@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./work-threads.module-definition"
+import { WorkThreadsLeadsReadService } from "./work-threads-leads-read.service"
 import { WorkThreadsService } from "./work-threads.service"
 
 @Module({})
@@ -11,8 +12,8 @@ export class WorkThreadsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), WorkThreadsService],
-            exports: [WorkThreadsService],
+            providers: [...(base.providers ?? []), WorkThreadsService, WorkThreadsLeadsReadService],
+            exports: [WorkThreadsService, WorkThreadsLeadsReadService],
         }
     }
 }

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { CHAIN_OWNER_DIRECTORY } from "./work-chains.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./work-chains.module-definition"
+import { WorkChainsHistoryReadService } from "./work-chains-history-read.service"
 import { WorkChainsService } from "./work-chains.service"
 
 @Module({})
@@ -16,8 +17,9 @@ export class WorkChainsModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: CHAIN_OWNER_DIRECTORY, useExisting: options.ownerDirectory },
                 WorkChainsService,
+                WorkChainsHistoryReadService,
             ],
-            exports: [WorkChainsService],
+            exports: [WorkChainsService, WorkChainsHistoryReadService],
         }
     }
 }

@@ -2,6 +2,8 @@ import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { EventsService } from "@modules/domain/events"
+import { LeadReadService } from "@modules/domain/leads"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { LeadDecisionRecord } from "./decision-history.contracts"
 import type { DecisionEntry, EvidenceEntry, WorkContext } from "./decisions.contracts"
@@ -41,14 +43,20 @@ const recordOf = builder<LeadDecisionRecord>({
 
 const build = async (query: MockEntityManager) => {
     const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
+    const leads = mock<LeadReadService>()
+    const members = mock<WorkspaceMemberDirectoryService>()
+    leads.cardsOf.mockResolvedValue([])
+    members.byIds.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
         providers: [
             EvidenceService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: query },
             { provide: EventsService, useValue: events },
+            { provide: LeadReadService, useValue: leads },
+            { provide: WorkspaceMemberDirectoryService, useValue: members },
         ],
     }).compile()
-    return { service: moduleRef.get(EvidenceService), events }
+    return { service: moduleRef.get(EvidenceService), events, leads, members }
 }
 
 describe("EvidenceService", () => {
@@ -179,8 +187,13 @@ describe("EvidenceService", () => {
     describe("listDecisions", () => {
         it("answers the history of a customer, oldest first when asked", async () => {
             const em = mockEntityManager()
-            const [read] = queueQueryBuilders(em, [{ getRawMany: [recordOf()] }])
-            const { service } = await build(em)
+            const { leadName: _name, ...raw } = recordOf({ decided_by: "An (stored)" })
+            const [read] = queueQueryBuilders(em, [{ getRawMany: [raw] }])
+            const { service, leads, members } = await build(em)
+            leads.cardsOf.mockResolvedValue([
+                { id: "lead-1", contactName: "Minh", company: "", channel: "", stage: "new", email: null },
+            ])
+            members.byIds.mockResolvedValue([{ id: "member-1", displayName: "An", role: "owner" }])
 
             await expect(
                 service.listDecisions("ws-1", { leadId: "lead-1", limit: 20, oldestFirst: true }),
@@ -191,6 +204,19 @@ describe("EvidenceService", () => {
             expect(read?.callsOf("orderBy")).toEqual([["d.createdAt", "ASC"]])
             expect(read?.callsOf("addOrderBy")).toEqual([["d.id", "ASC"]])
             expect(read?.callsOf("limit")).toEqual([[20]])
+        })
+
+        it("keeps the stored names for a customer or a member that is gone, and for a decision no member made", async () => {
+            const em = mockEntityManager()
+            const gone = recordOf({ id: "d-2", lead_id: "lead-gone", decidedByMemberId: "member-gone" })
+            const none = recordOf({ id: "d-3", lead_id: null, decidedByMemberId: null })
+            queueQueryBuilders(em, [{ getRawMany: [gone, none] }])
+            const { service } = await build(em)
+
+            await expect(service.listDecisions("ws-1", { limit: 5 })).resolves.toEqual([
+                { ...gone, leadName: null },
+                { ...none, leadName: null },
+            ])
         })
 
         it("filters one department's human decisions, newest first", async () => {

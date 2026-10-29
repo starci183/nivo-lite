@@ -1,5 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { InvoicesLedgerService } from "@modules/domain/invoices"
+import { LeadReadService } from "@modules/domain/leads"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import { OrdersLabelReadService } from "@modules/domain/orders"
+import { WorkItemsChainReadService } from "@modules/domain/work-items"
+import type { SubjectType } from "@modules/domain/work-items"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -39,59 +46,12 @@ import type {
 } from "./work-engine.contracts"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
 
-/** The agent a command sender id names. */
-interface SenderAgentRow {
-    /** The agent name. */
-    readonly name: string
-    /** The module it belongs to. */
-    readonly module: string
-    /** The installation name of the agent, null for an agent that is not an installed instance. */
-    readonly installation_name: string | null
-}
-
-/** Where a work item sits in its chain. */
-interface ParentPositionRow {
-    /** The item. */
-    readonly id: string
-    /** Its chain. */
-    readonly chain_id: string | null
-    /** Its depth. */
-    readonly depth: number
-}
-
-/** The depth of the deepest item of a chain. */
-interface ChainTopRow {
-    /** The depth. */
-    readonly depth: number
-}
-
-/** An installation of a module. */
-interface GivenInstallationRow {
-    /** The installation. */
-    readonly id: string
-    /** Its name. */
-    readonly name: string
-}
-
 /** How the database resolved the installation of a command (`public.resolve_installation`). */
 interface ResolvedInstallationRow {
     /** The installation. */
     readonly installation_id: string
     /** Which rule chose it. */
     readonly via: string
-}
-
-/** The readable label of a command subject. */
-interface SubjectLabelRow {
-    /** The order number, customer name or invoice number. */
-    readonly label: string | null
-}
-
-/** The table and column that hold the readable label of each kind of subject. */
-const LABEL_SOURCES: Readonly<Record<string, readonly [table: string, column: string]>> = {
-    order: ["public.orders", "order_no"],
-    lead: ["public.leads", "contact_name"],
-    invoice: ["public.invoices", "invoice_no"],
 }
 
 @Injectable()
@@ -107,6 +67,12 @@ export class CommandPlannerService {
         private readonly modules: ModuleCatalogService,
         private readonly evidence: EvidenceService,
         private readonly office: OfficeLinesService,
+        private readonly agents: AgentDirectoryService,
+        private readonly installations: InstallationRecordsService,
+        private readonly chains: WorkItemsChainReadService,
+        private readonly orders: OrdersLabelReadService,
+        private readonly leads: LeadReadService,
+        private readonly invoices: InvoicesLedgerService,
     ) {}
 
     /**
@@ -118,13 +84,13 @@ export class CommandPlannerService {
         input: SendCommandInput,
         manager: EntityManager = this.entityManager,
     ): Promise<CommandPlan> {
-        const receiver = await this.modules.entryOf(input.to, manager)
+        const receiver = await this.modules.entryOf(input.to)
         if (receiver === null) return this.refuse(ctx, input, manager, "unknown_module", `no agent ${input.to}`)
         const accepted = receiver.accepts.find((candidate) => candidate.command === input.command)
         if (accepted === undefined) {
             return this.refuse(ctx, input, manager, "unknown_command", `${input.to} does not accept ${input.command}`)
         }
-        const sender = await this.senderOf(ctx, input.from, manager)
+        const sender = await this.senderOf(ctx, input.from)
         if (sender === null) return this.refuse(ctx, input, manager, "unknown_sender", `no sender ${input.from}`)
         const missing = missingPayload(accepted.requiredFields, input.payload)
         if (missing.length > 0) {
@@ -161,7 +127,14 @@ export class CommandPlannerService {
         const dedupeKey = input.dedupeKey ?? defaultDedupeKey(input.command, address.subjectType, address.subjectId)
         if (
             position.chainId !== null &&
-            (await this.repeats(ctx, position.chainId, accepted, address, dedupeKey, manager))
+            (await this.repeats(
+                ctx,
+                position.chainId,
+                accepted,
+                { subjectType: address.subjectType, subjectId: address.subjectId },
+                dedupeKey,
+                manager,
+            ))
         ) {
             return this.refuse(
                 ctx,
@@ -218,8 +191,8 @@ export class CommandPlannerService {
     /** The Office mirror line and the `command.sent` evidence of a command that became a work item. */
     private async announce(parts: AcceptedCommandParts, row: WorkItem, manager: EntityManager): Promise<void> {
         const { ctx, input, accepted, address, instance } = parts
-        const subject = await this.subjectPhrase(ctx, address, manager)
-        const toName = instanceLabel(await this.modules.nameOf(input.to, ctx.locale, manager), instance?.name ?? null)
+        const subject = await this.subjectPhrase(ctx, address)
+        const toName = instanceLabel(await this.modules.nameOf(input.to, ctx.locale), instance?.name ?? null)
         const params = { to: toName, from: parts.sender, what: accepted.description[ctx.locale], subject }
         const body = this.catalog.get(subject === "" ? "command.mirror" : "command.mirror.subject", params, ctx.locale)
         await this.safely(
@@ -274,27 +247,19 @@ export class CommandPlannerService {
     }
 
     /** Who sends: the owner, an input, a module or an agent of the workspace; null when the id names nobody. */
-    private async senderOf(ctx: WorkContext, from: string, manager: EntityManager): Promise<OptionalCommandSender> {
+    private async senderOf(ctx: WorkContext, from: string): Promise<OptionalCommandSender> {
         if (from === "owner") return { label: this.catalog.get("command.sender.owner", {}, ctx.locale) }
         if (from === "inbound") return { label: this.catalog.get("command.sender.inbound", {}, ctx.locale) }
-        if ((await this.modules.entryOf(from, manager)) !== null)
-            return { label: await this.modules.nameOf(from, ctx.locale, manager) }
+        if ((await this.modules.entryOf(from)) !== null) return { label: await this.modules.nameOf(from, ctx.locale) }
         if (!isUuid(from)) return null
-        const agent = await manager
-            .createQueryBuilder()
-            .select("a.name", "name")
-            .addSelect("a.module", "module")
-            .addSelect("i.name", "installation_name")
-            .from("public.agents", "a")
-            .leftJoin("module_installations", "i", "i.agent_id = a.id AND i.workspace_id = a.workspace_id")
-            .where("a.workspace_id = :workspaceId AND a.id = :agentId", { workspaceId: ctx.workspaceId, agentId: from })
-            .limit(1)
-            .getRawOne<SenderAgentRow>()
-        if (agent === undefined) return null
-        const registered = await this.modules.entryOf(agent.module, manager)
+        const agent = await this.agents.find(ctx.workspaceId, from)
+        if (agent === null) return null
+        const registered = await this.modules.entryOf(agent.module)
         if (registered === null) return { label: agent.name }
-        const instanceName = registered.multiInstance ? agent.installation_name : null
-        return { label: instanceLabel(await this.modules.nameOf(agent.module, ctx.locale, manager), instanceName) }
+        const instanceName = registered.multiInstance
+            ? ((await this.installations.ofAgent(ctx.workspaceId, from))?.name ?? null)
+            : null
+        return { label: instanceLabel(await this.modules.nameOf(agent.module, ctx.locale), instanceName) }
     }
 
     /** Where the command sits in its chain: after its parent, or after the deepest item of the chain it names. */
@@ -305,34 +270,13 @@ export class CommandPlannerService {
     ): Promise<ChainPosition> {
         const named = input.chainId ?? null
         if (input.parentId !== undefined && input.parentId !== null) {
-            const parent = await manager
-                .createQueryBuilder()
-                .select("w.id", "id")
-                .addSelect("w.chain_id", "chain_id")
-                .addSelect("w.depth", "depth")
-                .from("public.work_items", "w")
-                .where("w.workspace_id = :workspaceId AND w.id = :parentId", {
-                    workspaceId: ctx.workspaceId,
-                    parentId: input.parentId,
-                })
-                .limit(1)
-                .getRawOne<ParentPositionRow>()
-            if (parent === undefined) return { chainId: named, depth: 0 }
-            return { chainId: named ?? parent.chain_id ?? parent.id, depth: parent.depth + 1 }
+            const parent = await this.chains.spotOf(ctx.workspaceId, input.parentId, manager)
+            if (parent === null) return { chainId: named, depth: 0 }
+            return { chainId: named ?? parent.chainId ?? parent.id, depth: parent.depth + 1 }
         }
         if (named === null) return { chainId: null, depth: 0 }
-        const top = await manager
-            .createQueryBuilder()
-            .select("w.depth", "depth")
-            .from("public.work_items", "w")
-            .where("w.workspace_id = :workspaceId AND w.chain_id = :chainId", {
-                workspaceId: ctx.workspaceId,
-                chainId: named,
-            })
-            .orderBy("w.depth", "DESC")
-            .limit(1)
-            .getRawOne<ChainTopRow>()
-        return { chainId: named, depth: top === undefined ? 1 : top.depth + 1 }
+        const top = await this.chains.topDepth(ctx.workspaceId, named, manager)
+        return { chainId: named, depth: top === null ? 1 : top + 1 }
     }
 
     /** The same command about the same subject twice in one chain is a cycle; a retry of the same dedupe key is not. */
@@ -340,28 +284,22 @@ export class CommandPlannerService {
         ctx: WorkContext,
         chainId: string,
         accepted: ModuleCommand,
-        address: SplitPayload,
+        subject: { readonly subjectType: SubjectType; readonly subjectId: string | null },
         dedupeKey: string,
         manager: EntityManager,
     ): Promise<boolean> {
-        const row = await manager
-            .createQueryBuilder()
-            .select("1", "repeats")
-            .from("public.work_items", "w")
-            .where(
-                "w.workspace_id = :workspaceId AND w.chain_id = :chainId AND w.action = :action AND w.subject_type = :subjectType AND w.dedupe_key <> :dedupeKey AND w.subject_id IS NOT DISTINCT FROM CAST(:subjectId AS uuid)",
-                {
-                    workspaceId: ctx.workspaceId,
-                    chainId,
-                    action: accepted.action,
-                    subjectType: address.subjectType,
-                    dedupeKey,
-                    subjectId: address.subjectId,
-                },
-            )
-            .limit(1)
-            .getRawOne<{ repeats: number }>()
-        return row !== undefined
+        const { subjectType, subjectId } = subject
+        return this.chains.repeats(
+            {
+                workspaceId: ctx.workspaceId,
+                chainId,
+                action: accepted.action,
+                subjectType,
+                subjectId,
+                dedupeKey,
+            },
+            manager,
+        )
     }
 
     /** The conversation a command is about: the one in its fields, else the subject when that is a conversation. */
@@ -382,7 +320,7 @@ export class CommandPlannerService {
     ): Promise<OptionalInstanceChoice> {
         if (!receiver.multiInstance) return null
         try {
-            const given = await this.givenInstance(ctx, input, manager)
+            const given = await this.givenInstance(ctx, input)
             if (given !== null) return given
             const [hit] = await callDbFunction<ResolvedInstallationRow>(manager, "public.resolve_installation", [
                 ctx.workspaceId,
@@ -392,13 +330,7 @@ export class CommandPlannerService {
                 position.chainId,
             ])
             if (hit === undefined) return null
-            const installation = await manager
-                .createQueryBuilder()
-                .select("i.name", "name")
-                .from("public.module_installations", "i")
-                .where("i.id = :installationId", { installationId: hit.installation_id })
-                .limit(1)
-                .getRawOne<{ name: string | null }>()
+            const installation = await this.installations.findById(hit.installation_id)
             return { id: hit.installation_id, via: hit.via, name: installation?.name ?? null }
         } catch (cause) {
             this.logger.error(WorkEngineLogEvent.InstanceUnresolved, cause, { to: input.to })
@@ -406,31 +338,17 @@ export class CommandPlannerService {
         }
     }
 
-    private async givenInstance(
-        ctx: WorkContext,
-        input: SendCommandInput,
-        manager: EntityManager,
-    ): Promise<OptionalInstanceChoice> {
+    private async givenInstance(ctx: WorkContext, input: SendCommandInput): Promise<OptionalInstanceChoice> {
         if (input.installationId === undefined || input.installationId === null) return null
-        const row = await manager
-            .createQueryBuilder()
-            .select("i.id", "id")
-            .addSelect("i.name", "name")
-            .from("public.module_installations", "i")
-            .where("i.workspace_id = :workspaceId AND i.module_key = :moduleKey AND i.id = :installationId", {
-                workspaceId: ctx.workspaceId,
-                moduleKey: input.to,
-                installationId: input.installationId,
-            })
-            .limit(1)
-            .getRawOne<GivenInstallationRow>()
-        return row === undefined ? null : { id: row.id, via: "given", name: row.name }
+        const row = await this.installations.find(ctx.workspaceId, input.installationId)
+        if (row === null || row.moduleKey !== input.to) return null
+        return { id: row.id, via: "given", name: row.name }
     }
 
     /** "order #DH-1" / "customer Lan"; empty when the subject has no readable label. A label is a courtesy: it never blocks a command. */
-    private async subjectPhrase(ctx: WorkContext, address: SplitPayload, manager: EntityManager): Promise<string> {
+    private async subjectPhrase(ctx: WorkContext, address: SplitPayload): Promise<string> {
         if (address.subjectId === null) return ""
-        const label = await this.labelOf(ctx, address, manager)
+        const label = await this.labelOf(ctx, address)
         if (label === null) return ""
         const shown = shownSubject(address.subjectType, label)
         const key = `command.subject.${address.subjectType}`
@@ -438,21 +356,17 @@ export class CommandPlannerService {
         return word === key ? shown : `${word} ${shown}`
     }
 
-    private async labelOf(ctx: WorkContext, address: SplitPayload, manager: EntityManager): Promise<string | null> {
+    private async labelOf(ctx: WorkContext, address: SplitPayload): Promise<string | null> {
         try {
-            const source = LABEL_SOURCES[address.subjectType]
-            if (source === undefined) return null
-            const row = await manager
-                .createQueryBuilder()
-                .select(`s.${source[1]}`, "label")
-                .from(source[0], "s")
-                .where("s.workspace_id = :workspaceId AND s.id = :subjectId", {
-                    workspaceId: ctx.workspaceId,
-                    subjectId: address.subjectId,
-                })
-                .limit(1)
-                .getRawOne<SubjectLabelRow>()
-            return row?.label ?? null
+            const subjectId = address.subjectId
+            if (subjectId === null) return null
+            if (address.subjectType === "order")
+                return (await this.orders.numbersOf(ctx.workspaceId, [subjectId]))[0]?.orderNo ?? null
+            if (address.subjectType === "lead")
+                return (await this.leads.cardsOf(ctx.workspaceId, [subjectId]))[0]?.contactName ?? null
+            if (address.subjectType === "invoice")
+                return (await this.invoices.receiptInvoice(ctx.workspaceId, subjectId))?.invoiceNo ?? null
+            return null
         } catch (cause) {
             this.logger.error(WorkEngineLogEvent.SubjectLabelUnreadable, cause, { subjectType: address.subjectType })
             return null

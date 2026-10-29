@@ -1,10 +1,11 @@
+// Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
+export { InboundPaymentsReadService } from "./inbound-payments-read.service"
+export type { UnmatchedPayment, UnmatchedPayments } from "./inbound-payments-read.contracts"
 export { INBOUND_EVENTS_ERROR_KINDS } from "./errors/inbound-events.error"
 export { INBOUND_EVENTS_MESSAGES } from "./messages/inbound-events.messages"
 export { InboundEventRecordsModule } from "./inbound-event-records.module"
 export { InboundEventsModule } from "./inbound-events.module"
 export { InboundEventsService } from "./inbound-events.service"
-export { InboundPaymentsReadService } from "./inbound-payments-read.service"
-export type { UnmatchedPayment, UnmatchedPayments } from "./inbound-payments-read.contracts"
 export { InboxFeedService } from "./inbox-feed.service"
 export type { InboundEventFeedRecord, InboundEventDetail } from "./inbound-events.contracts"
 export type {

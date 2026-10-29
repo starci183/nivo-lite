@@ -1,8 +1,7 @@
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { LeadReadService } from "@modules/domain/leads"
+import { WorkItemsLeadReadService } from "@modules/domain/work-items"
 import { CommandPlannerService } from "./command-planner.service"
 import type { ActionEntry, SendCommandInput, WorkContext, WorkItem, WorkSpec } from "./decisions.contracts"
 import { ModuleCatalogService } from "./module-catalog.service"
@@ -67,11 +66,19 @@ const ACTIONS: Readonly<Record<string, ActionEntry>> = {
 interface Built {
     readonly service: WorkChainService
     readonly leadGen: jest.Mock
+    readonly leads: LeadReadService
+    readonly waitingWork: WorkItemsLeadReadService
     readonly sent: Array<SendCommandInput>
     readonly inserted: Array<WorkSpec>
 }
 
-const build = async (entityManager: MockEntityManager, refuse = false): Promise<Built> => {
+/** What the customer read answers: the stage (null when the customer cannot be read) and whether a follow-up already waits. */
+interface Customer {
+    readonly stage?: string | null
+    readonly waiting?: boolean
+}
+
+const build = async (customer: Customer = {}, refuse = false): Promise<Built> => {
     const sent: Array<SendCommandInput> = []
     const inserted: Array<WorkSpec> = []
     const leadGen = jest.fn().mockResolvedValue(undefined)
@@ -88,7 +95,31 @@ const build = async (entityManager: MockEntityManager, refuse = false): Promise<
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkChainService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            {
+                provide: LeadReadService,
+                useValue: mock<LeadReadService>({
+                    cardsOf: jest.fn().mockResolvedValue(
+                        customer.stage === undefined || customer.stage === null
+                            ? []
+                            : [
+                                  {
+                                      id: "lead-1",
+                                      contactName: "",
+                                      company: "",
+                                      channel: "",
+                                      stage: customer.stage,
+                                      email: null,
+                                  },
+                              ],
+                    ),
+                }),
+            },
+            {
+                provide: WorkItemsLeadReadService,
+                useValue: mock<WorkItemsLeadReadService>({
+                    hasWaiting: jest.fn().mockResolvedValue(customer.waiting ?? false),
+                }),
+            },
             { provide: LEAD_GEN_FLOW, useValue: mock<LeadGenFlow>({ continueAfter: leadGen }) },
             {
                 provide: ModuleCatalogService,
@@ -108,12 +139,19 @@ const build = async (entityManager: MockEntityManager, refuse = false): Promise<
             },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkChainService), leadGen, sent, inserted }
+    return {
+        service: moduleRef.get(WorkChainService),
+        leadGen,
+        leads: moduleRef.get(LeadReadService),
+        waitingWork: moduleRef.get(WorkItemsLeadReadService),
+        sent,
+        inserted,
+    }
 }
 
 describe("WorkChainService", () => {
     it("queues the classification after a hand-off", async () => {
-        const built = await build(mockEntityManager())
+        const built = await build()
 
         await built.service.continueChain(ctx, itemOf({ action: "handoff_lead", department: "chatbot" }))
 
@@ -135,7 +173,7 @@ describe("WorkChainService", () => {
     })
 
     it("starts the chain at the item itself when it has no chain yet", async () => {
-        const built = await build(mockEntityManager())
+        const built = await build()
 
         await built.service.continueChain(ctx, itemOf({ action: "handoff_lead", chain_id: null }))
 
@@ -143,7 +181,7 @@ describe("WorkChainService", () => {
     })
 
     it("skips a step that needs a customer when the item has none", async () => {
-        const built = await build(mockEntityManager())
+        const built = await build()
 
         await built.service.continueChain(ctx, itemOf({ action: "handoff_lead", lead_id: null }))
         await built.service.continueChain(ctx, itemOf({ action: "classify_lead", lead_id: null }))
@@ -152,26 +190,19 @@ describe("WorkChainService", () => {
     })
 
     it("queues a follow-up for a customer who is neither lost, won nor waiting", async () => {
-        const em = mockEntityManager()
-        const [stage, pending] = queueQueryBuilders(em, [{ getRawOne: { stage: "new" } }, { getRawOne: undefined }])
-        const built = await build(em)
+        const built = await build({ stage: "new" })
 
         await built.service.continueChain(ctx, itemOf())
 
         expect(built.sent.map((input) => [input.command, input.reason, input.dedupeKey])).toEqual([
             ["send_follow_up", "classified", "send_follow_up:after:item-1"],
         ])
-        expect(stage?.callsOf("from")).toEqual([["public.leads", "l"]])
-        expect(stage?.callsOf("where")).toEqual([
-            ["l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
-        ])
-        expect(pending?.callsOf("from")).toEqual([["public.work_items", "w"]])
+        expect(built.leads.cardsOf).toHaveBeenCalledWith("ws-1", ["lead-1"])
+        expect(built.waitingWork.hasWaiting).toHaveBeenCalledWith("ws-1", "lead-1", "send_follow_up")
     })
 
     it("queues a follow-up when the customer cannot be read and nothing is probed", async () => {
-        const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: undefined }, { getRawOne: undefined }])
-        const built = await build(em)
+        const built = await build({ stage: null })
 
         await built.service.continueChain(ctx, itemOf())
 
@@ -181,7 +212,7 @@ describe("WorkChainService", () => {
 
 describe("WorkChainService", () => {
     it("queues no follow-up for a lost lead", async () => {
-        const built = await build(mockEntityManager())
+        const built = await build()
 
         await built.service.continueChain(ctx, itemOf({ proposal: { summary: "S", fields: { stage: "lost" } } }))
 
@@ -189,9 +220,7 @@ describe("WorkChainService", () => {
     })
 
     it("queues no follow-up for a customer who already bought", async () => {
-        const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: { stage: "won" } }])
-        const built = await build(em)
+        const built = await build({ stage: "won" })
 
         await built.service.continueChain(ctx, itemOf())
 
@@ -199,9 +228,7 @@ describe("WorkChainService", () => {
     })
 
     it("queues no second follow-up while one waits for a decision", async () => {
-        const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: { stage: "new" } }, { getRawOne: { pending: 1 } }])
-        const built = await build(em)
+        const built = await build({ stage: "new", waiting: true })
 
         await built.service.continueChain(ctx, itemOf())
 
@@ -209,7 +236,7 @@ describe("WorkChainService", () => {
     })
 
     it("queues the invoice of a confirmed order, once per order", async () => {
-        const built = await build(mockEntityManager())
+        const built = await build()
 
         await built.service.continueChain(
             ctx,
@@ -227,7 +254,7 @@ describe("WorkChainService", () => {
     })
 
     it("queues no invoice for an item that is not about an order", async () => {
-        const built = await build(mockEntityManager())
+        const built = await build()
 
         await built.service.continueChain(ctx, itemOf({ action: "confirm_order", subject_type: "inbound" }))
         await built.service.continueChain(
@@ -245,7 +272,7 @@ describe("WorkChainService", () => {
             itemOf({ action: "reconcile_payment", department: "accounting", subject_type: "transaction", ...overrides })
 
         it("tells the receipt pipeline about the transaction and the one settled invoice", async () => {
-            const built = await build(mockEntityManager())
+            const built = await build()
             const candidates = [{ id: "inv-1", label: "One", amount_vnd: 1 }]
 
             await built.service.continueChain(
@@ -263,7 +290,7 @@ describe("WorkChainService", () => {
         })
 
         it("falls back to the transaction when several invoices are candidates", async () => {
-            const built = await build(mockEntityManager())
+            const built = await build()
             const candidates = [
                 { id: "inv-1", label: "One", amount_vnd: 1 },
                 { id: "inv-2", label: "Two", amount_vnd: 2 },
@@ -278,7 +305,7 @@ describe("WorkChainService", () => {
         })
 
         it("takes the invoice from an invoice subject", async () => {
-            const built = await build(mockEntityManager())
+            const built = await build()
 
             await built.service.continueChain(ctx, paid({ subject_type: "invoice", subject_id: "inv-9" }))
 
@@ -288,7 +315,7 @@ describe("WorkChainService", () => {
         })
 
         it("sends no care message without a subject or a customer", async () => {
-            const built = await build(mockEntityManager())
+            const built = await build()
 
             await built.service.continueChain(ctx, paid({ subject_id: null }))
             await built.service.continueChain(ctx, paid({ subject_id: "tx-1", lead_id: null }))
@@ -302,7 +329,7 @@ describe("WorkChainService", () => {
 describe("WorkChainService", () => {
     describe("lead generation", () => {
         it("hands a lead generation step to the lead flow", async () => {
-            const built = await build(mockEntityManager())
+            const built = await build()
             const item = itemOf({ action: "greet_prospect", department: "lead_gen" })
 
             await built.service.continueChain(ctx, item)
@@ -312,7 +339,7 @@ describe("WorkChainService", () => {
         })
 
         it("lets the hand-off to sales use the generic loop", async () => {
-            const built = await build(mockEntityManager())
+            const built = await build()
 
             await built.service.continueChain(ctx, itemOf({ action: "handoff_to_sales", department: "lead_gen" }))
 
@@ -322,7 +349,7 @@ describe("WorkChainService", () => {
     })
 
     it("queues nothing for an action with no next step or an unknown one", async () => {
-        const built = await build(mockEntityManager())
+        const built = await build()
 
         await built.service.continueChain(ctx, itemOf({ action: "send_follow_up" }))
         await built.service.continueChain(ctx, itemOf({ action: "mystery" }))
@@ -331,7 +358,7 @@ describe("WorkChainService", () => {
     })
 
     it("never inserts a command the planner refused", async () => {
-        const built = await build(mockEntityManager(), true)
+        const built = await build({}, true)
 
         await built.service.continueChain(ctx, itemOf({ action: "handoff_lead" }))
 

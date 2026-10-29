@@ -26,7 +26,7 @@ export class WorkIntakeService {
 
     /** Inserts the item; `onInserted` runs once, only when this call really inserted the row. */
     async insert(ctx: WorkContext, spec: WorkSpec, manager?: EntityManager): Promise<IntakeResult> {
-        const entry = await this.modules.actionOf(spec.action, manager)
+        const entry = await this.modules.actionOf(spec.action)
         if (entry === null) {
             throw new DecisionsError({ code: DecisionsErrorCode.UnknownAction, params: { action: spec.action } })
         }

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { LeadReadService } from "@modules/domain/leads"
+import { WorkItemsLeadReadService } from "@modules/domain/work-items"
 import { CommandPlannerService } from "./command-planner.service"
 import type { SendCommandInput, WorkContext, WorkItem } from "./decisions.contracts"
 import { ModuleCatalogService } from "./module-catalog.service"
@@ -16,7 +16,8 @@ import { WorkIntakeService } from "./work-intake.service"
  */
 export class WorkChainService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly leads: LeadReadService,
+        private readonly waitingWork: WorkItemsLeadReadService,
         @InjectLeadGenFlow() private readonly leadGen: LeadGenFlow,
         private readonly modules: ModuleCatalogService,
         private readonly planner: CommandPlannerService,
@@ -107,25 +108,9 @@ export class WorkChainService {
     /** A lost lead, a customer who already bought and a customer with a follow-up already waiting get no new follow-up. */
     private async followUpWanted(ctx: WorkContext, item: WorkItem, leadId: string): Promise<boolean> {
         if (item.proposal.fields.stage === "lost") return false
-        const lead = await this.entityManager
-            .createQueryBuilder()
-            .select("l.stage", "stage")
-            .from("public.leads", "l")
-            .where("l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: ctx.workspaceId, leadId })
-            .limit(1)
-            .getRawOne<{ stage: string }>()
+        const [lead] = await this.leads.cardsOf(ctx.workspaceId, [leadId])
         if (lead?.stage === "won") return false
-        const waiting = await this.entityManager
-            .createQueryBuilder()
-            .select("1", "pending")
-            .from("public.work_items", "w")
-            .where(
-                "w.workspace_id = :workspaceId AND w.lead_id = :leadId AND w.action = 'send_follow_up' AND w.status = 'waiting_decision'",
-                { workspaceId: ctx.workspaceId, leadId },
-            )
-            .limit(1)
-            .getRawOne<{ pending: number }>()
-        return waiting === undefined
+        return !(await this.waitingWork.hasWaiting(ctx.workspaceId, leadId, "send_follow_up"))
     }
 
     /** A hand-off is a typed command: a refusal is logged by the planner and never stops the finished item. */

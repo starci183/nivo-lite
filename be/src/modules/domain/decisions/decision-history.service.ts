@@ -1,5 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager, ObjectLiteral, SelectQueryBuilder } from "typeorm"
+import type { EntityManager } from "typeorm"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { ApprovalRequestsHistoryReadService } from "@modules/domain/approval-requests"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import { LeadReadService } from "@modules/domain/leads"
+import { ThreadWorkLinksReadService } from "@modules/domain/thread-work"
+import { WorkChainsHistoryReadService } from "@modules/domain/work-chains"
+import { WorkThreadsLeadsReadService } from "@modules/domain/work-threads"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
+import type { MemberDirectoryEntry } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { DecisionRecord } from "./decisions-views.contracts"
 import { DecisionEntity } from "./persistence/entities"
@@ -25,165 +34,48 @@ export interface DecisionHistoryFilter {
 /** A line of the history before the customer name is read; `sort_key` orders lines of different sources at full precision. */
 type RawLine = Omit<DecisionRecord, "leadName"> & { readonly sort_key: string }
 
+/** What one pass over a source answers: how many rows it scanned and the lines it kept. */
+interface Pass {
+    /** The rows the pass read. */
+    readonly scanned: number
+    /** The lines that survived the filters. */
+    readonly kept: Array<RawLine>
+}
+
+/** The most passes one source reads to fill a page when a filter on the joined rows drops some of them. */
+const PASSES_MAX = 5
+
 /** Postgres text of the instant that sorts like the instant: fixed width, UTC, to the microsecond. */
 const SORT_KEY = "YYYYMMDDHH24MISS.US"
 
-/** The deciders an approval request resolved by this member counts as. */
-const REQUEST_DECIDER = "(CASE WHEN m.id IS NULL THEN 'policy' WHEN m.role = 'owner' THEN 'owner' ELSE 'staff' END)"
+/** The same sortable text of an instant held to the millisecond. */
+const sortKeyOf = (at: Date): string => at.toISOString().replaceAll(/[-:T]/g, "").replace("Z", "000")
 
-/** The deciders a hand-off a member completed counts as. */
-const TASK_DECIDER = "(CASE WHEN m.role = 'owner' THEN 'owner' ELSE 'staff' END)"
-
-/** The instant an approval request counts at: when it was resolved, else when it was made. */
-const REQUEST_AT = "COALESCE(r.resolved_at, r.created_at)"
-
-/** The instant a completed hand-off counts at. */
-const TASK_AT = "COALESCE(c.finished_at, c.started_at)"
-
-/** Where the decider, the outcome and the module of a line live in its source. */
-interface HistoryExpressions {
-    /** The decider expression. */
-    readonly decider: string
-    /** The outcome expression. */
-    readonly outcome: string
-    /** The module expression. */
-    readonly department: string
+/** The decider a request counts as: the owner or staff who settled it; the policy when nobody (or nobody known) did. */
+const deciderOf = (member: MemberDirectoryEntry | undefined): string => {
+    if (member === undefined) return "policy"
+    return member.role === "owner" ? "owner" : "staff"
 }
 
-/** Keeps the lines whose decider, outcome and module match the filter; `expressions` say where each lives in the source. */
-const narrow = (
-    select: SelectQueryBuilder<ObjectLiteral>,
-    filter: DecisionHistoryFilter,
-    expressions: HistoryExpressions,
-): SelectQueryBuilder<ObjectLiteral> => {
-    if (filter.deciders !== null)
-        select.andWhere(`${expressions.decider} IN (:...deciders)`, { deciders: [...filter.deciders] })
-    if (filter.outcome !== null) select.andWhere(`${expressions.outcome} = :outcome`, { outcome: filter.outcome })
-    if (filter.department !== null) {
-        select.andWhere(`${expressions.department} = :department`, { department: filter.department })
-    }
-    return select
-}
-
-/** The decision log lines: who decided each work item. */
-const loggedDecisions = (
-    manager: EntityManager,
-    workspaceId: string,
-    filter: DecisionHistoryFilter,
-): Promise<Array<RawLine>> =>
-    narrow(
-        manager
-            .createQueryBuilder(DecisionEntity, "d")
-            .select("d.id", "id")
-            .addSelect("d.workItemId", "work_item_id")
-            .addSelect("d.leadId", "lead_id")
-            .addSelect("d.department", "department")
-            .addSelect("d.action", "action")
-            .addSelect("COALESCE(m.display_name, d.decidedBy)", "decided_by")
-            .addSelect("d.decidedByMemberId", "decidedByMemberId")
-            .addSelect("d.deciderKind", "decider_kind")
-            .addSelect("d.outcome", "outcome")
-            .addSelect("d.reason", "reason")
-            .addSelect("COALESCE(d.note, '')", "note")
-            .addSelect("to_json(d.createdAt) #>> '{}'", "created_at")
-            .addSelect(`to_char(d.createdAt AT TIME ZONE 'UTC', '${SORT_KEY}')`, "sort_key")
-            .leftJoin("workspace_members", "m", "m.id = d.decidedByMemberId")
-            .where("d.workspaceId = :workspaceId", { workspaceId }),
-        filter,
-        { decider: "d.deciderKind", outcome: "d.outcome", department: "d.department" },
-    )
-        .orderBy("d.createdAt", "DESC")
-        .addOrderBy("d.id", "DESC")
-        .limit(filter.limit)
-        .getRawMany<RawLine>()
-
-/** The approval requests the engine does not log: verdicts given on a thread card outside an agent's work, and every one that ran out of time. */
-const approvalRequests = async (
-    manager: EntityManager,
-    workspaceId: string,
-    filter: DecisionHistoryFilter,
-): Promise<Array<RawLine>> => {
-    const lines = await narrow(
-        manager
-            .createQueryBuilder()
-            .select("r.id", "id")
-            .addSelect("t.lead_id", "lead_id")
-            .addSelect("r.department", "department")
-            .addSelect("r.action", "action")
-            .addSelect("COALESCE(m.display_name, 'NIVO')", "decided_by")
-            .addSelect("r.resolved_by", "decidedByMemberId")
-            .addSelect(REQUEST_DECIDER, "decider_kind")
-            .addSelect("r.status", "outcome")
-            .addSelect("COALESCE(ar.note, '')", "note")
-            .addSelect(`to_json(${REQUEST_AT}) #>> '{}'`, "created_at")
-            .addSelect(`to_char(${REQUEST_AT} AT TIME ZONE 'UTC', '${SORT_KEY}')`, "sort_key")
-            .from("public.approval_requests", "r")
-            .leftJoin("workspace_members", "m", "m.id = r.resolved_by")
-            .leftJoin("work_chains", "c", "c.id = r.chain_step_id")
-            .leftJoin("work_threads", "t", "t.id = c.thread_id")
-            .leftJoin("authority_rules", "ar", "ar.workspace_id = r.workspace_id AND ar.action = r.action")
-            .where("r.workspace_id = :workspaceId AND r.status <> 'pending'", { workspaceId })
-            .andWhere(
-                "(r.status = 'expired' OR NOT EXISTS (SELECT 1 FROM public.thread_work w WHERE w.approval_request_id = r.id))",
-            ),
-        filter,
-        { decider: REQUEST_DECIDER, outcome: "r.status", department: "r.department" },
-    )
-        .orderBy(REQUEST_AT, "DESC")
-        .addOrderBy("r.id", "DESC")
-        .limit(filter.limit)
-        .getRawMany<Omit<RawLine, "work_item_id" | "reason">>()
-    return lines.map((line) => ({ ...line, work_item_id: null, reason: "over_authority" }))
-}
-
-/** The tasks a member completed after being tagged in a thread no agent's work runs in. */
-const threadTasks = async (
-    manager: EntityManager,
-    workspaceId: string,
-    filter: DecisionHistoryFilter,
-): Promise<Array<RawLine>> => {
-    if (filter.outcome !== null && filter.outcome !== "completed") return []
-    const lines = await narrow(
-        manager
-            .createQueryBuilder()
-            .select("c.id", "id")
-            .addSelect("t.lead_id", "lead_id")
-            .addSelect("COALESCE(a.module, 'office')", "department")
-            .addSelect("m.display_name", "decided_by")
-            .addSelect("c.decided_by", "decidedByMemberId")
-            .addSelect(TASK_DECIDER, "decider_kind")
-            .addSelect("COALESCE(c.rule, c.action)", "note")
-            .addSelect(`to_json(${TASK_AT}) #>> '{}'`, "created_at")
-            .addSelect(`to_char(${TASK_AT} AT TIME ZONE 'UTC', '${SORT_KEY}')`, "sort_key")
-            .from("public.work_chains", "c")
-            .innerJoin("workspace_members", "m", "m.id = c.decided_by")
-            .innerJoin("work_threads", "t", "t.id = c.thread_id")
-            .leftJoin("agents", "a", "a.id = c.actor_id AND c.actor_kind = 'agent'")
-            .where("c.workspace_id = :workspaceId AND c.kind IN ('hand_off', 'assign') AND c.status = 'done'", {
-                workspaceId,
-            })
-            .andWhere("NOT EXISTS (SELECT 1 FROM public.thread_work w WHERE w.thread_id = c.thread_id)"),
-        { ...filter, outcome: null },
-        { decider: TASK_DECIDER, outcome: "'completed'", department: "COALESCE(a.module, 'office')" },
-    )
-        .orderBy(TASK_AT, "DESC")
-        .addOrderBy("c.id", "DESC")
-        .limit(filter.limit)
-        .getRawMany<Omit<RawLine, "work_item_id" | "reason" | "action" | "outcome">>()
-    return lines.map((line) => ({
-        ...line,
-        work_item_id: null,
-        action: "thread_task",
-        outcome: "completed",
-        reason: null,
-    }))
-}
+/** Whether the decider passes the filter. */
+const deciderWanted = (filter: DecisionHistoryFilter, decider: string): boolean =>
+    filter.deciders === null || filter.deciders.includes(decider)
 
 @Injectable()
 /** Reads the decision history of a workspace from the three sources that hold it. */
 export class DecisionHistoryService {
-    /** Captures the primary entity manager. */
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    /** Captures the primary entity manager and the owners' read services the other two sources and the names come from. */
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly requests: ApprovalRequestsHistoryReadService,
+        private readonly chains: WorkChainsHistoryReadService,
+        private readonly threads: WorkThreadsLeadsReadService,
+        private readonly threadWork: ThreadWorkLinksReadService,
+        private readonly rules: AuthorityRulesService,
+        private readonly agents: AgentDirectoryService,
+        private readonly members: WorkspaceMemberDirectoryService,
+        private readonly leads: LeadReadService,
+    ) {}
 
     /**
      * The newest lines of the decision history with the customer name: the decision log of the work engine, the approval requests the
@@ -193,28 +85,189 @@ export class DecisionHistoryService {
      */
     async list(workspaceId: string, filter: DecisionHistoryFilter): Promise<Array<DecisionRecord>> {
         const sources = [
-            ...(await loggedDecisions(this.entityManager, workspaceId, filter)),
-            ...(await approvalRequests(this.entityManager, workspaceId, filter)),
-            ...(await threadTasks(this.entityManager, workspaceId, filter)),
+            ...(await this.logged(workspaceId, filter)),
+            ...(await this.filled(filter.limit, (skip) => this.approvalLines(workspaceId, filter, skip))),
+            ...(await this.filled(filter.limit, (skip) => this.taskLines(workspaceId, filter, skip))),
         ]
         const page = sources
             .toSorted((left, right) => newestFirst(left.sort_key, right.sort_key) || newestFirst(left.id, right.id))
             .slice(0, filter.limit)
         const leadIds = [...new Set(page.flatMap((line) => (line.lead_id === null ? [] : [line.lead_id])))]
-        const leads =
-            leadIds.length === 0
-                ? []
-                : await this.entityManager
-                      .createQueryBuilder()
-                      .select("l.id", "id")
-                      .addSelect("l.contact_name", "name")
-                      .from("public.leads", "l")
-                      .where("l.id IN (:...leadIds)", { leadIds })
-                      .getRawMany<{ id: string; name: string | null }>()
-        const names = new Map(leads.map((lead) => [lead.id, lead.name]))
+        const names = new Map(
+            (await this.leads.cardsOf(workspaceId, leadIds)).map((card) => [card.id, card.contactName]),
+        )
         return page.map(({ sort_key: _key, ...line }) => ({
             ...line,
             leadName: line.lead_id === null ? null : (names.get(line.lead_id) ?? null),
         }))
+    }
+
+    /** Reads passes from a source until `limit` lines survived its filters, the source ran dry or the passes ran out. */
+    private async filled(limit: number, pass: (skip: number) => Promise<Pass>): Promise<Array<RawLine>> {
+        const lines: Array<RawLine> = []
+        let skip = 0
+        for (let index = 0; index < PASSES_MAX && lines.length < limit; index += 1) {
+            const read = await pass(skip)
+            lines.push(...read.kept)
+            if (read.scanned < limit) break
+            skip += read.scanned
+        }
+        return lines.slice(0, limit)
+    }
+
+    /** The members among the ids, by membership id. */
+    private async membersById(
+        workspaceId: string,
+        ids: ReadonlyArray<string | null>,
+    ): Promise<Map<string, MemberDirectoryEntry>> {
+        const wanted = [...new Set(ids.flatMap((id) => (id === null ? [] : [id])))]
+        return new Map((await this.members.byIds(workspaceId, wanted)).map((member) => [member.id, member]))
+    }
+
+    /** The decision log lines: who decided each work item. */
+    private async logged(workspaceId: string, filter: DecisionHistoryFilter): Promise<Array<RawLine>> {
+        const select = this.entityManager
+            .createQueryBuilder(DecisionEntity, "d")
+            .select("d.id", "id")
+            .addSelect("d.workItemId", "work_item_id")
+            .addSelect("d.leadId", "lead_id")
+            .addSelect("d.department", "department")
+            .addSelect("d.action", "action")
+            .addSelect("d.decidedBy", "decided_by")
+            .addSelect("d.decidedByMemberId", "decidedByMemberId")
+            .addSelect("d.deciderKind", "decider_kind")
+            .addSelect("d.outcome", "outcome")
+            .addSelect("d.reason", "reason")
+            .addSelect("COALESCE(d.note, '')", "note")
+            .addSelect("to_json(d.createdAt) #>> '{}'", "created_at")
+            .addSelect(`to_char(d.createdAt AT TIME ZONE 'UTC', '${SORT_KEY}')`, "sort_key")
+            .where("d.workspaceId = :workspaceId", { workspaceId })
+        if (filter.deciders !== null)
+            select.andWhere("d.deciderKind IN (:...deciders)", { deciders: [...filter.deciders] })
+        if (filter.outcome !== null) select.andWhere("d.outcome = :outcome", { outcome: filter.outcome })
+        if (filter.department !== null) select.andWhere("d.department = :department", { department: filter.department })
+        const lines = await select
+            .orderBy("d.createdAt", "DESC")
+            .addOrderBy("d.id", "DESC")
+            .limit(filter.limit)
+            .getRawMany<RawLine>()
+        const members = await this.membersById(
+            workspaceId,
+            lines.map((line) => line.decidedByMemberId),
+        )
+        return lines.map((line) => ({
+            ...line,
+            decided_by: members.get(line.decidedByMemberId ?? "")?.displayName ?? line.decided_by,
+        }))
+    }
+
+    /** One pass over the approval requests the engine does not log: verdicts given on a thread card outside an agent's work, and every one that ran out of time. */
+    private async approvalLines(workspaceId: string, filter: DecisionHistoryFilter, skip: number): Promise<Pass> {
+        const page = await this.requests.resolvedPage(workspaceId, {
+            department: filter.department,
+            status: filter.outcome,
+            skip,
+            limit: filter.limit,
+        })
+        const linked = new Set(
+            await this.threadWork.linkedRequestIds(
+                workspaceId,
+                page.map(({ id }) => id),
+            ),
+        )
+        const members = await this.membersById(
+            workspaceId,
+            page.map((request) => request.resolvedBy),
+        )
+        const wanted = page.filter(
+            (request) =>
+                (request.status === "expired" || !linked.has(request.id)) &&
+                deciderWanted(filter, deciderOf(members.get(request.resolvedBy ?? ""))),
+        )
+        const steps = await this.chains.threadsOfSteps(
+            workspaceId,
+            wanted.map(({ chainStepId }) => chainStepId),
+        )
+        const stepThread = new Map(steps.map((step) => [step.id, step.threadId]))
+        const threadLead = new Map(
+            (
+                await this.threads.leadsOf(
+                    workspaceId,
+                    steps.map(({ threadId }) => threadId),
+                )
+            ).map((thread) => [thread.id, thread.leadId]),
+        )
+        const notes = new Map((await this.rules.list(workspaceId)).map((rule) => [rule.action, rule.note]))
+        const kept = wanted.map((request): RawLine => {
+            const member = members.get(request.resolvedBy ?? "")
+            return {
+                id: request.id,
+                work_item_id: null,
+                lead_id: threadLead.get(stepThread.get(request.chainStepId) ?? "") ?? null,
+                department: request.department,
+                action: request.action,
+                decided_by: member?.displayName ?? "NIVO",
+                decidedByMemberId: request.resolvedBy,
+                decider_kind: deciderOf(member),
+                outcome: request.status,
+                reason: "over_authority",
+                note: notes.get(request.action) ?? "",
+                created_at: request.at.toISOString(),
+                sort_key: sortKeyOf(request.at),
+            }
+        })
+        return { scanned: page.length, kept }
+    }
+
+    /** One pass over the tasks a member completed after being tagged in a thread no agent's work runs in. */
+    private async taskLines(workspaceId: string, filter: DecisionHistoryFilter, skip: number): Promise<Pass> {
+        if (filter.outcome !== null && filter.outcome !== "completed") return { scanned: 0, kept: [] }
+        const tasks = await this.chains.completedTasks(workspaceId, skip, filter.limit)
+        const members = await this.membersById(
+            workspaceId,
+            tasks.map((task) => task.decidedBy),
+        )
+        const threadLead = new Map(
+            (
+                await this.threads.leadsOf(
+                    workspaceId,
+                    tasks.map(({ threadId }) => threadId),
+                )
+            ).map((thread) => [thread.id, thread.leadId]),
+        )
+        const working = new Set(await this.threadWork.workingThreadIds(workspaceId, [...threadLead.keys()]))
+        const modules = new Map(
+            (
+                await this.agents.cardsOf(
+                    workspaceId,
+                    tasks.flatMap((task) => (task.actorKind === "agent" ? [task.actorId] : [])),
+                )
+            ).map((card) => [card.id, card.module]),
+        )
+        const kept = tasks.flatMap((task): Array<RawLine> => {
+            const member = members.get(task.decidedBy)
+            const department = (task.actorKind === "agent" ? modules.get(task.actorId) : undefined) ?? "office"
+            if (member === undefined || !threadLead.has(task.threadId) || working.has(task.threadId)) return []
+            if (!deciderWanted(filter, deciderOf(member))) return []
+            if (filter.department !== null && filter.department !== department) return []
+            return [
+                {
+                    id: task.id,
+                    work_item_id: null,
+                    lead_id: threadLead.get(task.threadId) ?? null,
+                    department,
+                    action: "thread_task",
+                    decided_by: member.displayName,
+                    decidedByMemberId: task.decidedBy,
+                    decider_kind: deciderOf(member),
+                    outcome: "completed",
+                    reason: null,
+                    note: task.rule ?? task.action,
+                    created_at: task.at.toISOString(),
+                    sort_key: sortKeyOf(task.at),
+                },
+            ]
+        })
+        return { scanned: tasks.length, kept }
     }
 }
