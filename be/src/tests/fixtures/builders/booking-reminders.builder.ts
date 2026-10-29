@@ -1,7 +1,10 @@
 import { builder } from "@starci/jest-preset"
 import { In } from "typeorm"
-import { BookingReminderEntity } from "@modules/domain/booking-reminders"
+import { bookingRemindersEntities } from "@modules/domain/booking-reminders"
 import type { ReminderTarget } from "@modules/domain/booking-reminders"
+
+const [BookingReminderEntity] = bookingRemindersEntities
+type BookingReminderEntity = InstanceType<typeof BookingReminderEntity>
 
 /** One hour in milliseconds. */
 export const HOUR = 3_600_000
