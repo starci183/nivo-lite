@@ -121,6 +121,14 @@ export interface AgentModuleRef {
     readonly module: string
 }
 
+/** An active agent as a lens of the brain shows it: the module it serves and its name. */
+export interface AgentLens {
+    /** The module key. */
+    readonly module: string
+    /** The agent name. */
+    readonly name: string
+}
+
 /** The status of an agent, or null when there is none. */
 export type OptionalAgentStatus = string | null
 

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager, EntityTarget, ObjectLiteral, SelectQueryBuilder } from "typeorm"
-import { AgentEntity } from "@modules/domain/agents"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { LeadAutomationReadService, LeadReadService } from "@modules/domain/leads"
 import { InstallationOperationsService } from "@modules/domain/module-installations"
 import { StaffDirectoryService } from "@modules/domain/staff"
@@ -10,50 +9,17 @@ import { ModulesService } from "@modules/domain/modules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import {
-    AgentConversationEntity,
     AgentConversationsError,
     AgentConversationsErrorCode,
+    AgentConversationsReadService,
 } from "@modules/domain/agent-conversations"
-import { AgentMessageEntity } from "@modules/domain/agent-messages"
+import { AgentMessagesReadService } from "@modules/domain/agent-messages"
 import type { ChatbotGaps, ChatbotOverview, ChatbotOverviewRequest, ChatbotThread } from "./chatbot-workbench.contracts"
 import { buildChatbotOverview, emptyChatbotOverview } from "./overview.mapper"
 import { buildChatbotThread } from "./thread.mapper"
 import { waitingConversationId } from "./conversation.policy"
-import type {
-    AgentIdRow,
-    ConversationRow,
-    LensRow,
-    MessageBriefRow,
-    MessageRow,
-    WaitingRow,
-} from "./persistence/chatbot-workbench.rows"
-
-const CONVERSATION_COLUMNS = [
-    "id",
-    "channel",
-    "visitor_name",
-    "lead_id",
-    "handled_by",
-    "handled_at",
-    "external_id",
-    "created_at",
-] as const
-
-/** A read of the named columns of one table, each answered under its own column name. */
-const readFrom = (
-    manager: EntityManager,
-    entity: EntityTarget<ObjectLiteral>,
-    alias: string,
-    columns: ReadonlyArray<string>,
-): SelectQueryBuilder<ObjectLiteral> => {
-    const [first = "id", ...rest] = columns
-    return rest.reduce(
-        (query, column) => query.addSelect(`${alias}.${column}`, column),
-        manager.createQueryBuilder(entity, alias).select(`${alias}.${first}`, first),
-    )
-}
+import type { WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 const DAY_MS = 86_400_000
 
@@ -61,7 +27,6 @@ const DAY_MS = 86_400_000
 /** Authorized reads of the customer inbox, open threads and gaps in the workspace brain. */
 export class ChatbotWorkbenchService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         private readonly members: WorkspaceMembersService,
         private readonly knowledgeGaps: KnowledgeGapsService,
@@ -71,6 +36,9 @@ export class ChatbotWorkbenchService {
         private readonly installs: InstallationOperationsService,
         private readonly leads: LeadReadService,
         private readonly leadFacts: LeadAutomationReadService,
+        private readonly agentDirectory: AgentDirectoryService,
+        private readonly conversationReads: AgentConversationsReadService,
+        private readonly messageReads: AgentMessagesReadService,
     ) {}
 
     /** The selected installation's customer conversations with activity and capture figures. */
@@ -79,32 +47,12 @@ export class ChatbotWorkbenchService {
         const now = this.clock.now().getTime()
         const agents = await this.agentIds(request)
         if (agents.length === 0) return emptyChatbotOverview(request.workspaceId, now)
-        const conversations = await readFrom(this.entityManager, AgentConversationEntity, "c", CONVERSATION_COLUMNS)
-            .where("c.workspace_id = :workspaceId AND c.kind = 'customer'", { workspaceId: request.workspaceId })
-            .andWhere("c.agent_id IN (:...agents)", { agents })
-            .orderBy("c.created_at", "DESC")
-            .limit(200)
-            .getRawMany<ConversationRow>()
+        const conversations = await this.conversationReads.customerOfAgents(request.workspaceId, agents, 200)
         if (conversations.length === 0) return emptyChatbotOverview(request.workspaceId, now)
         const ids = conversations.map((row) => row.id)
         const leadIds = conversations.flatMap((row) => (row.lead_id === null ? [] : [row.lead_id]))
         const [messages, waiting, leads] = await Promise.all([
-            readFrom(this.entityManager, AgentMessageEntity, "m", [
-                "id",
-                "conversation_id",
-                "role",
-                "body",
-                "created_at",
-            ])
-                .where("m.workspace_id = :workspaceId AND m.conversation_id IN (:...ids)", {
-                    workspaceId: request.workspaceId,
-                    ids,
-                })
-                .andWhere("m.created_at >= :since::timestamptz", { since: new Date(now - 30 * DAY_MS) })
-                .orderBy("m.created_at")
-                .addOrderBy("m.id")
-                .limit(6000)
-                .getRawMany<MessageBriefRow>(),
+            this.messageReads.briefsIn(request.workspaceId, ids, new Date(now - 30 * DAY_MS), 6000),
             this.waiting(request.workspaceId),
             this.leads.listByIds(request.workspaceId, leadIds),
         ])
@@ -114,35 +62,10 @@ export class ChatbotWorkbenchService {
     /** A customer conversation of the caller's workspace with its lead and assigned escalation. */
     async thread(userId: string, workspaceId: string, conversationId: string): Promise<ChatbotThread> {
         await this.members.require(userId, workspaceId)
-        const [conversation] = await readFrom(this.entityManager, AgentConversationEntity, "c", CONVERSATION_COLUMNS)
-            .where("c.workspace_id = :workspaceId AND c.id = :conversationId AND c.kind = 'customer'", {
-                workspaceId,
-                conversationId,
-            })
-            .limit(1)
-            .getRawMany<ConversationRow>()
-        if (conversation === undefined)
-            throw new AgentConversationsError({ code: AgentConversationsErrorCode.NotFound })
+        const conversation = await this.conversationReads.customerById(workspaceId, conversationId)
+        if (conversation === null) throw new AgentConversationsError({ code: AgentConversationsErrorCode.NotFound })
         const [messages, waiting, lead] = await Promise.all([
-            readFrom(this.entityManager, AgentMessageEntity, "m", [
-                "id",
-                "conversation_id",
-                "role",
-                "author_kind",
-                "author_name",
-                "body",
-                "created_at",
-                "delivery_status",
-                "delivery_error",
-            ])
-                .where("m.workspace_id = :workspaceId AND m.conversation_id = :conversationId", {
-                    workspaceId,
-                    conversationId,
-                })
-                .orderBy("m.created_at")
-                .addOrderBy("m.id")
-                .limit(500)
-                .getRawMany<MessageRow>(),
+            this.messageReads.threadOf(workspaceId, conversationId, 500),
             this.waiting(workspaceId),
             conversation.lead_id === null ? undefined : this.leadFacts.lead(workspaceId, conversation.lead_id),
         ])
@@ -165,11 +88,7 @@ export class ChatbotWorkbenchService {
         await this.members.require(userId, workspaceId, ["owner", "manager"])
         const [gaps, agents, catalog] = await Promise.all([
             this.knowledgeGaps.list(workspaceId, ["open"], 50),
-            readFrom(this.entityManager, AgentEntity, "a", ["module", "name"])
-                .where("a.workspace_id = :workspaceId AND a.status = 'active'", { workspaceId })
-                .orderBy("a.created_at")
-                .limit(100)
-                .getRawMany<LensRow>(),
+            this.agentDirectory.activeLensesOf(workspaceId, 100),
             this.modules.catalog(),
         ])
         const definitions = new Map(catalog.modules.map((module) => [module.key, module]))
@@ -195,11 +114,7 @@ export class ChatbotWorkbenchService {
             if (own === undefined) return []
             if (installations.length > 1) return own.agentId === null ? [] : [own.agentId]
         }
-        const agents = await readFrom(this.entityManager, AgentEntity, "a", ["id"])
-            .where("a.workspace_id = :workspaceId AND a.module = 'chatbot'", { workspaceId: request.workspaceId })
-            .limit(100)
-            .getRawMany<AgentIdRow>()
-        return agents.map((agent) => agent.id)
+        return this.agentDirectory.idsOfModule(request.workspaceId, "chatbot", 100)
     }
 
     /** The customer-reply work items waiting for a decision, oldest first. */

@@ -3,6 +3,7 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, IsNull, Not } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueSubQueryBuilders } from "@tests/fixtures/builders/sub-query-builder.builder"
 import { entityOf } from "@tests/fixtures/builders/entity.builder"
 import { AgentConversationsReadService } from "./agent-conversations-read.service"
 import { AgentConversationEntity } from "./persistence/entities"
@@ -141,5 +142,49 @@ describe("AgentConversationsReadService > customerChannelsAmong", () => {
 
         await expect((await build(em)).customerChannelsAmong("w1", [], ["zalo"])).resolves.toEqual([])
         expect(em.find).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentConversationsReadService > customer inbox", () => {
+    const ROW = {
+        id: "c-1",
+        channel: "zalo",
+        visitor_name: null,
+        lead_id: null,
+        handled_by: null,
+        handled_at: null,
+        external_id: null,
+        created_at: "2026-10-13T01:00:00.000Z",
+    }
+
+    it("lists the newest customer conversations of the agents, bounded", async () => {
+        const em = mockEntityManager()
+        const [read] = queueSubQueryBuilders(em, [{ getRawMany: [ROW] }])
+
+        await expect((await build(em)).customerOfAgents("ws-1", ["a-1"], 200)).resolves.toEqual([ROW])
+        expect(read?.argsOf("andWhere")).toContainEqual(["c.agent_id IN (:...agentIds)", { agentIds: ["a-1"] }])
+        expect(read?.argsOf("orderBy")).toContainEqual(["c.created_at", "DESC"])
+        expect(read?.argsOf("limit")).toContainEqual([200])
+    })
+
+    it("asks for nothing without agents", async () => {
+        const em = mockEntityManager()
+
+        await expect((await build(em)).customerOfAgents("ws-1", [], 200)).resolves.toEqual([])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+
+    it("answers the customer conversation under an id, null for none", async () => {
+        const em = mockEntityManager()
+        const [found, missing] = queueSubQueryBuilders(em, [{ getRawMany: [ROW] }, { getRawMany: [] }])
+        const service = await build(em)
+
+        await expect(service.customerById("ws-1", "c-1")).resolves.toEqual(ROW)
+        await expect(service.customerById("ws-1", "c-9")).resolves.toBeNull()
+        expect(found?.argsOf("where")).toContainEqual([
+            "c.workspace_id = :workspaceId AND c.id = :conversationId AND c.kind = 'customer'",
+            { workspaceId: "ws-1", conversationId: "c-1" },
+        ])
+        expect(missing?.argsOf("limit")).toContainEqual([1])
     })
 })

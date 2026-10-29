@@ -5,6 +5,8 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ConnectionConversation,
     ConversationChannel,
+    CustomerConversationRow,
+    OptionalCustomerConversationRow,
     OptionalChannelText,
     OptionalCustomerChatRef,
     TestChatRef,
@@ -107,5 +109,46 @@ export class AgentConversationsReadService {
             take: conversationIds.length,
         })
         return rows.map((row) => ({ id: row.id, channel: row.channel }))
+    }
+
+    /** The newest customer conversations of the given agents, newest first, at most `limit`. */
+    async customerOfAgents(
+        workspaceId: string,
+        agentIds: ReadonlyArray<string>,
+        limit: number,
+    ): Promise<Array<CustomerConversationRow>> {
+        if (agentIds.length === 0) return []
+        return this.customerColumns()
+            .where("c.workspace_id = :workspaceId AND c.kind = 'customer'", { workspaceId })
+            .andWhere("c.agent_id IN (:...agentIds)", { agentIds: [...agentIds] })
+            .orderBy("c.created_at", "DESC")
+            .limit(limit)
+            .getRawMany<CustomerConversationRow>()
+    }
+
+    /** The customer conversation of the workspace under the id; null when there is none. */
+    async customerById(workspaceId: string, conversationId: string): Promise<OptionalCustomerConversationRow> {
+        const [row] = await this.customerColumns()
+            .where("c.workspace_id = :workspaceId AND c.id = :conversationId AND c.kind = 'customer'", {
+                workspaceId,
+                conversationId,
+            })
+            .limit(1)
+            .getRawMany<CustomerConversationRow>()
+        return row ?? null
+    }
+
+    /** A read of the inbox columns of conversations, each under its stored column name. */
+    private customerColumns() {
+        return this.entityManager
+            .createQueryBuilder(AgentConversationEntity, "c")
+            .select("c.id", "id")
+            .addSelect("c.channel", "channel")
+            .addSelect("c.visitor_name", "visitor_name")
+            .addSelect("c.lead_id", "lead_id")
+            .addSelect("c.handled_by", "handled_by")
+            .addSelect("c.handled_at", "handled_at")
+            .addSelect("c.external_id", "external_id")
+            .addSelect("c.created_at", "created_at")
     }
 }

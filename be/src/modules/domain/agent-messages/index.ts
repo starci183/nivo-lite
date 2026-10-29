@@ -1,6 +1,7 @@
 // Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
 export { AgentMessagesAutomationReadService } from "./agent-messages-automation-read.service"
 export { AgentMessagesReadService } from "./agent-messages-read.service"
+export type { MessageBrief, ThreadLine } from "./agent-messages-read.contracts"
 export { AgentMessageDeliveriesService } from "./agent-message-deliveries.service"
 export { AgentMessagesFeedReadService } from "./agent-messages-feed-read.service"
 export type { ConversationWrite, FeedMessage, OptionalDeliveredReply } from "./agent-messages-feed-read.contracts"

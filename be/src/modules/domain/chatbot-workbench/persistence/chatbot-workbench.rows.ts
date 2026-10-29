@@ -1,48 +1,14 @@
+import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
+import type { MessageBrief, ThreadLine } from "@modules/domain/agent-messages"
+
 /** The selected conversation columns. */
-export interface ConversationRow {
-    /** The stored id value. */
-    readonly id: string
-    /** The stored channel value. */
-    readonly channel: string
-    /** The stored visitor name value. */
-    readonly visitor_name: string | null
-    /** The stored lead id value. */
-    readonly lead_id: string | null
-    /** The stored handled by value. */
-    readonly handled_by: string | null
-    /** The stored handled at value. */
-    readonly handled_at: Date | string | null
-    /** The stored external id value. */
-    readonly external_id: string | null
-    /** The stored created at value. */
-    readonly created_at: Date | string
-}
+export type ConversationRow = CustomerConversationRow
 
 /** The message columns contributing to activity figures. */
-export interface MessageBriefRow {
-    /** The stored id value. */
-    readonly id: string
-    /** The stored conversation id value. */
-    readonly conversation_id: string
-    /** The stored role value. */
-    readonly role: string
-    /** The stored body value. */
-    readonly body: string
-    /** The stored created at value. */
-    readonly created_at: Date | string
-}
+export type MessageBriefRow = MessageBrief
 
 /** The stored message columns shown in a thread. */
-export interface MessageRow extends MessageBriefRow {
-    /** The stored author kind value. */
-    readonly author_kind: string | null
-    /** The stored author name value. */
-    readonly author_name: string | null
-    /** The stored delivery status value. */
-    readonly delivery_status: string | null
-    /** The stored delivery error value. */
-    readonly delivery_error: string | null
-}
+export type MessageRow = ThreadLine
 
 /** A waiting customer-reply work item. */
 export interface WaitingRow {
@@ -92,18 +58,4 @@ export interface ChatbotInstallationRow {
     readonly id: string
     /** The stored agent id value. */
     readonly agent_id: string | null
-}
-
-/** The selected Chatbot agent id. */
-export interface AgentIdRow {
-    /** The stored id value. */
-    readonly id: string
-}
-
-/** An active agent and its catalog module. */
-export interface LensRow {
-    /** The stored module value. */
-    readonly module: string
-    /** The stored name value. */
-    readonly name: string
 }

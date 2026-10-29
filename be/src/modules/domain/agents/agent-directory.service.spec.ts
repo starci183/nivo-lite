@@ -455,3 +455,28 @@ describe("AgentDirectoryService chat and turn facts", () => {
         await expect((await build(missing)).headOf("w1", "a9")).resolves.toBeNull()
     })
 })
+
+describe("AgentDirectoryService module lookups", () => {
+    it("answers the ids of the agents serving a module, bounded", async () => {
+        const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf(), lan()]] })
+
+        await expect((await build(em)).idsOfModule("w1", "chatbot", 100)).resolves.toEqual(["a1", "a2"])
+        expect(em.find).toHaveBeenCalledWith(AgentEntity, {
+            select: { id: true },
+            where: { workspaceId: "w1", module: "chatbot" },
+            take: 100,
+        })
+    })
+
+    it("answers the module and name of the active agents, oldest first, bounded", async () => {
+        const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf()]] })
+
+        await expect((await build(em)).activeLensesOf("w1", 100)).resolves.toEqual([{ module: "chatbot", name: "Bot" }])
+        expect(em.find).toHaveBeenCalledWith(AgentEntity, {
+            select: { module: true, name: true },
+            where: { workspaceId: "w1", status: "active" },
+            order: { createdAt: "ASC" },
+            take: 100,
+        })
+    })
+})

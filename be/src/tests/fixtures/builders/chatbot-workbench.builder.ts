@@ -79,17 +79,3 @@ export const GAP: GapRecord = {
     status: "open",
     reopenedCount: 0,
 }
-
-/** An installation row as a scenario declares it. */
-export interface InstallationRow {
-    readonly id: string
-    readonly agent_id: string | null
-}
-
-/** Whether a stubbed row is a waiting reply. */
-export const isWaitingRow = (row: unknown): row is WaitingRow =>
-    typeof row === "object" && row !== null && "subject_id" in row
-
-/** Whether a stubbed row is an installation with its agent. */
-export const isInstallationRow = (row: unknown): row is InstallationRow =>
-    typeof row === "object" && row !== null && "agent_id" in row
