@@ -6,7 +6,7 @@ import {
 } from "@modules/platform/event-bus"
 import type { EventConsumerRegistry } from "@modules/platform/event-bus"
 import { PaymentReceiptsModule } from "../../payment-receipts.module"
-import { PaymentReconciledConsumer } from "./payment_reconciled.consumer"
+import { PaymentReconciledConsumer } from "./payment-reconciled.consumer"
 import { ConfigurableModuleClass } from "./payment-receipts-message.module-definition"
 
 @Module({ imports: [PaymentReceiptsModule.register({})], providers: [PaymentReconciledConsumer] })

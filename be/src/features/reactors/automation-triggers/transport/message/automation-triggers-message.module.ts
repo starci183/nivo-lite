@@ -11,12 +11,12 @@ import {
 } from "@modules/platform/event-bus"
 import type { EventConsumerRegistry } from "@modules/platform/event-bus"
 import { AutomationTriggersModule } from "../../automation-triggers.module"
-import { LeadCapturedConsumer } from "./lead_captured.consumer"
-import { DealWonConsumer } from "./deal_won.consumer"
-import { DecisionMadeConsumer } from "./decision_made.consumer"
-import { PaymentReconciledConsumer } from "./payment_reconciled.consumer"
-import { OrderConfirmedConsumer } from "./order_confirmed.consumer"
-import { OrderShippedConsumer } from "./order_shipped.consumer"
+import { LeadCapturedConsumer } from "./lead-captured.consumer"
+import { DealWonConsumer } from "./deal-won.consumer"
+import { DecisionMadeConsumer } from "./decision-made.consumer"
+import { PaymentReconciledConsumer } from "./payment-reconciled.consumer"
+import { OrderConfirmedConsumer } from "./order-confirmed.consumer"
+import { OrderShippedConsumer } from "./order-shipped.consumer"
 import { ConfigurableModuleClass } from "./automation-triggers-message.module-definition"
 
 @Module({
