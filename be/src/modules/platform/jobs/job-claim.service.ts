@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
+import { returnedRows, rowShape } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
@@ -22,14 +24,45 @@ import type { JobClaims } from "./jobs.port"
 import { JobEntity } from "./persistence/entities"
 import type { JobState } from "./persistence/entities"
 
+/** The columns a claim answers, as the database names them. */
+const CLAIM_COLUMNS = "id, kind, fencing_token, current_step, payload"
+
+/** The row a claim returns: the job with its bumped token (a bigint the driver hands back as text) and the step it stopped at. */
+interface ClaimedRow {
+    readonly id: string
+    readonly kind: string
+    readonly fencing_token: string
+    readonly current_step: string | null
+    readonly payload: object
+}
+
+/** Whether a returned column set has the claim's shape; the payload is checked on top, for it must be an object. */
+const hasClaimShape = rowShape({
+    id: "string",
+    kind: "string",
+    fencing_token: "string",
+    current_step: "string?",
+    payload: "json",
+})
+
+/** The guard of the rows a claim returns. */
+const isClaimedRow = (value: unknown): value is ClaimedRow => hasClaimShape(value) && isRecord(value.payload)
+
 /**
- * The upsert half of a claim: an existing key is claimed again only when the job failed or its lease expired, and then the
- * token is bumped by the store. A done job and a live claim match nothing, so no row comes back.
+ * A re-claim takes a job whose delivery failed or whose lease lapsed; a done job and a live claim match nothing. The store bumps
+ * the token in the same statement, so two workers can never hold the same one.
  */
-const CLAIM_CONFLICT = `("job_key") DO UPDATE
-    SET fencing_token = jobs.fencing_token + 1, claimed_by = :claimedBy, lease_expires_at = :leaseExpiresAt,
-        status = 'running', error = NULL, updated_at = :now
-    WHERE jobs.status = 'failed' OR (jobs.status = 'running' AND jobs.lease_expires_at < :now)`
+const RECLAIMABLE =
+    "jobs.jobKey = :jobKey AND (jobs.status = :failed OR (jobs.status = :running AND jobs.leaseExpiresAt < :now))"
+
+/** The claim a returned row stands for. */
+const claimResultOf = (row: ClaimedRow): ClaimedJob => ({
+    jobId: row.id,
+    kind: row.kind,
+    fencingToken: Number(row.fencing_token),
+    currentStep: row.current_step,
+    payload: row.payload,
+})
 
 @Injectable()
 /**
@@ -46,7 +79,8 @@ export class JobClaimService implements JobClaims {
     /** Claims the delivery; null when the job is done or another worker holds a claim that has not expired. */
     async claim(params: ClaimParams): Promise<ClaimResult> {
         const now = this.clock.now()
-        const result = await this.writer()
+        const leaseExpiresAt = new Date(now.getTime() + params.leaseMs)
+        const inserted = await this.writer()
             .createQueryBuilder(JobEntity, "jobs")
             .insert()
             .values({
@@ -55,32 +89,37 @@ export class JobClaimService implements JobClaims {
                 status: "running",
                 fencingToken: 1,
                 claimedBy: params.workerId,
-                leaseExpiresAt: new Date(now.getTime() + params.leaseMs),
+                leaseExpiresAt,
                 payload: params.payload,
                 createdAt: now,
                 updatedAt: now,
             })
-            .onConflict(CLAIM_CONFLICT)
-            .setParameter("claimedBy", params.workerId)
-            .setParameter("leaseExpiresAt", new Date(now.getTime() + params.leaseMs))
-            .setParameter("now", now)
-            .returning("id, kind, fencing_token, current_step, payload")
+            .orIgnore()
+            .returning(CLAIM_COLUMNS)
             .execute()
-        const [row] = result.raw as Array<{
-            readonly id: string
-            readonly kind: string
-            readonly fencing_token: string
-            readonly current_step: string | null
-            readonly payload: object
-        }>
-        if (row === undefined) return null
-        return {
-            jobId: row.id,
-            kind: row.kind,
-            fencingToken: Number(row.fencing_token),
-            currentStep: row.current_step,
-            payload: row.payload,
-        }
+        const [first] = returnedRows(inserted.raw, isClaimedRow)
+        if (first !== undefined) return claimResultOf(first)
+        const reclaimed = await this.writer()
+            .createQueryBuilder(JobEntity, "jobs")
+            .update()
+            .set({
+                fencingToken: () => "fencing_token + 1",
+                claimedBy: params.workerId,
+                leaseExpiresAt,
+                status: "running",
+                error: null,
+                updatedAt: now,
+            })
+            .where(RECLAIMABLE, {
+                jobKey: params.jobKey,
+                failed: "failed" satisfies JobState,
+                running: "running" satisfies JobState,
+                now,
+            })
+            .returning(CLAIM_COLUMNS)
+            .execute()
+        const [row] = returnedRows(reclaimed.raw, isClaimedRow)
+        return row === undefined ? null : claimResultOf(row)
     }
 
     /** A refused claim completes only after confirmed success; races and live leases defer without spending an attempt. */
