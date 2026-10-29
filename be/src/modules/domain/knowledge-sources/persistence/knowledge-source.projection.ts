@@ -22,8 +22,8 @@ export interface ReadableSourceProjection {
 
 /** The title a `DELETE ... RETURNING title` answered; undefined when the delete removed nothing. */
 export const removedTitle = (raw: unknown): string | undefined => {
-    const [row] = Array.isArray(raw) ? raw : []
-    if (typeof row !== "object" || row === null) return undefined
+    const [row] = Array.isArray(raw) ? raw.filter((item): item is object => typeof item === "object" && item !== null) : []
+    if (row === undefined) return undefined
     const title: unknown = Reflect.get(row, "title")
     return typeof title === "string" ? title : undefined
 }

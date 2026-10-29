@@ -4,7 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
 import type { ChunkHit } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
+import { NivoKnowledgeSearchService } from "@modules/domain/nivo-knowledge"
 import type { NivoHit } from "@modules/domain/nivo-knowledge"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -40,7 +40,7 @@ const build = async (em: MockEntityManager = folding()) => {
     chunks.search.mockResolvedValue([chunk])
     const sources = mock<KnowledgeSourcesService>()
     sources.briefsOf.mockResolvedValue([{ id: "s1", kind: "faq", title: "Hours", topic: null }])
-    const nivo = mock<NivoKnowledgeService>()
+    const nivo = mock<NivoKnowledgeSearchService>()
     nivo.search.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -50,7 +50,7 @@ const build = async (em: MockEntityManager = folding()) => {
             { provide: EmbeddingService, useValue: embeddings },
             { provide: KnowledgeChunksService, useValue: chunks },
             { provide: KnowledgeSourcesService, useValue: sources },
-            { provide: NivoKnowledgeService, useValue: nivo },
+            { provide: NivoKnowledgeSearchService, useValue: nivo },
         ],
     }).compile()
     return { service: moduleRef.get(KnowledgeSearchService), members, embeddings, chunks, sources, nivo, em }

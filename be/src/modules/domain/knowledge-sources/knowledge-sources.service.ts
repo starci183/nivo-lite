@@ -42,8 +42,8 @@ import type {
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import { KnowledgeSourceEntity } from "./persistence/entities"
-import { removedTitle } from "./persistence/knowledge-source-projection"
-import type { ReadableSourceProjection } from "./persistence/knowledge-source-projection"
+import { removedTitle } from "./persistence/knowledge-source.projection"
+import type { ReadableSourceProjection } from "./persistence/knowledge-source.projection"
 import {
     NOW,
     metaChanges,
@@ -385,8 +385,8 @@ export class KnowledgeSourcesService {
     }
 
     /** How many indexed documents of one visibility an agent's view may read; a customer view never counts internal ones. */
-    async countReadable(scope: ReadableScope, visibility: DocumentVisibility): Promise<number> {
-        if (scope.audience === "customer" && visibility === "internal") return 0
+    countReadable(scope: ReadableScope, visibility: DocumentVisibility): Promise<number> {
+        if (scope.audience === "customer" && visibility === "internal") return Promise.resolve(0)
         return this.readable(scope).andWhere({ visibility }).getCount()
     }
 

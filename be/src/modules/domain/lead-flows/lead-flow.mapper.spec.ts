@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { builder } from "@starci/jest-preset"
+import { looseFlowOf } from "@tests/fixtures/builders/lead-flows.builder"
 import {
     platformOf as realPlatformOf,
     sourceKindOf as realSourceKindOf,
@@ -8,7 +8,6 @@ import {
     saveValues as realSaveValues,
 } from "./lead-flow.mapper"
 import type { Analysis, FlowState, LeadFlow, LeadSource, Signals, SourceKind } from "./lead-flows.contracts"
-import type { LeadFlowEntity } from "./persistence/entities"
 
 const SUBJECT = Symbol("lead-flow.mapper")
 
@@ -36,44 +35,6 @@ const build = async () => {
 }
 
 const NOW = "2026-10-12T10:00:00.000Z"
-
-const rowOf = builder<LeadFlowEntity>({
-    id: "flow-1",
-    workspaceId: "ws-1",
-    leadId: "lead-1",
-    connectionId: "connection-1",
-    conversationId: "conversation-1",
-    platform: null,
-    psid: "person-1",
-    igsid: null,
-    phone: "84912345678",
-    email: "lan@example.com",
-    name: "Lan",
-    state: "invalid",
-    resumeState: null,
-    source: null,
-    touches: null,
-    answers: null,
-    asked: 0,
-    pendingQuestion: null,
-    contactAskedAt: null,
-    signals: null,
-    score: null,
-    scoreReasons: null,
-    scoredAt: null,
-    analysis: null,
-    lastUserAt: null,
-    lastUserText: null,
-    greetedAt: null,
-    handedOffAt: null,
-    followedUpAt: null,
-    closedAt: null,
-    escalatedAt: null,
-    escalationReason: null,
-    createdAt: new Date(NOW),
-    updatedAt: new Date(NOW),
-    installationId: null,
-})
 
 const SIGNALS: Signals = {
     need: null,
@@ -146,6 +107,35 @@ const ANALYSIS: Analysis = {
     private_reply: "Please tell us more",
 }
 
+const ANSWER = { i: 1, question: "What do you need?", answer: "Tea", at: NOW }
+const MALFORMED = { touches: {}, answers: "bad", scoreReasons: 1, signals: {}, analysis: { turn: " " } }
+const stateOf = (state: FlowState) => ({ state, resumeState: state })
+const scoreOf = (score: string) => ({ score, platform: "facebook" })
+const FULL_ROW = {
+    platform: "instagram",
+    state: "scored",
+    resumeState: "qualifying",
+    source: SOURCE,
+    touches: [SOURCE, {}, null],
+    answers: [ANSWER, { i: 2, question: 5, answer: null }, { i: "3" }, null],
+    asked: 2,
+    pendingQuestion: 2,
+    contactAskedAt: new Date(NOW),
+    signals: { ...SIGNALS, need: "  Tea  ", interest: "high" },
+    score: "hot",
+    scoreReasons: [" need ", 1, null],
+    scoredAt: new Date(NOW),
+    analysis: { ...ANALYSIS, turn: " turn-1 " },
+    lastUserAt: new Date(NOW),
+    lastUserText: "I'd like tea",
+    greetedAt: new Date(NOW),
+    handedOffAt: new Date(NOW),
+    followedUpAt: new Date(NOW),
+    closedAt: new Date(NOW),
+    escalatedAt: new Date(NOW),
+    escalationReason: "complaint",
+}
+
 describe("lead flow mapping", () => {
     it.each(["instagram", "facebook", "unknown", null])("recognizes platform %s", async (value) => {
         const subject = await build()
@@ -210,12 +200,8 @@ describe("lead flow mapping", () => {
     it("supplies safe defaults for malformed or missing stored fields", async () => {
         const subject = await build()
 
-        expect(subject.toLeadFlow(rowOf())).toEqual(EMPTY_FLOW)
-        expect(
-            subject.toLeadFlow(
-                rowOf({ touches: {}, answers: "bad", scoreReasons: 1, signals: {}, analysis: { turn: " " } }),
-            ),
-        ).toEqual(EMPTY_FLOW)
+        expect(subject.toLeadFlow(looseFlowOf())).toEqual(EMPTY_FLOW)
+        expect(subject.toLeadFlow(looseFlowOf(MALFORMED))).toEqual(EMPTY_FLOW)
     })
 })
 
@@ -223,42 +209,14 @@ describe("lead flow mapping", () => {
     it("maps every field, normalizes timestamps, and drops malformed touches and answers", async () => {
         const subject = await build()
 
-        const answer = { i: 1, question: "What do you need?", answer: "Tea", at: NOW }
-        expect(
-            subject.toLeadFlow(
-                rowOf({
-                    platform: "instagram",
-                    state: "scored",
-                    resumeState: "qualifying",
-                    source: SOURCE,
-                    touches: [SOURCE, {}, null],
-                    answers: [answer, { i: 2, question: 5, answer: null }, { i: "3" }, null],
-                    asked: 2,
-                    pendingQuestion: 2,
-                    contactAskedAt: new Date(NOW),
-                    signals: { ...SIGNALS, need: "  Tea  ", interest: "high" },
-                    score: "hot",
-                    scoreReasons: [" need ", 1, null],
-                    scoredAt: new Date(NOW),
-                    analysis: { ...ANALYSIS, turn: " turn-1 " },
-                    lastUserAt: new Date(NOW),
-                    lastUserText: "I'd like tea",
-                    greetedAt: new Date(NOW),
-                    handedOffAt: new Date(NOW),
-                    followedUpAt: new Date(NOW),
-                    closedAt: new Date(NOW),
-                    escalatedAt: new Date(NOW),
-                    escalationReason: "complaint",
-                }),
-            ),
-        ).toEqual({
+        expect(subject.toLeadFlow(looseFlowOf(FULL_ROW))).toEqual({
             ...EMPTY_FLOW,
             platform: "instagram",
             state: "scored",
             resume_state: "qualifying",
             source: SOURCE,
             touches: [SOURCE],
-            answers: [answer, { i: 2, question: "", answer: "", at: "" }],
+            answers: [ANSWER, { i: 2, question: "", answer: "", at: "" }],
             asked: 2,
             pending_question: 2,
             contact_asked_at: NOW,
@@ -285,7 +243,7 @@ describe("lead flow mapping", () => {
         async (state) => {
             const subject = await build()
 
-            expect(subject.toLeadFlow(rowOf({ state, resumeState: state }))).toEqual({
+            expect(subject.toLeadFlow(looseFlowOf(stateOf(state)))).toEqual({
                 ...EMPTY_FLOW,
                 state,
                 resume_state: state,
@@ -298,7 +256,7 @@ describe("lead flow mapping", () => {
     it.each(["hot", "warm", "cold", "unknown"])("recognizes the stored score %s", async (score) => {
         const subject = await build()
 
-        expect(subject.toLeadFlow(rowOf({ score, platform: "facebook" }))).toEqual({
+        expect(subject.toLeadFlow(looseFlowOf(scoreOf(score)))).toEqual({
             ...EMPTY_FLOW,
             platform: "facebook",
             score: score === "unknown" ? null : score,

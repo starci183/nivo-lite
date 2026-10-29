@@ -4,7 +4,7 @@ import { KnowledgeChunksService, toVector } from "@modules/domain/knowledge-chun
 import type { ChunkHit } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { MODULE_CATALOG } from "@modules/domain/modules"
-import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
+import { NivoKnowledgeSearchService } from "@modules/domain/nivo-knowledge"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { EmbeddingService } from "./embedding.service"
@@ -31,7 +31,7 @@ export class KnowledgeSearchService {
         private readonly embeddings: EmbeddingService,
         private readonly chunks: KnowledgeChunksService,
         private readonly sources: KnowledgeSourcesService,
-        private readonly nivo: NivoKnowledgeService,
+        private readonly nivo: NivoKnowledgeSearchService,
     ) {}
 
     /** "Try asking": what an agent would retrieve for a question. Any member may try; the customer audience shows public passages only. */
@@ -52,11 +52,11 @@ export class KnowledgeSearchService {
      * The lens is the same as in `ask`: a customer-facing module or audience sees public passages only, and the instance joins its
      * own notes to the shared ones. A blank question finds nothing and spends nothing.
      */
-    async forAgent(request: AgentSearch): Promise<ReadonlyArray<Passage>> {
+    forAgent(request: AgentSearch): Promise<ReadonlyArray<Passage>> {
         const question = request.question.trim().slice(0, QUESTION_MAX_CHARS)
         const entry = MODULE_CATALOG.find((candidate) => candidate.key === request.module)
-        if (entry === undefined) throw new KnowledgeError({ code: KnowledgeErrorCode.ModuleUnknown })
-        if (question === "") return []
+        if (entry === undefined) return Promise.reject(new KnowledgeError({ code: KnowledgeErrorCode.ModuleUnknown }))
+        if (question === "") return Promise.resolve([])
         const lens = lensOf({
             workspaceId: request.workspaceId,
             module: request.module,

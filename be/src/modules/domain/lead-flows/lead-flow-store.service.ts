@@ -12,7 +12,7 @@ import type {
     OptionalText,
 } from "./lead-flows.contracts"
 import { LeadFlowEntity } from "./persistence/entities"
-import { NOW, leadFlowOfRaw } from "./persistence/lead-flow-projection"
+import { NOW, leadFlowOfRaw } from "./persistence/lead-flow.projection"
 
 /** The most flows an identity can match. */
 const CANDIDATES_MAX = 20

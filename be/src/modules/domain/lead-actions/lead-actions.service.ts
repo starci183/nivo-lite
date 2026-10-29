@@ -28,8 +28,9 @@ import type {
     LeadActionStatus,
 } from "./lead-actions.contracts"
 import { inputOf } from "./lead-action-input.policy"
+import type { LeadActionFenceType } from "./types/lead-action-fence.type"
 import { LeadActionEntity } from "./persistence/entities"
-import { NOW, returnedRows, runOfRaw } from "./persistence/lead-action-projection"
+import { NOW, returnedRows, runOfRaw } from "./persistence/lead-action.projection"
 
 @Injectable()
 /** Owns backend run rows: membership-proved enqueue, workspace-scoped status and results under the platform-held fence. */
@@ -153,12 +154,7 @@ export class LeadActionsService {
 
     /** Writes the terminal state of a run only for the worker whose fence the platform still holds; answers the rows written. */
     private async finish(
-        held: {
-            readonly id: string
-            readonly workspaceId: string
-            readonly jobId: string
-            readonly fencingToken: number
-        },
+        held: LeadActionFenceType,
         change: Partial<Pick<LeadActionEntity, "status" | "result" | "errorCode">>,
     ): Promise<ReadonlyArray<object>> {
         const written = await this.entityManager

@@ -44,8 +44,10 @@ const COLUMNS: ReadonlyArray<readonly [string, string]> = [
 
 /** The first flow a `RETURNING *` write answered, read as an entity; undefined when the write answered nothing. */
 export const leadFlowOfRaw = (raw: unknown): LeadFlowEntity | undefined => {
-    const [row] = Array.isArray(raw) ? raw : []
-    if (typeof row !== "object" || row === null) return undefined
+    const [row] = Array.isArray(raw)
+        ? raw.filter((item): item is object => typeof item === "object" && item !== null)
+        : []
+    if (row === undefined) return undefined
     return Object.assign(
         new LeadFlowEntity(),
         Object.fromEntries(COLUMNS.map(([property, column]) => [property, Reflect.get(row, column)])),

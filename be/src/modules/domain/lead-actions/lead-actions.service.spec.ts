@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { Brackets, In } from "typeorm"
+import { In } from "typeorm"
 import type { WorkContext } from "@modules/domain/decisions"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
@@ -19,14 +19,23 @@ import type { QueueDelivery } from "@modules/platform/queue"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { memberOf, leadOf } from "@tests/fixtures/builders/lead-actions.builder"
+import { bracketConditions } from "@tests/fixtures/builders/brackets.builder"
+import {
+    FENCE,
+    lost,
+    memberOf,
+    leadOf,
+    owned,
+    returnedRun,
+    running,
+} from "@tests/fixtures/builders/lead-actions.builder"
 import { LeadActionsError, LeadActionsErrorCode } from "./errors/lead-actions.error"
 import { LeadActionAiService } from "./lead-action-ai.service"
 import { LeadActionFlowService } from "./lead-action-flow.service"
 import { LeadActionsService } from "./lead-actions.service"
 import type { LeadActionInput, LeadActionRun } from "./lead-actions.contracts"
 import { LeadActionEntity } from "./persistence/entities"
-import { NOW } from "./persistence/lead-action-projection"
+import { NOW } from "./persistence/lead-action.projection"
 
 const LEAD = "11111111-1111-4111-8111-111111111111"
 const RESPONSIBILITY = "22222222-2222-4222-8222-222222222222"
@@ -39,49 +48,6 @@ const job: ClaimedJob = {
     fencingToken: 7,
     currentStep: null,
     payload: { workspaceId: "ws-1", runId: "run-1" },
-}
-
-const running: LeadActionRun = {
-    id: "run-1",
-    workspaceId: "ws-1",
-    requestedBy: "user-1",
-    action: "refresh-context",
-    input: { leadId: LEAD },
-    locale: "vi",
-    status: "running",
-    result: null,
-    errorCode: null,
-}
-
-/** The RETURNING row of a write that answered this run, as the database names its columns. */
-const returnedRun = (run: LeadActionRun): QueryBuilderAnswers => ({
-    execute: {
-        raw: [
-            {
-                id: run.id,
-                workspace_id: run.workspaceId,
-                requested_by: run.requestedBy,
-                action: run.action,
-                input: run.input,
-                locale: run.locale,
-                status: run.status,
-                result: run.result,
-                error_code: run.errorCode,
-            },
-        ],
-    },
-})
-
-/** The answer of a fenced write that changed one run, or none. */
-const owned: QueryBuilderAnswers = { execute: { raw: [{ id: "run-1" }] } }
-const lost: QueryBuilderAnswers = { execute: { raw: [] } }
-
-const FENCE = {
-    id: "run-1",
-    workspaceId: "ws-1",
-    jobId: "job-1",
-    fencingToken: 7,
-    status: "running",
 }
 
 const build = async (
@@ -503,15 +469,7 @@ describe("LeadActionsService", () => {
         expect(fakes[0]?.callsOf("where")).toEqual([
             [{ workspaceId: "ws-1", id: "run-1", status: In(["queued", "running"]) }],
         ])
-        const held: Array<unknown> = []
-        const scope = {
-            where: (...args: Array<unknown>) => (held.push(args), scope),
-            orWhere: (...args: Array<unknown>) => (held.push(args), scope),
-        }
-        const fence: unknown = fakes[0]?.callsOf("andWhere")[0]?.[0]
-        expect(fence).toBeInstanceOf(Brackets)
-        if (fence instanceof Brackets) fence.whereFactory(scope as never)
-        expect(held).toEqual([
+        expect(bracketConditions(fakes[0]?.callsOf("andWhere")[0]?.[0])).toEqual([
             ["job_id IS NULL"],
             ["job_id = :jobId AND fencing_token = :fencingToken", { jobId: "job-1", fencingToken: 7 }],
         ])
