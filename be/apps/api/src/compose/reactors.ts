@@ -6,6 +6,7 @@ import { BookingEffectsMessageModule } from "@features/reactors/booking-effects"
 import { ContentDraftingMessageModule } from "@features/reactors/content-drafting"
 import { ContractRenewalMessageModule } from "@features/reactors/contract-renewal"
 import { InventoryDeductionMessageModule } from "@features/reactors/inventory-deduction"
+import { PaymentReceiptsMessageModule } from "@features/reactors/payment-receipts"
 import { SourceFactsMessageModule } from "@features/reactors/source-facts"
 import { ThreadOutcomesMessageModule } from "@features/reactors/thread-outcomes"
 import { VideoScriptingMessageModule } from "@features/reactors/video-scripting"
@@ -19,6 +20,7 @@ export const API_REACTORS: Array<DynamicModule> = [
     ContentDraftingMessageModule.register({}),
     ContractRenewalMessageModule.register({}),
     InventoryDeductionMessageModule.register({}),
+    PaymentReceiptsMessageModule.register({}),
     SourceFactsMessageModule.register({}),
     ThreadOutcomesMessageModule.register({}),
     VideoScriptingMessageModule.register({}),
