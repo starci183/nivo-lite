@@ -1,5 +1,5 @@
 import type { Shift, WallClock } from "../shifts.contracts"
-import type { AlertShiftRead } from "../persistence/shifts-alerts.reads"
+import type { AlertShiftRead } from "../persistence/shifts-alerts.contracts"
 import { DEFAULT_SETTINGS } from "./row-mappers.policy"
 import { hhmm, instantOf, previousMonth, toMin } from "./time.policy"
 

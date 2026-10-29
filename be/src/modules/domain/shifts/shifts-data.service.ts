@@ -17,7 +17,7 @@ import {
     ShiftsStaffPayEntity,
     ShiftsSwapRequestEntity,
 } from "./persistence/entities"
-import { selectShiftWithSchedule } from "./persistence/shifts-shift.query"
+import { selectShiftWithScheduleColumns } from "./persistence/shifts-shift.query"
 import {
     toAvail,
     toBlock,
@@ -139,9 +139,26 @@ export class ShiftsDataService {
         return rows.map(toShift)
     }
 
+    /**
+     * The shifts profile of a member: linked directly by account, or through the member's staff row. The oldest active one wins; null
+     * when the member has none. A member without a staff row matches by account only.
+     */
+    async profileIdOfMember(workspaceId: string, userId: string, staffRowId: string | null): Promise<string | null> {
+        const own = { workspaceId, active: true }
+        const row = await this.entityManager.findOne(ShiftsStaffEntity, {
+            select: { id: true },
+            where: [{ ...own, userId }, ...(staffRowId === null ? [] : [{ ...own, staffId: staffRowId }])],
+            order: { createdAt: "ASC" },
+        })
+        return row?.id ?? null
+    }
+
     /** One shift with the state of its schedule, or undefined. */
     shiftRow(workspaceId: string, shiftId: string): Promise<ShiftWithSchedule | undefined> {
-        return selectShiftWithSchedule(this.entityManager, workspaceId)
+        return selectShiftWithScheduleColumns(
+            this.entityManager.createQueryBuilder(ShiftsShiftEntity, "s"),
+            workspaceId,
+        )
             .andWhere("s.id = :shiftId", { shiftId })
             .limit(1)
             .getRawOne<ShiftWithSchedule>()
@@ -188,13 +205,8 @@ export class ShiftsDataService {
     }
 
     /** The profile of the member in the shifts of the workspace, or null when the member has none. */
-    async profileOf(workspaceId: string, userId: string): Promise<string | null> {
-        const row = await this.entityManager.findOne(ShiftsStaffEntity, {
-            select: { id: true },
-            where: { workspaceId, active: true, userId },
-            order: { createdAt: "ASC" },
-        })
-        return row?.id ?? null
+    profileOf(workspaceId: string, userId: string): Promise<string | null> {
+        return this.profileIdOfMember(workspaceId, userId, null)
     }
 
     /** One leave request, or undefined. */

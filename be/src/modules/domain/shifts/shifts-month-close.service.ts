@@ -9,9 +9,9 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { Logger } from "@modules/platform/logging"
-import { ShiftsNotificationEntity } from "./persistence/entities"
-import type { AlertShiftRead } from "./persistence/shifts-alerts.reads"
-import { selectAlertShifts } from "./persistence/shifts-alert-shift.query"
+import { ShiftsNotificationEntity, ShiftsShiftEntity } from "./persistence/entities"
+import type { AlertShiftRead } from "./persistence/shifts-alerts.contracts"
+import { selectAlertShiftColumns } from "./persistence/shifts-alert-shift.query"
 import { MONTH_CLOSE_TEMPLATE, PIPELINES_MAX } from "./persistence/shifts-pipeline.query"
 import { money } from "./policies/labels.policy"
 import { monthCsvOf, monthLabel, monthSummaryOf, payrollMarker } from "./policies/month-summary.policy"
@@ -129,7 +129,7 @@ export class ShiftsMonthCloseService {
         const { from, to } = monthRange(month)
         const [setup, rows] = await Promise.all([
             this.data.loadSetup(workspaceId, true),
-            selectAlertShifts(this.entityManager, workspaceId, false)
+            selectAlertShiftColumns(this.entityManager.createQueryBuilder(ShiftsShiftEntity, "s"), workspaceId, false)
                 .andWhere("s.shift_date BETWEEN :from AND :to", { from, to })
                 .orderBy("s.shift_date", "ASC")
                 .addOrderBy("s.start_time", "ASC")

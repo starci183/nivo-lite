@@ -77,16 +77,19 @@ const shiftRow = Object.assign(new ShiftsShiftEntity(), {
     status: "published",
 })
 
+/** The columns of a position row the mapper reads. */
+const positionRow = (id: string, name: string, color: string) => ({ id, name, color })
+
 describe("row mappers", () => {
     it("keeps a position color and supplies the default for empty color", async () => {
         const subject = await build()
 
-        expect(subject.toPosition({ id: "position-1", name: "Cashier", color: "#123456" })).toEqual({
+        expect(subject.toPosition(positionRow("position-1", "Cashier", "#123456"))).toEqual({
             id: "position-1",
             name: "Cashier",
             color: "#123456",
         })
-        expect(subject.toPosition({ id: "position-2", name: "Barista", color: "" })).toEqual({
+        expect(subject.toPosition(positionRow("position-2", "Barista", ""))).toEqual({
             id: "position-2",
             name: "Barista",
             color: "#2f6fed",

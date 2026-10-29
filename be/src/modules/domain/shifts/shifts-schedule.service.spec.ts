@@ -49,17 +49,19 @@ const envOf = builder<Env>({
     overtimeHoursWeek: 40,
 })
 
-const scheduleOf = (overrides: Partial<ShiftsScheduleEntity> = {}): ShiftsScheduleEntity =>
+const scheduleOf = (costVnd = "60000.4", status = "draft"): ShiftsScheduleEntity =>
     Object.assign(new ShiftsScheduleEntity(), {
         id: "schedule-1",
         weekStart: "2026-10-12",
         version: 3,
-        status: "draft",
-        costVnd: "60000.4",
+        status,
+        costVnd,
         summary: {},
         evidence: { source: "saved" },
-        ...overrides,
     })
+
+/** The `update` call that stamps one schedule of the workspace: its key and the changes. */
+const updatedSchedule = (id: string, changes: object) => [ShiftsScheduleEntity, { id, workspaceId: "ws-1" }, changes]
 
 const shortageInsertion = [ADD_SHIFTS, shortageShiftParams]
 
@@ -168,11 +170,7 @@ describe("ShiftsScheduleService", () => {
             ],
         ])
         expect(em.update.mock.calls).toEqual([
-            [
-                ShiftsScheduleEntity,
-                { id: "schedule-1", workspaceId: "ws-1" },
-                { explanation: "A balanced week.", evidence: { source: "saved" } },
-            ],
+            updatedSchedule("schedule-1", { explanation: "A balanced week.", evidence: { source: "saved" } }),
         ])
         expect(generator.generate.mock.calls).toEqual([
             [
@@ -268,7 +266,7 @@ describe("ShiftsScheduleService", () => {
         const { service, generator, data } = await build(em)
         generator.generate.mockResolvedValue({ ok, output })
         if (fallback) {
-            data.scheduleRow.mockResolvedValue(scheduleOf({ costVnd: "invalid" }))
+            data.scheduleRow.mockResolvedValue(scheduleOf("invalid"))
             data.scheduleShifts.mockResolvedValue([shiftOf(), shiftOf({ id: "open-1", staffId: null })])
             data.loadSetup.mockResolvedValue(setupOf({ blocks: [blockOf({ min: 2, ideal: 2 })] }))
         }
@@ -279,11 +277,7 @@ describe("ShiftsScheduleService", () => {
         expect(data.loadSetup.mock.calls).toEqual([["ws-1", false]])
         expect(em.query).not.toHaveBeenCalled()
         expect(em.update.mock.calls).toEqual([
-            [
-                ShiftsScheduleEntity,
-                { id: "schedule-1", workspaceId: "ws-1" },
-                { explanation, evidence: { source: "saved" } },
-            ],
+            updatedSchedule("schedule-1", { explanation, evidence: { source: "saved" } }),
         ])
     })
 })
@@ -296,7 +290,7 @@ describe("ShiftsScheduleService", () => {
         const { waiting, costVnd, attempts, shifts, open, cost } = scenario
         const em = mockEntityManager({ update: [ShiftsScheduleEntity, { affected: 1 }] })
         const { service, data, gate, members } = await build(em)
-        data.scheduleRow.mockResolvedValue(scheduleOf({ costVnd: costVnd }))
+        data.scheduleRow.mockResolvedValue(scheduleOf(costVnd))
         data.scheduleShifts.mockResolvedValue(
             waiting ? [shiftOf(), shiftOf({ id: "open-1", staffId: null })] : [shiftOf()],
         )
@@ -330,11 +324,7 @@ describe("ShiftsScheduleService", () => {
             ],
         ])
         expect(em.query).not.toHaveBeenCalled()
-        expect(em.update.mock.calls).toEqual(
-            waiting
-                ? [[ShiftsScheduleEntity, { id: "schedule-1", workspaceId: "ws-1" }, { workItemId: "work-1" }]]
-                : [],
-        )
+        expect(em.update.mock.calls).toEqual(waiting ? [updatedSchedule("schedule-1", { workItemId: "work-1" })] : [])
     })
 
     it.each(["staff-1", null])("reassignShift: assigns or opens a draft shift for %s", async (staffId) => {
@@ -470,7 +460,7 @@ describe("ShiftsScheduleService", () => {
         ["addDraftShift", true],
     ])("refuses unusable schedules in %s (published=%s)", async (method, published) => {
         const { service, data, generator, gate } = await buildEdits(mockEntityManager({}))
-        data.scheduleRow.mockResolvedValue(published ? scheduleOf({ status: "published" }) : undefined)
+        data.scheduleRow.mockResolvedValue(published ? scheduleOf("60000.4", "published") : undefined)
         await expect(
             service[method]("user-1", "ws-1", {
                 ...addRequest,

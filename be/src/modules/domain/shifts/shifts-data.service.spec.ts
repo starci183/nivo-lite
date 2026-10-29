@@ -1,10 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Between, In, IsNull, LessThanOrEqual, MoreThanOrEqual, Not } from "typeorm"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import {
     ShiftsAvailabilityEntity,
     ShiftsCoverageEntity,
@@ -36,6 +35,8 @@ const staffRow = (overrides: Partial<ShiftsStaffEntity> = {}): ShiftsStaffEntity
         active: true,
         ...overrides,
     })
+
+const colleagueRow = (id: string, name: string): ShiftsStaffEntity => staffRow({ id, name })
 
 const person: ShiftStaff = {
     id: "staff-1",
@@ -130,14 +131,7 @@ describe("ShiftsDataService loadSetup", () => {
         const em = mockEntityManager({
             find: [
                 [ShiftsPositionEntity, [position]],
-                [
-                    ShiftsStaffEntity,
-                    [
-                        staffRow(),
-                        staffRow({ id: "staff-2", name: "Blair" }),
-                        staffRow({ id: "staff-3", name: "Casey" }),
-                    ],
-                ],
+                [ShiftsStaffEntity, [staffRow(), colleagueRow("staff-2", "Blair"), colleagueRow("staff-3", "Casey")]],
                 [ShiftsStaffPayEntity, pay],
                 [ShiftsCoverageEntity, [coverage]],
             ],
@@ -346,15 +340,14 @@ describe("ShiftsDataService shifts", () => {
                 [ShiftsSwapRequestEntity, swap],
             ],
         })
-        const read = fakeQueryBuilder({ getRawOne: withSchedule })
-        em.createQueryBuilder.mockReturnValue(read.builder as never)
+        const [read] = queueQueryBuilders(em, [{ getRawOne: withSchedule }])
         const service = await build(em)
 
         await expect(service.shiftRow("ws-1", "shift-1")).resolves.toEqual(withSchedule)
         await expect(service.scheduleRow("ws-1", "schedule-1")).resolves.toBe(schedule)
         await expect(service.leaveRow("ws-1", "leave-1")).resolves.toBe(leave)
         await expect(service.swapRow("ws-1", "swap-1")).resolves.toBe(swap)
-        expect(read.callsOf("andWhere")).toEqual([["s.id = :shiftId", { shiftId: "shift-1" }]])
+        expect(read?.callsOf("andWhere")).toEqual([["s.id = :shiftId", { shiftId: "shift-1" }]])
         expect(em.findOne).toHaveBeenCalledWith(ShiftsScheduleEntity, {
             where: { workspaceId: "ws-1", id: "schedule-1" },
         })
@@ -376,7 +369,7 @@ describe("ShiftsDataService lookups", () => {
                 [ShiftsSwapRequestEntity, null],
             ],
         })
-        em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ getRawOne: undefined }).builder as never)
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
         const service = await build(em)
 
         await expect(service.shiftRow("ws-1", "shift-1")).resolves.toBeUndefined()
@@ -386,16 +379,34 @@ describe("ShiftsDataService lookups", () => {
     })
 
     it("returns a member profile id or null when the member has none", async () => {
-        const em = mockEntityManager({ findOne: [ShiftsStaffEntity, null] })
+        const em = mockEntityManager({
+            findOne: [
+                [ShiftsStaffEntity, Object.assign(new ShiftsStaffEntity(), { id: "staff-1" })],
+                [ShiftsStaffEntity, null],
+            ],
+        })
         const service = await build(em)
-        em.findOne.mockResolvedValueOnce(Object.assign(new ShiftsStaffEntity(), { id: "staff-1" }) as never)
-        em.findOne.mockResolvedValueOnce(null as never)
 
         await expect(service.profileOf("ws-1", "user-1")).resolves.toBe("staff-1")
         await expect(service.profileOf("ws-1", "user-3")).resolves.toBeNull()
         expect(em.findOne).toHaveBeenNthCalledWith(1, ShiftsStaffEntity, {
             select: { id: true },
-            where: { workspaceId: "ws-1", active: true, userId: "user-1" },
+            where: [{ workspaceId: "ws-1", active: true, userId: "user-1" }],
+            order: { createdAt: "ASC" },
+        })
+    })
+
+    it("matches a member with a staff row by account or by that row, the oldest active profile first", async () => {
+        const em = mockEntityManager({ findOne: [ShiftsStaffEntity, null] })
+        const service = await build(em)
+
+        await expect(service.profileIdOfMember("ws-1", "user-1", "office-1")).resolves.toBeNull()
+        expect(em.findOne).toHaveBeenCalledWith(ShiftsStaffEntity, {
+            select: { id: true },
+            where: [
+                { workspaceId: "ws-1", active: true, userId: "user-1" },
+                { workspaceId: "ws-1", active: true, staffId: "office-1" },
+            ],
             order: { createdAt: "ASC" },
         })
     })

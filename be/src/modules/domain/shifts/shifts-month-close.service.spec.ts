@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import type { PipelineConfig, PipelineRow } from "@modules/domain/automation-pipelines"
 import { OfficeLog, OutboundMail } from "@modules/domain/module-ops"
@@ -9,11 +8,9 @@ import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { routedQueryBuilder } from "@tests/fixtures/builders/routed-query.builder"
-import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { Like } from "typeorm"
 import { ShiftsNotificationEntity } from "./persistence/entities"
-import type { AlertShiftRead } from "./persistence/shifts-alerts.reads"
+import type { AlertShiftRead } from "./persistence/shifts-alerts.contracts"
 import { DEFAULT_SETTINGS } from "./policies/row-mappers.policy"
 import type { Setup } from "./shifts.contracts"
 import { ShiftsDataService } from "./shifts-data.service"
@@ -62,7 +59,7 @@ const SHIFT: AlertShiftRead = {
 }
 
 /** The pipeline the owner of automations lists for a workspace whose month close is on. */
-const pipelineOf = (workspace: { workspace_id: string; config: PipelineConfig }): PipelineRow => ({
+const pipelineOf = (workspace: CloseWorkspace): PipelineRow => ({
     id: "pipeline-1",
     workspace_id: workspace.workspace_id,
     template_key: "shifts_month_close",
@@ -82,37 +79,23 @@ const pipelineOf = (workspace: { workspace_id: string; config: PipelineConfig })
     updated_at: "2026-10-01T00:00:00.000Z",
 })
 
-/** What `answer` set up for a manager: whether the workspace has an owner and which workspaces have the close on. */
-interface Setting {
-    readonly owner: boolean
-    readonly workspaces: ReadonlyArray<{ workspace_id: string; config: PipelineConfig }>
+/** A workspace whose month close is on, as the owner of automations lists it. */
+interface CloseWorkspace {
+    readonly workspace_id: string
+    readonly config: PipelineConfig
 }
 
-const settingOfManager = new WeakMap<object, Setting>()
-
-/** Whether the month was closed already (null: no marker line yet) and whether the workspace has an owner; the builders made are answered back. */
-const answer = (
-    done: boolean | null,
-    owner: boolean,
-    workspaces: ReadonlyArray<{ workspace_id: string; config: PipelineConfig }> = WORKSPACES,
-): { readonly em: MockEntityManager; readonly built: Array<FakeQueryBuilder> } => {
+/** Whether the month was closed already (null: no marker line yet), whether the workspace has an owner and which workspaces have the close on. */
+const build = async (done: boolean | null, owner: boolean, workspaces: ReadonlyArray<CloseWorkspace> = WORKSPACES) => {
     const em = mockEntityManager({ exists: [ShiftsNotificationEntity, done === true] })
-    settingOfManager.set(em, { owner, workspaces })
-    const built: Array<FakeQueryBuilder> = []
-    em.createQueryBuilder.mockImplementation(() => {
-        const fake: FakeQueryBuilder = routedQueryBuilder({ getRawMany: () => Promise.resolve([SHIFT]) })
-        built.push(fake)
-        return fake.builder as never
-    })
-    return { em, built }
-}
-
-const build = async (em: MockEntityManager) => {
-    const setting = settingOfManager.get(em) ?? { owner: true, workspaces: WORKSPACES }
+    const built = queueQueryBuilders(
+        em,
+        workspaces.map(() => ({ getRawMany: [SHIFT] })),
+    )
     const pipelines = mock<AutomationPipelinesService>()
-    pipelines.enabledOfTemplate.mockResolvedValue(setting.workspaces.map(pipelineOf))
+    pipelines.enabledOfTemplate.mockResolvedValue(workspaces.map(pipelineOf))
     const members = mock<WorkspaceMemberDirectoryService>()
-    members.firstActiveOwnerUserId.mockResolvedValue(setting.owner ? "u-1" : null)
+    members.firstActiveOwnerUserId.mockResolvedValue(owner ? "u-1" : null)
     const accounts = mock<AccountDirectory>()
     accounts.accountOf.mockResolvedValue({
         kind: "ok",
@@ -146,6 +129,8 @@ const build = async (em: MockEntityManager) => {
     }).compile()
     return {
         service: moduleRef.get(ShiftsMonthCloseService),
+        em,
+        built,
         office,
         mail,
         notify,
@@ -160,8 +145,7 @@ const build = async (em: MockEntityManager) => {
 
 describe("ShiftsMonthCloseService", () => {
     it("closes the month: the CSV to the owner, the summary to Office and the evidence for Accounting", async () => {
-        const { em } = answer(false, true)
-        const { service, mail, notify, office } = await build(em)
+        const { service, mail, notify, office } = await build(false, true)
 
         await expect(service.close("ws-1", "2026-09")).resolves.toEqual({ done: true, emailed: true, total: 120000 })
 
@@ -182,16 +166,14 @@ describe("ShiftsMonthCloseService", () => {
     })
 
     it("closes a month once", async () => {
-        const { em } = answer(true, true)
-        const { service, notify } = await build(em)
+        const { service, notify } = await build(true, true)
 
         await expect(service.close("ws-1", "2026-09")).resolves.toEqual({ done: false, emailed: false, total: 0 })
         expect(notify.toManagers).not.toHaveBeenCalled()
     })
 
     it("still posts the summary when there is no owner to mail", async () => {
-        const { em } = answer(false, false)
-        const { service, mail, notify } = await build(em)
+        const { service, mail, notify } = await build(false, false)
 
         await expect(service.close("ws-1", "2026-09")).resolves.toMatchObject({ done: true, emailed: false })
         expect(mail.send).not.toHaveBeenCalled()
@@ -199,8 +181,7 @@ describe("ShiftsMonthCloseService", () => {
     })
 
     it("on a tick closes the previous month of every workspace past its day and time", async () => {
-        const { em } = answer(false, false)
-        const { service, pipelines } = await build(em)
+        const { service, pipelines } = await build(false, false)
 
         await expect(service.tick(new Date("2026-10-01T03:00:00.000Z"))).resolves.toBe(1)
         await expect(service.tick(new Date("2026-10-01T01:00:00.000Z"))).resolves.toBe(0)
@@ -211,8 +192,7 @@ describe("ShiftsMonthCloseService", () => {
         { kind: "refused" as const, code: "missing" },
         { kind: "ok" as const, value: { email: "", lastSignInAt: null, displayName: "Owner" } },
     ])("closes without mail when the owner account cannot receive it: %j", async (account) => {
-        const { em } = answer(false, true)
-        const { service, accounts, mail, notify } = await build(em)
+        const { service, accounts, mail, notify } = await build(false, true)
         accounts.accountOf.mockResolvedValue(account)
 
         await expect(service.close("ws-1", "2026-09")).resolves.toEqual({ done: true, emailed: false, total: 120000 })
@@ -225,8 +205,7 @@ describe("ShiftsMonthCloseService", () => {
 
 describe("ShiftsMonthCloseService", () => {
     it("builds the payroll text, CSV and evidence even when mail fails and no prior marker exists", async () => {
-        const { em, built } = answer(null, true)
-        const { service, words, mail, office, notify, data, members } = await build(em)
+        const { service, em, words, mail, office, notify, data, members, built } = await build(null, true)
         words.text.mockImplementation((key, params) => {
             if (key === "shifts.payrollOffice") return `${params?.marker}  Monthly wages  `
             return key
@@ -289,12 +268,11 @@ describe("ShiftsMonthCloseService", () => {
 
 describe("ShiftsMonthCloseService", () => {
     it("counts only new closes and continues after a workspace fails", async () => {
-        const { em } = answer(null, false, [
+        const { service, logger } = await build(null, false, [
             { workspace_id: "ws-closed", config: { day: 1, time: "09:00" } },
             { workspace_id: "ws-failed", config: { day: 1, time: "09:00" } },
             { workspace_id: "ws-new", config: { day: 1, time: "09:00" } },
         ])
-        const { service, logger } = await build(em)
         const cause = new Error("cannot read payroll")
         const close = jest
             .spyOn(service, "close")

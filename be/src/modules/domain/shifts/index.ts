@@ -9,7 +9,7 @@ export {
 } from "./shifts-requests.mapper"
 export { ShiftsImportService } from "./shifts-import.service"
 export { ShiftsModule } from "./shifts.module"
-export { ShiftsLeaveRequestEntity, ShiftsStaffEntity, shiftsEntities } from "./persistence/entities"
+export { shiftsEntities } from "./persistence/entities"
 export { ShiftsRequestsService } from "./shifts-requests.service"
 export { ShiftsScheduleService } from "./shifts-schedule.service"
 export { ShiftsSetupService } from "./shifts-setup.service"

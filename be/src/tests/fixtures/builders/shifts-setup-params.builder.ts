@@ -1,15 +1,22 @@
 import { builder } from "@starci/jest-preset"
-import { entityOf } from "./entity.builder"
-import type {
-    SaveCoverageParams,
-    SaveShiftsAvailabilityParams,
-    SaveShiftsSettingsParams,
-} from "@modules/domain/shifts/shifts-setup.contracts"
-import { ShiftsStaffEntity } from "@modules/domain/shifts/persistence/entities"
-import type { ShiftWithSchedule } from "@modules/domain/shifts/shifts-records.contracts"
+import type { SaveCoverageParams, SaveShiftsAvailabilityParams, SaveShiftsSettingsParams } from "@modules/domain/shifts"
+
+/** A shift joined with the state of its schedule, as the joined read answers it. */
+interface ShiftWithScheduleRow {
+    id: string
+    scheduleId: string
+    shiftDate: string
+    startTime: string
+    endTime: string
+    positionId: string
+    staffId: string | null
+    status: string
+    scheduleStatus: string
+    weekStart: string
+}
 
 /** The published 08:00 to 10:00 shift of the first profile. */
-export const shiftRowOf = builder<ShiftWithSchedule>({
+export const shiftRowOf = builder<ShiftWithScheduleRow>({
     id: "shift-1",
     scheduleId: "schedule-1",
     shiftDate: "2026-10-12",
@@ -63,16 +70,20 @@ export interface SavedRow {
     readonly id: string | null
 }
 
+/** The result of `execute` of a save query. */
+export interface SavedExecution {
+    /** The rows the statement returned. */
+    readonly raw: ReadonlyArray<SavedRow>
+}
+
+/** What a save query builder answers. */
+export interface SavedAnswer {
+    /** The result of `execute`. */
+    readonly execute: SavedExecution
+}
+
 /** What a save query builder answers: one row with the given identifier. */
-export const saved = (id: string | null): { readonly execute: { readonly raw: ReadonlyArray<SavedRow> } } => ({
-    execute: { raw: [{ id }] },
-})
+export const saved = (id: string | null): SavedAnswer => ({ execute: { raw: [{ id }] } })
 
 /** What a save query builder answers when it wrote nothing. */
 export const nothingSaved = { execute: { raw: [] } } as const
-
-/** The shifts profile of the member. */
-export const staffOf = entityOf(ShiftsStaffEntity, { id: "profile-1" })
-
-/** Stubs `findOne` to find the shifts profile of the member. */
-export const profile = { findOne: [ShiftsStaffEntity, staffOf()] } as const

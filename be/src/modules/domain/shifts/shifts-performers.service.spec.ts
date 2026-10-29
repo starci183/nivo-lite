@@ -4,6 +4,10 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { ActionPerformerRegistry, OfficeLog } from "@modules/domain/module-ops"
 import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import {
+    performerShiftOf as shiftOf,
+    performerStaffOf as staffOf,
+} from "@tests/fixtures/builders/shifts-performers.builder"
 import { ShiftsErrorCode } from "./errors/shifts.error"
 import { ShiftsCoverService } from "./shifts-cover.service"
 import { ShiftsDataService } from "./shifts-data.service"
@@ -12,7 +16,7 @@ import type { StaffNotice } from "./shifts-notify.service"
 import { ShiftsPerformersService } from "./shifts-performers.service"
 import { ShiftsRequestsService } from "./shifts-requests.service"
 import { ShiftsTextService } from "./shifts-text.service"
-import type { Setup, Shift, ShiftStaff, SwapFinding } from "./shifts.contracts"
+import type { Setup, SwapFinding } from "./shifts.contracts"
 import { ShiftsLeaveRequestEntity, ShiftsScheduleEntity, ShiftsSwapRequestEntity } from "./persistence/entities"
 
 const PUBLISH_SCHEDULE = "SELECT * FROM public.shifts_publish($1, $2, $3, $4)"
@@ -46,22 +50,6 @@ const leaveStaffCalls = (key: string) =>
 const captured = (summary: string, detail?: string): PerformResult =>
     detail === undefined ? { summary, evidence: "captured" } : { summary, evidence: "captured", detail }
 
-const staffOf = builder<ShiftStaff>({
-    id: "staff-1",
-    name: "Alice",
-    positionIds: ["position-1"],
-    skills: [],
-    wage: 30000,
-    maxWeek: 40,
-    maxDay: 8,
-    minRest: 12,
-    staffRowId: "office-staff-1",
-    active: true,
-    telegramChatId: null,
-    zaloUserId: null,
-    phone: null,
-})
-
 const setupOf = builder<Setup>({
     positions: [{ id: "position-1", name: "Barista", color: "#123456" }],
     staff: [staffOf(), staffOf({ id: "staff-2", name: "Bob" })],
@@ -76,48 +64,38 @@ const setupOf = builder<Setup>({
     },
 })
 
-const shiftOf = builder<Shift>({
-    id: "shift-1",
-    date: "2026-10-12",
-    start: "08:00",
-    end: "10:00",
-    positionId: "position-1",
-    staffId: "staff-1",
-    status: "published",
-})
-
-const scheduleOf = (overrides: Partial<ShiftsScheduleEntity> = {}): ShiftsScheduleEntity =>
+const scheduleOf = (
+    status = "draft",
+    evidence: ShiftsScheduleEntity["evidence"] = { solver: "fixed" },
+): ShiftsScheduleEntity =>
     Object.assign(new ShiftsScheduleEntity(), {
         id: "schedule-1",
         weekStart: "2026-10-12",
         version: 3,
-        status: "draft",
+        status,
         costVnd: "60000",
         summary: {},
-        evidence: { solver: "fixed" },
-        ...overrides,
+        evidence,
     })
 
-const swapOf = (overrides: Partial<ShiftsSwapRequestEntity> = {}): ShiftsSwapRequestEntity =>
+const swapOf = (status = "pending", kind = "swap", fromStaffId: string | null = "staff-1"): ShiftsSwapRequestEntity =>
     Object.assign(new ShiftsSwapRequestEntity(), {
         id: "swap-1",
-        kind: "swap",
+        kind,
         shiftId: "shift-1",
-        fromStaffId: "staff-1",
+        fromStaffId,
         toStaffId: "staff-2",
-        status: "pending",
-        ...overrides,
+        status,
     })
 
-const leaveOf = (overrides: Partial<ShiftsLeaveRequestEntity> = {}): ShiftsLeaveRequestEntity =>
+const leaveOf = (status = "pending"): ShiftsLeaveRequestEntity =>
     Object.assign(new ShiftsLeaveRequestEntity(), {
         id: "leave-1",
         staffId: "staff-1",
         fromDate: "2026-10-12",
         toDate: "2026-10-13",
         reason: "Travel",
-        status: "pending",
-        ...overrides,
+        status,
     })
 
 const context: PerformContext = {
@@ -175,9 +153,9 @@ describe("ShiftsPerformersService", () => {
     it("registers and delegates all three perform and reject callbacks", async () => {
         const em = mockEntityManager({})
         const { service, registry, data, office } = await build(em)
-        data.scheduleRow.mockResolvedValue(scheduleOf({ status: "published" }))
-        data.swapRow.mockResolvedValue(swapOf({ status: "approved" }))
-        data.leaveRow.mockResolvedValue(leaveOf({ status: "approved" }))
+        data.scheduleRow.mockResolvedValue(scheduleOf("published"))
+        data.swapRow.mockResolvedValue(swapOf("approved"))
+        data.leaveRow.mockResolvedValue(leaveOf("approved"))
 
         service.onModuleInit()
 
@@ -214,9 +192,8 @@ describe("ShiftsPerformersService", () => {
     ])("refuses missing $action requests and leaves settled requests alone", async ({ action, code, summary }) => {
         const em = mockEntityManager({})
         const { service, data, requests, notify } = await build(em)
-        if (action === "swap")
-            data.swapRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(swapOf({ status: "declined" }))
-        else data.leaveRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(leaveOf({ status: "declined" }))
+        if (action === "swap") data.swapRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(swapOf("declined"))
+        else data.leaveRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(leaveOf("declined"))
         const perform = action === "swap" ? service.performSwap.bind(service) : service.performLeave.bind(service)
         await expect(perform(context)).rejects.toMatchObject({ code })
         await expect(perform(context)).resolves.toEqual({ summary: text(summary), evidence: "pending" })
@@ -228,9 +205,8 @@ describe("ShiftsPerformersService", () => {
     it.each(["swap", "leave"])("ignores missing or handled %s rejections", async (action) => {
         const em = mockEntityManager({})
         const { service, data, notify } = await build(em)
-        if (action === "swap")
-            data.swapRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(swapOf({ status: "declined" }))
-        else data.leaveRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(leaveOf({ status: "declined" }))
+        if (action === "swap") data.swapRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(swapOf("declined"))
+        else data.leaveRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(leaveOf("declined"))
         const reject = action === "swap" ? service.rejectSwap.bind(service) : service.rejectLeave.bind(service)
         await reject(context)
         await reject(context)
@@ -256,7 +232,7 @@ describe("ShiftsPerformersService performPublish", () => {
         async ({ evidence, populated, publishEvidence }) => {
             const em = mockEntityManager({ query: [PUBLISH_SCHEDULE, []] })
             const { service, data, notify, office, words } = await build(em)
-            data.scheduleRow.mockResolvedValue(scheduleOf({ evidence }))
+            data.scheduleRow.mockResolvedValue(scheduleOf("draft", evidence))
             data.scheduleShifts.mockResolvedValue(
                 populated
                     ? [
@@ -321,7 +297,7 @@ describe("ShiftsPerformersService performPublish", () => {
     it("refuses missing and superseded schedules without changing data", async () => {
         const em = mockEntityManager({})
         const { service, data, notify, office } = await build(em)
-        data.scheduleRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(scheduleOf({ status: "superseded" }))
+        data.scheduleRow.mockResolvedValueOnce(undefined).mockResolvedValueOnce(scheduleOf("superseded"))
 
         await expect(service.performPublish(context)).rejects.toMatchObject({
             code: ShiftsErrorCode.ScheduleNotFound,
@@ -348,7 +324,7 @@ describe("ShiftsPerformersService performSwap", () => {
     ])("approves $kind and notifies its participants", async ({ kind, fromStaffId, findings, sentences }) => {
         const em = mockEntityManager({ query: [DECIDE_SWAP, [{ shifts_decide_swap: true }]] })
         const { service, data, requests, notify, office } = await build(em)
-        data.swapRow.mockResolvedValue(swapOf({ kind, fromStaffId: fromStaffId }))
+        data.swapRow.mockResolvedValue(swapOf("pending", kind, fromStaffId))
         requests.checkSwap.mockResolvedValue({ shift: shiftOf(), setup: setupOf(), findings })
         const resultParams = { kind: text(`shifts.swapKind.${kind}`), line: "line:shift-1", to: "Bob" }
 
@@ -435,7 +411,7 @@ describe("ShiftsPerformersService", () => {
     ])("declines a pending $kind and tells its recipient", async ({ kind, fromStaffId, recipient }) => {
         const em = mockEntityManager({ query: [DECIDE_SWAP, []] })
         const { service, data, notify } = await build(em)
-        data.swapRow.mockResolvedValue(swapOf({ kind, fromStaffId: fromStaffId }))
+        data.swapRow.mockResolvedValue(swapOf("pending", kind, fromStaffId))
 
         await service.rejectSwap(context)
 

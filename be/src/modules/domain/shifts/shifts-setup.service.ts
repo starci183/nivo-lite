@@ -4,6 +4,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import { ShiftsError, ShiftsErrorCode } from "./errors/shifts.error"
 import type {
     CheckInOutput,
@@ -31,7 +32,6 @@ import {
     ShiftsStaffEntity,
     ShiftsStaffPayEntity,
 } from "./persistence/entities"
-import { profileIdOfMember } from "./persistence/shifts-profile.query"
 import { ANY_MEMBER, MANAGER_ROLES } from "./policies/access-roles.policy"
 import { isDay, isTime } from "./policies/input-text.policy"
 import { instantOf, toMin } from "./policies/time.policy"
@@ -49,9 +49,12 @@ const nameOf = (name: string, max: number): string => {
 
 /** The id a `RETURNING id` answered, or undefined when no row matched. */
 const idOf = (raw: unknown): string | undefined => {
-    const id = (raw as Array<{ id: string | null }> | undefined)?.[0]?.id
-    return id ?? undefined
+    const id = [raw].flat().find(isRecord)?.id
+    return typeof id === "string" ? id : undefined
 }
+
+/** True for the time a check-in was stored: a timestamp or its ISO text. */
+const isStamp = (value: unknown): value is Date | string => typeof value === "string" || value instanceof Date
 
 const windowOf = (start: string, end: string): void => {
     if (!isTime(start) || !isTime(end) || toMin(end) <= toMin(start)) {
@@ -278,9 +281,9 @@ export class ShiftsSetupService {
             .orIgnore()
             .returning("checked_in_at")
             .execute()
-        const first = (inserted.raw as Array<{ checked_in_at: Date | string | null }> | undefined)?.[0]
+        const checkedInAt = [inserted.raw].flat().find(isRecord)?.checked_in_at
         const stored =
-            first?.checked_in_at ??
+            (isStamp(checkedInAt) ? checkedInAt : undefined) ??
             (
                 await this.entityManager.findOne(ShiftsAttendanceEntity, {
                     where: { shiftId: request.shiftId, staffId: own },
@@ -318,12 +321,13 @@ export class ShiftsSetupService {
             status,
             decidedBy: decider,
         })
-        return { id: (result.identifiers[0] as { id?: string } | undefined)?.id ?? "" }
+        const id: unknown = result.identifiers[0]?.id
+        return { id: typeof id === "string" ? id : "" }
     }
 
     private async profileOfMember(workspaceId: string, userId: string): Promise<string> {
         const member = await this.members.require(userId, workspaceId)
-        const id = await profileIdOfMember(this.entityManager, workspaceId, userId, member.staffId)
+        const id = await this.data.profileIdOfMember(workspaceId, userId, member.staffId)
         if (id === null) throw new ShiftsError({ code: ShiftsErrorCode.ProfileMissing })
         return id
     }

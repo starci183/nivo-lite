@@ -1,16 +1,15 @@
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
-import { ShiftsScheduleEntity, ShiftsShiftEntity } from "./entities"
+import type { ObjectLiteral, SelectQueryBuilder } from "typeorm"
+import { ShiftsScheduleEntity } from "./entities"
 
 /**
- * A read of the shifts of one workspace joined with the schedule each belongs to, selecting a shift's columns and the state and week
+ * A read, over the shifts table under the alias `s`, of the shifts of one workspace joined with the schedule each belongs to, selecting a shift's columns and the state and week
  * of its schedule under camelCase names. The caller adds its own filter, order and bound.
  */
-export const selectShiftWithSchedule = (
-    manager: EntityManager,
+export const selectShiftWithScheduleColumns = <Row extends ObjectLiteral>(
+    builder: SelectQueryBuilder<Row>,
     workspaceId: string,
-): SelectQueryBuilder<ShiftsShiftEntity> =>
-    manager
-        .createQueryBuilder(ShiftsShiftEntity, "s")
+): SelectQueryBuilder<Row> =>
+    builder
         .innerJoin(ShiftsScheduleEntity, "c", "c.id = s.schedule_id")
         .select([
             's.id AS "id"',

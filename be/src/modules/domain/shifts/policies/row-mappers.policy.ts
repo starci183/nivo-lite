@@ -33,7 +33,9 @@ export type StaffFacts = Omit<ShiftsStaffEntity, "maxHoursWeek" | "maxHoursDay" 
 
 /** The rules of a workspace as stored: the overtime limit is a database numeric and the opening hours are whatever json was saved. */
 export type SettingsFacts = Omit<ShiftsSettingsEntity, "overtimeHoursWeek" | "openingHours"> & {
+    /** The overtime limit of a week, a database numeric that may arrive as text. */
     readonly overtimeHoursWeek: number | string
+    /** The opening hours as the json that was saved, read by `toSettings`. */
     readonly openingHours: unknown
 }
 
