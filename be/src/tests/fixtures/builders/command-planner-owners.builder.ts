@@ -1,5 +1,5 @@
 import { mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager, MockOf } from "@starci/jest-preset"
 import type { AgentDirectoryService } from "@modules/domain/agents"
 import type { InvoicesLedgerService } from "@modules/domain/invoices"
 import type { LeadReadService } from "@modules/domain/leads"
@@ -38,12 +38,12 @@ const textAt = (row: Record<string, unknown> | undefined, key: string): string |
 /** The manager a spec runs against and the owner services it reads through, with the reads they answer. */
 export interface Served {
     readonly em: MockEntityManager
-    readonly agents: AgentDirectoryService
-    readonly installations: InstallationRecordsService
-    readonly chains: WorkItemsChainReadService
-    readonly orders: OrdersLabelReadService
-    readonly leads: LeadReadService
-    readonly invoices: InvoicesLedgerService
+    readonly agents: MockOf<AgentDirectoryService>
+    readonly installations: MockOf<InstallationRecordsService>
+    readonly chains: MockOf<WorkItemsChainReadService>
+    readonly orders: MockOf<OrdersLabelReadService>
+    readonly leads: MockOf<LeadReadService>
+    readonly invoices: MockOf<InvoicesLedgerService>
 }
 
 const named = (name: string | null): InstallationRecord | null =>
@@ -70,7 +70,7 @@ const senders = (queries: Queries): Pick<Served, "agents" | "installations"> => 
 }
 
 /** The work item chain reads answering the named reads. */
-const chainsOf = (queries: Queries): WorkItemsChainReadService => {
+const chainsOf = (queries: Queries): MockOf<WorkItemsChainReadService> => {
     const [parent] = rowsAt(queries, FIND_PARENT_POSITION)
     const [top] = rowsAt(queries, FIND_CHAIN_TOP)
     const spot = parent === undefined ? null : { id: parent.id, chainId: parent.chain_id, depth: parent.depth }

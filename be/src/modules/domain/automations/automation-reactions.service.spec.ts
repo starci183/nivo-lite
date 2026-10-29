@@ -9,7 +9,7 @@ import {
     bareLead,
     barePayment,
     deal,
-    deliveryOf,
+    eventDeliveryOf,
     decision,
     lead,
     order,
@@ -50,7 +50,7 @@ describe("AutomationReactionsService claims", () => {
     it("claims (consumer, dedupeKey) in the transaction of the effect, and a repeat starts nothing", async () => {
         const { reactions, inbox, engine, webhooks } = await build(false)
 
-        await reactions.onDealWon(deliveryOf("deal_won__automations", deal))
+        await reactions.onDealWon(eventDeliveryOf("deal_won__automations", deal))
 
         expect(inbox.claims).toEqual([{ source: "deal_won__automations", eventId: "deal.won:lead-1" }])
         expect(engine.onBusinessEvent).not.toHaveBeenCalled()
@@ -60,7 +60,7 @@ describe("AutomationReactionsService claims", () => {
     it("starts the lead.created pipelines from a captured lead, keyed as before", async () => {
         const { reactions, engine, webhooks } = await build()
 
-        await reactions.onLeadCaptured(deliveryOf("lead_captured__automations", lead))
+        await reactions.onLeadCaptured(eventDeliveryOf("lead_captured__automations", lead))
 
         expect(engine.onBusinessEvent).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -91,7 +91,7 @@ describe("AutomationReactionsService claims", () => {
             amount_vnd: 500000,
         }
 
-        await reactions.onDealWon(deliveryOf("deal_won__automations", deal))
+        await reactions.onDealWon(eventDeliveryOf("deal_won__automations", deal))
 
         expect(engine.onBusinessEvent).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -110,7 +110,7 @@ describe("AutomationReactionsService deals and decisions", () => {
     it("publishes deal.won without the facts the door did not know", async () => {
         const { reactions, engine } = await build()
 
-        await reactions.onDealWon(deliveryOf("deal_won__automations", unadornedDeal))
+        await reactions.onDealWon(eventDeliveryOf("deal_won__automations", unadornedDeal))
 
         expect(engine.onBusinessEvent).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -123,7 +123,7 @@ describe("AutomationReactionsService deals and decisions", () => {
     it("passes on the source and the evidence of a deal when the door knew them", async () => {
         const { reactions, engine } = await build()
 
-        await reactions.onDealWon(deliveryOf("deal_won__automations", sourcedDeal))
+        await reactions.onDealWon(eventDeliveryOf("deal_won__automations", sourcedDeal))
 
         expect(engine.onBusinessEvent).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -153,7 +153,7 @@ describe("AutomationReactionsService deals and decisions", () => {
             summary: "Sent",
         }
 
-        await reactions.onDecisionMade(deliveryOf("decision_made__automations", decision))
+        await reactions.onDecisionMade(eventDeliveryOf("decision_made__automations", decision))
 
         expect(engine.onBusinessEvent).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -184,7 +184,7 @@ describe("AutomationReactionsService payments", () => {
             channel: "Zalo",
         }
 
-        await reactions.onPaymentReconciled(deliveryOf("payment_reconciled__automations", payment))
+        await reactions.onPaymentReconciled(eventDeliveryOf("payment_reconciled__automations", payment))
 
         expect(engine.onBusinessEvent).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -201,7 +201,7 @@ describe("AutomationReactionsService payments", () => {
     it("starts the receipt pipeline for the settled payment without the other pipelines", async () => {
         const { reactions, engine, webhooks, inbox } = await build()
 
-        await reactions.onPaymentReceipt(deliveryOf("payment_reconciled__payment_receipts", payment))
+        await reactions.onPaymentReceipt(eventDeliveryOf("payment_reconciled__payment_receipts", payment))
 
         expect(inbox.claims).toEqual([{ source: "payment_reconciled__payment_receipts", eventId: "inv-1" }])
         expect(engine.startPaymentReceipt).toHaveBeenCalledWith("ws-1", "tx-1", "inv-1")
@@ -212,8 +212,8 @@ describe("AutomationReactionsService payments", () => {
     it("reads a payment fact the invoice did not carry as null, and starts no receipt without a transaction", async () => {
         const { reactions, engine } = await build()
 
-        await reactions.onPaymentReconciled(deliveryOf("payment_reconciled__automations", barePayment))
-        await reactions.onPaymentReceipt(deliveryOf("payment_reconciled__payment_receipts", barePayment))
+        await reactions.onPaymentReconciled(eventDeliveryOf("payment_reconciled__automations", barePayment))
+        await reactions.onPaymentReceipt(eventDeliveryOf("payment_reconciled__payment_receipts", barePayment))
 
         expect(engine.onBusinessEvent.mock.calls[0]?.[0].data).toMatchObject({
             transaction_id: null,
@@ -243,7 +243,7 @@ describe("AutomationReactionsService orders", () => {
             status: "confirmed",
         }
 
-        await reactions.onOrderConfirmed(deliveryOf("order_confirmed__automations", order))
+        await reactions.onOrderConfirmed(eventDeliveryOf("order_confirmed__automations", order))
 
         expect(engine.onBusinessEvent).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -260,7 +260,7 @@ describe("AutomationReactionsService orders", () => {
     it("emits order.shipped as the member who recorded the shipment, deduplicated by order", async () => {
         const { reactions, automations, webhooks } = await build()
 
-        await reactions.onOrderShipped(deliveryOf("order_shipped__automations", shipment))
+        await reactions.onOrderShipped(eventDeliveryOf("order_shipped__automations", shipment))
 
         expect(automations.emit).toHaveBeenCalledWith("user-1", "ws-1", {
             event: "order.shipped",
@@ -282,9 +282,9 @@ describe("AutomationReactionsService absent facts", () => {
     it("reads a fact the door did not know as null in the event data", async () => {
         const { reactions, engine } = await build()
 
-        await reactions.onLeadCaptured(deliveryOf("lead_captured__automations", bareLead))
-        await reactions.onDealWon(deliveryOf("deal_won__automations", bareDeal))
-        await reactions.onDecisionMade(deliveryOf("decision_made__automations", bareDecision))
+        await reactions.onLeadCaptured(eventDeliveryOf("lead_captured__automations", bareLead))
+        await reactions.onDealWon(eventDeliveryOf("deal_won__automations", bareDeal))
+        await reactions.onDecisionMade(eventDeliveryOf("decision_made__automations", bareDecision))
 
         const [captured, won, decided] = engine.onBusinessEvent.mock.calls.map(([call]) => call.data)
         expect(captured).toMatchObject({ phone: null, email: null })

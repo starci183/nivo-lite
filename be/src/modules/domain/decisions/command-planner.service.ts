@@ -6,7 +6,6 @@ import { LeadReadService } from "@modules/domain/leads"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { OrdersLabelReadService } from "@modules/domain/orders"
 import { WorkItemsChainReadService } from "@modules/domain/work-items"
-import type { SubjectType } from "@modules/domain/work-items"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -36,6 +35,7 @@ import { ModuleCatalogService } from "./module-catalog.service"
 import { OfficeLinesService } from "@modules/domain/messages"
 import type {
     ChainPosition,
+    ChainSubject,
     AcceptedCommandParts,
     CommandPlan,
     CommandRefused,
@@ -280,11 +280,11 @@ export class CommandPlannerService {
     }
 
     /** The same command about the same subject twice in one chain is a cycle; a retry of the same dedupe key is not. */
-    private async repeats(
+    private repeats(
         ctx: WorkContext,
         chainId: string,
         accepted: ModuleCommand,
-        subject: { readonly subjectType: SubjectType; readonly subjectId: string | null },
+        subject: ChainSubject,
         dedupeKey: string,
         manager: EntityManager,
     ): Promise<boolean> {
@@ -341,7 +341,8 @@ export class CommandPlannerService {
     private async givenInstance(ctx: WorkContext, input: SendCommandInput): Promise<OptionalInstanceChoice> {
         if (input.installationId === undefined || input.installationId === null) return null
         const row = await this.installations.find(ctx.workspaceId, input.installationId)
-        if (row === null || row.moduleKey !== input.to) return null
+        if (row === null) return null
+        if (row.moduleKey !== input.to) return null
         return { id: row.id, via: "given", name: row.name }
     }
 

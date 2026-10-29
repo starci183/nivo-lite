@@ -9,7 +9,7 @@ import {
 import type { BaseEvent, EventDelivery } from "@modules/platform/event-bus"
 
 /** A delivery of an event to one consumer, as the bus hands it to a reactor. */
-export const deliveryOf = <Event extends BaseEvent>(consumer: string, event: Event): EventDelivery<Event> => ({
+export const eventDeliveryOf = <Event extends BaseEvent>(consumer: string, event: Event): EventDelivery<Event> => ({
     correlationId: "corr-1",
     eventId: event.eventId,
     consumer,

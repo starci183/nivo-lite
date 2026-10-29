@@ -2,7 +2,7 @@ import { ANY_FUNCTION } from "./any-function.builder"
 import { builderOf } from "./entity-query-builder-fake.builder"
 import { builder, mockEntityManager, fakeQueryBuilder } from "@starci/jest-preset"
 import type { MockEntityManager, FakeQueryBuilder, QueryBuilderAnswers } from "@starci/jest-preset"
-import { workItemsEntities } from "@modules/domain/work-items"
+import { toProposal, workItemsEntities } from "@modules/domain/work-items"
 import type { NewWorkItem, Proposal, WorkItemRecord } from "@modules/domain/work-items"
 
 const [WorkItemEntity] = workItemsEntities
@@ -78,6 +78,7 @@ export const entityOf = (record: WorkItemRecord = rowOf()): WorkItemEntity =>
 /** The contract an item reaches the callers as. */
 export const contractOf = (record: WorkItemRecord = rowOf()) => ({
     ...record,
+    proposal: toProposal(record.proposal),
     created_at: record.created_at.toISOString(),
     updated_at: record.updated_at.toISOString(),
     completed_at: record.completed_at === null ? null : record.completed_at.toISOString(),
