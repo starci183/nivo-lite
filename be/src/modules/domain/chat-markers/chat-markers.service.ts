@@ -3,7 +3,8 @@ import type { EntityManager } from "typeorm"
 import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
 import { AgentMessageCursorsService } from "@modules/domain/agent-messages"
 import { isOfficeRoomKey, MessageCursorsService } from "@modules/domain/messages"
-import { OfficeReadMarkersService } from "@modules/domain/office-rooms"
+import { OfficeReadMarkersService, OfficeRoomReadersService } from "@modules/domain/office-rooms"
+import type { RoomReaderStanding } from "@modules/domain/office-rooms"
 import { WorkspaceMemberSeatsService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -13,13 +14,15 @@ import type { ChatReaderAvatarRow, ChatTargetRow } from "./persistence/chat-mark
 import { ChatMarkerEntity } from "./persistence/entities"
 
 /** The conflict target of a marker: one row per member and target. */
-const MARKER_KEY = '("workspace_id", "user_id", "target_key")'
+const MARKER_KEY = ["workspace_id", "user_id", "target_key"]
 
 /** Moves the delivered cursor forward only: a row written for an older message never replaces a newer one. */
-const DELIVERED_UPSERT = `${MARKER_KEY} DO UPDATE SET "delivered_at" = EXCLUDED."delivered_at", "delivered_message_id" = EXCLUDED."delivered_message_id" WHERE "chat_markers"."delivered_at" IS NULL OR ("chat_markers"."delivered_at", "chat_markers"."delivered_message_id") < (EXCLUDED."delivered_at", EXCLUDED."delivered_message_id")`
+const DELIVERED_AHEAD =
+    "chat_markers.delivered_at IS NULL OR (chat_markers.delivered_at, chat_markers.delivered_message_id) < (EXCLUDED.delivered_at, EXCLUDED.delivered_message_id)"
 
-/** Moves both cursors forward only, each kept at the newest message it has seen. */
-const READ_UPSERT = `${MARKER_KEY} DO UPDATE SET "delivered_at" = GREATEST("chat_markers"."delivered_at", EXCLUDED."delivered_at"), "delivered_message_id" = CASE WHEN "chat_markers"."delivered_at" IS NULL OR ("chat_markers"."delivered_at", "chat_markers"."delivered_message_id") < (EXCLUDED."delivered_at", EXCLUDED."delivered_message_id") THEN EXCLUDED."delivered_message_id" ELSE "chat_markers"."delivered_message_id" END, "read_at" = GREATEST("chat_markers"."read_at", EXCLUDED."read_at"), "read_message_id" = CASE WHEN "chat_markers"."read_at" IS NULL OR ("chat_markers"."read_at", "chat_markers"."read_message_id") < (EXCLUDED."read_at", EXCLUDED."read_message_id") THEN EXCLUDED."read_message_id" ELSE "chat_markers"."read_message_id" END`
+/** Moves the read cursor forward only, kept at the newest message it has seen. */
+const READ_AHEAD =
+    "chat_markers.read_at IS NULL OR (chat_markers.read_at, chat_markers.read_message_id) < (EXCLUDED.read_at, EXCLUDED.read_message_id)"
 
 /** How many admitted accounts one target lists. */
 const MEMBER_IDS_LIMIT = 500
@@ -53,6 +56,7 @@ export class ChatMarkersService {
         private readonly seats: WorkspaceMemberSeatsService,
         private readonly roomMessages: MessageCursorsService,
         private readonly conversationMessages: AgentMessageCursorsService,
+        private readonly roomReaders: OfficeRoomReadersService,
     ) {}
 
     /** The same target admission used by receipt writes and typing broadcasts. */
@@ -114,7 +118,9 @@ export class ChatMarkersService {
                 deliveredMessageId: params[5],
             })
             .setParameter("at", params[4])
-            .onConflict(DELIVERED_UPSERT)
+            .orUpdate(["delivered_at", "delivered_message_id"], MARKER_KEY, {
+                overwriteCondition: { where: DELIVERED_AHEAD },
+            })
             .execute()
         await this.activity.receipt(workspaceId, chatActivityTarget(target))
     }
@@ -123,21 +129,29 @@ export class ChatMarkersService {
     async markRead(principalId: string, workspaceId: string, target: ChatTarget, messageId: string): Promise<void> {
         const params = await this.receiptParams(principalId, workspaceId, target, messageId)
         await this.entityManager.transaction(async (manager) => {
-            await manager
-                .createQueryBuilder(ChatMarkerEntity, "chat_markers")
-                .insert()
-                .values({
-                    workspaceId: params[0],
-                    userId: params[1],
-                    room: params[2],
-                    conversationId: params[3],
-                    deliveredAt: () => ":at::timestamptz",
-                    deliveredMessageId: params[5],
-                    readAt: () => ":at::timestamptz",
-                    readMessageId: params[5],
-                })
+            const insert = () =>
+                manager
+                    .createQueryBuilder(ChatMarkerEntity, "chat_markers")
+                    .insert()
+                    .values({
+                        workspaceId: params[0],
+                        userId: params[1],
+                        room: params[2],
+                        conversationId: params[3],
+                        deliveredAt: () => ":at::timestamptz",
+                        deliveredMessageId: params[5],
+                        readAt: () => ":at::timestamptz",
+                        readMessageId: params[5],
+                    })
+            await insert()
                 .setParameter("at", params[4])
-                .onConflict(READ_UPSERT)
+                .orUpdate(["delivered_at", "delivered_message_id"], MARKER_KEY, {
+                    overwriteCondition: { where: DELIVERED_AHEAD },
+                })
+                .execute()
+            await insert()
+                .setParameter("at", params[4])
+                .orUpdate(["read_at", "read_message_id"], MARKER_KEY, { overwriteCondition: { where: READ_AHEAD } })
                 .execute()
             if (target.conversationId === null)
                 await this.roomReads.advance(workspaceId, params[1], target.room ?? "", params[4], manager)
@@ -241,25 +255,29 @@ export class ChatMarkersService {
                 .getRawMany()
             return userIdsOf(rows)
         }
-        const rows: ReadonlyArray<unknown> = await manager
-            .createQueryBuilder()
-            .select("rd.user_id", "userId")
-            .from("public.office_rooms_reads", "rd")
-            .leftJoin(
-                ChatMarkerEntity,
-                "exact",
-                "exact.workspace_id = rd.workspace_id AND exact.user_id = rd.user_id AND exact.conversation_id IS NULL AND exact.room = rd.room",
-            )
-            .where("rd.workspace_id = :workspaceId AND rd.user_id IN (:...userIds)", cursor)
-            .andWhere("rd.room = COALESCE(:room::text, '')", { room: target.room })
+        const standings = await this.roomReaders.readersAt(workspaceId, target.room, userIds, own.createdAt, manager)
+        const passed = new Set(
+            standings.filter((one: RoomReaderStanding) => one.standing === "later").map((one) => one.userId),
+        )
+        const level = standings.filter((one) => one.standing === "equal").map((one) => one.userId)
+        if (level.length === 0) return passed
+        // A marker exactly on the instant passes only when the precise cursor is at or beyond the message.
+        const behind: ReadonlyArray<unknown> = await manager
+            .createQueryBuilder(ChatMarkerEntity, "s")
+            .select("s.user_id", "userId")
+            .where("s.workspace_id = :workspaceId AND s.user_id IN (:...level)", { workspaceId, level })
+            .andWhere("s.conversation_id IS NULL AND s.room = COALESCE(:room::text, '')", { room: target.room })
             .andWhere(
-                `(rd.last_read_at > :createdAt::timestamptz OR (rd.last_read_at = :createdAt::timestamptz
-                    AND (exact.read_at IS DISTINCT FROM rd.last_read_at OR exact.read_message_id >= :ownId::uuid)))`,
-                cursor,
+                "s.read_at = :createdAt::timestamptz AND NOT COALESCE(s.read_message_id >= :ownId::uuid, false)",
+                {
+                    createdAt: own.createdAt,
+                    ownId: own.id,
+                },
             )
-            .limit(userIds.length)
+            .limit(level.length)
             .getRawMany()
-        return userIdsOf(rows)
+        const held = userIdsOf(behind)
+        return new Set([...passed, ...level.filter((userId) => !held.has(userId))])
     }
 
     /** Whether the delivered cursor of any of the given accounts already reaches the message. */

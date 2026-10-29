@@ -1,27 +1,29 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentConversationsErrorCode } from "@modules/domain/agent-conversations"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import type { GapRecord } from "@modules/domain/knowledge-gaps"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesService } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
 import { StaffDirectoryService } from "@modules/domain/staff"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { InstallationOperationsService } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ChatbotWorkbenchService } from "./chatbot-workbench.service"
-import type {
-    ConversationRow,
-    LeadBriefRow,
-    LeadRow,
-    MessageBriefRow,
-    MessageRow,
-    WaitingRow,
-} from "./persistence/chatbot-workbench.rows"
+import {
+    briefOf,
+    conversationOf,
+    GAP,
+    LEAD,
+    LEAD_BRIEF,
+    MEMBER,
+    messageOf,
+    waitingOf,
+    isInstallationRow,
+    isWaitingRow,
+} from "@tests/fixtures/builders/chatbot-workbench.builder"
 import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
 import type { TableAnswers } from "@tests/fixtures/builders/table-query-builder.builder"
 
@@ -74,76 +76,6 @@ const parametersOf = (em: object, table: string, nth = 0): unknown =>
 
 const NOW = "2026-10-13T03:00:00.000Z"
 
-const MEMBER: WorkspaceMember = {
-    userId: "u-1",
-    workspaceId: "ws-1",
-    role: "owner",
-    staffId: null,
-    displayName: "Lan",
-    status: "active",
-}
-
-const conversationOf = builder<ConversationRow>({
-    id: "c-1",
-    channel: "zalo",
-    visitor_name: null,
-    lead_id: "l-1",
-    handled_by: null,
-    handled_at: null,
-    external_id: "zalo-9",
-    created_at: "2026-10-13T01:00:00.000Z",
-})
-
-const briefOf = builder<MessageBriefRow>({
-    id: "m-1",
-    conversation_id: "c-1",
-    role: "user",
-    body: "Is it in stock?",
-    created_at: "2026-10-13T01:00:00.000Z",
-})
-
-const messageOf = builder<MessageRow>({
-    ...briefOf(),
-    author_kind: null,
-    author_name: null,
-    delivery_status: null,
-    delivery_error: null,
-})
-
-const waitingOf = builder<WaitingRow>({
-    id: "w-1",
-    subject_id: "c-2",
-    proposal: null,
-    assigned_staff_id: null,
-    created_at: "2026-10-13T02:00:00.000Z",
-})
-
-const LEAD_BRIEF: LeadBriefRow = { id: "l-1", contact_name: "Hoa", created_at: "2026-10-12T00:00:00.000Z" }
-
-const LEAD: LeadRow = {
-    id: "l-1",
-    contact_name: "Hoa",
-    company: "Hoa Shop",
-    stage: "new",
-    need: "T-shirts",
-    phone: "0901000000",
-    email: null,
-}
-
-const GAP: GapRecord = {
-    id: "g-1",
-    module: "chatbot",
-    question: "When does the shop open?",
-    topic: null,
-    attributeGuess: null,
-    count: 3,
-    firstSeenAt: "2026-10-01T00:00:00.000Z",
-    lastSeenAt: "2026-10-12T00:00:00.000Z",
-    exampleConversationId: "c-1",
-    status: "open",
-    reopenedCount: 0,
-}
-
 const build = async (em: MockEntityManager) => {
     const clock = new FakeClock(NOW)
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(MEMBER)) })
@@ -156,13 +88,10 @@ const build = async (em: MockEntityManager) => {
     })
     const owned = OWNED.get(em)
     const work = mock<WorkItemsActivityService>()
-    work.waitingReplies.mockResolvedValue([...(owned?.waiting ?? [])] as Array<WaitingRow>)
+    work.waitingReplies.mockResolvedValue((owned?.waiting ?? []).filter(isWaitingRow))
     const installs = mock<InstallationOperationsService>()
     installs.agentLinksOf.mockResolvedValue(
-        (owned?.installations ?? []).map((row) => {
-            const { id, agent_id: agentId } = row as { id: string; agent_id: string | null }
-            return { id, agentId }
-        }),
+        (owned?.installations ?? []).filter(isInstallationRow).map((row) => ({ id: row.id, agentId: row.agent_id })),
     )
     const moduleRef = await Test.createTestingModule({
         providers: [
