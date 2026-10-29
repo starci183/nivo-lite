@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
+import type { QueryBuilderAnswers } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { TransactionsErrorCode } from "./errors/transactions.error"
 import { TransactionEntity } from "./persistence/entities"
 import type { NewTransaction, TransactionAccountingRow, TransactionRow } from "./transactions.contracts"
@@ -74,13 +74,11 @@ const build = async (entityManager: MockEntityManager, inputs: ReadonlyArray<typ
     return Object.assign(moduleRef.get(TransactionsService), { events })
 }
 
-const managerWith = (
-    fake: ReturnType<typeof fakeQueryBuilder>,
-    stubs: Parameters<typeof mockEntityManager>[0] = {},
-) => {
-    const manager = mockEntityManager(stubs)
-    manager.createQueryBuilder.mockReturnValue(fake.builder as never)
-    return manager
+/** A manager whose query builder answers `answers`, with the calls recorded on the builder. */
+const readerOf = (answers: QueryBuilderAnswers) => {
+    const em = mockEntityManager()
+    const [fake] = queueQueryBuilders(em, [answers])
+    return { em, callsOf: (method: string) => fake?.callsOf(method) ?? [] }
 }
 
 /** The key of the payment the specs read and settle. */
@@ -102,10 +100,10 @@ describe("TransactionsService", () => {
 
             await expect(transactions.find("ws-1", "tx-1")).resolves.toEqual(transactionOf())
             await expect(transactions.find("ws-1", "missing")).resolves.toBeNull()
-            expect(em.findOne.mock.calls).toEqual([
-                [TransactionEntity, { where: PAYMENT_KEY }],
-                [TransactionEntity, { where: { workspaceId: "ws-1", id: "missing" } }],
-            ])
+            expect(em.findOne).toHaveBeenNthCalledWith(1, TransactionEntity, { where: PAYMENT_KEY })
+            expect(em.findOne).toHaveBeenNthCalledWith(2, TransactionEntity, {
+                where: { workspaceId: "ws-1", id: "missing" },
+            })
         })
     })
 })
@@ -116,19 +114,18 @@ const TEXT_CREATED = "to_json(t.created_at) #>> '{}' AS created_at"
 describe("TransactionsService", () => {
     describe("momentOf", () => {
         it("answers the money and the moment of the payment as the old text, or null", async () => {
-            const read = fakeQueryBuilder({
-                getRawOne: {
-                    amount_vnd: 500000,
-                    payer: "Minh",
-                    reference: null,
-                    occurred_at: "2026-10-13T02:00:00.000000+00:00",
-                },
-            })
-            const missing = fakeQueryBuilder({ getRawOne: undefined })
             const em = mockEntityManager()
-            em.createQueryBuilder
-                .mockReturnValueOnce(read.builder as never)
-                .mockReturnValueOnce(missing.builder as never)
+            const [read] = queueQueryBuilders(em, [
+                {
+                    getRawOne: {
+                        amount_vnd: 500000,
+                        payer: "Minh",
+                        reference: null,
+                        occurred_at: "2026-10-13T02:00:00.000000+00:00",
+                    },
+                },
+                { getRawOne: undefined },
+            ])
             const transactions = await build(em)
 
             await expect(transactions.momentOf("ws-1", "tx-1")).resolves.toEqual({
@@ -139,16 +136,16 @@ describe("TransactionsService", () => {
             })
             await expect(transactions.momentOf("ws-1", "missing")).resolves.toBeNull()
             expect(em.createQueryBuilder).toHaveBeenCalledWith(TransactionEntity, "t")
-            expect(read.callsOf("select")).toEqual([
+            expect(read?.callsOf("select")).toEqual([
                 [["t.amount_vnd::float8 AS amount_vnd", "t.payer AS payer", "t.reference AS reference", TEXT_OCCURRED]],
             ])
-            expect(read.callsOf("where")).toEqual([
+            expect(read?.callsOf("where")).toEqual([
                 [
                     "t.workspace_id = :workspaceId AND t.id = :transactionId",
                     { workspaceId: "ws-1", transactionId: "tx-1" },
                 ],
             ])
-            expect(read.callsOf("limit")).toEqual([[1]])
+            expect(read?.callsOf("limit")).toEqual([[1]])
         })
     })
 })
@@ -170,8 +167,8 @@ describe("TransactionsService", () => {
                 occurred_at: "2026-10-13T02:00:00.000000+00:00",
                 created_at: "2026-10-13T02:00:01.000000+00:00",
             }
-            const read = fakeQueryBuilder({ getRawMany: [view] })
-            const transactions = await build(managerWith(read))
+            const read = readerOf({ getRawMany: [view] })
+            const transactions = await build(read.em)
 
             await expect(transactions.listForInvoices("ws-1", ["invoice-1"])).resolves.toEqual([view])
             expect(read.callsOf("select")[0]?.[0]).toEqual(expect.arrayContaining([TEXT_OCCURRED, TEXT_CREATED]))
@@ -205,8 +202,8 @@ describe("TransactionsService", () => {
         }
 
         it("reads the newest payments, a thousand by default", async () => {
-            const read = fakeQueryBuilder({ getRawMany: [raw] })
-            const em = managerWith(read)
+            const read = readerOf({ getRawMany: [raw] })
+            const em = read.em
             const transactions = await build(em)
             const expected: TransactionAccountingRow = {
                 ...transactionOf(),
@@ -228,8 +225,8 @@ describe("TransactionsService", () => {
         })
 
         it("bounds the read by the limit given and asks the inbound events owner for the inputs of the workspace", async () => {
-            const read = fakeQueryBuilder({ getRawMany: [raw, { ...raw, id: "tx-2", inbound_event_id: null }] })
-            const transactions = await build(managerWith(read))
+            const read = readerOf({ getRawMany: [raw, { ...raw, id: "tx-2", inbound_event_id: null }] })
+            const transactions = await build(read.em)
 
             await expect(transactions.listAccounting("ws-1", 20)).resolves.toHaveLength(2)
             expect(read.callsOf("limit")).toEqual([[20]])
@@ -237,8 +234,8 @@ describe("TransactionsService", () => {
         })
 
         it("carries the input record when the payment still has one", async () => {
-            const read = fakeQueryBuilder({ getRawMany: [raw] })
-            const transactions = await build(managerWith(read), [INPUT])
+            const read = readerOf({ getRawMany: [raw] })
+            const transactions = await build(read.em, [INPUT])
 
             const [row] = await transactions.listAccounting("ws-1")
             expect(row?.inbound).toEqual({
@@ -256,8 +253,8 @@ describe("TransactionsService", () => {
         const insertAnswer = { raw: [transactionOf()] }
 
         it("records an unmatched live payment and answers it in one statement", async () => {
-            const write = fakeQueryBuilder({ execute: insertAnswer })
-            const manager = managerWith(write)
+            const write = readerOf({ execute: insertAnswer })
+            const manager = write.em
             const transactions = await build(manager)
 
             await expect(transactions.open(payment)).resolves.toEqual(transactionOf())
@@ -281,8 +278,8 @@ describe("TransactionsService", () => {
         })
 
         it("records a debit when the bank move took money out", async () => {
-            const write = fakeQueryBuilder({ execute: insertAnswer })
-            const transactions = await build(managerWith(write))
+            const write = readerOf({ execute: insertAnswer })
+            const transactions = await build(write.em)
 
             await transactions.open({ ...payment, payer: "Supplier", direction: "debit" })
             expect(write.callsOf("values")[0]?.[0]).toMatchObject({ payer: "Supplier", direction: "debit" })
@@ -290,8 +287,8 @@ describe("TransactionsService", () => {
 
         it("records inside the caller transaction when it hands its manager", async () => {
             const em = mockEntityManager()
-            const write = fakeQueryBuilder({ execute: insertAnswer })
-            const tx = managerWith(write)
+            const write = readerOf({ execute: insertAnswer })
+            const tx = write.em
             const transactions = await build(em)
 
             await expect(transactions.open({ ...payment, direction: "debit" }, tx)).resolves.toEqual(transactionOf())
@@ -300,7 +297,15 @@ describe("TransactionsService", () => {
         })
 
         it("refuses when no row was created", async () => {
-            const transactions = await build(managerWith(fakeQueryBuilder({ execute: { raw: [] } })))
+            const transactions = await build(readerOf({ execute: { raw: [] } }).em)
+
+            await expect(transactions.open(payment)).rejects.toMatchObject({
+                code: TransactionsErrorCode.NotCreated,
+            })
+        })
+
+        it("refuses when the database answers something that is not rows", async () => {
+            const transactions = await build(readerOf({ execute: { raw: "none" } }).em)
 
             await expect(transactions.open(payment)).rejects.toMatchObject({
                 code: TransactionsErrorCode.NotCreated,
@@ -336,10 +341,11 @@ describe("TransactionsService", () => {
             await transactions.match("ws-1", "tx-1", "invoice-1")
             await transactions.sendToReview("ws-1", "tx-1")
 
-            expect(em.update.mock.calls).toEqual([
-                [TransactionEntity, PAYMENT_KEY, { status: "matched", invoiceId: "invoice-1" }],
-                [TransactionEntity, PAYMENT_KEY, { status: "needs_review" }],
-            ])
+            expect(em.update).toHaveBeenNthCalledWith(1, TransactionEntity, PAYMENT_KEY, {
+                status: "matched",
+                invoiceId: "invoice-1",
+            })
+            expect(em.update).toHaveBeenNthCalledWith(2, TransactionEntity, PAYMENT_KEY, { status: "needs_review" })
         })
     })
 })
@@ -355,8 +361,8 @@ describe("TransactionsService", () => {
                 status: "unmatched",
                 occurred_at: "2026-10-20T02:00:00.000000+00:00",
             }
-            const read = fakeQueryBuilder({ getRawMany: [credit] })
-            const transactions = await build(managerWith(read))
+            const read = readerOf({ getRawMany: [credit] })
+            const transactions = await build(read.em)
 
             await expect(
                 transactions.listBankCredits({
@@ -387,8 +393,8 @@ describe("TransactionsService", () => {
 describe("TransactionsService", () => {
     describe("listBankDebits", () => {
         it("lists the live bank debits of the workspace with the same filters", async () => {
-            const read = fakeQueryBuilder({ getRawMany: [] })
-            const transactions = await build(managerWith(read))
+            const read = readerOf({ getRawMany: [] })
+            const transactions = await build(read.em)
 
             await expect(
                 transactions.listBankDebits({ workspaceId: "ws-1", status: null, since: null, limit: 5 }),

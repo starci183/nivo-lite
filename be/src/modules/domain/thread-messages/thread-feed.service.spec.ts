@@ -11,7 +11,7 @@ import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
-import { passThroughAuthors } from "@tests/fixtures/builders/thread-message-authors.builder"
+import { namesFromRows } from "@tests/fixtures/builders/thread-message-names.builder"
 import { ThreadMessageEntity } from "./persistence/entities"
 import { ThreadFeedService } from "./thread-feed.service"
 import type { ThreadMessageRecord } from "./thread-messages.contracts"
@@ -56,7 +56,7 @@ const messageRow = (id: string, createdAt: string): ThreadMessageRecord => ({
 const managerAnswering = (answers: QueryBuilderAnswers) => {
     const em = mockEntityManager()
     const fake = fakeQueryBuilder(answers)
-    em.createQueryBuilder.mockReturnValueOnce(fake.builder as never)
+    em.createQueryBuilder.mockReturnValueOnce(fake.builder)
     return { em, fake }
 }
 
@@ -71,13 +71,15 @@ const build = async (em: ReturnType<typeof mockEntityManager>) => {
         list: jest.fn().mockResolvedValue({ nodes: [THREAD], pageInfo: { endCursor: "cursor", hasNextPage: false } }),
     })
     const chains = mock<WorkChainsService>({ view: jest.fn().mockResolvedValue(CHAIN) })
+    const authors = mock<ThreadMessageAuthorsService>()
+    namesFromRows(authors)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ThreadFeedService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: MentionDirectoryService, useValue: directory },
-            { provide: ThreadMessageAuthorsService, useValue: passThroughAuthors() },
+            { provide: ThreadMessageAuthorsService, useValue: authors },
             { provide: WorkThreadsService, useValue: threads },
             { provide: WorkChainsService, useValue: chains },
         ],

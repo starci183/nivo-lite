@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TransactionEntity } from "./persistence/entities"
-import type { LedgerPayment, PaymentTally, ReceiptPayment } from "./transactions-ledger.contracts"
+import type { LedgerPayment, OptionalReceiptPayment, PaymentTally } from "./transactions-ledger.contracts"
 
 @Injectable()
 /** The money-in figures and ledger lines the n8n workflows and other report readers ask for, always bounded by the caller. */
@@ -45,7 +45,7 @@ export class TransactionsLedgerService {
     }
 
     /** The payment a receipt is for, or null when the workspace has none with that id. */
-    async receiptPayment(workspaceId: string, transactionId: string): Promise<ReceiptPayment | null> {
+    async receiptPayment(workspaceId: string, transactionId: string): Promise<OptionalReceiptPayment> {
         const row = await this.entityManager.findOne(TransactionEntity, { where: { workspaceId, id: transactionId } })
         return row === null ? null : { invoiceId: row.invoiceId, amountVnd: row.amountVnd, occurredAt: row.occurredAt }
     }

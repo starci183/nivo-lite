@@ -7,7 +7,7 @@ import { envelopeParts, fieldOf, keyOf, numberOf, textOf } from "./event-fields.
  * set the lead to won). The optional fields are the facts only some doors know; a reactor passes on the ones present. `dedupeKey` is
  * `deal.won:<leadId>`: a deal is won once per customer.
  */
-export interface DealWonPayload extends EventPayload {
+export interface DealWonInput {
     /** The workspace of the lead. */
     readonly workspaceId: string
     /** The customer whose deal was won. */
@@ -29,6 +29,9 @@ export interface DealWonPayload extends EventPayload {
     /** The evidence the owner gave, when a lead action recorded the win. */
     readonly evidence?: string | null
 }
+
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface DealWonPayload extends EventPayload, DealWonInput {}
 
 /** The optional facts of a won deal that a payload carries, each as the door sent it; null when one is malformed. */
 const optionalFacts = (payload: object): Partial<DealWonPayload> | null => {
@@ -63,7 +66,7 @@ export class DealWonEvent extends BaseEvent {
     }
 
     /** A deal is won once per customer: the lead id is the identity of the fact. */
-    static create(payload: Omit<DealWonPayload, "dedupeKey">): DealWonEvent {
+    static create(payload: DealWonInput): DealWonEvent {
         const dedupeKey = `deal.won:${payload.leadId}`
         return new DealWonEvent(dedupeKey, { ...payload, dedupeKey })
     }

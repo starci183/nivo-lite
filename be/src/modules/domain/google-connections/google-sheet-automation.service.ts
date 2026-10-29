@@ -12,6 +12,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { GoogleConnectionsService } from "./google-connections.service"
+import { GoogleSheetsService } from "./google-sheets.service"
 
 /** The template this extension owns. */
 const SHEET_ORDERS = "sheet_orders"
@@ -34,6 +35,7 @@ export class GoogleSheetAutomationService implements OnModuleInit {
     constructor(
         private readonly extensions: AutomationExtensionsService,
         private readonly google: GoogleConnectionsService,
+        private readonly sheets: GoogleSheetsService,
         private readonly workspaces: WorkspacesService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectClock() private readonly clock: Clock,
@@ -55,7 +57,7 @@ export class GoogleSheetAutomationService implements OnModuleInit {
     async record(context: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> {
         const event = payload.event
         if (!isSheetEvent(event)) return this.skipped(this.say("sheetOrders.skippedDetail"), null)
-        const out = await this.google.runSheetEvent(context.workspaceId, context.config, {
+        const out = await this.sheets.runSheetEvent(context.workspaceId, context.config, {
             event,
             data: recordOf(payload.data),
             occurredAt: this.occurredAt(payload.at),
@@ -77,7 +79,7 @@ export class GoogleSheetAutomationService implements OnModuleInit {
         const existing = typeof config.spreadsheetId === "string" ? config.spreadsheetId.trim() : ""
         if (existing !== "") return config
         const name = (await this.workspaces.nameOf(workspaceId)).trim() || FALLBACK_NAME
-        const sheet = await this.google.provisionOrdersSheet(workspaceId, this.say("sheetTitle", { name }), config)
+        const sheet = await this.sheets.provisionOrdersSheet(workspaceId, this.say("sheetTitle", { name }), config)
         return { ...config, spreadsheetId: sheet.spreadsheetId, sheetUrl: sheet.spreadsheetUrl }
     }
 

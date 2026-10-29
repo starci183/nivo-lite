@@ -7,7 +7,7 @@ import { envelopeParts, fieldOf, keyOf, textOf } from "./event-fields.policy"
  * facts from here and reads the lead itself when it needs the current state. `dedupeKey` is `lead.created:<leadId>`: a lead is
  * captured once, however many doors reached it.
  */
-export interface LeadCapturedPayload extends EventPayload {
+export interface LeadCapturedInput {
     /** The workspace of the lead. */
     readonly workspaceId: string
     /** The new lead. */
@@ -26,6 +26,9 @@ export interface LeadCapturedPayload extends EventPayload {
     readonly email: string | null
 }
 
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface LeadCapturedPayload extends EventPayload, LeadCapturedInput {}
+
 /** Version 1 of `lead_captured`, published in the transaction that creates a lead. */
 export class LeadCapturedEvent extends BaseEvent {
     static readonly eventName = "lead_captured"
@@ -41,7 +44,7 @@ export class LeadCapturedEvent extends BaseEvent {
     }
 
     /** A lead is captured once: the lead id is the identity of the fact. */
-    static create(payload: Omit<LeadCapturedPayload, "dedupeKey">): LeadCapturedEvent {
+    static create(payload: LeadCapturedInput): LeadCapturedEvent {
         const dedupeKey = `lead.created:${payload.leadId}`
         return new LeadCapturedEvent(dedupeKey, { ...payload, dedupeKey })
     }

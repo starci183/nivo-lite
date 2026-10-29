@@ -5,6 +5,9 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TransactionEntity } from "./persistence/entities"
 import type { CreditFigure } from "./transactions-figures.contracts"
 
+/** The most open credits one governance read holds. */
+const OPEN_CREDITS_MAX = 5000
+
 @Injectable()
 /** The dashboard lists of a workspace's transactions, always scoped to the workspace. */
 export class TransactionsFiguresService {
@@ -15,6 +18,7 @@ export class TransactionsFiguresService {
         const credits = await this.entityManager.find(TransactionEntity, {
             select: { id: true, invoiceId: true, payer: true, reference: true, amountVnd: true, status: true },
             where: { workspaceId, direction: "credit", status: In(["matched", "unmatched", "needs_review"]) },
+            take: OPEN_CREDITS_MAX,
         })
         return credits.map((credit) => ({
             id: credit.id,

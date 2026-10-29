@@ -1,3 +1,4 @@
+import { MODULE_AUDIENCES } from "@modules/domain/module-audiences"
 import { catalogCopy, catalogList, catalogText } from "./policies/catalog-copy.policy"
 import { LEAD_GEN_ACTIONS, LEAD_GEN_COMMANDS } from "./lead-gen-flow.contracts"
 import { LEAD_GEN_GATES } from "./lead-gen-gates.contracts"
@@ -21,7 +22,7 @@ export const LEAD_GEN_MODULE: ModuleDefinition = {
     mascot: "/images/promo/mascot-chat.png",
     category: "sales_customer",
     status: "early",
-    audience: "customer",
+    audience: MODULE_AUDIENCES.lead_gen,
     includedWithWorkspace: false,
     available: true,
     knowledgeFolder: "lead_gen",

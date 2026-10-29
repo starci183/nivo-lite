@@ -1,5 +1,6 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
+import { isKey, isMember, isTextOrNull, openEnvelope } from "./money-event.policy"
 
 /** How a request for approval ended. */
 export type ApprovalResolvedOutcome = "approved" | "rejected" | "expired"
@@ -9,7 +10,7 @@ export type ApprovalResolvedOutcome = "approved" | "rejected" | "expired"
  * is terminal and never changes, so a reactor may act on it whatever the order of deliveries. `dedupeKey` is the request id: a request
  * ends once.
  */
-export interface ApprovalResolvedPayload extends EventPayload {
+export interface ApprovalResolvedInput {
     /** The request that ended; equals `dedupeKey`. */
     readonly requestId: string
     /** The workspace of the request. */
@@ -24,7 +25,10 @@ export interface ApprovalResolvedPayload extends EventPayload {
     readonly chainStepId: string
 }
 
-const OUTCOMES: ReadonlyArray<string> = ["approved", "rejected", "expired"]
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface ApprovalResolvedPayload extends EventPayload, ApprovalResolvedInput {}
+
+const OUTCOMES: ReadonlyArray<ApprovalResolvedOutcome> = ["approved", "rejected", "expired"]
 
 /** Version 1 of `approval_resolved`, published by the approval capability in the transaction that ends a request. */
 export class ApprovalResolvedEvent extends BaseEvent {
@@ -41,38 +45,31 @@ export class ApprovalResolvedEvent extends BaseEvent {
     }
 
     /** The request id is the identity of the fact: a request ends once. */
-    static create(payload: Omit<ApprovalResolvedPayload, "dedupeKey">): ApprovalResolvedEvent {
+    static create(payload: ApprovalResolvedInput): ApprovalResolvedEvent {
         return new ApprovalResolvedEvent(payload.requestId, { ...payload, dedupeKey: payload.requestId })
     }
 
     /** Reads the event envelope; a malformed delivery never reaches a reactor. */
     static parse(envelope: unknown): ParsedEvent<ApprovalResolvedEvent> {
-        if (typeof envelope !== "object" || envelope === null || !("eventId" in envelope) || !("payload" in envelope)) {
-            return null
-        }
-        const { eventId, payload } = envelope
-        if (typeof eventId !== "string" || eventId.trim() === "" || typeof payload !== "object" || payload === null) {
-            return null
-        }
-        const body = payload as Partial<Record<keyof ApprovalResolvedPayload, unknown>>
+        const opened = openEnvelope(envelope)
+        if (opened === null) return null
+        const { body } = opened
         const decidedBy = body.decidedBy === undefined ? null : body.decidedBy
         if (
-            typeof body.requestId !== "string" ||
-            body.requestId.trim() === "" ||
+            !isKey(body.requestId) ||
             typeof body.workspaceId !== "string" ||
-            typeof body.outcome !== "string" ||
-            !OUTCOMES.includes(body.outcome) ||
-            (decidedBy !== null && typeof decidedBy !== "string") ||
+            !isMember(OUTCOMES, body.outcome) ||
+            !isTextOrNull(decidedBy) ||
             typeof body.action !== "string" ||
             typeof body.chainStepId !== "string"
         ) {
             return null
         }
-        return new ApprovalResolvedEvent(eventId, {
+        return new ApprovalResolvedEvent(opened.eventId, {
             dedupeKey: body.requestId,
             requestId: body.requestId,
             workspaceId: body.workspaceId,
-            outcome: body.outcome as ApprovalResolvedPayload["outcome"],
+            outcome: body.outcome,
             decidedBy,
             action: body.action,
             chainStepId: body.chainStepId,

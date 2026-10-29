@@ -1,15 +1,13 @@
-import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { DomainError } from "@modules/platform/errors"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
-import { passThroughAuthors } from "@tests/fixtures/builders/thread-message-authors.builder"
+import { namesFromRows } from "@tests/fixtures/builders/thread-message-names.builder"
 import { toMessage } from "./thread.mapper"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
@@ -84,15 +82,15 @@ const rowOf = (approval: ApprovalCard | null): ThreadMessageRecord => ({
 })
 
 interface Answers {
-    /** The message as the first read finds it. */
-    readonly found?: ReadonlyArray<ThreadMessageRecord>
     /** The message as the lock finds it, after the gate answered. */
     readonly locked?: ThreadMessageRecord
     /** What the gate answers. */
     readonly decision?: ThreadApprovalDecisionResult
 }
 
-const build = async (em: MockEntityManager, answers: Answers = {}) => {
+const build = async (rows: ReadonlyArray<ThreadMessageRecord> = [rowOf(PENDING)], answers: Answers = {}) => {
+    const em = mockEntityManager()
+    queueQueryBuilders(em, [{ getRawOne: rows[0] }])
     fakeTransaction(em)
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(MEMBER) })
     const gate = mock<ThreadApprovalGate>({
@@ -107,6 +105,8 @@ const build = async (em: MockEntityManager, answers: Answers = {}) => {
         keep: jest.fn((...[, , card]: [unknown, unknown, ApprovalCard]) => Promise.resolve(toMessage(rowOf(card)))),
         settle: jest.fn().mockResolvedValue(toMessage(rowOf(DECIDED))),
     })
+    const authors = mock<ThreadMessageAuthorsService>()
+    namesFromRows(authors)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ThreadApprovalsService,
@@ -114,19 +114,11 @@ const build = async (em: MockEntityManager, answers: Answers = {}) => {
             { provide: APPROVAL_GATE, useValue: gate },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: MentionDirectoryService, useValue: directory },
-            { provide: ThreadMessageAuthorsService, useValue: passThroughAuthors() },
+            { provide: ThreadMessageAuthorsService, useValue: authors },
             { provide: ThreadApprovalOutcomesService, useValue: outcomes },
         ],
     }).compile()
     return { service: moduleRef.get(ThreadApprovalsService), members, gate, outcomes }
-}
-
-/** A manager double whose message read answers the first of the given rows, or nothing. */
-const found = (rows: ReadonlyArray<ThreadMessageRecord> = [rowOf(PENDING)]) => {
-    const em = mockEntityManager()
-    const read = fakeQueryBuilder({ getRawOne: rows[0] })
-    em.createQueryBuilder.mockReturnValueOnce(read.builder as never)
-    return em
 }
 
 const decision = (verdict: "approve" | "reject" = "approve", userId = "minh") => ({
@@ -140,7 +132,7 @@ const decision = (verdict: "approve" | "reject" = "approve", userId = "minh") =>
 const registerRefusals = () => {
     describe("decide refusals", () => {
         it("refuses a message that is not in the workspace", async () => {
-            const { service } = await build(found([]))
+            const { service } = await build([])
 
             await expect(service.decide(decision())).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.MessageNotFound,
@@ -148,13 +140,13 @@ const registerRefusals = () => {
         })
 
         it("refuses a message with no card", async () => {
-            const { service } = await build(found([rowOf(null)]))
+            const { service } = await build([rowOf(null)])
 
             await expect(service.decide(decision())).rejects.toMatchObject({ code: ThreadMessagesErrorCode.NoApproval })
         })
 
         it("refuses a member who is not among the people tagged, without asking the gate", async () => {
-            const { service, gate } = await build(found())
+            const { service, gate } = await build()
 
             await expect(service.decide(decision("approve", "van"))).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.NotApprover,
@@ -163,7 +155,7 @@ const registerRefusals = () => {
         })
 
         it("tells the late clicker who already decided and when", async () => {
-            const { service, gate } = await build(found([rowOf(DECIDED)]))
+            const { service, gate } = await build([rowOf(DECIDED)])
 
             await expect(service.decide(decision())).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.AlreadyDecided,
@@ -173,7 +165,7 @@ const registerRefusals = () => {
         })
 
         it("names nobody when a decided card has no name or instant", async () => {
-            const { service } = await build(found([rowOf({ ...PENDING, outcome: "rejected" })]))
+            const { service } = await build([rowOf({ ...PENDING, outcome: "rejected" })])
 
             await expect(service.decide(decision())).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.AlreadyDecided,
@@ -182,7 +174,7 @@ const registerRefusals = () => {
         })
 
         it("shows the closed card when the request expired before the card was settled", async () => {
-            const { service, gate } = await build(found())
+            const { service, gate } = await build()
             gate.decide.mockRejectedValueOnce(new GateRefusal({ code: "APPROVAL_REQUESTS_EXPIRED" }))
 
             await expect(service.decide(decision())).rejects.toMatchObject({
@@ -191,21 +183,21 @@ const registerRefusals = () => {
         })
 
         it("lets any other refusal of the gate through", async () => {
-            const { service, gate } = await build(found())
+            const { service, gate } = await build()
             gate.decide.mockRejectedValueOnce(new GateRefusal({ code: "APPROVAL_REQUESTS_NO_GRANT" }))
 
             await expect(service.decide(decision())).rejects.toMatchObject({ code: "APPROVAL_REQUESTS_NO_GRANT" })
         })
 
         it("lets a failure that is not a domain refusal through", async () => {
-            const { service, gate } = await build(found())
+            const { service, gate } = await build()
             gate.decide.mockRejectedValueOnce(new Error("down"))
 
             await expect(service.decide(decision())).rejects.toThrow("down")
         })
 
         it("refuses a card that expired", async () => {
-            const { service } = await build(found([rowOf({ ...PENDING, outcome: "expired" })]))
+            const { service } = await build([rowOf({ ...PENDING, outcome: "expired" })])
 
             await expect(service.decide(decision())).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.ApprovalClosed,
@@ -217,7 +209,7 @@ const registerRefusals = () => {
 const registerDecisions = () => {
     describe("decide", () => {
         it("asks the gate as the member and settles the card with the member's vote and the gate's answer", async () => {
-            const { service, gate, members, outcomes } = await build(found())
+            const { service, gate, members, outcomes } = await build()
 
             const message = await service.decide(decision())
 
@@ -235,7 +227,7 @@ const registerDecisions = () => {
         })
 
         it("settles a rejection the gate answered as rejected", async () => {
-            const { service, outcomes } = await build(found(), { decision: { status: "rejected" } })
+            const { service, outcomes } = await build(undefined, { decision: { status: "rejected" } })
 
             await service.decide(decision("reject"))
 
@@ -249,7 +241,7 @@ const registerDecisions = () => {
         })
 
         it("only records the vote while the policy still waits for more people", async () => {
-            const { service, outcomes } = await build(found(), { decision: { status: "pending" } })
+            const { service, outcomes } = await build(undefined, { decision: { status: "pending" } })
 
             const message = await service.decide(decision("approve", "nam"))
 
@@ -260,7 +252,7 @@ const registerDecisions = () => {
         })
 
         it("returns the card as settled when approval.resolved settled it while the gate was answering", async () => {
-            const { service, outcomes } = await build(found(), { locked: rowOf(DECIDED) })
+            const { service, outcomes } = await build(undefined, { locked: rowOf(DECIDED) })
 
             const message = await service.decide(decision())
 

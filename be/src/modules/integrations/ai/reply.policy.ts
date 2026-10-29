@@ -1,3 +1,4 @@
+import { isRecord } from "@modules/platform/primitives"
 import type { ContextPassage, AiMessage, AiUsage } from "./ai.contracts"
 
 /** The most characters of one retrieved passage that go into the prompt. */
@@ -6,10 +7,6 @@ const PASSAGE_MAX_CHARS = 600
 /** The heading of the retrieved block: it says what the notes are good for, and that they never give a price or an amount. */
 export const NOTES_HEADING =
     "Business notes (from the owner's knowledge; use them for facts about the business). They never give a price or an amount: those come only from the invoice or the contract."
-
-/** True for a non-null object: the guard every loose read of a LangChain reply goes through. */
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === "object" && value !== null
 
 /** One field of a value that may be an object; undefined for anything else. */
 export const fieldOf = (value: unknown, key: string): unknown => (isRecord(value) ? value[key] : undefined)

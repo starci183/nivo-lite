@@ -146,13 +146,17 @@ export class ContentConfigurationService {
     ): Promise<ContentBrandSettings> {
         await this.members.require(userId, workspaceId, ["owner", "manager"])
         await this.entityManager
-            .createQueryBuilder(ContentSettingsEntity, "content_settings")
+            .createQueryBuilder(ContentSettingsEntity, "cs")
             .insert()
-            .values({ workspaceId, automations: () => ":automation::jsonb" })
+            .values({ workspaceId })
+            .orIgnore()
+            .execute()
+        await this.entityManager
+            .createQueryBuilder(ContentSettingsEntity, "cs")
+            .update()
+            .set({ automations: () => `"automations" || :automation::jsonb` })
             .setParameter("automation", JSON.stringify({ [key]: on }))
-            .onConflict(
-                `("workspace_id") DO UPDATE SET "automations" = "content_settings"."automations" || EXCLUDED."automations"`,
-            )
+            .where("workspace_id = :workspaceId", { workspaceId })
             .execute()
         return this.readBrand(workspaceId)
     }

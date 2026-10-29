@@ -2,9 +2,8 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { StaffError, StaffErrorCode } from "./errors/staff.error"
-import type { OptionalStaffName, StaffWrite } from "./staff.contracts"
+import type { OptionalStaffName, StaffRow, StaffWrite } from "./staff.contracts"
 import { StaffEntity } from "./persistence/entities"
-import type { StaffRow } from "./persistence/staff.rows"
 
 /** The most staff rows one workspace lists. */
 const STAFF_ROWS_MAX = 500

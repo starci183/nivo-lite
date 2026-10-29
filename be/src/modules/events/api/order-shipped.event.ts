@@ -6,7 +6,7 @@ import { isKey, isTextOrNull, openEnvelope } from "./money-event.policy"
  * The payload of the `order_shipped` event: a confirmed order was handed to its carrier. `dedupeKey` is the order id: an order ships
  * once.
  */
-export interface OrderShippedPayload extends EventPayload {
+export interface OrderShippedInput {
     /** The workspace of the order. */
     readonly workspaceId: string
     /** The member who recorded the shipment. */
@@ -25,6 +25,9 @@ export interface OrderShippedPayload extends EventPayload {
     readonly shippedAt: string
 }
 
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface OrderShippedPayload extends EventPayload, OrderShippedInput {}
+
 /** Version 1 of `order_shipped`, published by sales in the transaction that records a shipment. */
 export class OrderShippedEvent extends BaseEvent {
     static readonly eventName = "order_shipped"
@@ -40,7 +43,7 @@ export class OrderShippedEvent extends BaseEvent {
     }
 
     /** The order id is the identity of the fact: an order ships once. */
-    static create(payload: Omit<OrderShippedPayload, "dedupeKey">): OrderShippedEvent {
+    static create(payload: OrderShippedInput): OrderShippedEvent {
         return new OrderShippedEvent(payload.orderId, { ...payload, dedupeKey: payload.orderId })
     }
 

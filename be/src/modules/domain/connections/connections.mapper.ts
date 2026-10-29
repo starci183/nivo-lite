@@ -1,6 +1,6 @@
 import type { ConnectionRecord, ConnectionStatus, Environment, FirstEvent, Provider } from "./connections.contracts"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
-import type { ConnectionProjection } from "./persistence/connection-projection"
+import type { ConnectionProjection } from "./persistence/connection.projection"
 
 const PROVIDERS: Readonly<Record<Provider, true>> = {
     telegram: true,

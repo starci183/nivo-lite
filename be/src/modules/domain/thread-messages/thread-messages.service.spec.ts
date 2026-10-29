@@ -11,7 +11,7 @@ import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-
 import { ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
-import { passThroughAuthors } from "@tests/fixtures/builders/thread-message-authors.builder"
+import { namesFromRows } from "@tests/fixtures/builders/thread-message-names.builder"
 import { ThreadMessageEntity } from "./persistence/entities"
 import { ThreadMessagesService } from "./thread-messages.service"
 import type { MemberPost, MentionView, ThreadMessageRecord } from "./thread-messages.contracts"
@@ -79,7 +79,7 @@ const writerOf = (
     const em = mockEntityManager()
     const insert = fakeQueryBuilder({ execute: { raw: inserted } })
     const read = fakeQueryBuilder({ getRawOne: readAnswer.found })
-    em.createQueryBuilder.mockReturnValueOnce(insert.builder as never).mockReturnValueOnce(read.builder as never)
+    em.createQueryBuilder.mockReturnValueOnce(insert.builder).mockReturnValueOnce(read.builder)
     return { em, insert, read }
 }
 
@@ -97,10 +97,9 @@ const build = async (em: MockEntityManager, doubles: Doubles = {}) => {
         memberIdOf: jest.fn().mockResolvedValue("member-van"),
     })
     const threads = mock<WorkThreadsService>({
-        lock:
-            doubles.lockFails === undefined
-                ? jest.fn().mockResolvedValue(THREAD)
-                : jest.fn().mockRejectedValue(doubles.lockFails),
+        lock: jest.fn(() =>
+            doubles.lockFails === undefined ? Promise.resolve(THREAD) : Promise.reject(doubles.lockFails),
+        ),
         setStatus: jest.fn().mockResolvedValue(undefined),
     })
     const chains = mock<WorkChainsService>({
@@ -111,6 +110,8 @@ const build = async (em: MockEntityManager, doubles: Doubles = {}) => {
         canAssign: jest.fn().mockResolvedValue(doubles.canAssign ?? true),
         canTag: jest.fn(),
     })
+    const authors = mock<ThreadMessageAuthorsService>()
+    namesFromRows(authors)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ThreadMessagesService,
@@ -118,7 +119,7 @@ const build = async (em: MockEntityManager, doubles: Doubles = {}) => {
             { provide: AGENT_RULES, useValue: rules },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: MentionDirectoryService, useValue: directory },
-            { provide: ThreadMessageAuthorsService, useValue: passThroughAuthors() },
+            { provide: ThreadMessageAuthorsService, useValue: authors },
             { provide: WorkThreadsService, useValue: threads },
             { provide: WorkChainsService, useValue: chains },
         ],
@@ -197,7 +198,11 @@ const registerPostAsMember = () => {
             expect(em.transaction).not.toHaveBeenCalled()
             expect(insert.callsOf("values")).toHaveLength(1)
         })
+    })
+}
 
+const registerTagging = () => {
+    describe("postAsMember tagging", () => {
         it("tags a person with no permission check and gives an agent work after the agents capability allows it", async () => {
             const views: ReadonlyArray<MentionView> = [
                 { kind: "member", id: MINH, name: "Mr Minh" },
@@ -396,6 +401,7 @@ const registerAppend = () => {
 describe("ThreadMessagesService", () => {
     registerPostAsUser()
     registerPostAsMember()
+    registerTagging()
     registerRefusals()
     registerInjectionGuard()
     registerAppend()

@@ -26,6 +26,10 @@ services:
       PORT: "8787"
       PRIMARY_DB_SCHEMA: public
       SITE_URL: http://localhost
+      AUTH_WEB_ORIGIN: http://localhost
+      AUTH_GOOGLE_CALLBACK_URL: http://api.localhost/auth/google/callback
+      STORAGE_ENDPOINT: http://host.docker.internal:9000
+      STORAGE_BUCKET_PREFIX: nivo-dev
       HTTP_SECURITY_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1
       QUEUE_ENABLED: "true"
       QUEUE_REDIS_HOST: nivo-redis
@@ -200,3 +204,8 @@ services:
 
 volumes:
   redis-data: {}
+
+# Custody records, declaration only: one external stub per member of environments.dev.secrets, named by its runtimeName and version; no service is granted one.
+secrets:
+  auth: { external: true, name: nivo-dev-auth-v1 }
+  ai: { external: true, name: nivo-dev-ai-v1 }

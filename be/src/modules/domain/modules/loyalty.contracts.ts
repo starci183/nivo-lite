@@ -1,3 +1,4 @@
+import { MODULE_AUDIENCES } from "@modules/domain/module-audiences"
 import { catalogCopy, catalogList, catalogText } from "./policies/catalog-copy.policy"
 import type { ModuleDefinition } from "./modules.contracts"
 
@@ -19,7 +20,7 @@ export const LOYALTY_MODULE: ModuleDefinition = {
     mascot: "/images/promo/mascot-offer.png",
     category: "sales_customer",
     status: "early",
-    audience: "customer",
+    audience: MODULE_AUDIENCES.loyalty,
     includedWithWorkspace: false,
     available: true,
     knowledgeFolder: "loyalty",

@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { isRecord } from "@modules/platform/primitives"
 import type {
     ContextPassage,
     AiChatRequest,
@@ -14,7 +15,7 @@ import { InjectAiOptions, InjectAiRunner } from "./ai.decorators"
 import type { OptionalAiRunner } from "./ai.decorators"
 import { AiLogEvent } from "./ai.log-events"
 import type { AiOptions } from "./ai.options"
-import { fieldOf, isRecord, modelOf, textOf, usageOf, vectorsOf } from "./reply.policy"
+import { fieldOf, modelOf, textOf, usageOf, vectorsOf } from "./reply.policy"
 
 /** The most characters sent per embedded text; a passage is about 800 characters, this only guards a runaway input. */
 const MAX_EMBED_CHARS = 8000
