@@ -24,7 +24,7 @@ const RECENT_DECISIONS = 40
 /** The event kinds that answer a customer for the first time. */
 const FIRST_RESPONSE_KINDS = ["execution.approved", "responsibility.assigned"] as const
 /** The title patterns of the invoice-preparation step, in the two languages the rows were written in. */
-const INVOICE_TITLES = ["Prepare invoice%", "Chuẩn bị hóa đơn%"] as const
+const INVOICE_TITLES = ["Prepare invoice%", "Chu\u1EA9n b\u1ECB h\u00F3a \u0111\u01A1n%"] as const
 /** How many invoice-preparation steps are checked for an approved execution. */
 const INVOICE_STEP_LIMIT = 5000
 

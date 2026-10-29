@@ -1,9 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { AuthorityService } from "@modules/domain/authority"
+import type { AuthorityProfile } from "@modules/domain/authority"
 import { DecisionsFiguresService } from "@modules/domain/decisions"
+import type { RecentDecision } from "@modules/domain/decisions"
 import { EventsReadService } from "@modules/domain/events"
 import { ExecutionsFiguresService } from "@modules/domain/executions"
 import { InvoicesFiguresService } from "@modules/domain/invoices"
@@ -18,6 +20,51 @@ import { windowAt } from "./overview.policy"
 const WINDOW = windowAt(new Date("2026-10-13T03:00:00.000Z"))
 const AT = new Date("2026-10-01T00:00:00.000Z")
 const AT_TEXT = "2026-10-01T00:00:00.000Z"
+
+const BOT_SHEET = {
+    id: "bot-1",
+    knowledge: "hours",
+    module: "chatbot",
+    name: "Bot",
+    handle: "bot",
+    role: "",
+    instructions: "",
+    greeting: "",
+    approvalRule: "",
+    status: "active",
+    createdAt: AT,
+}
+
+type WorkFigure = Awaited<ReturnType<WorkItemsReadService["newestFigures"]>>[number]
+
+const workFigureOf = builder<WorkFigure>({
+    id: "w-1",
+    leadId: "l-1",
+    department: "sales",
+    status: "done",
+    reason: null,
+    decidedPath: null,
+    createdAt: AT,
+    updatedAt: AT,
+    completedAt: AT,
+    summary: null,
+    contact: null,
+    customer: null,
+})
+
+const decisionOf = builder<RecentDecision>({
+    id: "d-1",
+    workItemId: "w-1",
+    leadId: "l-1",
+    department: "sales",
+    action: "reply",
+    decidedBy: "Lan",
+    deciderKind: "human",
+    outcome: "approved",
+    reason: null,
+    note: null,
+    createdAt: AT,
+})
 
 const build = async () => {
     const agents = mock<AgentDirectoryService>()
@@ -72,19 +119,7 @@ const build = async () => {
 describe("OverviewFiguresService.promo", () => {
     it("composes the onboarding facts from the owners' reads", async () => {
         const world = await build()
-        world.agents.earliestSheetOfModule.mockResolvedValue({
-            id: "bot-1",
-            knowledge: "hours",
-            module: "chatbot",
-            name: "Bot",
-            handle: "bot",
-            role: "",
-            instructions: "",
-            greeting: "",
-            approvalRule: "",
-            status: "active",
-            createdAt: AT,
-        })
+        world.agents.earliestSheetOfModule.mockResolvedValue(BOT_SHEET)
         world.events.existsOfKindBetween.mockResolvedValue(true)
         world.leads.websiteOf.mockResolvedValue([{ id: "l-web", createdAt: AT }])
         world.conversations.hasCustomerChat.mockResolvedValue(true)
@@ -121,7 +156,7 @@ describe("OverviewFiguresService.promo", () => {
         expect(world.events.existsOfKindForLeads).toHaveBeenCalledWith("ws-1", "outcome.recorded", ["l-won"])
         expect(world.responsibilities.idsTitledLike).toHaveBeenCalledWith(
             "ws-1",
-            ["Prepare invoice%", "Chuẩn bị hóa đơn%"],
+            ["Prepare invoice%", "Chu\u1EA9n b\u1ECB h\u00F3a \u0111\u01A1n%"],
             5000,
         )
         expect(world.executions.hasApprovedAmong).toHaveBeenCalledWith("ws-1", ["r-1"])
@@ -155,20 +190,20 @@ describe("OverviewFiguresService.promo", () => {
     })
 })
 
-describe("OverviewFiguresService.governance", () => {
-    const quiet = (world: Awaited<ReturnType<typeof build>>) => {
-        world.authority.profileOf.mockResolvedValue(null)
-        world.leads.summariesOf.mockResolvedValue([])
-        world.orders.confirmedOrBeyond.mockResolvedValue([])
-        world.invoices.issuedOrPaid.mockResolvedValue([])
-        world.transactions.openCredits.mockResolvedValue([])
-        world.work.newestFigures.mockResolvedValue([])
-        world.executions.countPendingWithoutWork.mockResolvedValue(0)
-        world.decisions.since.mockResolvedValue([])
-        world.decisions.recent.mockResolvedValue([])
-        world.leadRecords.namesOf.mockResolvedValue([])
-    }
+const quiet = (world: Awaited<ReturnType<typeof build>>) => {
+    world.authority.profileOf.mockResolvedValue(null)
+    world.leads.summariesOf.mockResolvedValue([])
+    world.orders.confirmedOrBeyond.mockResolvedValue([])
+    world.invoices.issuedOrPaid.mockResolvedValue([])
+    world.transactions.openCredits.mockResolvedValue([])
+    world.work.newestFigures.mockResolvedValue([])
+    world.executions.countPendingWithoutWork.mockResolvedValue(0)
+    world.decisions.since.mockResolvedValue([])
+    world.decisions.recent.mockResolvedValue([])
+    world.leadRecords.namesOf.mockResolvedValue([])
+}
 
+describe("OverviewFiguresService.governance", () => {
     it("answers null authority and zero counts when the rows are missing", async () => {
         const world = await build()
         quiet(world)
@@ -190,14 +225,15 @@ describe("OverviewFiguresService.governance", () => {
         expect(world.decisions.recent).toHaveBeenCalledWith("ws-1", 40)
     })
 
+})
+
+describe("OverviewFiguresService.governance rows", () => {
     it("composes the rows of every block, the pending count and the lead name of each recent decision", async () => {
         const world = await build()
         quiet(world)
-        world.authority.profileOf.mockResolvedValue({
-            goal_revenue_vnd: 5,
-            goal_new_customers: 2,
-            goal_first_reply_minutes: 3,
-        } as never)
+        world.authority.profileOf.mockResolvedValue(
+            mock<AuthorityProfile>({ goal_revenue_vnd: 5, goal_new_customers: 2, goal_first_reply_minutes: 3 }),
+        )
         world.leads.summariesOf.mockResolvedValue([
             { id: "l-1", contactName: "An", company: "Co", stage: "new", createdAt: AT },
         ])
@@ -211,79 +247,17 @@ describe("OverviewFiguresService.governance", () => {
             { id: "t-1", invoiceId: "i-1", payer: "An", reference: "R", amountVnd: 10, status: "matched" },
         ])
         world.work.newestFigures.mockResolvedValue([
-            {
-                id: "w-1",
-                leadId: "l-1",
-                department: "sales",
-                status: "done",
-                reason: null,
-                decidedPath: null,
-                createdAt: AT,
-                updatedAt: AT,
-                completedAt: AT,
-                summary: null,
-                contact: null,
-                customer: null,
-            },
-            {
-                id: "w-2",
-                leadId: null,
-                department: "sales",
-                status: "queued",
-                reason: null,
-                decidedPath: null,
-                createdAt: AT,
-                updatedAt: AT,
-                completedAt: null,
-                summary: null,
-                contact: null,
-                customer: null,
-            },
+            workFigureOf(),
+            workFigureOf({ id: "w-2", leadId: null, status: "queued", completedAt: null }),
         ])
         world.executions.countPendingWithoutWork.mockResolvedValue(4)
         world.decisions.since.mockResolvedValue([
             { workItemId: "w-1", leadId: "l-1", deciderKind: "human", outcome: "approved", createdAt: AT },
         ])
         world.decisions.recent.mockResolvedValue([
-            {
-                id: "d-1",
-                workItemId: "w-1",
-                leadId: "l-1",
-                department: "sales",
-                action: "reply",
-                decidedBy: "Lan",
-                deciderKind: "human",
-                outcome: "approved",
-                reason: null,
-                note: null,
-                createdAt: AT,
-            },
-            {
-                id: "d-2",
-                workItemId: null,
-                leadId: null,
-                department: "sales",
-                action: "reply",
-                decidedBy: "Lan",
-                deciderKind: "human",
-                outcome: "approved",
-                reason: null,
-                note: null,
-                createdAt: AT,
-            },
-            {
-                id: "d-3",
-                workItemId: null,
-                leadId: "l-gone",
-                department: "sales",
-                action: "reply",
-                decidedBy: "Lan",
-                deciderKind: "human",
-                outcome: "approved",
-                reason: null,
-                note: null,
-                createdAt: AT,
-            },
+            decisionOf(),
+            decisionOf({ id: "d-2", workItemId: null, leadId: null }),
+            decisionOf({ id: "d-3", workItemId: null, leadId: "l-gone" }),
         ])
         world.leadRecords.namesOf.mockResolvedValue([{ id: "l-1", contact_name: "An" }])
 
