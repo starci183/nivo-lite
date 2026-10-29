@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { ExecutionsService } from "@modules/domain/executions"
-import type { ExecutionRecord } from "@modules/domain/executions"
+import type { ExecutionRecordRow } from "@modules/domain/executions"
 import { LeadReadService } from "@modules/domain/leads"
 import { isOfficeRoomKey, MessagesReadService } from "@modules/domain/messages"
 import type { ThreadLine } from "@modules/domain/messages"
@@ -104,7 +104,7 @@ export class OfficeThreadService {
     /** The executions with the context an approval card shows: the step, the customer, the agent and the work item. */
     private async approvalsOf(
         workspaceId: string,
-        records: ReadonlyArray<ExecutionRecord>,
+        records: ReadonlyArray<ExecutionRecordRow>,
     ): Promise<Array<ApprovalView>> {
         const steps = await this.steps.stepsOf(
             workspaceId,

@@ -4,7 +4,7 @@ import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { EventsService } from "./events.service"
-import type { EventRecord } from "./events.contracts"
+import type { EventRecordRow } from "./events.contracts"
 import { EventEntity } from "./persistence/entities"
 
 const registerWorkspaceEvents = () => {
@@ -105,7 +105,7 @@ const entityOf = builder<EventEntity>({
     workItemId: "work-1",
 })
 
-const recordOf = builder<EventRecord>({
+const recordOf = builder<EventRecordRow>({
     id: "event-1",
     lead_id: "lead-1",
     kind: "work.asked",

@@ -5,7 +5,7 @@ import type { WorkContext } from "@modules/domain/decisions"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { InjectErrorsService, isDomainError } from "@modules/platform/errors"
 import type { ErrorsService } from "@modules/platform/errors"
 import { InjectRequestLocale } from "@modules/platform/i18n"
@@ -30,7 +30,7 @@ import type {
 import { inputOf } from "./lead-action-input.policy"
 import type { LeadActionFenceType } from "./types/lead-action-fence.type"
 import { LeadActionEntity } from "./persistence/entities"
-import { NOW, returnedRows, runOfRaw } from "./persistence/lead-action.projection"
+import { NOW, runOfRaw } from "./persistence/lead-action.projection"
 
 @Injectable()
 /** Owns backend run rows: membership-proved enqueue, workspace-scoped status and results under the platform-held fence. */
@@ -156,7 +156,7 @@ export class LeadActionsService {
     private async finish(
         held: LeadActionFenceType,
         change: Partial<Pick<LeadActionEntity, "status" | "result" | "errorCode">>,
-    ): Promise<ReadonlyArray<object>> {
+    ): Promise<ReadonlyArray<{ readonly id: string }>> {
         const written = await this.entityManager
             .createQueryBuilder(LeadActionEntity, "la")
             .update()
@@ -170,10 +170,10 @@ export class LeadActionsService {
             })
             .returning("id")
             .execute()
-        return returnedRows(written.raw)
+        return returnedRows(written.raw, rowShape({ id: "string" }))
     }
 
-    private requireOwned(rows: ReadonlyArray<object>): void {
+    private requireOwned(rows: ReadonlyArray<{ readonly id: string }>): void {
         if (rows.length === 0) throw new LeadActionsError({ code: LeadActionsErrorCode.NotFound })
     }
 
