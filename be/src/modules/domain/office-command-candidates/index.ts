@@ -7,7 +7,6 @@ export type {
     ApprovalView,
     CandidateView,
     ConfirmResult,
-    MessageCursor,
     MessagePage,
     ProposeOutcome,
 } from "./office-command-candidates.contracts"

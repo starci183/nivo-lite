@@ -85,7 +85,7 @@ const build = async (stubs: ReadonlyArray<Stub>, patch: Record<string, unknown> 
     return { settlement: moduleRef.get(SepayTransactionsService), tx, proof, inbox, outbox, claims, orders }
 }
 
-describe("SepayTransactionsService", () => {
+describe("SepayTransactionsService review", () => {
     describe("review", () => {
         it("reads nothing for no orders", async () => {
             const { settlement, tx } = await build([])
@@ -121,7 +121,7 @@ describe("SepayTransactionsService", () => {
                     }),
                 ],
             })
-            tx.em.createQueryBuilder.mockReturnValue(review.builder as never)
+            tx.em.createQueryBuilder.mockReturnValue(review.builder)
 
             await expect(settlement.review("ws-1", ["order-1"])).resolves.toEqual([
                 {
@@ -149,7 +149,9 @@ describe("SepayTransactionsService", () => {
             expect(review.callsOf("limit")).toEqual([[50]])
         })
     })
+})
 
+describe("SepayTransactionsService verification", () => {
     describe("verifySepayDelivery", () => {
         it.each([AUTHORIZATION, undefined])(
             "delegates the exact authorization %j without reading data",

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { LeadActivity } from "./events-activity-read.contracts"
+import type { EventsLeadActivity } from "./events-activity-read.contracts"
 import { EventEntity } from "./persistence/entities"
 
 @Injectable()
@@ -10,7 +10,7 @@ export class EventsActivityReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The instant of the newest line about each of the given customers; customers without a line are missing. */
-    lastAtByLead(workspaceId: string, leadIds: ReadonlyArray<string>, limit: number): Promise<Array<LeadActivity>> {
+    lastAtByLead(workspaceId: string, leadIds: ReadonlyArray<string>, limit: number): Promise<Array<EventsLeadActivity>> {
         if (leadIds.length === 0) return Promise.resolve([])
         return this.entityManager
             .createQueryBuilder(EventEntity, "e")
@@ -22,7 +22,7 @@ export class EventsActivityReadService {
             })
             .groupBy("e.leadId")
             .limit(limit)
-            .getRawMany<LeadActivity>()
+            .getRawMany<EventsLeadActivity>()
     }
 
     /** The customers the workspace logged a line of the kind about from an instant on. */
