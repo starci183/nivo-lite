@@ -125,6 +125,9 @@ describe("OverviewReadsService", () => {
         expect(step?.dueAt).toBeNull()
     })
 
+})
+
+describe("OverviewReadsService lists", () => {
     it("lists the agents with the creation time as text, bounded at 200", async () => {
         const { service, agents } = await build()
         const sheet: AgentSheet = {
@@ -179,6 +182,9 @@ describe("OverviewReadsService", () => {
         expect(leads.summariesOf).toHaveBeenCalledWith("ws-1", 10_000)
     })
 
+})
+
+describe("OverviewReadsService pending work", () => {
     it("adds the lead behind each waiting draft, or null when its step is gone", async () => {
         const { service, executions, responsibilities } = await build()
         executions.pendingOf.mockResolvedValue([
