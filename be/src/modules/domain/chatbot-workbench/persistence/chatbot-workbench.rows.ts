@@ -100,12 +100,6 @@ export interface AgentIdRow {
     readonly id: string
 }
 
-/** The selected staff display name. */
-export interface ChatbotStaffRow {
-    /** The stored name value. */
-    readonly name: string
-}
-
 /** An active agent and its catalog module. */
 export interface LensRow {
     /** The stored module value. */

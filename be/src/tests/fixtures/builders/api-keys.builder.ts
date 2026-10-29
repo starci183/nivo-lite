@@ -1,5 +1,8 @@
 import { builder } from "@starci/jest-preset"
-import type { ApiKeyEntity } from "@modules/domain/api-keys"
+import { apiKeysEntities } from "@modules/domain/api-keys"
+
+const [ApiKeyRowEntity] = apiKeysEntities
+type ApiKeyEntity = InstanceType<typeof ApiKeyRowEntity>
 
 /** A stored key of the workspace, with the fields a spec rarely changes filled. */
 export const keyOf = builder<ApiKeyEntity>({

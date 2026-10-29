@@ -9,6 +9,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 import { GoogleConnectionsService } from "./google-connections.service"
 import { GoogleSheetAutomationService } from "./google-sheet-automation.service"
+import { GoogleSheetsService } from "./google-sheets.service"
 
 const NOW = new Date("2026-10-12T03:00:00.000Z")
 const sheetDef = buildTemplate({ key: "sheet_orders" })
@@ -25,11 +26,12 @@ const build = async () => {
     const extensions = mock<AutomationExtensionsService>()
     const google = mock<GoogleConnectionsService>()
     google.accountsOf.mockResolvedValue([{ id: "g1", email: "shop@example.test", status: "connected" }])
-    google.provisionOrdersSheet.mockResolvedValue({
+    const sheets = mock<GoogleSheetsService>()
+    sheets.provisionOrdersSheet.mockResolvedValue({
         spreadsheetId: "sheet-new",
         spreadsheetUrl: "https://docs.google.com/spreadsheets/d/sheet-new/edit",
     })
-    google.runSheetEvent.mockResolvedValue({ evidence: "Row 2" })
+    sheets.runSheetEvent.mockResolvedValue({ evidence: "Row 2" })
     const workspaces = mock<WorkspacesService>()
     workspaces.nameOf.mockResolvedValue("Lan Shop")
     const catalog = mock<MessageCatalog>()
@@ -39,12 +41,13 @@ const build = async () => {
             GoogleSheetAutomationService,
             { provide: AutomationExtensionsService, useValue: extensions },
             { provide: GoogleConnectionsService, useValue: google },
+            { provide: GoogleSheetsService, useValue: sheets },
             { provide: WorkspacesService, useValue: workspaces },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
         ],
     }).compile()
-    return { service: moduleRef.get(GoogleSheetAutomationService), extensions, google, workspaces }
+    return { service: moduleRef.get(GoogleSheetAutomationService), extensions, sheets, workspaces }
 }
 
 describe("GoogleSheetAutomationService", () => {
@@ -60,7 +63,7 @@ describe("GoogleSheetAutomationService", () => {
     })
 
     it("runs the executor and switch-on hook registered with the engine", async () => {
-        const { service, extensions, google } = await build()
+        const { service, extensions, sheets } = await build()
         service.onModuleInit()
         const extension = extensions.add.mock.calls[0]?.[0]
 
@@ -69,7 +72,7 @@ describe("GoogleSheetAutomationService", () => {
             steps: [{ label: "googleConnections.sheetOrders.written{}", status: "done", detail: "Row 2" }],
             evidence: "Row 2",
         })
-        expect(google.runSheetEvent).toHaveBeenCalledWith("ws-1", context.config, {
+        expect(sheets.runSheetEvent).toHaveBeenCalledWith("ws-1", context.config, {
             event: "payment.received",
             data: {},
             occurredAt: NOW.toISOString(),
@@ -79,7 +82,7 @@ describe("GoogleSheetAutomationService", () => {
             spreadsheetId: "sheet-new",
             sheetUrl: "https://docs.google.com/spreadsheets/d/sheet-new/edit",
         })
-        expect(google.provisionOrdersSheet).toHaveBeenCalledWith(
+        expect(sheets.provisionOrdersSheet).toHaveBeenCalledWith(
             "ws-1",
             'googleConnections.sheetTitle{"name":"Lan Shop"}',
             { recordOrders: true },
@@ -89,14 +92,14 @@ describe("GoogleSheetAutomationService", () => {
 
 describe("GoogleSheetAutomationService / record", () => {
     it("writes the event and answers a done run with its evidence", async () => {
-        const { service, google } = await build()
+        const { service, sheets } = await build()
 
         const result = await service.record(context, {
             event: "order.confirmed",
             data: { order_no: "DH-1" },
             at: "2026-10-12T02:00:00.000Z",
         })
-        expect(google.runSheetEvent).toHaveBeenCalledWith("ws-1", context.config, {
+        expect(sheets.runSheetEvent).toHaveBeenCalledWith("ws-1", context.config, {
             event: "order.confirmed",
             data: { order_no: "DH-1" },
             occurredAt: "2026-10-12T02:00:00.000Z",
@@ -106,8 +109,8 @@ describe("GoogleSheetAutomationService / record", () => {
     })
 
     it("answers a skipped run when the kind of event is switched off", async () => {
-        const { service, google } = await build()
-        google.runSheetEvent.mockResolvedValue({ evidence: "Leads off", skipped: true })
+        const { service, sheets } = await build()
+        sheets.runSheetEvent.mockResolvedValue({ evidence: "Leads off", skipped: true })
 
         const result = await service.record(context, { event: "lead.created", data: {}, at: NOW })
         expect(result.status).toBe("skipped")
@@ -122,7 +125,7 @@ describe("GoogleSheetAutomationService / record", () => {
             ],
             evidence: "Leads off",
         })
-        expect(google.runSheetEvent).toHaveBeenCalledWith(
+        expect(sheets.runSheetEvent).toHaveBeenCalledWith(
             "ws-1",
             context.config,
             expect.objectContaining({ occurredAt: NOW.toISOString() }),
@@ -130,16 +133,16 @@ describe("GoogleSheetAutomationService / record", () => {
     })
 
     it("skips an event the sheet does not record without calling Google", async () => {
-        const { service, google } = await build()
+        const { service, sheets } = await build()
 
         await expect(service.record(context, { event: "order.shipped" })).resolves.toMatchObject({
             status: "skipped",
         })
-        expect(google.runSheetEvent).not.toHaveBeenCalled()
+        expect(sheets.runSheetEvent).not.toHaveBeenCalled()
     })
 
     it.each([undefined, null, 17])("skips a non-string event: %s", async (event) => {
-        const { service, google } = await build()
+        const { service, sheets } = await build()
 
         await expect(service.record(context, { event })).resolves.toEqual({
             status: "skipped",
@@ -152,7 +155,7 @@ describe("GoogleSheetAutomationService / record", () => {
             ],
             evidence: null,
         })
-        expect(google.runSheetEvent).not.toHaveBeenCalled()
+        expect(sheets.runSheetEvent).not.toHaveBeenCalled()
     })
 })
 
@@ -162,14 +165,14 @@ describe("GoogleSheetAutomationService / record", () => {
         { data: ["not", "an object"], at: 42 },
         { data: "text", at: undefined },
     ])("uses empty data and the clock for an unstructured payload: %j", async ({ data, at }) => {
-        const { service, google } = await build()
+        const { service, sheets } = await build()
 
         await expect(service.record(context, { event: "deal.won", data, at })).resolves.toEqual({
             status: "done",
             steps: [{ label: "googleConnections.sheetOrders.written{}", status: "done", detail: "Row 2" }],
             evidence: "Row 2",
         })
-        expect(google.runSheetEvent).toHaveBeenCalledWith("ws-1", context.config, {
+        expect(sheets.runSheetEvent).toHaveBeenCalledWith("ws-1", context.config, {
             event: "deal.won",
             data: {},
             occurredAt: NOW.toISOString(),
@@ -179,14 +182,14 @@ describe("GoogleSheetAutomationService / record", () => {
 
 describe("GoogleSheetAutomationService / prepareEnable", () => {
     it("creates the spreadsheet named after the shop and keeps its id and link", async () => {
-        const { service, google } = await build()
+        const { service, sheets } = await build()
 
         await expect(service.prepareEnable("ws-1", sheetDef, { recordOrders: true })).resolves.toEqual({
             recordOrders: true,
             spreadsheetId: "sheet-new",
             sheetUrl: "https://docs.google.com/spreadsheets/d/sheet-new/edit",
         })
-        expect(google.provisionOrdersSheet).toHaveBeenCalledWith(
+        expect(sheets.provisionOrdersSheet).toHaveBeenCalledWith(
             "ws-1",
             'googleConnections.sheetTitle{"name":"Lan Shop"}',
             { recordOrders: true },
@@ -194,7 +197,7 @@ describe("GoogleSheetAutomationService / prepareEnable", () => {
     })
 
     it("leaves another template and an existing spreadsheet untouched", async () => {
-        const { service, google } = await build()
+        const { service, sheets } = await build()
 
         await expect(service.prepareEnable("ws-1", buildTemplate({ key: "thank_payment" }), { a: 1 })).resolves.toEqual(
             { a: 1 },
@@ -202,11 +205,11 @@ describe("GoogleSheetAutomationService / prepareEnable", () => {
         await expect(service.prepareEnable("ws-1", sheetDef, { spreadsheetId: "s1" })).resolves.toEqual({
             spreadsheetId: "s1",
         })
-        expect(google.provisionOrdersSheet).not.toHaveBeenCalled()
+        expect(sheets.provisionOrdersSheet).not.toHaveBeenCalled()
     })
 
     it("uses the fallback shop name when a blank spreadsheet and workspace name are supplied", async () => {
-        const { service, google, workspaces } = await build()
+        const { service, sheets, workspaces } = await build()
         workspaces.nameOf.mockResolvedValue("   ")
         const config = { spreadsheetId: " \t ", recordOrders: true }
 
@@ -215,7 +218,7 @@ describe("GoogleSheetAutomationService / prepareEnable", () => {
             spreadsheetId: "sheet-new",
             sheetUrl: "https://docs.google.com/spreadsheets/d/sheet-new/edit",
         })
-        expect(google.provisionOrdersSheet).toHaveBeenCalledWith(
+        expect(sheets.provisionOrdersSheet).toHaveBeenCalledWith(
             "ws-1",
             'googleConnections.sheetTitle{"name":"NIVO"}',
             config,

@@ -26,4 +26,4 @@ export { toRequestPublicBookingRequest, toRequestPublicBookingType } from "./pub
 export { BookingNoticesService } from "./booking-notices.service"
 export type { BookingNotice, BookingNoticeResult, BookingNotifier } from "./booking-notice.contracts"
 export type { EffectsRow } from "./booking-facts.contracts"
-export { BookingEntity, bookingsEntities } from "./persistence/entities"
+export { bookingsEntities } from "./persistence/entities"

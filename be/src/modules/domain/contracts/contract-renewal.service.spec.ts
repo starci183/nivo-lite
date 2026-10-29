@@ -12,7 +12,7 @@ import { ContractsService } from "./contracts.service"
 
 const QUEUE = "payment_reconciled__contracts"
 
-const paymentOf = builder<PaymentReconciledPayload>({
+const PAID = {
     dedupeKey: "inv-1",
     workspaceId: "ws-1",
     invoiceId: "inv-1",
@@ -23,14 +23,23 @@ const paymentOf = builder<PaymentReconciledPayload>({
     workItemId: "item-1",
     subjectType: "transaction",
     subjectId: "tx-1",
-    orderId: null,
-    orderNo: null,
     leadId: "lead-1",
     customer: "Lan",
-    channel: null,
-    contractId: "contract-1",
-    periodEndsOn: "2027-01-01",
+}
+const RENEWAL = { contractId: "contract-1", periodEndsOn: "2027-01-01" }
+const paymentOf = builder<PaymentReconciledPayload>({ ...PAID, ...RENEWAL })
+const noContractOf = builder<PaymentReconciledPayload>({ ...PAID, periodEndsOn: RENEWAL.periodEndsOn })
+const leadlessOf = builder<PaymentReconciledPayload>({
+    ...Object.fromEntries(Object.entries(PAID).filter(([name]) => name !== "leadId")),
+    ...RENEWAL,
+    dedupeKey: PAID.dedupeKey,
+    workspaceId: PAID.workspaceId,
+    invoiceId: PAID.invoiceId,
+    invoiceNo: PAID.invoiceNo,
+    workItemId: PAID.workItemId,
+    customer: PAID.customer,
 })
+const noPeriodOf = builder<PaymentReconciledPayload>({ ...PAID, contractId: RENEWAL.contractId })
 
 const build = async () => {
     const tx = fakeTransaction(mockEntityManager())
@@ -86,6 +95,14 @@ describe("ContractRenewalService renewForPaidInvoice", () => {
         expect(tx.commits).toBe(1)
     })
 
+    it("records the renewal of an invoice with no customer on no customer", async () => {
+        const { service, events } = await build()
+
+        await service.renewForPaidInvoice(QUEUE, "inv-1", leadlessOf())
+
+        expect(events.record).toHaveBeenCalledWith(expect.objectContaining({ leadId: null }), expect.anything())
+    })
+
     it("records nothing more when the renewal was already applied", async () => {
         const { service, contracts, events } = await build()
         contracts.extendForPaidRenewal.mockResolvedValue({
@@ -109,12 +126,12 @@ describe("ContractRenewalService renewForPaidInvoice", () => {
     })
 
     it.each([
-        ["no contract", { contractId: null, periodEndsOn: "2027-01-01" }],
-        ["no renewed period", { contractId: "contract-1", periodEndsOn: null }],
-    ])("renews nothing for an invoice with %s", async (_name, change) => {
+        ["no contract", noContractOf],
+        ["no renewed period", noPeriodOf],
+    ])("renews nothing for an invoice with %s", async (_name, unrenewedOf) => {
         const { service, inbox, contracts, tx } = await build()
 
-        await service.renewForPaidInvoice(QUEUE, "inv-1", paymentOf(change))
+        await service.renewForPaidInvoice(QUEUE, "inv-1", unrenewedOf())
 
         expect(contracts.extendForPaidRenewal).not.toHaveBeenCalled()
         expect(inbox.claims).toEqual([])

@@ -7,7 +7,7 @@ import {
     nextAction,
     WizardFooter,
     type WizardAction,
-} from "@/components/composites/WizardFooter"
+} from "@/components/branches/WizardFooter"
 
 import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
 import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
@@ -164,11 +164,7 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
     return (
         <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
             {(_resume, isSkeleton) => (
-                <WizardFrame
-                    {...frameOf(view)}
-                    isSkeleton={isSkeleton}
-                    footer={<WizardFooter actions={actions} isSkeleton={isSkeleton} />}
-                >
+                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} actions={actions}>
                     {view.step === "connect" ? (
                         <div className={classNames.copy}>
                             <Text size="sm">{text.connectBody}</Text>

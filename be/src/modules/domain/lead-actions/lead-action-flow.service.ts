@@ -7,7 +7,7 @@ import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService, contactParts } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkItemsService } from "@modules/domain/work-items"
-import { DealWonEvent, LeadCapturedEvent } from "@modules/events/api"
+import { DealWonEvent, LeadCapturedEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -79,8 +79,8 @@ export class LeadActionFlowService {
                         company: created.company,
                         channel: created.channel,
                         need: created.need,
-                        phone: created.phone,
-                        email: created.email,
+                        ...whenPresent("phone", created.phone),
+                        ...whenPresent("email", created.email),
                     }),
                     manager,
                     `lead-captured:${created.id}`,
@@ -148,10 +148,10 @@ export class LeadActionFlowService {
                     workspaceId: ctx.workspaceId,
                     leadId: lead.id,
                     name: lead.contact_name,
-                    company: lead.company,
-                    channel: lead.channel,
-                    need: lead.need,
-                    evidence: run.input.evidence || null,
+                    ...whenPresent("company", lead.company),
+                    ...whenPresent("channel", lead.channel),
+                    ...whenPresent("need", lead.need),
+                    ...whenPresent("evidence", run.input.evidence || undefined),
                 }),
                 manager,
                 `deal-won:${lead.id}`,

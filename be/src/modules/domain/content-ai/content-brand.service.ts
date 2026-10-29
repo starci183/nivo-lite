@@ -1,9 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { Equal, In, IsNull, Or } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { AuthorityService } from "@modules/domain/authority"
 import { BrainFactsService } from "@modules/domain/brain-facts"
-import { KnowledgeSourceEntity } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import { ModuleContextVersionEntity } from "@modules/domain/module-context-versions"
 import { ModuleInstallationEntity } from "@modules/domain/module-installations"
 import { WorkspacesService } from "@modules/domain/workspaces"
@@ -13,8 +12,6 @@ import type { BrandMaterial } from "./content-ai-prompt.policy"
 
 /** The most public sources a marketing prompt reads. */
 const SOURCE_LIMIT = 40
-/** The states in which a source is indexed and may be quoted. */
-const QUOTABLE_STATUSES = ["ready", "extracting_facts"] as const
 
 @Injectable()
 /** Public marketing context; private sources and instance-only facts never reach these prompts. */
@@ -23,6 +20,7 @@ export class ContentBrandService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly authority: AuthorityService,
         private readonly facts: BrainFactsService,
+        private readonly sources: KnowledgeSourcesReadService,
         private readonly workspaces: WorkspacesService,
     ) {}
 
@@ -43,18 +41,7 @@ export class ContentBrandService {
                 .orderBy("i.created_at")
                 .limit(1)
                 .getRawOne<{ snapshot: unknown }>(),
-            this.entityManager.find(KnowledgeSourceEntity, {
-                select: { title: true, topic: true, content: true },
-                where: {
-                    workspaceId,
-                    visibility: "public",
-                    status: In(QUOTABLE_STATUSES),
-                    module: Or(IsNull(), Equal("content")),
-                    installationId: IsNull(),
-                },
-                order: { createdAt: "ASC" },
-                take: SOURCE_LIMIT,
-            }),
+            this.sources.allPublicTexts(workspaceId, "content", SOURCE_LIMIT),
             this.facts.forView(workspaceId, "customer", "content", null, 80),
         ])
         const snapshot = isJsonObject(setupRow?.snapshot) ? setupRow.snapshot : {}

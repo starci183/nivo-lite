@@ -30,6 +30,7 @@ import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.
 import { ReplyCustomerPerformerService } from "./reply-customer-performer.service"
 import { SendEmailPerformerService } from "./send-email-performer.service"
 import { PROMPT_WRITER } from "./work-performers.decorators"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./work-performers.module-definition"
 import { WorkPerformersRegistrarService } from "./work-performers-registrar.service"
 import { WorkspaceMailerService } from "./workspace-mailer.service"
@@ -47,6 +48,7 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                { provide: INBOX, useClass: InboxService },
                 BookingToolsService,
                 { provide: PROMPT_WRITER, useExisting: options.writer },
                 PerformerKitService,

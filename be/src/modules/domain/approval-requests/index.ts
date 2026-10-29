@@ -3,7 +3,6 @@ export { APPROVAL_REQUESTS_MESSAGES } from "./messages/approval-requests.message
 export { ApprovalRequestsModule } from "./approval-requests.module"
 export { ApprovalRequestsService } from "./approval-requests.service"
 export { ApprovalRequestsReadService } from "./approval-requests-read.service"
-export type { SettledRequest } from "./approval-requests-read.contracts"
 export type { OpenApprovalParams } from "./approval-requests.contracts"
 export type { ApprovalRequestRecord, ApprovalVerdictRecord } from "./approval-requests.contracts"
 export { ApprovalRequestEntity, approvalRequestsEntities } from "./persistence/entities"

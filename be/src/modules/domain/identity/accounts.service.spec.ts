@@ -49,6 +49,12 @@ const person = (meta: Record<string, unknown>, email: string | null = "an@exampl
     disabled: false,
 })
 
+const EXISTING_ACCOUNT: ReadonlyArray<readonly [string, unknown]> = [
+    [
+        USER_BY_EMAIL,
+        [{ id: "u1", email: "an@example.test", encrypted_password: "h", email_confirmed_at: NOW, disabled: false }],
+    ],
+]
 const build = async (stubs: ReadonlyArray<readonly [string, unknown]>) => {
     const em = mockEntityManager({ query: stubs })
     const mail = mock<MailClient>()
@@ -166,20 +172,7 @@ describe("IdentityAccountsService / setUploadedAvatar", () => {
 
 describe("IdentityAccountsService / deliverInvite", () => {
     it("mails a person who already has an account the invitation link on the web origin", async () => {
-        const { service, mail } = await build([
-            [
-                USER_BY_EMAIL,
-                [
-                    {
-                        id: "u1",
-                        email: "an@example.test",
-                        encrypted_password: "h",
-                        email_confirmed_at: NOW,
-                        disabled: false,
-                    },
-                ],
-            ],
-        ])
+        const { service, mail } = await build(EXISTING_ACCOUNT)
 
         await expect(service.deliverInvite("An@Example.test", REDIRECT)).resolves.toBe("existing")
 
@@ -227,20 +220,7 @@ describe("IdentityAccountsService / deliverInvite", () => {
         ])
         await expect(service.deliverInvite("x@example.test", "not a url")).resolves.toBe("none")
 
-        const failing = await build([
-            [
-                USER_BY_EMAIL,
-                [
-                    {
-                        id: "u1",
-                        email: "an@example.test",
-                        encrypted_password: "h",
-                        email_confirmed_at: NOW,
-                        disabled: false,
-                    },
-                ],
-            ],
-        ])
+        const failing = await build(EXISTING_ACCOUNT)
         failing.mail.sendThroughPlatform.mockRejectedValue(new Error("smtp down"))
         await expect(failing.service.deliverInvite("an@example.test", "not a url")).resolves.toBe("none")
         expect(mail.sendThroughPlatform).not.toHaveBeenCalled()

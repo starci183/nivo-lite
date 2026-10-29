@@ -465,8 +465,8 @@ export interface BookingEvent {
     readonly workspaceId: string
     /** The booking that changed. */
     readonly bookingId: string
-    /** What kind of change it was. */
-    readonly kind: BookingEventKind
+    /** What kind of change it was, as the event carries it: one of `BOOKING_STATUS_CHANGED_KINDS`. */
+    readonly kind: string
 }
 
 /** What applying one booking event did, for the job log. */

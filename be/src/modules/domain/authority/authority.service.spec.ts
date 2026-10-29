@@ -95,80 +95,55 @@ describe("AuthorityService", () => {
     })
 })
 
-const savedRow = (overrides: Record<string, unknown> = {}) => ({
-    policies: "Refunds in 7 days",
-    replyStyle: "short",
-    brandVoice: "warm",
-    limitsNote: "ask about discounts",
-    goalRevenueVnd: null,
-    goalNewCustomers: null,
-    goalFirstReplyMinutes: null,
-    goalNote: "",
-    updatedBy: "Binh",
-    updatedAt: new Date("2026-10-12T10:00:00.000Z"),
-    ...overrides,
-})
-
-/** A manager whose profile read answers `stored` and whose upsert statement answers `raw`. */
-const saving = (stored: AuthorityEntity | null, raw: ReadonlyArray<unknown>) => {
-    const em = mockEntityManager({ findOne: [AuthorityEntity, stored] })
-    const fake = fakeQueryBuilder({ execute: { raw } })
-    em.createQueryBuilder.mockReturnValue(fake.builder)
-    return { em, fake }
-}
-
 describe("AuthorityService", () => {
     describe("save", () => {
-        it("lays the patch over the stored sheet and saves it in one statement", async () => {
-            const { em, fake } = saving(entityOf(), [savedRow({ policies: "P2", goalRevenueVnd: "5000000" })])
+        it("lays the patch over the stored sheet and saves it", async () => {
+            const saved = Object.assign(entityOf(), { policies: "P2", goalRevenueVnd: "5000000", updatedBy: "Binh" })
+            const em = mockEntityManager({
+                findOne: [
+                    [AuthorityEntity, entityOf()],
+                    [AuthorityEntity, saved],
+                ],
+                upsert: [AuthorityEntity, {}],
+            })
             const service = await build(em)
 
             await expect(service.save("ws-1", { policies: "P2" }, "Binh")).resolves.toEqual(
                 profileOf({ policies: "P2", updated_by: "Binh", goal_revenue_vnd: 5000000 }),
             )
 
-            expect(em.createQueryBuilder).toHaveBeenCalledWith(AuthorityEntity, "au")
-            expect(fake.callsOf("values")).toEqual([
-                [
-                    {
-                        workspaceId: "ws-1",
-                        policies: "P2",
-                        replyStyle: "short",
-                        brandVoice: "warm",
-                        limitsNote: "ask about discounts",
-                        goalRevenueVnd: null,
-                        goalNewCustomers: null,
-                        goalFirstReplyMinutes: null,
-                        goalNote: "",
-                        updatedBy: "Binh",
-                        updatedAt: SQL_EXPRESSION,
-                    },
-                ],
-            ])
-            expect(fake.callsOf("orUpdate")).toEqual([
-                [expect.arrayContaining(["policies", "updated_at"]), ["workspace_id"]],
-            ])
-            expect(fake.callsOf("returning")).toEqual([[expect.stringContaining("goal_revenue_vnd")]])
+            const stamp = { policies: "P2", updatedBy: "Binh", updatedAt: SQL_EXPRESSION }
+            expect(em.upsert).toHaveBeenCalledWith(
+                AuthorityEntity,
+                expect.objectContaining({ workspaceId: "ws-1", replyStyle: "short", goalRevenueVnd: null, ...stamp }),
+                ["workspaceId"],
+            )
         })
 
         it("creates the sheet when the workspace has none", async () => {
-            const { em, fake } = saving(null, [savedRow({ goalNote: "grow" })])
+            const em = mockEntityManager({
+                findOne: [
+                    [AuthorityEntity, null],
+                    [AuthorityEntity, Object.assign(entityOf(), { goalNote: "grow" })],
+                ],
+                upsert: [AuthorityEntity, {}],
+            })
             const service = await build(em)
 
             await service.save("ws-1", { goal_note: "grow" }, "Binh")
 
-            expect(fake.callsOf("values")).toEqual([
-                [
-                    expect.objectContaining({
-                        policies: "",
-                        replyStyle: "",
-                        brandVoice: "",
-                        limitsNote: "",
-                        goalNote: "grow",
-                        updatedBy: "Binh",
-                    }),
-                ],
-            ])
+            expect(em.upsert).toHaveBeenCalledWith(
+                AuthorityEntity,
+                expect.objectContaining({
+                    policies: "",
+                    replyStyle: "",
+                    brandVoice: "",
+                    limitsNote: "",
+                    goalNote: "grow",
+                    updatedBy: "Binh",
+                }),
+                ["workspaceId"],
+            )
         })
     })
 })
@@ -176,28 +151,21 @@ describe("AuthorityService", () => {
 describe("AuthorityService", () => {
     describe("save", () => {
         it("stores the revenue goal as text and stamps the save with the database time", async () => {
-            const { em, fake } = saving(entityWithRevenueGoal(), [savedRow({ goalRevenueVnd: "5000000" })])
+            const em = mockEntityManager({
+                findOne: [AuthorityEntity, entityWithRevenueGoal()],
+                upsert: [AuthorityEntity, {}],
+            })
             const service = await build(em)
 
             await service.save("ws-1", {}, "Binh")
 
-            const values = fake.callsOf("values")[0]?.[0]
+            const values = em.upsert.mock.calls[0]?.[1]
             expect(evaluatedValues(values).goalRevenueVnd).toBe("5000000")
             expect(evaluatedValues(values).updatedAt).toBe("now()")
         })
 
-        it("fails when the save answers no row list", async () => {
-            const em = mockEntityManager({ findOne: [AuthorityEntity, null] })
-            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: { raw: undefined } }).builder)
-            const service = await build(em)
-
-            await expect(service.save("ws-1", {}, "Binh")).rejects.toMatchObject({
-                code: AuthorityErrorCode.NotSaved,
-            })
-        })
-
-        it("fails when nothing came back from the save", async () => {
-            const { em } = saving(null, [])
+        it("fails when the saved sheet cannot be read back", async () => {
+            const em = mockEntityManager({ findOne: [AuthorityEntity, null], upsert: [AuthorityEntity, {}] })
             const service = await build(em)
 
             await expect(service.save("ws-1", {}, "Binh")).rejects.toMatchObject({

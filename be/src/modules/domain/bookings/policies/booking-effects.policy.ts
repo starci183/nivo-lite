@@ -1,7 +1,6 @@
 import type { BookingNoticeKind } from "../booking-notice.contracts"
 import type {
     BookingEffects,
-    BookingEventKind,
     BookingSettings,
     CancelFeeFacts,
     ClosedBookingFacts,
@@ -27,7 +26,7 @@ export const cancelFeeOf = (row: CancelFeeFacts, windowHours: number, feePct: nu
 }
 
 /** Which notice an event earns, or null when the customer is not told. */
-export const noticeOf = (kind: BookingEventKind, status: string): NoticeKind | null => {
+export const noticeOf = (kind: string, status: string): NoticeKind | null => {
     if (status === "cancelled") return "cancelled"
     if (status === "no_show") return "no_show"
     if (kind === "moved" || status === "rescheduled") return "moved"

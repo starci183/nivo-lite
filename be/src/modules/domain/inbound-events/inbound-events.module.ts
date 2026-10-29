@@ -1,8 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./inbound-events.module-definition"
-import { InboundEventsService } from "./inbound-events.service"
+import { InboundEventRecordsModule } from "./inbound-event-records.module"
 import { InboxFeedService } from "./inbox-feed.service"
 
 @Module({})
@@ -13,13 +12,9 @@ export class InboundEventsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [
-                ...(base.providers ?? []),
-                InboundEventsService,
-                InboxFeedService,
-                { provide: INBOX, useClass: InboxService },
-            ],
-            exports: [InboundEventsService, InboxFeedService],
+            imports: [...(base.imports ?? []), InboundEventRecordsModule],
+            providers: [...(base.providers ?? []), InboxFeedService],
+            exports: [InboundEventRecordsModule, InboxFeedService],
         }
     }
 }

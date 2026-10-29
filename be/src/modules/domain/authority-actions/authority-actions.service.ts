@@ -6,18 +6,6 @@ import { AuthorityActionEntity } from "./persistence/entities"
 /** The most action rows one read or sync holds. */
 const ACTION_LIMIT = 500
 
-/** The columns a repeated sync overwrites on an existing action. */
-const UPDATED_COLUMNS = [
-    "module_key",
-    "sort_order",
-    "default_mode",
-    "default_limit_vnd",
-    "default_required_fields",
-    "amount_limit",
-    "max_mode",
-    "label",
-]
-
 @Injectable()
 /** The authority action rows, written through the transaction the catalogue sync hands in. */
 export class AuthorityActionsService {
@@ -28,11 +16,10 @@ export class AuthorityActionsService {
     ): Promise<AuthorityActionsSyncReport> {
         const written =
             records.length === 0
-                ? []
-                : await manager
-                      .createQueryBuilder(AuthorityActionEntity, "aa")
-                      .insert()
-                      .values(
+                ? 0
+                : (
+                      await manager.upsert(
+                          AuthorityActionEntity,
                           records.map((record) => ({
                               action: record.action,
                               moduleKey: record.module_key,
@@ -45,23 +32,32 @@ export class AuthorityActionsService {
                               maxMode: record.max_mode,
                               label: record.label,
                           })),
+                          ["action"],
                       )
-                      .orUpdate(UPDATED_COLUMNS, ["action"])
-                      .returning("action")
-                      .execute()
-                      .then((result) => (Array.isArray(result.raw) ? (result.raw as Array<{ action: string }>) : []))
+                  ).identifiers.length
         const held = await manager.find(AuthorityActionEntity, {
             select: { action: true },
             order: { action: "ASC" },
             take: ACTION_LIMIT,
         })
-        const keys = new Set(written.map((row) => row.action))
-        return { written: written.length, stale: held.map((row) => row.action).filter((action) => !keys.has(action)) }
+        const keys = new Set(records.map((record) => record.action))
+        return { written, stale: held.map((row) => row.action).filter((action) => !keys.has(action)) }
     }
 
     /** Whether the catalogue holds the action, read through the manager the caller hands in. */
     exists(manager: EntityManager, action: string): Promise<boolean> {
         return manager.exists(AuthorityActionEntity, { where: { action } })
+    }
+
+    /** Whether the catalogue registers the action under the department, read with a shared lock so the pair holds until the caller's transaction ends. */
+    async registeredUnder(manager: EntityManager, action: string, department: string): Promise<boolean> {
+        const row = await manager
+            .createQueryBuilder(AuthorityActionEntity, "a")
+            .select("a.action")
+            .where("a.action = :action AND a.moduleKey = :department", { action, department })
+            .setLock("pessimistic_read")
+            .getOne()
+        return row !== null
     }
 
     /** Every action of the catalogue, read through the manager the caller hands in. */

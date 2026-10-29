@@ -1,13 +1,13 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isAmountOrNull, isKey, isTextOrNull, openEnvelope } from "./money-event.policy"
+import { isAmountOrAbsent, isKey, isTextOrAbsent, openEnvelope, whenPresent } from "./money-event.policy"
 
 /**
  * The payload of the `payment_reconciled` event: a payment settled one invoice (it is paid, the order is paid, the bank transaction is
  * matched). A reactor reads the current state of what it acts on and takes only identities and display facts from here. `dedupeKey`
  * is the invoice id: an invoice is settled once.
  */
-export interface PaymentReconciledPayload extends EventPayload {
+export interface PaymentReconciledInput {
     /** The workspace of the invoice. */
     readonly workspaceId: string
     /** The settled invoice; equals `dedupeKey`. */
@@ -15,32 +15,35 @@ export interface PaymentReconciledPayload extends EventPayload {
     /** The invoice number shown to people. */
     readonly invoiceNo: string
     /** The paid amount in VND. */
-    readonly amountVnd: number | null
+    readonly amountVnd?: number
     /** The instant the invoice was paid (ISO), or null. */
-    readonly paidAt: string | null
+    readonly paidAt?: string
     /** The bank transaction the payment came as, or null for a customer's claim with no transaction. */
-    readonly transactionId: string | null
+    readonly transactionId?: string
     /** The work item that reconciled the payment: its evidence trail and chain continue from here. */
     readonly workItemId: string
     /** The subject type of that work item (`transaction` or `invoice`), or null. */
-    readonly subjectType: string | null
+    readonly subjectType?: string
     /** The subject id of that work item, or null. */
-    readonly subjectId: string | null
+    readonly subjectId?: string
     /** The order the invoice belongs to, or null. */
-    readonly orderId: string | null
+    readonly orderId?: string
     /** The order number, or null. */
-    readonly orderNo: string | null
+    readonly orderNo?: string
     /** The customer, or null. */
-    readonly leadId: string | null
+    readonly leadId?: string
     /** The customer's name as shown. */
     readonly customer: string
     /** The channel the customer came through, or null. */
-    readonly channel: string | null
+    readonly channel?: string
     /** The renewed contract when the invoice is a renewal, or null. */
-    readonly contractId: string | null
+    readonly contractId?: string
     /** The end of the term the renewal invoice pays (day), or null. */
-    readonly periodEndsOn: string | null
+    readonly periodEndsOn?: string
 }
+
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface PaymentReconciledPayload extends EventPayload, PaymentReconciledInput {}
 
 /** Version 1 of `payment_reconciled`, published by the reconcile-payment work in the transaction that marks an invoice paid. */
 export class PaymentReconciledEvent extends BaseEvent {
@@ -57,7 +60,7 @@ export class PaymentReconciledEvent extends BaseEvent {
     }
 
     /** The invoice id is the identity of the fact: an invoice is settled once. */
-    static create(payload: Omit<PaymentReconciledPayload, "dedupeKey">): PaymentReconciledEvent {
+    static create(payload: PaymentReconciledInput): PaymentReconciledEvent {
         return new PaymentReconciledEvent(payload.invoiceId, { ...payload, dedupeKey: payload.invoiceId })
     }
 
@@ -72,17 +75,17 @@ export class PaymentReconciledEvent extends BaseEvent {
             !isKey(body.workItemId) ||
             typeof body.invoiceNo !== "string" ||
             typeof body.customer !== "string" ||
-            !isAmountOrNull(body.amountVnd) ||
-            !isTextOrNull(body.paidAt) ||
-            !isTextOrNull(body.transactionId) ||
-            !isTextOrNull(body.subjectType) ||
-            !isTextOrNull(body.subjectId) ||
-            !isTextOrNull(body.orderId) ||
-            !isTextOrNull(body.orderNo) ||
-            !isTextOrNull(body.leadId) ||
-            !isTextOrNull(body.channel) ||
-            !isTextOrNull(body.contractId) ||
-            !isTextOrNull(body.periodEndsOn)
+            !isAmountOrAbsent(body.amountVnd) ||
+            !isTextOrAbsent(body.paidAt) ||
+            !isTextOrAbsent(body.transactionId) ||
+            !isTextOrAbsent(body.subjectType) ||
+            !isTextOrAbsent(body.subjectId) ||
+            !isTextOrAbsent(body.orderId) ||
+            !isTextOrAbsent(body.orderNo) ||
+            !isTextOrAbsent(body.leadId) ||
+            !isTextOrAbsent(body.channel) ||
+            !isTextOrAbsent(body.contractId) ||
+            !isTextOrAbsent(body.periodEndsOn)
         ) {
             return null
         }
@@ -91,19 +94,19 @@ export class PaymentReconciledEvent extends BaseEvent {
             workspaceId: body.workspaceId,
             invoiceId: body.invoiceId,
             invoiceNo: body.invoiceNo,
-            amountVnd: body.amountVnd,
-            paidAt: body.paidAt,
-            transactionId: body.transactionId,
+            ...whenPresent("amountVnd", body.amountVnd),
+            ...whenPresent("paidAt", body.paidAt),
+            ...whenPresent("transactionId", body.transactionId),
             workItemId: body.workItemId,
-            subjectType: body.subjectType,
-            subjectId: body.subjectId,
-            orderId: body.orderId,
-            orderNo: body.orderNo,
-            leadId: body.leadId,
+            ...whenPresent("subjectType", body.subjectType),
+            ...whenPresent("subjectId", body.subjectId),
+            ...whenPresent("orderId", body.orderId),
+            ...whenPresent("orderNo", body.orderNo),
+            ...whenPresent("leadId", body.leadId),
             customer: body.customer,
-            channel: body.channel,
-            contractId: body.contractId,
-            periodEndsOn: body.periodEndsOn,
+            ...whenPresent("channel", body.channel),
+            ...whenPresent("contractId", body.contractId),
+            ...whenPresent("periodEndsOn", body.periodEndsOn),
         })
     }
 }

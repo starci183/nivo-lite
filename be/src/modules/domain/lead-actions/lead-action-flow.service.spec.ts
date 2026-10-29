@@ -400,7 +400,7 @@ describe("LeadActionFlowService", () => {
 describe("LeadActionFlowService", () => {
     it.each([
         { evidence: "Signed agreement", expected: "Signed agreement" },
-        { evidence: "", expected: null },
+        { evidence: "", expected: undefined },
     ])("prepares an invoice and emits the won event with evidence $expected", async ({ evidence, expected }) => {
         const service = await build()
         leads.require.mockResolvedValue({ ...lead, stage: "won" })
@@ -428,8 +428,9 @@ describe("LeadActionFlowService", () => {
                 company: "Hue Tea",
                 channel: "zalo",
                 need: "tea",
-                evidence: expected,
+                ...(expected === undefined ? {} : { evidence: expected }),
             },
         })
+        if (expected === undefined) expect(eventBus.writes[0]).not.toHaveProperty("payload.evidence")
     })
 })

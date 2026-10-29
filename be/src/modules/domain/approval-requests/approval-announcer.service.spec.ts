@@ -1,7 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { EVENT_BUS } from "@modules/platform/event-bus"
-import type { EventBus } from "@modules/platform/event-bus"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { HA_REF, MINH_REF } from "@tests/fixtures/builders/approval-requests.builder"
@@ -31,8 +30,7 @@ const REMINDER: ApprovalReminder = {
 }
 
 const build = async () => {
-    const bus = mock<EventBus>()
-    bus.publish.mockResolvedValue(undefined)
+    const bus = recordingEventBus()
     const evidence = mock<ApprovalEvidenceService>()
     evidence.resolved.mockResolvedValue(undefined)
     evidence.reminder.mockResolvedValue(undefined)
@@ -53,15 +51,19 @@ describe("ApprovalAnnouncerService", () => {
 
     it("writes a settled request into the evidence log, then publishes approval_resolved, both in the caller's transaction", async () => {
         const { service, bus, evidence } = await build()
+        let published = -1
+        evidence.resolved.mockImplementation(() => {
+            published = bus.writes.length
+            return Promise.resolve()
+        })
 
         await expect(service.resolved(RESOLVED, tx)).resolves.toBeUndefined()
 
         expect(evidence.resolved).toHaveBeenCalledWith(RESOLVED, tx)
-        expect(bus.publish).toHaveBeenCalledTimes(1)
-        const [event, manager, correlationId] = bus.publish.mock.calls[0] ?? []
-        expect(manager).toBe(tx)
-        expect(correlationId).toBe("request-1")
-        expect(event).toMatchObject({
+        expect(bus.entries).toHaveLength(1)
+        const [entry] = bus.entries
+        expect(entry?.tx).toBe(tx)
+        expect(entry?.event).toMatchObject({
             eventId: "request-1",
             eventName: "approval_resolved",
             payload: {
@@ -74,7 +76,7 @@ describe("ApprovalAnnouncerService", () => {
                 chainStepId: "step-1",
             },
         })
-        expect(evidence.resolved.mock.invocationCallOrder[0]).toBeLessThan(bus.publish.mock.invocationCallOrder[0] ?? 0)
+        expect(published).toBe(0)
     })
 
     it("writes the reminder of a request into the evidence log only", async () => {
@@ -83,13 +85,13 @@ describe("ApprovalAnnouncerService", () => {
         await expect(service.reminder(REMINDER)).resolves.toBeUndefined()
 
         expect(evidence.reminder).toHaveBeenCalledWith(REMINDER)
-        expect(bus.publish).not.toHaveBeenCalled()
+        expect(bus.writes).toEqual([])
     })
 
     it("lets a failure to publish undo the settling instead of swallowing it, so the card is never stranded", async () => {
         const { service, bus } = await build()
         const cause = new Error("bus down")
-        bus.publish.mockRejectedValue(cause)
+        bus.failNext("publish", cause)
 
         await expect(service.resolved(RESOLVED, tx)).rejects.toBe(cause)
     })
@@ -101,7 +103,7 @@ describe("ApprovalAnnouncerService", () => {
 
         await expect(service.resolved(RESOLVED, tx)).rejects.toBe(cause)
 
-        expect(bus.publish).not.toHaveBeenCalled()
+        expect(bus.writes).toEqual([])
     })
 
     it("logs and swallows a failure to write a reminder", async () => {

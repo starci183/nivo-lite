@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { Plan, WorkspaceBilling } from "./billing.contracts"
 import { BillingService } from "./billing.service"
@@ -48,9 +48,12 @@ const workspaceOf = builder<WorkspaceBilling>({
 /** A manager whose count reads answer `members` and `invites` (undefined is a missing row), in the order the subject reads them. */
 const countsOf = (members: number | undefined) => {
     const em = mockEntityManager()
-    const fakes = queueQueryBuilders(em, [{ getRawOne: members === undefined ? undefined : { count: members } }])
-    return { em, fakes }
+    COUNTED.set(em, members ?? 0)
+    return { em }
 }
+
+/** The active member count each manager's workspace holds. */
+const COUNTED = new WeakMap<MockEntityManager, number>()
 
 const build = async (entityManager: MockEntityManager, plan: Plan | null = planOf(), workspace = workspaceOf()) => {
     const billing = mock<BillingService>({
@@ -58,26 +61,27 @@ const build = async (entityManager: MockEntityManager, plan: Plan | null = planO
         findPlan: jest.fn(() => Promise.resolve(plan)),
         requireMember: jest.fn(() => Promise.resolve()),
     })
+    const members = mock<WorkspaceMembersReadService>()
+    members.activeCount.mockResolvedValue(COUNTED.get(entityManager) ?? 0)
     const moduleRef = await Test.createTestingModule({
         providers: [
             EntitlementsService,
+            { provide: WorkspaceMembersReadService, useValue: members },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: BillingService, useValue: billing },
         ],
     }).compile()
-    return { entitlements: moduleRef.get(EntitlementsService), billing }
+    return { entitlements: moduleRef.get(EntitlementsService), billing, members }
 }
 
 describe("EntitlementsService > requireRoomForInvite", () => {
     it("lets an invitation in while members and pending invitations stay under the paid seats", async () => {
-        const { em, fakes } = countsOf(1)
-        const { entitlements } = await build(em)
+        const { em } = countsOf(1)
+        const { entitlements, members } = await build(em)
 
         await expect(entitlements.requireRoomForInvite("ws-1", 1)).resolves.toBeUndefined()
 
-        expect(fakes[0]?.callsOf("where")).toEqual([
-            ["m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId: "ws-1" }],
-        ])
+        expect(members.activeCount).toHaveBeenCalledWith("ws-1")
     })
 
     it("refuses an invitation once the paid seats are taken", async () => {
@@ -219,13 +223,11 @@ describe("EntitlementsService > storageOf", () => {
 
 describe("EntitlementsService", () => {
     it("treats absent member and invitation counts as zero", async () => {
-        const { em, fakes } = countsOf(undefined)
-        const { entitlements } = await build(em)
+        const { em } = countsOf(undefined)
+        const { entitlements, members } = await build(em)
 
         await expect(entitlements.requireRoomForInvite("ws-1", 0)).resolves.toBeUndefined()
-        expect(fakes[0]?.callsOf("where")).toEqual([
-            ["m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId: "ws-1" }],
-        ])
+        expect(members.activeCount).toHaveBeenCalledWith("ws-1")
     })
 
     it("does not limit invitations when a workspace stops tracking paid seats", async () => {

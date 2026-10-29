@@ -44,3 +44,13 @@ export type RuleRefusal = "unknown_action" | "mode_capped"
 
 /** The refusal of a rule, or null when the catalogue allows it. */
 export type OptionalRuleRefusal = RuleRefusal | null
+
+/** The part of a rule change the catalogue judges: the module it claims, the mode it asks for and its auto band. */
+export interface RuleRefusalSubject {
+    /** The module the action must be registered under. */
+    readonly department: string
+    /** The mode the rule asks for. */
+    readonly mode: "auto" | "ask" | "never"
+    /** The amount up to which the action runs alone; unset or null means no auto band. */
+    readonly auto_max?: number | null
+}

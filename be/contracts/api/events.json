@@ -2,10 +2,9 @@
   "events": {
     "ai_generation_completed": {
       "payload": {
-        "dedupeKey": "string",
         "generationId": "string",
         "purpose": "string",
-        "status": "done|error|cancelled",
+        "status": "string",
         "workspaceId": "string"
       },
       "version": 1
@@ -14,24 +13,26 @@
       "payload": {
         "action": "string",
         "chainStepId": "string",
-        "decidedBy": "string|null",
-        "dedupeKey": "string",
-        "outcome": "approved|rejected|expired",
+        "decidedBy": "string?",
+        "outcome": "string",
         "requestId": "string",
         "workspaceId": "string"
       },
       "version": 1
     },
     "bank_credit_booked": {
-      "payload": { "amountVnd": "number", "dedupeKey": "string", "inboundEventId": "string", "workspaceId": "string" },
+      "payload": {
+        "amountVnd": "number",
+        "inboundEventId": "string",
+        "workspaceId": "string"
+      },
       "version": 1
     },
     "booking_status_changed": {
       "payload": {
         "bookingId": "string",
-        "dedupeKey": "string",
-        "kind": "created|status|moved",
-        "previous": "string|null",
+        "kind": "string",
+        "previous": "string?",
         "status": "string",
         "workspaceId": "string"
       },
@@ -39,16 +40,15 @@
     },
     "deal_won": {
       "payload": {
-        "amountVnd": "number|null",
-        "channel": "string|null",
-        "company": "string|null",
-        "dedupeKey": "string",
-        "evidence": "string|null",
+        "amountVnd": "number?",
+        "channel": "string?",
+        "company": "string?",
+        "evidence": "string?",
         "leadId": "string",
         "name": "string",
-        "need": "string|null",
-        "orderNo": "string|null",
-        "source": "string",
+        "need": "string?",
+        "orderNo": "string?",
+        "source": "string?",
         "workspaceId": "string"
       },
       "version": 1
@@ -57,9 +57,8 @@
       "payload": {
         "action": "string",
         "decidedBy": "string",
-        "dedupeKey": "string",
         "department": "string",
-        "leadId": "string|null",
+        "leadId": "string?",
         "outcome": "string",
         "summary": "string",
         "workItemId": "string",
@@ -68,11 +67,19 @@
       "version": 1
     },
     "installation_changed": {
-      "payload": { "dedupeKey": "string", "force": "boolean", "installationId": "string|null", "workspaceId": "string" },
+      "payload": {
+        "force": "boolean",
+        "installationId": "string?",
+        "workspaceId": "string"
+      },
       "version": 1
     },
     "knowledge_source_indexed": {
-      "payload": { "dedupeKey": "string", "indexedAt": "number", "sourceId": "string", "workspaceId": "string" },
+      "payload": {
+        "indexedAt": "number",
+        "sourceId": "string",
+        "workspaceId": "string"
+      },
       "version": 1
     },
     "lead_captured": {
@@ -80,24 +87,22 @@
         "channel": "string",
         "company": "string",
         "contactName": "string",
-        "dedupeKey": "string",
-        "email": "string|null",
+        "email": "string?",
         "leadId": "string",
         "need": "string",
-        "phone": "string|null",
+        "phone": "string?",
         "workspaceId": "string"
       },
       "version": 1
     },
     "order_confirmed": {
       "payload": {
-        "amountVnd": "number|null",
-        "channel": "string|null",
+        "amountVnd": "number?",
+        "channel": "string?",
         "confirmedBy": "string",
         "customer": "string",
-        "dedupeKey": "string",
         "items": "string",
-        "leadId": "string|null",
+        "leadId": "string?",
         "orderId": "string",
         "orderNo": "string",
         "workspaceId": "string"
@@ -107,8 +112,7 @@
     "order_shipped": {
       "payload": {
         "carrier": "string",
-        "dedupeKey": "string",
-        "leadId": "string|null",
+        "leadId": "string?",
         "orderId": "string",
         "orderNo": "string",
         "shippedAt": "string",
@@ -120,21 +124,20 @@
     },
     "payment_reconciled": {
       "payload": {
-        "amountVnd": "number|null",
-        "channel": "string|null",
-        "contractId": "string|null",
+        "amountVnd": "number?",
+        "channel": "string?",
+        "contractId": "string?",
         "customer": "string",
-        "dedupeKey": "string",
         "invoiceId": "string",
         "invoiceNo": "string",
-        "leadId": "string|null",
-        "orderId": "string|null",
-        "orderNo": "string|null",
-        "paidAt": "string|null",
-        "periodEndsOn": "string|null",
-        "subjectId": "string|null",
-        "subjectType": "string|null",
-        "transactionId": "string|null",
+        "leadId": "string?",
+        "orderId": "string?",
+        "orderNo": "string?",
+        "paidAt": "string?",
+        "periodEndsOn": "string?",
+        "subjectId": "string?",
+        "subjectType": "string?",
+        "transactionId": "string?",
         "workItemId": "string",
         "workspaceId": "string"
       },

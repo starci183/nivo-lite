@@ -1,4 +1,7 @@
-import { ContentItemEntity } from "@modules/domain/content-items"
+import { contentItemsEntities } from "@modules/domain/content-items"
+
+const ContentItemEntity = contentItemsEntities[0]
+type ContentItemEntity = InstanceType<typeof ContentItemEntity>
 
 /** The fixed instant used by content editing scenarios. */
 export const at = "2026-01-01T00:00:00.000Z"
@@ -27,6 +30,13 @@ const shared = {
     published: {},
     source: "manual",
 }
+
+/** The stubs of a manager whose read of one item answers an item of the status (and, optionally, its draft time and media). */
+export const readingStatus = (
+    status: string,
+    draftedAt: Date | null = null,
+    media: ContentItemEntity["media"] = [],
+) => ({ findOne: [ContentItemEntity, row({ status, draftedAt, media })] as const })
 
 /** A persisted content item with optional field overrides. */
 export const row = (patch: Partial<ContentItemEntity> = {}): ContentItemEntity =>

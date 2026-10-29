@@ -42,7 +42,7 @@ With SePay, NIVO generates the API key and you paste it into SePay. No key has t
 5. For real use: repeat the steps with the **Production** environment (`my.sepay.vn/webhook`), then transfer a small real amount to check.
 
 The SePay account that collects the NIVO plan fee (the payment page shown when a workspace is created) is a separate configuration shared by the whole platform. It uses the variables
-`SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_*` and `SEPAY_ACCOUNT_NAME`, sealed in `.starcistacks/production/secrets/api.enc` (`starci app secret set production api --key <KEY>`) and delivered to the api at deploy time.
+`SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_*` and `SEPAY_ACCOUNT_NAME`, sealed in `.starcistacks/production/secrets/sepay.enc.yaml` (`starci app secret set production sepay <KEY>`) and delivered to the api at deploy time.
 These variables already have values.
 
 ## 3. Zalo OA (at the "early test" level, not yet tried with a real OA)

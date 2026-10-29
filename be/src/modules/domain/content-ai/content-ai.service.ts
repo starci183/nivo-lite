@@ -18,6 +18,7 @@ import type {
     ContentAiStatus,
     ContentDraftRequest,
     ContentQuickDraftRequest,
+    InboxClaim,
 } from "./content-ai.contracts"
 import { toContentAiReview } from "./content-ai-status.mapper"
 import { ContentBrandService } from "./content-brand.service"
@@ -40,7 +41,6 @@ import {
     trimmedText,
 } from "./content-ai-prompt.policy"
 import type { BrandMaterial } from "./content-ai-prompt.policy"
-import type { InboxClaim } from "./content-ai.contracts"
 import { ContentAiError, ContentAiErrorCode } from "./errors/content-ai.error"
 
 type DraftItem = Pick<

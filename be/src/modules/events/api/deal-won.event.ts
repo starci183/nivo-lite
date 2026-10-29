@@ -1,13 +1,14 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
 import { envelopeParts, fieldOf, keyOf, numberOf, textOf } from "./event-fields.policy"
+import { isTextOrAbsent, whenPresent } from "./money-event.policy"
 
 /**
  * The payload of the `deal_won` event: the deal of a customer was won (an order was confirmed for it, or the public API or the owner
- * set the lead to won). The optional fields are the facts only some doors know; a reactor passes on the ones present. `dedupeKey` is
+ * set the lead to won). The whenPresent fields are the facts only some doors know; a reactor passes on the ones present. `dedupeKey` is
  * `deal.won:<leadId>`: a deal is won once per customer.
  */
-export interface DealWonPayload extends EventPayload {
+export interface DealWonInput {
     /** The workspace of the lead. */
     readonly workspaceId: string
     /** The customer whose deal was won. */
@@ -15,36 +16,37 @@ export interface DealWonPayload extends EventPayload {
     /** The customer name as shown. */
     readonly name: string
     /** The company, or null when unknown. */
-    readonly company: string | null
+    readonly company?: string
     /** The channel label, or null when unknown. */
-    readonly channel: string | null
+    readonly channel?: string
     /** What the customer needed, or null when unknown. */
-    readonly need: string | null
+    readonly need?: string
     /** The number of the order that won the deal, when an order did. */
-    readonly orderNo?: string | null
+    readonly orderNo?: string
     /** The amount of that order in VND. */
-    readonly amountVnd?: number | null
+    readonly amountVnd?: number
     /** The API source that set the stage, when the public API did. */
     readonly source?: string
     /** The evidence the owner gave, when a lead action recorded the win. */
-    readonly evidence?: string | null
+    readonly evidence?: string
 }
 
-/** The optional facts of a won deal that a payload carries, each as the door sent it; null when one is malformed. */
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface DealWonPayload extends EventPayload, DealWonInput {}
+
+/** The whenPresent facts of a won deal that a payload carries, each as the door sent it (null is absent); null when one is malformed. */
 const optionalFacts = (payload: object): Partial<DealWonPayload> | null => {
-    const orderNo = fieldOf(payload, "orderNo")
-    const amountVnd = fieldOf(payload, "amountVnd")
+    const orderNo = fieldOf(payload, "orderNo") ?? undefined
+    const amountVnd = fieldOf(payload, "amountVnd") ?? undefined
     const source = fieldOf(payload, "source")
-    const evidence = fieldOf(payload, "evidence")
-    if (orderNo !== undefined && orderNo !== null && typeof orderNo !== "string") return null
-    if (amountVnd !== undefined && amountVnd !== null && numberOf(amountVnd) === null) return null
-    if (source !== undefined && typeof source !== "string") return null
-    if (evidence !== undefined && evidence !== null && typeof evidence !== "string") return null
+    const evidence = fieldOf(payload, "evidence") ?? undefined
+    if (!isTextOrAbsent(orderNo) || !isTextOrAbsent(source) || !isTextOrAbsent(evidence)) return null
+    if (amountVnd !== undefined && numberOf(amountVnd) === null) return null
     return {
-        ...(orderNo === undefined ? {} : { orderNo: textOf(orderNo) }),
-        ...(amountVnd === undefined ? {} : { amountVnd: numberOf(amountVnd) }),
-        ...(typeof source === "string" ? { source } : {}),
-        ...(evidence === undefined ? {} : { evidence: textOf(evidence) }),
+        ...whenPresent("orderNo", orderNo),
+        ...whenPresent("amountVnd", numberOf(amountVnd) ?? undefined),
+        ...whenPresent("source", source),
+        ...whenPresent("evidence", evidence),
     }
 }
 
@@ -63,7 +65,7 @@ export class DealWonEvent extends BaseEvent {
     }
 
     /** A deal is won once per customer: the lead id is the identity of the fact. */
-    static create(payload: Omit<DealWonPayload, "dedupeKey">): DealWonEvent {
+    static create(payload: DealWonInput): DealWonEvent {
         const dedupeKey = `deal.won:${payload.leadId}`
         return new DealWonEvent(dedupeKey, { ...payload, dedupeKey })
     }
@@ -76,22 +78,20 @@ export class DealWonEvent extends BaseEvent {
         const workspaceId = textOf(fieldOf(payload, "workspaceId"))
         const leadId = keyOf(fieldOf(payload, "leadId"))
         const name = textOf(fieldOf(payload, "name"))
-        const company = fieldOf(payload, "company")
-        const channel = fieldOf(payload, "channel")
-        const need = fieldOf(payload, "need")
+        const company = fieldOf(payload, "company") ?? undefined
+        const channel = fieldOf(payload, "channel") ?? undefined
+        const need = fieldOf(payload, "need") ?? undefined
         const facts = optionalFacts(payload)
         if (workspaceId === null || leadId === null || name === null || facts === null) return null
-        for (const known of [company, channel, need]) {
-            if (known !== null && typeof known !== "string") return null
-        }
+        if (!isTextOrAbsent(company) || !isTextOrAbsent(channel) || !isTextOrAbsent(need)) return null
         return new DealWonEvent(eventId, {
             dedupeKey: `deal.won:${leadId}`,
             workspaceId,
             leadId,
             name,
-            company: textOf(company),
-            channel: textOf(channel),
-            need: textOf(need),
+            ...whenPresent("company", company),
+            ...whenPresent("channel", channel),
+            ...whenPresent("need", need),
             ...facts,
         })
     }

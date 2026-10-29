@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { DriveGrantService } from "./drive-grant.service"
 import { GoogleConnectionsService } from "./google-connections.service"
+import { GoogleSheetsService } from "./google-sheets.service"
 import { GoogleSheetAutomationService } from "./google-sheet-automation.service"
 import { GoogleTokensService } from "./google-tokens.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./google-connections.module-definition"
@@ -22,6 +23,7 @@ export class GoogleConnectionsModule extends ConfigurableModuleClass {
                 GoogleTokensService,
                 DriveGrantService,
                 GoogleConnectionsService,
+                GoogleSheetsService,
                 GoogleSheetAutomationService,
             ],
             exports: [GoogleConnectionsService, DriveGrantService],

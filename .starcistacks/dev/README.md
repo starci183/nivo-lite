@@ -1,6 +1,6 @@
 # dev
 
-Local development of NIVO uses Supabase CLI-managed Docker containers for PostgreSQL, Auth, Storage and Studio. `supabase/config.toml` owns the local project and ports. The native StarCi Supabase lifecycle applies its project, port and protected-stack policy; preserve a running stack when that owner refuses an operation. Starting Docker or Supabase does not configure or start the API, web console or landing. Production has its own stack and runbook (`../production/README.md`).
+Local development of NIVO uses Supabase CLI-managed Docker containers for PostgreSQL, Auth, Storage and Studio. The Supabase CLI project config owns the local project and ports. The native StarCi Supabase lifecycle applies its project, port and protected-stack policy; preserve a running stack when that owner refuses an operation. Starting Docker or Supabase does not configure or start the API, web console or landing. Production has its own stack and runbook (`../production/README.md`).
 
 The API's required base settings are below. `be/apps/api/src/api.env.ts` composes the typed config readers; missing or malformed inputs fail boot. Optional integrations can require additional settings when enabled, so this list is not proof that an arbitrary supplied configuration is ready.
 

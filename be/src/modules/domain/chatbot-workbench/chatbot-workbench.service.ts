@@ -3,7 +3,7 @@ import type { EntityManager, EntityTarget, ObjectLiteral, SelectQueryBuilder } f
 import { AgentEntity } from "@modules/domain/agents"
 import { LeadEntity } from "@modules/domain/leads"
 import { ModuleInstallationEntity } from "@modules/domain/module-installations"
-import { StaffEntity } from "@modules/domain/staff"
+import { StaffDirectoryService } from "@modules/domain/staff"
 import { WorkItemEntity } from "@modules/domain/work-items"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { ModulesService } from "@modules/domain/modules"
@@ -30,7 +30,6 @@ import type {
     LensRow,
     MessageBriefRow,
     MessageRow,
-    ChatbotStaffRow,
     WaitingRow,
 } from "./persistence/chatbot-workbench.rows"
 
@@ -70,6 +69,7 @@ export class ChatbotWorkbenchService {
         private readonly members: WorkspaceMembersService,
         private readonly knowledgeGaps: KnowledgeGapsService,
         private readonly modules: ModulesService,
+        private readonly staff: StaffDirectoryService,
     ) {}
 
     /** The selected installation's customer conversations with activity and capture figures. */
@@ -171,13 +171,7 @@ export class ChatbotWorkbenchService {
         const [staff] =
             item?.assigned_staff_id === undefined || item.assigned_staff_id === null
                 ? []
-                : await readFrom(this.entityManager, StaffEntity, "s", ["name"])
-                      .where("s.workspace_id = :workspaceId AND s.id = :staffId", {
-                          workspaceId,
-                          staffId: item.assigned_staff_id,
-                      })
-                      .limit(1)
-                      .getRawMany<ChatbotStaffRow>()
+                : await this.staff.namesOf(workspaceId, [item.assigned_staff_id])
         return buildChatbotThread({
             conversation,
             messages,

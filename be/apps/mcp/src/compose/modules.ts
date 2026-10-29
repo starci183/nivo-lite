@@ -1,4 +1,4 @@
-import type { DynamicModule } from "@nestjs/common"
+import type { DynamicModule, Type } from "@nestjs/common"
 import { McpEndpointHttpModule } from "@features/api/mcp-endpoint"
 import { SystemHealthHttpModule } from "@features/api/system-health"
 import { McpAgentAuthenticatorService } from "@modules/domain/api-credentials"
@@ -8,7 +8,10 @@ import {
     ConnectionSecretsModule,
 } from "@modules/domain/connection-secrets"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
+import { AgentDirectoryModule } from "@modules/domain/agents"
+import { DataRecordsModule } from "@modules/domain/data-records"
 import { EventsModule } from "@modules/domain/events"
+import { InboundEventRecordsModule } from "@modules/domain/inbound-events"
 import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions } from "@modules/domain/identity"
 import { LivenessModule } from "@modules/domain/liveness"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
@@ -35,7 +38,7 @@ import type { McpAppOptions } from "../mcp.options"
  * the api-keys capability), the gateway over the primary database with the bank moves it reads and the connection key that opens
  * each remote connector's sealed credential, health and the endpoint.
  */
-export const mcpModules = (options: McpAppOptions): Array<DynamicModule> => [
+export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> => [
     ClockModule.register({ isGlobal: true }),
     LoggingModule.register({ isGlobal: true }),
     I18nModule.register({
@@ -83,8 +86,11 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule> => [
         credentialAuthenticator: McpAgentAuthenticatorService,
     }),
     LivenessModule.register({ isGlobal: true }),
+    AgentDirectoryModule,
+    InboundEventRecordsModule,
     TransactionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
+    DataRecordsModule.register({ isGlobal: true }),
     McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, keyCheck: true }),
     SystemHealthHttpModule.register({}),
     McpEndpointHttpModule.register({}),

@@ -1,68 +1,56 @@
+import { Test } from "@nestjs/testing"
+import { approvalRequestEntityOf } from "@tests/fixtures/builders/approval-requests.builder"
 import { toRequestRecord } from "./approval-requests.mapper"
-import type { ApprovalRequestEntity } from "./persistence/entities"
 
-const rowOf = (over: Partial<ApprovalRequestEntity> = {}): ApprovalRequestEntity =>
-    ({
-        id: "req-1",
-        workspaceId: "ws-1",
-        chainStepId: "step-1",
-        department: "sales",
-        action: "refund",
-        amount: 500000,
-        unit: "vnd",
-        requestedByAgentId: "agent-1",
-        policy: "any_one",
-        status: "pending",
-        approvers: [],
-        excluded: [],
-        verdicts: [],
-        timeoutMinutes: 60,
-        expiresAt: new Date("2026-03-02T10:00:00.000Z"),
-        remindedAt: null,
-        resolvedBy: null,
-        resolvedAt: null,
-        escalatedTo: null,
-        createdAt: new Date("2026-03-02T09:00:00.000Z"),
-        ...over,
-    }) as unknown as ApprovalRequestEntity
+const SUBJECT = Symbol("approval-requests.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toRequestRecord } }],
+    }).compile()
+    return moduleRef.get<typeof import("./approval-requests.mapper")>(SUBJECT)
+}
 
 describe("approval requests mapper", () => {
-    it("maps an open request with empty moments to null", () => {
-        expect(toRequestRecord(rowOf())).toEqual({
-            id: "req-1",
+    it("maps an open request with empty moments to null", async () => {
+        const mapper = await buildSubject()
+
+        expect(mapper.toRequestRecord(approvalRequestEntityOf())).toEqual({
+            id: "request-1",
             workspace_id: "ws-1",
             chain_step_id: "step-1",
             department: "sales",
-            action: "refund",
-            amount: 500000,
-            unit: "vnd",
-            requested_by_agent_id: "agent-1",
-            policy: "any_one",
+            action: "give_discount",
+            amount: 10,
+            unit: "percent",
+            requested_by_agent_id: "22222222-2222-4222-8222-222222222222",
+            policy: "any",
             status: "pending",
-            approvers: [],
+            approvers: [{ memberId: "member-minh", name: "Anh Minh", role: "manager", roomId: "sales" }],
             excluded: [],
             verdicts: [],
-            timeout_minutes: 60,
-            expires_at: "2026-03-02T10:00:00.000Z",
+            timeout_minutes: 30,
+            expires_at: "2026-10-22T10:00:00.000Z",
             reminded_at: null,
             resolved_by: null,
             resolved_at: null,
             escalated_to: null,
-            created_at: "2026-03-02T09:00:00.000Z",
+            created_at: "2026-10-22T09:30:00.000Z",
         })
     })
 
-    it("turns reminded and resolved moments into ISO text", () => {
-        const record = toRequestRecord(
-            rowOf({
-                remindedAt: new Date("2026-03-02T09:30:00.000Z"),
-                resolvedAt: new Date("2026-03-02T09:45:00.000Z"),
-                resolvedBy: "member-minh",
-            }),
-        )
+    it("turns reminded and resolved moments into ISO text", async () => {
+        const mapper = await buildSubject()
+        const settled = Object.assign(approvalRequestEntityOf(), {
+            remindedAt: new Date("2026-10-22T09:40:00.000Z"),
+            resolvedAt: new Date("2026-10-22T09:45:00.000Z"),
+            resolvedBy: "member-minh",
+        })
 
-        expect(record.reminded_at).toBe("2026-03-02T09:30:00.000Z")
-        expect(record.resolved_at).toBe("2026-03-02T09:45:00.000Z")
+        const record = mapper.toRequestRecord(settled)
+
+        expect(record.reminded_at).toBe("2026-10-22T09:40:00.000Z")
+        expect(record.resolved_at).toBe("2026-10-22T09:45:00.000Z")
         expect(record.resolved_by).toBe("member-minh")
     })
 })

@@ -18,7 +18,7 @@ import type { LeadRecordRow } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import type { OptionalOrder } from "@modules/domain/orders"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
-import { DealWonEvent, LeadCapturedEvent, OrderConfirmedEvent } from "@modules/events/api"
+import { DealWonEvent, LeadCapturedEvent, OrderConfirmedEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -139,11 +139,11 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
                 workspaceId: ctx.workspaceId,
                 orderId: order.id,
                 orderNo: order.order_no,
-                leadId: order.lead_id,
+                ...whenPresent("leadId", order.lead_id),
                 customer,
                 items: textOf(proposal.fields.items),
-                amountVnd: amount,
-                channel: buyer?.channel ?? null,
+                ...whenPresent("amountVnd", amount),
+                ...whenPresent("channel", buyer?.channel),
                 confirmedBy: by.name,
             }),
             tx,
@@ -155,11 +155,11 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
                 workspaceId: ctx.workspaceId,
                 leadId: order.lead_id,
                 name: customer,
-                company: buyer?.company ?? null,
-                channel: buyer?.channel ?? null,
-                need: buyer?.need ?? null,
+                ...whenPresent("company", buyer?.company),
+                ...whenPresent("channel", buyer?.channel),
+                ...whenPresent("need", buyer?.need),
                 orderNo: order.order_no,
-                amountVnd: amount,
+                ...whenPresent("amountVnd", amount),
             }),
             tx,
             `deal_won:${order.lead_id}`,
@@ -285,8 +285,8 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
                     company: created.company,
                     channel: created.channel,
                     need: created.need,
-                    phone: created.phone,
-                    email: created.email,
+                    ...whenPresent("phone", created.phone),
+                    ...whenPresent("email", created.email),
                 }),
                 tx,
                 `lead_captured:${created.id}`,

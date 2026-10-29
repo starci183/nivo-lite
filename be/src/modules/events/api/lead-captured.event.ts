@@ -1,13 +1,14 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
 import { envelopeParts, fieldOf, keyOf, textOf } from "./event-fields.policy"
+import { isTextOrAbsent, whenPresent } from "./money-event.policy"
 
 /**
  * The payload of the `lead_captured` event: a new customer (lead) was created in the workspace. A reactor takes identities and display
  * facts from here and reads the lead itself when it needs the current state. `dedupeKey` is `lead.created:<leadId>`: a lead is
  * captured once, however many doors reached it.
  */
-export interface LeadCapturedPayload extends EventPayload {
+export interface LeadCapturedInput {
     /** The workspace of the lead. */
     readonly workspaceId: string
     /** The new lead. */
@@ -21,10 +22,13 @@ export interface LeadCapturedPayload extends EventPayload {
     /** What the customer needs. */
     readonly need: string
     /** The phone, or null. */
-    readonly phone: string | null
+    readonly phone?: string
     /** The email, or null. */
-    readonly email: string | null
+    readonly email?: string
 }
+
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface LeadCapturedPayload extends EventPayload, LeadCapturedInput {}
 
 /** Version 1 of `lead_captured`, published in the transaction that creates a lead. */
 export class LeadCapturedEvent extends BaseEvent {
@@ -41,7 +45,7 @@ export class LeadCapturedEvent extends BaseEvent {
     }
 
     /** A lead is captured once: the lead id is the identity of the fact. */
-    static create(payload: Omit<LeadCapturedPayload, "dedupeKey">): LeadCapturedEvent {
+    static create(payload: LeadCapturedInput): LeadCapturedEvent {
         const dedupeKey = `lead.created:${payload.leadId}`
         return new LeadCapturedEvent(dedupeKey, { ...payload, dedupeKey })
     }
@@ -57,11 +61,11 @@ export class LeadCapturedEvent extends BaseEvent {
         const company = textOf(fieldOf(payload, "company"))
         const channel = textOf(fieldOf(payload, "channel"))
         const need = textOf(fieldOf(payload, "need"))
-        const phone = fieldOf(payload, "phone")
-        const email = fieldOf(payload, "email")
+        const phone = fieldOf(payload, "phone") ?? undefined
+        const email = fieldOf(payload, "email") ?? undefined
         if (workspaceId === null || leadId === null || contactName === null || company === null) return null
         if (channel === null || need === null) return null
-        if ((phone !== null && typeof phone !== "string") || (email !== null && typeof email !== "string")) return null
+        if (!isTextOrAbsent(phone) || !isTextOrAbsent(email)) return null
         return new LeadCapturedEvent(eventId, {
             dedupeKey: `lead.created:${leadId}`,
             workspaceId,
@@ -70,8 +74,8 @@ export class LeadCapturedEvent extends BaseEvent {
             company,
             channel,
             need,
-            phone,
-            email,
+            ...whenPresent("phone", phone),
+            ...whenPresent("email", email),
         })
     }
 }

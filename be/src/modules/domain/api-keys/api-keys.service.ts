@@ -6,7 +6,7 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { EventsService } from "@modules/domain/events"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { AgentEntity } from "@modules/domain/agents"
 import type {
     AgentKeyAnswer,
@@ -71,6 +71,7 @@ export class ApiKeysService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         private readonly events: EventsService,
+        private readonly seats: WorkspaceMemberSeatsService,
     ) {}
 
     /**
@@ -228,17 +229,8 @@ export class ApiKeysService {
         principalId: string,
         workspaceId: string,
     ): Promise<MemberFacts> {
-        const member = await manager
-            .createQueryBuilder(WorkspaceMemberEntity, "m")
-            .select("m.role", "role")
-            .addSelect("m.display_name", "displayName")
-            .where("m.workspace_id = :workspaceId AND m.user_id = :principalId AND m.status = 'active'", {
-                workspaceId,
-                principalId,
-            })
-            .limit(1)
-            .getRawOne<MemberFacts>()
-        if (member === undefined || !mayManageKeys(member.role)) {
+        const member = await this.seats.activeSeatOfUser(workspaceId, principalId, manager)
+        if (member === null || !mayManageKeys(member.role)) {
             throw new ApiKeysError({ code: ApiKeysErrorCode.NotManager })
         }
         return member

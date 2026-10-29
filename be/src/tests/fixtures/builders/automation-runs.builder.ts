@@ -1,5 +1,8 @@
 import { builder } from "@starci/jest-preset"
-import { AutomationRunEntity } from "@modules/domain/automation-runs"
+import { automationRunsEntities } from "@modules/domain/automation-runs"
+
+const [AutomationRunEntity] = automationRunsEntities
+type AutomationRunEntity = InstanceType<typeof AutomationRunEntity>
 
 /** The moment the automation run specs run at. */
 const RUN_MOMENT = "2026-10-12T10:00:00.000Z"

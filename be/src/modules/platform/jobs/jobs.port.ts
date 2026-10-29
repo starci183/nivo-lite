@@ -1,4 +1,5 @@
 import type { EntityManager } from "typeorm"
+import type { JobTick } from "./job-ticks.contracts"
 import type {
     AdvanceWrite,
     ClaimedJob,
@@ -46,4 +47,10 @@ export interface JobStep {
 export interface JobProcessorRegistry {
     /** Subscribes the processor to its queue. */
     add(processor: FencedProcessor): void
+}
+
+/** Starts the recurring cron jobs of the ticks; the package that fires them stays behind this port. */
+export interface JobTickScheduler {
+    /** Registers a cron job named after the tick that calls `onTick` on the tick's schedule; a firing that throws goes to `onError`. */
+    schedule(tick: JobTick, onTick: () => Promise<void>, onError: (cause: unknown) => void): void
 }

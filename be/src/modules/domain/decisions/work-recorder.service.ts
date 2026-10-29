@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { DecisionMadeEvent } from "@modules/events/api"
+import { DecisionMadeEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -223,7 +223,7 @@ export class WorkRecorderService {
                     department: item.department,
                     outcome: entry.outcome,
                     decidedBy: entry.decided_by,
-                    leadId: item.lead_id,
+                    ...whenPresent("leadId", item.lead_id),
                     summary,
                 }),
                 manager,

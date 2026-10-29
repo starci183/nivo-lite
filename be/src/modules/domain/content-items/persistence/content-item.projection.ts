@@ -1,12 +1,9 @@
-import type { AgentDraftRef, DueItem } from "../content-items.contracts"
+import type { AgentDraftRef } from "../content-items.contracts"
 import { ContentItemEntity } from "./entities"
 
 /** A timestamp column as the ISO text the contracts carry (UTC, millisecond precision). */
 export const ISO_TEXT = (column: string): string =>
     `to_char(${column} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`
-
-/** A post due in a window, as the projection query answers it. */
-export type DueItemProjection = DueItem
 
 /** A stored post as the scheduler reads it. */
 export interface ScheduleProjection {

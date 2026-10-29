@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AuthorityActionEntity } from "@modules/domain/authority-actions"
+import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { ModuleInstallationEntity } from "@modules/domain/module-installations"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
@@ -88,7 +88,10 @@ const namedSettings = (settings: RuleSettingsPatch): Partial<AuthorityRuleEntity
 @Injectable()
 /** What the owner granted each action: the only owner of the authority_rules table. */
 export class AuthorityRulesService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly actions: AuthorityActionsService,
+    ) {}
 
     /**
      * The rule of an action with the operating mode applied: while the handling instance is in assist mode an "auto" rule
@@ -154,16 +157,7 @@ export class AuthorityRulesService {
             new AuthorityRulesError({ code: AuthorityRulesErrorCode.UnknownAction, params: { action: change.action } })
         const record = await this.entityManager.transaction(async (manager) => {
             // The department must be the module the registry gives the action, so a mismatched pair stores nothing.
-            const registered = await manager
-                .createQueryBuilder(AuthorityActionEntity, "a")
-                .select("a.action")
-                .where("a.action = :action AND a.moduleKey = :department", {
-                    action: change.action,
-                    department: change.department,
-                })
-                .setLock("pessimistic_read")
-                .getOne()
-            if (registered === null) throw unknown()
+            if (!(await this.actions.registeredUnder(manager, change.action, change.department))) throw unknown()
             // Only the settings the caller named replace what is stored; a new rule takes the table default for the rest.
             const overwritten = overwrittenColumns(change.note, settings)
             const saved = await manager

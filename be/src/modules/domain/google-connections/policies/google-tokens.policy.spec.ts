@@ -15,9 +15,14 @@ describe("google-tokens.policy", () => {
     it("reads the stored token fields and ignores anything else", async () => {
         const subject = await buildSubject()
 
-        expect(subject.parseTokens('{"access_token":"a","refresh_token":"r","expires_at":5,"x":1}')).toEqual({
+        expect(subject.parseTokens('{"access_token":"a","renewal_token":"r","expires_at":5,"x":1}')).toEqual({
             access_token: "a",
-            refresh_token: "r",
+            renewal_token: "r",
+            expires_at: 5,
+        })
+        expect(subject.parseTokens('{"access_token":"a","refresh_token":"old","expires_at":5}')).toEqual({
+            access_token: "a",
+            renewal_token: "old",
             expires_at: 5,
         })
         expect(subject.parseTokens('{"access_token":3}')).toEqual({})

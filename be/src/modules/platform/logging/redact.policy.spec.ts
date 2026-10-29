@@ -94,12 +94,12 @@ describe("redactValue", () => {
         expect(
             subject.redactValue({
                 workspaceId: "ws-1",
-                nested: { refreshToken: "r", note: "Bearer abcdefghijk" },
+                nested: { accessToken: "r", note: "Bearer abcdefghijk" },
                 list: [{ secret: 1 }],
             }),
         ).toEqual({
             workspaceId: "ws-1",
-            nested: { refreshToken: REDACTED, note: `Bearer ${REDACTED}` },
+            nested: { accessToken: REDACTED, note: `Bearer ${REDACTED}` },
             list: [{ secret: REDACTED }],
         })
     })

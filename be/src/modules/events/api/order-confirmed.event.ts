@@ -1,11 +1,11 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isAmountOrNull, isKey, isTextOrNull, openEnvelope } from "./money-event.policy"
+import { isAmountOrAbsent, isKey, isTextOrAbsent, openEnvelope, whenPresent } from "./money-event.policy"
 
 /**
  * The payload of the `order_confirmed` event: a drafted order was confirmed. `dedupeKey` is the order id: an order is confirmed once.
  */
-export interface OrderConfirmedPayload extends EventPayload {
+export interface OrderConfirmedInput {
     /** The workspace of the order. */
     readonly workspaceId: string
     /** The confirmed order; equals `dedupeKey`. */
@@ -13,18 +13,21 @@ export interface OrderConfirmedPayload extends EventPayload {
     /** The order number shown to people. */
     readonly orderNo: string
     /** The customer, or null. */
-    readonly leadId: string | null
+    readonly leadId?: string
     /** The customer's name as shown. */
     readonly customer: string
     /** The ordered items as the customer wrote them. */
     readonly items: string
     /** The order amount in VND, or null. */
-    readonly amountVnd: number | null
+    readonly amountVnd?: number
     /** The channel the customer came through, or null. */
-    readonly channel: string | null
+    readonly channel?: string
     /** Who confirmed the order. */
     readonly confirmedBy: string
 }
+
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface OrderConfirmedPayload extends EventPayload, OrderConfirmedInput {}
 
 /** Version 1 of `order_confirmed`, published by the confirm-order work in the transaction that confirms an order. */
 export class OrderConfirmedEvent extends BaseEvent {
@@ -41,7 +44,7 @@ export class OrderConfirmedEvent extends BaseEvent {
     }
 
     /** The order id is the identity of the fact: an order is confirmed once. */
-    static create(payload: Omit<OrderConfirmedPayload, "dedupeKey">): OrderConfirmedEvent {
+    static create(payload: OrderConfirmedInput): OrderConfirmedEvent {
         return new OrderConfirmedEvent(payload.orderId, { ...payload, dedupeKey: payload.orderId })
     }
 
@@ -54,11 +57,11 @@ export class OrderConfirmedEvent extends BaseEvent {
             !isKey(body.orderId) ||
             !isKey(body.workspaceId) ||
             typeof body.orderNo !== "string" ||
-            !isTextOrNull(body.leadId) ||
+            !isTextOrAbsent(body.leadId) ||
             typeof body.customer !== "string" ||
             typeof body.items !== "string" ||
-            !isAmountOrNull(body.amountVnd) ||
-            !isTextOrNull(body.channel) ||
+            !isAmountOrAbsent(body.amountVnd) ||
+            !isTextOrAbsent(body.channel) ||
             typeof body.confirmedBy !== "string"
         ) {
             return null
@@ -68,11 +71,11 @@ export class OrderConfirmedEvent extends BaseEvent {
             workspaceId: body.workspaceId,
             orderId: body.orderId,
             orderNo: body.orderNo,
-            leadId: body.leadId,
+            ...whenPresent("leadId", body.leadId),
             customer: body.customer,
             items: body.items,
-            amountVnd: body.amountVnd,
-            channel: body.channel,
+            ...whenPresent("amountVnd", body.amountVnd),
+            ...whenPresent("channel", body.channel),
             confirmedBy: body.confirmedBy,
         })
     }

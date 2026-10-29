@@ -91,39 +91,8 @@ end
 $$;
 
 
-do $event_bus$
-declare
-    pair text[];
-    consumer_queue text;
-begin
-    foreach pair slice 1 in array array[
-        array['event_bus_probe', 'probe'],
-        array['bank_credit_booked', 'accounting'],
-        array['payment_reconciled', 'contracts'],
-        array['payment_reconciled', 'automations'],
-        array['payment_reconciled', 'payment_receipts'],
-        array['payment_reconciled', 'care'],
-        array['lead_captured', 'automations'],
-        array['deal_won', 'automations'],
-        array['order_confirmed', 'automations'],
-        array['order_confirmed', 'inventory'],
-        array['order_shipped', 'automations'],
-        array['decision_made', 'automations'],
-        array['approval_resolved', 'thread_outcomes'],
-        array['booking_status_changed', 'booking_effects'],
-        array['ai_generation_completed', 'content'],
-        array['ai_generation_completed', 'video'],
-        array['installation_changed', 'agent_sync'],
-        array['knowledge_source_indexed', 'brain']
-    ]
-    loop
-        consumer_queue := pair[1] || '__' || pair[2];
-        perform pgmq.create(consumer_queue);
-        perform pgmq.create(consumer_queue || '__dead');
-        perform pgmq.bind_topic(pair[1], consumer_queue);
-    end loop;
-end
-$event_bus$;
+-- The consumer queues, their dead-letter queues and the topic bindings are declared literally in
+-- 20261109100200_event-bus-missing-queues.sql (one pgmq.create / pgmq.bind_topic per name, as the migration shape requires).
 
 revoke all on function public.event_bus_send(text, jsonb) from public;
 grant execute on function public.event_bus_send(text, jsonb) to app_be;

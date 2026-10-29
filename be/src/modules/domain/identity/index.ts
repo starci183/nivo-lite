@@ -21,4 +21,4 @@ export type {
     CredentialResourceId,
 } from "./credential.contracts"
 export { CredentialGuard } from "./credential.guard"
-export { IdentityPasswordTokenEntity, IdentityRefreshTokenEntity, identityEntities } from "./persistence/entities"
+export { identityEntities } from "./persistence/entities"
