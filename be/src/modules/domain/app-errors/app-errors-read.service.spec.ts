@@ -37,6 +37,13 @@ describe("AppErrorsReadService", () => {
         })
     })
 
+    it("leaves out an error that names no workspace", async () => {
+        const { em, service } = await build()
+        em.find.mockResolvedValueOnce([error, Object.assign(new AppErrorEntity(), { workspaceId: null })])
+
+        await expect(service.workspacesSince(WHEN, 5000)).resolves.toEqual(["ws-1"])
+    })
+
     it("reads the newest errors of one workspace", async () => {
         const { em, service } = await build()
 

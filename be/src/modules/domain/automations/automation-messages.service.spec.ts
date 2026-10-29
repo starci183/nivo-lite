@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { StaffDirectoryService } from "@modules/domain/staff"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -92,6 +93,7 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
     const office = mock<AutomationOffice>()
     const text = mock<AutomationText>()
     text.generate.mockResolvedValue(null)
+    const staff = mock<StaffDirectoryService>({ list: jest.fn(() => Promise.resolve([{ id: "st-1", name: "Lan" }])) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AutomationMessagesService,
@@ -100,10 +102,11 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
             { provide: AUTOMATION_GATE, useValue: gate },
             { provide: AUTOMATION_OFFICE, useValue: office },
             { provide: AUTOMATION_TEXT, useValue: text },
+            { provide: StaffDirectoryService, useValue: staff },
         ],
     }).compile()
     const service = moduleRef.get(AutomationMessagesService)
-    return { service, gate, office, text }
+    return { service, gate, office, text, staff }
 }
 
 describe("AutomationMessagesService words", () => {
@@ -127,12 +130,7 @@ describe("AutomationMessagesService words", () => {
 })
 describe("AutomationMessagesService loaders", () => {
     it("reads a lead, the conversation of a lead and the first staff member", async () => {
-        const em = readingOf(
-            { getRawOne: LEAD },
-            { getRawOne: LEAD },
-            { getRawOne: { id: "cv-1" } },
-            { getRawOne: { name: "Lan" } },
-        ).em
+        const em = readingOf({ getRawOne: LEAD }, { getRawOne: LEAD }, { getRawOne: { id: "cv-1" } }).em
         const { service } = await build(em)
 
         await expect(service.lead("ws-1", "l-1")).resolves.toEqual(LEAD)
@@ -143,7 +141,8 @@ describe("AutomationMessagesService loaders", () => {
 
     it("answers none when there is nothing to read", async () => {
         const em = readingOf({ getRawOne: undefined }, { getRawOne: undefined }, { getRawOne: undefined }).em
-        const { service } = await build(em)
+        const { service, staff } = await build(em)
+        staff.list.mockResolvedValueOnce([])
 
         await expect(service.lead("ws-1", "l-1")).resolves.toBeNull()
         await expect(service.leadOf("ws-1", "")).resolves.toBeNull()

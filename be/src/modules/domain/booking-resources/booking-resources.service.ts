@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { StaffEntity } from "@modules/domain/staff"
+import { StaffDirectoryService } from "@modules/domain/staff"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { BookingResourceSaved, BookingResourceWrite } from "./booking-resources.contracts"
 import { BookingResourceEntity } from "./persistence/entities"
@@ -12,7 +12,10 @@ const savedOf = (raw: unknown): Array<BookingResourceSaved> =>
 @Injectable()
 /** Owns resource persistence; callers authorize setup writes and supply their atomic calendar transaction. */
 export class BookingResourcesService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly staff: StaffDirectoryService,
+    ) {}
 
     /** Saves one resource inside the setup transaction after any staff link has been proven. */
     async save(
@@ -55,20 +58,10 @@ export class BookingResourcesService {
         return held === null ? [] : [{ id: held.id }]
     }
 
-    /** Proves and holds a staff link within the same workspace as the resource. */
-    async lockStaff(
-        workspaceId: string,
-        id: string,
-        manager: EntityManager,
-    ): Promise<ReadonlyArray<BookingResourceSaved>> {
-        const held = await manager
-            .createQueryBuilder(StaffEntity, "s")
-            .select("s.id", "id")
-            .where("s.workspace_id = :workspaceId AND s.id = :id", { workspaceId, id })
-            .limit(1)
-            .setLock("pessimistic_read")
-            .getRawOne<BookingResourceSaved>()
-        return held === undefined ? [] : [{ id: held.id }]
+    /** Proves a staff link within the same workspace as the resource. */
+    async lockStaff(workspaceId: string, id: string): Promise<ReadonlyArray<BookingResourceSaved>> {
+        const [found] = await this.staff.namesOf(workspaceId, [id])
+        return found === undefined ? [] : [{ id: found.id }]
     }
 
     /** Reports whether booking or waitlist history still references the resource. */

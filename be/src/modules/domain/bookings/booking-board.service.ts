@@ -7,7 +7,7 @@ import { BookingResourceEntity } from "@modules/domain/booking-resources"
 import { BookingServiceEntity } from "@modules/domain/booking-services"
 import { BookingWaitlistEntity } from "@modules/domain/booking-waitlist"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { StaffEntity } from "@modules/domain/staff"
+import { StaffDirectoryService } from "@modules/domain/staff"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -53,6 +53,7 @@ export class BookingBoardService {
         private readonly members: WorkspaceMembersService,
         private readonly models: BookingModelService,
         private readonly overview: BookingOverviewService,
+        private readonly staff: StaffDirectoryService,
     ) {}
 
     /** Reads every setup and calendar field for an active workspace member. */
@@ -165,17 +166,13 @@ export class BookingBoardService {
             .getRawMany<BoardWaitFacts>()
     }
 
-    /** The active staff that resources can be linked to. */
-    private boardStaff(workspaceId: string): Promise<Array<BoardStaffFacts>> {
-        return this.entityManager
-            .createQueryBuilder(StaffEntity, "st")
-            .select("st.id", "id")
-            .addSelect("st.name", "name")
-            .where("st.workspace_id = :workspaceId AND st.active", { workspaceId })
-            .orderBy("st.name", "ASC")
-            .addOrderBy("st.id", "ASC")
-            .limit(STAFF_LIMIT)
-            .getRawMany<BoardStaffFacts>()
+    /** The active staff that resources can be linked to, by name. */
+    private async boardStaff(workspaceId: string): Promise<Array<BoardStaffFacts>> {
+        const staff = await this.staff.list(workspaceId)
+        return staff
+            .map(({ id, name }) => ({ id, name }))
+            .sort((left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id))
+            .slice(0, STAFF_LIMIT)
     }
 
     private requireRange(from: string, to: string): void {

@@ -28,12 +28,12 @@ export interface AppErrorScopeCount {
 
 const ROW_COLUMNS = { id: true, scope: true, message: true, workspaceId: true, createdAt: true } as const
 
-const toRow = (row: AppErrorEntity): AppErrorRow => ({
-    id: row.id,
-    scope: row.scope,
-    message: row.message,
-    workspaceId: row.workspaceId,
-    createdAt: row.createdAt,
+const toRow = ({ id, scope, message, workspaceId, createdAt }: AppErrorEntity): AppErrorRow => ({
+    id,
+    scope,
+    message,
+    workspaceId,
+    createdAt,
 })
 
 @Injectable()
@@ -41,14 +41,14 @@ const toRow = (row: AppErrorEntity): AppErrorRow => ({
 export class AppErrorsReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
-    /** The workspaces of the errors captured since an instant (one entry per error), at most `limit`. */
-    async workspacesSince(since: Date, limit: number): Promise<Array<string | null>> {
+    /** The workspaces of the errors captured since an instant (one entry per error that names one), at most `limit`. */
+    async workspacesSince(since: Date, limit: number): Promise<Array<string>> {
         const rows = await this.entityManager.find(AppErrorEntity, {
             select: { workspaceId: true },
             where: { createdAt: MoreThanOrEqual(since), workspaceId: Not(IsNull()) },
             take: limit,
         })
-        return rows.map((row) => row.workspaceId)
+        return rows.flatMap(({ workspaceId }) => (workspaceId === null ? [] : [workspaceId]))
     }
 
     /** The newest errors of one workspace, newest first. */

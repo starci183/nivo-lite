@@ -17,7 +17,8 @@ import type {
 import type { MessageVariables, TextParams } from "./automations.contracts"
 import { InjectAutomationGate, InjectAutomationOffice, InjectAutomationText } from "./automations.decorators"
 import { AutomationsError, AutomationsErrorCode } from "./errors/automations.error"
-import { readFirstStaff, readLatestConversation, readLead } from "./automation-reads.query"
+import { StaffDirectoryService } from "@modules/domain/staff"
+import { readLatestConversation, readLead } from "./automation-reads.query"
 import { acceptableMessage, fillBody, stripQuotes, withTail } from "./policies/config.policy"
 import { CLASSIFY_SYSTEM, FEEDBACK_MAX, caseSystem, shopBlock } from "./policies/prompt.policy"
 import { NEUTRAL_VARIABLES } from "./words.contracts"
@@ -43,6 +44,7 @@ export class AutomationMessagesService {
         @InjectAutomationGate() private readonly gate: AutomationGate,
         @InjectAutomationOffice() private readonly office: AutomationOffice,
         @InjectAutomationText() private readonly text: AutomationText,
+        private readonly staff: StaffDirectoryService,
     ) {}
 
     /** The Vietnamese text of a key; the runs the owner reads are stored in Vietnamese. */
@@ -82,7 +84,8 @@ export class AutomationMessagesService {
 
     /** The name of the first active staff member, or none. */
     async firstStaffName(workspaceId: string): Promise<NameOrNone> {
-        return (await readFirstStaff(this.entityManager, workspaceId))?.name ?? null
+        const [first] = await this.staff.list(workspaceId)
+        return first?.name ?? null
     }
 
     /**

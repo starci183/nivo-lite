@@ -6,7 +6,6 @@ import { InvoiceEntity } from "@modules/domain/invoices"
 import { WorkItemEntity } from "@modules/domain/work-items"
 import { ContractEntity } from "@modules/domain/contracts"
 import { AgentMessageEntity } from "@modules/domain/agent-messages"
-import { StaffEntity } from "@modules/domain/staff"
 import type { EntityManager } from "typeorm"
 import type {
     ContractRead,
@@ -291,16 +290,6 @@ export const readExpiringContracts = (
         .orderBy("c.ends_on", "ASC")
         .limit(100)
         .getRawMany<{ id: string; ends_on: string }>()
-
-/** The name of the first active staff member of a workspace. */
-export const readFirstStaff = (manager: EntityManager, workspaceId: string): Promise<{ name: string } | undefined> =>
-    manager
-        .createQueryBuilder(StaffEntity, "s")
-        .select("s.name", "name")
-        .where("s.workspace_id = :workspaceId AND s.active", { workspaceId })
-        .orderBy("s.created_at", "ASC")
-        .limit(1)
-        .getRawOne<{ name: string }>()
 
 /** The built-in care message the gate sent, or still holds, for a lead since an instant. */
 export const readBuiltInCare = (
