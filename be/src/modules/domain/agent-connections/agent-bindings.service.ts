@@ -2,9 +2,10 @@ import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { AgentDirectoryService } from "@modules/domain/agents"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectBindingAgents } from "./agent-connections.decorators"
+import type { BindingAgentsDirectory } from "./agent-connections.port"
 import {
     INBOUND_MODULES,
     PURPOSES,
@@ -52,7 +53,7 @@ export class AgentBindingsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
-        private readonly agents: AgentDirectoryService,
+        @InjectBindingAgents() private readonly agents: BindingAgentsDirectory,
         private readonly connections: ConnectionBindingsReadService,
     ) {}
 

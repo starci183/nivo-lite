@@ -112,12 +112,12 @@ export class AgentConversationsReadService {
     }
 
     /** The newest customer conversations of the given agents, newest first, at most `limit`. */
-    async customerOfAgents(
+    customerOfAgents(
         workspaceId: string,
         agentIds: ReadonlyArray<string>,
         limit: number,
     ): Promise<Array<CustomerConversationRow>> {
-        if (agentIds.length === 0) return []
+        if (agentIds.length === 0) return Promise.resolve([])
         return this.customerColumns()
             .where("c.workspace_id = :workspaceId AND c.kind = 'customer'", { workspaceId })
             .andWhere("c.agent_id IN (:...agentIds)", { agentIds: [...agentIds] })

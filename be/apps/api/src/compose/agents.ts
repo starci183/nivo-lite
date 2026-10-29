@@ -10,7 +10,7 @@ import {
 } from "@modules/domain/agent-connections"
 import { AGENT_TOOLS_ERROR_KINDS, AGENT_TOOLS_MESSAGES, AgentToolsModule } from "@modules/domain/agent-tools"
 import { AGENT_PROFILE_ERROR_KINDS, AGENT_PROFILE_MESSAGES, AgentProfileModule } from "@modules/domain/agent-profile"
-import { AGENTS_SYNC_FRESH_MS, AgentsModule, AgentsService } from "@modules/domain/agents"
+import { AGENTS_SYNC_FRESH_MS, AgentDirectoryService, AgentsModule, AgentsService } from "@modules/domain/agents"
 import {
     AI_GENERATIONS_ERROR_KINDS,
     AI_GENERATIONS_MESSAGES,
@@ -55,7 +55,7 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
         syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
     AgentProfileModule.register({ isGlobal: true, threads: ThreadAssignmentsService, work: ThreadWorkService }),
-    AgentConnectionsModule.register({ isGlobal: true }),
+    AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
     AiGenerationsModule.register({
         isGlobal: true,
         usage: UsageGateService,

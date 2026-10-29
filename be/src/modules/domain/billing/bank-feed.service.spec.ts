@@ -13,8 +13,8 @@ import {
     NO_OWNER,
     NO_STATE,
     TEST_ENVIRONMENT,
-    feedOwnersOf,
-    owningMembers,
+    arrangeFeedOwners,
+    arrangeOwningMember,
 } from "@tests/fixtures/builders/bank-feed-world.builder"
 import type { FeedWorld } from "@tests/fixtures/builders/bank-feed-world.builder"
 import { Test } from "@nestjs/testing"
@@ -67,7 +67,9 @@ const refusal = new BillingError({ code: BillingErrorCode.WebhookInvalid })
 const cases = receiptCasesOf(tx1, incoming)
 const build = async (world: Partial<FeedWorld> = {}) => {
     const tx = fakeTransaction(mockEntityManager({ query: [MARK_CONNECTION_FED, []] }))
-    const { connections, bindings } = feedOwnersOf({ ...FEED_WORLD, ...world })
+    const connections = mock<ConnectionBindingsReadService>()
+    const bindings = mock<AgentBindingsService>()
+    arrangeFeedOwners({ ...FEED_WORLD, ...world }, connections, bindings)
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
     const catalog = mock<MessageCatalog>()
@@ -77,7 +79,8 @@ const build = async (world: Partial<FeedWorld> = {}) => {
     inbound.recordBankPayment.mockResolvedValue({ duplicate: false, inboundEventId: "event-1" })
     const bus = recordingEventBus<BankCreditBookedEvent>()
     const publish = jest.spyOn(bus, "publish")
-    const members = owningMembers()
+    const members = mock<WorkspaceMembersService>()
+    arrangeOwningMember(members)
     const events = mock<EventsService>()
     const transactions = mock<TransactionsService>()
     const feedInbox = mock<BankFeedReceiptService>()

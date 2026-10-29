@@ -55,7 +55,7 @@ export interface MessageBrief {
 }
 
 /** A message of a thread with who wrote it and how its delivery stands, under its stored column names. */
-export interface ThreadLine extends MessageBrief {
+export interface ChatThreadLine extends MessageBrief {
     /** Who wrote it (`ai`, `human`), or null. */
     readonly author_kind: string | null
     /** The name written on it, or null. */

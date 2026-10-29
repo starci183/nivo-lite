@@ -1,6 +1,6 @@
-import { mock } from "@starci/jest-preset"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
-import { AgentMessageDeliveriesService } from "@modules/domain/agent-messages"
+import type { MockOf } from "@starci/jest-preset"
+import type { AgentConversationsReadService } from "@modules/domain/agent-conversations"
+import type { AgentMessageDeliveriesService } from "@modules/domain/agent-messages"
 import type { ChatConversation, ConversationTarget } from "@modules/domain/agent-conversations"
 import type { AgentThreadMessage } from "@modules/domain/agent-messages"
 import type { AgentProfile } from "@modules/domain/agents"
@@ -48,9 +48,12 @@ export const TURN: ChatTurnFacts = {
     replyDeliveryStatus: null,
 }
 
-/** The owners behind a chat turn answering the facts of one turn (none for a turn the workspace does not hold). */
-export const turnOwnersOf = (turn: ChatTurnFacts | null) => {
-    const deliveries = mock<AgentMessageDeliveriesService>()
+/** Makes the owners behind a chat turn answer the facts of one turn (none for a turn the workspace does not hold). */
+export const arrangeTurnOwners = (
+    deliveries: MockOf<AgentMessageDeliveriesService>,
+    conversationReads: MockOf<AgentConversationsReadService>,
+    turn: ChatTurnFacts | null,
+): void => {
     deliveries.turnMessageOf.mockResolvedValue(
         turn === null
             ? null
@@ -65,7 +68,5 @@ export const turnOwnersOf = (turn: ChatTurnFacts | null) => {
     deliveries.agentReplyTo.mockResolvedValue(
         turn === null || replyId === null ? null : { id: replyId, deliveryStatus: turn.replyDeliveryStatus },
     )
-    const conversationReads = mock<AgentConversationsReadService>()
     conversationReads.channelOf.mockResolvedValue(turn?.channel ?? null)
-    return { deliveries, conversationReads }
 }

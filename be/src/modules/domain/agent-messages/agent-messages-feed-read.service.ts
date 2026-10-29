@@ -45,9 +45,8 @@ export class AgentMessagesFeedReadService {
             where: { conversationId: In([...conversationIds]), role: "agent", deliveryStatus: Not(IsNull()) },
             order: { createdAt: "DESC" },
         })
-        return row === null || row.deliveryStatus === null
-            ? null
-            : { deliveryStatus: row.deliveryStatus, deliveryError: row.deliveryError }
+        const deliveryStatus = row?.deliveryStatus ?? null
+        return row === null || deliveryStatus === null ? null : { deliveryStatus, deliveryError: row.deliveryError }
     }
 
     /** When each conversation's customer last wrote, among the writes after `since`, newest first, at most `limit`. */

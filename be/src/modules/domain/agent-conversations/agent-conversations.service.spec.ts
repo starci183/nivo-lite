@@ -1,4 +1,4 @@
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { Test } from "@nestjs/testing"
 import { IsNull, Not } from "typeorm"
@@ -363,7 +363,7 @@ describe("AgentConversationsService writes and targets", () => {
 describe("AgentConversationsService turnOf", () => {
     it("answers the conversation with the agent that speaks in it", async () => {
         const em = mockEntityManager({ findOne: [AgentConversationEntity, turnConversation()] })
-        const { service, agents } = await build(em)
+        const { service } = await build(em)
 
         await expect(service.turnOf("conv-1")).resolves.toEqual({
             kind: "ok",

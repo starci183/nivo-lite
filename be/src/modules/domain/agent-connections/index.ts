@@ -3,5 +3,5 @@ export { AGENT_CONNECTIONS_MESSAGES } from "./messages/agent-connections.message
 export { AgentBindingsService } from "./agent-bindings.service"
 export { AgentConnectionsModule } from "./agent-connections.module"
 export { PURPOSES } from "./agent-bindings.policy"
-export type { Access, BoundAgent, BoundConnection, Purpose, StoredGrant } from "./agent-connections.contracts"
+export type { Access, BoundAgent, BoundConnection, Purpose } from "./agent-connections.contracts"
 export { agentConnectionsEntities } from "./persistence/entities"
