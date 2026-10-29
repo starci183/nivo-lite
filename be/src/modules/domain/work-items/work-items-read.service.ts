@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkItemEntity } from "./persistence/entities"
-import type { WorkException, WorkFigure } from "./work-items-read.contracts"
+import type { DepartmentWork, WorkException, WorkFigure } from "./work-items-read.contracts"
 
 /** The states an exception list shows. */
 const EXCEPTION_STATES = ["waiting_decision", "failed"] as const
@@ -71,5 +71,23 @@ export class WorkItemsReadService {
             .orderBy("w.createdAt", "ASC")
             .limit(limit)
             .getRawMany<WorkException>()
+    }
+
+    /** The newest work items of one department of the workspace, by finish (else last change), newest first. */
+    recentOfDepartment(workspaceId: string, department: string, limit: number): Promise<Array<DepartmentWork>> {
+        return this.entityManager
+            .createQueryBuilder(WorkItemEntity, "w")
+            .select("w.id", "id")
+            .addSelect("w.action", "action")
+            .addSelect("w.status", "status")
+            .addSelect("to_json(COALESCE(w.completed_at, w.updated_at)) #>> '{}'", "at")
+            .addSelect("COALESCE(NULLIF(w.result->>'summary', ''), w.proposal->>'summary')", "summary")
+            .addSelect(PROPOSAL_CUSTOMER, "customer")
+            .addSelect("w.leadId", "leadId")
+            .where("w.workspaceId = :workspaceId AND w.department = :department", { workspaceId, department })
+            .orderBy("COALESCE(w.completed_at, w.updated_at)", "DESC")
+            .addOrderBy("w.id", "ASC")
+            .limit(limit)
+            .getRawMany<DepartmentWork>()
     }
 }

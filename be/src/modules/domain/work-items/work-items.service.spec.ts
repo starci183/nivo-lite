@@ -20,19 +20,22 @@ import {
     rowOf,
     singleCall,
 } from "@tests/fixtures/builders/work-items.builder"
+import { AUTO_DONE_COLUMNS, STILL_WAITING_COLUMNS } from "@tests/fixtures/builders/work-items-service.builder"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { WorkItemEntity } from "./persistence/entities"
 import { WorkItemsService } from "./work-items.service"
 
-const providersOf = (entityManager: MockEntityManager) => [
-    WorkItemsService,
-    { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-    { provide: CLOCK, useValue: new FakeClock(NOW) },
-    { provide: IDS, useValue: fakeIds() },
-]
-
 const build = async (entityManager: MockEntityManager) =>
-    (await Test.createTestingModule({ providers: providersOf(entityManager) }).compile()).get(WorkItemsService)
+    (
+        await Test.createTestingModule({
+            providers: [
+                WorkItemsService,
+                { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+                { provide: CLOCK, useValue: new FakeClock(NOW) },
+                { provide: IDS, useValue: fakeIds() },
+            ],
+        }).compile()
+    ).get(WorkItemsService)
 
 describe("WorkItemsService persistence", () => {
     it("writes the queued item in one statement that ignores a used dedupe key, and answers it", async () => {
@@ -48,29 +51,22 @@ describe("WorkItemsService persistence", () => {
         expect(fake.callsOf("returning")).toEqual([["*"]])
     })
 
-    it("makes a root item the root of its own chain", async () => {
-        const { em, fake } = managerAnswering(returned([rowOf()]))
-
-        await (await build(em)).insert(newItem)
-
-        expect(fake.callsOf("values")[0]?.[0]).toMatchObject({ id: MINTED, chainId: MINTED })
-    })
-
     it("answers nothing when the dedupe key is used", async () => {
         const service = await build(managerAnswering(returned([])).em)
 
         expect(await service.insert(newItem)).toBeNull()
     })
 
-    it("inserts and reads the durable item through the caller's transaction", async () => {
+    it("makes a root item the root of its own chain, and inserts and reads the durable item through the caller's transaction", async () => {
         const primary = mockEntityManager()
-        const { em: tx } = managerAnswering(
+        const { em: tx, fake } = managerAnswering(
             returned([rowOf()]),
             mockEntityManager({ findOne: [WorkItemEntity, entityOf()] }),
         )
         const service = await build(primary)
 
         expect((await service.insert(newItem, tx))?.id).toBe("item-1")
+        expect(fake.callsOf("values")[0]?.[0]).toMatchObject({ id: MINTED, chainId: MINTED })
         expect((await service.findByDedupe("ws-1", "send_quote:lead-1", tx))?.id).toBe("item-1")
 
         expect(primary.createQueryBuilder).not.toHaveBeenCalled()
@@ -434,20 +430,7 @@ describe("WorkItemsService persistence", () => {
             leadId: "lead-9",
         })
 
-        expect(evaluatedValues(singleCall(fake, "set"))).toEqual({
-            status: "done",
-            decidedPath: "auto",
-            proposal,
-            result: { summary: "Sent", href: "/q/1" },
-            evidenceState: "captured",
-            completedAt: AT,
-            updatedAt: AT,
-            error: null,
-            leadId: "COALESCE(CAST(:leadId AS uuid), lead_id)",
-            reason: "CASE WHEN CAST(:path AS text) = 'auto' THEN 'routine' ELSE reason END",
-            reasons: "CASE WHEN CAST(:path AS text) = 'auto' THEN ARRAY['routine'] ELSE reasons END",
-            missingFields: [],
-        })
+        expect(evaluatedValues(singleCall(fake, "set"))).toEqual(AUTO_DONE_COLUMNS)
         expect(fake.callsOf("setParameters")).toEqual([[{ path: "auto", leadId: "lead-9" }]])
     })
 
@@ -484,22 +467,16 @@ describe("WorkItemsService persistence", () => {
             reasons: ["missing_data"],
         })
 
-        expect(singleCall(fake, "set")).toEqual({
-            status: "waiting_decision",
-            proposal,
-            missingFields: ["need"],
-            reason: "missing_data",
-            reasons: ["missing_data"],
-            updatedAt: AT,
-        })
+        expect(singleCall(fake, "set")).toEqual(STILL_WAITING_COLUMNS)
     })
 })
 
+/** The row of the workspace that names this installation, or none. */
+const rowNaming = (installationId: string | null) => Object.assign(new WorkItemEntity(), { installationId })
+
 describe("WorkItemsService installationIdOf", () => {
     it("answers the installation a row of the workspace names", async () => {
-        const em = mockEntityManager({
-            findOne: [WorkItemEntity, Object.assign(new WorkItemEntity(), { installationId: "inst-1" })],
-        })
+        const em = mockEntityManager({ findOne: [WorkItemEntity, rowNaming("inst-1")] })
 
         await expect((await build(em)).installationIdOf("ws-1", "rec-1")).resolves.toBe("inst-1")
         expect(em.findOne).toHaveBeenCalledWith(WorkItemEntity, {
@@ -512,9 +489,11 @@ describe("WorkItemsService installationIdOf", () => {
         const em = mockEntityManager({ findOne: [WorkItemEntity, null] })
         await expect((await build(em)).installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
 
-        const bare = mockEntityManager({
-            findOne: [WorkItemEntity, Object.assign(new WorkItemEntity(), { installationId: null })],
-        })
-        await expect((await build(bare)).installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
+        await expect(
+            (await build(mockEntityManager({ findOne: [WorkItemEntity, rowNaming(null)] }))).installationIdOf(
+                "ws-1",
+                "rec-1",
+            ),
+        ).resolves.toBeNull()
     })
 })

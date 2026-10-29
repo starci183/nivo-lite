@@ -14,6 +14,7 @@ import type {
     ClosedClaim,
     DoneMark,
     NewWorkItem,
+    OptionalInstallationId,
     OptionalWorkItem,
     PreparedSave,
     Proposal,
@@ -25,21 +26,18 @@ import type {
     WorkResult,
 } from "./work-items.contracts"
 import type { InboundWorkState } from "./inbound-work-state.contracts"
-import { requireWorkItem, toWorkItem, toWorkItemRecord } from "./work-items.mapper"
+import {
+    closedClaimsOf,
+    queuedValuesOf,
+    recordsOfRaw,
+    requireWorkItem,
+    toWorkItem,
+    toWorkItemRecord,
+} from "./work-items.mapper"
+import { ACCOUNTING_COLUMNS, FREE_TO_TAKE, FREE_TO_TAKE_UNALIASED, LEAD_ITEMS_MAX } from "./work-items.sql"
 
 /** The staff member an item is given to, or null when the assignment is cleared. */
 type AssignedStaff = string | null
-
-/** The most steps one customer journey read returns. */
-const LEAD_ITEMS_MAX = 500
-
-/** An item nobody touched since it was written, or whose last touch is older than the lease: free to take. */
-const FREE_TO_TAKE =
-    "(w.updated_at = w.created_at OR w.updated_at < CAST(:now AS timestamptz) - make_interval(secs => CAST(:lease AS int)))"
-
-/** The same rule for the guarded updates, which have no alias. */
-const FREE_TO_TAKE_UNALIASED =
-    "(updated_at = created_at OR updated_at < CAST(:now AS timestamptz) - make_interval(secs => CAST(:lease AS int)))"
 
 @Injectable()
 /** The work items of a workspace: the only writer of public.work_items. */
@@ -71,7 +69,7 @@ export class WorkItemsService {
     }
 
     /** The installation that owns a work item of the workspace; null when there is no such row or it names no installation. */
-    async installationIdOf(workspaceId: string, id: string): Promise<string | null> {
+    async installationIdOf(workspaceId: string, id: string): Promise<OptionalInstallationId> {
         const row = await this.entityManager.findOne(WorkItemEntity, {
             select: { installationId: true },
             where: { workspaceId, id },
@@ -123,7 +121,7 @@ export class WorkItemsService {
         id: string,
         manager: EntityManager = this.entityManager,
     ): Promise<OptionalWorkItem> {
-        const now = this.now()
+        const now = this.clock.now()
         return this.first(
             await this.changed(
                 manager,
@@ -143,14 +141,7 @@ export class WorkItemsService {
     listAccounting(workspaceId: string, limit: number = 500): Promise<Array<AccountingWork>> {
         return this.entityManager
             .createQueryBuilder(WorkItemEntity, "w")
-            .select([
-                "w.id AS id",
-                "w.action AS action",
-                "w.status AS status",
-                "w.subject_type AS subject_type",
-                "w.subject_id AS subject_id",
-                "to_json(w.created_at) #>> '{}' AS created_at",
-            ])
+            .select(ACCOUNTING_COLUMNS)
             .where("w.workspace_id = :workspaceId AND w.department = 'accounting'", { workspaceId })
             .orderBy("w.created_at", "DESC")
             .addOrderBy("w.id", "DESC")
@@ -167,27 +158,11 @@ export class WorkItemsService {
         const result = await manager
             .createQueryBuilder(WorkItemEntity, "w")
             .insert()
-            .values({
-                id,
-                workspaceId: item.workspaceId,
-                chainId: item.chainId ?? id,
-                depth: item.depth,
-                department: item.department,
-                action: item.action,
-                subjectType: item.subjectType,
-                subjectId: item.subjectId,
-                leadId: item.leadId,
-                inboundEventId: item.inboundEventId,
-                parentId: item.parentId,
-                dedupeKey: item.dedupeKey,
-                status: "queued",
-                proposal: item.proposal,
-                installationId: item.installationId,
-            })
+            .values(queuedValuesOf(item, id))
             .orIgnore()
             .returning("*")
             .execute()
-        return this.first(result.raw as Array<WorkItemRecord>)
+        return this.first(recordsOfRaw(result.raw))
     }
 
     /** The item a dedupe key stands for. */
@@ -218,7 +193,7 @@ export class WorkItemsService {
 
     /** Takes a queued item for processing; null when another worker holds it. The lease is CLAIM_LEASE_SECONDS. */
     async claim(workspaceId: string, id: string): Promise<OptionalWorkItem> {
-        const now = this.now()
+        const now = this.clock.now()
         return this.first(
             await this.changed(
                 this.entityManager,
@@ -242,7 +217,7 @@ export class WorkItemsService {
             .createQueryBuilder(WorkItemEntity, "w")
             .select("w.workspace_id", "workspace_id")
             .where("w.status = 'queued' AND w.reason IS NULL")
-            .andWhere(FREE_TO_TAKE, { now: this.now(), lease: CLAIM_LEASE_SECONDS })
+            .andWhere(FREE_TO_TAKE, { now: this.clock.now(), lease: CLAIM_LEASE_SECONDS })
             .groupBy("w.workspace_id")
             .orderBy("min(w.created_at)", "ASC")
             .addOrderBy("w.workspace_id", "ASC")
@@ -281,7 +256,7 @@ export class WorkItemsService {
                 {},
                 {
                     status: "queued",
-                    updatedAt: this.now(),
+                    updatedAt: this.clock.now(),
                 },
             ),
         )
@@ -300,7 +275,7 @@ export class WorkItemsService {
                     subjectType: () => "COALESCE(CAST(:subjectType AS text), subject_type)",
                     subjectId: () => "COALESCE(CAST(:subjectId AS uuid), subject_id)",
                     leadId: () => "COALESCE(CAST(:leadId AS uuid), lead_id)",
-                    updatedAt: this.now(),
+                    updatedAt: this.clock.now(),
                 },
             ),
         )
@@ -314,7 +289,7 @@ export class WorkItemsService {
                 { id },
                 null,
                 {},
-                { status: "failed", error, updatedAt: this.now() },
+                { status: "failed", error, updatedAt: this.clock.now() },
             ),
         )
     }
@@ -336,7 +311,7 @@ export class WorkItemsService {
                     executionId: waiting.executionId,
                     decidedPath: null,
                     error: null,
-                    updatedAt: this.now(),
+                    updatedAt: this.clock.now(),
                 },
             ),
         )
@@ -356,7 +331,7 @@ export class WorkItemsService {
             {},
             {
                 proposal,
-                updatedAt: this.now(),
+                updatedAt: this.clock.now(),
             },
             "id",
         )
@@ -372,7 +347,7 @@ export class WorkItemsService {
             {},
             {
                 assignedStaffId: staffId,
-                updatedAt: this.now(),
+                updatedAt: this.clock.now(),
             },
             "id",
         )
@@ -391,7 +366,7 @@ export class WorkItemsService {
         dedupePrefix: string,
         result: WorkResult,
     ): Promise<Array<ClosedClaim>> {
-        const now = this.now()
+        const now = this.clock.now()
         const closed = await this.entityManager
             .createQueryBuilder(WorkItemEntity, "w")
             .update()
@@ -411,12 +386,12 @@ export class WorkItemsService {
             )
             .returning("id, inbound_event_id")
             .execute()
-        return closed.raw as Array<ClosedClaim>
+        return closedClaimsOf(closed.raw)
     }
 
     /** Closes an item as done. */
     async markDone(id: string, done: DoneMark): Promise<WorkItem> {
-        const now = this.now()
+        const now = this.clock.now()
         const auto = "CAST(:path AS text) = 'auto'"
         return requireWorkItem(
             await this.changed(
@@ -445,7 +420,7 @@ export class WorkItemsService {
 
     /** Closes an item as rejected by a person. */
     async markRejected(id: string, proposal: Proposal, result: WorkResult): Promise<WorkItem> {
-        const now = this.now()
+        const now = this.clock.now()
         return requireWorkItem(
             await this.changed(
                 this.entityManager,
@@ -477,13 +452,9 @@ export class WorkItemsService {
                 missingFields: [...still.missing],
                 reason: still.reason,
                 reasons: [...still.reasons],
-                updatedAt: this.now(),
+                updatedAt: this.clock.now(),
             },
         )
-    }
-
-    private now(): Date {
-        return this.clock.now()
     }
 
     private first(rows: ReadonlyArray<WorkItemRecord>): OptionalWorkItem {
@@ -496,7 +467,7 @@ export class WorkItemsService {
         return this.entityManager
             .createQueryBuilder(WorkItemEntity, "w")
             .where("w.workspace_id = :workspaceId AND w.status = 'queued' AND w.reason IS NULL", { workspaceId })
-            .andWhere(FREE_TO_TAKE, { now: this.now(), lease: CLAIM_LEASE_SECONDS })
+            .andWhere(FREE_TO_TAKE, { now: this.clock.now(), lease: CLAIM_LEASE_SECONDS })
             .orderBy("w.created_at", "ASC")
             .addOrderBy("w.id", "ASC")
             .limit(1)
@@ -523,6 +494,6 @@ export class WorkItemsService {
             .setParameters(parameters)
             .returning(returning)
             .execute()
-        return result.raw as Array<WorkItemRecord>
+        return recordsOfRaw(result.raw)
     }
 }
