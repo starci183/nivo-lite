@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import type { EntityManager } from "typeorm"
+import { LoyaltyCustomersService } from "@modules/domain/loyalty-customers"
+import type { LoyaltyCustomer } from "@modules/domain/loyalty-customers"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { LoyaltyLedgerError, LoyaltyLedgerErrorCode } from "./errors/loyalty-ledger.error"
 import type {
@@ -13,7 +15,7 @@ import type {
 } from "./loyalty-ledger.contracts"
 import { LoyaltyLedgerEntity } from "./persistence/entities"
 import { toEntry, toExpiryEntry, toMember, toTotal } from "./policies/ledger.mapper"
-import type { MemberRaw, TotalRaw } from "./policies/ledger.mapper"
+import type { BalanceRaw, TotalRaw } from "./policies/ledger.mapper"
 
 /** The most customers one member list answers. */
 const MEMBER_LIMIT = 2000
@@ -30,7 +32,10 @@ const KIND_COUNT = 4
 @Injectable()
 /** The one way points move: an append-only ledger, idempotent on its key, never taking more than the balance. Balances come from the ledger and nowhere else. */
 export class LoyaltyLedgerService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly customers: LoyaltyCustomersService,
+    ) {}
 
     /**
      * Writes one entry under a lock on the customer. A key posted before changes nothing and answers null; taking more points
@@ -38,18 +43,8 @@ export class LoyaltyLedgerService {
      */
     async post(params: PostParams): Promise<PostedEntry> {
         const { manager } = params
-        const locked = await manager
-            .createQueryBuilder()
-            .select("c.id", "id")
-            .from("public.loyalty_customers", "c")
-            .where("c.id = :customerId AND c.workspace_id = :workspaceId", {
-                customerId: params.customerId,
-                workspaceId: params.workspaceId,
-            })
-            .limit(1)
-            .setLock("pessimistic_write")
-            .getRawOne<{ id: string }>()
-        if (locked === undefined) throw new LoyaltyLedgerError({ code: LoyaltyLedgerErrorCode.CustomerNotFound })
+        const locked = await this.customers.lockOwn(manager, params.workspaceId, params.customerId)
+        if (!locked) throw new LoyaltyLedgerError({ code: LoyaltyLedgerErrorCode.CustomerNotFound })
         const posted = await manager.exists(LoyaltyLedgerEntity, {
             where: { workspaceId: params.workspaceId, ref: params.ref },
         })
@@ -83,6 +78,11 @@ export class LoyaltyLedgerService {
         return id
     }
 
+    /** Whether any ledger entry refers to the reward. */
+    rewardUsed(rewardId: string): Promise<boolean> {
+        return this.entityManager.exists(LoyaltyLedgerEntity, { where: { rewardId } })
+    }
+
     /** Whether an idempotency key was posted before. */
     hasRef(workspaceId: string, ref: string): Promise<boolean> {
         return this.entityManager.exists(LoyaltyLedgerEntity, { where: { workspaceId, ref } })
@@ -90,20 +90,14 @@ export class LoyaltyLedgerService {
 
     /** Every customer of a workspace with the balance, newest first. */
     async members(workspaceId: string): Promise<ReadonlyArray<LoyaltyMember>> {
-        const rows = await this.memberQuery(workspaceId)
-            .orderBy("c.created_at", "DESC")
-            .limit(MEMBER_LIMIT)
-            .getRawMany<MemberRaw>()
-        return rows.map(toMember)
+        return this.withBalances(workspaceId, await this.customers.listNewest(workspaceId, MEMBER_LIMIT))
     }
 
     /** One customer with the balance, or null. */
     async member(workspaceId: string, customerId: string): Promise<MemberMatch> {
-        const row = await this.memberQuery(workspaceId)
-            .andWhere("c.id = :customerId", { customerId })
-            .limit(1)
-            .getRawOne<MemberRaw>()
-        return row === undefined ? null : toMember(row)
+        const customer = await this.customers.byId(workspaceId, customerId)
+        if (customer === null) return null
+        return toMember(customer, (await this.balancesOf(workspaceId, [customer.id])).get(customer.id))
     }
 
     /** The newest entries of a customer. */
@@ -158,25 +152,37 @@ export class LoyaltyLedgerService {
         return rows.map(toTotal)
     }
 
-    /** The customers of a workspace with the balances the ledger gives them (the customers belong to another capability). */
-    private memberQuery(workspaceId: string): SelectQueryBuilder<object> {
-        return this.entityManager
-            .createQueryBuilder()
-            .select("c.id", "id")
-            .addSelect("c.name", "name")
-            .addSelect("c.phone", "phone")
-            .addSelect("c.email", "email")
-            .addSelect("c.birthday::text", "birthday")
-            .addSelect("c.tier_key", "tier_key")
-            .addSelect("c.joined_at", "joined_at")
-            .addSelect("c.note", "note")
+    /** The customers as members: each with the balances its ledger entries give it (a customer without entries holds nothing). */
+    private async withBalances(
+        workspaceId: string,
+        customers: ReadonlyArray<LoyaltyCustomer>,
+    ): Promise<Array<LoyaltyMember>> {
+        if (customers.length === 0) return []
+        const balances = await this.balancesOf(
+            workspaceId,
+            customers.map((customer) => customer.id),
+        )
+        return customers.map((customer) => toMember(customer, balances.get(customer.id)))
+    }
+
+    /** What the ledger entries of each customer come to, by customer id. */
+    private async balancesOf(
+        workspaceId: string,
+        customerIds: ReadonlyArray<string>,
+    ): Promise<Map<string, BalanceRaw>> {
+        const rows = await this.entityManager
+            .createQueryBuilder(LoyaltyLedgerEntity, "l")
+            .select("l.customerId", "customer_id")
             .addSelect("COALESCE(sum(l.points), 0)::int", "points")
-            .addSelect("COALESCE(sum(l.amount_vnd) FILTER (WHERE l.kind = 'earn'), 0)::float8", "lifetime_spend_vnd")
-            .addSelect("(count(l.id) FILTER (WHERE l.kind = 'earn' AND l.order_id IS NOT NULL))::int", "visits")
-            .addSelect("max(l.occurred_at) FILTER (WHERE l.kind = 'earn')", "last_visit_at")
-            .from("public.loyalty_customers", "c")
-            .leftJoin(LoyaltyLedgerEntity, "l", "l.customer_id = c.id")
-            .where("c.workspace_id = :workspaceId", { workspaceId })
-            .groupBy("c.id")
+            .addSelect("COALESCE(sum(l.amountVnd) FILTER (WHERE l.kind = 'earn'), 0)::float8", "lifetime_spend_vnd")
+            .addSelect("(count(l.id) FILTER (WHERE l.kind = 'earn' AND l.orderId IS NOT NULL))::int", "visits")
+            .addSelect("max(l.occurredAt) FILTER (WHERE l.kind = 'earn')", "last_visit_at")
+            .where("l.workspaceId = :workspaceId AND l.customerId = ANY(:customerIds)", {
+                workspaceId,
+                customerIds: [...customerIds],
+            })
+            .groupBy("l.customerId")
+            .getRawMany<BalanceRaw>()
+        return new Map(rows.map((row) => [row.customer_id, row]))
     }
 }

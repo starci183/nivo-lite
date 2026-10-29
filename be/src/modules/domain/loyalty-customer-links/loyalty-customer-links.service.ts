@@ -1,14 +1,13 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { AgentConversationReadService } from "@modules/domain/agent-conversations"
+import type { CustomerChat } from "@modules/domain/agent-conversations"
+import { LeadReadService } from "@modules/domain/leads"
+import { LoyaltyCustomersService } from "@modules/domain/loyalty-customers"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import type {
-    ChatCustomerId,
-    ChatCustomerRef,
-    LeadLinkSource,
-    PushConversation,
-    PushTarget,
-} from "./loyalty-customer-links.contracts"
+import type { ChatCustomerId, ChatCustomerRef, LeadLinkSource, PushTarget } from "./loyalty-customer-links.contracts"
 import { LoyaltyCustomerLinkEntity } from "./persistence/entities"
 import type { LoyaltyCustomerLinkKind } from "./persistence/entities"
 
@@ -20,16 +19,6 @@ const DERIVED_LIMIT = 5000
 
 /** The most rows one chat lookup reads from each source: a chat has few links, and a lead matches at most two customers. */
 const CHAT_LOOKUP_LIMIT = 10
-
-/** A customer of the workspace as the lead matching reads it (the customers belong to another capability). */
-interface CustomerContactRaw {
-    /** The customer id. */
-    readonly id: string
-    /** The normalised phone, or null. */
-    readonly phone: string | null
-    /** The email, or null. */
-    readonly email: string | null
-}
 
 /** A customer and the reference a link points at. */
 interface DerivedLinkRaw {
@@ -47,19 +36,18 @@ interface RankedCustomerRaw {
     readonly rank: number
 }
 
-/** A chat row as the push lookup reads it. */
-interface PushConversationRaw extends PushConversation {
-    /** Whether the chat is on a push channel (Telegram or Zalo). */
-    readonly is_push: boolean | null
-}
-
 /** Finds the id of the customer that owns a lead's contact, or undefined. */
 type OwnerOf = (lead: LeadLinkSource) => string | undefined
 
 @Injectable()
 /** Ties customers to the leads, conversations and chat accounts that already exist, without touching those tables. */
 export class LoyaltyCustomerLinksService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly chats: AgentConversationReadService,
+        private readonly leads: LeadReadService,
+        private readonly customers: LoyaltyCustomersService,
+    ) {}
 
     /** Links the leads to the customers that own their contact, then their conversations and chat accounts; answers how many leads were linked. */
     async linkLeads(
@@ -82,40 +70,23 @@ export class LoyaltyCustomerLinksService {
     /** How many of the customers have a chat that staff do not handle. */
     async countReachable(workspaceId: string, customerIds: ReadonlyArray<string>): Promise<number> {
         if (customerIds.length === 0) return 0
-        const row = await this.entityManager
-            .createQueryBuilder(LoyaltyCustomerLinkEntity, "l")
-            .select("count(DISTINCT l.customerId)::int", "total")
-            .innerJoin(
-                "agent_conversations",
-                "c",
-                "c.workspace_id = l.workspace_id AND c.kind = 'customer' AND c.handled_by IS NULL AND ((l.kind = 'conversation' AND c.id::text = l.ref) OR (l.kind = 'lead' AND c.lead_id::text = l.ref))",
-            )
-            .where("l.workspaceId = :workspaceId AND l.customerId = ANY(:customerIds)", {
-                workspaceId,
-                customerIds: [...customerIds],
-            })
-            .getRawOne<{ total: number }>()
-        return row === undefined ? 0 : row.total
+        const links = await this.chatLinksOf(workspaceId, customerIds)
+        const chats = await this.chats.customerChatsOf(workspaceId, refsOf(links))
+        const reachable = new Set(chats.filter((chat) => chat.handledBy === null).flatMap(chatRefs))
+        return new Set(
+            links.filter((link) => reachable.has(refKey(link.kind, link.ref))).map((link) => link.customerId),
+        ).size
     }
 
     /** The chat to send a customer a message in, or null when the customer has none. */
     async pushConversation(workspaceId: string, customerId: string): Promise<PushTarget> {
-        const row = await this.entityManager
-            .createQueryBuilder(LoyaltyCustomerLinkEntity, "l")
-            .select("c.id", "id")
-            .addSelect("c.channel", "channel")
-            .addSelect("(c.channel IN ('telegram', 'zalo'))", "is_push")
-            .innerJoin(
-                "agent_conversations",
-                "c",
-                "c.workspace_id = l.workspace_id AND c.kind = 'customer' AND ((l.kind = 'conversation' AND c.id::text = l.ref) OR (l.kind = 'lead' AND c.lead_id::text = l.ref))",
-            )
-            .where("l.workspaceId = :workspaceId AND l.customerId = :customerId", { workspaceId, customerId })
-            .orderBy("is_push", "DESC")
-            .addOrderBy("c.created_at", "DESC")
-            .limit(1)
-            .getRawOne<PushConversationRaw>()
-        return row === undefined ? null : { id: row.id, channel: row.channel }
+        const links = await this.chatLinksOf(workspaceId, [customerId])
+        const chats = await this.chats.customerChatsOf(workspaceId, refsOf(links))
+        const linked = new Set(links.map((link) => refKey(link.kind, link.ref)))
+        const best = chats
+            .filter((chat) => chatRefs(chat).some((key) => linked.has(key)))
+            .sort((first, second) => Number(isPush(second)) - Number(isPush(first)))[0]
+        return best === undefined ? null : { id: best.id, channel: best.channel }
     }
 
     /** The member behind a chat, only through what NIVO already links to it: a stranger who types a phone number learns nothing. */
@@ -138,20 +109,30 @@ export class LoyaltyCustomerLinksService {
     }
 
     /** The customers whose phone or email is the lead's own, the phone match ranked first. */
-    private customersOfLead(workspaceId: string, leadId: string): Promise<Array<RankedCustomerRaw>> {
-        return this.entityManager
-            .createQueryBuilder()
-            .select("c.id", "customer_id")
-            .addSelect("CASE WHEN c.phone = ld.phone THEN 3 ELSE 4 END", "rank")
-            .from("public.leads", "ld")
-            .innerJoin(
-                "loyalty_customers",
-                "c",
-                "c.workspace_id = ld.workspace_id AND ((ld.phone IS NOT NULL AND c.phone = ld.phone) OR (ld.email IS NOT NULL AND c.email = lower(ld.email)))",
-            )
-            .where("ld.workspace_id = :workspaceId AND ld.id = :leadId", { workspaceId, leadId })
-            .limit(CHAT_LOOKUP_LIMIT)
-            .getRawMany<RankedCustomerRaw>()
+    private async customersOfLead(workspaceId: string, leadId: string): Promise<Array<RankedCustomerRaw>> {
+        const lead = await this.leads.contactOf(workspaceId, leadId)
+        if (lead === null) return []
+        const matches = await this.customers.contactsMatching(
+            this.entityManager,
+            workspaceId,
+            {
+                phones: lead.phone === null ? [] : [lead.phone],
+                emails: lead.email === null ? [] : [lead.email.toLowerCase()],
+            },
+            CHAT_LOOKUP_LIMIT,
+        )
+        return matches.map((customer) => ({ customer_id: customer.id, rank: customer.phone === lead.phone ? 3 : 4 }))
+    }
+
+    /** The conversation and lead links of the customers, the references their chats are found by. */
+    private chatLinksOf(
+        workspaceId: string,
+        customerIds: ReadonlyArray<string>,
+    ): Promise<Array<LoyaltyCustomerLinkEntity>> {
+        return this.entityManager.find(LoyaltyCustomerLinkEntity, {
+            where: { workspaceId, customerId: In([...customerIds]), kind: In(["conversation", "lead"]) },
+            take: DERIVED_LIMIT,
+        })
     }
 
     /** Finds the customer that owns the contact of each lead: by the phone when the lead has one, else by the email. */
@@ -162,19 +143,12 @@ export class LoyaltyCustomerLinksService {
     ): Promise<OwnerOf> {
         const phones = leads.flatMap((lead) => (lead.phone === null ? [] : [lead.phone]))
         const emails = leads.flatMap((lead) => (lead.phone === null && lead.email !== null ? [lead.email] : []))
-        const customers = await manager
-            .createQueryBuilder()
-            .select("c.id", "id")
-            .addSelect("c.phone", "phone")
-            .addSelect("c.email", "email")
-            .from("public.loyalty_customers", "c")
-            .where("c.workspace_id = :workspaceId AND (c.phone = ANY(:phones) OR c.email = ANY(:emails))", {
-                workspaceId,
-                phones,
-                emails,
-            })
-            .limit(leads.length * 2)
-            .getRawMany<CustomerContactRaw>()
+        const customers = await this.customers.contactsMatching(
+            manager,
+            workspaceId,
+            { phones, emails },
+            leads.length * 2,
+        )
         const byPhone = new Map<string, string>()
         const byEmail = new Map<string, string>()
         for (const customer of customers) {
@@ -189,40 +163,50 @@ export class LoyaltyCustomerLinksService {
 
     /** Links every customer to the customer conversations of the leads it is linked to. */
     private async linkConversations(manager: EntityManager, workspaceId: string): Promise<void> {
-        const pairs = await manager
-            .createQueryBuilder(LoyaltyCustomerLinkEntity, "l")
-            .select("l.customerId", "customer_id")
-            .addSelect("c.id::text", "ref")
-            .distinct(true)
-            .innerJoin(
-                "agent_conversations",
-                "c",
-                "c.workspace_id = l.workspace_id AND c.lead_id::text = l.ref AND c.kind = 'customer'",
-            )
-            .where("l.workspaceId = :workspaceId AND l.kind = 'lead'", { workspaceId })
-            .limit(DERIVED_LIMIT)
-            .getRawMany<DerivedLinkRaw>()
+        const leadLinks = await manager.find(LoyaltyCustomerLinkEntity, {
+            where: { workspaceId, kind: "lead" },
+            take: DERIVED_LIMIT,
+        })
+        const chats = await this.chats.customerChatsOf(
+            workspaceId,
+            { conversationIds: [], leadIds: leadLinks.map((link) => link.ref) },
+            manager,
+        )
+        const pairs = distinctPairs(
+            leadLinks.flatMap((link) =>
+                chats
+                    .filter((chat) => chat.leadId === link.ref)
+                    .map((chat) => ({ customer_id: link.customerId, ref: chat.id })),
+            ),
+        )
         await this.writeLinks(manager, workspaceId, "conversation", pairs)
     }
 
     /** Links every customer to the chat accounts (channel and account) of the conversations it is linked to. */
     private async linkChannels(manager: EntityManager, workspaceId: string): Promise<void> {
-        const pairs = await manager
-            .createQueryBuilder(LoyaltyCustomerLinkEntity, "l")
-            .select("l.customerId", "customer_id")
-            .addSelect("c.channel || ':' || split_part(c.external_id, ':', 1)", "ref")
-            .distinct(true)
-            .innerJoin(
-                "agent_conversations",
-                "c",
-                "c.workspace_id = l.workspace_id AND c.id::text = l.ref AND c.kind = 'customer'",
-            )
-            .where(
-                "l.workspaceId = :workspaceId AND l.kind = 'conversation' AND c.channel IS NOT NULL AND c.external_id IS NOT NULL",
-                { workspaceId },
-            )
-            .limit(DERIVED_LIMIT)
-            .getRawMany<DerivedLinkRaw>()
+        const chatLinks = await manager.find(LoyaltyCustomerLinkEntity, {
+            where: { workspaceId, kind: "conversation" },
+            take: DERIVED_LIMIT,
+        })
+        const chats = await this.chats.customerChatsOf(
+            workspaceId,
+            { conversationIds: chatLinks.map((link) => link.ref), leadIds: [] },
+            manager,
+        )
+        const pairs = distinctPairs(
+            chatLinks.flatMap((link) =>
+                chats.flatMap((chat) =>
+                    chat.id === link.ref && chat.externalId !== null
+                        ? [
+                              {
+                                  customer_id: link.customerId,
+                                  ref: `${chat.channel}:${chat.externalId.split(":", 1).join("")}`,
+                              },
+                          ]
+                        : [],
+                ),
+            ),
+        )
         await this.writeLinks(manager, workspaceId, "channel", pairs)
     }
 
@@ -250,6 +234,29 @@ export class LoyaltyCustomerLinksService {
         return written
     }
 }
+
+/** The key one link reference is looked up by. */
+const refKey = (kind: LoyaltyCustomerLinkKind, ref: string): string => `${kind}:${ref}`
+
+/** The keys a chat is reachable by: its own conversation key and, when it has one, its lead key. */
+const chatRefs = (chat: CustomerChat): Array<string> => [
+    refKey("conversation", chat.id),
+    ...(chat.leadId === null ? [] : [refKey("lead", chat.leadId)]),
+]
+
+/** The references that find the chats the links point at. */
+const refsOf = (links: ReadonlyArray<LoyaltyCustomerLinkEntity>) => ({
+    conversationIds: links.filter((link) => link.kind === "conversation").map((link) => link.ref),
+    leadIds: links.filter((link) => link.kind === "lead").map((link) => link.ref),
+})
+
+/** Whether the chat is on a push channel (Telegram or Zalo). */
+const isPush = (chat: CustomerChat): boolean => chat.channel === "telegram" || chat.channel === "zalo"
+
+/** The pairs without repeats, in first-seen order. */
+const distinctPairs = (pairs: ReadonlyArray<DerivedLinkRaw>): Array<DerivedLinkRaw> => [
+    ...new Map(pairs.map((pair) => [`${pair.customer_id}|${pair.ref}`, pair])).values(),
+]
 
 /** Removes a message suffix only from the final line of the external identity. */
 const accountIdOf = (value: string): string => {

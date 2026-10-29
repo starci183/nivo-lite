@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { LoyaltyConfig, ProgramMatch, ProgramPatch } from "./loyalty-programs.contracts"
 import { LoyaltyProgramEntity } from "./persistence/entities"
@@ -20,7 +22,11 @@ const SLUG_EXPRESSION =
 @Injectable()
 /** The programme rules and public slug, read by the other loyalty capabilities and changed by authorised owners. */
 export class LoyaltyProgramsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly installations: InstallationRecordsService,
+        private readonly workspaces: WorkspacesService,
+    ) {}
 
     /** The programme of a workspace, or null when it never created one. */
     async find(workspaceId: string): Promise<ProgramMatch> {
@@ -42,28 +48,15 @@ export class LoyaltyProgramsService {
 
     /** The programme when the module is installed and not paused and the owner switched the programme on, else null. */
     async findActive(workspaceId: string): Promise<ProgramMatch> {
-        const installation = await this.entityManager
-            .createQueryBuilder()
-            .select("i.status", "status")
-            .from("public.module_installations", "i")
-            .where("i.workspace_id = :workspaceId AND i.module_key = 'loyalty'", { workspaceId })
-            .limit(1)
-            .getRawOne<{ status: string }>()
-        if (installation === undefined || installation.status === "paused") return null
+        const installation = await this.installations.firstOfModule(workspaceId, "loyalty")
+        if (installation === null || installation.status === "paused") return null
         const program = await this.find(workspaceId)
         return program?.enabled === true ? program : null
     }
 
     /** The name of the shop that runs the programme; empty when the workspace is gone. */
     async shopName(workspaceId: string): Promise<string> {
-        const row = await this.entityManager
-            .createQueryBuilder()
-            .select("w.name", "name")
-            .from("public.workspaces", "w")
-            .where("w.id = :workspaceId", { workspaceId })
-            .limit(1)
-            .getRawOne<{ name: string }>()
-        return row === undefined ? "" : row.name
+        return this.workspaces.nameOf(workspaceId)
     }
 
     /** Saves the supplied fields, creating the programme and public slug only on this write. */

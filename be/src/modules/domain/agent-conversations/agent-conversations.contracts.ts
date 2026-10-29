@@ -189,3 +189,27 @@ export interface CustomerLeadConversation {
     /** The person who holds the conversation, or null while the agent answers. */
     readonly handled_by: string | null
 }
+
+/** The references that pick customer chats: conversation ids and lead ids. */
+export interface CustomerChatRefs {
+    /** The conversation ids. */
+    readonly conversationIds: ReadonlyArray<string>
+    /** The lead ids. */
+    readonly leadIds: ReadonlyArray<string>
+}
+
+/** A customer chat as another capability reads it by reference. */
+export interface CustomerChat {
+    /** The conversation id. */
+    readonly id: string
+    /** The lead the customer became, or null. */
+    readonly leadId: string | null
+    /** The channel the customer writes on. */
+    readonly channel: string
+    /** The customer's id on the channel, or null. */
+    readonly externalId: string | null
+    /** The person who holds the chat, or null while the agent answers. */
+    readonly handledBy: string | null
+    /** When the chat began. */
+    readonly createdAt: Date
+}

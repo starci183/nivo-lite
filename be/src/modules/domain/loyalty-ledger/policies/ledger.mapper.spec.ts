@@ -1,15 +1,20 @@
 import { toEntry, toExpiryEntry, toMember, toTotal } from "./ledger.mapper"
-import type { EntryFields, ExpiryFields, MemberRaw, TotalRaw } from "./ledger.mapper"
+import type { LoyaltyCustomer } from "@modules/domain/loyalty-customers"
+import type { BalanceRaw, EntryFields, ExpiryFields, TotalRaw } from "./ledger.mapper"
 
-const memberRow = (overrides: Partial<MemberRaw> = {}): MemberRaw => ({
+const customer: LoyaltyCustomer = {
     id: "c-1",
     name: "Nguyen Van A",
     phone: "84901234567",
     email: "a@example.com",
     birthday: "1990-10-03",
-    tier_key: "gold",
-    joined_at: new Date("2025-01-02T03:04:05.000Z"),
+    tierKey: "gold",
+    joinedAt: "2025-01-02T03:04:05.000Z",
     note: "regular",
+}
+
+const balanceRow = (overrides: Partial<BalanceRaw> = {}): BalanceRaw => ({
+    customer_id: "c-1",
     points: 120,
     lifetime_spend_vnd: 5_000_000,
     visits: 7,
@@ -36,7 +41,7 @@ const entryRow = (overrides: Partial<EntryFields> = {}): EntryFields => ({
 
 describe("toMember", () => {
     it("maps the customer columns and the balances", () => {
-        expect(toMember(memberRow())).toEqual({
+        expect(toMember(customer, balanceRow())).toEqual({
             id: "c-1",
             name: "Nguyen Van A",
             phone: "84901234567",
@@ -53,7 +58,16 @@ describe("toMember", () => {
     })
 
     it("answers a null last visit for a member who never earned", () => {
-        expect(toMember(memberRow({ last_visit_at: null })).lastVisitAt).toBeNull()
+        expect(toMember(customer, balanceRow({ last_visit_at: null })).lastVisitAt).toBeNull()
+    })
+
+    it("holds nothing for a customer the ledger has no entry for", () => {
+        expect(toMember(customer, undefined)).toMatchObject({
+            points: 0,
+            lifetimeSpendVnd: 0,
+            visits: 0,
+            lastVisitAt: null,
+        })
     })
 })
 
