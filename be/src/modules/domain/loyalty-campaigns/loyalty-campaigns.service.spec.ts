@@ -1,4 +1,4 @@
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { Test } from "@nestjs/testing"
 import { IsNull } from "typeorm"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
@@ -367,7 +367,7 @@ describe("LoyaltyCampaignsService draft settlement", () => {
         const [target, where, changes] = entityManager.update.mock.calls[0] ?? []
         expect(target).toBe(LoyaltyCampaignEntity)
         expect(where).toEqual({ workspaceId: "ws-1", id: "k1", status: "waiting" })
-        expect(expressionValues(changes)).toEqual({ status: "failed", finishedAt: "now()" })
+        expect(evaluatedValues(changes)).toEqual({ status: "failed", finishedAt: "now()" })
     })
 })
 

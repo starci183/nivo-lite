@@ -5,7 +5,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { KnowledgeSuggestionStateService } from "./knowledge-suggestion-state.service"
 import { KnowledgeSuggestionStateEntity } from "./persistence/entities"
 
@@ -83,7 +83,7 @@ describe("KnowledgeSuggestionStateService", () => {
         await expect(state.decide("user-1", "ws-1", "hours", "dismissed")).resolves.toBeUndefined()
         const [target, row, keys] = em.upsert.mock.calls[0] ?? []
         expect(target).toBe(KnowledgeSuggestionStateEntity)
-        expect(expressionValues(row)).toEqual({
+        expect(evaluatedValues(row)).toEqual({
             workspaceId: "ws-1",
             suggestionKey: "hours",
             state: "dismissed",

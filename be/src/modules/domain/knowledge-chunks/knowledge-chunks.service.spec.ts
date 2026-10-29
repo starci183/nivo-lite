@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { KnowledgeChunksService } from "./knowledge-chunks.service"
 import type { ChunkDraft } from "./knowledge-chunks.contracts"
 import { KnowledgeChunkEntity } from "./persistence/entities"
@@ -183,7 +183,7 @@ describe("KnowledgeChunksService", () => {
             await service.setVectors({ workspaceId: WS, model: "m1", ids: ["c1"], vectors: ["[1]"] })
 
             expect(write?.callsOf("update")).toEqual([[]])
-            expect(expressionValues(write?.callsOf("set")[0]?.[0])).toEqual({
+            expect(evaluatedValues(write?.callsOf("set")[0]?.[0])).toEqual({
                 embedding:
                     '(SELECT t.embedding::extensions.vector FROM unnest(CAST(:ids AS uuid[]), CAST(:vectors AS text[])) AS t(id, embedding) WHERE t.id = "knowledge_chunks"."id")',
                 embeddingModel: "m1",

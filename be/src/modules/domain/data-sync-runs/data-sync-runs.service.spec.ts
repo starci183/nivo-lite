@@ -3,7 +3,7 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { DataSyncRunsService } from "./data-sync-runs.service"
 import { DataSyncRunEntity } from "./persistence/entities"
@@ -90,7 +90,7 @@ describe("DataSyncRunsService / finish", () => {
                 { status: "failed", rowsUpserted: 12, error: "Sheet not shared", finishedAt: "function" },
             ],
         ])
-        expect(expressionValues(em.update.mock.calls[0]?.[2])).toEqual({
+        expect(evaluatedValues(em.update.mock.calls[0]?.[2])).toEqual({
             status: "failed",
             rowsUpserted: 12,
             error: "Sheet not shared",

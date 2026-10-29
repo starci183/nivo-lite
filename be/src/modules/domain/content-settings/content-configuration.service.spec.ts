@@ -10,7 +10,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { ContentConfigurationService } from "./content-configuration.service"
 import { CONTENT_CADENCE_PRESETS } from "./content-configuration.templates"
 import { ContentSettingsErrorCode } from "./errors/content-settings.error"
@@ -271,7 +271,7 @@ describe("ContentConfigurationService", () => {
         })
         expect(automation?.callsOf("setParameter")).toEqual([["automation", JSON.stringify({ offer_draft: true })]])
         expect(automation?.callsOf("onConflict")).toHaveLength(1)
-        expect(expressionValues(automation?.callsOf("values")[0]?.[0])).toEqual({
+        expect(evaluatedValues(automation?.callsOf("values")[0]?.[0])).toEqual({
             workspaceId: "ws-1",
             automations: ":automation::jsonb",
         })

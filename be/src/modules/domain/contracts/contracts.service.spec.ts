@@ -14,7 +14,7 @@ import { ContractsErrorCode } from "./errors/contracts.error"
 import { ContractEntity } from "./persistence/entities"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 
 const paramsOf = builder<SaveContractParams>({
     workspaceId: "ws-1",
@@ -145,7 +145,7 @@ describe("ContractsService", () => {
                 leadId: null,
             })
             expect(update?.callsOf("set")[0]?.[0]).toMatchObject({ ...FIELDS, leadId: null })
-            expect(expressionValues(update?.callsOf("set")[0]?.[0])).toMatchObject({ updatedAt: "now()" })
+            expect(evaluatedValues(update?.callsOf("set")[0]?.[0])).toMatchObject({ updatedAt: "now()" })
             expect(events.record).toHaveBeenCalledWith(
                 expect.objectContaining({
                     leadId: null,
@@ -236,7 +236,7 @@ describe("ContractsService", () => {
                 leadId: "lead-9",
             })
             expect(members.require).not.toHaveBeenCalled()
-            expect(expressionValues(attach?.callsOf("set")[0]?.[0])).toEqual({ leadId: "lead-9", updatedAt: "now()" })
+            expect(evaluatedValues(attach?.callsOf("set")[0]?.[0])).toEqual({ leadId: "lead-9", updatedAt: "now()" })
         })
     })
 
@@ -327,7 +327,7 @@ describe("ContractsService", () => {
                 contractId: "contract-1",
                 periodEndsOn: "2027-01-01",
             })
-            expect(expressionValues(extend?.callsOf("set")[0]?.[0])).toEqual({
+            expect(evaluatedValues(extend?.callsOf("set")[0]?.[0])).toEqual({
                 startsOn: "2027-01-01",
                 endsOn: "2028-01-01",
                 status: "active",

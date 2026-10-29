@@ -1,4 +1,4 @@
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { Test } from "@nestjs/testing"
 import { builder, mockEntityManager } from "@starci/jest-preset"
 import { In, Not } from "typeorm"
@@ -229,7 +229,7 @@ describe("KnowledgeGapsService", () => {
 
             expect(bump?.callsOf("update")).toEqual([[]])
             expect(bump?.callsOf("set")).toEqual([[BUMP_SET]])
-            expect(expressionValues(bump?.callsOf("set")[0]?.[0])).toEqual(BUMP_SQL)
+            expect(evaluatedValues(bump?.callsOf("set")[0]?.[0])).toEqual(BUMP_SQL)
             expect(bump?.callsOf("where")).toEqual([BUMP_WHERE])
             expect(bump?.callsOf("setParameters")).toEqual([
                 [{ subject: "Tea", attribute: "Price", conversationId: "c1" }],
@@ -317,7 +317,7 @@ describe("KnowledgeGapsService", () => {
         await service.dismiss(WS, "g1", "u1")
         await service.answer(WS, "g2", "owner")
 
-        expect(em.update.mock.calls.map(([, , changes]) => expressionValues(changes))).toEqual([
+        expect(em.update.mock.calls.map(([, , changes]) => evaluatedValues(changes))).toEqual([
             { status: "dismissed", dismissedAt: "now()", dismissedBy: "u1", updatedAt: "now()" },
             { status: "answered", answeredAt: "now()", answeredBy: "owner", updatedAt: "now()" },
         ])
