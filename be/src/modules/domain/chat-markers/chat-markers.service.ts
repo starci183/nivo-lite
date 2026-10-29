@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager, ObjectLiteral, SelectQueryBuilder } from "typeorm"
+import type { EntityManager } from "typeorm"
 import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
-import { AgentMessageEntity } from "@modules/domain/agent-messages"
-import { isOfficeRoomKey, MessageEntity } from "@modules/domain/messages"
+import { AgentMessageCursorsService } from "@modules/domain/agent-messages"
+import { isOfficeRoomKey, MessageCursorsService } from "@modules/domain/messages"
 import { OfficeReadMarkersService } from "@modules/domain/office-rooms"
 import { WorkspaceMemberSeatsService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
@@ -26,13 +26,6 @@ const MEMBER_IDS_LIMIT = 500
 
 /** How many readers the receipt names; the rest are only counted. */
 const SEEN_BY_LIMIT = 3
-
-/** Whether a member's room read cursor passes the message: strictly later, or equal with the precise cursor at or beyond it. */
-/** The messages of a direct chat or of an office room, whichever the target names. */
-const messagesOf = (manager: EntityManager, conversational: boolean): SelectQueryBuilder<ObjectLiteral> =>
-    conversational
-        ? manager.createQueryBuilder(AgentMessageEntity, "m")
-        : manager.createQueryBuilder(MessageEntity, "m")
 
 /** The most other active members one receipt weighs. */
 const RECEIPT_MEMBER_LIMIT = 500
@@ -58,6 +51,8 @@ export class ChatMarkersService {
         private readonly roomReads: OfficeReadMarkersService,
         private readonly activity: ChatActivityService,
         private readonly seats: WorkspaceMemberSeatsService,
+        private readonly roomMessages: MessageCursorsService,
+        private readonly conversationMessages: AgentMessageCursorsService,
     ) {}
 
     /** The same target admission used by receipt writes and typing broadcasts. */
@@ -170,34 +165,15 @@ export class ChatMarkersService {
     }
 
     /** The caller's newest authored message in the target, or null before any. */
-    private async ownMessage(
+    private ownMessage(
         manager: EntityManager,
         workspaceId: string,
         userId: string,
         target: ChatTarget,
     ): Promise<OwnMessage | null> {
-        const read = messagesOf(manager, target.conversationId !== null)
-            .select("m.id", "id")
-            .addSelect("to_json(m.created_at) #>> '{}'", "createdAt")
-        const rows: ReadonlyArray<unknown> = await (
-            target.conversationId === null
-                ? read
-                      .where("m.workspace_id = :workspaceId AND m.author_user_id = :userId", { workspaceId, userId })
-                      .andWhere(target.room === null ? "true" : "m.room = :room", { room: target.room })
-                : read.where(
-                      "m.workspace_id = :workspaceId AND m.conversation_id = :conversationId AND m.author_user_id = :userId",
-                      { workspaceId, conversationId: target.conversationId, userId },
-                  )
-        )
-            .orderBy("m.created_at", "DESC")
-            .addOrderBy("m.id", "DESC")
-            .limit(1)
-            .getRawMany()
-        const [row] = rows
-        if (typeof row !== "object" || row === null) return null
-        const id: unknown = Reflect.get(row, "id")
-        const createdAt: unknown = Reflect.get(row, "createdAt")
-        return typeof id === "string" && typeof createdAt === "string" ? { id, createdAt } : null
+        return target.conversationId === null
+            ? this.roomMessages.newestAuthored(workspaceId, userId, target.room, manager)
+            : this.conversationMessages.newestAuthored(workspaceId, userId, target.conversationId, manager)
     }
 
     /** The receipt beneath one message: seen by active readers, else delivered to another member, else sent. */
@@ -326,31 +302,10 @@ export class ChatMarkersService {
 
     /** The creation instant, as the database words it, of a message inside the proven target; undefined when the target holds no such message. */
     private async createdAtOf(workspaceId: string, target: ChatTarget, messageId: string): Promise<string | undefined> {
-        const read = messagesOf(this.entityManager, target.conversationId !== null).select(
-            "to_json(m.created_at) #>> '{}'",
-            "createdAt",
-        )
-        const rows: ReadonlyArray<unknown> =
+        const created =
             target.conversationId === null
-                ? await read
-                      .where("m.workspace_id = :workspaceId AND m.id = :messageId", { workspaceId, messageId })
-                      .andWhere(target.room === null ? "true" : "m.room = :room", { room: target.room })
-                      .limit(1)
-                      .getRawMany()
-                : await read
-                      .where(
-                          "m.workspace_id = :workspaceId AND m.conversation_id = :conversationId AND m.id = :messageId",
-                          {
-                              workspaceId,
-                              conversationId: target.conversationId,
-                              messageId,
-                          },
-                      )
-                      .limit(1)
-                      .getRawMany()
-        const created = rows.map((row): unknown =>
-            typeof row === "object" && row !== null ? Reflect.get(row, "createdAt") : null,
-        )
-        return created.find((value): value is string => typeof value === "string")
+                ? await this.roomMessages.createdAtOf(workspaceId, target.room, messageId)
+                : await this.conversationMessages.createdAtOf(workspaceId, target.conversationId, messageId)
+        return created ?? undefined
     }
 }
