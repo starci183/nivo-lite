@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type { OptionalCheckTime } from "./openclaw-agent-sync.contracts"
 import { OpenclawAgentSyncEntity } from "./persistence/entities"
 
 @Injectable()
@@ -9,7 +10,7 @@ export class AgentSyncChecksService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The latest check time of the workspace's agent copies as ISO text, or null when none was ever checked. */
-    async lastCheckAt(workspaceId: string): Promise<string | null> {
+    async lastCheckAt(workspaceId: string): Promise<OptionalCheckTime> {
         const latest = await this.entityManager.findOne(OpenclawAgentSyncEntity, {
             select: { checkedAt: true },
             where: { workspaceId },
