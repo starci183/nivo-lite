@@ -1,3 +1,4 @@
+import { MODULE_AUDIENCES } from "@modules/domain/module-audiences"
 import { catalogCopy, catalogList, catalogText } from "./policies/catalog-copy.policy"
 import type { ModuleDefinition } from "./modules.contracts"
 
@@ -19,7 +20,7 @@ export const HIRING_MODULE: ModuleDefinition = {
     mascot: "/images/promo/mascot-point.png",
     category: "hr",
     status: "early",
-    audience: "internal",
+    audience: MODULE_AUDIENCES.hiring,
     includedWithWorkspace: false,
     available: true,
     knowledgeFolder: "hiring",

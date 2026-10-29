@@ -1,4 +1,5 @@
 import type { CapabilityRole } from "@modules/domain/mcp-gateway"
+import type { ModuleAudience } from "@modules/domain/module-audiences"
 import type { InstallationLifecycle, InstallationRecord } from "@modules/domain/module-installations"
 
 /** A text in both product languages. */
@@ -19,9 +20,6 @@ export interface BilingualList {
 
 /** Whether the module is production ready or still early access. */
 export type ModuleStatus = "stable" | "early"
-
-/** Who the module's agent talks to: customers, or only the business itself. */
-export type ModuleAudience = "customer" | "internal"
 
 /** How a freshly installed agent runs: it proposes everything (assist) or follows the authority rules alone (autopilot). */
 export type OperatingMode = "assist" | "autopilot"
