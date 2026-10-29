@@ -1,7 +1,6 @@
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { NewSetupSession, SetupRevisionRecord, SetupSessionRecord } from "./module-setup-sessions.contracts"
 import { ModuleSetupSessionEntity } from "./persistence/entities"
@@ -27,17 +26,6 @@ const row = Object.assign(new ModuleSetupSessionEntity(), {
     draftSnapshot: session.draft,
     gateEvidence: session.gateEvidence,
     createdAt: new Date("2026-10-12T10:00:00.000Z"),
-})
-
-const savedRaw = () => ({
-    id: "ses-1",
-    workspace_id: "ws-1",
-    installation_id: "inst-1",
-    revision: 1,
-    status: "draft",
-    draft_snapshot: session.draft,
-    gate_evidence: session.gateEvidence,
-    created_at: new Date("2026-10-12T10:00:00.000Z"),
 })
 
 const opening: NewSetupSession = {
@@ -165,20 +153,32 @@ describe("SetupSessionsService", () => {
     })
 
     it("stores the draft of an open session", async () => {
-        const em = mockEntityManager()
-        const update = fakeQueryBuilder({ execute: { raw: [savedRaw()] } })
-        answerQueryBuilders(em, update)
+        const em = mockEntityManager({
+            update: [ModuleSetupSessionEntity, { affected: 1 }],
+            findOne: [ModuleSetupSessionEntity, row],
+        })
         const change = { draft: session.draft, gateEvidence: session.gateEvidence }
 
         await expect((await build(em)).save("ses-1", change)).resolves.toEqual(session)
 
-        expect(update.argsOf("set")).toEqual([[{ draftSnapshot: session.draft, gateEvidence: session.gateEvidence }]])
-        expect(update.argsOf("where")).toEqual([[{ id: "ses-1", status: "draft" }]])
+        expect(em.update).toHaveBeenCalledWith(
+            ModuleSetupSessionEntity,
+            { id: "ses-1", status: "draft" },
+            { draftSnapshot: session.draft, gateEvidence: session.gateEvidence },
+        )
     })
 
     it("answers nothing when the session is no longer a draft", async () => {
-        const em = mockEntityManager()
-        answerQueryBuilders(em, fakeQueryBuilder({ execute: { raw: [] } }))
+        const em = mockEntityManager({ update: [ModuleSetupSessionEntity, {}] })
+
+        await expect((await build(em)).save("ses-1", { draft: session.draft, gateEvidence: {} })).resolves.toBeNull()
+    })
+
+    it("answers nothing when the session vanished after the update", async () => {
+        const em = mockEntityManager({
+            update: [ModuleSetupSessionEntity, { affected: 1 }],
+            findOne: [ModuleSetupSessionEntity, null],
+        })
 
         await expect((await build(em)).save("ses-1", { draft: session.draft, gateEvidence: {} })).resolves.toBeNull()
     })
@@ -234,22 +234,22 @@ describe("SetupSessionsService", () => {
             ],
         }
         const current = Object.assign(new ModuleSetupSessionEntity(), row, { draftSnapshot: draft })
-        const em = mockEntityManager({ findOne: [ModuleSetupSessionEntity, current] })
-        const update = fakeQueryBuilder({ execute: { raw: [savedRaw()] } })
-        answerQueryBuilders(em, update)
+        const em = mockEntityManager({
+            findOne: [ModuleSetupSessionEntity, current],
+            update: [ModuleSetupSessionEntity, { affected: 1 }],
+        })
         const service = await build(em)
 
         await expect(service.dropFact("inst-1", "city")).resolves.toBeUndefined()
 
-        expect(update.argsOf("set")).toEqual([
-            [
-                {
-                    draftSnapshot: { summary: "Tea shop in Hue", facts: [{ key: "hours", text: "9 to 5" }] },
-                    gateEvidence: { tone: { status: "proposed", evidence: "warm" } },
-                },
-            ],
-        ])
-        expect(update.argsOf("where")).toEqual([[{ id: "ses-1", status: "draft" }]])
+        expect(em.update).toHaveBeenCalledWith(
+            ModuleSetupSessionEntity,
+            { id: "ses-1", status: "draft" },
+            {
+                draftSnapshot: { summary: "Tea shop in Hue", facts: [{ key: "hours", text: "9 to 5" }] },
+                gateEvidence: { tone: { status: "proposed", evidence: "warm" } },
+            },
+        )
         expect(draft.facts).toEqual([
             { key: "city", text: "Hue" },
             { key: "hours", text: "9 to 5" },

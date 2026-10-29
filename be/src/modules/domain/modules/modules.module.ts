@@ -57,12 +57,13 @@ export class ModulesModule extends ConfigurableModuleClass {
                       SetupTurnService,
                       WorkspaceSetupService,
                   ]
+        const sessions = ModuleSetupSessionsModule.register({})
         const tables = [
             ModuleInstallationsModule.register({}),
             ModuleContextVersionsModule.register({}),
-            ModuleSetupSessionsModule.register({}),
-            ContextNotesModule.register({}),
-            ModuleSetupMessagesModule.register({}),
+            sessions,
+            ContextNotesModule.register({ sessions }),
+            ModuleSetupMessagesModule.register({ sessions }),
             ModuleSetupWritesModule.register({}),
         ]
         return {

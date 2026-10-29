@@ -7,6 +7,7 @@ import {
     answerQueryBuilders,
     fakeQueryBuilder,
 } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { writeExpressionOf } from "@tests/fixtures/builders/write-expression.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { InstallationRecordsService } from "./installation-records.service"
 import type { InstallationRecord, NewInstallation } from "./module-installations.contracts"
@@ -350,8 +351,7 @@ describe("InstallationRecordsService / settleConnection", () => {
         await expect(service.settleConnection("ws-1", "inst-1", false)).resolves.toBe("needs_connection")
         await expect(service.settleConnection("ws-1", "inst-1", true)).resolves.toBeNull()
 
-        const set = moved.argsOf("set")[0]?.[0] as { status: () => string } | undefined
-        expect(set?.status()).toContain("CASE WHEN NOT :ready::boolean")
+        expect(writeExpressionOf(moved.argsOf("set")[0]?.[0], "status")).toContain("CASE WHEN NOT :ready::boolean")
         expect(moved.argsOf("where")).toEqual([
             ["id = :installationId AND workspace_id = :workspaceId", { installationId: "inst-1", workspaceId: "ws-1" }],
         ])
@@ -373,8 +373,7 @@ describe("InstallationRecordsService > markRemoved", () => {
             { status: "removed", liveEnabled: false, removedAt: ANY_FUNCTION, removedBy: "Lan" },
         )
 
-        const set = em.update.mock.calls[0]?.[2] as { removedAt: () => string } | undefined
-        expect(set?.removedAt()).toBe("now()")
+        expect(writeExpressionOf(em.update.mock.calls[0]?.[2], "removedAt")).toBe("now()")
 
         const none = mockEntityManager({ update: [ModuleInstallationEntity, { affected: 0 }] })
         await expect(service.markRemoved("ws-1", "inst-1", "Lan", none)).resolves.toBe("missing")

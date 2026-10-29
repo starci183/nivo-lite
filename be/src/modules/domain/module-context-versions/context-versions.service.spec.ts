@@ -74,6 +74,9 @@ describe("ContextVersionsService", () => {
         await expect((await build(em)).find("missing")).resolves.toBeNull()
     })
 
+})
+
+describe("ContextVersionsService > numbers and newest", () => {
     it("reads the numbers of the given versions once each", async () => {
         const em = mockEntityManager({ find: [ModuleContextVersionEntity, [row]] })
 
@@ -82,6 +85,7 @@ describe("ContextVersionsService", () => {
         expect(em.find).toHaveBeenCalledWith(ModuleContextVersionEntity, {
             select: { id: true, version: true },
             where: { id: In(["ver-1"]) },
+            take: 500,
         })
     })
 

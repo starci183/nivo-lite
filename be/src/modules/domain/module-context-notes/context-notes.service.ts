@@ -6,6 +6,7 @@ import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import type { ContextNote, DismissedNote } from "./context-notes.contracts"
 import { ModuleContextNotesError, ModuleContextNotesErrorCode } from "./errors/module-context-notes.error"
 import { ModuleContextNoteEntity } from "./persistence/entities"
@@ -23,6 +24,12 @@ interface DismissedRow {
     /** The fact key the note added to the draft. */
     readonly fact_key: string
 }
+
+const isDismissedRow = (value: unknown): value is DismissedRow =>
+    isRecord(value) && typeof value.installation_id === "string" && typeof value.fact_key === "string"
+
+/** The first row the dismissing update answered; the answer is a list of rows, anything else holds none. */
+const dismissedRowOf = (raw: unknown): DismissedRow | undefined => [raw].flat().find(isDismissedRow)
 
 @Injectable()
 /** Notes that supplement an installation's context later: the only owner of module_context_notes. */
@@ -64,7 +71,7 @@ export class ContextNotesService {
             .where({ workspaceId, id: noteId, status: "pending" })
             .returning(["installationId", "factKey"])
             .execute()
-        const [row] = changed.raw as Array<DismissedRow>
+        const row = dismissedRowOf(changed.raw)
         if (row === undefined) throw new ModuleContextNotesError({ code: ModuleContextNotesErrorCode.NotFound })
         const dismissed: DismissedNote = { installationId: row.installation_id, factKey: row.fact_key }
         await this.sessions.dropFact(dismissed.installationId, dismissed.factKey)
