@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { Not } from "typeorm"
 import type { EntityManager } from "typeorm"
-import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -23,13 +22,16 @@ export class PlatformAuditService {
     /** Writes one row. It never throws: a broken audit table must not take the console down, so the failure is logged instead. */
     async record(entry: AuditEntry): Promise<void> {
         await this.entityManager
-            .insert(PlatformAuditEntity, {
-                actorEmail: entry.actorEmail,
-                actorId: entry.actorId,
-                action: entry.action,
-                workspaceId: entry.workspaceId,
-                data: entry.data as QueryDeepPartialEntity<PlatformAuditEntity["data"]>,
-            })
+            .insert(
+                PlatformAuditEntity,
+                Object.assign(new PlatformAuditEntity(), {
+                    actorEmail: entry.actorEmail,
+                    actorId: entry.actorId,
+                    action: entry.action,
+                    workspaceId: entry.workspaceId,
+                    data: entry.data,
+                }),
+            )
             .catch((cause: unknown) =>
                 this.logger.error(PlatformAuditLogEvent.WriteFailed, cause, { action: entry.action }),
             )
