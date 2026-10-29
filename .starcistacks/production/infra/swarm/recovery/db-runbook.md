@@ -23,6 +23,14 @@ the migrations of `db/migrations/`. No secret is printed anywhere below; the age
    `PRIMARY_DB_URL` = `postgresql://app_be@nivo-postgres:5432/postgres` in the `api` member and deploy again.
 5. `select count(*) from cron.job` is 12 (the migrations schedule them). `starci app stack verify --env production`. Close the relay: `docker rm -f nivo-tunnel-pg`.
 
+### Applied files edited for the clean start (2026-10-29, commit 7a40edd5d)
+
+By owner decision, nine applied migrations were edited in place instead of squashed: `CREATE EXTENSION pg_cron/pg_net`, the
+`supabase_realtime` publication and every `cron.schedule`/`cron.unschedule` were removed, because the app no longer uses them (ticks run in
+platform/jobs, realtime is the app's own listener). The earlier versions of those files already ran on dev and rehearsal databases, which
+still carry the cron jobs, both extensions and the publication; `db migrate` compares versions only, so it reports nothing to do there.
+Reset such a database on the managed image (`npm run db:reset`, then migrate) to match production.
+
 ### What `db/bootstrap.sql` provides (and why)
 
 The applied migrations were written for Supabase and call objects GoTrue and Supabase Storage created. The `supabase/postgres` image ships only a partial, old-shaped copy of them (no `auth.identities`, `auth.sessions`, `auth.jwt()`, no storage tables).
