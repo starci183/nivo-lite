@@ -1,4 +1,5 @@
-import { ConnectionsErrorCode } from "@modules/domain/connections"
+import { ConnectionsErrorCode, connectionsEntities } from "@modules/domain/connections"
+import { entityOf } from "./entity.builder"
 import type { ConnectionsService, ConnectionActor } from "@modules/domain/connections"
 
 type ConnectionsOptions = ConstructorParameters<typeof ConnectionsService>[1]
@@ -46,3 +47,32 @@ export const connectionsCase = {
     invalidName: { code: ConnectionsErrorCode.NameInvalid },
     missing: { code: ConnectionsErrorCode.NotFound },
 }
+
+const [ConnectionEntity] = connectionsEntities
+
+/** A connected Telegram bot as the bindings read answers it, with a padded username and a blank masked account. */
+export const botConnectionOf = entityOf(ConnectionEntity, {
+    id: "c1",
+    provider: "telegram",
+    name: "Shop bot",
+    status: "connected",
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    publicMeta: { bot_username: "  shop_bot ", account_masked: "   ", other: 3 },
+})
+
+/** The same bot whose reported username is not text. */
+export const numericUsernameConnectionOf = () => botConnectionOf({ publicMeta: { bot_username: 5 } })
+
+/** The same bot, live, in workspace w1. */
+export const liveBotConnectionOf = () => botConnectionOf({ workspaceId: "w1", environment: "live" })
+
+/** A connected Telegram connection of workspace ws-1 as the secret reads find it. */
+export const secretConnectionOf = entityOf(ConnectionEntity, {
+    id: "c-1",
+    workspaceId: "ws-1",
+    provider: "telegram",
+    status: "connected",
+})
+
+/** The second connection of that workspace. */
+export const secondSecretConnectionOf = () => secretConnectionOf({ id: "c-2" })

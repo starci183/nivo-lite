@@ -4,16 +4,9 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { ConnectionSecretsErrorCode, ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import type { ConnectionSecret } from "@modules/domain/connection-secrets"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import { secondSecretConnectionOf, secretConnectionOf } from "@tests/fixtures/builders/connections.builder"
 import { ConnectionSecretReadsService } from "./connection-secret-reads.service"
 import { ConnectionEntity } from "./persistence/entities"
-
-const connectionOf = entityOf(ConnectionEntity, {
-    id: "c-1",
-    workspaceId: "ws-1",
-    provider: "telegram",
-    status: "connected",
-})
 
 const secretOf = builder<ConnectionSecret>({
     workspaceId: "ws-1",
@@ -40,7 +33,7 @@ const build = async (em: MockEntityManager) => {
 describe("ConnectionSecretReadsService", () => {
     describe("secretOf", () => {
         it("hands the facts of the connection to the secrets capability", async () => {
-            const em = mockEntityManager({ findOne: [ConnectionEntity, connectionOf()] })
+            const em = mockEntityManager({ findOne: [ConnectionEntity, secretConnectionOf()] })
             const { service, secrets } = await build(em)
 
             await expect(service.secretOf("c-1", "telegram")).resolves.toEqual({ kind: "ok", value: secretOf() })
@@ -53,7 +46,7 @@ describe("ConnectionSecretReadsService", () => {
 
         it("reads through the transaction manager it is given", async () => {
             const em = mockEntityManager()
-            const inside = mockEntityManager({ findOne: [ConnectionEntity, connectionOf()] })
+            const inside = mockEntityManager({ findOne: [ConnectionEntity, secretConnectionOf()] })
             const { service, secrets } = await build(em)
 
             await service.secretOf("c-1", "telegram", inside)
@@ -72,7 +65,7 @@ describe("ConnectionSecretReadsService", () => {
 
     describe("botToken", () => {
         it("answers the token only to the workspace that owns the connection", async () => {
-            const { service } = await build(mockEntityManager({ findOne: [ConnectionEntity, connectionOf()] }))
+            const { service } = await build(mockEntityManager({ findOne: [ConnectionEntity, secretConnectionOf()] }))
 
             await expect(service.botToken("ws-1", "c-1")).resolves.toEqual({ kind: "ok", value: "123:token" })
             await expect(service.botToken("ws-2", "c-1")).resolves.toMatchObject(NOT_FOUND)
@@ -89,7 +82,7 @@ describe("ConnectionSecretReadsService", () => {
         const horizon = new Date("2026-10-12T17:00:00.000Z")
 
         it("keeps the expiring ids that are live Zalo connections, soonest first", async () => {
-            const em = mockEntityManager({ find: [ConnectionEntity, [connectionOf({ id: "c-2" })]] })
+            const em = mockEntityManager({ find: [ConnectionEntity, [secondSecretConnectionOf()]] })
             const { service, secrets } = await build(em)
             secrets.expiringBefore.mockResolvedValue(["c-1", "c-2"])
 
