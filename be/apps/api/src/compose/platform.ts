@@ -1,14 +1,12 @@
-import {
-    AppErrorsModule,
-    API_MESSAGES_1,
-    API_MESSAGES_2,
-    API_MESSAGES_3,
-    API_MESSAGES_4,
-    API_ERROR_KINDS_1,
-    API_ERROR_KINDS_2,
-    API_ERROR_KINDS_3,
-    API_ERROR_KINDS_4,
-} from "@modules/domain/app-errors"
+import { AppErrorsModule } from "@modules/domain/app-errors"
+import { API_ERROR_KINDS_1 } from "./errors-1.contracts"
+import { API_ERROR_KINDS_2 } from "./errors-2.contracts"
+import { API_ERROR_KINDS_3 } from "./errors-3.contracts"
+import { API_ERROR_KINDS_4 } from "./errors-4.contracts"
+import { API_MESSAGES_1 } from "./messages-1.contracts"
+import { API_MESSAGES_2 } from "./messages-2.contracts"
+import { API_MESSAGES_3 } from "./messages-3.contracts"
+import { API_MESSAGES_4 } from "./messages-4.contracts"
 import type { DynamicModule } from "@nestjs/common"
 import { appPgTypes } from "@modules/integrations/data-sources"
 import { ClockModule } from "@modules/platform/clock"
