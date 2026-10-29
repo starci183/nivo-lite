@@ -1,5 +1,6 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
+import { isKey, isMember, isTextOrNull, openEnvelope } from "./money-event.policy"
 
 /** Why a booking event was sent: it was created, its status changed, or its time or resource changed. */
 export type BookingStatusChangedKind = "created" | "status" | "moved"
@@ -10,7 +11,7 @@ export type BookingStatusChangedKind = "created" | "status" | "moved"
  * booking as it is now; `status` and `previous` are only the hint of the change. `dedupeKey` is `<booking>:<kind>:<status>:<txid>`: one
  * change per transaction, whatever order the deliveries arrive in.
  */
-export interface BookingStatusChangedPayload extends EventPayload {
+export interface BookingStatusChangedInput {
     /** The workspace of the booking. */
     readonly workspaceId: string
     /** The booking that changed. */
@@ -23,7 +24,10 @@ export interface BookingStatusChangedPayload extends EventPayload {
     readonly previous: string | null
 }
 
-const KINDS: ReadonlyArray<string> = ["created", "status", "moved"]
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface BookingStatusChangedPayload extends EventPayload, BookingStatusChangedInput {}
+
+const KINDS: ReadonlyArray<BookingStatusChangedKind> = ["created", "status", "moved"]
 
 /**
  * Version 1 of `booking_status_changed`. The SQL trigger `bookings_notify` sends this envelope with `public.event_bus_send`; the class
@@ -44,7 +48,7 @@ export class BookingStatusChangedEvent extends BaseEvent {
 
     /** The change is identified by the key the trigger builds: booking, kind, status and the transaction. */
     static create(
-        payload: Omit<BookingStatusChangedPayload, "dedupeKey">,
+        payload: BookingStatusChangedInput,
         transactionId: string,
     ): BookingStatusChangedEvent {
         const key = `${payload.bookingId}:${payload.kind}:${payload.status}:${transactionId}`
@@ -53,32 +57,25 @@ export class BookingStatusChangedEvent extends BaseEvent {
 
     /** Reads the event envelope; a malformed delivery never reaches the reactor. */
     static parse(envelope: unknown): ParsedEvent<BookingStatusChangedEvent> {
-        if (typeof envelope !== "object" || envelope === null || !("eventId" in envelope) || !("payload" in envelope)) {
-            return null
-        }
-        const { eventId, payload } = envelope
-        if (typeof eventId !== "string" || eventId.trim() === "" || typeof payload !== "object" || payload === null) {
-            return null
-        }
-        const body = payload as Partial<Record<keyof BookingStatusChangedPayload, unknown>>
-        const previous = body.previous === undefined ? null : body.previous
+        const opened = openEnvelope(envelope)
+        if (opened === null) return null
+        const { body } = opened
+        const previous = body.previous ?? null
+        if (!isTextOrNull(previous)) return null
         if (
-            typeof body.dedupeKey !== "string" ||
-            body.dedupeKey.trim() === "" ||
+            !isKey(body.dedupeKey) ||
             typeof body.workspaceId !== "string" ||
             typeof body.bookingId !== "string" ||
-            typeof body.kind !== "string" ||
-            !KINDS.includes(body.kind) ||
-            typeof body.status !== "string" ||
-            (previous !== null && typeof previous !== "string")
+            !isMember(KINDS, body.kind) ||
+            typeof body.status !== "string"
         ) {
             return null
         }
-        return new BookingStatusChangedEvent(eventId, {
+        return new BookingStatusChangedEvent(opened.eventId, {
             dedupeKey: body.dedupeKey,
             workspaceId: body.workspaceId,
             bookingId: body.bookingId,
-            kind: body.kind as BookingStatusChangedPayload["kind"],
+            kind: body.kind,
             status: body.status,
             previous,
         })
