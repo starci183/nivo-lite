@@ -34,7 +34,11 @@ describe("Public API consumer over BullMQ (private local integration)", () => {
             (row) => row.processed_at !== null,
         )
         expect(await source(identity.workspaceId, accepted.id)).toHaveLength(1)
-        const completed = await apiRedisJob(world.db.primary, accepted.id)
+        // The job row turns done after the handler returned, which is after the request recorded its completion.
+        const completed = await waitForProof(
+            () => apiRedisJob(world.db.primary, accepted.id),
+            (rows) => rows.length === 1 && rows.every((row) => row.state === "done"),
+        )
         expect(completed).toEqual([expect.objectContaining({ state: "done" })])
         const id = completed[0]?.id
         expect(id).toBeDefined()
