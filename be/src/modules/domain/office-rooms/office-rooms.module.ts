@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./office-rooms.module-definition"
 import { OfficeRoomDirectoryModule } from "./office-room-directory.module"
 import { OfficeRoomMembersService } from "./office-room-members.service"
+import { OfficeRoomReadersService } from "./office-room-readers.service"
 import { OfficeRoomReadsService } from "./office-room-reads.service"
 import { OfficeRoomsService } from "./office-rooms.service"
 import { OfficeReadMarkersService } from "./office-read-markers.service"
@@ -21,9 +22,15 @@ export class OfficeRoomsModule extends ConfigurableModuleClass {
                 OfficeRoomsService,
                 OfficeReadMarkersService,
                 OfficeRoomReadsService,
+                OfficeRoomReadersService,
                 OfficeRoomMembersService,
             ],
-            exports: [OfficeRoomsService, OfficeReadMarkersService, OfficeRoomDirectoryModule],
+            exports: [
+                OfficeRoomsService,
+                OfficeReadMarkersService,
+                OfficeRoomReadersService,
+                OfficeRoomDirectoryModule,
+            ],
         }
     }
 }
