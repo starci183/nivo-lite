@@ -5,6 +5,7 @@ import {
     persistOfficeRoomMembers,
 } from "../../fixtures/builders/office-room-members.builder"
 import { withBackendRole } from "../../world/backend-role-proof.service"
+import { browserWriteAvatar } from "../../fixtures/builders/avatars-storage.builder"
 import { OfficeRoomMembersProofModule } from "../../world/office-room-members-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
 import {
@@ -12,7 +13,6 @@ import {
     avatarsBucket,
     avatarsPolicies,
     withBrowserRole,
-    browserWriteAvatar,
 } from "../../world/avatars-database.service"
 import { removeAuthUsers, removeWorkspace, storeUploadedAvatar } from "../../world/proof-accounts.service"
 

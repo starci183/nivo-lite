@@ -2,6 +2,7 @@ import type { ExecutionContext } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import { HttpSecurityErrorCode, RateLimit, RateLimitGuard, RateTier } from "@modules/platform/http-security"
 import type { OperationRequest } from "@modules/platform/http-security"
+import { insertRateLimitProofBucket } from "../../fixtures/builders/rate-limit.builder"
 import { RATE_LIMIT_PROOF_MODULES, sharedRateLimitStore } from "../../world/rate-limit-proof.module"
 import { withBackendRole } from "../../world/backend-role-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
@@ -10,7 +11,6 @@ import {
     expireRateLimitBucket,
     cleanRateLimitBucket,
     runRateLimitCleanup,
-    insertRateLimitProofBucket,
     updateRateLimitProofBucket,
     consumeRateLimitProofBucket,
     rateLimitAccess,

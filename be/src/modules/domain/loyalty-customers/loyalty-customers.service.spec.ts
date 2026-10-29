@@ -55,7 +55,8 @@ const hasClock = (value: unknown): value is { readonly updatedAt: () => string }
 /** What an update query builder was told to set, without the always-present save time. */
 const setOf = (fake: FakeQueryBuilder | undefined): object => {
     const [set] = fake?.callsOf("set")[0] ?? []
-    if (!hasClock(set)) throw new Error("the update did not stamp updatedAt")
+    expect(hasClock(set)).toBe(true)
+    if (!hasClock(set)) return {}
     expect(set.updatedAt()).toBe("now()")
     return { ...set, updatedAt: undefined }
 }
@@ -184,8 +185,8 @@ const registerMoveTier = () => {
     })
 }
 
-const registerLeadContactsAndCreateFromLeads = () => {
-    describe("leadContacts and createFromLeads", () => {
+const registerLeadContacts = () => {
+    describe("leadContacts and contactsMatching", () => {
         it("keeps the leads with a usable phone or email, normalised", async () => {
             leadReads.listContacts.mockResolvedValue([
                 { id: "l1", contact_name: "A", phone: "0912 345 678", email: null },
@@ -235,6 +236,11 @@ const registerLeadContactsAndCreateFromLeads = () => {
             )
         })
 
+    })
+}
+
+const registerCreateFromLeads = () => {
+    describe("createFromLeads", () => {
         it("creates the customers of leads in one statement and counts them", async () => {
             const manager = mockEntityManager()
             const [insert] = queueQueryBuilders(manager, [{ execute: { raw: [{ id: "c1" }, { id: "c2" }] } }])
@@ -358,6 +364,7 @@ describe("LoyaltyCustomersService", () => {
     registerByPhoneAndById()
     registerEnsureByPhone()
     registerMoveTier()
-    registerLeadContactsAndCreateFromLeads()
+    registerLeadContacts()
+    registerCreateFromLeads()
     registerUpdateProfile()
 })
