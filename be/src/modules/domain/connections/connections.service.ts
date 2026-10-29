@@ -4,7 +4,7 @@ import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectorInterestService } from "@modules/domain/connector-interest"
 import type { OptionalStoredSecret } from "@modules/domain/connection-secrets"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { AgentConnectionEntity } from "@modules/domain/agent-connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
@@ -69,6 +69,7 @@ export class ConnectionsService {
         private readonly secrets: ConnectionSecretsService,
         private readonly interest: ConnectorInterestService,
         private readonly upkeep: ConnectionsUpkeepService,
+        private readonly seats: WorkspaceMemberSeatsService,
     ) {
         this.siteUrl = options.publicSiteUrl ?? options.siteUrl
         this.providerUrl = options.publicApiUrl ?? options.publicSiteUrl
@@ -96,18 +97,9 @@ export class ConnectionsService {
 
     /** Requires an active member of the workspace holding one of the roles; answers who they are. */
     async authorize(actor: ConnectionActor, roles: ReadonlyArray<ConnectionRole>): Promise<ConnectionMember> {
-        const row = await this.entityManager
-            .createQueryBuilder(WorkspaceMemberEntity, "m")
-            .select("m.role", "role")
-            .addSelect("m.display_name", "displayName")
-            .where("m.workspace_id = :workspaceId AND m.user_id = :userId AND m.status = 'active'", {
-                workspaceId: actor.workspaceId,
-                userId: actor.principalId,
-            })
-            .limit(1)
-            .getRawOne<ConnectionMember>()
+        const row = await this.seats.activeSeatOfUser(actor.workspaceId, actor.principalId)
         const acceptedRoles: ReadonlyArray<string> = roles
-        if (row === undefined || !acceptedRoles.includes(row.role)) {
+        if (row === null || !acceptedRoles.includes(row.role)) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.Forbidden })
         }
         return { role: row.role, displayName: row.displayName }

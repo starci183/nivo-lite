@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto"
-import type { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { workspaceMembersEntities } from "@modules/domain/workspace-members"
+
+const [WorkspaceMemberEntity] = workspaceMembersEntities
+type WorkspaceMemberEntity = InstanceType<typeof WorkspaceMemberEntity>
 
 /** The creation time every fixture row carries. */
 export const CREATED = new Date("2026-10-01T00:00:00.000Z")

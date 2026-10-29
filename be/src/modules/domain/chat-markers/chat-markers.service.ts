@@ -4,7 +4,7 @@ import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-ac
 import { AgentMessageEntity } from "@modules/domain/agent-messages"
 import { isOfficeRoomKey, MessageEntity } from "@modules/domain/messages"
 import { OfficeReadMarkersService } from "@modules/domain/office-rooms"
-import { WorkspaceMemberEntity, WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { WorkspaceMemberSeatsService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ChatMarkerState, ChatOwnMessage, ChatSeenMember, ChatTarget } from "./chat-markers.contracts"
@@ -34,20 +34,12 @@ const messagesOf = (manager: EntityManager, conversational: boolean): SelectQuer
         ? manager.createQueryBuilder(AgentMessageEntity, "m")
         : manager.createQueryBuilder(MessageEntity, "m")
 
-const ROOM_READ_PASSED = `EXISTS (
-    SELECT 1 FROM public.office_rooms_reads rd
-    LEFT JOIN public.chat_markers exact ON exact.workspace_id = rd.workspace_id
-        AND exact.user_id = rd.user_id AND exact.conversation_id IS NULL AND exact.room = rd.room
-    WHERE rd.workspace_id = :workspaceId AND rd.user_id = wm.user_id
-        AND rd.room = COALESCE(:room::text, '')
-        AND (rd.last_read_at > :createdAt::timestamptz OR (rd.last_read_at = :createdAt::timestamptz
-            AND (exact.read_at IS DISTINCT FROM rd.last_read_at OR exact.read_message_id >= :ownId::uuid))))`
+/** The most other active members one receipt weighs. */
+const RECEIPT_MEMBER_LIMIT = 500
 
-/** Whether a member's conversation read cursor reaches the message. */
-const CONVERSATION_READ_PASSED = `EXISTS (
-    SELECT 1 FROM public.chat_markers s
-    WHERE s.workspace_id = :workspaceId AND s.user_id = wm.user_id AND s.conversation_id = :conversationId::uuid
-        AND (s.read_at, s.read_message_id) >= (:createdAt::timestamptz, :ownId::uuid))`
+/** The account ids a cursor query returned. */
+const userIdsOf = (rows: ReadonlyArray<unknown>): Set<string> =>
+    new Set(rows.map((row) => String(Reflect.get(Object(row), "userId"))))
 
 /** The newest authored message of the caller: its id and its creation instant as the database words it. */
 interface OwnMessage {
@@ -65,6 +57,7 @@ export class ChatMarkersService {
         private readonly members: WorkspaceMembersService,
         private readonly roomReads: OfficeReadMarkersService,
         private readonly activity: ChatActivityService,
+        private readonly seats: WorkspaceMemberSeatsService,
     ) {}
 
     /** The same target admission used by receipt writes and typing broadcasts. */
@@ -85,14 +78,8 @@ export class ChatMarkersService {
     /** The ids of every active account admitted to the target, after proving the caller is one of them. */
     async memberIds(principalId: string, workspaceId: string, target: ChatTarget): Promise<Array<string>> {
         await this.requireTarget(principalId, workspaceId, target)
-        const rows: ReadonlyArray<unknown> = await this.entityManager
-            .createQueryBuilder(WorkspaceMemberEntity, "m")
-            .select("m.user_id", "user_id")
-            .where("m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId })
-            .orderBy("m.user_id")
-            .limit(MEMBER_IDS_LIMIT)
-            .getRawMany()
-        return rows.map((row) => String(Reflect.get(Object(row), "user_id")))
+        const users = await this.seats.activeUsers(workspaceId, MEMBER_IDS_LIMIT)
+        return users.map((user) => user.userId)
     }
 
     /** The preference and receipt beneath this account's newest authored message. */
@@ -221,32 +208,27 @@ export class ChatMarkersService {
         target: ChatTarget,
         own: OwnMessage,
     ): Promise<ChatOwnMessage> {
-        const readerRows: ReadonlyArray<unknown> = await manager
-            .createQueryBuilder(WorkspaceMemberEntity, "wm")
-            .select("wm.user_id", "id")
-            .addSelect("wm.display_name", "name")
-            .addSelect("count(*) over ()::integer", "total")
-            .where("wm.workspace_id = :workspaceId AND wm.user_id <> :userId AND wm.status = 'active'", {
-                workspaceId,
-                userId,
-            })
-            .andWhere(target.conversationId === null ? ROOM_READ_PASSED : CONVERSATION_READ_PASSED, {
-                room: target.room,
-                conversationId: target.conversationId,
-                createdAt: own.createdAt,
-                ownId: own.id,
-            })
-            .orderBy("wm.user_id")
-            .limit(SEEN_BY_LIMIT)
-            .getRawMany()
-        const readers = readerRows.map((row) => ({
-            id: String(Reflect.get(Object(row), "id")),
-            name: String(Reflect.get(Object(row), "name")),
-            total: Number(Reflect.get(Object(row), "total")),
-        }))
+        const others = (await this.seats.activeUsers(workspaceId, RECEIPT_MEMBER_LIMIT, manager)).filter(
+            (user) => user.userId !== userId,
+        )
+        const passed = await this.readerIds(
+            manager,
+            workspaceId,
+            others.map((user) => user.userId),
+            target,
+            own,
+        )
+        const everyReader = others.filter((user) => passed.has(user.userId))
+        const readers = everyReader.slice(0, SEEN_BY_LIMIT).map((user) => ({ id: user.userId, name: user.displayName }))
         const [first] = readers
         if (first === undefined) {
-            const delivered = await this.delivered(manager, workspaceId, userId, target, own)
+            const delivered = await this.delivered(
+                manager,
+                workspaceId,
+                others.map((user) => user.userId),
+                target,
+                own,
+            )
             return { id: own.id, status: delivered ? "delivered" : "sent", seenBy: [], seenByCount: 0 }
         }
         const avatars = await callDbFunction<ChatReaderAvatarRow>(manager, "be_access.workspace_member_avatars", [
@@ -259,28 +241,66 @@ export class ChatMarkersService {
             avatarSeed: reader.id,
             avatarUrl: avatars.find((avatar) => avatar.id === reader.id)?.avatar_url ?? null,
         }))
-        return { id: own.id, status: "seen", seenBy, seenByCount: first.total }
+        return { id: own.id, status: "seen", seenBy, seenByCount: everyReader.length }
     }
 
-    /** Whether another active member's delivered cursor already reaches the message. */
+    /** Which of the given accounts have a read cursor that reaches the message, in the room or the conversation of the target. */
+    private async readerIds(
+        manager: EntityManager,
+        workspaceId: string,
+        userIds: ReadonlyArray<string>,
+        target: ChatTarget,
+        own: OwnMessage,
+    ): Promise<Set<string>> {
+        if (userIds.length === 0) return new Set()
+        const cursor = { workspaceId, userIds: [...userIds], createdAt: own.createdAt, ownId: own.id }
+        if (target.conversationId !== null) {
+            const rows: ReadonlyArray<unknown> = await manager
+                .createQueryBuilder(ChatMarkerEntity, "s")
+                .select("s.user_id", "userId")
+                .where("s.workspace_id = :workspaceId AND s.user_id IN (:...userIds)", cursor)
+                .andWhere("s.conversation_id = :conversationId::uuid", { conversationId: target.conversationId })
+                .andWhere("(s.read_at, s.read_message_id) >= (:createdAt::timestamptz, :ownId::uuid)", cursor)
+                .limit(userIds.length)
+                .getRawMany()
+            return userIdsOf(rows)
+        }
+        const rows: ReadonlyArray<unknown> = await manager
+            .createQueryBuilder()
+            .select("rd.user_id", "userId")
+            .from("public.office_rooms_reads", "rd")
+            .leftJoin(
+                ChatMarkerEntity,
+                "exact",
+                "exact.workspace_id = rd.workspace_id AND exact.user_id = rd.user_id AND exact.conversation_id IS NULL AND exact.room = rd.room",
+            )
+            .where("rd.workspace_id = :workspaceId AND rd.user_id IN (:...userIds)", cursor)
+            .andWhere("rd.room = COALESCE(:room::text, '')", { room: target.room })
+            .andWhere(
+                `(rd.last_read_at > :createdAt::timestamptz OR (rd.last_read_at = :createdAt::timestamptz
+                    AND (exact.read_at IS DISTINCT FROM rd.last_read_at OR exact.read_message_id >= :ownId::uuid)))`,
+                cursor,
+            )
+            .limit(userIds.length)
+            .getRawMany()
+        return userIdsOf(rows)
+    }
+
+    /** Whether the delivered cursor of any of the given accounts already reaches the message. */
     private async delivered(
         manager: EntityManager,
         workspaceId: string,
-        userId: string,
+        userIds: ReadonlyArray<string>,
         target: ChatTarget,
         own: OwnMessage,
     ): Promise<boolean> {
+        if (userIds.length === 0) return false
         const rows = await manager
             .createQueryBuilder(ChatMarkerEntity, "s")
             .select("1", "one")
-            .innerJoin(
-                WorkspaceMemberEntity,
-                "wm",
-                "wm.workspace_id = s.workspace_id AND wm.user_id = s.user_id AND wm.status = 'active'",
-            )
-            .where("s.workspace_id = :workspaceId AND s.user_id <> :userId AND s.target_key = :targetKey", {
+            .where("s.workspace_id = :workspaceId AND s.user_id IN (:...userIds) AND s.target_key = :targetKey", {
                 workspaceId,
-                userId,
+                userIds: [...userIds],
                 targetKey: target.conversationId ?? target.room ?? "",
             })
             .andWhere("(s.delivered_at, s.delivered_message_id) >= (:createdAt::timestamptz, :ownId::uuid)", {

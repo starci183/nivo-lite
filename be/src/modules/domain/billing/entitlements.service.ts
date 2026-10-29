@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { BillingService } from "./billing.service"
 import type { Plan, WorkspaceStorage } from "./billing.contracts"
@@ -14,6 +14,7 @@ export class EntitlementsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly billing: BillingService,
+        private readonly memberReads: WorkspaceMembersReadService,
     ) {}
 
     /**
@@ -86,12 +87,7 @@ export class EntitlementsService {
         return workspace?.seatCount ?? null
     }
 
-    private async members(workspaceId: string): Promise<number> {
-        const row = await this.entityManager
-            .createQueryBuilder(WorkspaceMemberEntity, "m")
-            .select("count(*)::int", "count")
-            .where("m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId })
-            .getRawOne<{ count: number }>()
-        return row?.count ?? 0
+    private members(workspaceId: string): Promise<number> {
+        return this.memberReads.activeCount(workspaceId)
     }
 }

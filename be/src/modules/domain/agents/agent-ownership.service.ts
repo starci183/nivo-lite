@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager, UpdateResult } from "typeorm"
-import { WorkspaceMemberEntity, WorkspaceMembersService } from "@modules/domain/workspace-members"
+import {
+    WorkspaceMemberDirectoryService,
+    WorkspaceMemberSeatsService,
+    WorkspaceMembersService,
+} from "@modules/domain/workspace-members"
 import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import {
@@ -53,6 +57,8 @@ export class AgentOwnershipService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
         private readonly rooms: OfficeRoomDirectoryService,
+        private readonly seats: WorkspaceMemberSeatsService,
+        private readonly directory: WorkspaceMemberDirectoryService,
     ) {}
 
     /**
@@ -64,14 +70,10 @@ export class AgentOwnershipService {
         const agent = await this.ownershipRow(agentId)
         const stored = [agent.ownerMemberId, agent.fallbackMemberId].filter((id): id is string => id !== null)
         const [active, workspaceOwner] = await Promise.all([
-            this.entityManager.find(WorkspaceMemberEntity, {
-                select: { id: true },
-                where: { workspaceId: agent.workspaceId, id: In(stored), status: "active" },
-                take: MEMBER_LIMIT,
-            }),
+            this.seats.activeIdsAmong(agent.workspaceId, stored, MEMBER_LIMIT),
             this.workspaceOwnerOf(agent.workspaceId),
         ])
-        return this.responderOf(agent, new Set(active.map((row) => row.id)), workspaceOwner)
+        return this.responderOf(agent, new Set(active), workspaceOwner)
     }
 
     /** Whether an agent may pass work to another agent: both active, one workspace, the second on the first's list. */
@@ -97,9 +99,7 @@ export class AgentOwnershipService {
     async canAssign(memberId: string, agentId: string): Promise<boolean> {
         const agent = await this.entityManager.findOne(AgentEntity, { where: { id: agentId } })
         if (agent === null) return false
-        const member = await this.entityManager.findOne(WorkspaceMemberEntity, {
-            where: { id: memberId, workspaceId: agent.workspaceId },
-        })
+        const member = await this.seats.seatById(agent.workspaceId, memberId)
         if (member === null) return false
         const rooms = await this.seatRooms(agent.workspaceId, [member.userId])
         const context: AssignContext = {
@@ -116,11 +116,7 @@ export class AgentOwnershipService {
     /** The member id (workspace_members.id) of a signed-in account; the account must belong to the workspace. */
     async memberIdOf(userId: string, workspaceId: string): Promise<string> {
         await this.members.require(userId, workspaceId)
-        const row = await this.entityManager.findOne(WorkspaceMemberEntity, {
-            select: { id: true },
-            where: { workspaceId, userId },
-        })
-        const id = row?.id ?? null
+        const id = await this.directory.idOfUser(workspaceId, userId)
         if (id === null) throw this.invalidOwnership("member")
         return id
     }
@@ -196,9 +192,7 @@ export class AgentOwnershipService {
 
     /** True when every given member (there is always at least the owner) is an active member of the workspace. */
     private async membersCounted(workspaceId: string, ids: ReadonlyArray<string>): Promise<boolean> {
-        const counted = await this.entityManager.count(WorkspaceMemberEntity, {
-            where: { workspaceId, id: In([...ids]), status: "active" },
-        })
+        const counted = await this.seats.countActiveAmong(workspaceId, ids)
         return counted === ids.length
     }
 
@@ -231,16 +225,13 @@ export class AgentOwnershipService {
 
     /** The given members with the first department room each sits in. */
     private async memberStates(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyArray<MemberState>> {
-        const members = await this.entityManager.find(WorkspaceMemberEntity, {
-            where: { workspaceId, id: In([...ids]) },
-            take: MEMBER_LIMIT,
-        })
+        const members = await this.seats.seatsByIds(workspaceId, ids, MEMBER_LIMIT)
         const rooms = await this.seatRooms(
             workspaceId,
             members.map((member) => member.userId),
         )
         return members.map((member) => ({
-            id: member.id,
+            id: member.memberId,
             displayName: member.displayName,
             role: member.role,
             status: member.status,
