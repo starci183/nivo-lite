@@ -126,7 +126,7 @@ describe("matchCustomer", () => {
     it("matches a customer that only has an email, ignoring values that are neither text nor numbers", async () => {
         const policy = await subjectOf()
         const mailOnly = policy.customerRecordOf(
-            rowOf({ "Tên khách hàng": "Mai", Email: "mai@nv.vn", SĐT: null, Active: true }),
+            rowOf({ "T\u00ean kh\u00e1ch h\u00e0ng": "Mai", Email: "mai@nv.vn", "S\u0110T": null, Active: true }),
         )
 
         expect(mailOnly).toEqual({ ...mailOnly, name: "Mai", phone: null, email: "mai@nv.vn" })
