@@ -1,3 +1,4 @@
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 import { Test } from "@nestjs/testing"
 import { IsNull } from "typeorm"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
@@ -17,9 +18,6 @@ import type { CampaignParams, LoyaltyCampaignView, Segment } from "./loyalty-cam
 import { LoyaltyCampaignsService } from "./loyalty-campaigns.service"
 import { LoyaltyCampaignEntity } from "./persistence/entities"
 import type { CampaignListRaw } from "./loyalty-campaigns.mapper"
-
-/** Matches the `() => "now()"` function a write hands the database for a time column. */
-const ANY_FUNCTION: unknown = expect.any(Function)
 
 /** Matches the name a campaign gets from a tier segment. */
 const NAMED_FOR_TIERS: unknown = expect.stringContaining(
@@ -255,6 +253,16 @@ describe("LoyaltyCampaignsService sentSince", () => {
     })
 })
 
+describe("LoyaltyCampaignsService sentSince without a count", () => {
+    it("counts nothing when the database answers no row", async () => {
+        const entityManager = mockEntityManager()
+        queueQueryBuilders(entityManager, [{ getRawOne: undefined }])
+        const { service } = await build({ members: [], entityManager })
+
+        await expect(service.sentSince("ws-1", "2026-09-12T00:00:00.000Z")).resolves.toBe(0)
+    })
+})
+
 describe("LoyaltyCampaignsService prepare", () => {
     it("writes the waiting draft through the producer's transaction", async () => {
         const { service, entityManager } = await build({ members: [memberOf()] })
@@ -356,11 +364,10 @@ describe("LoyaltyCampaignsService draft settlement", () => {
 
         await expect(service.failDraft("ws-1", "k1")).resolves.toBeUndefined()
 
-        expect(entityManager.update).toHaveBeenCalledWith(
-            LoyaltyCampaignEntity,
-            { workspaceId: "ws-1", id: "k1", status: "waiting" },
-            { status: "failed", finishedAt: ANY_FUNCTION },
-        )
+        const [target, where, changes] = entityManager.update.mock.calls[0] ?? []
+        expect(target).toBe(LoyaltyCampaignEntity)
+        expect(where).toEqual({ workspaceId: "ws-1", id: "k1", status: "waiting" })
+        expect(expressionValues(changes)).toEqual({ status: "failed", finishedAt: "now()" })
     })
 })
 
@@ -368,6 +375,7 @@ describe("LoyaltyCampaignsService attachDecision", () => {
     it.each([
         { affected: 1, attached: true },
         { affected: 0, attached: false },
+        { affected: undefined, attached: false },
     ])("reports whether the decision attached: $attached", async ({ affected, attached }) => {
         const entityManager = mockEntityManager({ update: [LoyaltyCampaignEntity, { affected }] })
         const { service } = await build({ members: [], entityManager })

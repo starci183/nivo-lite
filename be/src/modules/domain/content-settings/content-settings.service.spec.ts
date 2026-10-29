@@ -4,6 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 import { ContentSettingsService } from "./content-settings.service"
 import { ContentSettingsEntity } from "./persistence/entities"
 
@@ -72,6 +73,9 @@ describe("ContentSettingsService", () => {
             await (await build(em)).mergeMarks("workspace-1", { summary_week: "2026-10-12" })
 
             expect(em.createQueryBuilder).toHaveBeenCalledWith(ContentSettingsEntity, "cs")
+            expect(expressionValues(merge?.callsOf("set")[0]?.[0])).toEqual({
+                marks: "jsonb_concat(marks, CAST(:marks AS jsonb))",
+            })
             expect(merge?.callsOf("where")).toEqual([[{ workspaceId: "workspace-1" }]])
             expect(merge?.callsOf("setParameter")).toEqual([["marks", '{"summary_week":"2026-10-12"}']])
         })
@@ -108,6 +112,7 @@ describe("ContentSettingsService (continued)", () => {
                     },
                 ],
             ])
+            expect(expressionValues(save?.callsOf("values")[0]?.[0])).toMatchObject({ brandColors: ":colors::jsonb" })
             expect(save?.callsOf("setParameter")).toEqual([["colors", '[{"name":"Gold","hex":"#c2996b"}]']])
             expect(save?.callsOf("orUpdate")).toEqual([
                 [

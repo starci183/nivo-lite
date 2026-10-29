@@ -5,13 +5,13 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { DataRecordInput } from "./data-records.contracts"
 import { DataRecordsService } from "./data-records.service"
 import { DataRecordEntity } from "./persistence/entities"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 
 const KEYS = ["connectionId", "entity", "externalId"]
 
-/** The rows of one upsert with the type of their sync stamp, which is a function expression and cannot be compared. */
-const stamped = (rows: unknown): ReadonlyArray<unknown> =>
-    Array.isArray(rows) ? rows.map((row: Record<string, unknown>) => ({ ...row, syncedAt: typeof row.syncedAt })) : []
+/** The rows of one upsert with their sync stamp (a function expression) called, so the SQL it writes can be compared. */
+const stamped = (rows: unknown): ReadonlyArray<unknown> => (Array.isArray(rows) ? rows.map(expressionValues) : [])
 
 /** What each upsert wrote: the entity, the stamped rows, and the conflict keys. */
 const upsertsOf = (em: MockEntityManager) =>
@@ -53,7 +53,7 @@ describe("DataRecordsService upsert", () => {
                 data: {},
             },
         ]
-        const stamp = { workspaceId: "ws-1", connectionId: "c-1", entity: "order", syncedAt: "function" }
+        const stamp = { workspaceId: "ws-1", connectionId: "c-1", entity: "order", syncedAt: "now()" }
 
         await expect(service.upsert("ws-1", "c-1", "order", rows)).resolves.toBe(4)
 
@@ -127,7 +127,7 @@ describe("DataRecordsService upsert", () => {
             title: "",
             occurredAt: null,
             data: {},
-            syncedAt: "function",
+            syncedAt: "now()",
         })
 
         await expect(service.upsert("ws-2", "c-2", "product", rows)).resolves.toBe(501)

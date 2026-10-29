@@ -131,6 +131,12 @@ describe("IdentityAccountsService / accountOf", () => {
         })
     })
 
+    it("answers no last sign-in for an account that never signed in", async () => {
+        const { service } = await build([[USER_BY_ID, [{ ...person({}), last_sign_in_at: null }]]])
+
+        await expect(service.accountOf("u1")).resolves.toMatchObject({ value: { lastSignInAt: null } })
+    })
+
     it("refuses an account that does not exist", async () => {
         const { service } = await build([[USER_BY_ID, []]])
 
@@ -201,6 +207,19 @@ describe("IdentityAccountsService / deliverInvite", () => {
         expect(mail.sendThroughPlatform.mock.calls[0]?.[0].text).toContain("next=%2Finvite%2Ftoken-1")
     })
 
+    it("continues to the path of the link itself when it carries no next value", async () => {
+        const { service, mail } = await build([
+            [USER_BY_EMAIL, []],
+            [CREATE_USER, [{ be_auth_create_user: CREATED }]],
+        ])
+
+        await expect(
+            service.deliverInvite("new@example.test", "https://app.example.test/invite/token-2?x=1"),
+        ).resolves.toBe("invited")
+
+        expect(mail.sendThroughPlatform.mock.calls[0]?.[0].text).toContain("next=%2Finvite%2Ftoken-2%3Fx%3D1")
+    })
+
     it("falls back to the root when the invitation address is not a link, and answers none when mail fails", async () => {
         const { service, mail } = await build([
             [USER_BY_EMAIL, []],
@@ -250,6 +269,15 @@ describe("IdentityAccountsService / listUsers", () => {
         expect(em.query).toHaveBeenCalledWith(LIST_USERS, [2, 50])
     })
 
+    it("lists a person without an email as an empty address", async () => {
+        const { service } = await build([[LIST_USERS, [{ id: "u2", email: null, meta: {} }]]])
+
+        await expect(service.listUsers({ page: 1, perPage: 10 })).resolves.toEqual({
+            data: { users: [{ id: "u2", email: "", user_metadata: {} }] },
+            error: null,
+        })
+    })
+
     it("answers a failure of the list door instead of throwing", async () => {
         const { service, em } = await build([])
         em.query.mockRejectedValue(new Error("db down"))
@@ -296,6 +324,30 @@ describe("IdentityAccountsService / createUser", () => {
                 user_metadata: {},
             }),
         ).resolves.toEqual({ data: { user: null }, error: { message: "The account was not created." } })
+    })
+})
+
+describe("IdentityAccountsService / createUser failures", () => {
+    it("answers the failure of the create door, naming a thrown value that is not an error generically", async () => {
+        const account = {
+            email: "a@example.test",
+            password: "a-long-password",
+            email_confirm: false,
+            user_metadata: {},
+        }
+        const failing = await build([])
+        failing.em.query.mockRejectedValue(new Error("db down"))
+        await expect(failing.service.createUser(account)).resolves.toEqual({
+            data: { user: null },
+            error: { message: "db down" },
+        })
+
+        const odd = await build([])
+        odd.em.query.mockRejectedValue("refused")
+        await expect(odd.service.createUser(account)).resolves.toEqual({
+            data: { user: null },
+            error: { message: "The account door failed." },
+        })
     })
 })
 

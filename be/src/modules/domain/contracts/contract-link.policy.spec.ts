@@ -51,8 +51,12 @@ const leadOf = (lead: Partial<LinkLead>): LinkLead => ({
 describe("nameKeyOf", () => {
     it("drops accents, case, \u0111 and punctuation", async () => {
         const policy = await subjectOf()
-        expect(policy.nameKeyOf("  C\u00d4NG TY TNHH \u0110i\u1ec7n-C\u01a1  Tr\u01b0\u1eddng Ph\u00e1t ")).toBe("cong ty tnhh dien co truong phat")
-        expect(policy.nameKeyOf("c\u00f4ng ty tnhh \u0111i\u1ec7n c\u01a1 TR\u01af\u1edcNG PH\u00c1T")).toBe("cong ty tnhh dien co truong phat")
+        expect(policy.nameKeyOf("  C\u00d4NG TY TNHH \u0110i\u1ec7n-C\u01a1  Tr\u01b0\u1eddng Ph\u00e1t ")).toBe(
+            "cong ty tnhh dien co truong phat",
+        )
+        expect(policy.nameKeyOf("c\u00f4ng ty tnhh \u0111i\u1ec7n c\u01a1 TR\u01af\u1edcNG PH\u00c1T")).toBe(
+            "cong ty tnhh dien co truong phat",
+        )
     })
 })
 
@@ -75,7 +79,10 @@ describe("customerRecordOf", () => {
     it("falls back to the title and the record id and reads a company", async () => {
         const policy = await subjectOf()
         const record = policy.customerRecordOf(
-            rowOf({ "Kh\u00e1ch h\u00e0ng": "C\u00f4ng ty", "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i": 912000701 }, { title: "ACME", source: null }),
+            rowOf(
+                { "Kh\u00e1ch h\u00e0ng": "C\u00f4ng ty", "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i": 912000701 },
+                { title: "ACME", source: null },
+            ),
         )
 
         expect(record).toEqual({
@@ -108,22 +115,41 @@ describe("matchCustomer", () => {
     it("matches a customer code carried as the name or as the contract reference", async () => {
         const policy = await subjectOf()
         expect(policy.matchCustomer({ customerName: "htl-250728", note: "" }, index)).toMatchObject({ kind: "matched" })
-        expect(policy.matchCustomer({ customerName: "Kh\u00e1ch l\u1ebb", note: "HTL-250728 \u00b7 Hosting" }, index)).toMatchObject({
+        expect(
+            policy.matchCustomer({ customerName: "Kh\u00e1ch l\u1ebb", note: "HTL-250728 \u00b7 Hosting" }, index),
+        ).toMatchObject({
             kind: "matched",
             customer: CUSTOMER,
         })
     })
 
+    it("matches a customer that only has an email, ignoring values that are neither text nor numbers", async () => {
+        const policy = await subjectOf()
+        const mailOnly = policy.customerRecordOf(
+            rowOf({ "Tên khách hàng": "Mai", Email: "mai@nv.vn", SĐT: null, Active: true }),
+        )
+
+        expect(mailOnly).toEqual({ ...mailOnly, name: "Mai", phone: null, email: "mai@nv.vn" })
+        expect(policy.matchCustomer({ customerName: "mai", note: "" }, policy.indexCustomers([mailOnly]))).toEqual({
+            kind: "matched",
+            customer: mailOnly,
+        })
+    })
+
     it("matches the name without the part in brackets", async () => {
         const policy = await subjectOf()
-        expect(policy.matchCustomer({ customerName: "H\u00e0 Trung L\u01b0u (CRM: K\u1ebf to\u00e1n)", note: "" }, index)).toMatchObject({
+        expect(
+            policy.matchCustomer({ customerName: "H\u00e0 Trung L\u01b0u (CRM: K\u1ebf to\u00e1n)", note: "" }, index),
+        ).toMatchObject({
             kind: "matched",
         })
     })
 
     it("reports a customer it cannot find, one without a contact and one it cannot choose", async () => {
         const policy = await subjectOf()
-        expect(policy.matchCustomer({ customerName: "Ch\u01b0a x\u00e1c \u0111\u1ecbnh kh\u00e1ch", note: "" }, index)).toEqual({
+        expect(
+            policy.matchCustomer({ customerName: "Ch\u01b0a x\u00e1c \u0111\u1ecbnh kh\u00e1ch", note: "" }, index),
+        ).toEqual({
             kind: "unmatched",
             reason: "noCustomer",
         })
@@ -186,7 +212,9 @@ describe("planLink", () => {
         const policy = await subjectOf()
         const own = leadOf({ id: "own", phone: "84999999999" })
 
-        expect(policy.planLink(own, [leadOf({ id: "holder", phone: CUSTOMER.phone })], CUSTOMER)).toEqual({ kind: "keep" })
+        expect(policy.planLink(own, [leadOf({ id: "holder", phone: CUSTOMER.phone })], CUSTOMER)).toEqual({
+            kind: "keep",
+        })
     })
 })
 

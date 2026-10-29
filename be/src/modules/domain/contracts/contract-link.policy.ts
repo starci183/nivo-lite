@@ -153,12 +153,12 @@ export const indexCustomers = (records: ReadonlyArray<CustomerRecord>): Customer
 })
 
 const candidatesOf = (contract: ContractCustomer, index: CustomerIndex): ReadonlyArray<CustomerRecord> => {
-    const reference = contract.note.split(NOTE_SEPARATOR)[0] ?? ""
+    const reference = contract.note.split(NOTE_SEPARATOR, 1).join("")
     const found = [
         index.byCode.get(nameKeyOf(contract.customerName)),
         index.byCode.get(nameKeyOf(reference)),
         index.byName.get(nameKeyOf(contract.customerName)),
-        index.byName.get(nameKeyOf(contract.customerName.split(ASIDE_START)[0] ?? "")),
+        index.byName.get(nameKeyOf(contract.customerName.split(ASIDE_START, 1).join(""))),
     ]
     return found.find((records) => records !== undefined) ?? []
 }

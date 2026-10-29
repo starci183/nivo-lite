@@ -306,6 +306,13 @@ describe("JobOpsService / requeueFailed", () => {
         expect(Object.keys(counters)).toEqual(["requeued", "failed"])
     })
 
+    it("counts nothing when the bulk retry function answers no row", async () => {
+        const em = mockEntityManager({ query: [REQUEUE_FAILED_JOBS, []] })
+        const service = await build(em)
+
+        await expect(service.requeueFailed(24)).resolves.toEqual({ requeued: 0, failed: 0 })
+    })
+
     it("propagates a database error while bulk requeueing", async () => {
         const em = mockEntityManager()
         const cause = new Error("bulk requeue unavailable")

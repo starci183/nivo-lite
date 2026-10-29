@@ -141,10 +141,25 @@ describe("toActionEntry", () => {
         expect(subject.toActionEntry(actionRowOf({ definition })).next).toEqual(["send_follow_up", "close_lead"])
     })
 
+    it("reads a follow-up that is not text as its JSON and skips a null one", async () => {
+        const subject = await buildSubject()
+        const definition = { authorityActions: [{ action: "classify_lead", next: ["a", 2, null, { b: 1 }] }] }
+
+        expect(subject.toActionEntry(actionRowOf({ definition })).next).toEqual(["a", "2", '{"b":1}'])
+    })
+
+    it("has no follow-ups for an action whose next is not a list", async () => {
+        const subject = await buildSubject()
+        const definition = { authorityActions: [{ action: "classify_lead", next: "send_follow_up" }] }
+
+        expect(subject.toActionEntry(actionRowOf({ definition })).next).toEqual([])
+    })
+
     it("has no follow-ups when the definition lists none", async () => {
         const subject = await buildSubject()
 
         expect(subject.toActionEntry(actionRowOf({ definition: {} })).next).toEqual([])
         expect(subject.toActionEntry(actionRowOf({ definition: { authorityActions: "none" } })).next).toEqual([])
+        expect(subject.toActionEntry(actionRowOf({ definition: null })).next).toEqual([])
     })
 })

@@ -180,6 +180,11 @@ describe("yearBefore", () => {
         expect(subject.yearBefore("2027-03-15")).toBe("2026-03-15")
         expect(subject.yearBefore("2028-02-29")).toBe("2027-02-28")
     })
+
+    it("hands back a day it cannot read", async () => {
+        const subject = await buildSubject()
+        expect(subject.yearBefore("not-a-day")).toBe("not-a-day")
+    })
 })
 
 describe("importStatus", () => {
@@ -229,6 +234,13 @@ describe("readContractRows", () => {
         expect(row?.note).toBe(`SSL ${CONTRACT_IMPORT_COPY.derivedStart}`)
         expect(row?.problems).toEqual(["startsOnDerived"])
         expect(row === undefined ? "absent" : subject.skipReason(row)).toBeNull()
+    })
+
+    it("reads the cells a short row lacks as empty", async () => {
+        const row = await firstRow(["Anh Minh", "minh.vn", "", "2027-01-01"])
+        expect(row?.amountVnd).toBeNull()
+        expect(row?.note).toBe(CONTRACT_IMPORT_COPY.derivedStart)
+        expect(row?.problems).toEqual(["startsOnDerived"])
     })
 
     it("flags the rows that cannot be saved", async () => {

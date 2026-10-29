@@ -7,6 +7,7 @@ import { PASSPORT_PASSWORDS } from "@modules/integrations/passport"
 import type { PassportPasswordsClient } from "@modules/integrations/passport"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import type { Principal } from "@modules/platform/cqrs"
 import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -84,7 +85,7 @@ const build = async (stubs: Stubs, allowed = true) => {
             { provide: LOGGER, useValue: mock<Logger>() },
         ],
     }).compile()
-    return { service: moduleRef.get(IdentityPasswordResetService), em, mail, attempts }
+    return { service: moduleRef.get(IdentityPasswordResetService), em, mail, attempts, passwords }
 }
 
 describe("IdentityPasswordResetService / request", () => {
@@ -157,6 +158,20 @@ describe("IdentityPasswordResetService / complete", () => {
         expect(em.query).toHaveBeenCalledWith(CLOSE_USER_SESSIONS, ["u1"])
     })
 
+    it("spends an invitation link the same way", async () => {
+        const { service, em } = await build({
+            query: [
+                [SET_PASSWORD, []],
+                [CLOSE_USER_SESSIONS, [{ be_auth_close_user_sessions: 0 }]],
+            ],
+            token: tokenOf({ purpose: "invite" }),
+        })
+
+        await service.complete("d".repeat(40), "a-new-password")
+
+        expect(em.query).toHaveBeenCalledWith(SET_PASSWORD, ["u1", "$2b$10$new", new Date(NOW)])
+    })
+
     it("refuses an unknown, used or expired link without changing anything", async () => {
         const { service, em } = await build({ token: null })
 
@@ -176,5 +191,67 @@ describe("IdentityPasswordResetService / complete", () => {
             code: IdentityErrorCode.PasswordInvalid,
         })
         expect(em.query).not.toHaveBeenCalled()
+    })
+})
+
+const PRINCIPAL: Principal = { id: "u1", email: "An@Example.test", role: "authenticated" }
+const STORED = { ...ACCOUNT, encrypted_password: "$2a$10$stored" }
+
+describe("IdentityPasswordResetService / change", () => {
+    it("sets the new password of a person who proves the current one", async () => {
+        const { service, em, passwords, attempts } = await build({
+            query: [
+                [USER_BY_EMAIL, [STORED]],
+                [SET_PASSWORD, []],
+            ],
+        })
+        passwords.verify.mockResolvedValue(true)
+
+        await expect(service.change(PRINCIPAL, "current-pw", "a-new-password")).resolves.toBeUndefined()
+
+        expect(attempts.admit).toHaveBeenCalledWith("login", "an@example.test")
+        expect(passwords.verify).toHaveBeenCalledWith("current-pw", "$2a$10$stored")
+        expect(em.query).toHaveBeenCalledWith(SET_PASSWORD, ["u1", "$2b$10$new", new Date(NOW)])
+    })
+
+    it("refuses a caller whose token carries no email, and a new password outside the policy", async () => {
+        const { service, em } = await build({})
+
+        await expect(
+            service.change({ id: "u1", role: "authenticated" }, "current-pw", "a-new-password"),
+        ).rejects.toMatchObject({ code: IdentityErrorCode.Unauthenticated })
+        await expect(service.change(PRINCIPAL, "current-pw", "short")).rejects.toMatchObject({
+            code: IdentityErrorCode.PasswordInvalid,
+        })
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
+    it("refuses a wrong current password, an unreadable one and an account of someone else", async () => {
+        const wrong = await build({ query: [[USER_BY_EMAIL, [STORED]]] })
+        wrong.passwords.verify.mockResolvedValue(false)
+        await expect(wrong.service.change(PRINCIPAL, "wrong", "a-new-password")).rejects.toMatchObject({
+            code: IdentityErrorCode.InvalidCredentials,
+        })
+
+        const long = await build({ query: [[USER_BY_EMAIL, [STORED]]] })
+        long.passwords.verify.mockResolvedValue(false)
+        await expect(long.service.change(PRINCIPAL, "x".repeat(200), "a-new-password")).rejects.toMatchObject({
+            code: IdentityErrorCode.InvalidCredentials,
+        })
+        expect(long.passwords.verify).toHaveBeenCalledWith("", "$2a$10$stored")
+
+        const other = await build({ query: [[USER_BY_EMAIL, [{ ...STORED, id: "u2" }]]] })
+        other.passwords.verify.mockResolvedValue(true)
+        await expect(other.service.change(PRINCIPAL, "current-pw", "a-new-password")).rejects.toMatchObject({
+            code: IdentityErrorCode.InvalidCredentials,
+        })
+
+        const unknown = await build({ query: [[USER_BY_EMAIL, []]] })
+        unknown.passwords.verify.mockResolvedValue(false)
+        await expect(unknown.service.change(PRINCIPAL, "current-pw", "a-new-password")).rejects.toMatchObject({
+            code: IdentityErrorCode.InvalidCredentials,
+        })
+        expect(unknown.passwords.verify).toHaveBeenCalledWith("current-pw", "")
+        expect(unknown.em.query).not.toHaveBeenCalledWith(SET_PASSWORD, expect.anything())
     })
 })

@@ -8,6 +8,7 @@ import { In, Not } from "typeorm"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
 import { ContentPillarEntity } from "./persistence/entities"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 
 const pillarRow = entityRowBuilder<ContentPillarEntity>({
     id: "pillar-1",
@@ -83,6 +84,7 @@ const registerReplace = () => {
         expect(namedCalls(tx.update.mock.calls, 2)).toEqual([
             ["ContentPillarEntity", { workspaceId: "ws-1", id: In(["pillar-1"]) }, { name: "function" }],
         ])
+        expect(expressionValues(tx.update.mock.calls[0]?.[2])).toEqual({ name: "'edit:' || gen_random_uuid()::text" })
         expect(tx.createQueryBuilder).toHaveBeenCalledWith(ContentPillarEntity, "content_pillars")
         expect(saved?.callsOf("values")).toEqual([[INSERTED]])
         expect(saved?.callsOf("setParameter")).toEqual([["workspaceId", "ws-1"]])

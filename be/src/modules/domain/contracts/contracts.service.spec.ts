@@ -13,7 +13,8 @@ import { ContractsService } from "./contracts.service"
 import { ContractsErrorCode } from "./errors/contracts.error"
 import { ContractEntity } from "./persistence/entities"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { entityRowBuilder, namedCalls, stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 
 const paramsOf = builder<SaveContractParams>({
     workspaceId: "ws-1",
@@ -93,7 +94,10 @@ describe("ContractsService", () => {
     describe("saveContract", () => {
         it("adds a contract linked to a lead of the workspace and logs it in the same transaction", async () => {
             const tx = fakeTransaction(mockEntityManager())
-            const [lead, insert] = queueQueryBuilders(tx.em, [{ getRawOne: { id: "lead-1" } }, { execute: { raw: [ROW] } }])
+            const [lead, insert] = queueQueryBuilders(tx.em, [
+                { getRawOne: { id: "lead-1" } },
+                { execute: { raw: [ROW] } },
+            ])
             const { contracts, events, requestLocale } = await build(tx.em)
 
             await expect(contracts.saveContract(paramsOf())).resolves.toEqual({
@@ -117,7 +121,7 @@ describe("ContractsService", () => {
                     leadId: "lead-1",
                     kind: "contract.created",
                     actor: "Linh",
-                    summary: "contracts.created:{\"who\":\"Linh\",\"customer\":\"Anh Minh\"}",
+                    summary: 'contracts.created:{"who":"Linh","customer":"Anh Minh"}',
                     evidence: "2026-10-01 → 2027-09-30",
                 },
                 expect.anything(),
@@ -135,19 +139,23 @@ describe("ContractsService", () => {
                 contracts.saveContract(paramsOf({ contractId: "contract-1", leadId: null })),
             ).resolves.toMatchObject({ id: "contract-1", leadId: null })
 
-            expect(update?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1", leadId: null })
+            expect(update?.callsOf("where")[0]?.[1]).toEqual({
+                workspaceId: "ws-1",
+                contractId: "contract-1",
+                leadId: null,
+            })
             expect(update?.callsOf("set")[0]?.[0]).toMatchObject({ ...FIELDS, leadId: null })
+            expect(expressionValues(update?.callsOf("set")[0]?.[0])).toMatchObject({ updatedAt: "now()" })
             expect(events.record).toHaveBeenCalledWith(
                 expect.objectContaining({
                     leadId: null,
                     kind: "contract.updated",
-                    summary: "contracts.updated:{\"who\":\"Linh\",\"customer\":\"Anh Minh\"}",
+                    summary: 'contracts.updated:{"who":"Linh","customer":"Anh Minh"}',
                 }),
                 expect.anything(),
             )
             expect(isTransactionManager(events.record.mock.calls[0]?.[1])).toBe(true)
         })
-
     })
 })
 
@@ -194,6 +202,16 @@ describe("ContractsService", () => {
             expect(events.record).not.toHaveBeenCalled()
         })
 
+        it("refuses an edit whose write answers no row list", async () => {
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ execute: { raw: undefined } }])
+            const { contracts } = await build(tx.em)
+
+            await expect(
+                contracts.saveContract(paramsOf({ contractId: "contract-9", leadId: null })),
+            ).rejects.toMatchObject({ code: ContractsErrorCode.NotFound, params: { id: "contract-9" } })
+        })
+
         it("refuses an edit of a contract the workspace does not have", async () => {
             const tx = fakeTransaction(mockEntityManager())
             queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
@@ -212,8 +230,13 @@ describe("ContractsService", () => {
             const { contracts, members } = await build(em)
 
             await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
-            expect(attach?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1", leadId: "lead-9" })
+            expect(attach?.callsOf("where")[0]?.[1]).toEqual({
+                workspaceId: "ws-1",
+                contractId: "contract-1",
+                leadId: "lead-9",
+            })
             expect(members.require).not.toHaveBeenCalled()
+            expect(expressionValues(attach?.callsOf("set")[0]?.[0])).toEqual({ leadId: "lead-9", updatedAt: "now()" })
         })
     })
 
@@ -304,12 +327,12 @@ describe("ContractsService", () => {
                 contractId: "contract-1",
                 periodEndsOn: "2027-01-01",
             })
-            expect(stampedValues(extend?.callsOf("set")[0]?.[0])).toEqual({
+            expect(expressionValues(extend?.callsOf("set")[0]?.[0])).toEqual({
                 startsOn: "2027-01-01",
                 endsOn: "2028-01-01",
                 status: "active",
-                note: "VIP\ncontracts.renewalNote:{\"until\":\"01/01/2028\",\"no\":\"INV-202612-0001\"}",
-                updatedAt: "function",
+                note: 'VIP\ncontracts.renewalNote:{"until":"01/01/2028","no":"INV-202612-0001"}',
+                updatedAt: "now()",
             })
             expect(events.record).toHaveBeenCalledWith(
                 {
@@ -317,8 +340,7 @@ describe("ContractsService", () => {
                     leadId: "lead-1",
                     kind: "contract.updated",
                     actor: "NIVO",
-                    summary:
-                        "contracts.renewed:{\"customer\":\"Anh Minh\",\"until\":\"01/01/2028\",\"no\":\"INV-202612-0001\"}",
+                    summary: 'contracts.renewed:{"customer":"Anh Minh","until":"01/01/2028","no":"INV-202612-0001"}',
                     evidence: "2027-01-01 → 2028-01-01",
                 },
                 expect.anything(),
@@ -326,7 +348,6 @@ describe("ContractsService", () => {
             expect(isTransactionManager(events.record.mock.calls[0]?.[1])).toBe(true)
             expect(members.require).not.toHaveBeenCalled()
         })
-
     })
 })
 

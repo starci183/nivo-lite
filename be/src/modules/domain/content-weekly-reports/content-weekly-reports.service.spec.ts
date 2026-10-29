@@ -4,7 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ContentWeeklyReportsService } from "./content-weekly-reports.service"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 
 const build = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -74,13 +74,13 @@ const registerStoring = () => {
         await service.store("ws-1", "2026-10-12", { posts: [POST], postCount: 8, suggestion: SUGGESTION }, "x")
         await service.store("ws-1", "2026-10-12", { posts: [], postCount: 0, suggestion: null }, "y")
 
-        expect(stampedValues(first?.callsOf("values")[0]?.[0])).toEqual({
+        expect(expressionValues(first?.callsOf("values")[0]?.[0])).toEqual({
             workspaceId: "ws-1",
             weekStart: "2026-10-12",
-            posts: "function",
+            posts: ":posts::jsonb",
             postCount: 8,
-            suggestion: "function",
-            computedAt: "function",
+            suggestion: ":suggestion::jsonb",
+            computedAt: ":computedAt::timestamptz",
         })
         expect(first?.callsOf("setParameter")).toEqual([
             ["posts", JSON.stringify([POST])],
@@ -112,10 +112,10 @@ const registerClaim = () => {
 
         await expect(service.claimPost("ws-1", "2026-10-12", "z")).resolves.toBe(true)
         await expect(service.claimPost("ws-1", "2026-10-12", "z")).resolves.toBe(false)
-        expect(stampedValues(claim?.callsOf("values")[0]?.[0])).toEqual({
+        expect(expressionValues(claim?.callsOf("values")[0]?.[0])).toEqual({
             workspaceId: "ws-1",
             weekStart: "2026-10-12",
-            postedAt: "function",
+            postedAt: ":postedAt::timestamptz",
         })
         expect(claim?.callsOf("setParameter")).toEqual([["postedAt", "z"]])
     })

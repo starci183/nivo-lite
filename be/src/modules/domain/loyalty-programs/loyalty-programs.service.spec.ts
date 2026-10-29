@@ -4,6 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 import { LoyaltyProgramsService } from "./loyalty-programs.service"
 import { LoyaltyProgramEntity } from "./persistence/entities"
 import { DEFAULT_CONFIG } from "./policies/loyalty-config.policy"
@@ -162,6 +163,12 @@ describe("LoyaltyProgramsService", () => {
             ).resolves.toEqual({ ...FOUND, name: "N".repeat(80), enabled: false, config: resolved })
             expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
             expect(update?.callsOf("update")).toEqual([[]])
+            expect(expressionValues(update?.callsOf("set")[0]?.[0])).toEqual({
+                name: "COALESCE(CAST(:name AS text), name)",
+                enabled: "COALESCE(CAST(:enabled AS boolean), enabled)",
+                config: "COALESCE(CAST(:config AS jsonb), config)",
+                updatedAt: "now()",
+            })
             expect(update?.callsOf("where")).toEqual([["workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
             expect(update?.callsOf("setParameters")).toEqual(
                 UPDATE_PARAMS("N".repeat(80), false, JSON.stringify(resolved)),
@@ -178,6 +185,13 @@ describe("LoyaltyProgramsService", () => {
             expect(update?.callsOf("setParameters")).toEqual(UPDATE_PARAMS(null, null, null))
             expect(shop?.callsOf("where")).toEqual([["w.id = :workspaceId", { workspaceId: "ws-1" }]])
             expect(insert?.callsOf("insert")).toEqual([[]])
+            expect(expressionValues(insert?.callsOf("values")[0]?.[0])).toEqual({
+                workspaceId: "ws-1",
+                slug: "CASE WHEN CAST(:suffix AS boolean) THEN CAST(:slug AS text) || '-' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 8) ELSE CAST(:slug AS text) END",
+                name: "COALESCE(CAST(:name AS text), CAST(:shop AS text))",
+                enabled: "COALESCE(CAST(:enabled AS boolean), true)",
+                config: "CAST(:config AS jsonb)",
+            })
             expect(insert?.callsOf("setParameters")).toEqual(
                 INSERT_PARAMS(null, null, JSON.stringify(DEFAULT_CONFIG), false),
             )
