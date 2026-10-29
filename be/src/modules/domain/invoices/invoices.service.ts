@@ -12,15 +12,15 @@ import { INVOICE_COLUMNS, INVOICE_RETURNING, INVOICE_VIEW_COLUMNS, selectColumns
 import { INVOICE_NUMBER_ATTEMPTS, dueAtOf, invoicePrefixOf, nextInvoiceNumber } from "./invoice-number.policy"
 import type {
     ClaimableState,
-    InvoiceAccountingRecord,
+    InvoiceAccountingRow,
     InvoiceListingRecord,
-    InvoiceRecord,
-    InvoiceViewRecord,
+    InvoiceRow,
+    InvoiceViewRow,
     IssuedInvoice,
     NewInvoice,
     NewRenewalInvoice,
     OptionalInvoice,
-    ReconcileInvoiceRecord,
+    ReconcileInvoiceRow,
 } from "./invoices.contracts"
 import { InvoiceEntity } from "./persistence/entities"
 
@@ -60,14 +60,14 @@ interface InvoiceInsertAttempt {
     /** What the invoice bills. */
     readonly billing: InvoiceBilling
     /** Inserts with the billed part; no row when the insert conflicted. */
-    readonly write: (billed: BilledInvoice) => Promise<Array<InvoiceRecord>>
+    readonly write: (billed: BilledInvoice) => Promise<Array<InvoiceRow>>
     /** The invoice the conflict found already in place, or null when only the number was taken. */
     readonly existing: () => Promise<OptionalInvoice>
 }
 
 /** A reconciliation row before its order and customer are read: the invoice with the ids it bills. */
-type ReconcileInvoiceRow = Omit<
-    ReconcileInvoiceRecord,
+type ReconcileInvoiceIds = Omit<
+    ReconcileInvoiceRow,
     "customer" | "company" | "order_no" | "order_items" | "order_status"
 > & { readonly order_id: string | null; readonly lead_id: string | null }
 
@@ -95,7 +95,7 @@ export class InvoicesService {
         const invoice = await this.invoiceQuery(workspaceId)
             .andWhere("i.id = :invoiceId", { invoiceId })
             .limit(1)
-            .getRawOne<InvoiceRecord>()
+            .getRawOne<InvoiceRow>()
         return invoice ?? null
     }
 
@@ -109,7 +109,7 @@ export class InvoicesService {
             status === "paid"
                 ? query.orderBy("i.paid_at", "DESC", "NULLS LAST").addOrderBy("i.created_at", "DESC")
                 : query.orderBy("i.created_at", "DESC")
-        const invoice = await ordered.limit(1).getRawOne<InvoiceRecord>()
+        const invoice = await ordered.limit(1).getRawOne<InvoiceRow>()
         return invoice ?? null
     }
 
@@ -118,7 +118,7 @@ export class InvoicesService {
         const invoice = await this.invoiceQuery(workspaceId)
             .andWhere("i.orderId = :orderId", { orderId })
             .limit(1)
-            .getRawOne<InvoiceRecord>()
+            .getRawOne<InvoiceRow>()
         return invoice ?? null
     }
 
@@ -128,7 +128,7 @@ export class InvoicesService {
             .andWhere("i.status = 'issued'")
             .orderBy("i.created_at", "DESC")
             .limit(limit)
-            .getRawMany<InvoiceRecord>()
+            .getRawMany<InvoiceRow>()
         const { orders, leads } = await this.relatedOf(workspaceId, invoices)
         return invoices.map((invoice) => ({
             ...invoice,
@@ -138,12 +138,12 @@ export class InvoicesService {
     }
 
     /** The newest invoices and their related records for the accounting book. */
-    async listAccounting(workspaceId: string, limit: number = 1000): Promise<Array<InvoiceAccountingRecord>> {
+    async listAccounting(workspaceId: string, limit: number = 1000): Promise<Array<InvoiceAccountingRow>> {
         const invoices = await this.viewQuery(workspaceId)
             .orderBy("i.created_at", "DESC")
             .addOrderBy("i.id", "DESC")
             .limit(limit)
-            .getRawMany<InvoiceViewRecord>()
+            .getRawMany<InvoiceViewRow>()
         const { orders, leads } = await this.relatedOf(workspaceId, invoices)
         return invoices.map((invoice) => {
             const order = orders.get(invoice.order_id ?? "")
@@ -165,7 +165,7 @@ export class InvoicesService {
     }
 
     /** The invoices named by a reconciliation, at most fifty, after the caller proved membership. */
-    async listForReconcile(workspaceId: string, ids: ReadonlyArray<string>): Promise<Array<ReconcileInvoiceRecord>> {
+    async listForReconcile(workspaceId: string, ids: ReadonlyArray<string>): Promise<Array<ReconcileInvoiceRow>> {
         if (ids.length === 0) return []
         const invoices = await this.entityManager
             .createQueryBuilder(InvoiceEntity, "i")
@@ -182,7 +182,7 @@ export class InvoicesService {
                 ids: ids.slice(0, RECONCILE_LIMIT),
             })
             .limit(RECONCILE_LIMIT)
-            .getRawMany<ReconcileInvoiceRow>()
+            .getRawMany<ReconcileInvoiceIds>()
         const { orders, leads } = await this.relatedOf(workspaceId, invoices)
         return invoices.map(({ order_id: orderId, lead_id: leadId, ...invoice }) => {
             const order = orders.get(orderId ?? "")
@@ -199,22 +199,22 @@ export class InvoicesService {
     }
 
     /** The invoices shown in Sales handoffs, after the caller's membership was proved by the composer. */
-    listForWorkbench(workspaceId: string): Promise<Array<InvoiceViewRecord>> {
+    listForWorkbench(workspaceId: string): Promise<Array<InvoiceViewRow>> {
         return this.viewQuery(workspaceId)
             .orderBy("i.created_at", "ASC")
             .addOrderBy("i.id", "ASC")
             .limit(WORKBENCH_LIMIT)
-            .getRawMany<InvoiceViewRecord>()
+            .getRawMany<InvoiceViewRow>()
     }
 
     /** A customer's invoices, after the caller's membership was proved by the composer. */
-    listForLead(workspaceId: string, leadId: string): Promise<Array<InvoiceViewRecord>> {
+    listForLead(workspaceId: string, leadId: string): Promise<Array<InvoiceViewRow>> {
         return this.viewQuery(workspaceId)
             .andWhere("i.leadId = :leadId", { leadId })
             .orderBy("i.created_at", "ASC")
             .addOrderBy("i.id", "ASC")
             .limit(LEAD_LIMIT)
-            .getRawMany<InvoiceViewRecord>()
+            .getRawMany<InvoiceViewRow>()
     }
 
     /** The renewal invoice of one contract period, or null when that period has none yet. */
@@ -222,7 +222,7 @@ export class InvoicesService {
         const invoice = await this.invoiceQuery(workspaceId)
             .andWhere("i.contractId = :contractId AND i.period_ends_on = :periodEndsOn", { contractId, periodEndsOn })
             .limit(1)
-            .getRawOne<InvoiceRecord>()
+            .getRawOne<InvoiceRow>()
         return invoice ?? null
     }
 
@@ -266,7 +266,7 @@ export class InvoicesService {
         workspaceId: string,
         invoiceId: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<InvoiceRecord> {
+    ): Promise<InvoiceRow> {
         const result = await manager
             .createQueryBuilder(InvoiceEntity, "i")
             .update()
@@ -274,17 +274,17 @@ export class InvoicesService {
             .where("workspace_id = :workspaceId AND id = :invoiceId AND status <> 'paid'", { workspaceId, invoiceId })
             .returning(INVOICE_RETURNING)
             .execute()
-        const [paid] = result.raw as Array<InvoiceRecord>
+        const returned: Array<InvoiceRow> = result.raw
+        const [paid] = returned
         if (paid !== undefined) return paid
         const standing = await selectColumns(manager.createQueryBuilder(InvoiceEntity, "i"), INVOICE_COLUMNS)
             .where("i.workspaceId = :workspaceId AND i.id = :invoiceId", { workspaceId, invoiceId })
             .limit(1)
-            .getRawOne<InvoiceRecord>()
+            .getRawOne<InvoiceRow>()
         if (standing === undefined) throw new InvoicesError({ code: InvoicesErrorCode.NotFound })
         return standing
     }
 
-    /** The invoices of a workspace, selected as invoice records. */
     /** The orders and customers the invoices bill, by id; one that does not exist (or is not named) is missing. */
     private async relatedOf(
         workspaceId: string,
@@ -318,7 +318,7 @@ export class InvoicesService {
     /** Writes an issued invoice; no row when the number is taken or the order or period has its invoice already. */
     private async writeInvoice(
         invoice: Partial<InvoiceEntity> & Pick<InvoiceEntity, "workspaceId" | "leadId" | "invoiceNo" | "amountVnd">,
-    ): Promise<Array<InvoiceRecord>> {
+    ): Promise<Array<InvoiceRow>> {
         const result = await this.entityManager
             .createQueryBuilder(InvoiceEntity, "i")
             .insert()
@@ -326,7 +326,8 @@ export class InvoicesService {
             .orIgnore()
             .returning(INVOICE_RETURNING)
             .execute()
-        return result.raw as Array<InvoiceRecord>
+        const returned: Array<InvoiceRow> = result.raw
+        return returned
     }
 
     private async numbered(attempt: InvoiceInsertAttempt): Promise<IssuedInvoice> {

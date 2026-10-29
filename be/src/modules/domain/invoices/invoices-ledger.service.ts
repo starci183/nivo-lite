@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { LessThan } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { InvoiceTally, LedgerInvoice, OverdueInvoice, ReceiptInvoice } from "./invoices-ledger.contracts"
+import type { InvoiceTally, LedgerInvoice, OptionalReceiptInvoice, OverdueInvoice } from "./invoices-ledger.contracts"
 import { InvoiceEntity } from "./persistence/entities"
 
 @Injectable()
@@ -11,7 +11,7 @@ export class InvoicesLedgerService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** How many invoices were issued in the period and what they add up to. */
-    async issuedTally(workspaceId: string, from: Date, to: Date): Promise<InvoiceTally> {
+    issuedTally(workspaceId: string, from: Date, to: Date): Promise<InvoiceTally> {
         return this.tally(
             "i.workspaceId = :workspaceId AND i.status = 'issued' AND i.issuedAt >= :from AND i.issuedAt < :to",
             { workspaceId, from, to },
@@ -19,7 +19,7 @@ export class InvoicesLedgerService {
     }
 
     /** How many issued invoices were due before the instant and what they add up to. */
-    async overdueTally(workspaceId: string, before: Date): Promise<InvoiceTally> {
+    overdueTally(workspaceId: string, before: Date): Promise<InvoiceTally> {
         return this.tally("i.workspaceId = :workspaceId AND i.status = 'issued' AND i.dueAt < :before", {
             workspaceId,
             before,
@@ -67,7 +67,7 @@ export class InvoicesLedgerService {
     }
 
     /** The invoice a receipt is for, or null when the workspace has none with that id. */
-    async receiptInvoice(workspaceId: string, invoiceId: string): Promise<ReceiptInvoice | null> {
+    async receiptInvoice(workspaceId: string, invoiceId: string): Promise<OptionalReceiptInvoice> {
         const row = await this.entityManager.findOne(InvoiceEntity, { where: { workspaceId, id: invoiceId } })
         return row === null
             ? null

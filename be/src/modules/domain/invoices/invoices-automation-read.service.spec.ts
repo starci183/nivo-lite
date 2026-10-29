@@ -27,7 +27,7 @@ describe("InvoicesAutomationReadService", () => {
     it("totals the money paid since the start of the day, zero when nothing answers", async () => {
         const { service, entityManager } = await build([{ getRawOne: { total: "900000" } }, { getRawOne: undefined }])
 
-        await expect(service.paidTotalSince("ws-1", "2026-10-12", entityManager)).resolves.toBe("900000")
+        await expect(service.paidTotalSince("ws-1", "2026-10-12", entityManager)).resolves.toBe(900000)
         await expect(service.paidTotalSince("ws-1", "2026-10-12", entityManager)).resolves.toBe(0)
     })
 })
