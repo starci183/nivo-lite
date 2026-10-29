@@ -12,12 +12,6 @@ const buildSubject = async () => {
     return moduleRef.get<typeof import("./program.mapper")>(SUBJECT)
 }
 
-let subject: Awaited<ReturnType<typeof buildSubject>>
-
-beforeAll(async () => {
-    subject = await buildSubject()
-})
-
 const programRow = (config: object): ProgramFields => ({
     workspaceId: "w-1",
     slug: "main",
@@ -28,7 +22,9 @@ const programRow = (config: object): ProgramFields => ({
 })
 
 describe("toProgram", () => {
-    it("maps the columns and resolves an empty config to the defaults", () => {
+    it("maps the columns and resolves an empty config to the defaults", async () => {
+        const subject = await buildSubject()
+
         expect(subject.toProgram(programRow({}))).toEqual({
             workspaceId: "w-1",
             slug: "main",
@@ -39,7 +35,9 @@ describe("toProgram", () => {
         })
     })
 
-    it("resolves the saved rules over the defaults", () => {
+    it("resolves the saved rules over the defaults", async () => {
+        const subject = await buildSubject()
+
         const program = subject.toProgram(programRow({ earn: { perVisit: 5 }, expiry: { months: 6 } }))
 
         expect(program.config.earn.perVisit).toBe(5)
@@ -49,13 +47,17 @@ describe("toProgram", () => {
 })
 
 describe("firstProgramRow", () => {
-    it("answers the first row when it carries every programme column", () => {
+    it("answers the first row when it carries every programme column", async () => {
+        const subject = await buildSubject()
+
         const row = programRow({})
 
         expect(subject.firstProgramRow([row])).toBe(row)
     })
 
-    it("answers undefined for a non-array answer, no rows, or a malformed first row", () => {
+    it("answers undefined for a non-array answer, no rows, or a malformed first row", async () => {
+        const subject = await buildSubject()
+
         const row = programRow({})
         const malformed: ReadonlyArray<unknown> = [
             undefined,

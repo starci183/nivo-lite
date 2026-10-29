@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { QUEUE_TIMEOUT } from "@modules/platform/queue"
-import type { QueueTimeout } from "@modules/platform/queue"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { TIMER } from "@modules/platform/retry"
+import type { Timer } from "@modules/platform/retry"
 import { LivenessError, LivenessErrorCode } from "./errors/liveness.error"
 import { ReadinessLogEvent } from "./readiness.log-events"
 import { ReadinessService } from "./readiness.service"
@@ -28,20 +28,20 @@ const deferred = <T>() => {
 }
 
 const build = async (supplied?: MockEntityManager) => {
-    const entityManager = supplied ?? mockEntityManager({ query: [CHECK_READINESS_JOBS, JOB_ROWS] })
+    const entityManager = fakeTransaction(supplied ?? mockEntityManager({ query: [CHECK_READINESS_JOBS, JOB_ROWS] })).em
     const logger = mock<Logger>({ error: jest.fn() })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ReadinessService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: LOGGER, useValue: logger },
-            { provide: QUEUE_TIMEOUT, useValue: timeout },
+            { provide: TIMER, useValue: timeout },
         ],
     }).compile()
     return { readiness: moduleRef.get(ReadinessService), entityManager, logger }
 }
 
-const timeout = mock<QueueTimeout>()
+const timeout = mock<Timer>()
 
 const cancelDeadline = jest.fn()
 
