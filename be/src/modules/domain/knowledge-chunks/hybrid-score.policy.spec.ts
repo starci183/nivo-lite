@@ -1,7 +1,19 @@
+import { Test } from "@nestjs/testing"
 import { hybridHit, hybridScore } from "./hybrid-score.policy"
 
+const SUBJECT = Symbol("hybrid-score.policy")
+type Subject = { hybridHit: typeof hybridHit; hybridScore: typeof hybridScore }
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { hybridHit, hybridScore } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
+
 describe("hybrid score", () => {
-    it("scores a row with both halves, the vector half only for the query model", () => {
+    it("scores a row with both halves, the vector half only for the query model", async () => {
+        const { hybridScore } = await build()
         const score = hybridScore("c", { vector: true, text: true })
 
         expect(score).toContain("c.embeddingModel = :model")
@@ -11,7 +23,8 @@ describe("hybrid score", () => {
         expect(score.endsWith(") AS real)")).toBe(true)
     })
 
-    it("leaves out the half that has no input", () => {
+    it("leaves out the half that has no input", async () => {
+        const { hybridScore } = await build()
         expect(hybridScore("k", { vector: false, text: true })).toBe(
             "CAST((0 + least(1, ts_rank(k.fts, to_tsquery('simple', :tsquery))) * 0.3) AS real)",
         )
@@ -19,7 +32,8 @@ describe("hybrid score", () => {
         expect(hybridScore("k", { vector: false, text: false })).toBe("CAST((0 + 0) AS real)")
     })
 
-    it("hits on a close vector or a word match", () => {
+    it("hits on a close vector or a word match", async () => {
+        const { hybridHit } = await build()
         expect(hybridHit("c", { vector: true, text: true })).toBe(
             "((c.embedding IS NOT NULL AND c.embeddingModel = :model AND (c.embedding <=> CAST(:vector AS extensions.vector)) < 0.8) OR c.fts @@ to_tsquery('simple', :tsquery))",
         )
