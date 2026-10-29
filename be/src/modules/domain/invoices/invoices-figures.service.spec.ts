@@ -29,6 +29,7 @@ describe("InvoicesFiguresService", () => {
         expect(em.find).toHaveBeenCalledWith(InvoiceEntity, {
             select: { id: true, orderId: true, leadId: true, invoiceNo: true, amountVnd: true, status: true },
             where: { workspaceId: "ws-1", status: In(["issued", "paid"]) },
+            take: 5000,
         })
     })
 })

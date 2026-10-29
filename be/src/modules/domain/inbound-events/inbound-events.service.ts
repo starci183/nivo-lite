@@ -116,8 +116,10 @@ export class InboundEventsService {
     /** The given inbound events of the workspace (a missing event is missing from the answer). */
     async findMany(workspaceId: string, eventIds: ReadonlyArray<string>): Promise<Array<InboundEventDetail>> {
         if (eventIds.length === 0) return []
+        const wanted = [...new Set(eventIds)]
         const events = await this.entityManager.find(InboundEventEntity, {
-            where: { workspaceId, id: In([...new Set(eventIds)]) },
+            where: { workspaceId, id: In(wanted) },
+            take: wanted.length,
         })
         return events.map(toDetail)
     }

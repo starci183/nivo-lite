@@ -5,6 +5,9 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { DecisionFigure, RecentDecision } from "./decisions-figures.contracts"
 import { DecisionEntity } from "./persistence/entities"
 
+/** The most decisions one figure reads. */
+const SINCE_MAX = 5000
+
 @Injectable()
 /** The dashboard reads of a workspace's decisions, always scoped to the workspace and bounded by the caller. */
 export class DecisionsFiguresService {
@@ -15,6 +18,7 @@ export class DecisionsFiguresService {
         const decisions = await this.entityManager.find(DecisionEntity, {
             select: { workItemId: true, leadId: true, deciderKind: true, outcome: true, createdAt: true },
             where: { workspaceId, createdAt: MoreThanOrEqual(from) },
+            take: SINCE_MAX,
         })
         return decisions.map((decision) => ({
             workItemId: decision.workItemId,

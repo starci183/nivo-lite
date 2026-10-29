@@ -5,6 +5,9 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { InvoiceFigure } from "./invoices-figures.contracts"
 import { InvoiceEntity } from "./persistence/entities"
 
+/** The most invoices one figure reads. */
+const FIGURES_MAX = 5000
+
 @Injectable()
 /** The dashboard lists of a workspace's invoices, always scoped to the workspace. */
 export class InvoicesFiguresService {
@@ -15,6 +18,7 @@ export class InvoicesFiguresService {
         const invoices = await this.entityManager.find(InvoiceEntity, {
             select: { id: true, orderId: true, leadId: true, invoiceNo: true, amountVnd: true, status: true },
             where: { workspaceId, status: In(["issued", "paid"]) },
+            take: FIGURES_MAX,
         })
         return invoices.map((invoice) => ({
             id: invoice.id,
