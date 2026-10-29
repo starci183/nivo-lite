@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import type { WorkspaceRow } from "@tests/fixtures/builders/workspaces.builder"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkspacesErrorCode } from "./errors/workspaces.error"
@@ -10,7 +11,7 @@ import { WorkspaceBillingService } from "./workspace-billing.service"
 const NOW = new Date("2026-10-12T00:00:00.000Z")
 
 /** The stored billing facts of a workspace. */
-const billingOf = (patch: Partial<WorkspaceEntity> = {}): WorkspaceEntity =>
+const billingOf = (patch: Partial<WorkspaceRow> = {}): WorkspaceEntity =>
     Object.assign(new WorkspaceEntity(), {
         paidUntil: new Date("2026-12-01T00:00:00.000Z"),
         status: "active",
@@ -118,6 +119,46 @@ describe("WorkspaceBillingService", () => {
                 code: WorkspacesErrorCode.PlanUnknown,
             })
             expect(em.update).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("factsOf", () => {
+        it("answers the billing columns with the money columns as numbers", async () => {
+            const stored = billingOf({
+                tierCredits: "5000",
+                billedMonthlyVnd: "299000",
+                seatCount: 3,
+                billingCycle: "annual",
+            })
+            const em = mockEntityManager({ findOne: [WorkspaceEntity, stored] })
+
+            await expect((await build(em)).factsOf("ws-1")).resolves.toEqual({
+                status: "active",
+                planCode: "starter",
+                paidUntil: new Date("2026-12-01T00:00:00.000Z"),
+                tierCredits: 5000,
+                seatCount: 3,
+                billingCycle: "annual",
+                billedMonthlyVnd: 299000,
+            })
+        })
+
+        it("keeps the columns that were never set as none", async () => {
+            const stored = billingOf({ tierCredits: null, billedMonthlyVnd: null, seatCount: null, billingCycle: null })
+            const em = mockEntityManager({ findOne: [WorkspaceEntity, stored] })
+
+            await expect((await build(em)).factsOf("ws-1")).resolves.toMatchObject({
+                tierCredits: null,
+                billedMonthlyVnd: null,
+                seatCount: null,
+                billingCycle: null,
+            })
+        })
+
+        it("answers none for a workspace that does not exist", async () => {
+            const em = mockEntityManager({ findOne: [WorkspaceEntity, null] })
+
+            await expect((await build(em)).factsOf("ws-9")).resolves.toBeNull()
         })
     })
 })

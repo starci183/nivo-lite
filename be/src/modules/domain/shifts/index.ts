@@ -7,6 +7,7 @@ export {
     toAddShiftsAvailabilityRequest,
     toSubmitShiftsAvailabilityRequest,
 } from "./shifts-requests.mapper"
+export { ShiftsLeaveReadService } from "./shifts-leave-read.service"
 export { ShiftsImportService } from "./shifts-import.service"
 export { ShiftsModule } from "./shifts.module"
 export { shiftsEntities } from "./persistence/entities"

@@ -22,7 +22,7 @@ const build = async (rotated: ReadonlyArray<object>) => {
         ],
     })
     const update = fakeQueryBuilder({ execute: { raw: rotated } })
-    em.createQueryBuilder.mockReturnValue(update.builder as never)
+    em.createQueryBuilder.mockReturnValue(update.builder)
     const delivery = mock<InviteDeliveryPort>()
     delivery.deliverInvite.mockResolvedValue("invited")
     const moduleRef = await Test.createTestingModule({

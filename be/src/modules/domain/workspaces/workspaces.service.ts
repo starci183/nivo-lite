@@ -3,11 +3,13 @@ import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, advisoryXactLock } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
 import { WorkspaceEntity } from "./persistence/entities"
 import type {
     CreatedWorkspace,
     FirstWorkspace,
+    OptionalAccountId,
     WorkspaceBrand,
     WorkspaceMembership,
     WorkspaceName,
@@ -90,7 +92,7 @@ export class WorkspacesService {
     }
 
     /** The account that owns the workspace, or none when there is no such workspace. */
-    async ownerIdOf(workspaceId: string): Promise<string | null> {
+    async ownerIdOf(workspaceId: string): Promise<OptionalAccountId> {
         const row = await this.entityManager.findOne(WorkspaceEntity, {
             select: { ownerId: true },
             where: { id: workspaceId },
@@ -170,8 +172,9 @@ export class WorkspacesService {
     /** Creates a free active workspace and answers its id; a trigger makes the creator its owner member. */
     private async insertFree(manager: EntityManager, userId: string, name: string): Promise<string> {
         const result = await manager.insert(WorkspaceEntity, { ownerId: userId, name, status: "active" })
-        const id = (result.identifiers[0] as { readonly id?: string } | undefined)?.id
-        if (id === undefined) throw new WorkspacesError({ code: WorkspacesErrorCode.NotFound })
-        return id
+        const [created] = result.identifiers
+        if (!isRecord(created) || typeof created.id !== "string")
+            throw new WorkspacesError({ code: WorkspacesErrorCode.NotFound })
+        return created.id
     }
 }
