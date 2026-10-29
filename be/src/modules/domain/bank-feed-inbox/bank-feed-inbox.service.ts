@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { InjectInbox } from "@modules/platform/inbox"
+import { InjectEntityInbox } from "@modules/platform/inbox"
 import type { EntityInbox } from "@modules/platform/inbox"
 import type { FeedReceiptPayload, BankFeedInboxReceiptLookup, BankFeedProvider } from "./bank-feed-inbox.contracts"
 import { BankFeedInboxEntity } from "./persistence/entities"
@@ -9,7 +9,7 @@ import { BankFeedInboxEntity } from "./persistence/entities"
 @Injectable()
 /** Owns durable receipts while participating in the caller's atomic booking transaction. */
 export class BankFeedReceiptService {
-    constructor(@InjectInbox() private readonly inbox: EntityInbox) {}
+    constructor(@InjectEntityInbox() private readonly inbox: EntityInbox) {}
 
     /** Claims a delivery once using the caller's transaction. */
     claim(

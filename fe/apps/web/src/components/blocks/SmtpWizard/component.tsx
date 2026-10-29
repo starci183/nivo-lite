@@ -1,8 +1,8 @@
 import { Alert, CheckboxGroup, Input, RadioGroup, Text } from "@starci/grammar/common"
 import { SmtpAccountStep } from "@/components/composites/SmtpAccountStep"
 import { SmtpGuideStep } from "@/components/composites/SmtpGuideStep"
-import { backAction, closeAction, nextAction, startActions, WizardFooter } from "@/components/composites/WizardFooter"
-import type { WizardAction } from "@/components/composites/WizardFooter"
+import { backAction, closeAction, nextAction, startActions, WizardFooter } from "@/components/branches/WizardFooter"
+import type { WizardAction } from "@/components/branches/WizardFooter"
 import { WizardFrame } from "@/components/composites/WizardFrame"
 import type { SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText } from "@/modules/types"
 

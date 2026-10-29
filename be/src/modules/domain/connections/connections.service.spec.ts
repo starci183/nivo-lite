@@ -18,10 +18,21 @@ import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { ConnectionsService } from "./connections.service"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import { ConnectionEntity } from "./persistence/entities"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
+import type { MemberSeatRecord, WorkspaceRole } from "@modules/domain/workspace-members"
 import { AgentConnectionEntity } from "@modules/domain/agent-connections"
 
+/** The seat each manager's member read answers, as `memberOf` declared it while the builders were queued. */
+const seatsOf = new WeakMap<MockEntityManager, MemberSeatRecord>()
+
+/** The member read: an active seat of this role named Lan. */
+interface SeatAnswer {
+    readonly seat: MemberSeatRecord
+}
+
 const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}) => {
+    const seats = mock<WorkspaceMemberSeatsService>()
+    seats.activeSeatOfUser.mockResolvedValue(seatsOf.get(entityManager) ?? null)
     const secrets = mock<ConnectionSecretsService>()
     const interest = mock<ConnectorInterestService>()
     const upkeep = mock<ConnectionsUpkeepService>()
@@ -36,9 +47,10 @@ const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}) => {
             { provide: ConnectionSecretsService, useValue: secrets },
             { provide: ConnectorInterestService, useValue: interest },
             { provide: ConnectionsUpkeepService, useValue: upkeep },
+            { provide: WorkspaceMemberSeatsService, useValue: seats },
         ],
     }).compile()
-    return { service: moduleRef.get(ConnectionsService), secrets, interest, upkeep }
+    return { service: moduleRef.get(ConnectionsService), secrets, interest, upkeep, seats }
 }
 const build = async (entityManager: MockEntityManager, urls: Urls = {}) =>
     (await buildWith(entityManager, urls)).service
@@ -48,13 +60,22 @@ const AT = "2026-10-12T01:00:00.000Z"
 
 /** An entity manager whose query builders answer these terminals, in the order the subject opens them. */
 const withBuilders = (
-    answers: Parameters<typeof queueQueryBuilders>[1],
+    answers: ReadonlyArray<Parameters<typeof queueQueryBuilders>[1][number] | SeatAnswer>,
     em: MockEntityManager = mockEntityManager(),
-) => ({
-    em,
-    fakes: queueQueryBuilders(em, answers),
+) => {
+    const seated = answers.find((answer): answer is SeatAnswer => "seat" in answer)
+    if (seated !== undefined) seatsOf.set(em, seated.seat)
+    return {
+        em,
+        fakes: queueQueryBuilders(
+            em,
+            answers.filter((answer): answer is Exclude<typeof answer, SeatAnswer> => !("seat" in answer)),
+        ),
+    }
+}
+const memberOf = (role: WorkspaceRole): SeatAnswer => ({
+    seat: { memberId: "m-1", userId: "user-1", role, displayName: "Lan", status: "active" },
 })
-const memberOf = (role: string) => ({ getRawOne: { role, displayName: "Lan" } })
 const whereOf = (fake: FakeQueryBuilder | undefined) => fake?.callsOf("where")
 const setOf = (fake: FakeQueryBuilder | undefined) => evaluatedValues(fake?.callsOf("set")[0]?.[0])
 
@@ -80,20 +101,20 @@ describe("ConnectionsService > addresses", () => {
 
 describe("ConnectionsService > authorize", () => {
     it("answers the member holding one of the roles", async () => {
-        const { em, fakes } = withBuilders([memberOf("owner")])
-        await expect((await build(em)).authorize(actor, ["owner"])).resolves.toEqual({
+        const { em } = withBuilders([memberOf("owner")])
+        const { service, seats } = await buildWith(em)
+        await expect(service.authorize(actor, ["owner"])).resolves.toEqual({
             role: "owner",
             displayName: "Lan",
         })
-        expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkspaceMemberEntity, "m")
-        expect(whereOf(fakes[0])?.[0]?.[1]).toEqual({ workspaceId: "ws-1", userId: "user-1" })
+        expect(seats.activeSeatOfUser).toHaveBeenCalledWith("ws-1", "user-1")
     })
 
     it.each([
-        { name: "refuses a caller who is not an active member", answer: {}, roles: ["owner"] },
+        { name: "refuses a caller who is not an active member", answer: undefined, roles: ["owner"] },
         { name: "refuses a member whose role is not listed", answer: memberOf("staff"), roles: ["owner", "manager"] },
     ] as const)("$name", async ({ answer, roles }) => {
-        const { em } = withBuilders([answer])
+        const { em } = withBuilders(answer === undefined ? [] : [answer])
         await expect((await build(em)).authorize(actor, roles)).rejects.toMatchObject(forbidden)
     })
 })

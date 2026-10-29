@@ -193,10 +193,10 @@ describe("ApiKeysService management", () => {
 
     it.each([
         { member: undefined, reason: "a non-member" },
-        { member: "member", reason: "a staff member" },
-    ])("refuses $reason before reading the keys", async ({ member }) => {
+        { member: "staff", reason: "a staff member" },
+    ] as const)("refuses $reason before reading the keys", async ({ member }) => {
         const em = mockEntityManager()
-        const { service, events, fakes } = await buildManagement(em, [memberOf(member, "Staff")])
+        const { service, events } = await buildManagement(em, [memberOf(member, "Staff")])
 
         await expect(service.listKeys("principal-1", "workspace-1")).rejects.toMatchObject({
             code: ApiKeysErrorCode.NotManager,

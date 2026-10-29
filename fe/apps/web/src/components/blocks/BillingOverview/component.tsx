@@ -23,8 +23,8 @@ export interface BillingOverviewBaseProps {
         readonly renewalHint: string
         readonly plan: DataSlot<BillingPlanView>
         readonly planSlotLabels: SlotLabels
-        readonly usage: UsageCardProps["slot"]
-        readonly usagePlaceholder: UsageCardProps["placeholder"]
+        readonly usage: DataSlot<UsageCardProps["view"]>
+        readonly usagePlaceholder: UsageCardProps["view"]
         readonly usageSlotLabels: SlotLabels
         readonly historyTitle: string
         readonly historyEmpty: string
@@ -76,18 +76,27 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
         >
             {(plan) => renderCurrentBillingPlan(props, plan)}
         </SlotView>
-        <UsageCard
+        <SlotView
             slot={props.props.usage}
             placeholder={props.props.usagePlaceholder}
             labels={props.props.usageSlotLabels}
-            on={{
-                retry: props.on.retryUsage,
-                openCredits: props.on.openCredits,
-                formatDay: props.on.formatUsageDay,
-                formatCredits: props.on.formatUsageCredits,
-                minimumBarSize: props.on.minimumUsageBarSize,
-            }}
-        />
+            forbidden="hide"
+            onRetry={props.on.retryUsage}
+        >
+            {(view, isSkeleton) => (
+                <UsageCard
+                    view={view}
+                    isSkeleton={isSkeleton}
+                    on={{
+                        retry: props.on.retryUsage,
+                        openCredits: props.on.openCredits,
+                        formatDay: props.on.formatUsageDay,
+                        formatCredits: props.on.formatUsageCredits,
+                        minimumBarSize: props.on.minimumUsageBarSize,
+                    }}
+                />
+            )}
+        </SlotView>
         <SlotView
             slot={props.props.orders}
             placeholder={ROWS_PLACEHOLDER}
