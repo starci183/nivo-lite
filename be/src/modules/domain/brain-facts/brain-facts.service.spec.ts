@@ -6,9 +6,10 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { IsNull } from "typeorm"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { namedCalls, stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedCalls, evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { BrainFactsMaintenanceService } from "./brain-facts-maintenance.service"
 import { BrainFactsReadService } from "./brain-facts-read.service"
 import { BrainFactsService } from "./brain-facts.service"
@@ -40,7 +41,7 @@ const keyed = (status: string, installationId: string | null = null) => ({
 /** A write that answered these facts. */
 const answered = (...rows: ReadonlyArray<object>) => ({ execute: { raw: rows } })
 
-const setOf = (fake: FakeQueryBuilder | undefined) => stampedValues(fake?.callsOf("set")[0]?.[0])
+const setOf = (fake: FakeQueryBuilder | undefined) => evaluatedValues(fake?.callsOf("set")[0]?.[0])
 
 const registerIncomplete = () => {
     it("rejects incomplete facts before reaching persistence", async () => {
@@ -71,15 +72,15 @@ const registerReinforce = () => {
             expect(grow?.callsOf("setParameters")).toEqual([[{ evidence: JSON.stringify(evidence) }]])
             expect(setOf(grow)).toMatchObject({ trust: 95 })
             if (evidence.length > 0)
-                expect(namedCalls(em.update.mock.calls, 2)).toEqual([
+                expect(evaluatedCalls(em.update.mock.calls, 2)).toEqual([
                     [
                         "BrainFactEntity",
                         { ...keyed("proposed"), status: "proposed", proposalKind: "retire" },
                         {
                             status: "rejected",
-                            decidedAt: "function",
+                            decidedAt: "now()",
                             decisionNote: "A source confirmed this value again",
-                            updatedAt: "function",
+                            updatedAt: "now()",
                         },
                     ],
                 ])
@@ -147,6 +148,18 @@ const registerInsert = () => {
             outcome: "proposed",
         })
         expect(insertedBy(insert)).toEqual({ values: facts.insertedOf(), parameters: facts.insertParametersOf() })
+    })
+    it("writes the instants and the evidence of a proposal as parameterised SQL", async () => {
+        const em = mockEntityManager({ find: [BrainFactEntity, []] })
+        const [insert] = queueQueryBuilders(em, [answered(facts.rowOf())])
+        const service = await build(em)
+        await service.propose(facts.WS, facts.inputOf())
+        const values = evaluatedValues(insert?.callsOf("values")[0]?.[0])
+        expect({ validFrom: values.validFrom, validTo: values.validTo, evidence: values.evidence }).toEqual({
+            validFrom: ":validFrom::timestamptz",
+            validTo: ":validTo::timestamptz",
+            evidence: ":evidence::jsonb",
+        })
     })
 
     it("inherits the active value's type, restricted modules and unit for a conflict", async () => {
@@ -237,18 +250,18 @@ const registerApply = () => {
             supersedesId: current ? "old" : null,
             conflictWith: null,
             decidedBy: "u2",
-            decidedAt: "function",
+            decidedAt: "now()",
             decisionNote: current ? "approved" : null,
-            validFrom: "function",
-            updatedAt: "function",
+            validFrom: "coalesce(valid_from, now())",
+            updatedAt: "now()",
         })
-        expect(namedCalls(tx.em.update.mock.calls, 2)).toEqual(
+        expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual(
             current
                 ? [
                       [
                           "BrainFactEntity",
                           { workspaceId: facts.WS, id: "old", status: "active" },
-                          { status: "superseded", validTo: "function", updatedAt: "function" },
+                          { status: "superseded", validTo: "coalesce(valid_to, now())", updatedAt: "now()" },
                       ],
                   ]
                 : [],
@@ -277,16 +290,17 @@ const registerApply = () => {
             supersedesId: current ? "old" : null,
             decidedBy: "u2",
         })
-        expect(namedCalls(tx.em.update.mock.calls, 2)).toEqual([
+        expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual([
             [
                 "BrainFactEntity",
                 keyed("scheduled"),
-                { status: "rejected", decisionNote: "Replaced by a newer schedule", updatedAt: "function" },
+                { status: "rejected", decisionNote: "Replaced by a newer schedule", updatedAt: "now()" },
             ],
         ])
         if (current) {
             expect(writes[0]?.callsOf("where")).toEqual([[{ workspaceId: facts.WS, id: "old", status: "active" }]])
             expect(writes[0]?.callsOf("setParameter")).toEqual([["validTo", facts.LATER]])
+            expect(setOf(writes[0])).toEqual({ validTo: ":validTo::timestamptz", updatedAt: "now()" })
         } else expect(writes).toHaveLength(1)
     })
 }
@@ -316,7 +330,7 @@ const registerDecisions = () => {
             status: "expired",
             decidedBy: "u2",
             decisionNote: note === undefined ? "No source supports this value any more" : "because",
-            validTo: "function",
+            validTo: "now()",
         })
         expect(close?.callsOf("where")).toEqual([[{ workspaceId: facts.WS, id: "f1", status: "proposed" }]])
         expect(setOf(close)).toMatchObject({

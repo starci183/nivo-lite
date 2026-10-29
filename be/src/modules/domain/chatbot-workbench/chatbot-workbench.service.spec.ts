@@ -311,6 +311,21 @@ describe("ChatbotWorkbenchService overview", () => {
         })
     })
 
+    it("reads no leads when no conversation of the inbox has one", async () => {
+        const { em } = tablesEm({
+            query: [
+                [LIST_CHATBOT_AGENTS, [{ id: "a-1" }]],
+                [LIST_CHATBOT_CONVERSATIONS, [conversationOf({ lead_id: null })]],
+            ],
+        })
+        const { service } = await build(em)
+
+        const view = await service.overview("u-1", { workspaceId: "ws-1", installationId: null })
+
+        expect(view.conversations.map((row) => row.id)).toEqual(["c-1"])
+        expect(SEEN.get(em)?.queriesOf(LIST_CHATBOT_LEAD_BRIEFS)).toEqual([])
+    })
+
     it("reads only the installation's own agent when the workspace has several", async () => {
         const { em } = tablesEm({
             query: [

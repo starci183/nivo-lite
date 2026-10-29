@@ -4,7 +4,7 @@ import { ROW, connectionsCase, siteUrlCases } from "@tests/fixtures/builders/con
 import type { Urls } from "@tests/fixtures/builders/connections.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { namedCalls, stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedCalls, evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
@@ -56,7 +56,7 @@ const withBuilders = (
 })
 const memberOf = (role: string) => ({ getRawOne: { role, displayName: "Lan" } })
 const whereOf = (fake: FakeQueryBuilder | undefined) => fake?.callsOf("where")
-const setOf = (fake: FakeQueryBuilder | undefined) => stampedValues(fake?.callsOf("set")[0]?.[0])
+const setOf = (fake: FakeQueryBuilder | undefined) => evaluatedValues(fake?.callsOf("set")[0]?.[0])
 
 describe("ConnectionsService > addresses", () => {
     it.each(siteUrlCases)("trims trailing slashes and keeps the site path: %s", async (siteUrl, expected) => {
@@ -198,14 +198,14 @@ describe("ConnectionsService > create", () => {
         const { service, secrets } = await buildWith(tx.em)
         await expect(service.create(input)).resolves.toBe("c1")
         expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(ConnectionEntity, "co")
-        expect(stampedValues(fakes[0]?.callsOf("values")[0]?.[0])).toEqual({
+        expect(evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])).toEqual({
             workspaceId: "ws-1",
             provider: "telegram",
             name: "Shop bot",
             status: "connected",
             environment: "live",
             createdBy: "user-1",
-            publicMeta: "function",
+            publicMeta: ":meta::jsonb",
         })
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["meta", '{"bot_id":"7"}']])
         expect(fakes[0]?.callsOf("returning")).toEqual([["id"]])
@@ -259,9 +259,9 @@ describe("ConnectionsService > patch", () => {
             name: "New",
             status: "error",
             environment: "test",
-            publicMeta: "function",
+            publicMeta: ":meta::jsonb",
             lastError: null,
-            updatedAt: "function",
+            updatedAt: "now()",
         })
         expect(whereOf(fakes[0])).toEqual([[{ workspaceId: "ws-1", id: "c1" }]])
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["meta", '{"a":"b"}']])
@@ -270,7 +270,7 @@ describe("ConnectionsService > patch", () => {
     it("leaves every absent field alone", async () => {
         const { em, fakes } = withBuilders([{ execute: { raw: [{ id: "c1" }] } }])
         await (await build(em)).patch("ws-1", "c1", {})
-        expect(setOf(fakes[0])).toEqual({ updatedAt: "function" })
+        expect(setOf(fakes[0])).toEqual({ updatedAt: "now()" })
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["meta", null]])
     })
 
@@ -355,7 +355,7 @@ describe("ConnectionsService > recordEvent", () => {
         const { em, fakes } = withBuilders([{ execute: { raw: [{ name: "Bank", environment }] } }])
         await expect((await build(em)).recordEvent("c1", event)).resolves.toEqual({ name: "Bank", environment })
         expect(fakes[0]?.callsOf("setParameters")).toEqual([[{ at: AT, first: serialized }]])
-        expect(setOf(fakes[0])).toMatchObject({ lastError: null, status: "function", firstEvent: "function" })
+        expect(setOf(fakes[0])).toMatchObject({ lastError: null, status: "CASE WHEN status IN ('pending', 'error') THEN 'connected' ELSE status END", firstEvent: "COALESCE(first_event, :first::jsonb)" })
         expect(fakes[0]?.callsOf("returning")).toEqual([["name, environment"]])
     })
 
@@ -425,7 +425,7 @@ describe("ConnectionsService > intake", () => {
             code: ConnectionsErrorCode.NotFound,
             params: undefined,
         })
-        expect(namedCalls(em.findOne.mock.calls.slice(0, 1))).toEqual([
+        expect(evaluatedCalls(em.findOne.mock.calls.slice(0, 1))).toEqual([
             [
                 "ConnectionEntity",
                 {
@@ -446,8 +446,8 @@ describe("ConnectionsService > intake", () => {
         await service.markReceived("c-1", first, inside)
         await service.applyZaloAuthorization("c-1", "oa-9")
         await service.applyZaloAuthorization("c-1")
-        expect(namedCalls(em.update.mock.calls, 2)).toEqual([
-            ["ConnectionEntity", { id: "c-1" }, { status: "error", lastError: "Reconnect", updatedAt: "function" }],
+        expect(evaluatedCalls(em.update.mock.calls, 2)).toEqual([
+            ["ConnectionEntity", { id: "c-1" }, { status: "error", lastError: "Reconnect", updatedAt: "now()" }],
         ])
         expect(received[0]?.callsOf("setParameter")).toEqual([["first", JSON.stringify(first)]])
         expect(zalo.map((fake) => fake.callsOf("setParameter")[0])).toEqual([

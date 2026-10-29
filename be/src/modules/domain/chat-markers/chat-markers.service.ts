@@ -244,7 +244,8 @@ export class ChatMarkersService {
             name: String(Reflect.get(Object(row), "name")),
             total: Number(Reflect.get(Object(row), "total")),
         }))
-        if (readers.length === 0) {
+        const [first] = readers
+        if (first === undefined) {
             const delivered = await this.delivered(manager, workspaceId, userId, target, own)
             return { id: own.id, status: delivered ? "delivered" : "sent", seenBy: [], seenByCount: 0 }
         }
@@ -258,7 +259,7 @@ export class ChatMarkersService {
             avatarSeed: reader.id,
             avatarUrl: avatars.find((avatar) => avatar.id === reader.id)?.avatar_url ?? null,
         }))
-        return { id: own.id, status: "seen", seenBy, seenByCount: readers[0]?.total ?? 0 }
+        return { id: own.id, status: "seen", seenBy, seenByCount: first.total }
     }
 
     /** Whether another active member's delivered cursor already reaches the message. */

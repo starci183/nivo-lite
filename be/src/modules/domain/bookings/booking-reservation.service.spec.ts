@@ -3,6 +3,7 @@ import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-
 import { builder, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { BookingResourceEntity } from "@modules/domain/booking-resources"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { BookingReservationService } from "./booking-reservation.service"
 import type { NewBooking, RelocateParams } from "./booking-reservation.service"
 import { BookingsErrorCode } from "./errors/bookings.error"
@@ -145,6 +146,15 @@ describe("BookingReservationService", () => {
             expect(manager.find).not.toHaveBeenCalled()
         })
 
+        it("writes a booking without a price as a null price", async () => {
+            const { manager, write } = managerOf(1, [], { execute: { raw: [{ id: "b4" }] } })
+            const reservation = await build()
+
+            await reservation.reserve({ manager, booking: bookingOf({ priceVnd: null }), force: false })
+
+            expect(write.callsOf("values")).toEqual([[expect.objectContaining({ priceVnd: null })]])
+        })
+
         it("answers resource_not_found when the resource is not in the workspace", async () => {
             const { manager, write } = managerOf(null, null)
             const reservation = await build()
@@ -153,6 +163,15 @@ describe("BookingReservationService", () => {
                 kind: "resource_not_found",
             })
             expect(write.calls).toEqual([])
+        })
+
+        it("fails when the insert answers no rows at all", async () => {
+            const { manager } = managerOf(1, [], { execute: {} })
+            const reservation = await build()
+
+            await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).rejects.toMatchObject({
+                code: BookingsErrorCode.NotCreated,
+            })
         })
 
         it("fails when the insert answers no row", async () => {
@@ -191,19 +210,19 @@ describe("BookingReservationService", () => {
             const [, options] = manager.find.mock.calls[0] ?? []
             expect(JSON.stringify(options)).toContain("r2")
             expect(manager.createQueryBuilder).toHaveBeenCalledWith(BookingEntity, "bo")
-            expect(write.callsOf("set")).toEqual([
-                [
-                    expect.objectContaining({
-                        resourceId: "r2",
-                        startAt: new Date(START),
-                        endAt: new Date(START + HOUR),
-                        blockEndAt: new Date(START + HOUR),
-                        holdsSlot: true,
-                        conflictNote: "",
-                        updatedAt: new Date(START - HOUR),
-                    }),
-                ],
-            ])
+            const moved = "CAST(:startAt AS timestamptz) <> start_at"
+            expect(evaluatedValues(write.callsOf("set")[0]?.[0])).toEqual({
+                resourceId: "r2",
+                startAt: new Date(START),
+                endAt: new Date(START + HOUR),
+                blockEndAt: new Date(START + HOUR),
+                holdsSlot: true,
+                rescheduledFrom: `CASE WHEN ${moved} THEN start_at ELSE rescheduled_from END`,
+                rescheduleCount: `reschedule_count + CASE WHEN ${moved} THEN 1 ELSE 0 END`,
+                status: `CASE WHEN ${moved} AND status IN ('confirmed', 'rescheduled') THEN 'rescheduled' ELSE status END`,
+                conflictNote: "",
+                updatedAt: new Date(START - HOUR),
+            })
             expect(write.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "b1" }]])
             expect(write.callsOf("setParameter")).toEqual([["startAt", new Date(START)]])
         })

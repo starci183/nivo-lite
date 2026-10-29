@@ -7,7 +7,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { BrainFactsMaintenanceService } from "./brain-facts-maintenance.service"
 import { BrainFactsReadService } from "./brain-facts-read.service"
 import { BrainFactEntity } from "./persistence/entities"
@@ -27,7 +27,7 @@ const build = async (em: MockEntityManager) => {
 /** A write that answered these facts. */
 const answered = (...rows: ReadonlyArray<object>) => ({ execute: { raw: rows } })
 
-const setOf = (fake: FakeQueryBuilder | undefined) => stampedValues(fake?.callsOf("set")[0]?.[0])
+const setOf = (fake: FakeQueryBuilder | undefined) => evaluatedValues(fake?.callsOf("set")[0]?.[0])
 
 const registerWithdraw = () => {
     it("withdraws document evidence, rejects unsupported proposals and returns document orphans", async () => {
@@ -51,7 +51,18 @@ const registerWithdraw = () => {
         expect(supported?.callsOf("setParameter")).toEqual([
             ["evidence", JSON.stringify([facts.OTHER, { ...facts.PROOF, ref: "doc-2" }])],
         ])
+        expect(setOf(supported)).toEqual({ evidence: ":evidence::jsonb", updatedAt: "now()" })
         expect(em.createQueryBuilder).toHaveBeenCalledTimes(6)
+    })
+
+    it("rejects an unsupported proposal with no decision note when the note is blank", async () => {
+        const em = mockEntityManager()
+        const [, reject] = queueQueryBuilders(em, [
+            { getMany: [facts.rowOf({ evidence: [facts.PROOF] })] },
+            answered(facts.rowOf({ status: "rejected" })),
+        ])
+        await expect((await build(em)).withdrawSource(facts.WS, "doc-1", "  ")).resolves.toEqual([])
+        expect(setOf(reject)).toMatchObject({ decidedBy: "NIVO", decisionNote: null })
     })
 
     it("refuses when a proposal it meant to reject was decided meanwhile", async () => {
@@ -88,6 +99,14 @@ const registerMaintenance = () => {
         ])
         expect(promoted?.callsOf("where")).toEqual([[{ workspaceId: facts.WS, id: "f1", status: "scheduled" }]])
         expect(expire?.callsOf("returning")).toEqual([["id"]])
+        expect(setOf(promoted)).toEqual({ status: "active", updatedAt: "now()" })
+        expect(setOf(expire)).toEqual({ status: "expired", updatedAt: "now()" })
+    })
+
+    it("counts no expirations when the statement answers no rows", async () => {
+        const em = mockEntityManager({ find: [BrainFactEntity, []] })
+        queueQueryBuilders(em, [{ execute: {} }])
+        await expect((await build(em)).maintain(facts.WS)).resolves.toEqual({ activated: [], expired: 0 })
     })
 }
 

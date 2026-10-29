@@ -66,6 +66,13 @@ describe("BookingResourcesService", () => {
 
             await expect(resources.save(writeOf({ id: "r-9" }), em)).resolves.toEqual([])
         })
+
+        it("answers nothing when the statement hands back no rows at all", async () => {
+            const { em } = withBuilders({ execute: {} })
+            const resources = await build()
+
+            await expect(resources.save(writeOf({ id: "r-9" }), em)).resolves.toEqual([])
+        })
     })
 })
 
@@ -84,6 +91,13 @@ describe("BookingResourcesService", () => {
                 lock: { mode: "pessimistic_write" },
             })
             expect(fakes[0]?.callsOf("setLock")).toEqual([["pessimistic_read"]])
+        })
+
+        it("answers nothing for a resource that does not exist", async () => {
+            const em = mockEntityManager({ findOne: [BookingResourceEntity, null] })
+            const resources = await build()
+
+            await expect(resources.lock("ws-1", "r-9", em)).resolves.toEqual([])
         })
 
         it("answers the held staff link", async () => {

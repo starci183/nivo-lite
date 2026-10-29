@@ -6,7 +6,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
-import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { SepayConnectionService } from "./sepay-connection.service"
 
 const actor = { principalId: "owner-1", workspaceId: "ws-1" }
@@ -44,7 +44,7 @@ const build = async (connection: ConnectionRecord = feed()) => {
     connections.patch.mockResolvedValue(undefined)
     const manager = mockEntityManager()
     let answer: ReadonlyArray<unknown> = []
-    let failure: Error | null = null
+    let failure: unknown = null
     const seen = answerByTable(manager, {
         "": () => (failure === null ? answer : Promise.reject(failure)),
     })
@@ -52,7 +52,7 @@ const build = async (connection: ConnectionRecord = feed()) => {
         set: (next: ReadonlyArray<unknown>) => {
             answer = next
         },
-        fail: (error: Error) => {
+        fail: (error: unknown) => {
             failure = error
         },
     }
@@ -144,6 +144,56 @@ describe("SepayConnectionService events", () => {
     })
 })
 
+const eventRow = (changes: Record<string, string | null>) => ({
+    id: "e2",
+    at: "2026-10-28T07:00:00.000Z",
+    outcome: "accepted",
+    kind: "ping",
+    amountVnd: null,
+    providerEventId: null,
+    environment: "live",
+    ...changes,
+})
+
+describe("SepayConnectionService event kinds", () => {
+    it.each([
+        ["unauthorized", "debit", "live"],
+        ["accepted", "credit", "test"],
+        ["mystery", "mystery", "mystery"],
+    ])("types an event of outcome %s, kind %s and environment %s", async (outcome, kind, environment) => {
+        const { service, rows } = await build()
+        rows.set([eventRow({ outcome, kind, environment, amountVnd: kind === "debit" ? "150000" : null })])
+
+        const [event] = await service.events(actor, "c1")
+
+        expect(event).toEqual({
+            id: "e2",
+            at: "2026-10-28T07:00:00.000Z",
+            outcome: outcome === "unauthorized" ? "unauthorized" : "accepted",
+            kind: kind === "mystery" ? "ping" : kind,
+            amountVnd: kind === "debit" ? 150000 : null,
+            providerEventId: null,
+            environment: environment === "test" ? "test" : "live",
+        })
+    })
+})
+
+describe("SepayConnectionService read of a bare connection", () => {
+    it("shows empty account facts and a bullets-only key when the connection has none", async () => {
+        const { service, connections } = await build(feed({ meta: {} }))
+        connections.readSecret.mockResolvedValue(null)
+
+        await expect(service.read(actor, "c1")).resolves.toMatchObject({
+            bankCode: "",
+            bank: "",
+            accountMasked: "",
+            hasFullAccount: false,
+            holder: "",
+            apiKeyMasked: BULLETS,
+        })
+    })
+})
+
 describe("SepayConnectionService setEnvironment", () => {
     it("lets only the owner switch and patches the environment", async () => {
         const { service, connections } = await build()
@@ -176,15 +226,17 @@ describe("SepayConnectionService deliveries", () => {
         expect(seen.queries[1]?.callsOf("setParameters")).toEqual([
             [{ connectionId: "c1", outcome: "accepted", kind: "credit", amount: 2000, eventId: "2" }],
         ])
-        expect(Object.keys(stampedValues(seen.queries[1]?.callsOf("values")[0]?.[0]))).toEqual([
-            "workspaceId",
-            "connectionId",
-            "environment",
-            "outcome",
-            "kind",
-            "amountVnd",
-            "providerEventId",
-        ])
+        const feedOf = (column: string) =>
+            `(SELECT c.${column} FROM public.connections c WHERE c.id = :connectionId AND c.provider = 'sepay')`
+        expect(evaluatedValues(seen.queries[1]?.callsOf("values")[0]?.[0])).toEqual({
+            workspaceId: feedOf("workspace_id"),
+            connectionId: feedOf("id"),
+            environment: feedOf("environment"),
+            outcome: `CASE WHEN CAST(:outcome AS text) = 'accepted' AND CAST(:eventId AS text) IS NOT NULL AND EXISTS (SELECT 1 FROM public.channel_connections_sepay_events e WHERE e.connection_id = :connectionId AND e.outcome = 'accepted' AND e.provider_event_id = CAST(:eventId AS text)) THEN 'duplicate' ELSE CAST(:outcome AS text) END`,
+            kind: "CAST(:kind AS text)",
+            amountVnd: "CAST(:amount AS bigint)",
+            providerEventId: "CAST(:eventId AS text)",
+        })
     })
 
     it("does not remember a credit whose intake failed", async () => {
@@ -209,5 +261,17 @@ describe("SepayConnectionService deliveries", () => {
             [{ connectionId: "c1", outcome: "unauthorized", kind: "ping", amount: null, eventId: null }],
         ])
         expect(logger.warn).toHaveBeenCalledTimes(1)
+    })
+
+    it("logs an unknown reason when the write fails with something that is not an error", async () => {
+        const { service, rows, logger } = await build()
+        rows.fail("down")
+
+        await expect(service.traceRefusal("c1")).resolves.toBeUndefined()
+
+        expect(logger.warn).toHaveBeenCalledWith("channel-connections.sepay.event_not_recorded", {
+            connectionId: "c1",
+            reason: "unknown",
+        })
     })
 })

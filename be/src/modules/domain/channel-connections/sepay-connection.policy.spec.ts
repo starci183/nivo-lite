@@ -51,9 +51,20 @@ describe("readSepayDelivery", () => {
         ["a zero amount", { id: 1, transferType: "in", transferAmount: 0 }],
         ["no amount", { id: 1, transferType: "in" }],
         ["an empty object", {}],
+        ["an amount sent as blank text", { id: 1, transferType: "in", transferAmount: "  " }],
+        ["an amount sent as words", { id: 1, transferType: "in", transferAmount: "lots" }],
     ])("reads %s as a ping that carries nothing", async (_label, value) => {
         const { readSepayDelivery } = await buildSubject()
         expect(readSepayDelivery(body(value))).toEqual({ kind: "ping", amountVnd: null, providerEventId: null })
+    })
+
+    it.each([
+        ["a blank text id", { id: "  ", transferType: "in", transferAmount: 10 }],
+        ["a missing id", { transferType: "in", transferAmount: 10 }],
+        ["an unsafe integer id", { id: 2 ** 60, transferType: "in", transferAmount: 10 }],
+    ])("reads money in with %s as a credit with no transaction id", async (_label, value) => {
+        const { readSepayDelivery } = await buildSubject()
+        expect(readSepayDelivery(body(value))).toEqual({ kind: "credit", amountVnd: 10, providerEventId: null })
     })
 
     it.each([undefined, Buffer.from("not json"), Buffer.from("[1,2]")])("reads %p as a ping", async (raw) => {

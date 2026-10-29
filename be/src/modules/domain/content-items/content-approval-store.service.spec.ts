@@ -3,7 +3,7 @@ import { mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import type { ContentSubmissionSnapshot } from "./content-approval-store.contracts"
 import { ContentApprovalStoreService } from "./content-approval-store.service"
 import type { ContentEvidence, PublishMark } from "./content-editor.contracts"
@@ -52,10 +52,10 @@ describe("ContentApprovalStoreService", () => {
 
             expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(1)
             expect(entityManager.createQueryBuilder).toHaveBeenCalledWith(ContentItemEntity, "ci")
-            expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
+            expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
                 status: "waiting_approval",
                 workItemId: "work",
-                evidence: "function",
+                evidence: "(SELECT jsonb_agg(line ORDER BY ord) FROM jsonb_array_elements(evidence || jsonb_build_array(:evidence::jsonb)) WITH ORDINALITY AS history(line, ord) WHERE ord > jsonb_array_length(evidence || jsonb_build_array(:evidence::jsonb)) - 60)",
             })
             expect(fakes[0]?.callsOf("where")).toEqual([[{ workspaceId: "workspace", id: "post", status: "draft" }]])
             expect(fakes[0]?.callsOf("setParameters")).toEqual([
@@ -87,7 +87,7 @@ describe("ContentApprovalStoreService", () => {
             ).resolves.toBeUndefined()
 
             expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(1)
-            expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({
+            expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({
                 status: "approved",
                 approvedBy: "Approver",
             })
@@ -126,7 +126,7 @@ describe("ContentApprovalStoreService", () => {
 
             await expect(service.reject("workspace", "post", "work", evidence)).resolves.toBeUndefined()
 
-            expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({ status: "draft", evidence: "function" })
+            expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({ status: "draft", evidence: "(SELECT jsonb_agg(line ORDER BY ord) FROM jsonb_array_elements(evidence || jsonb_build_array(:evidence::jsonb)) WITH ORDINALITY AS history(line, ord) WHERE ord > jsonb_array_length(evidence || jsonb_build_array(:evidence::jsonb)) - 60)" })
             expect(fakes[0]?.callsOf("where")).toEqual([
                 [{ workspaceId: "workspace", id: "post", status: "waiting_approval", workItemId: "work" }],
             ])

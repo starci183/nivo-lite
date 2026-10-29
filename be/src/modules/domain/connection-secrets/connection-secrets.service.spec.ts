@@ -4,7 +4,8 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
 import { CONNECTION_SECRETS_OPTIONS } from "./connection-secrets.decorators"
 import { ConnectionSecretsService } from "./connection-secrets.service"
@@ -157,6 +158,15 @@ const registerSecretOf = () => {
         expect(seen.queries[0]?.callsOf("where")).toEqual([["s.connectionId = :connectionId", { connectionId: "c-1" }]])
     })
 
+    it("answers the expiry of a credential as an ISO instant", async () => {
+        const { service } = await readerOf([readOf({ tokenExpiresAt: new Date("2026-10-30T01:00:00.000Z") })])
+
+        await expect(service.secretOf("c-1", "telegram")).resolves.toMatchObject({
+            kind: "ok",
+            value: { tokenExpiresAt: "2026-10-30T01:00:00.000Z" },
+        })
+    })
+
     it("reads through the transaction manager it is given", async () => {
         const { service, em } = await readerOf([])
         const inside = mockEntityManager()
@@ -214,7 +224,7 @@ const registerLease = () => {
         await service.save("c-1", "sealed")
         await service.save("c-1", "sealed", expiry)
 
-        expect(namedCalls(em.update.mock.calls)).toEqual([
+        expect(evaluatedCalls(em.update.mock.calls)).toEqual([
             ["ConnectionSecretEntity", { connectionId: "c-1" }, { ciphertext: "sealed" }],
             [
                 "ConnectionSecretEntity",
@@ -244,7 +254,7 @@ const registerLease = () => {
 
         await (await build(em)).releaseLease("c-1")
 
-        expect(namedCalls(em.update.mock.calls)).toEqual([
+        expect(evaluatedCalls(em.update.mock.calls)).toEqual([
             ["ConnectionSecretEntity", { connectionId: "c-1" }, { refreshLockUntil: null }],
         ])
     })
@@ -275,7 +285,7 @@ const registerCreate = () => {
 
         const sealed = sealedOf(em.insert.mock.calls[0]?.[1])
         expect(openSecret(KEY, sealed)).toBe("new-token")
-        expect(namedCalls(em.insert.mock.calls)).toEqual([
+        expect(evaluatedCalls(em.insert.mock.calls)).toEqual([
             ["ConnectionSecretEntity", { connectionId: "c-1", ciphertext: sealed, webhookSecret: "new-hook" }],
         ])
     })
@@ -289,7 +299,7 @@ const registerCreate = () => {
 
         const sealed = sealedOf(inside.insert.mock.calls[0]?.[1])
         expect(openSecret(KEY, sealed)).toBe("inside-token")
-        expect(namedCalls(inside.insert.mock.calls)).toEqual([
+        expect(evaluatedCalls(inside.insert.mock.calls)).toEqual([
             ["ConnectionSecretEntity", { connectionId: "c-2", ciphertext: sealed, webhookSecret: "inside-hook" }],
         ])
         expect(em.insert).not.toHaveBeenCalled()
@@ -304,13 +314,13 @@ const registerCreate = () => {
             webhookSecret: "hook",
         })
         await expect((await build(missing)).read("c-9")).resolves.toBeNull()
-        expect(namedCalls(found.findOne.mock.calls)).toEqual([
+        expect(evaluatedCalls(found.findOne.mock.calls)).toEqual([
             [
                 "ConnectionSecretEntity",
                 { select: { ciphertext: true, webhookSecret: true }, where: { connectionId: "c-1" } },
             ],
         ])
-        expect(namedCalls(missing.findOne.mock.calls)).toEqual([
+        expect(evaluatedCalls(missing.findOne.mock.calls)).toEqual([
             [
                 "ConnectionSecretEntity",
                 { select: { ciphertext: true, webhookSecret: true }, where: { connectionId: "c-9" } },
@@ -351,7 +361,7 @@ const registerWrite = () => {
 
         await expect((await build(em)).wipe("c-1")).resolves.toBeUndefined()
 
-        expect(namedCalls(em.delete.mock.calls)).toEqual([["ConnectionSecretEntity", { connectionId: "c-1" }]])
+        expect(evaluatedCalls(em.delete.mock.calls)).toEqual([["ConnectionSecretEntity", { connectionId: "c-1" }]])
     })
 }
 

@@ -6,7 +6,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { connectionsCase } from "@tests/fixtures/builders/connections.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { namedCalls, stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedCalls, evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { ConnectionEntity } from "./persistence/entities"
 
@@ -26,7 +26,7 @@ const withBuilders = (
     em,
     fakes: queueQueryBuilders(em, answers),
 })
-const setOf = (fake: FakeQueryBuilder | undefined) => stampedValues(fake?.callsOf("set")[0]?.[0])
+const setOf = (fake: FakeQueryBuilder | undefined) => evaluatedValues(fake?.callsOf("set")[0]?.[0])
 
 describe("ConnectionsUpkeepService > health", () => {
     it("reads a page after an id, from the start when none is given", async () => {
@@ -83,7 +83,7 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
         await expect((await build(em)).setSchedule("ws-1", "c1", everyMinutes)).resolves.toBeUndefined()
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["minutes", everyMinutes]])
         expect(fakes[0]?.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "c1" }]])
-        expect(setOf(fakes[0])).toEqual({ syncEveryMinutes: "function", nextSyncAt: "function", updatedAt: "function" })
+        expect(setOf(fakes[0])).toEqual({ syncEveryMinutes: ":minutes::int", nextSyncAt: "CASE WHEN :minutes::int IS NULL THEN NULL ELSE now() END", updatedAt: "now()" })
     })
 
     it("rejects a missing connection when setting its schedule", async () => {
@@ -102,15 +102,15 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
         await expect(service.markSyncFailed("c2", "Expired token")).resolves.toBeUndefined()
         await expect(service.setDefaultSmtp("ws-1", "c3")).resolves.toBeUndefined()
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["facts", '{"items":"3","cursor":"next"}']])
-        expect(setOf(fakes[0])).toMatchObject({ status: "connected", lastError: null, lastSyncAt: "function" })
-        expect(namedCalls(em.update.mock.calls, 2)).toEqual([
+        expect(setOf(fakes[0])).toMatchObject({ status: "connected", lastError: null, lastSyncAt: "now()" })
+        expect(evaluatedCalls(em.update.mock.calls, 2)).toEqual([
             [
                 "ConnectionEntity",
                 { id: "c2" },
-                { status: "error", lastError: "Expired token", nextSyncAt: "function", updatedAt: "function" },
+                { status: "error", lastError: "Expired token", nextSyncAt: "CASE WHEN sync_every_minutes IS NULL THEN NULL ELSE now() + make_interval(mins => GREATEST(sync_every_minutes, 15)) END", updatedAt: "now()" },
             ],
         ])
-        expect(setOf(fakes[1])).toEqual({ isDefault: "function", updatedAt: "function" })
+        expect(setOf(fakes[1])).toEqual({ isDefault: "(id = :id)", updatedAt: "now()" })
         expect(fakes[1]?.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND provider = 'smtp' AND (is_default OR id = :id)",
