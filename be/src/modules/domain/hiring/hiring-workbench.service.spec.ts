@@ -257,13 +257,16 @@ describe("HiringWorkbenchService", () => {
                 ["HiringOnboardingEntity", { where: { workspaceId: "ws-1" }, order: { sort: "ASC" }, take: 2000 }],
                 ["HiringAvailabilityEntity", { where: { workspaceId: "ws-1" }, take: 2000 }],
             ])
-            expect(em.count.mock.calls.map(([entity, options]) => [entity.name, options?.where])).toEqual([
-                ["HiringJobEntity", { workspaceId: "ws-1", status: "open" }],
-                ["HiringJobEntity", { workspaceId: "ws-1" }],
-                ["HiringCandidateEntity", expect.objectContaining({ workspaceId: "ws-1" })],
-                ["HiringInterviewEntity", expect.objectContaining({ workspaceId: "ws-1", status: "confirmed" })],
-                ["HiringOfferEntity", { workspaceId: "ws-1", status: "waiting" }],
-                ["HiringOfferEntity", { workspaceId: "ws-1", status: "sent" }],
+            expect(namedCalls(em.count.mock.calls)).toEqual([
+                ["HiringJobEntity", { where: { workspaceId: "ws-1", status: "open" } }],
+                ["HiringJobEntity", { where: { workspaceId: "ws-1" } }],
+                ["HiringCandidateEntity", { where: expect.objectContaining({ workspaceId: "ws-1" }) }],
+                [
+                    "HiringInterviewEntity",
+                    { where: expect.objectContaining({ workspaceId: "ws-1", status: "confirmed" }) },
+                ],
+                ["HiringOfferEntity", { where: { workspaceId: "ws-1", status: "waiting" } }],
+                ["HiringOfferEntity", { where: { workspaceId: "ws-1", status: "sent" } }],
             ])
         })
     })

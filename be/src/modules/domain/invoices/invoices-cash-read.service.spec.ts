@@ -3,24 +3,17 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { LessThan } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import {
+    cashInvoiceOf as invoiceOf,
+    uncontractedInvoiceOf,
+    undatedInvoiceOf,
+} from "@tests/fixtures/builders/invoices-cash.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { InvoicesCashReadService } from "./invoices-cash-read.service"
 import { InvoiceEntity } from "./persistence/entities"
 
 const FROM = new Date("2026-10-01T00:00:00Z")
 const TO = new Date("2026-11-01T00:00:00Z")
-
-const invoiceOf = entityOf(InvoiceEntity, {
-    invoiceNo: "HD1",
-    amountVnd: 1000,
-    contractId: "c-1",
-    leadId: "l-1",
-    periodEndsOn: "2026-12-31",
-    issuedAt: FROM,
-    dueAt: TO,
-    paidAt: null,
-})
 
 const cashOf = {
     invoiceNo: "HD1",
@@ -74,7 +67,7 @@ describe("InvoicesCashReadService", () => {
     it("reads the invoiced periods of contracts, skipping rows without a period, and nothing for no contracts", async () => {
         const em = mockEntityManager()
         queueQueryBuilders(em, [
-            { getMany: [invoiceOf(), invoiceOf({ periodEndsOn: null }), invoiceOf({ contractId: null })] },
+            { getMany: [invoiceOf(), undatedInvoiceOf(), uncontractedInvoiceOf()] },
         ])
         const service = await build(em)
 

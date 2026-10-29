@@ -1,13 +1,13 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import { numberedOrderOf, summarisedOrderOf, unpricedOrderOf } from "@tests/fixtures/builders/orders-label.builder"
 import { OrdersLabelReadService } from "./orders-label-read.service"
 import { OrderEntity } from "./persistence/entities"
 
 describe("OrdersLabelReadService", () => {
     it("names the number of each order, nothing for no orders", async () => {
-        const em = mockEntityManager({ find: [OrderEntity, [entityOf(OrderEntity, { id: "o-1", orderNo: "DH-1" })()]] })
+        const em = mockEntityManager({ find: [OrderEntity, [numberedOrderOf()]] })
         const moduleRef = await Test.createTestingModule({
             providers: [OrdersLabelReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
         }).compile()
@@ -19,14 +19,7 @@ describe("OrdersLabelReadService", () => {
     })
 
     it("summarises each order, with a null amount staying null, nothing for no orders", async () => {
-        const order = entityOf(OrderEntity, {
-            id: "o-1",
-            orderNo: "DH-1",
-            items: "tea",
-            amountVnd: 5000,
-            status: "confirmed",
-        })
-        const em = mockEntityManager({ find: [OrderEntity, [order(), order({ id: "o-2", amountVnd: null })]] })
+        const em = mockEntityManager({ find: [OrderEntity, [summarisedOrderOf(), unpricedOrderOf()]] })
         const moduleRef = await Test.createTestingModule({
             providers: [OrdersLabelReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
         }).compile()

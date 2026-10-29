@@ -24,54 +24,19 @@ import {
     isWaitingRow,
 } from "@tests/fixtures/builders/chatbot-workbench.builder"
 import { LEAD_READ, LEAD_VIEW } from "@tests/fixtures/builders/chatbot-workbench-leads.builder"
-import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
-import type { TableAnswers } from "@tests/fixtures/builders/table-query-builder.builder"
-
-/** The table each read of the capability asks, so a spec names the read it answers. */
-const FIND_CHATBOT_CONVERSATION = "public.agent_conversations"
-const LIST_CHATBOT_CONVERSATIONS = "public.agent_conversations"
-const LIST_CHATBOT_MESSAGE_BRIEFS = "public.agent_messages"
-const LIST_CHATBOT_MESSAGES = "public.agent_messages"
-const LIST_CHATBOT_WAITING = "public.work_items"
-const LIST_CHATBOT_INSTALLATIONS = "public.module_installations"
-const LIST_CHATBOT_AGENTS = "public.agents"
-
-type TableStub = readonly [string, ReadonlyArray<unknown>]
-
-const SEEN = new WeakMap<object, TableAnswers>()
-
-const isPair = (value: TableStub | ReadonlyArray<TableStub>): value is TableStub => typeof value[0] === "string"
-
-/** A manager whose tables answer the given rows; `query` names them as a pair or a list of pairs. */
-const tablesEm = (stubs: { readonly query?: TableStub | ReadonlyArray<TableStub> } = {}) => {
-    const em = mockEntityManager()
-    const given = stubs.query ?? []
-    const pairs: ReadonlyArray<TableStub> = isPair(given) ? [given] : given
-    const rowsOf = (table: string): ReadonlyArray<unknown> => pairs.find(([name]) => name === table)?.[1] ?? []
-    OWNED.set(em, { waiting: rowsOf(LIST_CHATBOT_WAITING), installations: rowsOf(LIST_CHATBOT_INSTALLATIONS) })
-    SEEN.set(
-        em,
-        answerByTable(
-            em,
-            Object.fromEntries(
-                pairs.filter(([name]) => name !== LIST_CHATBOT_WAITING && name !== LIST_CHATBOT_INSTALLATIONS),
-            ),
-        ),
-    )
-    return { em }
-}
-
-/** The rows the owners of the work items and the installations answer for one manager. */
-const OWNED = new WeakMap<object, { waiting: ReadonlyArray<unknown>; installations: ReadonlyArray<unknown> }>()
-
-/** The named parameters of every condition the subject put on its n-th read of a table. */
-const parametersOf = (em: object, table: string, nth = 0): unknown =>
-    Object.assign(
-        {},
-        ...(SEEN.get(em)?.queriesOf(table)[nth]?.calls ?? [])
-            .filter((call) => call.method === "where" || call.method === "andWhere")
-            .map((call) => call.args[1]),
-    )
+import {
+    FIND_CHATBOT_CONVERSATION,
+    LIST_CHATBOT_AGENTS,
+    LIST_CHATBOT_CONVERSATIONS,
+    LIST_CHATBOT_INSTALLATIONS,
+    LIST_CHATBOT_MESSAGE_BRIEFS,
+    LIST_CHATBOT_MESSAGES,
+    LIST_CHATBOT_WAITING,
+    ownedOf,
+    parametersOf,
+    seenOf,
+    tablesEm,
+} from "@tests/fixtures/builders/chatbot-workbench-tables.builder"
 
 const NOW = "2026-10-13T03:00:00.000Z"
 
@@ -85,7 +50,7 @@ const build = async (em: MockEntityManager, leadViews: ReadonlyArray<typeof LEAD
     const staff = mock<StaffDirectoryService>({
         namesOf: jest.fn(() => Promise.resolve([{ id: "st-1", name: "Minh" }])),
     })
-    const owned = OWNED.get(em)
+    const owned = ownedOf(em)
     const work = mock<WorkItemsActivityService>()
     work.waitingReplies.mockResolvedValue((owned?.waiting ?? []).filter(isWaitingRow))
     const installs = mock<InstallationOperationsService>()
@@ -434,7 +399,7 @@ describe("ChatbotWorkbenchService thread", () => {
         await expect(service.thread("u-1", "ws-1", "c-9")).rejects.toMatchObject({
             code: AgentConversationsErrorCode.NotFound,
         })
-        expect(SEEN.get(em)?.queries).toHaveLength(1)
+        expect(seenOf(em)?.queries).toHaveLength(1)
     })
 })
 
@@ -508,7 +473,7 @@ describe("ChatbotWorkbenchService gaps", () => {
 
         expect(members.require.mock.calls).toEqual([["u-1", "ws-1", ["owner", "manager"]]])
         expect(knowledgeGaps.list.mock.calls).toEqual([["ws-1", ["open"], 50]])
-        expect(SEEN.get(em)?.queries.map((query) => query.table)).toEqual([LIST_CHATBOT_AGENTS])
+        expect(seenOf(em)?.queries.map((query) => query.table)).toEqual([LIST_CHATBOT_AGENTS])
         expect(parametersOf(em, LIST_CHATBOT_AGENTS)).toEqual({ workspaceId: "ws-1" })
     })
 })
