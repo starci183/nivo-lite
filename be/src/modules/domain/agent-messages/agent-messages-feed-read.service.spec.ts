@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import { failedZaloReply, untriedZaloReply } from "@tests/fixtures/builders/agent-messages.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { mockEntityManager } from "@starci/jest-preset"
@@ -23,8 +23,6 @@ const answering = (answers: QueryBuilderAnswers) => {
     em.createQueryBuilder.mockReturnValue(fake.builder)
     return { em, fake }
 }
-
-const replyOf = entityOf(AgentMessageEntity, { id: "m1", deliveryStatus: "failed", deliveryError: "zalo_error" })
 
 describe("AgentMessagesFeedReadService > recentIn", () => {
     it("lists the newest customer and agent messages across the conversations, bounded", async () => {
@@ -57,7 +55,7 @@ describe("AgentMessagesFeedReadService > recentIn", () => {
 
 describe("AgentMessagesFeedReadService > lastDeliveredReplyIn", () => {
     it("answers the verdict of the newest agent reply whose delivery was tried", async () => {
-        const em = mockEntityManager({ findOne: [AgentMessageEntity, replyOf()] })
+        const em = mockEntityManager({ findOne: [AgentMessageEntity, failedZaloReply()] })
 
         await expect((await build(em)).lastDeliveredReplyIn(["c1"])).resolves.toEqual({
             deliveryStatus: "failed",
@@ -72,7 +70,7 @@ describe("AgentMessagesFeedReadService > lastDeliveredReplyIn", () => {
 
     it("answers null when there is none, the status is blank or there are no conversations", async () => {
         const none = mockEntityManager({ findOne: [AgentMessageEntity, null] })
-        const blank = mockEntityManager({ findOne: [AgentMessageEntity, replyOf({ deliveryStatus: null })] })
+        const blank = mockEntityManager({ findOne: [AgentMessageEntity, untriedZaloReply()] })
 
         await expect((await build(none)).lastDeliveredReplyIn(["c1"])).resolves.toBeNull()
         await expect((await build(blank)).lastDeliveredReplyIn(["c1"])).resolves.toBeNull()

@@ -1,7 +1,7 @@
-import { mock } from "@starci/jest-preset"
-import { AgentBindingsService } from "@modules/domain/agent-connections"
-import { ConnectionBindingsReadService } from "@modules/domain/connections"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import type { MockOf } from "@starci/jest-preset"
+import type { AgentBindingsService } from "@modules/domain/agent-connections"
+import type { ConnectionBindingsReadService } from "@modules/domain/connections"
+import type { WorkspaceMembersService } from "@modules/domain/workspace-members"
 
 /** The name and the environment a connection runs in. */
 interface FeedState {
@@ -29,12 +29,14 @@ export const NO_AGENT: Partial<FeedWorld> = { agent: undefined }
 export const NO_OWNER: Partial<FeedWorld> = { owner: undefined }
 export const TEST_ENVIRONMENT: Partial<FeedWorld> = { state: TEST_STATE }
 
-/** The connection and binding owners answering the world of one scenario. */
-export const feedOwnersOf = (feedWorld: FeedWorld) => {
-    const connections = mock<ConnectionBindingsReadService>()
+/** Makes the connection and binding owners answer the world of one scenario. */
+export const arrangeFeedOwners = (
+    feedWorld: FeedWorld,
+    connections: MockOf<ConnectionBindingsReadService>,
+    bindings: MockOf<AgentBindingsService>,
+): void => {
     connections.workspaceOf.mockResolvedValue(feedWorld.owner?.workspace_id ?? null)
     connections.stateOf.mockResolvedValue(feedWorld.state ?? null)
-    const bindings = mock<AgentBindingsService>()
     bindings.agentsFor.mockResolvedValue(
         feedWorld.agent === undefined
             ? []
@@ -48,12 +50,10 @@ export const feedOwnersOf = (feedWorld: FeedWorld) => {
                   },
               ],
     )
-    return { connections, bindings }
 }
 
-/** The members owner answering that user-1 owns workspace ws-1. */
-export const owningMembers = () => {
-    const members = mock<WorkspaceMembersService>()
+/** Makes the members owner answer that user-1 owns workspace ws-1. */
+export const arrangeOwningMember = (members: MockOf<WorkspaceMembersService>): void => {
     members.require.mockResolvedValue({
         userId: "user-1",
         workspaceId: "ws-1",
@@ -62,5 +62,4 @@ export const owningMembers = () => {
         displayName: "Lan",
         status: "active",
     })
-    return members
 }

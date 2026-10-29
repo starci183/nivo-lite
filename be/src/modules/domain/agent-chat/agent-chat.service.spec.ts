@@ -12,7 +12,7 @@ import {
     TARGET,
     THREAD,
     TURN,
-    turnOwnersOf,
+    arrangeTurnOwners,
 } from "@tests/fixtures/builders/agent-chat-turn.builder"
 import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
 import { EventsReadService } from "@modules/domain/events"
@@ -44,7 +44,9 @@ const MEMBER: WorkspaceMember = {
 const AGENT: ChatAgentFacts = { id: "a1", module: "chatbot", status: "active", greeting: "Welcome" }
 
 const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | null = null) => {
-    const { deliveries, conversationReads } = turnOwnersOf(turn)
+    const deliveries = mock<AgentMessageDeliveriesService>()
+    const conversationReads = mock<AgentConversationsReadService>()
+    arrangeTurnOwners(deliveries, conversationReads, turn)
     const directory = mock<AgentDirectoryService>()
     directory.chatFactsOf.mockResolvedValue(agent)
     const tx = fakeTransaction(mockEntityManager())
@@ -87,6 +89,8 @@ const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | 
         turns,
         queueStatus,
         directory,
+        deliveries,
+        conversationReads,
     }
 }
 

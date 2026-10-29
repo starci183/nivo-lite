@@ -60,3 +60,11 @@ export const untriedTurnMessage = (): AgentMessageEntity =>
 
 /** The sent agent reply r1. */
 export const sentReplyR1 = (): AgentMessageEntity => sentReplyOf({ id: "r1" })
+
+/** The newest agent reply of a Zalo conversation, whose delivery failed. */
+export const failedZaloReply = (): AgentMessageEntity =>
+    messageOf({ id: "m1", deliveryStatus: "failed", deliveryError: "zalo_error" })
+
+/** An agent reply whose delivery was never tried. */
+export const untriedZaloReply = (): AgentMessageEntity =>
+    messageOf({ id: "m1", deliveryStatus: null, deliveryError: "zalo_error" })

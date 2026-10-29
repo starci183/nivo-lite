@@ -12,11 +12,12 @@ import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builde
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
-import { AgentDirectoryService } from "@modules/domain/agents"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentBindingsService } from "./agent-bindings.service"
+import { BINDING_AGENTS } from "./agent-connections.decorators"
+import type { BindingAgentsDirectory } from "./agent-connections.port"
 import { AgentConnectionsErrorCode } from "./errors/agent-connections.error"
 import { AgentConnectionEntity } from "./persistence/entities"
 
@@ -47,7 +48,7 @@ interface Owners {
 
 const build = async (entityManager: MockEntityManager, owners: Owners = {}) => {
     const members = mock<WorkspaceMembersService>()
-    const agents = mock<AgentDirectoryService>()
+    const agents = mock<BindingAgentsDirectory>()
     agents.activeCreatedAmong.mockResolvedValue([...(owners.agents ?? [])])
     agents.holds.mockResolvedValue(owners.holdsAgent ?? true)
     const connections = mock<ConnectionBindingsReadService>()
@@ -58,7 +59,7 @@ const build = async (entityManager: MockEntityManager, owners: Owners = {}) => {
             AgentBindingsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: WorkspaceMembersService, useValue: members },
-            { provide: AgentDirectoryService, useValue: agents },
+            { provide: BINDING_AGENTS, useValue: agents },
             { provide: ConnectionBindingsReadService, useValue: connections },
         ],
     }).compile()
@@ -349,21 +350,26 @@ describe("AgentBindingsService > stored grants", () => {
     const READ = { select: { agentId: true, connectionId: true, access: true }, order: { createdAt: "ASC" }, take: 500 }
 
     it.each([
-        { name: "the workspace", ask: "grantsOfWorkspace", args: [] as Array<string>, where: { workspaceId: "w1" } },
-        { name: "an agent", ask: "grantsOfAgent", args: ["a1"], where: { workspaceId: "w1", agentId: "a1" } },
+        {
+            name: "the workspace",
+            ask: (service: AgentBindingsService) => service.grantsOfWorkspace("w1"),
+            where: { workspaceId: "w1" },
+        },
+        {
+            name: "an agent",
+            ask: (service: AgentBindingsService) => service.grantsOfAgent("w1", "a1"),
+            where: { workspaceId: "w1", agentId: "a1" },
+        },
         {
             name: "a connection",
-            ask: "grantsOfConnection",
-            args: ["c1"],
+            ask: (service: AgentBindingsService) => service.grantsOfConnection("w1", "c1"),
             where: { workspaceId: "w1", connectionId: "c1" },
         },
-    ] as const)("lists the grants of $name, oldest first, bounded", async ({ ask, args, where }) => {
+    ])("lists the grants of $name, oldest first, bounded", async ({ ask, where }) => {
         const em = mockEntityManager({ find: [AgentConnectionEntity, [askLink()]] })
         const { service } = await build(em)
 
-        await expect(service[ask]("w1", ...(args as [string]))).resolves.toEqual([
-            { agentId: "a1", connectionId: "c1", access: "ask" },
-        ])
+        await expect(ask(service)).resolves.toEqual([{ agentId: "a1", connectionId: "c1", access: "ask" }])
         expect(em.find).toHaveBeenCalledWith(AgentConnectionEntity, { ...READ, where })
     })
 

@@ -14,7 +14,7 @@ import { JobOpsModule } from "@modules/domain/job-ops"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
-import { AgentRecordsService } from "@modules/domain/agents"
+import { AgentDirectoryService, AgentRecordsService } from "@modules/domain/agents"
 import { ProfileSourcesService } from "@modules/domain/knowledge-sources"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
@@ -132,7 +132,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
         ...options.channelConnections,
         ports: { agents: AgentBindingsService },
     }),
-    AgentConnectionsModule.register({ isGlobal: true }),
+    AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
     ConnectionGrantsModule.register({ isGlobal: true }),
     ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
     ChannelConnectionsModule.register({ isGlobal: true }),

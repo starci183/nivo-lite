@@ -7,7 +7,7 @@ import type {
     ChatNewest,
     ChatReader,
     MessageBrief,
-    ThreadLine,
+    ChatThreadLine,
 } from "./agent-messages-read.contracts"
 import { AgentMessageEntity } from "./persistence/entities"
 
@@ -81,13 +81,13 @@ export class AgentMessagesReadService {
     }
 
     /** The messages of the conversations written since `since`, oldest first, at most `limit`. */
-    async briefsIn(
+    briefsIn(
         workspaceId: string,
         conversationIds: ReadonlyArray<string>,
         since: Date,
         limit: number,
     ): Promise<Array<MessageBrief>> {
-        if (conversationIds.length === 0) return []
+        if (conversationIds.length === 0) return Promise.resolve([])
         return this.entityManager
             .createQueryBuilder(AgentMessageEntity, "m")
             .select("m.id", "id")
@@ -107,7 +107,7 @@ export class AgentMessagesReadService {
     }
 
     /** The messages of one conversation with their authors and deliveries, oldest first, at most `limit`. */
-    async threadOf(workspaceId: string, conversationId: string, limit: number): Promise<Array<ThreadLine>> {
+    threadOf(workspaceId: string, conversationId: string, limit: number): Promise<Array<ChatThreadLine>> {
         return this.entityManager
             .createQueryBuilder(AgentMessageEntity, "m")
             .select("m.id", "id")
@@ -126,6 +126,6 @@ export class AgentMessagesReadService {
             .orderBy("m.created_at")
             .addOrderBy("m.id")
             .limit(limit)
-            .getRawMany<ThreadLine>()
+            .getRawMany<ChatThreadLine>()
     }
 }

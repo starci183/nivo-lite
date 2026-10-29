@@ -1,5 +1,4 @@
 // The directory leads: other capabilities import this barrel while it loads (office-rooms <-> agents), see AgentDirectoryService.
-export { AgentDirectoryModule } from "./agent-directory.module"
 export { AgentDirectoryService } from "./agent-directory.service"
 export { AGENTS_ERROR_KINDS } from "./errors/agents.error"
 export { AGENTS_MESSAGES } from "./messages/agents.messages"
