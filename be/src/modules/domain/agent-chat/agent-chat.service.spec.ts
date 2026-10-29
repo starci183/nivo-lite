@@ -8,6 +8,7 @@ import { AgentMessagesService } from "@modules/domain/agent-messages"
 import type { AgentThreadMessage } from "@modules/domain/agent-messages"
 import { AgentsService } from "@modules/domain/agents"
 import type { AgentProfile } from "@modules/domain/agents"
+import { EventsReadService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -86,6 +87,8 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
     const agents = mock<AgentsService>()
     const conversations = mock<AgentConversationsService>()
     const messages = mock<AgentMessagesService>()
+    const events = mock<EventsReadService>()
+    events.existsOfKindBetween.mockResolvedValue(false)
     const turns = mock<ChatTurnQueue>()
     const queueStatus = mock<QueueStatusService>()
     members.require.mockResolvedValue(MEMBER)
@@ -98,6 +101,7 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
             { provide: AgentsService, useValue: agents },
             { provide: AgentConversationsService, useValue: conversations },
             { provide: AgentMessagesService, useValue: messages },
+            { provide: EventsReadService, useValue: events },
             { provide: ChatTurnQueue, useValue: turns },
             { provide: QUEUE_STATUS, useValue: queueStatus },
         ],
@@ -111,6 +115,7 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
         agents,
         conversations,
         messages,
+        events,
         turns,
         queueStatus,
     }
@@ -119,8 +124,9 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
 describe("AgentChatService", () => {
     describe("page", () => {
         it("returns the agent page and the welcome when a founding purchase sits inside the offer", async () => {
-            const { service, agents, builders } = await build([row(AGENT), row({ id: "purchase-1" })])
+            const { service, agents, events } = await build([row(AGENT)])
             agents.profileOf.mockResolvedValue(PROFILE)
+            events.existsOfKindBetween.mockResolvedValue(true)
 
             await expect(service.page("u1", PAGE)).resolves.toEqual({
                 id: "a1",
@@ -134,17 +140,21 @@ describe("AgentChatService", () => {
                 showWelcome: true,
             })
             const { startsAt, endsAt } = AGENT_CHAT_FOUNDING_OFFER
-            expect(builders[1]?.callsOf("where")).toEqual([
-                [expect.stringContaining("e.kind = 'module.purchased'"), { workspaceId: "w1", startsAt, endsAt }],
-            ])
+            expect(events.existsOfKindBetween).toHaveBeenCalledWith(
+                "w1",
+                "module.purchased",
+                new Date(startsAt),
+                new Date(endsAt),
+            )
         })
 
         it("hides the welcome outside the offer and does not read purchases", async () => {
-            const { service, agents, clock, builders } = await build([row(AGENT)])
+            const { service, agents, clock, builders, events } = await build([row(AGENT)])
             clock.set("2026-11-01T00:00:00.000Z")
             agents.profileOf.mockResolvedValue(PROFILE)
 
             await expect(service.page("u1", PAGE)).resolves.toMatchObject({ showWelcome: false, isActive: true })
+            expect(events.existsOfKindBetween).not.toHaveBeenCalled()
             expect(builders).toHaveLength(1)
             expect(builders[0]?.callsOf("where")).toEqual([
                 ["a.workspace_id = :workspaceId AND a.id = :agentId", { workspaceId: "w1", agentId: "a1" }],

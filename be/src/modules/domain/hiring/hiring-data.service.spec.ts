@@ -1,7 +1,6 @@
 import type { HiringSettings, JobRecord, CandidateRecord, InterviewRecord, OfferRecord } from "./hiring.contracts"
 import {
     CREATED,
-    LINK_TOKEN,
     settings as settingsFixture,
     job as jobFixture,
     candidate as candidateFixture,

@@ -4,9 +4,11 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { builder } from "@starci/jest-preset"
 import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
 import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
+import type { ConnectionSecretFacts } from "./connection-secrets.contracts"
 import { CONNECTION_SECRETS_OPTIONS } from "./connection-secrets.decorators"
 import { ConnectionSecretsService } from "./connection-secrets.service"
 import { ConnectionSecretsErrorCode } from "./errors/connection-secrets.error"
@@ -18,30 +20,8 @@ const options = { tokenKey: new Secret(KEY.toString("base64")) }
 const textLike: unknown = expect.stringContaining("Error")
 const hex64: unknown = expect.stringMatching(/^[a-f0-9]{64}$/u)
 
-/** A joined read of a connection and its sealed secret, as the query answers it. */
-interface JoinedRead {
-    /** The workspace of the connection. */
-    readonly workspaceId: string
-    /** The provider of the connection. */
-    readonly provider: string
-    /** The status of the connection. */
-    readonly status: string
-    /** The sealed credential. */
-    readonly ciphertext: string
-    /** The webhook secret. */
-    readonly webhookSecret: string
-    /** When the access token ends. */
-    readonly tokenExpiresAt: Date | null
-}
-
-const readOf = entityRowBuilder<JoinedRead>({
-    workspaceId: "ws-1",
-    provider: "telegram",
-    status: "connected",
-    ciphertext: sealSecret(KEY, "123:token"),
-    webhookSecret: "hook-secret",
-    tokenExpiresAt: null,
-})
+/** What the owner of a connection tells the secret check about it. */
+const factsOf = builder<ConnectionSecretFacts>({ id: "c-1", workspaceId: "ws-1", provider: "telegram", status: "connected" })
 
 /** One stored secret of a connection. */
 const storedOf = entityRowBuilder<ConnectionSecretEntity>({
@@ -91,11 +71,13 @@ const registerSealing = () => {
         await expect(failing).rejects.toMatchObject({ code: ConnectionSecretsErrorCode.KeyInvalid })
     })
 
-    it("seals a credential that secretOf opens again", async () => {
+    it("seals a credential that openFor opens again", async () => {
         const { service } = await readerOf([])
-        const reading = await readerOf([readOf({ ciphertext: service.seal("hello") })])
+        const em = mockEntityManager({
+            findOne: [ConnectionSecretEntity, storedOf({ ciphertext: service.seal("hello") })],
+        })
 
-        await expect(reading.service.secretOf("c-1", "telegram")).resolves.toMatchObject({
+        await expect((await build(em)).openFor(factsOf(), "telegram")).resolves.toMatchObject({
             kind: "ok",
             value: { credential: "hello" },
         })
@@ -147,21 +129,28 @@ describe("ConnectionSecretsService", () => {
     registerKeyCheck()
 })
 
-const registerSecretOf = () => {
+const registerOpenFor = () => {
     it("opens the credential of a connected connection of the provider", async () => {
-        const { service, seen } = await readerOf([readOf()])
+        const em = mockEntityManager({ findOne: [ConnectionSecretEntity, storedOf({ ciphertext: sealSecret(KEY, "123:token"), webhookSecret: "hook-secret" })] })
 
-        await expect(service.secretOf("c-1", "telegram")).resolves.toEqual({
+        await expect((await build(em)).openFor(factsOf(), "telegram")).resolves.toEqual({
             kind: "ok",
             value: { workspaceId: "ws-1", credential: "123:token", webhookSecret: "hook-secret", tokenExpiresAt: null },
         })
-        expect(seen.queries[0]?.callsOf("where")).toEqual([["s.connectionId = :connectionId", { connectionId: "c-1" }]])
+        expect(evaluatedCalls(em.findOne.mock.calls)).toEqual([
+            [
+                "ConnectionSecretEntity",
+                { select: { ciphertext: true, webhookSecret: true, tokenExpiresAt: true }, where: { connectionId: "c-1" } },
+            ],
+        ])
     })
 
     it("answers the expiry of a credential as an ISO instant", async () => {
-        const { service } = await readerOf([readOf({ tokenExpiresAt: new Date("2026-10-30T01:00:00.000Z") })])
+        const em = mockEntityManager({
+            findOne: [ConnectionSecretEntity, storedOf({ tokenExpiresAt: new Date("2026-10-30T01:00:00.000Z") })],
+        })
 
-        await expect(service.secretOf("c-1", "telegram")).resolves.toMatchObject({
+        await expect((await build(em)).openFor(factsOf(), "telegram")).resolves.toMatchObject({
             kind: "ok",
             value: { tokenExpiresAt: "2026-10-30T01:00:00.000Z" },
         })
@@ -169,46 +158,31 @@ const registerSecretOf = () => {
 
     it("reads through the transaction manager it is given", async () => {
         const { service, em } = await readerOf([])
-        const inside = mockEntityManager()
-        answerByTable(inside, { "": [readOf()] })
+        const inside = mockEntityManager({ findOne: [ConnectionSecretEntity, storedOf()] })
 
-        await expect(service.secretOf("c-1", "telegram", inside)).resolves.toMatchObject({ kind: "ok" })
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        await expect(service.openFor(factsOf(), "telegram", inside)).resolves.toMatchObject({ kind: "ok" })
+        expect(em.findOne).not.toHaveBeenCalled()
     })
 
-    it("refuses a missing connection, another provider and a disconnected one", async () => {
-        const missing = await readerOf([])
-        const other = await readerOf([readOf()])
-        const gone = await readerOf([readOf({ status: "disconnected" })])
+    it("refuses a missing secret row, another provider and a disconnected connection", async () => {
+        const missing = await build(mockEntityManager({ findOne: [ConnectionSecretEntity, null] }))
+        const other = await build(mockEntityManager({ findOne: [ConnectionSecretEntity, storedOf()] }))
 
-        await expect(missing.service.secretOf("c-1", "telegram")).resolves.toMatchObject(NOT_FOUND)
-        await expect(other.service.secretOf("c-1", "zalo_oa")).resolves.toMatchObject(NOT_FOUND)
-        await expect(gone.service.secretOf("c-1", "telegram")).resolves.toMatchObject(NOT_FOUND)
+        await expect(missing.openFor(factsOf(), "telegram")).resolves.toMatchObject(NOT_FOUND)
+        await expect(other.openFor(factsOf(), "zalo_oa")).resolves.toMatchObject(NOT_FOUND)
+        await expect(other.openFor(factsOf({ status: "disconnected" }), "telegram")).resolves.toMatchObject(NOT_FOUND)
     })
 
     it("refuses a credential sealed with another key and names the failure", async () => {
-        const { service } = await readerOf([readOf({ ciphertext: sealSecret(randomBytes(32), "x") })])
+        const em = mockEntityManager({
+            findOne: [ConnectionSecretEntity, storedOf({ ciphertext: sealSecret(randomBytes(32), "x") })],
+        })
 
-        await expect(service.secretOf("c-1", "telegram")).resolves.toMatchObject({
+        await expect((await build(em)).openFor(factsOf(), "telegram")).resolves.toMatchObject({
             kind: "refused",
             code: ConnectionSecretsErrorCode.Unreadable,
             params: { reason: textLike },
         })
-    })
-}
-
-const registerBotToken = () => {
-    it("answers the token only to the workspace that owns the connection", async () => {
-        const { service } = await readerOf([readOf()])
-
-        await expect(service.botToken("ws-1", "c-1")).resolves.toEqual({ kind: "ok", value: "123:token" })
-        await expect(service.botToken("ws-2", "c-1")).resolves.toMatchObject(NOT_FOUND)
-    })
-
-    it("passes the refusal of a connection that is gone", async () => {
-        const { service } = await readerOf([])
-
-        await expect(service.botToken("ws-1", "c-1")).resolves.toMatchObject(NOT_FOUND)
     })
 }
 
@@ -260,19 +234,16 @@ const registerLease = () => {
     })
 
     it("answers the ids of the connections whose token ends before the horizon", async () => {
-        const { service, seen } = await readerOf([{ connectionId: "c-1" }, { connectionId: "c-2" }])
+        const em = mockEntityManager({ find: [ConnectionSecretEntity, [storedOf(), storedOf({ connectionId: "c-2" })]] })
         const horizon = new Date("2026-10-12T17:00:00.000Z")
 
-        await expect(service.dueZalo(horizon)).resolves.toEqual(["c-1", "c-2"])
-        expect(seen.queries[0]?.callsOf("andWhere")).toEqual([
-            ["s.token_expires_at IS NOT NULL AND s.token_expires_at < :horizon", { horizon }],
-        ])
+        await expect((await build(em)).expiringBefore(horizon, 500)).resolves.toEqual(["c-1", "c-2"])
+        expect(em.find).toHaveBeenCalledTimes(1)
     })
 }
 
 describe("ConnectionSecretsService", () => {
-    describe("secretOf", registerSecretOf)
-    describe("botToken", registerBotToken)
+    describe("openFor", registerOpenFor)
     describe("lease and refresh", registerLease)
 })
 
