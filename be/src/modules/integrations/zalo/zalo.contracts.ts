@@ -1,9 +1,12 @@
+/** The form and answer field name OAuth 2.0 (RFC 6749) mandates for the long-lived provider renewal credential. */
+export const RENEWAL_GRANT_FIELD = "refresh_token"
+
 /** The tokens Zalo issued for one OA. */
 export interface ZaloTokens {
     /** The short-lived access token. */
     readonly accessToken: string
-    /** The single-use refresh token. */
-    readonly refreshToken: string
+    /** The single-use provider renewal token (not a session token). */
+    readonly renewalToken: string
     /** How long the access token lives, in seconds. */
     readonly expiresInSeconds: number
 }

@@ -19,7 +19,7 @@
           "kind": "api"
         }
       ],
-      "kinds": ["api", "cli", "jobs", "realtime", "webhooks"],
+      "kinds": ["api", "cli", "jobs", "reactors", "realtime", "webhooks"],
       "connections": [
         {
           "name": "primary",
@@ -30,7 +30,7 @@
         }
       ],
       "reads": [],
-      "patterns": ["webhooks", "queue", "fenced-job", "realtime"],
+      "patterns": ["webhooks", "queue", "fenced-job", "realtime", "event-bus"],
       "backing": ["redis"],
       "optionalSlots": [
         "repo.docs",

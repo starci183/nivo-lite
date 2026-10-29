@@ -11,7 +11,7 @@ export type OrderKind = "plan" | "upgrade" | "topup" | "credit_pack"
 export type OrderLookup = PaymentOrder | null
 
 /** What was sold on an order, frozen when the order was made (credits of a top-up, the proration inputs of an upgrade). */
-export type OrderDetail = Readonly<Record<string, unknown>>
+export type OrderDetail = Readonly<Record<string, string | number | boolean | null>>
 
 /** One payment order: a transfer the customer has to make, identified by its order code. */
 export interface PaymentOrder {

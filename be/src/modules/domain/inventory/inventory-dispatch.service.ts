@@ -15,7 +15,7 @@ import { fieldText } from "./policies/gate-fields.policy"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { isEmailAddress } from "./policies/input-text.policy"
 import { formatMoney } from "./policies/number-format.policy"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
 
 @Injectable()
 /**
@@ -32,6 +32,7 @@ export class InventoryDispatchService {
         private readonly mail: OutboundMail,
         private readonly orders: InventoryOrdersService,
         private readonly messages: InventoryOrderMessageService,
+        private readonly decisions: WorkItemsDecisionsReadService,
     ) {}
 
     private text(key: string, params: Record<string, string | number>): string {
@@ -59,15 +60,7 @@ export class InventoryDispatchService {
             kind === "order" ? po.status === "draft" : po.status === "sent" || po.status === "partially_received"
         if (!sendable) return { status: po.status, workItemId: null }
         const { text } = await this.messages.compose(workspaceId, po, kind)
-        const counted = await this.entityManager
-            .createQueryBuilder(WorkItemEntity, "w")
-            .select("CAST(COUNT(*) AS int)", "attempts")
-            .where("w.workspace_id = :workspaceId AND w.dedupe_key LIKE :pattern", {
-                workspaceId,
-                pattern: `send_po:${kind}:${po.id}:%`,
-            })
-            .getRawOne<{ attempts: number }>()
-        const attempt = (counted?.attempts ?? 0) + 1
+        const attempt = (await this.decisions.countWithKeyPrefix(workspaceId, `send_po:${kind}:${po.id}:`)) + 1
         const total = Math.round(po.totalVnd)
         if (kind === "order") await callDbFunction(this.entityManager, "public.inventory_set_po_message", [po.id, text])
         const verdict = await this.gate.request({

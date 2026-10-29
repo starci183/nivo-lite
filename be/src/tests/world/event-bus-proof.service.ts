@@ -126,7 +126,7 @@ export const openEventBusProof = async (world: LiteWorld): Promise<EventBusProof
     })
     const app = source.manager
     const logger = loggerOf()
-    const inbox = new InboxService(app)
+    const inbox = new InboxService()
     const publisher = new EventBusService(app)
     return {
         app,

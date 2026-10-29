@@ -28,10 +28,10 @@ const answering = {
             this.error(error)
         },
     }),
-    rawFailure: (thrown: unknown): passport.Strategy => ({
+    rawFailure: (message: string): passport.Strategy => ({
         name: "stand-in",
         authenticate() {
-            this.error(thrown as Error)
+            this.error({ name: "raw", message })
         },
     }),
     silent: (): passport.Strategy => ({ name: "stand-in", authenticate() {} }),
@@ -82,7 +82,7 @@ describe("PassportFlowsService / authenticateLocal", () => {
 
     it("reports the strategy as unavailable when passport builds no middleware", async () => {
         const { flows, exchange } = await build()
-        const authenticate = jest.spyOn(passport, "authenticate").mockReturnValueOnce(undefined as never)
+        const authenticate = jest.spyOn(passport, "authenticate").mockReturnValueOnce(undefined)
 
         await expect(flows.authenticateLocal(exchange)).rejects.toMatchObject({
             code: PassportErrorCode.GoogleUnavailable,

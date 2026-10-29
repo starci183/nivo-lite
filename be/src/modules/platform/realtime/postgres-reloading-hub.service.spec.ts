@@ -1,4 +1,13 @@
+import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
+import type { Timer } from "@modules/platform/retry"
+import { REALTIME_LISTENER, REALTIME_MANAGERS, REALTIME_TIMER } from "./realtime.decorators"
+import type { NotificationListener } from "./postgres-listener.port"
+import { RealtimeError, RealtimeErrorCode } from "./errors/realtime.error"
 import { RealtimeEventEntity } from "./persistence/entities"
+import { PostgresReloadingHubService } from "./postgres-reloading-hub.service"
 import { CATCH_UP_ROWS, REPLAY_FRAMES } from "./realtime.contracts"
 import { RealtimeLogEvent } from "./realtime.log-events"
 import {
@@ -8,20 +17,40 @@ import {
     SELECT_TOPIC_HIGHEST_SEQ,
 } from "@tests/fixtures/builders/realtime-statements.builder"
 import {
-    build,
-    buildReads,
     dropAndResume,
     frameOf,
     gateOf,
     notification,
+    reloadingHubWorld,
     rowOf,
     settle,
     topicOf,
 } from "@tests/fixtures/builders/realtime-reloading-hub.builder"
 
+/** The hub on a scripted database, built the way Nest builds it from its constructor dependencies. */
+const build = async (watermarks: Readonly<Record<string, number>> = {}) => {
+    const listener = mock<NotificationListener>()
+    const timer = mock<Timer>()
+    const logger = mock<Logger>()
+    const world = reloadingHubWorld(watermarks, listener, timer)
+    const managers = [world.em]
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            PostgresReloadingHubService,
+            { provide: REALTIME_MANAGERS, useValue: managers },
+            { provide: REALTIME_LISTENER, useValue: listener },
+            { provide: LOGGER, useValue: logger },
+            { provide: REALTIME_TIMER, useValue: timer },
+        ],
+    }).compile()
+    const hub = moduleRef.get(PostgresReloadingHubService)
+    await hub.onModuleInit()
+    return { hub, listener, logger, ...world }
+}
+
 describe("PostgresReloadingHubService reload after a lost LISTEN connection", () => {
     it("reloads, for each followed topic, the frames after its own cursor", async () => {
-        const { hub, em, table, handlers } = await build({ "t:down": 10 })
+        const { hub, table, handlers, reads } = await build({ "t:down": 10 })
         const reader = hub.subscribe(topicOf("t:down"))[Symbol.asyncIterator]()
         await settle()
         table.push(rowOf(11, "t:down", frameOf(11)), rowOf(12, "t:down", frameOf(12)))
@@ -30,7 +59,7 @@ describe("PostgresReloadingHubService reload after a lost LISTEN connection", ()
 
         await expect(reader.next()).resolves.toEqual({ done: false, value: frameOf(11) })
         await expect(reader.next()).resolves.toEqual({ done: false, value: frameOf(12) })
-        expect(em.query).toHaveBeenCalledWith(SELECT_MISSED_EVENTS, [["t:down"], [10], CATCH_UP_ROWS])
+        expect(reads).toContainEqual({ key: SELECT_MISSED_EVENTS, args: [["t:down"], [10], CATCH_UP_ROWS] })
         await reader.return?.()
     })
 
@@ -85,7 +114,7 @@ describe("PostgresReloadingHubService reload after a lost LISTEN connection", ()
 
 describe("PostgresReloadingHubService reload after a lost LISTEN connection (part 2)", () => {
     it("uses the new receiver position when a topic is released and followed again during a full reload batch", async () => {
-        const { hub, answers, table, handlers, em } = await build()
+        const { hub, answers, table, handlers, reads } = await build()
         const first = hub.subscribe(topicOf("t:refollow"))[Symbol.asyncIterator]()
         await settle()
         for (let seq = 1; seq <= CATCH_UP_ROWS; seq += 1) table.push(rowOf(seq, "t:refollow", frameOf(seq)))
@@ -105,7 +134,10 @@ describe("PostgresReloadingHubService reload after a lost LISTEN connection (par
         gate.open()
 
         await expect(second.next()).resolves.toEqual({ done: false, value: frameOf(CATCH_UP_ROWS + 1) })
-        expect(em.query).toHaveBeenCalledWith(SELECT_MISSED_EVENTS, [["t:refollow"], [CATCH_UP_ROWS], CATCH_UP_ROWS])
+        expect(reads).toContainEqual({
+            key: SELECT_MISSED_EVENTS,
+            args: [["t:refollow"], [CATCH_UP_ROWS], CATCH_UP_ROWS],
+        })
         await second.return?.()
     })
 
@@ -128,7 +160,7 @@ describe("PostgresReloadingHubService reload after a lost LISTEN connection (par
     })
 
     it("stops reloading a topic that was released while a full batch was still being read", async () => {
-        const { hub, em, table, answers, handlers } = await build({ "t:left": 0 })
+        const { hub, table, answers, handlers, reads } = await build({ "t:left": 0 })
         const reader = hub.subscribe(topicOf("t:left"))[Symbol.asyncIterator]()
         await settle()
         for (let seq = 1; seq <= CATCH_UP_ROWS; seq += 1) table.push(rowOf(seq, "t:left", frameOf(seq)))
@@ -138,20 +170,20 @@ describe("PostgresReloadingHubService reload after a lost LISTEN connection (par
             await gate.opened
             return reloadAnswer?.(args)
         })
-        em.query.mockClear()
+        reads.length = 0
 
         await dropAndResume(handlers)
         await reader.return?.()
         gate.open()
         await settle()
 
-        expect(em.query.mock.calls.filter(([sql]) => sql === SELECT_MISSED_EVENTS)).toHaveLength(1)
+        expect(reads.filter((read) => read.key === SELECT_MISSED_EVENTS)).toHaveLength(1)
     })
 })
 
 describe("PostgresReloadingHubService reload after a lost LISTEN connection (part 3)", () => {
     it("advances full-batch pagination while a receiver is still waiting for its join snapshot", async () => {
-        const { hub, answers, table, handlers, em } = await build()
+        const { hub, answers, table, handlers, reads } = await build()
         const gate = gateOf()
         answers.set(SELECT_TOPIC_HIGHEST_SEQ, async () => {
             await gate.opened
@@ -162,23 +194,26 @@ describe("PostgresReloadingHubService reload after a lost LISTEN connection (par
 
         await dropAndResume(handlers)
 
-        expect(em.query.mock.calls.filter(([sql]) => sql === SELECT_MISSED_EVENTS)).toHaveLength(2)
-        expect(em.query).toHaveBeenLastCalledWith(SELECT_MISSED_EVENTS, [["t:loading"], [CATCH_UP_ROWS], CATCH_UP_ROWS])
+        expect(reads.filter((read) => read.key === SELECT_MISSED_EVENTS)).toHaveLength(2)
+        expect(reads.at(-1)).toEqual({
+            key: SELECT_MISSED_EVENTS,
+            args: [["t:loading"], [CATCH_UP_ROWS], CATCH_UP_ROWS],
+        })
         gate.open()
         await expect(reader.next()).resolves.toEqual({ done: false, value: frameOf(1) })
         await reader.return?.()
     })
 
     it("keeps reloading while a batch comes back full", async () => {
-        const { hub, em, table, handlers } = await build({ "t:many": 0 })
+        const { hub, table, handlers, reads } = await build({ "t:many": 0 })
         const reader = hub.subscribe(topicOf("t:many"))[Symbol.asyncIterator]()
         await settle()
         for (let seq = 1; seq <= CATCH_UP_ROWS + 1; seq += 1) table.push(rowOf(seq, "t:many", frameOf(seq)))
-        em.query.mockClear()
+        reads.length = 0
 
         await dropAndResume(handlers)
 
-        expect(em.query).toHaveBeenCalledWith(SELECT_MISSED_EVENTS, [["t:many"], [CATCH_UP_ROWS], CATCH_UP_ROWS])
+        expect(reads).toContainEqual({ key: SELECT_MISSED_EVENTS, args: [["t:many"], [CATCH_UP_ROWS], CATCH_UP_ROWS] })
         await reader.return?.()
     })
 })
@@ -233,7 +268,7 @@ describe("PostgresReloadingHubService held notifications during a reconnect", ()
         answers.set(SELECT_EVENT, ([seq]) => {
             loads += 1
             return loads === 1
-                ? Promise.reject(new Error("stale writer"))
+                ? Promise.reject(new RealtimeError({ code: RealtimeErrorCode.ListenDropped }))
                 : table.filter((row) => row.seq === String(seq))
         })
         table.push(rowOf(11, "t:held-fail", frameOf(11)), rowOf(12, "t:held-fail", frameOf(12)))
@@ -252,7 +287,7 @@ describe("PostgresReloadingHubService held notifications during a reconnect", ()
 
 describe("PostgresReloadingHubService held notifications during a reconnect (part 2)", () => {
     it("keeps the notifications of the newer connection held when a second loss overtakes a reload", async () => {
-        const { hub, em, table, answers, handlers } = await build({ "t:flap": 10 })
+        const { hub, table, answers, handlers, reads } = await build({ "t:flap": 10 })
         const reader = hub.subscribe(topicOf("t:flap"))[Symbol.asyncIterator]()
         await settle()
         table.push(rowOf(11, "t:flap", frameOf(11)))
@@ -269,7 +304,7 @@ describe("PostgresReloadingHubService held notifications during a reconnect (par
         gate.open()
         await settle()
         await expect(reader.next()).resolves.toEqual({ done: false, value: frameOf(11) })
-        expect(em.query).not.toHaveBeenCalledWith(SELECT_EVENT, ["12"])
+        expect(reads).not.toContainEqual({ key: SELECT_EVENT, args: ["12"] })
 
         table.push(rowOf(12, "t:flap", frameOf(12)))
         handlers.current.resumed()
@@ -281,7 +316,7 @@ describe("PostgresReloadingHubService held notifications during a reconnect (par
 
 describe("PostgresReloadingHubService replay", () => {
     it("starts with the frames after the last event id, then goes live", async () => {
-        const { hub, em, answers, table, handlers } = await build()
+        const { hub, answers, table, handlers, reads } = await build()
         answers.set(SELECT_EVENTS_AFTER, () => [rowOf(5, "t:replay", frameOf(5)), rowOf(6, "t:replay", frameOf(6))])
         table.push(rowOf(7, "t:replay", frameOf(7)))
         const reader = hub.subscribe(topicOf("t:replay"), { after: "e-4" })[Symbol.asyncIterator]()
@@ -291,7 +326,7 @@ describe("PostgresReloadingHubService replay", () => {
         handlers.current.notify(notification("t:replay", 7))
 
         await expect(reader.next()).resolves.toEqual({ done: false, value: frameOf(7) })
-        expect(em.query).toHaveBeenCalledWith(SELECT_EVENTS_AFTER, ["t:replay", "e-4", REPLAY_FRAMES])
+        expect(reads).toContainEqual({ key: SELECT_EVENTS_AFTER, args: ["t:replay", "e-4", REPLAY_FRAMES] })
         await reader.return?.()
     })
 
@@ -320,50 +355,35 @@ describe("PostgresReloadingHubService replay", () => {
 
 describe("PostgresReloadingHubService reads", () => {
     it("loads the row a notification names, and nothing when the sweep already deleted it", async () => {
-        const { hub, em } = await buildReads()
-        const delivered: Array<unknown> = []
-        const subscriptions = (
-            hub as unknown as { subscriptions: { follows: () => boolean; fanOut: (entries: Array<unknown>) => void } }
-        ).subscriptions
-        subscriptions.follows = () => true
-        subscriptions.fanOut = (entries) => delivered.push(...entries)
-        em.findOne.mockResolvedValueOnce(
-            Object.assign(new RealtimeEventEntity(), { seq: "3", topic: "t:one", payload: { id: "e-3" } }) as never,
-        )
-        em.findOne.mockResolvedValueOnce(null as never)
-        const deliver = (payload: string) =>
-            (hub as unknown as { deliverNow: (payload: string) => Promise<void> }).deliverNow(payload)
+        const { hub, em, table, handlers } = await build({ "t:one": 0 })
+        const reader = hub.subscribe(topicOf("t:one"))[Symbol.asyncIterator]()
+        await settle()
+        table.push(rowOf(3, "t:one", frameOf(3)))
 
-        await deliver(JSON.stringify({ topic: "t:one", seq: 3 }))
-        await deliver(JSON.stringify({ topic: "t:one", seq: 4 }))
+        handlers.current.notify(notification("t:one", 4))
+        handlers.current.notify(notification("t:one", 3))
 
-        expect(em.findOne).toHaveBeenNthCalledWith(1, RealtimeEventEntity, {
+        await expect(reader.next()).resolves.toEqual({ done: false, value: frameOf(3) })
+        expect(em.findOne).toHaveBeenNthCalledWith(2, RealtimeEventEntity, {
             select: { seq: true, topic: true, payload: true },
             where: { seq: "3" },
         })
-        expect(delivered).toEqual([{ position: "3", topic: "t:one", frame: { id: "e-3" } }])
+        await reader.return?.()
     })
 
     it("reloads what the followed topics missed after each topic's own cursor, oldest first and bounded", async () => {
-        const { hub, fakes } = await buildReads({ getRawMany: [] })
-        const subscriptions = (
-            hub as unknown as {
-                subscriptions: { follows: () => boolean; floorOf: (topic: string) => string; fanOut: () => void }
-            }
-        ).subscriptions
-        subscriptions.follows = () => true
-        subscriptions.floorOf = (topic) => (topic === "t:a" ? "10" : "0")
-        subscriptions.fanOut = () => undefined
+        const { hub, fakes, handlers } = await build({ "t:a": 10, "t:b": 4 })
+        const readers = [topicOf("t:a"), topicOf("t:b")].map((topic) => hub.subscribe(topic)[Symbol.asyncIterator]())
+        await settle()
 
-        await (
-            hub as unknown as { reloadFrom: (topics: Array<string>, loaded: Map<string, number>) => Promise<void> }
-        ).reloadFrom(["t:a", "t:b"], new Map([["t:b", 4]]))
+        await dropAndResume(handlers)
 
-        const [read] = fakes
+        const read = fakes.find((fake) => fake.callsOf("innerJoin").length > 0)
         expect(read?.callsOf("innerJoin")[0]?.[1]).toBe("cursors")
         expect(read?.callsOf("innerJoin")[0]?.[2]).toBe("e.topic = cursors.topic AND e.seq > cursors.after")
         expect(read?.callsOf("setParameters")).toEqual([[{ topics: ["t:a", "t:b"], cursors: [10, 4] }]])
         expect(read?.callsOf("orderBy")).toEqual([["e.seq", "ASC"]])
         expect(read?.callsOf("limit")).toEqual([[CATCH_UP_ROWS]])
+        await Promise.all(readers.map((reader) => reader.return?.()))
     })
 })

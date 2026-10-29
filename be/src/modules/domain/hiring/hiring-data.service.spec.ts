@@ -7,18 +7,16 @@ import {
     candidate as candidateFixture,
     interview as interviewFixture,
     offer as offerFixture,
-    memberEntity,
 } from "@tests/fixtures/builders/hiring-data.builder"
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
+import { MemberRosterService, WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentConversationEntity } from "@modules/domain/agent-conversations"
-import { WorkItemEntity } from "@modules/domain/work-items"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { conversationOf } from "@tests/fixtures/builders/agent-conversations.builder"
 import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
-import { Like } from "typeorm"
 import { HiringDataService } from "./hiring-data.service"
 import {
     HiringCandidateEntity,
@@ -33,6 +31,14 @@ const job: JobRecord = jobFixture
 const candidate: CandidateRecord = candidateFixture
 const interview: InterviewRecord = interviewFixture
 const offer: OfferRecord = offerFixture
+
+const seatOf = (userId: string, displayName: string) => ({
+    memberId: "m-1",
+    userId,
+    role: "staff" as const,
+    displayName,
+    status: "active" as const,
+})
 
 const settingsRow = entityRowBuilder<HiringSettingEntity>({
     workspaceId: "ws-1",
@@ -144,9 +150,19 @@ const offerRow = entityRowBuilder<HiringOfferEntity>({
     createdAt: CREATED,
 })
 
+const seats = mock<WorkspaceMemberSeatsService>()
+const roster = mock<MemberRosterService>()
+const decisions = mock<WorkItemsDecisionsReadService>()
+
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [HiringDataService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            HiringDataService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: WorkspaceMemberSeatsService, useValue: seats },
+            { provide: MemberRosterService, useValue: roster },
+            { provide: WorkItemsDecisionsReadService, useValue: decisions },
+        ],
     }).compile()
     return moduleRef.get(HiringDataService)
 }
@@ -195,14 +211,13 @@ describe("HiringDataService", () => {
                 [HiringSettingEntity, settingsRow()],
                 [HiringCandidateEntity, candidateRow()],
                 [HiringJobEntity, jobRow()],
-                [WorkspaceMemberEntity, memberEntity()],
                 [HiringSettingEntity, null],
                 [HiringCandidateEntity, null],
                 [HiringJobEntity, null],
-                [WorkspaceMemberEntity, null],
             ],
         })
         const service = await build(em)
+        seats.activeSeatOfUser.mockResolvedValueOnce(seatOf("user-1", "Blair")).mockResolvedValueOnce(null)
 
         await expect(service.tickWorkspace("ws-1")).resolves.toEqual({
             workspaceId: "ws-1",
@@ -222,22 +237,17 @@ describe("HiringDataService", () => {
         await expect(service.memberName("ws-2", "user-2")).resolves.toBeUndefined()
         const tickSelect = { workspaceId: true, retentionDays: true, remindInterview: true }
         const jobSelect = { title: true, location: true, position: true }
-        const memberSelect = { userId: true, displayName: true }
         expect(em.findOne.mock.calls).toEqual([
             [HiringSettingEntity, { select: tickSelect, where: { workspaceId: "ws-1" } }],
             [HiringCandidateEntity, { select: { id: true, name: true }, where: { id: "candidate-1" } }],
             [HiringJobEntity, { select: jobSelect, where: { id: "job-1" } }],
-            [
-                WorkspaceMemberEntity,
-                { select: memberSelect, where: { workspaceId: "ws-1", userId: "user-1", status: "active" } },
-            ],
             [HiringSettingEntity, { select: tickSelect, where: { workspaceId: "ws-2" } }],
             [HiringCandidateEntity, { select: { id: true, name: true }, where: { id: "candidate-2" } }],
             [HiringJobEntity, { select: jobSelect, where: { id: "job-2" } }],
-            [
-                WorkspaceMemberEntity,
-                { select: memberSelect, where: { workspaceId: "ws-2", userId: "user-2", status: "active" } },
-            ],
+        ])
+        expect(seats.activeSeatOfUser.mock.calls).toEqual([
+            ["ws-1", "user-1"],
+            ["ws-2", "user-2"],
         ])
     })
 })
@@ -298,25 +308,16 @@ describe("HiringDataService", () => {
     })
 
     it("counts the asks of a prefix with the prefix wildcard", async () => {
-        const em = mockEntityManager({
-            count: [
-                [WorkItemEntity, 3],
-                [WorkItemEntity, 2],
-                [WorkItemEntity, 0],
-            ],
-        })
-        const service = await build(em)
+        const service = await build(mockEntityManager())
+        decisions.countWithKeyPrefix.mockResolvedValueOnce(3).mockResolvedValueOnce(2).mockResolvedValueOnce(0)
 
         await expect(service.askAttempts("ws-1", "send_offer", "offer:offer-1:")).resolves.toBe(3)
         await expect(service.askAttempts("ws-1", "invite_interview", "interview:candidate-1:")).resolves.toBe(2)
         await expect(service.askAttempts("ws-2", "send_offer", "offer:offer-2:")).resolves.toBe(0)
-        const where = (workspaceId: string, action: string, prefix: string) => ({
-            where: { workspaceId, action, dedupeKey: Like(`${prefix}%`) },
-        })
-        expect(em.count.mock.calls).toEqual([
-            [WorkItemEntity, where("ws-1", "send_offer", "offer:offer-1:")],
-            [WorkItemEntity, where("ws-1", "invite_interview", "interview:candidate-1:")],
-            [WorkItemEntity, where("ws-2", "send_offer", "offer:offer-2:")],
+        expect(decisions.countWithKeyPrefix.mock.calls).toEqual([
+            ["ws-1", "offer:offer-1:", "send_offer"],
+            ["ws-1", "interview:candidate-1:", "invite_interview"],
+            ["ws-2", "offer:offer-2:", "send_offer"],
         ])
     })
 })

@@ -1,25 +1,28 @@
 import { Test } from "@nestjs/testing"
 import { In } from "typeorm"
+import {
+    careKnowledgeRow,
+    editedKnowledgeRow,
+    knowledgeRow,
+    knowledgeRowWithText,
+    longKnowledgeRow,
+} from "@tests/fixtures/builders/nivo-knowledge.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import type { NivoItemInput } from "./nivo-knowledge.contracts"
 import { NivoKnowledgeService } from "./nivo-knowledge.service"
 import { NivoKnowledgeItemEntity } from "./persistence/entities"
 
-const rowOf = builder<NivoKnowledgeItemEntity>({
-    id: "n1",
-    module: "core",
-    slug: "voice",
-    title: "Voice",
-    body: "Warm.",
-    kind: "tone",
-    version: 1,
-    embedding: null,
-    fts: null,
-    updatedAt: new Date("2026-04-01T00:00:00.000Z"),
-    embeddingModel: null,
-})
+/** Runs a value that a spec captured as a function, answering what it returns. */
+const called = (value: unknown): unknown => (typeof value === "function" ? Reflect.apply(value, undefined, []) : undefined)
+
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** Any function, typed `unknown` so it flows into any slot. */
+const anyFunction = (): unknown => expect.any(Function)
 
 const item = (slug: string): NivoItemInput => ({
     module: "core",
@@ -38,35 +41,93 @@ const build = async (em: ReturnType<typeof mockEntityManager>) => {
 
 describe("NivoKnowledgeService", () => {
     describe("upsert", () => {
-        it("writes the items in one transaction and counts the new ones", async () => {
-            const tx = fakeTransaction(mockEntityManager())
+        it("writes the new items in one transaction and republishes the ones that exist", async () => {
+            const tx = fakeTransaction(
+                mockEntityManager({
+                    findOne: [NivoKnowledgeItemEntity, knowledgeRowWithText("T b", "B b")],
+                    update: [NivoKnowledgeItemEntity, {}],
+                }),
+            )
             const [first] = queueQueryBuilders(tx.em, [
-                { execute: { raw: [{ inserted: true }] } },
-                { execute: { raw: [{ inserted: false }] } },
+                { execute: { raw: [{ id: "n1" }] } },
+                { execute: { raw: [] } },
             ])
             const service = await build(tx.em)
 
             await expect(service.upsert([item("a"), item("b")])).resolves.toEqual({ inserted: 1, updated: 1 })
 
             expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(NivoKnowledgeItemEntity, "nivo_knowledge")
-
             expect(first?.callsOf("insert")).toEqual([[]])
             expect(first?.callsOf("values")).toEqual([
                 [{ module: "core", slug: "a", title: "T a", body: "B a", kind: "playbook" }],
             ])
-            expect(first?.callsOf("returning")).toEqual([["(xmax = 0) AS inserted"]])
+            expect(first?.callsOf("orIgnore")).toEqual([[]])
+            expect(first?.callsOf("returning")).toEqual([["id"]])
             expect(tx.commits).toBe(1)
         })
 
-        it("counts an upsert that answers no row as an update", async () => {
-            const tx = fakeTransaction(mockEntityManager())
+    })
+})
+
+describe("NivoKnowledgeService upsert of existing items", () => {
+    describe("upsert", () => {
+        it("keeps the version and the vector of an item whose text did not change", async () => {
+            const tx = fakeTransaction(
+                mockEntityManager({
+                    findOne: [NivoKnowledgeItemEntity, knowledgeRowWithText("T a", "B a")],
+                    update: [NivoKnowledgeItemEntity, {}],
+                }),
+            )
+            queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
+            const service = await build(tx.em)
+
+            await service.upsert([item("a")])
+
+            expect(tx.em.findOne).toHaveBeenCalledWith(NivoKnowledgeItemEntity, {
+                select: { id: true, title: true, body: true },
+                where: { slug: "a" },
+            })
+            const changes: unknown = tx.em.update.mock.calls[0]?.[2]
+            expect(changes).toEqual({
+                module: "core",
+                title: "T a",
+                body: "B a",
+                kind: "playbook",
+                updatedAt: anyFunction(),
+            })
+            expect(called(isRecord(changes) ? changes.updatedAt : undefined)).toBe("now()")
+        })
+
+        it("takes the next version and drops the vector of an item whose text changed", async () => {
+            const tx = fakeTransaction(
+                mockEntityManager({
+                    findOne: [NivoKnowledgeItemEntity, knowledgeRow()],
+                    update: [NivoKnowledgeItemEntity, {}],
+                }),
+            )
+            queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
+            const service = await build(tx.em)
+
+            await service.upsert([item("a")])
+
+            const changes: unknown = tx.em.update.mock.calls[0]?.[2]
+            expect(called(isRecord(changes) ? changes.version : undefined)).toBe('"version" + 1')
+            expect(called(isRecord(changes) ? changes.updatedAt : undefined)).toBe("now()")
+            expect(changes).toMatchObject({ embedding: null, embeddingModel: null, title: "T a" })
+        })
+
+        it("leaves an item that vanished while it was republished", async () => {
+            const tx = fakeTransaction(mockEntityManager({ findOne: [NivoKnowledgeItemEntity, null] }))
             queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
             const service = await build(tx.em)
 
             await expect(service.upsert([item("a")])).resolves.toEqual({ inserted: 0, updated: 1 })
+            expect(tx.em.update).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("NivoKnowledgeService counts", () => {
     describe("countFor", () => {
         it("counts the items of the named modules", async () => {
             const em = mockEntityManager({ count: [NivoKnowledgeItemEntity, 4] })
@@ -75,7 +136,7 @@ describe("NivoKnowledgeService", () => {
             await expect(service.countFor(["chatbot", "core"])).resolves.toBe(4)
 
             expect(em.count).toHaveBeenCalledWith(NivoKnowledgeItemEntity, {
-                where: { module: expect.objectContaining({ _value: ["chatbot", "core"] }) },
+                where: { module: objectLike({ _value: ["chatbot", "core"] }) },
             })
         })
 
@@ -98,7 +159,7 @@ describe("NivoKnowledgeService", () => {
             await expect(service.countForModule(module)).resolves.toBe(7)
 
             expect(em.count).toHaveBeenCalledWith(NivoKnowledgeItemEntity, {
-                where: { module: expect.objectContaining({ _value: folders }) },
+                where: { module: objectLike({ _value: folders }) },
             })
             expect(em.count).toHaveBeenCalledTimes(1)
         })
@@ -107,7 +168,7 @@ describe("NivoKnowledgeService", () => {
 
 describe("NivoKnowledgeService rulesOf", () => {
     it("reads the title and text of the items of the modules and kinds, bounded", async () => {
-        const em = mockEntityManager({ find: [NivoKnowledgeItemEntity, [rowOf()]] })
+        const em = mockEntityManager({ find: [NivoKnowledgeItemEntity, [knowledgeRow()]] })
 
         await expect((await build(em)).rulesOf(["video", "core"], ["tone"], 20)).resolves.toEqual([
             { title: "Voice", body: "Warm." },
@@ -128,16 +189,8 @@ describe("NivoKnowledgeService list", () => {
             find: [
                 NivoKnowledgeItemEntity,
                 [
-                    rowOf({ updatedAt: new Date("2026-04-01T10:30:00+07:00"), version: 2 }),
-                    rowOf({
-                        id: "n2",
-                        module: "chatbot",
-                        slug: "care",
-                        title: "Care",
-                        body: "Answer fast.",
-                        kind: "playbook",
-                        updatedAt: new Date("2026-04-02T01:02:03.456Z"),
-                    }),
+                    editedKnowledgeRow(),
+                    careKnowledgeRow(),
                 ],
             ],
         })
@@ -200,7 +253,7 @@ describe("NivoKnowledgeService", () => {
         it("names the items that need a vector with the text to embed, cut at the limit", async () => {
             const em = mockEntityManager()
             const read = queueQueryBuilders(em, [
-                { getMany: [rowOf({ id: "n1", title: "T", body: "x".repeat(9000) })] },
+                { getMany: [longKnowledgeRow(9000)] },
             ])[0]
             const service = await build(em)
 
@@ -224,8 +277,10 @@ describe("NivoKnowledgeService", () => {
 
             expect(write?.callsOf("update")).toEqual([[]])
             expect(write?.callsOf("setParameters")).toEqual([[{ ids: ["n1"], vectors: ["[1]"] }]])
-            const set = write?.callsOf("set")[0]?.[0] as { embedding: () => string } | undefined
-            expect(set?.embedding()).toContain("unnest(CAST(:ids AS uuid[])")
+            const set: unknown = write?.callsOf("set")[0]?.[0]
+            expect(called(isRecord(set) ? set.embedding : undefined)).toEqual(
+                expect.stringContaining("unnest(CAST(:ids AS uuid[])"),
+            )
         })
     })
 })

@@ -74,12 +74,15 @@ export interface DriveFolderListing {
     readonly truncated: boolean
 }
 
-/** The answer of Google's token endpoint to a refresh. */
+/** The form and answer field name OAuth 2.0 (RFC 6749) mandates for the long-lived provider renewal credential. */
+export const RENEWAL_GRANT_FIELD = "refresh_token"
+
+/** The answer of Google's token endpoint to a renewal. */
 export interface GoogleAccessToken {
     /** The new access token. */
     readonly accessToken: string
-    /** A new refresh token, when Google rotated it. */
-    readonly refreshToken: string | null
+    /** A new provider renewal token, when Google rotated it. */
+    readonly renewalToken: string | null
     /** How long the access token lives, in seconds. */
     readonly expiresInSeconds: number
 }

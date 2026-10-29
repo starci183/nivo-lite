@@ -25,7 +25,7 @@ import type {
     WorkbenchRecipeInput,
     WorkbenchSupplierInput,
     WorkbenchWorkInput,
-} from "./inventory-workbench.inputs"
+} from "./inventory-workbench.input"
 
 /** The rows the workbench read, before they are shaped. */
 export interface InventoryWorkbenchRows {

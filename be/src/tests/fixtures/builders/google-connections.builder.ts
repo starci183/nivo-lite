@@ -11,13 +11,13 @@ export const EXPIRES = NOW.getTime() + 3_600_000
 export const state: OAuthState = { w: "ws-1", u: "owner-1", r: "/connections", e: EXPIRES }
 export const tokens: GoogleTokenSet = {
     accessToken: "access-new",
-    refreshToken: "refresh-new",
+    renewalToken: "refresh-new",
     expiresAt: EXPIRES,
     idToken: null,
     scope: null,
 }
 /** The same grant when Google answers a re-consent without a new renewal grant. */
-export const tokensWithoutRenewal: GoogleTokenSet = { ...tokens, refreshToken: null }
+export const tokensWithoutRenewal: GoogleTokenSet = { ...tokens, renewalToken: null }
 /** The Drive-only consent answer. */
 export const driveTokens: GoogleTokenSet = { ...tokens, scope: DRIVE_READ_SCOPE }
 export const stored = { access_token: "access-old", renewal_token: "refresh-old", expires_at: EXPIRES }

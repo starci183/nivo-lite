@@ -5,6 +5,7 @@ import { authenticationModules } from "./compose/authentication"
 import { ErrorsFilter } from "@modules/platform/errors"
 import { OriginGuard, RateLimitGuard } from "@modules/platform/http-security"
 import { API_JOB_QUEUES } from "./compose/jobs"
+import { API_REACTORS } from "./compose/reactors"
 import type { ApiOptions } from "./api.options"
 import { platformModules } from "./compose/platform"
 import { identityModules } from "./compose/identity"
@@ -46,6 +47,7 @@ export class AppModule {
                 ...videoModules(options),
                 ...businessModules(options),
                 ...API_JOB_QUEUES,
+                ...API_REACTORS,
                 ...contentModules(options),
                 ...systemModules(),
                 ...knowledgeModules(options),

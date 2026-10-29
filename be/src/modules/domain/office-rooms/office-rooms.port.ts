@@ -12,6 +12,12 @@ export interface RoomAgentSeat {
     readonly at: string
 }
 
+/** The identity of one agent of a workspace. */
+export interface RoomAgentRef {
+    /** The agent id. */
+    readonly id: string
+}
+
 /** The one door to the agents of a workspace the rooms read through; the agents capability binds it. */
 export interface RoomsAgents {
     /** How many agents the workspace has. */
@@ -23,7 +29,7 @@ export interface RoomsAgents {
     /** The ids of the agents of the workspace in id order, bounded. */
     idsOf(workspaceId: string, limit: number): Promise<Array<string>>
     /** The agent of the workspace with this id; null when the workspace has none. */
-    find(workspaceId: string, agentId: string): Promise<{ readonly id: string } | null>
+    find(workspaceId: string, agentId: string): Promise<RoomAgentRef | null>
 }
 
 /** The one door to the customers of a workspace the rooms read through; the leads capability binds it. */

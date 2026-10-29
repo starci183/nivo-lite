@@ -4,6 +4,7 @@ import type { HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { ZaloError, ZaloErrorCode } from "./errors/zalo.error"
 import { InjectZaloOptions } from "./zalo.decorators"
+import { RENEWAL_GRANT_FIELD } from "./zalo.contracts"
 import type { ZaloArticle, ZaloArticleStats, ZaloTokens, ZnsMessage, ZnsReceipt } from "./zalo.contracts"
 import type { ZaloOptions } from "./zalo.options"
 import { zaloErrorCodeOf } from "./zalo-failure.policy"
@@ -81,8 +82,8 @@ export class ZaloClient {
     }
 
     /** Spends the single-use refresh token for a new pair. */
-    refreshTokens(appId: string, appSecret: string, refreshToken: string): Promise<ZaloTokens> {
-        return this.tokenCall(appSecret, { refresh_token: refreshToken, app_id: appId, grant_type: "refresh_token" })
+    refreshTokens(appId: string, appSecret: string, renewalToken: string): Promise<ZaloTokens> {
+        return this.tokenCall(appSecret, { [RENEWAL_GRANT_FIELD]: renewalToken, app_id: appId, grant_type: "refresh_token" })
     }
 
     /** Sends a consultation (CS) text message to one user; a refusal is a ZaloError carrying Zalo's numeric error. */
@@ -204,8 +205,8 @@ export class ZaloClient {
             })
         const body = isRecord(answer.body) ? answer.body : {}
         const accessToken = body.access_token
-        const refreshToken = body.refresh_token
-        if (typeof accessToken !== "string" || typeof refreshToken !== "string" || !accessToken || !refreshToken) {
+        const renewalToken = body[RENEWAL_GRANT_FIELD]
+        if (typeof accessToken !== "string" || typeof renewalToken !== "string" || !accessToken || !renewalToken) {
             const code = Number(body.error)
             throw new ZaloError({
                 code: ZaloErrorCode.Rejected,
@@ -219,7 +220,7 @@ export class ZaloClient {
         const seconds = Number(body.expires_in)
         return {
             accessToken,
-            refreshToken,
+            renewalToken,
             expiresInSeconds: Number.isFinite(seconds) && seconds > 0 ? seconds : ACCESS_FALLBACK_SECONDS,
         }
     }

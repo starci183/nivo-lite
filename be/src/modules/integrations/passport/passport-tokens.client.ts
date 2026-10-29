@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto"
+import { createHash, createHmac } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import { SignJWT, calculateJwkThumbprint, exportJWK, importPKCS8, importSPKI, jwtVerify } from "jose"
 import type { CryptoKey, KeyObject } from "jose"
-import { deriveStateKey, ok, refused, signStateToken, verifyStateToken } from "@modules/platform/primitives"
+import { ok, refused, signStateToken, verifyStateToken } from "@modules/platform/primitives"
 import type { Outcome, OptionalSignedState, SignedState } from "@modules/platform/primitives"
 import { PassportError, PassportErrorCode } from "./errors/passport.error"
 import type { AccessClaims, IssuedAccessToken, JwksDocument } from "./passport.contracts"
@@ -90,10 +90,8 @@ export class PassportTokensClient {
     }
 
     private stateKey(): Buffer {
-        const material = createHash("sha256").update(this.options.privateKey.reveal(), "utf8").digest("base64")
-        const key = deriveStateKey(material, STATE_LABEL)
-        if (key === null) throw new PassportError({ code: PassportErrorCode.KeyInvalid })
-        return key
+        const material = createHash("sha256").update(this.options.privateKey.reveal(), "utf8").digest()
+        return createHmac("sha256", material).update(STATE_LABEL).digest()
     }
 
     private keys(): Promise<KeyPair> {

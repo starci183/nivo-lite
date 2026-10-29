@@ -9,6 +9,11 @@ export interface ProofCardRow {
     readonly card: object | null
 }
 
+const cardRowOf = (row: unknown): ProofCardRow => {
+    const card: unknown = typeof row === "object" && row !== null ? Reflect.get(row, "card") : null
+    return { card: typeof card === "object" ? card : null }
+}
+
 /**
  * Inserts a line through the database boundary, without the application parser, so the database's card check is what answers; the
  * card is any JSON object, or null for an ordinary line.
@@ -30,5 +35,6 @@ export const insertProofCard = async (
         })
         .returning("card")
         .execute()
-    return result.raw
+    const raw: unknown = result.raw
+    return Array.isArray(raw) ? raw.map(cardRowOf) : []
 }

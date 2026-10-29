@@ -1,15 +1,21 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
+import { EngineStatusService } from "@modules/domain/agents"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentSyncChecksService } from "./agent-sync-checks.service"
 import { OpenclawAgentSyncEntity } from "./persistence/entities"
 
 const build = async (latest: OpenclawAgentSyncEntity | null) => {
     const em = mockEntityManager({ findOne: [OpenclawAgentSyncEntity, latest] })
+    const engine = mock<EngineStatusService>()
     const moduleRef = await Test.createTestingModule({
-        providers: [AgentSyncChecksService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            AgentSyncChecksService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: EngineStatusService, useValue: engine },
+        ],
     }).compile()
-    return { service: moduleRef.get(AgentSyncChecksService), em }
+    return { service: moduleRef.get(AgentSyncChecksService), em, engine }
 }
 
 describe("AgentSyncChecksService", () => {
@@ -29,5 +35,17 @@ describe("AgentSyncChecksService", () => {
         const { service } = await build(null)
 
         await expect(service.lastCheckAt("w1")).resolves.toBeNull()
+    })
+
+    it("answers the engine status, handing the engine the check time to read after membership", async () => {
+        const status = { gatewayConfigured: true, workspaceWritable: true, lastSyncCheckAt: null, syncFresh: false }
+        const { service, engine } = await build(null)
+        engine.status.mockImplementation(async (_userId, _workspaceId, lastSyncCheck) => {
+            await expect(lastSyncCheck()).resolves.toBeNull()
+            return status
+        })
+
+        await expect(service.engineStatus("u1", "w1")).resolves.toBe(status)
+        expect(engine.status).toHaveBeenCalledWith("u1", "w1", expect.any(Function))
     })
 })

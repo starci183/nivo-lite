@@ -1,8 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import { fakeInbox, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { IsNull } from "typeorm"
-import { fakeRowInbox } from "@tests/fixtures/builders/row-claims.builder"
 import { ConversationsService } from "@modules/domain/conversations"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
@@ -33,7 +32,8 @@ const build = async (pending: TelegramInboxEntity | null = pendingOf(), claimed 
     )
     const conversations = mock<ConversationsService>()
     conversations.acceptTelegram.mockResolvedValue(undefined)
-    const inbox = fakeRowInbox(claimed)
+    const inbox = fakeInbox()
+    if (!claimed) inbox.seen("telegram", "c-1:77")
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
     const moduleRef = await Test.createTestingModule({
@@ -52,21 +52,22 @@ const build = async (pending: TelegramInboxEntity | null = pendingOf(), claimed 
         conversations,
         outbox,
         write,
-        rowClaims: inbox.rowClaims,
+        inbox,
     }
 }
 
 describe("TelegramInboxService receipt delivery", () => {
     it("claims the connection-prefixed message identity and defers conversation effects", async () => {
-        const { service, conversations, write, rowClaims } = await build()
+        const { service, conversations, write, inbox } = await build()
         await service.acceptTelegramDelivery(body, "c-1")
         const manager = write.mock.calls[0]?.[0]
         expect(isTransactionManager(manager)).toBe(true)
-        expect(rowClaims).toEqual([
+        expect(inbox.receipts.map(({ source, eventId, entity, row }) => ({ source, eventId, entity, row }))).toEqual([
             {
                 source: "telegram",
                 eventId: "c-1:77",
-                receipt: { entity: TelegramInboxEntity, row: { provider: "telegram", deliveryId: "c-1:77", payload } },
+                entity: TelegramInboxEntity,
+                row: { provider: "telegram", deliveryId: "c-1:77", payload },
             },
         ])
         expect(write).toHaveBeenCalledWith(

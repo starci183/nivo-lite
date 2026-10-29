@@ -2,7 +2,7 @@
 export const LEAD_STAGES = ["new", "qualified", "proposal", "won", "lost"] as const
 
 /** One stage of a customer. */
-export type LeadStage = (typeof LEAD_STAGES)[number]
+export type PublicLeadStage = (typeof LEAD_STAGES)[number]
 
 /** The customer resolved by fulfillment, or null while its gated handoff still waits to capture one. */
 export type PublicLeadFulfillmentResult = string | null
@@ -27,7 +27,7 @@ export interface LeadRequestBody {
     /** A note for the customer's history, or an empty string. */
     readonly note: string
     /** The stage the caller asked for, or null. */
-    readonly stage: LeadStage | null
+    readonly stage: PublicLeadStage | null
     /** The caller's own id of the customer, or an empty string. */
     readonly externalId: string
     /** The source named in evidence: `api:<key name>`. */
@@ -45,7 +45,7 @@ export interface LegacyLeadRequestBody {
     /** A nonempty company replaces the existing one. */
     readonly company: string
     /** The requested outcome, or none. */
-    readonly stage: LeadStage | null
+    readonly stage: PublicLeadStage | null
     /** An optional note retained in customer evidence. */
     readonly note: string
 }
@@ -103,7 +103,7 @@ export interface ListLeadsParams {
     /** The Authorization header as sent. */
     readonly authorization: string | undefined
     /** Only customers of this stage. */
-    readonly stage?: LeadStage | undefined
+    readonly stage?: PublicLeadStage | undefined
     /** The most customers to answer, as the caller wrote it; clamped to 1..200, 50 when absent or not a number. */
     readonly limit?: string | undefined
 }
@@ -139,7 +139,7 @@ export interface AcceptLeadParams {
     /** A note for the customer's history. */
     readonly note?: string | undefined
     /** The stage the caller asks for; an empty string means none. */
-    readonly stage?: LeadStage | "" | undefined
+    readonly stage?: PublicLeadStage | "" | undefined
 }
 
 /** A hand-over with every absent text made empty and the stage decided. */
@@ -161,7 +161,7 @@ export interface LeadFacts {
     /** A note, or an empty string. */
     readonly note: string
     /** The stage the caller asked for, or null. */
-    readonly stage: LeadStage | null
+    readonly stage: PublicLeadStage | null
 }
 
 /** What handing over a customer answers. */

@@ -16,7 +16,7 @@ export class OfficeRoomsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), OfficeRoomDirectoryModule],
+            imports: [...(base.imports ?? []), OfficeRoomDirectoryModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 OfficeRoomsService,

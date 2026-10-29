@@ -21,6 +21,8 @@ export type {
 export { WorkItemsModule } from "./work-items.module"
 export { WorkItemsService } from "./work-items.service"
 export { WorkItemsReadService } from "./work-items-read.service"
+export { WorkItemsDecisionsReadService } from "./work-items-decisions-read.service"
+export type { WaitingDecision } from "./work-items-decisions-read.contracts"
 export type {
     AnswerProgressLine,
     DashboardListLine,

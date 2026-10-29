@@ -42,10 +42,9 @@ export const callDbFunction = async <T>(
     name: string,
     args: ReadonlyArray<unknown>,
 ): Promise<ReadonlyArray<T>> => {
-    const rows = await manager.query<Array<T>>(
-        `SELECT * FROM ${functionPart(name)}(${parameterList(args.length)})`,
-        [...args],
-    )
+    const rows = await manager.query<Array<T>>(`SELECT * FROM ${functionPart(name)}(${parameterList(args.length)})`, [
+        ...args,
+    ])
     return rows
 }
 
@@ -57,4 +56,15 @@ export const advisoryXactLock = async (manager: EntityManager, key: string): Pro
 /** Sends one NOTIFY on `channel` with `payload`, delivered when the manager's transaction commits. */
 export const notify = async (manager: EntityManager, channel: string, payload: string): Promise<void> => {
     await manager.query("SELECT pg_notify($1, $2)", [channel, payload])
+}
+
+/** A connection that runs one statement: a `pg` client the realtime hub holds open to listen on. */
+export interface StatementConnection {
+    /** Runs one statement. */
+    query(text: string): Promise<unknown>
+}
+
+/** Subscribes the connection to the channel; the name is checked like a function name and spliced as the identifier it is. */
+export const listenOn = async (connection: StatementConnection, channel: string): Promise<void> => {
+    await connection.query(`LISTEN ${functionPart(channel)}`)
 }

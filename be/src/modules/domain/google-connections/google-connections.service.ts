@@ -135,7 +135,7 @@ export class GoogleConnectionsService {
         const email = await this.google.accountEmail(tokens)
         const rows = await this.connections.listByProvider(workspaceId, "google", { includeDisconnected: false })
         const row = this.consentRowOf(rows, email)
-        const refresh = await this.tokens.keptRefresh(row, tokens.refreshToken)
+        const refresh = await this.tokens.keptRefresh(row, tokens.renewalToken)
         if (!refresh) throw new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.Missing })
         await this.tokens.save({
             workspaceId,

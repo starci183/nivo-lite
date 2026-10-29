@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { returnedRows, rowShape } from "@modules/platform/database"
 import type { RecordedRequest } from "./public-api.contracts"
 import { PublicApiEntity } from "./persistence/entities"
 import type { PublicApiKind } from "./persistence/entities"
@@ -22,6 +23,9 @@ export interface LedgerRecord {
     readonly needSupplied?: boolean | null
 }
 
+/** The request a ledger statement returns: its row and the customer it already resolved. */
+const isRequestRow = rowShape({ id: "string", lead_id: "string?" })
+
 @Injectable()
 /** The ledger of accepted public API requests, written only through the manager the caller's transaction hands in. */
 export class PublicApiLedgerService {
@@ -43,11 +47,20 @@ export class PublicApiLedgerService {
                 needSupplied: request.needSupplied ?? null,
             })
             .setParameters({ prefix: request.prefix, suffix: request.suffix })
-            .onConflict("(workspace_id, dedupe_key) DO UPDATE SET duplicates = public_api.duplicates + 1")
-            .returning("id, lead_id, (xmax = 0) AS inserted")
+            .orIgnore()
+            .returning(["id", "lead_id"])
             .execute()
-        const [row] = written.raw as Array<RecordedRequest>
-        return row
+        const [fresh] = returnedRows(written.raw, isRequestRow)
+        if (fresh !== undefined) return { ...fresh, inserted: true }
+        const counted = await manager
+            .createQueryBuilder(PublicApiEntity, "p")
+            .update()
+            .set({ duplicates: () => "duplicates + 1" })
+            .where({ workspaceId: request.workspaceId, dedupeKey: `${request.prefix}${request.suffix}` })
+            .returning(["id", "lead_id"])
+            .execute()
+        const [earlier] = returnedRows(counted.raw, isRequestRow)
+        return earlier === undefined ? undefined : { ...earlier, inserted: false }
     }
 
     /** Locks only the request belonging to this workspace, for the fenced worker that settles it. */
