@@ -10,7 +10,7 @@ import { GoogleLogEvent } from "./google.log-events"
 import { GoogleError, GoogleErrorCode } from "./errors/google.error"
 import { InjectGoogleOptions } from "./google.decorators"
 import type { GoogleOptions } from "./google.options"
-import { GOOGLE_SCOPE } from "./google.contracts"
+import { GOOGLE_SCOPE, RENEWAL_GRANT_FIELD } from "./google.contracts"
 import type {
     CreatedSpreadsheet,
     GoogleIdentityTokens,
@@ -105,12 +105,12 @@ export class GoogleClient {
         })
     }
 
-    /** Exchanges a refresh token for a new access token. */
-    refreshAccessToken(refreshToken: string): Promise<GoogleTokenSet> {
+    /** Exchanges a provider renewal token for a new access token. */
+    refreshAccessToken(renewalToken: string): Promise<GoogleTokenSet> {
         const { client } = this.options
         if (client === null) throw new GoogleError({ code: GoogleErrorCode.NotConfigured })
         return this.tokens({
-            refresh_token: refreshToken,
+            [RENEWAL_GRANT_FIELD]: renewalToken,
             client_id: client.clientId,
             client_secret: client.clientSecret.reveal(),
             grant_type: "refresh_token",
@@ -242,7 +242,7 @@ export class GoogleClient {
         if (!accessToken) throw new GoogleError({ code: GoogleErrorCode.ContractMismatch })
         return {
             accessToken,
-            refreshToken: textOf(body.refresh_token) ?? null,
+            renewalToken: textOf(body[RENEWAL_GRANT_FIELD]) ?? null,
             expiresAt:
                 this.clock.now().getTime() + (typeof body.expires_in === "number" ? body.expires_in : 3600) * 1000,
             idToken: textOf(body.id_token) ?? null,
