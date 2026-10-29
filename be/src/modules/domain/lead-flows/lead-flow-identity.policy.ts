@@ -1,4 +1,5 @@
-import type { Identity, LeadFlow, LeadSource, SourceWords } from "./lead-flows.contracts"
+import type { Identity, LeadFlow, LeadSource } from "./lead-flows.contracts"
+import type { SourceWords } from "./lead-flow-delivery.contracts"
 
 /** The flow fields that identify a prospect. */
 export type FlowIdentity = Pick<LeadFlow, "psid" | "igsid" | "phone" | "email" | "connection_id">

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { InboundEventFeedRecord } from "./inbound-events.contracts"
+import type { InboundEventFeedRow } from "./inbound-events.contracts"
 import { InboundEventEntity } from "./persistence/entities"
 
 /** The creation time as UTC ISO text with milliseconds, the shape the feed always answered. */
@@ -17,7 +17,7 @@ export class InboxFeedService {
     ) {}
 
     /** Lists a bounded feed from the verified member's selected workspace. */
-    async list(userId: string, workspaceId: string, limit: number): Promise<ReadonlyArray<InboundEventFeedRecord>> {
+    async list(userId: string, workspaceId: string, limit: number): Promise<ReadonlyArray<InboundEventFeedRow>> {
         await this.members.require(userId, workspaceId)
         return this.entityManager
             .createQueryBuilder(InboundEventEntity, "e")
@@ -39,6 +39,6 @@ export class InboxFeedService {
             .orderBy("e.createdAt", "DESC")
             .addOrderBy("e.id", "DESC")
             .limit(Math.max(1, Math.min(100, Math.trunc(limit))))
-            .getRawMany<InboundEventFeedRecord>()
+            .getRawMany<InboundEventFeedRow>()
     }
 }

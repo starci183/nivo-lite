@@ -4,7 +4,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { InboundEventFeedRecord } from "./inbound-events.contracts"
+import type { InboundEventFeedRow } from "./inbound-events.contracts"
 import { InboxFeedService } from "./inbox-feed.service"
 
 const member = builder<WorkspaceMember>({
@@ -16,7 +16,7 @@ const member = builder<WorkspaceMember>({
     status: "active",
 })
 
-const row = builder<InboundEventFeedRecord>({
+const row = builder<InboundEventFeedRow>({
     id: "event-1",
     workspace_id: "ws-1",
     channel: "telegram",

@@ -38,7 +38,7 @@ import { MemberGrantsModule, OfficeAuthorityService } from "@modules/domain/memb
 import { MODULE_KNOWLEDGE_FOLDERS, MODULES_MESSAGES } from "@modules/domain/modules"
 import { OwnersModule } from "@modules/domain/owners"
 import { InboundEventRecordsModule } from "@modules/domain/inbound-events"
-import { OfficeRoomDirectoryModule } from "@modules/domain/office-rooms"
+import { OfficeRoomsModule } from "@modules/domain/office-rooms"
 import { ClockModule } from "@modules/platform/clock"
 import { IdsModule } from "@modules/platform/ids"
 import { DatabaseModule } from "@modules/platform/database"
@@ -46,8 +46,27 @@ import { PRIMARY_ENTITIES } from "@modules/platform/database/entities"
 import { appPgTypes } from "@modules/integrations/data-sources"
 import { EventBusModule } from "@modules/platform/event-bus"
 import { QueueModule } from "@modules/platform/queue"
+import type { QueueOptions } from "@modules/platform/queue"
 import { LoggingModule, printConsoleLine } from "@modules/platform/logging"
 import type { CliAppOptions } from "../cli.options"
+
+/** The queue of the CLI: producers only, so no worker and no relay run. */
+const CLI_QUEUE: QueueOptions & { readonly isGlobal: true } = {
+    isGlobal: true,
+    enabled: false,
+    redisHost: "127.0.0.1",
+    redisPort: 6379,
+    redisDb: 0,
+    prefix: "nivo",
+    concurrency: 1,
+    workspaceConcurrency: 1,
+    relayIntervalMs: 500,
+    relayBatch: 50,
+    reconcileAfterMs: 15_000,
+    visibilityTimeoutMs: 60_000,
+    shutdownGraceMs: 1000,
+    schedulers: [],
+}
 
 /** Registers the CLI capabilities in their boot order, with queue producers only. */
 export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> => [
@@ -76,32 +95,17 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     ObjectStorageModule.register({ isGlobal: true, ...options.storage }),
     VideoMusicModule.register({ isGlobal: true, store: STORAGE_ASSETS }),
     EventsModule.register({ isGlobal: true }),
-    QueueModule.register({
-        isGlobal: true,
-        enabled: false,
-        redisHost: "127.0.0.1",
-        redisPort: 6379,
-        redisDb: 0,
-        prefix: "nivo",
-        concurrency: 1,
-        workspaceConcurrency: 1,
-        relayIntervalMs: 500,
-        relayBatch: 50,
-        reconcileAfterMs: 15_000,
-        visibilityTimeoutMs: 60_000,
-        shutdownGraceMs: 1000,
-        schedulers: [],
-    }),
+    QueueModule.register(CLI_QUEUE),
     EventBusModule.register({ isGlobal: true }),
     JobOpsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: IDENTITY_ACCOUNTS }),
     WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),
     AuthorityRulesModule.register({ isGlobal: true }),
-    OfficeRoomDirectoryModule,
+    OfficeRoomsModule.register({ isGlobal: true }),
     MemberGrantsModule.register({ isGlobal: true }),
     ModuleInstallationsModule.register({ isGlobal: true }),
-    InboundEventRecordsModule,
+    InboundEventRecordsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
     DataRecordsModule.register({ isGlobal: true }),
     McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true }),

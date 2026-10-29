@@ -45,3 +45,9 @@ export interface BookingPublishedSetting {
     /** The time zone. */
     readonly timezone: string
 }
+
+/** The settings a workspace saved, or null when it never saved any. */
+export type OptionalBookingSetting = BookingSettingRecord | null
+
+/** The public page settings that are on under a slug, or null when no page is on under it. */
+export type OptionalPublishedSetting = BookingPublishedSetting | null

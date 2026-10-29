@@ -13,7 +13,8 @@ import {
     handoffNeed as realHandoffNeed,
 } from "./lead-flow-steps.policy"
 import type { EscalationInput } from "./lead-flow-steps.policy"
-import type { Answer, EscalationReason, Flags, HandoffPack, StepInput } from "./lead-flows.contracts"
+import type { Answer, EscalationReason, Flags, StepInput } from "./lead-flows.contracts"
+import type { HandoffPack } from "./lead-flow-delivery.contracts"
 
 const SUBJECT = Symbol("lead-flow-steps.policy")
 
