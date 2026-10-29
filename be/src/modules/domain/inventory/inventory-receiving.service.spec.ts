@@ -2,9 +2,10 @@ import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { OfficeLog } from "@modules/domain/module-ops"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryErrorCode } from "./errors/inventory.error"
@@ -46,7 +47,11 @@ const poOf = (overrides: Partial<LoadedPo> = {}): LoadedPo => ({
     ...overrides,
 })
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (entityManager: MockEntityManager, accountingInstalled = false) => {
+    const installations = mock<InstallationRecordsService>()
+    installations.firstOfModule.mockResolvedValue(
+        accountingInstalled ? mock<InstallationRecord>({ moduleKey: "accounting" }) : null,
+    )
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => text(key, params))
     const office = mock<OfficeLog>()
@@ -75,6 +80,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: InventoryMovementsService, useValue: movements },
             { provide: InventoryLocationsService, useValue: locations },
             { provide: InventoryOrdersService, useValue: orders },
+            { provide: InstallationRecordsService, useValue: installations },
         ],
     }).compile()
     return { service: moduleRef.get(InventoryReceivingService), office, movements, orders }
@@ -92,8 +98,7 @@ describe("InventoryReceivingService / receivePo", () => {
                 [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
             ],
         })
-        queueQueryBuilders(em, [{ getRawOne: { id: "mod-1" } }])
-        const { service, movements, orders, office } = await build(em)
+        const { service, movements, orders, office } = await build(em, true)
         orders.loadPo
             .mockResolvedValueOnce(poOf())
             .mockResolvedValueOnce(
@@ -164,7 +169,6 @@ describe("InventoryReceivingService / receivePo", () => {
                 [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
             ],
         })
-        queueQueryBuilders(em, [{ getRawOne: undefined }])
         const { service, movements, orders, office } = await build(em)
         movements.apply
             .mockResolvedValueOnce({ applied: true, before: 0, after: 4, cost: 0 })
@@ -217,8 +221,7 @@ describe("InventoryReceivingService / receivePo", () => {
                 [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
             ],
         })
-        queueQueryBuilders(em, [{ getRawOne: { id: "mod-1" } }])
-        const { service, orders, office } = await build(em)
+        const { service, orders, office } = await build(em, true)
         orders.loadPo.mockResolvedValue(poOf({ supplier: null }))
 
         await service.receivePo("user-1", "ws-1", {
@@ -245,8 +248,7 @@ describe("InventoryReceivingService / receivePo", () => {
                 [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
             ],
         })
-        queueQueryBuilders(em, [{ getRawOne: { id: "mod-1" } }])
-        const { service, office } = await build(em)
+        const { service, office } = await build(em, true)
 
         await service.receivePo("user-1", "ws-1", {
             poId: "po-1",

@@ -1,13 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { AuthorityService } from "@modules/domain/authority"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
-import { ModuleContextVersionEntity } from "@modules/domain/module-context-versions"
-import { ModuleInstallationEntity } from "@modules/domain/module-installations"
+import { ContextVersionsService } from "@modules/domain/module-context-versions"
+import type { VersionSnapshot } from "@modules/domain/module-context-versions"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { isJsonObject, trimmedText } from "./content-ai-prompt.policy"
+import { trimmedText } from "./content-ai-prompt.policy"
 import type { BrandMaterial } from "./content-ai-prompt.policy"
 
 /** The most public sources a marketing prompt reads. */
@@ -17,39 +16,24 @@ const SOURCE_LIMIT = 40
 /** Public marketing context; private sources and instance-only facts never reach these prompts. */
 export class ContentBrandService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly authority: AuthorityService,
         private readonly facts: BrainFactsService,
         private readonly sources: KnowledgeSourcesReadService,
         private readonly workspaces: WorkspacesService,
+        private readonly installations: InstallationRecordsService,
+        private readonly versions: ContextVersionsService,
     ) {}
 
     /** Reads the applied setup, house voice, public knowledge and facts. */
     async material(workspaceId: string): Promise<BrandMaterial> {
-        const [shop, authority, setupRow, sources, facts] = await Promise.all([
+        const [shop, authority, snapshot, sources, facts] = await Promise.all([
             this.workspaces.nameOf(workspaceId),
             this.authority.load({ workspaceId }),
-            this.entityManager
-                .createQueryBuilder(ModuleInstallationEntity, "i")
-                .select("v.snapshot", "snapshot")
-                .innerJoin(
-                    ModuleContextVersionEntity,
-                    "v",
-                    "v.id = i.active_context_version_id AND v.workspace_id = i.workspace_id",
-                )
-                .where("i.workspace_id = :workspaceId AND i.module_key = 'content'", { workspaceId })
-                .orderBy("i.created_at")
-                .limit(1)
-                .getRawOne<{ snapshot: unknown }>(),
+            this.setupSnapshot(workspaceId),
             this.sources.allPublicTexts(workspaceId, "content", SOURCE_LIMIT),
             this.facts.forView(workspaceId, "customer", "content", null, 80),
         ])
-        const snapshot = isJsonObject(setupRow?.snapshot) ? setupRow.snapshot : {}
-        const evidence = (key: string): string => {
-            const gates = isJsonObject(snapshot.gates) ? snapshot.gates : {}
-            const gate = gates[key]
-            return isJsonObject(gate) ? trimmedText(gate.evidence) : ""
-        }
+        const evidence = (key: string): string => trimmedText(snapshot?.gates[key]?.evidence)
         return {
             shop,
             authority: {
@@ -58,12 +42,8 @@ export class ContentBrandService {
                 limitsNote: authority?.limits_note ?? "",
             },
             setup: {
-                summary: trimmedText(snapshot.summary),
-                facts: Array.isArray(snapshot.facts)
-                    ? snapshot.facts.flatMap((fact: unknown) =>
-                          isJsonObject(fact) && typeof fact.text === "string" ? [fact.text] : [],
-                      )
-                    : [],
+                summary: trimmedText(snapshot?.summary),
+                facts: snapshot?.facts.map((fact) => fact.text) ?? [],
                 tone: evidence("tone"),
                 claimsLimits: evidence("claims_limits"),
                 audience: evidence("audience"),
@@ -76,5 +56,12 @@ export class ContentBrandService {
                 value: fact.value,
             })),
         }
+    }
+
+    /** The setup the owner applied to the content module (its active context version); none before the first apply. */
+    private async setupSnapshot(workspaceId: string): Promise<VersionSnapshot | null> {
+        const installation = await this.installations.firstOfModule(workspaceId, "content")
+        if (installation?.activeContextVersionId == null) return null
+        return (await this.versions.find(installation.activeContextVersionId))?.snapshot ?? null
     }
 }
