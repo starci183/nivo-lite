@@ -1,8 +1,10 @@
 import { Test } from "@nestjs/testing"
 import { Brackets } from "typeorm"
+import type { WhereExpressionBuilder } from "typeorm"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { KnowledgeChunksService } from "./knowledge-chunks.service"
 import type { ChunkDraft } from "./knowledge-chunks.contracts"
@@ -46,6 +48,10 @@ const passage = (ord: number, embedding: string | null, embeddingModel: string |
     embedding,
     embeddingModel,
 })
+
+/** The order numbers of the rows an insert was given. */
+const ordsOf = (rows: unknown): Array<number> =>
+    Array.isArray(rows) ? rows.flatMap((row: unknown) => (isRecord(row) && typeof row.ord === "number" ? [row.ord] : [])) : []
 
 const write = (list: ReadonlyArray<ChunkDraft>) => ({
     workspaceId: WS,
@@ -110,9 +116,7 @@ describe("KnowledgeChunksService", () => {
             await service.replace(write(drafts(120, "[1]")))
 
             expect(tx.em.insert).toHaveBeenCalledTimes(3)
-            const orders = tx.em.insert.mock.calls.map(([, rows]) =>
-                Array.isArray(rows) ? rows.map((row) => row.ord) : [],
-            )
+            const orders = tx.em.insert.mock.calls.map(([, rows]) => ordsOf(rows))
             expect(orders[2]).toEqual(Array.from({ length: 20 }, (_, index) => 100 + index))
             expect(orders[1]).toEqual(Array.from({ length: 50 }, (_, index) => 50 + index))
         })
@@ -156,7 +160,7 @@ describe("KnowledgeChunksService", () => {
     describe("embeddedOf", () => {
         it("names the columns of the stored passages", async () => {
             const em = mockEntityManager()
-            queueQueryBuilders(em, [{ getMany: [chunkOf({ embeddingModel: "m1" })] }])
+            queueQueryBuilders(em, [{ getMany: [Object.assign(chunkOf(), { embeddingModel: "m1" })] }])
             const service = await build(em)
 
             await expect(service.embeddedOf(WS, "s1")).resolves.toEqual([{ order: 0, text: "a", model: "m1" }])
@@ -238,12 +242,11 @@ describe("KnowledgeChunksService", () => {
             expect(fake?.callsOf("where")).toEqual([[{ workspaceId: WS }]])
             expect(fake?.callsOf("andWhere")).toHaveLength(3)
             const conditions: Array<unknown> = []
-            const scope = {
-                where: (...args: Array<unknown>) => (conditions.push(args), scope),
-                orWhere: (...args: Array<unknown>) => (conditions.push(args), scope),
-            }
+            const scope = mock<WhereExpressionBuilder>()
+            scope.where.mockImplementation((...args: Array<unknown>) => (conditions.push(args), scope))
+            scope.orWhere.mockImplementation((...args: Array<unknown>) => (conditions.push(args), scope))
             for (const [brackets] of fake?.callsOf("andWhere") ?? [])
-                if (brackets instanceof Brackets) brackets.whereFactory(scope as never)
+                if (brackets instanceof Brackets) brackets.whereFactory(scope)
             expect(conditions).toEqual([
                 ["c.module IS NULL"],
                 ["c.module = :module", { module: "chatbot" }],
