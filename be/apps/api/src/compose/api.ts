@@ -14,7 +14,7 @@ import { InboxGraphqlModule } from "@features/api/inbox"
 import { AgentChatGraphqlModule } from "@features/api/agentchat"
 import { ChatMarkersGraphqlModule } from "@features/api/chatmarkers"
 import { ChattypingGraphqlModule } from "@features/api/chattyping"
-import { AgentChatModule } from "@modules/domain/agent-chat"
+import { AGENT_CHAT_ERROR_KINDS, AGENT_CHAT_MESSAGES, AgentChatModule } from "@modules/domain/agent-chat"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
@@ -27,6 +27,8 @@ import { MetaHttpModule } from "@features/webhooks/meta"
 import { ConnectionsGraphqlModule } from "@features/api/connections"
 import { SepayConnectionGraphqlModule } from "@features/api/sepay-connection"
 import { ZaloConnectionPageGraphqlModule } from "@features/api/zalo-connection-page"
+import type { ErrorKind } from "@modules/platform/errors"
+import type { MessageBundle } from "@modules/platform/i18n"
 /** The api area of the API, in registration order. */
 export const apiModules = (): Array<DynamicModule> => [
     WorkspacesGraphqlModule.register({}),
@@ -59,3 +61,9 @@ export const apiModules = (): Array<DynamicModule> => [
     N8nPipelinesHttpModule.register({}),
     AdminGraphqlModule.register({}),
 ]
+
+/** The error kinds of the capabilities this group registers, in registration order. */
+export const apiErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [AGENT_CHAT_ERROR_KINDS]
+
+/** The message bundles of the capabilities this group registers, in registration order. */
+export const apiMessages: ReadonlyArray<MessageBundle> = [AGENT_CHAT_MESSAGES]

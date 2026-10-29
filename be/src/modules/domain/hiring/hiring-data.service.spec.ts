@@ -7,7 +7,6 @@ import {
     interview as interviewFixture,
     offer as offerFixture,
 } from "@tests/fixtures/builders/hiring-data.builder"
-<<<<<<< HEAD
 import {
     settingsRow,
     jobRow,
@@ -16,16 +15,12 @@ import {
     offerRow,
     availabilityRow,
 } from "@tests/fixtures/builders/hiring-rows.builder"
-import { candidateRowsOf, unslottedInterviewRow } from "@tests/fixtures/builders/hiring-data-rows.builder"
-=======
-import { settingsRow, jobRow, candidateRow, interviewRow, offerRow, availabilityRow } from "@tests/fixtures/builders/hiring-rows.builder"
 import {
     busyInterviewsFind,
     candidateRowsOf,
     retentionCandidatesFind,
     unslottedInterviewRow,
 } from "@tests/fixtures/builders/hiring-data-rows.builder"
->>>>>>> main
 import { namedCalls } from "@tests/fixtures/builders/entity-row.builder"
 import { Test } from "@nestjs/testing"
 import { Between, In, IsNull } from "typeorm"
@@ -388,9 +383,7 @@ describe("HiringDataService lists", () => {
         const service = await build(em)
 
         await expect(service.busy("ws-1", "user-1")).resolves.toEqual([first, second, third, fourth])
-        expect(namedCalls(em.find.mock.calls)).toEqual([
-            busyInterviewsFind("user-1"),
-        ])
+        expect(namedCalls(em.find.mock.calls)).toEqual([busyInterviewsFind("user-1")])
     })
 })
 
