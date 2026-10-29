@@ -3,7 +3,7 @@ import { LoyaltyCustomerLinksService } from "@modules/domain/loyalty-customer-li
 import { LoyaltyCustomersService, toLoyaltyPhone } from "@modules/domain/loyalty-customers"
 import { LoyaltyLedgerService, expiringSoon } from "@modules/domain/loyalty-ledger"
 import { LoyaltyOtpsService } from "@modules/domain/loyalty-otps"
-import { LoyaltyProgramsService, nextTier, tierOf } from "@modules/domain/loyalty-programs"
+import { LoyaltyProgramsService, nextTier, tierByKey } from "@modules/domain/loyalty-programs"
 import type { LoyaltyProgram } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsService, redeemBlock } from "@modules/domain/loyalty-rewards"
 import { InjectClock } from "@modules/platform/clock"
@@ -122,7 +122,7 @@ export class LoyaltyPublicService {
             points: {
                 shop,
                 name: member.name,
-                tierName: tierOf(config, member.tierKey)?.name ?? "",
+                tierName: tierByKey(config, member.tierKey)?.name ?? "",
                 points: member.points,
                 nextTier: nextTier(config, member.lifetimeSpendVnd),
                 expiring:

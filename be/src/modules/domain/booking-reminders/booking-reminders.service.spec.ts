@@ -1,13 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { In, LessThanOrEqual } from "typeorm"
-import { AutomationPipelineEntity } from "@modules/domain/automation-pipelines"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { buildPipelineRow } from "@tests/fixtures/builders/automations.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import {
     CANCELLED_BOOKING_DONE,
-    CARD_CONFIG_READ,
-    CARD_WHERE,
     HOUR,
     NOW,
     OPEN_REMINDERS_OF_B1,
@@ -21,12 +20,18 @@ import {
 import { BookingRemindersService } from "./booking-reminders.service"
 import { BookingReminderEntity } from "./persistence/entities"
 
-const cardOf = (config: Record<string, unknown> | null, body: string | null = null) =>
-    Object.assign(new AutomationPipelineEntity(), { config, body })
+/** A reminder card as the pipelines capability hands it back; none when the owner never switched it on. */
+const cardOf = (config: Record<string, string | number> | null, body: string | null = null, enabled = true) =>
+    buildPipelineRow({ template_key: "appointment_reminder", config: config ?? {}, body, enabled })
 
-const build = async (manager = mockEntityManager()) => {
+const build = async (manager = mockEntityManager(), card: ReturnType<typeof cardOf> | null = null) => {
+    const pipelines = mock<AutomationPipelinesService>({ findPipeline: jest.fn(() => Promise.resolve(card)) })
     const moduleRef = await Test.createTestingModule({
-        providers: [BookingRemindersService, { provide: PRIMARY_ENTITY_MANAGER, useValue: manager }],
+        providers: [
+            BookingRemindersService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: manager },
+            { provide: AutomationPipelinesService, useValue: pipelines },
+        ],
     }).compile()
     return moduleRef.get(BookingRemindersService)
 }
@@ -101,30 +106,27 @@ describe("BookingRemindersService settle", () => {
 
 describe("BookingRemindersService cardOf", () => {
     it("reads the custom hours and trims the wording of the reminder card", async () => {
-        const manager = mockEntityManager({
-            findOne: [AutomationPipelineEntity, cardOf({ firstHours: 24, secondHours: "2" }, "  Hello {{customer}}  ")],
-        })
-        const reminders = await build(manager)
+        const card = cardOf({ firstHours: 24, secondHours: "2" }, "  Hello {{customer}}  ")
+        const reminders = await build(mockEntityManager(), card)
 
         await expect(reminders.cardOf("ws-1")).resolves.toEqual({ hours: [24, 2], body: "Hello {{customer}}" })
-
-        expect(manager.findOne.mock.calls).toEqual([
-            [AutomationPipelineEntity, { select: { config: true, body: true }, where: CARD_WHERE }],
-        ])
     })
 
-    it("returns no hours or body when there is no enabled card", async () => {
-        const manager = mockEntityManager({ findOne: [AutomationPipelineEntity, null] })
-        const reminders = await build(manager)
+    it("returns no hours or body when there is no card", async () => {
+        const reminders = await build()
 
         await expect(reminders.cardOf("ws-1")).resolves.toEqual({ hours: [], body: null })
-
-        expect(manager.findOne).toHaveBeenCalledTimes(1)
     })
 
-    it.each([null, "", " \n\t "])("returns no wording for a blank body %j", async (body) => {
-        const manager = mockEntityManager({ findOne: [AutomationPipelineEntity, cardOf(null, body)] })
-        const reminders = await build(manager)
+    it("returns no hours or body when the card is switched off", async () => {
+        const reminders = await build(mockEntityManager(), cardOf({ firstHours: 24 }, "Hello", false))
+
+        await expect(reminders.cardOf("ws-1")).resolves.toEqual({ hours: [], body: null })
+    })
+
+    it.each([null, "", " 
+	 "])("returns no wording for a blank body %j", async (body) => {
+        const reminders = await build(mockEntityManager(), cardOf(null, body))
 
         await expect(reminders.cardOf("ws-1")).resolves.toEqual({ hours: [], body: null })
     })
@@ -153,7 +155,6 @@ describe("BookingRemindersService schedule", () => {
 
     it("writes one reminder per default offset still ahead and cancels the stale ones", async () => {
         const manager = mockEntityManager({
-            findOne: [AutomationPipelineEntity, null],
             upsert: [BookingReminderEntity, {}],
             update: [BookingReminderEntity, {}],
         })
@@ -165,18 +166,16 @@ describe("BookingRemindersService schedule", () => {
             { kind: "h24", dueMs: NOW + 6 * HOUR },
             { kind: "h2", dueMs: NOW + 28 * HOUR },
         ])
-        expect(manager.findOne.mock.calls).toEqual([[AutomationPipelineEntity, CARD_CONFIG_READ]])
         expect(manager.upsert.mock.calls).toEqual([planned(["h24", "h2"], [NOW + 6 * HOUR, NOW + 28 * HOUR])])
         expect(manager.update.mock.calls).toEqual([STALE])
     })
 
     it("uses the offsets of the reminder card the owner customised", async () => {
         const manager = mockEntityManager({
-            findOne: [AutomationPipelineEntity, cardOf({ firstHours: 12, secondHours: 1 })],
             upsert: [BookingReminderEntity, {}],
             update: [BookingReminderEntity, {}],
         })
-        const reminders = await build()
+        const reminders = await build(manager, cardOf({ firstHours: 12, secondHours: 1 }))
 
         const plan = await reminders.schedule({ ...targetOf(), manager })
 
@@ -189,11 +188,8 @@ describe("BookingRemindersService schedule", () => {
     })
 
     it("writes nothing when every offset is already past", async () => {
-        const manager = mockEntityManager({
-            findOne: [AutomationPipelineEntity, cardOf(null)],
-            update: [BookingReminderEntity, {}],
-        })
-        const reminders = await build()
+        const manager = mockEntityManager({ update: [BookingReminderEntity, {}] })
+        const reminders = await build(manager, cardOf(null))
 
         const plan = await reminders.schedule({ ...targetOf({ startMs: NOW + HOUR }), manager })
 

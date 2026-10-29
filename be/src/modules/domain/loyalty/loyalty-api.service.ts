@@ -5,7 +5,7 @@ import type { CampaignDraft } from "@modules/domain/loyalty-campaigns"
 import { LoyaltyCustomersService, toLoyaltyPhone } from "@modules/domain/loyalty-customers"
 import { LoyaltyLedgerService } from "@modules/domain/loyalty-ledger"
 import type { LoyaltyMember } from "@modules/domain/loyalty-ledger"
-import { LoyaltyProgramsService, tierOf } from "@modules/domain/loyalty-programs"
+import { LoyaltyProgramsService, tierByKey } from "@modules/domain/loyalty-programs"
 import type { LoyaltyConfig } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsService } from "@modules/domain/loyalty-rewards"
 import { LoyaltyError, LoyaltyErrorCode } from "./errors/loyalty.error"
@@ -145,7 +145,7 @@ export class LoyaltyApiService {
             name: member.name,
             phone: member.phone,
             email: member.email,
-            tier: tierOf(config, member.tierKey)?.name ?? null,
+            tier: tierByKey(config, member.tierKey)?.name ?? null,
             points: member.points,
             lifetimeSpendVnd: member.lifetimeSpendVnd,
             visits: member.visits,

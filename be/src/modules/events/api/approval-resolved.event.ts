@@ -1,6 +1,6 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, isTextOrAbsent, memberOf, whenPresent, openEnvelope } from "./money-event.policy"
+import { isKey, isText, isTextOrAbsent, listedValue, whenPresent, openEnvelope } from "./money-event.policy"
 
 /**
  * The payload of the `approval_resolved` event: an approval request reached its end (a member's verdict, or the deadline). The outcome
@@ -44,7 +44,7 @@ export class ApprovalResolvedEvent extends BaseEvent {
 
     /** The request id is the identity of the fact: a request ends once. */
     static create(payload: ApprovalResolvedInput): ApprovalResolvedEvent {
-        memberOf(APPROVAL_RESOLVED_OUTCOMES, payload.outcome, "outcome")
+        listedValue(APPROVAL_RESOLVED_OUTCOMES, payload.outcome, "outcome")
         return new ApprovalResolvedEvent(payload.requestId, { ...payload, dedupeKey: payload.requestId })
     }
 
@@ -55,11 +55,11 @@ export class ApprovalResolvedEvent extends BaseEvent {
         const { body } = opened
         if (
             !isKey(body.requestId) ||
-            typeof body.workspaceId !== "string" ||
-            typeof body.outcome !== "string" ||
+            !isText(body.workspaceId) ||
+            !isText(body.outcome) ||
             !isTextOrAbsent(body.decidedBy) ||
-            typeof body.action !== "string" ||
-            typeof body.chainStepId !== "string"
+            !isText(body.action) ||
+            !isText(body.chainStepId)
         ) {
             return null
         }
@@ -67,7 +67,7 @@ export class ApprovalResolvedEvent extends BaseEvent {
             dedupeKey: body.requestId,
             requestId: body.requestId,
             workspaceId: body.workspaceId,
-            outcome: memberOf(APPROVAL_RESOLVED_OUTCOMES, body.outcome, "outcome"),
+            outcome: listedValue(APPROVAL_RESOLVED_OUTCOMES, body.outcome, "outcome"),
             ...whenPresent("decidedBy", body.decidedBy),
             action: body.action,
             chainStepId: body.chainStepId,

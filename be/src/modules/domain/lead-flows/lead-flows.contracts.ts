@@ -309,10 +309,68 @@ export interface LeadFlow {
 }
 
 /** The changes to one flow; every key is optional. */
-export type LeadFlowPatch = Partial<MutableFlow>
-
-/** The columns of a flow a step may change. */
-export type MutableFlow = Omit<LeadFlow, "id" | "workspace_id">
+export interface LeadFlowPatch {
+    /** The lead. */
+    readonly lead_id?: string | null
+    /** The Meta connection. */
+    readonly connection_id?: string | null
+    /** The transcript. */
+    readonly conversation_id?: string | null
+    /** Facebook or Instagram. */
+    readonly platform?: Platform | null
+    /** The Messenger id. */
+    readonly psid?: string | null
+    /** The Instagram id. */
+    readonly igsid?: string | null
+    /** The phone. */
+    readonly phone?: string | null
+    /** The email. */
+    readonly email?: string | null
+    /** The name. */
+    readonly name?: string | null
+    /** The state. */
+    readonly state?: FlowState
+    /** Where an escalated flow goes back to. */
+    readonly resume_state?: FlowState | null
+    /** The first touch. */
+    readonly source?: LeadSource | null
+    /** Every touch, oldest first. */
+    readonly touches?: ReadonlyArray<LeadSource>
+    /** The answers. */
+    readonly answers?: ReadonlyArray<Answer>
+    /** How many questions were asked. */
+    readonly asked?: number
+    /** The question waiting for an answer. */
+    readonly pending_question?: number | null
+    /** When the contact was asked for. */
+    readonly contact_asked_at?: string | null
+    /** The signals so far. */
+    readonly signals?: Signals
+    /** The score. */
+    readonly score?: Level | null
+    /** Why. */
+    readonly score_reasons?: ReadonlyArray<string>
+    /** When it was scored. */
+    readonly scored_at?: string | null
+    /** The last turn's reading. */
+    readonly analysis?: Analysis | null
+    /** When the person last wrote. */
+    readonly last_user_at?: string | null
+    /** What they last wrote. */
+    readonly last_user_text?: string | null
+    /** When they were greeted. */
+    readonly greeted_at?: string | null
+    /** When they went to Sales. */
+    readonly handed_off_at?: string | null
+    /** When they were followed up. */
+    readonly followed_up_at?: string | null
+    /** When the flow closed. */
+    readonly closed_at?: string | null
+    /** When a person took over. */
+    readonly escalated_at?: string | null
+    /** Why. */
+    readonly escalation_reason?: string | null
+}
 
 /** A new flow. */
 export interface NewLeadFlow {

@@ -23,7 +23,7 @@ import type {
     SignupFacts,
     TransferFacts,
     WorkspaceErrorFacts,
-} from "./platform-admin.facts"
+} from "./platform-admin-facts.contracts"
 import { connectionHealth, numberOrNull } from "./platform-admin.policy"
 
 /** An instant as ISO 8601 text, whether the driver answered a Date or text. */

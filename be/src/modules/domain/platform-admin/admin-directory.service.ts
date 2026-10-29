@@ -6,7 +6,7 @@ import { PlatformAuditService } from "@modules/domain/platform-audit"
 import { AdminAccessService } from "./admin-access.service"
 import { PlatformAdminError, PlatformAdminErrorCode } from "./errors/platform-admin.error"
 import { AdminDirectoryReadsService } from "./admin-directory-reads.service"
-import type * as R from "./platform-admin.facts"
+import type * as R from "./platform-admin-facts.contracts"
 import type {
     AdminHealth,
     AdminIdentity,

@@ -7,7 +7,7 @@ import type {
     AdminWorkspaceItem,
     WorkspaceFilter,
 } from "./platform-admin.contracts"
-import type { QuotaOverrideFacts, QuotaFacts } from "./platform-admin.facts"
+import type { QuotaOverrideFacts, QuotaFacts } from "./platform-admin-facts.contracts"
 
 const DAY_MS = 86_400_000
 
