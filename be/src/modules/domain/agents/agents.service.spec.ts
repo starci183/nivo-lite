@@ -7,8 +7,14 @@ import {
     agentInstallationOf as installationOf,
     agentMemberOf as memberOf,
 } from "@tests/fixtures/builders/agents.builder"
+import {
+    CONNECTIONS_EXPECTED,
+    DASHBOARD_LISTS,
+    WAITING_EXPECTED,
+} from "@tests/fixtures/builders/agents-dashboard.builder"
+import type { Lists } from "@tests/fixtures/builders/agents-dashboard.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -25,41 +31,19 @@ import type { InstallationDirectory, KnowledgeLens } from "./agents.port"
 import { AgentsService } from "./agents.service"
 import { AgentsErrorCode } from "./errors/agents.error"
 import { AgentEntity } from "./persistence/entities"
-import type { DashboardLine } from "./agents-reads.contracts"
 
 const AGENT = agentEntityOf({ knowledge: "", approvalRule: "" })
-
-const itemRowOf = builder<DashboardLine>({
-    id: "wi1",
-    action: "reply_customer",
-    leadId: null,
-    at: "2026-10-12T09:00:00.000Z",
-    summary: "Price question",
-    customer: "An",
-    resultHref: null,
-    total: "6",
-})
-
-/** The dashboard lists the work item reads answer, by list. */
-interface Lists {
-    readonly waiting?: ReadonlyArray<DashboardLine>
-    readonly done?: ReadonlyArray<DashboardLine>
-}
-
-/** The work item reads, answering these lists. */
-const workOf = (lists: Lists = {}) => {
-    const work = mock<WorkItemsActivityService>()
-    work.dashboardList.mockImplementation((query) =>
-        Promise.resolve([...(query.kind === "waiting" ? (lists.waiting ?? []) : (lists.done ?? []))]),
-    )
-    return work
-}
 
 const build = async (
     entityManager: MockEntityManager,
     member: WorkspaceMember = memberOf(),
-    work: jest.Mocked<WorkItemsActivityService> = workOf(),
+    lists: Lists = {},
+    bindKnowledge = true,
 ) => {
+    const work = mock<WorkItemsActivityService>()
+    work.dashboardList.mockImplementation((query) =>
+        Promise.resolve([...(query.kind === "waiting" ? (lists.waiting ?? []) : (lists.done ?? []))]),
+    )
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(member)) })
     const installations = mock<InstallationDirectory>({
         firstOfModule: jest.fn(() => Promise.resolve(installationOf())),
@@ -81,7 +65,7 @@ const build = async (
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
             { provide: LOGGER, useValue: logger },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
-            { provide: AGENTS_KNOWLEDGE, useValue: knowledge },
+            { provide: AGENTS_KNOWLEDGE, useValue: bindKnowledge ? knowledge : null },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AgentBindingsService, useValue: bindings },
             { provide: AgentOwnershipService, useValue: ownership },
@@ -98,29 +82,6 @@ const build = async (
         ownership,
         work,
     }
-}
-
-/** The setup mode binds no knowledge lens, which the service holds as null. */
-const buildSetupMode = async (entityManager: MockEntityManager) => {
-    const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(memberOf())) })
-    const installations = mock<InstallationDirectory>({ byId: jest.fn(() => Promise.resolve(installationOf())) })
-    const bindings = mock<AgentBindingsService>({ connectionsFor: jest.fn(() => Promise.resolve([])) })
-    const logger = mock<Logger>()
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            AgentsService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
-            { provide: LOGGER, useValue: logger },
-            { provide: AGENTS_INSTALLATIONS, useValue: installations },
-            { provide: AGENTS_KNOWLEDGE, useValue: null },
-            { provide: WorkspaceMembersService, useValue: members },
-            { provide: AgentBindingsService, useValue: bindings },
-            { provide: AgentOwnershipService, useValue: mock<AgentOwnershipService>() },
-            { provide: WorkItemsActivityService, useValue: workOf() },
-        ],
-    }).compile()
-    return { service: moduleRef.get(AgentsService), logger }
 }
 
 describe("AgentsService", () => {
@@ -226,6 +187,13 @@ describe("AgentsService", () => {
 
             await expect(service.agentOfDepartment("w1", "chatbot", "i1")).resolves.toEqual({ id: "a1", name: "Bot" })
             expect(installations.byId).toHaveBeenCalledWith("w1", "i1")
+        })
+
+        it("asks the work item reads, the lenses and the bindings with the instance scope", async () => {
+            const { service, knowledge, bindings, work } = await build(stubs, memberOf(), DASHBOARD_LISTS)
+
+            await service.dashboard("u1", { workspaceId: "w1", module: "chatbot", installationId: "i1" })
+
             expect(em.findOne).toHaveBeenCalledWith(AgentEntity, {
                 where: { id: "a1", workspaceId: "w1", status: "active" },
             })
@@ -273,55 +241,16 @@ describe("AgentsService agentById", () => {
 describe("AgentsService", () => {
     describe("dashboard", () => {
         const stubs = mockEntityManager()
-        const lists: Lists = {
-            waiting: [itemRowOf()],
-            done: [itemRowOf({ id: "wi2", total: "2", resultHref: "/leads/l1" })],
-        }
 
         it("loads the four regions of one instance for a manager", async () => {
-            const { service, installations, knowledge, bindings, work } = await build(
-                stubs,
-                memberOf(),
-                workOf(lists),
-            )
+            const { service, installations } = await build(stubs, memberOf(), DASHBOARD_LISTS)
 
             const data = await service.dashboard("u1", { workspaceId: "w1", module: "chatbot", installationId: "i1" })
 
             expect(data.agent).toEqual({ id: "a1", name: "Chatbot Q1", mode: "assist" })
-            expect(data.waiting).toEqual({
-                ok: true,
-                data: {
-                    total: 6,
-                    items: [
-                        {
-                            id: "wi1",
-                            title: "Price question",
-                            action: "reply_customer",
-                            customer: "An",
-                            at: "2026-10-12T09:00:00.000Z",
-                            leadId: null,
-                            resultHref: null,
-                            decisionHref: "/agents/chatbot/i1/workbench?focus=wi1",
-                        },
-                    ],
-                },
-            })
+            expect(data.waiting).toEqual(WAITING_EXPECTED)
             expect(data.done).toMatchObject({ ok: true, data: { count: 2 } })
-            expect(data.connections).toEqual({
-                ok: true,
-                data: [
-                    {
-                        id: "c1",
-                        name: "Shop bot",
-                        provider: "telegram",
-                        botUsername: null,
-                        accountMasked: null,
-                        status: "connected",
-                        access: "auto",
-                        purpose: "inbound_chat",
-                    },
-                ],
-            })
+            expect(data.connections).toEqual(CONNECTIONS_EXPECTED)
             expect(data.knowledge).toMatchObject({ ok: true, data: { audience: "customer", gaps: { openCount: 2 } } })
             expect(installations.byId).toHaveBeenCalledWith("w1", "i1")
             expect(work.dashboardList).toHaveBeenCalledWith({
@@ -400,7 +329,7 @@ describe("AgentsService", () => {
 
         it("fails the knowledge region alone in the setup mode, which binds no knowledge lens", async () => {
             const em = mockEntityManager()
-            const { service, logger } = await buildSetupMode(em)
+            const { service, logger } = await build(em, memberOf(), {}, false)
 
             const data = await service.dashboard("u1", { workspaceId: "w1", module: "chatbot" })
 
