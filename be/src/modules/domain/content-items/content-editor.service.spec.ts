@@ -9,12 +9,13 @@ import {
     completedRenderAttachments,
     selectedPillarInput,
     workbenchExpected,
+    readingStatus,
 } from "../../../tests/fixtures/builders/content-editor.builder"
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { And, In, LessThan, MoreThanOrEqual } from "typeorm"
-import { ContentPillarEntity } from "@modules/domain/content-pillars"
+import { ContentPillarsService } from "@modules/domain/content-pillars"
 import { VideoRendersService } from "@modules/domain/video-renders"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -61,7 +62,11 @@ const build = async (em: MockEntityManager = mockEntityManager(), answers: Reado
     const clock = new FakeClock("2026-01-01T00:00:00.000Z")
     const members = mock<WorkspaceMembersService>()
     const renders = mock<VideoRendersService>()
+    const pillars = mock<ContentPillarsService>()
     members.require.mockResolvedValue(member)
+    pillars.exists.mockResolvedValue(true)
+    pillars.countActive.mockResolvedValue(0)
+    pillars.countActiveAmong.mockResolvedValue(0)
     const transaction = fakeTransaction(em)
     const fakes = queueQueryBuilders(em, answers)
     const moduleRef = await Test.createTestingModule({
@@ -71,6 +76,7 @@ const build = async (em: MockEntityManager = mockEntityManager(), answers: Reado
             { provide: CLOCK, useValue: clock },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: VideoRendersService, useValue: renders },
+            { provide: ContentPillarsService, useValue: pillars },
         ],
     }).compile()
     return {
@@ -79,15 +85,11 @@ const build = async (em: MockEntityManager = mockEntityManager(), answers: Reado
         entityManager: em,
         members,
         renders,
+        pillars,
         transaction,
         fakes,
     }
 }
-
-/** The stubs of a manager whose read of one item answers the item with these changes. */
-const readingItem = (changes: Partial<ContentItemEntity>) => ({
-    findOne: [ContentItemEntity, row(changes)] as const,
-})
 
 /** The item scheduled at an instant. */
 const rowAt = (iso: string): ContentItemEntity => row({ scheduledAt: new Date(iso) })
@@ -158,9 +160,7 @@ describe("ContentEditorService actor and reads", () => {
         const { service, members } = await build(em)
         await expect(service.getForUser("user-1", "workspace-1", "item-1")).resolves.toEqual(item)
         expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1")
-        expect(em.findOne.mock.calls).toEqual([
-            [ContentItemEntity, { where: { workspaceId: "workspace-1", id: "item-1" } }],
-        ])
+        expect(em.findOne.mock.calls).toEqual([callOn({ where: { workspaceId: "workspace-1", id: "item-1" } })])
     })
 })
 
@@ -175,12 +175,9 @@ describe("ContentEditorService actor and reads", () => {
 
 describe("ContentEditorService create", () => {
     it("verifies a selected pillar and preserves a supplied schedule", async () => {
-        const em = mockEntityManager({ exists: [ContentPillarEntity, true] })
-        const { service, fakes } = await build(em, [written()])
+        const { service, fakes, pillars, entityManager } = await build(mockEntityManager(), [written()])
         await expect(service.create("user-1", "workspace-1", selectedPillarInput)).resolves.toEqual(item)
-        expect(em.exists.mock.calls).toEqual([
-            [ContentPillarEntity, { where: { workspaceId: "workspace-1", id: "pillar-1" } }],
-        ])
+        expect(pillars.exists).toHaveBeenCalledWith("workspace-1", "pillar-1", entityManager)
         expect(evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])).toEqual({
             workspaceId: "workspace-1",
             title: "x".repeat(200),
@@ -205,8 +202,9 @@ describe("ContentEditorService create", () => {
     })
 
     it("refuses a pillar outside the workspace", async () => {
-        const em = mockEntityManager({ exists: [ContentPillarEntity, false] })
-        const { service, fakes } = await build(em)
+        const em = mockEntityManager()
+        const { service, fakes, pillars } = await build(em)
+        pillars.exists.mockResolvedValue(false)
         await expect(
             service.create("user-1", "workspace-1", { title: "Launch", channels: ["facebook"], pillarId: "missing" }),
         ).rejects.toMatchObject({ code: ContentItemsErrorCode.InvalidInput })
@@ -217,7 +215,7 @@ describe("ContentEditorService create", () => {
 
 describe("ContentEditorService save and move", () => {
     it.each([null, new Date("2025-12-01T00:00:00.000Z")])("retains draft time %s", async (draftedAt) => {
-        const em = mockEntityManager(readingItem({ status: "draft", draftedAt }))
+        const em = mockEntityManager(readingStatus("draft", draftedAt))
         const { service, fakes } = await build(em, [written()])
         const variants = { facebook: { text: "Draft", hashtags: [], note: "" } }
         await expect(service.save("user-1", "workspace-1", "item-1", { variants, media: [] })).resolves.toEqual(item)
@@ -251,7 +249,7 @@ describe("ContentEditorService save and move", () => {
 
     it("allows a schedule move with legacy attachments that have no completed-render identifier", async () => {
         const media = legacyAttachments
-        const em = mockEntityManager(readingItem({ status: "approved", media }))
+        const em = mockEntityManager(readingStatus("approved", null, media))
         const { service, renders, fakes } = await build(em, [written()])
         await expect(
             service.save("user-1", "workspace-1", "item-1", { scheduledAt: "2026-02-01", media: [] }),
@@ -317,7 +315,7 @@ describe("ContentEditorService transition", () => {
     })
 
     it("refuses deletion after approval", async () => {
-        const em = mockEntityManager(readingItem({ status: "approved" }))
+        const em = mockEntityManager(readingStatus("approved"))
         const { service, transaction } = await build(em)
         await expect(service.transition("user-1", "workspace-1", "item-1", "delete")).rejects.toMatchObject({
             code: ContentItemsErrorCode.WrongStatus,
@@ -330,7 +328,7 @@ describe("ContentEditorService transition", () => {
         ["drop an idea aside", "skip", "idea", "skipped", false],
         ["bring an approved item back", "reopen", "approved", "draft", true],
     ] as const)("records the transition that would %s", async (_label, kind, status, next, reopen) => {
-        const em = mockEntityManager(readingItem({ status }))
+        const em = mockEntityManager(readingStatus(status))
         const { service, fakes } = await build(em, [{ execute: {} }])
         await expect(service.transition("user-1", "workspace-1", "item-1", kind)).resolves.toEqual({ id: "item-1" })
         expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
@@ -345,19 +343,20 @@ describe("ContentEditorService transition", () => {
 })
 
 describe("ContentEditorService figures and workbench", () => {
-    const figuresStubs = (upcoming: ContentItemEntity | null, counts: [number, number, number]) => ({
+    const figuresStubs = (upcoming: ContentItemEntity | null, counts: [number, number]) => ({
         count: [
             [ContentItemEntity, counts[0]],
             [ContentItemEntity, counts[1]],
-            [ContentPillarEntity, counts[2]],
         ] as const,
         findOne: [ContentItemEntity, upcoming] as const,
         find: [ContentItemEntity, []] as const,
     })
 
     it("computes Vietnam month boundaries and maps live figures and the upcoming post", async () => {
-        const em = mockEntityManager(figuresStubs(rowAt("2026-01-02T00:00:00Z"), [2, 4, 5]))
-        const { service, fakes } = await build(em, [{ getCount: 3 }])
+        const em = mockEntityManager(figuresStubs(rowAt("2026-01-02T00:00:00Z"), [2, 4]))
+        const { service, fakes, pillars } = await build(em, [{ getRawMany: [{ pillarId: "pillar-1" }] }])
+        pillars.countActive.mockResolvedValue(5)
+        pillars.countActiveAmong.mockResolvedValue(3)
         await expect(service.figures("user-1", "workspace-1")).resolves.toEqual({
             awaitingApproval: 2,
             published30: 4,
@@ -368,6 +367,7 @@ describe("ContentEditorService figures and workbench", () => {
             from: new Date("2025-12-31T17:00:00.000Z"),
             to: new Date("2026-01-31T17:00:00.000Z"),
         })
+        expect(pillars.countActiveAmong).toHaveBeenCalledWith("workspace-1", ["pillar-1"])
         expect(em.count.mock.calls[1]?.[1]).toMatchObject({
             where: {
                 workspaceId: "workspace-1",
@@ -381,7 +381,7 @@ describe("ContentEditorService figures and workbench", () => {
     })
 
     it.each([null, row()])("has no next post when none is scheduled: %j", async (upcoming) => {
-        const { service } = await build(mockEntityManager(figuresStubs(upcoming, [0, 0, 0])), [{ getCount: 0 }])
+        const { service } = await build(mockEntityManager(figuresStubs(upcoming, [0, 0])), [{ getRawMany: [] }])
         await expect(service.figures("user-1", "workspace-1")).resolves.toEqual({
             awaitingApproval: 0,
             published30: 0,
@@ -391,7 +391,7 @@ describe("ContentEditorService figures and workbench", () => {
     })
 
     it.each([true, false])("assembles the authorized workbench with an optional last plan: %s", async (hasPlan) => {
-        const { service } = await build(mockEntityManager(figuresStubs(null, [0, 0, 0])), [{ getCount: 0 }])
+        const { service } = await build(mockEntityManager(figuresStubs(null, [0, 0])), [{ getRawMany: [] }])
         const readPlan = jest.fn(() =>
             Promise.resolve(hasPlan ? { month: "2025-12", ideas: 8, ms: 45, createdAt: new Date(at) } : undefined),
         )

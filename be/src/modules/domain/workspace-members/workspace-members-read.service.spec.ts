@@ -25,7 +25,7 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(WorkspaceMembersReadService)
 }
 
-describe("WorkspaceMembersReadService", () => {
+describe("WorkspaceMembersReadService > active members", () => {
     it("counts the active members", async () => {
         const em = mockEntityManager({ count: [WorkspaceMemberEntity, 4] })
 
@@ -61,7 +61,9 @@ describe("WorkspaceMembersReadService", () => {
             { userIds: ["u1"] },
         ])
     })
+})
 
+describe("WorkspaceMembersReadService > stewards, names and directory", () => {
     it("counts the active owners and managers", async () => {
         const em = mockEntityManager({ count: [WorkspaceMemberEntity, 2] })
 
@@ -98,6 +100,7 @@ describe("WorkspaceMembersReadService", () => {
         expect(em.find).toHaveBeenCalledWith(WorkspaceMemberEntity, {
             select: { userId: true, displayName: true },
             where: { workspaceId: "w1", userId: In(["u1"]) },
+            take: 1,
         })
     })
 

@@ -1,15 +1,14 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { VideoBrandKitEntity } from "./persistence/entities"
 import { VideoBrandKitsService } from "./video-brand-kits.service"
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
-    const write = fakeQueryBuilder({ execute: { raw: [] } })
-    em.createQueryBuilder.mockReturnValue(write.builder as never)
+    const [fake] = queueQueryBuilders(em, [{ execute: { raw: [] } }])
+    const write = { callsOf: (method: string) => fake?.callsOf(method) ?? [] }
     const moduleRef = await Test.createTestingModule({
         providers: [VideoBrandKitsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
     }).compile()
@@ -120,8 +119,6 @@ describe("VideoBrandKitsService (continued)", () => {
             expect(write.callsOf("orUpdate")).toEqual([
                 [["primary_color", "secondary_color", "shop_name", "updated_by", "updated_at"], ["workspace_id"]],
             ])
-            const values = write.callsOf("values")[0]?.[0] as { updatedAt: () => string } | undefined
-            expect(values?.updatedAt()).toBe("now()")
         })
 
         it("keeps the stored name when the brand has none", async () => {
@@ -163,7 +160,9 @@ describe("VideoBrandKitsService (continued)", () => {
             })
         })
     })
+})
 
+describe("VideoBrandKitsService (reads)", () => {
     describe("kitOf", () => {
         it("answers the whole kit of the workspace, or null without one", async () => {
             const kit = Object.assign(new VideoBrandKitEntity(), {

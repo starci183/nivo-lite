@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
+import type { QueryBuilderAnswers } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import type { ClaimedJob, FailedJobEffect, JobEffect } from "./jobs.contracts"
 import { JOBS_MANAGERS } from "./jobs.decorators"
 import { JobClaimService } from "./job-claim.service"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { JobEntity } from "./persistence/entities"
 
 const AT = "2026-02-03T04:05:06.000Z"
@@ -36,18 +36,19 @@ const buildWithoutConnection = async () => {
 const stateOf = (status: "running" | "done" | "failed", leaseExpiresAt: Date | null): JobEntity =>
     Object.assign(new JobEntity(), { status, leaseExpiresAt })
 
-/** A manager whose query builder is the given double. */
-const managerWith = (
-    builder: ReturnType<typeof fakeQueryBuilder>,
-    stubs: Parameters<typeof mockEntityManager>[0] = {},
-) => {
-    const manager = mockEntityManager(stubs)
-    manager.createQueryBuilder.mockReturnValue(builder.builder as never)
-    return manager
+/** A manager whose next query builder answers as given. */
+const managerWith = (answers: QueryBuilderAnswers) => {
+    const manager = mockEntityManager()
+    const [builder] = queueQueryBuilders(manager, [answers])
+    return { manager, builder }
 }
 
 const lockOf = (found: boolean, extra: Partial<JobEntity> = {}) =>
-    fakeQueryBuilder({ getOne: found ? Object.assign(new JobEntity(), { id: "j-1", ...extra }) : null })
+    managerWith({ getOne: found ? Object.assign(new JobEntity(), { id: "j-1", ...extra }) : null })
+
+const FAILED_ROW = { id: "j-failed", fencingToken: 7 }
+const CLAIM_PARAMS = { kind: "mail", jobKey: "k-1", payload: { id: "m-1" }, workerId: "w-1", leaseMs: 60000 }
+const CLAIM_ROW = { id: "j-1", kind: "mail", fencing_token: "3", current_step: null, payload: { id: "m-1" } }
 
 const claimed: ClaimedJob = { jobId: "j-1", kind: "mail", fencingToken: 3, currentStep: null, payload: { id: "m-1" } }
 
@@ -98,27 +99,18 @@ describe("JobClaimService", () => {
 
 describe("JobClaimService", () => {
     describe("claim", () => {
-        it("claims the delivery in one statement and returns the job with the bumped token", async () => {
-            const upsert = fakeQueryBuilder({
-                execute: {
-                    raw: [{ id: "j-1", kind: "mail", fencing_token: "3", current_step: null, payload: { id: "m-1" } }],
-                },
-            })
-            const manager = managerWith(upsert)
+        it("claims a new delivery in one insert and returns the job with its first token", async () => {
+            const manager = mockEntityManager()
+            const [insert] = queueQueryBuilders(manager, [{ execute: { raw: [{ ...CLAIM_ROW, fencing_token: "1" }] } }])
             const { claims } = await build(manager)
 
-            const job = await claims.claim({
-                kind: "mail",
-                jobKey: "k-1",
-                payload: { id: "m-1" },
-                workerId: "w-1",
-                leaseMs: 60000,
-            })
+            const job = await claims.claim(CLAIM_PARAMS)
 
-            expect(job).toEqual(claimed)
+            expect(job).toEqual({ ...claimed, fencingToken: 1 })
+            expect(manager.createQueryBuilder).toHaveBeenCalledTimes(1)
             expect(manager.createQueryBuilder).toHaveBeenCalledWith(JobEntity, "jobs")
-            expect(upsert.callsOf("insert")).toEqual([[]])
-            expect(upsert.callsOf("values")).toEqual([
+            expect(insert?.callsOf("insert")).toEqual([[]])
+            expect(insert?.callsOf("values")).toEqual([
                 [
                     {
                         kind: "mail",
@@ -133,23 +125,50 @@ describe("JobClaimService", () => {
                     },
                 ],
             ])
-            expect(upsert.callsOf("onConflict")).toHaveLength(1)
-            expect(String(upsert.callsOf("onConflict")[0]?.[0])).toContain("fencing_token = jobs.fencing_token + 1")
-            expect(upsert.callsOf("setParameter")).toEqual([
-                ["claimedBy", "w-1"],
-                ["leaseExpiresAt", new Date("2026-02-03T04:06:06.000Z")],
-                ["now", new Date(AT)],
+            expect(insert?.callsOf("orIgnore")).toHaveLength(1)
+            expect(insert?.callsOf("returning")).toEqual([["id, kind, fencing_token, current_step, payload"]])
+        })
+
+        it("re-claims a failed or lapsed job in one update that bumps the token in the store", async () => {
+            const manager = mockEntityManager()
+            const [, update] = queueQueryBuilders(manager, [{ execute: { raw: [] } }, { execute: { raw: [CLAIM_ROW] } }])
+            const { claims } = await build(manager)
+
+            await expect(claims.claim(CLAIM_PARAMS)).resolves.toEqual(claimed)
+
+            expect(update?.callsOf("update")).toEqual([[]])
+            const set = update?.callsOf("set")[0]?.[0]
+            expect(set).toMatchObject({
+                claimedBy: "w-1",
+                leaseExpiresAt: new Date("2026-02-03T04:06:06.000Z"),
+                status: "running",
+                error: null,
+                updatedAt: new Date(AT),
+            })
+            expect(String(Reflect.get(set ?? {}, "fencingToken"))).toContain("fencing_token + 1")
+            expect(update?.callsOf("where")).toEqual([
+                [
+                    "jobs.jobKey = :jobKey AND (jobs.status = :failed OR (jobs.status = :running AND jobs.leaseExpiresAt < :now))",
+                    { jobKey: "k-1", failed: "failed", running: "running", now: new Date(AT) },
+                ],
             ])
-            expect(upsert.callsOf("returning")).toEqual([["id, kind, fencing_token, current_step, payload"]])
+            expect(update?.callsOf("returning")).toEqual([["id, kind, fencing_token, current_step, payload"]])
         })
 
         it("answers null when the job is done or another worker holds a live claim", async () => {
-            const manager = managerWith(fakeQueryBuilder({ execute: { raw: [] } }))
+            const manager = mockEntityManager()
+            queueQueryBuilders(manager, [{ execute: { raw: [] } }, { execute: { raw: [] } }])
             const { claims } = await build(manager)
 
-            await expect(
-                claims.claim({ kind: "mail", jobKey: "k-1", payload: {}, workerId: "w-1", leaseMs: 1000 }),
-            ).resolves.toBeNull()
+            await expect(claims.claim(CLAIM_PARAMS)).resolves.toBeNull()
+        })
+
+        it("refuses a returned row whose payload is not an object", async () => {
+            const manager = mockEntityManager()
+            queueQueryBuilders(manager, [{ execute: { raw: [{ ...CLAIM_ROW, payload: "text" }] } }])
+            const { claims } = await build(manager)
+
+            await expect(claims.claim(CLAIM_PARAMS)).rejects.toThrow("DATABASE_RETURNING_ROW_REJECTED")
         })
     })
 })
@@ -222,8 +241,7 @@ describe("JobClaimService", () => {
 describe("JobClaimService", () => {
     describe("withFence", () => {
         it("returns the domain effect result while holding the live token in a committed transaction", async () => {
-            const lock = lockOf(true)
-            const manager = managerWith(lock)
+            const { manager, builder: lock } = lockOf(true)
             const transaction = fakeTransaction(manager)
             const { claims } = await build(manager)
             const effect = mock<{ run: JobEffect<string> }>()
@@ -231,20 +249,20 @@ describe("JobClaimService", () => {
 
             await expect(claims.withFence(claimed, effect.run)).resolves.toBe("sent")
 
-            expect(lock.callsOf("where")).toEqual([
+            expect(lock?.callsOf("where")).toEqual([
                 [
                     "job.id = :jobId AND job.fencingToken = :token AND job.status = :running",
                     { jobId: "j-1", token: 3, running: "running" },
                 ],
             ])
-            expect(lock.callsOf("setLock")).toEqual([["pessimistic_write"]])
+            expect(lock?.callsOf("setLock")).toEqual([["pessimistic_write"]])
             expect(effect.run).toHaveBeenCalledTimes(1)
             expect(effect.run).toHaveBeenCalledWith()
             expect(transaction.outcomes).toEqual(["commit"])
         })
 
         it("rejects a stale token before calling the effect and rolls the transaction back", async () => {
-            const manager = managerWith(lockOf(false))
+            const { manager } = lockOf(false)
             const transaction = fakeTransaction(manager)
             const { claims } = await build(manager)
             const effect = mock<{ run: JobEffect<string> }>()
@@ -260,7 +278,7 @@ describe("JobClaimService", () => {
         })
 
         it("propagates a failed effect and rolls the live fence transaction back", async () => {
-            const manager = managerWith(lockOf(true))
+            const { manager } = lockOf(true)
             const transaction = fakeTransaction(manager)
             const { claims } = await build(manager)
             const effect = mock<{ run: JobEffect<string> }>()
@@ -278,8 +296,7 @@ describe("JobClaimService", () => {
 describe("JobClaimService", () => {
     describe("withFailedFence", () => {
         it("passes the failed claim and its numeric token to the terminal effect", async () => {
-            const lock = lockOf(true, { id: "j-failed", fencingToken: 7 })
-            const manager = managerWith(lock)
+            const { manager, builder: lock } = lockOf(true, FAILED_ROW)
             const transaction = fakeTransaction(manager)
             const { claims } = await build(manager)
             const effect = mock<{ run: FailedJobEffect }>()
@@ -287,17 +304,17 @@ describe("JobClaimService", () => {
 
             await expect(claims.withFailedFence("failed-delivery", effect.run)).resolves.toBeUndefined()
 
-            expect(lock.callsOf("where")).toEqual([
+            expect(lock?.callsOf("where")).toEqual([
                 ["job.jobKey = :jobKey AND job.status = :failed", { jobKey: "failed-delivery", failed: "failed" }],
             ])
-            expect(lock.callsOf("setLock")).toEqual([["pessimistic_write"]])
+            expect(lock?.callsOf("setLock")).toEqual([["pessimistic_write"]])
             expect(effect.run).toHaveBeenCalledTimes(1)
             expect(effect.run).toHaveBeenCalledWith({ jobId: "j-failed", expectedFencingToken: 7 })
             expect(transaction.outcomes).toEqual(["commit"])
         })
 
         it("commits without a terminal effect when no failed claim remains", async () => {
-            const manager = managerWith(lockOf(false))
+            const { manager } = lockOf(false)
             const transaction = fakeTransaction(manager)
             const { claims } = await build(manager)
             const effect = mock<{ run: FailedJobEffect }>()
@@ -309,8 +326,7 @@ describe("JobClaimService", () => {
         })
 
         it("propagates a terminal effect failure and rolls the failed fence back", async () => {
-            const lock = lockOf(true, { id: "j-failed", fencingToken: 7 })
-            const manager = managerWith(lock)
+            const { manager } = lockOf(true, FAILED_ROW)
             const transaction = fakeTransaction(manager)
             const { claims } = await build(manager)
             const effect = mock<{ run: FailedJobEffect }>()
@@ -328,9 +344,7 @@ describe("JobClaimService", () => {
         it("refuses to claim with no connection to hold the job table", async () => {
             const { claims } = await buildWithoutConnection()
 
-            await expect(
-                claims.claim({ kind: "mail", jobKey: "k-1", payload: {}, workerId: "w-1", leaseMs: 1000 }),
-            ).rejects.toMatchObject({
+            await expect(claims.claim(CLAIM_PARAMS)).rejects.toMatchObject({
                 code: JobsErrorCode.ConnectionMissing,
             })
         })

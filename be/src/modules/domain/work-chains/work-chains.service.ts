@@ -5,7 +5,7 @@ import { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentCard } from "@modules/domain/agents"
 import { WorkThreadsService } from "@modules/domain/work-threads"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
-import type { DirectoryMember } from "@modules/domain/workspace-members"
+import type { MemberDirectoryEntry } from "@modules/domain/workspace-members"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -43,7 +43,7 @@ const OWNER_CANDIDATES_MAX = 10
 /** The agents and members that acted in some steps, by id. */
 interface Actors {
     readonly agents: ReadonlyMap<string, AgentCard>
-    readonly members: ReadonlyMap<string, DirectoryMember>
+    readonly members: ReadonlyMap<string, MemberDirectoryEntry>
 }
 
 /** The step with the name and role of whoever acted: an agent name and module, or a member display name and role; empty when gone. */

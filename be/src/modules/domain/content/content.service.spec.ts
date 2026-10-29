@@ -2,7 +2,13 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
+import { ContentCadenceService } from "@modules/domain/content-cadence"
+import type { ContentCadence } from "@modules/domain/content-cadence"
+import { ContentPillarsService } from "@modules/domain/content-pillars"
+import type { ContentPillar } from "@modules/domain/content-pillars"
 import { ContentItemsService } from "@modules/domain/content-items"
+import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
+import type { ChangedPublicSource } from "@modules/domain/knowledge-sources"
 import type { DueItem } from "@modules/domain/content-items"
 import { ContentSettingsService } from "@modules/domain/content-settings"
 import type { TickWorkspace } from "@modules/domain/content-settings"
@@ -14,16 +20,11 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ContentService } from "./content.service"
 import { ContentLogEvent } from "./content.log-events"
-import { ContentCadenceEntity } from "@modules/domain/content-cadence"
-import { ContentPillarEntity } from "@modules/domain/content-pillars"
-import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
-import type { TableAnswers } from "@tests/fixtures/builders/table-query-builder.builder"
-import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
 
 /** The statement `callDbFunction` sends for the office notice. */
 const INSERT_NOTICE = "SELECT * FROM public.post_office_notice($1, $2)"
 
-const pillarOf = entityRowBuilder<ContentPillarEntity>({
+const pillarOf = builder<ContentPillar>({
     id: "pillar-1",
     workspaceId: "workspace-1",
     name: "Products",
@@ -31,47 +32,26 @@ const pillarOf = entityRowBuilder<ContentPillarEntity>({
     weight: 1,
     sort: 0,
     active: true,
-    createdAt: new Date("2026-10-01T00:00:00.000Z"),
 })
 
-const cadenceOf = entityRowBuilder<ContentCadenceEntity>({
+const cadenceOf = builder<ContentCadence>({
     id: "cadence-1",
     workspaceId: "workspace-1",
     channel: "zalo",
     postsPerWeek: 3,
     days: [],
-    postTime: "19:30",
-    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    time: "19:30",
 })
 
-const SEEN = new WeakMap<object, TableAnswers>()
-
-/** The rows a content spec hands its manager. */
+/** The rows the capabilities that own themes, cadence and fresh sources answer a spec. */
 interface ContentRows {
     /** The fresh sources. */
-    readonly sources?: ReadonlyArray<unknown>
+    readonly sources?: ReadonlyArray<ChangedPublicSource>
     /** The themes. */
-    readonly pillars?: ReadonlyArray<ContentPillarEntity>
+    readonly pillars?: ReadonlyArray<ContentPillar>
     /** The cadence channels. */
-    readonly cadence?: ReadonlyArray<ContentCadenceEntity>
+    readonly cadence?: ReadonlyArray<ContentCadence>
 }
-
-/** A manager whose themes, cadence channels, fresh sources and Office notice answer the given rows. */
-const emFor = (given: ContentRows): MockEntityManager => {
-    const em = mockEntityManager({
-        find: [
-            [ContentPillarEntity, given.pillars ?? []],
-            [ContentCadenceEntity, given.cadence ?? []],
-        ],
-        query: [INSERT_NOTICE, []],
-    })
-    SEEN.set(em, answerByTable(em, { "public.knowledge_sources": given.sources ?? [] }))
-    return em
-}
-
-/** The parameters of the fresh-source lookup the subject ran on a manager. */
-const sourceParameters = (em: object): unknown =>
-    SEEN.get(em)?.queriesOf("public.knowledge_sources")[0]?.callsOf("where")[0]?.[1]
 
 /** Monday 12 October 2026, 09:30 in Vietnam. */
 const registerRunTick = () => {
@@ -260,10 +240,10 @@ const registerEmptyReminder = () => {
 
 const registerSummaryContents = () => {
     it("summarises last week by status and by theme", async () => {
-        const em = emFor({
+        const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
+        const { content, settings, items } = await build(em, {
             pillars: [pillarOf(), pillarOf({ id: "pillar-2", name: "Unused" })],
         })
-        const { content, settings, items } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([summaryOf()])
         items.listBetween.mockResolvedValue([
             itemOf({ status: "published", pillarId: "pillar-1" }),
@@ -290,8 +270,8 @@ const registerSummaryContents = () => {
     })
 
     it("leaves out the theme and missed lines when there is nothing to say", async () => {
-        const em = emFor({})
-        const { content, settings, items } = await build(em)
+        const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
+        const { content, settings, items } = await build(em, {})
         settings.tickWorkspaces.mockResolvedValue([summaryOf()])
         items.listBetween.mockResolvedValue([itemOf({ status: "published" })])
 
@@ -306,8 +286,8 @@ const registerSummaryContents = () => {
 
 const registerEmptySummary = () => {
     it("says so when no post was scheduled", async () => {
-        const em = emFor({})
-        const { content, settings } = await build(em)
+        const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
+        const { content, settings } = await build(em, {})
         settings.tickWorkspaces.mockResolvedValue([summaryOf()])
 
         await content.runTick({})
@@ -338,23 +318,25 @@ const registerOfferDiscovery = () => {
     })
 
     it("makes an idea for each new offer, notifies the owner and moves the mark", async () => {
-        const em = emFor({
+        const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
+        const { content, settings, items, sources } = await build(em, {
             sources: [SOURCE, { ...SOURCE, id: "source-2", title: "Weather report", excerpt: "Sunny" }],
             pillars: [pillarOf(), pillarOf({ id: "pillar-2", name: "Special offer" })],
             cadence: [cadenceOf()],
         })
-        const { content, settings, items } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
 
         await expect(content.runTick({})).resolves.toEqual([
             { workspaceId: "workspace-1", job: "offer_draft", count: 1 },
         ])
 
-        expect(sourceParameters(em)).toEqual({ workspaceId: "workspace-1" })
-        expect(SEEN.get(em)?.queries[0]?.callsOf("andWhere")[1]).toEqual([
-            "s.updated_at > :since::timestamptz",
-            { since: "2026-10-12T00:00:00.000Z" },
-        ])
+        expect(sources.changedPublicSince).toHaveBeenCalledWith(
+            "workspace-1",
+            "content",
+            "2026-10-12T00:00:00.000Z",
+            400,
+            5,
+        )
         expect(items.hasOffer).toHaveBeenCalledWith("workspace-1", 'content.offer.title:{"title":"Big offer"}')
         expect(items.createOfferIdea).toHaveBeenCalledWith({
             workspaceId: "workspace-1",
@@ -373,8 +355,8 @@ const registerOfferDiscovery = () => {
 
 const registerOfferProgress = () => {
     it("leaves the mark at the newest source when it is later than now, and posts to Facebook by default", async () => {
-        const em = emFor({ sources: [{ ...SOURCE, changedAt: "2026-10-12T05:00:00.000000Z" }] })
-        const { content, settings, items } = await build(em)
+        const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
+        const { content, settings, items } = await build(em, { sources: [{ ...SOURCE, changedAt: "2026-10-12T05:00:00.000000Z" }] })
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
 
         await content.runTick({})
@@ -388,8 +370,8 @@ const registerOfferProgress = () => {
     })
 
     it("does not make an idea twice and does not notify when nothing new was made", async () => {
-        const em = emFor({ sources: [SOURCE] })
-        const { content, settings, items } = await build(em)
+        const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
+        const { content, settings, items } = await build(em, { sources: [SOURCE] })
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
         items.hasOffer.mockResolvedValue(true)
 
@@ -402,8 +384,8 @@ const registerOfferProgress = () => {
     })
 
     it("does nothing when no new source talks about an offer", async () => {
-        const em = emFor({ sources: [{ ...SOURCE, title: "Weather", excerpt: "Sunny" }] })
-        const { content, settings, items } = await build(em)
+        const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
+        const { content, settings, items } = await build(em, { sources: [{ ...SOURCE, title: "Weather", excerpt: "Sunny" }] })
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
 
         await expect(content.runTick({})).resolves.toEqual([])
@@ -413,23 +395,26 @@ const registerOfferProgress = () => {
     })
 
     it("looks at every source when an operator forces a first run", async () => {
-        const em = emFor({})
-        const { content, settings } = await build(em)
+        const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
+        const { content, settings, sources } = await build(em, {})
         settings.tickWorkspaces.mockResolvedValue([offerOf()])
 
         await content.runTick({ workspaceId: "workspace-1", force: true })
 
-        expect(SEEN.get(em)?.queries[0]?.callsOf("andWhere")[1]).toEqual([
-            "s.updated_at > :since::timestamptz",
-            { since: "1970-01-01T00:00:00.000Z" },
-        ])
+        expect(sources.changedPublicSince).toHaveBeenCalledWith(
+            "workspace-1",
+            "content",
+            "1970-01-01T00:00:00.000Z",
+            400,
+            5,
+        )
     })
 }
 
 const registerOfferTopics = () => {
     it("matches an offer by its topic too", async () => {
-        const em = emFor({ sources: [{ ...SOURCE, title: "News", topic: "Summer sale", excerpt: "x" }] })
-        const { content, settings, items } = await build(em)
+        const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
+        const { content, settings, items } = await build(em, { sources: [{ ...SOURCE, title: "News", topic: "Summer sale", excerpt: "x" }] })
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
 
         await content.runTick({})
@@ -467,7 +452,7 @@ const SOURCE = {
     changedAt: "2026-10-12T01:00:00.123456Z",
 }
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (entityManager: MockEntityManager, given: ContentRows = {}) => {
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => PATTERNS[key] ?? `${key}:${JSON.stringify(params)}`)
     const items = mock<ContentItemsService>()
@@ -479,11 +464,20 @@ const build = async (entityManager: MockEntityManager) => {
     items.createOfferIdea.mockResolvedValue("item-9")
     settings.tickWorkspaces.mockResolvedValue([])
     settings.mergeMarks.mockResolvedValue(undefined)
+    const pillars = mock<ContentPillarsService>()
+    pillars.list.mockResolvedValue([...(given.pillars ?? [])])
+    const cadence = mock<ContentCadenceService>()
+    cadence.list.mockResolvedValue([...(given.cadence ?? [])])
+    const sources = mock<KnowledgeSourcesReadService>()
+    sources.changedPublicSince.mockResolvedValue([...(given.sources ?? [])])
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContentService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: ContentItemsService, useValue: items },
+            { provide: ContentPillarsService, useValue: pillars },
+            { provide: ContentCadenceService, useValue: cadence },
+            { provide: KnowledgeSourcesReadService, useValue: sources },
             { provide: ContentSettingsService, useValue: settings },
             { provide: EventsService, useValue: events },
             { provide: CLOCK, useValue: new FakeClock(MONDAY) },
@@ -491,7 +485,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { content: moduleRef.get(ContentService), items, settings, events, logger }
+    return { content: moduleRef.get(ContentService), items, settings, events, logger, sources }
 }
 
 describe("ContentService", () => {

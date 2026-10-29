@@ -3,7 +3,7 @@
 PLAN v5 items N14 (tax calendar), N15 (daily summary card), N16 (e-invoice checks) and N23 (folio matching). The logic extends
 the existing accounting capability `be/src/modules/domain/accounting`; the morning job is
 `be/src/features/jobs/run-accounting-morning` on the queue `be/src/modules/queues/accounting-desk`, scheduled by
-`supabase/migrations/20261101000500_accounting-desk.sql` (pg_cron `accounting-desk-morning`, 23:30 UTC = 06:30 in Vietnam) and
+`db/migrations/20261101000500_accounting-desk.sql` (pg_cron `accounting-desk-morning`, 23:30 UTC = 06:30 in Vietnam) and
 declared in `.starcistacks/application-stacks.yaml` and `be/src/modules/domain/job-ops/job-tick.policy.ts`.
 
 ## Data layers

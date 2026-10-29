@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { Raw } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { MemberRef, OwnerMemberRef } from "./member-lookup.contracts"
+import type { OptionalNamedMember, OwnerMemberRef } from "./member-lookup.contracts"
 import { WorkspaceMemberEntity } from "./persistence/entities"
 
 const REF_COLUMNS = { id: true, displayName: true } as const
@@ -25,7 +25,7 @@ export class MemberLookupService {
     }
 
     /** The active member of the workspace with this membership id; null when there is none. */
-    async activeById(workspaceId: string, memberId: string): Promise<MemberRef | null> {
+    async activeById(workspaceId: string, memberId: string): Promise<OptionalNamedMember> {
         const row = await this.entityManager.findOne(WorkspaceMemberEntity, {
             select: REF_COLUMNS,
             where: { workspaceId, id: memberId, status: "active" },
@@ -34,7 +34,7 @@ export class MemberLookupService {
     }
 
     /** The member with this membership id, active or not; null when there is none. */
-    async byId(memberId: string): Promise<MemberRef | null> {
+    async byId(memberId: string): Promise<OptionalNamedMember> {
         const row = await this.entityManager.findOne(WorkspaceMemberEntity, {
             select: REF_COLUMNS,
             where: { id: memberId },
@@ -43,7 +43,7 @@ export class MemberLookupService {
     }
 
     /** The oldest active member who carries a display name (ignoring case); null when none does. */
-    async activeNamed(workspaceId: string, name: string): Promise<MemberRef | null> {
+    async activeNamed(workspaceId: string, name: string): Promise<OptionalNamedMember> {
         const row = await this.entityManager.findOne(WorkspaceMemberEntity, {
             select: REF_COLUMNS,
             where: {

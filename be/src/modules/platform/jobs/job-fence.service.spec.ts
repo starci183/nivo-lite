@@ -1,11 +1,10 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import type { ClaimedJob } from "./jobs.contracts"
 import { JOBS_MANAGERS } from "./jobs.decorators"
 import { JobFenceService } from "./job-fence.service"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { JobEntity } from "./persistence/entities"
 
 const job: ClaimedJob = {
@@ -18,9 +17,8 @@ const job: ClaimedJob = {
 
 /** A transaction whose lock builder finds the fence (`found`) or nothing. */
 const lockTransaction = (found: boolean) => {
-    const lock = fakeQueryBuilder({ getOne: found ? Object.assign(new JobEntity(), { id: "j-1" }) : null })
     const tx = fakeTransaction(mockEntityManager())
-    tx.em.createQueryBuilder.mockReturnValue(lock.builder as never)
+    const [lock] = queueQueryBuilders(tx.em, [{ getOne: found ? Object.assign(new JobEntity(), { id: "j-1" }) : null }])
     return { tx, lock }
 }
 
@@ -49,13 +47,13 @@ describe("JobFenceService", () => {
 
             expect(action).toHaveBeenCalledTimes(1)
             expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(JobEntity, "job")
-            expect(lock.callsOf("where")).toEqual([
+            expect(lock?.callsOf("where")).toEqual([
                 [
                     "job.id = :jobId AND job.fencingToken = :token AND job.status = :running",
                     { jobId: "j-1", token: 3, running: "running" },
                 ],
             ])
-            expect(lock.callsOf("setLock")).toEqual([["pessimistic_write"]])
+            expect(lock?.callsOf("setLock")).toEqual([["pessimistic_write"]])
             expect(tx.commits).toBe(1)
         })
 

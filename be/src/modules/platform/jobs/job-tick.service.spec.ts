@@ -8,9 +8,10 @@ import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { JobsErrorCode } from "./errors/jobs.error"
 import { JOB_TICKS } from "./job-ticks.contracts"
 import type { JobTick } from "./job-ticks.contracts"
-import { JOBS_MANAGERS } from "./jobs.decorators"
+import { JOB_TICK_SCHEDULER, JOBS_MANAGERS } from "./jobs.decorators"
 import { JobsLogEvent } from "./jobs.log-events"
-import { JobsModule } from "./jobs.module"
+import { JobsModule, cronSchedulerOf } from "./jobs.module"
+import type { JobTickScheduler } from "./jobs.port"
 import { JobTickService, tickMinute } from "./job-tick.service"
 
 // The statements advisoryXactLock and callDbFunction of platform/database send for one firing.
@@ -27,7 +28,7 @@ const TICK: JobTick = {
     payload: { kind: "nightly" },
 }
 
-const build = async (claimed: boolean | null, managed = true) => {
+const build = async (claimed: boolean | null) => {
     const transaction = fakeTransaction(
         mockEntityManager({
             query: [
@@ -38,19 +39,20 @@ const build = async (claimed: boolean | null, managed = true) => {
     )
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
-    const registry = mock<SchedulerRegistry>()
+    const scheduler = mock<JobTickScheduler>()
+    const managers = [transaction.em]
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             JobTickService,
-            { provide: SchedulerRegistry, useValue: registry },
-            { provide: JOBS_MANAGERS, useValue: managed ? [transaction.em] : [] },
+            { provide: JOB_TICK_SCHEDULER, useValue: scheduler },
+            { provide: JOBS_MANAGERS, useValue: managers },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: CLOCK, useValue: new FakeClock(AT) },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { ticks: moduleRef.get(JobTickService), transaction, outbox, write, registry, logger }
+    return { ticks: moduleRef.get(JobTickService), transaction, outbox, write, scheduler, managers, logger }
 }
 
 describe("JobTickService", () => {
@@ -95,13 +97,46 @@ describe("JobTickService", () => {
     })
 
     it("refuses to fire without a connection that holds the tick table", async () => {
-        const { ticks, outbox } = await build(true, false)
+        const { ticks, outbox, managers } = await build(true)
+        managers.splice(0)
 
         await expect(ticks.fire(TICK)).rejects.toMatchObject({ code: JobsErrorCode.ConnectionMissing })
 
         expect(outbox.jobs).toHaveLength(0)
     })
 
+    it("registers one cron job per tick under the name of the tick", async () => {
+        const { ticks, scheduler } = await build(true)
+
+        ticks.onApplicationBootstrap()
+
+        expect(scheduler.schedule.mock.calls.map(([tick]) => tick.name)).toEqual(JOB_TICKS.map((tick) => tick.name))
+    })
+
+    it("enqueues the job of the tick when its cron job fires", async () => {
+        const { ticks, outbox, scheduler, logger } = await build(true)
+        ticks.onApplicationBootstrap()
+        const [, onTick] = scheduler.schedule.mock.calls[0] ?? []
+
+        await expect(onTick?.()).resolves.toBeUndefined()
+
+        expect(outbox.jobs).toEqual([{ queue: JOB_TICKS[0]?.queue, payload: JOB_TICKS[0]?.payload }])
+        expect(logger.error).not.toHaveBeenCalled()
+    })
+
+    it("logs a failed firing by the name of the tick", async () => {
+        const { ticks, logger, scheduler } = await build(true)
+        const cause = new Error("redis down")
+        ticks.onApplicationBootstrap()
+        const [, , onError] = scheduler.schedule.mock.calls[0] ?? []
+
+        onError?.(cause)
+
+        expect(logger.error).toHaveBeenCalledWith(JobsLogEvent.TickFailed, cause, { tick: JOB_TICKS[0]?.name })
+    })
+})
+
+describe("JOB_TICKS", () => {
     it("holds the 13 ticks, each with a unique name and a five-field UTC cron expression", () => {
         expect(JOB_TICKS).toHaveLength(13)
         expect(new Set(JOB_TICKS.map((tick) => tick.name)).size).toBe(13)
@@ -110,41 +145,34 @@ describe("JobTickService", () => {
             expect(tick.cron.split(" ")).toHaveLength(5)
         }
     })
+})
 
-    it("registers one cron job per tick under the name of the tick", async () => {
-        const { ticks, registry } = await build(true)
+describe("cronSchedulerOf", () => {
+    it("adds a started cron job named after the tick and runs the tick on its firing", async () => {
+        const registry = mock<SchedulerRegistry>()
+        const onTick = jest.fn(() => Promise.resolve())
 
-        ticks.onApplicationBootstrap()
+        cronSchedulerOf(registry).schedule(TICK, onTick, jest.fn())
+        const [name, job] = registry.addCronJob.mock.calls[0] ?? []
+        await job?.fireOnTick()
+        void job?.stop()
 
-        expect(registry.addCronJob.mock.calls.map(([name]) => name)).toEqual(JOB_TICKS.map((tick) => tick.name))
-        for (const [, job] of registry.addCronJob.mock.calls) void job.stop()
+        expect(name).toBe(TICK.name)
+        expect(job?.isActive).toBe(false)
+        expect(onTick).toHaveBeenCalledTimes(1)
     })
 
-    it("enqueues the job of the tick when its cron job fires", async () => {
-        const { ticks, outbox, registry, logger } = await build(true)
-        ticks.onApplicationBootstrap()
-        const [, first] = registry.addCronJob.mock.calls[0] ?? []
-
-        await expect(first?.fireOnTick()).resolves.toBeUndefined()
-        await new Promise((resolve) => setImmediate(resolve))
-        for (const [, job] of registry.addCronJob.mock.calls) void job.stop()
-
-        expect(outbox.jobs).toEqual([{ queue: JOB_TICKS[0]?.queue, payload: JOB_TICKS[0]?.payload }])
-        expect(logger.error).not.toHaveBeenCalled()
-    })
-
-    it("logs a failed firing by the name of the tick and does not throw", async () => {
-        const { ticks, outbox, logger, registry } = await build(true)
+    it("hands a failed firing to the error handler", async () => {
+        const registry = mock<SchedulerRegistry>()
         const cause = new Error("redis down")
-        outbox.failNext("write", cause)
-        ticks.onApplicationBootstrap()
-        const [, first] = registry.addCronJob.mock.calls[0] ?? []
+        const onError = jest.fn()
 
-        await expect(first?.fireOnTick()).resolves.toBeUndefined()
-        await new Promise((resolve) => setImmediate(resolve))
-        for (const [, job] of registry.addCronJob.mock.calls) void job.stop()
+        cronSchedulerOf(registry).schedule(TICK, () => Promise.reject(cause), onError)
+        const [, job] = registry.addCronJob.mock.calls[0] ?? []
+        await job?.fireOnTick()
+        void job?.stop()
 
-        expect(logger.error).toHaveBeenCalledWith(JobsLogEvent.TickFailed, cause, { tick: JOB_TICKS[0]?.name })
+        expect(onError).toHaveBeenCalledWith(cause)
     })
 })
 

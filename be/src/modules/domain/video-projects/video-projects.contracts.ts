@@ -124,3 +124,15 @@ export interface ProjectCardFacts {
     /** The scenes, as stored. */
     readonly script: unknown
 }
+
+/** The id of one project to read, or null for every project of the workspace. */
+export type OptionalProjectId = string | null
+
+/** The project script generation reads, or undefined when the workspace has none with that id. */
+export type OptionalScriptProject = ScriptProjectRow | undefined
+
+/** The counts by state, or undefined when the count cannot be read. */
+export type OptionalProjectCounts = ProjectCounts | undefined
+
+/** The card facts of a project, or null when the workspace has none with that id. */
+export type OptionalProjectCardFacts = ProjectCardFacts | null

@@ -1,5 +1,5 @@
 /** A member of a workspace as the capabilities that name owners see them. */
-export interface MemberRef {
+export interface NamedMember {
     /** The membership id. */
     readonly id: string
     /** The name the member shows. */
@@ -13,3 +13,6 @@ export interface OwnerMemberRef {
     /** The name the member shows. */
     readonly displayName: string
 }
+
+/** A named member, or null when the lookup finds none. */
+export type OptionalNamedMember = NamedMember | null

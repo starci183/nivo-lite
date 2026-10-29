@@ -14,7 +14,7 @@ const build = async () => {
 const transaction = () => {
     const tx = mockEntityManager()
     const fake = fakeQueryBuilder({ execute: { raw: [] } })
-    tx.createQueryBuilder.mockReturnValue(fake.builder as never)
+    tx.createQueryBuilder.mockReturnValue(fake.builder)
     return { tx, fake }
 }
 

@@ -19,3 +19,9 @@ export interface PublicSourceExcerpt {
     /** The first characters of the text, with runs of white space folded into one space. */
     readonly excerpt: string
 }
+
+/** One public document that changed, as a change feed lists it. */
+export interface ChangedPublicSource extends PublicSourceExcerpt {
+    /** When it changed, as an ISO instant in UTC with microseconds. */
+    readonly changedAt: string
+}

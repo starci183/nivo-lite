@@ -35,7 +35,7 @@ const toMember = (row: WorkspaceMemberEntity): WorkspaceMember => ({
 /** The role a join names, held to the three the table allows (the table's own check would refuse any other). */
 const roleOf = (value: string): WorkspaceRole => {
     if (value === "owner" || value === "manager" || value === "staff") return value
-    throw new TypeError(`${value} is not a workspace role`)
+    throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.RoleInvalid, params: { role: value } })
 }
 
 /** The directory is bounded to the most members a workspace lists. */
@@ -50,11 +50,11 @@ interface MemberAvatarRow {
 /** Owners first, then managers, then staff: the order the directory lists. */
 const ROLE_RANK = "CASE m.role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END"
 
-/** The conflict clause of a join: an owner is never demoted, a staff link is never dropped, and the seat is active again. */
-const JOIN_CONFLICT = `("workspace_id", "user_id") DO UPDATE SET
-    "role" = CASE WHEN "workspace_members"."role" = 'owner' THEN 'owner' ELSE EXCLUDED."role" END,
-    "staff_id" = coalesce(EXCLUDED."staff_id", "workspace_members"."staff_id"),
-    "status" = 'active'`
+/** The role a join writes over an existing seat: an owner is never demoted. */
+const JOINED_ROLE = `CASE WHEN role = 'owner' THEN 'owner' ELSE :role END`
+
+/** The staff link a join writes over an existing seat: a link is never dropped. */
+const JOINED_STAFF = "coalesce(:staffId, staff_id)"
 
 const MANAGERS = ["owner", "manager"] as const
 
@@ -215,18 +215,31 @@ export class WorkspaceMembersService {
     /** Creates or reactivates a membership; an owner is never demoted and a staff link is never dropped. */
     async join(entry: JoinEntry): Promise<void> {
         const [linked] = entry.staffId === null ? [] : await this.staffNames.namesOf(entry.workspaceId, [entry.staffId])
-        await this.entityManager
-            .createQueryBuilder(WorkspaceMemberEntity, "workspace_members")
-            .insert()
-            .values({
-                workspaceId: entry.workspaceId,
-                userId: entry.userId,
-                role: roleOf(entry.role),
-                staffId: entry.staffId,
-                displayName: linked?.name ?? entry.displayName,
-            })
-            .onConflict(JOIN_CONFLICT)
-            .execute()
+        const role = roleOf(entry.role)
+        await this.entityManager.transaction(async (tx) => {
+            await tx
+                .createQueryBuilder(WorkspaceMemberEntity, "workspace_members")
+                .insert()
+                .values({
+                    workspaceId: entry.workspaceId,
+                    userId: entry.userId,
+                    role,
+                    staffId: entry.staffId,
+                    displayName: linked?.name ?? entry.displayName,
+                })
+                .orIgnore()
+                .execute()
+            await tx
+                .createQueryBuilder(WorkspaceMemberEntity, "workspace_members")
+                .update()
+                .set({ role: () => JOINED_ROLE, staffId: () => JOINED_STAFF, status: "active" })
+                .where("workspace_id = :workspaceId AND user_id = :userId", {
+                    workspaceId: entry.workspaceId,
+                    userId: entry.userId,
+                })
+                .setParameters({ role, staffId: entry.staffId })
+                .execute()
+        })
     }
 
     /** An authenticated owner may add a missing seat; reruns retain existing state and refuse conflicting roles. */
