@@ -1,36 +1,20 @@
 import { Test } from "@nestjs/testing"
+import { In } from "typeorm"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { ContentPillarDraft } from "./content-pillars.contracts"
 import { ContentPillarsService } from "./content-pillars.service"
-import { In, Not } from "typeorm"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import {
+    deleteAllOfWs1,
+    deleteExceptPillar1,
+    paddedDrafts,
+    paddedInserted,
+    pillarRow,
+} from "@tests/fixtures/builders/content-pillars.builder"
 import { ContentPillarEntity } from "./persistence/entities"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
-
-const pillarRow = entityRowBuilder<ContentPillarEntity>({
-    id: "pillar-1",
-    workspaceId: "ws-1",
-    name: "Menu",
-    description: "Daily menu",
-    weight: 2,
-    sort: 0,
-    active: true,
-    createdAt: new Date("2026-10-01T00:00:00.000Z"),
-})
-
-/** The rows the replace test expects the insert to carry: the kept theme, then the new one. */
-const insertedOf = (changes: Partial<ContentPillarEntity>, omitted: ReadonlyArray<string> = []) =>
-    Object.fromEntries(
-        Object.entries(pillarRow(changes)).filter(([key]) => key !== "createdAt" && !omitted.includes(key)),
-    )
-
-const INSERTED = [
-    insertedOf({ description: "Daily" }),
-    insertedOf({ name: "New", description: "Fresh", weight: 1, sort: 1, active: false }, ["id"]),
-]
 
 const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
     const moduleRef = await Test.createTestingModule({
@@ -61,32 +45,55 @@ const registerReads = () => {
 
         await expect(service.list("ws-1")).resolves.toEqual([])
     })
+
+    it("answers which of the given ids are themes of the workspace", async () => {
+        const em = mockEntityManager({ find: [ContentPillarEntity, [pillarRow()]] })
+        const service = await build()
+
+        await expect(service.known("ws-1", ["pillar-1", "ghost"], em)).resolves.toEqual(["pillar-1"])
+        expect(em.find).toHaveBeenCalledWith(ContentPillarEntity, expect.objectContaining({ take: 100 }))
+    })
+
+    it("answers whether a theme exists, on the caller's transaction or on its own", async () => {
+        const tx = mockEntityManager({ exists: [ContentPillarEntity, true] })
+        const own = mockEntityManager({ exists: [ContentPillarEntity, false] })
+        const service = await build(own)
+
+        await expect(service.exists("ws-1", "pillar-1", tx)).resolves.toBe(true)
+        await expect(service.exists("ws-1", "pillar-1")).resolves.toBe(false)
+    })
+
+    it("counts the active themes, all of them or among some ids", async () => {
+        const em = mockEntityManager({ count: [ContentPillarEntity, 3] })
+        const service = await build(em)
+
+        await expect(service.countActive("ws-1")).resolves.toBe(3)
+        await expect(service.countActiveAmong("ws-1", ["pillar-1"])).resolves.toBe(3)
+        expect(namedCalls(em.count.mock.calls)).toEqual([
+            ["ContentPillarEntity", { where: { workspaceId: "ws-1", active: true } }],
+            ["ContentPillarEntity", { where: { workspaceId: "ws-1", active: true, id: In(["pillar-1"]) } }],
+        ])
+    })
 }
 
 const registerReplace = () => {
     it("replaces themes and trims their text inside the caller's transaction", async () => {
         const service = await build()
-        const drafts: ReadonlyArray<ContentPillarDraft> = [
-            { id: "pillar-1", name: " Menu ", description: " Daily ", weight: 2, active: true },
-            { name: " New ", description: " Fresh ", weight: 1, active: false },
-        ]
         const tx = mockEntityManager({
             delete: [ContentPillarEntity, { affected: 0 }],
             update: [ContentPillarEntity, { affected: 1 }],
         })
         const [saved] = queueQueryBuilders(tx, [{ execute: { raw: [] } }])
 
-        await expect(service.replace(tx, "ws-1", drafts)).resolves.toBeUndefined()
+        await expect(service.replace(tx, "ws-1", paddedDrafts)).resolves.toBeUndefined()
 
-        expect(tx.delete.mock.calls).toEqual([
-            [ContentPillarEntity, { workspaceId: "ws-1", id: Not(In(["pillar-1"])) }],
-        ])
+        expect(namedCalls(tx.delete.mock.calls)).toEqual([["ContentPillarEntity", deleteExceptPillar1]])
         expect(namedCalls(tx.update.mock.calls, 2)).toEqual([
             ["ContentPillarEntity", { workspaceId: "ws-1", id: In(["pillar-1"]) }, { name: "function" }],
         ])
         expect(evaluatedValues(tx.update.mock.calls[0]?.[2])).toEqual({ name: "'edit:' || gen_random_uuid()::text" })
         expect(tx.createQueryBuilder).toHaveBeenCalledWith(ContentPillarEntity, "content_pillars")
-        expect(saved?.callsOf("values")).toEqual([[INSERTED]])
+        expect(saved?.callsOf("values")).toEqual([[paddedInserted]])
         expect(saved?.callsOf("setParameter")).toEqual([["workspaceId", "ws-1"]])
     })
 
@@ -98,7 +105,7 @@ const registerReplace = () => {
 
         await service.replace(tx, "ws-1", [])
 
-        expect(tx.delete.mock.calls).toEqual([[ContentPillarEntity, { workspaceId: "ws-1" }]])
+        expect(namedCalls(tx.delete.mock.calls)).toEqual([["ContentPillarEntity", deleteAllOfWs1]])
         expect(tx.update).not.toHaveBeenCalled()
         expect(tx.createQueryBuilder).not.toHaveBeenCalled()
     })

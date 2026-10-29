@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
+import { Not } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { ContentPillarEntity } from "@modules/domain/content-pillars"
+import { ContentPillarsService } from "@modules/domain/content-pillars"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectClock } from "@modules/platform/clock"
@@ -14,15 +14,8 @@ import type {
     ContentGeneratedPlan,
 } from "./content-ai-store.contracts"
 import { ContentItemsError, ContentItemsErrorCode } from "./errors/content-items.error"
-import { returnedRows } from "./persistence/content-item-projection"
+import { returnedRows } from "./persistence/content-item.projection"
 import { ContentItemEntity } from "./persistence/entities"
-
-/** The pillar of a draft belongs to the workspace, or the draft names none. */
-/** The most content pillars a workspace holds; a plan names a few of them. */
-const PILLARS_MAX = 100
-
-const PILLAR_IN_WORKSPACE =
-    "(:pillarId::uuid IS NULL OR EXISTS (SELECT 1 FROM public.content_pillars p WHERE p.id = :pillarId AND p.workspace_id = :workspaceId))"
 
 /** The revision the caller read is still the stored one, or the caller named none. */
 const REVISION_UNCHANGED =
@@ -34,6 +27,7 @@ export class ContentAiStoreService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
+        private readonly pillars: ContentPillarsService,
         @InjectClock() private readonly clock: Clock,
     ) {}
 
@@ -75,7 +69,12 @@ export class ContentAiStoreService {
         draft: ContentGeneratedDraft,
         tx?: EntityManager,
     ): Promise<ContentAiItemRef> {
-        const updated = await (tx ?? this.entityManager)
+        const manager = tx ?? this.entityManager
+        // A pillar of another workspace (or none) refuses the draft the way a row that is no longer editable does.
+        if (draft.pillarId !== undefined && !(await this.pillars.exists(workspaceId, draft.pillarId, manager))) {
+            throw new ContentItemsError({ code: ContentItemsErrorCode.NotWritten })
+        }
+        const updated = await manager
             .createQueryBuilder(ContentItemEntity, "ci")
             .update()
             .set({
@@ -94,7 +93,6 @@ export class ContentAiStoreService {
                 workspaceId,
             })
             .andWhere(REVISION_UNCHANGED)
-            .andWhere(PILLAR_IN_WORKSPACE)
             .setParameters({
                 variants: JSON.stringify(draft.variants),
                 media: draft.media === undefined ? null : JSON.stringify(draft.media),
@@ -139,12 +137,12 @@ export class ContentAiStoreService {
             .andWhere("scheduled_at >= (:month::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')", { month })
             .andWhere("scheduled_at < ((:month::date + interval '1 month')::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')")
             .execute()
-        const known = await manager.find(ContentPillarEntity, {
-            where: { workspaceId, id: In(plan.items.map((item) => item.pillarId)) },
-            select: { id: true },
-            take: PILLARS_MAX,
-        })
-        const placeable = plan.items.filter((item) => known.some((pillar) => pillar.id === item.pillarId))
+        const known = await this.pillars.known(
+            workspaceId,
+            plan.items.map((item) => item.pillarId),
+            manager,
+        )
+        const placeable = plan.items.filter((item) => known.includes(item.pillarId))
         const history = [{ at: this.clock.now().toISOString(), kind: "planned", by: "NIVO", text: plan.month }] as const
         const ideas =
             placeable.length === 0

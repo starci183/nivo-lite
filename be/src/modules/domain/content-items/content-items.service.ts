@@ -12,8 +12,8 @@ import type {
     ScheduleView,
     ScheduledChannelMark,
 } from "./content-items.contracts"
-import { ISO_TEXT, draftRefOf, returnedRows } from "./persistence/content-item-projection"
-import type { DueItemProjection, DueChannelProjection, ScheduleProjection } from "./persistence/content-item-projection"
+import { ISO_TEXT, draftRefOf, returnedRows } from "./persistence/content-item.projection"
+import type { DueChannelProjection, ScheduleProjection } from "./persistence/content-item.projection"
 import { ContentItemEntity } from "./persistence/entities"
 
 /** A stored post as the scheduler reads it: the text of each channel and the attached media paths. */
@@ -48,7 +48,7 @@ export class ContentItemsService {
             })
             .orderBy("c.scheduledAt")
             .limit(500)
-            .getRawMany<DueItemProjection>()
+            .getRawMany<DueItem>()
         return rows.map((row) => ({ ...row }))
     }
 
