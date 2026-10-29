@@ -160,28 +160,31 @@ export interface QuotaFigures {
     readonly topup_balance: number | null
 }
 
+/** A figure the driver answers as a number or as text. */
+type Figure = number | string
+
 /** One row of ai_quota_status as the driver answers it: bigint and numeric columns arrive as text and the period as a date. */
 export interface QuotaRecord {
     /** First day of the month. */
     readonly period_start: Date | string
     /** Customer replies this month. */
-    readonly messages_used: number | string
+    readonly messages_used: Figure
     /** Model tokens this month. */
-    readonly tokens_used: number | string
+    readonly tokens_used: Figure
     /** Model cost this month in USD. */
-    readonly cost_usd: number | string
+    readonly cost_usd: Figure
     /** The message allowance; null is unlimited. */
-    readonly messages_limit: number | string | null
+    readonly messages_limit: Figure | null
     /** The token allowance; null is unlimited. */
-    readonly tokens_limit: number | string | null
+    readonly tokens_limit: Figure | null
     /** The workspace's own fallback reply, or null. */
     readonly fallback_reply: string | null
     /** Credits spent this month, or null. */
-    readonly credits_used: number | string | null
+    readonly credits_used: Figure | null
     /** The credit allowance; null is unlimited. */
-    readonly credits_limit: number | string | null
+    readonly credits_limit: Figure | null
     /** Credits carried over, or null. */
-    readonly credits_carried: number | string | null
+    readonly credits_carried: Figure | null
     /** Top-up credits left, or null. */
-    readonly topup_balance: number | string | null
+    readonly topup_balance: Figure | null
 }

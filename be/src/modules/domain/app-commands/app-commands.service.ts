@@ -14,15 +14,6 @@ const ERROR_CODE_MAX = 80
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
-/** The columns the claiming update hands back. */
-interface BegunRow {
-    readonly id: string
-    readonly workspace_id: string | null
-    readonly requested_by: string
-    readonly kind: string
-    readonly input: unknown
-}
-
 @Injectable()
 /** The asks of the web app: the only writer of the state and result of public.app_commands. */
 export class AppCommandsService {
@@ -30,20 +21,19 @@ export class AppCommandsService {
 
     /** Starts a command; null when it is unknown or already settled, so a repeated delivery changes nothing. */
     async begin(commandId: string): Promise<OptionalAppCommand> {
-        const started = await this.entityManager
-            .createQueryBuilder(AppCommandEntity, "ac")
-            .update()
-            .set({ state: "running" })
-            .where({ id: commandId, state: In(OPEN_STATES) })
-            .returning("id, workspace_id, requested_by, kind, input")
-            .execute()
-        const [row] = Array.isArray(started.raw) ? (started.raw as Array<BegunRow>) : []
-        return row === undefined
+        const claimed = await this.entityManager.update(
+            AppCommandEntity,
+            { id: commandId, state: In(OPEN_STATES) },
+            { state: "running" },
+        )
+        if (claimed.affected !== 1) return null
+        const row = await this.entityManager.findOne(AppCommandEntity, { where: { id: commandId } })
+        return row === null
             ? null
             : {
                   id: row.id,
-                  workspaceId: row.workspace_id,
-                  requestedBy: row.requested_by,
+                  workspaceId: row.workspaceId,
+                  requestedBy: row.requestedBy,
                   kind: row.kind,
                   input: isRecord(row.input) ? row.input : {},
               }
