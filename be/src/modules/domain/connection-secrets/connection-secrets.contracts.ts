@@ -31,3 +31,15 @@ export interface VersionedSeal {
     /** The base64 of iv | tag | ciphertext. */
     readonly body: string
 }
+
+/** What the owner of a connection tells the secret check about it. */
+export interface ConnectionSecretFacts {
+    /** The connection id. */
+    readonly id: string
+    /** The workspace the connection belongs to. */
+    readonly workspaceId: string
+    /** The provider key. */
+    readonly provider: string
+    /** The connection status. */
+    readonly status: string
+}

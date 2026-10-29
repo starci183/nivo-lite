@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { AutomationOwnerChat } from "@modules/domain/automations"
-import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
-import { ConnectionsService } from "@modules/domain/connections"
+import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { InjectTelegram } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
@@ -14,7 +13,7 @@ import { AutomationPortsLogEvent } from "./automation-ports.log-events"
 export class AutomationOwnerChatService implements AutomationOwnerChat {
     constructor(
         private readonly connections: ConnectionsService,
-        private readonly secrets: ConnectionSecretsService,
+        private readonly secrets: ConnectionSecretReadsService,
         @InjectTelegram() private readonly telegram: TelegramClient,
         @InjectLogger() private readonly logger: Logger,
     ) {}
