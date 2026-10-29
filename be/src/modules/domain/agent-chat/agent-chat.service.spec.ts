@@ -6,7 +6,7 @@ import { AgentConversationsErrorCode, AgentConversationsService } from "@modules
 import type { ChatConversation, ConversationTarget } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import type { AgentThreadMessage } from "@modules/domain/agent-messages"
-import { AgentsService } from "@modules/domain/agents"
+import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
 import type { AgentProfile } from "@modules/domain/agents"
 import { EventsReadService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -79,7 +79,9 @@ const TURN: ChatTurnFacts = {
 /** The answer of a single-row raw read: the row, or nothing. */
 const row = (value: object | undefined): QueryBuilderAnswers => ({ getRawOne: value })
 
-const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
+const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = [], agent: ChatAgentFacts | null = null) => {
+    const directory = mock<AgentDirectoryService>()
+    directory.chatFactsOf.mockResolvedValue(agent)
     const tx = fakeTransaction(mockEntityManager())
     const builders = queueQueryBuilders(tx.em, answers)
     const clock = new FakeClock(NOW)
@@ -99,6 +101,7 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
             { provide: CLOCK, useValue: clock },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AgentsService, useValue: agents },
+            { provide: AgentDirectoryService, useValue: directory },
             { provide: AgentConversationsService, useValue: conversations },
             { provide: AgentMessagesService, useValue: messages },
             { provide: EventsReadService, useValue: events },
@@ -118,13 +121,14 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
         events,
         turns,
         queueStatus,
+        directory,
     }
 }
 
 describe("AgentChatService", () => {
     describe("page", () => {
         it("returns the agent page and the welcome when a founding purchase sits inside the offer", async () => {
-            const { service, agents, events } = await build([row(AGENT)])
+            const { service, agents, events } = await build([], AGENT)
             agents.profileOf.mockResolvedValue(PROFILE)
             events.existsOfKindBetween.mockResolvedValue(true)
 
@@ -149,20 +153,17 @@ describe("AgentChatService", () => {
         })
 
         it("hides the welcome outside the offer and does not read purchases", async () => {
-            const { service, agents, clock, builders, events } = await build([row(AGENT)])
+            const { service, agents, clock, directory, events } = await build([], AGENT)
             clock.set("2026-11-01T00:00:00.000Z")
             agents.profileOf.mockResolvedValue(PROFILE)
 
             await expect(service.page("u1", PAGE)).resolves.toMatchObject({ showWelcome: false, isActive: true })
             expect(events.existsOfKindBetween).not.toHaveBeenCalled()
-            expect(builders).toHaveLength(1)
-            expect(builders[0]?.callsOf("where")).toEqual([
-                ["a.workspace_id = :workspaceId AND a.id = :agentId", { workspaceId: "w1", agentId: "a1" }],
-            ])
+            expect(directory.chatFactsOf).toHaveBeenCalledWith("w1", "a1")
         })
 
         it("hides the welcome for a module that has no customer channel", async () => {
-            const { service, agents, tx } = await build([row({ ...AGENT, module: "sales" })])
+            const { service, agents, tx } = await build([], { ...AGENT, module: "sales" })
             agents.profileOf.mockResolvedValue(PROFILE)
 
             await expect(service.page("u1", PAGE)).resolves.toEqual({
@@ -183,7 +184,7 @@ describe("AgentChatService", () => {
             { name: "agent row", found: undefined, profile: PROFILE },
             { name: "agent profile", found: AGENT, profile: null },
         ])("refuses a missing $name", async ({ found, profile }) => {
-            const { service, agents } = await build([row(found)])
+            const { service, agents } = await build([], found ?? null)
             agents.profileOf.mockResolvedValue(profile)
 
             await expect(service.page("u1", PAGE)).rejects.toMatchObject({ code: AgentChatErrorCode.AgentNotFound })
@@ -194,7 +195,7 @@ describe("AgentChatService", () => {
 describe("AgentChatService", () => {
     describe("listConversations", () => {
         it("returns the agent's history after proving the agent", async () => {
-            const { service, conversations } = await build([row(AGENT)])
+            const { service, conversations } = await build([], AGENT)
             conversations.listChat.mockResolvedValue([CONVERSATION])
 
             await expect(service.listConversations("u1", { workspaceId: "w1", agentId: "a1" })).resolves.toEqual([
@@ -229,7 +230,7 @@ describe("AgentChatService", () => {
 describe("AgentChatService", () => {
     describe("start", () => {
         it("opens a test chat under the member's name and stores the greeting", async () => {
-            const { service, conversations, messages, tx } = await build([row(AGENT)])
+            const { service, conversations, messages, tx } = await build([], AGENT)
             conversations.openChat.mockResolvedValue(CONVERSATION)
 
             await expect(
@@ -244,7 +245,7 @@ describe("AgentChatService", () => {
         })
 
         it("keeps a customer name within 80 characters and skips an empty greeting", async () => {
-            const { service, conversations, messages, tx } = await build([row({ ...AGENT, greeting: "" })])
+            const { service, conversations, messages, tx } = await build([], { ...AGENT, greeting: "" })
             conversations.openChat.mockResolvedValue(CONVERSATION)
 
             await expect(
@@ -264,7 +265,7 @@ describe("AgentChatService", () => {
         })
 
         it("does not open a chat when the agent is missing", async () => {
-            const { service, conversations, tx } = await build([row(undefined)])
+            const { service, conversations, tx } = await build()
 
             await expect(
                 service.start("u1", { workspaceId: "w1", agentId: "a1", kind: "customer", visitorName: null }),
@@ -459,7 +460,7 @@ describe("AgentChatService", () => {
         { kind: "test", visitorName: "Lan" },
         { kind: "customer", visitorName: null },
     ] as const)("defaults a nameless $kind chat to $visitorName", async ({ kind, visitorName }) => {
-        const { service, tx, conversations, messages } = await build([row(AGENT)])
+        const { service, tx, conversations, messages } = await build([], AGENT)
         conversations.openChat.mockResolvedValue(CONVERSATION)
         await expect(service.start("u1", { workspaceId: "w1", agentId: "a1", kind, visitorName: null })).resolves.toBe(
             "c1",

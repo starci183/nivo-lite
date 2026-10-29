@@ -406,3 +406,36 @@ describe("AgentDirectoryService status and modules", () => {
         })
     })
 })
+
+describe("AgentDirectoryService chat and turn facts", () => {
+    it("answers the chat facts of the agent of the workspace, null for none", async () => {
+        const found = mockEntityManager({ findOne: [AgentEntity, agentEntityOf({ greeting: "Hi" })] })
+        const missing = mockEntityManager({ findOne: [AgentEntity, null] })
+
+        await expect((await build(found)).chatFactsOf("w1", "a1")).resolves.toEqual({
+            id: "a1",
+            module: "chatbot",
+            status: "active",
+            greeting: "Hi",
+        })
+        await expect((await build(missing)).chatFactsOf("w1", "a9")).resolves.toBeNull()
+    })
+
+    it("answers the agent of a turn with the texts that steer it, null for none", async () => {
+        const found = mockEntityManager({ findOne: [AgentEntity, agentEntityOf()] })
+        const missing = mockEntityManager({ findOne: [AgentEntity, null] })
+
+        await expect((await build(found)).turnFactsOf("a1")).resolves.toEqual({
+            id: "a1",
+            name: "Bot",
+            handle: "bot",
+            role: "Front desk",
+            module: "chatbot",
+            instructions: "Be kind",
+            knowledge: "Open 9-5",
+            approvalRule: "Ask first",
+            greeting: "",
+        })
+        await expect((await build(missing)).turnFactsOf("a9")).resolves.toBeNull()
+    })
+})

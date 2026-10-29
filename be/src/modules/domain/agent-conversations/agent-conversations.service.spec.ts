@@ -11,10 +11,11 @@ import {
     quietTestChat,
     telegramConversation,
     testConversation,
-    turnRow,
+    turnConversation,
     unnamedPartyConversation,
 } from "@tests/fixtures/builders/agent-conversations.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentConversationsService } from "./agent-conversations.service"
@@ -22,10 +23,29 @@ import { AgentConversationsErrorCode } from "./errors/agent-conversations.error"
 import { AgentConversationEntity } from "./persistence/entities"
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
+    const agents = mock<AgentDirectoryService>()
+    agents.turnFactsOf.mockResolvedValue(TURN_AGENT)
     const moduleRef = await Test.createTestingModule({
-        providers: [AgentConversationsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            AgentConversationsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: AgentDirectoryService, useValue: agents },
+        ],
     }).compile()
-    return { service: moduleRef.get(AgentConversationsService), em }
+    return { service: moduleRef.get(AgentConversationsService), em, agents }
+}
+
+/** The agent that speaks in the turn conversation. */
+const TURN_AGENT = {
+    id: "agent-1",
+    name: "Chatbot",
+    handle: "chatbot",
+    role: "Customer chat",
+    module: "chatbot",
+    instructions: "Be kind",
+    knowledge: "Tea",
+    approvalRule: "ask",
+    greeting: "Hi",
 }
 
 const chat = {
@@ -342,9 +362,8 @@ describe("AgentConversationsService writes and targets", () => {
 
 describe("AgentConversationsService turnOf", () => {
     it("answers the conversation with the agent that speaks in it", async () => {
-        const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: turnRow }])
-        const { service } = await build(em)
+        const em = mockEntityManager({ findOne: [AgentConversationEntity, turnConversation()] })
+        const { service, agents } = await build(em)
 
         await expect(service.turnOf("conv-1")).resolves.toEqual({
             kind: "ok",
@@ -358,27 +377,18 @@ describe("AgentConversationsService turnOf", () => {
                 handledBy: "Lan",
                 visitorName: "Minh",
                 installationId: "inst-1",
-                agent: {
-                    id: "agent-1",
-                    name: "Chatbot",
-                    handle: "chatbot",
-                    role: "Customer chat",
-                    module: "chatbot",
-                    instructions: "Be kind",
-                    knowledge: "Tea",
-                    approvalRule: "ask",
-                    greeting: "Hi",
-                },
+                agent: TURN_AGENT,
             },
         })
     })
 
-    it("refuses a conversation that does not exist", async () => {
-        const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: undefined }])
-        const { service } = await build(em)
+    it("refuses a conversation that does not exist and one whose agent is gone", async () => {
+        const { service } = await build(mockEntityManager({ findOne: [AgentConversationEntity, null] }))
+        const orphaned = await build(mockEntityManager({ findOne: [AgentConversationEntity, turnConversation()] }))
+        orphaned.agents.turnFactsOf.mockResolvedValue(null)
 
         await expect(service.turnOf("conv-1")).resolves.toMatchObject(REFUSED)
+        await expect(orphaned.service.turnOf("conv-1")).resolves.toMatchObject(REFUSED)
     })
 })
 

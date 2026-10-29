@@ -105,3 +105,43 @@ export type OptionalAgentStatus = string | null
 
 /** The greeting that opens a visit, or null when there is none. */
 export type OptionalGreeting = string | null
+
+/** The facts the agent chat page needs of an agent. */
+export interface AgentChatFacts {
+    /** The agent. */
+    readonly id: string
+    /** The module key. */
+    readonly module: string
+    /** Active or paused. */
+    readonly status: string
+    /** The opening greeting. */
+    readonly greeting: string
+}
+
+/** The agent chat facts, or null when the workspace has no such agent. */
+export type OptionalAgentChatFacts = AgentChatFacts | null
+
+/** The agent that speaks in a conversation turn, with the texts that steer it. */
+export interface AgentTurnFacts {
+    /** The agent. */
+    readonly id: string
+    /** The display name. */
+    readonly name: string
+    /** The handle. */
+    readonly handle: string
+    /** The role line. */
+    readonly role: string
+    /** The module key. */
+    readonly module: string
+    /** The owner's instructions. */
+    readonly instructions: string
+    /** The business knowledge text. */
+    readonly knowledge: string
+    /** The rule for what needs approval. */
+    readonly approvalRule: string
+    /** The opening greeting. */
+    readonly greeting: string
+}
+
+/** The agent of a turn, or null when there is none. */
+export type OptionalAgentTurnFacts = AgentTurnFacts | null
