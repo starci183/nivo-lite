@@ -100,3 +100,14 @@ export const PUBLIC_CONTACT_CASES = [
     { lead_id: "lead-1", customer_email: "mai@example.com" },
     { lead_id: null, customer_email: null },
 ]
+
+/** The order the finished booking of Mai is handed to inbound events as, reached through `contact`. */
+export const handOffOf = (contact: string | null) => ({
+    workspaceId: "ws-1",
+    sender: "Mai",
+    contact,
+    body: 'vi:bookings.handoff.body:{"service":"Cut"}',
+    amountVnd: 200000,
+    ref: BOOKING_ID,
+    leadId: "lead-1",
+})

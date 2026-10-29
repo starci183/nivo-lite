@@ -1,15 +1,3 @@
-import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
-import type { MessageBrief, ChatThreadLine } from "@modules/domain/agent-messages"
-
-/** The selected conversation columns. */
-export type ConversationRow = CustomerConversationRow
-
-/** The message columns contributing to activity figures. */
-export type MessageBriefRow = MessageBrief
-
-/** The stored message columns shown in a thread. */
-export type MessageRow = ChatThreadLine
-
 /** A waiting customer-reply work item. */
 export interface WaitingRow {
     /** The stored id value. */

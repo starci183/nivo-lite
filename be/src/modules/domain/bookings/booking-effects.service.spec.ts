@@ -19,6 +19,7 @@ import {
     effectsOf,
     eventOf,
     feeWritten,
+    handOffOf,
     found,
     namesCleared,
     releaseOf,
@@ -476,20 +477,7 @@ describe("BookingEffectsService", () => {
 
         const manager = reminders.cancel.mock.calls[0]?.[0]
         expect(isTransactionManager(manager)).toBe(true)
-        expect(inbound.handOffOrder.mock.calls).toEqual([
-            [
-                {
-                    workspaceId: WORKSPACE,
-                    sender: "Mai",
-                    contact: test.contact,
-                    body: 'vi:bookings.handoff.body:{"service":"Cut"}',
-                    amountVnd: 200000,
-                    ref: BOOKING_ID,
-                    leadId: "lead-1",
-                },
-                manager,
-            ],
-        ])
+        expect(inbound.handOffOrder.mock.calls).toEqual([[handOffOf(test.contact), manager]])
         expect(messages.get.mock.calls).toEqual([["bookings.handoff.body", { service: "Cut" }, "vi"]])
         expect(trace()).toEqual([SELECTED, claimOf("evidence:done")])
         expect(events.record).not.toHaveBeenCalled()

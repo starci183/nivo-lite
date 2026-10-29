@@ -14,7 +14,9 @@ import { InstallationOperationsService } from "@modules/domain/module-installati
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { ChatbotWorkbenchService } from "./chatbot-workbench.service"
-import type { ConversationRow, MessageBriefRow, MessageRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
+import type { MessageBrief, ChatThreadLine } from "@modules/domain/agent-messages"
+import type { WaitingRow } from "./persistence/chatbot-workbench.rows"
 import {
     briefOf,
     conversationOf,
@@ -31,10 +33,10 @@ const NOW = "2026-10-13T03:00:00.000Z"
 interface Facts {
     readonly agentIds: ReadonlyArray<string>
     readonly installations: ReadonlyArray<{ readonly id: string; readonly agentId: string | null }>
-    readonly conversations: ReadonlyArray<ConversationRow>
-    readonly conversation: ConversationRow | null
-    readonly briefs: ReadonlyArray<MessageBriefRow>
-    readonly messages: ReadonlyArray<MessageRow>
+    readonly conversations: ReadonlyArray<CustomerConversationRow>
+    readonly conversation: CustomerConversationRow | null
+    readonly briefs: ReadonlyArray<MessageBrief>
+    readonly messages: ReadonlyArray<ChatThreadLine>
     readonly waiting: ReadonlyArray<WaitingRow>
     readonly lenses: ReadonlyArray<AgentLens>
     readonly leadViews: ReadonlyArray<typeof LEAD_VIEW>

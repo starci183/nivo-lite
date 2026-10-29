@@ -1,6 +1,8 @@
 import { isoOf } from "@modules/domain/brain-facts"
 import type { ChatbotChannel, ChatbotConversation, ChatbotRole } from "./chatbot-workbench.contracts"
-import type { ConversationRow, MessageBriefRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
+import type { MessageBrief } from "@modules/domain/agent-messages"
+import type { WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 const CHANNELS: ReadonlyArray<ChatbotChannel> = ["telegram", "zalo", "facebook", "instagram"]
 
@@ -22,8 +24,8 @@ export const waitingConversationId = (item: WaitingRow): string | null => {
 
 /** The list entry of a conversation, derived from its stored lines and open escalation. */
 export const toConversation = (
-    row: ConversationRow,
-    messages: ReadonlyArray<MessageBriefRow>,
+    row: CustomerConversationRow,
+    messages: ReadonlyArray<MessageBrief>,
     leadName: string | undefined,
     waiting: boolean,
 ): ChatbotConversation => {
