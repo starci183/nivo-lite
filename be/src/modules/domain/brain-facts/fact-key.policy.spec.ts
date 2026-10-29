@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
-import { AUTO_APPLY_TRUST, keyOf, numberOf, sameValue, TRUST } from "./fact-key.policy"
+import { AUTO_APPLY_TRUST, factSlugOf, numberOf, sameValue, TRUST } from "./fact-key.policy"
 
 type Subject = {
-    keyOf: typeof keyOf
+    factSlugOf: typeof factSlugOf
     numberOf: typeof numberOf
     sameValue: typeof sameValue
 }
@@ -17,7 +17,7 @@ const emptyMatch = (input: string): RegExpExecArray => {
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { keyOf, numberOf, sameValue } }],
+        providers: [{ provide: SUBJECT, useValue: { factSlugOf, numberOf, sameValue } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -33,9 +33,9 @@ describe("fact keys", () => {
     it("normalizes accents, case and separators, and bounds the key", async () => {
         const subject = await build()
 
-        expect(subject.keyOf("  \u0110\u1ed3ng, COMBO Th\u01b0 gi\u00e3n!!! 12  ")).toBe("dong-combo-thu-gian-12")
-        expect(subject.keyOf("???")).toBe("")
-        expect(subject.keyOf("A".repeat(130))).toBe("a".repeat(120))
+        expect(subject.factSlugOf("  \u0110\u1ed3ng, COMBO Th\u01b0 gi\u00e3n!!! 12  ")).toBe("dong-combo-thu-gian-12")
+        expect(subject.factSlugOf("???")).toBe("")
+        expect(subject.factSlugOf("A".repeat(130))).toBe("a".repeat(120))
     })
 
     it.each([

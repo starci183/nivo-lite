@@ -7,6 +7,16 @@ import {
     incoming,
     feedDelivery,
 } from "@tests/fixtures/builders/bank-feed-receipts.builder"
+import {
+    FEED_WORLD,
+    NO_AGENT,
+    NO_OWNER,
+    NO_STATE,
+    TEST_ENVIRONMENT,
+    feedOwnersOf,
+    owningMembers,
+} from "@tests/fixtures/builders/bank-feed-world.builder"
+import type { FeedWorld } from "@tests/fixtures/builders/bank-feed-world.builder"
 import { Test } from "@nestjs/testing"
 import {
     FakeClock,
@@ -52,52 +62,12 @@ const thrownBy = (run: () => unknown): unknown => {
 
 const textLike = (text: string): unknown => expect.stringContaining(text)
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
-/** The name and the environment a connection runs in. */
-interface FeedState {
-    readonly name: string
-    readonly environment: string
-}
-
-/** What the connection tables answer: a key set to undefined is a missing row. */
-interface FeedWorld {
-    /** The connection row that names the workspace. */
-    readonly owner: { readonly workspace_id: string } | undefined
-    /** The name and environment of the connection. */
-    readonly state: FeedState | undefined
-    /** The accounting agent bound to the connection for its bank feed. */
-    readonly agent: { readonly id: string } | undefined
-}
-const LIVE_STATE = { name: "Bank", environment: "live" }
-const TEST_STATE = { name: "Test", environment: "test" }
-const FEED_WORLD: FeedWorld = { owner: { workspace_id: "ws-1" }, state: LIVE_STATE, agent: { id: "agent-1" } }
-const NO_STATE: Partial<FeedWorld> = { state: undefined }
-const NO_AGENT: Partial<FeedWorld> = { agent: undefined }
-const NO_OWNER: Partial<FeedWorld> = { owner: undefined }
-const TEST_ENVIRONMENT: Partial<FeedWorld> = { state: TEST_STATE }
-
 const raw = (body: object): Buffer => Buffer.from(JSON.stringify(body))
 const refusal = new BillingError({ code: BillingErrorCode.WebhookInvalid })
 const cases = receiptCasesOf(tx1, incoming)
 const build = async (world: Partial<FeedWorld> = {}) => {
     const tx = fakeTransaction(mockEntityManager({ query: [MARK_CONNECTION_FED, []] }))
-    const feedWorld = { ...FEED_WORLD, ...world }
-    const connections = mock<ConnectionBindingsReadService>()
-    connections.workspaceOf.mockResolvedValue(feedWorld.owner?.workspace_id ?? null)
-    connections.stateOf.mockResolvedValue(feedWorld.state ?? null)
-    const bindings = mock<AgentBindingsService>()
-    bindings.agentsFor.mockResolvedValue(
-        feedWorld.agent === undefined
-            ? []
-            : [
-                  {
-                      id: feedWorld.agent.id,
-                      module: "accounting",
-                      name: "Accountant",
-                      access: "auto",
-                      purpose: "bank_feed",
-                  },
-              ],
-    )
+    const { connections, bindings } = feedOwnersOf({ ...FEED_WORLD, ...world })
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
     const catalog = mock<MessageCatalog>()
@@ -107,15 +77,7 @@ const build = async (world: Partial<FeedWorld> = {}) => {
     inbound.recordBankPayment.mockResolvedValue({ duplicate: false, inboundEventId: "event-1" })
     const bus = recordingEventBus<BankCreditBookedEvent>()
     const publish = jest.spyOn(bus, "publish")
-    const members = mock<WorkspaceMembersService>()
-    members.require.mockResolvedValue({
-        userId: "user-1",
-        workspaceId: "ws-1",
-        role: "owner",
-        staffId: null,
-        displayName: "Lan",
-        status: "active",
-    })
+    const members = owningMembers()
     const events = mock<EventsService>()
     const transactions = mock<TransactionsService>()
     const feedInbox = mock<BankFeedReceiptService>()

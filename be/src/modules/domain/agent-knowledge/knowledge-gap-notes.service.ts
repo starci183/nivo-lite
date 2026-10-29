@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { keyOf } from "@modules/domain/brain-facts"
+import { factSlugOf } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import { FACT_ANSWERS, KnowledgeGapsService, answers, keywordsOf } from "@modules/domain/knowledge-gaps"
 import { InjectLogger } from "@modules/platform/logging"
@@ -68,7 +68,7 @@ export class KnowledgeGapNotesService {
                 .passagesText(view, words.join(" "), COVER_LIMIT)
                 .catch((cause: unknown) => this.skip(cause, view, [])),
         ])
-        const covered = (text: string): boolean => answers(words, new Set(keyOf(text).split("-")), FACT_ANSWERS)
+        const covered = (text: string): boolean => answers(words, new Set(factSlugOf(text).split("-")), FACT_ANSWERS)
         return (
             !facts.some((fact) => covered(`${fact.subjectLabel} ${fact.attributeLabel} ${fact.value}`)) &&
             !passages.some((passage) => covered(`${passage.title} ${passage.topic ?? ""} ${passage.content}`))

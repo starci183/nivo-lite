@@ -1,5 +1,5 @@
 import type { FactAudience, FactRecord, InstallationScope } from "./brain-facts.contracts"
-import { keyOf } from "./fact-key.policy"
+import { factSlugOf } from "./fact-key.policy"
 
 /** Whether a fact is visible to an agent with this audience, module and instance (the view of the one shared brain). */
 export const visibleTo = (
@@ -29,7 +29,7 @@ export const factLine = (fact: FactRecord): string => `${fact.subjectLabel} - ${
 export const searchFacts = (facts: ReadonlyArray<FactRecord>, query: string, limit: number): Array<FactRecord> => {
     const words = [
         ...new Set(
-            keyOf(query)
+            factSlugOf(query)
                 .split("-")
                 .filter((word) => word.length > 1),
         ),
@@ -37,7 +37,7 @@ export const searchFacts = (facts: ReadonlyArray<FactRecord>, query: string, lim
     return facts
         .map((fact) => {
             const subject = `-${fact.subjectKey}-`
-            const rest = `-${fact.attribute}-${keyOf(fact.value)}-`
+            const rest = `-${fact.attribute}-${factSlugOf(fact.value)}-`
             const score = words.reduce(
                 (sum, word) => sum + (subject.includes(`-${word}-`) ? 2 : 0) + (rest.includes(`-${word}-`) ? 1 : 0),
                 0,

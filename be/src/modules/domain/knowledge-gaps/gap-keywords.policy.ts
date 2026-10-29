@@ -1,6 +1,6 @@
-import { keyOf } from "@modules/domain/brain-facts"
+import { factSlugOf } from "@modules/domain/brain-facts"
 
-/** Words that carry no topic (question words, greetings, particles), in the accent-free form keyOf gives. */
+/** Words that carry no topic (question words, greetings, particles), in the accent-free form factSlugOf gives. */
 const STOP: ReadonlySet<string> = new Set([
     "la",
     "co",
@@ -127,7 +127,7 @@ export const DOC_ANSWERS = 0.75
 /** The significant words of a text, unique, in order of appearance. */
 export const keywordsOf = (text: string): Array<string> => [
     ...new Set(
-        keyOf(text)
+        factSlugOf(text)
             .split("-")
             .filter((word) => word.length > 1 && !STOP.has(word)),
     ),
@@ -145,7 +145,7 @@ export const sameQuestion = (a: ReadonlyArray<string>, b: ReadonlyArray<string>)
 /** The words of a text as a set, for coverage. */
 export const wordSet = (text: string): Set<string> =>
     new Set(
-        keyOf(text)
+        factSlugOf(text)
             .split("-")
             .filter((word) => word.length > 1),
     )
