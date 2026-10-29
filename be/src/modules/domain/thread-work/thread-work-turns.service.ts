@@ -10,6 +10,7 @@ import type { MentionRef } from "@modules/domain/work-chains"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { isRecord } from "@modules/platform/primitives"
 import { ThreadWorkEntity } from "./persistence/entities"
 import { amountText, groupMentionOf, nextStepOf, workAgentOf } from "./thread-work.policy"
 import type {
@@ -20,6 +21,20 @@ import type {
     WorkAgent,
     WorkPlace,
 } from "./thread-work.contracts"
+
+/** True when a RETURNING row carries the columns of a piece of thread work. */
+const isThreadWorkRecord = (value: unknown): value is ThreadWorkRecord =>
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.workspace_id === "string" &&
+    typeof value.thread_id === "string" &&
+    typeof value.work_item_id === "string" &&
+    typeof value.agent_id === "string" &&
+    typeof value.state === "string" &&
+    Array.isArray(value.missing_fields)
+
+/** The thread work a write answered, if it answered one. */
+const returnedWork = (raw: unknown): ThreadWorkRecord | undefined => [raw].flat().find(isThreadWorkRecord)
 
 /** One line an agent writes in its thread: the text, who it tags, the title of the chain step it makes. */
 interface AgentLine {
@@ -99,8 +114,7 @@ export class ThreadWorkTurnsService {
                 "id, workspace_id, thread_id, work_item_id, agent_id, state, approval_request_id, waiting_member_id, missing_fields",
             )
             .execute()
-        const [row] = result.raw as Array<ThreadWorkRecord>
-        return row
+        return returnedWork(result.raw)
     }
 
     /**

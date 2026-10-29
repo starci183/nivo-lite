@@ -22,7 +22,7 @@ export interface LedgerPayment {
     readonly status: string
 }
 
-/** The payment a receipt is for. */
+/** The invoice, amount and instant of the payment a receipt confirms to the payer. */
 export interface ReceiptPayment {
     /** The invoice it settles. */
     readonly invoiceId: string | null
@@ -31,3 +31,6 @@ export interface ReceiptPayment {
     /** When the money arrived. */
     readonly occurredAt: Date
 }
+
+/** The payment a receipt is for, or null when the workspace has none with that id. */
+export type OptionalReceiptPayment = ReceiptPayment | null

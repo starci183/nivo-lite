@@ -1,9 +1,10 @@
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { ApprovalResolvedEvent } from "@modules/events/api"
-import { APPROVAL_RESOLVED_THREAD_OUTCOMES_TOPIC_QUEUE } from "@modules/platform/event-bus"
+import { APPROVAL_RESOLVED_THREAD_OUTCOMES_TOPIC_QUEUE, EVENT_CONSUMER_REGISTRY } from "@modules/platform/event-bus"
 import type { EventConsumerRegistry, EventDelivery } from "@modules/platform/event-bus"
 import { ApprovalResolvedConsumer } from "./approval-resolved.consumer"
-import type { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
+import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 
 const delivery = (): EventDelivery<ApprovalResolvedEvent> => {
     const event = ApprovalResolvedEvent.create({
@@ -25,15 +26,22 @@ const delivery = (): EventDelivery<ApprovalResolvedEvent> => {
 }
 
 describe("ApprovalResolvedConsumer", () => {
-    const build = () => {
+    const build = async () => {
         const registry = mock<EventConsumerRegistry>()
         const outcomes = mock<ThreadApprovalOutcomesService>()
         outcomes.resolved.mockResolvedValue(undefined)
-        return { registry, outcomes, subject: new ApprovalResolvedConsumer(registry, outcomes) }
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                ApprovalResolvedConsumer,
+                { provide: EVENT_CONSUMER_REGISTRY, useValue: registry },
+                { provide: ThreadApprovalOutcomesService, useValue: outcomes },
+            ],
+        }).compile()
+        return { registry, outcomes, subject: moduleRef.get(ApprovalResolvedConsumer) }
     }
 
-    it("subscribes to the thread_outcomes queue of approval_resolved", () => {
-        const { registry, subject } = build()
+    it("subscribes to the thread_outcomes queue of approval_resolved", async () => {
+        const { registry, subject } = await build()
 
         subject.onModuleInit()
 
@@ -41,7 +49,7 @@ describe("ApprovalResolvedConsumer", () => {
     })
 
     it("has the card settled with the verdict and the delivery's inbox key", async () => {
-        const { outcomes, subject } = build()
+        const { outcomes, subject } = await build()
 
         await subject.handle(delivery())
 
@@ -52,7 +60,7 @@ describe("ApprovalResolvedConsumer", () => {
     })
 
     it("lets a failure reach the bus so the message is retried", async () => {
-        const { outcomes, subject } = build()
+        const { outcomes, subject } = await build()
         const cause = new Error("db down")
         outcomes.resolved.mockRejectedValue(cause)
 

@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { KnowledgeChunksService, toVector } from "@modules/domain/knowledge-chunks"
 import type { ChunkHit } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import { MODULE_CATALOG } from "@modules/domain/modules"
+import { catalogAudienceOf } from "@modules/domain/module-audiences"
 import { NivoKnowledgeSearchService } from "@modules/domain/nivo-knowledge"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -54,13 +54,13 @@ export class KnowledgeSearchService {
      */
     forAgent(request: AgentSearch): Promise<ReadonlyArray<Passage>> {
         const question = request.question.trim().slice(0, QUESTION_MAX_CHARS)
-        const entry = MODULE_CATALOG.find((candidate) => candidate.key === request.module)
-        if (entry === undefined) return Promise.reject(new KnowledgeError({ code: KnowledgeErrorCode.ModuleUnknown }))
+        const audience = catalogAudienceOf(request.module)
+        if (audience === null) return Promise.reject(new KnowledgeError({ code: KnowledgeErrorCode.ModuleUnknown }))
         if (question === "") return Promise.resolve([])
         const lens = lensOf({
             workspaceId: request.workspaceId,
             module: request.module,
-            moduleAudience: entry.audience === "customer" ? "customer" : "internal",
+            moduleAudience: audience,
             requestedAudience: request.audience,
             installationId: request.installationId,
         })

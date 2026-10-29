@@ -2,7 +2,27 @@ import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import type { ActionEntry, ModuleCommand, WorkItem } from "@modules/domain/decisions"
 import { MODULE_CATALOG } from "@modules/domain/modules"
 import { itemOf } from "@tests/fixtures/builders/work-decision.builder"
-import type { ThreadWorkRecord, WorkAgentRecord } from "../../../modules/domain/thread-work/thread-work.contracts"
+
+/** An agent as the thread work reads it from the agent directory. */
+interface WorkAgentRecord {
+    id: string
+    name: string
+    module: string
+    can_tag_agent_ids: Array<string>
+}
+
+/** One piece of thread work as the runtime reads it. */
+interface ThreadWorkRecord {
+    id: string
+    workspace_id: string
+    thread_id: string
+    work_item_id: string
+    agent_id: string
+    state: "running" | "asked" | "waiting_member" | "done" | "stopped"
+    approval_request_id: string | null
+    waiting_member_id: string | null
+    missing_fields: Array<string>
+}
 
 /** The sales agent that can pass work to Accounting. */
 const SALES_AI = {

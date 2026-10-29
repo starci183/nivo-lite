@@ -29,6 +29,7 @@ describe("TransactionsFiguresService", () => {
         expect(em.find).toHaveBeenCalledWith(TransactionEntity, {
             select: { id: true, invoiceId: true, payer: true, reference: true, amountVnd: true, status: true },
             where: { workspaceId: "ws-1", direction: "credit", status: In(["matched", "unmatched", "needs_review"]) },
+            take: 5000,
         })
     })
 })

@@ -1,14 +1,14 @@
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
-import type { ThreadMessageRead } from "../thread-messages.contracts"
-import { ThreadMessageEntity } from "./entities"
+import type { ObjectLiteral, SelectQueryBuilder } from "typeorm"
 
 /**
- * A read of the messages of one workspace, before the name of the author is added (see ThreadMessageAuthorsService). The caller adds
- * its own filter, order and bound.
+ * The columns of a read of the messages of one workspace, before the name of the author is added (see ThreadMessageAuthorsService).
+ * The builder is over the messages table under the alias `m`; the caller adds its own filter, order and bound.
  */
-export const selectMessages = (manager: EntityManager, workspaceId: string): SelectQueryBuilder<ThreadMessageEntity> =>
-    manager
-        .createQueryBuilder(ThreadMessageEntity, "m")
+export const selectMessageColumns = <Row extends ObjectLiteral>(
+    builder: SelectQueryBuilder<Row>,
+    workspaceId: string,
+): SelectQueryBuilder<Row> =>
+    builder
         .select([
             "m.id AS id",
             "m.thread_id AS thread_id",
@@ -22,14 +22,3 @@ export const selectMessages = (manager: EntityManager, workspaceId: string): Sel
             "m.created_at AS created_at",
         ])
         .where("m.workspace_id = :workspaceId", { workspaceId })
-
-/** One message of the workspace without its author's name, or undefined when there is none with that id. */
-export const readMessageById = (
-    manager: EntityManager,
-    workspaceId: string,
-    messageId: string,
-): Promise<ThreadMessageRead | undefined> =>
-    selectMessages(manager, workspaceId)
-        .andWhere("m.id = :messageId", { messageId })
-        .limit(1)
-        .getRawOne<ThreadMessageRead>()

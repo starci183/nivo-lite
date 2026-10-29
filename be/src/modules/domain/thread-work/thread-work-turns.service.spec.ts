@@ -45,19 +45,9 @@ export const moved = (
         },
     ] as const
 
-/** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
-/** The any-function matcher, typed `unknown` so it flows into any slot. */
 const anyFunction = (): unknown => expect.any(Function)
-
-/** What the `updatedAt` expression of a column change evaluates to. */
-const nowOf = (change: unknown): unknown =>
-    typeof change === "object" && change !== null && "updatedAt" in change && typeof change.updatedAt === "function"
-        ? change.updatedAt()
-        : undefined
-
-/** The match-anything matcher, typed `unknown` so it flows into any slot. */
 const anything = (): unknown => expect.anything()
 
 /** Builds thread turns with explicit kit doubles for every constructor dependency. */
@@ -66,7 +56,7 @@ const build = async (doubles: Doubles = {}) => {
         update: [ThreadWorkEntity, { affected: 1, raw: [], generatedMaps: [] }],
     })
     const write = fakeQueryBuilder({ execute: { raw: doubles.inserted ?? [rowOf("running")] } })
-    em.createQueryBuilder.mockReturnValue(write.builder as never)
+    em.createQueryBuilder.mockReturnValue(write.builder)
     const agents = mock<AgentDirectoryService>({
         activeInOrder: jest.fn().mockResolvedValue([
             {
@@ -295,7 +285,7 @@ const registerDone = () => {
                 }),
             )
             expect(em.update).toHaveBeenCalledWith(...moved("done"))
-            expect(nowOf(em.update.mock.calls[0]?.[2])).toBe("now()")
+            expect(evaluatedValues(em.update.mock.calls[0]?.[2]).updatedAt).toBe("now()")
             expect(engine.runWork).toHaveBeenCalledWith(
                 { workspaceId: "ws-1", actor: "AI Sales", locale: "vi" },
                 objectLike({
