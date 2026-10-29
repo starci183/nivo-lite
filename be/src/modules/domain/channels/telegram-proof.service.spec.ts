@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { ConnectionSecretsErrorCode, ConnectionSecretsService } from "@modules/domain/connection-secrets"
+import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
+import { ConnectionSecretReadsService } from "@modules/domain/connections"
 import { WEBHOOK_PROOF_REGISTRY } from "@modules/platform/http-security"
 import type { WebhookProofRegistry } from "@modules/platform/http-security"
 import { TelegramProofService } from "./telegram-proof.service"
@@ -8,7 +9,7 @@ import { TelegramProofService } from "./telegram-proof.service"
 const CONNECTION = "0b1d52a4-8f3e-4c8a-9a64-4f0d2f6e7a11"
 
 const build = async (secret: string | null) => {
-    const secrets = mock<ConnectionSecretsService>()
+    const secrets = mock<ConnectionSecretReadsService>()
     secrets.secretOf.mockResolvedValue(
         secret === null
             ? { kind: "refused", code: ConnectionSecretsErrorCode.NotFound }
@@ -22,7 +23,7 @@ const build = async (secret: string | null) => {
         providers: [
             TelegramProofService,
             { provide: WEBHOOK_PROOF_REGISTRY, useValue: registry },
-            { provide: ConnectionSecretsService, useValue: secrets },
+            { provide: ConnectionSecretReadsService, useValue: secrets },
         ],
     }).compile()
     return { proof: moduleRef.get(TelegramProofService), registry, secrets }
