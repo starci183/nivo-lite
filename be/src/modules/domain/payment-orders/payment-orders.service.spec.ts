@@ -22,21 +22,8 @@ const NOW = PAYMENT_ORDER_NOW
 const ROW = paymentOrderRowOf()
 /** Any freshly drawn order code. */
 const DRAWN_CODE: unknown = expect.stringMatching(/^NIVO[2-9A-HJKMNP-Z]{5}$/)
-/** What the insert answers with `RETURNING *`. */
-const WRITTEN = {
-    id: "order-1",
-    workspace_id: "ws-1",
-    plan_code: "starter",
-    amount_vnd: "990000",
-    order_code: "NIVO8F3K2",
-    status: "pending",
-    expires_at: new Date("2026-10-12T10:30:00.000Z"),
-    paid_at: null,
-    created_at: new Date(NOW),
-    kind: "plan",
-    pack_code: null,
-    detail: {},
-}
+/** What the insert answers with `RETURNING id`. */
+const WRITTEN = { id: "order-1" }
 const NEW_ORDER = {
     workspaceId: "ws-1",
     userId: "person-1",
@@ -144,13 +131,14 @@ describe("PaymentOrdersService", () => {
             expect(em.find).toHaveBeenCalledWith(PaymentOrderEntity, {
                 select: { id: true },
                 where: { workspaceId: "ws-1", id: In(["order-1", "foreign"]) },
+                take: 500,
             })
         })
     })
 
     describe("create", () => {
         it("writes the pending order with a fresh code and answers it", async () => {
-            const em = mockEntityManager()
+            const em = mockEntityManager({ findOneOrFail: [PaymentOrderEntity, ROW] })
             const insert = fakeQueryBuilder({ execute: { raw: [WRITTEN] } })
             answerQueryBuilders(em, insert)
             const orders = await build(em)
@@ -178,7 +166,7 @@ describe("PaymentOrdersService", () => {
         })
 
         it("draws a new code when the first one collides", async () => {
-            const em = mockEntityManager()
+            const em = mockEntityManager({ findOneOrFail: [PaymentOrderEntity, ROW] })
             answerQueryBuilders(
                 em,
                 fakeQueryBuilder({ execute: { raw: [] } }),
