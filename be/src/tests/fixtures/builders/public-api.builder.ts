@@ -3,13 +3,14 @@ import type { EntityManager } from "typeorm"
 import { PublicApiEntity } from "@modules/domain/public-api"
 import { AgentConversationEntity } from "@modules/domain/agent-conversations"
 import { AgentEntity } from "@modules/domain/agents"
-import { ApiKeyEntity } from "@modules/domain/api-keys"
+import { apiKeysEntities } from "@modules/domain/api-keys"
 import { AuthorityRuleEntity } from "@modules/domain/authority-rules"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { leadsEntities } from "@modules/domain/leads"
 import { workspacesEntities } from "@modules/domain/workspaces"
 
 const [WorkspaceEntity] = workspacesEntities
+const [ApiKeyEntity] = apiKeysEntities
 
 const [InboundEventEntity] = inboundEventsEntities
 const [LeadEntity] = leadsEntities

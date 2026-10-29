@@ -1,9 +1,10 @@
-import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AuthorityRulesService } from "./authority-rules.service"
 import {
@@ -23,20 +24,21 @@ import { AuthorityRuleEntity } from "./persistence/entities"
 
 const scope = { workspaceId: "ws-1" }
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (entityManager: MockEntityManager, registered = true) => {
+    const actions = mock<AuthorityActionsService>()
+    actions.registeredUnder.mockResolvedValue(registered)
     const moduleRef = await Test.createTestingModule({
-        providers: [AuthorityRulesService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            AuthorityRulesService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: AuthorityActionsService, useValue: actions },
+        ],
     }).compile()
     return moduleRef.get(AuthorityRulesService)
 }
 
 /** The SQL expression the upsert stamps the save moment with. */
 const NOW_EXPRESSION: unknown = expect.any(Function)
-
-/** The answer of the registry check: the action exists, or it does not. */
-const registered = (found: boolean): QueryBuilderAnswers => ({
-    getOne: found ? { action: "send_follow_up" } : null,
-})
 
 /** The answer of an upsert that stored these rows. */
 const upserted = (...rows: Array<AuthorityRuleEntity>): QueryBuilderAnswers => ({ execute: { raw: rows } })
@@ -174,16 +176,12 @@ describe("AuthorityRulesService > list", () => {
 
 describe("AuthorityRulesService > save", () => {
     it("saves the rule", async () => {
-        const { em, fakes } = saving(registered(true), upserted(askRuleEntity()))
+        const { em, fakes } = saving(upserted(askRuleEntity()))
         const service = await build(em)
 
         await expect(service.save("ws-1", changeOf())).resolves.toEqual(recordOf({ mode: "ask" }))
-        expect(fakes[0]?.callsOf("where")).toEqual([
-            ["a.action = :action AND a.moduleKey = :department", { action: "send_follow_up", department: "sales" }],
-        ])
-        expect(fakes[0]?.callsOf("setLock")).toEqual([["pessimistic_read"]])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(AuthorityRuleEntity, "ar")
-        expect(fakes[1]?.callsOf("values")).toEqual([
+        expect(fakes[0]?.callsOf("values")).toEqual([
             [
                 {
                     workspaceId: "ws-1",
@@ -197,7 +195,7 @@ describe("AuthorityRulesService > save", () => {
                 },
             ],
         ])
-        expect(fakes[1]?.callsOf("orUpdate")).toEqual([
+        expect(fakes[0]?.callsOf("orUpdate")).toEqual([
             [
                 ["mode", "limit_vnd", "required_fields", "updated_at"],
                 ["workspace_id", "department", "action"],
@@ -208,7 +206,7 @@ describe("AuthorityRulesService > save", () => {
 
 describe("AuthorityRulesService > save, approval settings", () => {
     it("saves the bands and approval settings as a patch of the keys the change names, and follows the bands", async () => {
-        const { em, fakes } = saving(registered(true), upserted(unlimitedAutoRuleEntity()))
+        const { em, fakes } = saving(upserted(unlimitedAutoRuleEntity()))
         const service = await build(em)
 
         await service.save(
@@ -228,7 +226,7 @@ describe("AuthorityRulesService > save, approval settings", () => {
             }),
         )
 
-        expect(fakes[1]?.callsOf("values")).toEqual([
+        expect(fakes[0]?.callsOf("values")).toEqual([
             [
                 {
                     workspaceId: "ws-1",
@@ -251,7 +249,7 @@ describe("AuthorityRulesService > save, approval settings", () => {
                 },
             ],
         ])
-        expect(fakes[1]?.callsOf("orUpdate")).toEqual([
+        expect(fakes[0]?.callsOf("orUpdate")).toEqual([
             [
                 [
                     "mode",
@@ -287,18 +285,18 @@ describe("AuthorityRulesService > save, refusals", () => {
     })
 
     it("refuses an action the registry does not know", async () => {
-        const { em, fakes } = saving(registered(false))
-        const service = await build(em)
+        const { em } = saving()
+        const service = await build(em, false)
 
         await expect(service.save("ws-1", changeOf())).rejects.toMatchObject({
             code: AuthorityRulesErrorCode.UnknownAction,
             params: { action: "send_follow_up" },
         })
-        expect(fakes[0]?.callsOf("insert")).toEqual([])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("refuses an action when the upsert stores no row", async () => {
-        const { em } = saving(registered(true), upserted())
+        const { em } = saving(upserted())
         const service = await build(em)
 
         await expect(service.save("ws-1", changeOf())).rejects.toMatchObject({
@@ -314,16 +312,16 @@ const expressionOf = (calls: ReadonlyArray<ReadonlyArray<unknown>> | undefined, 
 
 describe("AuthorityRulesService > save, database clock", () => {
     it("stamps the saved rule with the database time", async () => {
-        const { em, fakes } = saving(registered(true), upserted(askRuleEntity()))
+        const { em, fakes } = saving(upserted(askRuleEntity()))
         const service = await build(em)
 
         await service.save("ws-1", changeOf())
 
-        expect(expressionOf(fakes[1]?.callsOf("values"), "updatedAt")).toBe("now()")
+        expect(expressionOf(fakes[0]?.callsOf("values"), "updatedAt")).toBe("now()")
     })
 
     it("refuses an action when the upsert answers no row list", async () => {
-        const { em } = saving(registered(true), { execute: { raw: undefined } })
+        const { em } = saving({ execute: { raw: undefined } })
         const service = await build(em)
 
         await expect(service.save("ws-1", changeOf())).rejects.toMatchObject({

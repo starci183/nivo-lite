@@ -1,7 +1,7 @@
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { AutomationRunEntity } from "@modules/domain/automation-runs"
-import { BankFeedInboxEntity } from "@modules/domain/bank-feed-inbox"
+import { automationRunsEntities } from "@modules/domain/automation-runs"
+import { bankFeedInboxEntities } from "@modules/domain/bank-feed-inbox"
 import { contractsEntities } from "@modules/domain/contracts"
 import { eventsEntities } from "@modules/domain/events"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
@@ -11,6 +11,10 @@ import { workItemsEntities } from "@modules/domain/work-items"
 import { sql } from "@modules/platform/database"
 import { inboxEntities } from "@modules/platform/inbox"
 import { jobsEntities } from "@modules/platform/jobs"
+
+const [BankFeedInboxEntity] = bankFeedInboxEntities
+
+const [AutomationRunEntity] = automationRunsEntities
 
 const [WorkItemEntity] = workItemsEntities
 

@@ -6,6 +6,8 @@ import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jes
 import type { MockEntityManager } from "@starci/jest-preset"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
+import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ApiKeysService } from "./api-keys.service"
@@ -44,6 +46,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:20.000Z") },
             { provide: EventsService, useValue: mock<EventsService>() },
+            { provide: WorkspaceMemberSeatsService, useValue: mock<WorkspaceMemberSeatsService>() },
         ],
     }).compile()
     return moduleRef.get(ApiKeysService)
@@ -108,16 +111,42 @@ describe("ApiKeysService authenticate", () => {
 const ANYTHING: unknown = expect.anything()
 
 /** The answer of the active-member read: a member of this role, or none. */
-const memberOf = (role: string | undefined, displayName = "Owner"): QueryBuilderAnswers => ({
-    getRawOne: role === undefined ? undefined : { role, displayName },
-})
+const memberOf = (role: WorkspaceRole | undefined, displayName = "Owner"): SeatAnswer => ({ seat: { role, displayName } })
+
+/** The seat the member read answers: a seat of this role, or none. */
+interface SeatAnswer {
+    readonly seat: { readonly role: WorkspaceRole | undefined; readonly displayName: string }
+}
+
+/** True when an answer stands for the member read, not for a query builder. */
+const isSeatAnswer = (answer: QueryBuilderAnswers | SeatAnswer | undefined): answer is SeatAnswer =>
+    answer !== undefined && "seat" in answer
 
 /** The answer of a write that returns `rows`. */
 const wrote = (...rows: Array<ApiKeyEntity>): QueryBuilderAnswers => ({ execute: { raw: rows } })
 
-const buildManagement = async (entityManager: MockEntityManager, answers: ReadonlyArray<QueryBuilderAnswers>) => {
+const buildManagement = async (
+    entityManager: MockEntityManager,
+    answers: ReadonlyArray<QueryBuilderAnswers | SeatAnswer>,
+) => {
     const transaction = fakeTransaction(entityManager)
-    const fakes = queueQueryBuilders(entityManager, answers)
+    const [first, ...rest] = answers
+    const seats = mock<WorkspaceMemberSeatsService>()
+    seats.activeSeatOfUser.mockResolvedValue(
+        isSeatAnswer(first) && first.seat.role !== undefined
+            ? {
+                  memberId: "member-1",
+                  userId: "principal-1",
+                  status: "active",
+                  role: first.seat.role,
+                  displayName: first.seat.displayName,
+              }
+            : null,
+    )
+    const fakes = queueQueryBuilders(
+        entityManager,
+        rest.filter((answer): answer is QueryBuilderAnswers => !isSeatAnswer(answer)),
+    )
     const execute = entityManager.transaction.getMockImplementation()
     const managers: Array<EntityManager> = []
     entityManager.transaction.mockImplementation(
@@ -140,25 +169,21 @@ const buildManagement = async (entityManager: MockEntityManager, answers: Readon
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:20.000Z") },
             { provide: EventsService, useValue: events },
+            { provide: WorkspaceMemberSeatsService, useValue: seats },
         ],
     }).compile()
-    return { service: moduleRef.get(ApiKeysService), events, transaction, managers, fakes }
+    return { service: moduleRef.get(ApiKeysService), events, transaction, managers, fakes, seats }
 }
-
-const MEMBER_WHERE = [
-    "m.workspace_id = :workspaceId AND m.user_id = :principalId AND m.status = 'active'",
-    { workspaceId: "workspace-1", principalId: "principal-1" },
-]
 
 const REVOKE_WHERE = "id = :keyId AND workspace_id = :workspaceId AND revoked_at IS NULL"
 
 describe("ApiKeysService management", () => {
     it("lists the workspace keys as public views for an owner", async () => {
         const em = mockEntityManager({ find: [ApiKeyEntity, [keyOf()]] })
-        const { service, fakes } = await buildManagement(em, [memberOf("owner")])
+        const { service, seats } = await buildManagement(em, [memberOf("owner")])
 
         await expect(service.listKeys("principal-1", "workspace-1")).resolves.toEqual([keyView])
-        expect(fakes[0]?.callsOf("where")).toEqual([MEMBER_WHERE])
+        expect(seats.activeSeatOfUser).toHaveBeenCalledWith("workspace-1", "principal-1", em)
         expect(em.find).toHaveBeenCalledWith(ApiKeyEntity, {
             where: { workspaceId: "workspace-1" },
             order: { createdAt: "DESC" },
@@ -176,8 +201,7 @@ describe("ApiKeysService management", () => {
         await expect(service.listKeys("principal-1", "workspace-1")).rejects.toMatchObject({
             code: ApiKeysErrorCode.NotManager,
         })
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
-        expect(fakes[0]?.callsOf("where")).toEqual([MEMBER_WHERE])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
         expect(em.find).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
     })
@@ -210,12 +234,11 @@ describe("ApiKeysService management", () => {
 
         expect(created.item).toEqual(keyView)
         expect(created.key).toMatch(/^nvk_[A-Za-z0-9_-]{43}$/u)
-        expect(fakes[0]?.callsOf("where")).toEqual([MEMBER_WHERE])
         expect(em.count).toHaveBeenCalledWith(ApiKeyEntity, {
             where: { workspaceId: "workspace-1", revokedAt: ANYTHING },
         })
         expect(em.createQueryBuilder).toHaveBeenCalledWith(ApiKeyEntity, "ak")
-        expect(fakes[1]?.callsOf("values")).toEqual([
+        expect(fakes[0]?.callsOf("values")).toEqual([
             [
                 {
                     workspaceId: "workspace-1",
@@ -249,7 +272,7 @@ describe("ApiKeysService management", () => {
             code: ApiKeysErrorCode.LimitReached,
             params: { limit: 20 },
         })
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
@@ -263,7 +286,7 @@ describe("ApiKeysService management", () => {
         await expect(service.createKey("principal-1", "workspace-1", "Daily sync")).rejects.toMatchObject({
             code: ApiKeysErrorCode.NotCreated,
         })
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
@@ -282,10 +305,9 @@ describe("ApiKeysService management", () => {
             revokedAt: revokedAt.toISOString(),
             lastUsedAt: lastUsedAt.toISOString(),
         })
-        expect(fakes[0]?.callsOf("where")).toEqual([MEMBER_WHERE])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(ApiKeyEntity, "ak")
-        expect(fakes[1]?.callsOf("where")).toEqual([[REVOKE_WHERE, { keyId: "key-2", workspaceId: "workspace-1" }]])
-        expect(evaluatedValues(fakes[1]?.callsOf("set")[0]?.[0]).revokedAt).toBe("now()")
+        expect(fakes[0]?.callsOf("where")).toEqual([[REVOKE_WHERE, { keyId: "key-2", workspaceId: "workspace-1" }]])
+        expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0]).revokedAt).toBe("now()")
         expect(events.record).toHaveBeenCalledWith(
             {
                 workspaceId: "workspace-1",
@@ -318,7 +340,7 @@ describe("ApiKeysService management", () => {
         await expect(service.revokeKey("principal-1", "workspace-1", "missing")).rejects.toMatchObject({
             code: ApiKeysErrorCode.NotFound,
         })
-        expect(fakes[1]?.callsOf("where")).toEqual([[REVOKE_WHERE, { keyId: "missing", workspaceId: "workspace-1" }]])
+        expect(fakes[0]?.callsOf("where")).toEqual([[REVOKE_WHERE, { keyId: "missing", workspaceId: "workspace-1" }]])
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
@@ -399,11 +421,11 @@ describe("ApiKeysService agent keys", () => {
         const created = await service.createKey("principal-1", "workspace-1", "Desk agent", "agent-1")
 
         expect(created.item).toEqual({ ...keyView, agentId: "agent-1" })
-        expect(fakes[1]?.callsOf("setLock")).toEqual([["pessimistic_read"]])
-        expect(fakes[1]?.callsOf("where")).toEqual([
+        expect(fakes[0]?.callsOf("setLock")).toEqual([["pessimistic_read"]])
+        expect(fakes[0]?.callsOf("where")).toEqual([
             ["a.id = :agentId AND a.workspace_id = :workspaceId", { agentId: "agent-1", workspaceId: "workspace-1" }],
         ])
-        expect(fakes[2]?.callsOf("values")).toEqual([
+        expect(fakes[1]?.callsOf("values")).toEqual([
             [
                 {
                     workspaceId: "workspace-1",
@@ -430,7 +452,7 @@ describe("ApiKeysService agent keys", () => {
         await expect(service.createKey("principal-1", "workspace-1", "Desk agent", "agent-9")).rejects.toMatchObject({
             code: ApiKeysErrorCode.AgentNotFound,
         })
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
