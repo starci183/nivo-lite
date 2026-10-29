@@ -1,10 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import { REPLAY_TTL_MS, SWEEP_BATCH, SWEEP_MAX_BATCHES } from "./realtime.contracts"
 import { REALTIME_MANAGERS } from "./realtime.decorators"
 import { RealtimeRetentionService } from "./realtime-retention.service"
 import { RealtimeEventEntity } from "./persistence/entities"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 
 /** How many rows a batch deleted; undefined is a statement that answers no count. */
 type Deleted = number | undefined
@@ -12,10 +11,9 @@ type Deleted = number | undefined
 /** A manager whose delete answers the counts in order (the only count answers every batch). */
 const build = async (...answers: Array<Deleted>) => {
     const em = mockEntityManager()
-    const fakes = answers.map((affected) => fakeQueryBuilder({ execute: { affected, raw: [] } }))
-    for (const fake of fakes) em.createQueryBuilder.mockReturnValueOnce(fake.builder as never)
-    const [only] = fakes
-    if (fakes.length === 1 && only !== undefined) em.createQueryBuilder.mockReturnValue(only.builder as never)
+    const batches = answers.map((affected) => ({ execute: { affected, raw: [] } }))
+    const queued = batches.length === 1 ? Array.from({ length: SWEEP_MAX_BATCHES }, () => batches[0] ?? {}) : batches
+    const fakes = queueQueryBuilders(em, queued)
     const managers = [em]
     const moduleRef = await Test.createTestingModule({
         providers: [RealtimeRetentionService, { provide: REALTIME_MANAGERS, useValue: managers }],

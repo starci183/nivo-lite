@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
-import { advisoryXactLock, callDbFunction, notify } from "./database.client"
+import { advisoryXactLock, callDbFunction, listenOn, notify } from "./database.client"
 const SUBJECT = Symbol("database.client")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { advisoryXactLock, callDbFunction, notify } }],
+        providers: [{ provide: SUBJECT, useValue: { advisoryXactLock, callDbFunction, listenOn, notify } }],
     }).compile()
     return moduleRef.get<typeof import("./database.client")>(SUBJECT)
 }
@@ -76,5 +76,27 @@ describe("notify", () => {
         await expect(subject.notify(em, "hub", '{"seq":"1"}')).resolves.toBeUndefined()
 
         expect(em.query).toHaveBeenCalledWith("SELECT pg_notify($1, $2)", ["hub", '{"seq":"1"}'])
+    })
+})
+
+describe("listenOn", () => {
+    it("subscribes the connection to the named channel", async () => {
+        const subject = await build()
+        const connection = { query: jest.fn(() => Promise.resolve()) }
+
+        await subject.listenOn(connection, "realtime_events")
+
+        expect(connection.query).toHaveBeenCalledWith("LISTEN realtime_events")
+    })
+
+    it("refuses a channel name that is no identifier and sends nothing", async () => {
+        const subject = await build()
+        const connection = { query: jest.fn(() => Promise.resolve()) }
+
+        await expect(subject.listenOn(connection, "a; drop")).rejects.toThrow(
+            new DatabaseError({ code: DatabaseErrorCode.FunctionRejected }),
+        )
+
+        expect(connection.query).not.toHaveBeenCalled()
     })
 })
