@@ -74,7 +74,13 @@ describe("KnowledgeSourcesReadService", () => {
 
     describe("changedPublicSince", () => {
         it("lists the documents changed after an instant, oldest change first, and drops malformed rows", async () => {
-            const good = { id: "s1", title: "Menu", topic: null, excerpt: "Tea", changedAt: "2026-10-01T00:00:00.000000Z" }
+            const good = {
+                id: "s1",
+                title: "Menu",
+                topic: null,
+                excerpt: "Tea",
+                changedAt: "2026-10-01T00:00:00.000000Z",
+            }
             const { em, fake } = managerAnswering({ getRawMany: [good, { id: "s2" }, null] })
 
             await expect(
@@ -82,7 +88,10 @@ describe("KnowledgeSourcesReadService", () => {
             ).resolves.toEqual([good])
 
             expectSharedPublic(fake, em)
-            expect(fake.callsOf("andWhere")[2]).toEqual(["s.updated_at > :since::timestamptz", { since: "2026-09-01T00:00:00Z" }])
+            expect(fake.callsOf("andWhere")[2]).toEqual([
+                "s.updated_at > :since::timestamptz",
+                { since: "2026-09-01T00:00:00Z" },
+            ])
             expect(fake.callsOf("setParameter")).toEqual([["excerptChars", 400]])
             expect(fake.callsOf("orderBy")).toEqual([["s.updated_at"]])
             expect(fake.callsOf("limit")).toEqual([[5]])

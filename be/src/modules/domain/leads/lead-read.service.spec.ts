@@ -176,7 +176,6 @@ describe("LeadReadService", () => {
 
         await expect(leads.listByIds("ws-1", ["lead-1"])).resolves.toEqual([LEAD])
     })
-
 })
 
 describe("LeadReadService requires", () => {
@@ -208,7 +207,6 @@ describe("LeadReadService requires", () => {
         expect(fakes[0]?.callsOf("andWhere")).toEqual([["l.id = ANY(:leadIds)", { leadIds: ids }]])
         expect(fakes[0]?.callsOf("limit")).toEqual([[1000]])
     })
-
 })
 
 describe("LeadReadService contacts", () => {
@@ -303,7 +301,6 @@ describe("LeadReadService dashboard reads", () => {
             ],
         ])
     })
-
 })
 
 describe("LeadReadService dashboard channels", () => {

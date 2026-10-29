@@ -226,7 +226,6 @@ describe("LeadRecordsService matching", () => {
 
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
-
 })
 
 describe("LeadRecordsService writes", () => {
