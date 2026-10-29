@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { createdAtOfRows, cursorOfRows } from "@modules/domain/messages"
 import type { OptionalAgentMessageCursor, OptionalCreatedAt } from "./agent-message-cursors.contracts"
 import { AgentMessageEntity } from "./persistence/entities"
 
@@ -31,11 +32,7 @@ export class AgentMessageCursorsService {
             .addOrderBy("m.id", "DESC")
             .limit(1)
             .getRawMany()
-        const [row] = rows
-        if (typeof row !== "object" || row === null) return null
-        const id: unknown = Reflect.get(row, "id")
-        const createdAt: unknown = Reflect.get(row, "createdAt")
-        return typeof id === "string" && typeof createdAt === "string" ? { id, createdAt } : null
+        return cursorOfRows(rows)
     }
 
     /** The creation instant of a message posted in the conversation; null when there is no such message. */
@@ -55,9 +52,6 @@ export class AgentMessageCursorsService {
             })
             .limit(1)
             .getRawMany()
-        const created = rows.map((row): unknown =>
-            typeof row === "object" && row !== null ? Reflect.get(row, "createdAt") : null,
-        )
-        return created.find((value): value is string => typeof value === "string") ?? null
+        return createdAtOfRows(rows)
     }
 }

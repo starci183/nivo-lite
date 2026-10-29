@@ -22,7 +22,8 @@ const isPostedMessage = (value: unknown): value is PostedMessage =>
     isNullableText(value.room)
 
 /** The stored card line a RETURNING answered, or undefined when the answer holds none. */
-export const postedCardOf = (raw: unknown): PostedCard | undefined => (Array.isArray(raw) ? raw.find(isPostedCard) : undefined)
+export const postedCardOf = (raw: unknown): PostedCard | undefined =>
+    Array.isArray(raw) ? raw.find(isPostedCard) : undefined
 
 /** The stored Office line a RETURNING answered, or undefined when the answer holds none. */
 export const postedMessageOf = (raw: unknown): PostedMessage | undefined =>

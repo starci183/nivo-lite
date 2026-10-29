@@ -27,7 +27,14 @@ export class MessagesModule extends ConfigurableModuleClass {
                 OfficeCardsService,
                 TeamChatService,
             ],
-            exports: [MessagesService, MessagesReadService, MessageCursorsService, OfficeLinesService, OfficeCardsService, TeamChatService],
+            exports: [
+                MessagesService,
+                MessagesReadService,
+                MessageCursorsService,
+                OfficeLinesService,
+                OfficeCardsService,
+                TeamChatService,
+            ],
         }
     }
 }

@@ -93,10 +93,7 @@ describe("MessagesReadService > activityOfRooms", () => {
             expect.stringContaining("unnest(CAST(:markScopes AS text[]), CAST(:markReadAts AS timestamptz[]))"),
             { markScopes: ["sales", "hr"], markReadAts: ["2026-10-29T09:00:00+00:00", null] },
         ])
-        expect(unread?.argsOf("andWhere")).toContainEqual([
-            expect.stringContaining("IS DISTINCT FROM :userId"),
-            READER,
-        ])
+        expect(unread?.argsOf("andWhere")).toContainEqual([expect.stringContaining("IS DISTINCT FROM :userId"), READER])
         expect(newest?.argsOf("distinctOn")).toContainEqual([["m.room"]])
         expect(newest?.argsOf("addOrderBy")).toContainEqual(["m.created_at", "DESC"])
     })
