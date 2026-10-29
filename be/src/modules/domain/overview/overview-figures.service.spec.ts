@@ -224,7 +224,6 @@ describe("OverviewFiguresService.governance", () => {
         expect(world.work.newestFigures).toHaveBeenCalledWith("ws-1", 2000)
         expect(world.decisions.recent).toHaveBeenCalledWith("ws-1", 40)
     })
-
 })
 
 describe("OverviewFiguresService.governance rows", () => {

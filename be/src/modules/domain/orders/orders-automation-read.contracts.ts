@@ -14,6 +14,9 @@ export interface AutomationOrderRead {
     readonly tracking_code: string | null
 }
 
+/** One order of an automation delivery notice, or undefined when the workspace has none. */
+export type OptionalAutomationOrderRead = AutomationOrderRead | undefined
+
 /** The confirmed orders of a period as the day report counts them. */
 export interface AutomationOrderFigures {
     /** How many orders were confirmed. */

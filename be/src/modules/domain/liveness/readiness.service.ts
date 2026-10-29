@@ -1,10 +1,10 @@
-import { InjectQueueTimeout } from "@modules/platform/queue"
-import type { QueueTimeout } from "@modules/platform/queue"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { InjectTimer } from "@modules/platform/retry"
+import type { Timer } from "@modules/platform/retry"
 import { LivenessError, LivenessErrorCode } from "./errors/liveness.error"
 import type { ReadinessReport } from "./readiness.contracts"
 import { ReadinessLogEvent } from "./readiness.log-events"
@@ -29,7 +29,7 @@ export class ReadinessService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectLogger() private readonly logger: Logger,
-        @InjectQueueTimeout() private readonly timeout: QueueTimeout,
+        @InjectTimer() private readonly timer: Timer,
     ) {}
 
     /** Reports ready only when both dependency probes answer within three seconds. */
@@ -38,7 +38,7 @@ export class ReadinessService {
         const cancels: Array<() => void> = []
         const deadline = new Promise<never>((_resolve, reject) => {
             cancels.push(
-                this.timeout.schedule(
+                this.timer.schedule(
                     () => reject(new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable })),
                     PROBE_TIMEOUT_MS,
                 ),
@@ -46,7 +46,9 @@ export class ReadinessService {
         })
         try {
             const rows = await Promise.race([
-                callDbFunction<ReadinessJobsRow>(this.entityManager, "public.job_stats", []),
+                this.entityManager.transaction((manager) =>
+                    callDbFunction<ReadinessJobsRow>(manager, "public.job_stats", []),
+                ),
                 deadline,
             ])
             if (rows[0]?.job_stats?.checkedAt == null) {

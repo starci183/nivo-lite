@@ -29,6 +29,7 @@ import { HTTP_SECURITY_ERROR_KINDS, HTTP_SECURITY_MESSAGES, HttpSecurityModule }
 import { I18nModule } from "@modules/platform/i18n"
 import { LoggingModule } from "@modules/platform/logging"
 import { QueueModule } from "@modules/platform/queue"
+import { RetryModule } from "@modules/platform/retry"
 import type { McpAppOptions } from "../mcp.options"
 
 /**
@@ -78,6 +79,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
         typeParsers: appPgTypes,
     }),
     QueueModule.register({ isGlobal: true, schedulers: [], ...options.queue, enabled: false }),
+    RetryModule.register({ isGlobal: true }),
     EventsModule.register({ isGlobal: true }),
     ApiKeysModule.register({ isGlobal: true }),
     IdentityModule.register({

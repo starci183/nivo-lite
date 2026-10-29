@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { INBOX, InboxService } from "@modules/platform/inbox"
-import { KnowledgeQueueModule } from "@modules/queues/knowledge"
 import { BrainCommandRunnerService } from "./brain-command-runner.service"
 import { BrainLearningService } from "./brain-learning.service"
 import { BrainPageService } from "./brain-page.service"
@@ -20,7 +19,6 @@ export class BrainModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), KnowledgeQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 { provide: BRAIN_CORRECTIONS, useClass: options.corrections },

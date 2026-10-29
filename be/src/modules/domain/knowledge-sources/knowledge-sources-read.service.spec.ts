@@ -71,7 +71,9 @@ describe("KnowledgeSourcesReadService", () => {
             expect(fake.callsOf("limit")).toEqual([[20]])
         })
     })
+})
 
+describe("KnowledgeSourcesReadService excerpts", () => {
     describe("changedPublicSince", () => {
         it("lists the documents changed after an instant, oldest change first, and drops malformed rows", async () => {
             const good = {

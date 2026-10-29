@@ -18,12 +18,14 @@ import { AiGatewayModule } from "@modules/integrations/ai-gateway"
 import { AiModule } from "@modules/integrations/ai"
 import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import { MODULE_KNOWLEDGE_FOLDERS } from "@modules/domain/modules"
+import { KnowledgeQueueModule } from "@modules/queues/knowledge"
 import type { ApiOptions } from "../api.options"
 /** The knowledge area of the API, in registration order. */
 export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
     AiGatewayModule.register({ isGlobal: true, ...options.aiGateway }),
     AiModule.register({ isGlobal: true, ...options.aiTasks.endpoint }),
     DocumentsModule.register({ isGlobal: true, ...options.documents }),
+    KnowledgeQueueModule.register({}),
     KnowledgeSourcesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     KnowledgeChunksModule.register({ isGlobal: true }),
     KnowledgeSuggestionStateModule.register({ isGlobal: true }),

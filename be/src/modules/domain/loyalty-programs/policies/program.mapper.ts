@@ -30,6 +30,6 @@ const isProgramFields = (value: unknown): value is ProgramFields =>
 
 /** The programme row a returning clause answered first, or undefined when it answered none or a malformed one. */
 export const firstProgramRow = (raw: unknown): ProgramFields | undefined => {
-    const [row]: Array<unknown> = Array.isArray(raw) ? raw : []
+    const row: unknown = Array.isArray(raw) ? Reflect.get(raw, 0) : undefined
     return isProgramFields(row) ? row : undefined
 }

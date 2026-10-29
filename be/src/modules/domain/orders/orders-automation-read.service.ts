@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { AutomationOrderFigures, AutomationOrderRead } from "./orders-automation-read.contracts"
+import type { AutomationOrderFigures, AutomationOrderRead, OptionalAutomationOrderRead } from "./orders-automation-read.contracts"
 import { OrderEntity } from "./persistence/entities"
 
 @Injectable()
@@ -10,7 +10,7 @@ export class OrdersAutomationReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** One order of a workspace, or none. */
-    order(workspaceId: string, orderId: string): Promise<AutomationOrderRead | undefined> {
+    order(workspaceId: string, orderId: string): Promise<OptionalAutomationOrderRead> {
         return this.entityManager
             .createQueryBuilder(OrderEntity, "o")
             .select([

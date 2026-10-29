@@ -43,6 +43,8 @@ const job = { sourceId: "s1", workspaceId: WS }
 const missing = { code: codes.SourceNotFound }
 const listRowOf = builder<KnowledgeSourceEntity>({ ...row, createdAt: new Date("2026-10-11T10:00:00.000Z") })
 const KEY = { id: "s1", workspaceId: WS }
+/** A matcher for an object holding at least these fields, typed unknown so it nests inside an expected object. */
+const matching = (fields: object): unknown => expect.objectContaining(fields)
 const touched = (changes: object) => [{ ...changes, updatedAt: NOW }]
 const instance = { id: "i1", workspaceId: WS, moduleKey: "chatbot" }
 const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content: "Open 8 to 21" })
@@ -360,7 +362,7 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
         )
         expect(queue.enqueueFacts).not.toHaveBeenCalled()
         expect(bus.eventsOf(KnowledgeSourceIndexedEvent)).toEqual([
-            expect.objectContaining({ payload: expect.objectContaining({ ...job, indexedAt: Date.parse(AT) }) }),
+            expect.objectContaining({ payload: matching({ ...job, indexedAt: Date.parse(AT) }) }),
         ])
         expect(bus.allInTransaction).toBe(true)
         expect(tx.em.update).toHaveBeenCalledWith(
@@ -433,7 +435,7 @@ describe("KnowledgeSourcesService reading", () => {
         expect(members.require).toHaveBeenCalledTimes(2)
         expect(members.require).toHaveBeenCalledWith("u1", WS)
         expect(em.find).toHaveBeenNthCalledWith(1, KnowledgeSourceEntity, {
-            select: expect.objectContaining({ id: true, updatedAt: true }),
+            select: matching({ id: true, updatedAt: true }),
             where: { workspaceId: WS, module: "chatbot" },
             order: { createdAt: "DESC" },
             take: 500,
@@ -461,7 +463,7 @@ describe("KnowledgeSourcesService reading", () => {
         await expect(service.detail("u1", WS, "s1")).resolves.toEqual({ ...summary, content: "c" })
         expect(members.require).toHaveBeenCalledWith("u1", WS)
         expect(em.findOne).toHaveBeenCalledWith(KnowledgeSourceEntity, {
-            select: expect.objectContaining({ id: true, content: true }),
+            select: matching({ id: true, content: true }),
             where: { workspaceId: WS, id: "s1" },
         })
     })
