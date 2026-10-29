@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { headOf, recentOf, ruleLineOf } from "./agent-profile.mapper"
 import type { AgentHeadRead, RecentWorkRead } from "./agent-profile-reads.contracts"
-import type { AuthorityRuleEntity } from "@modules/domain/authority-rules"
+import type { DepartmentRuleLine } from "@modules/domain/authority-rules"
 
 type Subject = {
     headOf: typeof headOf
@@ -41,7 +41,7 @@ const recentRowOf = builder<RecentWorkRead>({
     leadId: "l1",
 })
 
-const ruleRowOf = builder<Pick<AuthorityRuleEntity, "action" | "department" | "mode" | "limitVnd" | "note">>({
+const ruleRowOf = builder<DepartmentRuleLine>({
     action: "send_quote",
     department: "sales",
     mode: "ask",

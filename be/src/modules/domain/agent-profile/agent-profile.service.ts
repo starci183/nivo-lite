@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentEntity, AgentOwnershipService } from "@modules/domain/agents"
 import type { Region } from "@modules/domain/agents"
-import { AuthorityRuleEntity } from "@modules/domain/authority-rules"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
@@ -34,6 +34,7 @@ export class AgentProfileService {
         @InjectLogger() private readonly logger: Logger,
         private readonly agents: AgentOwnershipService,
         private readonly work: WorkItemsActivityService,
+        private readonly rules: AuthorityRulesService,
     ) {}
 
     /** The page of an agent for a member of the workspace. */
@@ -64,11 +65,7 @@ export class AgentProfileService {
     }
 
     private async rulesOf(workspaceId: string, agent: AgentHead): Promise<ReadonlyArray<AppliedRule>> {
-        const rows = await this.entityManager.find(AuthorityRuleEntity, {
-            where: { workspaceId, department: agent.module },
-            order: { action: "ASC" },
-            take: RULE_LIMIT,
-        })
+        const rows = await this.rules.departmentRules(workspaceId, agent.module, RULE_LIMIT)
         return rows.map(ruleLineOf)
     }
 

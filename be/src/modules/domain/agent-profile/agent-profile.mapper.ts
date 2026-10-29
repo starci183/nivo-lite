@@ -1,5 +1,5 @@
 import { storedAvatarAddress } from "@modules/integrations/object-storage"
-import type { AuthorityRuleEntity } from "@modules/domain/authority-rules"
+import type { DepartmentRuleLine } from "@modules/domain/authority-rules"
 import type { AgentHead, AppliedRule, RecentWork } from "./agent-profile.contracts"
 import type { AgentHeadRead, RecentWorkRead } from "./agent-profile-reads.contracts"
 
@@ -17,9 +17,7 @@ export const headOf = (row: AgentHeadRead): AgentHead => ({
 })
 
 /** A stored rule row as the read-only line of the agent's page. */
-export const ruleLineOf = (
-    rule: Pick<AuthorityRuleEntity, "action" | "department" | "mode" | "limitVnd" | "note">,
-): AppliedRule => ({
+export const ruleLineOf = (rule: DepartmentRuleLine): AppliedRule => ({
     action: rule.action,
     department: rule.department,
     mode: rule.mode,

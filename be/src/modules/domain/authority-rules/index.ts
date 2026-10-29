@@ -7,6 +7,7 @@ export type {
     AuthorityRule,
     AuthorityRuleRecord,
     DefaultRule,
+    DepartmentRuleLine,
     GateVerdict,
     OptionalAuthorityRule,
     RuleChange,

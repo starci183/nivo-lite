@@ -1,10 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentOwnershipService } from "@modules/domain/agents"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
-import { AuthorityRuleEntity } from "@modules/domain/authority-rules"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import type { DepartmentRuleLine } from "@modules/domain/authority-rules"
 import type { AgentOwnership } from "@modules/domain/agents"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -46,28 +47,22 @@ const WORK: RecentWorkRead = {
     leadId: null,
 }
 
-const RULE = builder<AuthorityRuleEntity>({
-    id: "r1",
-    workspaceId: "w1",
-    department: "sales",
+const RULE: DepartmentRuleLine = {
     action: "send_quote",
+    department: "sales",
     mode: "ask",
     limitVnd: null,
-    requiredFields: [],
     note: "",
-    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
-    unit: "vnd",
-    autoMax: null,
-    askMax: null,
-    approverRoles: ["owner", "manager"],
-    approverRooms: [],
-    approverMembers: [],
-    approvalPolicy: "any",
-    timeoutMinutes: 60,
-    agents: [],
-})
+}
 
-const build = async (entityManager: MockEntityManager, recent: ReadonlyArray<RecentWorkRead> = []) => {
+const build = async (
+    entityManager: MockEntityManager,
+    recent: ReadonlyArray<RecentWorkRead> = [],
+    rules: ReadonlyArray<DepartmentRuleLine> | Error = new Error("rules table missing"),
+) => {
+    const authority = mock<AuthorityRulesService>()
+    if (rules instanceof Error) authority.departmentRules.mockRejectedValue(rules)
+    else authority.departmentRules.mockResolvedValue([...rules])
     const activity = mock<WorkItemsActivityService>()
     activity.recentOf.mockResolvedValue([...recent])
     const agents = mock<AgentOwnershipService>({ ownershipOf: jest.fn(() => Promise.resolve(OWNERSHIP)) })
@@ -79,16 +74,17 @@ const build = async (entityManager: MockEntityManager, recent: ReadonlyArray<Rec
             { provide: LOGGER, useValue: logger },
             { provide: AgentOwnershipService, useValue: agents },
             { provide: WorkItemsActivityService, useValue: activity },
+            { provide: AuthorityRulesService, useValue: authority },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentProfileService), agents, logger, activity }
+    return { service: moduleRef.get(AgentProfileService), agents, logger, activity, authority }
 }
 
 describe("AgentProfileService", () => {
     it("composes the header, the ownership, the rules of its module and its recent work", async () => {
-        const em = mockEntityManager({ find: [AuthorityRuleEntity, [RULE()]] })
+        const em = mockEntityManager()
         const [head] = queueQueryBuilders(em, [{ getRawOne: HEAD }])
-        const { service, agents, activity } = await build(em, [WORK])
+        const { service, agents, activity, authority } = await build(em, [WORK], [RULE])
 
         const page = await service.page("u1", "w1", "a1")
 
@@ -116,11 +112,7 @@ describe("AgentProfileService", () => {
         expect(head?.callsOf("where")).toEqual([
             ["a.id = :agentId AND a.workspaceId = :workspaceId", { agentId: "a1", workspaceId: "w1" }],
         ])
-        expect(em.find).toHaveBeenCalledWith(AuthorityRuleEntity, {
-            where: { workspaceId: "w1", department: "sales" },
-            order: { action: "ASC" },
-            take: 50,
-        })
+        expect(authority.departmentRules).toHaveBeenCalledWith("w1", "sales", 50)
         expect(activity.recentOf).toHaveBeenCalledWith("w1", "sales", 6)
     })
 
