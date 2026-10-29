@@ -1,3 +1,4 @@
+import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { MODULE_CATALOG } from "@modules/domain/modules"
 import * as mapper from "./module-catalog.mapper"
@@ -6,7 +7,7 @@ const SUBJECT = Symbol("module-catalog.mapper")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { toActionEntry: mapper.toActionEntry, toModuleEntry: mapper.toModuleEntry } }],
+        providers: [{ provide: SUBJECT, useValue: mock<typeof mapper>({ toActionEntry: mapper.toActionEntry, toModuleEntry: mapper.toModuleEntry }) }],
     }).compile()
     return moduleRef.get<typeof mapper>(SUBJECT)
 }

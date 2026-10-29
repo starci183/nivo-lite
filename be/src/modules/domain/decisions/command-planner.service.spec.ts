@@ -38,11 +38,20 @@ import {
     FIND_SUBJECT_LABEL,
     RESOLVE_INSTALLATION,
     UNREADABLE,
+    answer,
     serve,
 } from "@tests/fixtures/builders/command-planner-owners.builder"
 import type { Queries, Served } from "@tests/fixtures/builders/command-planner-owners.builder"
 
-const build = async (served: Served = serve()) => {
+const build = async (stage: Served = serve()) => {
+    const agents = mock<AgentDirectoryService>()
+    const installations = mock<InstallationRecordsService>()
+    const chains = mock<WorkItemsChainReadService>()
+    const orders = mock<OrdersLabelReadService>()
+    const leads = mock<LeadReadService>()
+    const invoices = mock<InvoicesLedgerService>()
+    answer(stage.queries, { agents, installations, chains, orders, leads, invoices })
+    const served = { em: stage.em, agents, installations, chains, orders, leads, invoices }
     const log = jest.fn().mockResolvedValue(undefined)
     const post = jest.fn<Promise<void>, Parameters<OfficeLinesService["post"]>>().mockResolvedValue(undefined)
     const error = jest.fn<void, Parameters<Logger["error"]>>()
@@ -59,12 +68,12 @@ const build = async (served: Served = serve()) => {
             { provide: ModuleCatalogService, useValue: modules },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log }) },
             { provide: OfficeLinesService, useValue: mock<OfficeLinesService>({ post }) },
-            { provide: AgentDirectoryService, useValue: served.agents },
-            { provide: InstallationRecordsService, useValue: served.installations },
-            { provide: WorkItemsChainReadService, useValue: served.chains },
-            { provide: OrdersLabelReadService, useValue: served.orders },
-            { provide: LeadReadService, useValue: served.leads },
-            { provide: InvoicesLedgerService, useValue: served.invoices },
+            { provide: AgentDirectoryService, useValue: agents },
+            { provide: InstallationRecordsService, useValue: installations },
+            { provide: WorkItemsChainReadService, useValue: chains },
+            { provide: OrdersLabelReadService, useValue: orders },
+            { provide: LeadReadService, useValue: leads },
+            { provide: InvoicesLedgerService, useValue: invoices },
         ],
     }).compile()
     return { service: moduleRef.get(CommandPlannerService), served, em: served.em, log, post, error, modules }
