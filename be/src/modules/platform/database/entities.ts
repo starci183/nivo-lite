@@ -1,4 +1,5 @@
 import { accountingAdjustmentsEntities } from "@modules/domain/accounting-adjustments"
+import { appErrorsEntities } from "@modules/domain/app-errors"
 import { agentAccessLogEntities } from "@modules/domain/agent-access-log"
 import { agentConnectionsEntities } from "@modules/domain/agent-connections"
 import { agentConversationsEntities } from "@modules/domain/agent-conversations"
@@ -133,6 +134,7 @@ import { realtimeEntities } from "@modules/platform/realtime"
  */
 export const PRIMARY_ENTITIES = [
     ...accountingAdjustmentsEntities,
+    ...appErrorsEntities,
     ...agentAccessLogEntities,
     ...agentConnectionsEntities,
     ...agentConversationsEntities,
