@@ -71,6 +71,7 @@ export const ImapWizard = (props: ImapWizardProps) => {
                 save: wizard.save,
                 finish: wizard.finish,
                 close: () => props.onClose(savedId !== null),
+                retry: wizard.reload,
                 folders: wizard.setFolders,
                 since: (value: string) => wizard.setSinceDays(Number(value)),
                 schedule: (value: string) => wizard.setEvery(value === "null" ? null : Number(value)),

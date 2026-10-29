@@ -41,7 +41,7 @@ export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput) => {
     const commands = useImapCommands()
     const setConnectionAgents = useSetConnectionAgents()
     const { start: startSync } = useSyncNow()
-    const { loading, view: mailbox, error: loadError } = useImapMailbox(resumeId)
+    const { loading, view: mailbox, error: loadError, reload } = useImapMailbox(resumeId)
     const [state, patch] = useReducer(merge, undefined, stateOf)
     const form = useImapAccountForm(state.savedId !== null)
     const { reset } = form
@@ -100,5 +100,6 @@ export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput) => {
         check,
         save,
         finish,
+        reload,
     }
 }

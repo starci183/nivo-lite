@@ -13,6 +13,8 @@ export type PayDrawerShape = "paid" | "expired" | "awaiting"
 /** Settled transfer presentation, drawn shape, and actions supplied by the connected drawer; it is mounted only while open. */
 type PayDrawerBaseProps = {
     readonly shape: PayDrawerShape
+    /** False while the drawer plays its exit: the last view stays drawn until it has slid out. */
+    readonly isOpen: boolean
     readonly props: {
         /** True while the order is being made: the drawer shows the waiting notice. */
         readonly isWaiting: boolean
@@ -55,7 +57,7 @@ export const PayDrawerBase = (props: PayDrawerBaseProps) => {
         <Drawer
             title={props.props.title}
             description={props.props.description}
-            isOpen
+            isOpen={props.isOpen}
             onOpenChange={(open) => {
                 if (!open) props.on.close()
             }}

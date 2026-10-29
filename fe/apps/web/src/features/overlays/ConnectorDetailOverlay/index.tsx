@@ -106,6 +106,8 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
                         emptyHint: t("connectedEmptyHint"),
                         automationsLink: t("automationsLink"),
                         automationsHref: CONNECTION_ROUTES.automations,
+                        backLabel: t("crumbHome"),
+                        backHref: CONNECTION_ROUTES.dashboard,
                     },
                     board: slot,
                     slotLabels: slotLabelsOf(t("connectedEmpty")),

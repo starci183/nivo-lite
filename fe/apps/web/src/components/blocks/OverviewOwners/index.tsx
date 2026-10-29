@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import type { BadgeTone } from "@starci/grammar/common"
 import type { IconName } from "@/components/leaves/Icon"
-import { useDraftFollowUp, useOverviewOwners } from "@/hooks/overview"
+import { useDraftFollowUp, useOverviewData, useOverviewOwners } from "@/hooks/overview"
 import { moduleGlyphOf } from "@/hooks/installations"
 import { navigation } from "@/modules/i18n"
 import { leadHref } from "@/modules/routes"
@@ -32,7 +32,27 @@ export const OverviewOwners = () => {
     const router = navigation.useRouter()
     const data = useOverviewOwners()
     const { draft, isDrafting } = useDraftFollowUp()
-    if (data === undefined) return null
+    const { failed } = useOverviewData()
+    if (data === undefined) {
+        if (failed) return null
+        return (
+            <OverviewOwnersBase
+                props={{
+                    title: "-",
+                    description: "-",
+                    listLabel: t("groupAria"),
+                    emptyMessage: "",
+                    emptyDescription: "",
+                    emptyActionLabel: "",
+                    draftLabel: t("menuDraft"),
+                    isDrafting: false,
+                    groups: [],
+                    isSkeleton: true,
+                }}
+                on={{ openEmptyAction: () => undefined, draft: () => undefined }}
+            />
+        )
+    }
     const roleTextOf = (group: OwnerGroupRole): string => {
         if (group.kind !== "agent") return t("ownerHuman")
         return group.handle === null ? t("ownerAgent") : t("ownerAgentHandle", { handle: group.handle })
@@ -48,6 +68,7 @@ export const OverviewOwners = () => {
                 emptyActionLabel: data.emptyActionLabel,
                 draftLabel: isDrafting ? t("drafting") : t("menuDraft"),
                 isDrafting,
+                isSkeleton: false,
                 groups: data.groups.map((group) => ({
                     key: group.key,
                     name: group.name,

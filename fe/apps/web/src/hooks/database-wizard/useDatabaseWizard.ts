@@ -50,7 +50,7 @@ const merge = (state: DatabaseWizardState, patch: DatabasePatch): DatabaseWizard
 export const useDatabaseWizard = (input: DatabaseWizardInput) => {
     const setConnectionAgents = useSetConnectionAgents()
     const commands = useDatabaseCommands()
-    const { saved, isLoading, error: loadError } = useDatabaseSaved(input.resumeId)
+    const { saved, isLoading, error: loadError, reload } = useDatabaseSaved(input.resumeId)
     const [state, patch] = useReducer(merge, undefined, () => stateOf(input.resumeId, null))
     const seeded = useRef(false)
     useEffect(() => {
@@ -84,6 +84,7 @@ export const useDatabaseWizard = (input: DatabaseWizardInput) => {
 
     return {
         isLoading,
+        loadError: loadError ?? null,
         step: DB_STEPS[state.index] ?? "connect",
         index: state.index,
         values,
@@ -103,6 +104,10 @@ export const useDatabaseWizard = (input: DatabaseWizardInput) => {
             test,
             save,
             finish,
+            retry: () => {
+                seeded.current = false
+                reload()
+            },
             toggle: mapping.toggle,
             setEntity: mapping.setEntity,
             setIdColumn: mapping.setIdColumn,

@@ -87,6 +87,8 @@ export interface ImapWizardBaseProps {
         readonly save: () => void
         readonly finish: () => void
         readonly close: () => void
+        /** Reads the saved mailbox again after the read failed. */
+        readonly retry: () => void
         readonly folders: (paths: ReadonlyArray<string>) => void
         readonly since: (value: string) => void
         readonly schedule: (value: string) => void
@@ -164,7 +166,7 @@ export const ImapWizardBase = (props: ImapWizardBaseProps) => {
     const { props: view, on } = props
     const { text } = view
     return (
-        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels}>
+        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
             {(_resume, isSkeleton) => (
                 <WizardFrame
                     {...frameOf(view)}

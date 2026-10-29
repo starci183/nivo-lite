@@ -12,6 +12,16 @@ export type OnboardingChecklistStep = {
     readonly cta: string
 }
 
+/** What the card draws while the dashboard is read: three undone steps as inert geometry. */
+export const ONBOARDING_CHECKLIST_PLACEHOLDER: ReadonlyArray<OnboardingChecklistStep> = ["a", "b", "c"].map((key) => ({
+    key,
+    label: "-",
+    hint: "-",
+    done: false,
+    href: "",
+    cta: "-",
+}))
+
 const PENDING_ICON = { name: "pending", usage: "leading" } as const
 
 /** Resolved copy and state supplied by the connected checklist block. */
@@ -27,6 +37,8 @@ export interface OnboardingChecklistBaseProps {
         readonly progressValue: string
         readonly toggleLabel: string
         readonly doneLabel: string
+        /** The steps are placeholders: the card draws its lines as skeleton. */
+        readonly isSkeleton: boolean
     }
     readonly on: { readonly toggle: () => void }
 }
@@ -56,6 +68,7 @@ const Steps = ({ props }: StepsProps) => {
                                 weight={step.done ? "normal" : "medium"}
                                 tone={step.done ? "muted" : "default"}
                                 isSuperseded={step.done}
+                                isSkeleton={props.isSkeleton}
                                 startContent={<Icon props={step.done ? doneIcon : PENDING_ICON} />}
                             >
                                 {step.label}
@@ -64,7 +77,7 @@ const Steps = ({ props }: StepsProps) => {
                         description={isNext ? step.hint : null}
                         actions={
                             isNext ? (
-                                <Button intent="neutral" size="sm" href={step.href}>
+                                <Button intent="neutral" size="sm" href={step.href} isSkeleton={props.isSkeleton}>
                                     {step.cta}
                                 </Button>
                             ) : null
@@ -105,6 +118,7 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
                     aria-expanded={props.isOpen}
                     aria-controls={props.listId}
                     onPress={on.toggle}
+                    isSkeleton={props.isSkeleton}
                 />
             }
         >
@@ -116,6 +130,7 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
                     maxValue={props.steps.length}
                     valueLabel={props.progressValue}
                     tone="informative"
+                    isSkeleton={props.isSkeleton}
                 />
                 {props.isOpen ? <Steps props={props} /> : null}
             </div>

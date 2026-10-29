@@ -1,4 +1,4 @@
-import { SurfaceCard, Text } from "@starci/grammar/common"
+import { Skeleton, SurfaceCard, Text } from "@starci/grammar/common"
 import { OverviewGovSummary, type OverviewGovSummaryProps } from "@/components/composites/OverviewGovSummary"
 import { OverviewGovResults, type OverviewGovResultsProps } from "@/components/composites/OverviewGovResults"
 import { OverviewGovWaiting, type OverviewGovWaitingProps } from "@/components/composites/OverviewGovWaiting"
@@ -21,12 +21,21 @@ interface OverviewGovernanceBaseProps {
         readonly unavailable: string
         readonly resultsTitle: string
         readonly figures: OverviewGovernanceFigures | null
+        /** The dashboard is still read: one card draws as skeleton lines in place of the five blocks. */
+        readonly isSkeleton: boolean
     }
 }
 
 /** The five governance blocks of the operating flow: overview, results by status, waiting, exceptions, decision history. */
 export const OverviewGovernanceBase = (props: OverviewGovernanceBaseProps) => {
     const figures = props.props.figures
+    if (props.props.isSkeleton) {
+        return (
+            <SurfaceCard ariaLabel={props.props.resultsTitle}>
+                <Skeleton shape="text" lines={4} />
+            </SurfaceCard>
+        )
+    }
     if (figures === null) {
         return (
             <SurfaceCard ariaLabel={props.props.resultsTitle}>

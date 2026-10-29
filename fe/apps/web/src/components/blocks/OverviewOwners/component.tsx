@@ -70,6 +70,8 @@ interface OverviewOwnersBaseProps {
         readonly emptyActionLabel: string
         readonly draftLabel: string
         readonly isDrafting: boolean
+        /** The dashboard is still read: the heading and one card of rows draw as skeleton. */
+        readonly isSkeleton: boolean
     }
     readonly on: {
         readonly openEmptyAction: () => void
@@ -94,8 +96,15 @@ export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => {
     )
     return (
         <div className={MAIN_CLASS_NAME}>
-            <SectionHeader level={2} title={props.props.title} description={props.props.description} />
-            {props.props.groups.length === 0 ? (
+            <SectionHeader
+                level={2}
+                title={props.props.title}
+                description={props.props.description}
+                isSkeleton={props.props.isSkeleton}
+            />
+            {props.props.isSkeleton ? (
+                <SurfaceListCard ariaLabel={props.props.listLabel} isLoading />
+            ) : props.props.groups.length === 0 ? (
                 <SurfaceCard ariaLabel={props.props.listLabel}>
                     <EmptyNotice
                         message={props.props.emptyMessage}

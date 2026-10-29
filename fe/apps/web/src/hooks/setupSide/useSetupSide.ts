@@ -1,5 +1,6 @@
 "use client"
 
+import type { SetupKnowledgeCounts } from "@/hooks/agentSetup"
 import { LOADING_SESSION, useSetupGates, useSetupKnowledge, useSetupState, useSetupVersions } from "@/hooks/agentSetup"
 import { setupProgressOf } from "@/modules/setup-view"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
@@ -28,7 +29,8 @@ export const useSetupSide = (module: string, installationId: string) => {
     const { slot, reload } = useSetupState(installationId)
     const versionsSlot = useSetupVersions(installationId)
     const unmet = useSetupRequirements(moduleKey)
-    const counts = useSetupKnowledge(moduleKey)
+    const knowledgeSlot = useSetupKnowledge(moduleKey)
+    const counts = knowledgeSlot.items ?? null
     const isLoading =
         slot.items === undefined ||
         catalog.slot.items === undefined ||
@@ -76,7 +78,7 @@ export const useSetupSide = (module: string, installationId: string) => {
         knowledge: knowledgeOf(t, business, counts, moduleKey),
         versions: versionsOf(t, versions, format, activeVersionId),
     }
-    const sideSlot = sideSlotOf(view, [slot, catalog.slot], isLoading)
+    const sideSlot = sideSlotOf(view, [slot, catalog.slot, knowledgeSlot], isLoading)
     return {
         slot: sideSlot,
         placeholder: view,
@@ -118,7 +120,7 @@ const gatesLabelsOf = (t: ReturnType<typeof useTranslations<"moduleSetup">>) => 
 const knowledgeOf = (
     t: ReturnType<typeof useTranslations<"moduleSetup">>,
     business: number,
-    counts: ReturnType<typeof useSetupKnowledge>,
+    counts: SetupKnowledgeCounts | null,
     moduleKey: string,
 ): SetupSideKnowledge => {
     return {

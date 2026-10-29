@@ -102,6 +102,8 @@ export interface CsvImportWizardBaseProps {
         readonly runImport: () => void
         readonly finish: () => void
         readonly close: () => void
+        /** Reads the saved import again after the read failed. */
+        readonly retry: () => void
         readonly name: (value: string) => void
         readonly entity: (value: string | null) => void
         readonly source: (value: string) => void
@@ -262,9 +264,9 @@ const RESUME_PLACEHOLDER: WizardResume = { isResumed: false }
  * documents); the column mapping with a preview; the import; the agents that may read it.
  */
 export const CsvImportWizardBase = (props: CsvImportWizardBaseProps) => {
-    const { props: view } = props
+    const { props: view, on } = props
     return (
-        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels}>
+        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
             {(_resume, isSkeleton) => (
                 <WizardFrame
                     {...frameOf(view)}

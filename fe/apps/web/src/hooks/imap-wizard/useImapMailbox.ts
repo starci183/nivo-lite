@@ -32,5 +32,6 @@ export const useImapMailbox = (resumeId: string | undefined) => {
         loading: resumeId !== undefined && saved.isLoading,
         view,
         error: saved.error instanceof Error ? saved.error.message : null,
+        reload: () => void saved.mutate(),
     }
 }

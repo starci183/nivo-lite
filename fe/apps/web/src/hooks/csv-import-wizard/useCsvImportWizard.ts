@@ -178,6 +178,7 @@ const viewOf = ({
             runImport: () => void runImport(),
             finish: () => void finish(),
             close: () => input.onClose(fields.result !== null),
+            retry: resume.reload,
             name: (value: string) => form.setValue("name", value, { shouldValidate: true }),
             entity: (value: string | null) => {
                 const next = tableEntityOf(value ?? "")

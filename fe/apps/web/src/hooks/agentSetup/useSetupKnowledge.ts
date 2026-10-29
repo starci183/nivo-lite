@@ -1,8 +1,10 @@
 "use client"
 
 import { useMemo } from "react"
+import { slotOfSwr } from "@/hooks/slot"
 import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
 import type { ModuleKey } from "@/modules/catalog"
+import type { DataSlot } from "@/modules/types"
 
 /** How many sources the knowledge of a module holds. */
 export interface SetupKnowledgeCounts {
@@ -10,12 +12,12 @@ export interface SetupKnowledgeCounts {
     readonly publicSources: number
 }
 
-/** The ready sources of the workspace that the module reads (its own and the ones for every module), counted; none while they load. */
-export const useSetupKnowledge = (moduleKey: ModuleKey): SetupKnowledgeCounts | null => {
+/** The ready sources of the workspace that the module reads (its own and the ones for every module), counted; a failed or forbidden read shows as such, one in flight as loading. */
+export const useSetupKnowledge = (moduleKey: ModuleKey): DataSlot<SetupKnowledgeCounts> => {
     const read = useQueryKnowledgeSourcesSwr({ module: moduleKey })
     const { data } = read
-    return useMemo(() => {
-        if (data === undefined) return null
+    const counts = useMemo((): SetupKnowledgeCounts | undefined => {
+        if (data === undefined) return undefined
         const ready = data.filter(
             (source) => source.status === "ready" && (source.module === null || source.module === moduleKey),
         )
@@ -24,4 +26,5 @@ export const useSetupKnowledge = (moduleKey: ModuleKey): SetupKnowledgeCounts | 
             publicSources: ready.filter((source) => source.visibility === "public").length,
         }
     }, [data, moduleKey])
+    return slotOfSwr({ data: counts, error: read.error, isLoading: read.isLoading })
 }

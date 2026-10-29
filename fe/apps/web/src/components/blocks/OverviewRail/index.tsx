@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useOverviewRail } from "@/hooks/overview"
+import { useOverviewData, useOverviewRail } from "@/hooks/overview"
 import { moduleGlyphOf } from "@/hooks/installations"
 import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
 import type { IconName } from "@/components/leaves/Icon"
@@ -20,11 +20,16 @@ const KIND_ICONS: Readonly<Record<string, IconName>> = {
     "agent.updated": "agentos",
 }
 
+/** What the rail holds while the dashboard is read: both cards draw as skeleton. */
+const NO_RAIL = { agents: [], activity: [] } as const
+
 /** The overview rail with its copy resolved in the browser. */
 export const OverviewRail = () => {
     const t = useTranslations("overview")
-    const data = useOverviewRail()
-    if (data === undefined) return null
+    const read = useOverviewRail()
+    const { failed } = useOverviewData()
+    if (read === undefined && failed) return null
+    const data = read ?? NO_RAIL
     const hasChatbot = data.agents.some((agent) => agent.module === "chatbot")
     return (
         <OverviewRailBase
@@ -33,7 +38,7 @@ export const OverviewRail = () => {
                 agentsEmpty: t("agentsEmpty"),
                 agentsEmptyBody: t("agentsEmptyDesc"),
                 chatLabel: t("chat"),
-                buyChatbotLabel: hasChatbot ? null : t("buyChatbot"),
+                buyChatbotLabel: hasChatbot || read === undefined ? null : t("buyChatbot"),
                 buyChatbotHref: CONSOLE_ROUTES.newChatbot,
                 agents: data.agents.map((agent) => ({
                     id: agent.id,
@@ -49,6 +54,7 @@ export const OverviewRail = () => {
                 activityEmptyBody: t("activityEmptyDesc"),
                 viewAllLabel: t("viewAll"),
                 viewAllHref: CONSOLE_ROUTES.responsibilities,
+                isSkeleton: read === undefined,
                 activity: data.activity.map((item) => ({
                     id: item.id,
                     icon: KIND_ICONS[item.kind] ?? "notification",
