@@ -1,7 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import type { FindOperator } from "typeorm"
+import { FindOperator } from "typeorm"
+import { isRecord } from "@modules/platform/primitives"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MemberLookupService } from "./member-lookup.service"
@@ -72,8 +73,11 @@ describe("MemberLookupService", () => {
 
             await lookup.activeNamed("ws-1", "Lan")
 
-            const options = em.findOne.mock.calls[0]?.[1] as { where: { displayName: FindOperator<string> } }
-            expect(options.where.displayName.getSql?.("name_col")).toBe("lower(name_col) = lower(:name)")
+            const where: unknown = em.findOne.mock.calls[0]?.[1]?.where
+            const displayName = isRecord(where) ? where.displayName : undefined
+            expect(displayName instanceof FindOperator && displayName.getSql?.("name_col")).toBe(
+                "lower(name_col) = lower(:name)",
+            )
         })
     })
 })

@@ -3,7 +3,11 @@ import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMemberEntity } from "./persistence/entities"
-import type { DirectoryMember } from "./workspace-member-directory.contracts"
+import type {
+    MemberDirectoryEntry,
+    OptionalAccountId,
+    OptionalMemberDirectoryEntry,
+} from "./workspace-member-directory.contracts"
 import type { WorkspaceMember } from "./workspace-members.contracts"
 
 const DIRECTORY_COLUMNS = { id: true, displayName: true, role: true } as const
@@ -11,7 +15,7 @@ const DIRECTORY_COLUMNS = { id: true, displayName: true, role: true } as const
 /** Owners first, then managers, then staff: the order the directory lists. */
 const ROLE_RANK = "CASE m.role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END"
 
-const toDirectoryMember = (row: WorkspaceMemberEntity): DirectoryMember => ({
+const toDirectoryMember = (row: WorkspaceMemberEntity): MemberDirectoryEntry => ({
     id: row.id,
     displayName: row.displayName,
     role: row.role,
@@ -55,7 +59,7 @@ export class WorkspaceMemberDirectoryService {
     }
 
     /** The account of the oldest active owner of the workspace; null when it has none. */
-    async firstActiveOwnerUserId(workspaceId: string): Promise<string | null> {
+    async firstActiveOwnerUserId(workspaceId: string): Promise<OptionalAccountId> {
         const row = await this.entityManager.findOne(WorkspaceMemberEntity, {
             select: { userId: true },
             where: { workspaceId, role: "owner", status: "active" },
@@ -70,8 +74,8 @@ export class WorkspaceMemberDirectoryService {
         const rows = await this.entityManager
             .createQueryBuilder(WorkspaceMemberEntity, "m")
             .select("m.userId", "user_id")
-            .distinct(true)
             .where("m.workspaceId IN (:...workspaceIds)", { workspaceIds: [...workspaceIds] })
+            .groupBy("m.userId")
             .orderBy("m.userId")
             .limit(limit)
             .getRawMany<{ readonly user_id: string }>()
@@ -79,7 +83,7 @@ export class WorkspaceMemberDirectoryService {
     }
 
     /** The active members of the workspace, owners first, then managers, then staff, by name, bounded. */
-    async activeDirectory(workspaceId: string, limit: number): Promise<Array<DirectoryMember>> {
+    async activeDirectory(workspaceId: string, limit: number): Promise<Array<MemberDirectoryEntry>> {
         const rows = await this.entityManager
             .createQueryBuilder(WorkspaceMemberEntity, "m")
             .where("m.workspaceId = :workspaceId AND m.status = 'active'", { workspaceId })
@@ -96,7 +100,7 @@ export class WorkspaceMemberDirectoryService {
         memberIds: ReadonlyArray<string>,
         limit: number,
         manager: EntityManager = this.entityManager,
-    ): Promise<Array<DirectoryMember>> {
+    ): Promise<Array<MemberDirectoryEntry>> {
         if (memberIds.length === 0) return []
         const rows = await manager
             .createQueryBuilder(WorkspaceMemberEntity, "m")
@@ -116,7 +120,7 @@ export class WorkspaceMemberDirectoryService {
         workspaceId: string,
         memberIds: ReadonlyArray<string>,
         manager: EntityManager = this.entityManager,
-    ): Promise<Array<DirectoryMember>> {
+    ): Promise<Array<MemberDirectoryEntry>> {
         if (memberIds.length === 0) return []
         const rows = await manager.find(WorkspaceMemberEntity, {
             select: DIRECTORY_COLUMNS,
@@ -131,7 +135,7 @@ export class WorkspaceMemberDirectoryService {
         workspaceId: string,
         userId: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<string | null> {
+    ): Promise<OptionalAccountId> {
         const row = await manager.findOne(WorkspaceMemberEntity, {
             select: { id: true },
             where: { workspaceId, userId },
@@ -144,7 +148,7 @@ export class WorkspaceMemberDirectoryService {
         workspaceId: string,
         memberId: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<DirectoryMember | null> {
+    ): Promise<OptionalMemberDirectoryEntry> {
         const row = await manager.findOne(WorkspaceMemberEntity, {
             select: DIRECTORY_COLUMNS,
             where: { workspaceId, id: memberId },

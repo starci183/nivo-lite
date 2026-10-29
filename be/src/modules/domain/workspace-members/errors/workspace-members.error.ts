@@ -23,6 +23,8 @@ export enum WorkspaceMembersErrorCode {
     SessionNotFound = "WORKSPACE_MEMBERS_SESSION_NOT_FOUND",
     /** Ensure found an existing seat with different role or disabled status; explicit change policy is required. */
     EnsureConflict = "WORKSPACE_MEMBERS_ENSURE_CONFLICT",
+    /** A join names a role the table does not allow. */
+    RoleInvalid = "WORKSPACE_MEMBERS_ROLE_INVALID",
 }
 
 /** How each workspace-members code travels. */
@@ -37,6 +39,7 @@ export const WORKSPACE_MEMBERS_ERROR_KINDS: Record<WorkspaceMembersErrorCode, Er
     [WorkspaceMembersErrorCode.CurrentSession]: "invalid",
     [WorkspaceMembersErrorCode.SessionNotFound]: "not-found",
     [WorkspaceMembersErrorCode.EnsureConflict]: "conflict",
+    [WorkspaceMembersErrorCode.RoleInvalid]: "invalid",
 }
 
 /** The one error class of the workspace-members capability. */

@@ -6,11 +6,14 @@ import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/works
 import type { AccountDirectory, AccountOverview, DeviceSession } from "./workspace-members.contracts"
 import { InjectAccountDirectory } from "./workspace-members.port"
 
+/** A timestamp as the database function answers it: a date, or text, or none. */
+type StoredInstant = Date | string | null
+
 /** One row of `public.be_account_sessions`. */
 interface SessionRow {
     readonly id: string
-    readonly created_at: Date | string | null
-    readonly last_active_at: Date | string | null
+    readonly created_at: StoredInstant
+    readonly last_active_at: StoredInstant
     readonly user_agent: string | null
     readonly ip: string | null
 }
@@ -29,7 +32,7 @@ interface RevokedRow {
 const SESSION_LIMIT = 100
 const PROVIDER_LIMIT = 20
 
-const isoOf = (value: Date | string | null): string | null => (value === null ? null : new Date(value).toISOString())
+const isoOf = (value: StoredInstant): string | null => (value === null ? null : new Date(value).toISOString())
 
 @Injectable()
 /** The signed-in person's own account: linked sign-in methods and signed-in devices. */
