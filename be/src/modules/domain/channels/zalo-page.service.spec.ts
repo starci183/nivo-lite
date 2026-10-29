@@ -59,7 +59,7 @@ const secret: ZaloSecret = {
     appSecret: "app-secret-1234",
     oaSecret: "oa-key-9876",
     accessToken: "access-token",
-    refreshToken: "refresh-token",
+    renewalToken: "refresh-token",
     refreshExpiresAt: "2027-01-01T00:00:00.000Z",
 }
 
@@ -170,7 +170,7 @@ describe("ZaloPageService view", () => {
         const { service, credentials } = await build({ [LIST_ZALO_RECIPIENTS]: [], [FIND_LAST_ZALO_REPLY]: [] })
         credentials.load.mockResolvedValue(
             ok({
-                secret: { ...secret, refreshToken: undefined },
+                secret: { ...secret, renewalToken: undefined },
                 expiresAt: NOW.getTime() - 3 * HOUR,
                 workspaceId: "ws-1",
             }),
@@ -239,7 +239,7 @@ describe("ZaloPageService events", () => {
         })
         credentials.load.mockResolvedValue(
             ok({
-                secret: { ...secret, refreshToken: undefined },
+                secret: { ...secret, renewalToken: undefined },
                 expiresAt: NOW.getTime() - HOUR,
                 workspaceId: "ws-1",
             }),

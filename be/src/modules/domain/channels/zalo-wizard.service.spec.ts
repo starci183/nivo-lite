@@ -18,7 +18,7 @@ const loaded = (oaSecret = "oa-secret"): LoadedZalo => ({
         appSecret: "app-secret",
         oaSecret,
         accessToken: "access-1",
-        refreshToken: "refresh-1",
+        renewalToken: "refresh-1",
     },
     expiresAt: null,
     workspaceId: "ws-1",
@@ -161,7 +161,7 @@ describe("ZaloWizardService", () => {
             [
                 [
                     '{"appId":"app-1","appSecret":"app-secret",',
-                    '"oaSecret":"oa-secret-2","accessToken":"access-1","refreshToken":"refresh-1"}',
+                    '"oaSecret":"oa-secret-2","accessToken":"access-1","renewalToken":"refresh-1"}',
                 ].join(""),
             ],
         ])
@@ -170,7 +170,7 @@ describe("ZaloWizardService", () => {
                 "c-1",
                 [
                     'sealed:{"appId":"app-1","appSecret":"app-secret",',
-                    '"oaSecret":"oa-secret-2","accessToken":"access-1","refreshToken":"refresh-1"}',
+                    '"oaSecret":"oa-secret-2","accessToken":"access-1","renewalToken":"refresh-1"}',
                 ].join(""),
             ],
         ])

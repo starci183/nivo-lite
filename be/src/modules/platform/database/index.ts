@@ -6,6 +6,8 @@ export { advisoryXactLock, callDbFunction, listenOn, notify } from "./database.c
 export type { StatementConnection } from "./database.client"
 export { returnedRows, rowShape } from "./returned-rows.policy"
 export { openPostgresSession } from "./postgres-session.client"
+export { openMssqlSession, openMysqlSession, selectRows } from "./customer-sessions.client"
+export type { CustomerRow, CustomerSession } from "./customer-sessions.contracts"
 export type { PostgresSession, PostgresSessionTarget, PostgresTlsOptions } from "./postgres-session.contracts"
 export { DATABASE_ERROR_KINDS, DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 export { parsePrimaryDatabaseConfig } from "./primary.config"

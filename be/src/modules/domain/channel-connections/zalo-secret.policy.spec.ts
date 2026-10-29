@@ -26,7 +26,7 @@ describe("parseZaloSecret", () => {
                 appSecret: "s",
                 oaSecret: "o",
                 accessToken: "at",
-                refreshToken: "rt",
+                renewalToken: "rt",
                 refreshExpiresAt: "2027-01-01T00:00:00.000Z",
                 pkce: { verifier: "v", nonce: "n", exp: 5 },
             }),

@@ -21,7 +21,7 @@ const secret = (patch: Partial<ZaloSecret> = {}): ZaloSecret => ({
     appSecret: "app-secret-1234",
     oaSecret: "oa-key-9876",
     accessToken: "access",
-    refreshToken: "refresh",
+    renewalToken: "refresh",
     refreshExpiresAt: "2027-01-01T00:00:00.000Z",
     ...patch,
 })
@@ -53,13 +53,13 @@ describe("tokenViewOf", () => {
         const view = subject.tokenViewOf(secret(), NOW - 3 * HOUR, "error", NOW)
         expect(view.state).toBe("expired")
         expect(view.expiredMinutesAgo).toBe(180)
-        const noRefresh = subject.tokenViewOf(secret({ refreshToken: undefined }), NOW - HOUR, "connected", NOW)
+        const noRefresh = subject.tokenViewOf(secret({ renewalToken: undefined }), NOW - HOUR, "connected", NOW)
         expect(noRefresh.state).toBe("expired")
     })
 
     it("calls a connection that was never authorized none", async () => {
         const subject = await build()
-        const bare = secret({ accessToken: undefined, refreshToken: undefined })
+        const bare = secret({ accessToken: undefined, renewalToken: undefined })
         expect(subject.tokenViewOf(bare, null, "pending", NOW).state).toBe("none")
     })
 })
@@ -175,19 +175,19 @@ describe("eventsOf", () => {
 describe("edge cases of the token", () => {
     it("reads a refresh token without an end, with an unreadable end, or empty", async () => {
         const subject = await build()
-        const open: ZaloSecret = { appId: "1", appSecret: "s", oaSecret: "o", refreshToken: "refresh" }
+        const open: ZaloSecret = { appId: "1", appSecret: "s", oaSecret: "o", renewalToken: "refresh" }
         expect(subject.tokenViewOf(open, NOW - HOUR, "connected", NOW).canRefresh).toBe(true)
         const unreadable = secret({ refreshExpiresAt: "not a date" })
         expect(subject.tokenViewOf(unreadable, NOW - HOUR, "connected", NOW).canRefresh).toBe(true)
         const ended = secret({ refreshExpiresAt: "2020-01-01T00:00:00.000Z" })
         expect(subject.tokenViewOf(ended, NOW - HOUR, "connected", NOW).canRefresh).toBe(false)
-        const empty = secret({ refreshToken: "" })
+        const empty = secret({ renewalToken: "" })
         expect(subject.tokenViewOf(empty, NOW - HOUR, "connected", NOW).canRefresh).toBe(false)
     })
 
     it("keeps an ended token with no recorded end as expired without a count of minutes", async () => {
         const subject = await build()
-        const view = subject.tokenViewOf(secret({ refreshToken: undefined }), null, "connected", NOW)
+        const view = subject.tokenViewOf(secret({ renewalToken: undefined }), null, "connected", NOW)
         expect(view).toMatchObject({ state: "expired", expiresAt: null, expiredMinutesAgo: null })
     })
 })
