@@ -1,6 +1,6 @@
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
-import { AutomationEngineService } from "@modules/domain/automations"
+import { AutomationsService } from "@modules/domain/automations"
 import { BankFeedService } from "@modules/domain/billing"
 import { ModulesService } from "@modules/domain/modules"
 import { CLOCK } from "@modules/platform/clock"
@@ -116,9 +116,8 @@ const yearlyEnding = (days: number, contract: RenewalContract): RenewalContract 
 
 /** The engine's business event, as the contract scan announces a contract entering its renewal window. */
 const announceExpiring = (contractId: string, contract: RenewalContract): Promise<void> =>
-    world.resolve(AutomationEngineService).onBusinessEvent({
+    world.resolve(AutomationsService).emit(identity.ownerId, WS, {
         event: "contract.expiring",
-        workspaceId: WS,
         dedupe: `contract.expiring:${contractId}:${contract.endsOn}`,
         data: {
             contract_id: contractId,

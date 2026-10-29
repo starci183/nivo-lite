@@ -1,6 +1,5 @@
 // The directory and the ports lead: other capabilities import this barrel while it loads (import cycles) and bind the ports.
 export { OFFICE_ROOMS_AGENTS, OFFICE_ROOMS_LEADS, OFFICE_ROOMS_TEST_CHATS } from "./office-rooms.decorators"
-export { OfficeRoomDirectoryModule } from "./office-room-directory.module"
 export { OfficeRoomDirectoryService } from "./office-room-directory.service"
 export { OFFICE_ROOMS_ERROR_KINDS } from "./errors/office-rooms.error"
 export { OFFICE_ROOMS_MESSAGES } from "./messages/office-rooms.messages"

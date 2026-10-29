@@ -52,7 +52,6 @@ import type { CliAppOptions } from "../cli.options"
 
 /** The queue of the CLI: producers only, so no worker and no relay run. */
 const CLI_QUEUE: QueueOptions = {
-    isGlobal: true,
     enabled: false,
     redisHost: "127.0.0.1",
     redisPort: 6379,
