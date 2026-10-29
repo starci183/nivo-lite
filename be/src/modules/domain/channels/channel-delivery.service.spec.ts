@@ -5,7 +5,7 @@ import type { ConversationTarget } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { AgentConversationsErrorCode } from "@modules/domain/agent-conversations"
 import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
-import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
+import { ConnectionSecretReadsService } from "@modules/domain/connections"
 import { TELEGRAM } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
 import { ZALO } from "@modules/integrations/zalo"
@@ -42,7 +42,7 @@ const build = async (found: ConversationTarget | null = target()) => {
     telegram.sendTyping.mockResolvedValue(true)
     const zalo = mock<ZaloClient>()
     const logger = mock<Logger>()
-    const secrets = mock<ConnectionSecretsService>()
+    const secrets = mock<ConnectionSecretReadsService>()
     const credentials = mock<ZaloCredentialsService>()
     const senders = mock<ChannelSenderRegistry>()
     const zaloDelivery = mock<ZaloDeliveryService>()
@@ -55,7 +55,7 @@ const build = async (found: ConversationTarget | null = target()) => {
             { provide: LOGGER, useValue: logger },
             { provide: AgentConversationsService, useValue: conversations },
             { provide: AgentMessagesService, useValue: messages },
-            { provide: ConnectionSecretsService, useValue: secrets },
+            { provide: ConnectionSecretReadsService, useValue: secrets },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ZaloDeliveryService, useValue: zaloDelivery },
         ],
