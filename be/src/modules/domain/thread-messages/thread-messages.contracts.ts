@@ -264,8 +264,8 @@ export interface InboxClaim {
 export interface ApprovalResolved {
     /** The approval request. */
     readonly requestId: string
-    /** How it ended. */
-    readonly outcome: "approved" | "rejected" | "expired"
+    /** How it ended, as the event carries it: one of `APPROVAL_RESOLVED_OUTCOMES`. */
+    readonly outcome: string
     /** The member id of who decided it, or null when it expired. */
     readonly decidedBy: string | null
 }

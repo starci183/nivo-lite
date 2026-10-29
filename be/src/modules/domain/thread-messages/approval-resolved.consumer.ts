@@ -24,7 +24,7 @@ export class ApprovalResolvedConsumer implements EventConsumer<ApprovalResolvedE
     handle(delivery: EventDelivery<ApprovalResolvedEvent>): Promise<void> {
         const { requestId, outcome, decidedBy } = delivery.event.payload
         return this.outcomes.resolved(
-            { requestId, outcome, decidedBy },
+            { requestId, outcome, decidedBy: decidedBy ?? null },
             { consumer: delivery.consumer, dedupeKey: delivery.dedupeKey },
         )
     }

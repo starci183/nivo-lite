@@ -326,8 +326,6 @@ describe("ReconcilePaymentPerformerService perform", () => {
                     leadId: "lead-1",
                     customer: "Mai",
                     channel: "Zalo",
-                    contractId: null,
-                    periodEndsOn: null,
                 },
             ],
         ])
@@ -377,15 +375,15 @@ describe("ReconcilePaymentPerformerService perform", () => {
         )
         expect(bus.writes[0]?.payload).toMatchObject({
             invoiceId: "inv-1",
-            transactionId: null,
             subjectType: "invoice",
             orderId: "ord-1",
-            orderNo: null,
             leadId: "lead-1",
             customer: "Customer",
             amountVnd: 450000,
-            channel: null,
         })
+        for (const field of ["transactionId", "orderNo", "channel"]) {
+            expect(bus.writes[0]?.payload).not.toHaveProperty(field)
+        }
     })
 
     it("publishes no customer or order when the settled invoice cannot be read back", async () => {
@@ -396,7 +394,9 @@ describe("ReconcilePaymentPerformerService perform", () => {
 
         expect(leads.find).not.toHaveBeenCalled()
         expect(orders.find).not.toHaveBeenCalled()
-        expect(bus.writes[0]?.payload).toMatchObject({ customer: "", channel: null, orderNo: null })
+        expect(bus.writes[0]?.payload).toMatchObject({ customer: "" })
+        expect(bus.writes[0]?.payload).not.toHaveProperty("channel")
+        expect(bus.writes[0]?.payload).not.toHaveProperty("orderNo")
     })
 
     it("names the renewed contract and its term in the fact so the contracts reactor can renew it", async () => {

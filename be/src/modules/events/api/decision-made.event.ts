@@ -1,6 +1,6 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, isText, isTextOrNull, openEnvelope } from "./money-event.policy"
+import { isKey, isText, isTextOrAbsent, whenPresent, openEnvelope } from "./money-event.policy"
 
 /**
  * The payload of the `decision_made` event: a person decided a work item (approved, edited or rejected it). A reactor settles the
@@ -21,7 +21,7 @@ export interface DecisionMadeInput {
     /** Who decided, as the decision log names them. */
     readonly decidedBy: string
     /** The customer of the item, or null. */
-    readonly leadId: string | null
+    readonly leadId?: string
     /** The summary of the performed work. */
     readonly summary: string
 }
@@ -62,7 +62,7 @@ export class DecisionMadeEvent extends BaseEvent {
             !isText(body.department) ||
             !isText(body.decidedBy) ||
             !isText(body.summary) ||
-            !isTextOrNull(body.leadId)
+            !isTextOrAbsent(body.leadId)
         ) {
             return null
         }
@@ -74,7 +74,7 @@ export class DecisionMadeEvent extends BaseEvent {
             department: body.department,
             outcome: body.outcome,
             decidedBy: body.decidedBy,
-            leadId: body.leadId,
+            ...whenPresent("leadId", body.leadId),
             summary: body.summary,
         })
     }

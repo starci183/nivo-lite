@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ApprovalResolvedEvent } from "@modules/events/api"
+import { ApprovalResolvedEvent, whenPresent } from "@modules/events/api"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
 import { InjectLogger } from "@modules/platform/logging"
@@ -29,7 +29,7 @@ export class ApprovalAnnouncerService {
             requestId: event.requestId,
             workspaceId: event.workspaceId,
             outcome: event.outcome,
-            decidedBy: event.decidedBy,
+            ...whenPresent("decidedBy", event.decidedBy),
             action: event.action,
             chainStepId: event.chainStepId,
         })

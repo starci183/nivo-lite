@@ -1,6 +1,6 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, isTextOrNull, openEnvelope } from "./money-event.policy"
+import { isKey, isTextOrAbsent, openEnvelope, whenPresent } from "./money-event.policy"
 
 /**
  * The payload of the `order_shipped` event: a confirmed order was handed to its carrier. `dedupeKey` is the order id: an order ships
@@ -16,7 +16,7 @@ export interface OrderShippedInput {
     /** The order number shown to people. */
     readonly orderNo: string
     /** The customer, or null. */
-    readonly leadId: string | null
+    readonly leadId?: string
     /** The recorded carrier. */
     readonly carrier: string
     /** The recorded tracking code. */
@@ -57,7 +57,7 @@ export class OrderShippedEvent extends BaseEvent {
             !isKey(body.workspaceId) ||
             typeof body.userId !== "string" ||
             typeof body.orderNo !== "string" ||
-            !isTextOrNull(body.leadId) ||
+            !isTextOrAbsent(body.leadId) ||
             typeof body.carrier !== "string" ||
             typeof body.trackingCode !== "string" ||
             typeof body.shippedAt !== "string"
@@ -70,7 +70,7 @@ export class OrderShippedEvent extends BaseEvent {
             userId: body.userId,
             orderId: body.orderId,
             orderNo: body.orderNo,
-            leadId: body.leadId,
+            ...whenPresent("leadId", body.leadId),
             carrier: body.carrier,
             trackingCode: body.trackingCode,
             shippedAt: body.shippedAt,

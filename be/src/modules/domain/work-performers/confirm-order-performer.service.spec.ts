@@ -427,7 +427,9 @@ describe("ConfirmOrderPerformerService perform", () => {
         await service.perform(ctx, itemOf(), proposalOf({ customer: "Walk-in" }, 90000), { name: "Mai" })
 
         expect(bus.writes.map((event) => event.constructor)).toEqual([OrderConfirmedEvent])
-        expect(bus.writes[0]?.payload).toMatchObject({ customer: "Walk-in", leadId: null, channel: null })
+        expect(bus.writes[0]?.payload).toMatchObject({ customer: "Walk-in" })
+        expect(bus.writes[0]?.payload).not.toHaveProperty("leadId")
+        expect(bus.writes[0]?.payload).not.toHaveProperty("channel")
     })
 
     it("publishes nothing and answers the standing order when the draft was already confirmed", async () => {

@@ -24,7 +24,7 @@ export class InstallationChangedConsumer implements EventConsumer<InstallationCh
     handle(delivery: EventDelivery<InstallationChangedEvent>): Promise<void> {
         const { workspaceId, installationId, force } = delivery.event.payload
         return this.sync.installationChanged(
-            { workspaceId, installationId, force },
+            { workspaceId, installationId: installationId ?? null, force },
             { consumer: delivery.consumer, dedupeKey: delivery.dedupeKey },
         )
     }

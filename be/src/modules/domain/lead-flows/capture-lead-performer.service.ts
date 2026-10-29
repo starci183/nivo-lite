@@ -15,7 +15,7 @@ import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
-import { LeadCapturedEvent } from "@modules/events/api"
+import { LeadCapturedEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -145,8 +145,8 @@ export class CaptureLeadPerformerService implements WorkPerformer, OnModuleInit 
                     company: created.company,
                     channel: created.channel,
                     need: created.need,
-                    phone: created.phone,
-                    email: created.email,
+                    ...whenPresent("phone", created.phone),
+                    ...whenPresent("email", created.email),
                 }),
                 manager,
                 `lead-captured:${created.id}`,

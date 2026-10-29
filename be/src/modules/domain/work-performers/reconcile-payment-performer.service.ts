@@ -19,7 +19,7 @@ import { OrdersService } from "@modules/domain/orders"
 import { TransactionsService } from "@modules/domain/transactions"
 import type { OptionalTransaction } from "@modules/domain/transactions"
 import { WorkItemsService } from "@modules/domain/work-items"
-import { PaymentReconciledEvent } from "@modules/events/api"
+import { PaymentReconciledEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -197,19 +197,19 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
                 workspaceId: ctx.workspaceId,
                 invoiceId: invoice.id,
                 invoiceNo: invoice.invoice_no,
-                amountVnd: proposal.amount_vnd ?? invoice.amount_vnd,
-                paidAt: invoice.paid_at,
-                transactionId: item.subject_type === "transaction" ? item.subject_id : null,
+                ...whenPresent("amountVnd", proposal.amount_vnd ?? invoice.amount_vnd),
+                ...whenPresent("paidAt", invoice.paid_at),
+                ...whenPresent("transactionId", item.subject_type === "transaction" ? item.subject_id : null),
                 workItemId: item.id,
-                subjectType: item.subject_type,
-                subjectId: item.subject_id,
-                orderId: invoice.order_id,
-                orderNo: parties.orderNo,
-                leadId: invoice.lead_id,
+                ...whenPresent("subjectType", item.subject_type),
+                ...whenPresent("subjectId", item.subject_id),
+                ...whenPresent("orderId", invoice.order_id),
+                ...whenPresent("orderNo", parties.orderNo),
+                ...whenPresent("leadId", invoice.lead_id),
                 customer: parties.customer ?? textOf(proposal.fields.payer),
-                channel: parties.channel,
-                contractId: invoice.contract_id,
-                periodEndsOn: invoice.period_ends_on,
+                ...whenPresent("channel", parties.channel),
+                ...whenPresent("contractId", invoice.contract_id),
+                ...whenPresent("periodEndsOn", invoice.period_ends_on),
             }),
             tx,
             `payment_reconciled:${invoice.id}`,

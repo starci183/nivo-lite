@@ -60,8 +60,8 @@ export class AutomationReactionsService {
                     company: lead.company,
                     channel: lead.channel,
                     need: lead.need,
-                    phone: lead.phone,
-                    email: lead.email,
+                    phone: lead.phone ?? null,
+                    email: lead.email ?? null,
                 },
             })
         })
@@ -77,9 +77,9 @@ export class AutomationReactionsService {
             data: {
                 lead_id: deal.leadId,
                 name: deal.name,
-                company: deal.company,
-                channel: deal.channel,
-                need: deal.need,
+                company: deal.company ?? null,
+                channel: deal.channel ?? null,
+                need: deal.need ?? null,
                 ...(deal.orderNo === undefined ? {} : { order_no: deal.orderNo }),
                 ...(deal.amountVnd === undefined ? {} : { amount_vnd: deal.amountVnd }),
                 ...(deal.source === undefined ? {} : { source: deal.source }),
@@ -101,7 +101,7 @@ export class AutomationReactionsService {
                 department: decision.department,
                 outcome: decision.outcome,
                 decided_by: decision.decidedBy,
-                lead_id: decision.leadId,
+                lead_id: decision.leadId ?? null,
                 summary: decision.summary,
             },
         })
@@ -116,15 +116,15 @@ export class AutomationReactionsService {
             dedupe: `payment.received:${payment.invoiceId}`,
             data: {
                 invoice_id: payment.invoiceId,
-                transaction_id: payment.transactionId,
+                transaction_id: payment.transactionId ?? null,
                 invoice_no: payment.invoiceNo,
-                order_id: payment.orderId,
-                order_no: payment.orderNo,
-                lead_id: payment.leadId,
+                order_id: payment.orderId ?? null,
+                order_no: payment.orderNo ?? null,
+                lead_id: payment.leadId ?? null,
                 customer: payment.customer,
-                amount_vnd: payment.amountVnd,
-                paid_at: payment.paidAt,
-                channel: payment.channel,
+                amount_vnd: payment.amountVnd ?? null,
+                paid_at: payment.paidAt ?? null,
+                channel: payment.channel ?? null,
             },
         })
     }
@@ -133,7 +133,7 @@ export class AutomationReactionsService {
     onPaymentReceipt(delivery: EventDelivery<PaymentReconciledEvent>): Promise<void> {
         const payment = delivery.event.payload
         return this.react(delivery, () =>
-            this.engine.startPaymentReceipt(payment.workspaceId, payment.transactionId, payment.invoiceId),
+            this.engine.startPaymentReceipt(payment.workspaceId, payment.transactionId ?? null, payment.invoiceId),
         )
     }
 

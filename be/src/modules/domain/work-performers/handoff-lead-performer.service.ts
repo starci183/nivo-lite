@@ -10,7 +10,7 @@ import { LeadRecordsService, contactParts } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { PublicLeadCompletionService } from "@modules/domain/public-api"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
-import { LeadCapturedEvent } from "@modules/events/api"
+import { LeadCapturedEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -125,8 +125,8 @@ export class HandoffLeadPerformerService implements WorkPerformer {
                     company: lead.company,
                     channel: lead.channel,
                     need: lead.need,
-                    phone: lead.phone,
-                    email: lead.email,
+                    ...whenPresent("phone", lead.phone),
+                    ...whenPresent("email", lead.email),
                 }),
                 tx,
                 `lead_captured:${lead.id}`,

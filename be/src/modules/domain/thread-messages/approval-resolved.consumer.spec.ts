@@ -75,9 +75,9 @@ describe("ApprovalResolvedEvent", () => {
         expect(ApprovalResolvedEvent.parse({ eventId: event.eventId, payload: event.payload })?.payload).toEqual(
             event.payload,
         )
-        expect(
+        expect(() =>
             ApprovalResolvedEvent.parse({ eventId: "req-1", payload: { ...event.payload, outcome: "maybe" } }),
-        ).toBeNull()
+        ).toThrow("EVENTS_VALUE_OUTSIDE_SET")
         expect(ApprovalResolvedEvent.parse({ eventId: "req-1", payload: { requestId: "" } })).toBeNull()
         expect(ApprovalResolvedEvent.parse(null)).toBeNull()
     })
