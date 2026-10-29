@@ -91,3 +91,14 @@ export interface AgentCreation {
     /** When the agent was created. */
     readonly createdAt: Date
 }
+
+/** An agent and the module it serves. */
+export interface AgentModuleRef {
+    /** The agent. */
+    readonly id: string
+    /** The module key. */
+    readonly module: string
+}
+
+/** The status of an agent, or null when there is none. */
+export type OptionalAgentStatus = string | null

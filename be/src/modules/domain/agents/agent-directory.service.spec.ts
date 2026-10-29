@@ -384,3 +384,25 @@ describe("AgentDirectoryService bindings", () => {
         })
     })
 })
+
+describe("AgentDirectoryService status and modules", () => {
+    it("answers the status of the agent of the workspace, null for none", async () => {
+        const found = mockEntityManager({ findOne: [AgentEntity, agentEntityOf()] })
+        const missing = mockEntityManager({ findOne: [AgentEntity, null] })
+
+        await expect((await build(found)).statusOf("w1", "a1")).resolves.toBe("active")
+        await expect((await build(missing)).statusOf("w1", "a9")).resolves.toBeNull()
+    })
+
+    it("lists the agents of the workspace with their modules, oldest first, bounded", async () => {
+        const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf()]] })
+
+        await expect((await build(em)).moduleRefsOf("w1", 500)).resolves.toEqual([{ id: "a1", module: "chatbot" }])
+        expect(em.find).toHaveBeenCalledWith(AgentEntity, {
+            select: { id: true, module: true },
+            where: { workspaceId: "w1" },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 500,
+        })
+    })
+})

@@ -7,7 +7,7 @@ import type { Clock } from "@modules/platform/clock"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
-import { AgentEntity } from "@modules/domain/agents"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import type {
     AgentKeyAnswer,
     AgentKeyPrincipal,
@@ -72,6 +72,7 @@ export class ApiKeysService {
         @InjectClock() private readonly clock: Clock,
         private readonly events: EventsService,
         private readonly seats: WorkspaceMemberSeatsService,
+        private readonly agents: AgentDirectoryService,
     ) {}
 
     /**
@@ -118,12 +119,11 @@ export class ApiKeysService {
             .addSelect("k.agentId", "agent_id")
             .addSelect("k.scopes", "scopes")
             .addSelect("k.revokedAt IS NOT NULL", "revoked")
-            .addSelect("a.status", "agent_status")
-            .leftJoin(AgentEntity, "a", "a.id = k.agent_id AND a.workspace_id = k.workspace_id")
             .where("k.keyHash = :keyHash", { keyHash: hashKey(key) })
             .limit(1)
-            .getRawOne<AgentKeyAnswer>()
-        const admitted = admitAgentKey(row)
+            .getRawOne<Omit<AgentKeyAnswer, "agent_status">>()
+        const status = row?.agent_id == null ? null : await this.agents.statusOf(row.workspace_id, row.agent_id)
+        const admitted = admitAgentKey(row === undefined ? undefined : { ...row, agent_status: status })
         if (admitted.kind === "refused") throw new ApiKeysError({ code: admitted.code, params: admitted.params })
         return admitted.value
     }
@@ -213,15 +213,8 @@ export class ApiKeysService {
         })
     }
 
-    private async holdsAgent(manager: EntityManager, workspaceId: string, agentId: string): Promise<boolean> {
-        const held = await manager
-            .createQueryBuilder(AgentEntity, "a")
-            .select("a.id", "id")
-            .where("a.id = :agentId AND a.workspace_id = :workspaceId", { agentId, workspaceId })
-            .limit(1)
-            .setLock("pessimistic_read")
-            .getRawOne<{ id: string }>()
-        return held !== undefined
+    private holdsAgent(manager: EntityManager, workspaceId: string, agentId: string): Promise<boolean> {
+        return this.agents.holds(workspaceId, agentId, manager)
     }
 
     private async requireManager(
