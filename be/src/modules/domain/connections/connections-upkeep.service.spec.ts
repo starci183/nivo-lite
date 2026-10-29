@@ -131,7 +131,9 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
             ],
         ])
     })
+})
 
+describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
     it("claims the due sync owners under a skip-locked read and moves their next sync on", async () => {
         const tx = fakeTransaction(mockEntityManager())
         const { fakes } = withBuilders(

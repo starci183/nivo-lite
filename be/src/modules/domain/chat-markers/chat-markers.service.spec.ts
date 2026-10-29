@@ -104,6 +104,9 @@ describe("ChatMarkersService admission", () => {
     })
 })
 
+/** The stored marker of a member, muted or not. */
+const markerOf = (muted: boolean): ChatMarkerEntity => Object.assign(new ChatMarkerEntity(), { muted })
+
 const OWN_ROW = { id: "message", createdAt: PERSISTED_AT }
 
 describe("ChatMarkersService state", () => {
@@ -113,7 +116,7 @@ describe("ChatMarkersService state", () => {
                 [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
                 [CHAT_READER_AVATARS, [{ id: "reader", avatar_url: "https://cdn.example.test/reader.png" }]],
             ],
-            findOne: [ChatMarkerEntity, { muted: true } as ChatMarkerEntity],
+            findOne: [ChatMarkerEntity, markerOf(true)],
         })
         const [own, readers] = queueQueryBuilders(em, [
             { getRawMany: [OWN_ROW] },
@@ -176,11 +179,13 @@ describe("ChatMarkersService state", () => {
         expect(delivered?.callsOf("andWhere")[0]?.[1]).toEqual({ createdAt: PERSISTED_AT, ownId: "message" })
         expect(em.query).toHaveBeenCalledTimes(1)
     })
+})
 
+describe("ChatMarkersService state", () => {
     it("answers sent when no other member has read or received the message", async () => {
         const em = mockEntityManager({
             query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
-            findOne: [ChatMarkerEntity, { muted: false } as ChatMarkerEntity],
+            findOne: [ChatMarkerEntity, markerOf(false)],
         })
         queueQueryBuilders(em, [{ getRawMany: [OWN_ROW] }, { getRawMany: [] }, { getRawMany: [] }])
         const { service } = await build(em)
@@ -194,7 +199,7 @@ describe("ChatMarkersService state", () => {
     it("keeps an absent owned message null", async () => {
         const em = mockEntityManager({
             query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
-            findOne: [ChatMarkerEntity, { muted: false } as ChatMarkerEntity],
+            findOne: [ChatMarkerEntity, markerOf(false)],
         })
         const [own] = queueQueryBuilders(em, [{ getRawMany: [] }])
         const { service } = await build(em)
@@ -248,7 +253,9 @@ describe("ChatMarkersService state", () => {
             })
         },
     )
+})
 
+describe("ChatMarkersService state", () => {
     it("keeps an owned message without a readable instant null", async () => {
         const em = mockEntityManager({
             query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],

@@ -84,6 +84,19 @@ const build = async (em: MockEntityManager = mockEntityManager(), answers: Reado
     }
 }
 
+type ManagerStubs = NonNullable<Parameters<typeof mockEntityManager>[0]>
+
+/** The stubs of a manager whose read of one item answers the item with these changes. */
+const readingItem = (changes: Partial<ContentItemEntity>): ManagerStubs => ({
+    findOne: [ContentItemEntity, row(changes)],
+})
+
+/** The item scheduled at an instant. */
+const rowAt = (iso: string): ContentItemEntity => row({ scheduledAt: new Date(iso) })
+
+/** One call of the manager on the item table: the table and its options. */
+const callOn = (options: object): [typeof ContentItemEntity, object] => [ContentItemEntity, options]
+
 describe("ContentEditorService actor and reads", () => {
     it.each([
         ["owner", true],
@@ -151,7 +164,9 @@ describe("ContentEditorService actor and reads", () => {
             [ContentItemEntity, { where: { workspaceId: "workspace-1", id: "item-1" } }],
         ])
     })
+})
 
+describe("ContentEditorService actor and reads", () => {
     it("reports a missing workspace item", async () => {
         const { service } = await build(mockEntityManager({ findOne: [ContentItemEntity, null] }))
         await expect(service.get("workspace-1", "missing")).rejects.toMatchObject({
@@ -204,7 +219,7 @@ describe("ContentEditorService create", () => {
 
 describe("ContentEditorService save and move", () => {
     it.each([null, new Date("2025-12-01T00:00:00.000Z")])("retains draft time %s", async (draftedAt) => {
-        const em = mockEntityManager({ findOne: [ContentItemEntity, row({ status: "draft", draftedAt })] })
+        const em = mockEntityManager(readingItem({ status: "draft", draftedAt }))
         const { service, fakes } = await build(em, [written()])
         const variants = { facebook: { text: "Draft", hashtags: [], note: "" } }
         await expect(service.save("user-1", "workspace-1", "item-1", { variants, media: [] })).resolves.toEqual(item)
@@ -238,7 +253,7 @@ describe("ContentEditorService save and move", () => {
 
     it("allows a schedule move with legacy attachments that have no completed-render identifier", async () => {
         const media = legacyAttachments
-        const em = mockEntityManager({ findOne: [ContentItemEntity, row({ status: "approved", media })] })
+        const em = mockEntityManager(readingItem({ status: "approved", media }))
         const { service, renders, fakes } = await build(em, [written()])
         await expect(
             service.save("user-1", "workspace-1", "item-1", { scheduledAt: "2026-02-01", media: [] }),
@@ -273,17 +288,16 @@ describe("ContentEditorService save and move", () => {
         })
         expect(transaction.outcomes).toEqual(["rollback"])
     })
+})
 
+describe("ContentEditorService save and move", () => {
     it("moves by saving only the new calendar instant under the row lock", async () => {
         const em = mockEntityManager({ findOne: [ContentItemEntity, row()] })
         const { service, members, transaction, fakes } = await build(em, [written()])
         await expect(service.move("user-1", "workspace-1", "item-1", "2026-02-01")).resolves.toEqual(item)
         expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1", ["owner", "manager"])
         expect(em.findOne.mock.calls).toEqual([
-            [
-                ContentItemEntity,
-                { where: { workspaceId: "workspace-1", id: "item-1" }, lock: { mode: "pessimistic_write" } },
-            ],
+            callOn({ where: { workspaceId: "workspace-1", id: "item-1" }, lock: { mode: "pessimistic_write" } }),
         ])
         expect(fakes[0]?.callsOf("setParameters")[0]?.[0]).toMatchObject({ scheduledAt: "2026-02-01" })
         expect(transaction.outcomes).toEqual(["commit"])
@@ -299,13 +313,13 @@ describe("ContentEditorService transition", () => {
         const { service, transaction } = await build(em)
         await expect(service.transition("user-1", "workspace-1", "item-1", "delete")).resolves.toEqual({ id: "item-1" })
         expect(em.delete.mock.calls).toEqual([
-            [ContentItemEntity, { workspaceId: "workspace-1", id: "item-1", status: In(["idea", "draft", "skipped"]) }],
+            callOn({ workspaceId: "workspace-1", id: "item-1", status: In(["idea", "draft", "skipped"]) }),
         ])
         expect(transaction.outcomes).toEqual(["commit"])
     })
 
     it("refuses deletion after approval", async () => {
-        const em = mockEntityManager({ findOne: [ContentItemEntity, row({ status: "approved" })] })
+        const em = mockEntityManager(readingItem({ status: "approved" }))
         const { service, transaction } = await build(em)
         await expect(service.transition("user-1", "workspace-1", "item-1", "delete")).rejects.toMatchObject({
             code: ContentItemsErrorCode.WrongStatus,
@@ -318,7 +332,7 @@ describe("ContentEditorService transition", () => {
         ["drop an idea aside", "skip", "idea", "skipped", false],
         ["bring an approved item back", "reopen", "approved", "draft", true],
     ] as const)("records the transition that would %s", async (_label, kind, status, next, reopen) => {
-        const em = mockEntityManager({ findOne: [ContentItemEntity, row({ status })] })
+        const em = mockEntityManager(readingItem({ status }))
         const { service, fakes } = await build(em, [{ execute: {} }])
         await expect(service.transition("user-1", "workspace-1", "item-1", kind)).resolves.toEqual({ id: "item-1" })
         expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
@@ -333,19 +347,18 @@ describe("ContentEditorService transition", () => {
 })
 
 describe("ContentEditorService figures and workbench", () => {
-    const figuresEm = (upcoming: ContentItemEntity | null, counts: [number, number, number]) =>
-        mockEntityManager({
-            count: [
-                [ContentItemEntity, counts[0]],
-                [ContentItemEntity, counts[1]],
-                [ContentPillarEntity, counts[2]],
-            ],
-            findOne: [ContentItemEntity, upcoming],
-            find: [ContentItemEntity, []],
-        })
+    const figuresStubs = (upcoming: ContentItemEntity | null, counts: [number, number, number]): ManagerStubs => ({
+        count: [
+            [ContentItemEntity, counts[0]],
+            [ContentItemEntity, counts[1]],
+            [ContentPillarEntity, counts[2]],
+        ],
+        findOne: [ContentItemEntity, upcoming],
+        find: [ContentItemEntity, []],
+    })
 
     it("computes Vietnam month boundaries and maps live figures and the upcoming post", async () => {
-        const em = figuresEm(row({ scheduledAt: new Date("2026-01-02T00:00:00Z") }), [2, 4, 5])
+        const em = mockEntityManager(figuresStubs(rowAt("2026-01-02T00:00:00Z"), [2, 4, 5]))
         const { service, fakes } = await build(em, [{ getCount: 3 }])
         await expect(service.figures("user-1", "workspace-1")).resolves.toEqual({
             awaitingApproval: 2,
@@ -370,7 +383,7 @@ describe("ContentEditorService figures and workbench", () => {
     })
 
     it.each([null, row()])("has no next post when none is scheduled: %j", async (upcoming) => {
-        const { service } = await build(figuresEm(upcoming, [0, 0, 0]), [{ getCount: 0 }])
+        const { service } = await build(mockEntityManager(figuresStubs(upcoming, [0, 0, 0])), [{ getCount: 0 }])
         await expect(service.figures("user-1", "workspace-1")).resolves.toEqual({
             awaitingApproval: 0,
             published30: 0,
@@ -380,7 +393,7 @@ describe("ContentEditorService figures and workbench", () => {
     })
 
     it.each([true, false])("assembles the authorized workbench with an optional last plan: %s", async (hasPlan) => {
-        const { service } = await build(figuresEm(null, [0, 0, 0]), [{ getCount: 0 }])
+        const { service } = await build(mockEntityManager(figuresStubs(null, [0, 0, 0])), [{ getCount: 0 }])
         const readPlan = jest.fn(() =>
             Promise.resolve(hasPlan ? { month: "2025-12", ideas: 8, ms: 45, createdAt: new Date(at) } : undefined),
         )
