@@ -1,4 +1,7 @@
-import type { KnowledgeSourceEntity } from "@modules/domain/knowledge-sources"
+import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
+
+const [KnowledgeSourceEntity] = knowledgeSourcesEntities
+type KnowledgeSourceEntity = InstanceType<typeof KnowledgeSourceEntity>
 
 /** Fixed document identity and time shared by the source row and its expected views. */
 const WS = "11111111-1111-4111-8111-111111111111"
