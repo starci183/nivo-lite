@@ -1,44 +1,19 @@
 import { Injectable } from "@nestjs/common"
+import { LessThan } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { ConnectionEntity } from "@modules/domain/connections/persistence/entities"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { InjectConnectionSecretsOptions } from "./connection-secrets.decorators"
-import type { ConnectionSecret, OptionalSealedText, OptionalStoredSecret } from "./connection-secrets.contracts"
+import type {
+    ConnectionSecret,
+    ConnectionSecretFacts,
+    OptionalSealedText,
+    OptionalStoredSecret,
+} from "./connection-secrets.contracts"
 import type { ConnectionSecretsOptions } from "./connection-secrets.options"
 import { ConnectionSecretsError, ConnectionSecretsErrorCode } from "./errors/connection-secrets.error"
 import { ConnectionSecretEntity } from "./persistence/entities"
-
-/** A connection with its sealed credential, as the joined read answers it. */
-interface ConnectionSecretRead {
-    /** The workspace the connection belongs to. */
-    readonly workspaceId: string
-    /** The provider key. */
-    readonly provider: string
-    /** The connection status. */
-    readonly status: string
-    /** The sealed credential. */
-    readonly ciphertext: string
-    /** The random secret of the connection's own webhook. */
-    readonly webhookSecret: string
-    /** When the access token ends. */
-    readonly tokenExpiresAt: Date | null
-}
-
-const isConnectionSecretRead = (value: unknown): value is ConnectionSecretRead =>
-    typeof value === "object" &&
-    value !== null &&
-    "workspaceId" in value &&
-    typeof value.workspaceId === "string" &&
-    "provider" in value &&
-    typeof value.provider === "string" &&
-    "status" in value &&
-    typeof value.status === "string" &&
-    "ciphertext" in value &&
-    typeof value.ciphertext === "string" &&
-    "webhookSecret" in value &&
-    typeof value.webhookSecret === "string"
 
 /** True when a row names the connection of a lease or a due credential. */
 const hasConnectionId = (value: unknown): value is { readonly connectionId: string } =>
@@ -95,31 +70,27 @@ export class ConnectionSecretsService {
         }
     }
 
-    /** The opened credential and webhook secret of a connection of the provider, or a refusal when it is missing, disconnected, of another provider or unreadable. */
-    async secretOf(
-        connectionId: string,
+    /**
+     * The opened credential and webhook secret of a connection of the provider, or a refusal when the connection is of another provider,
+     * disconnected, has no secret row or its secret is unreadable. The connection's own facts come from its owner (the caller reads
+     * them), so this capability never reads the connections table.
+     */
+    async openFor(
+        facts: ConnectionSecretFacts,
         provider: string,
         manager: EntityManager = this.entityManager,
     ): Promise<Outcome<ConnectionSecret, ConnectionSecretsErrorCode>> {
-        const rows: ReadonlyArray<unknown> = await manager
-            .createQueryBuilder(ConnectionSecretEntity, "s")
-            .select("c.workspace_id", "workspaceId")
-            .addSelect("c.provider", "provider")
-            .addSelect("c.status", "status")
-            .addSelect("s.ciphertext", "ciphertext")
-            .addSelect("s.webhook_secret", "webhookSecret")
-            .addSelect("s.token_expires_at", "tokenExpiresAt")
-            .innerJoin(ConnectionEntity, "c", "c.id = s.connection_id")
-            .where("s.connectionId = :connectionId", { connectionId })
-            .limit(1)
-            .getRawMany()
-        const row = rows.find(isConnectionSecretRead)
-        if (row?.provider !== provider || row.status === "disconnected") {
+        if (facts.provider !== provider || facts.status === "disconnected") {
             return refused(ConnectionSecretsErrorCode.NotFound)
         }
+        const row = await manager.findOne(ConnectionSecretEntity, {
+            select: { ciphertext: true, webhookSecret: true, tokenExpiresAt: true },
+            where: { connectionId: facts.id },
+        })
+        if (row === null) return refused(ConnectionSecretsErrorCode.NotFound)
         try {
             return ok({
-                workspaceId: row.workspaceId,
+                workspaceId: facts.workspaceId,
                 credential: openSecret(this.key, row.ciphertext),
                 webhookSecret: row.webhookSecret,
                 tokenExpiresAt: row.tokenExpiresAt?.toISOString() ?? null,
@@ -127,15 +98,6 @@ export class ConnectionSecretsService {
         } catch (cause) {
             return refused(ConnectionSecretsErrorCode.Unreadable, { reason: String(cause) })
         }
-    }
-
-    /** The bot token of the connection a Telegram conversation came in on, or a refusal when the connection is not that workspace's Telegram bot. */
-    async botToken(workspaceId: string, connectionId: string): Promise<Outcome<string, ConnectionSecretsErrorCode>> {
-        const secret = await this.secretOf(connectionId, "telegram")
-        if (secret.kind !== "ok") return secret
-        return secret.value.workspaceId === workspaceId
-            ? ok(secret.value.credential)
-            : refused(ConnectionSecretsErrorCode.NotFound)
     }
 
     /** Replaces the sealed credential; with an expiry it also records the end of the access token and drops the refresh lease. */
@@ -215,17 +177,14 @@ export class ConnectionSecretsService {
         await this.entityManager.update(ConnectionSecretEntity, { connectionId }, { refreshLockUntil: null })
     }
 
-    /** The ids of the Zalo connections whose access token ends before the horizon, soonest first. */
-    async dueZalo(horizon: Date): Promise<ReadonlyArray<string>> {
-        const rows: ReadonlyArray<unknown> = await this.entityManager
-            .createQueryBuilder(ConnectionSecretEntity, "s")
-            .select("s.connection_id", "connectionId")
-            .innerJoin(ConnectionEntity, "c", "c.id = s.connection_id")
-            .where("c.provider = 'zalo_oa' AND c.status <> 'disconnected'")
-            .andWhere("s.token_expires_at IS NOT NULL AND s.token_expires_at < :horizon", { horizon })
-            .orderBy("s.token_expires_at")
-            .limit(500)
-            .getRawMany()
-        return rows.filter(hasConnectionId).map((row) => row.connectionId)
+    /** The ids of the connections whose access token ends before the horizon, soonest first, at most `limit`. */
+    async expiringBefore(horizon: Date, limit: number): Promise<ReadonlyArray<string>> {
+        const rows = await this.entityManager.find(ConnectionSecretEntity, {
+            select: { connectionId: true },
+            where: { tokenExpiresAt: LessThan(horizon) },
+            order: { tokenExpiresAt: "ASC" },
+            take: limit,
+        })
+        return rows.map((row) => row.connectionId)
     }
 }
