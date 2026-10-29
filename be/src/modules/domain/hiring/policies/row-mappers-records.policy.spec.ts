@@ -172,6 +172,9 @@ describe("row mappers policy", () => {
         })
     })
 
+})
+
+describe("row mappers policy interviews", () => {
     describe("toInterview", () => {
         it("maps every interview column and proposed slot", async () => {
             const subject = await buildSubject()
