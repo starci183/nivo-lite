@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
-import type { QuotaFigures, QuotaStatus, UsageKind } from "./ai-usage-events.contracts"
+import type { QuotaFigures, QuotaRecord, QuotaStatus, UsageKind } from "./ai-usage-events.contracts"
 import {
+    quotaFiguresOf as realQuotaFiguresOf,
     quotaLookupOf as realQuotaLookupOf,
     quotaOf as realQuotaOf,
     stopsCall as realStopsCall,
@@ -14,11 +15,17 @@ const build = async () => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { quotaLookupOf: realQuotaLookupOf, quotaOf: realQuotaOf, stopsCall: realStopsCall },
+                useValue: {
+                    quotaFiguresOf: realQuotaFiguresOf,
+                    quotaLookupOf: realQuotaLookupOf,
+                    quotaOf: realQuotaOf,
+                    stopsCall: realStopsCall,
+                },
             },
         ],
     }).compile()
     return moduleRef.get<{
+        quotaFiguresOf: typeof realQuotaFiguresOf
         quotaLookupOf: typeof realQuotaLookupOf
         quotaOf: typeof realQuotaOf
         stopsCall: typeof realStopsCall
@@ -236,4 +243,46 @@ describe("quota policy > stopsCall", () => {
             expect(subject.stopsCall({ ...status, creditsExceeded: true, level: "exceeded" }, kind)).toBe(true)
         },
     )
+})
+
+const record: QuotaRecord = {
+    period_start: "2026-10-01T00:00:00.000Z",
+    messages_used: "500",
+    tokens_used: "2000",
+    cost_usd: "0.6",
+    messages_limit: "1000",
+    tokens_limit: null,
+    fallback_reply: "Wait",
+    credits_used: "100",
+    credits_limit: null,
+    credits_carried: "40",
+    topup_balance: "5",
+}
+
+describe("quota policy > quotaFiguresOf", () => {
+    it("reads a text date and numeric text into figures, keeping null allowances", async () => {
+        const subject = await build()
+
+        expect(subject.quotaFiguresOf(record)).toEqual({
+            period_start: "2026-10-01",
+            messages_used: 500,
+            tokens_used: 2_000,
+            cost_usd: 0.6,
+            messages_limit: 1_000,
+            tokens_limit: null,
+            fallback_reply: "Wait",
+            credits_used: 100,
+            credits_limit: null,
+            credits_carried: 40,
+            topup_balance: 5,
+        })
+    })
+
+    it("reads a local date into a padded period", async () => {
+        const subject = await build()
+
+        expect(subject.quotaFiguresOf({ ...record, period_start: new Date(2026, 0, 5) }).period_start).toBe(
+            "2026-01-05",
+        )
+    })
 })

@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
@@ -165,5 +166,29 @@ describe("AppCommandsService", () => {
         const service = await serviceOf(em)
 
         await expect(service.fail("command-1", "INVITE_EXPIRED")).rejects.toBe(error)
+    })
+})
+
+/** The `finishedAt` expression of the settling write, asked for the SQL it hands the database. */
+const clockOf = (em: MockEntityManager): unknown => evaluatedValues(em.update.mock.calls[0]?.[2]).finishedAt
+
+describe("AppCommandsService database clock", () => {
+    it("stamps a settled command with the database time", async () => {
+        const done = mockEntityManager({ update: [AppCommandEntity, { affected: 1 }] })
+        const failed = mockEntityManager({ update: [AppCommandEntity, { affected: 1 }] })
+
+        await (await serviceOf(done)).succeed("command-1", { sent: true })
+        await (await serviceOf(failed)).fail("command-1", "INVITE_EXPIRED")
+
+        expect(clockOf(done)).toBe("now()")
+        expect(clockOf(failed)).toBe("now()")
+    })
+
+    it("returns null when the claiming update answers no row list", async () => {
+        const em = mockEntityManager()
+        em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: { raw: undefined } }).builder)
+        const service = await serviceOf(em)
+
+        await expect(service.begin("command-1")).resolves.toBeNull()
     })
 })

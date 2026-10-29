@@ -485,6 +485,16 @@ describe("AgentsService", () => {
             )
         })
 
+        it("treats an update that reports no affected count as no agent", async () => {
+            const em = mockEntityManager({ update: [AgentEntity, { affected: 1 }] })
+            em.update.mockResolvedValueOnce({ raw: [], generatedMaps: [] })
+            const { service } = await build(em)
+
+            await expect(service.setStatus("u1", "w1", "ghost", true)).rejects.toMatchObject({
+                code: AgentsErrorCode.AgentNotFound,
+            })
+        })
+
         it("refuses an agent that is not in the workspace", async () => {
             const { service } = await build(mockEntityManager({ update: [AgentEntity, { affected: 0 }] }))
 

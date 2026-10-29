@@ -43,6 +43,14 @@ describe("AutomationRecordsService", () => {
         })
     })
 
+    it("links the contracts of the workspace through the contracts capability", async () => {
+        const { subject, contracts } = await setup()
+
+        await expect(subject.linkCustomers("ws-1")).resolves.toBeUndefined()
+
+        expect(contracts.linkCustomers).toHaveBeenCalledWith("ws-1")
+    })
+
     it("attaches the lead to the contract through the contracts capability", async () => {
         const { subject, contracts } = await setup()
 

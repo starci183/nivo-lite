@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
@@ -316,6 +317,7 @@ describe("ApiKeysService management", () => {
         expect(fakes[0]?.callsOf("where")).toEqual([MEMBER_WHERE])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(ApiKeyEntity, "ak")
         expect(fakes[1]?.callsOf("where")).toEqual([[REVOKE_WHERE, { keyId: "key-2", workspaceId: "workspace-1" }]])
+        expect(evaluatedValues(fakes[1]?.callsOf("set")[0]?.[0]).revokedAt).toBe("now()")
         expect(events.record).toHaveBeenCalledWith(
             {
                 workspaceId: "workspace-1",
@@ -329,6 +331,16 @@ describe("ApiKeysService management", () => {
         expect(managers).toHaveLength(1)
         expect(events.record.mock.calls[0]?.[1]).toBe(managers[0])
         expect(transaction.outcomes).toEqual(["commit"])
+    })
+
+    it("refuses revocation when the update answers no row list", async () => {
+        const em = mockEntityManager()
+        const { service, events } = await buildManagement(em, [memberOf("owner"), { execute: { raw: undefined } }])
+
+        await expect(service.revokeKey("principal-1", "workspace-1", "missing")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.NotFound,
+        })
+        expect(events.record).not.toHaveBeenCalled()
     })
 
     it("refuses revocation of a missing active key without recording an event", async () => {

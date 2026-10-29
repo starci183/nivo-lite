@@ -84,5 +84,12 @@ describe("BookingExceptionsService", () => {
             await expect(exceptions.remove("ws-1", "ex-9")).resolves.toEqual([])
             expect(em.delete).toHaveBeenLastCalledWith(BookingExceptionEntity, { workspaceId: "ws-1", id: "ex-9" })
         })
+
+        it("answers nothing when the delete reports no affected count", async () => {
+            const em = mockEntityManager({ delete: [BookingExceptionEntity, {}] })
+            const exceptions = await build(em)
+
+            await expect(exceptions.remove("ws-1", "ex-1")).resolves.toEqual([])
+        })
     })
 })

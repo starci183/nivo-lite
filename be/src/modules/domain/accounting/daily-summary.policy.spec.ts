@@ -7,6 +7,7 @@ import {
     dueLine,
     renewalLines,
     renewalReport,
+    renewalSectionOf,
     renewalStoryOf,
     summaryHubCard,
     summarySources,
@@ -205,7 +206,10 @@ const RENEWAL_DAY: RenewalCashFacts = {
 const buildRenewal = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
-            { provide: SUBJECT, useValue: { dayText, renewalLines, renewalReport, renewalStoryOf, withRenewal } },
+            {
+                provide: SUBJECT,
+                useValue: { dayText, renewalLines, renewalReport, renewalSectionOf, renewalStoryOf, withRenewal },
+            },
         ],
     }).compile()
     return moduleRef.get<typeof import("./daily-summary.policy")>(SUBJECT)
@@ -303,5 +307,59 @@ describe("daily-summary.policy renewal wording", () => {
         expect(told.hub.lines?.[5]).toEqual({ text: report.lines[0] })
         expect(told.hub.data).toEqual(expect.objectContaining({ day: "2026-10-20", renewal: report.story }))
         expect(told.text).toBe([card.text, RENEWAL_COPY.heading, ...report.lines].join("\n"))
+    })
+})
+
+describe("daily-summary.policy renewal gaps", () => {
+    it("reads missing names, plans, amounts and memos as empty text", async () => {
+        const subject = await buildRenewal()
+        const row: RenewalCashFacts = {
+            ...EMPTY_ROW,
+            issued_count: 1,
+            issued: [{ invoice_no: "INV-1", amount_vnd: 100, customer_name: null }],
+            paid_count: 1,
+            paid: [{ ...PAID_ITEM, customer_name: null }],
+            expiring_count: 1,
+            expiring: [{ customer_name: "Duy Linh", plan: null, ends_on: "2026-11-01", amount_vnd: null }],
+            unmatched_count: 1,
+            unmatched: [{ amount_vnd: null, sender_name: "Hai Thanh", memo: null }],
+        }
+
+        const story = subject.renewalStoryOf(row, "2026-10-27", "2026-11-26")
+
+        expect(story.issued.items).toEqual([{ invoiceNo: "INV-1", amountVnd: 100, customer: "" }])
+        expect(story.paid.items[0]?.customer).toBe("")
+        expect(story.expiring.items).toEqual([{ customer: "Duy Linh", plan: "", endsOn: "2026-11-01" }])
+        expect(story.unmatched.items).toEqual([{ amountVnd: 0, sender: "Hai Thanh", memo: "" }])
+        expect(subject.renewalLines(story).at(-1)).toBe(
+            RENEWAL_COPY.item([CARD_COPY.money(0), "", RENEWAL_COPY.from("Hai Thanh")]),
+        )
+    })
+
+    it("adds the story to a card that has no fields or lines yet", async () => {
+        const subject = await buildRenewal()
+        const card = buildDailySummary(input())
+        const bare = { ...card, hub: { ...card.hub, fields: undefined, lines: undefined } }
+        const report = subject.renewalReport(subject.renewalStoryOf(undefined, "2026-10-27", "2026-11-26"))
+
+        const told = subject.withRenewal(bare, report)
+
+        expect(told.hub.fields?.map((field) => field.label)).toEqual([
+            RENEWAL_COPY.fieldIssued,
+            RENEWAL_COPY.fieldPaid,
+            RENEWAL_COPY.fieldUnpaid,
+            RENEWAL_COPY.fieldExpiring,
+            RENEWAL_COPY.fieldUnmatched,
+        ])
+        expect(told.hub.lines).toEqual(report.lines.map((text) => ({ text })))
+    })
+})
+
+describe("daily-summary.policy renewal section", () => {
+    it("heads the report lines with the renewal heading", async () => {
+        const subject = await buildRenewal()
+        const report = subject.renewalReport(subject.renewalStoryOf(undefined, "2026-10-27", "2026-11-26"))
+
+        expect(subject.renewalSectionOf(report)).toBe([RENEWAL_COPY.heading, ...report.lines].join("\n"))
     })
 })

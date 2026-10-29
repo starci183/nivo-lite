@@ -1,4 +1,5 @@
 import { mockEntityManager } from "@starci/jest-preset"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { Test } from "@nestjs/testing"
 import { IsNull, Not } from "typeorm"
 import {
@@ -73,6 +74,19 @@ describe("AgentConversationsService", () => {
                 [{ workspaceId: "ws-1", agentId: "agent-1", kind: "customer", visitorName: "Minh" }],
             ])
             expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        })
+
+        it("reads any kind other than customer as a test chat", async () => {
+            const { service } = await build()
+            const inside = mockEntityManager()
+            queueQueryBuilders(inside, [{ execute: { raw: [{ ...insertedChatRow, kind: "test" }] } }])
+
+            await expect(
+                service.openChat(
+                    { workspaceId: "ws-1", agentId: "agent-1", kind: "test", visitorName: "Minh" },
+                    inside,
+                ),
+            ).resolves.toEqual({ ...chat, kind: "test" })
         })
 
         it("refuses a chat insert that returned no row", async () => {
@@ -476,7 +490,7 @@ describe("AgentConversationsService hand-over", () => {
         await expect(service.handToAgent({ ...move, installationId: "inst-2" })).resolves.toBe(true)
         await expect(service.handToAgent({ ...move, installationId: null })).resolves.toBe(false)
         expect(moved?.callsOf("set")).toEqual([[{ agentId: "agent-2", installationId: "inst-2" }]])
-        expect(stayed?.callsOf("set")).toEqual([[{ agentId: "agent-2", installationId: expect.any(Function) }]])
+        expect(evaluatedValues(stayed?.callsOf("set")[0]?.[0]).installationId).toBe("installation_id")
         expect(moved?.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND id = :conversationId AND handled_by IS NULL AND agent_id <> :agentId",
@@ -535,5 +549,27 @@ describe("AgentConversationsService connector party", () => {
             { workspaceId: "ws-1", id: "conv-1" },
             { connectorPartyId: "p1", connectorPartyName: "Lan", connectorPartyAt: expect.any(Function) },
         )
+    })
+})
+
+describe("AgentConversationsService database clock", () => {
+    it("stamps the hand-over, the chat holder, the human handling and the party with the database time", async () => {
+        const { service, em } = await build(mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] }))
+        const inside = mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] })
+        const inside2 = mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] })
+
+        await service.handToPerson("ws-1", "conv-1", "Lan")
+        await service.setChatHolder("ws-1", "chat-1", "Lan", inside)
+        await service.setHumanHandling("ws-1", "conv-1", "Lan", inside2)
+        await service.rememberParty({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            party: { partyId: "p1", name: "L" },
+        })
+
+        expect(evaluatedValues(inside.update.mock.calls[0]?.[2]).handledAt).toBe("now()")
+        expect(evaluatedValues(inside2.update.mock.calls[0]?.[2]).handledAt).toBe("now()")
+        expect(evaluatedValues(em.update.mock.calls[0]?.[2]).handledAt).toBe("now()")
+        expect(evaluatedValues(em.update.mock.calls[1]?.[2]).connectorPartyAt).toBe("now()")
     })
 })

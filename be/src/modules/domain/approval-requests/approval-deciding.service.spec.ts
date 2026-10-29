@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -115,6 +116,9 @@ describe("ApprovalDecidingService > any one", () => {
                 },
             ],
         ])
+        expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0]).verdicts).toBe(
+            "verdicts || jsonb_build_array(jsonb_build_object('member_id', :memberId::text, 'verdict', :verdict::text, 'decided_at', :decidedAt::text))",
+        )
         expect(em.update).toHaveBeenCalledWith(
             ApprovalRequestEntity,
             { id: "request-1", status: "pending" },

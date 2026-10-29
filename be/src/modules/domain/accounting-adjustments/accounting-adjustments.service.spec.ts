@@ -6,6 +6,7 @@ import { EventsService } from "@modules/domain/events"
 import { InvoicesService } from "@modules/domain/invoices"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { TransactionsService } from "@modules/domain/transactions"
+import type { TransactionRow } from "@modules/domain/transactions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -240,6 +241,65 @@ describe("AccountingAdjustmentsService", () => {
             ).rejects.toThrow("insert failed")
             expect(tx.rollbacks).toBe(1)
             expect(events.record).not.toHaveBeenCalled()
+        })
+    })
+})
+
+const transactionOf = builder<TransactionRow>({
+    id: TARGET,
+    workspace_id: WORKSPACE,
+    inbound_event_id: null,
+    amount_vnd: 100000,
+    reference: null,
+    payer: null,
+    invoice_id: null,
+    status: "unmatched",
+})
+
+describe("AccountingAdjustmentsService", () => {
+    describe("create without an amount", () => {
+        it("reads a correction with no amount, on a transaction that has no lead, as a note only", async () => {
+            const { em, fake } = appending([createdRow({ target_type: "transaction", corrected_amount_vnd: null })])
+            const { service, transactions, events } = await build(em)
+            transactions.find.mockResolvedValueOnce(transactionOf())
+
+            const created = await service.create(USER, WORKSPACE, {
+                targetType: "transaction",
+                targetId: TARGET,
+                note: "Wrong payer",
+            })
+
+            expect(created).toEqual(adjustmentOf({ target_type: "transaction", corrected_amount_vnd: null }))
+            expect(fake.callsOf("values")[0]).toEqual([
+                expect.objectContaining({ targetType: "transaction", correctedAmountVnd: null }),
+            ])
+            expect(events.record.mock.calls[0]?.[0]).toEqual({
+                workspaceId: WORKSPACE,
+                leadId: null,
+                kind: "accounting.adjustment",
+                actor: "Lan",
+                summary: "Wrong payer",
+                evidence: "Wrong payer",
+            })
+        })
+
+        it("rolls back when the insert answers its rows in no list", async () => {
+            const em = mockEntityManager()
+            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: { raw: undefined } }).builder)
+            const { service, tx } = await build(em)
+
+            await expect(
+                service.create(USER, WORKSPACE, { targetType: "invoice", targetId: TARGET, note: "Note only fix" }),
+            ).rejects.toMatchObject({ code: AccountingAdjustmentsErrorCode.NotCreated })
+            expect(tx.rollbacks).toBe(1)
+        })
+
+        it("lists a stored correction with no amount as null", async () => {
+            const { service } = await build(
+                mockEntityManager({ find: [AccountingAdjustmentEntity, [entityOf({ correctedAmountVnd: null })]] }),
+            )
+
+            await expect(service.list(WORKSPACE)).resolves.toEqual([adjustmentOf({ corrected_amount_vnd: null })])
         })
     })
 })

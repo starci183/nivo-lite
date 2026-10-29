@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { In, LessThan, LessThanOrEqual, MoreThanOrEqual } from "typeorm"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
@@ -139,6 +140,17 @@ describe("AutomationRunsService > claimRun", () => {
 
         await expect(runs.claimRun("r-1")).resolves.toEqual(claimed)
         await expect(lost.claimRun("r-1")).resolves.toBeNull()
+    })
+
+    it("counts the attempt in the database and treats an answer without a row list as lost", async () => {
+        const { em, fake } = withBuilder({ raw: [{ id: "r-1", attempts: 1, payload: {} }] })
+        const { runs: counted } = await build(em)
+        const { runs: nothing } = await build(withBuilder({ raw: undefined }).em)
+
+        await counted.claimRun("r-1")
+
+        expect(evaluatedValues(fake.callsOf("set")[0]?.[0]).attempts).toBe("attempts + 1")
+        await expect(nothing.claimRun("r-1")).resolves.toBeNull()
     })
 })
 
@@ -287,6 +299,15 @@ describe("AutomationRunsService > runsOf", () => {
         expect(fake.callsOf("where")).toEqual([["r.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
         expect(fake.callsOf("andWhere")).toEqual([])
         expect(fake.callsOf("limit")).toEqual([[20]])
+    })
+
+    it("reads the instant a run finished as text", async () => {
+        const { em } = withBuilder([runOf({ finishedAt: new Date(NOW) })])
+        const { runs } = await build(em)
+
+        const [read] = await runs.runsOf({ workspaceId: "ws-1", templateKey: null, limit: 20 })
+
+        expect(read?.finished_at).toBe(NOW)
     })
 
     it("narrows the runs to one template", async () => {

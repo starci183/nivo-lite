@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -124,6 +125,7 @@ describe("AutomationTemplatesService", () => {
                 },
                 ["key"],
             )
+            expect(evaluatedValues(tx.em.upsert.mock.calls[0]?.[1]).updatedAt).toBe("now()")
             expect(tx.em.find).toHaveBeenCalledTimes(2)
             expect(tx.em.upsert).toHaveBeenCalledTimes(2)
         })

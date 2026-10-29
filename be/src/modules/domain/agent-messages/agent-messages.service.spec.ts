@@ -272,6 +272,20 @@ describe("AgentMessagesService storeReply", () => {
         })
     })
 })
+describe("AgentMessagesService storeReply without returned rows", () => {
+    it("reads an insert that answered no row list as not stored and answers the earlier reply", async () => {
+        const { em } = withStatements(mockEntityManager({ findOne: [AgentMessageEntity, sentEarlierReply()] }), {
+            execute: { raw: undefined },
+        })
+        const { service } = await build(em)
+
+        await expect(service.storeReply("ws-1", "conv-1", "New", "msg-1")).resolves.toEqual({
+            id: "r-0",
+            body: "Old",
+            sent: true,
+        })
+    })
+})
 describe("AgentMessagesService replyExists", () => {
     it("tells whether a reply to the customer message is already stored", async () => {
         const stored1 = await build(mockEntityManager({ exists: [AgentMessageEntity, true] }))
