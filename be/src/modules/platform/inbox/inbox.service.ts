@@ -1,8 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import type { EntityInbox, InboxEntityReceipt, InboxReceipt } from "./inbox.port"
 import { InboxEntity } from "./persistence/entities"
+
+/** The row a delivery claim returns to the transaction that won it. */
+const isClaimedRow = rowShape({ delivery_id: "string" })
+
+/** The row a receipt insert returns to the transaction that won it. */
+const isReceiptRow = rowShape({ id: "string" })
 
 @Injectable()
 /** Claims delivery keys durably; provider receipts share their caller's outbox transaction. */
@@ -20,7 +26,7 @@ export class InboxService implements EntityInbox {
                 .orIgnore()
                 .returning("delivery_id")
                 .execute()
-            return this.won(result.raw)
+            return returnedRows(result.raw, isClaimedRow).length > 0
         }
         if (manager === undefined) return false
         const rows = await manager.query<Array<{ readonly id: string }>>(receipt.insert, [
@@ -46,11 +52,6 @@ export class InboxService implements EntityInbox {
             .orIgnore()
             .returning("id")
             .execute()
-        return this.won(result.raw)
-    }
-
-    /** Whether the insert returned a row: `ON CONFLICT DO NOTHING` returns none for a repeat. */
-    private won(raw: unknown): boolean {
-        return Array.isArray(raw) && raw.length > 0
+        return returnedRows(result.raw, isReceiptRow).length > 0
     }
 }
