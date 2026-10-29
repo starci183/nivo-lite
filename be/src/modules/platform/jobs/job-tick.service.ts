@@ -1,7 +1,5 @@
 import { Injectable } from "@nestjs/common"
 import type { OnApplicationBootstrap } from "@nestjs/common"
-import { SchedulerRegistry } from "@nestjs/schedule"
-import { CronJob } from "cron"
 import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -13,8 +11,9 @@ import type { QueueOutbox } from "@modules/platform/queue"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import { JOB_TICKS } from "./job-ticks.contracts"
 import type { JobTick } from "./job-ticks.contracts"
-import { InjectJobsManagers } from "./jobs.decorators"
+import { InjectJobTickScheduler, InjectJobsManagers } from "./jobs.decorators"
 import { JobsLogEvent } from "./jobs.log-events"
+import type { JobTickScheduler } from "./jobs.port"
 
 /** The record job_tick_claim returns. */
 interface TickClaim {
@@ -33,7 +32,7 @@ export const tickMinute = (at: Date): string => at.toISOString().slice(0, 16)
  */
 export class JobTickService implements OnApplicationBootstrap {
     constructor(
-        private readonly registry: SchedulerRegistry,
+        @InjectJobTickScheduler() private readonly scheduler: JobTickScheduler,
         @InjectJobsManagers() private readonly managers: ReadonlyArray<EntityManager>,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         @InjectClock() private readonly clock: Clock,
@@ -43,19 +42,14 @@ export class JobTickService implements OnApplicationBootstrap {
     /** Registers one cron job per tick, read in the tick's time zone; a failed firing is logged and the next one runs. */
     onApplicationBootstrap(): void {
         for (const tick of JOB_TICKS) {
-            this.registry.addCronJob(
-                tick.name,
-                CronJob.from({
-                    cronTime: tick.cron,
-                    timeZone: tick.timeZone,
-                    onTick: async () => {
-                        await this.fire(tick)
-                    },
-                    errorHandler: (cause: unknown) => {
-                        this.logger.error(JobsLogEvent.TickFailed, cause, { tick: tick.name })
-                    },
-                    start: true,
-                }),
+            this.scheduler.schedule(
+                tick,
+                async () => {
+                    await this.fire(tick)
+                },
+                (cause) => {
+                    this.logger.error(JobsLogEvent.TickFailed, cause, { tick: tick.name })
+                },
             )
         }
     }
