@@ -21,10 +21,12 @@ const readJson = (plain: string): JsonRead => {
 export const parseTokens = (plain: string): Partial<StoredGoogleTokens> => {
     const read = readJson(plain)
     if (!read.ok || !isRecord(read.value)) return {}
-    const { access_token: access, refresh_token: refresh, expires_at: expires } = read.value
+    const { access_token: access, expires_at: expires } = read.value
+    // Secrets sealed before the rename keep the grant under Google's own wire name; both spellings are read.
+    const renewal = read.value.renewal_token ?? read.value.refresh_token
     return {
         ...(typeof access === "string" ? { access_token: access } : {}),
-        ...(typeof refresh === "string" ? { refresh_token: refresh } : {}),
+        ...(typeof renewal === "string" ? { renewal_token: renewal } : {}),
         ...(typeof expires === "number" ? { expires_at: expires } : {}),
     }
 }

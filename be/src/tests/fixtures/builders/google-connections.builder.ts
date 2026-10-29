@@ -1,5 +1,5 @@
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { GoogleError, GoogleErrorCode } from "@modules/integrations/google"
+import { DRIVE_READ_SCOPE, GoogleError, GoogleErrorCode } from "@modules/integrations/google"
 import type { GoogleTokenSet, OAuthState, SheetEventIn } from "@modules/integrations/google"
 import type { GoogleConnectionsService } from "@modules/domain/google-connections"
 
@@ -16,8 +16,12 @@ export const tokens: GoogleTokenSet = {
     idToken: null,
     scope: null,
 }
-export const stored = { access_token: "access-old", refresh_token: "refresh-old", expires_at: EXPIRES }
-export const issued = { access_token: "access-new", refresh_token: "refresh-new", expires_at: EXPIRES }
+/** The same grant when Google answers a re-consent without a new renewal grant. */
+export const tokensWithoutRenewal: GoogleTokenSet = { ...tokens, refreshToken: null }
+/** The Drive-only consent answer. */
+export const driveTokens: GoogleTokenSet = { ...tokens, scope: DRIVE_READ_SCOPE }
+export const stored = { access_token: "access-old", renewal_token: "refresh-old", expires_at: EXPIRES }
+export const issued = { access_token: "access-new", renewal_token: "refresh-new", expires_at: EXPIRES }
 export const event: SheetEventIn = { event: "order.confirmed", data: { code: "O-1" }, occurredAt: NOW.toISOString() }
 export const sheet = { spreadsheetId: "sheet-1", spreadsheetUrl: "https://docs.google.com/spreadsheets/d/sheet-1/edit" }
 

@@ -1,3 +1,6 @@
+/** The prefix of the last_error a refused consent leaves on a Google connection. */
+export const CONSENT_PREFIX = "consent:"
+
 import { GoogleError, isConsentFailure } from "@modules/integrations/google"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "../errors/google-connections.error"
 

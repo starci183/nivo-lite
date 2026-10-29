@@ -79,7 +79,7 @@ export class DriveGrantService implements DriveAccessSource {
             provider: PROVIDER,
             name: email === null ? "Google Drive" : `Google Drive - ${email}`,
             meta: { email: email ?? "" },
-            tokens: { access_token: tokens.accessToken, refresh_token: refresh, expires_at: tokens.expiresAt },
+            tokens: { access_token: tokens.accessToken, renewal_token: refresh, expires_at: tokens.expiresAt },
         })
     }
 

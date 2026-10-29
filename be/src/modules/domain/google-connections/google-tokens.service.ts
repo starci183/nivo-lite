@@ -61,7 +61,7 @@ export class GoogleTokensService {
     async keptRefresh(row: MaybeConnection, incoming: MaybeRefreshToken): Promise<MaybeRefreshToken> {
         if (incoming) return incoming
         if (row === null) return null
-        return (await this.stored(row.id)).refresh_token ?? null
+        return (await this.stored(row.id)).renewal_token ?? null
     }
 
     /** Stores a consent: the existing connection is marked connected with fresh tokens, otherwise a new one is created. */
@@ -96,14 +96,14 @@ export class GoogleTokensService {
     async accessToken(request: TokenRequest): Promise<string> {
         const { row } = request
         const stored = await this.stored(row.id)
-        if (!stored.refresh_token) throw new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.Lost })
+        if (!stored.renewal_token) throw new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.Lost })
         const fresh = request.force ? null : freshAccessToken(stored, this.clock.now().getTime())
         if (fresh !== null) return fresh
         try {
-            const next = await this.google.refreshAccessToken(stored.refresh_token)
+            const next = await this.google.refreshAccessToken(stored.renewal_token)
             const kept: StoredGoogleTokens = {
                 access_token: next.accessToken,
-                refresh_token: next.refreshToken ?? stored.refresh_token,
+                renewal_token: next.refreshToken ?? stored.renewal_token,
                 expires_at: next.expiresAt,
             }
             await this.connections.writeSecret(row.id, JSON.stringify(kept))
