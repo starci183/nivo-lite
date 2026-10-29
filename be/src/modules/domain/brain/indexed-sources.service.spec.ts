@@ -1,8 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { IndexedSourcesService } from "./indexed-sources.service"
 
@@ -11,7 +10,8 @@ const CLAIM = { consumer: "knowledge_source_indexed__brain", dedupeKey: "s1:1000
 
 const build = async (claimWon = true) => {
     const tx = fakeTransaction(mockEntityManager())
-    const inbox = mock<Inbox>({ claim: jest.fn().mockResolvedValue(claimWon) })
+    const inbox = fakeInbox()
+    if (!claimWon) inbox.seen(CLAIM.consumer, CLAIM.dedupeKey)
     const queue = mock<KnowledgeQueue>()
     queue.enqueueFacts.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
@@ -31,7 +31,7 @@ describe("IndexedSourcesService", () => {
 
         await service.queueFacts({ ...SOURCE, indexedAt: 1000 }, CLAIM)
 
-        expect(inbox.claim).toHaveBeenCalledWith("knowledge_source_indexed__brain", "s1:1000", expect.anything())
+        expect(inbox.claims).toEqual([{ source: "knowledge_source_indexed__brain", eventId: "s1:1000" }])
         expect(queue.enqueueFacts).toHaveBeenCalledWith(SOURCE, expect.anything(), 1000)
         expect(tx.commits).toBe(1)
     })

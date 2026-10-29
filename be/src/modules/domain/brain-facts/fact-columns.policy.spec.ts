@@ -1,5 +1,44 @@
+import { Test } from "@nestjs/testing"
+import {
+    isBrainFactEntity as isBrainFactEntityReal,
+    keyOf as keyOfReal,
+    RETURNED as RETURNEDReal,
+    returnedFacts as returnedFactsReal,
+    scopeOf as scopeOfReal,
+} from "./fact-columns.policy"
 import { IsNull } from "typeorm"
-import { isBrainFactEntity, keyOf, RETURNED, returnedFacts, scopeOf } from "./fact-columns.policy"
+
+const SUBJECT = Symbol("fact-columns.policy")
+
+let isBrainFactEntity: typeof isBrainFactEntityReal
+let keyOf: typeof keyOfReal
+let RETURNED: typeof RETURNEDReal
+let returnedFacts: typeof returnedFactsReal
+let scopeOf: typeof scopeOfReal
+
+beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    isBrainFactEntity: isBrainFactEntityReal,
+                    keyOf: keyOfReal,
+                    RETURNED: RETURNEDReal,
+                    returnedFacts: returnedFactsReal,
+                    scopeOf: scopeOfReal,
+                },
+            },
+        ],
+    }).compile()
+    ;({ isBrainFactEntity, keyOf, RETURNED, returnedFacts, scopeOf } = moduleRef.get<{
+        isBrainFactEntity: typeof isBrainFactEntityReal
+        keyOf: typeof keyOfReal
+        RETURNED: typeof RETURNEDReal
+        returnedFacts: typeof returnedFactsReal
+        scopeOf: typeof scopeOfReal
+    }>(SUBJECT))
+})
 
 const row = (id: string, subjectKey: string): Record<string, unknown> => ({ id, subjectKey, attribute: "price" })
 
