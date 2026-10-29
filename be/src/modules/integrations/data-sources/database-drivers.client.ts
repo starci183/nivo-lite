@@ -1,7 +1,6 @@
 import { isIP } from "node:net"
-import { ConnectionPool, NVarChar } from "mssql"
-import { createConnection } from "mysql2/promise"
-import { openPostgresSession } from "@modules/platform/database"
+import { openMssqlSession, openMysqlSession, openPostgresSession, selectRows } from "@modules/platform/database"
+import type { CustomerSession, CustomerSessionTarget } from "@modules/platform/database"
 import type { DatabaseSession, DatabaseTarget, DatabaseTlsOptions } from "./database-session.contracts"
 import { toRows } from "./database-values.policy"
 
@@ -11,12 +10,26 @@ export const DATABASE_CONNECT_MS = 10_000
 /** How long one statement may run. */
 export const DATABASE_QUERY_MS = 15_000
 
-const MYSQL_READ_ONLY = "SET SESSION TRANSACTION READ ONLY"
-const MYSQL_TIMEOUT = `SET SESSION MAX_EXECUTION_TIME=${DATABASE_QUERY_MS}`
-
 const tlsOf = (target: DatabaseTarget): DatabaseTlsOptions => ({
     rejectUnauthorized: false,
     ...(isIP(target.host) ? {} : { servername: target.host }),
+})
+
+const sessionTargetOf = (target: DatabaseTarget, address: string): CustomerSessionTarget => ({
+    host: address,
+    port: target.port,
+    user: target.user,
+    password: target.password,
+    database: target.database,
+    ssl: target.ssl ? tlsOf(target) : false,
+    connectMs: DATABASE_CONNECT_MS,
+    queryMs: DATABASE_QUERY_MS,
+})
+
+const sessionOf = (engine: DatabaseSession["engine"], session: CustomerSession): DatabaseSession => ({
+    engine,
+    query: (sql, params) => selectRows(session, sql, params),
+    close: () => session.close(),
 })
 
 /** Opens a read only PostgreSQL session to the resolved address through the platform database client. */
@@ -33,85 +46,19 @@ export const openPostgres = async (target: DatabaseTarget, address: string): Pro
     })
     return {
         engine: "postgres",
-        query: async (sql, params) => toRows(await session.query(sql, params)),
+        query: async (sql, params) => toRows(await selectRows(session, sql, params)),
         close: () => session.close(),
     }
 }
 
-/** Opens a read only MySQL session to the resolved address. */
+/** Opens a read only MySQL session to the resolved address through the platform database client. */
 export const openMysql = async (target: DatabaseTarget, address: string): Promise<DatabaseSession> => {
-    const connection = await createConnection({
-        host: address,
-        port: target.port,
-        user: target.user,
-        password: target.password,
-        database: target.database,
-        connectTimeout: DATABASE_CONNECT_MS,
-        ...(target.ssl ? { ssl: tlsOf(target) } : {}),
-        supportBigNumbers: true,
-        bigNumberStrings: true,
-        multipleStatements: false,
-    })
-    connection.on("error", () => undefined)
-    try {
-        await connection.query(MYSQL_READ_ONLY)
-        await connection.query(MYSQL_TIMEOUT).then(
-            () => undefined,
-            () => undefined,
-        )
-    } catch (error) {
-        connection.destroy()
-        throw error
-    }
-    return {
-        engine: "mysql",
-        query: async (sql, params) => {
-            const [rows] = await connection.query({
-                sql,
-                values: params === undefined ? [] : [...params],
-                timeout: DATABASE_QUERY_MS,
-            })
-            return toRows(rows)
-        },
-        close: () =>
-            connection.end().then(
-                () => undefined,
-                () => connection.destroy(),
-            ),
-    }
+    const session = await openMysqlSession(sessionTargetOf(target, address))
+    return sessionOf("mysql", session)
 }
 
-/** Opens a read intent SQL Server session to the resolved address. */
+/** Opens a read intent SQL Server session to the resolved address through the platform database client. */
 export const openMssql = async (target: DatabaseTarget, address: string): Promise<DatabaseSession> => {
-    const pool = new ConnectionPool({
-        server: address,
-        port: target.port,
-        user: target.user,
-        password: target.password,
-        database: target.database,
-        connectionTimeout: DATABASE_CONNECT_MS,
-        requestTimeout: DATABASE_QUERY_MS,
-        pool: { max: 1, min: 0 },
-        options: {
-            encrypt: target.ssl,
-            trustServerCertificate: true,
-            readOnlyIntent: true,
-            ...(target.ssl && !isIP(target.host) ? { serverName: target.host } : {}),
-        },
-    })
-    pool.on("error", () => undefined)
-    await pool.connect()
-    return {
-        engine: "mssql",
-        query: async (sql, params) => {
-            const request = pool.request()
-            ;(params ?? []).forEach((value, index) => request.input(`p${index}`, NVarChar, value))
-            return toRows((await request.query(sql)).recordset)
-        },
-        close: () =>
-            pool.close().then(
-                () => undefined,
-                () => undefined,
-            ),
-    }
+    const session = await openMssqlSession(sessionTargetOf(target, address))
+    return sessionOf("mssql", session)
 }
