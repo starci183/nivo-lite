@@ -1,10 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import { In, MoreThan } from "typeorm"
 import type { EntityManager } from "typeorm"
-import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { newOrderCode } from "./order-code.policy"
 import { PaymentOrdersError, PaymentOrdersErrorCode } from "./errors/payment-orders.error"
 import type { NewOrder, OpenOrderQuery, OrderLookup, PaymentOrder } from "./payment-orders.contracts"
@@ -14,38 +13,11 @@ import { PaymentOrderEntity } from "./persistence/entities"
 /** How many of the newest orders of a workspace are listed. */
 const LIST_LIMIT = 50
 
-/** The columns an insert answers with `RETURNING *`: the bigint as text and the instants as the driver gives them. */
-interface WrittenPaymentOrder {
-    readonly id: string
-    readonly workspace_id: string
-    readonly plan_code: string
-    readonly amount_vnd: string | number
-    readonly order_code: string
-    readonly status: PaymentOrderEntity["status"]
-    readonly expires_at: Date
-    readonly paid_at: Date | null
-    readonly created_at: Date
-    readonly kind: PaymentOrderEntity["kind"]
-    readonly pack_code: string | null
-    readonly detail: PaymentOrderEntity["detail"]
-}
+/** How many ids one membership check reads. */
+const IDS_LIMIT = 500
 
-/** Maps the answer of the insert to the stored order. */
-const fromWritten = (row: WrittenPaymentOrder): PaymentOrderEntity =>
-    Object.assign(new PaymentOrderEntity(), {
-        id: row.id,
-        workspaceId: row.workspace_id,
-        planCode: row.plan_code,
-        amountVnd: Number(row.amount_vnd),
-        orderCode: row.order_code,
-        status: row.status,
-        expiresAt: row.expires_at,
-        paidAt: row.paid_at,
-        createdAt: row.created_at,
-        kind: row.kind,
-        packCode: row.pack_code,
-        detail: row.detail,
-    })
+/** The row an insert answers with `RETURNING id`, to the transaction that won the order code. */
+const isWrittenId = rowShape({ id: "string" })
 
 /** How many order codes are drawn before giving up on a collision streak. */
 const CODE_ATTEMPTS = 5
@@ -74,6 +46,7 @@ export class PaymentOrdersService {
         const rows = await this.entityManager.find(PaymentOrderEntity, {
             select: { id: true },
             where: { workspaceId, id: In([...new Set(orderIds)]) },
+            take: IDS_LIMIT,
         })
         return rows.map((row) => row.id)
     }
@@ -112,13 +85,14 @@ export class PaymentOrdersService {
                     orderCode: newOrderCode(),
                     kind: order.kind,
                     packCode: order.packCode,
-                    detail: order.detail as QueryDeepPartialEntity<PaymentOrderEntity["detail"]>,
+                    detail: order.detail,
                 })
                 .orUpdate(["order_code"], ["order_code"], { skipUpdateIfNoValuesChanged: true })
-                .returning("*")
+                .returning("id")
                 .execute()
-            const [row] = inserted.raw as Array<WrittenPaymentOrder>
-            return row === undefined ? attempt(left - 1) : toPaymentOrder(fromWritten(row))
+            const [written] = returnedRows(inserted.raw, isWrittenId)
+            if (written === undefined) return attempt(left - 1)
+            return toPaymentOrder(await this.entityManager.findOneOrFail(PaymentOrderEntity, { where: { id: written.id } }))
         }
         return await attempt(CODE_ATTEMPTS)
     }
