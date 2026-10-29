@@ -3,7 +3,7 @@ import { FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { VideoProjectEntity } from "./persistence/entities"
@@ -106,7 +106,7 @@ describe("VideoProjectWorkbenchWriterService > update", () => {
         expect(em.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "v")
 
         expect(fake.callsOf("update")).toEqual([[]])
-        expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+        expect(fake.callsOf("set").map(([set]) => evaluatedValues(set))).toEqual([
             {
                 title: "COALESCE(NULLIF(CAST(:title AS text), ''), title)",
                 goal: "COALESCE(CAST(:goal AS text), goal)",
@@ -244,7 +244,7 @@ describe("VideoProjectWorkbenchWriterService > publish", () => {
 
         await expect(writer.publish(approved.em, "workspace-1", "project-1")).resolves.toBe(true)
         await expect(writer.publish(draft.em, "workspace-1", "project-1")).resolves.toBe(false)
-        expect(approved.fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+        expect(approved.fake.callsOf("set").map(([set]) => evaluatedValues(set))).toEqual([
             { status: "published", publishedAt: "now()" },
         ])
         expect(approved.fake.callsOf("where")).toEqual([
@@ -262,7 +262,7 @@ describe("VideoProjectWorkbenchWriterService > approve", () => {
         const writer = await build(em)
 
         await expect(writer.approve("workspace-1", "project-1", "render-1", "Lan")).resolves.toBe(true)
-        expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+        expect(fake.callsOf("set").map(([set]) => evaluatedValues(set))).toEqual([
             { status: "approved", approvedAt: "now()", approvedByName: "Lan" },
         ])
         expect(fake.callsOf("where")).toEqual([

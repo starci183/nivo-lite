@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { VideoBrandKitEntity } from "./persistence/entities"
@@ -107,7 +107,7 @@ describe("VideoBrandKitsService (continued)", () => {
                 shopName: "H".repeat(70),
             })
 
-            expect(write.callsOf("values").map(([row]) => resolveFragments(row))).toEqual([
+            expect(write.callsOf("values").map(([row]) => evaluatedValues(row))).toEqual([
                 {
                     workspaceId: "workspace-1",
                     primaryColor: "#c2996b",

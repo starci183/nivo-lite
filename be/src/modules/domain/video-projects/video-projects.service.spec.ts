@@ -3,7 +3,7 @@ import { mockEntityManager } from "@starci/jest-preset"
 import { VideoBrandKitEntity } from "@modules/domain/video-brand-kits"
 import { VideoRenderEntity } from "@modules/domain/video-renders"
 import { WorkspaceEntity } from "@modules/domain/workspaces"
-import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { VideoProjectEntity } from "./persistence/entities"
@@ -93,7 +93,7 @@ describe("VideoProjectsService render lifecycle", () => {
             expect(manager.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "v")
 
             expect(fake.callsOf("update")).toEqual([[]])
-            expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+            expect(fake.callsOf("set").map(([set]) => evaluatedValues(set))).toEqual([
                 {
                     status: "rendering",
                     renderId: "render-1",

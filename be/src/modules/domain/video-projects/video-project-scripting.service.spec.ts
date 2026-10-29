@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
-import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { VideoProjectEntity } from "./persistence/entities"
 import { VideoProjectScriptingService } from "./video-project-scripting.service"
@@ -32,7 +32,7 @@ describe("VideoProjectScriptingService", () => {
             expect(tx.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "v")
 
             expect(fake.callsOf("update")).toEqual([[]])
-            expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+            expect(fake.callsOf("set").map(([set]) => evaluatedValues(set))).toEqual([
                 { status: "scripting", lastError: null, scriptMeta: "CAST(:meta AS jsonb)" },
             ])
             expect(fake.callsOf("where")).toEqual([
@@ -62,7 +62,7 @@ describe("VideoProjectScriptingService", () => {
                 }),
             ).resolves.toBeUndefined()
 
-            expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+            expect(fake.callsOf("set").map(([set]) => evaluatedValues(set))).toEqual([
                 {
                     status: "draft",
                     script: "CAST(:script AS jsonb)",
@@ -99,7 +99,7 @@ describe("VideoProjectScriptingService failures", () => {
                 }),
             ).resolves.toBeUndefined()
 
-            expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+            expect(fake.callsOf("set").map(([set]) => evaluatedValues(set))).toEqual([
                 { status: "draft", lastError: "code:VIDEO_SCRIPT_FAILED", scriptMeta: "CAST(:meta AS jsonb)" },
             ])
             expect(fake.callsOf("where")).toEqual([

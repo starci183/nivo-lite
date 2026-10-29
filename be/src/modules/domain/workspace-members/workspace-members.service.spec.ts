@@ -1,4 +1,4 @@
-import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -262,7 +262,7 @@ describe("WorkspaceMembersService / join", () => {
         expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkspaceMemberEntity, "workspace_members")
 
         expect(upsert.callsOf("insert")).toEqual([[]])
-        expect(upsert.callsOf("values").map(([row]) => resolveFragments(row))).toEqual([
+        expect(upsert.callsOf("values").map(([row]) => evaluatedValues(row))).toEqual([
             {
                 workspaceId: "ws-1",
                 userId: "user-2",
