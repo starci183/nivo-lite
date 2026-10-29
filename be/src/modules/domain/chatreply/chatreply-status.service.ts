@@ -2,8 +2,8 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { WorkItemsReplyProgressService } from "@modules/domain/work-items"
-import { AgentConversationEntity } from "@modules/domain/agent-conversations"
-import { AgentMessageEntity } from "@modules/domain/agent-messages"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
+import { AgentMessageDeliveriesService } from "@modules/domain/agent-messages"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ChatReplyProgress } from "./chatreply.contracts"
 import { ChatreplyError, ChatreplyErrorCode } from "./errors/chatreply.error"
@@ -19,25 +19,17 @@ export class ChatReplyStatusService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
         private readonly progress: WorkItemsReplyProgressService,
+        private readonly deliveries: AgentMessageDeliveriesService,
+        private readonly conversations: AgentConversationsReadService,
     ) {}
 
     /** The stored human reply's delivery and the terminal outcome of its delivery job. */
     async replyStatus(principalId: string, workspaceId: string, messageId: string): Promise<ChatReplyProgress> {
         await this.members.require(principalId, workspaceId)
-        const message = await this.entityManager
-            .createQueryBuilder(AgentMessageEntity, "m")
-            .select("m.id", "id")
-            .addSelect("m.delivery_status", "delivery_status")
-            .innerJoin(AgentConversationEntity, "c", "c.id = m.conversation_id AND c.workspace_id = m.workspace_id")
-            .where(
-                "m.workspace_id = :workspaceId AND m.id = :messageId AND m.author_kind = 'human' AND c.kind = 'customer'",
-                {
-                    workspaceId,
-                    messageId,
-                },
-            )
-            .limit(1)
-            .getRawOne<MessageProgress>()
+        const reply = await this.deliveries.humanReplyById(workspaceId, messageId)
+        const chat = reply === null ? null : await this.conversations.customerChat(workspaceId, reply.conversationId)
+        const message: MessageProgress | undefined =
+            reply === null || chat === null ? undefined : { id: reply.id, delivery_status: reply.deliveryStatus }
         if (message === undefined) throw new ChatreplyError({ code: ChatreplyErrorCode.NotFound })
         const row: ReplyProgressRow = {
             ...message,
