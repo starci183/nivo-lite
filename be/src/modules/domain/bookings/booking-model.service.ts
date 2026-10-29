@@ -52,7 +52,7 @@ export class BookingModelService {
             this.servicesRead.catalogue(workspaceId),
             this.resourcesRead.catalogue(workspaceId),
             this.hoursRead.week(workspaceId),
-            this.exceptionsRead.list(workspaceId, null),
+            this.exceptionsRead.list(workspaceId),
         ])
         return {
             settings,

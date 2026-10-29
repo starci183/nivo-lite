@@ -390,13 +390,13 @@ export type OptionalAvatarUrl = string | null
 export type OptionalAgentText = string | null
 
 /** The settings of an installation: a free-form bag the modules lane owns. */
-export interface InstallationSettings {
+export interface AgentSettingsBag {
     /** Any setting. */
     readonly [key: string]: unknown
 }
 
 /** Settings, or nothing when the installation has none. */
-export type OptionalSettings = InstallationSettings | null | undefined
+export type OptionalSettings = AgentSettingsBag | null | undefined
 
 /** What an agent's prompt needs to speak as it. */
 export interface AgentProfile {
