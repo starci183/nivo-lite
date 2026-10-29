@@ -60,6 +60,7 @@ export const useBillingOverview = (workspaceId: string) => {
             retryReview: () => {
                 void review.mutate()
             },
+            retryUsage: usage.on.retry,
             openCredits: usage.on.openCredits,
             formatUsageDay: usage.on.formatDay,
             formatUsageCredits: usage.on.formatCredits,

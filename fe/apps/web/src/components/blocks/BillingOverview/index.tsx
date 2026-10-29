@@ -18,7 +18,6 @@ export const BillingOverview = (props: BillingOverviewProps) => {
         <BillingOverviewBase
             props={{
                 isRenewing: overview.isRenewing,
-                usageState: overview.usage.state,
                 planLabel: t("currentPlan"),
                 statusLabel: t("status"),
                 paidUntilLabel: t("paidUntil"),
@@ -26,7 +25,9 @@ export const BillingOverview = (props: BillingOverviewProps) => {
                 renewalHint: t("renewHint"),
                 plan: overview.plan,
                 planSlotLabels: slotLabels(t("noPlan")),
-                usage: overview.usage.props,
+                usage: overview.usage.slot,
+                usagePlaceholder: overview.usage.placeholder,
+                usageSlotLabels: slotLabels(t("usageEmpty")),
                 historyTitle: t("history"),
                 historyEmpty: t("noHistory"),
                 orders: overview.orders,
