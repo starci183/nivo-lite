@@ -1,10 +1,18 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { builder, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { BookingHoursReadService } from "./booking-hours-read.service"
 import { BookingHourEntity } from "./persistence/entities"
 
+const rowOf = builder<BookingHourEntity>({
+    id: "h-1",
+    workspaceId: "ws-1",
+    resourceId: "r-0",
+    weekday: 0,
+    startTime: "08:00",
+    endTime: "17:00",
+})
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
         providers: [BookingHoursReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
@@ -14,7 +22,7 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("BookingHoursReadService", () => {
     it("lists the weekly windows of a workspace, at most 2000", async () => {
-        const rows = [{ resourceId: "r-1", weekday: 1, startTime: "09:00", endTime: "18:00" }]
+        const rows = [rowOf({ resourceId: "r-1", weekday: 1, startTime: "09:00", endTime: "18:00" })]
         const em = mockEntityManager({ find: [BookingHourEntity, rows] })
         const hours = await build(em)
 

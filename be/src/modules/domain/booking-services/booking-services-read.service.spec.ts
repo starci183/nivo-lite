@@ -1,11 +1,25 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { builder, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { BookingServicesReadService } from "./booking-services-read.service"
 import { BookingServiceEntity } from "./persistence/entities"
 
+const rowOf = builder<BookingServiceEntity>({
+    id: "s-0",
+    workspaceId: "ws-1",
+    name: "Service",
+    description: "",
+    durationMin: 60,
+    bufferMin: 0,
+    priceVnd: null,
+    resourceKind: null,
+    followupDays: null,
+    active: true,
+    sortOrder: 0,
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+})
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
         providers: [BookingServicesReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
@@ -15,7 +29,7 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("BookingServicesReadService", () => {
     it("lists the services of a workspace in the owner's order, at most 200", async () => {
-        const rows = [{ id: "s-1", name: "Cut" }]
+        const rows = [rowOf({ id: "s-1", name: "Cut" })]
         const em = mockEntityManager({ find: [BookingServiceEntity, rows] })
         const services = await build(em)
 
@@ -31,13 +45,7 @@ describe("BookingServicesReadService", () => {
 
     it("names the given services by id", async () => {
         const em = mockEntityManager({
-            find: [
-                BookingServiceEntity,
-                [
-                    { id: "s-1", name: "Cut" },
-                    { id: "s-2", name: "Dye" },
-                ],
-            ],
+            find: [BookingServiceEntity, [rowOf({ id: "s-1", name: "Cut" }), rowOf({ id: "s-2", name: "Dye" })]],
         })
         const services = await build(em)
 
@@ -66,10 +74,11 @@ describe("BookingServicesReadService", () => {
     })
 
     it("answers how long a service holds a resource", async () => {
-        const em = mockEntityManager({ findOne: [BookingServiceEntity, { durationMin: 30, bufferMin: 5 }] })
+        const timing = rowOf({ durationMin: 30, bufferMin: 5 })
+        const em = mockEntityManager({ findOne: [BookingServiceEntity, timing] })
         const services = await build(em)
 
-        await expect(services.timingOf("ws-1", "s-1")).resolves.toEqual({ durationMin: 30, bufferMin: 5 })
+        await expect(services.timingOf("ws-1", "s-1")).resolves.toEqual(timing)
 
         expect(em.findOne.mock.calls).toEqual([
             [

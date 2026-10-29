@@ -27,7 +27,7 @@ interface ReadAnswers {
     /** The figures of the day report. */
     readonly figures?: DayFigures
     /** The order of the delivery notice. */
-    readonly order?: OrderRead
+    readonly order?: OrderRead | undefined
     /** The contract answered by each successive read; none answers nothing. */
     readonly contracts?: ReadonlyArray<ContractFacts | undefined>
 }
