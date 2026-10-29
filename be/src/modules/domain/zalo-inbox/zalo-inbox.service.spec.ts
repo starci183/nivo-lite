@@ -115,13 +115,13 @@ describe("ZaloInboxService deferred effects", () => {
             where: { provider: "zalo", deliveryId: "c-1:m-1", processedAt: IsNull() },
             lock: { mode: "pessimistic_write" },
         })
-        const [, , set] = tx.em.update.mock.calls[0] as [unknown, unknown, { processedAt: () => string }]
-        expect(tx.em.update).toHaveBeenCalledWith(
-            ZaloInboxEntity,
-            { id: "receipt-1" },
-            { processedAt: set.processedAt },
-        )
-        expect(set.processedAt()).toBe("now()")
+        const [, , set] = tx.em.update.mock.calls[0] ?? []
+        const processedAt = set?.processedAt
+        expect(tx.em.update).toHaveBeenCalledWith(ZaloInboxEntity, { id: "receipt-1" }, { processedAt })
+        if (typeof processedAt !== "function") {
+            throw new Error("the receipt is marked processed through a database expression")
+        }
+        expect(processedAt()).toBe("now()")
         expect(tx.commits).toBe(1)
     })
 

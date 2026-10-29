@@ -1,4 +1,5 @@
 import type { ProposedCommand } from "@modules/domain/ai-tasks"
+import type { OptionalMessageCursor } from "@modules/domain/messages"
 import type { Locale } from "@modules/platform/i18n"
 
 /** One labelled line of a command card ("Customer: Lan"). */
@@ -213,17 +214,6 @@ export interface ConfirmResult {
     /** False when the same command about the same subject already existed. */
     readonly created: boolean
 }
-
-/** The position after which the next page of messages starts (keyset on created_at, id). */
-export interface MessageCursor {
-    /** The `created_at` of the oldest message of the previous page. */
-    readonly createdAt: string
-    /** The id of the oldest message of the previous page. */
-    readonly id: string
-}
-
-/** A cursor, or null for the first page. */
-export type OptionalMessageCursor = MessageCursor | null
 
 /** What a thread listing asks for. */
 export interface MessagePageQuery {
