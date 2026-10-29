@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { OFFICE_ROOMS_AGENTS } from "@modules/domain/office-rooms"
 import { AgentsQueueModule } from "@modules/queues/agents"
 import { AgentBundleService } from "./agent-bundle.service"
+import { AgentDirectoryModule } from "./agent-directory.module"
 import { AgentDirectoryService } from "./agent-directory.service"
 import { AgentIdentityService } from "./agent-identity.service"
 import { AgentLensesService } from "./agent-lenses.service"
@@ -36,7 +37,6 @@ export class AgentsModule extends ConfigurableModuleClass {
             { provide: AGENTS_CONNECTIONS, useExisting: options.ports.connections },
             PauseClient,
             AgentsService,
-            AgentDirectoryService,
             { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
             AgentIdentityService,
             AgentBundleService,
@@ -47,7 +47,7 @@ export class AgentsModule extends ConfigurableModuleClass {
             AGENTS_INSTALLATIONS,
             PauseClient,
             AgentsService,
-            AgentDirectoryService,
+            AgentDirectoryModule,
             OFFICE_ROOMS_AGENTS,
             AgentIdentityService,
             AgentBundleService,
@@ -66,7 +66,7 @@ export class AgentsModule extends ConfigurableModuleClass {
                   }
         return {
             ...base,
-            imports: [...(base.imports ?? []), AgentsQueueModule.register({})],
+            imports: [...(base.imports ?? []), AgentsQueueModule.register({}), AgentDirectoryModule.register({})],
             providers: [...(base.providers ?? []), ...shared, ...full.providers],
             exports: [...exported, ...full.exports],
         }

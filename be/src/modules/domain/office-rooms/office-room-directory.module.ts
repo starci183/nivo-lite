@@ -6,5 +6,5 @@ import { OfficeRoomDirectoryService } from "./office-room-directory.service"
     providers: [OfficeRoomDirectoryService],
     exports: [OfficeRoomDirectoryService],
 })
-/** The room lookups other capabilities read through: the names of the department rooms and who sits in them. */
+/** The room lookups other capabilities read through: the names of the department rooms and who sits in them; imported and exported by the office rooms module. */
 export class OfficeRoomDirectoryModule extends ConfigurableModuleClass {}

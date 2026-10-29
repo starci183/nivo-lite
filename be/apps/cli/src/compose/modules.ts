@@ -37,7 +37,7 @@ import { AuthorityRulesModule } from "@modules/domain/authority-rules"
 import { MemberGrantsModule, OfficeAuthorityService } from "@modules/domain/member-grants"
 import { MODULE_KNOWLEDGE_FOLDERS, MODULES_MESSAGES } from "@modules/domain/modules"
 import { OwnersModule } from "@modules/domain/owners"
-import { InboundEventRecordsModule } from "@modules/domain/inbound-events"
+import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { OfficeRoomsModule } from "@modules/domain/office-rooms"
 import { ClockModule } from "@modules/platform/clock"
 import { IdsModule } from "@modules/platform/ids"
@@ -105,7 +105,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     OfficeRoomsModule.register({ isGlobal: true }),
     MemberGrantsModule.register({ isGlobal: true }),
     ModuleInstallationsModule.register({ isGlobal: true }),
-    InboundEventRecordsModule.register({ isGlobal: true }),
+    InboundEventsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
     DataRecordsModule.register({ isGlobal: true }),
     McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true }),

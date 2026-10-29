@@ -6,7 +6,7 @@ import {
 } from "@modules/domain/customer-turns"
 import type { DynamicModule } from "@nestjs/common"
 import { McpGatewayModule } from "@modules/domain/mcp-gateway"
-import { InboundEventRecordsModule, InboundEventsModule } from "@modules/domain/inbound-events"
+import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
 import { ChatActivityModule } from "@modules/domain/chat-activity"
@@ -35,7 +35,6 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     ChatMarkersModule.register({ isGlobal: true }),
     ChatTypingModule.register({ isGlobal: true }),
     ChannelReceiptsModule.register({ isGlobal: true }),
-    InboundEventRecordsModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
     ChannelsModule.register({ isGlobal: true, ...options.channels }),
     ConversationsModule.register({
