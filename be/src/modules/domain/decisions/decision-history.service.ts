@@ -10,6 +10,7 @@ import { WorkThreadsLeadsReadService } from "@modules/domain/work-threads"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import type { MemberDirectoryEntry } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { eachInOrder } from "@modules/platform/primitives"
 import type { DecisionRecord } from "./decisions-views.contracts"
 import { DecisionEntity } from "./persistence/entities"
 
@@ -106,12 +107,14 @@ export class DecisionHistoryService {
     private async filled(limit: number, pass: (skip: number) => Promise<Pass>): Promise<Array<RawLine>> {
         const lines: Array<RawLine> = []
         let skip = 0
-        for (let index = 0; index < PASSES_MAX && lines.length < limit; index += 1) {
+        let dry = false
+        await eachInOrder(Array.from({ length: PASSES_MAX }), async () => {
+            if (dry || lines.length >= limit) return
             const read = await pass(skip)
             lines.push(...read.kept)
-            if (read.scanned < limit) break
+            dry = read.scanned < limit
             skip += read.scanned
-        }
+        })
         return lines.slice(0, limit)
     }
 

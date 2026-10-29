@@ -245,7 +245,9 @@ describe("EvidenceService", () => {
             expect(small?.callsOf("andWhere")).toEqual([])
         })
     })
+})
 
+describe("EvidenceService accounting", () => {
     describe("listAccounting", () => {
         it("answers the newest accounting decisions, five hundred by default", async () => {
             const em = mockEntityManager()

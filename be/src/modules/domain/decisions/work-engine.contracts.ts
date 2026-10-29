@@ -122,6 +122,14 @@ export interface ChainPosition {
     readonly depth: number
 }
 
+/** The record a command is about, as the chain's repeat check reads it. */
+export interface ChainSubject {
+    /** The kind of record. */
+    readonly subjectType: SubjectType
+    /** The record, or null. */
+    readonly subjectId: string | null
+}
+
 /** Everything the planner has found out about an accepted command, before it becomes a work spec. */
 export interface AcceptedCommandParts {
     /** Who and where the call acts. */
