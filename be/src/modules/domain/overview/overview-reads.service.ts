@@ -37,6 +37,13 @@ const exceptionLeadOf = (card: LeadCard | undefined): OverviewExceptionLead | nu
         ? null
         : { id: card.id, contactName: card.contactName, company: card.company, channel: card.channel }
 
+/** The rows keyed by their id. */
+const indexById = <Row extends { readonly id: string }>(rows: ReadonlyArray<Row>): Map<string, Row> =>
+    new Map(rows.map((row) => [row.id, row]))
+
+/** The ids that are set. */
+const presentIds = (ids: ReadonlyArray<string | null>): Array<string> => ids.filter((id): id is string => id !== null)
+
 @Injectable()
 /** The list reads of the executive dashboard, each bounded as the former statement was and answered by the capability that owns the rows. */
 export class OverviewReadsService {
@@ -53,12 +60,7 @@ export class OverviewReadsService {
     /** Every responsibility with its lead, due soonest first. */
     async responsibilities(workspaceId: string): Promise<Array<OverviewResponsibility>> {
         const steps = await this.responsibilityReads.dueSoonest(workspaceId, RESPONSIBILITY_LIMIT)
-        const leads = new Map(
-            (await this.leadReads.cardsOf(workspaceId, [...new Set(steps.map((step) => step.leadId))])).map((card) => [
-                card.id,
-                card,
-            ]),
-        )
+        const leads = indexById(await this.leadReads.cardsOf(workspaceId, [...new Set(steps.map((step) => step.leadId))]))
         return steps.flatMap((step): Array<OverviewResponsibility> => {
             const lead = leads.get(step.leadId)
             if (lead === undefined) return []
@@ -126,17 +128,11 @@ export class OverviewReadsService {
     async exceptions(workspaceId: string): Promise<Array<OverviewException>> {
         const items = await this.workReads.exceptions(workspaceId, EXCEPTION_LIMIT)
         const [cards, people] = await Promise.all([
-            this.leadReads.cardsOf(
-                workspaceId,
-                items.flatMap((item) => (item.leadId === null ? [] : [item.leadId])),
-            ),
-            this.staff.namesOf(
-                workspaceId,
-                items.flatMap((item) => (item.assignedStaffId === null ? [] : [item.assignedStaffId])),
-            ),
+            this.leadReads.cardsOf(workspaceId, presentIds(items.map((item) => item.leadId))),
+            this.staff.namesOf(workspaceId, presentIds(items.map((item) => item.assignedStaffId))),
         ])
-        const leadOf = new Map(cards.map((card) => [card.id, card]))
-        const staffName = new Map(people.map((person) => [person.id, person.name]))
+        const leadOf = indexById(cards)
+        const staffName = indexById(people)
         return items.map((item): OverviewException => ({
             id: item.id,
             leadId: item.leadId,
@@ -146,7 +142,7 @@ export class OverviewReadsService {
             reason: item.reason,
             error: item.error,
             executionId: item.executionId,
-            assignedStaffName: item.assignedStaffId === null ? null : (staffName.get(item.assignedStaffId) ?? null),
+            assignedStaffName: item.assignedStaffId === null ? null : (staffName.get(item.assignedStaffId)?.name ?? null),
             createdAt: instant(item.createdAt),
             summary: item.summary,
             contact: item.contact,
