@@ -1,6 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { EngineStatusService } from "@modules/domain/agents"
 import type { EngineStatus } from "@modules/domain/agents"
+import { AgentSyncChecksService } from "@modules/domain/openclaw-agent-sync"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -12,11 +13,15 @@ export class GetEngineStatusHandler extends ICQRSHandler<GetEngineStatusQuery, E
     constructor(
         @InjectLogger() logger: Logger,
         private readonly engine: EngineStatusService,
+        private readonly syncChecks: AgentSyncChecksService,
     ) {
         super(logger)
     }
 
     protected override process(query: GetEngineStatusQuery): Promise<EngineStatus> {
-        return this.engine.status(query.params.principal.id, query.params.request.workspaceId)
+        const { workspaceId } = query.params.request
+        return this.engine.status(query.params.principal.id, workspaceId, () =>
+            this.syncChecks.lastCheckAt(workspaceId),
+        )
     }
 }
