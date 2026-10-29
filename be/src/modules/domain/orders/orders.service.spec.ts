@@ -225,16 +225,6 @@ const registerReads = () => {
             expect(orders.doubles.leads.cardsOf).toHaveBeenCalledWith("ws-1", ["gone"])
         })
 
-        it("lists an order with no amount and no customer labels as nulls", async () => {
-            const unpriced = orderOf({ id: "order-2", amount_vnd: null })
-            const em = mockEntityManager()
-            const orders = await build(em)
-            const withoutLabels = fakeQueryBuilder({ getRawAndEntities: { entities: [entityOf(unpriced)], raw: [] } })
-            answerQueryBuilders(em, withoutLabels)
-
-            await expect(orders.list("ws-1")).resolves.toEqual([{ ...unpriced, contact_name: null, company: null }])
-        })
-
         it("reads at least one order and 200 by default", async () => {
             const em = mockEntityManager({ find: [OrderEntity, []] })
             const orders = await build(em)

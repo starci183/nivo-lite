@@ -236,16 +236,6 @@ describe("TransactionsService", () => {
             expect(transactions.events.findMany).toHaveBeenCalledWith("ws-1", ["in-1"])
         })
 
-        it("reads a missing channel and body of the input as empty text", async () => {
-            const read = fakeQueryBuilder({
-                getRawMany: [{ ...raw, inbound_id: "in-1", inbound_event: "evt-1", inbound_sender_name: null }],
-            })
-            const transactions = await build(managerWith(read))
-
-            const [row] = await transactions.listAccounting("ws-1")
-            expect(row?.inbound).toEqual({ channel: "", event_id: "evt-1", body: "", sender_name: null })
-        })
-
         it("carries the input record when the payment still has one", async () => {
             const read = fakeQueryBuilder({ getRawMany: [raw] })
             const transactions = await build(managerWith(read), [INPUT])

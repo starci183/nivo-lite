@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { forwardRef, Inject, Injectable } from "@nestjs/common"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { BookingChatLookupService } from "@modules/domain/bookings"
 import { LeadFlowStoreService } from "@modules/domain/lead-flows"
@@ -15,7 +15,7 @@ export class RecordInstallationService {
         private readonly workItems: WorkItemsService,
         private readonly conversations: AgentConversationsService,
         private readonly bookings: BookingChatLookupService,
-        private readonly flows: LeadFlowStoreService,
+        @Inject(forwardRef(() => LeadFlowStoreService)) private readonly flows: LeadFlowStoreService,
         private readonly leads: LeadRecordsService,
     ) {}
 
