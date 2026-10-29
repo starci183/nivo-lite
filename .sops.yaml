@@ -1,5 +1,8 @@
-# Lite secrets have encrypted twins only under .starcistacks/<environment>/secrets.
-# Project-owned age recipient. The private key lives outside the repo, in the canonical runtime .claude/secret.env as SOPS_AGE_KEY (docs/host-secrets.md); sops reads it from the environment. The owner backs up secret.env.
+# Managed by starci app secret init and recipients: one rule per environment, public age recipients only.
 creation_rules:
+  - path_regex: \.starcistacks[/\\]dev[/\\]secrets[/\\][^/\\]+\.enc(?:\.yaml)?$
+    age: age173qfq7f776syam9tpkyfej0h2jjt6rc4ha7r38ez40n5mn0lwyaqp9ejt7
+  - path_regex: \.starcistacks[/\\]production[/\\]secrets[/\\][^/\\]+\.enc(?:\.yaml)?$
+    age: age173qfq7f776syam9tpkyfej0h2jjt6rc4ha7r38ez40n5mn0lwyaqp9ejt7,age148vdeuc9jmk6rr8vwltalqwq373nxsrra4hyfzejgc3388gnhpgqwzwusz
   - path_regex: \.starcistacks[/\\][^/\\]+[/\\]secrets[/\\][^/\\]+\.enc$
     age: age173qfq7f776syam9tpkyfej0h2jjt6rc4ha7r38ez40n5mn0lwyaqp9ejt7
