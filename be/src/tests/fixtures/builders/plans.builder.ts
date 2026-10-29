@@ -1,5 +1,9 @@
 import { builder } from "@starci/jest-preset"
-import { PlanEntity, PlanUsageTierEntity } from "@modules/domain/billing"
+import { billingEntities } from "@modules/domain/billing"
+
+const [, PlanEntity, PlanUsageTierEntity] = billingEntities
+type PlanEntity = InstanceType<typeof PlanEntity>
+type PlanUsageTierEntity = InstanceType<typeof PlanUsageTierEntity>
 
 /** A listed monthly plan with the fields a spec rarely changes filled. */
 export const planOf = builder<PlanEntity>({
