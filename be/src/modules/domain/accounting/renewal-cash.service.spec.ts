@@ -1,10 +1,10 @@
 import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { ContractsReadService } from "@modules/domain/contracts"
 import type { ContractFacts } from "@modules/domain/contracts"
-import { InvoiceEntity } from "@modules/domain/invoices"
+import { InboundPaymentsReadService } from "@modules/domain/inbound-events"
+import { InvoicesCashReadService } from "@modules/domain/invoices"
+import type { CashInvoice } from "@modules/domain/invoices"
 import { LeadReadService } from "@modules/domain/leads"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { RenewalCashService } from "./renewal-cash.service"
@@ -31,42 +31,40 @@ const contractOf = builder<ContractFacts>({
     status: "active",
 })
 
-const invoiceOf = (changes: Partial<InvoiceEntity>): InvoiceEntity =>
-    Object.assign(new InvoiceEntity(), {
-        invoiceNo: "INV-1",
-        amountVnd: 500_000,
-        contractId: "c1",
-        leadId: null,
-        periodEndsOn: "2026-11-05",
-        dueAt: new Date("2026-10-31T17:00:00.000Z"),
-        ...changes,
-    })
+const invoiceOf = builder<CashInvoice>({
+    invoiceNo: "INV-1",
+    amountVnd: 500_000,
+    contractId: "c1",
+    leadId: null,
+    periodEndsOn: "2026-11-05",
+    issuedAt: null,
+    dueAt: new Date("2026-10-31T17:00:00.000Z"),
+    paidAt: null,
+})
 
-/** What the statements answer, in the order the reader runs them: invoices issued, paid, unpaid, renewed, then the two unmatched reads. */
-const build = async (reads: {
-    readonly issued?: ReadonlyArray<InvoiceEntity>
-    readonly paid?: ReadonlyArray<InvoiceEntity>
-    readonly unpaid?: ReadonlyArray<InvoiceEntity>
-    readonly renewed?: ReadonlyArray<InvoiceEntity>
+/** What the owners answer for one scenario. */
+interface Reads {
+    readonly issued?: ReadonlyArray<CashInvoice>
+    readonly paid?: ReadonlyArray<CashInvoice>
+    readonly unpaid?: ReadonlyArray<CashInvoice>
+    readonly periods?: ReadonlyArray<{ contractId: string; periodEndsOn: string }>
     readonly contracts?: ReadonlyArray<ContractFacts>
     readonly ending?: ReadonlyArray<ContractFacts>
-}) => {
+}
+
+const build = async (reads: Reads) => {
     const entityManager = mockEntityManager()
     const tx = fakeTransaction(entityManager)
-    const answers: ReadonlyArray<QueryBuilderAnswers> = [
-        { getMany: [...(reads.issued ?? [])] },
-        { getMany: [...(reads.paid ?? [])] },
-        { getMany: [...(reads.unpaid ?? [])] },
-        ...((reads.ending ?? []).length === 0 ? [] : [{ getMany: [...(reads.renewed ?? [])] }]),
-        { getRawOne: { count: 1, total: 100_000 } },
-        { getRawMany: [{ amount_vnd: 100_000, sender_name: null, memo: "CK" }] },
-    ]
-    const fakes = answers.map((answer) => fakeQueryBuilder(answer))
-    let next = 0
-    entityManager.createQueryBuilder.mockImplementation(() => {
-        const fake = fakes[Math.min(next, fakes.length - 1)]
-        next += 1
-        return (fake ?? fakes[0]).builder
+    const invoices = mock<InvoicesCashReadService>()
+    invoices.renewalsIssued.mockResolvedValue([...(reads.issued ?? [])])
+    invoices.renewalsPaid.mockResolvedValue([...(reads.paid ?? [])])
+    invoices.unpaidDueBefore.mockResolvedValue([...(reads.unpaid ?? [])])
+    invoices.invoicedPeriods.mockResolvedValue([...(reads.periods ?? [])])
+    const payments = mock<InboundPaymentsReadService>()
+    payments.unmatched.mockResolvedValue({
+        count: 1,
+        total: 100_000,
+        items: [{ amountVnd: 100_000, senderName: null, memo: "CK" }],
     })
     const contracts = mock<ContractsReadService>()
     contracts.contractsByIds.mockResolvedValue([...(reads.contracts ?? [])])
@@ -81,14 +79,16 @@ const build = async (reads: {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: ContractsReadService, useValue: contracts },
             { provide: LeadReadService, useValue: leads },
+            { provide: InvoicesCashReadService, useValue: invoices },
+            { provide: InboundPaymentsReadService, useValue: payments },
         ],
     }).compile()
-    return { service: moduleRef.get(RenewalCashService), tx, contracts, leads }
+    return { service: moduleRef.get(RenewalCashService), tx, contracts, invoices, payments }
 }
 
 describe("RenewalCashService", () => {
     it("reads every part of the story in one repeatable-read snapshot and joins the contracts in code", async () => {
-        const { service, tx, contracts } = await build({
+        const { service, tx, contracts, invoices, payments } = await build({
             issued: [invoiceOf({ invoiceNo: "INV-1" }), invoiceOf({ invoiceNo: "INV-X", contractId: "gone" })],
             paid: [
                 invoiceOf({ invoiceNo: "INV-2", periodEndsOn: "2026-10-01" }),
@@ -101,7 +101,7 @@ describe("RenewalCashService", () => {
             ],
             contracts: [contractOf({})],
             ending: [contractOf({ id: "c2", customerName: "Lan Anh", amountVnd: null }), contractOf({ id: "c3" })],
-            renewed: [invoiceOf({ contractId: "c3", periodEndsOn: "2026-11-05" })],
+            periods: [{ contractId: "c3", periodEndsOn: "2026-11-05" }],
         })
 
         const facts = await service.read(queryOf())
@@ -128,6 +128,9 @@ describe("RenewalCashService", () => {
         expect(facts.unmatched_count).toBe(1)
         expect(facts.unmatched).toEqual([{ amount_vnd: 100_000, sender_name: null, memo: "CK" }])
         expect(contracts.activeEndingBetween).toHaveBeenCalledWith(WS, "2026-10-27", "2026-11-26", 5000)
+        expect(invoices.unpaidDueBefore).toHaveBeenCalledWith(WS, new Date("2026-11-26T17:00:00.000Z"), 5000)
+        expect(invoices.invoicedPeriods).toHaveBeenCalledWith(WS, ["c2", "c3"])
+        expect(payments.unmatched).toHaveBeenCalledWith(WS, 20)
     })
 
     it("bounds each list but counts and totals every row", async () => {
@@ -141,7 +144,7 @@ describe("RenewalCashService", () => {
         expect(facts.issued_total).toBe(1_500_000)
     })
 
-    it("tells an empty workspace from one with no contract of its own", async () => {
+    it("reads no contract for a story without invoices", async () => {
         const { service, contracts } = await build({})
 
         const facts = await service.read(queryOf())
