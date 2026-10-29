@@ -100,6 +100,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 ModuleCatalogService,
                 WorkDecisionService,
                 WorkDrainService,
+                WorkItemViewsService,
                 WorkPlacementService,
                 WorkEngineService,
             ],

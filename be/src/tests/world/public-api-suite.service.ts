@@ -6,7 +6,7 @@ import { ModulesService } from "@modules/domain/modules"
 import { PUBLIC_API_QUEUE } from "@modules/queues/public-api"
 import { HandoffLeadPerformerService } from "../../modules/domain/work-performers/handoff-lead-performer.service"
 import type { PublicApiIdentity } from "../fixtures/builders/public-api.builder"
-import { apiInbox, apiLeadRequest, apiOutbox, apiSource } from "./public-api-database.service"
+import { apiDealWon, apiInbox, apiLeadRequest, apiOutbox, apiSource } from "./public-api-database.service"
 import type { PublicApiRequestState } from "./public-api-database.service"
 import type { LiteWorld } from "./lite-world.service"
 import { PublicApiProofAccess } from "./public-api-capabilities.options"
@@ -46,6 +46,7 @@ const observations = (world: LiteWorld) => ({
     source: (workspaceId: string, id: string) => apiSource(world.db.primary, workspaceId, id),
     inbox: (workspaceId: string) => apiInbox(world.db.primary, workspaceId),
     outbox: (workspaceId: string) => apiOutbox(world.db.primary, workspaceId),
+    dealsWon: (workspaceId: string) => apiDealWon(world.db.primary, workspaceId),
 })
 
 /** Registers the world's real processors and gives each scenario its own local workspace and router delivery. */

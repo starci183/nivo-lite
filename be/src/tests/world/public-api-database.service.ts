@@ -22,6 +22,10 @@ WHERE workspace_id = $1::uuid AND id = $2::uuid`
 const API_OUTBOX = sql`SELECT id, queue, name, dedupe_key, payload FROM public.job_outbox
 WHERE payload->>'workspaceId' = $1 ORDER BY created_at, id`
 
+/** The `deal_won` messages the event bus holds for the automations consumer, one workspace. */
+const API_DEAL_WON = sql`SELECT message FROM pgmq.q_deal_won__automations
+WHERE message->'payload'->>'workspaceId' = $1 ORDER BY msg_id`
+
 /** Removes only the messages and publications created by one isolated workspace. */
 const CLEAN_API_PUBLICATIONS = sql`DELETE FROM public.job_outbox WHERE payload->>'workspaceId' = $1`
 
@@ -220,6 +224,17 @@ export const apiSource = (
 /** Queue handoffs are successful fulfillment; external indexing and delivery remain separate work. */
 export const apiOutbox = (manager: EntityManager, workspaceId: string): Promise<Array<PublicApiOutboxState>> =>
     manager.query<Array<PublicApiOutboxState>>(API_OUTBOX, [workspaceId])
+
+/** The `deal_won` envelopes published on the event bus for one workspace (the automations consumer reacts to them). */
+export const apiDealWon = async (
+    manager: EntityManager,
+    workspaceId: string,
+): Promise<Array<Readonly<Record<string, unknown>>>> => {
+    const rows = await manager.query<Array<{ readonly message: Readonly<Record<string, unknown>> }>>(API_DEAL_WON, [
+        workspaceId,
+    ])
+    return rows.map((row) => row.message)
+}
 
 /** Inbox receipts of public API and manual inbound inputs in this workspace. */
 export const apiInbox = (manager: EntityManager, workspaceId: string): Promise<Array<PublicApiInboxState>> => {

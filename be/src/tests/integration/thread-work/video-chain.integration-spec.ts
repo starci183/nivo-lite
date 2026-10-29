@@ -1,11 +1,14 @@
 import { AgentAssignmentsService } from "@modules/domain/agent-profile"
 import { ApprovalRequestsService } from "@modules/domain/approval-requests"
-import { DecisionsService } from "@modules/domain/decisions"
+import { DecisionsService, WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
+import type { WorkPerformerRegistry } from "@modules/domain/decisions"
 import { OfficeAuthorityService } from "@modules/domain/member-grants"
 import { ModulesService } from "@modules/domain/modules"
 import { ThreadFeedService } from "@modules/domain/thread-messages"
 import type { ThreadMessage } from "@modules/domain/thread-messages"
 import { ThreadWorkService } from "@modules/domain/thread-work"
+import { IssueInvoicePerformerService } from "../../../modules/domain/work-performers/issue-invoice-performer.service"
+import { ReplyCustomerPerformerService } from "../../../modules/domain/work-performers/reply-customer-performer.service"
 import { persistOfficeRows, persistStoryLead } from "../../fixtures/builders/office-chain.builder"
 import type { OfficeIdentity, OfficeMembers } from "../../fixtures/builders/office-chain.builder"
 
@@ -102,6 +105,11 @@ beforeAll(async () => {
         await removeAuthUsers(world.db.primary, Object.values(identity.users))
     })
     await world.resolve(ModulesService).sync()
+    // The world compiles the container without the boot hooks, so the registrar has not filled the registry: the story's two
+    // performing actions are registered as it would; give_discount has none and only records its decision.
+    const registry = world.resolve<WorkPerformerRegistry>(WORK_PERFORMER_REGISTRY)
+    registry.add("issue_invoice", world.resolve(IssueInvoicePerformerService))
+    registry.add("reply_customer", world.resolve(ReplyCustomerPerformerService))
     story.members = await persistOfficeRows(world.db.primary, identity)
     await persistStoryLead(world.db.primary, WS, LEAD)
     await world.resolve(OfficeAuthorityService).apply(WS, authority())

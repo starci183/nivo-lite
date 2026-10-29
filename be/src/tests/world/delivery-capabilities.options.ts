@@ -24,6 +24,8 @@ import { EventsModule } from "@modules/domain/events"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { PaymentOrdersModule } from "@modules/domain/payment-orders"
+import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
+import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { BillingModule, BILLING_MESSAGES } from "@modules/domain/billing"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { TransactionsModule } from "@modules/domain/transactions"
@@ -141,6 +143,8 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
     PaymentOrdersModule.register({ isGlobal: true }),
     BankFeedInboxModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
+    ChannelSetupModule.register({ isGlobal: true, zaloOauthBase: undefined, siteUrl: undefined, timeoutMs: 1000 }),
+    ChannelConnectionsModule.register({ isGlobal: true }),
     BillingModule.register({
         isGlobal: true,
         sepayApiKey: new Secret("delivery-proof-key"),
