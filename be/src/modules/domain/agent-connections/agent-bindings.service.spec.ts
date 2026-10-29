@@ -327,3 +327,20 @@ describe("AgentBindingsService > removing grants", () => {
         expect(em.delete).toHaveBeenCalledWith(AgentConnectionEntity, deleted)
     })
 })
+
+describe("AgentBindingsService > agentIdsOf", () => {
+    it("lists the agents attached to a connection of the workspace in the order they were attached, bounded", async () => {
+        const em = mockEntityManager({
+            find: [AgentConnectionEntity, [linkOf({ agentId: "agent-2" }), linkOf({ agentId: "agent-1" })]],
+        })
+        const { service } = await build(em)
+
+        await expect(service.agentIdsOf("w1", "c1", 500)).resolves.toEqual(["agent-2", "agent-1"])
+        expect(em.find).toHaveBeenCalledWith(AgentConnectionEntity, {
+            select: { agentId: true },
+            where: { workspaceId: "w1", connectionId: "c1" },
+            order: { createdAt: "ASC" },
+            take: 500,
+        })
+    })
+})

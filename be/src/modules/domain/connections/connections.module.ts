@@ -5,6 +5,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connections.module-defi
 import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { ConnectionsService } from "./connections.service"
 import { ConnectionsAdminReadService } from "./connections-admin-read.service"
+import { CONNECTION_AGENTS } from "./connections.decorators"
 import { ConnectionBindingsReadService } from "./connection-bindings-read.service"
 import { ConnectionSecretReadsService } from "./connection-secret-reads.service"
 
@@ -22,6 +23,9 @@ export class ConnectionsModule extends ConfigurableModuleClass {
                 ConnectionsAdminReadService,
                 ConnectionSecretReadsService,
                 ConnectionBindingsReadService,
+                options.ports === undefined
+                    ? { provide: CONNECTION_AGENTS, useValue: null }
+                    : { provide: CONNECTION_AGENTS, useExisting: options.ports.agents },
                 ConnectionsService,
                 ConnectionsUpkeepService,
             ],
