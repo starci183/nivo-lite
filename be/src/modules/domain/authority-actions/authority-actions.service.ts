@@ -49,6 +49,17 @@ export class AuthorityActionsService {
         return manager.exists(AuthorityActionEntity, { where: { action } })
     }
 
+    /** Whether the catalogue registers the action under the department, read with a shared lock so the pair holds until the caller's transaction ends. */
+    async registeredUnder(manager: EntityManager, action: string, department: string): Promise<boolean> {
+        const row = await manager
+            .createQueryBuilder(AuthorityActionEntity, "a")
+            .select("a.action")
+            .where("a.action = :action AND a.moduleKey = :department", { action, department })
+            .setLock("pessimistic_read")
+            .getOne()
+        return row !== null
+    }
+
     /** Every action of the catalogue, read through the manager the caller hands in. */
     async list(manager: EntityManager): Promise<Array<AuthorityActionRecord>> {
         const rows = await manager.find(AuthorityActionEntity, {

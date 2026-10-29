@@ -34,44 +34,40 @@ const build = async () => {
     return moduleRef.get(AuthorityActionsService)
 }
 
-/** A manager whose catalogue read answers `held` and whose upsert statement answers `raw`. */
-const syncing = (held: ReadonlyArray<AuthorityActionEntity>, raw: ReadonlyArray<unknown>) => {
+/** A manager whose catalogue read answers `held` and whose upsert stores `stored` rows. */
+const syncing = (held: ReadonlyArray<AuthorityActionEntity>, stored: ReadonlyArray<{ action: string }>) => {
     const em = mockEntityManager({ find: [AuthorityActionEntity, held] })
-    const fake = fakeQueryBuilder({ execute: { raw } })
-    em.createQueryBuilder.mockReturnValue(fake.builder)
-    return { em, fake }
+    em.upsert.mockResolvedValue({ identifiers: [...stored], generatedMaps: [], raw: [] })
+    return em
 }
 
 describe("AuthorityActionsService", () => {
     describe("upsertAll", () => {
         it("upserts the records in one statement in the given transaction and reports nothing stale", async () => {
-            const { em, fake } = syncing([ROW], [{ action: "issue_invoice" }])
+            const em = syncing([ROW], [{ action: "issue_invoice" }])
 
             await expect((await build()).upsertAll(em, [RECORD])).resolves.toEqual({ written: 1, stale: [] })
-            expect(em.createQueryBuilder).toHaveBeenCalledWith(AuthorityActionEntity, "aa")
-            expect(fake.callsOf("values")).toEqual([
+            expect(em.upsert).toHaveBeenCalledWith(
+                AuthorityActionEntity,
                 [
-                    [
-                        expect.objectContaining({
-                            action: "issue_invoice",
-                            moduleKey: "accounting",
-                            sortOrder: 0,
-                            defaultMode: "auto",
-                            defaultLimitVnd: "20000000",
-                            defaultRequiredFields: ["customer"],
-                            amountLimit: true,
-                            maxMode: null,
-                            label: { vi: "vi", en: "Issue invoice" },
-                        }),
-                    ],
+                    expect.objectContaining({
+                        action: "issue_invoice",
+                        moduleKey: "accounting",
+                        sortOrder: 0,
+                        defaultMode: "auto",
+                        defaultLimitVnd: "20000000",
+                        defaultRequiredFields: ["customer"],
+                        amountLimit: true,
+                        maxMode: null,
+                        label: { vi: "vi", en: "Issue invoice" },
+                    }),
                 ],
-            ])
-            expect(fake.callsOf("orUpdate")).toEqual([[expect.arrayContaining(["module_key", "label"]), ["action"]]])
-            expect(fake.callsOf("returning")).toEqual([["action"]])
+                ["action"],
+            )
         })
 
         it("reports the actions the database holds that were not written, and deletes nothing", async () => {
-            const { em } = syncing(
+            const em = syncing(
                 [ROW, Object.assign(new AuthorityActionEntity(), { action: "retired_action" })],
                 [{ action: "issue_invoice" }],
             )
@@ -82,6 +78,30 @@ describe("AuthorityActionsService", () => {
             })
         })
     })
+    describe("registeredUnder", () => {
+        it("reads the pair under a shared lock and answers whether the catalogue holds it", async () => {
+            const em = mockEntityManager()
+            const fake = fakeQueryBuilder({ getOne: { action: "issue_invoice" } })
+            em.createQueryBuilder.mockReturnValue(fake.builder)
+
+            await expect((await build()).registeredUnder(em, "issue_invoice", "accounting")).resolves.toBe(true)
+            expect(fake.callsOf("where")).toEqual([
+                [
+                    "a.action = :action AND a.moduleKey = :department",
+                    { action: "issue_invoice", department: "accounting" },
+                ],
+            ])
+            expect(fake.callsOf("setLock")).toEqual([["pessimistic_read"]])
+        })
+
+        it("answers false when the catalogue does not hold the pair", async () => {
+            const em = mockEntityManager()
+            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ getOne: null }).builder)
+
+            await expect((await build()).registeredUnder(em, "issue_invoice", "sales")).resolves.toBe(false)
+        })
+    })
+
     describe("exists", () => {
         it("asks the given manager whether the catalogue holds the action", async () => {
             const em = mockEntityManager({ exists: [AuthorityActionEntity, true] })
