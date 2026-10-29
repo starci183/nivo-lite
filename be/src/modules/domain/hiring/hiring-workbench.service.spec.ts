@@ -1,3 +1,4 @@
+import { benchJobRow, benchCandidateRow, benchInterviewRow, benchOfferRow } from "@tests/fixtures/builders/hiring-rows.builder"
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -377,5 +378,63 @@ describe("HiringWorkbenchService", () => {
 
             await expect(service.candidateDetail("u-1", "ws-1", "cand-1")).resolves.toEqual({ events: [], cv: null })
         })
+    })
+})
+
+describe("HiringWorkbenchService populated views", () => {
+    it.each([true, false])("maps additional workbench fields with reasons=%s", async (screened) => {
+        const em = mockEntityManager({
+            find: [
+                [HiringJobEntity, [benchJobRow()]],
+                [HiringCandidateEntity, [benchCandidateRow(screened ? {} : { scoreReasons: null })]],
+                [HiringInterviewEntity, [benchInterviewRow()]],
+                [HiringOfferEntity, [benchOfferRow()]],
+                [HiringOnboardingEntity, []],
+                [HiringAvailabilityEntity, []],
+            ],
+            count: counts([]),
+        })
+        const { service, links } = await build(em)
+        links.job.mockReturnValue("https://nivo.vn/tiem-ca-phe/cashier")
+
+        const bench = await service.bench("u-1", "ws-1")
+
+        expect(bench.jobs).toEqual([
+            expect.objectContaining({
+                id: "job-1",
+                adVariants: { page: "Join us" },
+                createdAt: NOW,
+                updatedAt: NOW,
+                publicUrl: "https://nivo.vn/tiem-ca-phe/cashier",
+            }),
+        ])
+        expect(bench.candidates).toEqual([
+            expect.objectContaining({
+                id: "cand-1",
+                cvSize: 123,
+                score: 90,
+                scoreLabel: "fit",
+                scoreReasons: screened ? [{ criterion: "POS", status: "met", note: "Yes" }] : [],
+                scoreSummary: "Ready",
+                screenedAt: NOW,
+                stageChangedAt: NOW,
+                rejectedReason: null,
+                notes: "Call",
+                createdAt: NOW,
+            }),
+        ])
+        expect(bench.interviews).toEqual([
+            expect.objectContaining({ id: "int-1", reminderSentAt: NOW, createdAt: NOW }),
+        ])
+        expect(bench.offers).toEqual([
+            expect.objectContaining({
+                id: "offer-1",
+                sentVia: "email",
+                sentAt: NOW,
+                respondedAt: NOW,
+                createdAt: NOW,
+            }),
+        ])
+        expect(links.job.mock.calls).toEqual([["tiem-ca-phe", "cashier"]])
     })
 })

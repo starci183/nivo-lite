@@ -29,7 +29,8 @@ import {
     HiringOnboardingEntity,
 } from "./persistence/entities"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
-import { toCandidate, toInterview, toJob, toOffer } from "./policies/row-mappers.policy"
+import { toJob } from "./policies/row-mappers.policy"
+import { toCandidate, toInterview, toOffer } from "./policies/row-mappers-records.policy"
 import { addDays, hiringIsoOf, isoOrNull, vnInstant, vnClockParts } from "./policies/vn-time.policy"
 
 /** How many jobs the workbench shows. */
