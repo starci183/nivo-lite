@@ -22,3 +22,4 @@ export { CONNECTIONS_ERROR_KINDS, ConnectionsError, ConnectionsErrorCode } from 
 export { CONNECTIONS_MESSAGES } from "./messages/connections.messages"
 export { ConnectionsAdminReadService } from "./connections-admin-read.service"
 export { ConnectionSecretReadsService } from "./connection-secret-reads.service"
+export { ConnectionBindingsReadService } from "./connection-bindings-read.service"

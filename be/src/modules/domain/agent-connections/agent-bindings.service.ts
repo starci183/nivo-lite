@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { In } from "typeorm"
+import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { AgentEntity } from "@modules/domain/agents/persistence/entities"
-import { ConnectionEntity } from "@modules/domain/connections/persistence/entities"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import {
     INBOUND_MODULES,
@@ -36,23 +37,6 @@ const GOVERNORS = ["owner", "manager"] as const
 /** The most bindings one read answers. */
 const BINDINGS_MAX = 200
 
-/** A binding joined to its agent, as the driver answers it: the creation moment is still a date. */
-interface AgentBindingRaw extends Omit<BoundAgentFacts, "created_at"> {
-    readonly created_at: Date
-}
-
-/** A binding joined to its connection, as the driver answers it. */
-interface ConnectionBindingRaw extends Omit<BoundConnectionFacts, "created_at"> {
-    readonly created_at: Date
-}
-
-const agentFactsOf = (row: AgentBindingRaw): BoundAgentFacts => ({ ...row, created_at: row.created_at.toISOString() })
-
-const connectionFactsOf = (row: ConnectionBindingRaw): BoundConnectionFacts => ({
-    ...row,
-    created_at: row.created_at.toISOString(),
-})
-
 @Injectable()
 /**
  * The one resolver of "which agent listens and speaks on which connection". agent_connections (agent, connection, purpose, access) is
@@ -64,6 +48,8 @@ export class AgentBindingsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
+        private readonly agents: AgentDirectoryService,
+        private readonly connections: ConnectionBindingsReadService,
     ) {}
 
     /** The active agents bound to a connection for the purpose(s), oldest first. */
@@ -72,24 +58,30 @@ export class AgentBindingsService {
         purpose: PurposeSelector,
         options: AgentsForOptions = {},
     ): Promise<ReadonlyArray<BoundAgent>> {
-        const rows = await this.entityManager
-            .createQueryBuilder(AgentConnectionEntity, "ac")
-            .select("a.id", "id")
-            .addSelect("a.module", "module")
-            .addSelect("a.name", "name")
-            .addSelect("a.created_at", "created_at")
-            .addSelect("ac.access", "access")
-            .addSelect("ac.purpose", "purpose")
-            .innerJoin(AgentEntity, "a", "a.id = ac.agent_id")
-            .where("ac.connection_id = :connectionId AND ac.purpose = ANY(:purposes) AND a.status = 'active'", {
-                connectionId,
-                purposes: purposesOf(purpose),
-            })
-            .orderBy("a.created_at", "ASC")
-            .addOrderBy("a.id", "ASC")
-            .limit(BINDINGS_MAX)
-            .getRawMany<AgentBindingRaw>()
-        return boundAgentsOf(rows.map(agentFactsOf), options)
+        const links = await this.entityManager.find(AgentConnectionEntity, {
+            where: { connectionId, purpose: In([...purposesOf(purpose)]) },
+            take: BINDINGS_MAX,
+        })
+        const [first] = links
+        if (first === undefined) return []
+        const agents = await this.agents.activeCreatedAmong(
+            first.workspaceId,
+            links.map((link) => link.agentId),
+            BINDINGS_MAX,
+        )
+        const rows = agents.flatMap((agent) =>
+            links
+                .filter((link) => link.agentId === agent.id)
+                .map((link): BoundAgentFacts => ({
+                    id: agent.id,
+                    module: agent.module,
+                    name: agent.name,
+                    created_at: agent.createdAt.toISOString(),
+                    access: link.access,
+                    purpose: link.purpose,
+                })),
+        )
+        return boundAgentsOf(rows, options)
     }
 
     /** The connections an agent is bound to for the purpose(s), oldest first; disconnected ones never count. */
@@ -98,14 +90,7 @@ export class AgentBindingsService {
         purpose: PurposeSelector,
         options: ConnectionsForOptions = {},
     ): Promise<ReadonlyArray<BoundConnection>> {
-        const rows = await this.connectionRows(
-            this.entityManager
-                .createQueryBuilder(AgentConnectionEntity, "ac")
-                .where("ac.agent_id = :agentId AND ac.purpose = ANY(:purposes)", {
-                    agentId,
-                    purposes: purposesOf(purpose),
-                }),
-        )
+        const rows = await this.connectionRows({ agentId, purpose: In([...purposesOf(purpose)]) })
         return boundConnectionsOf(rows, options)
     }
 
@@ -116,15 +101,7 @@ export class AgentBindingsService {
         agentId: string,
     ): Promise<ReadonlyArray<BoundConnection>> {
         await this.members.require(userId, workspaceId)
-        const rows = await this.connectionRows(
-            this.entityManager
-                .createQueryBuilder(AgentConnectionEntity, "ac")
-                .where("ac.agent_id = :agentId AND ac.workspace_id = :workspaceId AND ac.purpose = ANY(:purposes)", {
-                    agentId,
-                    workspaceId,
-                    purposes: PURPOSES,
-                }),
-        )
+        const rows = await this.connectionRows({ agentId, workspaceId, purpose: In([...PURPOSES]) })
         return boundConnectionsOf(rows, {})
     }
 
@@ -174,26 +151,33 @@ export class AgentBindingsService {
         await this.removeGrant(target)
     }
 
-    /** The bindings selected by `bindings` joined to their connections, oldest connection first. */
-    private async connectionRows(
-        bindings: SelectQueryBuilder<AgentConnectionEntity>,
-    ): Promise<Array<BoundConnectionFacts>> {
-        const rows = await bindings
-            .select("c.id", "id")
-            .addSelect("c.provider", "provider")
-            .addSelect("c.name", "name")
-            .addSelect("c.status", "status")
-            .addSelect("c.created_at", "created_at")
-            .addSelect("ac.access", "access")
-            .addSelect("ac.purpose", "purpose")
-            .addSelect("NULLIF(btrim(c.public_meta ->> 'bot_username'), '')", "bot_username")
-            .addSelect("NULLIF(btrim(c.public_meta ->> 'account_masked'), '')", "account_masked")
-            .innerJoin(ConnectionEntity, "c", "c.id = ac.connection_id")
-            .orderBy("c.created_at", "ASC")
-            .addOrderBy("c.id", "ASC")
-            .limit(BINDINGS_MAX)
-            .getRawMany<ConnectionBindingRaw>()
-        return rows.map(connectionFactsOf)
+    /** The bindings matching `where` beside the facts of their connections, oldest connection first. */
+    private async connectionRows(where: FindOptionsWhere<AgentConnectionEntity>): Promise<Array<BoundConnectionFacts>> {
+        const links = await this.entityManager.find(AgentConnectionEntity, { where, take: BINDINGS_MAX })
+        const facts = await this.connections.factsOf(
+            links.map((link) => link.connectionId),
+            BINDINGS_MAX,
+        )
+        return [...facts]
+            .sort(
+                (left, right) =>
+                    left.createdAt.getTime() - right.createdAt.getTime() || left.id.localeCompare(right.id),
+            )
+            .flatMap((connection) =>
+                links
+                    .filter((link) => link.connectionId === connection.id)
+                    .map((link): BoundConnectionFacts => ({
+                        id: connection.id,
+                        provider: connection.provider,
+                        name: connection.name,
+                        status: connection.status,
+                        created_at: connection.createdAt.toISOString(),
+                        access: link.access,
+                        purpose: link.purpose,
+                        bot_username: connection.botUsername,
+                        account_masked: connection.accountMasked,
+                    })),
+            )
     }
 
     /**
@@ -201,19 +185,10 @@ export class AgentBindingsService {
      * workspace. Both rows are held while the grant is written, so neither can leave the workspace in between.
      */
     private async upsert(manager: EntityManager, grant: BindingGrant): Promise<boolean> {
-        const held = await manager
-            .createQueryBuilder(AgentEntity, "a")
-            .select("a.id", "id")
-            .innerJoin(ConnectionEntity, "c", "c.workspace_id = a.workspace_id")
-            .where("a.id = :agentId AND c.id = :connectionId AND a.workspace_id = :workspaceId", {
-                agentId: grant.agentId,
-                connectionId: grant.connectionId,
-                workspaceId: grant.workspaceId,
-            })
-            .limit(1)
-            .setLock("pessimistic_read")
-            .getRawOne<{ id: string }>()
-        if (held === undefined) return false
+        const held =
+            (await this.agents.holds(grant.workspaceId, grant.agentId, manager)) &&
+            (await this.connections.holds(grant.workspaceId, grant.connectionId, manager))
+        if (!held) return false
         await manager
             .createQueryBuilder(AgentConnectionEntity, "ac")
             .insert()

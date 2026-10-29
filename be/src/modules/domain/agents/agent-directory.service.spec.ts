@@ -328,3 +328,41 @@ describe("AgentDirectoryService", () => {
         })
     })
 })
+
+describe("AgentDirectoryService bindings", () => {
+    it("lists the active agents among the ids with their creation moments, oldest first, bounded", async () => {
+        const created = new Date("2026-10-01T00:00:00.000Z")
+        const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf({ createdAt: created })]] })
+
+        await expect((await build(em)).activeCreatedAmong("w1", ["a1", "a1"], 200)).resolves.toEqual([
+            { id: "a1", module: "chatbot", name: "Bot", createdAt: created },
+        ])
+        expect(em.find).toHaveBeenCalledWith(AgentEntity, {
+            select: { id: true, module: true, name: true, createdAt: true },
+            where: { workspaceId: "w1", status: "active", id: In(["a1"]) },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 200,
+        })
+    })
+
+    it("reads nothing for no ids", async () => {
+        const em = mockEntityManager()
+
+        await expect((await build(em)).activeCreatedAmong("w1", [], 200)).resolves.toEqual([])
+        expect(em.find).not.toHaveBeenCalled()
+    })
+
+    it("tells whether the workspace holds the agent, under a shared lock", async () => {
+        const held = mockEntityManager({ findOne: [AgentEntity, agentEntityOf()] })
+        const missing = mockEntityManager({ findOne: [AgentEntity, null] })
+        const service = await build(mockEntityManager())
+
+        await expect(service.holds("w1", "a1", held)).resolves.toBe(true)
+        await expect(service.holds("w1", "a9", missing)).resolves.toBe(false)
+        expect(held.findOne).toHaveBeenCalledWith(AgentEntity, {
+            select: { id: true },
+            where: { id: "a1", workspaceId: "w1" },
+            lock: { mode: "pessimistic_read" },
+        })
+    })
+})

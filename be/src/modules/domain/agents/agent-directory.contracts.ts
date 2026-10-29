@@ -79,3 +79,15 @@ export type OptionalAgentCard = AgentCard | null
 
 /** An agent sheet, or null when there is none. */
 export type OptionalAgentSheet = AgentSheet | null
+
+/** An active agent with the moment it was created. */
+export interface AgentCreation {
+    /** The agent. */
+    readonly id: string
+    /** The module key. */
+    readonly module: string
+    /** The display name. */
+    readonly name: string
+    /** When the agent was created. */
+    readonly createdAt: Date
+}
