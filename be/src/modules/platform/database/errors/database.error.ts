@@ -5,6 +5,8 @@ import type { ErrorKind } from "@modules/platform/errors"
 export enum DatabaseErrorCode {
     /** A dynamic SQL identifier was not on the list of names its caller allows. */
     IdentifierRejected = "DATABASE_IDENTIFIER_REJECTED",
+    /** A database function name was not an identifier of the shape a migration declares. */
+    FunctionRejected = "DATABASE_FUNCTION_REJECTED",
     /** The managed migration wrapper failed or could not be started. */
     MigrationFailed = "DATABASE_MIGRATION_FAILED",
 }
@@ -12,6 +14,7 @@ export enum DatabaseErrorCode {
 /** How each database code travels. */
 export const DATABASE_ERROR_KINDS: Record<DatabaseErrorCode, ErrorKind> = {
     [DatabaseErrorCode.IdentifierRejected]: "internal",
+    [DatabaseErrorCode.FunctionRejected]: "internal",
     [DatabaseErrorCode.MigrationFailed]: "internal",
 }
 
