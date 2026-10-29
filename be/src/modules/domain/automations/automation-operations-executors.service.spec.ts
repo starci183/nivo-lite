@@ -1,15 +1,14 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { MockEntityManager } from "@starci/jest-preset"
+import type { ContractFacts } from "@modules/domain/contracts"
 import { DeskDailyService, renewalSectionOf } from "@modules/domain/accounting"
 import type { RenewalCashReport } from "@modules/domain/accounting"
 import type { RunResult } from "@modules/domain/automation-runs"
 import { AutomationMessagesService } from "./automation-messages.service"
 import { AutomationRenewalPaymentService } from "./automation-renewal-payment.service"
 import { AUTOMATION_OFFICE, AUTOMATION_OWNER_CHAT, AUTOMATION_RECORDS } from "./automations.decorators"
-import { WorkItemsActivityService } from "@modules/domain/work-items"
+import { AutomationReadsService } from "./automation-reads.service"
 import { AutomationOperationsExecutorsService } from "./automation-operations-executors.service"
 import type {
     AutomationOffice,
@@ -21,45 +20,25 @@ import type {
 } from "./automation-ports.contracts"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 import type { DayFigures } from "./automation-reads.contracts"
-import type { LeadRead } from "./automation-reads.contracts"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { LeadRead, OrderRead } from "./automation-reads.contracts"
 
-const READS = new WeakMap<object, ReadonlyArray<FakeQueryBuilder>>()
-
-/** The manager of {@link readingOf}. */
-interface ReadingManager {
-    /** The manager whose reads answer the given results. */
-    readonly em: MockEntityManager
+/** What the reads of the subject answer in a test: the day figures, an order, and the contract on each successive read. */
+interface ReadAnswers {
+    /** The figures of the day report. */
+    readonly figures?: DayFigures
+    /** The order of the delivery notice. */
+    readonly order?: OrderRead
+    /** The contract answered by each successive read; none answers nothing. */
+    readonly contracts?: ReadonlyArray<ContractFacts | undefined>
 }
 
-/** A manager whose reads (and the snapshot transaction around some of them) answer `answers`, one fake statement each, in order. */
-const readingOf = (...answers: Array<QueryBuilderAnswers>): ReadingManager => {
-    const em = mockEntityManager()
-    fakeTransaction(em)
-    READS.set(em, queueQueryBuilders(em, answers))
-    return { em }
-}
-
-/** The fake statements of a manager made by {@link readingOf}, in the order the subject built them. */
-const readsOf = (em: object): ReadonlyArray<FakeQueryBuilder> => READS.get(em) ?? []
-
-/** What the five statements of the day report answer for these figures, in the order they run. */
-const dayFiguresAnswers = (figures: DayFigures | undefined): Array<QueryBuilderAnswers> => [
-    { getRawOne: figures && { count: figures.new_leads } },
-    { getRawOne: figures && { count: figures.confirmed_orders, total: figures.confirmed_total } },
-    { getRawOne: figures && { total: figures.money_in } },
-    { getRawOne: figures && { count: figures.won_leads } },
-]
-
-/** The summaries of the items waiting for a decision, as the work item reads answer them for each manager. */
-const WAITING = new WeakMap<MockEntityManager, ReadonlyArray<string | null>>()
-
-/** A manager whose four figure statements answer these figures and whose work item read answers their waiting list. */
-const dayEm = (figures: DayFigures | undefined): MockEntityManager => {
-    const { em } = readingOf(...dayFiguresAnswers(figures))
-    WAITING.set(em, figures?.waiting ?? [])
-    return em
+const NO_FIGURES: DayFigures = {
+    new_leads: 0,
+    confirmed_orders: 0,
+    confirmed_total: 0,
+    money_in: 0,
+    won_leads: 0,
+    waiting: [],
 }
 
 const RENEWAL_REPORT = mock<RenewalCashReport>({ lines: ["   - Renewal line"] })
@@ -78,13 +57,13 @@ const LEAD: LeadRead = {
 }
 const SENT: RunResult = { status: "waiting_approval", steps: [{ label: "sent", status: "waiting" }], evidence: "wait" }
 const CONVERSATION = { id: "cv-1", channel: "web", handled_by: null, visitor_name: null, lead_id: "l-1" }
-const CONTRACT = {
+const CONTRACT: ContractFacts = {
     id: "c-1",
-    customer_name: "Binh",
-    lead_id: "l-1",
+    customerName: "Binh",
+    leadId: "l-1",
     plan: "Gold",
-    ends_on: "2026-10-20",
-    amount_vnd: null,
+    endsOn: "2026-10-20",
+    amountVnd: null,
     status: "active",
 }
 
@@ -102,7 +81,7 @@ const runner =
     (key: string, ctx: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> =>
         executors[key]?.(ctx, payload) ?? Promise.reject(new TypeError(`no executor for ${key}`))
 
-const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = false) => {
+const build = async (answers: ReadAnswers = {}, useNullChat = false) => {
     const office = mock<AutomationOffice>()
     office.openFollowUp.mockResolvedValue(true)
     const records = mock<AutomationRecords>()
@@ -126,12 +105,14 @@ const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = 
     renewal.zaloWindowSteps.mockResolvedValue([])
     const desk = mock<DeskDailyService>()
     desk.renewalOfDay.mockResolvedValue(RENEWAL_REPORT)
-    const work = mock<WorkItemsActivityService>()
-    work.waitingSummaries.mockResolvedValue([...(WAITING.get(em) ?? [])])
+    const reads = mock<AutomationReadsService>()
+    reads.dayFigures.mockResolvedValue(answers.figures ?? NO_FIGURES)
+    reads.order.mockResolvedValue(answers.order)
+    reads.contract.mockResolvedValue(undefined)
+    for (const contract of answers.contracts ?? []) reads.contract.mockResolvedValueOnce(contract)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AutomationOperationsExecutorsService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: AUTOMATION_OFFICE, useValue: office },
             { provide: AUTOMATION_RECORDS, useValue: records },
@@ -139,11 +120,11 @@ const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = 
             { provide: AutomationMessagesService, useValue: messages },
             { provide: AutomationRenewalPaymentService, useValue: renewal },
             { provide: DeskDailyService, useValue: desk },
-            { provide: WorkItemsActivityService, useValue: work },
+            { provide: AutomationReadsService, useValue: reads },
         ],
     }).compile()
     const service = moduleRef.get(AutomationOperationsExecutorsService)
-    return { office, records, chat, messages, renewal, desk, work, run: runner(service.executors()) }
+    return { office, records, chat, messages, renewal, desk, reads, run: runner(service.executors()) }
 }
 
 const figures = {
@@ -157,17 +138,11 @@ const figures = {
 
 describe("AutomationOperationsExecutorsService daily_report", () => {
     it("posts the day to Office with the deals, the money and what waits", async () => {
-        const em = dayEm(figures)
-        const { run, office, desk } = await build(em)
+        const { run, office, desk, reads } = await build({ figures })
 
         const result = await run("daily_report", context(), { day: "2026-10-11" })
 
-        expect(readsOf(em)[0]?.callsOf("where")).toEqual([
-            [
-                expect.stringContaining(".created_at >= :start"),
-                { workspaceId: "ws-1", start: "2026-10-10T17:00:00.000Z" },
-            ],
-        ])
+        expect(reads.dayFigures).toHaveBeenCalledWith("ws-1", "2026-10-10T17:00:00.000Z")
         const text = (office.postLine.mock.calls[0] ?? [])[1] ?? ""
         expect(text.split("\n")).toEqual([
             'report.title{"day":"11/10/2026","shop":"Tiem Hoa"}',
@@ -189,17 +164,11 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
     })
 
     it("reports an empty day: today, no deals, nothing waiting", async () => {
-        const em = dayEm(undefined)
-        const { run, office } = await build(em)
+        const { run, office, reads } = await build()
 
         const result = await run("daily_report", context(), {})
 
-        expect(readsOf(em)[0]?.callsOf("where")).toEqual([
-            [
-                expect.stringContaining(".created_at >= :start"),
-                { workspaceId: "ws-1", start: "2026-10-11T17:00:00.000Z" },
-            ],
-        ])
+        expect(reads.dayFigures).toHaveBeenCalledWith("ws-1", "2026-10-11T17:00:00.000Z")
         const text = (office.postLine.mock.calls[0] ?? [])[1] ?? ""
         expect(text).toContain('report.deals{"count":0}')
         expect(text).toContain("report.waitingNone{}")
@@ -207,8 +176,7 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
     })
 
     it("also sends the report to the chat of the owner when asked", async () => {
-        const em = dayEm(figures)
-        const { run, chat } = await build(em)
+        const { run, chat } = await build({ figures })
 
         const result = await run("daily_report", context({ toOwnerChat: true }), {})
 
@@ -217,9 +185,9 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
     })
 
     it("says the chat was skipped when it cannot be reached or the null chat adapter is registered", async () => {
-        const unreachable = await build(dayEm(figures))
+        const unreachable = await build({ figures })
         unreachable.chat.sendToOwner.mockResolvedValue(false)
-        const nullChat = await build(dayEm(figures), true)
+        const nullChat = await build({ figures }, true)
         const skipped = { label: "report.chatSkipped{}", status: "skipped", detail: "report.chatSkippedDetail{}" }
 
         const first = await unreachable.run("daily_report", context({ toOwnerChat: true }), {})
@@ -241,8 +209,7 @@ describe("AutomationOperationsExecutorsService delivery_notice", () => {
         tracking_code: " ABC ",
     }
     it("tells the customer the order left, with the carrier and the tracking code", async () => {
-        const em = readingOf({ getRawOne: order }).em
-        const { run, messages } = await build(em)
+        const { run, messages } = await build({ order: order })
 
         await expect(run("delivery_notice", context(), { order_id: "o-1" })).resolves.toBe(SENT)
 
@@ -257,8 +224,7 @@ describe("AutomationOperationsExecutorsService delivery_notice", () => {
     })
 
     it("falls back on standard words when the order has no carrier or tracking code", async () => {
-        const em = readingOf({ getRawOne: { ...order, carrier: null, tracking_code: null } }).em
-        const { run, messages } = await build(em)
+        const { run, messages } = await build({ order: { ...order, carrier: null, tracking_code: null } })
 
         await run("delivery_notice", context(), { order_id: "o-1" })
 
@@ -272,11 +238,11 @@ describe("AutomationOperationsExecutorsService delivery_notice", () => {
     })
 
     it("skips an order that is not shipped, has no customer or no chat", async () => {
-        const missing = await build(readingOf({ getRawOne: undefined }).em)
-        const unshipped = await build(readingOf({ getRawOne: { ...order, shipped_at: null } }).em)
-        const noLead = await build(readingOf({ getRawOne: { ...order, lead_id: null } }).em)
+        const missing = await build({ order: undefined })
+        const unshipped = await build({ order: { ...order, shipped_at: null } })
+        const noLead = await build({ order: { ...order, lead_id: null } })
         noLead.messages.leadOf.mockResolvedValue(null)
-        const noChat = await build(readingOf({ getRawOne: order }).em)
+        const noChat = await build({ order: order })
         noChat.messages.conversationOf.mockResolvedValue(null)
 
         await missing.run("delivery_notice", context(), {})
@@ -293,7 +259,7 @@ describe("AutomationOperationsExecutorsService delivery_notice", () => {
 })
 describe("AutomationOperationsExecutorsService contract_renewal", () => {
     it("drafts the renewal message, asks the owner and opens a follow-up for sales", async () => {
-        const { run, messages, office } = await build(readingOf({ getRawOne: CONTRACT }).em)
+        const { run, messages, office } = await build({ contracts: [CONTRACT] })
 
         const result = await run("contract_renewal", context(), { contract_id: "c-1", ends_on: "2026-10-20" })
 
@@ -336,9 +302,9 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
     })
 
     it("lets the owner switch the question off, and follows up on the end date when it is sooner", async () => {
-        const { run, messages, office } = await build(
-            readingOf({ getRawOne: { ...CONTRACT, ends_on: "2026-10-13", plan: "  " } }).em,
-        )
+        const { run, messages, office } = await build({
+            contracts: [{ ...CONTRACT, endsOn: "2026-10-13", plan: "  " }],
+        })
 
         await run("contract_renewal", context({ alwaysAsk: false }), { contract_id: "c-1" })
 
@@ -354,7 +320,7 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
 })
 describe("AutomationOperationsExecutorsService contract_renewal", () => {
     it("only notes a follow-up that was already open, and uses the standard staff name and the action without a phone", async () => {
-        const { run, messages, office } = await build(readingOf({ getRawOne: CONTRACT }).em)
+        const { run, messages, office } = await build({ contracts: [CONTRACT] })
         office.openFollowUp.mockResolvedValue(false)
         messages.firstStaffName.mockResolvedValue(null)
         messages.lead.mockResolvedValue({ ...LEAD, phone: null })
@@ -373,7 +339,7 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
     })
 
     it("does not message a customer without a chat but still opens the follow-up", async () => {
-        const { run, messages } = await build(readingOf({ getRawOne: CONTRACT }).em)
+        const { run, messages } = await build({ contracts: [CONTRACT] })
         messages.conversationOf.mockResolvedValue(null)
 
         const result = await run("contract_renewal", context(), { contract_id: "c-1" })
@@ -387,9 +353,12 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
     })
 
     it("makes a lead for a contract typed in by name and attaches it", async () => {
-        const { run, records, messages } = await build(
-            readingOf({ getRawOne: { ...CONTRACT, lead_id: null } }, { getRawOne: { ...CONTRACT, lead_id: null } }).em,
-        )
+        const { run, records, messages } = await build({
+            contracts: [
+                { ...CONTRACT, leadId: null },
+                { ...CONTRACT, leadId: null },
+            ],
+        })
 
         await run("contract_renewal", context(), { contract_id: "c-1" })
 
@@ -404,11 +373,11 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
     })
 
     it("skips a contract that is gone, no longer active, moved to another end date or has no lead", async () => {
-        const gone = await build(readingOf({ getRawOne: undefined }).em)
-        const noId = await build(mockEntityManager())
-        const ended = await build(readingOf({ getRawOne: { ...CONTRACT, status: "ended" } }).em)
-        const moved = await build(readingOf({ getRawOne: CONTRACT }).em)
-        const noLead = await build(readingOf({ getRawOne: CONTRACT }).em)
+        const gone = await build({ contracts: [undefined] })
+        const noId = await build()
+        const ended = await build({ contracts: [{ ...CONTRACT, status: "ended" }] })
+        const moved = await build({ contracts: [CONTRACT] })
+        const noLead = await build({ contracts: [CONTRACT] })
         noLead.messages.lead.mockResolvedValue(null)
 
         await gone.run("contract_renewal", context(), { contract_id: "c-1" })
@@ -426,17 +395,15 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
 })
 describe("AutomationOperationsExecutorsService contract_renewal links the customer", () => {
     it("links the contracts to their customers before it makes a lead, and uses the lead the link found", async () => {
-        const unlinked = { ...CONTRACT, lead_id: null }
-        const { run, records } = await build(readingOf({ getRawOne: unlinked }, { getRawOne: unlinked }).em)
+        const unlinked = { ...CONTRACT, leadId: null }
+        const { run, records } = await build({ contracts: [unlinked, unlinked] })
         records.linkCustomers.mockResolvedValue(undefined)
         await run("contract_renewal", context(), { contract_id: "c-1" })
         expect(records.linkCustomers).toHaveBeenCalledWith("ws-1")
         expect(records.linkCustomers.mock.invocationCallOrder[0]).toBeLessThan(
             records.createLead.mock.invocationCallOrder[0] ?? 0,
         )
-        const linked = await build(
-            readingOf({ getRawOne: unlinked }, { getRawOne: { ...unlinked, lead_id: "l-1" } }).em,
-        )
+        const linked = await build({ contracts: [unlinked, { ...unlinked, leadId: "l-1" }] })
         await linked.run("contract_renewal", context(), { contract_id: "c-1" })
         expect(linked.records.linkCustomers).toHaveBeenCalledWith("ws-1")
         expect(linked.records.createLead).not.toHaveBeenCalled()
@@ -444,8 +411,8 @@ describe("AutomationOperationsExecutorsService contract_renewal links the custom
     })
 
     it("keeps the contract it read when it cannot be read again after the link", async () => {
-        const unlinked = { ...CONTRACT, lead_id: null }
-        const { run, records } = await build(readingOf({ getRawOne: unlinked }, { getRawOne: undefined }).em)
+        const unlinked = { ...CONTRACT, leadId: null }
+        const { run, records } = await build({ contracts: [unlinked, undefined] })
         records.linkCustomers.mockResolvedValue(undefined)
 
         await run("contract_renewal", context(), { contract_id: "c-1" })
@@ -455,7 +422,7 @@ describe("AutomationOperationsExecutorsService contract_renewal links the custom
     })
 
     it("does not link when the contract already has its lead", async () => {
-        const { run, records } = await build(readingOf({ getRawOne: CONTRACT }).em)
+        const { run, records } = await build({ contracts: [CONTRACT] })
         await run("contract_renewal", context(), { contract_id: "c-1" })
         expect(records.linkCustomers).not.toHaveBeenCalled()
     })
@@ -472,7 +439,7 @@ describe("AutomationOperationsExecutorsService contract_renewal with a payment",
     }
 
     it("sends the payment lines as a fixed tail, reports the invoice first and names it in the evidence", async () => {
-        const { run, messages, renewal, office } = await build(readingOf({ getRawOne: CONTRACT }).em)
+        const { run, messages, renewal, office } = await build({ contracts: [CONTRACT] })
         renewal.paymentOf.mockResolvedValue(PAYMENT)
         const zalo = { label: "zalo", status: "skipped" as const }
         renewal.zaloWindowSteps.mockResolvedValue([zalo])
@@ -497,7 +464,7 @@ describe("AutomationOperationsExecutorsService contract_renewal with a payment",
     })
 
     it("keeps the invoice step when the customer has no chat, so sales can quote it", async () => {
-        const { run, messages, renewal } = await build(readingOf({ getRawOne: CONTRACT }).em)
+        const { run, messages, renewal } = await build({ contracts: [CONTRACT] })
         renewal.paymentOf.mockResolvedValue(PAYMENT)
         messages.conversationOf.mockResolvedValue(null)
 

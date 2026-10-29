@@ -4,6 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orders.module-definitio
 import { OrdersService } from "./orders.service"
 import { OrdersFiguresService } from "./orders-figures.service"
 import { OrdersReadService } from "./orders-read.service"
+import { OrdersAutomationReadService } from "./orders-automation-read.service"
 
 @Module({})
 /** The orders of a workspace over the primary Supabase PostgreSQL connection: the only writer of public.orders. */
@@ -13,8 +14,14 @@ export class OrdersModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), OrdersService, OrdersReadService, OrdersFiguresService],
-            exports: [OrdersService, OrdersReadService, OrdersFiguresService],
+            providers: [
+                ...(base.providers ?? []),
+                OrdersService,
+                OrdersReadService,
+                OrdersFiguresService,
+                OrdersAutomationReadService,
+            ],
+            exports: [OrdersService, OrdersReadService, OrdersFiguresService, OrdersAutomationReadService],
         }
     }
 }

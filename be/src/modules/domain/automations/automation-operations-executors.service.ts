@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { DeskDailyService, renewalSectionOf } from "@modules/domain/accounting"
 import type { RunResult, RunStep } from "@modules/domain/automation-runs"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AutomationMessagesService } from "./automation-messages.service"
 import { AutomationRenewalPaymentService } from "./automation-renewal-payment.service"
 import type {
@@ -16,9 +14,9 @@ import type {
     ExecutorPayload,
 } from "./automation-ports.contracts"
 import { InjectAutomationOffice, InjectAutomationOwnerChat, InjectAutomationRecords } from "./automations.decorators"
-import { WorkItemsActivityService } from "@modules/domain/work-items"
-import { readContract, readDayFigures, readOrder } from "./automation-reads.query"
-import type { ContractRead, LeadRead } from "./automation-reads.contracts"
+import type { ContractFacts } from "@modules/domain/contracts"
+import { AutomationReadsService } from "./automation-reads.service"
+import type { LeadRead } from "./automation-reads.contracts"
 import { dayText, instantOf, vndText } from "./policies/format.policy"
 import { vnClock } from "./policies/hours.policy"
 import { renewalNoticeFields } from "./policies/renewal-notice.policy"
@@ -35,7 +33,6 @@ const WAITING_EXCERPT = 90
  */
 export class AutomationOperationsExecutorsService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectAutomationOffice() private readonly office: AutomationOffice,
         @InjectAutomationRecords() private readonly records: AutomationRecords,
@@ -43,7 +40,7 @@ export class AutomationOperationsExecutorsService {
         private readonly messages: AutomationMessagesService,
         private readonly renewalPayment: AutomationRenewalPaymentService,
         private readonly desk: DeskDailyService,
-        private readonly work: WorkItemsActivityService,
+        private readonly reads: AutomationReadsService,
     ) {}
 
     /** The executors of the templates this service runs, by template key. */
@@ -59,12 +56,7 @@ export class AutomationOperationsExecutorsService {
     private async dailyReport(context: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> {
         const say = this.messages.say.bind(this.messages)
         const day = textOf(payload.day) || vnClock(this.clock.now()).day
-        const figures = await readDayFigures(
-            this.entityManager,
-            this.work,
-            context.workspaceId,
-            new Date(`${day}T00:00:00+07:00`).toISOString(),
-        )
+        const figures = await this.reads.dayFigures(context.workspaceId, new Date(`${day}T00:00:00+07:00`).toISOString())
         const deals = Math.max(figures.won_leads, figures.confirmed_orders)
         const waiting = figures.waiting.map((summary) => (summary ?? "").slice(0, WAITING_EXCERPT))
         // The renewal-to-cash story of the calendar day: renewals issued and paid, unpaid, ending soon, and money waiting for a match.
@@ -111,7 +103,7 @@ export class AutomationOperationsExecutorsService {
     private async deliveryNotice(context: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> {
         const say = this.messages.say.bind(this.messages)
         const orderId = textOf(payload.order_id)
-        const order = orderId ? await readOrder(this.entityManager, context.workspaceId, orderId) : undefined
+        const order = orderId ? await this.reads.order(context.workspaceId, orderId) : undefined
         if (!order?.shipped_at) return this.messages.skipped(say("delivery.notShipped"))
         const lead = await this.messages.leadOf(context.workspaceId, order.lead_id ?? "")
         if (lead === null) return this.messages.skipped(say("delivery.noLead", { order: order.order_no }))
@@ -151,17 +143,17 @@ export class AutomationOperationsExecutorsService {
     private async contractRenewal(context: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> {
         const say = this.messages.say.bind(this.messages)
         const contractId = textOf(payload.contract_id)
-        const found = contractId ? await readContract(this.entityManager, context.workspaceId, contractId) : undefined
+        const found = contractId ? await this.reads.contract(context.workspaceId, contractId) : undefined
         if (found?.status !== "active") return this.messages.skipped(say("renewal.gone"))
         // A contract typed in by name only may belong to a lead that already holds the customer's contact: link before opening a new one.
-        const contract = found.lead_id === null ? await this.linked(context.workspaceId, found) : found
-        if (textOf(payload.ends_on) && contract.ends_on !== textOf(payload.ends_on)) {
+        const contract = found.leadId === null ? await this.linked(context.workspaceId, found) : found
+        if (textOf(payload.ends_on) && contract.endsOn !== textOf(payload.ends_on)) {
             return this.messages.skipped(say("renewal.moved"))
         }
-        const ends = dayText(contract.ends_on)
+        const ends = dayText(contract.endsOn)
         const plan = contract.plan.trim() || say("renewal.planFallback")
         // A contract typed in by name only gets an open lead now, so sales can follow the renewal.
-        const leadId = contract.lead_id ?? (await this.createRenewalLead(context.workspaceId, contract, plan))
+        const leadId = contract.leadId ?? (await this.createRenewalLead(context.workspaceId, contract, plan))
         const lead = await this.messages.lead(context.workspaceId, leadId)
         if (lead === null) return this.messages.skipped(say("renewal.noLead"))
         const payment = await this.renewalPayment.paymentOf(context.workspaceId, contract, lead.id, context.body)
@@ -181,7 +173,7 @@ export class AutomationOperationsExecutorsService {
                 action: "send_follow_up",
                 lead,
                 conversationId: conversation.id,
-                dedupe: `renew:${contract.id}:${contract.ends_on}`,
+                dedupe: `renew:${contract.id}:${contract.endsOn}`,
                 summary: say("renewal.summary", { name: lead.contact_name, plan, ends }),
                 caseNote: say("renewal.case", { plan, ends }),
                 vars: { ten_khach: lead.contact_name, ten_goi: plan, ngay_het_han: ends, ...payment?.vars },
@@ -200,7 +192,7 @@ export class AutomationOperationsExecutorsService {
             kind: "automation.contract_renewal",
             actor: this.messages.actorOf(context.def),
             summary: say("renewal.evidenceSummary", { plan, name: lead.contact_name }),
-            evidence: [contract.id, contract.ends_on, payment?.invoiceNo].filter(Boolean).join(":"),
+            evidence: [contract.id, contract.endsOn, payment?.invoiceNo].filter(Boolean).join(":"),
         })
         return { status, steps, evidence }
     }
@@ -208,12 +200,12 @@ export class AutomationOperationsExecutorsService {
     /** Opens the follow-up for sales (unless an open one has its title) and notes it in Office; answers the step it adds. */
     private async openRenewalFollowUp(
         context: ExecutorContext,
-        contract: ContractRead,
+        contract: ContractFacts,
         lead: LeadRead,
         plan: string,
     ): Promise<ReadonlyArray<RunStep>> {
         const say = this.messages.say.bind(this.messages)
-        const ends = dayText(contract.ends_on)
+        const ends = dayText(contract.endsOn)
         const owner = (await this.messages.firstStaffName(context.workspaceId)) ?? say("after.staffFallback")
         const opened = await this.office.openFollowUp(context.workspaceId, {
             leadId: lead.id,
@@ -225,7 +217,7 @@ export class AutomationOperationsExecutorsService {
                 plan,
                 ends,
             }),
-            dueAt: this.renewalDue(contract.ends_on).toISOString(),
+            dueAt: this.renewalDue(contract.endsOn).toISOString(),
         })
         if (!opened) return []
         await this.office.postLine(
@@ -243,15 +235,15 @@ export class AutomationOperationsExecutorsService {
     }
 
     /** The contract after the workspace's contracts were linked to the leads that hold their customers' contacts. */
-    private async linked(workspaceId: string, contract: ContractRead): Promise<ContractRead> {
+    private async linked(workspaceId: string, contract: ContractFacts): Promise<ContractFacts> {
         await this.records.linkCustomers(workspaceId)
-        const reread = await readContract(this.entityManager, workspaceId, contract.id)
+        const reread = await this.reads.contract(workspaceId, contract.id)
         return reread ?? contract
     }
 
-    private async createRenewalLead(workspaceId: string, contract: ContractRead, plan: string): Promise<string> {
+    private async createRenewalLead(workspaceId: string, contract: ContractFacts, plan: string): Promise<string> {
         const leadId = await this.records.createLead(workspaceId, {
-            contactName: contract.customer_name,
+            contactName: contract.customerName,
             channel: this.messages.say("renewal.channel"),
             need: this.messages.say("renewal.need", { plan }),
             stage: "qualified",
