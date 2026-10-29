@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import { TransactionsError, TransactionsErrorCode } from "./errors/transactions.error"
 import { TransactionEntity } from "./persistence/entities"
 import { toTransactionRow } from "./transaction.mapper"
@@ -49,6 +50,17 @@ interface AccountingRawRow {
     /** When it was written, ISO text as `to_json` renders it. */
     readonly created_at: string
 }
+
+/** True when a RETURNING row carries the columns of a transaction contract row. */
+const isReturnedRow = (value: unknown): value is TransactionRow =>
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.workspace_id === "string" &&
+    typeof value.amount_vnd === "number" &&
+    typeof value.status === "string"
+
+/** The transaction rows a write answered. */
+const returnedRows = (raw: unknown): Array<TransactionRow> => (Array.isArray(raw) ? raw.filter(isReturnedRow) : [])
 
 @Injectable()
 /** The payments of a workspace as the ledger sees them: the only writer of public.transactions. */
@@ -196,7 +208,7 @@ export class TransactionsService {
                 "id, workspace_id, inbound_event_id, amount_vnd::float8 AS amount_vnd, reference, payer, invoice_id, status",
             )
             .execute()
-        const [created] = result.raw as Array<TransactionRow>
+        const created = returnedRows(result.raw)[0]
         if (created === undefined) throw new TransactionsError({ code: TransactionsErrorCode.NotCreated })
         return created
     }
