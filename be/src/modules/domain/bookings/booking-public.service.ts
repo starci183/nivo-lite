@@ -28,7 +28,7 @@ import type { OptionalCancellableBooking } from "./booking-chat.contracts"
 import { cancellableOf } from "./policies/cancellable.policy"
 import { BookingsError, BookingsErrorCode } from "./errors/bookings.error"
 import { BookingServiceEntity } from "@modules/domain/booking-services"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { WorkspaceAdminReadService } from "@modules/domain/workspaces"
 import type { CancellableFacts, PublishedPageFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
 import { checkSlot, findSlots, nearestSlots } from "./policies/availability.policy"
@@ -69,6 +69,7 @@ export class BookingPublicService {
         private readonly models: BookingModelService,
         private readonly reservation: BookingReservationService,
         private readonly reminders: BookingRemindersService,
+        private readonly workspaces: WorkspaceAdminReadService,
     ) {}
 
     /** Supplies active workspace services and timezone to callers that do not use a published page. */
@@ -232,17 +233,17 @@ export class BookingPublicService {
     private async published(slug: string): Promise<PublishedPageFacts> {
         const row = await this.entityManager
             .createQueryBuilder(BookingSettingEntity, "s")
-            .innerJoin(WorkspaceEntity, "w", "w.id = s.workspaceId")
             .select("s.workspaceId", "workspace_id")
             .addSelect("s.publicNote", "public_note")
             .addSelect("s.address", "address")
             .addSelect("s.timezone", "timezone")
-            .addSelect("w.name", "shop")
             .where("s.publicSlug = :slug AND s.publicEnabled", { slug })
             .limit(1)
-            .getRawOne<PublishedPageFacts>()
+            .getRawOne<Omit<PublishedPageFacts, "shop">>()
         if (row === undefined) throw new BookingsError({ code: BookingsErrorCode.PageNotFound })
-        return row
+        const [named] = await this.workspaces.namesOf([row.workspace_id], 1)
+        if (named === undefined) throw new BookingsError({ code: BookingsErrorCode.PageNotFound })
+        return { ...row, shop: named.name }
     }
 
     private async keyed(workspaceId: string, key: string): Promise<KeyedBooking | undefined> {

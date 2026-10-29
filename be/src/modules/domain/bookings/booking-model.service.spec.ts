@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
+import { ShiftsLeaveReadService } from "@modules/domain/shifts"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { BookingExceptionEntity } from "@modules/domain/booking-exceptions"
 import { BookingHourEntity } from "@modules/domain/booking-hours"
@@ -31,12 +31,20 @@ const SETTINGS = Object.assign(new BookingSettingEntity(), {
     address: "1 Main St",
 })
 
-const build = async (entityManager: MockEntityManager) => {
+const buildWith = async (entityManager: MockEntityManager) => {
+    const leave = mock<ShiftsLeaveReadService>()
+    leave.approvedLeave.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
-        providers: [BookingModelService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            BookingModelService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: ShiftsLeaveReadService, useValue: leave },
+        ],
     }).compile()
-    return moduleRef.get(BookingModelService)
+    return { model: moduleRef.get(BookingModelService), leave }
 }
+
+const build = async (entityManager: MockEntityManager) => (await buildWith(entityManager)).model
 
 describe("BookingModelService", () => {
     describe("settings", () => {
@@ -172,23 +180,30 @@ describe("BookingModelService", () => {
         it("joins the held bookings with the whole-day blocks of approved leave", async () => {
             const entityManager = mockEntityManager({
                 find: [
-                    BookingEntity,
                     [
-                        Object.assign(new BookingEntity(), {
-                            id: "b1",
-                            resourceId: "r1",
-                            partySize: 2,
-                            startAt: new Date(1000),
-                            blockEndAt: new Date(2000),
-                        }),
+                        BookingEntity,
+                        [
+                            Object.assign(new BookingEntity(), {
+                                id: "b1",
+                                resourceId: "r1",
+                                partySize: 2,
+                                startAt: new Date(1000),
+                                blockEndAt: new Date(2000),
+                            }),
+                        ],
+                    ],
+                    [
+                        BookingResourceEntity,
+                        [
+                            Object.assign(new BookingResourceEntity(), { id: "r2", staffId: "p1" }),
+                            Object.assign(new BookingResourceEntity(), { id: "r3", staffId: "p2" }),
+                            Object.assign(new BookingResourceEntity(), { id: "r4", staffId: null }),
+                        ],
                     ],
                 ],
             })
-            const leaves = fakeQueryBuilder({
-                getRawMany: [{ resource_id: "r2", leave_staff: "p1", from_date: "2026-10-12", to_date: "2026-10-12" }],
-            })
-            entityManager.createQueryBuilder.mockReturnValue(leaves.builder)
-            const model = await build(entityManager)
+            const { model, leave } = await buildWith(entityManager)
+            leave.approvedLeave.mockResolvedValue([{ staffId: "p1", fromDate: "2026-10-12", toDate: "2026-10-12" }])
             const from = Date.UTC(2026, 9, 11, 17)
 
             const spans = await model.spans("ws-1", from, from + 86_400_000, "Asia/Ho_Chi_Minh")
@@ -206,8 +221,12 @@ describe("BookingModelService", () => {
             const [, options] = entityManager.find.mock.calls[0] ?? []
             expect(JSON.stringify(options)).toContain("2026-10-12T17:00:00.000Z")
             expect(JSON.stringify(options)).toContain("2026-10-11T17:00:00.000Z")
-            expect(leaves.callsOf("where")).toEqual([["r.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
-            expect(leaves.callsOf("andWhere")[0]?.[1]).toEqual({ from: "2026-10-12", to: "2026-10-13" })
+            expect(leave.approvedLeave).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                staffIds: ["p1", "p2"],
+                from: "2026-10-12",
+                to: "2026-10-13",
+            })
         })
     })
 })
