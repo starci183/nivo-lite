@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { builder, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import { Between, In } from "typeorm"
-import { StaffEntity } from "@modules/domain/staff"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { StaffDirectoryService } from "@modules/domain/staff"
+import { WorkItemsService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -121,10 +121,21 @@ const availabilityOf = entityOf(ShiftsAvailabilityEntity, {
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
 })
 
-const itemOf = entityOf(WorkItemEntity, { id: "item-1", status: "done", proposal: {}, result: null, decidedPath: null })
+const itemOf = (overrides: Record<string, unknown> = {}) => ({
+    id: "item-1",
+    status: "done",
+    proposal: {},
+    result: null,
+    decided_path: null,
+    ...overrides,
+})
 
 /** What the reads answer: the rows of each entity, whether the member has a profile, the reminder switch and the figures. */
 interface Answers {
+    /** The work items the decision lookup answers. */
+    readonly items?: ReadonlyArray<object>
+    /** The active staff the directory answers. */
+    readonly staff?: ReadonlyArray<{ readonly id: string; readonly name: string }>
     /** The rows `find` answers per entity; an entity not listed answers no rows. */
     readonly find?: ReadonlyMap<unknown, ReadonlyArray<object>>
     /** Whether the member has a shifts profile. */
@@ -165,6 +176,10 @@ const build = async (answers: Answers = {}, member: WorkspaceMember = memberOf()
     })
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(member)
+    const workItems = mock<WorkItemsService>()
+    workItems.findMany.mockResolvedValue((answers.items ?? []) as never)
+    const staff = mock<StaffDirectoryService>()
+    staff.list.mockResolvedValue([...(answers.staff ?? [])])
     const data = mock<ShiftsDataService>()
     data.loadSetup.mockResolvedValue(SETUP)
     data.loadEnv.mockResolvedValue(ENV)
@@ -176,9 +191,11 @@ const build = async (answers: Answers = {}, member: WorkspaceMember = memberOf()
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: ShiftsDataService, useValue: data },
+            { provide: WorkItemsService, useValue: workItems },
+            { provide: StaffDirectoryService, useValue: staff },
         ],
     }).compile()
-    return { workbench: moduleRef.get(ShiftsWorkbenchService), em, members, data }
+    return { workbench: moduleRef.get(ShiftsWorkbenchService), em, members, data, workItems, staff }
 }
 
 const managerBenchRows: Answers = {
@@ -187,17 +204,14 @@ const managerBenchRows: Answers = {
     gaps: 3,
     pending: 2,
     minutes: "750",
+    items: [itemOf({ id: "item-1", status: "waiting_decision", proposal: { summary: "Publish" } })],
+    staff: [{ id: "staff-row-1", name: "Lan" }],
     find: new Map<unknown, ReadonlyArray<object>>([
         [
             ShiftsScheduleEntity,
             [scheduleOf(), scheduleOf({ id: "schedule-1", version: 1, status: "published", workItemId: null })],
         ],
         [ShiftsAttendanceEntity, [{ shiftId: "shift-1", checkedInAt: new Date("2026-10-14T00:55:00.000Z") }]],
-        [
-            WorkItemEntity,
-            [itemOf({ id: "item-1", status: "waiting_decision", proposal: { summary: "Publish" } as never })],
-        ],
-        [StaffEntity, [{ id: "staff-row-1", name: "Lan" }]],
         [ShiftsSwapRequestEntity, [swapOf()]],
         [ShiftsShiftEntity, [shiftRowOf()]],
     ]),
@@ -214,7 +228,7 @@ describe("ShiftsWorkbenchService", () => {
     ])(
         "maps missing timestamps and malformed work-item JSON %j / %j (null dates=%s)",
         async (proposal, result, nullDates) => {
-            const item = { id: "item-1", status: "done", proposal, result, decidedPath: null }
+            const item = itemOf({ proposal, result })
             const published = new Date("2026-10-13T02:00:00.000Z")
             const dateOf = (date: Date | string): Date | string | null => (nullDates ? null : date)
             const dated = <Row extends { createdAt: Date | string }>(row: Row) => ({
@@ -235,8 +249,8 @@ describe("ShiftsWorkbenchService", () => {
                     [ShiftsAvailabilityEntity, [dated(availabilityOf())]],
                     [ShiftsAttendanceEntity, [{ shiftId: "shift-1", checkedInAt: dateOf("2026-10-14T00:55:00.000Z") }]],
                     [ShiftsShiftEntity, [shiftRowOf({ positionId: "absent" })]],
-                    [WorkItemEntity, [item]],
                 ]),
+                items: [item],
             })
             const segs = [{ date: "2026-10-11", s: 480, e: 600, pos: "position-1" }]
             data.loadEnv.mockResolvedValue({ ...ENV, prior: new Map([["profile-1", segs]]) })
@@ -452,20 +466,17 @@ describe("ShiftsWorkbenchService bench", () => {
         const { workbench } = await build({
             find: new Map<unknown, ReadonlyArray<object>>([
                 [ShiftsLeaveRequestEntity, [leaveOf()]],
-                [
-                    WorkItemEntity,
-                    [
-                        itemOf({
-                            id: "item-2",
-                            status: "done",
-                            proposal: null as never,
-                            result: { summary: "Approved" } as never,
-                            decidedPath: "human",
-                        }),
-                    ],
-                ],
                 [ShiftsAvailabilityEntity, [availabilityOf()]],
             ]),
+            items: [
+                itemOf({
+                    id: "item-2",
+                    status: "done",
+                    proposal: null,
+                    result: { summary: "Approved" },
+                    decided_path: "human",
+                }),
+            ],
         })
 
         const view = await workbench.bench("user-1", "ws-1")

@@ -2,6 +2,7 @@ import { WorkItemsErrorCode } from "./errors/work-items.error"
 import { FakeClock, fakeIds, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { In, Like } from "typeorm"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
@@ -105,6 +106,22 @@ describe("WorkItemsService listing", () => {
             where: { workspaceId: "ws-1", leadId: "lead-1" },
             order: { createdAt: "ASC", id: "ASC" },
             take: 500,
+        })
+    })
+
+    it("answers the items of the given ids", async () => {
+        const em = mockEntityManager({ find: [WorkItemEntity, [entityOf()]] })
+
+        expect(await (await build(em)).findMany(["item-1", "item-2"], 200)).toEqual([contractOf()])
+        expect(em.find).toHaveBeenCalledWith(WorkItemEntity, { where: { id: In(["item-1", "item-2"]) }, take: 200 })
+    })
+
+    it("counts the items of an action under a dedupe prefix", async () => {
+        const em = mockEntityManager({ count: [WorkItemEntity, 3] })
+
+        expect(await (await build(em)).countByDedupePrefix("ws-1", "ask", "ask:lead-1")).toBe(3)
+        expect(em.count).toHaveBeenCalledWith(WorkItemEntity, {
+            where: { workspaceId: "ws-1", action: "ask", dedupeKey: Like("ask:lead-1%") },
         })
     })
 })
