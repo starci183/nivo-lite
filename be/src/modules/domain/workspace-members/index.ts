@@ -23,3 +23,10 @@ export { MemberLookupService } from "./member-lookup.service"
 export type { NamedMember } from "./member-lookup.contracts"
 export { workspaceMembersEntities } from "./persistence/entities"
 export { MemberRosterService } from "./member-roster.service"
+export { WorkspaceMemberSeatsService } from "./workspace-member-seats.service"
+export type {
+    ActiveUserRecord,
+    MemberSeatRecord,
+    OptionalMemberSeatRecord,
+    UserSeatRecord,
+} from "./workspace-member-seats.contracts"

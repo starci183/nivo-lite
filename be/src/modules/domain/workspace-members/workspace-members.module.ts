@@ -4,6 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workspace-members.modul
 import { AccountSessionsService } from "./account-sessions.service"
 import { ACCOUNT_DIRECTORY } from "./workspace-members.port"
 import { WorkspaceMemberDirectoryService } from "./workspace-member-directory.service"
+import { WorkspaceMemberSeatsService } from "./workspace-member-seats.service"
 import { WorkspaceMembersReadService } from "./workspace-members-read.service"
 import { WorkspaceMembersService } from "./workspace-members.service"
 import { MemberLookupService } from "./member-lookup.service"
@@ -23,6 +24,7 @@ export class WorkspaceMembersModule extends ConfigurableModuleClass {
                 { provide: ACCOUNT_DIRECTORY, useExisting: options.accounts },
                 WorkspaceMembersService,
                 WorkspaceMembersReadService,
+                WorkspaceMemberSeatsService,
                 WorkspaceMemberDirectoryService,
                 AccountSessionsService,
                 MemberLookupService,
@@ -32,6 +34,7 @@ export class WorkspaceMembersModule extends ConfigurableModuleClass {
                 ACCOUNT_DIRECTORY,
                 WorkspaceMembersService,
                 WorkspaceMembersReadService,
+                WorkspaceMemberSeatsService,
                 WorkspaceMemberDirectoryService,
                 AccountSessionsService,
                 MemberLookupService,
