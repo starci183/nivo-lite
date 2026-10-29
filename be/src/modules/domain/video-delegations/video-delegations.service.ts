@@ -39,8 +39,8 @@ export class VideoDelegationsService {
             contentItemId: input.contentItemId,
             channels: [...input.channels],
         })
-        const id = (result.identifiers[0] as { readonly id?: string } | undefined)?.id
-        return id === undefined ? null : { id, project_id: input.projectId }
+        const id: unknown = result.identifiers[0]?.id
+        return typeof id === "string" ? { id, project_id: input.projectId } : null
     }
 
     /** Links the render queued for a delegation. */

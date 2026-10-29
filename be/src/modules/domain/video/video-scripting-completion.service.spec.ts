@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, builder, fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AiGenerationsError, GenerationsService } from "@modules/domain/ai-generations"
 import type { GenerationState } from "@modules/domain/ai-generations"
 import { EventsService } from "@modules/domain/events"
@@ -8,50 +8,13 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import { INBOX } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
 import type { ScriptProject } from "./video-stored.contracts"
 import { VideoScriptReadsService } from "./video-script-reads.service"
 import { VideoScriptingCompletionService } from "./video-scripting-completion.service"
 import { VIDEO_SCRIPT_RETRY } from "./video-scripting.templates"
-
-const WS = "workspace-1"
-const NOW = "2026-10-13T09:00:00.000Z"
-const ANSWER = JSON.stringify({
-    title: "Spring  sale",
-    scenes: [
-        { caption: "Fresh", voiceover: "Hi" },
-        { caption: "Visit", voiceover: "Bye" },
-    ],
-})
-const PROMPT = [
-    { role: "system", content: "Write a script" },
-    { role: "tool", content: "dropped" },
-]
-
-const META = {
-    generation_id: "generation-1",
-    script_request_id: "generation-1",
-    attempts: 1,
-    auto_title: true,
-    started_at: "2026-10-13T08:59:58.000Z",
-}
-
-const stateOf = builder<GenerationState>({
-    id: "generation-1",
-    workspaceId: WS,
-    purpose: "video_script",
-    status: "done",
-    text: ANSWER,
-    errorCode: null,
-    input: { context: { projectId: "project-1" }, messages: PROMPT },
-    output: {},
-    timings: { total_ms: 5 },
-    createdAt: "2026-10-13T08:59:58.000Z",
-    finishedAt: NOW,
-    messages: [],
-})
+import { CLAIM, META, NOW, stateOf, WS } from "@tests/fixtures/builders/video-scripting-completion.builder"
 
 const projectOf = builder<ScriptProject>({
     id: "project-1",
@@ -68,11 +31,9 @@ const projectOf = builder<ScriptProject>({
     shop_name: null,
 })
 
-/** The delivery key the bus hands the `video` reactor. */
-const CLAIM = { consumer: "ai_generation_completed__video", dedupeKey: "generation-1" }
-
 const build = async (state: GenerationState | null, project: ScriptProject | null = projectOf(), claimWon = true) => {
-    const inbox = mock<Inbox>({ claim: jest.fn().mockResolvedValue(claimWon) })
+    const inbox = fakeInbox()
+    if (!claimWon) inbox.seen(CLAIM.consumer, CLAIM.dedupeKey)
     const tx = fakeTransaction(mockEntityManager())
     const reads = mock<VideoScriptReadsService>()
     reads.projectOf.mockResolvedValue(project ?? undefined)
@@ -114,11 +75,7 @@ describe("VideoScriptingCompletionService", () => {
 
             await expect(completion.complete(WS, "generation-1", CLAIM)).resolves.toBeUndefined()
 
-            expect(inbox.claim).toHaveBeenCalledWith(
-                "ai_generation_completed__video",
-                "generation-1",
-                expect.anything(),
-            )
+            expect(inbox.claims).toEqual([{ source: "ai_generation_completed__video", eventId: "generation-1" }])
             expect(projectWriter.finish).not.toHaveBeenCalled()
             expect(events.record).not.toHaveBeenCalled()
         })

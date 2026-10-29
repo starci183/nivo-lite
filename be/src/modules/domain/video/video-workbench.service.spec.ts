@@ -78,7 +78,9 @@ const PROJECT = {
     updatedAt: "2026-10-13T11:00:00.000Z",
 }
 
-const build = async (reads: VideoWorkbenchReadsService = mock<VideoWorkbenchReadsService>()) => {
+const build = async (rows: ReadonlyArray<StoredProject> = []) => {
+    const reads = mock<VideoWorkbenchReadsService>()
+    reads.projectsOf.mockResolvedValue([...rows])
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(memberOf())
     const media = mock<VideoMediaService>()
@@ -92,13 +94,6 @@ const build = async (reads: VideoWorkbenchReadsService = mock<VideoWorkbenchRead
         ],
     }).compile()
     return { workbench: moduleRef.get(VideoWorkbenchService), members, media, reads }
-}
-
-/** A reads double that answers these projects. */
-const readsOf = (...rows: ReadonlyArray<StoredProject>) => {
-    const reads = mock<VideoWorkbenchReadsService>()
-    reads.projectsOf.mockResolvedValue([...rows])
-    return reads
 }
 
 describe("VideoWorkbenchService", () => {
@@ -119,7 +114,7 @@ describe("VideoWorkbenchService", () => {
 
     describe("list", () => {
         it("answers the projects with their render links", async () => {
-            const { workbench, media, reads } = await build(readsOf(rowOf()))
+            const { workbench, media, reads } = await build([rowOf()])
 
             await expect(workbench.list("person-1", WS)).resolves.toEqual([PROJECT])
             expect(reads.projectsOf).toHaveBeenCalledWith(WS, null, false)
@@ -127,7 +122,7 @@ describe("VideoWorkbenchService", () => {
         })
 
         it("includes archived projects on request", async () => {
-            const { workbench, reads } = await build(readsOf())
+            const { workbench, reads } = await build()
 
             await expect(workbench.list("person-1", WS, true)).resolves.toEqual([])
             expect(reads.projectsOf).toHaveBeenCalledWith(WS, null, true)
@@ -136,14 +131,14 @@ describe("VideoWorkbenchService", () => {
 
     describe("get", () => {
         it("answers one project of the workspace", async () => {
-            const { workbench, reads } = await build(readsOf(rowOf()))
+            const { workbench, reads } = await build([rowOf()])
 
             await expect(workbench.get("person-1", WS, "project-1")).resolves.toEqual(PROJECT)
             expect(reads.projectsOf).toHaveBeenCalledWith(WS, "project-1", true)
         })
 
         it("refuses a project the workspace does not have", async () => {
-            const { workbench } = await build(readsOf())
+            const { workbench } = await build()
 
             await expect(workbench.get("person-1", WS, "project-9")).rejects.toMatchObject({
                 code: VideoErrorCode.ProjectNotFound,
@@ -156,7 +151,7 @@ describe("VideoWorkbenchService", () => {
 describe("VideoWorkbenchService", () => {
     describe("managed", () => {
         it("answers the manager's membership with the project", async () => {
-            const { workbench, members } = await build(readsOf(rowOf()))
+            const { workbench, members } = await build([rowOf()])
 
             await expect(workbench.managed("person-1", WS, "project-1")).resolves.toEqual({
                 member: memberOf(),
@@ -180,9 +175,8 @@ describe("VideoWorkbenchService", () => {
         }
 
         it("falls back to the workspace name and the default colors and voice", async () => {
-            const reads = mock<VideoWorkbenchReadsService>()
+            const { workbench, reads } = await build()
             reads.brandOf.mockResolvedValue(brandRow)
-            const { workbench } = await build(reads)
 
             await expect(workbench.brand("person-1", WS)).resolves.toEqual({
                 shopName: "Bakery",
@@ -204,9 +198,8 @@ describe("VideoWorkbenchService", () => {
                 music_track: "calm-glow",
                 voice: "vi-VN-NamMinhNeural",
             }
-            const reads = mock<VideoWorkbenchReadsService>()
+            const { workbench, reads } = await build()
             reads.brandOf.mockResolvedValue(saved)
-            const { workbench } = await build(reads)
 
             await expect(workbench.brand("person-1", WS)).resolves.toEqual({
                 shopName: "Bakery Shop",
@@ -219,9 +212,8 @@ describe("VideoWorkbenchService", () => {
         })
 
         it("refuses a workspace that does not exist", async () => {
-            const reads = mock<VideoWorkbenchReadsService>()
+            const { workbench, reads } = await build()
             reads.brandOf.mockResolvedValue(undefined)
-            const { workbench } = await build(reads)
 
             await expect(workbench.brand("person-1", WS)).rejects.toMatchObject({
                 code: VideoErrorCode.ProjectNotFound,
@@ -235,9 +227,8 @@ describe("VideoWorkbenchService", () => {
     describe("sources", () => {
         it("answers the public sources of the workspace", async () => {
             const sources = [{ id: "source-1", title: "Menu", topic: null, excerpt: "Bread" }]
-            const reads = mock<VideoWorkbenchReadsService>()
+            const { workbench, reads } = await build()
             reads.sourcesOf.mockResolvedValue(sources)
-            const { workbench } = await build(reads)
 
             await expect(workbench.sources("person-1", WS)).resolves.toEqual(sources)
             expect(reads.sourcesOf).toHaveBeenCalledWith(WS)
@@ -247,18 +238,16 @@ describe("VideoWorkbenchService", () => {
     describe("figures", () => {
         it("answers the month's figures", async () => {
             const figures = { rendering: 1, scripting: 0, readyToPublish: 2, approved: 1, published30: 3, credits30: 9 }
-            const reads = mock<VideoWorkbenchReadsService>()
+            const { workbench, reads } = await build()
             reads.figuresOf.mockResolvedValue(figures)
-            const { workbench } = await build(reads)
 
             await expect(workbench.figures("person-1", WS)).resolves.toEqual(figures)
             expect(reads.figuresOf).toHaveBeenCalledWith(WS)
         })
 
         it("fails when the figures row is missing", async () => {
-            const reads = mock<VideoWorkbenchReadsService>()
+            const { workbench, reads } = await build()
             reads.figuresOf.mockResolvedValue(undefined)
-            const { workbench } = await build(reads)
 
             await expect(workbench.figures("person-1", WS)).rejects.toMatchObject({ code: VideoErrorCode.InputInvalid })
         })

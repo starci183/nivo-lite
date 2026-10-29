@@ -3,6 +3,7 @@ import { FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { writeExpressionOf } from "@tests/fixtures/builders/write-expression.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { VideoProjectEntity } from "./persistence/entities"
@@ -25,7 +26,7 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
 /** A manager double whose every query builder is one fake that answers the given terminals and records the chain. */
 const managerAnswering = (answers: QueryBuilderAnswers, em: MockEntityManager = mockEntityManager()) => {
     const fake = fakeQueryBuilder(answers)
-    em.createQueryBuilder.mockReturnValue(fake.builder as never)
+    em.createQueryBuilder.mockReturnValue(fake.builder)
     return { em, fake }
 }
 
@@ -93,6 +94,42 @@ describe("VideoProjectWorkbenchWriterService > create", () => {
     })
 })
 
+describe("VideoProjectWorkbenchWriterService > rejected drafts", () => {
+    it.each([
+        ["a goal the table does not know", { goal: "party", aspect: "9:16" }],
+        ["a shape the table does not know", { goal: "offer", aspect: "4:3" }],
+    ])("writes nothing for %s", async (_label, draft) => {
+        const { em: tx, fake } = managerAnswering(returned(ONE))
+        const writer = await build()
+        const delegated = { ...draft, title: "T", targetSeconds: 30, script: [] }
+
+        await expect(writer.create(tx, "workspace-1", "person-1", { ...draft, targetSeconds: 30 })).resolves.toBeNull()
+        await expect(writer.createDelegated(tx, "workspace-1", delegated)).resolves.toBeNull()
+        expect(fake.callsOf("values")).toEqual([])
+    })
+
+    it("stores an empty document for inputs and scenes that are not documents", async () => {
+        const { em: tx, fake } = managerAnswering(returned(ONE))
+        const writer = await build()
+        const draft = { goal: "offer", aspect: "9:16", targetSeconds: 30 }
+
+        await writer.create(tx, "workspace-1", "person-1", { ...draft, inputs: "text" })
+        await writer.createDelegated(tx, "workspace-1", { ...draft, title: "T", script: null })
+
+        expect(fake.callsOf("values")[0]?.[0]).toMatchObject({ inputs: {} })
+        expect(fake.callsOf("values")[1]?.[0]).toMatchObject({ script: [] })
+    })
+
+    it("reads a database answer that is not rows as nothing saved", async () => {
+        const { em: tx } = managerAnswering({ execute: { raw: "none" } })
+        const writer = await build()
+
+        await expect(
+            writer.create(tx, "workspace-1", "person-1", { goal: "offer", aspect: "9:16", targetSeconds: 30 }),
+        ).resolves.toBeNull()
+    })
+})
+
 describe("VideoProjectWorkbenchWriterService > update", () => {
     it("serializes the changed inputs and scenes, guards an idle project in one statement and reports the change", async () => {
         const { em, fake } = managerAnswering(returned(ONE))
@@ -139,21 +176,26 @@ describe("VideoProjectWorkbenchWriterService > update", () => {
 
         await writer.update("workspace-1", "project-1", { script: [] })
 
-        const set = fake.callsOf("set")[0]?.[0] as Record<string, () => string>
-        expect(set.title?.()).toBe("COALESCE(NULLIF(CAST(:title AS text), ''), title)")
-        expect(set.script?.()).toBe("COALESCE(CAST(:script AS jsonb), script)")
-        expect(set.goal?.()).toBe("COALESCE(CAST(:goal AS text), goal)")
-        expect(set.aspect?.()).toBe("COALESCE(CAST(:aspect AS text), aspect)")
-        expect(set.targetSeconds?.()).toBe("COALESCE(CAST(:targetSeconds AS integer), target_seconds)")
-        expect(set.inputs?.()).toBe("COALESCE(CAST(:inputs AS jsonb), inputs)")
-        expect(set.approvedByName?.()).toBe(
+        const set = fake.callsOf("set")[0]?.[0]
+        const expression = (key: string) => writeExpressionOf(set, key)
+        expect(expression("title")).toBe("COALESCE(NULLIF(CAST(:title AS text), ''), title)")
+        expect(expression("script")).toBe("COALESCE(CAST(:script AS jsonb), script)")
+        expect(expression("goal")).toBe("COALESCE(CAST(:goal AS text), goal)")
+        expect(expression("aspect")).toBe("COALESCE(CAST(:aspect AS text), aspect)")
+        expect(expression("targetSeconds")).toBe("COALESCE(CAST(:targetSeconds AS integer), target_seconds)")
+        expect(expression("inputs")).toBe("COALESCE(CAST(:inputs AS jsonb), inputs)")
+        expect(expression("approvedByName")).toBe(
             "CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE approved_by_name END",
         )
-        expect(set.status?.()).toBe(
+        expect(expression("status")).toBe(
             "CASE WHEN CAST(:script AS jsonb) IS NOT NULL AND status IN ('ready', 'approved', 'published') THEN 'draft' ELSE status END",
         )
-        expect(set.approvedAt?.()).toBe("CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE approved_at END")
-        expect(set.publishedAt?.()).toBe("CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE published_at END")
+        expect(expression("approvedAt")).toBe(
+            "CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE approved_at END",
+        )
+        expect(expression("publishedAt")).toBe(
+            "CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE published_at END",
+        )
     })
 
     it("reports a busy project that did not change", async () => {
@@ -244,8 +286,7 @@ describe("VideoProjectWorkbenchWriterService > archive", () => {
             ],
         ])
         expect(changed.fake.callsOf("setParameter")).toEqual([["archived", true]])
-        const set = changed.fake.callsOf("set")[0]?.[0] as { status: () => string }
-        expect(set.status()).toBe(
+        expect(writeExpressionOf(changed.fake.callsOf("set")[0]?.[0], "status")).toBe(
             "CASE WHEN CAST(:archived AS boolean) THEN 'archived' WHEN render_id IS NULL THEN 'draft' ELSE 'ready' END",
         )
     })
@@ -260,8 +301,7 @@ describe("VideoProjectWorkbenchWriterService > publish", () => {
         await expect(writer.publish(approved.em, "workspace-1", "project-1")).resolves.toBe(true)
         await expect(writer.publish(draft.em, "workspace-1", "project-1")).resolves.toBe(false)
         expect(approved.fake.callsOf("set")).toEqual([[{ status: "published", publishedAt: anyFunction() }]])
-        const published = approved.fake.callsOf("set")[0]?.[0] as { publishedAt: () => string }
-        expect(published.publishedAt()).toBe("now()")
+        expect(writeExpressionOf(approved.fake.callsOf("set")[0]?.[0], "publishedAt")).toBe("now()")
         expect(approved.fake.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND id = :projectId AND status = 'approved'",
@@ -287,8 +327,7 @@ describe("VideoProjectWorkbenchWriterService > approve", () => {
             ],
         ])
         expect(fake.callsOf("andWhere")).toEqual([])
-        const approved = fake.callsOf("set")[0]?.[0] as { approvedAt: () => string }
-        expect(approved.approvedAt()).toBe("now()")
+        expect(writeExpressionOf(fake.callsOf("set")[0]?.[0], "approvedAt")).toBe("now()")
     })
 
     it("reports a render that is not the finished one", async () => {

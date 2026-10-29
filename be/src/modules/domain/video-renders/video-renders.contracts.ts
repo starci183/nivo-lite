@@ -129,3 +129,9 @@ export interface SettledRender {
     /** The failure text of a failed render. */
     readonly error: string | null
 }
+
+/** The raw status text of a render, or null when there is no such render. */
+export type OptionalRenderState = string | null
+
+/** A done or failed render with what a delegation card shows, or null when it is open or none. */
+export type OptionalSettledRender = SettledRender | null

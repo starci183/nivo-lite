@@ -1,5 +1,18 @@
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { writeExpressionOf } from "@tests/fixtures/builders/write-expression.builder"
+import {
+    accountOf,
+    CHU_OWNER_SEAT,
+    joinWorld,
+    listWorld,
+    MEMBER_AVATARS,
+    SAVED_STAFF,
+    seatChangeReads,
+    seatLookup,
+    seatRowOf,
+    STAFF_OPTION,
+} from "@tests/fixtures/builders/workspace-members.builder"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { EventsService } from "@modules/domain/events"
@@ -11,42 +24,6 @@ import { WorkspaceMemberEntity } from "./persistence/entities"
 import type { AccountDirectory } from "./workspace-members.contracts"
 import { ACCOUNT_DIRECTORY } from "./workspace-members.port"
 import { WorkspaceMembersService } from "./workspace-members.service"
-
-const rowOf = builder<WorkspaceMemberEntity>({
-    id: "member-1",
-    workspaceId: "ws-1",
-    userId: "user-1",
-    role: "staff",
-    staffId: null,
-    displayName: "An",
-    status: "active",
-    createdAt: new Date("2026-10-01T00:00:00.000Z"),
-})
-
-/** The statement `callDbFunction` sends for the member pictures. */
-const MEMBER_AVATARS = "SELECT * FROM be_access.workspace_member_avatars($1, $2)"
-
-/** A manager-or-staff viewer who lists one member (the viewer) whose picture the avatars door answers. */
-const listWorld = (
-    viewer: WorkspaceMemberEntity,
-    avatars: ReadonlyArray<{ id: string; avatar_url: string | null }>,
-) => {
-    const em = mockEntityManager({
-        findOne: [WorkspaceMemberEntity, viewer],
-        query: [MEMBER_AVATARS, avatars],
-    })
-    const list = fakeQueryBuilder({ getMany: [viewer] })
-    em.createQueryBuilder.mockReturnValue(list.builder)
-    return { em, list }
-}
-
-const accountOf = () => ({
-    id: "user-1",
-    email: "an@example.test",
-    lastSignInAt: "2026-10-01T00:00:00.000Z",
-    avatarUrl: null,
-    displayName: "An",
-})
 
 const build = async (entityManager: MockEntityManager) => {
     const auth = mock<AccountDirectory>()
@@ -74,8 +51,8 @@ describe("WorkspaceMembersService / ensure", () => {
     it("locks the owner's authority and inserts without overwriting an existing seat", async () => {
         const em = mockEntityManager({
             findOne: [
-                [WorkspaceMemberEntity, rowOf({ role: "owner" })],
-                [WorkspaceMemberEntity, rowOf({ userId: "target-1", role: "manager" })],
+                [WorkspaceMemberEntity, seatRowOf("owner")],
+                [WorkspaceMemberEntity, seatRowOf("manager", "active", "target-1")],
             ],
         })
         const insert = fakeQueryBuilder({ execute: {} })
@@ -84,11 +61,8 @@ describe("WorkspaceMembersService / ensure", () => {
         const { service } = await build(em)
         await expect(service.ensure("user-1", entry)).resolves.toMatchObject({ userId: "target-1", role: "manager" })
         expect(em.findOne.mock.calls).toEqual([
-            [
-                WorkspaceMemberEntity,
-                { where: { workspaceId: "ws-1", userId: "user-1" }, lock: { mode: "pessimistic_write" } },
-            ],
-            [WorkspaceMemberEntity, { where: { workspaceId: "ws-1", userId: "target-1" } }],
+            [WorkspaceMemberEntity, { ...seatLookup("ws-1", "user-1"), lock: { mode: "pessimistic_write" } }],
+            [WorkspaceMemberEntity, seatLookup("ws-1", "target-1")],
         ])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkspaceMemberEntity, "w")
         expect(insert.callsOf("insert")).toEqual([[]])
@@ -101,8 +75,8 @@ describe("WorkspaceMembersService / ensure", () => {
 
     it.each([
         { actor: null, code: WorkspaceMembersErrorCode.NotMember },
-        { actor: rowOf({ role: "manager" }), code: WorkspaceMembersErrorCode.RoleForbidden },
-        { actor: rowOf({ role: "owner", status: "disabled" }), code: WorkspaceMembersErrorCode.NotMember },
+        { actor: seatRowOf("manager"), code: WorkspaceMembersErrorCode.RoleForbidden },
+        { actor: seatRowOf("owner", "disabled"), code: WorkspaceMembersErrorCode.NotMember },
     ])("refuses missing or insufficient actor authority before insertion", async ({ actor, code }) => {
         const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, actor] }),
             transaction = fakeTransaction(em)
@@ -112,31 +86,32 @@ describe("WorkspaceMembersService / ensure", () => {
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
-    it.each([
-        { target: null },
-        { target: rowOf({ role: "staff" }) },
-        { target: rowOf({ role: "manager", status: "disabled" }) },
-    ])("preserves a conflicting existing seat", async ({ target }) => {
-        const em = mockEntityManager({
-            findOne: [
-                [WorkspaceMemberEntity, rowOf({ role: "owner" })],
-                [WorkspaceMemberEntity, target],
-            ],
-        })
-        em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: {} }).builder)
-        const transaction = fakeTransaction(em),
-            { service } = await build(em)
-        await expect(service.ensure("user-1", entry)).rejects.toMatchObject({
-            code: WorkspaceMembersErrorCode.EnsureConflict,
-        })
-        expect(transaction.rollbacks).toBe(1)
-        expect(em.update).not.toHaveBeenCalled()
-    })
+    it.each([{ target: null }, { target: seatRowOf("staff") }, { target: seatRowOf("manager", "disabled") }])(
+        "preserves a conflicting existing seat",
+        async ({ target }) => {
+            const em = mockEntityManager({
+                findOne: [
+                    [WorkspaceMemberEntity, seatRowOf("owner")],
+                    [WorkspaceMemberEntity, target],
+                ],
+            })
+            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: {} }).builder)
+            const transaction = fakeTransaction(em),
+                { service } = await build(em)
+            await expect(service.ensure("user-1", entry)).rejects.toMatchObject({
+                code: WorkspaceMembersErrorCode.EnsureConflict,
+            })
+            expect(transaction.rollbacks).toBe(1)
+            expect(em.update).not.toHaveBeenCalled()
+        },
+    )
 })
 
 describe("WorkspaceMembersService / require", () => {
     it("answers the active membership", async () => {
-        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, rowOf({ staffId: "staff-1" })] })
+        const em = mockEntityManager({
+            findOne: [WorkspaceMemberEntity, seatRowOf("staff", "active", "user-1", "An", "staff-1")],
+        })
         const { service } = await build(em)
 
         await expect(service.require("user-1", "ws-1")).resolves.toEqual({
@@ -152,26 +127,19 @@ describe("WorkspaceMembersService / require", () => {
         })
     })
 
-    it("refuses a person who is not in the workspace", async () => {
-        const { service } = await build(mockEntityManager({ findOne: [WorkspaceMemberEntity, null] }))
+    it.each([
+        { seat: null, roles: undefined, code: WorkspaceMembersErrorCode.NotMember },
+        { seat: seatRowOf(), roles: ["owner", "manager"] as const, code: WorkspaceMembersErrorCode.RoleForbidden },
+    ])("refuses a person outside the workspace or outside the allowed roles: $code", async ({ seat, roles, code }) => {
+        const { service } = await build(mockEntityManager({ findOne: [WorkspaceMemberEntity, seat] }))
 
-        await expect(service.require("user-1", "ws-9")).rejects.toMatchObject({
-            code: WorkspaceMembersErrorCode.NotMember,
-        })
-    })
-
-    it("refuses a member whose role is not allowed", async () => {
-        const { service } = await build(mockEntityManager({ findOne: [WorkspaceMemberEntity, rowOf()] }))
-
-        await expect(service.require("user-1", "ws-1", ["owner", "manager"])).rejects.toMatchObject({
-            code: WorkspaceMembersErrorCode.RoleForbidden,
-        })
+        await expect(service.require("user-1", "ws-1", roles)).rejects.toMatchObject({ code })
     })
 })
 
 describe("WorkspaceMembersService / idOf", () => {
     it("answers the member id of the caller's active seat", async () => {
-        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, rowOf({ id: "member-1" })] })
+        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, seatRowOf()] })
         const { service } = await build(em)
 
         await expect(service.idOf("user-1", "ws-1")).resolves.toBe("member-1")
@@ -192,7 +160,7 @@ describe("WorkspaceMembersService / idOf", () => {
 
 describe("WorkspaceMembersService / list", () => {
     it("lists emails and sign-ins for a manager viewer", async () => {
-        const { em, list } = listWorld(rowOf({ role: "owner" }), [
+        const { em, list } = listWorld(WorkspaceMemberEntity, seatRowOf("owner"), [
             { id: "user-1", avatar_url: "https://cdn.example.test/person.png" },
         ])
         const { service, auth } = await build(em)
@@ -218,7 +186,9 @@ describe("WorkspaceMembersService / list", () => {
     })
 
     it("blanks contact details for a staff viewer", async () => {
-        const { em } = listWorld(rowOf(), [{ id: "user-1", avatar_url: "https://cdn.example.test/person.png" }])
+        const { em } = listWorld(WorkspaceMemberEntity, seatRowOf(), [
+            { id: "user-1", avatar_url: "https://cdn.example.test/person.png" },
+        ])
         const { service, auth } = await build(em)
 
         await expect(service.list("user-1", "ws-1")).resolves.toMatchObject([
@@ -228,7 +198,7 @@ describe("WorkspaceMembersService / list", () => {
     })
 
     it("blanks contact details for a member whose account Auth does not know", async () => {
-        const { em } = listWorld(rowOf({ role: "manager" }), [])
+        const { em } = listWorld(WorkspaceMemberEntity, seatRowOf("manager"), [])
         const { service, auth } = await build(em)
         auth.accountOf.mockResolvedValue(refused("ACCOUNT_NOT_FOUND"))
 
@@ -248,20 +218,20 @@ describe("WorkspaceMembersService / list", () => {
 
 describe("WorkspaceMembersService / join", () => {
     const entry = { workspaceId: "ws-1", userId: "user-2", role: "staff", staffId: "staff-1", displayName: "Binh" }
+    const buildJoin = async () => {
+        const world = joinWorld()
+        return { ...(await build(world.em)), ...world }
+    }
 
-    it("creates or reactivates the membership under the name of the staff row it links", async () => {
-        const em = mockEntityManager()
-        const upsert = fakeQueryBuilder({ execute: {} })
-        em.createQueryBuilder.mockReturnValue(upsert.builder)
-        const { service, staffNames } = await build(em)
+    it("creates the membership under the name of the staff row it links, then reactivates it keeping owner and link", async () => {
+        const { service, staffNames, em, insert, update, transaction } = await buildJoin()
         staffNames.namesOf.mockResolvedValue([{ id: "staff-1", name: "Binh Tran" }])
 
         await service.join(entry)
 
         expect(staffNames.namesOf).toHaveBeenCalledWith("ws-1", ["staff-1"])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkspaceMemberEntity, "workspace_members")
-        expect(upsert.callsOf("insert")).toEqual([[]])
-        expect(upsert.callsOf("values")).toEqual([
+        expect(insert.callsOf("values")).toEqual([
             [
                 {
                     workspaceId: "ws-1",
@@ -272,56 +242,46 @@ describe("WorkspaceMembersService / join", () => {
                 },
             ],
         ])
-        expect(upsert.callsOf("onConflict")).toHaveLength(1)
+        expect(insert.callsOf("orIgnore")).toHaveLength(1)
+        const written = update.callsOf("set")[0]?.[0]
+        expect(writeExpressionOf(written, "role")).toBe("CASE WHEN role = 'owner' THEN 'owner' ELSE :role END")
+        expect(writeExpressionOf(written, "staffId")).toBe("coalesce(:staffId, staff_id)")
+        expect(update.callsOf("setParameters")).toEqual([[{ role: "staff", staffId: "staff-1" }]])
+        expect(transaction.commits).toBe(1)
     })
 
     it("keeps the given name when the linked staff row is not found", async () => {
-        const em = mockEntityManager()
-        const upsert = fakeQueryBuilder({ execute: {} })
-        em.createQueryBuilder.mockReturnValue(upsert.builder)
-        const { service } = await build(em)
+        const { service, insert } = await buildJoin()
 
         await service.join(entry)
 
-        expect(upsert.callsOf("values")).toEqual([[expect.objectContaining({ displayName: "Binh" })]])
+        expect(insert.callsOf("values")).toEqual([[expect.objectContaining({ displayName: "Binh" })]])
     })
 
     it("refuses a role the table does not allow", async () => {
-        const em = mockEntityManager()
-        em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: {} }).builder)
-        const { service } = await build(em)
+        const { service, insert } = await buildJoin()
 
-        await expect(service.join({ ...entry, role: "admin" })).rejects.toThrow("admin is not a workspace role")
+        await expect(service.join({ ...entry, role: "admin" })).rejects.toMatchObject({
+            code: WorkspaceMembersErrorCode.RoleInvalid,
+        })
+        expect(insert.calls).toEqual([])
     })
 
     it("asks for no staff name when the seat links no staff row", async () => {
-        const em = mockEntityManager()
-        const upsert = fakeQueryBuilder({ execute: {} })
-        em.createQueryBuilder.mockReturnValue(upsert.builder)
-        const { service, staffNames } = await build(em)
+        const { service, staffNames, insert } = await buildJoin()
 
         await service.join({ ...entry, staffId: null })
 
         expect(staffNames.namesOf).not.toHaveBeenCalled()
-        expect(upsert.callsOf("values")).toEqual([[expect.objectContaining({ staffId: null, displayName: "Binh" })]])
+        expect(insert.callsOf("values")).toEqual([[expect.objectContaining({ staffId: null, displayName: "Binh" })]])
     })
 })
 
 describe("WorkspaceMembersService / staff directory", () => {
-    const saved = {
-        id: "staff-2",
-        workspace_id: "ws-1",
-        name: "Binh",
-        role: "Sales",
-        email: "binh@example.test",
-        active: false,
-        created_at: "2026-10-01T00:00:00.000Z",
-    }
-    const option = { id: saved.id, name: saved.name, role: saved.role, email: saved.email, active: saved.active }
     it("saves staff after proving the caller is a manager and returns the console fields", async () => {
-        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, rowOf({ role: "manager" })] })
+        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, seatRowOf("manager")] })
         const { service, staff } = await build(em)
-        staff.save.mockResolvedValue(saved)
+        staff.save.mockResolvedValue(SAVED_STAFF)
         const input = {
             workspaceId: "ws-1",
             id: "staff-2",
@@ -331,7 +291,7 @@ describe("WorkspaceMembersService / staff directory", () => {
             active: false,
         }
 
-        await expect(service.saveStaff("user-1", input)).resolves.toEqual(option)
+        await expect(service.saveStaff("user-1", input)).resolves.toEqual(STAFF_OPTION)
         expect(em.findOne).toHaveBeenCalledWith(WorkspaceMemberEntity, {
             where: { workspaceId: "ws-1", userId: "user-1" },
         })
@@ -339,7 +299,7 @@ describe("WorkspaceMembersService / staff directory", () => {
     })
 
     it("refuses staff callers before saving", async () => {
-        const { service, staff } = await build(mockEntityManager({ findOne: [WorkspaceMemberEntity, rowOf()] }))
+        const { service, staff } = await build(mockEntityManager({ findOne: [WorkspaceMemberEntity, seatRowOf()] }))
 
         await expect(
             service.saveStaff("user-1", {
@@ -355,11 +315,11 @@ describe("WorkspaceMembersService / staff directory", () => {
     })
 
     it("lists staff for an active member and returns only the console fields", async () => {
-        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, rowOf()] })
+        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, seatRowOf()] })
         const { service, staff } = await build(em)
-        staff.list.mockResolvedValue([saved])
+        staff.list.mockResolvedValue([SAVED_STAFF])
 
-        await expect(service.listStaff("user-1", "ws-1")).resolves.toEqual([option])
+        await expect(service.listStaff("user-1", "ws-1")).resolves.toEqual([STAFF_OPTION])
         expect(em.findOne).toHaveBeenCalledWith(WorkspaceMemberEntity, {
             where: { workspaceId: "ws-1", userId: "user-1" },
         })
@@ -369,7 +329,7 @@ describe("WorkspaceMembersService / staff directory", () => {
 
 describe("WorkspaceMembersService", () => {
     it("presents the caller's workspace role", async () => {
-        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, rowOf({ role: "owner" })] })
+        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, seatRowOf("owner")] })
         const { service } = await build(em)
 
         await expect(service.roleOf("user-1", "ws-1")).resolves.toBe("owner")
@@ -392,21 +352,17 @@ describe("WorkspaceMembersService", () => {
 })
 
 describe("WorkspaceMembersService / seat changes", () => {
-    const actor = rowOf({ role: "owner", displayName: "Chu" })
-    const target = rowOf({ userId: "user-2", displayName: "Binh" })
-    const seats = () =>
-        [
-            [WorkspaceMemberEntity, actor],
-            [WorkspaceMemberEntity, target],
-        ] as const
     it("changes a role and records the exact change", async () => {
-        const em = mockEntityManager({ findOne: seats(), update: [WorkspaceMemberEntity, { affected: 1 }] })
+        const em = mockEntityManager({
+            findOne: seatChangeReads(WorkspaceMemberEntity),
+            update: [WorkspaceMemberEntity, { affected: 1 }],
+        })
         const { service, events } = await build(em)
 
         await expect(service.changeRole("user-1", "ws-1", "user-2", "manager")).resolves.toBeUndefined()
         expect(em.findOne.mock.calls).toEqual([
-            [WorkspaceMemberEntity, { where: { workspaceId: "ws-1", userId: "user-1" } }],
-            [WorkspaceMemberEntity, { where: { workspaceId: "ws-1", userId: "user-2" } }],
+            [WorkspaceMemberEntity, seatLookup("ws-1", "user-1")],
+            [WorkspaceMemberEntity, seatLookup("ws-1", "user-2")],
         ])
         expect(em.update).toHaveBeenCalledWith(
             WorkspaceMemberEntity,
@@ -422,7 +378,7 @@ describe("WorkspaceMembersService / seat changes", () => {
     })
 
     it("leaves an identical role unchanged without recording an event", async () => {
-        const em = mockEntityManager({ findOne: seats() })
+        const em = mockEntityManager({ findOne: seatChangeReads(WorkspaceMemberEntity) })
         const { service, events } = await build(em)
 
         await expect(service.changeRole("user-1", "ws-1", "user-2", "staff")).resolves.toBeUndefined()
@@ -435,7 +391,10 @@ describe("WorkspaceMembersService / seat changes", () => {
         ["disabled", "member.disabled"],
         ["active", "member.enabled"],
     ] as const)("sets status %s and records %s", async (status, kind) => {
-        const em = mockEntityManager({ findOne: seats(), update: [WorkspaceMemberEntity, { affected: 1 }] })
+        const em = mockEntityManager({
+            findOne: seatChangeReads(WorkspaceMemberEntity),
+            update: [WorkspaceMemberEntity, { affected: 1 }],
+        })
         const { service, events } = await build(em)
 
         await expect(service.setStatus("user-1", "ws-1", "user-2", status)).resolves.toBeUndefined()
@@ -448,7 +407,10 @@ describe("WorkspaceMembersService / seat changes", () => {
     })
 
     it("removes a member and records their name", async () => {
-        const em = mockEntityManager({ findOne: seats(), delete: [WorkspaceMemberEntity, { affected: 1 }] })
+        const em = mockEntityManager({
+            findOne: seatChangeReads(WorkspaceMemberEntity),
+            delete: [WorkspaceMemberEntity, { affected: 1 }],
+        })
         const { service, events } = await build(em)
 
         await expect(service.remove("user-1", "ws-1", "user-2")).resolves.toBeUndefined()
@@ -463,17 +425,10 @@ describe("WorkspaceMembersService / seat changes", () => {
 })
 
 describe("WorkspaceMembersService / seat changes", () => {
-    const actor = rowOf({ role: "owner", displayName: "Chu" })
-    const target = rowOf({ userId: "user-2", displayName: "Binh" })
-    const seats = () =>
-        [
-            [WorkspaceMemberEntity, actor],
-            [WorkspaceMemberEntity, target],
-        ] as const
     it("refuses an absent target before writing or recording an event", async () => {
         const em = mockEntityManager({
             findOne: [
-                [WorkspaceMemberEntity, actor],
+                [WorkspaceMemberEntity, CHU_OWNER_SEAT],
                 [WorkspaceMemberEntity, null],
             ],
         })
@@ -487,7 +442,7 @@ describe("WorkspaceMembersService / seat changes", () => {
     })
 
     it("refuses removing one's own account before writing", async () => {
-        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, actor] })
+        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, CHU_OWNER_SEAT] })
         const { service, events } = await build(em)
 
         await expect(service.remove("user-1", "ws-1", "user-1")).rejects.toMatchObject({
@@ -497,8 +452,11 @@ describe("WorkspaceMembersService / seat changes", () => {
         expect(events.record).not.toHaveBeenCalled()
     })
 
-    it("refuses when the target disappears before the update", async () => {
-        const em = mockEntityManager({ findOne: seats(), update: [WorkspaceMemberEntity, { affected: 0 }] })
+    it.each([{ affected: 0 }, {}])("refuses when the target disappears before the update: %p", async (written) => {
+        const em = mockEntityManager({
+            findOne: seatChangeReads(WorkspaceMemberEntity),
+            update: [WorkspaceMemberEntity, written],
+        })
         const { service, events } = await build(em)
 
         await expect(service.changeRole("user-1", "ws-1", "user-2", "manager")).rejects.toMatchObject({
@@ -513,7 +471,7 @@ describe("WorkspaceMembersService / seat changes", () => {
     })
 
     it("translates a last-owner database refusal and preserves its cause", async () => {
-        const em = mockEntityManager({ findOne: seats() })
+        const em = mockEntityManager({ findOne: seatChangeReads(WorkspaceMemberEntity) })
         const cause = new Error("workspace_members guard: last_owner")
         em.delete.mockRejectedValueOnce(cause)
         const { service, events } = await build(em)
@@ -529,7 +487,7 @@ describe("WorkspaceMembersService / seat changes", () => {
     it.each([new Error("database offline"), { message: "last_owner" }])(
         "propagates an unrelated database failure unchanged: %p",
         async (cause) => {
-            const em = mockEntityManager({ findOne: seats() })
+            const em = mockEntityManager({ findOne: seatChangeReads(WorkspaceMemberEntity) })
             em.delete.mockRejectedValueOnce(cause)
             const { service, events } = await build(em)
 

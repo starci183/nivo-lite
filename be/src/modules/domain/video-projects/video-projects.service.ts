@@ -3,7 +3,10 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     LockedProjectLookup,
-    ProjectCardFacts,
+    OptionalProjectCardFacts,
+    OptionalProjectCounts,
+    OptionalProjectId,
+    OptionalScriptProject,
     ProjectCounts,
     ProjectRow,
     RenderStart,
@@ -47,7 +50,7 @@ export class VideoProjectsService {
         workspaceId: string,
         projectId: string,
         lock: boolean,
-    ): Promise<ScriptProjectRow | undefined> {
+    ): Promise<OptionalScriptProject> {
         const query = manager
             .createQueryBuilder(VideoProjectEntity, "p")
             .select("p.id", "id")
@@ -68,7 +71,7 @@ export class VideoProjectsService {
     /** The projects of a workspace, newest first; one project when `projectId` names it. */
     listForWorkbench(
         workspaceId: string,
-        projectId: string | null,
+        projectId: OptionalProjectId,
         includeArchived: boolean,
     ): Promise<Array<ProjectRow>> {
         return this.entityManager
@@ -85,7 +88,7 @@ export class VideoProjectsService {
     }
 
     /** The project counts by state; undefined when the count cannot be read. */
-    countsOf(workspaceId: string): Promise<ProjectCounts | undefined> {
+    countsOf(workspaceId: string): Promise<OptionalProjectCounts> {
         return this.entityManager
             .createQueryBuilder(VideoProjectEntity, "p")
             .select("count(*) FILTER (WHERE p.status = 'rendering')::int", "rendering")
@@ -127,7 +130,7 @@ export class VideoProjectsService {
     }
 
     /** What a delegation card shows of a project of the workspace; null when there is none. */
-    async cardFactsOf(workspaceId: string, projectId: string): Promise<ProjectCardFacts | null> {
+    async cardFactsOf(workspaceId: string, projectId: string): Promise<OptionalProjectCardFacts> {
         const project = await this.entityManager.findOne(VideoProjectEntity, {
             select: { title: true, aspect: true, script: true },
             where: { id: projectId, workspaceId },

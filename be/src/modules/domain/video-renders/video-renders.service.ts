@@ -3,7 +3,7 @@ import { In, LessThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { VideoProjectsService } from "@modules/domain/video-projects"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { parseJsonText } from "@modules/platform/primitives"
+import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import { VideoRendersError, VideoRendersErrorCode } from "./errors/video-renders.error"
 import { MAX_OPEN_RENDERS } from "./video-renders.contracts"
 import type {
@@ -12,8 +12,9 @@ import type {
     RenderClaim,
     RenderDone,
     RenderFacts,
+    OptionalRenderState,
+    OptionalSettledRender,
     RenderStatus,
-    SettledRender,
 } from "./video-renders.contracts"
 import { VideoRenderEntity } from "./persistence/entities"
 import type { VideoRenderState } from "./persistence/entities"
@@ -64,6 +65,9 @@ const toCompletedMedia = (row: CompletedRenderMediaRow, projectTitle: string | u
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
 })
 
+/** The most renders one workbench read holds. */
+const FACTS_MAX = 500
+
 /** The claimed render as the update's `RETURNING` clause answers it. */
 interface ClaimedRenderRaw {
     /** The render id. */
@@ -82,6 +86,14 @@ interface RenderMetaRaw {
     readonly attempts: number
 }
 
+/** True when a RETURNING row carries what claiming a render needs. */
+const isClaimedRender = (value: unknown): value is ClaimedRenderRaw =>
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.workspace_id === "string" &&
+    isRecord(value.meta) &&
+    typeof value.meta.attempts === "number"
+
 @Injectable()
 /** The `video_renders` rows reached only through the primary EntityManager: a render is queued by the video capability's transaction and settled by the render job. */
 export class VideoRendersService {
@@ -93,7 +105,7 @@ export class VideoRendersService {
     /** Writes a queued render in the caller's transaction and answers its id; a workspace that already has the most open renders is refused. */
     async open(manager: EntityManager, render: NewRender): Promise<string> {
         const specRead = parseJsonText(render.spec)
-        if (!specRead.ok) throw new VideoRendersError({ code: VideoRendersErrorCode.JsonUnreadable })
+        if (!specRead.ok || typeof specRead.value !== "object" || specRead.value === null) throw new VideoRendersError({ code: VideoRendersErrorCode.JsonUnreadable })
         const open = await manager.count(VideoRenderEntity, {
             where: { workspaceId: render.workspaceId, status: In([...OPEN_STATES]) },
         })
@@ -105,11 +117,11 @@ export class VideoRendersService {
         }
         const result = await manager.insert(VideoRenderEntity, {
             workspaceId: render.workspaceId,
-            spec: specRead.value as object,
+            spec: specRead.value,
             createdBy: render.createdBy,
         })
-        const id = (result.identifiers[0] as { readonly id?: string } | undefined)?.id
-        if (id === undefined) throw new VideoRendersError({ code: VideoRendersErrorCode.NotWritten })
+        const id: unknown = result.identifiers[0]?.id
+        if (typeof id !== "string") throw new VideoRendersError({ code: VideoRendersErrorCode.NotWritten })
         return id
     }
 
@@ -127,7 +139,7 @@ export class VideoRendersService {
             .where("id = :renderId AND status IN (:...open)", { renderId, open: OPEN_STATES })
             .returning(["id", "workspace_id", "spec", "meta"])
             .execute()
-        const [row] = result.raw as Array<ClaimedRenderRaw>
+        const row = Array.isArray(result.raw) ? result.raw.find(isClaimedRender) : undefined
         if (row === undefined) return null
         return { renderId: row.id, workspaceId: row.workspace_id, spec: row.spec, attempts: row.meta.attempts }
     }
@@ -228,7 +240,7 @@ export class VideoRendersService {
     }
 
     /** The raw status text of a render; null when there is no such render. */
-    async stateOf(renderId: string): Promise<string | null> {
+    async stateOf(renderId: string): Promise<OptionalRenderState> {
         const row = await this.entityManager.findOne(VideoRenderEntity, {
             select: { status: true },
             where: { id: renderId },
@@ -257,6 +269,7 @@ export class VideoRendersService {
                 meta: true,
             },
             where: { workspaceId, id: In([...new Set(renderIds)]) },
+            take: FACTS_MAX,
         })
         return renders.map((render) => ({
             id: render.id,
@@ -273,7 +286,7 @@ export class VideoRendersService {
     }
 
     /** A done or failed render of the workspace with what a delegation card shows; null when it is still open or is no render of the workspace. */
-    async settledOf(workspaceId: string, renderId: string): Promise<SettledRender | null> {
+    async settledOf(workspaceId: string, renderId: string): Promise<OptionalSettledRender> {
         const render = await this.entityManager.findOne(VideoRenderEntity, {
             select: {
                 id: true,

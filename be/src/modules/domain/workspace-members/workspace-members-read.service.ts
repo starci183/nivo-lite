@@ -59,9 +59,11 @@ export class WorkspaceMembersReadService {
     /** The display names of the given accounts of the workspace, whatever their status. */
     async namesOf(workspaceId: string, userIds: ReadonlyArray<string>): Promise<Array<MemberName>> {
         if (userIds.length === 0) return []
+        const accounts = [...new Set(userIds)]
         const members = await this.entityManager.find(WorkspaceMemberEntity, {
             select: { userId: true, displayName: true },
-            where: { workspaceId, userId: In([...new Set(userIds)]) },
+            where: { workspaceId, userId: In(accounts) },
+            take: accounts.length,
         })
         return members.map((member) => ({ userId: member.userId, displayName: member.displayName }))
     }

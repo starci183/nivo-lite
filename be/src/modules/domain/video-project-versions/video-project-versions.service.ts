@@ -17,8 +17,8 @@ export class VideoProjectVersionsService {
             projectId: version.projectId,
             workspaceId: version.workspaceId,
             version: version.version,
-            script: script.value as unknown,
-            spec: spec.value as unknown,
+            script: script.value,
+            spec: spec.value,
             renderId: version.renderId,
             createdBy: version.createdBy,
         })
