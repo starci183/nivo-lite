@@ -2,7 +2,12 @@ import { Injectable } from "@nestjs/common"
 import { In, IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { OptionalChannelText, OptionalCustomerChatRef, TestChatRef } from "./agent-conversations-read.contracts"
+import type {
+    ConnectionConversation,
+    OptionalChannelText,
+    OptionalCustomerChatRef,
+    TestChatRef,
+} from "./agent-conversations-read.contracts"
 import { AgentConversationEntity } from "./persistence/entities"
 
 @Injectable()
@@ -70,5 +75,21 @@ export class AgentConversationsReadService {
             where: { id: conversationId },
         })
         return row?.channel ?? null
+    }
+
+    /** The conversations of a connection on a channel, oldest first, at most `limit`. */
+    async onConnection(
+        workspaceId: string,
+        connectionId: string,
+        channel: string,
+        limit: number,
+    ): Promise<Array<ConnectionConversation>> {
+        const rows = await this.entityManager.find(AgentConversationEntity, {
+            select: { id: true, externalId: true, visitorName: true },
+            where: { workspaceId, connectionId, channel },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: limit,
+        })
+        return rows.map((row) => ({ id: row.id, externalId: row.externalId, visitorName: row.visitorName }))
     }
 }

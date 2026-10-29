@@ -2,6 +2,8 @@
 export { AgentMessagesAutomationReadService } from "./agent-messages-automation-read.service"
 export { AgentMessagesReadService } from "./agent-messages-read.service"
 export { AgentMessageDeliveriesService } from "./agent-message-deliveries.service"
+export { AgentMessagesFeedReadService } from "./agent-messages-feed-read.service"
+export type { ConversationWrite, FeedMessage, OptionalDeliveredReply } from "./agent-messages-feed-read.contracts"
 export { AgentMessageCursorsService } from "./agent-message-cursors.service"
 export { AgentTestChatsService } from "./agent-test-chats.service"
 export { AgentMessagesModule } from "./agent-messages.module"

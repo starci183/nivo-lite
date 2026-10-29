@@ -103,3 +103,21 @@ describe("AgentConversationsReadService > channelOf", () => {
         })
     })
 })
+
+describe("AgentConversationsReadService > onConnection", () => {
+    it("lists the conversations of a connection on a channel, oldest first, bounded", async () => {
+        const em = mockEntityManager({
+            find: [AgentConversationEntity, [chatOf({ id: "c1", externalId: "u-1", visitorName: "An" })]],
+        })
+
+        await expect((await build(em)).onConnection("w1", "conn-1", "zalo", 500)).resolves.toEqual([
+            { id: "c1", externalId: "u-1", visitorName: "An" },
+        ])
+        expect(em.find).toHaveBeenCalledWith(AgentConversationEntity, {
+            select: { id: true, externalId: true, visitorName: true },
+            where: { workspaceId: "w1", connectionId: "conn-1", channel: "zalo" },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 500,
+        })
+    })
+})

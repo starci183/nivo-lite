@@ -19,3 +19,13 @@ export type OptionalCustomerChatRef = CustomerChatRef | null
 
 /** The channel text of a conversation, or null when there is none. */
 export type OptionalChannelText = string | null
+
+/** A conversation on a connection, as a channel page lists it. */
+export interface ConnectionConversation {
+    /** The conversation. */
+    readonly id: string
+    /** The customer's id on the channel, or null. */
+    readonly externalId: string | null
+    /** The name on the conversation, or null. */
+    readonly visitorName: string | null
+}
