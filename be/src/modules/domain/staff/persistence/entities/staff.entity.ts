@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "staff" })
 /** A staff record of one workspace, used by the accounting assignment picker and the shifts workbench. */
-export class StaffEntity {
-    /** The staff id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class StaffEntity extends UuidAbstractEntity {
     /** The workspace the person works for. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -26,8 +24,4 @@ export class StaffEntity {
     /** Whether the person is active. */
     @Column({ name: "active", type: "boolean", default: true })
     active!: boolean
-
-    /** When the record was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "shifts_positions" })
 /** A position of the shop a person can work at (cashier, kitchen, floor). */
-export class ShiftsPositionEntity {
-    /** The position id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ShiftsPositionEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -26,8 +24,4 @@ export class ShiftsPositionEntity {
     /** Whether it is still in use. */
     @Column({ name: "active", type: "boolean", default: () => "true" })
     active!: boolean
-
-    /** When it was made. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

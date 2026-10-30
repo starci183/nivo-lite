@@ -1,13 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { ResponsibilityOwnerKind, ResponsibilityStatus } from "../../responsibility-journal.contracts"
 
 @Entity({ schema: "public", name: "responsibilities" })
 /** One follow-up step of a customer with its owner and deadline: one row of `public.responsibilities`. */
-export class ResponsibilityEntity {
-    /** The step. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ResponsibilityEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -47,8 +45,4 @@ export class ResponsibilityEntity {
     /** Where the step is, a member of the table check. */
     @Column({ name: "status", type: "text", default: () => "'open'" })
     status!: ResponsibilityStatus
-
-    /** When the step was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "shifts_attendance" })
 /** The check-in of a person for a shift. */
-export class ShiftsAttendanceEntity {
-    /** The check-in id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ShiftsAttendanceEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

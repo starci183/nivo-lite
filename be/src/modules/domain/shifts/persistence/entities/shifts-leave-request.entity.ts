@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "shifts_leave_requests" })
 /** A request for days off. */
-export class ShiftsLeaveRequestEntity {
-    /** The request id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ShiftsLeaveRequestEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -42,8 +40,4 @@ export class ShiftsLeaveRequestEntity {
     /** When it was decided, or null. */
     @Column({ name: "decided_at", type: "timestamptz", nullable: true })
     decidedAt!: Date | null
-
-    /** When it was asked. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

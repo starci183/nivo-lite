@@ -1,8 +1,10 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
+import { AbstractEntity } from "@modules/platform/database"
+
 @Entity({ schema: "public", name: "shifts_settings" })
 /** The shifts rules of one workspace. */
-export class ShiftsSettingsEntity {
+export class ShiftsSettingsEntity extends AbstractEntity {
     /** The workspace. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -30,8 +32,4 @@ export class ShiftsSettingsEntity {
     /** The hours a week after which pay is overtime (numeric, so text). */
     @Column({ name: "overtime_hours_week", type: "numeric", default: () => "48" })
     overtimeHoursWeek!: string
-
-    /** When it last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

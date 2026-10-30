@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "shifts_staff" })
 /** A person who works shifts: the profile the rules and the schedule run against. */
-export class ShiftsStaffEntity {
-    /** The profile id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ShiftsStaffEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -58,8 +56,4 @@ export class ShiftsStaffEntity {
     /** Whether the person still works shifts. */
     @Column({ name: "active", type: "boolean", default: () => "true" })
     active!: boolean
-
-    /** When the profile was made. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

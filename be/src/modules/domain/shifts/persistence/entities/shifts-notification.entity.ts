@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "shifts_notifications" })
 /** One message of the shifts module kept as evidence, sent, failed or skipped. */
-export class ShiftsNotificationEntity {
-    /** The notice id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ShiftsNotificationEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -42,8 +40,4 @@ export class ShiftsNotificationEntity {
     /** Why it failed, or null. */
     @Column({ name: "error", type: "text", nullable: true })
     error!: string | null
-
-    /** When it was written. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

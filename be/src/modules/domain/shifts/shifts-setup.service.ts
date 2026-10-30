@@ -144,7 +144,6 @@ export class ShiftsSetupService {
                     staffId: saved,
                     workspaceId,
                     hourlyWageVnd: Math.max(0, Math.round(request.wage)),
-                    updatedAt: () => "now()",
                 },
                 ["staffId"],
             )
@@ -216,7 +215,6 @@ export class ShiftsSetupService {
                 remindMinutes: request.remindMinutes,
                 noshowMinutes: request.noshowMinutes,
                 overtimeHoursWeek: String(request.overtimeHoursWeek),
-                updatedAt: () => "now()",
             },
             ["workspaceId"],
         )

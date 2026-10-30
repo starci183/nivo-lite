@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "shifts_schedules" })
 /** One version of the schedule of a week. */
-export class ShiftsScheduleEntity {
-    /** The schedule id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ShiftsScheduleEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -54,10 +52,6 @@ export class ShiftsScheduleEntity {
     /** Who made it, or null. */
     @Column({ name: "created_by", type: "text", nullable: true })
     createdBy!: string | null
-
-    /** When it was made. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When it was published, or null. */
     @Column({ name: "published_at", type: "timestamptz", nullable: true })

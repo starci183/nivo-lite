@@ -1,5 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
 import type { ValueTransformer } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** Reads a Postgres `bigint` (which the driver returns as text) as a number; SePay ids and VND amounts fit a double. */
 const bigintAsNumber: ValueTransformer = {
@@ -9,11 +11,7 @@ const bigintAsNumber: ValueTransformer = {
 
 @Entity({ schema: "public", name: "sepay_transactions" })
 /** One bank transfer SePay reported: the receipt claimed at intake and the settlement result written by the consumer. */
-export class SepayTransactionEntity {
-    /** The receipt id, completed after settlement. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class SepayTransactionEntity extends UuidAbstractEntity {
     /** SePay's own transaction id, the idempotency key. */
     @Column({ name: "sepay_id", type: "bigint", transformer: bigintAsNumber })
     sepayId!: number

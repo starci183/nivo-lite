@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "shifts_coverage" })
 /** How many people a position needs in a block of a weekday. */
-export class ShiftsCoverageEntity {
-    /** The block id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ShiftsCoverageEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -38,8 +36,4 @@ export class ShiftsCoverageEntity {
     /** Whether it is a peak block. */
     @Column({ name: "is_peak", type: "boolean", default: () => "false" })
     isPeak!: boolean
-
-    /** When it was made. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

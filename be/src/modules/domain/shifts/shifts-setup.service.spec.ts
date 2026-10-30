@@ -170,7 +170,7 @@ describe("ShiftsSetupService saveStaff", () => {
         const [payEntity, pay, payKeys] = em.upsert.mock.calls[0] ?? []
         expect([payEntity, evaluatedValues(pay), payKeys]).toEqual([
             ShiftsStaffPayEntity,
-            { staffId: "profile-1", workspaceId: "ws-1", hourlyWageVnd: 30001, updatedAt: "now()" },
+            { staffId: "profile-1", workspaceId: "ws-1", hourlyWageVnd: 30001 },
             ["staffId"],
         ])
     })
@@ -304,7 +304,6 @@ describe("ShiftsSetupService saveSettings", () => {
                 remindMinutes: 60,
                 noshowMinutes: 15,
                 overtimeHoursWeek: "40",
-                updatedAt: "now()",
             },
             ["workspaceId"],
         ])

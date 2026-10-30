@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "shifts_availability" })
 /** A statement of when a person can or cannot work. */
-export class ShiftsAvailabilityEntity {
-    /** The statement id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ShiftsAvailabilityEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -46,8 +44,4 @@ export class ShiftsAvailabilityEntity {
     /** Who decided it, or null. */
     @Column({ name: "decided_by", type: "text", nullable: true })
     decidedBy!: string | null
-
-    /** When it was stated. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }
