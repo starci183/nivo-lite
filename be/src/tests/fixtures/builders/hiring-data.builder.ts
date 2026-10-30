@@ -116,5 +116,6 @@ export const memberEntity = (changes: Partial<WorkspaceMemberEntity> = {}): Work
     displayName: "Blair",
     status: "active",
     createdAt: CREATED,
+    updatedAt: CREATED,
     ...changes,
 })
