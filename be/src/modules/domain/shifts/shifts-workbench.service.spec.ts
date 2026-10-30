@@ -196,7 +196,7 @@ describe("ShiftsWorkbenchService", () => {
                     }),
                 ],
                 leaves: [leaveEntity(unlinkedLeaveRow()), leaveEntity(orphanLeaveRow(), missing)],
-                swaps: [swapEntity(noticeSwapRow()), swapEntity(orphanSwapRow(), missing)],
+                swaps: [swapEntity(noticeSwapRow()), Object.assign(swapEntity(orphanSwapRow(), missing), { checks: "stray" })],
                 availability: [availabilityEntity(availabilityRowOf(), missing)],
                 attendance: [attendanceEntity(nullDates ? null : new Date("2026-10-14T00:55:00.000Z"))],
                 shifts: [shiftEntity(strayShiftRow())],
@@ -216,6 +216,7 @@ describe("ShiftsWorkbenchService", () => {
             ])
             expect(view.requests.leaves[1]?.createdAt).toBe(nullDates ? "" : "2026-10-13T02:00:00.000Z")
             expect(view.requests.swaps[1]?.createdAt).toBe(nullDates ? "" : "2026-10-13T03:00:00.000Z")
+            expect(view.requests.swaps[1]?.checks).toEqual([])
             expect(view.allAvailability[0]?.createdAt).toBe(nullDates ? "" : "2026-10-01T00:00:00.000Z")
             expect(view.requests.availability[0]?.createdAt).toBe(nullDates ? "" : "2026-10-01T00:00:00.000Z")
             expect(view.week.publishItem).toBeNull()

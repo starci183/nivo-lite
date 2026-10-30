@@ -105,10 +105,10 @@ describe("AgentConversationsService chat", () => {
         await expect(service.openChat(chatInput("test", "Minh"), inside)).resolves.toEqual({ ...chat, kind: "test" })
     })
 
-    it("refuses a chat insert that returned no row", async () => {
+    it.each([[[]], [undefined]])("refuses a chat insert that returned no row (raw %j)", async (raw) => {
         const { service } = await build()
         const inside = mockEntityManager()
-        const [fake] = queueQueryBuilders(inside, [{ execute: { raw: [] } }])
+        const [fake] = queueQueryBuilders(inside, [{ execute: { raw } }])
 
         await expect(service.openChat(chatInput("test", null), inside)).rejects.toMatchObject({
             code: AgentConversationsErrorCode.NotStored,
@@ -318,10 +318,10 @@ describe("AgentConversationsService find and open", () => {
         ])
     })
 
-    it("fails loudly when the insert answers no row", async () => {
+    it.each([[[]], [undefined]])("fails loudly when the insert answers no row (raw %j)", async (raw) => {
         const { service } = await build()
         const inside = mockEntityManager()
-        queueQueryBuilders(inside, [{ execute: { raw: [] } }])
+        queueQueryBuilders(inside, [{ execute: { raw } }])
 
         await expect(service.open(input, inside)).rejects.toMatchObject({
             code: AgentConversationsErrorCode.NotStored,

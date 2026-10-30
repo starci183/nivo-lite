@@ -65,11 +65,7 @@ const SWAP_SHIFTS_MAX = 500
 /** Matches no person; filters the requests of a member without a shifts profile. */
 const UNLINKED_STAFF = "00000000-0000-0000-0000-000000000000"
 
-const iso = (value: Date | string | null): string | null => {
-    if (value === null) return null
-    if (typeof value === "string") return value
-    return value.toISOString()
-}
+const iso = (value: Date | null): string | null => (value === null ? null : value.toISOString())
 
 /** The summary sentence of a proposal or result json, or null. */
 const summaryOf = (value: unknown): string | null => {

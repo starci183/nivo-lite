@@ -95,9 +95,10 @@ const registerTelegramGuards = () => {
         expect(queue.enqueueChatTurn).toHaveBeenCalledWith(greeting, manager)
     })
 
-    it("greets with the default line when the agent has no greeting of its own", async () => {
+    it.each([["  "], [null]])("greets with the default line when the agent greeting is %j", async (greeting) => {
         const manager = mockEntityManager()
-        const { service, messages } = await build({}, [{ id: "agent-1", greeting: "  " }])
+        const { service, messages, agents } = await build({}, [{ id: "agent-1", greeting: "  " }])
+        agents.greetingOf.mockResolvedValue(greeting)
 
         await expect(
             service.acceptTelegram(CONNECTION, telegram({ text: "/start", isStart: true }), manager),
@@ -452,6 +453,7 @@ const build = async (setup: Setup = {}, front: ReadonlyArray<FrontAgent> = []) =
         zalo,
         catalog,
         bindings,
+        agents,
     }
 }
 

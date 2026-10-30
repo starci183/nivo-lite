@@ -49,11 +49,12 @@ const isZaloSecret = (value: unknown): value is ZaloSecret =>
 const LEGACY_RENEWAL_KEY = "refreshToken"
 
 /** Stored secrets written before the rename keep the single-use token under the legacy key; read it as `renewalToken`. */
-const withLegacyRenewal = (value: object): object => {
+const withLegacyRenewal = (value: ZaloSecret): ZaloSecret => {
     const legacy: unknown = Reflect.get(value, LEGACY_RENEWAL_KEY)
     if (typeof legacy !== "string" || typeof Reflect.get(value, "renewalToken") === "string") return value
-    const rest = Object.fromEntries(Object.entries(value).filter(([key]) => key !== LEGACY_RENEWAL_KEY))
-    return { ...rest, renewalToken: legacy }
+    const migrated: ZaloSecret = { ...value, renewalToken: legacy }
+    Reflect.deleteProperty(migrated, LEGACY_RENEWAL_KEY)
+    return migrated
 }
 
 @Injectable()
@@ -273,8 +274,7 @@ export class ZaloCredentialsService {
         try {
             const parsed: unknown = JSON.parse(credential)
             if (!isZaloSecret(parsed)) return refused(ChannelsErrorCode.SecretUnreadable)
-            const migrated = withLegacyRenewal(parsed)
-            return isZaloSecret(migrated) ? ok(migrated) : refused(ChannelsErrorCode.SecretUnreadable)
+            return ok(withLegacyRenewal(parsed))
         } catch (cause) {
             return refused(ChannelsErrorCode.SecretUnreadable, { reason: String(cause) })
         }
