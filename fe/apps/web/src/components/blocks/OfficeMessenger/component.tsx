@@ -1,4 +1,4 @@
-import { ChatWorkspace, Divider, FillViewport, Page, Region } from "@starci/grammar/common"
+import { PaneLayout, Divider, FillViewport, Page, Region } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
@@ -20,6 +20,7 @@ import {
     BODY_CLASS_NAME,
     CONVERSATION_CLASS_NAME,
     DIVIDER_CLASS_NAME,
+    INFO_COLUMN_CLASS_NAME,
     LIST_COLUMN_CLASS_NAME,
     LIST_COLUMN_HIDDEN_CLASS_NAME,
     TASKS_CLASS_NAME,
@@ -88,7 +89,7 @@ const MessengerWorkspace = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
     const { text } = view
-    const infoPanel = <MessengerInfoPanel {...props} />
+    const infoPanel = <MessengerInfoPanel {...props} isDocked={false} />
     const isTasks = view.centre === "tasks"
 
     const workspace = {
@@ -121,16 +122,18 @@ const MessengerWorkspace = (props: OfficeMessengerBaseProps) => {
         ),
         composer: isTasks ? null : <MessengerComposer {...props} />,
     }
-    const rail = {
-        rail: infoPanel,
-        railLabel: text("infoTitle"),
-        railOpenLabel: text("infoOpen"),
-        railCloseLabel: text("infoClose"),
-        onRailOpenChange: on.infoOpenChange,
-    }
-    if (view.isCompact) return <ChatWorkspace {...workspace} {...rail} isRailOpen={view.isInfoOpen} />
-    if (view.isInfoOpen) return <ChatWorkspace {...workspace} {...rail} isRailOpen={false} />
-    return <ChatWorkspace {...workspace} />
+    if (!view.isCompact) return <PaneLayout {...workspace} />
+    return (
+        <PaneLayout
+            {...workspace}
+            rail={infoPanel}
+            railLabel={text("infoTitle")}
+            railOpenLabel={text("infoOpen")}
+            railCloseLabel={text("infoClose")}
+            isRailOpen={view.isInfoOpen}
+            onRailOpenChange={on.infoOpenChange}
+        />
+    )
 }
 
 /**
@@ -173,6 +176,16 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                     >
                         <MessengerWorkspace {...props} />
                     </div>
+                    {view.isInfoOpen && !view.isCompact ? (
+                        <>
+                            <div className={DIVIDER_CLASS_NAME}>
+                                <Divider orientation="vertical" semantics="presentation" />
+                            </div>
+                            <Region label={text("infoTitle")} className={INFO_COLUMN_CLASS_NAME}>
+                                <MessengerInfoPanel {...props} isDocked />
+                            </Region>
+                        </>
+                    ) : null}
                 </div>
             </FillViewport>
         </Page>
@@ -228,14 +241,17 @@ const MessengerComposer = (props: OfficeMessengerBaseProps) => {
     )
 }
 
+/** The messenger props plus whether the panel shows its own header row (the docked column) or not (the drawer). */
+type MessengerInfoPanelProps = OfficeMessengerBaseProps & { readonly isDocked: boolean }
+
 /** Connects the shared info panel used by the dock and drawer. */
-const MessengerInfoPanel = (props: OfficeMessengerBaseProps) => {
+const MessengerInfoPanel = (props: MessengerInfoPanelProps) => {
     const view = props.props
     const on = props.on
     const { text } = view
     return (
         <OfficeInfoPanel
-            props={{ info: view.info, isDocked: view.isInfoDocked, text }}
+            props={{ info: view.info, isDocked: props.isDocked, text }}
             on={{
                 jumpApproval: on.jumpApproval,
                 jumpException: on.jumpException,

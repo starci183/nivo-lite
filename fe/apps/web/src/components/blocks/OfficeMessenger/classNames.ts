@@ -21,3 +21,6 @@ export const TASKS_CLASS_NAME = "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
 
 /** The vertical hairline between two columns, from md up; on a phone only one column shows. */
 export const DIVIDER_CLASS_NAME = "hidden shrink-0 md:flex"
+
+/** The group-info column at the right edge: full height, a fixed width beside the thread, its own header row. */
+export const INFO_COLUMN_CLASS_NAME = "hidden min-h-0 w-72 shrink-0 flex-col md:flex xl:w-80"

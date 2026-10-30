@@ -14,7 +14,7 @@ export const HEAD_AVATAR_CLASS_NAME = "hidden shrink-0 md:flex"
 export const WIDE_ONLY_CLASS_NAME = "hidden sm:inline"
 
 /** The head band of the chat column: mark, title with member line, controls. */
-export const HEAD_BAND_CLASS_NAME = "flex min-w-0 items-center gap-3 px-4 py-3"
+export const HEAD_BAND_CLASS_NAME = "flex h-18 min-w-0 items-center gap-3 px-4"
 
 /** The room name and its member line. */
 export const HEAD_TITLE_CLASS_NAME = "flex min-w-0 flex-1 flex-col"

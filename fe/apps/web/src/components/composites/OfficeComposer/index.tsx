@@ -106,7 +106,7 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
                             label={text("composerLabel")}
                             isLabelHidden
                             placeholder={text("composerPlaceholder")}
-                            rows={1}
+                            rows={3}
                             isSkeleton={view.isSkeleton}
                             value={view.draft}
                             onValueChange={props.on.change}
