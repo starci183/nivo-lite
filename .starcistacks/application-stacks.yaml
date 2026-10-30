@@ -339,12 +339,6 @@ environments:
         where: secrets/sepay
         recipientPolicy: SOPS/age, one member per provider (sepay.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys SEPAY_* keys.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
-      - name: openrouter
-        runtimeName: nivo-custody-openrouter-v1
-        version: 1
-        where: secrets/openrouter
-        recipientPolicy: SOPS/age, one member per provider (openrouter.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys OPENROUTER_API_KEY.
-        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: n8n
         runtimeName: nivo-custody-n8n-v1
         version: 1
@@ -391,13 +385,13 @@ environments:
         runtimeName: nivo-custody-ai-v1
         version: 1
         where: secrets/ai
-        recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys AI_ROUTER_ADMIN_TOKEN, AI_API_KEY.
+        recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys AI_ROUTER_ADMIN_TOKEN, AI_API_KEY and the upstream OPENROUTER_API_KEY (the whole AI domain in one member).
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: vps
         runtimeName: nivo-custody-vps-v1
         version: 1
         where: secrets/vps
-        recipientPolicy: SOPS/age, one member per provider (vps.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys VPS_HOST, VPS_USER (operator, never granted).
+        recipientPolicy: SOPS/age, one member per provider (vps.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys VPS_HOST, VPS_USER, privateKey (operator SSH key), knownHosts (pinned host keys, GitHub VPS_KNOWN_HOSTS) and ciPrivateKey (GitHub environment secret VPS_SSH_KEY), every VPS credential in one member, operator only, never granted.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: test-accounts
         runtimeName: nivo-custody-test-accounts-v1
@@ -405,23 +399,69 @@ environments:
         where: secrets/test-accounts
         recipientPolicy: SOPS/age, one member per provider (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys DEMO_EMAIL, DEMO_PASSWORD, DEMO_STAFF_PASSWORD, READY_OWNER_EMAIL, READY_OWNER_PASSWORD, READY_STAFF_EMAIL, READY_STAFF_PASSWORD.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
-      - name: ci-ssh-key
-        runtimeName: nivo-custody-ci-ssh-key-v1
+      - name: ai-api-key
+        member: ai
+        key: AI_API_KEY
+        where: secrets/ai
+        runtimeName: nivo-custody-ai-api-key-v1
         version: 1
-        where: secrets/ci-ssh-key
-        recipientPolicy: SOPS/age, one member per provider (ci-ssh-key.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys ciPrivateKey (GitHub environment secret VPS_SSH_KEY).
+        recipientPolicy: SOPS/age, key AI_API_KEY of the sealed member ai (ai.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; the api's own gateway virtual key.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
+      - name: ai-router-admin-token
+        member: ai
+        key: AI_ROUTER_ADMIN_TOKEN
+        where: secrets/ai
+        runtimeName: nivo-custody-ai-router-admin-token-v1
+        version: 1
+        recipientPolicy: SOPS/age, key AI_ROUTER_ADMIN_TOKEN of the sealed member ai (ai.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; the in-process gateway admin token.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
+      - name: vps-host
+        member: vps
+        key: VPS_HOST
+        where: secrets/vps
+        runtimeName: nivo-custody-vps-host-v1
+        version: 1
+        recipientPolicy: SOPS/age, key VPS_HOST of the sealed member vps (vps.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; the manager host the stack verbs connect to.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
+      - name: vps-user
+        member: vps
+        key: VPS_USER
+        where: secrets/vps
+        runtimeName: nivo-custody-vps-user-v1
+        version: 1
+        recipientPolicy: SOPS/age, key VPS_USER of the sealed member vps (vps.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; the manager account the stack verbs connect as.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
+      - name: openrouter-api-key
+        member: ai
+        key: OPENROUTER_API_KEY
+        where: secrets/ai
+        runtimeName: nivo-custody-openrouter-api-key-v1
+        version: 1
+        recipientPolicy: SOPS/age, key OPENROUTER_API_KEY of the sealed member ai (ai.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; the upstream OpenRouter key.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: vps-ssh-key
+        member: vps
+        key: privateKey
+        where: secrets/vps
         runtimeName: nivo-custody-vps-ssh-key-v1
         version: 1
-        where: secrets/vps-ssh-key
-        recipientPolicy: SOPS/age, one member per provider (vps-ssh-key.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys privateKey (operator SSH key).
+        recipientPolicy: SOPS/age, key privateKey of the sealed member vps (vps.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; the operator SSH key the stack verbs use.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: vps-known-hosts
+        member: vps
+        key: knownHosts
+        where: secrets/vps
         runtimeName: nivo-custody-vps-known-hosts-v1
         version: 1
-        where: secrets/vps-known-hosts
-        recipientPolicy: SOPS/age, one member per provider (vps-known-hosts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys knownHosts (pinned host keys, GitHub VPS_KNOWN_HOSTS).
+        recipientPolicy: SOPS/age, key knownHosts of the sealed member vps (vps.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; the pinned host keys (GitHub VPS_KNOWN_HOSTS).
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
+      - name: ci-ssh-key
+        member: vps
+        key: ciPrivateKey
+        where: secrets/vps
+        runtimeName: nivo-custody-ci-ssh-key-v1
+        version: 1
+        recipientPolicy: SOPS/age, key ciPrivateKey of the sealed member vps (vps.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; the CI deploy key (GitHub environment secret VPS_SSH_KEY).
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: channel-token-key
         member: nivo
@@ -541,7 +581,7 @@ environments:
       remote:
         host: vps
         releasesBase: /srv/nivo
-        sealed: {ops: vps, sshKey: vps-ssh-key, knownHosts: vps-known-hosts}
+        sealed: {ops: vps, sshKey: vps, knownHosts: vps}
         serverRecipient: age148vdeuc9jmk6rr8vwltalqwq373nxsrra4hyfzejgc3388gnhpgqwzwusz
       images:
         nivo-api: {app: api}
@@ -564,7 +604,6 @@ environments:
               - {member: nivo}
               - {member: smtp}
               - {member: sepay}
-              - {member: openrouter}
               - {member: postgres}
               - {member: redis}
               - {member: auth}

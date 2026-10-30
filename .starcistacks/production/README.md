@@ -4,7 +4,7 @@ The production environment of NIVO: **Docker Swarm on one Ubuntu VPS** (a single
 
 ## The seven commands
 
-All commands run at the app root of an owner machine that holds the age identity (the `ops`, `vps-ssh-key` and `vps-known-hosts` members give the verbs their SSH session), or on the VPS manager. Effectful verbs are a dry run without `--execute`.
+All commands run at the app root of an owner machine that holds the age identity (the one `vps` member gives the verbs their SSH session), or on the VPS manager. Effectful verbs are a dry run without `--execute`.
 
 | Command | What it does |
 | --- | --- |
@@ -54,19 +54,17 @@ The key roster with semantics is `.starcistacks/production/runtime/env/KEYS.md`.
 | `nivo` | api task (`<KEY>_FILE`); mcp task (`CHANNEL_TOKEN_KEY` only) | `CHANNEL_TOKEN_KEY`, `OTP_PEPPER`, `WEBHOOK_SIGNING_SECRET`, `NIVO_PLATFORM_ADMINS`. Remote MCP connector credentials are not custody keys: they are sealed per workspace in the database from the console |
 | `smtp` | api task | `SMTP_URL`, `SMTP_FROM` |
 | `sepay` | api task | `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_ACCOUNT`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NAME` |
-| `openrouter` | api task | `OPENROUTER_API_KEY` |
 | `auth` | api task | `AUTH_JWT_PRIVATE_KEY`, `AUTH_JWT_PUBLIC_KEY` (the own Passport signing pair) |
 | `google` | api task | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` (own Google sign-in) |
 | `storage` | api task | `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` (the MinIO service account; `STORAGE_ENDPOINT`, `STORAGE_PUBLIC_URL` and `STORAGE_BUCKET_PREFIX` are public configuration in `api-public.conf`) |
-| `ai` | api task | `AI_ROUTER_ADMIN_TOKEN`, `AI_API_KEY` |
+| `ai` | api task | `AI_ROUTER_ADMIN_TOKEN`, `AI_API_KEY`, `OPENROUTER_API_KEY` (the upstream key) |
 | `n8n` | n8n, api | `N8N_ENCRYPTION_KEY` (n8n), `N8N_SIGNING_SECRET` (also granted to the api); configuration read at render time (not a Swarm secret): `N8N_ALLOWED_HOSTS`, `N8N_PROTOCOL`, `N8N_SECURE_COOKIE` |
 | `openclaw` | openclaw, api | secrets: `OPENCLAW_GATEWAY_TOKEN` (also granted to the api), `OPENCLAW_AI_KEY` (the gateway virtual key of openclaw); `OPENCLAW_MANAGE_AGENTS` (`true` or `false`, granted to the api), `OPENCLAW_TURN_TIMEOUT`; configuration read at render time: `OPENCLAW_MODEL` |
 | `redis` | `nivo-redis`, api task | `QUEUE_REDIS_PASSWORD` |
 | `postgres` | `db` (`POSTGRES_PASSWORD_FILE`), `nivo-postgres-backup`; api task; operator | `POSTGRES_PASSWORD` (superuser), `APP_BE_DB_PASSWORD` (the `app_be` login role), `PRIMARY_DB_URL` |
-| `vps` | operator verbs | `VPS_HOST`, `VPS_USER` (never granted) |
+| `vps` | operator verbs | `VPS_HOST`, `VPS_USER`, `privateKey` (operator SSH key), `knownHosts` (pinned host keys), `ciPrivateKey` (the CI deploy key, GitHub `VPS_SSH_KEY`); never granted |
 | `web` | web image build | the public build values of the console (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL` and their siblings, never sealed) read by `starci app stack build-args` |
 | `test-accounts` | smoke tests | `READY_OWNER_*`, `READY_STAFF_*`, `DEMO_*` |
-| `ci-ssh-key`, `vps-ssh-key`, `vps-known-hosts` | JSON envelopes of the deploy SSH material | one key each |
 
 The non-secret production configuration (`PRIMARY_DB_SCHEMA`, `AUTH_WEB_ORIGIN`, `AUTH_GOOGLE_CALLBACK_URL`, `STORAGE_ENDPOINT`, `STORAGE_PUBLIC_URL`, `STORAGE_BUCKET_PREFIX`, `SITE_URL`, `PUBLIC_SITE_URL`, `PUBLIC_API_URL`, `HTTP_SECURITY_ALLOWED_ORIGINS`, `N8N_WEBHOOK_BASE`) is committed in `.starcistacks/production/infra/swarm/api-public.conf` and merged into the api environment by the render; the names the be reads, with required or optional marked, are in `.starcistacks/production/infra/swarm/api.env.example`. The public web values `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_DEVELOPER_API_URL` are build arguments declared in `environments.production.deploy.images.web.buildArgs`.
 
@@ -105,7 +103,7 @@ host `nivo-mcp`, port 8790). Its container healthcheck probes `/healthz` (livene
 
 ## The AI gateway and its virtual keys
 
-The api process hosts `@starci/ai-router` 0.3.0 through `AiRouterGatewayModule`: no extra container or image. It listens on **8788** (`AI_ROUTER_PORT`, api 8787 + offset 1, declared on the `nivo-api` component) on the private `agents` network only: no route, no published port. The api calls it at `http://127.0.0.1:8788/v1`, openclaw at `http://nivo-api:8788/v1`. The pool holds one OpenRouter provider with the profiles `work` (`deepseek/deepseek-v4.1-flash`) and `embed` (`qwen/qwen3-embedding-8b`). Virtual keys are in SQLite (`AI_ROUTER_KEYS_PATH`) on the volume `nivo-engine_ai-router-data`, which `starci app stack backup` includes; losing it loses the keys (re-issue them). Sealed `api` member: `OPENROUTER_API_KEY`, `AI_ROUTER_ADMIN_TOKEN`, `AI_API_KEY`; sealed `stack` member: `OPENCLAW_AI_KEY` for openclaw.
+The api process hosts `@starci/ai-router` 0.3.0 through `AiRouterGatewayModule`: no extra container or image. It listens on **8788** (`AI_ROUTER_PORT`, api 8787 + offset 1, declared on the `nivo-api` component) on the private `agents` network only: no route, no published port. The api calls it at `http://127.0.0.1:8788/v1`, openclaw at `http://nivo-api:8788/v1`. The pool holds one OpenRouter provider with the profiles `work` (`deepseek/deepseek-v4.1-flash`) and `embed` (`qwen/qwen3-embedding-8b`). Virtual keys are in SQLite (`AI_ROUTER_KEYS_PATH`) on the volume `nivo-engine_ai-router-data`, which `starci app stack backup` includes; losing it loses the keys (re-issue them). Sealed `ai` member: `OPENROUTER_API_KEY`, `AI_ROUTER_ADMIN_TOKEN`, `AI_API_KEY`; sealed `stack` member: `OPENCLAW_AI_KEY` for openclaw.
 
 **Virtual keys are mounted from secrets, no bootstrap step.** The two keys are generated secrets sealed like any other: `AI_API_KEY` (label `nivo_api`, profiles `work,embed`) in the `ai` member and `OPENCLAW_AI_KEY` (label `nivo_openclaw`, profile `work`) in the `openclaw` member, both of the form `sk-starci-<label>-<48 hex>`. The api reads both (file pointers) and passes them to the in-process gateway as mounted keys (`@starci/ai-router` 0.4.0): held in memory, never written to the key store, each under a fixed id per label for quota and usage. openclaw sends its own key. A mounted key is revoked only by changing its secret and deploying; the admin API cannot revoke it. Make or rotate one without ever printing it:
 

@@ -113,8 +113,8 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | --- | --- | --- |
 | `APP_BE_DB_PASSWORD` | `app-be-db` (legacy cloud role) and `postgres` | Password of the `app_be` database role; the owner uses it to set the role and rebuild `PRIMARY_DB_URL`. |
 | `POSTGRES_PASSWORD` | `postgres` (declared, not yet sealed) | Superuser password of `db` (`POSTGRES_PASSWORD_FILE`); also read by `nivo-postgres-backup` for pg_dump. Migrations use it through `DATABASE_URL` (shell only, see the README). |
-| `VPS_HOST` | `ops` | The manager account `starci app stack` verbs connect to from the owner machine. |
-| `VPS_USER` | `ops` | The manager account `starci app stack` verbs connect to from the owner machine. |
+| `VPS_HOST` | `vps` | The manager account `starci app stack` verbs connect to from the owner machine. |
+| `VPS_USER` | `vps` | The manager account `starci app stack` verbs connect to from the owner machine. |
 | `DEMO_EMAIL` | `test-accounts` | Demo accounts of the post-deploy smoke tests. |
 | `DEMO_PASSWORD` | `test-accounts` | Demo accounts of the post-deploy smoke tests. |
 | `DEMO_STAFF_PASSWORD` | `test-accounts` | Demo accounts of the post-deploy smoke tests. |
@@ -124,9 +124,9 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | `READY_STAFF_PASSWORD` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
 | `WORKSPACE_SEED_INPUT` | `test-accounts` | Private ensure input (owner, manager, staff accounts and workspace name) the **seed demo workspace** workflow (`.github/workflows/cli-deploy.yml`) hands to `cli seed-workspace profile` as `WORKSPACE_SEED_INPUT_FILE`. |
 | `WORKSPACE_PROFILE_INPUT` | `test-accounts` | Private profile input `{"schema":"nivo/workspace-profile-input@1","connectors":{"hakuen":{"url":"https://..."}}}`: the endpoint of each remote MCP connector the profile registers. The same workflow hands it to `cli seed-workspace profile` as `WORKSPACE_PROFILE_INPUT_FILE`; a dry run refuses when a connector endpoint is missing. |
-| `privateKey` | `vps-ssh-key` | Property of the operator SSH key envelope once re-sealed (`starci app stack` reads `privateKey`, `key` or `data`). |
-| `knownHosts` | `vps-known-hosts` | Property of the pinned host keys envelope once re-sealed (`starci app stack` reads `knownHosts`, `known_hosts` or `data`). |
-| `ciPrivateKey` | `ci-ssh-key` | Property of the CI deploy key envelope once re-sealed, so that no two members hold the same key. |
+| `privateKey` | `vps` | The operator SSH key (`starci app stack` reads it from the member `deploy.remote.sealed.sshKey` names). |
+| `knownHosts` | `vps` | The pinned host keys (`starci app stack` reads them from the member `deploy.remote.sealed.knownHosts` names). |
+| `ciPrivateKey` | `vps` | The CI deploy key (GitHub environment secret `VPS_SSH_KEY`), kept apart from the operator `privateKey`. |
 | `SOPS_AGE_KEY` | not sealed | The owner's age identity (untracked `.claude/secret.env` and the CI environment secret); never an application key. |
 
 ## web: public build values
@@ -150,7 +150,7 @@ The api hosts the gateway through `AiRouterGatewayModule`; it listens on `AI_ROU
 | `AI_ROUTER_PORT` | api stack value | The gateway listener (`8788`); declared on the `nivo-api` component. |
 | `AI_ROUTER_KEYS_PATH` | api stack value | SQLite key store (`/var/lib/ai-router/keys.sqlite`) on the volume `nivo-engine_ai-router-data`. |
 | `AI_ROUTER_ADMIN_TOKEN` | its sealed member (granted in `application-stacks.yaml`) | Bearer token of the gateway admin API; the `keys ...` CLI reads it from the same variable. |
-| `OPENROUTER_API_KEY` | its sealed member (granted in `application-stacks.yaml`) | The single upstream key (OpenRouter). |
+| `OPENROUTER_API_KEY` | `ai` (granted in `application-stacks.yaml`) | The single upstream key (OpenRouter). |
 | `AI_API_KEY` | its sealed member (granted in `application-stacks.yaml`) | The api's virtual key (`nivo_api`). openclaw has its own, `OPENCLAW_AI_KEY` (virtual key `nivo_openclaw`), sealed in `stack`, exported by the entrypoint wrapper; openclaw holds no OpenRouter key. Mounted by the gateway from this secret at boot (no key is issued by hand); it must start with `sk-starci-nivo_api-`. |
 
 ## Self-hosted cutover (sh-cutover)
