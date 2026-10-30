@@ -15,7 +15,6 @@ export const AuthLayout = async (props: AuthLayoutProps) => {
                 mainLabel: t("mainLabel"),
                 headline: t("headline"),
                 tagline: t("tagline"),
-                points: [t("pointCapture"), t("pointOwner"), t("pointApprove")],
                 legalLabel: t("legalLabel"),
                 privacyLabel: t("privacyLink"),
                 termsLabel: t("termsLink"),

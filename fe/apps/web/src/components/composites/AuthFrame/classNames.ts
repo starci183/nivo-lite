@@ -1,34 +1,20 @@
 import { cn } from "@heroui/react"
 
-/** Language switch row above both panes, aligned to the end. */
-export const AUTH_LOCALE_CLASS_NAME = cn("flex", "justify-end", "px-4", "py-3", "lg:px-8")
-/** Brand card inset on the rail: same stepped inset as the form pane (PADDING-7: p-6 -> p-8). */
-export const AUTH_BRAND_PANE_CLASS_NAME = cn("p-6", "lg:p-8")
-/** Brand card body under the edge-to-edge art band of the joined card: the band owns no inset, the body takes the outer-edge inset (PADDING-4) and stacks pitch then details (GAP-5). */
-export const AUTH_BRAND_STACK_CLASS_NAME = cn("flex", "flex-col", "gap-6", "p-4")
-/** SURFACE-6 case-1: decorative band with one aria-hidden mascot and no copy; shown from lg only so the form stays in the first phone screen. */
-export const AUTH_ART_BAND_CLASS_NAME = cn(
-    "relative",
-    "isolate",
-    "hidden",
-    "min-h-32",
-    "overflow-hidden",
-    "lg:block",
-    "lg:min-h-56",
-)
-/** Pitch under the band: logo, headline, tagline (GAP-4). */
-export const AUTH_PITCH_CLASS_NAME = cn("flex", "flex-col", "gap-4")
-/** Selling points and the offer, hidden below lg (GAP-4). */
-export const AUTH_DETAILS_CLASS_NAME = cn("hidden", "flex-col", "gap-4", "lg:flex")
-/** Tagline, hidden below lg. */
-export const AUTH_TAGLINE_CLASS_NAME = cn("hidden", "lg:block")
-/** Selling points (GAP-3); List owns the reset. */
-export const AUTH_POINTS_CLASS_NAME = cn("flex", "flex-col", "gap-3")
-/** One point: its mark beside its line (GAP-2). */
-export const AUTH_POINT_CLASS_NAME = cn("flex", "items-center", "gap-2")
-/** Form pane: centres the auth card with the same stepped inset (PADDING-7). */
-export const AUTH_FORM_PANE_CLASS_NAME = cn("flex", "items-center", "justify-center", "p-6", "lg:p-8")
+/** Art pane on the rail: holds the ink brand card at full height with the stepped inset (PADDING-7); shown from lg only so the form stays in the first phone screen. */
+export const AUTH_ART_PANE_CLASS_NAME = cn("hidden", "min-h-dvh", "flex-col", "p-8", "lg:flex", "[&>*]:flex-1")
+/** Brand copy inside the ink card: the logo at the top, headline and tagline at the bottom (GAP-6). */
+export const AUTH_ART_COPY_CLASS_NAME = cn("flex", "h-full", "flex-col", "justify-between", "gap-6")
+/** Headline and tagline (GAP-2). */
+export const AUTH_ART_BOTTOM_CLASS_NAME = cn("flex", "max-w-md", "flex-col", "gap-2")
+/** Form pane: the language switch at the top, the auth card centred, the legal links at the bottom, at the stepped inset (PADDING-7). */
+export const AUTH_FORM_PANE_CLASS_NAME = cn("flex", "min-h-dvh", "flex-col", "p-6", "lg:p-8")
+/** Language switch row, aligned to the end. */
+export const AUTH_LOCALE_CLASS_NAME = cn("flex", "justify-end")
+/** Centres the auth card in the remaining height. */
+export const AUTH_CENTER_CLASS_NAME = cn("flex", "flex-1", "flex-col", "items-center", "justify-center", "gap-6", "py-8")
+/** Logo above the card below lg, where the art pane is hidden. */
+export const AUTH_COMPACT_LOGO_CLASS_NAME = cn("flex", "justify-center", "lg:hidden")
 /** Width of the auth card. */
-export const AUTH_CARD_CLASS_NAME = cn("w-full", "max-w-md")
-/** Privacy and terms links under the auth card. */
-export const AUTH_LEGAL_CLASS_NAME = cn("pt-4")
+export const AUTH_CARD_CLASS_NAME = cn("w-full", "max-w-sm")
+/** Privacy and terms links at the bottom of the form pane. */
+export const AUTH_LEGAL_CLASS_NAME = cn("flex", "justify-center")

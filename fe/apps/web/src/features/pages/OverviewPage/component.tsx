@@ -1,5 +1,4 @@
 import { Page, PrimaryRailLayout } from "@starci/grammar/common"
-import { FoundingOffer } from "@/components/blocks/FoundingOffer"
 import { OnboardingChecklist } from "@/components/blocks/OnboardingChecklist"
 import { OverviewGovernance } from "@/components/blocks/OverviewGovernance"
 import { OverviewHeader } from "@/components/blocks/OverviewHeader"
@@ -40,7 +39,6 @@ export const OverviewPageBase = (props: OverviewPageBaseProps) => (
                     </div>
                 }
             />
-            <FoundingOffer variant="hero" />
         </div>
     </Page>
 )
