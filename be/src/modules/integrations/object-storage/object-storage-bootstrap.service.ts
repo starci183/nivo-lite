@@ -3,9 +3,9 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { StorageClient } from "./object-storage.contracts"
-import { InjectStorageClient, InjectStorageOptions } from "./storage.decorators"
+import { InjectStorageClient, InjectStorageOptions } from "./object-storage.decorators"
 import { StorageLogEvent } from "./object-storage.log-events"
-import type { ObjectStorageOptions } from "./storage.options"
+import type { ObjectStorageOptions } from "./object-storage.options"
 import { STORAGE_BUCKETS, bucketNameOf } from "./object-storage.policy"
 
 @Injectable()

@@ -2,7 +2,7 @@ import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { S3Client } from "@aws-sdk/client-s3"
 import type { StorageClient } from "./object-storage.contracts"
-import type { ObjectStorageOptions } from "./storage.options"
+import type { ObjectStorageOptions } from "./object-storage.options"
 import type { StorageSigner } from "./s3.client"
 import type { StorageAssetsPort, StorageObjectsPort } from "./object-storage.port"
 

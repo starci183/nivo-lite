@@ -1,7 +1,7 @@
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3"
 import { Test } from "@nestjs/testing"
 import { Secret } from "@modules/platform/config"
-import type { ObjectStorageOptions } from "./storage.options"
+import type { ObjectStorageOptions } from "./object-storage.options"
 import { createS3Client as realCreateS3Client, createStorageSigner as realCreateStorageSigner } from "./s3.client"
 
 const SUBJECT = Symbol("storage.sdk")

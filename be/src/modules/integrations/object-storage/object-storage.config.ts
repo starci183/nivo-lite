@@ -1,5 +1,5 @@
 import type { EnvSource } from "@modules/platform/config"
-import type { ObjectStorageOptions } from "./storage.options"
+import type { ObjectStorageOptions } from "./object-storage.options"
 
 const DEFAULT_REGION = "us-east-1"
 const DEFAULT_TIMEOUT_MS = 30_000

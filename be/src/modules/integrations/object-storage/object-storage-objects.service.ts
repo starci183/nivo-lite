@@ -5,9 +5,9 @@ import { eachInOrder, ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { ObjectStorageError, ObjectStorageErrorCode } from "./errors/object-storage.error"
 import type { SignedObjectUrl, StorageClient, StorageFailureCode } from "./object-storage.contracts"
-import { InjectStorageClient, InjectStorageOptions } from "./storage.decorators"
+import { InjectStorageClient, InjectStorageOptions } from "./object-storage.decorators"
 import { StorageLogEvent } from "./object-storage.log-events"
-import type { ObjectStorageOptions } from "./storage.options"
+import type { ObjectStorageOptions } from "./object-storage.options"
 import type {
     ListedObjectsOutcome,
     RemovedObjectsOutcome,

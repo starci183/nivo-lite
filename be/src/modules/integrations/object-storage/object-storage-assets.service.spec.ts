@@ -4,8 +4,8 @@ import { Secret } from "@modules/platform/config"
 import { fakeStorage } from "@tests/fixtures/doubles/fake-storage.client"
 import type { StorageClient } from "./object-storage.contracts"
 import { StorageAssetsService } from "./object-storage-assets.service"
-import { STORAGE_CLIENT, STORAGE_OPTIONS } from "./storage.decorators"
-import type { ObjectStorageOptions } from "./storage.options"
+import { STORAGE_CLIENT, STORAGE_OPTIONS } from "./object-storage.decorators"
+import type { ObjectStorageOptions } from "./object-storage.options"
 
 const options: ObjectStorageOptions = {
     endpoint: "https://academy-minio.test:9000",
