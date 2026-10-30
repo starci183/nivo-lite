@@ -57,6 +57,21 @@ describe("AutomationReactionsService claims", () => {
         expect(webhooks.publish).not.toHaveBeenCalled()
     })
 
+    it("starts nothing for a repeated lead, receipt or shipment", async () => {
+        const { reactions, inbox, engine, automations } = await build()
+        inbox.seen("lead_captured__automations", lead.payload.dedupeKey)
+        inbox.seen("payment_reconciled__payment_receipts", payment.payload.dedupeKey)
+        inbox.seen("order_shipped__automations", shipment.payload.dedupeKey)
+
+        await reactions.onLeadCaptured(eventDeliveryOf("lead_captured__automations", lead))
+        await reactions.onPaymentReceipt(eventDeliveryOf("payment_reconciled__payment_receipts", payment))
+        await reactions.onOrderShipped(eventDeliveryOf("order_shipped__automations", shipment))
+
+        expect(engine.onBusinessEvent).not.toHaveBeenCalled()
+        expect(engine.startPaymentReceipt).not.toHaveBeenCalled()
+        expect(automations.emit).not.toHaveBeenCalled()
+    })
+
     it("starts the lead.created pipelines from a captured lead, keyed as before", async () => {
         const { reactions, engine, webhooks } = await build()
 

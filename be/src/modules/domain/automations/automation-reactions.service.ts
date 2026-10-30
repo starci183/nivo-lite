@@ -10,7 +10,7 @@ import type {
     PaymentReconciledEvent,
 } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { EventDelivery } from "@modules/platform/event-bus"
+import type { BaseEvent, EventDelivery } from "@modules/platform/event-bus"
 import { InjectInbox } from "@modules/platform/inbox"
 import type { Inbox } from "@modules/platform/inbox"
 import { AutomationEngineService } from "./automation-engine.service"
@@ -40,88 +40,93 @@ export class AutomationReactionsService {
     ) {}
 
     /** `lead.created` for the pipelines; a new lead has no webhook delivery today. */
-    async onLeadCaptured(delivery: EventDelivery<LeadCapturedEvent>): Promise<void> {
-        await this.entityManager.transaction(async (tx: EntityManager) => {
-            if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
-            const lead = delivery.event.payload
-            await this.engine.onBusinessEvent({
-                workspaceId: lead.workspaceId,
-                event: "lead.created",
-                dedupe: delivery.dedupeKey,
-                data: {
-                    lead_id: lead.leadId,
-                    name: lead.contactName,
-                    company: lead.company,
-                    channel: lead.channel,
-                    need: lead.need,
-                    phone: lead.phone ?? null,
-                    email: lead.email ?? null,
-                },
-            })
-        })
+    onLeadCaptured(delivery: EventDelivery<LeadCapturedEvent>): Promise<void> {
+        return this.entityManager.transaction((tx) => this.startLeadPipelines(delivery, tx))
     }
 
     /** `deal.won` for the pipelines and the webhooks. */
-    async onDealWon(delivery: EventDelivery<DealWonEvent>): Promise<void> {
-        await this.entityManager.transaction(async (tx: EntityManager) => {
-            if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
-            await this.publish(tx, dealWonReaction(delivery.event.payload, delivery.dedupeKey))
-        })
+    onDealWon(delivery: EventDelivery<DealWonEvent>): Promise<void> {
+        return this.entityManager.transaction((tx) => this.react(delivery, tx, dealWonReaction))
     }
 
     /** `decision.made`: the automation run that waited for the item settles, and the webhooks hear the decision. */
-    async onDecisionMade(delivery: EventDelivery<DecisionMadeEvent>): Promise<void> {
-        await this.entityManager.transaction(async (tx: EntityManager) => {
-            if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
-            await this.publish(tx, decisionMadeReaction(delivery.event.payload, delivery.dedupeKey))
-        })
+    onDecisionMade(delivery: EventDelivery<DecisionMadeEvent>): Promise<void> {
+        return this.entityManager.transaction((tx) => this.react(delivery, tx, decisionMadeReaction))
     }
 
     /** `payment.received` for the pipelines (thank-you, review request, sheet) and the webhooks. */
-    async onPaymentReconciled(delivery: EventDelivery<PaymentReconciledEvent>): Promise<void> {
-        await this.entityManager.transaction(async (tx: EntityManager) => {
-            if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
-            const payment = delivery.event.payload
-            await this.publish(tx, paymentReceivedReaction(payment))
-        })
+    onPaymentReconciled(delivery: EventDelivery<PaymentReconciledEvent>): Promise<void> {
+        return this.entityManager.transaction((tx) => this.react(delivery, tx, paymentReceivedReaction))
     }
 
     /** The customer's receipt by email for the settled payment, when the shop switched the receipt pipeline on. */
-    async onPaymentReceipt(delivery: EventDelivery<PaymentReconciledEvent>): Promise<void> {
-        await this.entityManager.transaction(async (tx: EntityManager) => {
-            if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
-            const payment = delivery.event.payload
-            await this.engine.startPaymentReceipt(payment.workspaceId, payment.transactionId ?? null, payment.invoiceId)
-        })
+    onPaymentReceipt(delivery: EventDelivery<PaymentReconciledEvent>): Promise<void> {
+        return this.entityManager.transaction((tx) => this.startReceipt(delivery, tx))
     }
 
     /** `order.confirmed` for the pipelines and the webhooks. */
-    async onOrderConfirmed(delivery: EventDelivery<OrderConfirmedEvent>): Promise<void> {
-        await this.entityManager.transaction(async (tx: EntityManager) => {
-            if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
-            const order = delivery.event.payload
-            await this.publish(tx, orderConfirmedReaction(order))
-        })
+    onOrderConfirmed(delivery: EventDelivery<OrderConfirmedEvent>): Promise<void> {
+        return this.entityManager.transaction((tx) => this.react(delivery, tx, orderConfirmedReaction))
     }
 
     /** `order.shipped` for the pipelines, after the member who recorded the shipment is checked again. */
-    async onOrderShipped(delivery: EventDelivery<OrderShippedEvent>): Promise<void> {
-        await this.entityManager.transaction(async (tx: EntityManager) => {
-            if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
-            const shipment = delivery.event.payload
-            await this.automations.emit(shipment.userId, shipment.workspaceId, {
-                event: "order.shipped",
-                dedupe: `order.shipped:${shipment.orderId}`,
-                data: {
-                    order_id: shipment.orderId,
-                    order_no: shipment.orderNo,
-                    lead_id: shipment.leadId,
-                    carrier: shipment.carrier,
-                    tracking_code: shipment.trackingCode,
-                    shipped_at: shipment.shippedAt,
-                },
-            })
+    onOrderShipped(delivery: EventDelivery<OrderShippedEvent>): Promise<void> {
+        return this.entityManager.transaction((tx) => this.emitShipment(delivery, tx))
+    }
+
+    /** Claims the new lead, then starts the pipelines that listen for it. */
+    private async startLeadPipelines(delivery: EventDelivery<LeadCapturedEvent>, tx: EntityManager): Promise<void> {
+        if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
+        const lead = delivery.event.payload
+        await this.engine.onBusinessEvent({
+            workspaceId: lead.workspaceId,
+            event: "lead.created",
+            dedupe: delivery.dedupeKey,
+            data: {
+                lead_id: lead.leadId,
+                name: lead.contactName,
+                company: lead.company,
+                channel: lead.channel,
+                need: lead.need,
+                phone: lead.phone ?? null,
+                email: lead.email ?? null,
+            },
         })
+    }
+
+    /** Claims the settled payment, then starts the receipt pipeline for it. */
+    private async startReceipt(delivery: EventDelivery<PaymentReconciledEvent>, tx: EntityManager): Promise<void> {
+        if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
+        const payment = delivery.event.payload
+        await this.engine.startPaymentReceipt(payment.workspaceId, payment.transactionId ?? null, payment.invoiceId)
+    }
+
+    /** Claims the shipment, then emits it to the pipelines as the member who recorded it. */
+    private async emitShipment(delivery: EventDelivery<OrderShippedEvent>, tx: EntityManager): Promise<void> {
+        if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
+        const shipment = delivery.event.payload
+        await this.automations.emit(shipment.userId, shipment.workspaceId, {
+            event: "order.shipped",
+            dedupe: `order.shipped:${shipment.orderId}`,
+            data: {
+                order_id: shipment.orderId,
+                order_no: shipment.orderNo,
+                lead_id: shipment.leadId,
+                carrier: shipment.carrier,
+                tracking_code: shipment.trackingCode,
+                shipped_at: shipment.shippedAt,
+            },
+        })
+    }
+
+    /** Claims the delivery in the inbox inside the transaction, then publishes the reaction the payload maps to; a repeat does nothing. */
+    private async react<Event extends BaseEvent>(
+        delivery: EventDelivery<Event>,
+        tx: EntityManager,
+        reaction: (payload: Event["payload"], dedupe: string) => Reaction,
+    ): Promise<void> {
+        if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
+        await this.publish(tx, reaction(delivery.event.payload, delivery.dedupeKey))
     }
 
     /** The pipelines hear the event and the subscribed webhooks get their delivery job, in the transaction of the inbox claim. */
