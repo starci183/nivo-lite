@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { CHANNEL_SENDER_REGISTRY } from "./channels.decorators"
+import { CHANNEL_SENDER_REGISTRY, ZALO_INBOX_READS } from "./channels.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./channels.module-definition"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { ChannelSenderRegistryService } from "./channel-sender-registry.service"
@@ -34,6 +34,7 @@ export class ChannelsModule extends ConfigurableModuleClass {
                 ZaloConnectService,
                 ZaloPageService,
                 { provide: CHANNEL_SENDER_REGISTRY, useExisting: ChannelSenderRegistryService },
+                { provide: ZALO_INBOX_READS, useExisting: options.ports.inbox },
             ],
             exports: [
                 ZaloCredentialsService,

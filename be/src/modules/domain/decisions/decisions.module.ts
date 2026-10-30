@@ -15,7 +15,7 @@ import { ApprovalRequesterService } from "./approval-requester.service"
 import { CommandBusService } from "./command-bus.service"
 import { CommandPlannerService } from "./command-planner.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./decisions.module-definition"
-import { DecisionHistoryService } from "./decision-history.service"
+import { DecisionLogReadService } from "./decision-log-read.service"
 import { DecisionsService } from "./decisions.service"
 import { DecisionsFiguresService } from "./decisions-figures.service"
 import { EvidenceService } from "./evidence.service"
@@ -29,7 +29,13 @@ import { WorkPlacementService } from "./work-placement.service"
 import { WorkEngineService } from "./work-engine.service"
 import { WorkIntakeService } from "./work-intake.service"
 import { WORK_PERFORMER_REGISTRY } from "./work-performer.port"
-import { INBOUND_EVENT_STATUS, LEAD_DIRECTORY, LEAD_GEN_FLOW, OUTBOUND_ACCESS_GATE } from "./work-engine.decorators"
+import {
+    INBOUND_EVENT_STATUS,
+    LEAD_DIRECTORY,
+    LEAD_GEN_FLOW,
+    MODULE_CATALOG_SOURCE,
+    OUTBOUND_ACCESS_GATE,
+} from "./work-engine.decorators"
 import { WorkPerformersService } from "./work-performers.service"
 import { WorkRecorderService } from "./work-recorder.service"
 import { DurableWorkService } from "./durable-work.service"
@@ -65,13 +71,14 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: INBOUND_EVENT_STATUS, useClass: options.ports.inboundEventStatus },
                 { provide: LEAD_DIRECTORY, useExisting: options.ports.leadDirectory },
                 { provide: LEAD_GEN_FLOW, useExisting: options.ports.leadGenFlow },
+                { provide: MODULE_CATALOG_SOURCE, useExisting: options.ports.moduleCatalog },
                 { provide: OUTBOUND_ACCESS_GATE, useClass: options.ports.outboundAccessGate },
                 ApprovalRequesterService,
                 AuthorityGrantsService,
                 CommandBusService,
                 DecisionJobsService,
                 CommandPlannerService,
-                DecisionHistoryService,
+                DecisionLogReadService,
                 DecisionsService,
                 DecisionsFiguresService,
                 EvidenceService,
@@ -96,6 +103,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 AuthorityGrantsService,
                 CommandBusService,
                 DecisionJobsService,
+                DecisionLogReadService,
                 DecisionsService,
                 DecisionsFiguresService,
                 EvidenceService,

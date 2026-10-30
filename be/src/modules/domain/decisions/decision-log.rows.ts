@@ -1,3 +1,4 @@
+import type { DecisionRecord } from "./decisions-views.contracts"
 import type { DeciderKind, DecisionOutcome } from "./decisions.contracts"
 
 /** A decision's lineage in the accounting book. */
@@ -19,3 +20,18 @@ export interface AccountingDecisionRow {
     /** When it was written, ISO text. */
     readonly created_at: string
 }
+
+/** What the decision log is narrowed to; a null filter does not narrow. */
+export interface DecisionLogFilter {
+    /** The deciders to keep (`policy`, `owner`, `staff`). */
+    readonly deciders: ReadonlyArray<string> | null
+    /** The outcome to keep. */
+    readonly outcome: string | null
+    /** The module to keep. */
+    readonly department: string | null
+    /** The most lines. */
+    readonly limit: number
+}
+
+/** A line of the decision log before the customer name is read; `sort_key` orders lines of different sources at full precision. */
+export type DecisionLogLine = Omit<DecisionRecord, "leadName"> & { readonly sort_key: string }

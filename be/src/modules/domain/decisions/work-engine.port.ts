@@ -1,3 +1,4 @@
+import type { ModuleDefinition } from "@modules/domain/modules"
 import type { InboundStatus, Proposal, WorkContext, WorkItem } from "./decisions.contracts"
 import type { OptionalText, OutboundAccess } from "./work-engine.contracts"
 
@@ -36,4 +37,10 @@ export interface OutboundAccessGate {
      * customer's latest conversation; "auto" when there is no connection (website chat) or nothing is bound.
      */
     accessOf(ctx: WorkContext, item: WorkItem, proposal: Proposal): Promise<OutboundAccess>
+}
+
+/** The one door to the catalogue of modules: which modules exist and which actions each performs. The app root binds it to the modules capability. */
+export interface ModuleCatalogSource {
+    /** The catalogue, its modules in display order. */
+    catalog(): Promise<{ readonly modules: ReadonlyArray<ModuleDefinition> }>
 }

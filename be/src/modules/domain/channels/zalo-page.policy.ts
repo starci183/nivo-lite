@@ -1,3 +1,4 @@
+import type { ZaloFollowEventRow, ZaloInboxFactsRow } from "@modules/domain/zalo-inbox"
 import { sepayQrUrlOf } from "./qr-image.policy"
 import type {
     ZaloCheckRow,
@@ -7,13 +8,8 @@ import type {
     ZaloTokenState,
     ZaloAccessView,
 } from "./zalo-page.contracts"
-import type {
-    LastReplyRow,
-    MessageEventRow,
-    RecipientRow,
-} from "./persistence/zalo-page.rows"
+import type { LastReplyRow, MessageEventRow, RecipientRow } from "./persistence/zalo-page.rows"
 import type { ZaloSecret } from "./channels.contracts"
-import type { ZaloFollowEventRow, ZaloInboxFactsRow } from "@modules/domain/zalo-inbox"
 
 const MINUTE_MS = 60_000
 const EXCERPT = 120

@@ -15,8 +15,6 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { WorkContext, WorkItem } from "./decisions.contracts"
 import type {
     AuthoritySheet,
-    DecisionHistoryQuery,
-    DecisionRecord,
     ListWorkItemsQuery,
     ReconcileCandidate,
     ReconcileDetails,
@@ -26,7 +24,6 @@ import type {
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import { clampPageSize, splitPage } from "./paging.policy"
-import { DecisionHistoryService } from "./decision-history.service"
 import type { AccountingWaitingWorkRow, WorkItemViewRow } from "./work-item-views.rows"
 import { ruleSummary } from "./rule-save.policy"
 import { WorkItemViewsService } from "./work-item-views.service"
@@ -41,14 +38,6 @@ const textField = (item: WorkItem, key: string): string | null => {
 const candidateOf = (row: ReconcileInvoiceRow): ReconcileCandidate => ({ ...row })
 
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
-
-const HUMAN_DECIDERS = ["owner", "staff"]
-
-/** The deciders a history kind narrows to; null for every decider. */
-const decidersOf = (kind: DecisionHistoryQuery["kind"]): Array<string> | null => {
-    if (kind === "policy") return ["policy"]
-    return kind === "human" ? HUMAN_DECIDERS : null
-}
 
 const withoutCursor = (row: WorkItemViewRow): WorkItem => {
     const { cursor_at: _cursor, ...item } = row
@@ -68,7 +57,6 @@ export class DecisionsService {
         private readonly invoices: InvoicesService,
         private readonly transactions: TransactionsService,
         private readonly views: WorkItemViewsService,
-        private readonly history: DecisionHistoryService,
     ) {}
 
     /** Waiting accounting work and the related names; any workspace member may read. */
@@ -102,21 +90,6 @@ export class DecisionsService {
         const row = await this.views.find(workspaceId, workItemId)
         if (row === undefined) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
         return withoutCursor(row)
-    }
-
-    /** The newest lines of the decision log of the workspace, filtered; any member may read. */
-    async listDecisionHistory(
-        principalId: string,
-        workspaceId: string,
-        query: DecisionHistoryQuery,
-    ): Promise<ReadonlyArray<DecisionRecord>> {
-        await this.members.require(principalId, workspaceId)
-        return this.history.list(workspaceId, {
-            deciders: decidersOf(query.kind),
-            outcome: query.kind === "rejected" ? "rejected" : null,
-            department: query.department,
-            limit: clampPageSize(query.limit),
-        })
     }
 
     /** The goals, house rules and every rule of the workspace; owner and manager only. */

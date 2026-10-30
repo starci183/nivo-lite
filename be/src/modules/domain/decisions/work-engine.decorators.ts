@@ -1,6 +1,12 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
-import type { InboundEventStatus, LeadDirectory, LeadGenFlow, OutboundAccessGate } from "./work-engine.port"
+import type {
+    InboundEventStatus,
+    LeadDirectory,
+    LeadGenFlow,
+    ModuleCatalogSource,
+    OutboundAccessGate,
+} from "./work-engine.port"
 
 /** Token of the inbound event status port; the app root binds it to the inbox capability. */
 export const INBOUND_EVENT_STATUS: unique symbol = Symbol("domain.decisions.inbound-event-status")
@@ -27,3 +33,10 @@ export const InjectOutboundAccessGate = (): TypedParameterDecorator<OutboundAcce
 
 /** Injects the lead directory port. Parameter type: LeadDirectory. */
 export const InjectLeadDirectory = (): TypedParameterDecorator<LeadDirectory> => injector<LeadDirectory>(LEAD_DIRECTORY)
+
+/** Token of the module catalogue port. */
+export const MODULE_CATALOG_SOURCE: unique symbol = Symbol("domain.decisions.module-catalog-source")
+
+/** Injects the module catalogue port. Parameter type: ModuleCatalogSource. */
+export const InjectModuleCatalogSource = (): TypedParameterDecorator<ModuleCatalogSource> =>
+    injector<ModuleCatalogSource>(MODULE_CATALOG_SOURCE)

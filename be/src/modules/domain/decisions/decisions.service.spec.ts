@@ -14,8 +14,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { WorkItem } from "./decisions.contracts"
-import type { DecisionHistoryKind, ListWorkItemsQuery } from "./decisions-views.contracts"
-import { DecisionHistoryService } from "./decision-history.service"
+import type { ListWorkItemsQuery } from "./decisions-views.contracts"
 import { DecisionsService } from "./decisions.service"
 import { WorkItemViewsService } from "./work-item-views.service"
 import { DecisionsErrorCode } from "./errors/decisions.error"
@@ -141,7 +140,6 @@ const invoiceOf = builder<ReconcileInvoiceRow>({
 
 const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
     const views = mock<WorkItemViewsService>()
-    const history = mock<DecisionHistoryService>()
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
     const evidence = mock<EvidenceService>({ log: jest.fn().mockResolvedValue(undefined) })
     const authority = mock<AuthorityService>({ profileOf: jest.fn(), save: jest.fn() })
@@ -156,7 +154,6 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
     const moduleRef = await Test.createTestingModule({
         providers: [
             DecisionsService,
-            { provide: DecisionHistoryService, useValue: history },
             { provide: WorkItemViewsService, useValue: views },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: WorkspaceMembersService, useValue: members },
@@ -177,7 +174,6 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
         invoices,
         transactions,
         views,
-        history,
     }
 }
 
@@ -196,28 +192,6 @@ describe("DecisionsService", () => {
             await expect(service.listAccountingWaiting("user-1", "ws-1", limit)).resolves.toEqual([row])
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
             expect(views.accountingWaiting).toHaveBeenCalledWith("ws-1", limit ?? 500)
-        })
-    })
-
-    describe("listDecisionHistory", () => {
-        it.each<{
-            kind: DecisionHistoryKind
-            deciders: Array<string> | null
-            outcome: string | null
-        }>([
-            { kind: "all", deciders: null, outcome: null },
-            { kind: "human", deciders: ["owner", "staff"], outcome: null },
-            { kind: "policy", deciders: ["policy"], outcome: null },
-            { kind: "rejected", deciders: null, outcome: "rejected" },
-        ])("filters $kind history with a bounded page size", async ({ kind, deciders, outcome }) => {
-            const { service, members, history } = await build()
-            history.list.mockResolvedValue([])
-
-            await expect(
-                service.listDecisionHistory("user-1", "ws-1", { kind, department: "sales", limit: 1000 }),
-            ).resolves.toEqual([])
-            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(history.list).toHaveBeenCalledWith("ws-1", { deciders, outcome, department: "sales", limit: 100 })
         })
     })
 })
