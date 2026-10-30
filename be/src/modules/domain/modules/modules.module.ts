@@ -14,7 +14,10 @@ import { InstallationDirectoryService } from "./installation-directory.service"
 import { InstallationFactsService } from "./installation-facts.service"
 import { ModuleInstallService } from "./module-install.service"
 import { ModuleReadinessService } from "./module-readiness.service"
+import { RECORD_INSTALLATION_SOURCES } from "./modules.decorators"
+import type { RecordInstallationSource } from "./modules.port"
 import { ModulesService } from "./modules.service"
+import { RecordInstallationService } from "./record-installation.service"
 import { SetupCardsService } from "./setup-cards.service"
 import { SetupChatService } from "./setup-chat.service"
 import { SetupTurnService } from "./setup-turn.service"
@@ -52,6 +55,7 @@ export class ModulesModule extends ConfigurableModuleClass {
                       AgentRemovalService,
                       ModuleInstallService,
                       InstallationFactsService,
+                      RecordInstallationService,
                       SetupTurnService,
                       WorkspaceSetupService,
                   ]
@@ -64,10 +68,15 @@ export class ModulesModule extends ConfigurableModuleClass {
             ModuleSetupMessagesModule.register({ sessions }),
             ModuleSetupWritesModule.register({}),
         ]
+        const sources = {
+            provide: RECORD_INSTALLATION_SOURCES,
+            useFactory: (...owners: Array<RecordInstallationSource>) => owners,
+            inject: [...(options.ports?.recordSources ?? [])],
+        }
         return {
             ...base,
             imports: [...(base.imports ?? []), ...tables],
-            providers: [...(base.providers ?? []), ...providers],
+            providers: [...(base.providers ?? []), ...providers, ...(options.setupOnly === true ? [] : [sources])],
             exports: [...providers, ...tables],
         }
     }

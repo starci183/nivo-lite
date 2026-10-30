@@ -14,6 +14,7 @@ import { ModulesErrorCode } from "./errors/modules.error"
 import { ModuleInstallService } from "./module-install.service"
 import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
+import { RecordInstallationService } from "./record-installation.service"
 import { INSTALLING_MEMBER as MEMBER, installAgentOf as agentOf, installationRecordOf as recordOf } from "@tests/fixtures/builders/module-install.builder"
 import { INSTALL_VIEWED as VIEWED, installRequestOf as requestOf, SYNCED_AGENT_COPY } from "@tests/fixtures/builders/module-install-service.builder"
 
@@ -30,6 +31,7 @@ const build = async () => {
     const events = mock<EventsService>()
     const sync = mock<InstallationChangesService>()
     const facts = mock<InstallationFactsService>()
+    const recordOwners = mock<RecordInstallationService>()
     const readiness = mock<ModuleReadinessService>()
     readiness.needsOf.mockResolvedValue([])
     readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, ...VIEWED }))
@@ -46,6 +48,7 @@ const build = async () => {
             { provide: EventsService, useValue: events },
             { provide: InstallationChangesService, useValue: sync },
             { provide: InstallationFactsService, useValue: facts },
+            { provide: RecordInstallationService, useValue: recordOwners },
             { provide: ModuleReadinessService, useValue: readiness },
         ],
     }).compile()
@@ -63,6 +66,7 @@ const build = async () => {
         sync,
         readiness,
         facts,
+        recordOwners,
     }
 }
 
@@ -466,6 +470,17 @@ describe("ModuleInstallService > concurrent writes and reads", () => {
         expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", false, false, expect.anything())
         expect(agents.setStatus).not.toHaveBeenCalled()
         expect(installations.find).toHaveBeenCalledTimes(2)
+    })
+
+    it("answers record ownership after checking workspace membership", async () => {
+        const { service, recordOwners, members } = await build()
+        recordOwners.installationOfRecord.mockResolvedValue({ installationId: "inst-1" })
+
+        await expect(service.installationOfRecord("u1", "ws-1", "record-1")).resolves.toEqual({
+            installationId: "inst-1",
+        })
+        expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
+        expect(recordOwners.installationOfRecord).toHaveBeenCalledWith("ws-1", "record-1")
     })
 
     it("answers requirement facts after checking workspace membership", async () => {
