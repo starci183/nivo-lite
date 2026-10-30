@@ -52,7 +52,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
             ExecutionsModule.register({ isGlobal: false }),
             MessagesModule.register({ isGlobal: false, agentDirectory: options.ports.agentDirectory }),
             ResponsibilitiesModule.register({ isGlobal: false, agentDirectory: options.ports.agentDirectory }),
-            WorkItemsModule.register({ isGlobal: false }),
+            WorkItemsModule.register({ isGlobal: false, ports: { leads: options.ports.workItemLeads } }),
         ]
         return {
             ...base,

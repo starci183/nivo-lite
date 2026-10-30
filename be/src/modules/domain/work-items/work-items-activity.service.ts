@@ -1,7 +1,5 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { LeadReadService } from "@modules/domain/leads"
-import type { LeadCard } from "@modules/domain/leads"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     CareWorkItemId,
@@ -11,6 +9,8 @@ import type {
     WaitingReplyRow,
     WaitingSummary,
 } from "./work-items-activity.contracts"
+import { InjectWorkItemsLeads } from "./work-items.decorators"
+import type { WorkItemLeadCard, WorkItemsLeadDirectory } from "./work-items.port"
 import { WorkItemEntity } from "./persistence/entities"
 
 /** The moment a finished item stopped moving. */
@@ -37,7 +37,7 @@ interface BareLine {
 }
 
 /** What the lists call the customer: the lead's name, else the one the proposal carries. */
-const customerOf = (row: BareLine, cards: ReadonlyMap<string, LeadCard>): string | null => {
+const customerOf = (row: BareLine, cards: ReadonlyMap<string, WorkItemLeadCard>): string | null => {
     const card = row.leadId === null ? undefined : cards.get(row.leadId)
     return card === undefined ? row.proposalCustomer : card.contactName
 }
@@ -47,7 +47,7 @@ const customerOf = (row: BareLine, cards: ReadonlyMap<string, LeadCard>): string
 export class WorkItemsActivityService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        private readonly leads: LeadReadService,
+        @InjectWorkItemsLeads() private readonly leads: WorkItemsLeadDirectory,
     ) {}
 
     /** The department's work most recently touched, newest first, with the lead's name folded in. */
@@ -196,7 +196,10 @@ export class WorkItemsActivityService {
     }
 
     /** The cards of the leads the rows name, by lead id. */
-    private async leadCards(workspaceId: string, rows: ReadonlyArray<BareLine>): Promise<Map<string, LeadCard>> {
+    private async leadCards(
+        workspaceId: string,
+        rows: ReadonlyArray<BareLine>,
+    ): Promise<Map<string, WorkItemLeadCard>> {
         const ids = rows.flatMap((row) => (row.leadId === null ? [] : [row.leadId]))
         const cards = await this.leads.cardsOf(workspaceId, ids)
         return new Map(cards.map((card) => [card.id, card]))

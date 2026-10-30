@@ -1,6 +1,6 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { LeadGenCommentService } from "@modules/domain/leads"
-import type { LeadGenCommentStatus } from "@modules/domain/leads"
+import { LeadGenCommentService } from "./leadgen-comment.service"
+import type { LeadGenCommentStatus } from "./leadgen-comment.contracts"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"

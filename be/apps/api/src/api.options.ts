@@ -58,6 +58,7 @@ export const DECISIONS_PORTS = {
     agentDirectory: AgentsService,
     inboundEventStatus: InboundStatusService,
     leadDirectory: LeadReadService,
+    workItemLeads: LeadReadService,
     leadGenFlow: LeadFlowChainService,
     outboundAccessGate: OutboundAccessService,
 }

@@ -1,4 +1,4 @@
-import type { ApproveLeadGenCommentRequest, LeadGenCommentStatus } from "@modules/domain/leads"
+import type { ApproveLeadGenCommentRequest, LeadGenCommentStatus } from "../../application/leadgen-comment.contracts"
 import type { Locale } from "@modules/platform/i18n"
 import type { ApproveLeadGenCommentInput } from "./dto/approve-leadgen-comment.input"
 import type { LeadGenCommentStatusType } from "./dto/leadgen-comment-status.type"
