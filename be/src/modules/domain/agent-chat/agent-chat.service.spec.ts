@@ -474,4 +474,13 @@ describe("AgentChatService", () => {
         expect(deliveries.turnMessageOf).toHaveBeenCalledWith("w1", "m1")
         expect(queueStatus.status).toHaveBeenCalledWith("w1", "chat_turn", "chat-turn.turn:m1")
     })
+
+    it("refuses a message whose conversation channel the owner no longer holds", async () => {
+        const { service, conversationReads } = await build(null, TURN)
+        conversationReads.channelOf.mockResolvedValue(null)
+
+        await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).rejects.toMatchObject({
+            code: AgentChatErrorCode.TurnNotFound,
+        })
+    })
 })

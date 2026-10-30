@@ -21,7 +21,7 @@ const BLOCK = "### NIVO setup v2\nBe brief.\n### end NIVO setup"
 
 /** What the insert answers and the row a known handle already holds. */
 interface Scenario {
-    readonly inserted: ReadonlyArray<{ id: string }>
+    readonly inserted: unknown
     readonly stored?: AgentEntity | null
 }
 
@@ -108,6 +108,12 @@ describe("AgentRecordsService > ensureByHandle", () => {
 
     it("refuses when the insert was ignored and no row holds the handle", async () => {
         const { service } = await build({ inserted: [], stored: null })
+
+        await expect(service.ensureByHandle(AGENT)).rejects.toMatchObject({ code: AgentsErrorCode.NotCreated })
+    })
+
+    it("refuses when the insert answered no row list at all", async () => {
+        const { service } = await build({ inserted: undefined, stored: null })
 
         await expect(service.ensureByHandle(AGENT)).rejects.toMatchObject({ code: AgentsErrorCode.NotCreated })
     })

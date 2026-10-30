@@ -448,4 +448,12 @@ describe("AgentOwnershipService setOwnership refusals", () => {
             code: AgentsErrorCode.AgentNotFound,
         })
     })
+
+    it("refuses an agent when the update does not report affected rows", async () => {
+        const { service } = await build(mockEntityManager({ count: [AgentEntity, 1], update: [AgentEntity, {}] }), countedOf())
+
+        await expect(service.setOwnership("u1", "w1", "ghost", CHANGE)).rejects.toMatchObject({
+            code: AgentsErrorCode.AgentNotFound,
+        })
+    })
 })

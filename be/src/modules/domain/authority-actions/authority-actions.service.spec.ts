@@ -79,6 +79,32 @@ describe("AuthorityActionsService", () => {
     })
 })
 
+describe("AuthorityActionsService nullable limits and empty syncs", () => {
+    it("writes nothing for an empty catalogue and reports every held action stale", async () => {
+        const em = mockEntityManager({ find: [AuthorityActionEntity, [ROW]] })
+
+        await expect((await build()).upsertAll(em, [])).resolves.toEqual({ written: 0, stale: ["issue_invoice"] })
+        expect(em.upsert).not.toHaveBeenCalled()
+    })
+
+    it("stores a record without a default limit as null and reads a null limit back as null", async () => {
+        const open: AuthorityActionRecord = { ...RECORD, default_limit_vnd: null }
+        const em = mockEntityManager({
+            find: [AuthorityActionEntity, [Object.assign(new AuthorityActionEntity(), ROW, { defaultLimitVnd: null })]],
+            upsert: [AuthorityActionEntity, { identifiers: [{ action: "issue_invoice" }], generatedMaps: [] }],
+        })
+        const service = await build()
+
+        await service.upsertAll(em, [open])
+        expect(em.upsert).toHaveBeenCalledWith(
+            AuthorityActionEntity,
+            [expect.objectContaining({ defaultLimitVnd: null })],
+            ["action"],
+        )
+        await expect(service.list(em)).resolves.toEqual([open])
+    })
+})
+
 describe("AuthorityActionsService reads", () => {
     describe("registeredUnder", () => {
         it("reads the pair under a shared lock and answers whether the catalogue holds it", async () => {

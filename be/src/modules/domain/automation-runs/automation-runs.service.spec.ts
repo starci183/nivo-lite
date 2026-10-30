@@ -87,6 +87,7 @@ describe("AutomationRunsService > beginRun", () => {
                 },
             ],
         ])
+        expect(evaluatedValues(fake.callsOf("values")[0]?.[0]).payload).toBe("CAST(:payload AS jsonb)")
         expect(fake.callsOf("setParameter")).toEqual([["payload", '{"a":1}']])
         expect(fake.callsOf("orIgnore")).toHaveLength(1)
         expect(fake.callsOf("returning")).toEqual([[["id", "attempts"]]])
@@ -416,6 +417,7 @@ describe("AutomationRunsService > markPayload", () => {
         await runs.markPayload("r-1", { y: 2 })
 
         expect(fake.callsOf("set")).toEqual([[{ payload: ANY_FUNCTION }]])
+        expect(evaluatedValues(fake.callsOf("set")[0]?.[0]).payload).toBe("CAST(:payload AS jsonb)")
         expect(fake.callsOf("where")).toEqual([[{ id: "r-1" }]])
         expect(fake.callsOf("setParameter")).toEqual([["payload", '{"y":2}']])
     })
