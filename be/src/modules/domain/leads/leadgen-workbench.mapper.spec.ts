@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import type { Proposal } from "@modules/domain/decisions"
+import type { Proposal } from "@modules/domain/work-items"
 import { buildLeadGenWorkbench, conversionSinceIso } from "./leadgen-workbench.mapper"
 import type { LeadGenLeadRecord, LeadGenWorkbenchInput, LeadGenWorkItemRecord } from "./leadgen-workbench.contracts"
 

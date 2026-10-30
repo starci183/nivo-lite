@@ -22,6 +22,7 @@ import {
     WorkspaceMembersModule,
 } from "@modules/domain/workspace-members"
 import { WORKSPACES_ERROR_KINDS, WORKSPACES_MESSAGES, WorkspacesModule } from "@modules/domain/workspaces"
+import { DecisionsService } from "@modules/domain/decisions"
 import { LEADS_ERROR_KINDS, LEADS_MESSAGES, LeadsModule } from "@modules/domain/leads"
 import { LeadFlowsModule } from "@modules/domain/lead-flows"
 import type { ApiOptions } from "../api.options"
@@ -29,7 +30,7 @@ import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The identity area of the API, in registration order. */
 export const identityModules = (options: ApiOptions): Array<DynamicModule> => [
-    LeadsModule.register({ isGlobal: true }),
+    LeadsModule.register({ isGlobal: true, ports: { decisions: DecisionsService } }),
     LeadFlowsModule.register({ isGlobal: true }),
     MessagesModule.register({ isGlobal: true, agentDirectory: AgentsService }),
     ResponsibilitiesModule.register({ isGlobal: true, agentDirectory: AgentsService }),

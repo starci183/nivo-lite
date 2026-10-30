@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { DecisionsError, DecisionsErrorCode, DecisionsService } from "@modules/domain/decisions"
-import type { WorkItem } from "@modules/domain/decisions"
 import { WorkspaceMembersService, canDecide } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { DECISIONS_QUEUE, DecisionsJob, decisionsDedupeKey } from "@modules/queues/decisions"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
+import { LeadsError, LeadsErrorCode } from "./errors/leads.error"
+import { InjectLeadGenCommentDecisions } from "./leads.decorators"
+import type { LeadGenCommentDecisions, LeadGenCommentItem } from "./leads.port"
 import type { ApproveLeadGenCommentRequest, LeadGenCommentStatus } from "./leadgen-comment.contracts"
 
 /** The row `job_status` answers for the existing decisions queue entry. */
@@ -21,7 +22,7 @@ export class LeadGenCommentService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
-        private readonly decisions: DecisionsService,
+        @InjectLeadGenCommentDecisions() private readonly decisions: LeadGenCommentDecisions,
         @InjectQueueOutbox() private readonly queue: QueueOutbox,
     ) {}
 
@@ -35,8 +36,8 @@ export class LeadGenCommentService {
                 assigneeId: item.assigned_staff_id,
             })
         )
-            throw new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
-        if (item.status !== "waiting_decision") throw new DecisionsError({ code: DecisionsErrorCode.NotWaiting })
+            throw new LeadsError({ code: LeadsErrorCode.CommentNotAllowed })
+        if (item.status !== "waiting_decision") throw new LeadsError({ code: LeadsErrorCode.CommentNotWaiting })
         await this.entityManager.transaction((tx) =>
             this.queue.write(
                 tx,
@@ -65,7 +66,7 @@ export class LeadGenCommentService {
             decisionsDedupeKey(DecisionsJob.DecideWork, workItemId),
         ])
         if (job === undefined && item.status !== "done" && item.status !== "failed" && item.status !== "rejected") {
-            throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
+            throw new LeadsError({ code: LeadsErrorCode.NotFound })
         }
         const failed =
             job?.state === "failed" ||
@@ -80,14 +81,14 @@ export class LeadGenCommentService {
             status,
             workStatus: item.status,
             resultHref: item.result?.href ?? null,
-            errorCode: failed ? DecisionsErrorCode.WorkFailed : null,
+            errorCode: failed ? LeadsErrorCode.CommentFailed : null,
         }
     }
 
-    private async commentOf(userId: string, workspaceId: string, id: string): Promise<WorkItem> {
+    private async commentOf(userId: string, workspaceId: string, id: string): Promise<LeadGenCommentItem> {
         const item = await this.decisions.getWorkItem(userId, workspaceId, id)
         if (item.department !== "lead_gen" || item.action !== "reply_comment_public") {
-            throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
+            throw new LeadsError({ code: LeadsErrorCode.NotFound })
         }
         return item
     }

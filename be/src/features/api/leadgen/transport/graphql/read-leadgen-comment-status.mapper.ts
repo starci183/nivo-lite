@@ -1,4 +1,4 @@
-import type { LeadGenCommentStatus } from "../../application/leadgen-comment.contracts"
+import type { LeadGenCommentStatus } from "@modules/domain/leads"
 import type { ReadLeadGenCommentStatusRequest } from "../../application/read-leadgen-comment-status.contracts"
 import type { ReadLeadGenCommentStatusInput } from "./dto/read-leadgen-comment-status.input"
 import type { LeadGenCommentStatusType } from "./dto/leadgen-comment-status.type"

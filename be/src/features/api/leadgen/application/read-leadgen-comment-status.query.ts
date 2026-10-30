@@ -1,5 +1,5 @@
 import { Query } from "@nestjs/cqrs"
-import type { LeadGenCommentStatus } from "./leadgen-comment.contracts"
+import type { LeadGenCommentStatus } from "@modules/domain/leads"
 import type { ExecuteParams } from "@modules/platform/cqrs"
 import type { ReadLeadGenCommentStatusRequest } from "./read-leadgen-comment-status.contracts"
 

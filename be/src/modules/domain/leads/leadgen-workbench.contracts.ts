@@ -1,4 +1,4 @@
-import type { WorkItem, WorkStatus } from "@modules/domain/decisions"
+import type { WorkItem, WorkStatus } from "@modules/domain/work-items"
 
 /** The network a lead arrived from. */
 export type LeadPlatform = "facebook" | "instagram" | "other"
