@@ -35,6 +35,7 @@
       "optionalSlots": [
         "repo.docs",
         "be.contract.graphql",
+        "be.contract.events",
         "repo.i18n-dynamic-keys",
         "be.events",
         "be.platform.event-bus"

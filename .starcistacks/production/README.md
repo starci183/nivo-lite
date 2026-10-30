@@ -26,7 +26,7 @@ All commands run at the app root of an owner machine that holds the age identity
 
 ## Custody
 
-Secrets are kept ONLY as sops-encrypted YAML members, one per provider, `.starcistacks/production/secrets/<provider>.enc.yaml` (map in SECRETS-PLAN.md). The age recipient is in `.sops.yaml`; the age identity is `SOPS_AGE_KEY` in the owner's untracked runtime secret file and in the GitHub environment secret of the same name. No root dotenv file, no plaintext secrets file and no secrets directory exists, and none may be created.
+Secrets are kept ONLY as sops-encrypted YAML members, one per provider, `.starcistacks/production/secrets/<provider>.enc.yaml`. The age recipient is in `.sops.yaml`; the age identity is `SOPS_AGE_KEY` in the owner's untracked runtime secret file and in the GitHub environment secret of the same name. No root dotenv file, no plaintext secrets file and no secrets directory exists, and none may be created.
 
 - Read or change a value: `starci app secret list|get|set production <slug>` (values travel through stdin and memory only; `list` prints names).
 - A release decrypts the members **in memory on the runner** and pipes each granted key into `docker secret create nivo-<key>-v<keyed hash> -` on the manager over the pinned ssh session (`starci app stack deploy`). The version is the first 10 hex of an HMAC of the key name and value under the age identity: a changed value is a new name; an unchanged one keeps its name, so a deploy restarts only what changed. The rendered stack keeps `{external: true, name: <runtimeName>}` and no value. The logical-name to runtime-name map is the `secrets` list of each release record (names only).
@@ -122,4 +122,4 @@ The Swarm Traefik is the SHARED ingress of the VPS: nivo plus the compose tenant
 
 ## Cutover to self-hosted Postgres, auth and storage
 
-The production move off Supabase cloud (locked for egress quota) is the step-by-step runbook with rollback in [CUTOVER-SELFHOST.md](CUTOVER-SELFHOST.md). The `db:*` package scripts now call `starci app db` with `--url-env DATABASE_URL`; the Supabase CLI scripts are gone.
+Production starts on an empty self-hosted PostgreSQL (no data is moved from Supabase). The `db:*` package scripts now call `starci app db` with `--url-env DATABASE_URL`; the Supabase CLI scripts are gone.

@@ -45,12 +45,11 @@ The lite edition runs neither service (auth is the app's own, storage is MinIO),
 | publication `supabase_realtime` | `alter publication ... add table` in the baseline |
 | schema `extensions` | `pgcrypto`, `unaccent`, `vector` are created `WITH SCHEMA extensions` |
 
-Extensions `pg_cron`, `pg_net` and `pgmq` come from the image with `shared_preload_libraries` and `cron.database_name` set explicitly in the stack.
+Extensions `vector` and `pgmq` come from the managed image `.starcistacks/images/db/Dockerfile` (official postgres 17 with pgvector and pgmq); pg_cron and pg_net are not used: scheduled work runs as app CLI jobs.
 
-## 2. Rehearsal (local, throwaway)
+## 2. First start
 
-`bash scripts/integration/selfhost-db-rehearsal.sh [port]` starts a fresh `supabase/postgres:17.11.0.006@sha256:c141fd17...` container on a free local port (default 55432), runs `db/bootstrap.sql`, then every migration in order (each in its own transaction, as `postgres`), prints the summary and deletes the container.
-Recorded 2026-10-29: bootstrap OK, **52 of 52 migrations applied with zero errors**, 179 public tables, 12 cron jobs, extensions pg_cron/pg_net/pgcrypto/pgmq/unaccent/vector, `app_be` LOGIN and NOBYPASSRLS. Run it again whenever a migration or the image digest changes.
+Production starts on an empty database: the first deploy (`--first-start`) runs `db/bootstrap.sql` and every migration in order as the superuser, then the app connects as `app_be`.
 
 ## 3. Backups and restore
 

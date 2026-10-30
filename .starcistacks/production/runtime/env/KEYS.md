@@ -17,13 +17,13 @@ turns every granted key into one versioned Swarm secret (see the production READ
 
 | Key | Where | Semantics |
 | --- | --- | --- |
-| `PRIMARY_DB_URL` | its sealed member (see SECRETS-PLAN.md) | The least-privilege `app_be` connection to the self-hosted PostgreSQL of the stack (`nivo-postgres:5432`, private network, RLS applies). |
+| `PRIMARY_DB_URL` | its sealed member (granted in `application-stacks.yaml`) | The least-privilege `app_be` connection to the self-hosted PostgreSQL of the stack (`nivo-postgres:5432`, private network, RLS applies). |
 | `PRIMARY_DB_SCHEMA` | `api-public.conf` | The schema the primary connection is bound to (`public`). |
-| `STORAGE_ACCESS_KEY` | its sealed member (see SECRETS-PLAN.md) | MinIO service-account access key of the S3 object store. |
-| `STORAGE_SECRET_KEY` | its sealed member (see SECRETS-PLAN.md) | MinIO service-account secret key of the S3 object store. |
-| `OTP_PEPPER` | its sealed member (see SECRETS-PLAN.md) | At least 32 characters; hashes loyalty one-time codes. |
-| `CHANNEL_TOKEN_KEY` | its sealed member (see SECRETS-PLAN.md) | Encrypts stored channel tokens and the per-workspace credentials of remote MCP connectors. One random 32-byte key, set once and never overwritten or rotated: a different key leaves every sealed credential unreadable. |
-| `N8N_SIGNING_SECRET` | its sealed member (see SECRETS-PLAN.md) | Must equal what the n8n workflows sign with. |
+| `STORAGE_ACCESS_KEY` | its sealed member (granted in `application-stacks.yaml`) | MinIO service-account access key of the S3 object store. |
+| `STORAGE_SECRET_KEY` | its sealed member (granted in `application-stacks.yaml`) | MinIO service-account secret key of the S3 object store. |
+| `OTP_PEPPER` | its sealed member (granted in `application-stacks.yaml`) | At least 32 characters; hashes loyalty one-time codes. |
+| `CHANNEL_TOKEN_KEY` | its sealed member (granted in `application-stacks.yaml`) | Encrypts stored channel tokens and the per-workspace credentials of remote MCP connectors. One random 32-byte key, set once and never overwritten or rotated: a different key leaves every sealed credential unreadable. |
+| `N8N_SIGNING_SECRET` | its sealed member (granted in `application-stacks.yaml`) | Must equal what the n8n workflows sign with. |
 | `HTTP_SECURITY_ALLOWED_ORIGINS` | `api-public.conf` | Comma-separated exact HTTPS origins of the console and the landing. |
 | `SITE_URL` | `api-public.conf` | The public origin of the console (`https://app.nivo.vn`); the browser return pages are served there. |
 | `PUBLIC_SITE_URL` | `api-public.conf` | The public origin of the console, used in links the api sends. |
@@ -34,7 +34,7 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `STORAGE_PUBLIC_URL` | `api-public.conf` | The origin browsers upload to and read from (`https://minio.starci.org`); presigned addresses are signed for it. |
 | `STORAGE_BUCKET_PREFIX` | `api-public.conf` | `nivo`: buckets are `<prefix>-avatars-public`, `-media`, `-videos`, `-hiring`, `-knowledge-uploads`. |
 | `PORT` | stack environment | The listener port (`8787`). |
-| `QUEUE_REDIS_PASSWORD` | its sealed member (see SECRETS-PLAN.md) | The password of the declared Redis (the BullMQ broker): the api reads it as `QUEUE_REDIS_PASSWORD_FILE`, the `nivo-redis` service starts with `--requirepass` from the same Swarm secret, and holds no trailing newline. Never printed, never read from a file by hand: `starci app secret set production api QUEUE_REDIS_PASSWORD --generate 32`. |
+| `QUEUE_REDIS_PASSWORD` | its sealed member (granted in `application-stacks.yaml`) | The password of the declared Redis (the BullMQ broker): the api reads it as `QUEUE_REDIS_PASSWORD_FILE`, the `nivo-redis` service starts with `--requirepass` from the same Swarm secret, and holds no trailing newline. Never printed, never read from a file by hand: `starci app secret set production api QUEUE_REDIS_PASSWORD --generate 32`. |
 | `QUEUE_REDIS_HOST` | stack environment | `nivo-redis`, the one Redis service on the private `agents` network. |
 | `QUEUE_REDIS_PORT` | stack environment | `6379`. |
 | `QUEUE_REDIS_PREFIX` | stack environment | `nivo`, the key prefix of every queue in the broker. |
@@ -49,6 +49,8 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | --- | --- |
 | `N8N_WEBHOOK_BASE` | Base URL of the n8n webhook the api emits events to (`http://nivo-n8n:5678/webhook/nivo-events`, set in `api-public.conf`); absent = no emission. |
 | `N8N_ALLOWED_HOSTS` | Hosts the n8n client may call; a stack setting, default `n8n`. |
+| `N8N_PROTOCOL` | The protocol n8n serves its editor and webhooks on behind the proxy; a stack setting, `https` in production. |
+| `N8N_SECURE_COOKIE` | Whether n8n marks its session cookie secure; a stack setting, `true` in production. |
 | `OPENCLAW_GATEWAY_URL` | Gateway URL (`ws://nivo-openclaw:18790`), set by the deploy block; absent or without credentials = the gateway is off. |
 | `OPENCLAW_GATEWAY_TOKEN` | Gateway token, granted to the api and to openclaw from the sealed `openclaw`/`n8n` member. |
 | `OPENCLAW_GATEWAY_PASSWORD` | Alternative gateway credential when no token exists; not used in production. |
@@ -83,14 +85,14 @@ These nonsecret keys select operator-installed executables. Omission retains the
 
 ## mcp (the NIVO MCP gateway, `be/apps/mcp`)
 
-The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets come from the same its sealed member (see SECRETS-PLAN.md) member as the api's, granted key by key
+The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets come from the same its sealed member (granted in `application-stacks.yaml`) member as the api's, granted key by key
 (`deploy.secrets.grants`, service `nivo-mcp`); the non-secret values are `deploy.environment.nivo-mcp.values`.
 
 | Key | Where | Semantics |
 | --- | --- | --- |
 | `PORT` | stack environment | The listener port (`8790`); internal only, on the private `agents` network as `nivo-mcp`. |
-| `PRIMARY_DB_URL` | its sealed member (see SECRETS-PLAN.md) (required) | The same `app_be` connection as the api: connectors, grants and the call audit. |
-| `CHANNEL_TOKEN_KEY` | its sealed member (see SECRETS-PLAN.md) (required) | The same connection key as the api: it opens the bearer credential each remote connector has sealed in its own `mcp_connectors` row. Connector credentials are set per workspace in the console (Settings > Connections), never as deployment keys. |
+| `PRIMARY_DB_URL` | its sealed member (granted in `application-stacks.yaml`) (required) | The same `app_be` connection as the api: connectors, grants and the call audit. |
+| `CHANNEL_TOKEN_KEY` | its sealed member (granted in `application-stacks.yaml`) (required) | The same connection key as the api: it opens the bearer credential each remote connector has sealed in its own `mcp_connectors` row. Connector credentials are set per workspace in the console (Settings > Connections), never as deployment keys. |
 | `PRIMARY_DB_SCHEMA` | stack environment | `public`. |
 | `HTTP_SECURITY_ALLOWED_ORIGINS` | stack environment | The OriginGuard and CORS allowlist (`https://app.nivo.vn`); the gateway has no browser caller, so only the console origin is listed. |
 | `MCP_GATEWAY_TIMEOUT_MS` | not set | Per-call timeout, default 4000. |
@@ -147,13 +149,13 @@ The api hosts the gateway through `AiRouterGatewayModule`; it listens on `AI_ROU
 | --- | --- | --- |
 | `AI_ROUTER_PORT` | api stack value | The gateway listener (`8788`); declared on the `nivo-api` component. |
 | `AI_ROUTER_KEYS_PATH` | api stack value | SQLite key store (`/var/lib/ai-router/keys.sqlite`) on the volume `nivo-engine_ai-router-data`. |
-| `AI_ROUTER_ADMIN_TOKEN` | its sealed member (see SECRETS-PLAN.md) | Bearer token of the gateway admin API; the `keys ...` CLI reads it from the same variable. |
-| `OPENROUTER_API_KEY` | its sealed member (see SECRETS-PLAN.md) | The single upstream key (OpenRouter). |
-| `AI_API_KEY` | its sealed member (see SECRETS-PLAN.md) | The api's virtual key (`nivo_api`). openclaw has its own, `OPENCLAW_AI_KEY` (virtual key `nivo_openclaw`), sealed in `stack`, exported by the entrypoint wrapper; openclaw holds no OpenRouter key. Created after the first deploy (production README). |
+| `AI_ROUTER_ADMIN_TOKEN` | its sealed member (granted in `application-stacks.yaml`) | Bearer token of the gateway admin API; the `keys ...` CLI reads it from the same variable. |
+| `OPENROUTER_API_KEY` | its sealed member (granted in `application-stacks.yaml`) | The single upstream key (OpenRouter). |
+| `AI_API_KEY` | its sealed member (granted in `application-stacks.yaml`) | The api's virtual key (`nivo_api`). openclaw has its own, `OPENCLAW_AI_KEY` (virtual key `nivo_openclaw`), sealed in `stack`, exported by the entrypoint wrapper; openclaw holds no OpenRouter key. Mounted by the gateway from this secret at boot (no key is issued by hand); it must start with `sk-starci-nivo_api-`. |
 
 ## Self-hosted cutover (sh-cutover)
 
-Names the move off Supabase cloud relies on (see `CUTOVER-SELFHOST.md`). Owning lanes seal their own rows; this lists only the cutover view.
+Names the self-hosted stack relies on (Postgres, own auth, MinIO). Owning lanes seal their own rows; this lists only the cutover view.
 
 | Key | Member | Purpose |
 | --- | --- | --- |
