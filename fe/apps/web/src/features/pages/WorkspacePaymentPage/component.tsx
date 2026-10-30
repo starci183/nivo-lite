@@ -20,7 +20,7 @@ export const WorkspacePaymentPageBase = (props: WorkspacePaymentPageBaseProps) =
     <WorkspacesFrame
         homeHref={AUTH_ROUTES.workspaces}
         mainLabel={props.props.title}
-        logo={<BrandLogo variant="full" height={44} />}
+        logo={<BrandLogo variant="full" height={40} />}
         localeSwitch={<LocaleSwitch />}
         account={<WorkspacesAccount />}
     >

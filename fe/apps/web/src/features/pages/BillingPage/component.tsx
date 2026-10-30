@@ -26,7 +26,7 @@ export const BillingPageBase = (props: BillingPageBaseProps) => (
     <WorkspacesFrame
         homeHref={props.props.homeHref}
         mainLabel={props.props.mainLabel}
-        logo={<BrandLogo variant="full" height={44} />}
+        logo={<BrandLogo variant="full" height={40} />}
         localeSwitch={<LocaleSwitch />}
         account={<WorkspacesAccount />}
     >

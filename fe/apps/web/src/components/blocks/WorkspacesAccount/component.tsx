@@ -1,7 +1,6 @@
-import { Button, DropdownMenu, Text } from "@starci/grammar/common"
+import { AvatarButton, DropdownMenu } from "@starci/grammar/common"
 import type { DropdownMenuEntry } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The person and the entries the connected account menu supplies. */
@@ -15,7 +14,7 @@ export interface WorkspacesAccountBaseProps {
     readonly on: { readonly retry: () => void }
 }
 
-/** Draws the account menu of the workspaces area: the avatar and email open Account and Sign out. */
+/** Draws the account menu of the workspaces area: the control-size avatar, as in the console bar, opens Account and Sign out. */
 export const WorkspacesAccountBase = (props: WorkspacesAccountBaseProps) => (
     <SlotView
         slot={props.props.slot}
@@ -28,18 +27,7 @@ export const WorkspacesAccountBase = (props: WorkspacesAccountBaseProps) => (
             <DropdownMenu
                 placement="bottom end"
                 entries={props.props.entries}
-                trigger={
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isSkeleton={isSkeleton}
-                        startContent={<PersonAvatar name={email} size="sm" />}
-                    >
-                        <Text as="span" size="sm" overflow="truncate">
-                            {email}
-                        </Text>
-                    </Button>
-                }
+                trigger={<AvatarButton size="control" name={email} seed={email} isDisabled={isSkeleton} />}
             />
         )}
     </SlotView>

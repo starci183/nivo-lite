@@ -45,6 +45,7 @@ export const LanguageMenu = (props: LanguageMenuProps) => (
                 source={nivoIconSource("locale", "leading")}
                 label={props.label}
                 intent="dismiss"
+                size="control"
                 isDisabled={props.isDisabled}
             />
         }
