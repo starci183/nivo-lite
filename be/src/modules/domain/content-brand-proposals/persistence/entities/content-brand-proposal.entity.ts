@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "content_brand_proposals" })
 /** One row of public.content_brand_proposals. */
-export class ContentBrandProposalEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ContentBrandProposalEntity extends UuidAbstractEntity {
     /** The workspace id. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -42,8 +39,4 @@ export class ContentBrandProposalEntity {
     /** The decided at. */
     @Column({ name: "decided_at", type: "timestamptz", nullable: true })
     decidedAt!: Date | null
-
-    /** The created at. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "hiring_onboarding" })
 /** One step of the onboarding checklist of a hired candidate. */
-export class HiringOnboardingEntity {
-    /** The step. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class HiringOnboardingEntity extends UuidAbstractEntity {
     /** The workspace the step belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -30,8 +27,4 @@ export class HiringOnboardingEntity {
     /** Its place in the list. */
     @Column({ name: "sort", type: "integer", default: () => "0" })
     sort!: number
-
-    /** When it was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

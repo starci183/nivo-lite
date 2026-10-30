@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "hiring_settings" })
 /** The hiring choices of a workspace: the public link, the retention, the reminders and the consent words. */
-export class HiringSettingEntity {
+export class HiringSettingEntity extends AbstractEntity {
     /** The workspace the settings belong to. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -43,8 +44,4 @@ export class HiringSettingEntity {
         default: () => "'th\u00e2n thi\u1ec7n, r\u00f5 r\u00e0ng, t\u00f4n tr\u1ecdng'::text",
     })
     adTone!: string
-
-    /** When the settings last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

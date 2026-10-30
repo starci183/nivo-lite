@@ -22,6 +22,7 @@ const settingsRow = entityRowBuilder<ContentSettingsEntity>({
     brandTone: "Warm",
     brandImagery: [],
     brandSource: "",
+    createdAt: new Date("2026-10-12T00:00:00.000Z"),
 })
 
 const build = async (entityManager: MockEntityManager) => {

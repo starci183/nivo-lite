@@ -1,9 +1,10 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 import { numberColumn } from "./number-column.mapper"
 
 @Entity({ schema: "public", name: "credit_packs" })
 /** One row of public.credit_packs: an add-on credit pack on sale. */
-export class CreditPackEntity {
+export class CreditPackEntity extends AbstractEntity {
     /** The pack code. */
     @PrimaryColumn({ name: "code", type: "text" })
     code!: string

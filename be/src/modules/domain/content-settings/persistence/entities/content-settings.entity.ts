@@ -1,9 +1,10 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 import type { AutomationMarks, AutomationSwitches, GuidelineColor } from "../../content-settings.contracts"
 
 @Entity({ schema: "public", name: "content_settings" })
 /** One row of public.content_settings: the brand, guideline and automation settings of a workspace. */
-export class ContentSettingsEntity {
+export class ContentSettingsEntity extends AbstractEntity {
     /** The workspace the settings belong to. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -35,10 +36,6 @@ export class ContentSettingsEntity {
     /** The dedupe marks of the automations. */
     @Column({ name: "marks", type: "jsonb", default: () => "'{}'::jsonb" })
     marks!: AutomationMarks
-
-    /** When the row last changed; a trigger writes it. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()", insert: false, update: false })
-    updatedAt!: Date
 
     /** The palette read from a guideline. */
     @Column({ name: "brand_colors", type: "jsonb", default: () => "'[]'::jsonb" })

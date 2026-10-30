@@ -30,6 +30,7 @@ const entityOf = builder<ExecutionEntity>({
     decidedAt: null,
     createdAt: new Date("2026-10-12T09:00:00.000Z"),
     workItemId: "item-1",
+    updatedAt: new Date("2026-10-12T09:00:00.000Z"),
 })
 
 const recordOf = {

@@ -18,6 +18,8 @@ const rowOf = entityRowBuilder<DataSyncRunEntity>({
     error: null,
     startedAt: new Date("2026-10-13T03:00:00.000Z"),
     finishedAt: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 const build = async (em: MockEntityManager) => {

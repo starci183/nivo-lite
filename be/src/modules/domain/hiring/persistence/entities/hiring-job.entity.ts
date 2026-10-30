@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { EmploymentType, JobStatus, PayUnit } from "../../hiring.contracts"
 
 /** The requirements column as stored (snake case keys, any key may be missing). */
@@ -35,11 +36,7 @@ export interface HiringJobQuestion {
 
 @Entity({ schema: "public", name: "hiring_jobs" })
 /** One job a workspace hires for, with its public page, requirements and screening questions. */
-export class HiringJobEntity {
-    /** The job. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class HiringJobEntity extends UuidAbstractEntity {
     /** The workspace the job belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -115,12 +112,4 @@ export class HiringJobEntity {
     /** The user who created the job. */
     @Column({ name: "created_by", type: "uuid", nullable: true })
     createdBy!: string | null
-
-    /** When the job was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When the job was last edited. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

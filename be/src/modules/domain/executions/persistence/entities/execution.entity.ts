@@ -1,15 +1,12 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 /** The decision states of an approval card. */
 export type ExecutionStatusLine = "pending_approval" | "approved" | "rejected"
 
 @Entity({ schema: "public", name: "executions" })
 /** An approval card of a drafted action. */
-export class ExecutionEntity {
-    /** The execution id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ExecutionEntity extends UuidAbstractEntity {
     /** The workspace that owns the card. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -41,10 +38,6 @@ export class ExecutionEntity {
     /** The decision time, when decided. */
     @Column({ name: "decided_at", type: "timestamptz", nullable: true })
     decidedAt!: Date | null
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The work item the card belongs to, when there is one. */
     @Column({ name: "work_item_id", type: "uuid", nullable: true })

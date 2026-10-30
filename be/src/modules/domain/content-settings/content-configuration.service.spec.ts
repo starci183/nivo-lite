@@ -40,6 +40,7 @@ const settingsRow = entityRowBuilder<ContentSettingsEntity>({
     brandTone: "",
     brandImagery: [],
     brandSource: "",
+    createdAt: new Date("2026-10-12T00:00:00.000Z"),
 })
 
 const STORED = {

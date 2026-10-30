@@ -1,18 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
-
-/** Reads the bigint amount as the number the contract carries; the amount is never larger than a safe integer. */
-const amountTransformer = {
-    to: (value: number | null): number | null => value,
-    from: (value: string | number | null): number | null => (value === null ? null : Number(value)),
-}
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
+import { amountTransformer } from "./amount-column.mapper"
 
 @Entity({ schema: "public", name: "contracts" })
 /** One row of public.contracts: a recurring contract the renewal automation reads. */
-export class ContractEntity {
-    /** The contract row id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ContractEntity extends UuidAbstractEntity {
     /** The workspace the contract belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -48,12 +40,4 @@ export class ContractEntity {
     /** Free-text remarks kept with the contract. */
     @Column({ name: "note", type: "text", default: () => "''::text" })
     note!: string
-
-    /** When the contract was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When the contract last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

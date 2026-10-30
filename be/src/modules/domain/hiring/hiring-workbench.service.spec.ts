@@ -113,6 +113,7 @@ const onboarding = entityRowBuilder<HiringOnboardingEntity>({
     doneAt: null,
     sort: 1,
     createdAt: CREATED,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 const windowRow = entityRowBuilder<HiringAvailabilityEntity>({
@@ -122,6 +123,8 @@ const windowRow = entityRowBuilder<HiringAvailabilityEntity>({
     weekday: 1,
     startMin: 540,
     endMin: 720,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 const eventOf = entityRowBuilder<HiringEventEntity>({

@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { ApplicationSource, ScoreLabel, ScoreReason, Stage } from "../../hiring.contracts"
 
 /** One entry of the answers column as stored. */
@@ -13,11 +14,7 @@ export interface HiringCandidateAnswer {
 
 @Entity({ schema: "public", name: "hiring_candidates" })
 /** One applicant for a job with the answers, the CV, the advisory score and the pipeline stage. */
-export class HiringCandidateEntity {
-    /** The candidate. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class HiringCandidateEntity extends UuidAbstractEntity {
     /** The workspace the candidate applied to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -105,10 +102,6 @@ export class HiringCandidateEntity {
     /** The manager's private notes. */
     @Column({ name: "notes", type: "text", default: () => "''::text" })
     notes!: string
-
-    /** When the application arrived. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The staff row the hire became, when linked. */
     @Column({ name: "staff_id", type: "uuid", nullable: true })

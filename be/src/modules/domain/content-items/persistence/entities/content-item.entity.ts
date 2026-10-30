@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { ContentEvidence, ContentLink, ContentMediaRef, ContentVariant } from "../../content-editor.contracts"
 
 @Entity({ schema: "public", name: "content_items" })
-/** One row of public.content_items: a post from idea to published, with its per-channel text, media and history. */
-export class ContentItemEntity {
-    /** The post id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+/** One row of public.content_items: a post from idea to published, with its per-channel text, media and history. Its id, created_at and updated_at come from UuidAbstractEntity; a trigger sets updated_at. */
+export class ContentItemEntity extends UuidAbstractEntity {
     /** The workspace that owns the post. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -95,12 +92,4 @@ export class ContentItemEntity {
     /** Who created the post. */
     @Column({ name: "created_by", type: "text", default: () => "''::text" })
     createdBy!: string
-
-    /** When the post was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When the post last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

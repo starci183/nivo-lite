@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "content_engagement_daily" })
 /** One row of public.content_engagement_daily. */
-export class ContentEngagementDailyEntity {
+export class ContentEngagementDailyEntity extends AbstractEntity {
     /** The workspace id. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { OfferStatus } from "../../hiring.contracts"
 
 /** The terms column as stored. */
@@ -17,11 +18,7 @@ export interface HiringOfferTerms {
 
 @Entity({ schema: "public", name: "hiring_offers" })
 /** One offer letter to a candidate: the terms, the draft, the decision behind it and the answer. */
-export class HiringOfferEntity {
-    /** The offer. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class HiringOfferEntity extends UuidAbstractEntity {
     /** The workspace the offer belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -73,8 +70,4 @@ export class HiringOfferEntity {
     /** The user who created the offer. */
     @Column({ name: "created_by", type: "uuid", nullable: true })
     createdBy!: string | null
-
-    /** When it was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

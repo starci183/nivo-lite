@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { DeciderKind, DecisionOutcome, Proposal } from "../../decisions.contracts"
 
 @Entity({ schema: "public", name: "decisions" })
 /** One row of public.decisions: an append-only line of the decision log, who decided what about a work item. */
-export class DecisionEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class DecisionEntity extends UuidAbstractEntity {
     /** The workspace id. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -55,10 +52,6 @@ export class DecisionEntity {
     /** The proposal after the decision. */
     @Column({ name: "after", type: "jsonb", nullable: true })
     after!: Proposal | null
-
-    /** When the line was written. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The member who decided; null for a policy decision and for lines written before members were named. */
     @Column({ name: "decided_by_member_id", type: "uuid", nullable: true })

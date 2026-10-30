@@ -21,6 +21,7 @@ export const settingsRow = entityRowBuilder<HiringSettingEntity>({
     applyConsentText: "Consent example",
     adTone: "Friendly",
     updatedAt: CREATED,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 export const jobRow = entityRowBuilder<HiringJobEntity>({
@@ -74,6 +75,7 @@ export const candidateRow = entityRowBuilder<HiringCandidateEntity>({
     notes: "",
     createdAt: CREATED,
     staffId: null,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 export const interviewRow = entityRowBuilder<HiringInterviewEntity>({
@@ -95,6 +97,7 @@ export const interviewRow = entityRowBuilder<HiringInterviewEntity>({
     reminderSentAt: null,
     note: "Bring examples",
     createdAt: CREATED,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 export const offerRow = entityRowBuilder<HiringOfferEntity>({
@@ -119,6 +122,7 @@ export const offerRow = entityRowBuilder<HiringOfferEntity>({
     respondedAt: null,
     createdBy: null,
     createdAt: CREATED,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 export const availabilityRow = entityRowBuilder<HiringAvailabilityEntity>({
@@ -128,6 +132,8 @@ export const availabilityRow = entityRowBuilder<HiringAvailabilityEntity>({
     weekday: 1,
     startMin: 480,
     endMin: 720,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 export const benchJobRow = entityRowBuilder<HiringJobEntity>({
@@ -188,6 +194,7 @@ export const benchCandidateRow = entityRowBuilder<HiringCandidateEntity>({
     notes: "Call",
     staffId: null,
     createdAt: new Date(NOW),
+    updatedAt: new Date(NOW),
 })
 
 export const benchInterviewRow = entityRowBuilder<HiringInterviewEntity>({
@@ -209,6 +216,7 @@ export const benchInterviewRow = entityRowBuilder<HiringInterviewEntity>({
     reminderSentAt: new Date(NOW),
     note: "Bring CV",
     createdAt: new Date(NOW),
+    updatedAt: new Date(NOW),
 })
 
 export const benchOfferRow = entityRowBuilder<HiringOfferEntity>({
@@ -227,4 +235,5 @@ export const benchOfferRow = entityRowBuilder<HiringOfferEntity>({
     respondedAt: new Date(NOW),
     createdBy: null,
     createdAt: new Date(NOW),
+    updatedAt: new Date(NOW),
 })

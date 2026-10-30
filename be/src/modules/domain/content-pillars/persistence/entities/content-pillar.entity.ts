@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "content_pillars" })
 /** One row of public.content_pillars: a content theme of a workspace. */
-export class ContentPillarEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ContentPillarEntity extends UuidAbstractEntity {
     /** The workspace id. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -30,8 +27,4 @@ export class ContentPillarEntity {
     /** Whether the theme is in use. */
     @Column({ name: "active", type: "boolean", default: () => "true" })
     active!: boolean
-
-    /** When the theme was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

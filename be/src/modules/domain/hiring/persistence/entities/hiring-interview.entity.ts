@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { InterviewStatus } from "../../hiring.contracts"
 
 /** One entry of the proposed slots column as stored. */
@@ -11,11 +12,7 @@ export interface HiringInterviewSlot {
 
 @Entity({ schema: "public", name: "hiring_interviews" })
 /** One interview of a candidate: the times proposed, the time chosen and where it stands. */
-export class HiringInterviewEntity {
-    /** The interview. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class HiringInterviewEntity extends UuidAbstractEntity {
     /** The workspace the interview belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -79,8 +76,4 @@ export class HiringInterviewEntity {
     /** A note for the interviewer. */
     @Column({ name: "note", type: "text", default: () => "''::text" })
     note!: string
-
-    /** When it was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

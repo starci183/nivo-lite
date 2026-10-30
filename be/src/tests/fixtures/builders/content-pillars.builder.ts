@@ -14,12 +14,15 @@ export const pillarRow = entityRowBuilder<ContentPillarEntity>({
     sort: 0,
     active: true,
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 })
 
-/** The theme row an insert carries (no creation stamp), with some fields changed and some left out. */
+/** The theme row an insert carries (no creation or update stamp: the database sets them), with some fields changed and some left out. */
 const insertedOf = (changes: Partial<ContentPillarEntity>, omitted: ReadonlyArray<string> = []) =>
     Object.fromEntries(
-        Object.entries(pillarRow(changes)).filter(([key]) => key !== "createdAt" && !omitted.includes(key)),
+        Object.entries(pillarRow(changes)).filter(
+            ([key]) => key !== "createdAt" && key !== "updatedAt" && !omitted.includes(key),
+        ),
     )
 
 /** The drafts a manager sends: the kept theme, then a new one, both with padded text. */

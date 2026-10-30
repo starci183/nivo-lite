@@ -23,7 +23,15 @@ import {
     WORKSPACE,
 } from "@tests/fixtures/builders/credits.builder"
 
-const PACK_ROW = { code: "credits_1000", credits: 1000, priceVnd: 299000, sort: 2, active: true }
+const PACK_ROW = {
+    code: "credits_1000",
+    credits: 1000,
+    priceVnd: 299000,
+    sort: 2,
+    active: true,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+}
 const TOPUP = { workspaceId: "ws-1", packCode: "credits_1000" }
 const UPGRADE = { workspaceId: "ws-1", planCode: "growth" }
 
@@ -346,6 +354,8 @@ describe("CreditsService", () => {
             purchasedAt: new Date(NOW),
             expiresAt: new Date(PAID_UNTIL),
             creditsRemaining: 800,
+            createdAt: new Date(NOW),
+            updatedAt: new Date(NOW),
         }
 
         it("lists the purchased lots for a manager", async () => {

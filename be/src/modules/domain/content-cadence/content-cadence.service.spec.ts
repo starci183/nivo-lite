@@ -16,6 +16,7 @@ const row = entityRowBuilder<ContentCadenceEntity>({
     days: [1, 3],
     postTime: "09:00",
     createdAt: new Date("2026-10-13T02:00:00.000Z"),
+    updatedAt: new Date("2026-10-13T02:00:00.000Z"),
 })()
 
 const build = async (rows: ReadonlyArray<ContentCadenceEntity>) => {

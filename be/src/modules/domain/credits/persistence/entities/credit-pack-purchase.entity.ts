@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import { numberColumn } from "./number-column.mapper"
 
 @Entity({ schema: "public", name: "credit_pack_purchases" })
 /** One row of public.credit_pack_purchases: an add-on pack a workspace paid for. */
-export class CreditPackPurchaseEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class CreditPackPurchaseEntity extends UuidAbstractEntity {
     /** The workspace id. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
