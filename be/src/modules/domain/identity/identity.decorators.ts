@@ -1,11 +1,12 @@
-import { SetMetadata, createParamDecorator } from "@nestjs/common"
+import { SetMetadata, applyDecorators, createParamDecorator } from "@nestjs/common"
 import type { ExecutionContext } from "@nestjs/common"
 import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
-import { requestOf } from "@modules/platform/http-security"
+import type { DoorDecorator, TypedParameterDecorator } from "@modules/platform/composition"
+import { ServerToServer, requestOf } from "@modules/platform/http-security"
 import type { Principal } from "@modules/platform/cqrs"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
 import type { CredentialAuthenticator, CredentialMetadata, CredentialPrincipal } from "./credential.contracts"
+import { PublicReason } from "./identity.contracts"
 import type { PublicMetadata, VerifyAccessToken } from "./identity.contracts"
 
 /** Token of the access-token verifier the composition root hands to identity. */
@@ -20,8 +21,12 @@ export const PUBLIC_KEY = "domain.identity.public"
 
 /**
  * Opens a door to anonymous callers, stating why; other doors require their selected credential or a verified session.
+ * A signed webhook proves its caller by its signature, so it owes no browser origin.
  */
-export const Public = (metadata: PublicMetadata): ReturnType<typeof SetMetadata> => SetMetadata(PUBLIC_KEY, metadata)
+export const Public = (metadata: PublicMetadata): DoorDecorator =>
+    metadata.reason === PublicReason.SignedWebhook
+        ? applyDecorators(SetMetadata(PUBLIC_KEY, metadata), ServerToServer())
+        : applyDecorators(SetMetadata(PUBLIC_KEY, metadata))
 
 /** The authenticated caller established by the default-deny guard. */
 export const CurrentPrincipal = createParamDecorator((_data: unknown, context: ExecutionContext): Principal => {
@@ -40,9 +45,12 @@ export const CREDENTIAL_AUTHENTICATOR: unique symbol = Symbol("domain.identity.c
 export const InjectCredentialAuthenticator = (): TypedParameterDecorator<CredentialAuthenticator> =>
     injector<CredentialAuthenticator>(CREDENTIAL_AUTHENTICATOR)
 
-/** Requires successful credential authentication before the global default-deny gate. */
-export const Credential = (metadata: CredentialMetadata): ReturnType<typeof SetMetadata> =>
-    SetMetadata(CREDENTIAL_KEY, metadata)
+/**
+ * Requires successful credential authentication before the global default-deny gate. The credential travels in a header
+ * no browser attaches by itself, so the door owes no browser origin.
+ */
+export const Credential = (metadata: CredentialMetadata): DoorDecorator =>
+    applyDecorators(SetMetadata(CREDENTIAL_KEY, metadata), ServerToServer())
 
 /** The stored link record established by the credential guard. */
 export const CurrentCredentialPrincipal = createParamDecorator(
