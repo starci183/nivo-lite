@@ -1,6 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager, UpdateResult } from "typeorm"
-import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -23,7 +22,7 @@ import type {
     WaitingData,
 } from "./agents.contracts"
 import { AgentOwnershipService } from "./agent-ownership.service"
-import { InjectAgentConnections, InjectInstallations, InjectKnowledge } from "./agents.decorators"
+import { InjectAgentConnections, InjectInstallations, InjectKnowledge, InjectWorkDashboard } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
 import { firstProfileOf, refOf, summaryOf } from "./agents.mapper"
 import type { AgentRecord } from "./agents.mapper"
@@ -33,6 +32,7 @@ import type {
     InstallationDirectory,
     KnowledgeLens,
     OptionalInstallation,
+    WorkDashboardDirectory,
 } from "./agents.port"
 import {
     GAP_LIMIT,
@@ -79,7 +79,7 @@ export class AgentsService {
         private readonly members: WorkspaceMembersService,
         @InjectAgentConnections() private readonly bindings: AgentConnectionsDirectory,
         private readonly ownership: AgentOwnershipService,
-        private readonly work: WorkItemsActivityService,
+        @InjectWorkDashboard() private readonly work: WorkDashboardDirectory,
         @Optional() @InjectKnowledge() private readonly knowledge: KnowledgeLens | null = null,
     ) {}
 

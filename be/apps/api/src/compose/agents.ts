@@ -18,6 +18,7 @@ import {
     AiGenerationsModule,
     TextGeneratorService,
 } from "@modules/domain/ai-generations"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { ApprovalRequestsModule } from "@modules/domain/approval-requests"
 import { ThreadAssignmentsService } from "@modules/domain/thread-messages"
 import { ThreadWorkService } from "@modules/domain/thread-work"
@@ -49,6 +50,7 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
         ports: {
             installations: InstallationDirectoryService,
             connections: AgentBindingsService,
+            work: WorkItemsActivityService,
             knowledge: AgentKnowledgeLensService,
             modules: ModuleProfilesService,
         },

@@ -16,7 +16,6 @@ import type { Lists } from "@tests/fixtures/builders/agents-dashboard.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -24,9 +23,14 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentOwnershipService } from "./agent-ownership.service"
-import { AGENTS_CONNECTIONS, AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE } from "./agents.decorators"
+import { AGENTS_CONNECTIONS, AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_WORK } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
-import type { AgentConnectionsDirectory, InstallationDirectory, KnowledgeLens } from "./agents.port"
+import type {
+    AgentConnectionsDirectory,
+    InstallationDirectory,
+    KnowledgeLens,
+    WorkDashboardDirectory,
+} from "./agents.port"
 import { AgentsService } from "./agents.service"
 import { AgentsErrorCode } from "./errors/agents.error"
 import { AgentEntity } from "./persistence/entities"
@@ -39,7 +43,7 @@ const build = async (
     lists: Lists = {},
     bindKnowledge = true,
 ) => {
-    const work = mock<WorkItemsActivityService>()
+    const work = mock<WorkDashboardDirectory>()
     work.dashboardList.mockImplementation((query) =>
         Promise.resolve([...(query.kind === "waiting" ? (lists.waiting ?? []) : (lists.done ?? []))]),
     )
@@ -67,7 +71,7 @@ const build = async (
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AGENTS_CONNECTIONS, useValue: bindings },
             { provide: AgentOwnershipService, useValue: ownership },
-            { provide: WorkItemsActivityService, useValue: work },
+            { provide: AGENTS_WORK, useValue: work },
             { provide: AGENTS_KNOWLEDGE, useValue: bindKnowledge ? knowledge : null },
         ],
     }).compile()

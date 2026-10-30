@@ -1,6 +1,12 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
-import type { AgentConnectionsDirectory, InstallationDirectory, KnowledgeLens, ModuleProfiles } from "./agents.port"
+import type {
+    AgentConnectionsDirectory,
+    InstallationDirectory,
+    KnowledgeLens,
+    ModuleProfiles,
+    WorkDashboardDirectory,
+} from "./agents.port"
 import type { AgentsRunOptions } from "./agents.options"
 
 /** Token of the agents options, exported so a spec can provide it. */
@@ -36,3 +42,10 @@ export const InjectModuleProfiles = (): TypedParameterDecorator<ModuleProfiles> 
 /** Injects the agent connections port. Parameter type: AgentConnectionsDirectory. */
 export const InjectAgentConnections = (): TypedParameterDecorator<AgentConnectionsDirectory> =>
     injector<AgentConnectionsDirectory>(AGENTS_CONNECTIONS)
+
+/** Token of the dashboard work lists port (work-items lane). */
+export const AGENTS_WORK: unique symbol = Symbol("domain.agents.work")
+
+/** Injects the dashboard work lists port. Parameter type: WorkDashboardDirectory. */
+export const InjectWorkDashboard = (): TypedParameterDecorator<WorkDashboardDirectory> =>
+    injector<WorkDashboardDirectory>(AGENTS_WORK)

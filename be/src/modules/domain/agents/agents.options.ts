@@ -1,5 +1,11 @@
 import type { Type } from "@nestjs/common"
-import type { AgentConnectionsDirectory, InstallationDirectory, KnowledgeLens, ModuleProfiles } from "./agents.port"
+import type {
+    AgentConnectionsDirectory,
+    InstallationDirectory,
+    KnowledgeLens,
+    ModuleProfiles,
+    WorkDashboardDirectory,
+} from "./agents.port"
 
 /** The ports the setup mode binds: the installations and the module definitions, without the knowledge lens. */
 export interface AgentsSetupPorts {
@@ -9,6 +15,8 @@ export interface AgentsSetupPorts {
     readonly modules: Type<ModuleProfiles>
     /** Implements the agent connections port; an existing provider of the app. */
     readonly connections: Type<AgentConnectionsDirectory>
+    /** Implements the dashboard work lists port; an existing provider of the app. */
+    readonly work: Type<WorkDashboardDirectory>
 }
 
 /** The classes that implement the ports of the other lanes; the app root passes them and the module binds each token to them. */

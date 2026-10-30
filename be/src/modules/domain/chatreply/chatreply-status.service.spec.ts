@@ -27,7 +27,7 @@ const build = async (reply: ReplyWorld | null = null) => {
     const entityManager = mockEntityManager()
     const members = mock<WorkspaceMembersService>()
     const progress = mock<WorkItemsReplyProgressService>()
-    progress.answerProgress.mockResolvedValue(null)
+    progress.replyItemOf.mockResolvedValue(null)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatReplyStatusService,
@@ -116,7 +116,7 @@ describe("ChatReplyStatusService", () => {
                 code: ChatreplyErrorCode.NotFound,
             })
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(progress.answerProgress).toHaveBeenCalledWith("ws-1", "work-1")
+            expect(progress.replyItemOf).toHaveBeenCalledWith("ws-1", "work-1")
 
             expect(service.answerStatus).toBeInstanceOf(Function)
         })
@@ -128,6 +128,17 @@ describe("ChatReplyStatusService", () => {
                 code: ChatreplyErrorCode.NotFound,
             })
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+            expect(entityManager.query).not.toHaveBeenCalled()
+        })
+
+        it("refuses an answer whose conversation is not a customer conversation", async () => {
+            const { service, entityManager, progress, conversations } = await build()
+            progress.replyItemOf.mockResolvedValue({ id: "work-1", status: "done", conversationId: "c1" })
+            conversations.customerChat.mockResolvedValue(null)
+
+            await expect(service.answerStatus("user-1", "ws-1", "work-1")).rejects.toMatchObject({
+                code: ChatreplyErrorCode.NotFound,
+            })
             expect(entityManager.query).not.toHaveBeenCalled()
         })
 
@@ -144,13 +155,12 @@ describe("ChatReplyStatusService", () => {
         ] as const)(
             "maps work %s, delivery %s and job %s",
             async (workStatus, deliveryStatus, jobState, messageId, status, errorCode) => {
-                const { service, entityManager, members, progress } = await build()
-                progress.answerProgress.mockResolvedValue({
-                    id: "work-1",
-                    work_status: workStatus,
-                    delivery_status: deliveryStatus,
-                    message_id: messageId,
-                })
+                const { service, entityManager, members, progress, deliveries, conversations } = await build()
+                progress.replyItemOf.mockResolvedValue({ id: "work-1", status: workStatus, conversationId: "c1" })
+                conversations.customerChat.mockResolvedValue({ id: "c1", leadId: null })
+                deliveries.humanReplyOf.mockResolvedValue(
+                    messageId === null && deliveryStatus === null ? null : { id: messageId ?? "message-1", deliveryStatus },
+                )
                 entityManager.query.mockResolvedValue(jobAnswer(jobState))
 
                 await expect(service.answerStatus("user-1", "ws-1", "work-1")).resolves.toEqual({
