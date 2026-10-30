@@ -5,9 +5,6 @@
 /** The event name and pgmq topic of `event_bus_probe`. */
 export const EVENT_BUS_PROBE_TOPIC = "event_bus_probe"
 
-/** The queue of the `probe` consumer of `event_bus_probe`. */
-export const EVENT_BUS_PROBE_PROBE_TOPIC_QUEUE = "event_bus_probe__probe"
-
 /** The event name and pgmq topic of `bank_credit_booked`. */
 export const BANK_CREDIT_BOOKED_TOPIC = "bank_credit_booked"
 

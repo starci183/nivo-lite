@@ -24,7 +24,6 @@
     "emailTitle": "Email",
     "emailCurrent": "Sign-in email",
     "emailHint": "This is the address you sign in with.",
-    "errEmail": "Enter a valid email address.",
     "passwordTitle": "Password",
     "passwordHint": "Use at least 8 characters. You will stay signed in on this device.",
     "currentPassword": "Current password",

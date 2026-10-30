@@ -43,6 +43,12 @@ export const found = (row: EffectsRow = rowOf()): QueryBuilderAnswers => {
     RESOURCE_NAMES.set("resource-1", row.resource_name)
     return { getRawOne: { ...row, service_id: "service-1", resource_id: "resource-1" } }
 }
+/** A found booking whose service no longer has a name to show. */
+export const serviceGone = (): QueryBuilderAnswers => {
+    const answers = found()
+    SERVICE_NAMES.clear()
+    return answers
+}
 export const MISSING: QueryBuilderAnswers = { getRawOne: undefined }
 export const CLAIMED: QueryBuilderAnswers = { execute: { raw: [{ id: BOOKING_ID }] } }
 export const ALREADY_CLAIMED: QueryBuilderAnswers = { execute: { raw: [] } }

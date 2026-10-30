@@ -30,6 +30,9 @@ export const stored = (secret: ZaloSecret | string, expiresAt: number | null = N
         webhookSecret: "hook",
         tokenExpiresAt: expiresAt === null ? null : new Date(expiresAt).toISOString(),
     })
+/** The stored credential of a connection whose authorization was begun: a PKCE verifier and nonce that are still valid. */
+export const startedAuthorization = () =>
+    stored(secretOf({ pkce: { verifier: "verifier-1", nonce: "nonce-1", exp: NOW + 60_000 } }))
 /** Parse the sealed test text, retaining an unreadable value's error so assertions expose it. */
 export const sealedJson = (sealed: string): object => {
     try {

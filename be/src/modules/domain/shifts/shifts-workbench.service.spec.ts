@@ -236,9 +236,7 @@ describe("ShiftsWorkbenchService", () => {
             expect(view.requests.swaps.map((row) => row.shiftLine)).toEqual(["14/10 08:00–10:00", "—"])
         },
     )
-})
 
-describe("ShiftsWorkbenchService bench", () => {
     it("refuses a week that is not a day before reading anything", async () => {
         const { workbench, members } = await build()
         await expect(workbench.bench("user-1", "ws-1", "next week")).rejects.toMatchObject({

@@ -2,6 +2,7 @@ import {
     LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE,
     PAYMENT_RECONCILED_AUTOMATIONS_TOPIC_QUEUE,
 } from "@modules/platform/event-bus"
+import { InboxService } from "@modules/platform/inbox"
 import { eachInOrder } from "@modules/platform/primitives"
 import { SpecEvent, drainRounds, openEventBusProof, pause } from "../../world/event-bus-proof.service"
 import type { EventBusProof } from "../../world/event-bus-proof.service"
@@ -48,20 +49,50 @@ beforeEach(async () => {
 })
 
 describe("event-bus publishing", () => {
-    it("event-bus/rollback: a publish inside a rolled-back transaction sends nothing", async () => {
+    it("event-bus/atomic-with-transaction: the event and the domain write commit together or not at all", async () => {
         const { app, publisher, count } = bus()
-        await expect(
+        const inbox = new InboxService()
+        const publishWithWrite = (key: string, fail: boolean): Promise<void> =>
             app.transaction(async (manager) => {
                 await publisher.publish(
-                    new SpecEvent("lead_captured", "e", { dedupeKey: `rb:${RUN}`, subjectId: "1" }),
+                    new SpecEvent("lead_captured", "e", { dedupeKey: key, subjectId: "1" }),
                     manager,
                     "request-1",
                 )
-                throw new TestWorldError({ code: TestWorldErrorCode.ProviderDown })
-            }),
-        ).rejects.toMatchObject({ code: TestWorldErrorCode.ProviderDown })
+                await inbox.claim("atomic-proof", key, manager)
+                if (fail) throw new TestWorldError({ code: TestWorldErrorCode.ProviderDown })
+            })
+        const keptKey = `atomic-kept:${RUN}`
+        const lostKey = `atomic-lost:${RUN}`
 
+        await publishWithWrite(keptKey, false)
+        await expect(publishWithWrite(lostKey, true)).rejects.toMatchObject({ code: TestWorldErrorCode.ProviderDown })
+
+        expect(await count(LEAD_QUEUE)).toBe(1)
+        await expect(app.transaction((manager) => inbox.claim("atomic-proof", keptKey, manager))).resolves.toBe(false)
+        await expect(app.transaction((manager) => inbox.claim("atomic-proof", lostKey, manager))).resolves.toBe(true)
+    })
+
+    it("event-bus/relay-only-after-commit: nothing is visible before the commit, and a rolled-back publish sends nothing", async () => {
+        const { app, publisher, count } = bus()
+        const seen: Array<number> = []
+        const publishOnce = (key: string, fail: boolean): Promise<void> =>
+            app.transaction(async (manager) => {
+                await publisher.publish(
+                    new SpecEvent("lead_captured", "e", { dedupeKey: key, subjectId: "1" }),
+                    manager,
+                    "request-1",
+                )
+                seen.push(await count(LEAD_QUEUE))
+                if (fail) throw new TestWorldError({ code: TestWorldErrorCode.ProviderDown })
+            })
+
+        await expect(publishOnce(`rb:${RUN}`, true)).rejects.toMatchObject({ code: TestWorldErrorCode.ProviderDown })
         expect(await count(LEAD_QUEUE)).toBe(0)
+        await publishOnce(`cm:${RUN}`, false)
+
+        expect(seen).toEqual([0, 0])
+        expect(await count(LEAD_QUEUE)).toBe(1)
     })
 
     it("event-bus/commit: one publish reaches two consumers, each exactly once, then is archived", async () => {
@@ -116,7 +147,7 @@ describe("event-bus delivery", () => {
         expect(logger.error).toHaveBeenCalledTimes(1)
     })
 
-    it("event-bus/dedupe: a duplicate dedupeKey is processed once", async () => {
+    it("event-bus/duplicate-delivery-is-a-noop: a duplicate dedupeKey is processed once", async () => {
         const { publish, runnerOf, door, count } = bus()
         const effects: Array<string> = []
         const runner = runnerOf()
@@ -133,7 +164,7 @@ describe("event-bus delivery", () => {
 })
 
 describe("event-bus dead letters", () => {
-    it("event-bus/dead-letter: a message dead-letters after maxDeliveries, no longer blocks, and can be requeued", async () => {
+    it("event-bus/redelivery-then-dead-letter: a failing consumer is retried, then buried past maxDeliveries, and can be requeued", async () => {
         const { publish, runnerOf, door, count, logger, publisher } = bus()
         const effects: Array<string> = []
         const runner = runnerOf({ visibilitySeconds: 1 })

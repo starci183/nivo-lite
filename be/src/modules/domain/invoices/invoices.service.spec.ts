@@ -16,6 +16,8 @@ import {
     NOW,
     ORDER,
     PERIOD,
+    RECONCILE_RAW,
+    RECONCILE_ROW,
     RENEWAL,
     RENEWAL_INPUT,
     VIEW,
@@ -30,7 +32,7 @@ import {
 } from "@tests/fixtures/builders/invoices-service.builder"
 import { InvoicesErrorCode } from "./errors/invoices.error"
 import { INVOICE_RETURNING } from "./invoice-columns.policy"
-import type { InvoiceAccountingRow, InvoiceListingRecord, ReconcileInvoiceRow } from "./invoices.contracts"
+import type { InvoiceAccountingRow, InvoiceListingRecord } from "./invoices.contracts"
 import { InvoicesService } from "./invoices.service"
 
 /** The orders and customers the owners answer for the invoices a spec lists. */
@@ -82,13 +84,6 @@ describe("InvoicesService finds", () => {
         expect(fakes[0]?.callsOf("addOrderBy")).toEqual([["i.created_at", "DESC"]])
     })
 
-    it("answers null when the customer has no invoice in that state", async () => {
-        const { em } = queued([found(undefined)])
-        const service = await build(em)
-
-        await expect(service.latestOfLead(WS, "l1", "paid")).resolves.toBeNull()
-    })
-
     it("finds one invoice of the workspace", async () => {
         const { em, fakes } = queued([found(INVOICE)])
         const service = await build(em)
@@ -98,11 +93,17 @@ describe("InvoicesService finds", () => {
         expect(fakes[0]?.callsOf("andWhere")).toEqual([["i.id = :invoiceId", { invoiceId: "inv-1" }]])
     })
 
-    it("answers null for an invoice the workspace does not have", async () => {
+    it.each([
+        [
+            "the customer has no invoice in that state",
+            (service: InvoicesService) => service.latestOfLead(WS, "l1", "paid"),
+        ],
+        ["the workspace does not have the invoice", (service: InvoicesService) => service.find(WS, "missing")],
+    ])("answers null when %s", async (_case, read) => {
         const { em } = queued([found(undefined)])
         const service = await build(em)
 
-        await expect(service.find(WS, "missing")).resolves.toBeNull()
+        await expect(read(service)).resolves.toBeNull()
     })
 
     it("reads the invoice of an order, or null when it has none", async () => {
@@ -217,34 +218,11 @@ describe("InvoicesService reconciliation lists", () => {
     })
 
     it("reads at most fifty reconciliation invoices without changing the selection", async () => {
-        const raw = {
-            id: INVOICE.id,
-            order_id: "o1",
-            lead_id: "l1",
-            invoice_no: INVOICE.invoice_no,
-            amount_vnd: INVOICE.amount_vnd,
-            status: INVOICE.status,
-            issued_at: NOW,
-            due_at: DUE_AT,
-        }
-        const row: ReconcileInvoiceRow = {
-            id: INVOICE.id,
-            invoice_no: INVOICE.invoice_no,
-            amount_vnd: INVOICE.amount_vnd,
-            status: INVOICE.status,
-            customer: "Minh",
-            company: "Tea Co",
-            order_no: "ORDER-1",
-            order_items: "Tea",
-            order_status: "invoiced",
-            issued_at: NOW,
-            due_at: DUE_AT,
-        }
         const ids = Array.from({ length: 52 }, (_, index) => `inv-${index + 1}`)
-        const { em, fakes } = queued([listed([raw])])
+        const { em, fakes } = queued([listed([RECONCILE_RAW])])
         const service = await build(em, { orders: [ORDER], leads: [LEAD] })
 
-        await expect(service.listForReconcile(WS, ids)).resolves.toEqual([row])
+        await expect(service.listForReconcile(WS, ids)).resolves.toEqual([RECONCILE_ROW])
         expect(fakes[0]?.callsOf("where")).toEqual([
             ["i.workspaceId = :workspaceId AND i.id IN (:...ids)", { workspaceId: WS, ids: ids.slice(0, 50) }],
         ])
