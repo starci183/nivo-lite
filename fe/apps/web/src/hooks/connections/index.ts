@@ -11,6 +11,7 @@ export {
     statusKey,
     statusTone,
     URL_PARAMS,
+    wizardQuery,
     wizardTargetOf,
 } from "./connections.shared"
 export { useConnectionOverlays } from "./useConnectionOverlays"

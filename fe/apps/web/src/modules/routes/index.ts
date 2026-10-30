@@ -7,6 +7,9 @@ export const APP_ROUTES = {
     chat: "/chat",
     account: "/account",
     workspaceNew: "/workspaces/new",
+    workspaceChannels: "/workspaces/new/channels",
+    workspaceHandover: "/workspaces/new/ai",
+    workspaceReady: "/workspaces/new/done",
 } as const
 
 export { safeNext } from "./safe-next-path"

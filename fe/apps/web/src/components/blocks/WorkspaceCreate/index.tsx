@@ -21,7 +21,7 @@ const OFFERED: ReadonlySet<string> = new Set(WORKSPACE_BUSINESS_TYPES)
 /** True when the picked option is one of the business types the form offers. */
 const isBusinessType = (value: string | null): value is WorkspaceBusinessType => value !== null && OFFERED.has(value)
 
-/** The connected create form: makes a free workspace through the back end GraphQL API (validated by react-hook-form + zod, outcome toasted), makes it the active one and lands on the Office. */
+/** The connected create form: makes a free workspace through the back end GraphQL API (validated by react-hook-form + zod, outcome toasted), makes it the active one and moves on to the channels step. */
 export const WorkspaceCreate = () => {
     const t = useTranslations("onboarding")
     const router = navigation.useRouter()
@@ -38,8 +38,7 @@ export const WorkspaceCreate = () => {
         if (id === undefined) return
         setNavigating(true)
         select(id)
-        router.push(APP_ROUTES.chat)
-        router.refresh()
+        router.push(APP_ROUTES.workspaceChannels)
     })
 
     const isPending = isCreating || isNavigating
@@ -61,7 +60,7 @@ export const WorkspaceCreate = () => {
                 otherIndustryLabel: t("industryOtherLabel"),
                 otherIndustry: form.watch("customIndustry"),
                 otherIndustryError: form.formState.errors.customIndustry?.message,
-                submitLabel: isPending ? t("creating") : t("createFirst"),
+                submitLabel: isPending ? t("creating") : t("continue"),
                 cancelLabel: t("backToLobby"),
                 cancelHref: AUTH_ROUTES.workspaces,
                 failTitle: t("errGeneric"),

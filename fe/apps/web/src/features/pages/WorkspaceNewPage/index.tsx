@@ -8,13 +8,12 @@ export const workspaceNewMetadata = async (): Promise<Metadata> => {
     return { title: t("newTitle") }
 }
 
-/** /workspaces/new: names a new workspace; the proxy sends the signed-out to the sign-in page. */
+/** /workspaces/new: a step of the first-run wizard; the proxy sends the signed-out to the sign-in page. */
 export const WorkspaceNewPage = async () => {
     const t = await getTranslations("onboarding")
     return (
         <WorkspaceNewPageBase
             props={{
-                title: t("newTitle"),
                 stepsLabel: t("welcomeStepsLabel"),
                 steps: [t("trackStep1"), t("trackStep2"), t("trackStep3")],
             }}

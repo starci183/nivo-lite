@@ -81,11 +81,11 @@ export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => {
                     ) : null}
                     <FormNotice failTitle={form.failTitle} error={form.error} />
                     <div className={ACTIONS_CLASS_NAME}>
-                        <Button type="submit" intent="commit" isPending={form.isPending}>
-                            {form.submitLabel}
-                        </Button>
                         <Button intent="neutral" href={form.cancelHref} isDisabled={form.isPending}>
                             {form.cancelLabel}
+                        </Button>
+                        <Button type="submit" intent="commit" isPending={form.isPending}>
+                            {form.submitLabel}
                         </Button>
                     </div>
                 </div>
