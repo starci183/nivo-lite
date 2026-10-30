@@ -1,8 +1,10 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
+import { AbstractEntity } from "@modules/platform/database"
+
 @Entity({ schema: "public", name: "office_rooms_reads" })
 /** Where one person last read one room, '' being the Office room: one row of `public.office_rooms_reads`. */
-export class OfficeRoomReadEntity {
+export class OfficeRoomReadEntity extends AbstractEntity {
     /** The workspace. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

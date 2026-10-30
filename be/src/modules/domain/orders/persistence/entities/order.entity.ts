@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { OrderStatus } from "../../orders.contracts"
 
 /** Reads a bigint column as a number, as the order contract always did. */
@@ -9,11 +11,7 @@ const amountTransformer = {
 
 @Entity({ schema: "public", name: "orders" })
 /** One sales order of a workspace: one row of `public.orders`. */
-export class OrderEntity {
-    /** The order. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class OrderEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -49,10 +47,6 @@ export class OrderEntity {
     /** When the order was confirmed. */
     @Column({ name: "confirmed_at", type: "timestamptz", nullable: true })
     confirmedAt!: Date | null
-
-    /** When the order was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When the carrier received the order. */
     @Column({ name: "shipped_at", type: "timestamptz", nullable: true })

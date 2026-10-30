@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "office_rooms" })
 /** One department room of a workspace: one row of `public.office_rooms`. */
-export class OfficeRoomEntity {
-    /** The room. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class OfficeRoomEntity extends UuidAbstractEntity {
     /** The workspace the room belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -26,8 +24,4 @@ export class OfficeRoomEntity {
     /** The module kinds the room covers. */
     @Column({ name: "modules", type: "text", array: true, default: () => "'{}'::text[]" })
     modules!: Array<string>
-
-    /** When the room was opened. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

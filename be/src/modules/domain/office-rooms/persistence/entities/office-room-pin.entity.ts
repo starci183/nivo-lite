@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "office_rooms_pins" })
 /** One document pinned in a room: one row of `public.office_rooms_pins`. */
-export class OfficeRoomPinEntity {
-    /** The pin. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class OfficeRoomPinEntity extends UuidAbstractEntity {
     /** The room the document is pinned in. */
     @Column({ name: "room_id", type: "uuid" })
     roomId!: string
@@ -22,8 +20,4 @@ export class OfficeRoomPinEntity {
     /** The line under the title. */
     @Column({ name: "note", type: "text", default: "" })
     note!: string
-
-    /** When the document was pinned. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

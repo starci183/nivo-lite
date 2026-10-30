@@ -53,6 +53,7 @@ const row: PublicApiEntity = {
     duplicates: 0,
     processedAt: new Date("2026-10-25T00:00:00Z"),
     createdAt: new Date("2026-10-24T23:00:00Z"),
+    updatedAt: new Date("2026-10-25T00:00:00Z"),
 }
 const item = (ledgerRequestId: string | null = requestId) =>
     mock<WorkItem>({

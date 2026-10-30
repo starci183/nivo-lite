@@ -1,13 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { CandidateStatus, ShownRow } from "../../office-command-candidates.contracts"
 
 @Entity({ schema: "public", name: "office_command_candidates" })
 /** One command the model proposed from an owner's Office message, waiting for the owner to send or cancel it. */
-export class OfficeCommandCandidateEntity {
-    /** The candidate id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class OfficeCommandCandidateEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -51,10 +49,6 @@ export class OfficeCommandCandidateEntity {
     /** The name of the person who owns the card. */
     @Column({ name: "created_by", type: "text", default: () => "''::text" })
     createdBy!: string
-
-    /** When the candidate was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When the owner decided it, or null. */
     @Column({ name: "decided_at", type: "timestamptz", nullable: true })

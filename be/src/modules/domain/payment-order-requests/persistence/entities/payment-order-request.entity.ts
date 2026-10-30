@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { PaymentOrderRequestKind } from "../../payment-order-requests.contracts"
 
 /** Reads a bigint column as a number, as the request contract always did. */
@@ -9,11 +11,7 @@ const tierTransformer = {
 
 @Entity({ schema: "public", name: "payment_order_requests" })
 /** One request to open a payment order, answered by a job: one row of `public.payment_order_requests`. */
-export class PaymentOrderRequestEntity {
-    /** The request id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class PaymentOrderRequestEntity extends UuidAbstractEntity {
     /** The workspace that pays. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -41,10 +39,6 @@ export class PaymentOrderRequestEntity {
     /** The stable refusal code written by the worker. */
     @Column({ name: "fault", type: "text", nullable: true })
     fault!: string | null
-
-    /** When the request was made. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When the worker answered it. */
     @Column({ name: "answered_at", type: "timestamptz", nullable: true })

@@ -1,5 +1,7 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
+import { AbstractEntity } from "@modules/platform/database"
+
 /** The meta of one file written into the OpenClaw workspace of an agent. */
 export interface OpenclawSyncFileMeta {
     /** The path relative to the workspace. */
@@ -12,7 +14,7 @@ export interface OpenclawSyncFileMeta {
 
 @Entity({ schema: "public", name: "openclaw_agent_sync" })
 /** The OpenClaw copy of the agent of an installation: one row of `public.openclaw_agent_sync`. */
-export class OpenclawAgentSyncEntity {
+export class OpenclawAgentSyncEntity extends AbstractEntity {
     /** The installation. */
     @PrimaryColumn({ name: "installation_id", type: "uuid" })
     installationId!: string

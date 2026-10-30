@@ -82,9 +82,8 @@ export class NivoKnowledgeService {
                       version: () => '"version" + 1',
                       embedding: null,
                       embeddingModel: null,
-                      updatedAt: () => "now()",
                   }
-                : { ...fields, updatedAt: () => "now()" },
+                : fields,
         )
     }
 

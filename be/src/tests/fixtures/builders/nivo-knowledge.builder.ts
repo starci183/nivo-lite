@@ -15,6 +15,7 @@ export const knowledgeRow = builder<NivoKnowledgeItem>({
     version: 1,
     embedding: null,
     fts: null,
+    createdAt: new Date("2026-04-01T00:00:00.000Z"),
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
     embeddingModel: null,
 })

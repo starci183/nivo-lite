@@ -1,15 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** What a ledger row asks for. */
 export type PublicApiKind = "lead" | "message" | "knowledge"
 
 @Entity({ schema: "public", name: "public_api" })
 /** One accepted public API request, once per dedupe key: one row of `public.public_api`. */
-export class PublicApiEntity {
-    /** The original admission identity. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class PublicApiEntity extends UuidAbstractEntity {
     /** The workspace of the key. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -37,10 +35,6 @@ export class PublicApiEntity {
     /** How many times the same request was sent again. */
     @Column({ name: "duplicates", type: "integer", default: () => "0" })
     duplicates!: number
-
-    /** When the request was admitted; a message past its auto-send window waits for approval. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** Durable fulfillment has committed when this is nonnull. */
     @Column({ name: "processed_at", type: "timestamptz", nullable: true })

@@ -96,11 +96,19 @@ const build = async (em: MockEntityManager) => {
 const pipelineOf = (config: PipelineRow["config"], body: string | null): PipelineRow =>
     mock<PipelineRow>({ config, body })
 
+/** The stored api_base setting. */
+const API_BASE_ROW: N8nPlatformConfigEntity = {
+    key: "api_base",
+    value: "https://api.example",
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+}
+
 describe("N8nRunsService startRun", () => {
     it("writes the run and its delivery job in one transaction and answers the run id", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
-                findOne: [N8nPlatformConfigEntity, { key: "api_base", value: "https://api.example" }],
+                findOne: [N8nPlatformConfigEntity, API_BASE_ROW],
             }),
         )
         const insert = fakeQueryBuilder({ execute: { raw: [{ id: STARTED_ID }] } })
@@ -147,7 +155,7 @@ describe("N8nRunsService startRun", () => {
     it("answers none for an occurrence that already started a run", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
-                findOne: [N8nPlatformConfigEntity, { key: "api_base", value: "https://api.example" }],
+                findOne: [N8nPlatformConfigEntity, API_BASE_ROW],
             }),
         )
         answerQueryBuilders(tx.em, fakeQueryBuilder({ execute: { raw: [] } }))

@@ -22,9 +22,6 @@ const called = (value: unknown): unknown =>
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
-/** Any function, typed `unknown` so it flows into any slot. */
-const anyFunction = (): unknown => expect.any(Function)
-
 const item = (slug: string): NivoItemInput => ({
     module: "core",
     slug,
@@ -90,9 +87,7 @@ describe("NivoKnowledgeService upsert of existing items", () => {
                 title: "T a",
                 body: "B a",
                 kind: "playbook",
-                updatedAt: anyFunction(),
             })
-            expect(called(isRecord(changes) ? changes.updatedAt : undefined)).toBe("now()")
         })
 
         it("takes the next version and drops the vector of an item whose text changed", async () => {
@@ -109,7 +104,6 @@ describe("NivoKnowledgeService upsert of existing items", () => {
 
             const changes: unknown = tx.em.update.mock.calls[0]?.[2]
             expect(called(isRecord(changes) ? changes.version : undefined)).toBe('"version" + 1')
-            expect(called(isRecord(changes) ? changes.updatedAt : undefined)).toBe("now()")
             expect(changes).toMatchObject({ embedding: null, embeddingModel: null, title: "T a" })
         })
 

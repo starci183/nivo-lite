@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "n8n_runs" })
 /** One run of a shared n8n workflow: one row of `public.n8n_runs`. */
-export class N8nRunEntity {
-    /** The run. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class N8nRunEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -42,10 +40,6 @@ export class N8nRunEntity {
     /** The engine job that carried the run, when one did. */
     @Column({ name: "engine_job_id", type: "uuid", nullable: true })
     engineJobId!: string | null
-
-    /** When the run was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When the run was closed. */
     @Column({ name: "finished_at", type: "timestamptz", nullable: true })

@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { OrderDetail, OrderKind, OrderStatus } from "../../payment-orders.contracts"
 
 /** Reads a bigint column as a number, as the order contract always did. */
@@ -9,11 +11,7 @@ const amountTransformer = {
 
 @Entity({ schema: "public", name: "payment_orders" })
 /** One payment order of a workspace: one row of `public.payment_orders`. */
-export class PaymentOrderEntity {
-    /** The order id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class PaymentOrderEntity extends UuidAbstractEntity {
     /** The workspace that pays. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -49,10 +47,6 @@ export class PaymentOrderEntity {
     /** The bank transaction that settled it; written by the settlement function. */
     @Column({ name: "sepay_transaction_id", type: "bigint", nullable: true, insert: false, update: false })
     sepayTransactionId!: string | null
-
-    /** When the order was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The kind, a member of the table check. */
     @Column({ name: "kind", type: "text", default: () => "'plan'" })

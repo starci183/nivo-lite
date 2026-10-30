@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "nivo_knowledge" })
 /** One item of the base knowledge of NIVO, mirrored from the resource files. */
-export class NivoKnowledgeItemEntity {
-    /** The item id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class NivoKnowledgeItemEntity extends UuidAbstractEntity {
     /** The module folder, or core. */
     @Column({ name: "module", type: "text" })
     module!: string
@@ -38,10 +36,6 @@ export class NivoKnowledgeItemEntity {
     /** The search vector the database generates from the title and the body. */
     @Column({ name: "fts", type: "tsvector", nullable: true, select: false, insert: false, update: false })
     fts!: string | null
-
-    /** Last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** The model that made the vector, or null. */
     @Column({ name: "embedding_model", type: "text", nullable: true })

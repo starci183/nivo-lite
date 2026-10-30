@@ -27,6 +27,7 @@ export const ledgerRowOf = builder<PublicApiEntity>({
     duplicates: 0,
     processedAt: null,
     createdAt: new Date("2026-10-24T08:00:00Z"),
+    updatedAt: new Date("2026-10-24T08:00:00Z"),
 })
 
 /** A ledger row already processed. */
