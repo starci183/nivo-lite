@@ -59,16 +59,9 @@ export class VideoBrandKitsService {
                 secondaryColor: brand.secondary,
                 shopName,
                 updatedBy: principalId,
-                updatedAt: () => "now()",
             })
             .orUpdate(
-                [
-                    "primary_color",
-                    "secondary_color",
-                    ...(shopName === "" ? [] : ["shop_name"]),
-                    "updated_by",
-                    "updated_at",
-                ],
+                ["primary_color", "secondary_color", ...(shopName === "" ? [] : ["shop_name"]), "updated_by"],
                 ["workspace_id"],
             )
             .execute()

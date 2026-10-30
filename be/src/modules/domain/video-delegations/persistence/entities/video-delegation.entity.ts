@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "video_delegations" })
 /** A script another agent delegated to AI Editor and how its render came back. */
-export class VideoDelegationEntity {
-    /** The delegation id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class VideoDelegationEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -50,12 +48,4 @@ export class VideoDelegationEntity {
     /** Why the render failed, when it did. */
     @Column({ name: "error", type: "text", nullable: true })
     error!: string | null
-
-    /** When the delegation was recorded. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When the delegation last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

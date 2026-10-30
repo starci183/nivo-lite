@@ -1,15 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** The roles an invitation may grant, as the table checks them. */
 export type WorkspaceInviteRole = "manager" | "staff"
 
 @Entity({ schema: "public", name: "workspace_invites" })
 /** One invitation into a workspace, stored by the SHA-256 hash of its token. */
-export class WorkspaceInviteEntity {
-    /** The invitation id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class WorkspaceInviteEntity extends UuidAbstractEntity {
     /** The workspace it belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -33,10 +31,6 @@ export class WorkspaceInviteEntity {
     /** The person who issued it. */
     @Column({ name: "invited_by", type: "uuid", nullable: true })
     invitedBy!: string | null
-
-    /** When it was issued. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When the link stops working. */
     @Column({ name: "expires_at", type: "timestamptz", default: () => "now() + '7 days'::interval" })

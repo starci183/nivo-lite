@@ -5,12 +5,8 @@ import { VideoProjectsService } from "@modules/domain/video-projects"
 import { VideoRendersService } from "@modules/domain/video-renders"
 import type { SettledRender } from "@modules/domain/video-renders"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { writeExpressionOf } from "@tests/fixtures/builders/write-expression.builder"
 import { VideoDelegationEntity } from "./persistence/entities"
 import { VideoDelegationsService } from "./video-delegations.service"
-
-/** The any-function matcher, typed `unknown` so it flows into any slot. */
-const anyFunction = (): unknown => expect.any(Function)
 
 const ROW = { id: "delegation-1", project_id: "project-1" }
 const ENTITY = Object.assign(new VideoDelegationEntity(), { id: "delegation-1", projectId: "project-1" })
@@ -22,11 +18,6 @@ const INPUT = {
     sourceModule: "content",
     contentItemId: null,
     channels: ["facebook"],
-}
-
-/** What the last update stamped as the change time. */
-const stamped = (em: MockEntityManager): string => {
-    return writeExpressionOf(em.update.mock.calls.at(-1)?.[2], "updatedAt") ?? ""
 }
 
 const SETTLED: SettledRender = {
@@ -192,12 +183,7 @@ describe("VideoDelegationsService > writes", () => {
 
         await service.linkRender("delegation-1", "render-1")
 
-        expect(em.update).toHaveBeenCalledWith(
-            VideoDelegationEntity,
-            { id: "delegation-1" },
-            { renderId: "render-1", updatedAt: anyFunction() },
-        )
-        expect(stamped(em)).toBe("now()")
+        expect(em.update).toHaveBeenCalledWith(VideoDelegationEntity, { id: "delegation-1" }, { renderId: "render-1" })
     })
 
     it("keeps the posted card as JSON", async () => {
@@ -210,9 +196,8 @@ describe("VideoDelegationsService > writes", () => {
         expect(em.update).toHaveBeenCalledWith(
             VideoDelegationEntity,
             { id: "delegation-1" },
-            { approvalWorkItemId: "approval-1", card: { v: 1 }, updatedAt: anyFunction() },
+            { approvalWorkItemId: "approval-1", card: { v: 1 } },
         )
-        expect(stamped(em)).toBe("now()")
     })
 })
 
@@ -226,9 +211,8 @@ describe("VideoDelegationsService > settling", () => {
         expect(em.update).toHaveBeenCalledWith(
             VideoDelegationEntity,
             { id: "delegation-1", status: "rendering" },
-            { status: "failed", error: "boom", updatedAt: anyFunction() },
+            { status: "failed", error: "boom" },
         )
-        expect(stamped(em)).toBe("now()")
     })
 
     it("answers false once the delegation was settled", async () => {

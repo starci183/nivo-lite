@@ -149,7 +149,7 @@ describe("WorkItemsService persistence", () => {
             reason: null,
             reasons: [],
             completedAt: null,
-            updatedAt: "created_at",
+            leasedAt: null,
         })
         expect(fake.callsOf("where")).toEqual([
             [
@@ -169,7 +169,7 @@ describe("WorkItemsService persistence", () => {
         expect((await service.stopFailed("ws-1", "item-1"))?.status).toBe("rejected")
         expect(await service.stopFailed("ws-1", "item-1", tx)).toBeNull()
         expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
-        expect(singleCall(fake, "set")).toEqual({ status: "rejected", completedAt: AT, updatedAt: AT })
+        expect(singleCall(fake, "set")).toEqual({ status: "rejected", completedAt: AT, leasedAt: AT })
         expect(fake.callsOf("where")[0]?.[0]).toBe("workspace_id = :workspaceId AND id = :id AND status = 'failed'")
         expect(txFake.callsOf("set")).toHaveLength(1)
     })
@@ -198,7 +198,7 @@ describe("WorkItemsService lookups", () => {
 
         expect((await (await build(em)).nextInboundQueued("ws-1", "event-1"))?.id).toBe("item-1")
         expect(fake.callsOf("andWhere")).toEqual([
-            [expect.stringContaining("w.updated_at = w.created_at"), { now: AT, lease: 120 }],
+            [expect.stringContaining("w.leased_at IS NULL"), { now: AT, lease: 120 }],
             ["w.inbound_event_id = :eventId", { eventId: "event-1" }],
         ])
         expect(fake.callsOf("limit")).toEqual([[1]])
@@ -237,10 +237,8 @@ describe("WorkItemsService lookups", () => {
         const held = managerAnswering(returned([]))
 
         expect((await (await build(taken.em)).claim("ws-1", "item-1"))?.id).toBe("item-1")
-        expect(singleCall(taken.fake, "set")).toEqual({ updatedAt: AT })
-        expect(taken.fake.callsOf("where")[0]?.[0]).toContain(
-            "status = 'queued' AND (updated_at = created_at OR updated_at <",
-        )
+        expect(singleCall(taken.fake, "set")).toEqual({ leasedAt: AT })
+        expect(taken.fake.callsOf("where")[0]?.[0]).toContain("status = 'queued' AND (leased_at IS NULL OR leased_at <")
         expect(taken.fake.callsOf("setParameters")).toEqual([[{ now: AT, lease: 120 }]])
         expect(await (await build(held.em)).claim("ws-1", "item-1")).toBeNull()
     })
@@ -281,7 +279,7 @@ describe("WorkItemsService persistence", () => {
         const other = managerAnswering(returned([]))
 
         expect((await (await build(waiting.em)).reopen("ws-1", "item-1"))?.id).toBe("item-1")
-        expect(singleCall(waiting.fake, "set")).toEqual({ status: "queued", updatedAt: AT })
+        expect(singleCall(waiting.fake, "set")).toEqual({ status: "queued", leasedAt: AT })
         expect(waiting.fake.callsOf("where")[0]?.[0]).toBe(
             "workspace_id = :workspaceId AND id = :id AND status = 'waiting_decision'",
         )
@@ -297,7 +295,7 @@ describe("WorkItemsService holds and assignments", () => {
         const { em, fake } = managerAnswering(returned(rows))
 
         expect(await (await build(em)).hold("ws-1", "item-1", proposal)).toBe(expected)
-        expect(singleCall(fake, "set")).toEqual({ proposal, updatedAt: AT })
+        expect(singleCall(fake, "set")).toEqual({ proposal, leasedAt: AT })
         expect(fake.callsOf("where")[0]?.[0]).toContain("status = 'waiting_decision'")
         expect(fake.callsOf("returning")).toEqual([["id"]])
     })
@@ -320,7 +318,7 @@ describe("WorkItemsService holds and assignments", () => {
         const { em, fake } = managerAnswering(returned(rows))
 
         expect(await (await build(em)).assign("ws-1", "item-1", staffId)).toBe(expected)
-        expect(singleCall(fake, "set")).toEqual({ assignedStaffId: staffId, updatedAt: AT })
+        expect(singleCall(fake, "set")).toEqual({ assignedStaffId: staffId, leasedAt: AT })
         expect(fake.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", id: "item-1" })
     })
 
@@ -348,7 +346,7 @@ describe("WorkItemsService holds and assignments", () => {
             decidedPath: "auto",
             reason: "routine",
             completedAt: AT,
-            updatedAt: AT,
+            leasedAt: AT,
             evidenceState: "verified",
             result: { summary: "Paid" },
         })
@@ -374,7 +372,7 @@ describe("WorkItemsService persistence", () => {
             subjectType: "COALESCE(CAST(:subjectType AS text), subject_type)",
             subjectId: "COALESCE(CAST(:subjectId AS uuid), subject_id)",
             leadId: "COALESCE(CAST(:leadId AS uuid), lead_id)",
-            updatedAt: AT,
+            leasedAt: AT,
         })
         expect(fake.callsOf("setParameters")).toEqual([[{ subjectType: "order", subjectId: "o-1", leadId: null }]])
         expect(fake.callsOf("where")[0]).toEqual(["id = :id", { id: "item-1" }])
@@ -386,7 +384,7 @@ describe("WorkItemsService persistence", () => {
         const item = await (await build(em)).markFailed("item-1", "boom")
 
         expect(item.status).toBe("failed")
-        expect(singleCall(fake, "set")).toEqual({ status: "failed", error: "boom", updatedAt: AT })
+        expect(singleCall(fake, "set")).toEqual({ status: "failed", error: "boom", leasedAt: AT })
     })
 
     it("puts an item in front of a person", async () => {
@@ -411,7 +409,7 @@ describe("WorkItemsService persistence", () => {
             executionId: "exec-1",
             decidedPath: null,
             error: null,
-            updatedAt: AT,
+            leasedAt: AT,
         })
     })
 })
@@ -444,7 +442,7 @@ describe("WorkItemsService persistence", () => {
             decidedPath: "human",
             proposal,
             completedAt: AT,
-            updatedAt: AT,
+            leasedAt: AT,
             result: { summary: "No" },
         })
     })

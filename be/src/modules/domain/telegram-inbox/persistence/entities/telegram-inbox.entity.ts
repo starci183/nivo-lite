@@ -1,13 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { TelegramInboxPayload } from "../../telegram-inbox.contracts"
 
 @Entity({ schema: "public", name: "telegram_inbox" })
 /** One Telegram webhook delivery receipt: `(provider, delivery_id)` is unique, so a redelivery inserts nothing. */
-export class TelegramInboxEntity {
-    /** The receipt id, completed after processing succeeds. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class TelegramInboxEntity extends UuidAbstractEntity {
     /** The provider name of the delivery. */
     @Column({ name: "provider", type: "text" })
     provider!: string

@@ -1,13 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { WorkspaceRole } from "../../workspace-members.contracts"
 
 @Entity({ schema: "public", name: "workspace_members" })
 /** One seat of a person in a workspace. */
-export class WorkspaceMemberEntity {
-    /** The seat id: what steps, grants and decisions name, not the Auth account. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class WorkspaceMemberEntity extends UuidAbstractEntity {
     /** The workspace the seat belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -31,8 +29,4 @@ export class WorkspaceMemberEntity {
     /** Whether the seat is active or disabled. */
     @Column({ name: "status", type: "text", default: () => "'active'::text" })
     status!: "active" | "disabled"
-
-    /** When the seat was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

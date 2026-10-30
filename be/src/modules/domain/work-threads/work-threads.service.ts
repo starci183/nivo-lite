@@ -124,7 +124,7 @@ export class WorkThreadsService {
         threadId: string,
         status: ThreadStatus,
     ): Promise<void> {
-        await manager.update(WorkThreadEntity, { workspaceId, id: threadId }, { status, updatedAt: () => "now()" })
+        await manager.update(WorkThreadEntity, { workspaceId, id: threadId }, { status })
     }
 
     /** A read of the threads of one workspace; the caller adds its own filter, order, bound and lock. */

@@ -113,11 +113,10 @@ describe("VideoBrandKitsService (continued)", () => {
                     secondaryColor: "#5a4632",
                     shopName: "H".repeat(60),
                     updatedBy: "person-1",
-                    updatedAt: "now()",
                 },
             ])
             expect(write.callsOf("orUpdate")).toEqual([
-                [["primary_color", "secondary_color", "shop_name", "updated_by", "updated_at"], ["workspace_id"]],
+                [["primary_color", "secondary_color", "shop_name", "updated_by"], ["workspace_id"]],
             ])
         })
 
@@ -131,7 +130,7 @@ describe("VideoBrandKitsService (continued)", () => {
             })
 
             expect(write.callsOf("orUpdate")).toEqual([
-                [["primary_color", "secondary_color", "updated_by", "updated_at"], ["workspace_id"]],
+                [["primary_color", "secondary_color", "updated_by"], ["workspace_id"]],
             ])
         })
 

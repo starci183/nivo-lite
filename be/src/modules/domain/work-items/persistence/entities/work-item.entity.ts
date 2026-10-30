@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type {
     DecidedPath,
     EvidenceState,
@@ -11,11 +13,7 @@ import type {
 
 @Entity({ schema: "public", name: "work_items" })
 /** One step of work in a workspace: the unit the agents queue, perform, hold for a person and close. */
-export class WorkItemEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class WorkItemEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -96,13 +94,9 @@ export class WorkItemEntity {
     @Column({ name: "execution_id", type: "uuid", nullable: true })
     executionId!: string | null
 
-    /** When the row was written. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When the row last changed; also the lease of a claimed item. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
+    /** When a worker last held the item: the claim lease; null while nobody has. */
+    @Column({ name: "leased_at", type: "timestamptz", nullable: true })
+    leasedAt!: Date | null
 
     /** When the work finished. */
     @Column({ name: "completed_at", type: "timestamptz", nullable: true })

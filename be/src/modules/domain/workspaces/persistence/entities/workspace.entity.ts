@@ -1,15 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** The billing states the table checks. */
 export type WorkspaceState = "pending_payment" | "active" | "past_due" | "cancelled"
 
 @Entity({ schema: "public", name: "workspaces" })
 /** One workspace: the tenant every other row hangs off, and the billing facts support changes by hand. */
-export class WorkspaceEntity {
-    /** The workspace id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class WorkspaceEntity extends UuidAbstractEntity {
     /** The Auth user who owns the workspace. */
     @Column({ name: "owner_id", type: "uuid" })
     ownerId!: string
@@ -17,10 +15,6 @@ export class WorkspaceEntity {
     /** The workspace name. */
     @Column({ name: "name", type: "text" })
     name!: string
-
-    /** When the workspace was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The billing status. */
     @Column({ name: "status", type: "text", default: () => "'active'" })

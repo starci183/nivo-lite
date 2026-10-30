@@ -1,5 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
 import type { ValueTransformer } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** Reads a Postgres `bigint` (which the driver returns as text) as a number; VND amounts fit a double. */
 const bigintAsNumber: ValueTransformer = {
@@ -18,11 +20,7 @@ export type TransactionDirection = "credit" | "debit"
 
 @Entity({ schema: "public", name: "transactions" })
 /** One payment of a workspace: recorded unmatched, then matched to an invoice or sent to review. */
-export class TransactionEntity {
-    /** The transaction id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class TransactionEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -58,10 +56,6 @@ export class TransactionEntity {
     /** The lifecycle state. */
     @Column({ name: "status", type: "text", default: () => "'unmatched'" })
     status!: TransactionState
-
-    /** When the record was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** Money in or out of the workspace's account. */
     @Column({ name: "direction", type: "text", default: () => "'credit'" })

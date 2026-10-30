@@ -45,11 +45,7 @@ export class VideoDelegationsService {
 
     /** Links the render queued for a delegation. */
     async linkRender(delegationId: string, renderId: string): Promise<void> {
-        await this.entityManager.update(
-            VideoDelegationEntity,
-            { id: delegationId },
-            { renderId, updatedAt: () => "now()" },
-        )
+        await this.entityManager.update(VideoDelegationEntity, { id: delegationId }, { renderId })
     }
 
     /** The still rendering delegation of a settled render, with what its cards show; null when nobody delegated it. */
@@ -105,18 +101,14 @@ export class VideoDelegationsService {
 
     /** Keeps the card AI Editor posted and the work item that decides it. */
     async saveCard(delegationId: string, approvalWorkItemId: string, card: object): Promise<void> {
-        await this.entityManager.update(
-            VideoDelegationEntity,
-            { id: delegationId },
-            { approvalWorkItemId, card, updatedAt: () => "now()" },
-        )
+        await this.entityManager.update(VideoDelegationEntity, { id: delegationId }, { approvalWorkItemId, card })
     }
 
     private async settle(delegationId: string, status: string, error: OptionalFailureReason): Promise<boolean> {
         const result = await this.entityManager.update(
             VideoDelegationEntity,
             { id: delegationId, status: "rendering" },
-            { status, error, updatedAt: () => "now()" },
+            { status, error },
         )
         return (result.affected ?? 0) > 0
     }

@@ -12,6 +12,7 @@ export interface SeatRow {
     readonly displayName: string
     readonly status: "active" | "disabled"
     readonly createdAt: Date
+    readonly updatedAt: Date
 }
 
 const baseSeat = builder<SeatRow>({
@@ -23,6 +24,7 @@ const baseSeat = builder<SeatRow>({
     displayName: "An",
     status: "active",
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 })
 
 /** A seat of the first workspace: the staff seat of user-1 named An, active; each argument changes one fact of it. */

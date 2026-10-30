@@ -22,7 +22,6 @@ import {
     unrelated,
 } from "@tests/fixtures/builders/thread-work-turns.builder"
 import type { Doubles } from "@tests/fixtures/builders/thread-work-turns.builder"
-import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { ThreadWorkEntity } from "./persistence/entities"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
 
@@ -41,13 +40,11 @@ export const moved = (
             ...(requestId === null ? {} : { approvalRequestId: requestId }),
             waitingMemberId: memberId,
             missingFields: missing,
-            updatedAt: anyFunction(),
         },
     ] as const
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
-const anyFunction = (): unknown => expect.any(Function)
 const anything = (): unknown => expect.anything()
 
 /** Builds thread turns with explicit kit doubles for every constructor dependency. */
@@ -243,7 +240,6 @@ const registerMemberAsk = () => {
                 }),
             )
             expect(em.update).toHaveBeenCalledWith(...moved("waiting_member", null, "m-van", ["tax_code", "po"]))
-            expect(evaluatedValues(em.update.mock.calls[0]?.[2]).updatedAt).toBe("now()")
         })
 
         it("missing data with nobody named: asks the owner of the agent; a stopped chain waits for nobody", async () => {
@@ -285,7 +281,6 @@ const registerDone = () => {
                 }),
             )
             expect(em.update).toHaveBeenCalledWith(...moved("done"))
-            expect(evaluatedValues(em.update.mock.calls[0]?.[2]).updatedAt).toBe("now()")
             expect(engine.runWork).toHaveBeenCalledWith(
                 { workspaceId: "ws-1", actor: "AI Sales", locale: "vi" },
                 objectLike({

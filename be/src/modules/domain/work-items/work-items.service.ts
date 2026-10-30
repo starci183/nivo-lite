@@ -109,7 +109,7 @@ export class WorkItemsService {
                     reason: null,
                     reasons: [],
                     completedAt: null,
-                    updatedAt: () => "created_at",
+                    leasedAt: null,
                 },
             ),
         )
@@ -131,7 +131,7 @@ export class WorkItemsService {
                 {
                     status: "rejected",
                     completedAt: now,
-                    updatedAt: now,
+                    leasedAt: now,
                 },
             ),
         )
@@ -200,7 +200,7 @@ export class WorkItemsService {
                 { workspaceId, id },
                 `status = 'queued' AND ${FREE_TO_TAKE_UNALIASED}`,
                 { now, lease: CLAIM_LEASE_SECONDS },
-                { updatedAt: now },
+                { leasedAt: now },
             ),
         )
     }
@@ -256,7 +256,7 @@ export class WorkItemsService {
                 {},
                 {
                     status: "queued",
-                    updatedAt: this.clock.now(),
+                    leasedAt: this.clock.now(),
                 },
             ),
         )
@@ -275,7 +275,7 @@ export class WorkItemsService {
                     subjectType: () => "COALESCE(CAST(:subjectType AS text), subject_type)",
                     subjectId: () => "COALESCE(CAST(:subjectId AS uuid), subject_id)",
                     leadId: () => "COALESCE(CAST(:leadId AS uuid), lead_id)",
-                    updatedAt: this.clock.now(),
+                    leasedAt: this.clock.now(),
                 },
             ),
         )
@@ -289,7 +289,7 @@ export class WorkItemsService {
                 { id },
                 null,
                 {},
-                { status: "failed", error, updatedAt: this.clock.now() },
+                { status: "failed", error, leasedAt: this.clock.now() },
             ),
         )
     }
@@ -311,7 +311,7 @@ export class WorkItemsService {
                     executionId: waiting.executionId,
                     decidedPath: null,
                     error: null,
-                    updatedAt: this.clock.now(),
+                    leasedAt: this.clock.now(),
                 },
             ),
         )
@@ -331,7 +331,7 @@ export class WorkItemsService {
             {},
             {
                 proposal,
-                updatedAt: this.clock.now(),
+                leasedAt: this.clock.now(),
             },
             "id",
         )
@@ -347,7 +347,7 @@ export class WorkItemsService {
             {},
             {
                 assignedStaffId: staffId,
-                updatedAt: this.clock.now(),
+                leasedAt: this.clock.now(),
             },
             "id",
         )
@@ -375,7 +375,7 @@ export class WorkItemsService {
                 decidedPath: "auto",
                 reason: "routine",
                 completedAt: now,
-                updatedAt: now,
+                leasedAt: now,
                 evidenceState: "verified",
                 result,
             })
@@ -406,7 +406,7 @@ export class WorkItemsService {
                     result: done.result,
                     evidenceState: done.evidence,
                     completedAt: now,
-                    updatedAt: now,
+                    leasedAt: now,
                     error: null,
                     leadId: () => "COALESCE(CAST(:leadId AS uuid), lead_id)",
                     // An automatic path also records the routine reason.
@@ -432,7 +432,7 @@ export class WorkItemsService {
                     decidedPath: "human",
                     proposal,
                     completedAt: now,
-                    updatedAt: now,
+                    leasedAt: now,
                     result,
                 },
             ),
@@ -452,7 +452,7 @@ export class WorkItemsService {
                 missingFields: [...still.missing],
                 reason: still.reason,
                 reasons: [...still.reasons],
-                updatedAt: this.clock.now(),
+                leasedAt: this.clock.now(),
             },
         )
     }

@@ -1,15 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** Where a thread stands, as the table checks it. */
 export type WorkThreadState = "open" | "waiting" | "done" | "stopped"
 
 @Entity({ schema: "public", name: "work_threads" })
 /** One work thread of a workspace: members and agents write in it, optionally about one lead or one order. */
-export class WorkThreadEntity {
-    /** The thread id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class WorkThreadEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -33,12 +31,4 @@ export class WorkThreadEntity {
     /** The member id of whoever opened it. */
     @Column({ name: "created_by", type: "uuid" })
     createdBy!: string
-
-    /** When it opened. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When it last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

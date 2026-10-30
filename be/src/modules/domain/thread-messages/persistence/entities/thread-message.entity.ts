@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { ApprovalCard, MentionView } from "../../thread-messages.contracts"
 
 /** Who wrote a message. */
@@ -6,11 +8,7 @@ export type ThreadAuthorKind = "member" | "agent"
 
 @Entity({ schema: "public", name: "thread_messages" })
 /** One line written into a work thread by a member or an agent, with the tags and the approval card it carries. */
-export class ThreadMessageEntity {
-    /** The message id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ThreadMessageEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -46,8 +44,4 @@ export class ThreadMessageEntity {
     /** The approval request the card follows, unique when set. */
     @Column({ name: "approval_request_id", type: "uuid", nullable: true })
     approvalRequestId!: string | null
-
-    /** When it was written. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

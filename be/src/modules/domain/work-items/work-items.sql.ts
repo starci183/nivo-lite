@@ -1,10 +1,10 @@
-/** An item nobody touched since it was written, or whose last touch is older than the lease: free to take. */
+/** An item nobody has leased, or whose last lease is older than the lease length: free to take. */
 export const FREE_TO_TAKE =
-    "(w.updated_at = w.created_at OR w.updated_at < CAST(:now AS timestamptz) - make_interval(secs => CAST(:lease AS int)))"
+    "(w.leased_at IS NULL OR w.leased_at < CAST(:now AS timestamptz) - make_interval(secs => CAST(:lease AS int)))"
 
 /** The same rule for the guarded updates, which have no alias. */
 export const FREE_TO_TAKE_UNALIASED =
-    "(updated_at = created_at OR updated_at < CAST(:now AS timestamptz) - make_interval(secs => CAST(:lease AS int)))"
+    "(leased_at IS NULL OR leased_at < CAST(:now AS timestamptz) - make_interval(secs => CAST(:lease AS int)))"
 
 /** The columns of the accounting book's lineage read. */
 export const ACCOUNTING_COLUMNS = [

@@ -11,6 +11,7 @@ export interface StoredInviteRow {
     readonly tokenHash: string
     readonly invitedBy: string | null
     readonly createdAt: Date
+    readonly updatedAt: Date
     readonly expiresAt: Date
     readonly acceptedAt: Date | null
     readonly acceptedBy: string | null
@@ -29,6 +30,7 @@ export const storedInviteOf = (row: ReturnType<typeof inviteRowOf>): StoredInvit
     tokenHash: "stored-hash",
     invitedBy: null,
     createdAt: new Date("2026-10-12T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-12T00:00:00.000Z"),
     expiresAt: new Date(row.expires_at),
     acceptedAt: optionalDate(row.accepted_at),
     acceptedBy: null,

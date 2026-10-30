@@ -71,6 +71,7 @@ export const entityOf = (record: WorkItemRecord = rowOf()): WorkItemEntity =>
         executionId: record.execution_id,
         createdAt: record.created_at,
         updatedAt: record.updated_at,
+        leasedAt: null,
         completedAt: record.completed_at,
         installationId: record.installation_id,
     })

@@ -1,8 +1,10 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
+import { AbstractEntity } from "@modules/platform/database"
+
 @Entity({ schema: "public", name: "video_brand_kits" })
 /** The video brand kit of one workspace: colors, logo, music and voice. */
-export class VideoBrandKitEntity {
+export class VideoBrandKitEntity extends AbstractEntity {
     /** The workspace the kit belongs to. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -34,8 +36,4 @@ export class VideoBrandKitEntity {
     /** The last editor. */
     @Column({ name: "updated_by", type: "uuid", nullable: true })
     updatedBy!: string | null
-
-    /** When the kit last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { ChainStepKind, ChainStepStatus } from "../../work-chains.contracts"
 
 /** The party a step is tagged to, as the jsonb column stores it. */
@@ -11,11 +13,7 @@ export interface WorkChainTarget {
 
 @Entity({ schema: "public", name: "work_chains" })
 /** One step of a work thread's chain: who acted, what for, and where the step stands. */
-export class WorkChainEntity {
-    /** The step id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class WorkChainEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

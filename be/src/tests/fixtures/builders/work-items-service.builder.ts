@@ -8,7 +8,7 @@ export const AUTO_DONE_COLUMNS = {
     result: { summary: "Sent", href: "/q/1" },
     evidenceState: "captured",
     completedAt: AT,
-    updatedAt: AT,
+    leasedAt: AT,
     error: null,
     leadId: "COALESCE(CAST(:leadId AS uuid), lead_id)",
     reason: "CASE WHEN CAST(:path AS text) = 'auto' THEN 'routine' ELSE reason END",
@@ -23,5 +23,5 @@ export const STILL_WAITING_COLUMNS = {
     missingFields: ["need"],
     reason: "missing_data",
     reasons: ["missing_data"],
-    updatedAt: AT,
+    leasedAt: AT,
 }

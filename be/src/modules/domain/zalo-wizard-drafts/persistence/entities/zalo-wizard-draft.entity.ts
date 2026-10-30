@@ -1,8 +1,10 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
+import { AbstractEntity } from "@modules/platform/database"
+
 @Entity({ schema: "public", name: "zalo_wizard_drafts" })
 /** The keys the Zalo wizard handed over for a connection while the back end seals them. */
-export class ZaloWizardDraftEntity {
+export class ZaloWizardDraftEntity extends AbstractEntity {
     /** The connection the keys belong to. */
     @PrimaryColumn({ name: "connection_id", type: "uuid" })
     connectionId!: string
@@ -18,8 +20,4 @@ export class ZaloWizardDraftEntity {
     /** The OA Secret Key. */
     @Column({ name: "oa_secret", type: "text", nullable: true })
     oaSecret!: string | null
-
-    /** When the wizard wrote the draft. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

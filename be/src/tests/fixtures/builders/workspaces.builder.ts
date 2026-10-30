@@ -6,6 +6,7 @@ export interface WorkspaceRow {
     readonly ownerId: string
     readonly name: string
     readonly createdAt: Date
+    readonly updatedAt: Date
     readonly status: "pending_payment" | "active" | "past_due" | "cancelled"
     readonly planCode: string | null
     readonly paidUntil: Date | null
@@ -24,6 +25,7 @@ export const workspaceRow = entityRowBuilder<WorkspaceRow>({
     ownerId: "owner-1",
     name: "Quan Ca Phe",
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
     status: "active",
     planCode: null,
     paidUntil: null,

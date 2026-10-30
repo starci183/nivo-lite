@@ -292,7 +292,7 @@ export interface WorkItemRecord {
     execution_id: string | null
     /** When the row was written. */
     created_at: Date
-    /** When the row last changed; also the lease of a claimed item. */
+    /** When the row last changed. */
     updated_at: Date
     /** When the work finished. */
     completed_at: Date | null

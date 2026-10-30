@@ -1,13 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { ZaloReceiptPayload } from "../../zalo-inbox.contracts"
 
 @Entity({ schema: "public", name: "zalo_inbox" })
 /** One Zalo webhook delivery receipt: `(provider, delivery_id)` is unique, so a redelivery inserts nothing. */
-export class ZaloInboxEntity {
-    /** The receipt id, completed after processing succeeds. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ZaloInboxEntity extends UuidAbstractEntity {
     /** The provider name of the delivery. */
     @Column({ name: "provider", type: "text" })
     provider!: string

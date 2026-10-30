@@ -141,7 +141,6 @@ export class ThreadWorkTurnsService {
                 ...(move.requestId === null ? {} : { approvalRequestId: move.requestId }),
                 waitingMemberId: move.memberId,
                 missingFields: [...move.missing],
-                updatedAt: () => "now()",
             },
         )
         return move.state

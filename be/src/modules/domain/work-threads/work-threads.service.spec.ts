@@ -4,7 +4,6 @@ import { LeadReadService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { normalizePage } from "@modules/platform/pagination"
-import { writeExpressionOf } from "@tests/fixtures/builders/write-expression.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { WorkThreadsErrorCode } from "./errors/work-threads.error"
@@ -12,9 +11,6 @@ import { WorkThreadEntity } from "./persistence/entities"
 import { THREAD_COLUMNS, THREAD_RETURNING } from "./persistence/work-thread.query"
 import { WorkThreadsService } from "./work-threads.service"
 import type { WorkThreadRecord } from "./work-threads.contracts"
-
-/** The any-function matcher, typed `unknown` so it flows into any slot. */
-const anyFunction = (): unknown => expect.any(Function)
 
 const threadRow: WorkThreadRecord = {
     id: "thread-1",
@@ -281,9 +277,8 @@ const registerStatus = () => {
             expect(em.update).toHaveBeenCalledWith(
                 WorkThreadEntity,
                 { workspaceId: "ws-1", id: "thread-1" },
-                { status: "waiting", updatedAt: anyFunction() },
+                { status: "waiting" },
             )
-            expect(writeExpressionOf(em.update.mock.calls[0]?.[2], "updatedAt")).toBe("now()")
         })
     })
 }

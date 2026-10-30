@@ -1,13 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { ThreadWorkState } from "../../thread-work.contracts"
 
 @Entity({ schema: "public", name: "thread_work" })
 /** One piece of work an agent does in a work thread, tied to the work item the engine runs; a work item is recorded once. */
-export class ThreadWorkEntity {
-    /** The row id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ThreadWorkEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -39,12 +37,4 @@ export class ThreadWorkEntity {
     /** The fields it asked for. */
     @Column({ name: "missing_fields", type: "text", array: true, default: () => "'{}'::text[]" })
     missingFields!: Array<string>
-
-    /** When the row was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When the work last moved. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }
