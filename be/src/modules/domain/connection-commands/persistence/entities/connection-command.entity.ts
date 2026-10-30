@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "connection_commands" })
 /** One row of public.connection_commands: a console command a member submitted, until its outcome is read back. */
-export class ConnectionCommandEntity {
-    /** The command id the caller polls for its result. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ConnectionCommandEntity extends UuidAbstractEntity {
     /** The workspace the command acts in; every effect stays inside it. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -30,10 +27,6 @@ export class ConnectionCommandEntity {
     /** What the command answered, written when it is done. */
     @Column({ name: "outcome", type: "jsonb", nullable: true })
     outcome!: object | null
-
-    /** The created at. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The finished at. */
     @Column({ name: "finished_at", type: "timestamptz", nullable: true })

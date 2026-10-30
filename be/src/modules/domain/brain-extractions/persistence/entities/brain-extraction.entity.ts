@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "brain_extractions" })
 /** One row of public.brain_extractions. */
-export class BrainExtractionEntity {
+export class BrainExtractionEntity extends AbstractEntity {
     /** The source id. */
     @PrimaryColumn({ name: "source_id", type: "uuid" })
     sourceId!: string
@@ -50,8 +51,4 @@ export class BrainExtractionEntity {
     /** The orphan fact ids. */
     @Column({ name: "orphan_fact_ids", type: "uuid", array: true, default: () => "'{}'::uuid[]" })
     orphanFactIds!: Array<string>
-
-    /** The updated at. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

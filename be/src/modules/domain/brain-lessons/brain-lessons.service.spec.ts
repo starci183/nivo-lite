@@ -295,6 +295,8 @@ const rowOf = entityRowBuilder<BrainLessonEntity>({
     proposedAt: new Date(AT),
     decidedBy: null,
     decidedAt: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 const lesson = {

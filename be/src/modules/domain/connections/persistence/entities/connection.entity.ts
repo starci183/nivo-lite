@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "connections" })
 /** One row of public.connections: a workspace's link to one outside provider. */
-export class ConnectionEntity {
-    /** The connection id every command and grant refers to. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ConnectionEntity extends UuidAbstractEntity {
     /** The workspace that owns the connection. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -34,14 +31,6 @@ export class ConnectionEntity {
     /** The member who created the connection; null for system-created ones. */
     @Column({ name: "created_by", type: "uuid", nullable: true })
     createdBy!: string | null
-
-    /** When the connection was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When the connection last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** `test` or `live`. */
     @Column({ name: "environment", type: "text", default: () => "'live'::text" })

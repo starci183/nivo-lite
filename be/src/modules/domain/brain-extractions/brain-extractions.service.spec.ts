@@ -32,6 +32,7 @@ const rowOf = entityRowBuilder<BrainExtractionEntity>({
     attempts: 1,
     orphanFactIds: ["f1", "f2"],
     updatedAt: new Date("2026-10-13T02:00:00.000Z"),
+    createdAt: new Date("2026-10-13T02:00:00.000Z"),
 })
 
 /** Every update the double saw: the entity, the filter and the changes with their function expressions named. */
@@ -157,7 +158,6 @@ describe("BrainExtractionsService", () => {
                 windowsDone: 0,
                 attempts: 0,
                 orphanFactIds: ["f1", "f2"],
-                updatedAt: "now()",
             }
             const upserts = () => evaluatedCalls(em.upsert.mock.calls, 1)
             expect(upserts()).toEqual([["BrainExtractionEntity", started, ["sourceId"]]])
@@ -195,7 +195,6 @@ describe("BrainExtractionsService", () => {
                         windowsTotal: 5,
                         error: "BRAIN_NOTE_MODEL_BUSY",
                         attempts: 3,
-                        updatedAt: "now()",
                     },
                 ],
             ])
@@ -225,7 +224,6 @@ describe("BrainExtractionsService", () => {
                         windowsTotal: 5,
                         error: null,
                         attempts: 0,
-                        updatedAt: "now()",
                     },
                 ],
             ])
@@ -245,7 +243,7 @@ describe("BrainExtractionsService", () => {
                 [
                     "BrainExtractionEntity",
                     { workspaceId: WS, sourceId: "s1" },
-                    { status: "done", error: null, model: "model-1", orphanFactIds: [], updatedAt: "now()" },
+                    { status: "done", error: null, model: "model-1", orphanFactIds: [] },
                 ],
             ])
         })
@@ -264,7 +262,7 @@ describe("BrainExtractionsService settling", () => {
                 [
                     "BrainExtractionEntity",
                     { workspaceId: WS, sourceId: "s1", status: Not("done") },
-                    { status: "failed", error: ExtractionNote.Aborted, updatedAt: "now()" },
+                    { status: "failed", error: ExtractionNote.Aborted },
                 ],
             ])
         })

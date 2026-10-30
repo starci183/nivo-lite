@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "connection_secrets" })
 /** One row of public.connection_secrets: the sealed credential of a connection. */
-export class ConnectionSecretEntity {
+export class ConnectionSecretEntity extends AbstractEntity {
     /** The connection the credential belongs to. */
     @PrimaryColumn({ name: "connection_id", type: "uuid" })
     connectionId!: string

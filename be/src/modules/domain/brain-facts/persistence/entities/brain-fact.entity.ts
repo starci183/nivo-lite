@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type {
     BrainSubjectType,
     Evidence,
@@ -10,11 +11,7 @@ import type {
 
 @Entity({ schema: "public", name: "brain_facts" })
 /** One row of public.brain_facts: a thing the business knows, with where it came from and when it holds. */
-export class BrainFactEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class BrainFactEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -114,10 +111,6 @@ export class BrainFactEntity {
     /** The note given with the decision. */
     @Column({ name: "decision_note", type: "text", nullable: true })
     decisionNote!: string | null
-
-    /** When the row last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** Whether the proposal sets a value or retires one. */
     @Column({ name: "proposal_kind", type: "text", default: () => "'set'::text" })

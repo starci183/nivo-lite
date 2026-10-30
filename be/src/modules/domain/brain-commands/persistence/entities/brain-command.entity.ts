@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "brain_commands" })
 /** One row of public.brain_commands. */
-export class BrainCommandEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class BrainCommandEntity extends UuidAbstractEntity {
     /** The workspace id. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -34,10 +31,6 @@ export class BrainCommandEntity {
     /** The error code. */
     @Column({ name: "error_code", type: "text", nullable: true })
     errorCode!: string | null
-
-    /** The created at. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The finished at. */
     @Column({ name: "finished_at", type: "timestamptz", nullable: true })

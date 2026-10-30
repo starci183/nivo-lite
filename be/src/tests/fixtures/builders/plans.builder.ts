@@ -26,6 +26,8 @@ export const planOf = builder<PlanEntity>({
     individual: false,
     perSeat: false,
     listed: true,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** The plan a new workspace starts on, with the default price and no annual discount. */
@@ -53,6 +55,8 @@ export const teamTier = builder<PlanUsageTierEntity>({
     priceVnd: 200000,
     perSeat: true,
     sort: 1,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** A usage tier of a plan, the allowance of which is paid per seat. */
@@ -62,6 +66,8 @@ export const tierOf = builder<PlanUsageTierEntity>({
     priceVnd: 50000,
     perSeat: true,
     sort: 0,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** The 1000-credit per-seat tier of the starter plan. */

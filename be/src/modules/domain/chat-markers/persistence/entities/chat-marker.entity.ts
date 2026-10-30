@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "chat_markers" })
 /** One row of public.chat_markers: what one member has received, read and muted in one chat target. */
-export class ChatMarkerEntity {
+export class ChatMarkerEntity extends AbstractEntity {
     /** The workspace. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

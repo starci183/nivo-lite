@@ -27,6 +27,8 @@ const rowOf = (changes: Partial<BrainLessonEntity> = {}): BrainLessonEntity => (
     proposedAt: new Date("2026-10-10T10:00:00.000Z"),
     decidedBy: "u2",
     decidedAt: new Date("2026-10-12T10:00:00.000Z"),
+    createdAt: new Date("2026-10-10T10:00:00.000Z"),
+    updatedAt: new Date("2026-10-12T10:00:00.000Z"),
     ...changes,
 })
 

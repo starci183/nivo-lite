@@ -366,7 +366,7 @@ export class BrainFactsService {
         return this.changed(
             em,
             { workspaceId, id: fact.id },
-            { evidence: () => ":evidence::jsonb", trust: Math.max(fact.trust, trust), updatedAt: () => "now()" },
+            { evidence: () => ":evidence::jsonb", trust: Math.max(fact.trust, trust) },
             BrainFactsErrorCode.NotProposed,
             { evidence: JSON.stringify(mergeEvidence(fact.evidence, evidence)) },
         )
@@ -403,13 +403,13 @@ export class BrainFactsService {
         await tx.update(
             BrainFactEntity,
             { ...factKeyOf(workspaceId, fact.subjectKey, fact.attribute, fact.installationId), status: "scheduled" },
-            { status: "rejected", decisionNote: "Replaced by a newer schedule", updatedAt: () => "now()" },
+            { status: "rejected", decisionNote: "Replaced by a newer schedule" },
         )
         if (currentId !== null) {
             await tx
                 .createQueryBuilder(BrainFactEntity, "bf")
                 .update()
-                .set({ validTo: () => ":validTo::timestamptz", updatedAt: () => "now()" })
+                .set({ validTo: () => ":validTo::timestamptz" })
                 .where({ workspaceId, id: currentId, status: "active" })
                 .setParameter("validTo", fact.validFrom)
                 .execute()

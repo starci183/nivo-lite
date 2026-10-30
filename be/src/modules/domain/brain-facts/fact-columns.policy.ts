@@ -73,6 +73,7 @@ export type NewFact = Omit<
     | "decidedBy"
     | "decidedAt"
     | "decisionNote"
+    | "createdAt"
     | "updatedAt"
     | "supersedesId"
     | "validFrom"

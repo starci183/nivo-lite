@@ -57,6 +57,7 @@ export const rowOf = entityRowBuilder<BrainFactEntity>({
     decidedAt: null,
     decisionNote: null,
     updatedAt: new Date(AT),
+    createdAt: new Date(AT),
 })
 
 /** Shared, complete test data for the capability cases. */
