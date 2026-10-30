@@ -9,7 +9,6 @@ import { LeadsService } from "./leads.service"
 import { LeadReadService } from "./lead-read.service"
 import { LeadAutomationReadService } from "./lead-automation-read.service"
 import { LeadGenWorkbenchService } from "./leadgen-workbench.service"
-import { LeadGenCommentService } from "./leadgen-comment.service"
 
 @Module({})
 /** The journey of a lead over the primary Supabase PostgreSQL connection. */
@@ -29,7 +28,6 @@ export class LeadsModule extends ConfigurableModuleClass {
                 { provide: RESPONSIBILITY_LEAD_DESK, useExisting: LeadDeskService },
                 { provide: OFFICE_ROOMS_LEADS, useExisting: LeadReadService },
                 LeadGenWorkbenchService,
-                LeadGenCommentService,
             ],
             exports: [
                 RESPONSIBILITY_LEAD_DESK,
@@ -39,7 +37,6 @@ export class LeadsModule extends ConfigurableModuleClass {
                 LeadReadService,
                 LeadAutomationReadService,
                 LeadGenWorkbenchService,
-                LeadGenCommentService,
             ],
         }
     }

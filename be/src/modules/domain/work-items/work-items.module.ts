@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./work-items.module-definition"
+import { WORK_ITEMS_LEADS } from "./work-items.decorators"
 import { WorkItemsService } from "./work-items.service"
 import { WorkItemsActivityService } from "./work-items-activity.service"
 import { WorkItemsReplyProgressService } from "./work-items-reply-progress.service"
@@ -20,6 +21,7 @@ export class WorkItemsModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                { provide: WORK_ITEMS_LEADS, useExisting: options.ports.leads },
                 WorkItemsService,
                 WorkItemsReadService,
                 WorkItemsActivityService,

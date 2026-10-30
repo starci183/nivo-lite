@@ -3,20 +3,21 @@ import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { LeadReadService } from "@modules/domain/leads"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { DashboardListQuery } from "./work-items-activity.contracts"
+import { WORK_ITEMS_LEADS } from "./work-items.decorators"
+import type { WorkItemsLeadDirectory } from "./work-items.port"
 import { WorkItemsActivityService } from "./work-items-activity.service"
 import { WorkItemEntity } from "./persistence/entities"
 
 const buildWith = async (entityManager: MockEntityManager) => {
-    const leads = mock<LeadReadService>()
+    const leads = mock<WorkItemsLeadDirectory>()
     leads.cardsOf.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkItemsActivityService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: LeadReadService, useValue: leads },
+            { provide: WORK_ITEMS_LEADS, useValue: leads },
         ],
     }).compile()
     return { service: moduleRef.get(WorkItemsActivityService), leads }
