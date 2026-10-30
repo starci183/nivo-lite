@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 /** One alternative unit of an item with its factor to the base unit. */
 export interface InventoryItemUnit {
@@ -10,11 +11,7 @@ export interface InventoryItemUnit {
 
 @Entity({ schema: "public", name: "inventory_items" })
 /** One stock item of a workspace's catalogue. */
-export class InventoryItemEntity {
-    /** The item. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class InventoryItemEntity extends UuidAbstractEntity {
     /** The workspace that owns the item. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -66,12 +63,4 @@ export class InventoryItemEntity {
     /** Whether the item is in use. */
     @Column({ name: "active", type: "boolean", default: () => "true" })
     active!: boolean
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** The last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

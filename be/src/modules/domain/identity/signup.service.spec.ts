@@ -53,6 +53,7 @@ const passwordTokenFor = (purpose: IdentityPasswordTokenEntity["purpose"]): Iden
         createdAt: new Date("2026-11-09T09:00:00.000Z"),
         expiresAt: new Date("2026-11-09T12:00:00.000Z"),
         usedAt: null,
+        updatedAt: new Date("2026-11-09T09:00:00.000Z"),
     })()
 
 const build = async (

@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "inventory_recipe_lines" })
 /** One ingredient of a recipe. */
-export class InventoryRecipeLineEntity {
-    /** The line. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class InventoryRecipeLineEntity extends UuidAbstractEntity {
     /** The workspace that owns the line. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

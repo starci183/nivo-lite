@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "inventory_stock_levels" })
 /** The quantity of one item at one location. */
-export class InventoryStockLevelEntity {
+export class InventoryStockLevelEntity extends AbstractEntity {
     /** The workspace that owns the level. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -18,8 +19,4 @@ export class InventoryStockLevelEntity {
     /** The quantity on hand, decimal text. */
     @Column({ name: "qty", type: "numeric", default: () => "0" })
     qty!: string
-
-    /** The last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

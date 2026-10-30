@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "knowledge_chunks" })
 /** One passage of a knowledge source, with its vector for similarity search. */
-export class KnowledgeChunkEntity {
-    /** The passage id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class KnowledgeChunkEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -34,10 +31,6 @@ export class KnowledgeChunkEntity {
     /** The search vector the database generates from the text. */
     @Column({ name: "fts", type: "tsvector", nullable: true, select: false, insert: false, update: false })
     fts!: string | null
-
-    /** When the passage was stored. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** Who may see the passage: public or internal (the table checks it). */
     @Column({ name: "visibility", type: "text", default: () => "'internal'::text" })

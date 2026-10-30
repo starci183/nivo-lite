@@ -1,22 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
-import type { ValueTransformer } from "typeorm"
-
-/** Reads the pgmq message id, a Postgres `bigint` the driver returns as text, as a number. */
-const idAsNumber: ValueTransformer = {
-    to: (value: number | null | undefined) => value,
-    from: (value: string | null) => (value === null ? null : Number(value)),
-}
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
+import { idAsNumber } from "./id-number-column.mapper"
 
 /** The lifecycle states of an outbox row. */
 export type JobOutboxState = "queued" | "running" | "done" | "failed"
 
 @Entity({ schema: "public", name: "job_outbox" })
 /** One legacy queue delivery row of public.job_outbox; the queue functions own its writes, tests and operators read it. */
-export class JobOutboxEntity {
-    /** The outbox row id: the BullMQ job id of the delivery. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class JobOutboxEntity extends UuidAbstractEntity {
     /** The workspace the delivery belongs to; null for a delivery no workspace owns. */
     @Column({ name: "workspace_id", type: "uuid", nullable: true })
     workspaceId!: string | null
@@ -36,10 +27,6 @@ export class JobOutboxEntity {
     /** The idempotency key, unique per delivery. */
     @Column({ name: "dedupe_key", type: "text" })
     dedupeKey!: string
-
-    /** Creation instant. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When the relay sent it to the broker. */
     @Column({ name: "sent_at", type: "timestamptz", nullable: true })

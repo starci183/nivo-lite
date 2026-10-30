@@ -32,6 +32,7 @@ const rowOf = builder<KnowledgeGapEntity>({
     dismissedBy: null,
     reopenedCount: 0,
     updatedAt: AT,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** Hands a literal to an expectation as a plain object, so it is not mistaken for a hand-built entity row. */
@@ -61,7 +62,6 @@ const NOW: unknown = expect.any(Function)
 const BUMP_SQL = {
     count: "count + 1",
     lastSeenAt: "now()",
-    updatedAt: "now()",
     topic: "coalesce(topic, :subject)",
     attributeGuess: "coalesce(attribute_guess, :attribute)",
     exampleConversationId: "coalesce(example_conversation_id, CAST(:conversationId AS uuid))",
@@ -91,7 +91,6 @@ const NOTHING = { execute: { raw: [] } }
 const BUMP_SET = {
     count: NOW,
     lastSeenAt: NOW,
-    updatedAt: NOW,
     topic: NOW,
     attributeGuess: NOW,
     exampleConversationId: NOW,
@@ -318,8 +317,8 @@ describe("KnowledgeGapsService", () => {
         await service.answer(WS, "g2", "owner")
 
         expect(em.update.mock.calls.map(([, , changes]) => evaluatedValues(changes))).toEqual([
-            { status: "dismissed", dismissedAt: "now()", dismissedBy: "u1", updatedAt: "now()" },
-            { status: "answered", answeredAt: "now()", answeredBy: "owner", updatedAt: "now()" },
+            { status: "dismissed", dismissedAt: "now()", dismissedBy: "u1" },
+            { status: "answered", answeredAt: "now()", answeredBy: "owner" },
         ])
     })
 
@@ -334,12 +333,12 @@ describe("KnowledgeGapsService", () => {
             [
                 KnowledgeGapEntity,
                 plain({ workspaceId: WS, id: "g1", status: Not("answered") }),
-                plain({ status: "dismissed", dismissedAt: NOW, dismissedBy: "u1", updatedAt: NOW }),
+                plain({ status: "dismissed", dismissedAt: NOW, dismissedBy: "u1" }),
             ],
             [
                 KnowledgeGapEntity,
                 plain({ workspaceId: WS, id: "g2", status: "open" }),
-                plain({ status: "answered", answeredAt: NOW, answeredBy: "owner", updatedAt: NOW }),
+                plain({ status: "answered", answeredAt: NOW, answeredBy: "owner" }),
             ],
         ])
     })
@@ -357,7 +356,7 @@ const OPEN_QUERY = [
 const ANSWERED = (id: string, by: string) => [
     KnowledgeGapEntity,
     plain({ workspaceId: WS, id, status: "open" }),
-    plain({ status: "answered", answeredAt: NOW, answeredBy: by, updatedAt: NOW }),
+    plain({ status: "answered", answeredAt: NOW, answeredBy: by }),
 ]
 
 describe("KnowledgeGapsService", () => {

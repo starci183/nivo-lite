@@ -1,15 +1,12 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 /** Where a question gap stands. */
 export type KnowledgeGapStatus = "open" | "answered" | "dismissed"
 
 @Entity({ schema: "public", name: "knowledge_gaps" })
 /** A question customers asked that the brain could not answer. */
-export class KnowledgeGapEntity {
-    /** The gap. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class KnowledgeGapEntity extends UuidAbstractEntity {
     /** The workspace that asked. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -81,8 +78,4 @@ export class KnowledgeGapEntity {
     /** Times asked again after an answer. */
     @Column({ name: "reopened_count", type: "integer", default: () => "0" })
     reopenedCount!: number
-
-    /** The last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

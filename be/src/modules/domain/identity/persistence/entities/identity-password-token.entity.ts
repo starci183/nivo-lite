@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { PasswordPurpose } from "../../identity-auth.contracts"
 
 @Entity({ schema: "public", name: "identity_password_tokens" })
 /** One single-use link token (reset, invite or confirm); only its digest is stored. */
-export class IdentityPasswordTokenEntity {
-    /** The token id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class IdentityPasswordTokenEntity extends UuidAbstractEntity {
     /** The account the link is for. */
     @Column({ name: "user_id", type: "uuid" })
     userId!: string
@@ -19,10 +16,6 @@ export class IdentityPasswordTokenEntity {
     /** What the link does: reset, invite or confirm. */
     @Column({ name: "purpose", type: "text" })
     purpose!: PasswordPurpose
-
-    /** When the token was issued. */
-    @Column({ name: "created_at", type: "timestamptz" })
-    createdAt!: Date
 
     /** When the token stops working. */
     @Column({ name: "expires_at", type: "timestamptz" })

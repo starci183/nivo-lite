@@ -45,6 +45,7 @@ const tokenRow = (usedAt: string | null, expiresAt = "2026-11-09T11:00:00.000Z")
         createdAt: new Date("2026-11-09T08:00:00.000Z"),
         expiresAt: new Date(expiresAt),
         usedAt: usedAt === null ? null : new Date(usedAt),
+        updatedAt: new Date("2026-11-09T08:00:00.000Z"),
     })()
 
 const person = (disabled = false) => [{ id: "u1", email: "an@example.test", last_sign_in_at: null, meta: {}, disabled }]

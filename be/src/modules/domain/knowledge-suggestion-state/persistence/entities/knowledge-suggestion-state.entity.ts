@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "knowledge_suggestion_state" })
 /** What a workspace decided about one knowledge suggestion. */
-export class KnowledgeSuggestionStateEntity {
+export class KnowledgeSuggestionStateEntity extends AbstractEntity {
     /** The workspace. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

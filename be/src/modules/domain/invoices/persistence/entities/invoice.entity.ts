@@ -1,22 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
-import type { ValueTransformer } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
+import { amountTransformer } from "./amount-column.mapper"
 
 /** Where an invoice stands. */
 export type InvoiceStatus = "draft" | "issued" | "paid" | "void"
 
-/** Reads the bigint amount (text from the driver) as a number; invoices bill whole VND. */
-const amountTransformer: ValueTransformer = {
-    to: (value: number | null | undefined) => value,
-    from: (value: string | null): number | null => (value === null ? null : Number(value)),
-}
-
 @Entity({ schema: "public", name: "invoices" })
 /** One invoice of a workspace: for an order, or for one period of a contract. */
-export class InvoiceEntity {
-    /** The invoice. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class InvoiceEntity extends UuidAbstractEntity {
     /** The workspace that issued it. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -56,10 +47,6 @@ export class InvoiceEntity {
     /** When it was paid. */
     @Column({ name: "paid_at", type: "timestamptz", nullable: true })
     paidAt!: Date | null
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The contract it renews (an id of the contracts capability), when it is a renewal. */
     @Column({ name: "contract_id", type: "uuid", nullable: true })

@@ -1,15 +1,12 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 /** How a supplier receives orders. */
 export type SupplierChannel = "email" | "zalo" | "phone"
 
 @Entity({ schema: "public", name: "inventory_suppliers" })
 /** One supplier a workspace buys from. */
-export class InventorySupplierEntity {
-    /** The supplier. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class InventorySupplierEntity extends UuidAbstractEntity {
     /** The workspace that owns the supplier. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -53,8 +50,4 @@ export class InventorySupplierEntity {
     /** Whether the supplier is in use. */
     @Column({ name: "active", type: "boolean", default: () => "true" })
     active!: boolean
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

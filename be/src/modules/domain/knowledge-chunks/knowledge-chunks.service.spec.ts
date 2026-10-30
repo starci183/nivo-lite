@@ -25,6 +25,7 @@ const chunkOf = builder<KnowledgeChunkEntity>({
     visibility: "internal",
     embeddingModel: null,
     installationId: null,
+    updatedAt: new Date("2026-04-01T00:00:00.000Z"),
 })
 
 const build = async (em: ReturnType<typeof mockEntityManager>) => {

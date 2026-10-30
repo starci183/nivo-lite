@@ -51,6 +51,7 @@ const inventoryLocationBase = builder<InventoryLocationEntity>({
     name: "Main",
     isDefault: false,
     createdAt: AT,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** One supplier entity. */
@@ -68,6 +69,7 @@ const inventorySupplierBase = builder<InventorySupplierEntity>({
     note: "",
     active: true,
     createdAt: AT,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** One stock level entity. */
@@ -77,6 +79,7 @@ const inventoryStockLevelBase = builder<InventoryStockLevelEntity>({
     locationId: "loc-1",
     qty: "0",
     updatedAt: AT,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** One stock movement entity. */
@@ -107,6 +110,7 @@ const inventoryRecipeBase = builder<InventoryRecipeEntity>({
     aliases: [],
     active: true,
     createdAt: AT,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** One recipe line entity. */
@@ -116,6 +120,8 @@ const inventoryRecipeLineBase = builder<InventoryRecipeLineEntity>({
     recipeId: "rec-1",
     itemId: "item-1",
     qty: "1",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** One purchase order entity. */
@@ -149,6 +155,8 @@ const inventoryPoLineBase = builder<InventoryPoLineEntity>({
     qtyOrdered: "1",
     qtyReceived: "0",
     unitCostVnd: "0",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** InventoryItemEntity with the fields a spec varies (the parameter is a plain mapped type, not a row literal). */

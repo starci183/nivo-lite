@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 /** Where a knowledge source stands; the table holds it under a CHECK. */
 export type KnowledgeSourceStatus =
@@ -6,11 +7,7 @@ export type KnowledgeSourceStatus =
 
 @Entity({ schema: "public", name: "knowledge_sources" })
 /** One document or link a workspace taught its agents: a row of public.knowledge_sources. */
-export class KnowledgeSourceEntity {
-    /** The source id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class KnowledgeSourceEntity extends UuidAbstractEntity {
     /** The owning workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -46,14 +43,6 @@ export class KnowledgeSourceEntity {
     /** Who added it; null for an API key. */
     @Column({ name: "created_by", type: "uuid", nullable: true })
     createdBy!: string | null
-
-    /** Creation instant. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** Last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** The topic label. */
     @Column({ name: "topic", type: "text", nullable: true })

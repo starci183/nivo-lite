@@ -68,6 +68,7 @@ const eventEntity = builder<InboundEventEntity>({
     leadId: null,
     status: "received",
     createdAt: new Date("2026-10-13T10:00:00.000Z"),
+    updatedAt: new Date("2026-10-13T10:00:00.000Z"),
 })
 
 describe("InboundEventsService recordBankPayment", () => {

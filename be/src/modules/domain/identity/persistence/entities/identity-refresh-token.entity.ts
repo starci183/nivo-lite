@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "identity_refresh_tokens" })
 /** One refresh token of a device session; only its digest is stored, and a spent token is kept for replay detection. */
-export class IdentityRefreshTokenEntity {
-    /** The token id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class IdentityRefreshTokenEntity extends UuidAbstractEntity {
     /** The device session the token belongs to. */
     @Column({ name: "session_id", type: "uuid" })
     sessionId!: string
@@ -18,10 +15,6 @@ export class IdentityRefreshTokenEntity {
     /** The digest of the token, unique. */
     @Column({ name: "token_hash", type: "text" })
     tokenHash!: string
-
-    /** When the token was issued. */
-    @Column({ name: "created_at", type: "timestamptz" })
-    createdAt!: Date
 
     /** When the token stops working. */
     @Column({ name: "expires_at", type: "timestamptz" })

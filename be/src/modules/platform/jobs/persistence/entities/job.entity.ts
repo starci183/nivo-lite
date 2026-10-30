@@ -1,22 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
-import type { ValueTransformer } from "typeorm"
-
-/** Reads the fencing token, a Postgres `bigint` the driver returns as text, as the number the claim contracts carry. */
-const tokenAsNumber: ValueTransformer = {
-    to: (value: number | undefined) => value,
-    from: Number,
-}
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
+import { tokenAsNumber } from "./fencing-token-column.mapper"
 
 /** The lifecycle states of a job row. */
 export type JobState = "running" | "done" | "failed"
 
 @Entity({ schema: "public", name: "jobs" })
 /** One delivery of a queue job: the claim, its lease and the fencing token that rejects a zombie worker. */
-export class JobEntity {
-    /** The id of the job row. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class JobEntity extends UuidAbstractEntity {
     /** The kind of the job. */
     @Column({ name: "kind", type: "varchar" })
     kind!: string
@@ -52,12 +43,4 @@ export class JobEntity {
     /** Why the job failed. */
     @Column({ name: "error", type: "text", nullable: true })
     error!: string | null
-
-    /** When the job row was created. */
-    @Column({ name: "created_at", type: "timestamptz" })
-    createdAt!: Date
-
-    /** When the job row last changed. */
-    @Column({ name: "updated_at", type: "timestamptz" })
-    updatedAt!: Date
 }

@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "inventory_purchase_orders" })
 /** One purchase order to a supplier. */
-export class InventoryPurchaseOrderEntity {
-    /** The order. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class InventoryPurchaseOrderEntity extends UuidAbstractEntity {
     /** The workspace that owns the order. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -66,12 +63,4 @@ export class InventoryPurchaseOrderEntity {
     /** How many reminders were sent. */
     @Column({ name: "reminders", type: "integer", default: () => "0" })
     reminders!: number
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** The last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }
