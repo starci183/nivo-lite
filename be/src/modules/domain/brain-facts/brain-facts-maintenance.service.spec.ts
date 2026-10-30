@@ -1,7 +1,7 @@
 import * as facts from "@tests/fixtures/builders/brain-facts.builder"
 
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
@@ -12,14 +12,15 @@ import { BrainFactsReadService } from "./brain-facts-read.service"
 import { BrainFactEntity } from "./persistence/entities"
 
 const build = async (em: MockEntityManager) => {
+    const reads = mock<BrainFactsReadService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainFactsMaintenanceService,
-            BrainFactsReadService,
+            { provide: BrainFactsReadService, useValue: reads },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
         ],
     }).compile()
-    return moduleRef.get(BrainFactsMaintenanceService)
+    return { service: moduleRef.get(BrainFactsMaintenanceService), reads }
 }
 
 /** A write that answered these facts. */
@@ -38,7 +39,7 @@ const registerWithdraw = () => {
             { execute: {} },
             { execute: {} },
         ])
-        await expect((await build(em)).withdrawSource(facts.WS, "doc-1", "Removed")).resolves.toEqual(["orphan"])
+        await expect((await build(em)).service.withdrawSource(facts.WS, "doc-1", "Removed")).resolves.toEqual(["orphan"])
         expect(read?.callsOf("where")[0]?.[1]).toEqual({
             workspaceId: facts.WS,
             pattern: '[{"kind":"document","ref":"doc-1"}]',
@@ -59,14 +60,14 @@ const registerWithdraw = () => {
             { getMany: [facts.rowOf({ evidence: [facts.PROOF] })] },
             answered(facts.rowOf({ status: "rejected" })),
         ])
-        await expect((await build(em)).withdrawSource(facts.WS, "doc-1", "  ")).resolves.toEqual([])
+        await expect((await build(em)).service.withdrawSource(facts.WS, "doc-1", "  ")).resolves.toEqual([])
         expect(setOf(reject)).toMatchObject({ decidedBy: "NIVO", decisionNote: null })
     })
 
     it("refuses when a proposal it meant to reject was decided meanwhile", async () => {
         const em = mockEntityManager()
         queueQueryBuilders(em, [{ getMany: [facts.rowOf({ evidence: [facts.PROOF] })] }, answered()])
-        await expect((await build(em)).withdrawSource(facts.WS, "doc-1", "Removed")).rejects.toMatchObject({
+        await expect((await build(em)).service.withdrawSource(facts.WS, "doc-1", "Removed")).rejects.toMatchObject({
             code: "BRAIN_FACTS_NOT_PROPOSED",
         })
     })
@@ -75,19 +76,19 @@ const registerWithdraw = () => {
 const registerMaintenance = () => {
     it("promotes due facts, supersedes every former value and counts expirations", async () => {
         const em = mockEntityManager({
-            find: [
-                [BrainFactEntity, [facts.rowOf(), facts.rowOf({ id: "f2" })]],
-                [BrainFactEntity, [facts.rowOf({ id: "old1" }), facts.rowOf({ id: "old2" })]],
-                [BrainFactEntity, []],
-            ],
+            find: [BrainFactEntity, [facts.rowOf(), facts.rowOf({ id: "f2" })]],
             update: [BrainFactEntity, { affected: 1 }],
         })
+        const { service, reads } = await build(em)
+        reads.keyed
+            .mockResolvedValueOnce([facts.factOf({ id: "old1" }), facts.factOf({ id: "old2" })])
+            .mockResolvedValue([])
         const [promoted, , expire] = queueQueryBuilders(em, [
             answered(facts.rowOf({ status: "active" })),
             answered(),
             answered({ id: "e1" }, { id: "e2" }),
         ])
-        await expect((await build(em)).maintain(facts.WS)).resolves.toEqual({
+        await expect(service.maintain(facts.WS)).resolves.toEqual({
             activated: [facts.factOf({ status: "active" })],
             expired: 2,
         })
@@ -104,7 +105,7 @@ const registerMaintenance = () => {
     it("counts no expirations when the statement answers no rows", async () => {
         const em = mockEntityManager({ find: [BrainFactEntity, []] })
         queueQueryBuilders(em, [{ execute: {} }])
-        await expect((await build(em)).maintain(facts.WS)).resolves.toEqual({ activated: [], expired: 0 })
+        await expect((await build(em)).service.maintain(facts.WS)).resolves.toEqual({ activated: [], expired: 0 })
     })
 }
 

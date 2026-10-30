@@ -95,7 +95,7 @@ export interface ApiOptions {
     /** The independent monitor of failed jobs and stale queued work. */
     readonly jobsAlert: ReturnType<typeof parseJobsAlertConfig>
     /** The channel token key that seals provider credentials, and the public site address; the ports are bound by `compose/connections.ts`. */
-    readonly connections: Omit<ReturnType<typeof parseConnectionsConfig>, "ports">
+    readonly connections: ReturnType<typeof parseConnectionsConfig>
     /** The signing key behind outgoing webhooks. */
     readonly webhookConnections: ReturnType<typeof parseWebhookConnectionsConfig>
     /** Google OAuth and Sheets. */

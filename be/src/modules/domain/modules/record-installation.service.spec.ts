@@ -7,14 +7,17 @@ import { RecordInstallationService } from "./record-installation.service"
 const RECORD_ID = "0b6c5d1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
 
 const build = async () => {
-    const sources = [mock<RecordInstallationSource>(), mock<RecordInstallationSource>(), mock<RecordInstallationSource>()]
+    const first = mock<RecordInstallationSource>()
+    const second = mock<RecordInstallationSource>()
+    const third = mock<RecordInstallationSource>()
+    const sources = [first, second, third]
     for (const source of sources) {
         source.installationIdOf.mockResolvedValue(null)
     }
     const moduleRef = await Test.createTestingModule({
         providers: [RecordInstallationService, { provide: RECORD_INSTALLATION_SOURCES, useValue: sources }],
     }).compile()
-    return { service: moduleRef.get(RecordInstallationService), sources }
+    return { service: moduleRef.get(RecordInstallationService), sources, second, third }
 }
 
 describe("RecordInstallationService", () => {
@@ -29,8 +32,7 @@ describe("RecordInstallationService", () => {
     })
 
     it("asks every source and answers the installation of the first that names one", async () => {
-        const { service, sources } = await build()
-        const [, second, third] = sources
+        const { service, sources, second, third } = await build()
         second.installationIdOf.mockResolvedValue("inst-second")
         third.installationIdOf.mockResolvedValue("inst-third")
 

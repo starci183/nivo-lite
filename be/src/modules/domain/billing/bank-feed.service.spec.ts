@@ -430,7 +430,7 @@ describe("BankFeedService booked credit details", () => {
 describe("BankFeedService debits", () => {
     const debitPayload = (amount: number, content: string, eventId: string) => ({
         connection: "c-1",
-        credits: [{ amount, content, eventId, fallbackBankName: "SePay", direction: "debit" }],
+        credits: [{ amount, content, eventId, fallbackBankName: "SePay", direction: "debit" as const }],
     })
     const outgoing = { ...incoming, id: 654, transferType: "out", transferAmount: 45000.4, content: "Pay supplier" }
     it("claims a SePay transfer out as a debit receipt", async () => {

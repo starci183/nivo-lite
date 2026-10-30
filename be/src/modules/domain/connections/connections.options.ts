@@ -21,3 +21,6 @@ export interface ConnectionsPorts {
     /** Implements the agents port; an existing provider of the app. */
     readonly agents: Type<ConnectionAgentsDirectory>
 }
+
+/** What the environment alone decides; the app root adds the ports. */
+export type ConnectionsConfig = Omit<ConnectionsOptions, "ports">
