@@ -29,6 +29,7 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `PUBLIC_SITE_URL` | `api-public.conf` | The public origin of the console, used in links the api sends. |
 | `PUBLIC_API_URL` | `api-public.conf` | The public origin of the api (`https://api.nivo.vn`), used in webhook and callback URLs and as the base of the agents' tool door (`<origin>/agent-tools`); it must be https (http only for a loopback host) or the api refuses to boot. |
 | `AUTH_WEB_ORIGIN` | `api-public.conf` | The public origin of the console (`https://app.nivo.vn`) the own auth returns browsers to and trusts for cookies. |
+| `AUTH_COOKIE_DOMAIN` | `api-public.conf` | The refresh cookie's domain (`nivo.vn`): the console's server (`app.nivo.vn`) forwards it to `/auth/session` on `api.nivo.vn`, so both hosts must see it. |
 | `AUTH_GOOGLE_CALLBACK_URL` | `api-public.conf` | The Google sign-in callback registered with the OAuth client (`https://api.nivo.vn/auth/google/callback`). |
 | `STORAGE_ENDPOINT` | `api-public.conf` | The MinIO S3 address over the shared `nivo-edge-swarm` overlay (`http://academy-minio:9000`); public configuration, not a secret. |
 | `STORAGE_PUBLIC_URL` | `api-public.conf` | The origin browsers upload to and read from (`https://minio.starci.org`); presigned addresses are signed for it. |
