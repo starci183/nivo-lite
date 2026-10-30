@@ -189,6 +189,11 @@ environments:
         - The console answers /health/live on http://localhost.
         - The landing answers /health/live on http://landing.localhost.
     backup:
+      - component: db
+        target: The local db container's volume is disposable development data; `starci app db migrate` rebuilds it from db/bootstrap.sql and db/migrations.
+        retention: None; the repository migrations are the source, the local volume is recreated on demand.
+        owner: Development operator
+        restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
       - component: supabase
         target: Local Supabase development data is disposable; `supabase db reset` rebuilds it from db/migrations and the seed.
         retention: None; the repository migrations are the source, the local volume is recreated on demand.

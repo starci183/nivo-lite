@@ -1,11 +1,5 @@
--- Declares the event bus consumer queues of platform/event-bus/event-bus.queues.ts with literal names. The queues already exist from
--- 20261109000554_event-bus.sql, which creates them in a loop over name pairs; the app check reads only literal pgmq.create and
--- pgmq.bind_topic calls, so each queue, its dead-letter queue and its topic binding is restated here. Every call is idempotent
--- (pgmq.create skips an existing queue, pgmq.bind_topic upserts the binding), so applying this over the earlier chain changes nothing.
-
-select pgmq.create('event_bus_probe__probe');
-select pgmq.create('event_bus_probe__probe__dead');
-select pgmq.bind_topic('event_bus_probe', 'event_bus_probe__probe');
+-- Declares the event bus consumer queues of platform/event-bus/event-bus.queue.ts with literal names: each queue, its dead-letter
+-- queue and its topic binding. Every call is idempotent (pgmq.create skips an existing queue, pgmq.bind_topic upserts the binding).
 
 select pgmq.create('bank_credit_booked__accounting');
 select pgmq.create('bank_credit_booked__accounting__dead');
