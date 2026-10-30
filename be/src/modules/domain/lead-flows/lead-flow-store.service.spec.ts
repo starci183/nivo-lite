@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { IsNull, Not } from "typeorm"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -71,6 +72,24 @@ describe("LeadFlowStoreService", () => {
         })
         expect(entityManager.findOne).toHaveBeenNthCalledWith(2, LeadFlowEntity, {
             where: { workspaceId: "ws-1", leadId: "lead-2" },
+        })
+    })
+    it("answers the installation that owns a flow, or null when there is no flow or it names none", async () => {
+        const { store, entityManager } = await build(
+            mockEntityManager({
+                findOne: [
+                    [LeadFlowEntity, storedFlowOf({ installationId: "installation-1" })],
+                    [LeadFlowEntity, null],
+                ],
+            }),
+        )
+
+        await expect(store.installationIdOf("ws-1", "flow-1")).resolves.toBe("installation-1")
+        await expect(store.installationIdOf("ws-1", "flow-2")).resolves.toBeNull()
+
+        expect(entityManager.findOne).toHaveBeenNthCalledWith(1, LeadFlowEntity, {
+            select: { installationId: true },
+            where: { workspaceId: "ws-1", id: "flow-1", installationId: Not(IsNull()) },
         })
     })
     it("answers no flow for a missing lead and no candidates for an empty identity without a query", async () => {

@@ -110,10 +110,11 @@ const expectInTransaction = <Args extends Array<unknown>>(spy: jest.Mock<unknown
 }
 
 const agentId = "11111111-1111-4111-8111-111111111111"
+const uuidAgent = [{ ...AGENT, id: agentId }]
 
 describe("ConnectionGrantsService > candidates", () => {
     it("lists every grantable connection with the access the agent already has", async () => {
-        const { em } = managerOf([{ agentId, connectionId: "c1", access: "ask" }])
+        const { em } = managerOf([{ agentId, connectionId: "c1", access: "ask" }], uuidAgent)
         const { service, connections } = await build(em, [
             connection({ id: "c1", meta: { bot_username: "shop_bot" } }),
             connection({ id: "c2", provider: "sepay", meta: { account_masked: "****1234" } }),
@@ -148,7 +149,7 @@ describe("ConnectionGrantsService > candidates", () => {
 
 describe("ConnectionGrantsService > candidates", () => {
     it("treats a blank public fact as absent, an unknown level as auto, and no grant as none", async () => {
-        const { em } = managerOf([{ agentId, connectionId: "c1", access: "nope" }])
+        const { em } = managerOf([{ agentId, connectionId: "c1", access: "nope" }], uuidAgent)
         const { service } = await build(em, [
             connection({ id: "c1", meta: { bot_username: "  ", account_masked: "****1234" } }),
             connection({ id: "c2" }),

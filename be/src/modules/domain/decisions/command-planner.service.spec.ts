@@ -5,6 +5,7 @@ import { InvoicesLedgerService } from "@modules/domain/invoices"
 import { LeadReadService } from "@modules/domain/leads"
 import { OfficeLinesService } from "@modules/domain/messages"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord } from "@modules/domain/module-installations"
 import { OrdersLabelReadService } from "@modules/domain/orders"
 import { WorkItemsChainReadService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -379,6 +380,12 @@ describe("CommandPlannerService", () => {
                 { from: AGENT_ID },
                 agent("Bot", "chatbot", "Branch 1"),
             ),
+            mirror(
+                "a multi-instance agent with no installation",
+                "Chatbot: classify",
+                { from: AGENT_ID },
+                agent("Bot", "chatbot", null),
+            ),
             mirror("a single-instance agent", "Sales: classify", { from: AGENT_ID }, agent("Ann", "sales", "Main")),
             mirror(
                 "an unregistered agent",
@@ -388,6 +395,8 @@ describe("CommandPlannerService", () => {
             ),
             mirror("an order number", "Owner: classify for order #DH-1", { payload: subject("order") }, label("DH-1")),
             mirror("an untranslated kind", "Owner: classify for Rice", { payload: subject("invoice") }, label("Rice")),
+            mirror("an order without a number", "Owner: classify", { payload: subject("order") }, label(null)),
+            mirror("an invoice without a receipt", "Owner: classify", { payload: subject("invoice") }, label(null)),
             mirror("no subject id", "Owner: classify", { payload: { lead_id: "lead-1" } }, []),
             mirror("a blank label", "Owner: classify", {}, label(null)),
             mirror("no label row", "Owner: classify"),
@@ -441,6 +450,31 @@ describe("CommandPlannerService", () => {
                 WorkEngineLogEvent.OfficeFailed,
                 WorkEngineLogEvent.EvidenceFailed,
             ])
+        })
+    })
+})
+
+describe("CommandPlannerService", () => {
+    describe("a named instance that can not be used", () => {
+        it("ignores a named instance that belongs to another module", async () => {
+            const built = await build()
+            built.served.installations.find.mockResolvedValue(
+                mock<InstallationRecord>({ id: "inst-1", name: "Branch 1", moduleKey: "sales" }),
+            )
+
+            const plan = planned(await built.service.plan(ctx, replyOf({ installationId: "inst-1" })))
+
+            expect(plan.spec.installationId).toBeNull()
+            expect(built.served.installations.find).toHaveBeenCalledWith("ws-1", "inst-1")
+        })
+
+        it("does not look up a named instance that is null", async () => {
+            const built = await build()
+
+            const plan = planned(await built.service.plan(ctx, replyOf({ installationId: null })))
+
+            expect(plan.spec.installationId).toBeNull()
+            expect(built.served.installations.find).not.toHaveBeenCalled()
         })
     })
 })
