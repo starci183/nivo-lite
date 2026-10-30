@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common"
 import { CreateResponsibilityHandler } from "./application/create-responsibility.handler"
-import { DecisionHistoryService } from "./application/decision-history.service"
 import { DecideExecutionHandler } from "./application/decide-execution.handler"
 import { AssignWorkItemHandler } from "./application/assign-work-item.handler"
 import { DecideWorkItemHandler } from "./application/decide-work-item.handler"
@@ -23,7 +22,6 @@ import { ConfigurableModuleClass } from "./decisions.module-definition"
 @Module({
     providers: [
         CreateResponsibilityHandler,
-        DecisionHistoryService,
         DecideExecutionHandler,
         AssignWorkItemHandler,
         DecideWorkItemHandler,

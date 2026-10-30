@@ -1,4 +1,5 @@
 import type { ReasonCode } from "@modules/domain/work-items"
+import type { DecisionHistoryKind } from "./decisions-views.contracts"
 
 /** One decision in a customer's flow or the recent human Sales history. */
 export interface LeadDecisionRecord {
@@ -40,4 +41,62 @@ export interface DecisionHistoryQuery {
     readonly limit: number
     /** Oldest first for the customer's journey. */
     readonly oldestFirst?: boolean
+}
+
+/** Which decisions the history lists, how many and of which module. */
+export interface DecisionHistoryRequest {
+    /** Every decision, those the policy made alone, those a person made, or the rejected ones. */
+    readonly kind: DecisionHistoryKind
+    /** Only the decisions of this module; null for every module. */
+    readonly department: string | null
+    /** How many lines, clamped to 1..100. */
+    readonly limit: number
+}
+
+/** What the decision log is narrowed to; a null filter does not narrow. */
+export interface DecisionLogFilter {
+    /** The deciders to keep (`policy`, `owner`, `staff`). */
+    readonly deciders: ReadonlyArray<string> | null
+    /** The outcome to keep. */
+    readonly outcome: string | null
+    /** The module to keep. */
+    readonly department: string | null
+    /** The most lines. */
+    readonly limit: number
+}
+
+/** A chain step as the history names its thread. */
+export interface HistoryStepThread {
+    /** The step id. */
+    readonly id: string
+    /** The thread the step belongs to. */
+    readonly threadId: string
+}
+
+/** A hand-off or assignment a member completed, as the history lists it. */
+export interface HistoryCompletedTask {
+    /** The step id. */
+    readonly id: string
+    /** The thread the step belongs to. */
+    readonly threadId: string
+    /** member or agent. */
+    readonly actorKind: string
+    /** The actor id. */
+    readonly actorId: string
+    /** The step title. */
+    readonly action: string
+    /** The authority rule, or null. */
+    readonly rule: string | null
+    /** The member who completed it. */
+    readonly decidedBy: string
+    /** When it finished, else when it started. */
+    readonly at: Date
+}
+
+/** The customer a thread is about, as the history reads it. */
+export interface HistoryThreadLead {
+    /** The thread id. */
+    readonly id: string
+    /** The customer, or null when the thread is about none. */
+    readonly leadId: string | null
 }

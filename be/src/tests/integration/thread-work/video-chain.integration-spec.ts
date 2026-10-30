@@ -1,13 +1,12 @@
 import { AgentAssignmentsService } from "@modules/domain/agent-profile"
 import { ApprovalRequestsService } from "@modules/domain/approval-requests"
-import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
+import { DecisionHistoryService, WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkPerformerRegistry } from "@modules/domain/decisions"
 import { OfficeAuthorityService } from "@modules/domain/member-grants"
 import { ModulesService } from "@modules/domain/modules"
 import { ThreadFeedService } from "@modules/domain/thread-messages"
 import type { ThreadMessage } from "@modules/domain/thread-messages"
 import { ThreadWorkService } from "@modules/domain/thread-work"
-import { DecisionHistoryService } from "../../../features/api/decisions/application/decision-history.service"
 import { IssueInvoicePerformerService } from "../../../modules/domain/work-performers/issue-invoice-performer.service"
 import { ReplyCustomerPerformerService } from "../../../modules/domain/work-performers/reply-customer-performer.service"
 import { persistOfficeRows, persistStoryLead } from "../../fixtures/builders/office-chain.builder"
@@ -205,7 +204,7 @@ describe("v0.3.2 video chain in the real api: what the chain recorded", () => {
     it("the decision history names anh Minh and Van for their decisions and NIVO for the policy's", async () => {
         const history = await world
             .resolve(DecisionHistoryService)
-            .list(identity.users.nam, WS, { workspaceId: WS, kind: "all", department: null, limit: 20 })
+            .list(identity.users.nam, WS, { kind: "all", department: null, limit: 20 })
 
         const lines = history.map((line) => [line.action, line.outcome, line.decider_kind, line.decided_by])
         expect(lines.filter(([action]) => action === "give_discount")).toHaveLength(1)
@@ -241,7 +240,7 @@ describe("v0.3.2 decision history: what people decide outside an agent's work an
 
         const history = await world
             .resolve(DecisionHistoryService)
-            .list(identity.users.nam, WS, { workspaceId: WS, kind: "human", department: null, limit: 50 })
+            .list(identity.users.nam, WS, { kind: "human", department: null, limit: 50 })
         expect(history).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({ action: "thread_task", outcome: "completed", decided_by: "Van" }),
@@ -267,7 +266,7 @@ describe("v0.3.2 decision history: what people decide outside an agent's work an
 
         const history = await world
             .resolve(DecisionHistoryService)
-            .list(identity.users.nam, WS, { workspaceId: WS, kind: "policy", department: "sales", limit: 50 })
+            .list(identity.users.nam, WS, { kind: "policy", department: "sales", limit: 50 })
         expect(history).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({ action: "give_discount", outcome: "expired", decider_kind: "policy" }),

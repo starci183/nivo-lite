@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { DecisionLogFilter, DecisionLogLine } from "./decision-log.rows"
+import type { DecisionLogFilter } from "./decision-history.contracts"
+import type { DecisionLogRow } from "./decision-log.rows"
 import { DecisionEntity } from "./persistence/entities"
 
 /** Postgres text of the instant that sorts like the instant: fixed width, UTC, to the microsecond. */
@@ -14,7 +15,7 @@ export class DecisionLogReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The newest `limit` lines of the decision log that pass the filter; each carries its `sort_key` at full precision. */
-    lines(workspaceId: string, filter: DecisionLogFilter): Promise<Array<DecisionLogLine>> {
+    lines(workspaceId: string, filter: DecisionLogFilter): Promise<Array<DecisionLogRow>> {
         const select = this.entityManager
             .createQueryBuilder(DecisionEntity, "d")
             .select("d.id", "id")
@@ -39,6 +40,6 @@ export class DecisionLogReadService {
             .orderBy("d.createdAt", "DESC")
             .addOrderBy("d.id", "DESC")
             .limit(filter.limit)
-            .getRawMany<DecisionLogLine>()
+            .getRawMany<DecisionLogRow>()
     }
 }

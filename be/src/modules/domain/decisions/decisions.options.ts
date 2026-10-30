@@ -6,6 +6,9 @@ import type {
     LeadGenFlow,
     ModuleCatalogSource,
     OutboundAccessGate,
+    ThreadWorkHistory,
+    WorkChainsHistory,
+    WorkThreadsHistory,
 } from "./work-engine.port"
 
 /** The owners of the ports the work engine reads and calls through: the app root names a class for each one. */
@@ -24,6 +27,12 @@ export interface DecisionsPorts {
     readonly moduleCatalog: Type<ModuleCatalogSource>
     /** Reads the access of an agent on a connection (the connections lane). */
     readonly outboundAccessGate: Type<OutboundAccessGate>
+    /** Tells which approval requests and threads an agent's work runs in (the thread-work capability, a global provider the port reuses). */
+    readonly threadWorkHistory: Type<ThreadWorkHistory>
+    /** Names the thread of a step and lists the completed tasks (the work-chains capability, a global provider the port reuses). */
+    readonly workChainsHistory: Type<WorkChainsHistory>
+    /** Names the customer of a thread (the work-threads capability, a global provider the port reuses). */
+    readonly workThreadsHistory: Type<WorkThreadsHistory>
 }
 
 /** What the decisions capability needs from the app root. */

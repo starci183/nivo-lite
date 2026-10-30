@@ -21,17 +21,8 @@ export interface AccountingDecisionRow {
     readonly created_at: string
 }
 
-/** What the decision log is narrowed to; a null filter does not narrow. */
-export interface DecisionLogFilter {
-    /** The deciders to keep (`policy`, `owner`, `staff`). */
-    readonly deciders: ReadonlyArray<string> | null
-    /** The outcome to keep. */
-    readonly outcome: string | null
-    /** The module to keep. */
-    readonly department: string | null
-    /** The most lines. */
-    readonly limit: number
+/** A row of the decision log before the customer name is read. */
+export interface DecisionLogRow extends Omit<DecisionRecord, "leadName"> {
+    /** The instant of the row as fixed-width UTC text, to order rows of different sources at full precision. */
+    readonly sort_key: string
 }
-
-/** A line of the decision log before the customer name is read; `sort_key` orders lines of different sources at full precision. */
-export type DecisionLogLine = Omit<DecisionRecord, "leadName"> & { readonly sort_key: string }

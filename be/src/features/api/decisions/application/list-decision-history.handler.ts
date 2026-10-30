@@ -1,9 +1,9 @@
 import { QueryHandler } from "@nestjs/cqrs"
+import { DecisionHistoryService } from "@modules/domain/decisions"
 import type { DecisionRecord } from "@modules/domain/decisions"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { DecisionHistoryService } from "./decision-history.service"
 import { ListDecisionHistoryQuery } from "./list-decision-history.query"
 
 @QueryHandler(ListDecisionHistoryQuery)
