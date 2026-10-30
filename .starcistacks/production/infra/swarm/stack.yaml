@@ -371,7 +371,6 @@ secrets:
   nivo: { external: true, name: nivo-custody-nivo-v1 }
   smtp: { external: true, name: nivo-custody-smtp-v1 }
   sepay: { external: true, name: nivo-custody-sepay-v1 }
-  openrouter: { external: true, name: nivo-custody-openrouter-v1 }
   n8n: { external: true, name: nivo-custody-n8n-v1 }
   openclaw: { external: true, name: nivo-custody-openclaw-v1 }
   postgres: { external: true, name: nivo-custody-postgres-v1 }
@@ -382,9 +381,6 @@ secrets:
   ai: { external: true, name: nivo-custody-ai-v1 }
   vps: { external: true, name: nivo-custody-vps-v1 }
   test-accounts: { external: true, name: nivo-custody-test-accounts-v1 }
-  ci-ssh-key: { external: true, name: nivo-custody-ci-ssh-key-v1 }
-  vps-ssh-key: { external: true, name: nivo-custody-vps-ssh-key-v1 }
-  vps-known-hosts: { external: true, name: nivo-custody-vps-known-hosts-v1 }
   channel-token-key: { external: true, name: nivo-custody-channel-token-key-v1 }
   otp-pepper: { external: true, name: nivo-custody-otp-pepper-v1 }
   webhook-signing-secret: { external: true, name: nivo-custody-webhook-signing-secret-v1 }
