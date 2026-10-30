@@ -4057,6 +4057,9 @@
     "removed": "Đã gỡ agent."
   },
   "office": {
+    "quickLabel": "Câu hỏi nhanh",
+    "quickPrevious": "Câu hỏi trước",
+    "quickNext": "Câu hỏi tiếp",
     "crumbLabel": "Đường dẫn",
     "crumbHome": "Tổng quan",
     "title": "Office",

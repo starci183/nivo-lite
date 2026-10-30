@@ -4057,6 +4057,9 @@
     "removed": "Agent removed."
   },
   "office": {
+    "quickLabel": "Quick questions",
+    "quickPrevious": "Previous questions",
+    "quickNext": "More questions",
     "crumbLabel": "Breadcrumb",
     "crumbHome": "Overview",
     "title": "Office",
