@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Link, Page, WorkspaceShell } from "@starci/grammar/common"
-import { TOP_CLASS_NAME, TOP_END_CLASS_NAME } from "./classNames"
+import { BAR_CLASS_NAME, TOP_CLASS_NAME, TOP_END_CLASS_NAME } from "./classNames"
 
 /** What the workspaces frame draws around a page. */
 type WorkspacesFrameProps = {
@@ -20,17 +20,19 @@ type WorkspacesFrameProps = {
 export const WorkspacesFrame = (props: WorkspacesFrameProps) => (
     <WorkspaceShell
         header={
-            <Page measure="product">
-                <div className={TOP_CLASS_NAME}>
-                    <Link href={props.homeHref} visited="uniform">
-                        {props.logo}
-                    </Link>
-                    <div className={TOP_END_CLASS_NAME}>
-                        {props.localeSwitch}
-                        {props.account}
+            <div className={BAR_CLASS_NAME}>
+                <Page measure="product">
+                    <div className={TOP_CLASS_NAME}>
+                        <Link href={props.homeHref} visited="uniform">
+                            {props.logo}
+                        </Link>
+                        <div className={TOP_END_CLASS_NAME}>
+                            {props.localeSwitch}
+                            {props.account}
+                        </div>
                     </div>
-                </div>
-            </Page>
+                </Page>
+            </div>
         }
         primaryLabel={props.mainLabel}
         primary={props.children}

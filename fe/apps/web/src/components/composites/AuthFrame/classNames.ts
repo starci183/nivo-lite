@@ -2,10 +2,10 @@ import { cn } from "@heroui/react"
 
 /** The split screen: the art half and the form half side by side from lg, the form alone below it. */
 export const AUTH_SPLIT_CLASS_NAME = cn("grid", "min-h-dvh", "lg:grid-cols-2")
-/** Art half: full bleed, edge to edge and top to bottom, with the brand copy over the picture; shown from lg only so the form stays in the first phone screen. */
-export const AUTH_ART_PANE_CLASS_NAME = cn("relative", "isolate", "hidden", "overflow-hidden", "lg:block")
+/** Art half: edge to edge and top to bottom with a rounded bottom-end corner, with the brand copy over the picture; shown from lg only so the form stays in the first phone screen. */
+export const AUTH_ART_PANE_CLASS_NAME = cn("relative", "isolate", "hidden", "overflow-hidden", "rounded-br-[3rem]", "lg:block")
 /** The plain ground under everything: a one-colour picture stretched over the whole half (SURFACE-6 case-1, aria-hidden). */
-export const AUTH_GROUND_CLASS_NAME = cn("absolute", "inset-0", "-z-20", "[&>*]:h-full", "[&_img]:h-full", "[&_img]:w-full")
+export const AUTH_GROUND_CLASS_NAME = cn("absolute", "inset-0", "-z-20", "[&>*]:h-full", "[&_img]:h-full", "[&_img]:w-full", "[&_img]:object-cover")
 /** The scene over the ground: centred and scaled to the half, clear of the logo above and the copy below (SURFACE-6 case-1, aria-hidden). */
 export const AUTH_ART_CLASS_NAME = cn(
     "absolute",
@@ -16,8 +16,10 @@ export const AUTH_ART_CLASS_NAME = cn(
     "flex",
     "items-center",
     "justify-center",
+    "[&>*]:aspect-[975/1428]",
     "[&>*]:h-full",
-    "[&>*]:w-full",
+    "[&>*]:max-w-full",
+    "[&>*]:w-auto",
     "[&_img]:h-full",
     "[&_img]:w-full",
 )

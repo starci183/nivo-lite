@@ -42,7 +42,18 @@ const Welcome = (props: WelcomeProps) => (
     <SurfaceCard
         ariaLabel={props.props.welcomeTitle}
         treatment="ink"
-        artwork={<Image src="/images/entry/workspace-welcome.png" alt="" aspect="square" fit="contain" plate="none" />}
+        artwork={
+            <Image
+                src="/images/entry/lobby-welcome.webp"
+                alt=""
+                aspect="portrait"
+                fit="contain"
+                plate="none"
+                assetSlot="lobby-welcome"
+                assetSha256="b2a5858380490746ec3d76a43d669439e518f9d8af80545fcbedd89ef566899b"
+                assetPrompt="The NIVO unicorn waves hello and holds a small golden heart key, sparkles, transparent ground"
+            />
+        }
     >
         <div className={WELCOME_COPY_CLASS_NAME}>
             <Heading level={2} isSkeleton={props.isSkeleton}>
