@@ -20,7 +20,7 @@
     "@nivo-lite/offer": "*",
     "@reduxjs/toolkit": "2.11.2",
     "@starci/event-stream": "0.1.0",
-    "@starci/grammar": "0.15.29",
+    "@starci/grammar": "0.15.32",
     "@starci/heroicons": "0.3.4",
     "@xyflow/react": "12.11.6",
     "axios": "1.20.0",
