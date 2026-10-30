@@ -85,3 +85,6 @@ coverage-*/
 
 # Local plaintext credentials never enter Git.
 secrets.env
+
+# Written by the Next dev server (nextjs-agent-rules); generated, never tracked.
+fe/apps/web/AGENTS.md
