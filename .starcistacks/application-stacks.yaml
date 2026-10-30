@@ -559,10 +559,11 @@ environments:
             from:
               - {member: postgres, keys: [PRIMARY_DB_URL], required: true}
               - {member: nivo, keys: [CHANNEL_TOKEN_KEY], required: true}
+          # APP_BE_DB_PASSWORD reaches db too: its init script gives the app_be login role that password when the cluster is first created.
           - service: db
             filePointers: true
             from:
-              - {member: postgres, keys: [POSTGRES_PASSWORD], required: true}
+              - {member: postgres, keys: [POSTGRES_PASSWORD, APP_BE_DB_PASSWORD], required: true}
           - service: nivo-postgres-backup
             from:
               - {member: postgres, keys: [POSTGRES_PASSWORD], required: true}

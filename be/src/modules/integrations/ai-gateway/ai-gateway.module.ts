@@ -18,8 +18,10 @@ const KEY_OWNER = "nivo-lite"
  * The gateway over the registered router: virtual keys in a SQLite file plus the keys mounted from sealed secrets, the admin token
  * read at each admin request, its own port (the app port plus one).
  */
-const gatewayOf = (gateway: AiGatewayHost): DynamicModule =>
+const gatewayOf = (gateway: AiGatewayHost, router: DynamicModule): DynamicModule =>
     AiRouterGatewayModule.registerAsync({
+        // The gateway resolves the raw router (`AI_ROUTER`) from the router module it imports.
+        imports: [router],
         useFactory: async () => ({
             keys: await openSqliteKeyStore(gateway.keysPath),
             mountedKeys: gateway.mountedKeys.map((key) => ({
@@ -45,10 +47,9 @@ export class AiGatewayModule extends ConfigurableModuleClass {
         const base = super.register(options)
         const { isGlobal: _isGlobal, ...pool } = options
         const router = routerOptionsOf(pool)
+        const routing = router === null ? null : AiRouterModule.register(router)
         const imports: Array<DynamicModule> =
-            router === null
-                ? []
-                : [AiRouterModule.register(router), ...(pool.gateway === null ? [] : [gatewayOf(pool.gateway)])]
+            routing === null ? [] : [routing, ...(pool.gateway === null ? [] : [gatewayOf(pool.gateway, routing)])]
         return {
             ...base,
             imports: [...(base.imports ?? []), ...imports],
