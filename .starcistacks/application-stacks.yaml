@@ -385,12 +385,14 @@ environments:
         runtimeName: nivo-custody-ai-v1
         version: 1
         where: secrets/ai
+        keys: [AI_API_KEY, AI_ROUTER_ADMIN_TOKEN, OPENROUTER_API_KEY]
         recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys AI_ROUTER_ADMIN_TOKEN, AI_API_KEY and the upstream OPENROUTER_API_KEY (the whole AI domain in one member).
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: vps
         runtimeName: nivo-custody-vps-v1
         version: 1
         where: secrets/vps
+        keys: [VPS_HOST, VPS_USER, privateKey, knownHosts, ciPrivateKey]
         recipientPolicy: SOPS/age, one member per provider (vps.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys VPS_HOST, VPS_USER, privateKey (operator SSH key), knownHosts (pinned host keys, GitHub VPS_KNOWN_HOSTS) and ciPrivateKey (GitHub environment secret VPS_SSH_KEY), every VPS credential in one member, operator only, never granted.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: test-accounts
@@ -517,7 +519,7 @@ environments:
       remote:
         host: vps
         releasesBase: /srv/nivo
-        sealed: {ops: vps, sshKey: vps, knownHosts: vps}
+        sealed: vps
         serverRecipient: age148vdeuc9jmk6rr8vwltalqwq373nxsrra4hyfzejgc3388gnhpgqwzwusz
       images:
         nivo-api: {app: api}

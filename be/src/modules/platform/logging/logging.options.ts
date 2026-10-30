@@ -1,5 +1,5 @@
-/** The logging capability's options. */
+/** Options of the logging capability. */
 export interface LoggingOptions {
-    /** Where info lines go: stdout by default; a command line sends them to stderr so its stdout carries only its report. */
+    /** The stream info lines go to: "stdout" (default) for servers, "stderr" for a CLI whose stdout carries only command output. Warn and error always go to stderr. */
     readonly info?: "stdout" | "stderr"
 }

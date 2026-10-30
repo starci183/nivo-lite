@@ -127,10 +127,8 @@ services:
       replicas: 1
       # openclaw-data and video-cache are single-host volumes: the placement is explicit, a replica is not high availability.
       placement: { constraints: [node.role == manager] }
-      # continue, not rollback: on a first start the api comes up before the floor migrated the new db and restarts (restart_policy any)
-      # until the schema exists; a red release is still rolled back by the deploy floor's converge and verify.
       update_config:
-        { parallelism: 1, order: stop-first, failure_action: continue, monitor: 45s, max_failure_ratio: 0, delay: 5s }
+        { parallelism: 1, order: stop-first, failure_action: rollback, monitor: 45s, max_failure_ratio: 0, delay: 5s }
       rollback_config: { parallelism: 1, order: stop-first, monitor: 45s }
       restart_policy: { condition: any, delay: 5s }
 
@@ -162,9 +160,8 @@ services:
     deploy:
       replicas: 1 # the circuit breakers are process-local: one replica keeps one breaker per (workspace, connector)
       resources: { limits: { memory: 300M } }
-      # continue, not rollback: same first-start reason as nivo-api; the deploy floor rolls a red release back.
       update_config:
-        { parallelism: 1, order: start-first, failure_action: continue, monitor: 30s, max_failure_ratio: 0, delay: 5s }
+        { parallelism: 1, order: start-first, failure_action: rollback, monitor: 30s, max_failure_ratio: 0, delay: 5s }
       rollback_config: { parallelism: 1, order: start-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }
 

@@ -16,6 +16,8 @@ export const WorkspaceNewPage = async () => {
             props={{
                 title: t("newTitle"),
                 description: t("nameText"),
+                stepsLabel: t("welcomeStepsLabel"),
+                steps: [t("welcomeStep1"), t("welcomeStep2"), t("welcomeStep3")],
             }}
         />
     )

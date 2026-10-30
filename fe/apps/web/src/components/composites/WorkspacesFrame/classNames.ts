@@ -1,6 +1,6 @@
 import { cn } from "@heroui/react"
 
-/** The bar fills the shell header (a flex row), so the page measure inside it centres instead of shrinking to its content. */
+/** The bar fills the shell header (a flex row), so its row spans the header instead of shrinking to its content. */
 export const BAR_CLASS_NAME = cn("min-w-0", "flex-1")
 
 /** The bar row spans the measure: the logo at the start, the language and account menus at the end (GAP-4). */

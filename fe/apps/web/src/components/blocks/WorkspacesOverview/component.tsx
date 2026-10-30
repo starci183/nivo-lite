@@ -1,4 +1,4 @@
-import { Alert, Button, Heading, Image, Stepper, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Heading, Mascot, Stepper, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { APP_ROUTES } from "@/modules/routes"
 import type { DataSlot, SlotLabels } from "@/modules/types"
@@ -37,18 +37,16 @@ const COUNT_PLACEHOLDER: WorkspacesCount = { count: 0 }
 /** What the welcome card draws from: the words of the overview, and whether they are placeholders. */
 type WelcomeProps = Pick<WorkspacesOverviewBaseProps, "props"> & { readonly isSkeleton: boolean }
 
-/** Draws the first-run welcome card; in skeleton its words rest as shapes. */
+/** Draws the first-run welcome card on the soft surface with the lobby mascot; in skeleton its words rest as shapes. */
 const Welcome = (props: WelcomeProps) => (
     <SurfaceCard
         ariaLabel={props.props.welcomeTitle}
-        treatment="ink"
+        treatment="soft"
         artwork={
-            <Image
+            <Mascot
                 src="/images/entry/lobby-welcome.webp"
-                alt=""
-                aspect="portrait"
-                fit="contain"
-                plate="none"
+                size="lg"
+                loading="eager"
                 assetSlot="lobby-welcome"
                 assetSha256="b2a5858380490746ec3d76a43d669439e518f9d8af80545fcbedd89ef566899b"
                 assetPrompt="The NIVO unicorn waves hello and holds a small golden heart key, sparkles, transparent ground"
