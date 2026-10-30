@@ -31,10 +31,12 @@ export const WorkspaceCreate = () => {
         <WorkspaceCreateBase
             props={{
                 title: t("nameTitle"),
-                nameLabel: t("workspaceName"),
+                heading: t("nameQuestion"),
+                description: t("nameQuestionText"),
+                nameLabel: t("businessName"),
                 nameHint: t("workspaceNameHint"),
                 submitLabel: isPending ? t("creating") : t("createFirst"),
-                cancelLabel: t("cancel"),
+                cancelLabel: t("backToLobby"),
                 cancelHref: AUTH_ROUTES.workspaces,
                 failTitle: t("errGeneric"),
                 name: form.watch("name"),

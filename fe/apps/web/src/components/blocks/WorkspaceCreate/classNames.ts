@@ -5,3 +5,5 @@ export const STACK_CLASS_NAME = cn("flex", "flex-col", "gap-4")
 
 /** Button row (GAP-3). */
 export const ACTIONS_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "gap-3")
+/** The question and the line under it (GAP-2). */
+export const HEAD_CLASS_NAME = cn("flex", "flex-col", "gap-2")

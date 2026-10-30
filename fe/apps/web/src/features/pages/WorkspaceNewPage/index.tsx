@@ -15,9 +15,8 @@ export const WorkspaceNewPage = async () => {
         <WorkspaceNewPageBase
             props={{
                 title: t("newTitle"),
-                description: t("nameText"),
                 stepsLabel: t("welcomeStepsLabel"),
-                steps: [t("welcomeStep1"), t("welcomeStep2"), t("welcomeStep3")],
+                steps: [t("trackStep1"), t("trackStep2"), t("trackStep3")],
             }}
         />
     )

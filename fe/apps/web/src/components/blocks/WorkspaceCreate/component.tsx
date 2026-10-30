@@ -1,11 +1,14 @@
-import { Button, Form, Input, SurfaceCard } from "@starci/grammar/common"
+import { Button, Form, Heading, Input, SurfaceCard, Text } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
-import { ACTIONS_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
+import { ACTIONS_CLASS_NAME, HEAD_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** Copy, values and state the connected create form supplies. */
 export interface WorkspaceCreateBaseProps {
     readonly props: {
         readonly title: string
+        /** The question the card opens with (the page's h1) and the line under it. */
+        readonly heading: string
+        readonly description: string
         readonly nameLabel: string
         readonly nameHint: string
         readonly submitLabel: string
@@ -22,7 +25,7 @@ export interface WorkspaceCreateBaseProps {
     }
 }
 
-/** Draws the form that names a new workspace. */
+/** Draws the form that names a new workspace: the card opens with the page's question, then the name and the actions. */
 export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => {
     const { props: form, on } = props
 
@@ -30,6 +33,10 @@ export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => {
         <SurfaceCard ariaLabel={form.title} measure="form">
             <Form label={form.title} onSubmit={on.submit} isPending={form.isPending}>
                 <div className={STACK_CLASS_NAME}>
+                    <div className={HEAD_CLASS_NAME}>
+                        <Heading level={1}>{form.heading}</Heading>
+                        <Text tone="muted">{form.description}</Text>
+                    </div>
                     <Input
                         id="workspace-name"
                         name="name"
