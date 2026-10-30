@@ -1,6 +1,7 @@
 export { DatabaseModule } from "./database.module"
 export { MigrationRunnerService } from "./migration-runner.service"
 export { SeedRunnerService } from "./seed-runner.service"
+export { AbstractEntity, UuidAbstractEntity } from "./abstract.entity"
 export { sql } from "./database.sql"
 export { advisoryXactLock, callDbFunction, listenOn, notify } from "./database.client"
 export type { StatementConnection } from "./database.client"
