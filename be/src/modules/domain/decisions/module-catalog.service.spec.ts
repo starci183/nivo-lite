@@ -1,9 +1,11 @@
 import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
 import { MODULE_CATALOG } from "@modules/domain/modules"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { MODULE_CATALOG_SOURCE } from "./work-engine.decorators"
+import type { ModuleCatalogSource } from "./work-engine.port"
 
-const [module] = MODULE_CATALOG.filter(
+const [catalogued] = MODULE_CATALOG.filter(
     (candidate) => candidate.accepts.length > 0 && candidate.authorityActions.length > 0,
 )
 
@@ -13,7 +15,9 @@ const build = async () => {
             ModuleCatalogService,
             {
                 provide: MODULE_CATALOG_SOURCE,
-                useValue: { catalog: () => Promise.resolve({ modules: MODULE_CATALOG }) },
+                useValue: mock<ModuleCatalogSource>({
+                    catalog: jest.fn(() => Promise.resolve({ modules: MODULE_CATALOG })),
+                }),
             },
         ],
     }).compile()
@@ -25,7 +29,7 @@ describe("ModuleCatalogService", () => {
         it("answers the module of the catalogue, null for an unknown key", async () => {
             const service = await build()
 
-            await expect(service.entryOf(module?.key ?? "")).resolves.toMatchObject({ key: module?.key })
+            await expect(service.entryOf(catalogued?.key ?? "")).resolves.toMatchObject({ key: catalogued?.key })
             await expect(service.entryOf("no-such-module")).resolves.toBeNull()
         })
     })
@@ -34,7 +38,9 @@ describe("ModuleCatalogService", () => {
         it("lists the commands the module accepts, none for an unknown module", async () => {
             const service = await build()
 
-            await expect(service.acceptsOf(module?.key ?? "")).resolves.toHaveLength(module?.accepts.length ?? -1)
+            await expect(service.acceptsOf(catalogued?.key ?? "")).resolves.toHaveLength(
+                catalogued?.accepts.length ?? -1,
+            )
             await expect(service.acceptsOf("no-such-module")).resolves.toEqual([])
         })
     })
@@ -43,7 +49,7 @@ describe("ModuleCatalogService", () => {
         it("answers the module's name in the language, the key when the module is unknown", async () => {
             const service = await build()
 
-            await expect(service.nameOf(module?.key ?? "", "en")).resolves.toBe(module?.name.en)
+            await expect(service.nameOf(catalogued?.key ?? "", "en")).resolves.toBe(catalogued?.name.en)
             await expect(service.nameOf("no-such-module", "vi")).resolves.toBe("no-such-module")
         })
 
@@ -60,7 +66,7 @@ describe("ModuleCatalogService", () => {
     describe("actionOf", () => {
         it("answers the action under the module that performs it, null for an unknown action", async () => {
             const service = await build()
-            const action = module?.authorityActions[0]
+            const action = catalogued?.authorityActions[0]
 
             await expect(service.actionOf(action?.action ?? "")).resolves.toMatchObject({
                 action: action?.action,

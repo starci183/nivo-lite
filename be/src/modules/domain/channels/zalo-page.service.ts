@@ -190,12 +190,13 @@ export class ZaloPageService {
 
     private async recipientsOf(conversations: ReadonlyArray<ConnectionConversation>) {
         const since = new Date(this.clock.now().getTime() - ZALO_FREE_WINDOW_MS)
+        const reachable = conversations.filter((conversation) => conversation.externalId !== null)
         const writes = await this.feed.lastWritesSince(
-            conversations.map((conversation) => conversation.id),
+            reachable.map((conversation) => conversation.id),
             since,
             RECIPIENTS_MAX,
         )
-        const byId = new Map(conversations.map((conversation) => [conversation.id, conversation]))
+        const byId = new Map(reachable.map((conversation) => [conversation.id, conversation]))
         const rows = writes.flatMap((write): Array<RecipientRow> => {
             const conversation = byId.get(write.conversationId)
             return conversation?.externalId === undefined || conversation.externalId === null

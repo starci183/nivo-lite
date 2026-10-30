@@ -50,6 +50,7 @@ describe("AgentDirectoryService > one agent and the active lists", () => {
             expect(em.find).toHaveBeenCalledWith(AgentEntity, {
                 select: SELECT,
                 where: { workspaceId: "w1", status: "active", id: In(["a2", "a3", "a1"]) },
+                take: 3,
             })
         })
 
@@ -244,6 +245,7 @@ describe("AgentDirectoryService > handle, module count and identities", () => {
             expect(em.find).toHaveBeenCalledWith(AgentEntity, {
                 select: { id: true, name: true, handle: true, avatarUrl: true },
                 where: { workspaceId: "w1", id: In(["a1"]) },
+                take: 1,
             })
         })
 
