@@ -144,3 +144,21 @@ describe("StorageObjectsService / reads", () => {
         })
     })
 })
+
+describe("StorageObjectsService / sizes", () => {
+    it("answers the size of an object without reading it, NOT_FOUND when it is not there and UNAVAILABLE when the store fails", async () => {
+        const { client, service } = await build()
+        await client.put("nivo-knowledge-uploads", "ws/u/doc.txt", new Uint8Array([7, 8, 9]), "text/plain")
+
+        await expect(service.sizeOf("knowledge-uploads", "ws/u/doc.txt")).resolves.toEqual({ kind: "ok", value: 3 })
+        await expect(service.sizeOf("knowledge-uploads", "ws/u/none.txt")).resolves.toEqual({
+            kind: "refused",
+            code: "OBJECT_STORAGE_NOT_FOUND",
+        })
+        client.head.mockRejectedValueOnce(new Error("down"))
+        await expect(service.sizeOf("knowledge-uploads", "ws/u/doc.txt")).resolves.toEqual({
+            kind: "refused",
+            code: "OBJECT_STORAGE_UNAVAILABLE",
+        })
+    })
+})

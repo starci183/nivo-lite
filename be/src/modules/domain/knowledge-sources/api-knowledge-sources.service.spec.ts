@@ -6,6 +6,7 @@ import type { ApiTextSourceInput } from "./api-knowledge-sources.contracts"
 import { ApiKnowledgeSourcesService } from "./api-knowledge-sources.service"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { KnowledgeSourceEntity } from "./persistence/entities"
+import { SourceQuotaService } from "./source-quota.service"
 
 const sourceRowOf = builder<KnowledgeSourceEntity>(row)
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -22,18 +23,24 @@ const sourceOf = builder<ApiTextSourceInput>({
 
 const build = async () => {
     const queue = mock<KnowledgeQueue>()
+    const quota = mock<SourceQuotaService>()
     const moduleRef = await Test.createTestingModule({
-        providers: [ApiKnowledgeSourcesService, { provide: KnowledgeQueue, useValue: queue }],
+        providers: [
+            ApiKnowledgeSourcesService,
+            { provide: KnowledgeQueue, useValue: queue },
+            { provide: SourceQuotaService, useValue: quota },
+        ],
     }).compile()
-    return { service: moduleRef.get(ApiKnowledgeSourcesService), queue }
+    return { service: moduleRef.get(ApiKnowledgeSourcesService), queue, quota }
 }
 
 describe("ApiKnowledgeSourcesService addText", () => {
     it("keeps the request id and publishes indexing through the supplied transaction", async () => {
         const tx = mockEntityManager({ insert: [KnowledgeSourceEntity, { identifiers: [{ id: "request-1" }] }] })
-        const { service, queue } = await build()
+        const { service, queue, quota } = await build()
 
         await expect(service.addText(sourceOf(), tx)).resolves.toEqual({ id: "request-1" })
+        expect(quota.admit).toHaveBeenCalledWith(tx, WS, 7)
         expect(tx.insert).toHaveBeenCalledWith(KnowledgeSourceEntity, {
             id: "request-1",
             workspaceId: WS,
@@ -46,6 +53,7 @@ describe("ApiKnowledgeSourcesService addText", () => {
             status: "queued",
             progress: 0,
             origin: "api:Website",
+            sizeBytes: 7,
             createdBy: null,
         })
         expect(queue.enqueueIndex).toHaveBeenCalledWith({ sourceId: "request-1", workspaceId: WS }, tx)
@@ -91,6 +99,19 @@ describe("ApiKnowledgeSourcesService addText", () => {
         queue.enqueueIndex.mockRejectedValue(failure)
 
         await expect(service.addText(sourceOf(), tx)).rejects.toBe(failure)
+    })
+})
+
+describe("ApiKnowledgeSourcesService addText / the workspace allowance", () => {
+    it("writes and publishes nothing when the workspace has no room left", async () => {
+        const tx = mockEntityManager()
+        const { service, queue, quota } = await build()
+        const refusal = new Error("quota")
+        quota.admit.mockRejectedValue(refusal)
+
+        await expect(service.addText(sourceOf(), tx)).rejects.toBe(refusal)
+        expect(tx.insert).not.toHaveBeenCalled()
+        expect(queue.enqueueIndex).not.toHaveBeenCalled()
     })
 })
 

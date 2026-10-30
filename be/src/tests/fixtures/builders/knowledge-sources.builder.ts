@@ -26,6 +26,7 @@ export const row: KnowledgeSourceEntity = {
     storagePath: null,
     sourceUrl: null,
     origin: null,
+    sizeBytes: 0,
     createdBy: null,
     createdAt: new Date(AT),
     updatedAt: new Date(AT),

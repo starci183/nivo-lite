@@ -10,6 +10,7 @@ import { StorageLogEvent } from "./object-storage.log-events"
 import type { ObjectStorageOptions } from "./object-storage.options"
 import type {
     ListedObjectsOutcome,
+    ObjectSizeOutcome,
     RemovedObjectsOutcome,
     SignedObjectUrlsOutcome,
     SignedUploadOutcome,
@@ -43,6 +44,15 @@ export class StorageObjectsService implements StorageObjectsPort {
             const found = await this.client.get(this.bucketOf(bucket), objectKeyOf(path))
             if (found === null) throw new ObjectStorageError({ code: ObjectStorageErrorCode.ObjectNotFound })
             return found
+        })
+    }
+
+    /** The size in bytes of the object at `path` of `bucket`; the object is not read. */
+    sizeOf(bucket: string, path: string): Promise<ObjectSizeOutcome> {
+        return this.guard(bucket, async () => {
+            const found = await this.client.head(this.bucketOf(bucket), objectKeyOf(path))
+            if (found === null) throw new ObjectStorageError({ code: ObjectStorageErrorCode.ObjectNotFound })
+            return found.size
         })
     }
 

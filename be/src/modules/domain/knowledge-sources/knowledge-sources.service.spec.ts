@@ -34,6 +34,7 @@ import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import { NOW } from "./source-input.policy"
+import { SourceQuotaService } from "./source-quota.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const AT = "2026-10-12T10:00:00.000Z"
@@ -46,6 +47,12 @@ const KEY = { id: "s1", workspaceId: WS }
 /** A matcher for an object holding at least these fields, typed unknown so it nests inside an expected object. */
 const matching = (fields: object): unknown => expect.objectContaining(fields)
 const touched = (changes: object) => [{ ...changes, updatedAt: NOW }]
+/** Asserts that the manager updated the source `KEY` with these changes and the instant of the write. */
+const updated = (em: MockEntityManager, changes: object) =>
+    expect(em.update).toHaveBeenCalledWith(KnowledgeSourceEntity, KEY, ...touched(changes))
+/** A transaction whose insert answers the new source `s1`. */
+const insertedTx = () =>
+    fakeTransaction(mockEntityManager({ insert: [KnowledgeSourceEntity, { identifiers: [{ id: "s1" }] }] }))
 const instance = { id: "i1", workspaceId: WS, moduleKey: "chatbot" }
 const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content: "Open 8 to 21" })
 /** A manager that hands out one fake statement per createQueryBuilder call, in order. */
@@ -61,6 +68,8 @@ const build = async (em: MockEntityManager) => {
     const logger = mock<Logger>()
     const entitlements = mock<EntitlementsService>()
     const installations = mock<InstallationRecordsService>()
+    const quota = mock<SourceQuotaService>()
+    quota.measure.mockResolvedValue(12)
     const moduleRef = await Test.createTestingModule({
         providers: [
             KnowledgeSourcesService,
@@ -73,16 +82,16 @@ const build = async (em: MockEntityManager) => {
             { provide: EntitlementsService, useValue: entitlements },
             { provide: LOGGER, useValue: logger },
             { provide: InstallationRecordsService, useValue: installations },
+            { provide: SourceQuotaService, useValue: quota },
             { provide: IDS, useValue: fakeIds() },
         ],
     }).compile()
-    return { service: moduleRef.get(KnowledgeSourcesService), members, queue, bus, storage, logger, installations }
+    const service = moduleRef.get(KnowledgeSourcesService)
+    return { service, members, queue, bus, storage, logger, installations, quota }
 }
 describe("KnowledgeSourcesService addSource", () => {
     it("authorizes the manager and atomically writes the source with its indexing job", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({ insert: [KnowledgeSourceEntity, { identifiers: [{ id: "s1" }] }] }),
-        )
+        const tx = insertedTx()
         const { service, members, queue } = await build(tx.em)
         await expect(service.addSource("u1", WS, inputOf({ tags: ["a"], topic: "Open" }))).resolves.toEqual({
             id: "s1",
@@ -103,6 +112,7 @@ describe("KnowledgeSourcesService addSource", () => {
             storagePath: null,
             sourceUrl: null,
             origin: null,
+            sizeBytes: 12,
             createdBy: "u1",
         })
         expect(queue.enqueueIndex).toHaveBeenCalledWith(job, expect.anything())
@@ -110,9 +120,7 @@ describe("KnowledgeSourcesService addSource", () => {
     })
 
     it("keeps a document for one agent instance and takes the module of its type", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({ insert: [KnowledgeSourceEntity, { identifiers: [{ id: "s1" }] }] }),
-        )
+        const tx = insertedTx()
         const { service, installations } = await build(tx.em)
         installations.find.mockResolvedValue(mock<InstallationRecord>(instance))
         await service.addSource("u1", WS, inputOf({ installationId: "i1", module: "sales" }))
@@ -186,11 +194,7 @@ describe("KnowledgeSourcesService retrySource", () => {
         const tx = fakeTransaction(mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] }))
         const { service, queue } = await build(tx.em)
         await expect(service.reindexSource("u1", WS, input)).resolves.toEqual({ id: "s1" })
-        expect(tx.em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            KEY,
-            ...touched({ status: "queued", progress: 0, error: null, ...changes }),
-        )
+        updated(tx.em, { status: "queued", progress: 0, error: null, ...changes })
         expect(queue.enqueueIndex).toHaveBeenCalledWith(expect.anything(), expect.anything(), Date.parse(AT))
     })
 
@@ -214,7 +218,7 @@ describe("KnowledgeSourcesService retrySource", () => {
         const em = mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] })
         const { service } = await build(em)
         await service.updateSource("u1", WS, input)
-        expect(em.update).toHaveBeenCalledWith(KnowledgeSourceEntity, KEY, ...touched(changes))
+        updated(em, changes)
     })
 
     it("refuses an unknown source", async () => {
@@ -318,16 +322,8 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
         const { service } = await build(em)
         await service.begin(WS, "s1")
         await service.startIndexing(WS, "s1", "text", "Title")
-        expect(em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            KEY,
-            ...touched({ status: "reading", error: null, progress: 5 }),
-        )
-        expect(em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            KEY,
-            ...touched({ status: "indexing", content: "text", title: "Title", progress: 20 }),
-        )
+        updated(em, { status: "reading", error: null, progress: 5 })
+        updated(em, { status: "indexing", content: "text", title: "Title", progress: 20 })
     })
 
     it("moves the progress bar inside 0 to 100", async () => {
@@ -336,9 +332,9 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
         await service.advance(WS, "s1", 42.4)
         await service.advance(WS, "s1", -3)
         await service.advance(WS, "s1", 140)
-        expect(em.update).toHaveBeenCalledWith(KnowledgeSourceEntity, KEY, ...touched({ progress: 42 }))
-        expect(em.update).toHaveBeenCalledWith(KnowledgeSourceEntity, KEY, ...touched({ progress: 0 }))
-        expect(em.update).toHaveBeenCalledWith(KnowledgeSourceEntity, KEY, ...touched({ progress: 100 }))
+        updated(em, { progress: 42 })
+        updated(em, { progress: 0 })
+        updated(em, { progress: 100 })
     })
 
     it("never fails the job when the progress bar cannot move", async () => {
@@ -355,21 +351,13 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
         const tx = fakeTransaction(mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] }))
         const { service, queue, bus } = await build(tx.em)
         await service.finishIndexing(WS, "s1", StoredNote.KeywordOnly, 3)
-        expect(tx.em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            KEY,
-            ...touched({ error: StoredNote.KeywordOnly, chunkCount: 3, progress: 80 }),
-        )
+        updated(tx.em, { error: StoredNote.KeywordOnly, chunkCount: 3, progress: 80 })
         expect(queue.enqueueFacts).not.toHaveBeenCalled()
         expect(bus.eventsOf(KnowledgeSourceIndexedEvent)).toEqual([
             expect.objectContaining({ payload: matching({ ...job, indexedAt: Date.parse(AT) }) }),
         ])
         expect(bus.allInTransaction).toBe(true)
-        expect(tx.em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            KEY,
-            ...touched({ status: "extracting_facts", progress: 85 }),
-        )
+        updated(tx.em, { status: "extracting_facts", progress: 85 })
         expect(tx.commits).toBe(1)
     })
 })
@@ -379,27 +367,19 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
         const em = mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] })
         const { service } = await build(em)
         await service.fail(WS, "s1", "CODE")
-        expect(em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            KEY,
-            ...touched({ status: "failed", error: "CODE" }),
-        )
+        updated(em, { status: "failed", error: "CODE" })
     })
 
     it("waits for credits after storing the passages without vectors", async () => {
         const em = mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] })
         const { service } = await build(em)
         await service.blockIndexing(WS, "s1", StoredNote.NoCreditsForIndex, 60)
-        expect(em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            KEY,
-            ...touched({
-                status: "blocked_credits",
-                error: StoredNote.NoCreditsForIndex,
-                chunkCount: 60,
-                progress: 80,
-            }),
-        )
+        updated(em, {
+            status: "blocked_credits",
+            error: StoredNote.NoCreditsForIndex,
+            chunkCount: 60,
+            progress: 80,
+        })
     })
 
     it("marks a source ready, or waiting for credits to read its facts", async () => {
@@ -408,21 +388,9 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
         await service.ready(WS, "s1", null)
         await service.ready(WS, "s1", StoredNote.KeywordOnly)
         await service.blockFacts(WS, "s1", StoredNote.NoCreditsForFacts)
-        expect(em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            KEY,
-            ...touched({ status: "ready", progress: 100 }),
-        )
-        expect(em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            KEY,
-            ...touched({ status: "ready", progress: 100, error: StoredNote.KeywordOnly }),
-        )
-        expect(em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            KEY,
-            ...touched({ status: "blocked_credits", error: StoredNote.NoCreditsForFacts }),
-        )
+        updated(em, { status: "ready", progress: 100 })
+        updated(em, { status: "ready", progress: 100, error: StoredNote.KeywordOnly })
+        updated(em, { status: "blocked_credits", error: StoredNote.NoCreditsForFacts })
     })
 })
 

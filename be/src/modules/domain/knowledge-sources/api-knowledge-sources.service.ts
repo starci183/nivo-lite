@@ -7,11 +7,16 @@ import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowl
 import type { SourceRef } from "./knowledge-sources.contracts"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import { normalizeSource } from "./source-input.policy"
+import { rawBytesOf } from "./source-quota.policy"
+import { SourceQuotaService } from "./source-quota.service"
 
 @Injectable()
 /** Knowledge writes of authenticated API requests, owned by the caller's fenced transaction. */
 export class ApiKnowledgeSourcesService {
-    constructor(private readonly queue: KnowledgeQueue) {}
+    constructor(
+        private readonly queue: KnowledgeQueue,
+        private readonly quota: SourceQuotaService,
+    ) {}
 
     /** Stores the promised source id and its indexing job together, without borrowing a person's identity. */
     async addText(input: ApiTextSourceInput, tx: EntityManager): Promise<SourceRef> {
@@ -27,6 +32,8 @@ export class ApiKnowledgeSourcesService {
             }),
             KnowledgeSourcesError,
         )
+        const sizeBytes = rawBytesOf(source, 0)
+        await this.quota.admit(tx, input.workspaceId, sizeBytes)
         const inserted = await tx.insert(KnowledgeSourceEntity, {
             id: input.sourceId,
             workspaceId: input.workspaceId,
@@ -39,6 +46,7 @@ export class ApiKnowledgeSourcesService {
             status: "queued",
             progress: 0,
             origin: source.origin,
+            sizeBytes,
             createdBy: null,
         })
         const [row] = inserted.identifiers

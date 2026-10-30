@@ -3863,6 +3863,11 @@ type KnowledgeSuggestionContextType {
   decisions: [SuggestionDecisionType!]!
 }
 
+type KnowledgeUsageType {
+  limitBytes: Int!
+  usedBytes: Int!
+}
+
 type LeadActionQueuedType {
   id: String!
   status: String!
@@ -5985,6 +5990,7 @@ type Query {
   knowledgeSource(input: KnowledgeSourceInput!): KnowledgeSourceDetailType!
   knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
   knowledgeSuggestions: KnowledgeSuggestionContextType!
+  knowledgeUsage: KnowledgeUsageType!
   leadActionStatus(input: LeadActionStatusInput!): LeadActionStatusType!
   leadBoard(input: LeadBoardInput! = {}): LeadBoardConnectionType!
   leadFlow(input: LeadFlowInput!): LeadFlowType!

@@ -13,6 +13,9 @@ export type SignedUploadOutcome = Outcome<SignedUpload, StorageFailureCode>
 /** The outcome of reading one stored object. */
 export type StoredObjectOutcome = Outcome<StoredObject, StorageFailureCode>
 
+/** The outcome of asking the size of one stored object, in bytes. */
+export type ObjectSizeOutcome = Outcome<number, StorageFailureCode>
+
 /** The outcome of listing the objects in one bucket folder. */
 export type ListedObjectsOutcome = Outcome<ReadonlyArray<ListedObject>, StorageFailureCode>
 
@@ -28,6 +31,8 @@ export interface StorageObjectsPort {
     signedUpload(bucket: string, path: string): Promise<SignedUploadOutcome>
     /** The bytes and content type of the object at `path` of `bucket`. */
     download(bucket: string, path: string): Promise<StoredObjectOutcome>
+    /** The size in bytes of the object at `path` of `bucket`, without reading it. */
+    sizeOf(bucket: string, path: string): Promise<ObjectSizeOutcome>
     /** Lists files of one folder, newest first; subfolders are omitted. */
     list(bucket: string, prefix: string, limit: number): Promise<ListedObjectsOutcome>
     /** Signs read addresses for the requested paths; missing objects are omitted. */

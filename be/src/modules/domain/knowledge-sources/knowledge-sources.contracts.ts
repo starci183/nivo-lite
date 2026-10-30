@@ -17,8 +17,22 @@ export const MAX_SOURCE_CHARS = 120_000
 /** The storage bucket of uploaded documents; objects live at `<workspaceId>/<uuid>/<filename>`. */
 export const KNOWLEDGE_UPLOAD_BUCKET = "knowledge-uploads"
 
-/** The largest uploaded document, in bytes (the bucket's own limit). */
-export const MAX_UPLOAD_BYTES = 12_582_912
+/** The largest uploaded document, in bytes: 50 MB. */
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
+/** The most raw document data one workspace may index in total, in bytes: 50 MB. */
+export const WORKSPACE_SOURCE_BYTES = 50 * 1024 * 1024
+
+/** How much of its raw document allowance a workspace has used. */
+export interface KnowledgeUsage {
+    /** The raw bytes its sources hold now. */
+    readonly usedBytes: number
+    /** The most raw bytes it may hold. */
+    readonly limitBytes: number
+}
+
+/** The storage path of an uploaded file, or null for a source that has none. */
+export type MaybeStoragePath = string | null
 
 /** The notes and failure codes stored in `knowledge_sources.error`; the front end shows its own text for each. */
 export enum StoredNote {
@@ -32,7 +46,7 @@ export enum StoredNote {
     FactsUnread = "KNOWLEDGE_NOTE_FACTS_UNREAD",
     /** The uploaded file is not in storage. */
     FileMissing = "KNOWLEDGE_NOTE_FILE_MISSING",
-    /** The uploaded file is larger than the bucket allows. */
+    /** The uploaded file is larger than a document may be. */
     FileTooLarge = "KNOWLEDGE_NOTE_FILE_TOO_LARGE",
     /** The source cannot be read and nothing more specific is known. */
     Unreadable = "KNOWLEDGE_NOTE_UNREADABLE",

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import { KnowledgeApiModule } from "../../knowledge.module"
 import { ConfigurableModuleClass } from "./knowledge-graphql.module-definition"
 import { KnowledgeSourcesResolver } from "./knowledge-sources.resolver"
+import { KnowledgeUsageResolver } from "./knowledge-usage.resolver"
 import { KnowledgeSourceResolver } from "./knowledge-source.resolver"
 import { NivoKnowledgeCountResolver } from "./nivo-knowledge-count.resolver"
 import { NivoKnowledgeResolver } from "./nivo-knowledge.resolver"
@@ -37,6 +38,7 @@ import { AgentKnowledgeLensesResolver } from "./agent-knowledge-lenses.resolver"
     providers: [
         KnowledgeSourcesResolver,
         KnowledgeSourceResolver,
+        KnowledgeUsageResolver,
         NivoKnowledgeCountResolver,
         NivoKnowledgeResolver,
         KnowledgeSuggestionsResolver,

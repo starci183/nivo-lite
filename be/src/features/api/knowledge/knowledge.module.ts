@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { KnowledgeSourcesHandler } from "./application/knowledge-sources.handler"
+import { KnowledgeUsageHandler } from "./application/knowledge-usage.handler"
 import { KnowledgeSourceHandler } from "./application/knowledge-source.handler"
 import { NivoKnowledgeCountHandler } from "./application/nivo-knowledge-count.handler"
 import { NivoKnowledgeHandler } from "./application/nivo-knowledge.handler"
@@ -35,6 +36,7 @@ import { ConfigurableModuleClass } from "./knowledge.module-definition"
     providers: [
         KnowledgeSourcesHandler,
         KnowledgeSourceHandler,
+        KnowledgeUsageHandler,
         NivoKnowledgeCountHandler,
         NivoKnowledgeHandler,
         KnowledgeSuggestionsHandler,

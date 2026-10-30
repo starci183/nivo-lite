@@ -23,6 +23,12 @@ export enum KnowledgeSourcesErrorCode {
     UploadUnavailable = "KNOWLEDGE_SOURCES_UPLOAD_UNAVAILABLE",
     /** The uploaded file name is empty. */
     FileNameRequired = "KNOWLEDGE_SOURCES_FILE_NAME_REQUIRED",
+    /** The uploaded file is larger than one document may be. */
+    FileTooLarge = "KNOWLEDGE_SOURCES_FILE_TOO_LARGE",
+    /** The new source would take the workspace past its raw document allowance. */
+    QuotaExceeded = "KNOWLEDGE_SOURCES_QUOTA_EXCEEDED",
+    /** The file source names a storage object that was never uploaded. */
+    UploadMissing = "KNOWLEDGE_SOURCES_UPLOAD_MISSING",
 }
 
 /** How each knowledge-sources code travels. */
@@ -37,6 +43,9 @@ export const KNOWLEDGE_SOURCES_ERROR_KINDS: Record<KnowledgeSourcesErrorCode, Er
     [KnowledgeSourcesErrorCode.InstanceUnknown]: "invalid",
     [KnowledgeSourcesErrorCode.UploadUnavailable]: "unavailable",
     [KnowledgeSourcesErrorCode.FileNameRequired]: "invalid",
+    [KnowledgeSourcesErrorCode.FileTooLarge]: "invalid",
+    [KnowledgeSourcesErrorCode.QuotaExceeded]: "invalid",
+    [KnowledgeSourcesErrorCode.UploadMissing]: "invalid",
 }
 
 /** The one error class of the knowledge-sources capability. */

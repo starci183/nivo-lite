@@ -43,6 +43,7 @@ const rowOf = builder<KnowledgeSourceEntity>({
     storagePath: null,
     sourceUrl: "https://x.test",
     origin: null,
+    sizeBytes: 0,
     createdBy: "u1",
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
     updatedAt: new Date("2026-10-02T00:00:00.000Z"),

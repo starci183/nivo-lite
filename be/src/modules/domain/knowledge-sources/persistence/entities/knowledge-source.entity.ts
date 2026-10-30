@@ -83,6 +83,10 @@ export class KnowledgeSourceEntity {
     @Column({ name: "origin", type: "text", nullable: true })
     origin!: string | null
 
+    /** The raw bytes it holds: the uploaded file, or the pasted text. */
+    @Column({ name: "size_bytes", type: "integer", default: () => "0" })
+    sizeBytes!: number
+
     /** 0-100 while a worker is on it. */
     @Column({ name: "progress", type: "integer", default: () => "0" })
     progress!: number

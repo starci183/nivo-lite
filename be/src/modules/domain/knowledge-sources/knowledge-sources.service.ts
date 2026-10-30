@@ -48,6 +48,7 @@ import {
     replacementContent,
     safeFileName,
 } from "./source-input.policy"
+import { SourceQuotaService } from "./source-quota.service"
 import { toSourceDetail, toSourceRecord, toSourceSummary } from "./source-record.mapper"
 
 /** The most documents the Knowledge page lists. */
@@ -88,6 +89,7 @@ export class KnowledgeSourcesService {
         @InjectEventBus() private readonly bus: EventBus,
         private readonly entitlements: EntitlementsService,
         private readonly installations: InstallationRecordsService,
+        private readonly quota: SourceQuotaService,
         @InjectIds() private readonly ids: Ids,
     ) {}
 
@@ -114,35 +116,43 @@ export class KnowledgeSourcesService {
         return toSourceDetail(row)
     }
 
-    /** Adds a document and queues its indexing; the row and the job are written in one transaction. */
+    /** Adds a document and queues its indexing; the row and the job are written in one transaction, after the workspace's raw-data allowance is checked under a lock. */
     async addSource(userId: string, workspaceId: string, input: AddSourceInput): Promise<SourceRef> {
         await this.members.require(userId, workspaceId, MANAGERS)
         const source = unwrapOutcome(normalizeSource(workspaceId, input), KnowledgeSourcesError)
         const instance = await this.instanceOf(workspaceId, source.installationId)
-        return this.entityManager.transaction(async (tx) => {
-            const inserted = await tx.insert(KnowledgeSourceEntity, {
-                workspaceId,
-                module: instance?.moduleKey ?? source.module,
-                installationId: instance?.id ?? null,
-                kind: source.kind,
-                topic: source.topic,
-                tags: [...source.tags],
-                visibility: source.visibility,
-                title: source.title,
-                content: source.content,
-                status: "queued",
-                progress: 0,
-                storagePath: source.storagePath,
-                sourceUrl: source.sourceUrl,
-                origin: source.origin,
-                createdBy: userId,
+        const sizeBytes = await this.quota.measure(source)
+        try {
+            return await this.entityManager.transaction(async (tx) => {
+                await this.quota.admit(tx, workspaceId, sizeBytes)
+                const inserted = await tx.insert(KnowledgeSourceEntity, {
+                    workspaceId,
+                    module: instance?.moduleKey ?? source.module,
+                    installationId: instance?.id ?? null,
+                    kind: source.kind,
+                    topic: source.topic,
+                    tags: [...source.tags],
+                    visibility: source.visibility,
+                    title: source.title,
+                    content: source.content,
+                    status: "queued",
+                    progress: 0,
+                    storagePath: source.storagePath,
+                    sourceUrl: source.sourceUrl,
+                    origin: source.origin,
+                    sizeBytes,
+                    createdBy: userId,
+                })
+                const [row] = inserted.identifiers
+                if (typeof row?.id !== "string")
+                    throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+                await this.queue.enqueueIndex({ sourceId: row.id, workspaceId }, tx)
+                return { id: row.id }
             })
-            const [row] = inserted.identifiers
-            if (typeof row?.id !== "string")
-                throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
-            await this.queue.enqueueIndex({ sourceId: row.id, workspaceId }, tx)
-            return { id: row.id }
-        })
+        } catch (failure) {
+            await this.quota.discardRefused(source.storagePath, failure)
+            throw failure
+        }
     }
 
     /** Puts a failed or credit-blocked source back on the queue; any other source is left as it is. */
