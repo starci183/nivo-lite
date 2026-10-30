@@ -275,7 +275,6 @@ export type {
     OfficePinRowView,
     OfficeResultCardView,
     OfficeCardIdentity,
-    OfficeRoomMemberPreviewView,
     OfficeRoomMembersView,
     OfficeRoomRowView,
     OfficeMessageStatusKind,
@@ -284,7 +283,6 @@ export type {
     OfficeMissingField,
     OfficeOutboxView,
     OfficePreviewKind,
-    OfficeSeenReaderView,
     OfficeTaskView,
     OfficeText,
     OfficeThreadItem,
@@ -293,6 +291,7 @@ export type {
 } from "./office"
 export type {
     OfficeCardDraft,
+    Arrangement,
     OfficeComposerProps,
     OfficeConversationsProps,
     OfficeInfoPanelProps,
@@ -348,10 +347,8 @@ export type { ModuleIconName } from "./module-icon"
 export type {
     ApprovalExpiryView,
     ThreadApprovalCardView,
-    ApprovalLineView,
     BodySegment,
     ChainPanelView,
-    ChainStepView,
     ComposerOption,
     StatusTone,
     ThreadApprovalLabels,
@@ -369,9 +366,7 @@ export type { BillingPlanView, BillingRowView, BillingTone, PlanCardView, PlanGr
 export type { OwnerGroupView, ResponsibilityRowView, RowStatus } from "./responsibilities"
 export type {
     SetupGatesCardProps,
-    SetupSideDraft,
     SetupSideGate,
-    SetupSideGates,
     SetupSideKnowledge,
     SetupSideNotice,
     SetupSideVersions,
@@ -404,7 +399,6 @@ export type {
     ContentEditorItemView,
     ContentEditorPatch,
     ContentNoteView,
-    ContentStatusView,
     ContentTransitionView,
 } from "./content-editor"
 export type { TypedDecisionValues } from "./sales-decision-typed"
@@ -412,7 +406,7 @@ export type { MemberRowView } from "./team"
 export type { ContractImportDialogEvents, ContractImportDialogView, ContractImportRowView } from "./contract-import"
 export type { ReadGateBaseProps } from "./read-gate"
 export type { MethodView, SessionRowView } from "./account"
-export type { FlowEntryView, FlowSectionView, FlowView } from "./leads"
+export type { FlowEntryView, FlowView } from "./leads"
 export { ZALO_TABS } from "./zalo-connection"
 export type {
     ZaloAgentRowView,
@@ -421,7 +415,6 @@ export type {
     ZaloFactView,
     ZaloHeadView,
     ZaloPasteView,
-    ZaloRecipientOption,
     ZaloSendView,
     ZaloTab,
     ZaloTone,
@@ -435,7 +428,5 @@ export type {
     SepayEventKind,
     SepayEventOutcome,
     SepayEventView,
-    SepayHealthView,
-    SepayStepState,
     SepayStepView,
 } from "./sepay-connection"
