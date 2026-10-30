@@ -33,6 +33,10 @@ const parameterList = (count: number): DbParameterList => {
     return placeholders
 }
 
+/** The statement text of one function call: the checked name and the numbered placeholders, never a value. */
+const callStatement = (name: string, count: number): string =>
+    `SELECT * FROM ${functionPart(name)}(${parameterList(count)})`
+
 /**
  * Calls one database function TypeORM cannot express (a pg built-in or a SECURITY DEFINER function of a migration) with numbered
  * parameters; the function name is an identifier the canon lint holds to the listed set, never a value.
@@ -42,9 +46,8 @@ export const callDbFunction = async <T>(
     name: string,
     args: ReadonlyArray<unknown>,
 ): Promise<ReadonlyArray<T>> => {
-    const rows = await manager.query<Array<T>>(`SELECT * FROM ${functionPart(name)}(${parameterList(args.length)})`, [
-        ...args,
-    ])
+    const statement = callStatement(name, args.length)
+    const rows = await manager.query<Array<T>>(statement, [...args])
     return rows
 }
 
@@ -66,5 +69,6 @@ export interface StatementConnection {
 
 /** Subscribes the connection to the channel; the name is checked like a function name and spliced as the identifier it is. */
 export const listenOn = async (connection: StatementConnection, channel: string): Promise<void> => {
-    await connection.query(`LISTEN ${functionPart(channel)}`)
+    const statement = `LISTEN ${functionPart(channel)}`
+    await connection.query(statement)
 }

@@ -269,11 +269,14 @@ describe("ContentConfigurationService", () => {
             workspaceId: "ws-1",
             brandVoice: "warm",
         })
-        expect(automation?.callsOf("setParameter")).toEqual([["automation", JSON.stringify({ offer_draft: true })]])
+        expect(automation?.callsOf("setParameter")).toEqual([
+            ["automationKey", "offer_draft"],
+            ["automationOn", "true"],
+        ])
         expect(ensure?.callsOf("values")).toEqual([[{ workspaceId: "ws-1" }]])
         expect(ensure?.callsOf("orIgnore")).toEqual([[]])
         expect(evaluatedValues(automation?.callsOf("set")[0]?.[0])).toEqual({
-            automations: '"automations" || :automation::jsonb',
+            automations: 'jsonb_set("automations", ARRAY[:automationKey]::text[], :automationOn::jsonb)',
         })
         expect(automation?.callsOf("where")).toEqual([["workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
 

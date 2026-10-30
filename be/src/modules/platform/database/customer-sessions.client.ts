@@ -66,7 +66,8 @@ export const openMysqlSession = async (target: PostgresSessionTarget): Promise<C
     const runner: SessionRunner = source
     await prepared(source, async () => {
         await runner.query(MYSQL_READ_ONLY)
-        await runner.query(`SET SESSION MAX_EXECUTION_TIME=${target.queryMs}`).then(
+        const executionLimit = `SET SESSION MAX_EXECUTION_TIME=${target.queryMs}`
+        await runner.query(executionLimit).then(
             () => undefined,
             () => undefined,
         )

@@ -50,3 +50,5 @@ begin
   );
   return new;
 end $$;
+
+revoke execute on function public.bookings_notify() from public, anon;
