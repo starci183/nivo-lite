@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** The business goals a project may have, as the table checks them. */
 export type VideoProjectGoal = "service" | "offer" | "testimonial" | "behind_scenes" | "hiring" | "custom"
@@ -14,11 +16,7 @@ export type VideoProjectJson = object
 
 @Entity({ schema: "public", name: "video_projects" })
 /** One video project of a workspace: its brief, its scenes, the render it points at and its approval. */
-export class VideoProjectEntity {
-    /** The project id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class VideoProjectEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -102,12 +100,4 @@ export class VideoProjectEntity {
     /** The account that created it; null for a delegated script. */
     @Column({ name: "created_by", type: "uuid", nullable: true })
     createdBy!: string | null
-
-    /** When the row was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When the row last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

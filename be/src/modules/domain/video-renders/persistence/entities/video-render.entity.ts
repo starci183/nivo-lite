@@ -1,15 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** The render lifecycle states stored in `status`. */
 export type VideoRenderState = "queued" | "rendering" | "done" | "failed"
 
 @Entity({ schema: "public", name: "video_renders" })
 /** One render of a video project: queued by the video capability's transaction and settled by the render job. */
-export class VideoRenderEntity {
-    /** The render id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class VideoRenderEntity extends UuidAbstractEntity {
     /** The workspace the render belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -57,14 +55,6 @@ export class VideoRenderEntity {
     /** The person who asked for it, or null when an agent did. */
     @Column({ name: "created_by", type: "uuid", nullable: true })
     createdBy!: string | null
-
-    /** When the render was queued. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When the row last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** When the first delivery took the render. */
     @Column({ name: "started_at", type: "timestamptz", nullable: true })
