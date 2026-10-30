@@ -9,6 +9,7 @@ import type {
     InstallationMode,
     InstallationRecord,
     InstallationWrite,
+    RecordInstallation,
     RequirementFacts,
 } from "@modules/domain/module-installations"
 import { InstallationChangesService } from "./installation-changes.service"
@@ -21,6 +22,7 @@ import type { InstallRequest, InstallResult } from "./module-installs.contracts"
 import { ModuleReadinessService } from "./module-readiness.service"
 import type { InstallationView, ModuleDefinition } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
+import { RecordInstallationService } from "./record-installation.service"
 import {
     AGENT_NAME_LIMITS,
     agentNameOf,
@@ -59,6 +61,7 @@ export class ModuleInstallService {
         private readonly events: EventsService,
         private readonly changes: InstallationChangesService,
         private readonly facts: InstallationFactsService,
+        private readonly recordOwners: RecordInstallationService,
         private readonly readiness: ModuleReadinessService,
     ) {}
 
@@ -73,6 +76,16 @@ export class ModuleInstallService {
     async get(principalId: string, workspaceId: string, installationId: string): Promise<InstallationView> {
         await this.members.require(principalId, workspaceId)
         return this.viewOf(workspaceId, installationId)
+    }
+
+    /** The installation that owns a record of the workspace; any member may read. Null when none says. */
+    async installationOfRecord(
+        principalId: string,
+        workspaceId: string,
+        recordId: string,
+    ): Promise<RecordInstallation> {
+        await this.members.require(principalId, workspaceId)
+        return this.recordOwners.installationOfRecord(workspaceId, recordId)
     }
 
     /**
