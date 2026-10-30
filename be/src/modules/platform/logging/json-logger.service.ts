@@ -42,4 +42,5 @@ export class JsonLoggerService implements Logger {
 }
 
 /** Builds the JSON logger stamping lines with `clock`, info on `out` (stdout by default) and the rest on stderr; main.ts uses it before the DI container exists. */
-export const createJsonLogger = (clock: Clock, out: Writable = process.stdout): Logger => new JsonLoggerService(clock, out, process.stderr)
+export const createJsonLogger = (clock: Clock, out: Writable = process.stdout): Logger =>
+    new JsonLoggerService(clock, out, process.stderr)

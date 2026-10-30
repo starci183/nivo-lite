@@ -23,11 +23,7 @@ export class WorkspaceSetupService {
     ) {}
 
     /** Creates a free workspace owned by the person, with the business type they named, and lays down its governance. */
-    async createFree(
-        userId: string,
-        name: string,
-        businessType: NamedBusinessType = null,
-    ): Promise<CreatedWorkspace> {
+    async createFree(userId: string, name: string, businessType: NamedBusinessType = null): Promise<CreatedWorkspace> {
         const created = await this.workspaces.createFree(userId, name, businessType)
         await this.ensureGovernance(created.id)
         return created

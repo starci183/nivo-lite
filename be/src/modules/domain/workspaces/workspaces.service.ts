@@ -6,7 +6,15 @@ import { InjectPrimaryEntityManager, advisoryXactLock } from "@modules/platform/
 import { isRecord } from "@modules/platform/primitives"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
 import { WorkspaceEntity } from "./persistence/entities"
-import type { CreatedWorkspace, FirstWorkspace, NamedBusinessType, OptionalAccountId, WorkspaceBrand, WorkspaceMembership, WorkspaceName } from "./workspaces.contracts"
+import type {
+    CreatedWorkspace,
+    FirstWorkspace,
+    NamedBusinessType,
+    OptionalAccountId,
+    WorkspaceBrand,
+    WorkspaceMembership,
+    WorkspaceName,
+} from "./workspaces.contracts"
 import type { WorkspacesOptions } from "./workspaces.options"
 import { FIRST_WORKSPACE_NAME } from "./workspaces.templates"
 import { InjectWorkspacesOptions } from "./workspaces.port"
@@ -94,11 +102,7 @@ export class WorkspacesService {
     }
 
     /** Creates a free workspace owned by the person; only where the environment allows it. */
-    async createFree(
-        userId: string,
-        name: string,
-        businessType: NamedBusinessType = null,
-    ): Promise<CreatedWorkspace> {
+    async createFree(userId: string, name: string, businessType: NamedBusinessType = null): Promise<CreatedWorkspace> {
         if (!this.options.allowFreeWorkspace) throw new WorkspacesError({ code: WorkspacesErrorCode.SignupDisabled })
         return { id: await this.insertFree(this.entityManager, userId, name, businessType) }
     }
