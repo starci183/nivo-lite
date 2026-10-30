@@ -13,8 +13,8 @@ import { GoogleStateClient } from "./google-state.client"
 import { PassportFlowsService } from "./passport-flows.service"
 import { PassportGoogleStrategy } from "./passport-google.adapter"
 import { PassportLocalStrategy } from "./passport-local.adapter"
-import { PassportPasswordsClient } from "./passport-passwords.client"
-import { PassportTokensClient } from "./passport-tokens.client"
+import { PassportPasswordsClient } from "./passport.password"
+import { PassportTokensClient } from "./passport.tokens"
 
 @Module({})
 /** The passport integration: the local and Google strategies, our access-token signer, the password hasher and the flows that run them. */

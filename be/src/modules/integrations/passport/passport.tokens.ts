@@ -1,7 +1,7 @@
 import { createHash, createHmac } from "node:crypto"
 import { Injectable } from "@nestjs/common"
-import { SignJWT, calculateJwkThumbprint, exportJWK, importPKCS8, importSPKI, jwtVerify } from "jose"
-import type { CryptoKey, KeyObject } from "jose"
+import { SignJWT, calculateJwkThumbprint, createLocalJWKSet, exportJWK, importPKCS8, importSPKI, jwtVerify } from "jose"
+import type { CryptoKey, JWTVerifyGetKey, KeyObject } from "jose"
 import { ok, refused, signStateToken, verifyStateToken } from "@modules/platform/primitives"
 import type { Outcome, OptionalSignedState, SignedState } from "@modules/platform/primitives"
 import { PassportError, PassportErrorCode } from "./errors/passport.error"
@@ -14,7 +14,7 @@ const STATE_LABEL = "passport.google-state"
 
 interface KeyPair {
     readonly privateKey: CryptoKey | KeyObject
-    readonly publicKey: CryptoKey | KeyObject
+    readonly keySet: JWTVerifyGetKey
     readonly keyId: string
     readonly jwk: Record<string, string>
 }
@@ -48,9 +48,9 @@ export class PassportTokensClient {
 
     /** The claims of a token that passed signature, issuer, audience and expiry, or a refusal. */
     async verify(token: string, now: Date): Promise<Outcome<AccessClaims, PassportErrorCode>> {
-        const { publicKey } = await this.keys()
+        const { keySet } = await this.keys()
         try {
-            const { payload } = await jwtVerify(token, publicKey, {
+            const { payload } = await jwtVerify(token, keySet, {
                 algorithms: ["EdDSA"],
                 issuer: this.options.issuer,
                 audience: this.options.audience,
@@ -113,6 +113,6 @@ export class PassportTokensClient {
         for (const [name, value] of Object.entries({ ...exported, kid: keyId, alg: ALGORITHM, use: "sig" })) {
             if (typeof value === "string") jwk[name] = value
         }
-        return { privateKey, publicKey, keyId, jwk }
+        return { privateKey, keySet: createLocalJWKSet({ keys: [jwk] }), keyId, jwk }
     }
 }

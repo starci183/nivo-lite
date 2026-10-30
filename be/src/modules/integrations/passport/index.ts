@@ -9,11 +9,11 @@ export {
     PASSPORT_PASSWORDS,
     PASSPORT_TOKENS,
 } from "./passport.decorators"
-export { cookieValue } from "./cookie-read.policy"
+export { cookieValue } from "./passport.cookie"
 export { PassportModule } from "./passport.module"
-export { PassportTokensClient } from "./passport-tokens.client"
+export { PassportTokensClient } from "./passport.tokens"
 export type { PassportFlowsService } from "./passport-flows.service"
-export type { PassportPasswordsClient } from "./passport-passwords.client"
+export type { PassportPasswordsClient } from "./passport.password"
 export type {
     AuthSubject,
     GoogleProfile,

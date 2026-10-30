@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { ObjectStorageError, ObjectStorageErrorCode } from "./errors/object-storage.error"
 import type { StorageClient } from "./object-storage.contracts"
-import { InjectStorageClient, InjectStorageOptions } from "./object-storage.decorators"
-import type { ObjectStorageOptions } from "./object-storage.options"
+import { InjectStorageClient, InjectStorageOptions } from "./storage.decorators"
+import type { ObjectStorageOptions } from "./storage.options"
 import type { StorageAssetDownload, StorageAssetUpload, StorageAssetsPort } from "./object-storage.port"
 import { bucketNameOf, objectKeyOf } from "./object-storage.policy"
 

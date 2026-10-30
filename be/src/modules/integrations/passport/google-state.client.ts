@@ -6,10 +6,10 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
 import { sameSitePath } from "@modules/platform/primitives"
-import { cookieValue } from "./cookie-read.policy"
+import { cookieValue } from "./passport.cookie"
 import { InjectPassportOptions, InjectPassportTokens } from "./passport.decorators"
 import type { PassportOptions } from "./passport.options"
-import type { PassportTokensClient } from "./passport-tokens.client"
+import type { PassportTokensClient } from "./passport.tokens"
 
 /** The cookie that carries one Google round trip. */
 export const GOOGLE_STATE_COOKIE = "nivo_google_state"
