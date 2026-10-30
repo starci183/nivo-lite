@@ -23,7 +23,8 @@ const bootstrap = async (): Promise<void> => {
     app.disable("x-powered-by")
     app.use(securityHeaders)
     app.useBodyParser("json", { limit: JSON_BODY_LIMIT })
-    app.enableCors({ origin: [...options.httpSecurity.allowedOrigins] })
+    // credentials: the console calls /auth/login and /auth/refresh with the refresh cookie, so the allowed origins may send and receive it.
+    app.enableCors({ origin: [...options.httpSecurity.allowedOrigins], credentials: true })
     app.enableShutdownHooks()
     await app.listen(options.server.port)
     createJsonLogger(new SystemClockService()).info(LoggingLogEvent.ServerStarted, {

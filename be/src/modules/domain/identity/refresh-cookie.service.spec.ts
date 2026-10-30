@@ -36,19 +36,16 @@ const build = async (cookieDomain: string | undefined) => {
 }
 
 describe("IdentityRefreshCookieService / issue and clear", () => {
-    it("writes an httpOnly, Secure, SameSite=Lax cookie on the shared domain", async () => {
+    const SHARED = { httpOnly: true, secure: true, sameSite: "lax", domain: ".nivo.vn" } as const
+    const HOST_ONLY = { httpOnly: true, secure: true, sameSite: "lax" } as const
+
+    it("writes an httpOnly, Secure, SameSite=Lax cookie on every path of the shared domain, clearing the old /auth copy first", async () => {
         const response = mock<Response>()
 
         ;(await build(".nivo.vn")).issue(response, TOKENS)
 
-        expect(response.cookie).toHaveBeenCalledWith("nivo_refresh", "r1", {
-            httpOnly: true,
-            secure: true,
-            sameSite: "lax",
-            path: "/auth",
-            maxAge: 60_000,
-            domain: ".nivo.vn",
-        })
+        expect(response.clearCookie).toHaveBeenCalledWith("nivo_refresh", { ...SHARED, path: "/auth" })
+        expect(response.cookie).toHaveBeenCalledWith("nivo_refresh", "r1", { ...SHARED, path: "/", maxAge: 60_000 })
     })
 
     it("keeps the cookie host-only when no domain is configured, on write and on clear", async () => {
@@ -58,33 +55,18 @@ describe("IdentityRefreshCookieService / issue and clear", () => {
         service.issue(response, TOKENS)
         service.clear(response)
 
-        expect(response.cookie).toHaveBeenCalledWith("nivo_refresh", "r1", {
-            httpOnly: true,
-            secure: true,
-            sameSite: "lax",
-            path: "/auth",
-            maxAge: 60_000,
-        })
-        expect(response.clearCookie).toHaveBeenCalledWith("nivo_refresh", {
-            httpOnly: true,
-            secure: true,
-            sameSite: "lax",
-            path: "/auth",
-        })
+        expect(response.cookie).toHaveBeenCalledWith("nivo_refresh", "r1", { ...HOST_ONLY, path: "/", maxAge: 60_000 })
+        expect(response.clearCookie).toHaveBeenCalledWith("nivo_refresh", { ...HOST_ONLY, path: "/" })
+        expect(response.clearCookie).toHaveBeenCalledWith("nivo_refresh", { ...HOST_ONLY, path: "/auth" })
     })
 
-    it("clears the cookie with the same attributes it was written with", async () => {
+    it("clears the cookie on its path and on the old /auth path, with the attributes it was written with", async () => {
         const response = mock<Response>()
 
         ;(await build(".nivo.vn")).clear(response)
 
-        expect(response.clearCookie).toHaveBeenCalledWith("nivo_refresh", {
-            httpOnly: true,
-            secure: true,
-            sameSite: "lax",
-            path: "/auth",
-            domain: ".nivo.vn",
-        })
+        expect(response.clearCookie).toHaveBeenCalledWith("nivo_refresh", { ...SHARED, path: "/" })
+        expect(response.clearCookie).toHaveBeenCalledWith("nivo_refresh", { ...SHARED, path: "/auth" })
     })
 })
 
