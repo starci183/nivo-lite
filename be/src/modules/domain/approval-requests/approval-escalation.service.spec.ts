@@ -22,7 +22,7 @@ import { APPROVAL_AGENT_OWNERS } from "./approval-requests.decorators"
 import type { AgentOwnerRef, ApprovalAgentOwners } from "./approval-requests.port"
 import { ApprovalRequestEntity } from "./persistence/entities"
 
-const FIND_OWNER_SEAT = "SELECT * FROM public.workspace_owner_member($1)"
+const FIND_OWNER_SEAT = 'SELECT * FROM "public"."workspace_owner_member"($1)'
 
 const build = async (owners: AgentOwnerRef | Error, seat: string | null = "member-owner") => {
     const tx = fakeTransaction(

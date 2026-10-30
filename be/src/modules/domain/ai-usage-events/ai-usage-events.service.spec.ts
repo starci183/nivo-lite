@@ -11,8 +11,8 @@ import { CREDIT_USD_VALUE } from "./usage-cost.policy"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { AiUsageEventEntity } from "./persistence/entities"
 
-const SELECT_QUOTA_STATUS = "SELECT * FROM public.ai_quota_status($1)"
-const POST_USAGE_NOTICE = "SELECT * FROM public.usage_notice_post($1, $2, $3, $4)"
+const SELECT_QUOTA_STATUS = 'SELECT * FROM "public"."ai_quota_status"($1)'
+const POST_USAGE_NOTICE = 'SELECT * FROM "public"."usage_notice_post"($1, $2, $3, $4)'
 /** The row as the driver answers it: bigint and numeric columns as text. */
 const ROW: QuotaRecord = {
     period_start: "2026-10-01",

@@ -8,11 +8,11 @@ import { JobOpsErrorCode } from "./errors/job-ops.error"
 import { JobOpsLogEvent } from "./job-ops.log-events"
 import { JobOpsService } from "./job-ops.service"
 /** The statements `callDbFunction` sends for the jobs functions. */
-const READ_JOB_STATS = "SELECT * FROM public.job_stats()"
-const READ_FAILED_JOBS = "SELECT * FROM public.job_failed($1)"
-const READ_OPEN_JOBS = "SELECT * FROM public.job_open($1)"
-const REQUEUE_JOB = "SELECT * FROM public.job_reopen($1)"
-const REQUEUE_FAILED_JOBS = "SELECT * FROM public.job_requeue_failed($1)"
+const READ_JOB_STATS = 'SELECT * FROM "public"."job_stats"()'
+const READ_FAILED_JOBS = 'SELECT * FROM "public"."job_failed"($1)'
+const READ_OPEN_JOBS = 'SELECT * FROM "public"."job_open"($1)'
+const REQUEUE_JOB = 'SELECT * FROM "public"."job_reopen"($1)'
+const REQUEUE_FAILED_JOBS = 'SELECT * FROM "public"."job_requeue_failed"($1)'
 
 const OUTBOX_ID = "12345678-1234-1234-1234-123456789abc"
 const STATS = {

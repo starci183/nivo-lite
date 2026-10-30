@@ -27,7 +27,7 @@ import type { SeatAnswer } from "@tests/fixtures/builders/api-keys-seats.builder
 import { ApiKeysErrorCode } from "./errors/api-keys.error"
 import { ApiKeyEntity } from "./persistence/entities"
 
-const API_KEY_AUTH = "SELECT * FROM public.api_key_auth($1)"
+const API_KEY_AUTH = 'SELECT * FROM "public"."api_key_auth"($1)'
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 

@@ -9,9 +9,9 @@ import type { AccountDirectory } from "./workspace-members.contracts"
 import { ACCOUNT_DIRECTORY } from "./workspace-members.port"
 
 /** The statements `callDbFunction` sends for the three account doors. */
-const LIST_PROVIDERS = "SELECT * FROM public.be_account_providers($1)"
-const LIST_SESSIONS = "SELECT * FROM public.be_account_sessions($1)"
-const REVOKE_SESSION = "SELECT * FROM public.be_revoke_session($1, $2)"
+const LIST_PROVIDERS = 'SELECT * FROM "public"."be_account_providers"($1)'
+const LIST_SESSIONS = 'SELECT * FROM "public"."be_account_sessions"($1)'
+const REVOKE_SESSION = 'SELECT * FROM "public"."be_revoke_session"($1, $2)'
 
 const CREATED = new Date("2026-10-01T00:00:00.000Z")
 const ACTIVE = "2026-10-11T08:30:00.000Z"

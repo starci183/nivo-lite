@@ -20,8 +20,8 @@ const stringLike = (text: string): unknown => expect.stringContaining(text)
 /** The match-anything matcher, typed `unknown` so it flows into any slot. */
 const anything = (): unknown => expect.anything()
 
-const WORKSPACE_FOOTPRINT = "SELECT * FROM public.workspace_footprint($1)"
-const WORKSPACE_USER_REFERENCES = "SELECT * FROM public.workspace_user_references($1, $2)"
+const WORKSPACE_FOOTPRINT = 'SELECT * FROM "public"."workspace_footprint"($1)'
+const WORKSPACE_USER_REFERENCES = 'SELECT * FROM "public"."workspace_user_references"($1, $2)'
 
 const HAKUEN = "cd312306-c950-4328-8b88-022553070ae6"
 const SPA = "11111111-1111-4111-8111-111111111111"

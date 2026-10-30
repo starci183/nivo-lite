@@ -13,7 +13,7 @@ import { AvatarsService } from "./avatars.service"
 import { AvatarsErrorCode } from "./errors/avatars.error"
 
 /** The statement `callDbFunction` sends to allocate a picture object name. */
-const NEW_AVATAR_OBJECT_ID = "SELECT * FROM gen_random_uuid()"
+const NEW_AVATAR_OBJECT_ID = 'SELECT * FROM "pg_catalog"."gen_random_uuid"()'
 const ID = "0f8fad5b-d9cb-469f-a165-70867728950e"
 const PUBLIC_BASE = "https://s.test/storage/v1/object/public/avatars_public"
 const PNG = { contentType: "image/png", sizeBytes: 4096 }

@@ -5,7 +5,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { JobHistoryRetentionService } from "./job-history-retention.service"
 
 /** The statement `callDbFunction` sends for the sweep function. */
-const SWEEP_SYSTEM_HISTORY = "SELECT * FROM public.system_history_sweep($1, $2, $3)"
+const SWEEP_SYSTEM_HISTORY = 'SELECT * FROM "public"."system_history_sweep"($1, $2, $3)'
 
 const counts = (outbox: number, jobs = 0, cron = 0, http = 0) => [
     { system_history_sweep: { outbox, jobs, cron, http } },

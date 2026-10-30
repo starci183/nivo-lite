@@ -18,13 +18,13 @@ import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
 import type { ApplicationInput } from "./policies/application.policy"
 
-const SUBMIT_APPLICATION = "SELECT * FROM public.hiring_application_submit($1, $2, $3, $4, $5, $6)"
-const MOVE_CANDIDATE = "SELECT * FROM public.hiring_candidate_move($1, $2, $3, $4, $5, $6)"
-const SAVE_NOTES = "SELECT * FROM public.hiring_candidate_notes($1, $2, $3, $4, $5)"
-const DELETE_CANDIDATES = "SELECT * FROM public.hiring_candidates_delete($1, $2)"
-const LINK_STAFF = "SELECT * FROM public.hiring_candidate_link_staff($1, $2)"
-const TOGGLE_ONBOARDING = "SELECT * FROM public.hiring_onboarding_toggle($1, $2, $3)"
-const FILL_CHECK = "SELECT * FROM public.hiring_job_fill_check($1, $2)"
+const SUBMIT_APPLICATION = 'SELECT * FROM "public"."hiring_application_submit"($1, $2, $3, $4, $5, $6)'
+const MOVE_CANDIDATE = 'SELECT * FROM "public"."hiring_candidate_move"($1, $2, $3, $4, $5, $6)'
+const SAVE_NOTES = 'SELECT * FROM "public"."hiring_candidate_notes"($1, $2, $3, $4, $5)'
+const DELETE_CANDIDATES = 'SELECT * FROM "public"."hiring_candidates_delete"($1, $2)'
+const LINK_STAFF = 'SELECT * FROM "public"."hiring_candidate_link_staff"($1, $2)'
+const TOGGLE_ONBOARDING = 'SELECT * FROM "public"."hiring_onboarding_toggle"($1, $2, $3)'
+const FILL_CHECK = 'SELECT * FROM "public"."hiring_job_fill_check"($1, $2)'
 
 interface NotesRow {
     readonly hiring_candidate_notes: boolean

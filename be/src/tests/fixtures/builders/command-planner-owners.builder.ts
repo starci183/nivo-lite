@@ -19,7 +19,7 @@ export const CHAIN_REPEATS_COMMAND = "chain repeats"
 export const FIND_GIVEN_INSTALLATION = "given installation"
 export const FIND_SUBJECT_LABEL = "subject label"
 /** The statement `callDbFunction` sends for the resolver. */
-export const RESOLVE_INSTALLATION = "SELECT * FROM public.resolve_installation($1, $2, $3, $4, $5)"
+export const RESOLVE_INSTALLATION = 'SELECT * FROM "public"."resolve_installation"($1, $2, $3, $4, $5)'
 /** Stands for a lookup that fails: every read of a subject label rejects. */
 export const UNREADABLE = "SELECT 1"
 

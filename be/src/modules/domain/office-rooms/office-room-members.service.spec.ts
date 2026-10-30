@@ -10,7 +10,7 @@ import { OFFICE_ROOMS_AGENTS } from "./office-rooms.decorators"
 import type { RoomAgentSeat, RoomsAgents } from "./office-rooms.port"
 
 /** The statement `callDbFunction` runs for the Auth-side photos. */
-const LIST_MEMBER_AVATARS = "SELECT * FROM be_access.workspace_member_avatars($1, $2)"
+const LIST_MEMBER_AVATARS = 'SELECT * FROM "be_access"."workspace_member_avatars"($1, $2)'
 
 const person = (seat: string, user: string, name: string, at: string): MemberSeat => ({
     seat_id: seat,

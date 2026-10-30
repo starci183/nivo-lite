@@ -27,7 +27,7 @@ import { AgentsErrorCode } from "./errors/agents.error"
 import { AgentEntity } from "./persistence/entities"
 
 /** The statement `callDbFunction` sends for the workspace owner. */
-const FIND_WORKSPACE_OWNER = "SELECT * FROM public.workspace_owner_member($1)"
+const FIND_WORKSPACE_OWNER = 'SELECT * FROM "public"."workspace_owner_member"($1)'
 const ownerRow = (id: string | null) => [{ workspace_owner_member: id }]
 
 const seatOf = builder<MemberSeatRecord>({

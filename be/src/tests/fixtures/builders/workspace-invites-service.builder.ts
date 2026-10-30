@@ -45,7 +45,7 @@ export const pendingStoredInvite = (): StoredInviteRow => ({
 })
 
 /** The statement the database mints a uuid with. */
-export const MINT_UUID = "SELECT * FROM gen_random_uuid()"
+export const MINT_UUID = 'SELECT * FROM "pg_catalog"."gen_random_uuid"()'
 
 /** Two uuids of the database whose joining, dashes removed, is `TOKEN`. */
 export const MINTED = [

@@ -9,7 +9,7 @@ import { ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 
 /** The statement `callDbFunction` runs to find the owner seat. */
-const FIND_WORKSPACE_OWNER = "SELECT * FROM public.workspace_owner_member($1)"
+const FIND_WORKSPACE_OWNER = 'SELECT * FROM "public"."workspace_owner_member"($1)'
 
 const MEMBER_ID = "11111111-1111-4111-8111-111111111111"
 const AGENT_ID = "22222222-2222-4222-8222-222222222222"

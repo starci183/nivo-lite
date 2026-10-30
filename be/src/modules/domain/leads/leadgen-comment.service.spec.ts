@@ -11,7 +11,7 @@ import type { LeadGenCommentDecisions, LeadGenCommentItem } from "./leads.port"
 import { LeadGenCommentService } from "./leadgen-comment.service"
 
 /** The statement `callDbFunction` sends for the decisions job lookup. */
-const FIND_LEADGEN_COMMENT_JOB = "SELECT * FROM public.job_status($1, $2, $3, $4)"
+const FIND_LEADGEN_COMMENT_JOB = 'SELECT * FROM "public"."job_status"($1, $2, $3, $4)'
 
 /** The row `job_status` answers for the decisions queue entry. */
 interface LeadGenCommentJobRow {

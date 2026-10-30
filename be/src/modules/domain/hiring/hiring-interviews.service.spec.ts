@@ -29,13 +29,13 @@ import { HiringInterviewsService } from "./hiring-interviews.service"
 import { HiringLinksService } from "./hiring-links.service"
 import { HiringNotifyService } from "./hiring-notify.service"
 import { HiringTextService } from "./hiring-text.service"
-const CREATE_INTERVIEW = "SELECT * FROM public.hiring_interview_create($1, $2, $3, $4, $5, $6, $7, $8)"
-const NONE_FIT_INTERVIEW = "SELECT * FROM public.hiring_interview_none_fit($1, $2, $3)"
-const CONFIRM_INTERVIEW = "SELECT * FROM public.hiring_interview_confirm($1, $2, $3, $4)"
-const SET_INTERVIEW_STATUS = "SELECT * FROM public.hiring_interview_status($1, $2, $3, $4, $5)"
-const SAVE_AVAILABILITY = "SELECT * FROM public.hiring_availability_save($1, $2, $3)"
-const CLAIM_REMINDER = "SELECT * FROM public.hiring_interview_remind_claim($1)"
-const LOG_EVENT = "SELECT * FROM public.hiring_event_log($1, $2, $3, $4, $5)"
+const CREATE_INTERVIEW = 'SELECT * FROM "public"."hiring_interview_create"($1, $2, $3, $4, $5, $6, $7, $8)'
+const NONE_FIT_INTERVIEW = 'SELECT * FROM "public"."hiring_interview_none_fit"($1, $2, $3)'
+const CONFIRM_INTERVIEW = 'SELECT * FROM "public"."hiring_interview_confirm"($1, $2, $3, $4)'
+const SET_INTERVIEW_STATUS = 'SELECT * FROM "public"."hiring_interview_status"($1, $2, $3, $4, $5)'
+const SAVE_AVAILABILITY = 'SELECT * FROM "public"."hiring_availability_save"($1, $2, $3)'
+const CLAIM_REMINDER = 'SELECT * FROM "public"."hiring_interview_remind_claim"($1)'
+const LOG_EVENT = 'SELECT * FROM "public"."hiring_event_log"($1, $2, $3, $4, $5)'
 const NO_STATUS_ROW = [{ rows: [] }, { rows: [{ hiring_interview_status: null }] }]
 const NO_CLAIM_ROW = [{ rows: [] }, { rows: [{ hiring_interview_remind_claim: false }] }]
 

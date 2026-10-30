@@ -15,9 +15,9 @@ import { HiringTickService } from "./hiring-tick.service"
 import type { InterviewRecord } from "./hiring.contracts"
 import { HiringLogEvent } from "./hiring.log-events"
 
-const EXPIRE_OFFERS = "SELECT * FROM public.hiring_offers_expire($1, $2)"
-const EXPIRE_JOBS = "SELECT * FROM public.hiring_jobs_expire($1)"
-const LOG_RETENTION = "SELECT * FROM public.hiring_retention_log_add($1, $2, $3, $4)"
+const EXPIRE_OFFERS = 'SELECT * FROM "public"."hiring_offers_expire"($1, $2)'
+const EXPIRE_JOBS = 'SELECT * FROM "public"."hiring_jobs_expire"($1)'
+const LOG_RETENTION = 'SELECT * FROM "public"."hiring_retention_log_add"($1, $2, $3, $4)'
 
 /** What the tick reads of the settings of a workspace. */
 interface TickWorkspace {

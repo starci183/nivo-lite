@@ -5,7 +5,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkspaceShellService } from "./workspace-shell.service"
 
-const SHELL_DATA = "SELECT * FROM public.shell_data($1, $2, $3)"
+const SHELL_DATA = 'SELECT * FROM "public"."shell_data"($1, $2, $3)'
 
 const WINDOW = { from: "2026-09-28T17:00:00.000Z", to: "2026-10-31T16:59:59.000Z" }
 

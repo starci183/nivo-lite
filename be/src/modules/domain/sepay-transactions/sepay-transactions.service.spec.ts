@@ -33,7 +33,7 @@ const credit = (over: Record<string, unknown> = {}): SepayDelivery => ({
 })
 
 /** Marks the receipt as found and locked; the pending row itself is built from the delivery in `build`. */
-const SETTLE_PAYMENT_ORDER = "SELECT * FROM public.settle_payment_order($1, $2, $3)"
+const SETTLE_PAYMENT_ORDER = 'SELECT * FROM "public"."settle_payment_order"($1, $2, $3)'
 const PENDING = "pending" as const
 /** Marks the settlement result write and the completion write, which the entity API answers as updates. */
 const UPDATE_SEPAY_RESULT = "update-result" as const

@@ -22,10 +22,10 @@ import { HiringJobsService } from "./hiring-jobs.service"
 import { HiringLinksService } from "./hiring-links.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
-const CREATE_JOB = "SELECT * FROM public.hiring_job_create($1, $2, $3, $4)"
-const UPDATE_JOB = "SELECT * FROM public.hiring_job_update($1, $2, $3)"
-const SET_JOB_STATUS = "SELECT * FROM public.hiring_job_status($1, $2, $3)"
-const SET_JOB_ADS = "SELECT * FROM public.hiring_job_ads($1, $2, $3)"
+const CREATE_JOB = 'SELECT * FROM "public"."hiring_job_create"($1, $2, $3, $4)'
+const UPDATE_JOB = 'SELECT * FROM "public"."hiring_job_update"($1, $2, $3)'
+const SET_JOB_STATUS = 'SELECT * FROM "public"."hiring_job_status"($1, $2, $3)'
+const SET_JOB_ADS = 'SELECT * FROM "public"."hiring_job_ads"($1, $2, $3)'
 const commonFields: Omit<JobRecord, "id" | "workspaceId" | "slug" | "status"> = {
     title: "Cashier",
     position: "",

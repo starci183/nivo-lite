@@ -16,11 +16,11 @@ import { IdentityRefreshTokenEntity } from "./persistence/entities"
 import { IdentitySessionsService } from "./sessions.service"
 
 /** The statements `callDbFunction` sends for the session doors. */
-const OPEN_SESSION = "SELECT * FROM public.be_auth_open_session($1, $2, $3, $4, $5)"
-const TOUCH_SESSION = "SELECT * FROM public.be_auth_touch_session($1, $2)"
-const CLOSE_SESSION = "SELECT * FROM public.be_auth_close_session($1)"
-const CLOSE_OTHER_SESSIONS = "SELECT * FROM public.be_auth_close_other_sessions($1, $2)"
-const USER_BY_ID = "SELECT * FROM public.be_auth_user_by_id($1)"
+const OPEN_SESSION = 'SELECT * FROM "public"."be_auth_open_session"($1, $2, $3, $4, $5)'
+const TOUCH_SESSION = 'SELECT * FROM "public"."be_auth_touch_session"($1, $2)'
+const CLOSE_SESSION = 'SELECT * FROM "public"."be_auth_close_session"($1)'
+const CLOSE_OTHER_SESSIONS = 'SELECT * FROM "public"."be_auth_close_other_sessions"($1, $2)'
+const USER_BY_ID = 'SELECT * FROM "public"."be_auth_user_by_id"($1)'
 
 const NOW = "2026-11-09T10:00:00.000Z"
 const OPTIONS: IdentityAuthOptions = {

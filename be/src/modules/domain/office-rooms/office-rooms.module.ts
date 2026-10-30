@@ -11,9 +11,16 @@ import { OfficeReadMarkersService } from "./office-read-markers.service"
 @Module({})
 /** The Hub rooms: the department rooms of a workspace, who sits in them, their pins and each person's read marker. */
 export class OfficeRoomsModule extends ConfigurableModuleClass {
-    /** Registers the capability once in the API app. */
+    /** Registers the capability once per app; the directory mode registers only the room directory. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.directoryOnly === true) {
+            return {
+                ...base,
+                imports: [...(base.imports ?? []), OfficeRoomDirectoryModule.register({})],
+                exports: [OfficeRoomDirectoryModule],
+            }
+        }
         return {
             ...base,
             imports: [...(base.imports ?? []), OfficeRoomDirectoryModule.register({})],

@@ -33,8 +33,8 @@ const SALES: ChatTarget = { room: "sales", conversationId: null }
 const CONVERSATION: ChatTarget = { room: null, conversationId: "conversation" }
 const PERSISTED_AT = "2026-10-25T01:00:00+00:00"
 /** The statements `callDbFunction` sends for the admission predicate and the avatar function. */
-const CHAT_TARGET_MEMBER = "SELECT * FROM be_access.chat_target_member($1, $2, $3, $4)"
-const CHAT_READER_AVATARS = "SELECT * FROM be_access.workspace_member_avatars($1, $2)"
+const CHAT_TARGET_MEMBER = 'SELECT * FROM "be_access"."chat_target_member"($1, $2, $3, $4)'
+const CHAT_READER_AVATARS = 'SELECT * FROM "be_access"."workspace_member_avatars"($1, $2)'
 
 /** The caller and one other active member, the roster most receipts weigh. */
 const ME: ActiveUserRecord = { userId: "member", displayName: "Me" }

@@ -12,17 +12,12 @@ import { AgentsModule } from "@modules/domain/agents"
 import { DataRecordsModule } from "@modules/domain/data-records"
 import { EventsModule } from "@modules/domain/events"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
-import {
-    IDENTITY_ACCOUNTS,
-    IDENTITY_ERROR_KINDS,
-    IDENTITY_MESSAGES,
-    IdentityModule,
-    refuseSessions,
-} from "@modules/domain/identity"
+import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions } from "@modules/domain/identity"
 import { LivenessModule } from "@modules/domain/liveness"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
+import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { appPgTypes } from "@modules/integrations/data-sources"
 import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
@@ -95,7 +90,8 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
         credentialAuthenticator: McpAgentAuthenticatorService,
     }),
     LivenessModule.register({ isGlobal: true }),
-    WorkspaceMembersModule.register({ isGlobal: true, accounts: IDENTITY_ACCOUNTS }),
+    StaffModule.register({ isGlobal: true }),
+    WorkspaceMembersModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     InboundEventsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),

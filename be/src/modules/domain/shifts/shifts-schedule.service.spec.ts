@@ -24,9 +24,9 @@ import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsScheduleService } from "./shifts-schedule.service"
 import { ShiftsTextService } from "./shifts-text.service"
 
-const SAVE_SCHEDULE = "SELECT * FROM public.shifts_save_schedule($1, $2, $3, $4, $5, $6, $7)"
-const ADD_SHIFTS = "SELECT * FROM public.shifts_add_shifts($1, $2, $3, $4, $5, $6, $7, $8)"
-const REASSIGN_SHIFT = "SELECT * FROM public.shifts_reassign($1, $2, $3)"
+const SAVE_SCHEDULE = 'SELECT * FROM "public"."shifts_save_schedule"($1, $2, $3, $4, $5, $6, $7)'
+const ADD_SHIFTS = 'SELECT * FROM "public"."shifts_add_shifts"($1, $2, $3, $4, $5, $6, $7, $8)'
+const REASSIGN_SHIFT = 'SELECT * FROM "public"."shifts_reassign"($1, $2, $3)'
 
 const setupOf = builder<Setup>({
     positions: [{ id: "position-1", name: "Cashier", color: "#ff0000" }],

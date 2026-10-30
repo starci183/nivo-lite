@@ -14,8 +14,8 @@ import { ShiftsRequestsService } from "./shifts-requests.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import type { Env, Setup, Shift, ShiftStaff } from "./shifts.contracts"
 
-const CREATE_SWAP = "SELECT * FROM public.shifts_create_swap($1, $2, $3, $4, $5, $6)"
-const CREATE_LEAVE = "SELECT * FROM public.shifts_create_leave($1, $2, $3, $4, $5)"
+const CREATE_SWAP = 'SELECT * FROM "public"."shifts_create_swap"($1, $2, $3, $4, $5, $6)'
+const CREATE_LEAVE = 'SELECT * FROM "public"."shifts_create_leave"($1, $2, $3, $4, $5)'
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 

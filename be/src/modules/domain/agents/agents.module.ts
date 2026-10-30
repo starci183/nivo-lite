@@ -16,6 +16,7 @@ import {
     AGENTS_OPTIONS,
     AGENTS_WORK,
 } from "./agents.decorators"
+import { noWorkLines } from "./agent-work.policy"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agents.module-definition"
 import { AgentsService } from "./agents.service"
 import { EngineStatusService } from "./engine-status.service"
@@ -26,7 +27,7 @@ import { PauseClient } from "./pause.client"
 export class AgentsModule extends ConfigurableModuleClass {
     /**
      * Registers the capability once; the other lanes' ports are bound to the classes the options name. The setup mode registers
-     * fewer real providers (no knowledge lens, no engine status) and nothing in their place; the directory mode registers only the
+     * fewer real providers (no knowledge lens, no dashboard work lists) and nothing in their place; the directory mode registers only the
      * agent directory.
      */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
@@ -44,9 +45,9 @@ export class AgentsModule extends ConfigurableModuleClass {
             { provide: AGENTS_INSTALLATIONS, useClass: options.ports.installations },
             { provide: AGENTS_MODULES, useClass: options.ports.modules },
             { provide: AGENTS_CONNECTIONS, useExisting: options.ports.connections },
-            { provide: AGENTS_WORK, useExisting: options.ports.work },
             PauseClient,
             AgentsService,
+            EngineStatusService,
             { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
             AgentIdentityService,
             AgentBundleService,
@@ -57,6 +58,7 @@ export class AgentsModule extends ConfigurableModuleClass {
             AGENTS_INSTALLATIONS,
             PauseClient,
             AgentsService,
+            EngineStatusService,
             AgentDirectoryModule,
             OFFICE_ROOMS_AGENTS,
             AgentIdentityService,
@@ -65,14 +67,14 @@ export class AgentsModule extends ConfigurableModuleClass {
         ]
         const full =
             options.setupOnly === true
-                ? { providers: [], exports: [] }
+                ? { providers: [{ provide: AGENTS_WORK, useValue: { dashboardList: noWorkLines } }], exports: [] }
                 : {
                       providers: [
+                          { provide: AGENTS_WORK, useExisting: options.ports.work },
                           { provide: AGENTS_KNOWLEDGE, useClass: options.ports.knowledge },
-                          EngineStatusService,
                           AgentLensesService,
                       ],
-                      exports: [AGENTS_KNOWLEDGE, EngineStatusService, AgentLensesService],
+                      exports: [AGENTS_KNOWLEDGE, AgentLensesService],
                   }
         return {
             ...base,

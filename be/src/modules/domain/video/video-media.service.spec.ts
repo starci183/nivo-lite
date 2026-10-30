@@ -12,7 +12,7 @@ import type { StoredRender } from "./video-stored.contracts"
 import { VideoMediaService } from "./video-media.service"
 
 /** The statement `callDbFunction` sends to generate an upload identity. */
-const SELECT_VIDEO_MEDIA_ID = "SELECT * FROM gen_random_uuid()"
+const SELECT_VIDEO_MEDIA_ID = 'SELECT * FROM "pg_catalog"."gen_random_uuid"()'
 
 const WS = "workspace-1"
 const UPLOAD_ID = "00000000-0000-4000-8000-000000000001"

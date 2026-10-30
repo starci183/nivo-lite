@@ -35,6 +35,7 @@ export class AgentMessagesModule extends ConfigurableModuleClass {
                 AgentMessagesAutomationReadService,
                 AgentMessageCursorsService,
                 AgentMessageDeliveriesService,
+                AgentMessagesFeedReadService,
                 AgentTestChatsService,
                 OFFICE_ROOMS_TEST_CHATS,
             ],

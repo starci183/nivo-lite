@@ -3,7 +3,7 @@ import { mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QueueStatusService } from "./queue-status.service"
 
-const STATEMENT = "SELECT * FROM public.job_status($1, $2, $3)"
+const STATEMENT = 'SELECT * FROM "public"."job_status"($1, $2, $3)'
 
 const status = { id: "job-1", state: "queued", attempts: 2 }
 

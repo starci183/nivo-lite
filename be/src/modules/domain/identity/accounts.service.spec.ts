@@ -21,12 +21,12 @@ import { IdentityPasswordResetService } from "./password-reset.service"
 import { IdentitySessionsService } from "./sessions.service"
 
 /** The statements `callDbFunction` sends for the account doors. */
-const USER_BY_EMAIL = "SELECT * FROM public.be_auth_user_by_email($1)"
-const USER_BY_ID = "SELECT * FROM public.be_auth_user_by_id($1)"
-const CREATE_USER = "SELECT * FROM public.be_auth_create_user($1, $2, $3, $4, $5, $6)"
-const SET_AVATAR = "SELECT * FROM public.be_auth_set_avatar($1, $2)"
-const LIST_USERS = "SELECT * FROM public.be_auth_list_users($1, $2)"
-const DELETE_USER = "SELECT * FROM public.be_auth_delete_user($1)"
+const USER_BY_EMAIL = 'SELECT * FROM "public"."be_auth_user_by_email"($1)'
+const USER_BY_ID = 'SELECT * FROM "public"."be_auth_user_by_id"($1)'
+const CREATE_USER = 'SELECT * FROM "public"."be_auth_create_user"($1, $2, $3, $4, $5, $6)'
+const SET_AVATAR = 'SELECT * FROM "public"."be_auth_set_avatar"($1, $2)'
+const LIST_USERS = 'SELECT * FROM "public"."be_auth_list_users"($1, $2)'
+const DELETE_USER = 'SELECT * FROM "public"."be_auth_delete_user"($1)'
 
 const NOW = "2026-11-09T10:00:00.000Z"
 const CREATED = "00000000-0000-4000-8000-000000000001"

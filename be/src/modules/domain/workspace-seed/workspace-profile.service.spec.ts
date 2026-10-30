@@ -125,9 +125,9 @@ const build = async (em: MockEntityManager, input?: unknown, profileInput: unkno
     return { service, print, ...doubles }
 }
 
-const ROOMS_FUNCTION_PRESENT = "SELECT * FROM to_regproc($1)"
-const ENSURE_OFFICE_ROOMS = "SELECT * FROM public.ensure_office_rooms($1)"
-const MOVE_AGENT_HOME = "SELECT * FROM public.move_office_agent_home($1, $2, $3)"
+const ROOMS_FUNCTION_PRESENT = 'SELECT * FROM "pg_catalog"."to_regproc"($1)'
+const ENSURE_OFFICE_ROOMS = 'SELECT * FROM "public"."ensure_office_rooms"($1)'
+const MOVE_AGENT_HOME = 'SELECT * FROM "public"."move_office_agent_home"($1, $2, $3)'
 const ROOMS_READY = {
     query: [
         [ROOMS_FUNCTION_PRESENT, [{ to_regproc: "public.ensure_office_rooms" }]],

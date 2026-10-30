@@ -8,7 +8,7 @@ import { STACK_MAX, clean } from "./app-errors.policy"
 import { AppErrorsService } from "./app-errors.service"
 
 /** The statement `callDbFunction` sends for the recording function. */
-const RECORD_APP_ERROR = "SELECT * FROM public.app_errors_record($1, $2, $3, $4, $5, $6)"
+const RECORD_APP_ERROR = 'SELECT * FROM "public"."app_errors_record"($1, $2, $3, $4, $5, $6)'
 const WS = "3f1c2b9e-1d2a-4c3b-9a8e-0f1e2d3c4b5a"
 const CONNECTION = "4a2d3c0f-2e3b-4d4c-8b9f-1a2b3c4d5e6f"
 

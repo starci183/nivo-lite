@@ -14,7 +14,7 @@ import type { Lens } from "./knowledge.contracts"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const lens: Lens = { workspaceId: WS, module: "chatbot", audience: "internal", installationId: "i1" }
-const FOLD = "SELECT * FROM public.knowledge_fold($1)"
+const FOLD = 'SELECT * FROM "public"."knowledge_fold"($1)'
 
 const chunk: ChunkHit = {
     id: "business-1",

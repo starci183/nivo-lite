@@ -19,9 +19,9 @@ import { ShiftsTextService } from "./shifts-text.service"
 import type { Setup, SwapFinding } from "./shifts.contracts"
 import { ShiftsLeaveRequestEntity, ShiftsScheduleEntity, ShiftsSwapRequestEntity } from "./persistence/entities"
 
-const PUBLISH_SCHEDULE = "SELECT * FROM public.shifts_publish($1, $2, $3, $4)"
-const DECIDE_SWAP = "SELECT * FROM public.shifts_decide_swap($1, $2, $3, $4, $5, $6)"
-const DECIDE_LEAVE = "SELECT * FROM public.shifts_decide_leave($1, $2, $3, $4, $5, $6)"
+const PUBLISH_SCHEDULE = 'SELECT * FROM "public"."shifts_publish"($1, $2, $3, $4)'
+const DECIDE_SWAP = 'SELECT * FROM "public"."shifts_decide_swap"($1, $2, $3, $4, $5, $6)'
+const DECIDE_LEAVE = 'SELECT * FROM "public"."shifts_decide_leave"($1, $2, $3, $4, $5, $6)'
 
 type EvidenceEntry = Parameters<OfficeLog["logEvidence"]>[1]
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`

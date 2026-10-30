@@ -8,7 +8,7 @@ import { BillingService } from "./billing.service"
 import { EntitlementsService } from "./entitlements.service"
 import { BillingErrorCode } from "./errors/billing.error"
 
-const SELECT_STORAGE_BYTES = "SELECT * FROM public.workspace_storage_bytes($1)"
+const SELECT_STORAGE_BYTES = 'SELECT * FROM "public"."workspace_storage_bytes"($1)'
 
 const GB = 1024 ** 3
 

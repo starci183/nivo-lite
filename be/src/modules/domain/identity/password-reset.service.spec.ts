@@ -20,9 +20,9 @@ import { digestOf } from "./password.policy"
 import { IdentityPasswordTokenEntity } from "./persistence/entities"
 
 /** The statements `callDbFunction` sends for the account doors. */
-const USER_BY_EMAIL = "SELECT * FROM public.be_auth_user_by_email($1)"
-const SET_PASSWORD = "SELECT * FROM public.be_auth_set_password($1, $2, $3)"
-const CLOSE_USER_SESSIONS = "SELECT * FROM public.be_auth_close_user_sessions($1)"
+const USER_BY_EMAIL = 'SELECT * FROM "public"."be_auth_user_by_email"($1)'
+const SET_PASSWORD = 'SELECT * FROM "public"."be_auth_set_password"($1, $2, $3)'
+const CLOSE_USER_SESSIONS = 'SELECT * FROM "public"."be_auth_close_user_sessions"($1)'
 
 const NOW = "2026-11-09T10:00:00.000Z"
 const OPTIONS: IdentityAuthOptions = {

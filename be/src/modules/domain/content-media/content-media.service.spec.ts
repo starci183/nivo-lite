@@ -15,7 +15,7 @@ import { ContentMediaService } from "./content-media.service"
 import { ContentMediaError, ContentMediaErrorCode } from "./errors/content-media.error"
 
 /** The statement `callDbFunction` sends to allocate an upload object name. */
-const NEW_CONTENT_MEDIA_UPLOAD_ID = "SELECT * FROM gen_random_uuid()"
+const NEW_CONTENT_MEDIA_UPLOAD_ID = 'SELECT * FROM "pg_catalog"."gen_random_uuid"()'
 
 const MEMBER: WorkspaceMember = {
     userId: "user-1",

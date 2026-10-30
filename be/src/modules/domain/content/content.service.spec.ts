@@ -22,7 +22,7 @@ import { ContentService } from "./content.service"
 import { ContentLogEvent } from "./content.log-events"
 
 /** The statement `callDbFunction` sends for the office notice. */
-const INSERT_NOTICE = "SELECT * FROM public.post_office_notice($1, $2)"
+const INSERT_NOTICE = 'SELECT * FROM "public"."post_office_notice"($1, $2)'
 
 const pillarOf = builder<ContentPillar>({
     id: "pillar-1",

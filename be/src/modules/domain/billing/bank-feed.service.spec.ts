@@ -48,7 +48,7 @@ import type { BankFeedProvider } from "./billing.contracts"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 
-const MARK_CONNECTION_FED = "SELECT * FROM public.connection_mark_fed($1, $2, $3)"
+const MARK_CONNECTION_FED = 'SELECT * FROM "public"."connection_mark_fed"($1, $2, $3)'
 
 /** What `run` throws, read as `unknown`; the matcher then judges its fields. */
 const thrownBy = (run: () => unknown): unknown => {

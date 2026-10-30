@@ -32,11 +32,11 @@ import { HiringLinksService } from "./hiring-links.service"
 import { HiringNotifyService } from "./hiring-notify.service"
 import { HiringOffersService } from "./hiring-offers.service"
 import { HiringTextService } from "./hiring-text.service"
-const ANSWER_OFFER = "SELECT * FROM public.hiring_offer_answer($1, $2, $3, $4, $5)"
-const CANCEL_OFFER = "SELECT * FROM public.hiring_offer_cancel($1, $2, $3, $4, $5)"
-const CREATE_OFFER = "SELECT * FROM public.hiring_offer_create($1, $2, $3, $4, $5, $6)"
-const LINK_OFFER = "SELECT * FROM public.hiring_offer_link($1, $2, $3, $4)"
-const MARK_OFFER_SENT = "SELECT * FROM public.hiring_offer_sent($1, $2, $3, $4, $5, $6, $7)"
+const ANSWER_OFFER = 'SELECT * FROM "public"."hiring_offer_answer"($1, $2, $3, $4, $5)'
+const CANCEL_OFFER = 'SELECT * FROM "public"."hiring_offer_cancel"($1, $2, $3, $4, $5)'
+const CREATE_OFFER = 'SELECT * FROM "public"."hiring_offer_create"($1, $2, $3, $4, $5, $6)'
+const LINK_OFFER = 'SELECT * FROM "public"."hiring_offer_link"($1, $2, $3, $4)'
+const MARK_OFFER_SENT = 'SELECT * FROM "public"."hiring_offer_sent"($1, $2, $3, $4, $5, $6, $7)'
 const publicNotFound = { code: HiringErrorCode.PublicNotFound }
 
 const requestOf = builder<RequestOfferParams>({ candidateId: "candidate-1", ...termsOf() })

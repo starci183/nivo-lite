@@ -11,8 +11,8 @@ import type { SaveSettingsParams } from "./hiring-operations.contracts"
 import { HiringDataService } from "./hiring-data.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
-const INIT_SETTINGS = "SELECT * FROM public.hiring_settings_init($1, $2)"
-const SAVE_SETTINGS = "SELECT * FROM public.hiring_settings_save($1, $2)"
+const INIT_SETTINGS = 'SELECT * FROM "public"."hiring_settings_init"($1, $2)'
+const SAVE_SETTINGS = 'SELECT * FROM "public"."hiring_settings_save"($1, $2)'
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 

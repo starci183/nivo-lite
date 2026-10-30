@@ -11,7 +11,7 @@ import { ReadinessLogEvent } from "./readiness.log-events"
 import { ReadinessService } from "./readiness.service"
 
 /** The statement `callDbFunction` sends for the jobs statistics function. */
-const CHECK_READINESS_JOBS = "SELECT * FROM public.job_stats()"
+const CHECK_READINESS_JOBS = 'SELECT * FROM "public"."job_stats"()'
 
 const JOB_ROWS = [{ job_stats: { checkedAt: "2026-10-14T00:00:00.000Z" } }]
 

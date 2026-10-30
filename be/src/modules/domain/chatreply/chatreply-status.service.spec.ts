@@ -9,7 +9,7 @@ import { ChatReplyStatusService } from "./chatreply-status.service"
 import { ChatreplyErrorCode } from "./errors/chatreply.error"
 
 /** The statement `callDbFunction` sends for the job state. */
-const JOB_STATUS = "SELECT * FROM public.job_status($1, $2, $3, $4)"
+const JOB_STATUS = 'SELECT * FROM "public"."job_status"($1, $2, $3, $4)'
 
 /** The human reply the message reads answer, and whether its conversation is a customer conversation. */
 interface ReplyWorld {

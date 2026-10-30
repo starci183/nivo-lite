@@ -9,11 +9,11 @@ import { OwnersErrorCode } from "./errors/owners.error"
 import { OwnersService } from "./owners.service"
 
 /** The statements `callDbFunction` sends for the account doors and the bcrypt hash. */
-const FIND_ACCOUNT = "SELECT * FROM public.be_auth_user_by_email($1)"
-const CREATE_OWNER = "SELECT * FROM public.be_auth_create_user($1, $2, $3, $4, $5, $6)"
-const SET_OWNER_PASSWORD = "SELECT * FROM public.be_auth_set_password($1, $2, $3)"
-const GEN_SALT = "SELECT * FROM extensions.gen_salt($1, $2)"
-const CRYPT = "SELECT * FROM extensions.crypt($1, $2)"
+const FIND_ACCOUNT = 'SELECT * FROM "public"."be_auth_user_by_email"($1)'
+const CREATE_OWNER = 'SELECT * FROM "public"."be_auth_create_user"($1, $2, $3, $4, $5, $6)'
+const SET_OWNER_PASSWORD = 'SELECT * FROM "public"."be_auth_set_password"($1, $2, $3)'
+const GEN_SALT = 'SELECT * FROM "extensions"."gen_salt"($1, $2)'
+const CRYPT = 'SELECT * FROM "extensions"."crypt"($1, $2)'
 const SALT = "$2a$10$salt"
 const HASH = "$2a$10$hashed"
 /** The two statements that hash the password in the database. */

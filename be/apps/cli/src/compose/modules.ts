@@ -101,7 +101,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     WorkspaceMembersModule.register({ isGlobal: true, accounts: IDENTITY_ACCOUNTS }),
     WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),
     AuthorityRulesModule.register({ isGlobal: true }),
-    OfficeRoomsModule.register({ isGlobal: true }),
+    OfficeRoomsModule.register({ isGlobal: true, directoryOnly: true }),
     MemberGrantsModule.register({ isGlobal: true }),
     ModuleInstallationsModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),

@@ -11,9 +11,9 @@ import { KnowledgeLogEvent } from "./knowledge.log-events"
 import type { QuotaStatusRow } from "./persistence/usage.rows"
 
 /** The statements `callDbFunction` sends for the usage functions. */
-const RECORD_USAGE_EVENT = "SELECT * FROM public.record_ai_usage($1, $2, $3, $4, $5, $6, $7, $8)"
-const SELECT_QUOTA_STATUS = "SELECT * FROM public.ai_quota_status($1)"
-const POST_USAGE_NOTICE = "SELECT * FROM public.post_ai_usage_notice($1, $2, $3, $4)"
+const RECORD_USAGE_EVENT = 'SELECT * FROM "public"."record_ai_usage"($1, $2, $3, $4, $5, $6, $7, $8)'
+const SELECT_QUOTA_STATUS = 'SELECT * FROM "public"."ai_quota_status"($1)'
+const POST_USAGE_NOTICE = 'SELECT * FROM "public"."post_ai_usage_notice"($1, $2, $3, $4)'
 import { UsageMeterService } from "./usage-meter.service"
 
 const recordOf = builder<UsageRecord>({

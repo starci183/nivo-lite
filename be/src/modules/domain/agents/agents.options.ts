@@ -15,14 +15,14 @@ export interface AgentsSetupPorts {
     readonly modules: Type<ModuleProfiles>
     /** Implements the agent connections port; an existing provider of the app. */
     readonly connections: Type<AgentConnectionsDirectory>
-    /** Implements the dashboard work lists port; an existing provider of the app. */
-    readonly work: Type<WorkDashboardDirectory>
 }
 
 /** The classes that implement the ports of the other lanes; the app root passes them and the module binds each token to them. */
 export interface AgentsPorts extends AgentsSetupPorts {
     /** Implements the business knowledge port. */
     readonly knowledge: Type<KnowledgeLens>
+    /** Implements the dashboard work lists port; an existing provider of the app. */
+    readonly work: Type<WorkDashboardDirectory>
 }
 
 /** The options of the full agents capability (the api): every port, the dashboard and the engine status. */

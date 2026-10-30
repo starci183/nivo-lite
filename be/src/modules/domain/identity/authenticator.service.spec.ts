@@ -12,12 +12,12 @@ import { IdentityAttemptsService } from "./attempts.service"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
 
 /** The statements `callDbFunction` sends for the account doors. */
-const USER_BY_EMAIL = "SELECT * FROM public.be_auth_user_by_email($1)"
-const USER_BY_ID = "SELECT * FROM public.be_auth_user_by_id($1)"
-const USER_BY_GOOGLE = "SELECT * FROM public.be_auth_user_by_google($1)"
-const CREATE_USER = "SELECT * FROM public.be_auth_create_user($1, $2, $3, $4, $5, $6)"
-const LINK_GOOGLE = "SELECT * FROM public.be_auth_link_google($1, $2, $3, $4)"
-const TOUCH_USER = "SELECT * FROM public.be_auth_touch_user($1, $2, $3, $4)"
+const USER_BY_EMAIL = 'SELECT * FROM "public"."be_auth_user_by_email"($1)'
+const USER_BY_ID = 'SELECT * FROM "public"."be_auth_user_by_id"($1)'
+const USER_BY_GOOGLE = 'SELECT * FROM "public"."be_auth_user_by_google"($1)'
+const CREATE_USER = 'SELECT * FROM "public"."be_auth_create_user"($1, $2, $3, $4, $5, $6)'
+const LINK_GOOGLE = 'SELECT * FROM "public"."be_auth_link_google"($1, $2, $3, $4)'
+const TOUCH_USER = 'SELECT * FROM "public"."be_auth_touch_user"($1, $2, $3, $4)'
 
 const NOW = "2026-11-09T10:00:00.000Z"
 const ACCOUNT = {

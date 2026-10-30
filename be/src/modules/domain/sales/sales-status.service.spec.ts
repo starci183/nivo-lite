@@ -9,7 +9,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { SalesActionRow } from "./persistence/sales.rows"
 import { SalesStatusService } from "./sales-status.service"
 
-const SALES_ACTION_FIND = "SELECT * FROM public.sales_action_find($1, $2, $3)"
+const SALES_ACTION_FIND = 'SELECT * FROM "public"."sales_action_find"($1, $2, $3)'
 
 const actionOf = builder<SalesActionRow>({
     id: "msg-1",

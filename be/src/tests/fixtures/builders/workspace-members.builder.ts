@@ -77,7 +77,7 @@ export const STAFF_OPTION = {
 }
 
 /** The statement `callDbFunction` sends for the member pictures. */
-export const MEMBER_AVATARS = "SELECT * FROM be_access.workspace_member_avatars($1, $2)"
+export const MEMBER_AVATARS = 'SELECT * FROM "be_access"."workspace_member_avatars"($1, $2)'
 
 /** A manager-or-staff viewer who lists one member (the viewer) whose picture the avatars door answers. */
 export const listWorld = (

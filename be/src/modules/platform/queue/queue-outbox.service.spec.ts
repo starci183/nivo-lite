@@ -3,8 +3,8 @@ import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import { QueueErrorCode } from "./errors/queue.error"
 import { QueueOutboxService } from "./queue-outbox.service"
 
-const ENQUEUE = "SELECT * FROM public.job_enqueue($1, $2, $3, $4, $5)"
-const MINT = "SELECT * FROM gen_random_uuid()"
+const ENQUEUE = 'SELECT * FROM "public"."job_enqueue"($1, $2, $3, $4, $5)'
+const MINT = 'SELECT * FROM "pg_catalog"."gen_random_uuid"()'
 
 const WORKSPACE = "3f0c7a52-8d1e-4b6a-9c2d-5e7f10a4b8c6"
 

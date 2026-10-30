@@ -19,10 +19,10 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AdminDirectoryReadsService } from "./admin-directory-reads.service"
 
 /** The statements `callDbFunction` runs for the database functions. */
-const WORKSPACE_STATS = "SELECT * FROM public.admin_workspace_stats()"
-const USER_EMAILS = "SELECT * FROM be_access.user_emails($1)"
-const QUOTA_STATUS = "SELECT * FROM public.ai_quota_status($1)"
-const SIGNUPS = "SELECT * FROM public.admin_signups_per_day($1)"
+const WORKSPACE_STATS = 'SELECT * FROM "public"."admin_workspace_stats"()'
+const USER_EMAILS = 'SELECT * FROM "be_access"."user_emails"($1)'
+const QUOTA_STATUS = 'SELECT * FROM "public"."ai_quota_status"($1)'
+const SIGNUPS = 'SELECT * FROM "public"."admin_signups_per_day"($1)'
 
 const AT = new Date("2026-10-12T03:00:00.000Z")
 const ISO = "2026-10-12T03:00:00.000Z"

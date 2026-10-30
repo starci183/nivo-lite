@@ -25,7 +25,7 @@ const build = async (em: MockEntityManager) => {
     return { shop: moduleRef.get(AutomationShopService), em }
 }
 
-const SELECT_OVERVIEW = "SELECT * FROM public.automations_data($1)"
+const SELECT_OVERVIEW = 'SELECT * FROM "public"."automations_data"($1)'
 
 describe("AutomationShopService overviewRows", () => {
     it("reads every row of the screen in one call", async () => {

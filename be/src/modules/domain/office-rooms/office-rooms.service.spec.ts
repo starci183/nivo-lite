@@ -22,8 +22,8 @@ import type {
 } from "./office-rooms.contracts"
 
 /** The statements `callDbFunction` runs. */
-const MARK_ROOM_READ = "SELECT * FROM public.mark_office_room_read($1, $2, $3)"
-const ENSURE_ROOMS = "SELECT * FROM public.ensure_office_rooms($1)"
+const MARK_ROOM_READ = 'SELECT * FROM "public"."mark_office_room_read"($1, $2, $3)'
+const ENSURE_ROOMS = 'SELECT * FROM "public"."ensure_office_rooms"($1)'
 
 /** Two ids as the stored uuids render. */
 const AGENT_ID = "00000000-0000-4000-8000-0000000000a1"

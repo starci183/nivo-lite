@@ -15,7 +15,7 @@ import { HiringDataService } from "./hiring-data.service"
 import { HiringScreeningService } from "./hiring-screening.service"
 import { HiringTextService } from "./hiring-text.service"
 import { HiringLogEvent } from "./hiring.log-events"
-const SET_SCREENED = "SELECT * FROM public.hiring_candidate_screened($1, $2, $3, $4, $5, $6, $7, $8)"
+const SET_SCREENED = 'SELECT * FROM "public"."hiring_candidate_screened"($1, $2, $3, $4, $5, $6, $7, $8)'
 const candidateOf = builder<CandidateRecord>(CANDIDATE)
 const jobOf = builder<JobRecord>(JOB)
 

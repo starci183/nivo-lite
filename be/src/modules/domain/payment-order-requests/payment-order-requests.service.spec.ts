@@ -13,7 +13,7 @@ import { PaymentOrderRequestsService } from "./payment-order-requests.service"
 import { PaymentOrderRequestEntity } from "./persistence/entities"
 
 /** The statement `callDbFunction` runs to enqueue the fenced job. */
-const ENQUEUE_REQUEST = "SELECT * FROM public.job_enqueue($1, $2, $3, $4, $5)"
+const ENQUEUE_REQUEST = 'SELECT * FROM "public"."job_enqueue"($1, $2, $3, $4, $5)'
 
 const build = async (entityManager: MockEntityManager) => {
     const billing = mock<BillingService>()

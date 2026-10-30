@@ -10,7 +10,7 @@ import { WorkspaceInviteEntity } from "./persistence/entities"
 import type { InviteDeliveryPort } from "./workspace-invites.contracts"
 import { INVITE_DELIVERY, WORKSPACE_INVITES_OPTIONS } from "./workspace-invites.port"
 
-const MINT_UUID = "SELECT * FROM gen_random_uuid()"
+const MINT_UUID = 'SELECT * FROM "pg_catalog"."gen_random_uuid"()'
 
 const NOW = new Date("2026-10-12T00:00:00.000Z")
 

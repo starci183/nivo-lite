@@ -57,10 +57,10 @@ const MEMBER_OF_USER: Readonly<Record<string, string>> = {
     "user-ha": "m-ha",
     "user-van": "m-van",
 }
-const ROOMS_FUNCTION_PRESENT = "SELECT * FROM to_regproc($1)"
-const ENSURE_OFFICE_ROOMS = "SELECT * FROM public.ensure_office_rooms($1)"
-const MOVE_AGENT_HOME = "SELECT * FROM public.move_office_agent_home($1, $2, $3)"
-const SEAT_PERSON = "SELECT * FROM public.seat_office_member($1, $2, $3)"
+const ROOMS_FUNCTION_PRESENT = 'SELECT * FROM "pg_catalog"."to_regproc"($1)'
+const ENSURE_OFFICE_ROOMS = 'SELECT * FROM "public"."ensure_office_rooms"($1)'
+const MOVE_AGENT_HOME = 'SELECT * FROM "public"."move_office_agent_home"($1, $2, $3)'
+const SEAT_PERSON = 'SELECT * FROM "public"."seat_office_member"($1, $2, $3)'
 const ROOMS_READY = [
     [ROOMS_FUNCTION_PRESENT, [{ to_regproc: "public.ensure_office_rooms" }]],
     [ENSURE_OFFICE_ROOMS, []],
