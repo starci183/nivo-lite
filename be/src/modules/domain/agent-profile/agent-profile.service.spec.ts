@@ -127,6 +127,15 @@ describe("AgentProfileService", () => {
         expect(activity.recentOf).toHaveBeenCalledWith("w1", "sales", 6)
     })
 
+    it("leaves the operating mode empty for an agent with no installation", async () => {
+        const { service, installations } = await build(HEAD_FACTS, [WORK], [RULE])
+        installations.ofAgent.mockResolvedValue(null)
+
+        const page = await service.page("u1", "w1", "a1")
+
+        expect(page.agent.operatingMode).toBeNull()
+    })
+
     it("fails the rules region in place (their statement is not answered) and keeps the rest of the page", async () => {
         const { service, logger } = await build()
 

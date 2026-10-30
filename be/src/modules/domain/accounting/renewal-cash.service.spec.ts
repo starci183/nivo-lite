@@ -157,3 +157,27 @@ describe("RenewalCashService", () => {
         expect(contracts.contractsByIds).not.toHaveBeenCalled()
     })
 })
+
+describe("RenewalCashService invoices without a contract or a due date", () => {
+    it("leaves an issued invoice that names no contract out of the renewals", async () => {
+        const { service } = await build({
+            issued: [invoiceOf({ invoiceNo: "INV-1" }), invoiceOf({ invoiceNo: "INV-N", contractId: null })],
+            contracts: [contractOf({})],
+        })
+
+        const facts = await service.read(queryOf())
+
+        expect(facts.issued.map((item) => item.invoice_no)).toEqual(["INV-1"])
+    })
+
+    it("dates an unpaid invoice with no due date on the epoch day", async () => {
+        const { service } = await build({
+            unpaid: [invoiceOf({ invoiceNo: "INV-D", dueAt: null })],
+            contracts: [contractOf({})],
+        })
+
+        const facts = await service.read(queryOf())
+
+        expect(facts.unpaid.map((item) => [item.invoice_no, item.due_on])).toEqual([["INV-D", "1970-01-01"]])
+    })
+})
