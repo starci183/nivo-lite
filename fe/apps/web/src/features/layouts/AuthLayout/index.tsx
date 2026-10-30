@@ -11,7 +11,6 @@ export const AuthLayout = async (props: AuthLayoutProps) => {
     return (
         <AuthLayoutBase
             props={{
-                aboutLabel: t("aboutLabel"),
                 mainLabel: t("mainLabel"),
                 headline: t("headline"),
                 tagline: t("tagline"),

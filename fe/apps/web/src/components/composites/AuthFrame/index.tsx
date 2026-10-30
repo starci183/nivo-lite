@@ -1,8 +1,9 @@
 import type { ReactNode } from "react"
-import { Heading, Image, NavLandmark, SurfaceCard, Text, TextAction, WorkspaceShell } from "@starci/grammar/common"
+import { Heading, Image, NavLandmark, Text, TextAction, WorkspaceShell } from "@starci/grammar/common"
 import { privacyHref, termsHref } from "@/modules/routes"
 import {
     AUTH_ART_BOTTOM_CLASS_NAME,
+    AUTH_ART_CLASS_NAME,
     AUTH_ART_COPY_CLASS_NAME,
     AUTH_ART_PANE_CLASS_NAME,
     AUTH_CARD_CLASS_NAME,
@@ -11,11 +12,11 @@ import {
     AUTH_FORM_PANE_CLASS_NAME,
     AUTH_LEGAL_CLASS_NAME,
     AUTH_LOCALE_CLASS_NAME,
+    AUTH_SPLIT_CLASS_NAME,
 } from "./classNames"
 
 /** The words of the brand side and the live pieces the layout supplies (language switch and logo are connected blocks). */
 interface AuthFrameProps {
-    readonly aboutLabel: string
     readonly mainLabel: string
     readonly headline: string
     readonly tagline: string
@@ -27,29 +28,24 @@ interface AuthFrameProps {
     readonly children: ReactNode
 }
 
-/** The split auth screen: a full-height art pane with the brand pitch on the rail, the routed auth card centred beside it (the art pane hides on mobile). */
+/** The split auth screen: the art half, full bleed with the brand pitch over it, beside the routed auth card (the art half hides on mobile). */
 export const AuthFrame = (props: AuthFrameProps) => (
     <WorkspaceShell
         align="stretch"
-        railPosition="leading"
-        railWidth="wide"
-        railLabel={props.aboutLabel}
-        rail={
-            <div className={AUTH_ART_PANE_CLASS_NAME}>
-                <SurfaceCard
-                    ariaLabel={props.aboutLabel}
-                    treatment="ink"
-                    artwork={
+        primaryLabel={props.mainLabel}
+        primary={
+            <div className={AUTH_SPLIT_CLASS_NAME}>
+                <div className={AUTH_ART_PANE_CLASS_NAME}>
+                    <div className={AUTH_ART_CLASS_NAME} aria-hidden="true">
                         <Image
                             src="/images/entry/login-mascot.png"
                             alt=""
-                            aspect="square"
-                            fit="contain"
+                            aspect="auto"
+                            fit="cover"
                             plate="none"
                             loading="eager"
                         />
-                    }
-                >
+                    </div>
                     <div className={AUTH_ART_COPY_CLASS_NAME}>
                         {props.logo}
                         <div className={AUTH_ART_BOTTOM_CLASS_NAME}>
@@ -57,26 +53,23 @@ export const AuthFrame = (props: AuthFrameProps) => (
                             <Text tone="muted">{props.tagline}</Text>
                         </div>
                     </div>
-                </SurfaceCard>
-            </div>
-        }
-        primaryLabel={props.mainLabel}
-        primary={
-            <div className={AUTH_FORM_PANE_CLASS_NAME}>
-                <div className={AUTH_LOCALE_CLASS_NAME}>{props.localeSwitch}</div>
-                <div className={AUTH_CENTER_CLASS_NAME}>
-                    <div className={AUTH_COMPACT_LOGO_CLASS_NAME}>{props.logo}</div>
-                    <div className={AUTH_CARD_CLASS_NAME}>{props.children}</div>
                 </div>
-                <div className={AUTH_LEGAL_CLASS_NAME}>
-                    <NavLandmark label={props.legalLabel} layout="bar">
-                        <TextAction href={privacyHref()} size="sm">
-                            {props.privacyLabel}
-                        </TextAction>
-                        <TextAction href={termsHref()} size="sm">
-                            {props.termsLabel}
-                        </TextAction>
-                    </NavLandmark>
+                <div className={AUTH_FORM_PANE_CLASS_NAME}>
+                    <div className={AUTH_LOCALE_CLASS_NAME}>{props.localeSwitch}</div>
+                    <div className={AUTH_CENTER_CLASS_NAME}>
+                        <div className={AUTH_COMPACT_LOGO_CLASS_NAME}>{props.logo}</div>
+                        <div className={AUTH_CARD_CLASS_NAME}>{props.children}</div>
+                    </div>
+                    <div className={AUTH_LEGAL_CLASS_NAME}>
+                        <NavLandmark label={props.legalLabel} layout="bar">
+                            <TextAction href={privacyHref()} size="sm">
+                                {props.privacyLabel}
+                            </TextAction>
+                            <TextAction href={termsHref()} size="sm">
+                                {props.termsLabel}
+                            </TextAction>
+                        </NavLandmark>
+                    </div>
                 </div>
             </div>
         }

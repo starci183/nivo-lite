@@ -6,7 +6,6 @@ import { AuthFrame } from "@/components/composites/AuthFrame"
 /** The words of the brand side, resolved by the layout. */
 export interface AuthLayoutBaseProps {
     readonly props: {
-        readonly aboutLabel: string
         readonly mainLabel: string
         readonly headline: string
         readonly tagline: string
@@ -20,7 +19,6 @@ export interface AuthLayoutBaseProps {
 /** Draws the split sign-in screen around the routed card: brand pitch on the art pane, language switch and legal links. */
 export const AuthLayoutBase = (props: AuthLayoutBaseProps) => (
     <AuthFrame
-        aboutLabel={props.props.aboutLabel}
         mainLabel={props.props.mainLabel}
         headline={props.props.headline}
         tagline={props.props.tagline}

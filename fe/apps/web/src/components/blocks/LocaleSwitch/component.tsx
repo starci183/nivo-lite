@@ -1,4 +1,4 @@
-import { LocaleSegments } from "@/components/composites/LocaleSegments"
+import { LanguageMenu } from "@/components/composites/LanguageMenu"
 
 /** The words, options and state of the language switch, resolved by the connected block. */
 export interface LocaleSwitchBaseProps {
@@ -11,9 +11,9 @@ export interface LocaleSwitchBaseProps {
     readonly on: { readonly choose: (locale: string) => void }
 }
 
-/** Draws the language switch from resolved options. */
+/** Draws the language switch from resolved options: the same globe menu as the console bar. */
 export const LocaleSwitchBase = (props: LocaleSwitchBaseProps) => (
-    <LocaleSegments
+    <LanguageMenu
         label={props.props.label}
         value={props.props.locale}
         options={props.props.options}
