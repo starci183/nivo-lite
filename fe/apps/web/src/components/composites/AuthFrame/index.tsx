@@ -38,7 +38,7 @@ export const AuthFrame = (props: AuthFrameProps) => (
             <div className={AUTH_SPLIT_CLASS_NAME}>
                 <div className={AUTH_ART_PANE_CLASS_NAME}>
                     <div className={AUTH_GROUND_CLASS_NAME} aria-hidden="true">
-                        <Image src="/images/entry/login-ground.png" alt="" aspect="square" fit="cover" plate="none" />
+                        <Image src="/images/entry/login-ground.png" alt="" aspect="auto" fit="cover" plate="none" />
                     </div>
                     <div className={AUTH_ART_CLASS_NAME} aria-hidden="true">
                         <Image
