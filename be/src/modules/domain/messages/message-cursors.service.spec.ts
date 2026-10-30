@@ -42,6 +42,14 @@ describe("MessageCursorsService > newestAuthored", () => {
         await expect((await build(partial.em)).newestAuthored("ws", "u1", "sales")).resolves.toBeNull()
     })
 
+    it("looks in every office room when no room is given", async () => {
+        const { em, fake } = answering([])
+
+        await (await build(em)).newestAuthored("ws", "u1", null)
+
+        expect(fake.callsOf("andWhere")).toEqual([["true", { room: null }]])
+    })
+
     it("reads through the manager it is handed", async () => {
         const own = mockEntityManager()
         const { em: handed } = answering([])
@@ -65,6 +73,14 @@ describe("MessageCursorsService > createdAtOf", () => {
 
         await expect((await build(none.em)).createdAtOf("ws", "sales", "m1")).resolves.toBeNull()
         await expect((await build(broken.em)).createdAtOf("ws", "sales", "m1")).resolves.toBeNull()
+    })
+
+    it("looks in every office room when no room is given", async () => {
+        const { em, fake } = answering([])
+
+        await (await build(em)).createdAtOf("ws", null, "m1")
+
+        expect(fake.callsOf("andWhere")).toEqual([["true", { room: null }]])
     })
 
     it("reads through the manager it is handed", async () => {

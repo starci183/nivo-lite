@@ -145,7 +145,8 @@ describe("JobClaimService", () => {
                 error: null,
                 updatedAt: new Date(AT),
             })
-            expect(String(Reflect.get(set ?? {}, "fencingToken"))).toContain("fencing_token + 1")
+            const bump: unknown = Reflect.get(set ?? {}, "fencingToken")
+            expect(typeof bump === "function" ? Reflect.apply(bump, undefined, []) : bump).toBe("fencing_token + 1")
             expect(update?.callsOf("where")).toEqual([
                 [
                     "jobs.jobKey = :jobKey AND (jobs.status = :failed OR (jobs.status = :running AND jobs.leaseExpiresAt < :now))",
