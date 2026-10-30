@@ -57,6 +57,7 @@ export const useOfficeFrame = () => {
         centre: state.centre,
         isThreadVisible: state.centre === "chat" && (isSideBySide || state.phoneView === "thread"),
         isInfoDocked,
+        isSideBySide,
         isInfoOpen,
         showThread: useCallback(() => dispatch({ type: "thread" }), []),
         showList: useCallback(() => dispatch({ type: "list" }), []),

@@ -49,6 +49,7 @@ export const OfficeMessenger = () => {
                 centre: frame.centre,
                 isInfoOpen: frame.isInfoOpen,
                 isInfoDocked: frame.isInfoDocked,
+                isCompact: !frame.isSideBySide,
                 isMuted: office.isMuted,
                 title: office.roomTitle ?? text("title"),
                 subtitle: officeSubtitle(office),

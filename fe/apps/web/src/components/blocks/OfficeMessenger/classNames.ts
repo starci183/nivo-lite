@@ -13,8 +13,8 @@ export const THREAD_COLUMN_CLASS_NAME = "flex min-w-0 flex-1 flex-col"
 /** The centre column while the list shows on a phone. */
 export const THREAD_COLUMN_HIDDEN_CLASS_NAME = "hidden min-w-0 flex-1 flex-col md:flex"
 
-/** The docked info column on wide screens. */
-export const INFO_COLUMN_CLASS_NAME = "flex w-72 shrink-0 flex-col 2xl:w-80"
+/** The conversation scroll content: the thread fills it and keeps its own stick-to-bottom scroll. */
+export const CONVERSATION_CLASS_NAME = "flex h-full min-h-0 flex-col"
 
 /** The tasks view scrolls in the centre column. */
 export const TASKS_CLASS_NAME = "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"

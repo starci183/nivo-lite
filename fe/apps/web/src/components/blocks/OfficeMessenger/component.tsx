@@ -1,9 +1,8 @@
-import type { ReactNode } from "react"
-import { Divider, Drawer, FillViewport, Page, Region, SurfaceCard } from "@starci/grammar/common"
+import { ChatWorkspace, Divider, FillViewport, Page, Region } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
-import { OfficeHeaderContent } from "@/components/composites/OfficeHeader"
+import { OfficeHeader } from "@/components/composites/OfficeHeader"
 import { OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
 import { OfficeTasks } from "@/components/composites/OfficeTasks"
 import { OfficeThread } from "@/components/composites/OfficeThread"
@@ -19,8 +18,8 @@ import type {
 } from "@/modules/types"
 import {
     BODY_CLASS_NAME,
+    CONVERSATION_CLASS_NAME,
     DIVIDER_CLASS_NAME,
-    INFO_COLUMN_CLASS_NAME,
     LIST_COLUMN_CLASS_NAME,
     LIST_COLUMN_HIDDEN_CLASS_NAME,
     TASKS_CLASS_NAME,
@@ -42,6 +41,8 @@ export interface OfficeMessengerBaseProps {
         readonly centre: "chat" | "tasks"
         readonly isInfoOpen: boolean
         readonly isInfoDocked: boolean
+        /** Narrower than the side-by-side breakpoint: the info panel opens as the workspace drawer. */
+        readonly isCompact: boolean
         /** I muted this conversation: the list shows a dot instead of the count. */
         readonly isMuted: boolean
         /** The name of the room shown. */
@@ -82,156 +83,150 @@ export interface OfficeMessengerBaseProps {
         }
 }
 
+/** The chat workbench: header, conversation, composer and, when the info panel is shown, the rail. */
+const MessengerWorkspace = (props: OfficeMessengerBaseProps) => {
+    const view = props.props
+    const on = props.on
+    const { text } = view
+    const infoPanel = <MessengerInfoPanel {...props} />
+    const isTasks = view.centre === "tasks"
+
+    const workspace = {
+        label: text("messengerLabel"),
+        conversationLabel: text("messengerLabel"),
+        header: (
+            <OfficeHeader
+                props={{
+                    text,
+                    centre: view.centre,
+                    title: view.title,
+                    subtitle: view.subtitle,
+                    chip: view.chip,
+                    isMuted: view.isMuted,
+                    isInfoOpen: view.isInfoOpen,
+                }}
+                on={{
+                    back: on.back,
+                    chip: on.chip,
+                    toggleMute: on.toggleMute,
+                    toggleInfo: on.toggleInfo,
+                    showChat: on.showChat,
+                }}
+            />
+        ),
+        conversation: (
+            <div className={CONVERSATION_CLASS_NAME}>
+                <MessengerCentre {...props} />
+            </div>
+        ),
+        composer: isTasks ? null : <MessengerComposer {...props} />,
+    }
+    const rail = {
+        rail: infoPanel,
+        railLabel: text("infoTitle"),
+        railOpenLabel: text("infoOpen"),
+        railCloseLabel: text("infoClose"),
+        onRailOpenChange: on.infoOpenChange,
+    }
+    if (view.isCompact) return <ChatWorkspace {...workspace} {...rail} isRailOpen={view.isInfoOpen} />
+    if (view.isInfoOpen) return <ChatWorkspace {...workspace} {...rail} isRailOpen={false} />
+    return <ChatWorkspace {...workspace} />
+}
+
 /**
- * Office as a messenger: the conversation list on the left, the team thread with its composer pinned at the bottom, and a collapsible
- * info panel on the right (a drawer on narrow screens). The columns are regions of ONE joined Grammar surface.
+ * Office as a messenger, full-bleed: the conversation list on the left, then the chat workbench with the team thread, its composer
+ * pinned at the bottom and the info rail. The columns are separated by vertical dividers only.
  */
 export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
     const { text } = view
-    const infoPanel = <MessengerInfoPanel {...props} />
-
-    const header = OfficeHeaderContent({
-        props: {
-            text,
-            centre: view.centre,
-            title: view.title,
-            subtitle: view.subtitle,
-            chip: view.chip,
-            isMuted: view.isMuted,
-            isInfoOpen: view.isInfoOpen,
-        },
-        on: {
-            back: on.back,
-            chip: on.chip,
-            toggleMute: on.toggleMute,
-            toggleInfo: on.toggleInfo,
-            showChat: on.showChat,
-        },
-    })
 
     return (
-        <Page measure="full" header={header}>
+        <Page chrome="bleed">
             <FillViewport minHeight="md" bottomInset="none">
-                <SurfaceCard ariaLabel={text("messengerLabel")} composition="joined" height="fill">
-                    <div className={BODY_CLASS_NAME}>
-                        <Region
-                            label={text("listLabel")}
-                            className={
-                                view.phoneView === "list" ? LIST_COLUMN_CLASS_NAME : LIST_COLUMN_HIDDEN_CLASS_NAME
-                            }
-                        >
-                            <SlotView slot={view.listSlot} placeholder={view.listPlaceholder} labels={view.slotLabels}>
-                                {(list, isSkeleton) => (
-                                    <OfficeConversations
-                                        props={{ list, isSkeleton, text }}
-                                        on={{
-                                            openGroup: on.openGroup,
-                                            openAgent: on.openAgent,
-                                            openCustomer: on.openCustomer,
-                                        }}
-                                    />
-                                )}
-                            </SlotView>
-                        </Region>
-                        <div className={DIVIDER_CLASS_NAME}>
-                            <Divider orientation="vertical" semantics="presentation" />
-                        </div>
-                        <Region
-                            label={text("messengerLabel")}
-                            className={
-                                view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
-                            }
-                        >
-                            <MessengerCentre {...props} />
-                        </Region>
-                        {view.isInfoDocked && view.isInfoOpen ? (
-                            <InfoColumn label={text("infoTitle")}>{infoPanel}</InfoColumn>
-                        ) : null}
+                <div className={BODY_CLASS_NAME}>
+                    <Region
+                        label={text("listLabel")}
+                        className={view.phoneView === "list" ? LIST_COLUMN_CLASS_NAME : LIST_COLUMN_HIDDEN_CLASS_NAME}
+                    >
+                        <SlotView slot={view.listSlot} placeholder={view.listPlaceholder} labels={view.slotLabels}>
+                            {(list, isSkeleton) => (
+                                <OfficeConversations
+                                    props={{ list, isSkeleton, text }}
+                                    on={{
+                                        openGroup: on.openGroup,
+                                        openAgent: on.openAgent,
+                                        openCustomer: on.openCustomer,
+                                    }}
+                                />
+                            )}
+                        </SlotView>
+                    </Region>
+                    <div className={DIVIDER_CLASS_NAME}>
+                        <Divider orientation="vertical" semantics="presentation" />
                     </div>
-                </SurfaceCard>
+                    <div
+                        className={
+                            view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
+                        }
+                    >
+                        <MessengerWorkspace {...props} />
+                    </div>
+                </div>
             </FillViewport>
-            {view.isInfoDocked ? null : (
-                <Drawer
-                    isOpen={view.isInfoOpen}
-                    onOpenChange={on.infoOpenChange}
-                    placement="right"
-                    title={text("infoTitle")}
-                    closeLabel={text("infoClose")}
-                >
-                    {infoPanel}
-                </Drawer>
-            )}
         </Page>
     )
 }
 
-/** The centre column body: the tasks view, or the thread with its composer. */
+/** The conversation scroll content: the tasks view, or the thread. */
 const MessengerCentre = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
     const { text } = view
-    const isTasks = view.centre === "tasks"
-    return (
-        <>
-            {isTasks ? (
-                <div className={TASKS_CLASS_NAME}>
-                    <OfficeTasks props={{ tasks: view.tasks, text }} on={{ openLeads: on.openLeads }} />
-                </div>
-            ) : (
-                <>
-                    <SlotView
-                        slot={view.threadSlot}
-                        placeholder={view.threadPlaceholder}
-                        labels={view.slotLabels}
-                        onRetry={on.retry}
-                    >
-                        {(thread, isSkeleton) => (
-                            <OfficeThread
-                                props={{ ...thread, isSkeleton }}
-                                on={{
-                                    decideApproval: on.decideApproval,
-                                    decideWork: on.decideWork,
-                                    decideCard: on.decideCard,
-                                    sendCommand: on.sendCommand,
-                                    cancelCommand: on.cancelCommand,
-                                    reply: on.reply,
-                                    loadEarlier: on.loadEarlier,
-                                    editCard: on.editCard,
-                                    copy: on.copy,
-                                }}
-                            />
-                        )}
-                    </SlotView>
-                    <SlotView slot={view.composerSlot} placeholder={view.composerPlaceholder} labels={view.slotLabels}>
-                        {(composer, isSkeleton) => (
-                            <OfficeComposer
-                                props={{ ...composer, isSkeleton }}
-                                on={{ change: on.change, send: on.send }}
-                            />
-                        )}
-                    </SlotView>
-                </>
+    return view.centre === "tasks" ? (
+        <div className={TASKS_CLASS_NAME}>
+            <OfficeTasks props={{ tasks: view.tasks, text }} on={{ openLeads: on.openLeads }} />
+        </div>
+    ) : (
+        <SlotView
+            slot={view.threadSlot}
+            placeholder={view.threadPlaceholder}
+            labels={view.slotLabels}
+            onRetry={on.retry}
+        >
+            {(thread, isSkeleton) => (
+                <OfficeThread
+                    props={{ ...thread, isSkeleton }}
+                    on={{
+                        decideApproval: on.decideApproval,
+                        decideWork: on.decideWork,
+                        decideCard: on.decideCard,
+                        sendCommand: on.sendCommand,
+                        cancelCommand: on.cancelCommand,
+                        reply: on.reply,
+                        loadEarlier: on.loadEarlier,
+                        editCard: on.editCard,
+                        copy: on.copy,
+                    }}
+                />
             )}
-        </>
+        </SlotView>
     )
 }
 
-/** What the docked info column draws. */
-type InfoColumnProps = { readonly label: string; readonly children: ReactNode }
-
-/** The docked info column with the hairline that divides it from the thread. */
-const InfoColumn = (props: InfoColumnProps) => (
-    <>
-        <div className={DIVIDER_CLASS_NAME}>
-            <Divider orientation="vertical" semantics="presentation" />
-        </div>
-        <Region label={props.label} className={INFO_COLUMN_CLASS_NAME}>
-            {props.children}
-        </Region>
-    </>
-)
+/** The composer pinned under the thread. */
+const MessengerComposer = (props: OfficeMessengerBaseProps) => {
+    const view = props.props
+    const on = props.on
+    return (
+        <SlotView slot={view.composerSlot} placeholder={view.composerPlaceholder} labels={view.slotLabels}>
+            {(composer, isSkeleton) => (
+                <OfficeComposer props={{ ...composer, isSkeleton }} on={{ change: on.change, send: on.send }} />
+            )}
+        </SlotView>
+    )
+}
 
 /** Connects the shared info panel used by the dock and drawer. */
 const MessengerInfoPanel = (props: OfficeMessengerBaseProps) => {
