@@ -199,7 +199,7 @@ describe("ZaloPageService view", () => {
 
     it("skips a write whose conversation the connection does not list", async () => {
         const { service, feed } = await build()
-        feed.lastWritesSince.mockResolvedValue([{ conversationId: "elsewhere", lastAt: NOW }])
+        feed.lastWritesSince.mockResolvedValue([{ conversationId: "elsewhere", lastAt: NOW.toISOString() }])
 
         const page = await service.view(actor, "c-1")
 
