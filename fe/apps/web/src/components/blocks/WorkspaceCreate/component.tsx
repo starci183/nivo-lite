@@ -1,4 +1,4 @@
-import { Button, Form, Heading, Input, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Form, Heading, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
 import { ACTIONS_CLASS_NAME, HEAD_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
@@ -11,6 +11,15 @@ export interface WorkspaceCreateBaseProps {
         readonly description: string
         readonly nameLabel: string
         readonly nameHint: string
+        /** The business type picker: its label, the offered types and the chosen one. */
+        readonly industryLabel: string
+        readonly industries: ReadonlyArray<{ readonly id: string; readonly label: string }>
+        readonly industry: string
+        /** The owner's own words, asked for only when the type is `other`. */
+        readonly isOtherIndustry: boolean
+        readonly otherIndustryLabel: string
+        readonly otherIndustry: string
+        readonly otherIndustryError?: string | undefined
         readonly submitLabel: string
         readonly cancelLabel: string
         readonly cancelHref: string
@@ -21,6 +30,8 @@ export interface WorkspaceCreateBaseProps {
     }
     readonly on: {
         readonly setName: (value: string) => void
+        readonly setIndustry: (value: string | null) => void
+        readonly setOtherIndustry: (value: string) => void
         readonly submit: () => void
     }
 }
@@ -47,6 +58,27 @@ export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => {
                         value={form.name}
                         onValueChange={on.setName}
                     />
+                    <Select
+                        name="businessType"
+                        label={form.industryLabel}
+                        options={form.industries}
+                        value={form.industry}
+                        isDisabled={form.isPending}
+                        onValueChange={on.setIndustry}
+                    />
+                    {form.isOtherIndustry ? (
+                        <Input
+                            id="workspace-industry"
+                            name="customIndustry"
+                            label={form.otherIndustryLabel}
+                            isRequired
+                            isDisabled={form.isPending}
+                            value={form.otherIndustry}
+                            isError={form.otherIndustryError !== undefined}
+                            errorMessage={form.otherIndustryError}
+                            onValueChange={on.setOtherIndustry}
+                        />
+                    ) : null}
                     <FormNotice failTitle={form.failTitle} error={form.error} />
                     <div className={ACTIONS_CLASS_NAME}>
                         <Button type="submit" intent="commit" isPending={form.isPending}>

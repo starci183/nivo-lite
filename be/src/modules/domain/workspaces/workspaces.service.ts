@@ -6,14 +6,7 @@ import { InjectPrimaryEntityManager, advisoryXactLock } from "@modules/platform/
 import { isRecord } from "@modules/platform/primitives"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
 import { WorkspaceEntity } from "./persistence/entities"
-import type {
-    CreatedWorkspace,
-    FirstWorkspace,
-    OptionalAccountId,
-    WorkspaceBrand,
-    WorkspaceMembership,
-    WorkspaceName,
-} from "./workspaces.contracts"
+import type { CreatedWorkspace, FirstWorkspace, NamedBusinessType, OptionalAccountId, WorkspaceBrand, WorkspaceMembership, WorkspaceName } from "./workspaces.contracts"
 import type { WorkspacesOptions } from "./workspaces.options"
 import { FIRST_WORKSPACE_NAME } from "./workspaces.templates"
 import { InjectWorkspacesOptions } from "./workspaces.port"
@@ -101,9 +94,13 @@ export class WorkspacesService {
     }
 
     /** Creates a free workspace owned by the person; only where the environment allows it. */
-    async createFree(userId: string, name: string): Promise<CreatedWorkspace> {
+    async createFree(
+        userId: string,
+        name: string,
+        businessType: NamedBusinessType = null,
+    ): Promise<CreatedWorkspace> {
         if (!this.options.allowFreeWorkspace) throw new WorkspacesError({ code: WorkspacesErrorCode.SignupDisabled })
-        return { id: await this.insertFree(this.entityManager, userId, name) }
+        return { id: await this.insertFree(this.entityManager, userId, name, businessType) }
     }
 
     /** Ensures one explicitly named owned workspace under the existing per-owner creation lock. */
@@ -169,9 +166,19 @@ export class WorkspacesService {
         return workspace.status === "active" && (await this.members.isActiveOwner(workspace.id, userId, manager))
     }
 
-    /** Creates a free active workspace and answers its id; a trigger makes the creator its owner member. */
-    private async insertFree(manager: EntityManager, userId: string, name: string): Promise<string> {
-        const result = await manager.insert(WorkspaceEntity, { ownerId: userId, name, status: "active" })
+    /** Creates a free active workspace, with the business type when one was named, and answers its id; a trigger makes the creator its owner member. */
+    private async insertFree(
+        manager: EntityManager,
+        userId: string,
+        name: string,
+        businessType: NamedBusinessType = null,
+    ): Promise<string> {
+        const result = await manager.insert(WorkspaceEntity, {
+            ownerId: userId,
+            name,
+            status: "active",
+            ...(businessType === null ? {} : { businessType }),
+        })
         const [created] = result.identifiers
         if (!isRecord(created) || typeof created.id !== "string")
             throw new WorkspacesError({ code: WorkspacesErrorCode.NotFound })

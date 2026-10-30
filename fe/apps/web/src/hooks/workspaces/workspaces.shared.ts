@@ -4,6 +4,53 @@ export const WORKSPACE_NAME_MIN = 2
 /** The longest workspace name the form accepts. */
 export const WORKSPACE_NAME_MAX = 80
 
+/** The business types the form offers, in order (the first is the default); `other` lets the owner type their own words. */
+export const WORKSPACE_BUSINESS_TYPES = [
+    "spa",
+    "retail",
+    "cafe",
+    "clinic",
+    "education",
+    "technology",
+    "real_estate",
+    "manufacturing",
+    "logistics",
+    "travel",
+    "fitness",
+    "fashion",
+    "finance",
+    "agency",
+    "construction",
+    "services",
+    "other",
+] as const
+/** One business type the form offers. */
+export type WorkspaceBusinessType = (typeof WORKSPACE_BUSINESS_TYPES)[number]
+/** The option that asks for the owner's own words. */
+export const OTHER_BUSINESS_TYPE: WorkspaceBusinessType = "other"
+/** The longest business type the owner may type. */
+export const BUSINESS_TYPE_MAX = 60
+/** The catalog key (`onboarding` namespace) that names each business type. */
+export const BUSINESS_TYPE_KEYS: Readonly<Record<WorkspaceBusinessType, string>> = {
+    spa: "industrySpa",
+    retail: "industryRetail",
+    cafe: "industryCafe",
+    clinic: "industryClinic",
+    education: "industryEducation",
+    technology: "industryTechnology",
+    real_estate: "industryRealEstate",
+    manufacturing: "industryManufacturing",
+    logistics: "industryLogistics",
+    travel: "industryTravel",
+    fitness: "industryFitness",
+    fashion: "industryFashion",
+    finance: "industryFinance",
+    agency: "industryAgency",
+    construction: "industryConstruction",
+    services: "industryServices",
+    other: "industryOther",
+}
+
 /** How a workspace stands: usable, waiting for its payment, or switched off. */
 export type WorkspaceState = "active" | "pending" | "cancelled"
 

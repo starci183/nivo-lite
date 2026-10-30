@@ -6,6 +6,7 @@ import type { CreateWorkspaceType } from "./dto/create-workspace.type"
 /** Maps the GraphQL input to the command request. */
 export const toCreateWorkspaceRequest = (input: CreateWorkspaceInput): CreateWorkspaceRequest => ({
     name: input.name,
+    businessType: input.businessType,
 })
 
 /** Maps the created workspace to the GraphQL type. */

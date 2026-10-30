@@ -1,5 +1,8 @@
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 
+/** The business type a workspace names at onboarding: a known key the knowledge ideas and inventory starters read (`spa`, `retail`, `cafe`, `technology`...) or the owner's own words; none leaves it unset. */
+export type NamedBusinessType = string | null
+
 /** One workspace as a member sees it. */
 export interface WorkspaceSummary {
     /** The workspace id. */

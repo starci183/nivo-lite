@@ -251,6 +251,19 @@ describe("WorkspacesService > createFree", () => {
         })
     })
 
+    it("stores the business type named at onboarding", async () => {
+        const em = mockEntityManager({ insert: [WorkspaceEntity, INSERTED("ws-spa")] })
+        const service = await serviceOf(em, { allowFreeWorkspace: true })
+
+        await expect(service.createFree("user-1", "Spa Hoa Mai", "spa")).resolves.toEqual({ id: "ws-spa" })
+        expect(em.insert).toHaveBeenCalledWith(WorkspaceEntity, {
+            ownerId: "user-1",
+            name: "Spa Hoa Mai",
+            status: "active",
+            businessType: "spa",
+        })
+    })
+
     it("refuses as not found when the insert answers no identifier", async () => {
         const em = mockEntityManager({ insert: [WorkspaceEntity, { identifiers: [], generatedMaps: [], raw: [] }] })
 

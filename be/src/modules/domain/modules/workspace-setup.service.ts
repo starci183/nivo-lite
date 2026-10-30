@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { AuthorityService } from "@modules/domain/authority"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import type { CreatedWorkspace } from "@modules/domain/workspaces"
+import type { CreatedWorkspace, NamedBusinessType } from "@modules/domain/workspaces"
 import { eachInOrder } from "@modules/platform/primitives"
 import { ModulesService } from "./modules.service"
 import { defaultRulesOf } from "./policies/instance.policy"
@@ -22,9 +22,13 @@ export class WorkspaceSetupService {
         private readonly catalog: ModulesService,
     ) {}
 
-    /** Creates a free workspace owned by the person and lays down its governance. */
-    async createFree(userId: string, name: string): Promise<CreatedWorkspace> {
-        const created = await this.workspaces.createFree(userId, name)
+    /** Creates a free workspace owned by the person, with the business type they named, and lays down its governance. */
+    async createFree(
+        userId: string,
+        name: string,
+        businessType: NamedBusinessType = null,
+    ): Promise<CreatedWorkspace> {
+        const created = await this.workspaces.createFree(userId, name, businessType)
         await this.ensureGovernance(created.id)
         return created
     }

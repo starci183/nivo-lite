@@ -38,7 +38,7 @@ describe("WorkspaceSetupService", () => {
 
         await expect(service.createFree("user-1", "Shop")).resolves.toEqual({ id: "ws-1" })
 
-        expect(workspaces.createFree).toHaveBeenCalledWith("user-1", "Shop")
+        expect(workspaces.createFree).toHaveBeenCalledWith("user-1", "Shop", null)
         expect(authority.ensureSheet).toHaveBeenCalledWith("ws-1")
         expect(rules.seedDefaults).toHaveBeenCalledTimes(STABLE.length)
         STABLE.forEach((module) => {

@@ -17,6 +17,10 @@ export class CreateWorkspaceHandler extends ICQRSHandler<CreateWorkspaceCommand,
     }
 
     protected override process(command: CreateWorkspaceCommand): Promise<CreatedWorkspace> {
-        return this.setup.createFree(command.params.principal.id, command.params.request.name)
+        return this.setup.createFree(
+            command.params.principal.id,
+            command.params.request.name,
+            command.params.request.businessType,
+        )
     }
 }
