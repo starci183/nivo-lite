@@ -75,10 +75,10 @@ jobs:
         shell: bash
         run: |
           owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "db=ghcr.io/${owner}/nivo-lite-db" >> "$GITHUB_OUTPUT"
           echo "nivo-api=ghcr.io/${owner}/nivo-lite-api" >> "$GITHUB_OUTPUT"
           echo "nivo-landing=ghcr.io/${owner}/nivo-lite-landing" >> "$GITHUB_OUTPUT"
           echo "nivo-mcp=ghcr.io/${owner}/nivo-lite-mcp" >> "$GITHUB_OUTPUT"
-          echo "nivo-postgres=ghcr.io/${owner}/nivo-lite-db" >> "$GITHUB_OUTPUT"
           echo "nivo-web-app=ghcr.io/${owner}/nivo-lite-web" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
@@ -86,6 +86,17 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
+      - name: build and push db
+        id: build-db
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: .starcistacks/images/db/Dockerfile
+          push: true
+          provenance: false
+          tags: ${{ steps.names.outputs.db }}:${{ github.sha }}
+          cache-from: type=gha,scope=db
+          cache-to: type=gha,scope=db,mode=max
       - name: build and push nivo-api
         id: build-nivo-api
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -125,17 +136,6 @@ jobs:
           tags: ${{ steps.names.outputs.nivo-mcp }}:${{ github.sha }}
           cache-from: type=gha,scope=nivo-mcp
           cache-to: type=gha,scope=nivo-mcp,mode=max
-      - name: build and push nivo-postgres
-        id: build-nivo-postgres
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: .starcistacks/images/db/Dockerfile
-          push: true
-          provenance: false
-          tags: ${{ steps.names.outputs.nivo-postgres }}:${{ github.sha }}
-          cache-from: type=gha,scope=nivo-postgres
-          cache-to: type=gha,scope=nivo-postgres,mode=max
       - name: public build values of nivo-web-app
         id: args-nivo-web-app
         env:
@@ -166,17 +166,17 @@ jobs:
           XDG_DATA_HOME: ${{ runner.temp }}/starci-data
           GH_TOKEN: ${{ github.token }}
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          IMAGE_DB: ${{ steps.names.outputs.db }}@${{ steps.build-db.outputs.digest }}
           IMAGE_NIVO_API: ${{ steps.names.outputs.nivo-api }}@${{ steps.build-nivo-api.outputs.digest }}
           IMAGE_NIVO_LANDING: ${{ steps.names.outputs.nivo-landing }}@${{ steps.build-nivo-landing.outputs.digest }}
           IMAGE_NIVO_MCP: ${{ steps.names.outputs.nivo-mcp }}@${{ steps.build-nivo-mcp.outputs.digest }}
-          IMAGE_NIVO_POSTGRES: ${{ steps.names.outputs.nivo-postgres }}@${{ steps.build-nivo-postgres.outputs.digest }}
           IMAGE_NIVO_WEB_APP: ${{ steps.names.outputs.nivo-web-app }}@${{ steps.build-nivo-web-app.outputs.digest }}
         run: |
           npx --no-install starci app stack deploy --env "$STACK_ENVIRONMENT" \
+            --image "db=$IMAGE_DB" \
             --image "nivo-api=$IMAGE_NIVO_API" \
             --image "nivo-landing=$IMAGE_NIVO_LANDING" \
             --image "nivo-mcp=$IMAGE_NIVO_MCP" \
-            --image "nivo-postgres=$IMAGE_NIVO_POSTGRES" \
             --image "nivo-web-app=$IMAGE_NIVO_WEB_APP" \
             --source-sha "$GITHUB_SHA" --execute
       - name: disconnect from the swarm manager
