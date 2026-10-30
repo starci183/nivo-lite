@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./object-storage.module-definition"
+import { ConfigurableModuleClass, OPTIONS_TYPE } from "./storage.module-definition"
 import { S3StorageClient } from "./storage.client"
 import {
     S3_CLIENT,
