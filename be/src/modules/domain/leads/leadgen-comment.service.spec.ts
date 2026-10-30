@@ -1,12 +1,13 @@
 import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
-import { DecisionsErrorCode, DecisionsService } from "@modules/domain/decisions"
-import type { WorkItem } from "@modules/domain/decisions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { DECISIONS_QUEUE, DecisionsJob, decisionsDedupeKey } from "@modules/queues/decisions"
+import { LeadsErrorCode } from "./errors/leads.error"
+import { LEADGEN_COMMENT_DECISIONS } from "./leads.decorators"
+import type { LeadGenCommentDecisions, LeadGenCommentItem } from "./leads.port"
 import { LeadGenCommentService } from "./leadgen-comment.service"
 
 /** The statement `callDbFunction` sends for the decisions job lookup. */
@@ -17,33 +18,13 @@ interface LeadGenCommentJobRow {
     readonly state: "queued" | "running" | "done" | "failed"
 }
 
-const itemOf = builder<WorkItem>({
+const itemOf = builder<LeadGenCommentItem>({
     id: "item-1",
-    workspace_id: "ws-1",
     department: "lead_gen",
     action: "reply_comment_public",
-    subject_type: "lead",
-    subject_id: "lead-1",
-    lead_id: "lead-1",
-    inbound_event_id: null,
-    parent_id: null,
-    chain_id: "item-1",
-    depth: 0,
     status: "waiting_decision",
-    decided_path: null,
-    reason: null,
-    reasons: [],
-    missing_fields: [],
-    proposal: { summary: "Reply", fields: {}, draft: "Thanks" },
-    result: null,
-    error: null,
-    evidence_state: "pending",
     assigned_staff_id: null,
-    execution_id: null,
-    created_at: "2026-10-12T03:00:00.000Z",
-    updated_at: "2026-10-12T03:00:00.000Z",
-    completed_at: null,
-    installation_id: null,
+    result: null,
 })
 
 const MEMBER: WorkspaceMember = {
@@ -56,7 +37,7 @@ const MEMBER: WorkspaceMember = {
 }
 
 const build = async (
-    item: WorkItem,
+    item: LeadGenCommentItem,
     jobs: ReadonlyArray<LeadGenCommentJobRow> = [{ state: "queued" }],
     member: WorkspaceMember = MEMBER,
 ) => {
@@ -65,14 +46,14 @@ const build = async (
     const write = jest.spyOn(outbox, "write")
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(member)
-    const decisions = mock<DecisionsService>()
+    const decisions = mock<LeadGenCommentDecisions>()
     decisions.getWorkItem.mockResolvedValue(item)
     const moduleRef = await Test.createTestingModule({
         providers: [
             LeadGenCommentService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: WorkspaceMembersService, useValue: members },
-            { provide: DecisionsService, useValue: decisions },
+            { provide: LEADGEN_COMMENT_DECISIONS, useValue: decisions },
             { provide: QUEUE_OUTBOX, useValue: outbox },
         ],
     }).compile()
@@ -124,7 +105,7 @@ describe("LeadGenCommentService", () => {
                 draft: null,
                 locale: "en",
             }),
-        ).rejects.toMatchObject({ code: DecisionsErrorCode.NotWaiting })
+        ).rejects.toMatchObject({ code: LeadsErrorCode.CommentNotWaiting })
 
         expect(outbox.jobs).toEqual([])
     })
@@ -193,7 +174,7 @@ describe("LeadGenCommentService", () => {
                 draft: "Changed",
                 locale: "en",
             }),
-        ).rejects.toMatchObject({ code: DecisionsErrorCode.NotAllowed })
+        ).rejects.toMatchObject({ code: LeadsErrorCode.CommentNotAllowed })
 
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
         expect(outbox.jobs).toEqual([])
@@ -210,7 +191,7 @@ describe("LeadGenCommentService", () => {
         const { comments, decisions, tx } = await build(itemOf(overrides))
 
         await expect(comments.status("user-1", "ws-1", "item-1")).rejects.toMatchObject({
-            code: DecisionsErrorCode.NotFound,
+            code: LeadsErrorCode.NotFound,
         })
 
         expect(decisions.getWorkItem).toHaveBeenCalledWith("user-1", "ws-1", "item-1")
@@ -221,7 +202,7 @@ describe("LeadGenCommentService", () => {
         const { comments, tx } = await build(itemOf(), [])
 
         await expect(comments.status("user-1", "ws-1", "item-1")).rejects.toMatchObject({
-            code: DecisionsErrorCode.NotFound,
+            code: LeadsErrorCode.NotFound,
         })
 
         expect(tx.em.query).toHaveBeenCalledWith(FIND_LEADGEN_COMMENT_JOB, [
@@ -233,33 +214,33 @@ describe("LeadGenCommentService", () => {
     })
 
     it.each<{
-        workStatus: WorkItem["status"]
+        workStatus: LeadGenCommentItem["status"]
         jobState: LeadGenCommentJobRow["state"] | null
         status: string
-        errorCode: DecisionsErrorCode | null
+        errorCode: LeadsErrorCode | null
     }>([
         { workStatus: "done", jobState: null, status: "succeeded", errorCode: null },
         { workStatus: "done", jobState: "done", status: "succeeded", errorCode: null },
-        { workStatus: "failed", jobState: null, status: "failed", errorCode: DecisionsErrorCode.WorkFailed },
-        { workStatus: "rejected", jobState: null, status: "failed", errorCode: DecisionsErrorCode.WorkFailed },
-        { workStatus: "failed", jobState: "queued", status: "failed", errorCode: DecisionsErrorCode.WorkFailed },
-        { workStatus: "rejected", jobState: "running", status: "failed", errorCode: DecisionsErrorCode.WorkFailed },
+        { workStatus: "failed", jobState: null, status: "failed", errorCode: LeadsErrorCode.CommentFailed },
+        { workStatus: "rejected", jobState: null, status: "failed", errorCode: LeadsErrorCode.CommentFailed },
+        { workStatus: "failed", jobState: "queued", status: "failed", errorCode: LeadsErrorCode.CommentFailed },
+        { workStatus: "rejected", jobState: "running", status: "failed", errorCode: LeadsErrorCode.CommentFailed },
         {
             workStatus: "waiting_decision",
             jobState: "failed",
             status: "failed",
-            errorCode: DecisionsErrorCode.WorkFailed,
+            errorCode: LeadsErrorCode.CommentFailed,
         },
         {
             workStatus: "waiting_decision",
             jobState: "done",
             status: "failed",
-            errorCode: DecisionsErrorCode.WorkFailed,
+            errorCode: LeadsErrorCode.CommentFailed,
         },
-        { workStatus: "done", jobState: "failed", status: "failed", errorCode: DecisionsErrorCode.WorkFailed },
+        { workStatus: "done", jobState: "failed", status: "failed", errorCode: LeadsErrorCode.CommentFailed },
     ])("reports work=$workStatus, job=$jobState as $status", async ({ workStatus, jobState, status, errorCode }) => {
         const { comments } = await build(
-            itemOf({ status: workStatus, result: { summary: "Replied", href: "https://example.test/comment/1" } }),
+            itemOf({ status: workStatus, result: { href: "https://example.test/comment/1" } }),
             jobState === null ? [] : [{ state: jobState }],
         )
 
@@ -275,7 +256,7 @@ describe("LeadGenCommentService", () => {
 
 describe("LeadGenCommentService", () => {
     it("reports a successful comment without a result link", async () => {
-        const { comments } = await build(itemOf({ status: "done", result: { summary: "Replied" } }), [])
+        const { comments } = await build(itemOf({ status: "done", result: {} }), [])
 
         await expect(comments.status("user-1", "ws-1", "item-1")).resolves.toEqual({
             id: "item-1",
