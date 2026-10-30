@@ -2560,8 +2560,8 @@ input CreateWorkThreadInput {
 }
 
 input CreateWorkspaceInput {
-  name: String! @inputBounds(maxLength: 120)
   businessType: String @inputBounds(maxLength: 60)
+  name: String! @inputBounds(maxLength: 120)
 }
 
 type CreateWorkspaceType {
