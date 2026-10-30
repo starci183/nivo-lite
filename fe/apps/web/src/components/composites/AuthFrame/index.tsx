@@ -1,16 +1,12 @@
 import type { ReactNode } from "react"
-import { Heading, Image, NavLandmark, Text, TextAction, WorkspaceShell } from "@starci/grammar/common"
+import { Backdrop, Heading, Mascot, NavLandmark, Text, TextAction, WorkspaceShell } from "@starci/grammar/common"
 import { privacyHref, termsHref } from "@/modules/routes"
 import {
-    AUTH_ART_BOTTOM_CLASS_NAME,
-    AUTH_ART_CLASS_NAME,
-    AUTH_ART_COPY_CLASS_NAME,
     AUTH_ART_PANE_CLASS_NAME,
     AUTH_CARD_CLASS_NAME,
     AUTH_CENTER_CLASS_NAME,
     AUTH_COMPACT_LOGO_CLASS_NAME,
     AUTH_FORM_PANE_CLASS_NAME,
-    AUTH_GROUND_CLASS_NAME,
     AUTH_LEGAL_CLASS_NAME,
     AUTH_LOCALE_CLASS_NAME,
     AUTH_SPLIT_CLASS_NAME,
@@ -29,7 +25,7 @@ interface AuthFrameProps {
     readonly children: ReactNode
 }
 
-/** The split auth screen: the art half, full bleed with the brand pitch over it, beside the routed auth card (the art half hides on mobile). */
+/** The split auth screen: the brand Backdrop (one accent corner toward the form, the hero mascot) beside the routed auth card; the backdrop hides on mobile. */
 export const AuthFrame = (props: AuthFrameProps) => (
     <WorkspaceShell
         align="stretch"
@@ -37,26 +33,23 @@ export const AuthFrame = (props: AuthFrameProps) => (
         primary={
             <div className={AUTH_SPLIT_CLASS_NAME}>
                 <div className={AUTH_ART_PANE_CLASS_NAME}>
-                    <div className={AUTH_GROUND_CLASS_NAME} aria-hidden="true">
-                        <Image src="/images/entry/login-ground.png" alt="" aspect="square" fit="cover" plate="none" />
-                    </div>
-                    <div className={AUTH_ART_CLASS_NAME} aria-hidden="true">
-                        <Image
-                            src="/images/entry/login-mascot.webp"
-                            alt=""
-                            aspect="auto"
-                            fit="contain"
-                            plate="none"
-                            loading="eager"
-                        />
-                    </div>
-                    <div className={AUTH_ART_COPY_CLASS_NAME}>
+                    <Backdrop
+                        accentCorner="end-end"
+                        artwork={
+                            <Mascot
+                                src="/images/entry/login-mascot.webp"
+                                size="hero"
+                                loading="eager"
+                                assetSlot="sign-in-hero"
+                                assetSha256="de0a2c29360b590ed8ddf6a6aff50c2aa343e249dbc097f8dbd92d8b20e8918d"
+                                assetPrompt="The NIVO unicorn stands on its hind legs holding an open laptop with a red-check checklist, transparent ground"
+                            />
+                        }
+                    >
                         {props.logo}
-                        <div className={AUTH_ART_BOTTOM_CLASS_NAME}>
-                            <Heading level={1}>{props.headline}</Heading>
-                            <Text tone="muted">{props.tagline}</Text>
-                        </div>
-                    </div>
+                        <Heading level={1}>{props.headline}</Heading>
+                        <Text tone="muted">{props.tagline}</Text>
+                    </Backdrop>
                 </div>
                 <div className={AUTH_FORM_PANE_CLASS_NAME}>
                     <div className={AUTH_LOCALE_CLASS_NAME}>{props.localeSwitch}</div>
