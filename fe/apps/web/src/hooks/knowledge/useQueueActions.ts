@@ -3,6 +3,7 @@
 import { mutate } from "swr"
 import {
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
+    QUERY_KNOWLEDGE_USAGE_SWR_KEY,
     useMutateCreateKnowledgeUploadSwr,
     useMutateEnqueueKnowledgeSourceSwr,
     usePutPresignedSwr,
@@ -52,7 +53,11 @@ export const useQueueActions = (): QueueActions => {
                 { showSuccessToast: false },
             )
             if (queued === undefined) return false
-            await mutate((key) => Array.isArray(key) && key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY)
+            await mutate(
+                (key) =>
+                    Array.isArray(key) &&
+                    (key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY || key[0] === QUERY_KNOWLEDGE_USAGE_SWR_KEY),
+            )
             return true
         },
     }

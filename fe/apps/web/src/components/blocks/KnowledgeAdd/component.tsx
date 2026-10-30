@@ -1,4 +1,4 @@
-import { Drawer, SegmentedControl, Text } from "@starci/grammar/common"
+import { Drawer, Meter, SegmentedControl, Text } from "@starci/grammar/common"
 import { AddFilesPanel, type LinkRowView, type QueueRowView } from "@/components/composites/AddFilesPanel"
 
 import { AddNotePanel, type PairView } from "@/components/composites/AddNotePanel"
@@ -70,12 +70,22 @@ interface ZoneView {
     readonly driveFailure?: string | undefined
 }
 
+/** The meter of the workspace's raw document allowance. */
+interface UsageView {
+    readonly label: string
+    readonly value: number
+    readonly max: number
+    readonly valueLabel: string
+    readonly tone: "affirmative" | "cautionary" | "negative"
+}
+
 /** Copy, values and state the connected drawer supplies. */
 export interface KnowledgeAddBaseProps {
     readonly props: {
         /** Set when the member may only read: the words replace the drop zone and the drawer. */
         readonly readOnlyNote?: string | undefined
         readonly zone: ZoneView
+        readonly usage?: UsageView | undefined
         readonly title: string
         readonly description: string
         readonly closeLabel: string
@@ -124,6 +134,16 @@ export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) =>
         </Text>
     ) : (
         <>
+            {props.props.usage === undefined ? null : (
+                <Meter
+                    label={props.props.usage.label}
+                    value={props.props.usage.value}
+                    minValue={0}
+                    maxValue={props.props.usage.max}
+                    valueLabel={props.props.usage.valueLabel}
+                    tone={props.props.usage.tone}
+                />
+            )}
             <DocumentDropZone
                 label={props.props.zone.label}
                 prompt={props.props.zone.prompt}

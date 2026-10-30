@@ -52,7 +52,7 @@ export interface QueueActions {
 }
 
 /** The most bytes one file may have. */
-export const DOCUMENT_MAX_BYTES = 10_000_000
+export const DOCUMENT_MAX_BYTES = 50 * 1024 * 1024
 
 /** The most files one ZIP or folder may bring. */
 export const ARCHIVE_MAX_ENTRIES = 300

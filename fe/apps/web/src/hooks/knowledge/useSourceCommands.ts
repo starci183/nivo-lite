@@ -5,6 +5,7 @@ import { mutate } from "swr"
 import {
     QUERY_KNOWLEDGE_SOURCE_SWR_KEY,
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
+    QUERY_KNOWLEDGE_USAGE_SWR_KEY,
     useMutateDeleteKnowledgeSourceSwr,
     useMutateReindexKnowledgeSourceSwr,
     useMutateUpdateKnowledgeSourceSwr,
@@ -29,7 +30,9 @@ const revalidateDocuments = () =>
     mutate(
         (key) =>
             Array.isArray(key) &&
-            (key[0] === QUERY_KNOWLEDGE_SOURCE_SWR_KEY || key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY),
+            (key[0] === QUERY_KNOWLEDGE_SOURCE_SWR_KEY ||
+                key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY ||
+                key[0] === QUERY_KNOWLEDGE_USAGE_SWR_KEY),
     )
 
 /** Reading a document again, changing who may read it and deleting it; each failure is toasted, the lists revalidate. */

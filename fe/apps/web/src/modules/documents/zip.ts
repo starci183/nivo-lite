@@ -11,7 +11,7 @@ import {
 } from "./zip-names"
 
 const MAX_ZIP_BYTES = 200_000_000
-const MAX_ZIP_ENTRY_BYTES = 10_000_000
+const MAX_ZIP_ENTRY_BYTES = 50 * 1024 * 1024
 const MAX_ZIP_TOTAL_BYTES = 500_000_000
 /** Declared uncompressed size over compressed size above which the archive is refused (zip bomb). Entries under the floor are exempt: a 1 KB run of spaces legitimately compresses 100x. */
 const MAX_ZIP_RATIO = 100
