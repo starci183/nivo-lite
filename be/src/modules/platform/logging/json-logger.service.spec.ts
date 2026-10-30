@@ -136,5 +136,23 @@ describe("JsonLoggerService", () => {
                 })}\n`,
             ])
         })
+
+        it("writes info to the given sink, so a command line keeps stdout for its report", () => {
+            const lines: Array<string> = []
+            jest.spyOn(process.stdout, "write").mockImplementation((chunk) => lines.push(`out:${String(chunk)}`) > 0)
+            jest.spyOn(process.stderr, "write").mockImplementation((chunk) => lines.push(`err:${String(chunk)}`) > 0)
+            const logger = createJsonLogger(new FakeClock("2026-05-06T07:08:09.000Z"), process.stderr)
+
+            logger.info(LoggingLogEvent.ServerStarted)
+
+            expect(lines).toEqual([
+                `err:${JSON.stringify({
+                    level: "info",
+                    event: LoggingLogEvent.ServerStarted,
+                    time: "2026-05-06T07:08:09.000Z",
+                })}
+`,
+            ])
+        })
     })
 })

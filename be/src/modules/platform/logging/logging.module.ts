@@ -16,7 +16,12 @@ export class LoggingModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
-                { provide: LOGGER, inject: [CLOCK], useFactory: (clock: Clock) => createJsonLogger(clock) },
+                {
+                    provide: LOGGER,
+                    inject: [CLOCK],
+                    useFactory: (clock: Clock) =>
+                        createJsonLogger(clock, options.info === "stderr" ? process.stderr : process.stdout),
+                },
             ],
             exports: [LOGGER],
         }

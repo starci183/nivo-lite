@@ -71,7 +71,8 @@ const CLI_QUEUE: QueueOptions = {
 export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> => [
     ClockModule.register({ isGlobal: true }),
     IdsModule.register({ isGlobal: true }),
-    LoggingModule.register({ isGlobal: true }),
+    // Info lines go to stderr: a command's stdout is its report alone (`jobs watchdog` prints `<n> <n>`, the deploy verify matches it).
+    LoggingModule.register({ isGlobal: true, info: "stderr" }),
     OwnersModule.register({ isGlobal: true, print: printConsoleLine }),
     DatabaseModule.register({
         isGlobal: true,
