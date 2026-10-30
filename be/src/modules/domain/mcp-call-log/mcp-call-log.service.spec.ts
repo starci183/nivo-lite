@@ -41,9 +41,10 @@ const build = async (entityManager: MockEntityManager) => {
 /** What an insert query builder was told to write; a function value is read as what it answers. */
 const writtenBy = (fake: FakeQueryBuilder): Record<string, unknown> => {
     const [values] = fake.callsOf("values")[0] ?? []
-    const written: Record<string, unknown> = typeof values === "object" && values !== null ? values : {}
+    const entries: Array<[string, unknown]> =
+        typeof values === "object" && values !== null ? Object.entries(values) : []
     return Object.fromEntries(
-        Object.entries(written).map(([key, value]) => [key, typeof value === "function" ? Reflect.apply(value, undefined, []) : value]),
+        entries.map(([key, value]) => [key, typeof value === "function" ? Reflect.apply(value, undefined, []) : value]),
     )
 }
 
