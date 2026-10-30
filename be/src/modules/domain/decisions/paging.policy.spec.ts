@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { clampPageSize as realClampPageSize, splitPage as realSplitPage } from "./paging.policy"
+import { clampDecisionPageSize as realClampPageSize, splitPage as realSplitPage } from "./paging.policy"
 
 const SUBJECT = Symbol("paging.policy")
 
@@ -9,19 +9,19 @@ const buildSubject = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
-                    clampPageSize: realClampPageSize,
+                    clampDecisionPageSize: realClampPageSize,
                     splitPage: realSplitPage,
                 },
             },
         ],
     }).compile()
     return moduleRef.get<{
-        clampPageSize: typeof realClampPageSize
+        clampDecisionPageSize: typeof realClampPageSize
         splitPage: typeof realSplitPage
     }>(SUBJECT)
 }
 
-describe("clampPageSize", () => {
+describe("clampDecisionPageSize", () => {
     it.each([
         [20, 20],
         [0, 1],
@@ -32,7 +32,7 @@ describe("clampPageSize", () => {
     ])("turns %s into %s", async (requested, expected) => {
         const subject = await buildSubject()
 
-        expect(subject.clampPageSize(requested)).toBe(expected)
+        expect(subject.clampDecisionPageSize(requested)).toBe(expected)
     })
 })
 

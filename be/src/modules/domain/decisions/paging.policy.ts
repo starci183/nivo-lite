@@ -4,7 +4,7 @@ import type { OptionalWorkItemCursor } from "./decisions-views.contracts"
 export const WORK_ITEM_PAGE_MAX = 100
 
 /** A requested page size forced into 1..100; a non-integer rounds down and a non-number becomes 1. */
-export const clampPageSize = (requested: number): number =>
+export const clampDecisionPageSize = (requested: number): number =>
     Number.isFinite(requested) ? Math.min(WORK_ITEM_PAGE_MAX, Math.max(1, Math.floor(requested))) : 1
 
 /** The rows of a page and the cursor of the next one: the query asks for one row more than the page to know there is one. */

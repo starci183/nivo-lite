@@ -23,7 +23,7 @@ import type {
 } from "./decisions-views.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
-import { clampPageSize, splitPage } from "./paging.policy"
+import { clampDecisionPageSize, splitPage } from "./paging.policy"
 import type { AccountingWaitingWorkRow, WorkItemViewRow } from "./work-item-views.rows"
 import { ruleSummary } from "./rule-save.policy"
 import { WorkItemViewsService } from "./work-item-views.service"
@@ -73,7 +73,7 @@ export class DecisionsService {
     /** One page of the workspace's work items, newest first; any member may read. */
     async listWorkItems(principalId: string, workspaceId: string, query: ListWorkItemsQuery): Promise<WorkItemPage> {
         await this.members.require(principalId, workspaceId)
-        const size = clampPageSize(query.limit)
+        const size = clampDecisionPageSize(query.limit)
         const fetched = await this.views.list(workspaceId, {
             statuses: query.statuses,
             after: query.after ?? null,

@@ -15,6 +15,7 @@ import { ApprovalRequesterService } from "./approval-requester.service"
 import { CommandBusService } from "./command-bus.service"
 import { CommandPlannerService } from "./command-planner.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./decisions.module-definition"
+import { DecisionHistoryService } from "./decision-history.service"
 import { DecisionLogReadService } from "./decision-log-read.service"
 import { DecisionsService } from "./decisions.service"
 import { DecisionsFiguresService } from "./decisions-figures.service"
@@ -35,6 +36,9 @@ import {
     LEAD_GEN_FLOW,
     MODULE_CATALOG_SOURCE,
     OUTBOUND_ACCESS_GATE,
+    THREAD_WORK_HISTORY,
+    WORK_CHAINS_HISTORY,
+    WORK_THREADS_HISTORY,
 } from "./work-engine.decorators"
 import { WorkPerformersService } from "./work-performers.service"
 import { WorkRecorderService } from "./work-recorder.service"
@@ -73,11 +77,15 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: LEAD_GEN_FLOW, useExisting: options.ports.leadGenFlow },
                 { provide: MODULE_CATALOG_SOURCE, useExisting: options.ports.moduleCatalog },
                 { provide: OUTBOUND_ACCESS_GATE, useClass: options.ports.outboundAccessGate },
+                { provide: THREAD_WORK_HISTORY, useExisting: options.ports.threadWorkHistory },
+                { provide: WORK_CHAINS_HISTORY, useExisting: options.ports.workChainsHistory },
+                { provide: WORK_THREADS_HISTORY, useExisting: options.ports.workThreadsHistory },
                 ApprovalRequesterService,
                 AuthorityGrantsService,
                 CommandBusService,
                 DecisionJobsService,
                 CommandPlannerService,
+                DecisionHistoryService,
                 DecisionLogReadService,
                 DecisionsService,
                 DecisionsFiguresService,
@@ -103,7 +111,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 AuthorityGrantsService,
                 CommandBusService,
                 DecisionJobsService,
-                DecisionLogReadService,
+                DecisionHistoryService,
                 DecisionsService,
                 DecisionsFiguresService,
                 EvidenceService,

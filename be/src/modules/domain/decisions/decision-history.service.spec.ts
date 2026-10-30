@@ -4,21 +4,19 @@ import { AgentDirectoryService } from "@modules/domain/agents"
 import { ApprovalRequestsHistoryReadService } from "@modules/domain/approval-requests"
 import type { ResolvedRequestLine } from "@modules/domain/approval-requests"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { DecisionLogReadService } from "@modules/domain/decisions"
-import type { DecisionLogLine } from "@modules/domain/decisions"
 import { LeadReadService } from "@modules/domain/leads"
-import { ThreadWorkLinksReadService } from "@modules/domain/thread-work"
-import { WorkChainsHistoryReadService } from "@modules/domain/work-chains"
-import type { CompletedTask } from "@modules/domain/work-chains"
-import { WorkThreadsLeadsReadService } from "@modules/domain/work-threads"
 import { WorkspaceMemberDirectoryService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { recordOf } from "@tests/fixtures/builders/authority-rules.builder"
+import type { DecisionHistoryRequest, HistoryHistoryCompletedTask } from "./decision-history.contracts"
 import { DecisionHistoryService } from "./decision-history.service"
-import type { ListDecisionHistoryRequest } from "./list-decision-history.contracts"
+import { DecisionLogReadService } from "./decision-log-read.service"
+import type { DecisionLogRow } from "./decision-log.rows"
+import { THREAD_WORK_HISTORY, WORK_CHAINS_HISTORY, WORK_THREADS_HISTORY } from "./work-engine.decorators"
+import type { ThreadWorkHistory, WorkChainsHistory, WorkThreadsHistory } from "./work-engine.port"
 
-const queryOf = builder<ListDecisionHistoryRequest>({ workspaceId: "ws-1", kind: "all", department: null, limit: 10 })
+const queryOf = builder<DecisionHistoryRequest>({ kind: "all", department: null, limit: 10 })
 
-const loggedOf = builder<DecisionLogLine>({
+const loggedOf = builder<DecisionLogRow>({
     id: "decision-1",
     work_item_id: "work-1",
     lead_id: "lead-1",
@@ -44,7 +42,7 @@ const requestOf = builder<ResolvedRequestLine>({
     at: new Date("2026-10-16T09:15:00.000Z"),
 })
 
-const taskOf = builder<CompletedTask>({
+const taskOf = builder<HistoryCompletedTask>({
     id: "chain-1",
     threadId: "thread-1",
     actorKind: "agent",
@@ -55,14 +53,14 @@ const taskOf = builder<CompletedTask>({
     at: new Date("2026-10-14T09:15:00.000Z"),
 })
 
-const build = async (logged: ReadonlyArray<Partial<DecisionLogLine>> = []) => {
+const build = async (logged: ReadonlyArray<Partial<DecisionLogRow>> = []) => {
     const log = mock<DecisionLogReadService>()
     log.lines.mockResolvedValue(logged.map((line) => loggedOf(line)))
     const access = mock<WorkspaceMembersService>()
     const requests = mock<ApprovalRequestsHistoryReadService>()
-    const chains = mock<WorkChainsHistoryReadService>()
-    const threads = mock<WorkThreadsLeadsReadService>()
-    const threadWork = mock<ThreadWorkLinksReadService>()
+    const chains = mock<WorkChainsHistory>()
+    const threads = mock<WorkThreadsHistory>()
+    const threadWork = mock<ThreadWorkHistory>()
     const rules = mock<AuthorityRulesService>()
     const agents = mock<AgentDirectoryService>()
     const members = mock<WorkspaceMemberDirectoryService>()
@@ -83,9 +81,9 @@ const build = async (logged: ReadonlyArray<Partial<DecisionLogLine>> = []) => {
             { provide: DecisionLogReadService, useValue: log },
             { provide: WorkspaceMembersService, useValue: access },
             { provide: ApprovalRequestsHistoryReadService, useValue: requests },
-            { provide: WorkChainsHistoryReadService, useValue: chains },
-            { provide: WorkThreadsLeadsReadService, useValue: threads },
-            { provide: ThreadWorkLinksReadService, useValue: threadWork },
+            { provide: WORK_CHAINS_HISTORY, useValue: chains },
+            { provide: WORK_THREADS_HISTORY, useValue: threads },
+            { provide: THREAD_WORK_HISTORY, useValue: threadWork },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: AgentDirectoryService, useValue: agents },
             { provide: WorkspaceMemberDirectoryService, useValue: members },

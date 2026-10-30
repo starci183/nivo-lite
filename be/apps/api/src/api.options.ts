@@ -13,6 +13,9 @@ import {
 import { LeadReadService } from "@modules/domain/leads"
 import { LeadFlowChainService } from "@modules/domain/lead-flows"
 import { ModulesService } from "@modules/domain/modules"
+import { ThreadWorkLinksReadService } from "@modules/domain/thread-work"
+import { WorkChainsHistoryReadService } from "@modules/domain/work-chains"
+import { WorkThreadsLeadsReadService } from "@modules/domain/work-threads"
 import { ToolTokenService } from "@modules/integrations/openclaw"
 import { ModuleTextGeneratorService } from "@modules/domain/ai-generations"
 import { ModuleOutboundMailService } from "@modules/domain/email-messages"
@@ -63,6 +66,9 @@ export const DECISIONS_PORTS = {
     leadGenFlow: LeadFlowChainService,
     moduleCatalog: ModulesService,
     outboundAccessGate: OutboundAccessService,
+    threadWorkHistory: ThreadWorkLinksReadService,
+    workChainsHistory: WorkChainsHistoryReadService,
+    workThreadsHistory: WorkThreadsLeadsReadService,
 }
 
 export type { ApiOptions } from "./api.env"

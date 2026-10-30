@@ -2,16 +2,17 @@ import { Injectable } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { ApprovalRequestsHistoryReadService } from "@modules/domain/approval-requests"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { clampPageSize, DecisionLogReadService } from "@modules/domain/decisions"
-import type { DecisionLogFilter, DecisionLogLine, DecisionRecord } from "@modules/domain/decisions"
 import { LeadReadService } from "@modules/domain/leads"
-import { ThreadWorkLinksReadService } from "@modules/domain/thread-work"
-import { WorkChainsHistoryReadService } from "@modules/domain/work-chains"
-import { WorkThreadsLeadsReadService } from "@modules/domain/work-threads"
 import { WorkspaceMemberDirectoryService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { MemberDirectoryEntry } from "@modules/domain/workspace-members"
 import { eachInOrder } from "@modules/platform/primitives"
-import type { ListDecisionHistoryRequest } from "./list-decision-history.contracts"
+import type { DecisionHistoryRequest, DecisionLogFilter } from "./decision-history.contracts"
+import { DecisionLogReadService } from "./decision-log-read.service"
+import type { DecisionLogRow } from "./decision-log.rows"
+import type { DecisionRecord } from "./decisions-views.contracts"
+import { clampDecisionPageSize } from "./paging.policy"
+import { InjectThreadWorkHistory, InjectWorkChainsHistory, InjectWorkThreadsHistory } from "./work-engine.decorators"
+import type { ThreadWorkHistory, WorkChainsHistory, WorkThreadsHistory } from "./work-engine.port"
 
 /** Orders two texts that compare byte by byte (fixed-width instants, lower-case uuids), the greater first. */
 const newestFirst = (left: string, right: string): number => {
@@ -20,7 +21,7 @@ const newestFirst = (left: string, right: string): number => {
 }
 
 /** The deciders a history kind narrows to; null for every decider. */
-const decidersOf = (kind: ListDecisionHistoryRequest["kind"]): Array<string> | null => {
+const decidersOf = (kind: DecisionHistoryRequest["kind"]): Array<string> | null => {
     if (kind === "policy") return ["policy"]
     return kind === "human" ? ["owner", "staff"] : null
 }
@@ -30,7 +31,7 @@ interface Pass {
     /** The rows the pass read. */
     readonly scanned: number
     /** The lines that survived the filters. */
-    readonly kept: Array<DecisionLogLine>
+    readonly kept: Array<DecisionLogRow>
 }
 
 /** The most passes one source reads to fill a page when a filter on the joined rows drops some of them. */
@@ -57,9 +58,9 @@ export class DecisionHistoryService {
         private readonly members: WorkspaceMembersService,
         private readonly log: DecisionLogReadService,
         private readonly requests: ApprovalRequestsHistoryReadService,
-        private readonly chains: WorkChainsHistoryReadService,
-        private readonly threads: WorkThreadsLeadsReadService,
-        private readonly threadWork: ThreadWorkLinksReadService,
+        @InjectWorkChainsHistory() private readonly chains: WorkChainsHistory,
+        @InjectWorkThreadsHistory() private readonly threads: WorkThreadsHistory,
+        @InjectThreadWorkHistory() private readonly threadWork: ThreadWorkHistory,
         private readonly rules: AuthorityRulesService,
         private readonly agents: AgentDirectoryService,
         private readonly directory: WorkspaceMemberDirectoryService,
@@ -76,14 +77,14 @@ export class DecisionHistoryService {
     async list(
         principalId: string,
         workspaceId: string,
-        query: ListDecisionHistoryRequest,
+        query: DecisionHistoryRequest,
     ): Promise<Array<DecisionRecord>> {
         await this.members.require(principalId, workspaceId)
         const filter: DecisionLogFilter = {
             deciders: decidersOf(query.kind),
             outcome: query.kind === "rejected" ? "rejected" : null,
             department: query.department,
-            limit: clampPageSize(query.limit),
+            limit: clampDecisionPageSize(query.limit),
         }
         const sources = [
             ...(await this.logged(workspaceId, filter)),
@@ -104,8 +105,8 @@ export class DecisionHistoryService {
     }
 
     /** Reads passes from a source until `limit` lines survived its filters, the source ran dry or the passes ran out. */
-    private async filled(limit: number, pass: (skip: number) => Promise<Pass>): Promise<Array<DecisionLogLine>> {
-        const lines: Array<DecisionLogLine> = []
+    private async filled(limit: number, pass: (skip: number) => Promise<Pass>): Promise<Array<DecisionLogRow>> {
+        const lines: Array<DecisionLogRow> = []
         let skip = 0
         let dry = false
         await eachInOrder(Array.from({ length: PASSES_MAX }), async () => {
@@ -128,7 +129,7 @@ export class DecisionHistoryService {
     }
 
     /** The decision log lines: who decided each work item. */
-    private async logged(workspaceId: string, filter: DecisionLogFilter): Promise<Array<DecisionLogLine>> {
+    private async logged(workspaceId: string, filter: DecisionLogFilter): Promise<Array<DecisionLogRow>> {
         const lines = await this.log.lines(workspaceId, filter)
         const members = await this.membersById(
             workspaceId,
@@ -177,7 +178,7 @@ export class DecisionHistoryService {
             ).map((thread) => [thread.id, thread.leadId]),
         )
         const notes = new Map((await this.rules.list(workspaceId)).map((rule) => [rule.action, rule.note]))
-        const kept = wanted.map((request): DecisionLogLine => {
+        const kept = wanted.map((request): DecisionLogRow => {
             const member = members.get(request.resolvedBy ?? "")
             return {
                 id: request.id,
@@ -223,7 +224,7 @@ export class DecisionHistoryService {
                 )
             ).map((card) => [card.id, card.module]),
         )
-        const kept = tasks.flatMap((task): Array<DecisionLogLine> => {
+        const kept = tasks.flatMap((task): Array<DecisionLogRow> => {
             const member = members.get(task.decidedBy)
             const department = (task.actorKind === "agent" ? modules.get(task.actorId) : undefined) ?? "office"
             if (member === undefined || !threadLead.has(task.threadId) || working.has(task.threadId)) return []

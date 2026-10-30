@@ -1,4 +1,5 @@
 import type { ModuleDefinition } from "@modules/domain/modules"
+import type { HistoryCompletedTask, HistoryStepThread, HistoryThreadLead } from "./decision-history.contracts"
 import type { InboundStatus, Proposal, WorkContext, WorkItem } from "./decisions.contracts"
 import type { OptionalText, OutboundAccess } from "./work-engine.contracts"
 
@@ -43,4 +44,26 @@ export interface OutboundAccessGate {
 export interface ModuleCatalogSource {
     /** The catalogue, its modules in display order. */
     catalog(): Promise<{ readonly modules: ReadonlyArray<ModuleDefinition> }>
+}
+
+/** The one door to what agents' work in threads is linked to: the history keeps the verdicts the engine did not log. The app root binds it to the thread-work capability. */
+export interface ThreadWorkHistory {
+    /** Which of the given approval requests an agent's work waits on. */
+    linkedRequestIds(workspaceId: string, requestIds: ReadonlyArray<string>): Promise<Array<string>>
+    /** Which of the given threads an agent's work still runs in. */
+    workingThreadIds(workspaceId: string, threadIds: ReadonlyArray<string>): Promise<Array<string>>
+}
+
+/** The one door to the work chains: the history names the thread of a step and lists the tasks members completed. The app root binds it to the work-chains capability. */
+export interface WorkChainsHistory {
+    /** The thread of each given step. */
+    threadsOfSteps(workspaceId: string, stepIds: ReadonlyArray<string>): Promise<Array<HistoryStepThread>>
+    /** The tasks members completed, newest first, a bounded page. */
+    completedTasks(workspaceId: string, skip: number, limit: number): Promise<Array<HistoryCompletedTask>>
+}
+
+/** The one door to the work threads: the history names the customer of a thread. The app root binds it to the work-threads capability. */
+export interface WorkThreadsHistory {
+    /** The customer of each given thread. */
+    leadsOf(workspaceId: string, threadIds: ReadonlyArray<string>): Promise<Array<HistoryThreadLead>>
 }

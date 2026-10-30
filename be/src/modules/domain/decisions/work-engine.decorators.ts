@@ -6,6 +6,9 @@ import type {
     LeadGenFlow,
     ModuleCatalogSource,
     OutboundAccessGate,
+    ThreadWorkHistory,
+    WorkChainsHistory,
+    WorkThreadsHistory,
 } from "./work-engine.port"
 
 /** Token of the inbound event status port; the app root binds it to the inbox capability. */
@@ -40,3 +43,24 @@ export const MODULE_CATALOG_SOURCE: unique symbol = Symbol("domain.decisions.mod
 /** Injects the module catalogue port. Parameter type: ModuleCatalogSource. */
 export const InjectModuleCatalogSource = (): TypedParameterDecorator<ModuleCatalogSource> =>
     injector<ModuleCatalogSource>(MODULE_CATALOG_SOURCE)
+
+/** Token of the thread work history port. */
+export const THREAD_WORK_HISTORY: unique symbol = Symbol("domain.decisions.thread-work-history")
+
+/** Token of the work chains history port. */
+export const WORK_CHAINS_HISTORY: unique symbol = Symbol("domain.decisions.work-chains-history")
+
+/** Token of the work threads history port. */
+export const WORK_THREADS_HISTORY: unique symbol = Symbol("domain.decisions.work-threads-history")
+
+/** Injects the thread work history port. Parameter type: ThreadWorkHistory. */
+export const InjectThreadWorkHistory = (): TypedParameterDecorator<ThreadWorkHistory> =>
+    injector<ThreadWorkHistory>(THREAD_WORK_HISTORY)
+
+/** Injects the work chains history port. Parameter type: WorkChainsHistory. */
+export const InjectWorkChainsHistory = (): TypedParameterDecorator<WorkChainsHistory> =>
+    injector<WorkChainsHistory>(WORK_CHAINS_HISTORY)
+
+/** Injects the work threads history port. Parameter type: WorkThreadsHistory. */
+export const InjectWorkThreadsHistory = (): TypedParameterDecorator<WorkThreadsHistory> =>
+    injector<WorkThreadsHistory>(WORK_THREADS_HISTORY)
