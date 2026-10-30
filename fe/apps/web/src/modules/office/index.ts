@@ -50,3 +50,4 @@ export { toOfficeAgents, toOfficeLead, toOfficePeople, toOfficeTask } from "./of
 export { NIVO_AVATAR } from "./office.words"
 export type { OfficeContext, OfficeWords } from "./office.words"
 export { EMPTY_OFFICE_CARD_DRAFT } from "./office.drafts"
+export { arrangementOf } from "./office.arrangement"

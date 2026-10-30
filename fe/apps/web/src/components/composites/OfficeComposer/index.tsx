@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react"
 import {
     Button,
-    Divider,
     Fieldset,
     HorizontalScrollRegion,
     Icon,
@@ -88,7 +87,6 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
 
     return (
         <div className={COMPOSER_CLASS_NAME}>
-            <Divider semantics="presentation" />
             <div className={COMPOSER_BODY_CLASS_NAME}>
                 <QuickPrompts view={view} prompts={prompts} onPrompt={onPrompt} />
                 <div className={ROW_CLASS_NAME}>

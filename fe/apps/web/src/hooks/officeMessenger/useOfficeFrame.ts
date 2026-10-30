@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useReducer, useSyncExternalStore } from "react"
+import { arrangementOf } from "@/modules/office"
 
 const WIDE_INFO_QUERY = "(min-width: 80rem)"
 const SIDE_BY_SIDE_QUERY = "(min-width: 48rem)"
@@ -59,6 +60,12 @@ export const useOfficeFrame = () => {
         isInfoDocked,
         isSideBySide,
         isInfoOpen,
+        arrangement: arrangementOf({
+            phoneView: state.phoneView,
+            centre: state.centre,
+            isInfoOpen,
+            isCompact: !isSideBySide,
+        }),
         showThread: useCallback(() => dispatch({ type: "thread" }), []),
         showList: useCallback(() => dispatch({ type: "list" }), []),
         showTasks: useCallback(() => dispatch({ type: "tasks" }), []),

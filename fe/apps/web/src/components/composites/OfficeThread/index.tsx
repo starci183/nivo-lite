@@ -42,7 +42,6 @@ export const OfficeThread = (props: OfficeThreadProps) => {
     return (
         <VerticalScrollRegion
             isScrollable
-            tone="background"
             ref={scrollRef}
             className={SCROLL_CLASS_NAME}
             role="log"

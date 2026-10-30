@@ -1,12 +1,11 @@
-import { Button, Divider, IconButton, Region, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, IconButton, Region, SurfaceCard, Text } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { OfficeMemberRow } from "@/components/branches/OfficeMemberRow"
 import { OfficeRoomResources } from "@/components/branches/OfficeRoomResources"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { OfficeInfoPanelProps, OfficeJumpRowView, OfficeWaitingRowView } from "@/modules/types"
+import type { OfficeInfoPanelProps, OfficeJumpRowView, OfficeText, OfficeWaitingRowView } from "@/modules/types"
 import {
     BODY_CLASS_NAME,
-    DRAWER_BODY_CLASS_NAME,
     HEAD_CLASS_NAME,
     HEAD_TEXT_CLASS_NAME,
     JUMP_ROW_CLASS_NAME,
@@ -71,26 +70,36 @@ const JumpList = <Row extends OfficeJumpRowView>(props: JumpListProps<Row>) => (
     </Region>
 )
 
-/** The right column: what waits for approval, who is in the chat and the team's tasks. */
+/** What the info column head draws and asks. */
+interface OfficeInfoHeadProps {
+    readonly props: { readonly text: OfficeText }
+    readonly on: { readonly close: () => void }
+}
+
+/** The head of the docked info column: its title and the close control. */
+export const OfficeInfoHead = (props: OfficeInfoHeadProps) => {
+    const { text } = props.props
+    return (
+        <div className={HEAD_CLASS_NAME}>
+            <div className={HEAD_TEXT_CLASS_NAME}>
+                <Text weight="semibold">{text("infoTitle")}</Text>
+            </div>
+            <IconButton
+                intent="dismiss"
+                source={nivoIconSource("close", "leading")}
+                label={text("infoClose")}
+                onPress={props.on.close}
+            />
+        </div>
+    )
+}
+
+/** The right column body: what waits for approval, who is in the chat and the team's tasks. */
 export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
-    const { info, isDocked, text } = props.props
+    const { info, text } = props.props
     return (
         <>
-            {isDocked ? (
-                <div className={HEAD_CLASS_NAME}>
-                    <div className={HEAD_TEXT_CLASS_NAME}>
-                        <Text weight="semibold">{text("infoTitle")}</Text>
-                    </div>
-                    <IconButton
-                        intent="dismiss"
-                        source={nivoIconSource("close", "leading")}
-                        label={text("infoClose")}
-                        onPress={props.on.close}
-                    />
-                </div>
-            ) : null}
-            {isDocked ? <Divider semantics="presentation" /> : null}
-            <div className={isDocked ? BODY_CLASS_NAME : DRAWER_BODY_CLASS_NAME}>
+            <div className={BODY_CLASS_NAME}>
                 <JumpList
                     title={text("pendingTitle")}
                     none={text("pendingNone")}

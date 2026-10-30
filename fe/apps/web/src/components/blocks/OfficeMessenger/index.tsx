@@ -50,6 +50,7 @@ export const OfficeMessenger = () => {
                 isInfoOpen: frame.isInfoOpen,
                 isInfoDocked: frame.isInfoDocked,
                 isCompact: !frame.isSideBySide,
+                arrangement: frame.arrangement,
                 isMuted: office.isMuted,
                 title: office.roomTitle ?? text("title"),
                 subtitle: officeSubtitle(office),

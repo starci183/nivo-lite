@@ -1,4 +1,4 @@
-/** The composer: the closing band of the card; a Divider opens it. */
+/** The composer: the closing band of its pane; the grid draws the line above it. */
 export const COMPOSER_CLASS_NAME = "flex shrink-0 flex-col"
 
 /** The inset body of the composer band. */

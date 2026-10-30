@@ -1,8 +1,5 @@
-/** The header band of the column; a Grammar divider closes it. */
-export const HEAD_CLASS_NAME = "flex h-18 shrink-0 items-center gap-3 px-4"
-
-/** The title block of the header. */
-export const HEAD_TEXT_CLASS_NAME = "flex min-w-0 flex-1 flex-col"
+/** The header band of the column; the grid row sets its height. */
+export const HEAD_CLASS_NAME = "flex h-full min-w-0 items-center px-4 py-3"
 
 /** The search box band under the header. */
 export const SEARCH_CLASS_NAME = "shrink-0 px-4 pt-3 pb-2"
@@ -10,8 +7,8 @@ export const SEARCH_CLASS_NAME = "shrink-0 px-4 pt-3 pb-2"
 /** The filter tab band under the search. */
 export const TABS_CLASS_NAME = "shrink-0 px-4 pb-2"
 
-/** The scrolling list: the one conversation list sits at the panel content edge. */
-export const BODY_CLASS_NAME = "flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4"
+/** The list inside the scrolling list pane: the one conversation list sits at the panel content edge. */
+export const BODY_CLASS_NAME = "flex flex-col px-4 pb-4"
 
 /** The trailing cell of a row: the time over the indicators. */
 export const TRAILING_CLASS_NAME = "flex shrink-0 flex-col items-end gap-1"

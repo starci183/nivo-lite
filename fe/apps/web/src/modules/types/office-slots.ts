@@ -1,3 +1,4 @@
+import type { PaneTrack } from "@starci/grammar/common"
 import type {
     OfficeAvatarView,
     OfficeInfoView,
@@ -102,12 +103,17 @@ export interface OfficeConversationsProps {
     }
 }
 
+/** The pane areas and tracks of one arrangement of a pane grid. */
+export interface Arrangement {
+    readonly areas: ReadonlyArray<string>
+    readonly columns: ReadonlyArray<PaneTrack>
+    readonly rows: ReadonlyArray<PaneTrack>
+}
+
 /** What the right column draws. */
 export interface OfficeInfoPanelProps {
     readonly props: {
         readonly info: OfficeInfoView
-        /** Docked as a column (draws its own header and close); false inside the drawer, which owns title and close. */
-        readonly isDocked: boolean
         readonly text: OfficeText
     }
     readonly on: {
@@ -116,7 +122,6 @@ export interface OfficeInfoPanelProps {
         readonly jumpCard: (id: string) => void
         readonly mention: (handle: string) => void
         readonly openTasks: () => void
-        readonly close: () => void
     }
 }
 

@@ -1,12 +1,13 @@
-import { PaneLayout, Divider, FillViewport, Page, Region } from "@starci/grammar/common"
+import { Pane, PaneGrid, FillViewport, Page, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
 import { OfficeHeader } from "@/components/composites/OfficeHeader"
-import { OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
+import { OfficeInfoHead, OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
 import { OfficeTasks } from "@/components/composites/OfficeTasks"
 import { OfficeThread } from "@/components/composites/OfficeThread"
 import type {
+    Arrangement,
     DataSlot,
     OfficeInfoView,
     OfficeListView,
@@ -16,17 +17,7 @@ import type {
     OfficeThreadProps,
     SlotLabels,
 } from "@/modules/types"
-import {
-    BODY_CLASS_NAME,
-    CONVERSATION_CLASS_NAME,
-    DIVIDER_CLASS_NAME,
-    INFO_COLUMN_CLASS_NAME,
-    LIST_COLUMN_CLASS_NAME,
-    LIST_COLUMN_HIDDEN_CLASS_NAME,
-    TASKS_CLASS_NAME,
-    THREAD_COLUMN_CLASS_NAME,
-    THREAD_COLUMN_HIDDEN_CLASS_NAME,
-} from "./classNames"
+import { CONVERSATION_CLASS_NAME, LIST_HEAD_CLASS_NAME, TASKS_CLASS_NAME } from "./classNames"
 
 /** What the thread draws once its messages are in. */
 export type OfficeMessengerThread = Omit<OfficeThreadProps["props"], "isSkeleton">
@@ -44,6 +35,8 @@ export interface OfficeMessengerBaseProps {
         readonly isInfoDocked: boolean
         /** Narrower than the side-by-side breakpoint: the info panel opens as the workspace drawer. */
         readonly isCompact: boolean
+        /** The pane areas and tracks for the frame. */
+        readonly arrangement: Arrangement
         /** I muted this conversation: the list shows a dot instead of the count. */
         readonly isMuted: boolean
         /** The name of the room shown. */
@@ -84,111 +77,131 @@ export interface OfficeMessengerBaseProps {
         }
 }
 
-/** The chat workbench: header, conversation, composer and, when the info panel is shown, the rail. */
-const MessengerWorkspace = (props: OfficeMessengerBaseProps) => {
-    const view = props.props
-    const on = props.on
-    const { text } = view
-    const infoPanel = <MessengerInfoPanel {...props} isDocked={false} />
-    const isTasks = view.centre === "tasks"
-
-    const workspace = {
-        label: text("messengerLabel"),
-        conversationLabel: text("messengerLabel"),
-        header: (
-            <OfficeHeader
-                props={{
-                    text,
-                    centre: view.centre,
-                    title: view.title,
-                    subtitle: view.subtitle,
-                    chip: view.chip,
-                    isMuted: view.isMuted,
-                    isInfoOpen: view.isInfoOpen,
-                }}
-                on={{
-                    back: on.back,
-                    chip: on.chip,
-                    toggleMute: on.toggleMute,
-                    toggleInfo: on.toggleInfo,
-                    showChat: on.showChat,
-                }}
-            />
-        ),
-        conversation: (
-            <div className={CONVERSATION_CLASS_NAME}>
-                <MessengerCentre {...props} />
-            </div>
-        ),
-        composer: isTasks ? null : <MessengerComposer {...props} />,
-    }
-    if (!view.isCompact) return <PaneLayout {...workspace} />
-    return (
-        <PaneLayout
-            {...workspace}
-            rail={infoPanel}
-            railLabel={text("infoTitle")}
-            railOpenLabel={text("infoOpen")}
-            railCloseLabel={text("infoClose")}
-            isRailOpen={view.isInfoOpen}
-            onRailOpenChange={on.infoOpenChange}
-        />
-    )
-}
-
 /**
- * Office as a messenger, full-bleed: the conversation list on the left, then the chat workbench with the team thread, its composer
- * pinned at the bottom and the info rail. The columns are separated by vertical dividers only.
+ * Office as a messenger, full-bleed, on a PaneGrid: the conversation list, the Office column (header row, thread, composer
+ * pinned at the bottom) and the group info column, flush with a divider between and all on the surface. Below the compact
+ * boundary the grid is one column: the list is its own screen on a phone, and the info column opens as a drawer.
  */
 export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
     const { text } = view
+    const arrangement = view.arrangement
+    const isTasks = view.centre === "tasks"
+    const isListScreen = view.isCompact && view.phoneView === "list"
+    const hasList = isListScreen || !view.isCompact
+    const hasCentre = !isListScreen
+    const hasDockedInfo = !view.isCompact && view.isInfoOpen
+    const hasDrawerInfo = view.isCompact && !isListScreen
 
     return (
         <Page chrome="bleed">
             <FillViewport minHeight="md" bottomInset="none">
-                <div className={BODY_CLASS_NAME}>
-                    <Region
-                        label={text("listLabel")}
-                        className={view.phoneView === "list" ? LIST_COLUMN_CLASS_NAME : LIST_COLUMN_HIDDEN_CLASS_NAME}
-                    >
-                        <SlotView slot={view.listSlot} placeholder={view.listPlaceholder} labels={view.slotLabels}>
-                            {(list, isSkeleton) => (
-                                <OfficeConversations
-                                    props={{ list, isSkeleton, text }}
-                                    on={{
-                                        openGroup: on.openGroup,
-                                        openAgent: on.openAgent,
-                                        openCustomer: on.openCustomer,
-                                    }}
-                                />
-                            )}
-                        </SlotView>
-                    </Region>
-                    <div className={DIVIDER_CLASS_NAME}>
-                        <Divider orientation="vertical" semantics="presentation" />
-                    </div>
-                    <div
-                        className={
-                            view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
-                        }
-                    >
-                        <MessengerWorkspace {...props} />
-                    </div>
-                    {view.isInfoOpen && !view.isCompact ? (
-                        <>
-                            <div className={DIVIDER_CLASS_NAME}>
-                                <Divider orientation="vertical" semantics="presentation" />
+                <PaneGrid
+                    label={text("messengerLabel")}
+                    areas={arrangement.areas}
+                    columns={arrangement.columns}
+                    rows={arrangement.rows}
+                >
+                    {hasList ? (
+                        <Pane area="listHead" surface>
+                            <div className={LIST_HEAD_CLASS_NAME}>
+                                <Text weight="semibold">{text("listTitle")}</Text>
                             </div>
-                            <Region label={text("infoTitle")} className={INFO_COLUMN_CLASS_NAME}>
-                                <MessengerInfoPanel {...props} isDocked />
-                            </Region>
-                        </>
+                        </Pane>
                     ) : null}
-                </div>
+                    {hasList ? (
+                        <Pane area="list" surface scroll label={text("listLabel")}>
+                            <MessengerList {...props} />
+                        </Pane>
+                    ) : null}
+                    {hasCentre ? (
+                        <Pane area="head" surface>
+                            <MessengerHeader {...props} />
+                        </Pane>
+                    ) : null}
+                    {hasCentre ? (
+                        <Pane area="thread" surface>
+                            <div className={CONVERSATION_CLASS_NAME}>
+                                <MessengerCentre {...props} />
+                            </div>
+                        </Pane>
+                    ) : null}
+                    {hasCentre && !isTasks ? (
+                        <Pane area="composer" surface>
+                            <MessengerComposer {...props} />
+                        </Pane>
+                    ) : null}
+                    {hasDockedInfo ? (
+                        <Pane area="infoHead" surface>
+                            <OfficeInfoHead props={{ text }} on={{ close: on.closeInfo }} />
+                        </Pane>
+                    ) : null}
+                    {hasDockedInfo ? (
+                        <Pane area="info" surface scroll label={text("infoTitle")}>
+                            <MessengerInfoPanel {...props} />
+                        </Pane>
+                    ) : null}
+                    {hasDrawerInfo ? (
+                        <Pane
+                            area="info"
+                            surface
+                            collapse="drawer"
+                            collapseLabel={text("infoTitle")}
+                            openLabel={text("infoOpen")}
+                            closeLabel={text("infoClose")}
+                            isOpen={view.isInfoOpen}
+                            onOpenChange={on.infoOpenChange}
+                        >
+                            <MessengerInfoPanel {...props} />
+                        </Pane>
+                    ) : null}
+                </PaneGrid>
             </FillViewport>
         </Page>
+    )
+}
+
+/** The conversation list content of the list pane. */
+const MessengerList = (props: OfficeMessengerBaseProps) => {
+    const view = props.props
+    const on = props.on
+    const { text } = view
+    return (
+        <SlotView slot={view.listSlot} placeholder={view.listPlaceholder} labels={view.slotLabels}>
+            {(list, isSkeleton) => (
+                <OfficeConversations
+                    props={{ list, isSkeleton, text }}
+                    on={{ openGroup: on.openGroup, openAgent: on.openAgent, openCustomer: on.openCustomer }}
+                />
+            )}
+        </SlotView>
+    )
+}
+
+/** The Office header row: the room, its member line and the controls. */
+const MessengerHeader = (props: OfficeMessengerBaseProps) => {
+    const view = props.props
+    const on = props.on
+    return (
+        <OfficeHeader
+            props={{
+                text: view.text,
+                centre: view.centre,
+                title: view.title,
+                subtitle: view.subtitle,
+                chip: view.chip,
+                isMuted: view.isMuted,
+                isInfoOpen: view.isInfoOpen,
+            }}
+            on={{
+                back: on.back,
+                chip: on.chip,
+                toggleMute: on.toggleMute,
+                toggleInfo: on.toggleInfo,
+                showChat: on.showChat,
+            }}
+        />
     )
 }
 
@@ -241,24 +254,20 @@ const MessengerComposer = (props: OfficeMessengerBaseProps) => {
     )
 }
 
-/** The messenger props plus whether the panel shows its own header row (the docked column) or not (the drawer). */
-type MessengerInfoPanelProps = OfficeMessengerBaseProps & { readonly isDocked: boolean }
-
-/** Connects the shared info panel used by the dock and drawer. */
-const MessengerInfoPanel = (props: MessengerInfoPanelProps) => {
+/** Connects the shared info panel used by the docked column and the drawer. */
+const MessengerInfoPanel = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
     const { text } = view
     return (
         <OfficeInfoPanel
-            props={{ info: view.info, isDocked: props.isDocked, text }}
+            props={{ info: view.info, text }}
             on={{
                 jumpApproval: on.jumpApproval,
                 jumpException: on.jumpException,
                 jumpCard: on.jumpCard,
                 mention: on.mention,
                 openTasks: on.openTasks,
-                close: on.closeInfo,
             }}
         />
     )

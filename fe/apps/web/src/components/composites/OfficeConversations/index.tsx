@@ -1,6 +1,6 @@
 import { useState } from "react"
 import type { ReactNode } from "react"
-import { AvatarGroup, Badge, Divider, ListBox, NavLandmark, SearchField, Tabs, Text } from "@starci/grammar/common"
+import { AvatarGroup, Badge, ListBox, NavLandmark, SearchField, Tabs, Text } from "@starci/grammar/common"
 import type { AvatarGroupItem, ListBoxItem } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { Icon } from "@/components/leaves/Icon"
@@ -12,8 +12,6 @@ import type {
 } from "@/modules/types"
 import {
     BODY_CLASS_NAME,
-    HEAD_CLASS_NAME,
-    HEAD_TEXT_CLASS_NAME,
     INDICATOR_CLASS_NAME,
     SEARCH_CLASS_NAME,
     TABS_CLASS_NAME,
@@ -132,7 +130,7 @@ const itemsOf = (rows: ReadonlyArray<OfficeConversationRowView>, text: OfficeTex
         trailing: trailingOf(row),
     }))
 
-/** The left column: the panel title, search, the filter tabs and one conversation list, newest first. */
+/** The left column body: search, the filter tabs and one conversation list, newest first. */
 export const OfficeConversations = (props: OfficeConversationsProps) => {
     const { list, text, isSkeleton } = props.props
     const [query, setQuery] = useState("")
@@ -150,12 +148,6 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
 
     return (
         <>
-            <div className={HEAD_CLASS_NAME}>
-                <div className={HEAD_TEXT_CLASS_NAME}>
-                    <Text weight="semibold">{text("listTitle")}</Text>
-                </div>
-            </div>
-            <Divider semantics="presentation" />
             <div className={SEARCH_CLASS_NAME}>
                 <SearchField
                     label={text("searchLabel")}

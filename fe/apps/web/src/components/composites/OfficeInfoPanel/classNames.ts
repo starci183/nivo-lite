@@ -1,14 +1,11 @@
-/** The header band of the docked column. */
-export const HEAD_CLASS_NAME = "flex h-18 shrink-0 items-center gap-3 px-4"
+/** The header band of the docked column; the grid row sets its height. */
+export const HEAD_CLASS_NAME = "flex h-full min-w-0 items-center gap-3 px-4 py-3"
 
 /** The title block of the header. */
 export const HEAD_TEXT_CLASS_NAME = "flex min-w-0 flex-1 flex-col"
 
-/** The docked body scrolls inside the column. */
-export const BODY_CLASS_NAME = "flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4"
-
-/** The drawer body: the drawer owns inset and scroll. */
-export const DRAWER_BODY_CLASS_NAME = "flex flex-col gap-6"
+/** The body of the info pane (or of its drawer): the pane scrolls, this insets and stacks the sections. */
+export const BODY_CLASS_NAME = "flex flex-col gap-6 p-4"
 
 /** One section of the panel. */
 export const SECTION_CLASS_NAME = "flex flex-col gap-2"

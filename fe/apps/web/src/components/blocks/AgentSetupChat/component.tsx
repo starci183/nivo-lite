@@ -2,7 +2,8 @@ import {
     Button,
     ChatBubble,
     ChatBubbleSkeletons,
-    ChatWorkspace,
+    Pane,
+    PaneGrid,
     Divider,
     EmptyNotice,
     FileDropzone,
@@ -235,20 +236,26 @@ const Composer = (props: ChatPartProps) => (
 )
 
 const Chat = (props: ChatPartProps) => (
-    <ChatWorkspace
+    <PaneGrid
         label={props.content.chatTitle}
-        conversationLabel={props.content.chatTitle}
-        header={
+        areas={["head", "conversation", "composer"]}
+        rows={["auto", "fill", "auto"]}
+    >
+        <Pane area="head" surface>
             <div className={CHAT_BAND}>
                 <Heading level={2}>{props.content.chatTitle}</Heading>
                 <Text size="xs" tone="muted">
                     {props.content.chatPrivate}
                 </Text>
             </div>
-        }
-        conversation={<Conversation {...props} />}
-        composer={<Composer {...props} />}
-    />
+        </Pane>
+        <Pane area="conversation" surface scroll label={props.content.chatTitle}>
+            <Conversation {...props} />
+        </Pane>
+        <Pane area="composer" surface>
+            <Composer {...props} />
+        </Pane>
+    </PaneGrid>
 )
 
 /** Draws the private chat with NIVO: the messages with their confirm cards, and the composer. */
