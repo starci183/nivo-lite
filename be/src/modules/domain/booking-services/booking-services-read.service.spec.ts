@@ -1,9 +1,15 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { In } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { serviceRowOf as rowOf } from "@tests/fixtures/builders/booking-services.builder"
+import {
+    CATALOGUE_FIND,
+    CUT_SERVICE,
+    DYE_SERVICE,
+    TIMED_SERVICE,
+    TIMING_FIND,
+    namesFindOf,
+} from "@tests/fixtures/builders/booking-services.builder"
 import { BookingServicesReadService } from "./booking-services-read.service"
 import { BookingServiceEntity } from "./persistence/entities"
 
@@ -16,24 +22,17 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("BookingServicesReadService", () => {
     it("lists the services of a workspace in the owner's order, at most 200", async () => {
-        const rows = [rowOf({ id: "s-1", name: "Cut" })]
+        const rows = [CUT_SERVICE]
         const em = mockEntityManager({ find: [BookingServiceEntity, rows] })
         const services = await build(em)
 
         await expect(services.catalogue("ws-1")).resolves.toEqual(rows)
 
-        expect(em.find.mock.calls).toEqual([
-            [
-                BookingServiceEntity,
-                { where: { workspaceId: "ws-1" }, order: { sortOrder: "ASC", createdAt: "ASC" }, take: 200 },
-            ],
-        ])
+        expect(em.find.mock.calls).toEqual([[BookingServiceEntity, CATALOGUE_FIND]])
     })
 
     it("names the given services by id", async () => {
-        const em = mockEntityManager({
-            find: [BookingServiceEntity, [rowOf({ id: "s-1", name: "Cut" }), rowOf({ id: "s-2", name: "Dye" })]],
-        })
+        const em = mockEntityManager({ find: [BookingServiceEntity, [CUT_SERVICE, DYE_SERVICE]] })
         const services = await build(em)
 
         await expect(services.namesOf("ws-1", ["s-1", "s-2"])).resolves.toEqual(
@@ -43,12 +42,7 @@ describe("BookingServicesReadService", () => {
             ]),
         )
 
-        expect(em.find.mock.calls).toEqual([
-            [
-                BookingServiceEntity,
-                { select: { id: true, name: true }, where: { workspaceId: "ws-1", id: In(["s-1", "s-2"]) }, take: 2 },
-            ],
-        ])
+        expect(em.find.mock.calls).toEqual([[BookingServiceEntity, namesFindOf(["s-1", "s-2"])]])
     })
 
     it("reads nothing when no names are wanted", async () => {
@@ -61,17 +55,12 @@ describe("BookingServicesReadService", () => {
     })
 
     it("answers how long a service holds a resource", async () => {
-        const timing = rowOf({ durationMin: 30, bufferMin: 5 })
+        const timing = TIMED_SERVICE
         const em = mockEntityManager({ findOne: [BookingServiceEntity, timing] })
         const services = await build(em)
 
         await expect(services.timingOf("ws-1", "s-1")).resolves.toEqual(timing)
 
-        expect(em.findOne.mock.calls).toEqual([
-            [
-                BookingServiceEntity,
-                { select: { durationMin: true, bufferMin: true }, where: { workspaceId: "ws-1", id: "s-1" } },
-            ],
-        ])
+        expect(em.findOne.mock.calls).toEqual([[BookingServiceEntity, TIMING_FIND]])
     })
 })

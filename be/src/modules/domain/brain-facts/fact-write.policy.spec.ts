@@ -1,5 +1,23 @@
-import { SUPERSEDE, activateChanges, decisionOf, scheduleChanges } from "./fact-write.policy"
+import { Test } from "@nestjs/testing"
 import type { FactChanges } from "./fact-columns.policy"
+import * as policyModule from "./fact-write.policy"
+
+type Policy = typeof policyModule
+
+const SUBJECT = Symbol("fact-write.policy")
+
+const build = async (): Promise<Policy> => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: policyModule }],
+    }).compile()
+    return moduleRef.get<Policy>(SUBJECT)
+}
+
+let policy: Policy
+
+beforeAll(async () => {
+    policy = await build()
+})
 
 const isInstant = (value: unknown): value is () => unknown => typeof value === "function"
 
@@ -9,7 +27,7 @@ const resolved = (changes: FactChanges): Record<string, unknown> =>
 
 describe("fact-write.policy decisionOf", () => {
     it("stamps the decision now with the note and who decided", () => {
-        expect(resolved(decisionOf("rejected", "wrong price", "user-1"))).toEqual({
+        expect(resolved(policy.decisionOf("rejected", "wrong price", "user-1"))).toEqual({
             status: "rejected",
             decidedBy: "user-1",
             decidedAt: "now()",
@@ -19,7 +37,7 @@ describe("fact-write.policy decisionOf", () => {
     })
 
     it("leaves decidedBy out when nobody decided", () => {
-        const changes = resolved(decisionOf("expired", null))
+        const changes = resolved(policy.decisionOf("expired", null))
 
         expect(changes).toEqual({
             status: "expired",
@@ -33,7 +51,7 @@ describe("fact-write.policy decisionOf", () => {
 
 describe("fact-write.policy scheduleChanges", () => {
     it("approves the proposal as scheduled after the current value", () => {
-        expect(resolved(scheduleChanges("fact-0", "user-1", "next season"))).toEqual({
+        expect(resolved(policy.scheduleChanges("fact-0", "user-1", "next season"))).toEqual({
             status: "scheduled",
             supersedesId: "fact-0",
             conflictWith: null,
@@ -45,7 +63,7 @@ describe("fact-write.policy scheduleChanges", () => {
     })
 
     it("follows no value when there is none in force", () => {
-        expect(resolved(scheduleChanges(null, "user-1", null))).toMatchObject({
+        expect(resolved(policy.scheduleChanges(null, "user-1", null))).toMatchObject({
             supersedesId: null,
             decisionNote: null,
         })
@@ -54,7 +72,7 @@ describe("fact-write.policy scheduleChanges", () => {
 
 describe("fact-write.policy activateChanges", () => {
     it("approves the proposal as the value in force from its own start or now", () => {
-        expect(resolved(activateChanges("fact-0", "user-1", "confirmed"))).toEqual({
+        expect(resolved(policy.activateChanges("fact-0", "user-1", "confirmed"))).toEqual({
             status: "active",
             supersedesId: "fact-0",
             conflictWith: null,
@@ -67,7 +85,7 @@ describe("fact-write.policy activateChanges", () => {
     })
 
     it("replaces nothing when there is no current value", () => {
-        expect(resolved(activateChanges(null, "user-1", null))).toMatchObject({
+        expect(resolved(policy.activateChanges(null, "user-1", null))).toMatchObject({
             supersedesId: null,
             decisionNote: null,
         })
@@ -76,7 +94,7 @@ describe("fact-write.policy activateChanges", () => {
 
 describe("fact-write.policy SUPERSEDE", () => {
     it("closes the value in force as history", () => {
-        expect(resolved(SUPERSEDE)).toEqual({
+        expect(resolved(policy.SUPERSEDE)).toEqual({
             status: "superseded",
             validTo: "coalesce(valid_to, now())",
             updatedAt: "now()",

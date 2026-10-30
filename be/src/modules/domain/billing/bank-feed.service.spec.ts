@@ -428,6 +428,10 @@ describe("BankFeedService booked credit details", () => {
     })
 })
 describe("BankFeedService debits", () => {
+    const debitPayload = (amount: number, content: string, eventId: string) => ({
+        connection: "c-1",
+        credits: [{ amount, content, eventId, fallbackBankName: "SePay", direction: "debit" }],
+    })
     const outgoing = { ...incoming, id: 654, transferType: "out", transferAmount: 45000.4, content: "Pay supplier" }
     it("claims a SePay transfer out as a debit receipt", async () => {
         const { feed, feedInbox } = await build()
@@ -468,12 +472,7 @@ describe("BankFeedService debits", () => {
         const { feed, feedInbox, transactions } = await build()
         feedInbox.lock.mockResolvedValue({
             ...receipt,
-            payload: {
-                connection: "c-1",
-                credits: [
-                    { amount: 10, content: "", eventId: "sepay:1", fallbackBankName: "SePay", direction: "debit" },
-                ],
-            },
+            payload: debitPayload(10, "", "sepay:1"),
         })
         await expect(
             feed.processRecordedFeedDelivery({ provider: "sepay-feed", deliveryId: "c-1:1" }),
@@ -487,12 +486,7 @@ describe("BankFeedService debits", () => {
         const { feed, feedInbox, transactions, tx } = await build(world)
         feedInbox.lock.mockResolvedValue({
             ...receipt,
-            payload: {
-                connection: "c-1",
-                credits: [
-                    { amount: 10, content: "x", eventId: "sepay:2", fallbackBankName: "SePay", direction: "debit" },
-                ],
-            },
+            payload: debitPayload(10, "x", "sepay:2"),
         })
         await expect(
             feed.processRecordedFeedDelivery({ provider: "sepay-feed", deliveryId: "c-1:2" }),
