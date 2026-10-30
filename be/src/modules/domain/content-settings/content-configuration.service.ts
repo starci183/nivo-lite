@@ -154,8 +154,9 @@ export class ContentConfigurationService {
         await this.entityManager
             .createQueryBuilder(ContentSettingsEntity, "cs")
             .update()
-            .set({ automations: () => `"automations" || :automation::jsonb` })
-            .setParameter("automation", JSON.stringify({ [key]: on }))
+            .set({ automations: () => `jsonb_set("automations", ARRAY[:automationKey]::text[], :automationOn::jsonb)` })
+            .setParameter("automationKey", key)
+            .setParameter("automationOn", JSON.stringify(on))
             .where("workspace_id = :workspaceId", { workspaceId })
             .execute()
         return this.readBrand(workspaceId)

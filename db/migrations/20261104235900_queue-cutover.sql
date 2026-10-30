@@ -1,7 +1,6 @@
 -- Expand before the BullMQ contract migration. Only job queues are drained; the event bus stays on pgmq.
 -- Keep the empty queues and redirect late legacy sends, including cron commands already executing at cutover.
 -- All adoption, fencing and deletion below commits atomically. A bad envelope or conflicting identity aborts it.
-BEGIN;
 SET LOCAL lock_timeout = '15s';
 LOCK TABLE public.job_outbox, public.job_slots, public.jobs IN ACCESS EXCLUSIVE MODE;
 ALTER TABLE public.job_outbox ADD COLUMN IF NOT EXISTS run_lease_until timestamptz;
@@ -169,4 +168,3 @@ REVOKE EXECUTE ON FUNCTION public.job_fail(text, bigint, integer, text) FROM PUB
 GRANT EXECUTE ON FUNCTION public.job_fail(text, bigint, integer, text) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.job_archive(text, bigint, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.job_archive(text, bigint, text) TO app_be;
-COMMIT;

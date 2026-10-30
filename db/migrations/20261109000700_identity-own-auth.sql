@@ -36,9 +36,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.identity_refresh_tokens TO 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.identity_password_tokens TO app_be;
 
 -- The dedicated backend principal must be active, including through an inherited app_be role.
-CREATE POLICY identity_refresh_tokens_app_be ON public.identity_refresh_tokens
+CREATE POLICY identity_refresh_tokens_app_be_all ON public.identity_refresh_tokens
     FOR ALL TO app_be USING (current_user = 'app_be') WITH CHECK (current_user = 'app_be');
-CREATE POLICY identity_password_tokens_app_be ON public.identity_password_tokens
+CREATE POLICY identity_password_tokens_app_be_all ON public.identity_password_tokens
     FOR ALL TO app_be USING (current_user = 'app_be') WITH CHECK (current_user = 'app_be');
 
 -- A person by sign-in address (lower-cased), with the stored bcrypt hash so the back end can verify it.

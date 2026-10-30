@@ -13,7 +13,6 @@
 --                       still starting, running, sending or connecting.
 --   net._http_response  a 2xx/3xx answer older than p_done_days; an error, a timeout or a 4xx/5xx answer older than p_failed_days.
 -- Rows are locked with SKIP LOCKED so the sweep never waits behind, or blocks, the queue.
-BEGIN;
 
 CREATE FUNCTION public.system_history_sweep(p_done_days integer DEFAULT 1, p_failed_days integer DEFAULT 7, p_batch integer DEFAULT 5000)
     RETURNS jsonb
@@ -69,4 +68,3 @@ GRANT EXECUTE ON FUNCTION public.system_history_sweep(integer, integer, integer)
 
 -- 23:30 Asia/Ho_Chi_Minh (UTC+7, no DST) is 16:30 on the cron clock (cron.timezone is GMT). The windows ride in the payload: change
 -- them with cron.alter_job; `cli jobs tick system-history-retention` sends the same tick by hand.
-COMMIT;

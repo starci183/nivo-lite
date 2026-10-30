@@ -94,15 +94,15 @@ $$;
 -- The consumer queues, their dead-letter queues and the topic bindings are declared literally in
 -- 20261109100200_event-bus-missing-queues.sql (one pgmq.create / pgmq.bind_topic per name, as the migration shape requires).
 
-revoke all on function public.event_bus_send(text, jsonb) from public;
+revoke execute on function public.event_bus_send(text, jsonb) from public, anon;
 grant execute on function public.event_bus_send(text, jsonb) to app_be;
-revoke all on function public.event_bus_read(text, integer, integer) from public;
+revoke execute on function public.event_bus_read(text, integer, integer) from public, anon;
 grant execute on function public.event_bus_read(text, integer, integer) to app_be;
-revoke all on function public.event_bus_archive(text, bigint) from public;
+revoke execute on function public.event_bus_archive(text, bigint) from public, anon;
 grant execute on function public.event_bus_archive(text, bigint) to app_be;
-revoke all on function public.event_bus_bury(text, bigint, integer, jsonb, text) from public;
+revoke execute on function public.event_bus_bury(text, bigint, integer, jsonb, text) from public, anon;
 grant execute on function public.event_bus_bury(text, bigint, integer, jsonb, text) to app_be;
-revoke all on function public.event_bus_dead_letters(text, integer) from public;
+revoke execute on function public.event_bus_dead_letters(text, integer) from public, anon;
 grant execute on function public.event_bus_dead_letters(text, integer) to app_be;
-revoke all on function public.event_bus_requeue(text, bigint) from public;
+revoke execute on function public.event_bus_requeue(text, bigint) from public, anon;
 grant execute on function public.event_bus_requeue(text, bigint) to app_be;
