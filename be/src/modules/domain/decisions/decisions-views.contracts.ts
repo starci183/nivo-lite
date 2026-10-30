@@ -96,16 +96,6 @@ export interface AuthoritySheet {
 /** Which decisions the history lists. */
 export type DecisionHistoryKind = "all" | "policy" | "human" | "rejected"
 
-/** What the decision history asks for. */
-export interface DecisionHistoryQuery {
-    /** Which decisions: every one, those the policy made alone, those a person made, or the rejected ones. */
-    readonly kind: DecisionHistoryKind
-    /** Only the decisions of this module; null for every module. */
-    readonly department: string | null
-    /** How many lines, clamped to 1..100. */
-    readonly limit: number
-}
-
 /** One line of the decision log. */
 export interface DecisionRecord {
     /** The id. */

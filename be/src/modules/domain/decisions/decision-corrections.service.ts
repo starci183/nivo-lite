@@ -1,6 +1,6 @@
+import type { Correction, CorrectionSource } from "@modules/domain/brain"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import type { Correction, CorrectionSource } from "@modules/domain/brain"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { toCorrection } from "./correction.mapper"
 import type { CorrectionRow } from "./persistence/corrections.rows"

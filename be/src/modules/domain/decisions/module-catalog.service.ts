@@ -1,21 +1,20 @@
-import { Injectable } from "@nestjs/common"
-import { MODULE_CATALOG } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
+import { Injectable } from "@nestjs/common"
 import type { Locale } from "@modules/platform/i18n"
 import type { ModuleCommand, OptionalActionEntry, OptionalModuleEntry } from "./decisions.contracts"
 import { toActionEntry, toModuleEntry } from "./module-catalog.mapper"
-
-/** The module of the catalogue that performs an action, with the definition of that action; null when no module lists it. */
-const performerOf = (action: string): ModuleDefinition | undefined =>
-    MODULE_CATALOG.find((module) => module.authorityActions.some((candidate) => candidate.action === action))
+import { InjectModuleCatalogSource } from "./work-engine.decorators"
+import type { ModuleCatalogSource } from "./work-engine.port"
 
 @Injectable()
 /** The module registry of the catalogue: what each module accepts and which actions it owns. */
 export class ModuleCatalogService {
+    constructor(@InjectModuleCatalogSource() private readonly source: ModuleCatalogSource) {}
+
     /** The module with that key, or null when the registry has none. */
-    entryOf(moduleKey: string): Promise<OptionalModuleEntry> {
-        const module = MODULE_CATALOG.find((candidate) => candidate.key === moduleKey)
-        return Promise.resolve(module === undefined ? null : toModuleEntry(module))
+    async entryOf(moduleKey: string): Promise<OptionalModuleEntry> {
+        const module = (await this.source.catalog()).modules.find((candidate) => candidate.key === moduleKey)
+        return module === undefined ? null : toModuleEntry(module)
     }
 
     /** The commands the module accepts from other agents; none for an unknown module. */
@@ -30,11 +29,16 @@ export class ModuleCatalogService {
     }
 
     /** The authority action with that key, or null when the registry has none. */
-    actionOf(action: string): Promise<OptionalActionEntry> {
-        const module = performerOf(action)
+    async actionOf(action: string): Promise<OptionalActionEntry> {
+        const module = await this.performerOf(action)
         const definition = module?.authorityActions.find((candidate) => candidate.action === action)
-        return Promise.resolve(
-            module === undefined || definition === undefined ? null : toActionEntry(module.key, definition),
+        return module === undefined || definition === undefined ? null : toActionEntry(module.key, definition)
+    }
+
+    /** The module of the catalogue that performs an action, with the definition of that action; undefined when no module lists it. */
+    private async performerOf(action: string): Promise<ModuleDefinition | undefined> {
+        return (await this.source.catalog()).modules.find((module) =>
+            module.authorityActions.some((candidate) => candidate.action === action),
         )
     }
 }

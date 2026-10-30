@@ -3,7 +3,6 @@ import { Test } from "@nestjs/testing"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
-import { ZaloInboxPageReadService } from "@modules/domain/zalo-inbox"
 import type { ZaloFollowEventRow, ZaloInboxFactsRow } from "@modules/domain/zalo-inbox"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
@@ -12,6 +11,8 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
 import { ChannelDeliveryService } from "./channel-delivery.service"
+import { ZALO_INBOX_READS } from "./channels.decorators"
+import type { ZaloInboxReads } from "./channels.port"
 import type { ZaloSecret } from "./channels.contracts"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 
@@ -115,7 +116,7 @@ const build = async (
     credentials.accessToken.mockResolvedValue("access-token")
     const delivery = mock<ChannelDeliveryService>()
     delivery.sendToPerson.mockResolvedValue(undefined)
-    const inboxReads = mock<ZaloInboxPageReadService>()
+    const inboxReads = mock<ZaloInboxReads>()
     inboxReads.followEvents.mockResolvedValue([FOLLOW])
     inboxReads.factsOf.mockResolvedValue(facts)
     const rows = { ...DEFAULT_ANSWERS, ...answers }
@@ -154,7 +155,7 @@ const build = async (
             { provide: LOGGER, useValue: logger },
             { provide: ConnectionsService, useValue: connections },
             { provide: ZaloCredentialsService, useValue: credentials },
-            { provide: ZaloInboxPageReadService, useValue: inboxReads },
+            { provide: ZALO_INBOX_READS, useValue: inboxReads },
             { provide: ChannelDeliveryService, useValue: delivery },
             { provide: AgentConversationsReadService, useValue: conversations },
             { provide: AgentMessagesFeedReadService, useValue: feed },

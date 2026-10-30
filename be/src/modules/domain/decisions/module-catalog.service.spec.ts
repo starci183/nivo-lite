@@ -1,13 +1,22 @@
 import { Test } from "@nestjs/testing"
 import { MODULE_CATALOG } from "@modules/domain/modules"
 import { ModuleCatalogService } from "./module-catalog.service"
+import { MODULE_CATALOG_SOURCE } from "./work-engine.decorators"
 
 const [module] = MODULE_CATALOG.filter(
     (candidate) => candidate.accepts.length > 0 && candidate.authorityActions.length > 0,
 )
 
 const build = async () => {
-    const moduleRef = await Test.createTestingModule({ providers: [ModuleCatalogService] }).compile()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            ModuleCatalogService,
+            {
+                provide: MODULE_CATALOG_SOURCE,
+                useValue: { catalog: () => Promise.resolve({ modules: MODULE_CATALOG }) },
+            },
+        ],
+    }).compile()
     return moduleRef.get(ModuleCatalogService)
 }
 

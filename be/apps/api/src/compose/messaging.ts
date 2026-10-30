@@ -36,7 +36,7 @@ import {
 } from "@modules/domain/connection-secrets"
 import { CONVERSATIONS_ERROR_KINDS, CONVERSATIONS_MESSAGES, ConversationsModule } from "@modules/domain/conversations"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
-import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
+import { ZaloInboxModule, ZaloInboxPageReadService } from "@modules/domain/zalo-inbox"
 import { ZaloWizardDraftsModule } from "@modules/domain/zalo-wizard-drafts"
 import { MAIL_ERROR_KINDS, MAIL_MESSAGES, MailModule } from "@modules/integrations/mail"
 import { TELEGRAM_ERROR_KINDS, TELEGRAM_MESSAGES, TelegramModule } from "@modules/integrations/telegram"
@@ -57,7 +57,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     ChatTypingModule.register({ isGlobal: true }),
     ChannelReceiptsModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
-    ChannelsModule.register({ isGlobal: true, ...options.channels }),
+    ChannelsModule.register({ isGlobal: true, ...options.channels, ports: { inbox: ZaloInboxPageReadService } }),
     ConversationsModule.register({
         isGlobal: true,
         runtime: CustomerTurnRuntimeService,

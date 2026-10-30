@@ -1,41 +1,24 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { ApprovalRequestsHistoryReadService } from "@modules/domain/approval-requests"
 import type { ResolvedRequestLine } from "@modules/domain/approval-requests"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import { DecisionLogReadService } from "@modules/domain/decisions"
+import type { DecisionLogLine } from "@modules/domain/decisions"
 import { LeadReadService } from "@modules/domain/leads"
 import { ThreadWorkLinksReadService } from "@modules/domain/thread-work"
 import { WorkChainsHistoryReadService } from "@modules/domain/work-chains"
 import type { CompletedTask } from "@modules/domain/work-chains"
 import { WorkThreadsLeadsReadService } from "@modules/domain/work-threads"
-import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { WorkspaceMemberDirectoryService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { recordOf } from "@tests/fixtures/builders/authority-rules.builder"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { DecisionHistoryService } from "./decision-history.service"
-import type { DecisionHistoryFilter } from "./decision-history.service"
+import type { ListDecisionHistoryRequest } from "./list-decision-history.contracts"
 
-const filterOf = builder<DecisionHistoryFilter>({ deciders: null, outcome: null, department: null, limit: 10 })
+const queryOf = builder<ListDecisionHistoryRequest>({ workspaceId: "ws-1", kind: "all", department: null, limit: 10 })
 
-/** A row of the decision log as the query returns it. */
-interface LoggedLine {
-    readonly id: string
-    readonly work_item_id: string
-    readonly lead_id: string | null
-    readonly department: string
-    readonly action: string
-    readonly decided_by: string
-    readonly decidedByMemberId: string | null
-    readonly decider_kind: string
-    readonly outcome: string
-    readonly reason: string
-    readonly note: string
-    readonly created_at: string
-    readonly sort_key: string
-}
-
-const loggedOf = builder<LoggedLine>({
+const loggedOf = builder<DecisionLogLine>({
     id: "decision-1",
     work_item_id: "work-1",
     lead_id: "lead-1",
@@ -72,9 +55,10 @@ const taskOf = builder<CompletedTask>({
     at: new Date("2026-10-14T09:15:00.000Z"),
 })
 
-const build = async (logged: ReadonlyArray<unknown> = []) => {
-    const em = mockEntityManager()
-    const [fake] = queueQueryBuilders(em, [{ getRawMany: logged }])
+const build = async (logged: ReadonlyArray<Partial<DecisionLogLine>> = []) => {
+    const log = mock<DecisionLogReadService>()
+    log.lines.mockResolvedValue(logged.map((line) => loggedOf(line)))
+    const access = mock<WorkspaceMembersService>()
     const requests = mock<ApprovalRequestsHistoryReadService>()
     const chains = mock<WorkChainsHistoryReadService>()
     const threads = mock<WorkThreadsLeadsReadService>()
@@ -96,7 +80,8 @@ const build = async (logged: ReadonlyArray<unknown> = []) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             DecisionHistoryService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: DecisionLogReadService, useValue: log },
+            { provide: WorkspaceMembersService, useValue: access },
             { provide: ApprovalRequestsHistoryReadService, useValue: requests },
             { provide: WorkChainsHistoryReadService, useValue: chains },
             { provide: WorkThreadsLeadsReadService, useValue: threads },
@@ -109,7 +94,8 @@ const build = async (logged: ReadonlyArray<unknown> = []) => {
     }).compile()
     return {
         service: moduleRef.get(DecisionHistoryService),
-        fake,
+        log,
+        access,
         requests,
         chains,
         threads,
@@ -123,7 +109,7 @@ const build = async (logged: ReadonlyArray<unknown> = []) => {
 
 describe("DecisionHistoryService merging", () => {
     it("merges the three sources newest first with the names of members, customers and rules", async () => {
-        const kit = await build([loggedOf()])
+        const kit = await build([{}])
         kit.members.byIds.mockResolvedValue([
             { id: "member-1", displayName: "Mai", role: "owner" },
             { id: "member-2", displayName: "Binh", role: "manager" },
@@ -150,7 +136,7 @@ describe("DecisionHistoryService merging", () => {
             { id: "lead-1", contactName: "Lan", company: "", channel: "", stage: "new", email: null },
         ])
 
-        const lines = await kit.service.list("ws-1", filterOf())
+        const lines = await kit.service.list("user-1", "ws-1", queryOf())
 
         expect(lines.map((line) => [line.id, line.decider_kind, line.decided_by, line.leadName, line.note])).toEqual([
             ["request-3", "staff", "Binh", null, "pay with care"],
@@ -160,30 +146,54 @@ describe("DecisionHistoryService merging", () => {
         ])
         expect(lines[3]).toMatchObject({ department: "sales", action: "thread_task", outcome: "completed" })
     })
-
 })
 
 describe("DecisionHistoryService filters and passes", () => {
-    it("narrows every source by decider, outcome and module", async () => {
+    it("proves the membership and narrows every source by kind, module and a bounded page", async () => {
         const kit = await build([])
         kit.members.byIds.mockResolvedValue([{ id: "member-2", displayName: "Binh", role: "staff" }])
         kit.chains.completedTasks.mockResolvedValue([taskOf(), taskOf({ id: "chain-2", actorKind: "member" })])
         kit.threads.leadsOf.mockResolvedValue([{ id: "thread-1", leadId: null }])
         kit.agents.cardsOf.mockResolvedValue([{ id: "agent-1", name: "A", module: "sales", canTagAgentIds: [] }])
-        const filter = filterOf({ deciders: ["staff"], outcome: "completed", department: "office" })
 
-        const lines = await kit.service.list("ws-1", filter)
+        const lines = await kit.service.list(
+            "user-1",
+            "ws-1",
+            queryOf({ kind: "human", department: "office", limit: 1000 }),
+        )
 
         expect(lines.map((line) => line.id)).toEqual(["chain-2"])
-        expect(kit.fake?.callsOf("andWhere").map(([sql]) => sql)).toEqual([
-            "d.deciderKind IN (:...deciders)",
-            "d.outcome = :outcome",
-            "d.department = :department",
-        ])
+        expect(kit.access.require).toHaveBeenCalledWith("user-1", "ws-1")
+        expect(kit.log.lines).toHaveBeenCalledWith("ws-1", {
+            deciders: ["owner", "staff"],
+            outcome: null,
+            department: "office",
+            limit: 100,
+        })
         expect(kit.requests.resolvedPage).toHaveBeenCalledWith("ws-1", {
             department: "office",
-            status: "completed",
+            status: null,
             skip: 0,
+            limit: 100,
+        })
+    })
+
+    it("reads the policy and the rejected kinds as their own deciders and outcome", async () => {
+        const kit = await build([])
+
+        await kit.service.list("user-1", "ws-1", queryOf({ kind: "policy" }))
+        await expect(kit.service.list("user-1", "ws-1", queryOf({ kind: "rejected" }))).resolves.toEqual([])
+
+        expect(kit.log.lines).toHaveBeenNthCalledWith(1, "ws-1", {
+            deciders: ["policy"],
+            outcome: null,
+            department: null,
+            limit: 10,
+        })
+        expect(kit.log.lines).toHaveBeenNthCalledWith(2, "ws-1", {
+            deciders: null,
+            outcome: "rejected",
+            department: null,
             limit: 10,
         })
     })
@@ -191,7 +201,7 @@ describe("DecisionHistoryService filters and passes", () => {
     it("reads no tasks for an outcome a task can not have, and drops tasks without member, thread or free thread", async () => {
         const kit = await build([])
 
-        await expect(kit.service.list("ws-1", filterOf({ outcome: "rejected" }))).resolves.toEqual([])
+        await expect(kit.service.list("user-1", "ws-1", queryOf({ kind: "rejected" }))).resolves.toEqual([])
         expect(kit.chains.completedTasks).not.toHaveBeenCalled()
 
         kit.members.byIds.mockResolvedValue([{ id: "member-2", displayName: "Binh", role: "staff" }])
@@ -205,7 +215,7 @@ describe("DecisionHistoryService filters and passes", () => {
             { id: "thread-busy", leadId: null },
         ])
         kit.threadWork.workingThreadIds.mockResolvedValue(["thread-busy"])
-        await expect(kit.service.list("ws-1", filterOf())).resolves.toEqual([])
+        await expect(kit.service.list("user-1", "ws-1", queryOf())).resolves.toEqual([])
     })
 
     it("keeps reading passes while a source runs short of the page, and stops when it runs dry", async () => {
@@ -216,7 +226,7 @@ describe("DecisionHistoryService filters and passes", () => {
             .mockResolvedValueOnce([])
         kit.requests.resolvedPage.mockResolvedValue([])
 
-        await expect(kit.service.list("ws-1", filterOf({ deciders: ["owner"], limit: 1 }))).resolves.toEqual([])
+        await expect(kit.service.list("user-1", "ws-1", queryOf({ kind: "policy", limit: 1 }))).resolves.toEqual([])
         expect(kit.requests.resolvedPage).toHaveBeenNthCalledWith(2, "ws-1", expect.objectContaining({ skip: 1 }))
     })
 })

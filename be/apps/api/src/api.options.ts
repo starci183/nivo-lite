@@ -12,6 +12,7 @@ import {
 } from "@modules/domain/work-performers"
 import { LeadReadService } from "@modules/domain/leads"
 import { LeadFlowChainService } from "@modules/domain/lead-flows"
+import { ModulesService } from "@modules/domain/modules"
 import { ToolTokenService } from "@modules/integrations/openclaw"
 import { ModuleTextGeneratorService } from "@modules/domain/ai-generations"
 import { ModuleOutboundMailService } from "@modules/domain/email-messages"
@@ -60,6 +61,7 @@ export const DECISIONS_PORTS = {
     leadDirectory: LeadReadService,
     workItemLeads: LeadReadService,
     leadGenFlow: LeadFlowChainService,
+    moduleCatalog: ModulesService,
     outboundAccessGate: OutboundAccessService,
 }
 

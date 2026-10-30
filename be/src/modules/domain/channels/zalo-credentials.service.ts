@@ -21,7 +21,7 @@ import type {
     ZaloSecret,
 } from "./channels.contracts"
 import { ChannelsLogEvent } from "./channels.log-events"
-import type { ChannelsOptions } from "./channels.options"
+import type { ChannelsConfig } from "./channels.options"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZALO_AUTHORIZATION_FAILED_REASON, ZALO_RECONNECT_REASON } from "./messages/channels.messages"
 
@@ -64,7 +64,7 @@ const withLegacyRenewal = (value: object): object => {
 export class ZaloCredentialsService {
     constructor(
         @InjectClock() private readonly clock: Clock,
-        @InjectChannelsOptions() private readonly options: ChannelsOptions,
+        @InjectChannelsOptions() private readonly options: ChannelsConfig,
         @InjectZalo() private readonly zalo: ZaloClient,
         @InjectLogger() private readonly logger: Logger,
         private readonly secrets: ConnectionSecretsService,

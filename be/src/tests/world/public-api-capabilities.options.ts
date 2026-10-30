@@ -16,7 +16,7 @@ import { ApiKnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { AGENT_DIRECTORY, OfficeLinesService } from "@modules/domain/messages"
 import type { AgentDirectory } from "@modules/domain/messages"
-import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
+import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule, ModulesService } from "@modules/domain/modules"
 import { PublicApiModule } from "@modules/domain/public-api"
 import { ResponsibilitiesModule } from "@modules/domain/responsibilities"
 import { StaffModule } from "@modules/domain/staff"
@@ -41,6 +41,7 @@ import { WorkChainService } from "../../modules/domain/decisions/work-chain.serv
 import {
     INBOUND_EVENT_STATUS,
     LEAD_GEN_FLOW,
+    MODULE_CATALOG_SOURCE,
     OUTBOUND_ACCESS_GATE,
 } from "../../modules/domain/decisions/work-engine.decorators"
 import { WorkIntakeService } from "../../modules/domain/decisions/work-intake.service"
@@ -136,6 +137,7 @@ class PublicApiProofPeersModule {
                 { provide: INBOX, useClass: InboxService },
                 { provide: INBOUND_EVENT_STATUS, useClass: PublicApiProofInbound },
                 { provide: LEAD_GEN_FLOW, useClass: PublicApiProofChain },
+                { provide: MODULE_CATALOG_SOURCE, useExisting: ModulesService },
                 { provide: OUTBOUND_ACCESS_GATE, useExisting: PublicApiProofAccess },
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
                 {

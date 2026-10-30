@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { ZaloInboxPageReadService } from "@modules/domain/zalo-inbox"
 import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import type { ConnectionConversation } from "@modules/domain/agent-conversations"
@@ -11,6 +10,8 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ChannelDeliveryService } from "./channel-delivery.service"
+import { InjectZaloInboxReads } from "./channels.decorators"
+import type { ZaloInboxReads } from "./channels.port"
 import type { LoadedZalo } from "./channels.contracts"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
@@ -51,7 +52,7 @@ export class ZaloPageService {
         private readonly connections: ConnectionsService,
         private readonly credentials: ZaloCredentialsService,
         private readonly delivery: ChannelDeliveryService,
-        private readonly inboxReads: ZaloInboxPageReadService,
+        @InjectZaloInboxReads() private readonly inboxReads: ZaloInboxReads,
         private readonly conversations: AgentConversationsReadService,
         private readonly feed: AgentMessagesFeedReadService,
     ) {}
