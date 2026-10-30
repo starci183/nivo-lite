@@ -65,8 +65,7 @@ export class AutomationReactionsService {
     async onDealWon(delivery: EventDelivery<DealWonEvent>): Promise<void> {
         await this.entityManager.transaction(async (tx: EntityManager) => {
             if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
-            const deal = delivery.event.payload
-            await this.publish(tx, dealWonReaction(deal, delivery.dedupeKey))
+            await this.publish(tx, dealWonReaction(delivery.event.payload, delivery.dedupeKey))
         })
     }
 
@@ -74,8 +73,7 @@ export class AutomationReactionsService {
     async onDecisionMade(delivery: EventDelivery<DecisionMadeEvent>): Promise<void> {
         await this.entityManager.transaction(async (tx: EntityManager) => {
             if (!(await this.inbox.claim(delivery.consumer, delivery.dedupeKey, tx))) return
-            const decision = delivery.event.payload
-            await this.publish(tx, decisionMadeReaction(decision, delivery.dedupeKey))
+            await this.publish(tx, decisionMadeReaction(delivery.event.payload, delivery.dedupeKey))
         })
     }
 

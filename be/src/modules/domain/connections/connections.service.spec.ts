@@ -30,7 +30,7 @@ interface SeatAnswer {
     readonly seat: MemberSeatRecord
 }
 
-const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}, composed = true) => {
+const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}) => {
     const agents = mock<ConnectionAgentsDirectory>()
     const seats = mock<WorkspaceMemberSeatsService>()
     seats.activeSeatOfUser.mockResolvedValue(seatsOf.get(entityManager) ?? null)
@@ -39,7 +39,7 @@ const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}, comp
     const upkeep = mock<ConnectionsUpkeepService>()
     const logger = mock<Logger>()
     const options = { channelTokenKey: new Secret("k"), siteUrl: "https://site.example.com", ...urls }
-    const testing = Test.createTestingModule({
+    const moduleRef = await Test.createTestingModule({
         providers: [
             ConnectionsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
@@ -51,11 +51,7 @@ const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}, comp
             { provide: WorkspaceMemberSeatsService, useValue: seats },
             { provide: CONNECTION_AGENTS, useValue: agents },
         ],
-    })
-    const moduleRef = await (composed
-        ? testing
-        : testing.overrideProvider(CONNECTION_AGENTS).useValue(null)
-    ).compile()
+    }).compile()
     return { service: moduleRef.get(ConnectionsService), secrets, interest, upkeep, seats, agents }
 }
 const build = async (entityManager: MockEntityManager, urls: Urls = {}) =>
@@ -230,14 +226,7 @@ describe("ConnectionsService > agentIds", () => {
         await expect(service.agentIds("ws-1", "c1")).resolves.toEqual(["agent-2", "agent-1"])
         expect(agents.agentIdsOf).toHaveBeenCalledWith("ws-1", "c1", 500)
     })
-
-    it("answers none when no agents are composed", async () => {
-        const { service } = await buildWith(mockEntityManager(), {}, false)
-
-        await expect(service.agentIds("ws-1", "c1")).resolves.toEqual([])
-    })
 })
-
 
 describe("ConnectionsService > create", () => {
     const input = connectionsCase.createInput

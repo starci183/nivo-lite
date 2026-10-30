@@ -195,7 +195,9 @@ describe("DecisionHistoryService filters and passes", () => {
             limit: 10,
         })
     })
+})
 
+describe("DecisionHistoryService task and pass edges", () => {
     it("reads no tasks for an outcome a task can not have, and drops tasks without member, thread or free thread", async () => {
         const kit = await build([])
 

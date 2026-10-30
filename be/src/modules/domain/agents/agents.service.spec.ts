@@ -37,12 +37,7 @@ import { AgentEntity } from "./persistence/entities"
 
 const AGENT = agentEntityOf({ knowledge: "", approvalRule: "" })
 
-const build = async (
-    entityManager: MockEntityManager,
-    member: WorkspaceMember = memberOf(),
-    lists: Lists = {},
-    bindKnowledge = true,
-) => {
+const build = async (entityManager: MockEntityManager, member: WorkspaceMember = memberOf(), lists: Lists = {}) => {
     const work = mock<WorkDashboardDirectory>()
     work.dashboardList.mockImplementation((query) =>
         Promise.resolve([...(query.kind === "waiting" ? (lists.waiting ?? []) : (lists.done ?? []))]),
@@ -61,7 +56,7 @@ const build = async (
     })
     const logger = mock<Logger>()
     const ownership = mock<AgentOwnershipService>()
-    const testing = Test.createTestingModule({
+    const moduleRef = await Test.createTestingModule({
         providers: [
             AgentsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
@@ -74,11 +69,7 @@ const build = async (
             { provide: AGENTS_WORK, useValue: work },
             { provide: AGENTS_KNOWLEDGE, useValue: knowledge },
         ],
-    })
-    const moduleRef = await (bindKnowledge
-        ? testing
-        : testing.overrideProvider(AGENTS_KNOWLEDGE).useValue(null)
-    ).compile()
+    }).compile()
     return {
         service: moduleRef.get(AgentsService),
         members,
@@ -89,6 +80,35 @@ const build = async (
         ownership,
         work,
     }
+}
+
+/** The setup mode registers no knowledge lens: the optional port stays unbound. */
+const buildSetupMode = async () => {
+    const logger = mock<Logger>()
+    const work = mock<WorkDashboardDirectory>({ dashboardList: jest.fn(() => Promise.resolve([])) })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AgentsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
+            { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
+            { provide: LOGGER, useValue: logger },
+            {
+                provide: AGENTS_INSTALLATIONS,
+                useValue: mock<InstallationDirectory>({
+                    firstOfModule: jest.fn(() => Promise.resolve(installationOf())),
+                }),
+            },
+            {
+                provide: WorkspaceMembersService,
+                useValue: mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(memberOf())) }),
+            },
+            { provide: AGENTS_CONNECTIONS, useValue: mock<AgentConnectionsDirectory>() },
+            { provide: AgentOwnershipService, useValue: mock<AgentOwnershipService>() },
+            { provide: AGENTS_WORK, useValue: work },
+            { provide: AGENTS_KNOWLEDGE, useValue: null },
+        ],
+    }).compile()
+    return { service: moduleRef.get(AgentsService), logger }
 }
 
 describe("AgentsService", () => {
@@ -335,8 +355,7 @@ describe("AgentsService", () => {
         })
 
         it("fails the knowledge region alone in the setup mode, which binds no knowledge lens", async () => {
-            const em = mockEntityManager()
-            const { service, logger } = await build(em, memberOf(), {}, false)
+            const { service, logger } = await buildSetupMode()
 
             const data = await service.dashboard("u1", { workspaceId: "w1", module: "chatbot" })
 
@@ -398,17 +417,8 @@ describe("AgentsService", () => {
             })
         })
 
-        it("rethrows any other database failure", async () => {
-            const failure = new Error("connection lost")
-            const em = mockEntityManager()
-            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: () => Promise.reject(failure) }).builder)
-            const { service } = await build(em)
-
-            await expect(service.create("u1", agent)).rejects.toBe(failure)
-        })
-
-        it.each([null, "connection lost", { code: "23503" }])(
-            "preserves a non-unique rejection: %p",
+        it.each([new Error("connection lost"), null, "connection lost", { code: "23503" }])(
+            "rethrows any other database failure as it came: %p",
             async (failure) => {
                 const em = mockEntityManager()
                 em.createQueryBuilder.mockReturnValue(
@@ -420,9 +430,9 @@ describe("AgentsService", () => {
             },
         )
 
-        it("refuses when the insert answers no row", async () => {
+        it.each([[], undefined])("refuses when the insert answers no row (raw %p)", async (raw) => {
             const em = mockEntityManager()
-            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: { raw: [] } }).builder)
+            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: { raw } }).builder)
             const { service } = await build(em)
 
             await expect(service.create("u1", agent)).rejects.toMatchObject({ code: AgentsErrorCode.NotCreated })
@@ -439,18 +449,8 @@ describe("AgentsService", () => {
             await service.setStatus("u1", "w1", "a1", false)
             await service.setStatus("u1", "w1", "a1", true)
 
-            expect(em.update).toHaveBeenNthCalledWith(
-                1,
-                AgentEntity,
-                { id: "a1", workspaceId: "w1" },
-                { status: "paused" },
-            )
-            expect(em.update).toHaveBeenNthCalledWith(
-                2,
-                AgentEntity,
-                { id: "a1", workspaceId: "w1" },
-                { status: "active" },
-            )
+            expect(em.update.mock.calls.map((call) => call[2])).toEqual([{ status: "paused" }, { status: "active" }])
+            expect(em.update).toHaveBeenCalledWith(AgentEntity, { id: "a1", workspaceId: "w1" }, { status: "active" })
         })
 
         it("replaces the texts of an agent", async () => {
@@ -466,8 +466,8 @@ describe("AgentsService", () => {
             )
         })
 
-        it("refuses an agent that is not in the workspace", async () => {
-            const { service } = await build(mockEntityManager({ update: [AgentEntity, { affected: 0 }] }))
+        it.each([{ affected: 0 }, {}])("refuses an agent that is not in the workspace (%p)", async (result) => {
+            const { service } = await build(mockEntityManager({ update: [AgentEntity, result] }))
 
             await expect(service.setStatus("u1", "w1", "ghost", true)).rejects.toMatchObject({
                 code: AgentsErrorCode.AgentNotFound,

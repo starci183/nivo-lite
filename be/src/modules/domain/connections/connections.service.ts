@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { Not, Raw } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
@@ -70,7 +70,7 @@ export class ConnectionsService {
         private readonly seats: WorkspaceMemberSeatsService,
         private readonly interest: ConnectorInterestService,
         private readonly upkeep: ConnectionsUpkeepService,
-        @Optional() @InjectConnectionAgents() private readonly agents: ConnectionAgentsDirectory | null = null,
+        @InjectConnectionAgents() private readonly agents: ConnectionAgentsDirectory,
     ) {
         this.siteUrl = options.publicSiteUrl ?? options.siteUrl
         this.providerUrl = options.publicApiUrl ?? options.publicSiteUrl
@@ -168,7 +168,7 @@ export class ConnectionsService {
 
     /** The ids of the agents that use a connection, in the order they were attached. */
     agentIds(workspaceId: string, connectionId: string): Promise<ReadonlyArray<string>> {
-        return this.agents === null ? Promise.resolve([]) : this.agents.agentIdsOf(workspaceId, connectionId, LIST_MAX)
+        return this.agents.agentIdsOf(workspaceId, connectionId, LIST_MAX)
     }
 
     /** Every connection of the workspace, oldest first. */

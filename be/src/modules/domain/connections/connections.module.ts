@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConnectorInterestModule } from "@modules/domain/connector-interest"
+import { noAgentIds } from "./connection-agents.policy"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connections.module-definition"
 import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { ConnectionsService } from "./connections.service"
@@ -24,7 +25,7 @@ export class ConnectionsModule extends ConfigurableModuleClass {
                 ConnectionSecretReadsService,
                 ConnectionBindingsReadService,
                 options.ports === undefined
-                    ? { provide: CONNECTION_AGENTS, useValue: null }
+                    ? { provide: CONNECTION_AGENTS, useValue: { agentIdsOf: noAgentIds } }
                     : { provide: CONNECTION_AGENTS, useExisting: options.ports.agents },
                 ConnectionsService,
                 ConnectionsUpkeepService,
