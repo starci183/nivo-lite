@@ -18,9 +18,9 @@
 #                  AOF with appendfsync everysec on the persisted volume redis-data. PostgreSQL stays the durable record: the relay republishes any
 #                  committed outbox row Redis loses, so a broker restart can cost at most the last second of broker state, never an admitted job.
 #
-#   nivo-postgres  the PostgreSQL database (owner ruling 2026-10-29: production left Supabase cloud), on the private `agents` network
-#                  (nivo-postgres:5432, no published port) on the persisted volume postgres-data; the api and the mcp gateway connect as app_be
-#   nivo-postgres-backup  the daily age-encrypted pg_dump of nivo-postgres onto the persisted volume postgres-backups (14 days)
+#   db  the PostgreSQL database (owner ruling 2026-10-29: production left Supabase cloud), on the private `agents` network
+#                  (db:5432, no published port) on the persisted volume postgres-data; the api and the mcp gateway connect as app_be
+#   nivo-postgres-backup  the daily age-encrypted pg_dump of db onto the persisted volume postgres-backups (14 days)
 #
 # Health signals: the container healthcheck is LIVENESS only (process-local /healthz; a Supabase outage never restarts the api). READINESS
 # (/readyz: the database answers) gates traffic at the shared ingress (Traefik health check in routes.yml) and the deploy acceptance, never a restart.
@@ -272,15 +272,18 @@ services:
 
   # The database: the app's managed db image (rulings lite-official-postgres-image, lite-db-image-in-stacks), built by `starci app stack build`
   # from .starcistacks/images/db/Dockerfile: the Docker Official postgres image plus pgvector and pgmq (the event bus). Private `agents` network
-  # only (nivo-postgres:5432), no published port. The superuser is `postgres` with the sealed POSTGRES_PASSWORD of the `postgres` member
+  # only (db:5432), no published port. The superuser is `postgres` with the sealed POSTGRES_PASSWORD of the `postgres` member
   # (POSTGRES_PASSWORD_FILE pointer added by the override); the app_be password is set by the runbook (infra/swarm/recovery/db-runbook.md).
   # Stateful: stop-first, one replica pinned to the manager with its single-host volume. stop_grace_period lets a fast shutdown checkpoint.
-  nivo-postgres:
+  db:
     image: ghcr.io/starci183/nivo-lite-db@sha256:0000000000000000000000000000000000000000000000000000000000000000
     command: ["postgres", "-c", "shared_buffers=512MB", "-c", "max_connections=120"]
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    networks: [agents]
+    # The service was nivo-postgres before the lite skeleton naming; the sealed connection URLs still name that host, so it stays an alias.
+    networks:
+      agents:
+        aliases: [nivo-postgres]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1"]
       interval: 10s
@@ -306,7 +309,7 @@ services:
     image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
     command: ["sh", "/opt/nivo/backup.sh"]
     environment:
-      PGHOST: nivo-postgres
+      PGHOST: db
       PGUSER: postgres
       PGDATABASE: postgres
       BACKUP_DIR: /backups

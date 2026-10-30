@@ -1,5 +1,5 @@
 #!/bin/sh
-# Daily encrypted backup of nivo-postgres (the nivo-postgres-backup service). No secret is written to disk or printed:
+# Daily encrypted backup of db (the nivo-postgres-backup service). No secret is written to disk or printed:
 # the password comes from the Swarm secret file, the output is encrypted to the project age RECIPIENT (public key, .sops.yaml) before it
 # touches the volume, and only the owner's age identity opens it. Restore: .starcistacks/production/infra/swarm/recovery/db-runbook.md.
 #

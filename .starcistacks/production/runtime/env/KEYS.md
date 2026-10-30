@@ -17,7 +17,7 @@ turns every granted key into one versioned Swarm secret (see the production READ
 
 | Key | Where | Semantics |
 | --- | --- | --- |
-| `PRIMARY_DB_URL` | its sealed member (granted in `application-stacks.yaml`) | The least-privilege `app_be` connection to the self-hosted PostgreSQL of the stack (`nivo-postgres:5432`, private network, RLS applies). |
+| `PRIMARY_DB_URL` | its sealed member (granted in `application-stacks.yaml`) | The least-privilege `app_be` connection to the self-hosted PostgreSQL of the stack (`db:5432`, private network, RLS applies). |
 | `PRIMARY_DB_SCHEMA` | `api-public.conf` | The schema the primary connection is bound to (`public`). |
 | `STORAGE_ACCESS_KEY` | its sealed member (granted in `application-stacks.yaml`) | MinIO service-account access key of the S3 object store. |
 | `STORAGE_SECRET_KEY` | its sealed member (granted in `application-stacks.yaml`) | MinIO service-account secret key of the S3 object store. |
@@ -112,7 +112,7 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | Key | Member | Semantics |
 | --- | --- | --- |
 | `APP_BE_DB_PASSWORD` | `app-be-db` (legacy cloud role) and `postgres` | Password of the `app_be` database role; the owner uses it to set the role and rebuild `PRIMARY_DB_URL`. |
-| `POSTGRES_PASSWORD` | `postgres` (declared, not yet sealed) | Superuser password of `nivo-postgres` (`POSTGRES_PASSWORD_FILE`); also read by `nivo-postgres-backup` for pg_dump. Migrations use it through `DATABASE_URL` (shell only, see the README). |
+| `POSTGRES_PASSWORD` | `postgres` (declared, not yet sealed) | Superuser password of `db` (`POSTGRES_PASSWORD_FILE`); also read by `nivo-postgres-backup` for pg_dump. Migrations use it through `DATABASE_URL` (shell only, see the README). |
 | `VPS_HOST` | `ops` | The manager account `starci app stack` verbs connect to from the owner machine. |
 | `VPS_USER` | `ops` | The manager account `starci app stack` verbs connect to from the owner machine. |
 | `DEMO_EMAIL` | `test-accounts` | Demo accounts of the post-deploy smoke tests. |
@@ -159,7 +159,7 @@ Names the self-hosted stack relies on (Postgres, own auth, MinIO). Owning lanes 
 
 | Key | Member | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | `api` | Connection of the self-hosted `nivo-postgres` as `app_be`; the default env of `starci app db plan|migrate|dump --url-env` (and of `app stack deploy --urgent --db-url-env`). Replaces the Supabase `PRIMARY_DB_URL`. |
+| `DATABASE_URL` | `api` | Connection of the self-hosted `db` as `app_be`; the default env of `starci app db plan|migrate|dump --url-env` (and of `app stack deploy --urgent --db-url-env`). Replaces the Supabase `PRIMARY_DB_URL`. |
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | `auth` | Google sign-in of our own auth; replace `SUPABASE_AUTH_EXTERNAL_GOOGLE_*`. |
 | auth signing key, storage endpoint and keys | `auth`, `api` | Exact names owned by sh-authbe and sh-storage (BE_AUTH_JWT_OWN_JWKS, BE_STORAGE_OWNER). |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | retired | No longer baked into the web image. |
