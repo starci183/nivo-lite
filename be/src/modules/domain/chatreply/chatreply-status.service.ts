@@ -63,15 +63,20 @@ export class ChatReplyStatusService {
     /** The escalation decision's job and the approved answer's actual delivery; rejecting an answer completes successfully. */
     async answerStatus(principalId: string, workspaceId: string, workItemId: string): Promise<ChatReplyProgress> {
         await this.members.require(principalId, workspaceId)
-        const work = await this.progress.answerProgress(workspaceId, workItemId)
-        if (work === null) throw new ChatreplyError({ code: ChatreplyErrorCode.NotFound })
+        const item = await this.progress.replyItemOf(workspaceId, workItemId)
+        const chat = item === null ? null : await this.conversations.customerChat(workspaceId, item.conversationId)
+        if (item === null || chat === null) throw new ChatreplyError({ code: ChatreplyErrorCode.NotFound })
+        const stored = await this.deliveries.humanReplyOf(workspaceId, chat.id, item.id)
         const row: AnswerProgressRow = {
-            ...work,
+            id: item.id,
+            work_status: item.status,
+            message_id: stored?.id ?? null,
+            delivery_status: stored?.deliveryStatus ?? null,
             job_state: await this.jobState(
                 workspaceId,
                 "decisions",
                 "decisions.decide-work",
-                `decisions.decide-work:${work.id}`,
+                `decisions.decide-work:${item.id}`,
             ),
         }
         const result = { id: row.id, messageId: row.message_id, delivery: row.delivery_status }

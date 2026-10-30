@@ -14,6 +14,7 @@ import {
     AGENTS_KNOWLEDGE,
     AGENTS_MODULES,
     AGENTS_OPTIONS,
+    AGENTS_WORK,
 } from "./agents.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agents.module-definition"
 import { AgentsService } from "./agents.service"
@@ -43,6 +44,7 @@ export class AgentsModule extends ConfigurableModuleClass {
             { provide: AGENTS_INSTALLATIONS, useClass: options.ports.installations },
             { provide: AGENTS_MODULES, useClass: options.ports.modules },
             { provide: AGENTS_CONNECTIONS, useExisting: options.ports.connections },
+            { provide: AGENTS_WORK, useExisting: options.ports.work },
             PauseClient,
             AgentsService,
             { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },

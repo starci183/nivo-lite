@@ -1,4 +1,5 @@
 import type { AgentAccess, AgentPurpose } from "./agents-connections.contracts"
+import type { DashboardLine } from "./agents-reads.contracts"
 import type { AskAsAgentInput, AskedPassage } from "./agent-ask.contracts"
 import type {
     AgentAudience,
@@ -183,4 +184,28 @@ export interface BoundConnectionView {
 export interface AgentConnectionsDirectory {
     /** The connections an agent is bound to for the purposes, oldest connection first. */
     connectionsFor(agentId: string, purposes: ReadonlyArray<AgentPurpose>): Promise<ReadonlyArray<BoundConnectionView>>
+}
+
+/** The scope of one dashboard list of a department's work items. */
+export interface WorkListRequest {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The department (module key) whose work is listed. */
+    readonly department: string
+    /** The instance the list narrows to, or null for the whole department. */
+    readonly installationId: string | null
+    /** Waiting for a decision, or done alone since a moment. */
+    readonly kind: "waiting" | "done"
+    /** Done lists only: the earliest completion moment shown. */
+    readonly since: Date | null
+    /** The text pattern that marks a test run; matching items are left out. */
+    readonly testRunPattern: string
+    /** The most lines read. */
+    readonly limit: number
+}
+
+/** The work items the dashboard lists: the port the work-items capability implements for the agents dashboard. */
+export interface WorkDashboardDirectory {
+    /** The lines of one dashboard list; each carries the count before the limit. */
+    dashboardList(query: WorkListRequest): Promise<ReadonlyArray<DashboardLine>>
 }

@@ -6,6 +6,7 @@ import { BrainFactsModule } from "@modules/domain/brain-facts"
 import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
 import { InstallationDirectoryService, MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
 import { OPENCLAW_RELOAD_SETTLE_MS, OpenclawAgentSyncModule } from "@modules/domain/openclaw-agent-sync"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { OpenclawModule } from "@modules/integrations/openclaw"
 import type { CliAppOptions } from "../cli.options"
 
@@ -22,6 +23,7 @@ export const cliSetupModules = (options: CliAppOptions): Array<DynamicModule> =>
             installations: InstallationDirectoryService,
             modules: ModuleProfilesService,
             connections: AgentBindingsService,
+            work: WorkItemsActivityService,
         },
         syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
