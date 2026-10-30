@@ -23,9 +23,6 @@ export const PAYMENT_RECONCILED_AUTOMATIONS_TOPIC_QUEUE = "payment_reconciled__a
 /** The queue of the `payment_receipts` consumer of `payment_reconciled`. */
 export const PAYMENT_RECONCILED_PAYMENT_RECEIPTS_TOPIC_QUEUE = "payment_reconciled__payment_receipts"
 
-/** The queue of the `care` consumer of `payment_reconciled`. */
-export const PAYMENT_RECONCILED_CARE_TOPIC_QUEUE = "payment_reconciled__care"
-
 /** The event name and pgmq topic of `lead_captured`. */
 export const LEAD_CAPTURED_TOPIC = "lead_captured"
 

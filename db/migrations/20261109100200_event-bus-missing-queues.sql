@@ -17,10 +17,6 @@ select pgmq.create('payment_reconciled__payment_receipts');
 select pgmq.create('payment_reconciled__payment_receipts__dead');
 select pgmq.bind_topic('payment_reconciled', 'payment_reconciled__payment_receipts');
 
-select pgmq.create('payment_reconciled__care');
-select pgmq.create('payment_reconciled__care__dead');
-select pgmq.bind_topic('payment_reconciled', 'payment_reconciled__care');
-
 select pgmq.create('lead_captured__automations');
 select pgmq.create('lead_captured__automations__dead');
 select pgmq.bind_topic('lead_captured', 'lead_captured__automations');

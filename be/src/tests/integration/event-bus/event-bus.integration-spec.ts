@@ -17,7 +17,7 @@ import { useTestWorld } from "../../world/use-test-world"
 const world = useTestWorld({ modules: [] })
 
 const RUN = world.prefix
-const PAYMENT_QUEUES = ["contracts", "automations", "payment_receipts", "care"].map(
+const PAYMENT_QUEUES = ["contracts", "automations", "payment_receipts"].map(
     (consumer) => `payment_reconciled__${consumer}`,
 )
 const ALL_QUEUES = [...PAYMENT_QUEUES, LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE]
@@ -100,7 +100,7 @@ describe("event-bus publishing", () => {
         const effects: Array<string> = []
         const runner = runnerOf()
         await publish("payment_reconciled", `pay:${RUN}`)
-        expect(await Promise.all(PAYMENT_QUEUES.map((queue) => count(`q_${queue}`)))).toEqual([1, 1, 1, 1])
+        expect(await Promise.all(PAYMENT_QUEUES.map((queue) => count(`q_${queue}`)))).toEqual([1, 1, 1])
 
         await eachInOrder(PAYMENT_QUEUES.slice(0, 2), async (queue) => {
             await expect(runner.drain({ queue, consumer: door(effects), maxDeliveries: 5 })).resolves.toBe(1)
@@ -113,7 +113,7 @@ describe("event-bus publishing", () => {
         ])
         expect(await count("a_payment_reconciled__contracts")).toBe(1)
         expect(await count("a_payment_reconciled__automations")).toBe(1)
-        expect(await count("q_payment_reconciled__care")).toBe(1)
+        expect(await count("q_payment_reconciled__payment_receipts")).toBe(1)
     })
 
     it("event-bus/no-direct-pgmq: the application role cannot reach the pgmq schema", async () => {
