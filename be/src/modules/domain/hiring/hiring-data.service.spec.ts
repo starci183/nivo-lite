@@ -251,7 +251,7 @@ describe("HiringDataService lists", () => {
         ])
         expect(namedCalls(em.find.mock.calls)).toEqual([
             [
-                HiringInterviewEntity,
+                "HiringInterviewEntity",
                 {
                     where: {
                         workspaceId: "ws-1",
@@ -283,7 +283,7 @@ describe("HiringDataService member lists", () => {
         ])
         expect(namedCalls(em.find.mock.calls)).toEqual([
             [
-                HiringAvailabilityEntity,
+                "HiringAvailabilityEntity",
                 {
                     select: { weekday: true, startMin: true, endMin: true },
                     where: { workspaceId: "ws-1", memberUserId: "user-1" },
@@ -324,7 +324,7 @@ describe("HiringDataService job and retention lists", () => {
         await expect(service.retentionDue("ws-1", cutoff)).resolves.toEqual(["candidate-1", "candidate-2"])
         expect(namedCalls(em.find.mock.calls)).toEqual([
             [
-                HiringJobEntity,
+                "HiringJobEntity",
                 { select: { id: true }, where: { workspaceId: "ws-1", status: In(["open", "paused"]) }, take: 500 },
             ],
             retentionCandidatesFind(cutoff),

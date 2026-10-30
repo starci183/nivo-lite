@@ -348,8 +348,9 @@ export class CommandPlannerService {
 
     /** "order #DH-1" / "customer Lan"; empty when the subject has no readable label. A label is a courtesy: it never blocks a command. */
     private async subjectPhrase(ctx: WorkContext, address: SplitPayload): Promise<string> {
-        if (address.subjectId === null) return ""
-        const label = await this.labelOf(ctx, address)
+        const subjectId = address.subjectId
+        if (subjectId === null) return ""
+        const label = await this.labelOf(ctx, address, subjectId)
         if (label === null) return ""
         const shown = shownSubject(address.subjectType, label)
         const key = `command.subject.${address.subjectType}`
@@ -357,10 +358,8 @@ export class CommandPlannerService {
         return word === key ? shown : `${word} ${shown}`
     }
 
-    private async labelOf(ctx: WorkContext, address: SplitPayload): Promise<string | null> {
+    private async labelOf(ctx: WorkContext, address: SplitPayload, subjectId: string): Promise<string | null> {
         try {
-            const subjectId = address.subjectId
-            if (subjectId === null) return null
             if (address.subjectType === "order")
                 return (await this.orders.numbersOf(ctx.workspaceId, [subjectId]))[0]?.orderNo ?? null
             if (address.subjectType === "lead")

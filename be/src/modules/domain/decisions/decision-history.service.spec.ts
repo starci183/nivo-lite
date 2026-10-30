@@ -230,3 +230,40 @@ describe("DecisionHistoryService task and pass edges", () => {
         expect(kit.requests.resolvedPage).toHaveBeenNthCalledWith(2, "ws-1", expect.objectContaining({ skip: 1 }))
     })
 })
+
+describe("DecisionHistoryService fallbacks", () => {
+    it("keeps the stored name of a line nobody can be named for, and reads an owner's request without a thread or a rule", async () => {
+        const kit = await build([
+            { id: "no-member", decidedByMemberId: null },
+            { id: "gone-member", decidedByMemberId: "member-gone" },
+        ])
+        kit.members.byIds.mockResolvedValue([{ id: "member-1", displayName: "Mai", role: "owner" }])
+        kit.requests.resolvedPage.mockResolvedValue([
+            requestOf({ id: "owned", status: "approved", resolvedBy: "member-1", chainStepId: "step-lost" }),
+        ])
+
+        const lines = await kit.service.list("user-1", "ws-1", queryOf())
+
+        const stored = lines.filter((line) => line.id !== "owned").map((line) => line.decided_by)
+        expect(stored).toEqual(["Mai (stored)", "Mai (stored)"])
+        expect(lines.find((line) => line.id === "owned")).toMatchObject({
+            decider_kind: "owner",
+            decided_by: "Mai",
+            lead_id: null,
+            note: "",
+        })
+    })
+
+    it("names a task by its action when it has no rule, and drops a task whose decider the filter does not want", async () => {
+        const kit = await build([])
+        kit.members.byIds.mockResolvedValue([{ id: "member-2", displayName: "Binh", role: "staff" }])
+        kit.chains.completedTasks.mockResolvedValue([taskOf({ rule: null })])
+        kit.threads.leadsOf.mockResolvedValue([{ id: "thread-1", leadId: null }])
+
+        const everyone = await kit.service.list("user-1", "ws-1", queryOf())
+        const policyOnly = await kit.service.list("user-1", "ws-1", queryOf({ kind: "policy" }))
+
+        expect(everyone.map((line) => [line.id, line.note])).toEqual([["chain-1", "hand_off"]])
+        expect(policyOnly).toEqual([])
+    })
+})

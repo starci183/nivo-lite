@@ -14,6 +14,12 @@ import { InboundEventEntity } from "./persistence/entities"
 /** Matches the `() => "now()"` function a write hands the database for a time column. */
 const ANY_FUNCTION: unknown = expect.any(Function)
 
+/** What the function held by the named field of a value answers when it is called. */
+const runField = (value: unknown, field: string): unknown => {
+    const fn: unknown = Reflect.get(Object(value), field)
+    return typeof fn === "function" ? Reflect.apply(fn, undefined, []) : undefined
+}
+
 const NOW = "2026-10-12T10:00:00.000Z"
 
 const INSERTED = (id: string): QueryBuilderAnswers => ({ execute: { raw: [{ id }] } })
@@ -104,6 +110,7 @@ describe("InboundEventsService recordBankPayment", () => {
         })
 
         expect(bump?.callsOf("update")).toEqual([[]])
+        expect(runField(bump?.callsOf("set")[0]?.[0], "duplicateCount")).toBe("duplicate_count + 1")
         expect(bump?.callsOf("set")).toEqual([[{ duplicateCount: ANY_FUNCTION, lastDuplicateAt: new Date(NOW) }]])
         expect(bump?.callsOf("where")).toEqual([
             ["workspace_id = :workspaceId AND dedupe_key = :key", { workspaceId: "ws-1", key: "bank:payment:casso:7" }],
