@@ -29,8 +29,8 @@ export interface PassportOptions {
     readonly issuer: string
     /** The origin of the web app: an absolute return address is accepted only on this origin. */
     readonly returnOrigin: string
-    /** The `aud` claim. */
-    readonly audience: string
+    /** The `aud` claim: every access token is for the authenticated role, so it is the one fixed value. */
+    readonly audience: "authenticated"
     /** How long an access token lives, in seconds. */
     readonly accessTtlSeconds: number
     /** The bcrypt cost of a new password hash. */
