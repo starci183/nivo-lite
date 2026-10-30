@@ -4,51 +4,90 @@ import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 declare const functionPartBrand: unique symbol
 declare const parameterListBrand: unique symbol
 
-/** The name of a database function, checked against the identifier shape of a migration. */
+/** One part of a database function name that passed the identifier check: the only caller text a call statement holds. */
 type DbFunctionPart = string & { readonly [functionPartBrand]: true }
 
-/** The numbered placeholders `$1, $2, ...` of a call, built here from the argument count and never from a value. */
+/** The numbered parameters `$1, ..., $n` of one call, built from a count alone. */
 type DbParameterList = string & { readonly [parameterListBrand]: true }
 
-/** The shape of a function name: a bare pg built-in or `schema.function`; which functions may be called is the dbFunctions list of hfs.json. */
-const IDENTIFIER = /^[a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)?$/
+/** A function the call statement names: its schema and its name, each part checked. */
+interface DbFunctionTarget {
+    readonly schema: DbFunctionPart
+    readonly name: DbFunctionPart
+}
+
+/** The pg built-ins the canon lists bare in ruleParams.be.dbFunctions; each is called in pg_catalog. */
+const PG_BUILTINS: ReadonlySet<string> = new Set([
+    "pg_advisory_xact_lock",
+    "hashtextextended",
+    "pg_notify",
+    "to_regproc",
+    "gen_random_uuid",
+])
+
+/** The schema that holds the pg built-ins. */
+const BUILTIN_SCHEMA = "pg_catalog"
+
+/** One unquoted lower-case identifier: a part of this shape needs no escaping inside double quotes. */
+const PART_PATTERN = /^[a-z_][a-z0-9_]*$/
 
 function assertFunctionPart(_value: string): asserts _value is DbFunctionPart {
-    // The brand is compile-time only; `functionPart` is the single caller after checking the name.
+    // The brand is compile-time only; `functionPart` is the single caller after checking the part.
 }
 
 function assertParameterList(_value: string): asserts _value is DbParameterList {
     // The brand is compile-time only; `parameterList` is the single caller.
 }
 
-const functionPart = (name: string): DbFunctionPart => {
-    if (!IDENTIFIER.test(name)) throw new DatabaseError({ code: DatabaseErrorCode.FunctionRejected })
-    assertFunctionPart(name)
-    return name
-}
+/** The refusal of a name that is not a callable database function. */
+const rejected = (name: string): DatabaseError =>
+    new DatabaseError({ code: DatabaseErrorCode.IdentifierRejected, params: { name } })
 
-const parameterList = (count: number): DbParameterList => {
-    const placeholders = Array.from({ length: count }, (_, index) => `$${String(index + 1)}`).join(", ")
-    assertParameterList(placeholders)
-    return placeholders
+/** Checks one part of a function name against the identifier shape and brands it. */
+const functionPart = (part: string, name: string): DbFunctionPart => {
+    if (!PART_PATTERN.test(part)) throw rejected(name)
+    assertFunctionPart(part)
+    return part
 }
-
-/** The statement text of one function call: the checked name and the numbered placeholders, never a value. */
-const callStatement = (name: string, count: number): string =>
-    `SELECT * FROM ${functionPart(name)}(${parameterList(count)})`
 
 /**
- * Calls one database function TypeORM cannot express (a pg built-in or a SECURITY DEFINER function of a migration) with numbered
- * parameters; the function name is an identifier the canon lint holds to the listed set, never a value.
+ * The function a name calls: `schema.name` for a function of a migration (never in pg_catalog), or a bare pg built-in of
+ * the canon's list, called in pg_catalog. Anything else is refused before any SQL is built.
  */
-export const callDbFunction = async <T>(
+const functionTarget = (name: string): DbFunctionTarget => {
+    const parts = name.split(".")
+    if (parts.length === 1 && PG_BUILTINS.has(name)) {
+        return { schema: functionPart(BUILTIN_SCHEMA, name), name: functionPart(name, name) }
+    }
+    const [schema, fn] = parts
+    if (parts.length !== 2 || schema === undefined || fn === undefined || schema === BUILTIN_SCHEMA)
+        throw rejected(name)
+    return { schema: functionPart(schema, name), name: functionPart(fn, name) }
+}
+
+/** A LISTEN channel: one unquoted lower-case identifier, spliced as the identifier it is. */
+const channelPart = (channel: string): DbFunctionPart => functionPart(channel, channel)
+
+/** The numbered parameter list of a call with `count` arguments. */
+const parameterList = (count: number): DbParameterList => {
+    const list = Array.from({ length: count }, (_, index) => `$${String(index + 1)}`).join(", ")
+    assertParameterList(list)
+    return list
+}
+
+/**
+ * Calls one database function TypeORM cannot express (a pg built-in or a SECURITY DEFINER function of a migration) with
+ * numbered parameters. The name is schema-qualified (`public.job_claim`) or a bare built-in of the canon's list, each part
+ * is checked and double-quoted, and the arguments are values, never text of the statement (R334, R68).
+ */
+export const callDbFunction = <T>(
     manager: EntityManager,
     name: string,
     args: ReadonlyArray<unknown>,
 ): Promise<ReadonlyArray<T>> => {
-    const statement = callStatement(name, args.length)
-    const rows = await manager.query<Array<T>>(statement, [...args])
-    return rows
+    const target = functionTarget(name)
+    const parameters = parameterList(args.length)
+    return manager.query<Array<T>>(`SELECT * FROM "${target.schema}"."${target.name}"(${parameters})`, [...args])
 }
 
 /** Takes a transaction-scoped advisory lock on the 64-bit hash of `key`; it is released when the manager's transaction ends. */
@@ -69,6 +108,5 @@ export interface StatementConnection {
 
 /** Subscribes the connection to the channel; the name is checked like a function name and spliced as the identifier it is. */
 export const listenOn = async (connection: StatementConnection, channel: string): Promise<void> => {
-    const statement = `LISTEN ${functionPart(channel)}`
-    await connection.query(statement)
+    await connection.query(`LISTEN ${channelPart(channel)}`)
 }

@@ -1,7 +1,6 @@
 import type { ExecutionContext } from "@nestjs/common"
 import { CommandBus, CommandHandler, CqrsModule, QueryHandler } from "@nestjs/cqrs"
 import type { ICommandHandler, IQueryHandler } from "@nestjs/cqrs"
-import { Reflector } from "@nestjs/core"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import {
@@ -19,8 +18,18 @@ import { GetToolManifestQuery } from "../../../features/api/agent-tools/applicat
 import { RunToolCommand } from "../../../features/api/agent-tools/application/run-tool.command"
 import { AgentToolsController } from "../../../features/api/agent-tools/transport/http/agent-tools.controller"
 
-const CREDENTIAL_KEY = Credential({ kind: "tool-token" }).KEY
-const PUBLIC_KEY = Public({ reason: PublicReason.Health }).KEY
+/** Doors carrying exactly the decorators under test: the metadata a controller method must (or must not) share with them. */
+class DoorProbe {
+    @Credential({ kind: "tool-token" })
+    toolDoor(): void {}
+
+    @Public({ reason: PublicReason.Health })
+    publicDoor(): void {}
+}
+
+/** The metadata entries a decorated probe method carries. */
+const metadataOf = (target: object): Array<[unknown, unknown]> =>
+    Reflect.getMetadataKeys(target).map((key: unknown) => [key, Reflect.getMetadata(key, target)])
 
 @QueryHandler(GetToolManifestQuery)
 /** A contract consumer of the manifest envelope; the real query bus delivers it. */
@@ -61,10 +70,17 @@ describe("AgentToolsController", () => {
         "requires a tool credential on %s",
         async (method) => {
             const { controller, moduleRef } = await build()
-            const reflector = new Reflector()
+            const probe = new DoorProbe()
             try {
-                expect(reflector.get(CREDENTIAL_KEY, controller[method])).toEqual({ kind: "tool-token" })
-                expect(reflector.get(PUBLIC_KEY, controller[method])).toBeUndefined()
+                for (const [key, value] of metadataOf(probe.toolDoor)) {
+                    expect(Reflect.getMetadata(key, controller[method])).toEqual(value)
+                }
+                const publicOnly = metadataOf(probe.publicDoor).filter(
+                    ([key]) => Reflect.getMetadata(key, probe.toolDoor) === undefined,
+                )
+                for (const [key] of publicOnly) {
+                    expect(Reflect.getMetadata(key, controller[method])).toBeUndefined()
+                }
             } finally {
                 await moduleRef.close()
             }

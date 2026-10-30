@@ -1,87 +1,112 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
-import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 import { advisoryXactLock, callDbFunction, listenOn, notify } from "./database.client"
-const SUBJECT = Symbol("database.client")
+import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 
-const build = async () => {
+const DATABASE_CLIENT = Symbol("database-client")
+
+const setup = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { advisoryXactLock, callDbFunction, listenOn, notify } }],
+        providers: [
+            { provide: DATABASE_CLIENT, useFactory: () => ({ advisoryXactLock, callDbFunction, listenOn, notify }) },
+        ],
     }).compile()
-    return moduleRef.get<typeof import("./database.client")>(SUBJECT)
+    return moduleRef.get<{
+        readonly advisoryXactLock: typeof advisoryXactLock
+        readonly callDbFunction: typeof callDbFunction
+        readonly listenOn: typeof listenOn
+        readonly notify: typeof notify
+    }>(DATABASE_CLIENT)
+}
+
+/** What `callDbFunction` throws for `name`, or null when it builds a call. */
+const refusalOf = async (name: string): Promise<unknown> => {
+    const client = await setup()
+    try {
+        await client.callDbFunction(mockEntityManager({ query: ['SELECT * FROM "public"."never"()', []] }), name, [])
+        return null
+    } catch (error) {
+        return error
+    }
 }
 
 describe("callDbFunction", () => {
-    it("selects from the function with one numbered placeholder per argument and answers its rows", async () => {
-        const subject = await build()
-        const rows = [{ id: "a", state: "queued" }]
-        const em = mockEntityManager({ query: ["SELECT * FROM public.event_bus_read($1, $2, $3)", rows] })
+    it("calls a schema-qualified function with each part quoted and the arguments as numbered parameters", async () => {
+        const client = await setup()
+        const manager = mockEntityManager({ query: ['SELECT * FROM "public"."job_claim"($1, $2)', [{ id: "job-1" }]] })
 
-        const answered = await subject.callDbFunction(em, "public.event_bus_read", ["ws", "q", "key"])
+        const rows = await client.callDbFunction<{ id: string }>(manager, "public.job_claim", ["mail", 3])
 
-        expect(answered).toBe(rows)
-        expect(em.query).toHaveBeenCalledWith("SELECT * FROM public.event_bus_read($1, $2, $3)", ["ws", "q", "key"])
+        expect(rows).toEqual([{ id: "job-1" }])
+        expect(manager.query).toHaveBeenCalledWith('SELECT * FROM "public"."job_claim"($1, $2)', ["mail", 3])
     })
 
-    it("calls a function with no argument with an empty parameter list", async () => {
-        const subject = await build()
-        const em = mockEntityManager({ query: ["SELECT * FROM public.event_bus_dead_letters()", [{ job_stats: {} }]] })
+    it("calls a bare pg built-in of the canon's list in pg_catalog", async () => {
+        const client = await setup()
+        const manager = mockEntityManager({
+            query: ['SELECT * FROM "pg_catalog"."to_regproc"($1)', [{ to_regproc: null }]],
+        })
 
-        await subject.callDbFunction(em, "public.event_bus_dead_letters", [])
+        const rows = await client.callDbFunction<{ to_regproc: string | null }>(manager, "to_regproc", [
+            "public.job_claim",
+        ])
 
-        expect(em.query).toHaveBeenCalledWith("SELECT * FROM public.event_bus_dead_letters()", [])
+        expect(rows).toEqual([{ to_regproc: null }])
     })
 
-    it("passes null and array arguments through as parameters, never into the statement text", async () => {
-        const subject = await build()
-        const em = mockEntityManager({ query: ["SELECT * FROM public.event_bus_send($1, $2)", []] })
-        const args = [null, ["x", "y"]]
+    it("calls a function of another schema with no arguments", async () => {
+        const client = await setup()
+        const manager = mockEntityManager({ query: ['SELECT * FROM "be_access"."chat_target_member"()', []] })
 
-        await subject.callDbFunction(em, "public.event_bus_send", args)
+        const rows = await client.callDbFunction(manager, "be_access.chat_target_member", [])
 
-        expect(em.query).toHaveBeenCalledWith("SELECT * FROM public.event_bus_send($1, $2)", args)
+        expect(rows).toEqual([])
     })
 
-    it.each(["", "fn()", "fn; select 1", "Public.fn", "a.b.c", "1fn", "public.", "fn name", "public.fn--"])(
-        "refuses the name %j and sends no statement",
-        async (name) => {
-            const subject = await build()
-            const em = mockEntityManager()
+    it.each([
+        ["a bare name that is not a listed built-in", "job_claim"],
+        ["a pg_catalog name spelt out", "pg_catalog.pg_terminate_backend"],
+        ["a quote inside a part", 'public."job_claim'],
+        ["a second statement smuggled into the name", "public.job_claim(); SELECT 1; --"],
+        ["an upper-case part", "public.Job_Claim"],
+        ["three parts", "db.public.job_claim"],
+        ["an empty schema", ".job_claim"],
+        ["an empty name", ""],
+    ])("refuses %s before any SQL runs", async (_case, name) => {
+        const refusal = await refusalOf(name)
 
-            await expect(subject.callDbFunction(em, name, [1])).rejects.toThrow(
-                new DatabaseError({ code: DatabaseErrorCode.FunctionRejected }),
-            )
-
-            expect(em.query).not.toHaveBeenCalled()
-        },
-    )
+        expect(refusal).toBeInstanceOf(DatabaseError)
+        expect(refusal).toMatchObject({ code: DatabaseErrorCode.IdentifierRejected, params: { name } })
+    })
 })
 
 describe("advisoryXactLock", () => {
     it("locks the 64-bit hash of the key for the transaction", async () => {
-        const subject = await build()
-        const em = mockEntityManager({ query: ["SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", []] })
+        const client = await setup()
+        const manager = mockEntityManager({ query: ["SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [{}]] })
 
-        await expect(subject.advisoryXactLock(em, "topic:a")).resolves.toBeUndefined()
+        await expect(client.advisoryXactLock(manager, "jobs:mail")).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledWith("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", ["topic:a"])
+        expect(manager.query).toHaveBeenCalledWith("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+            "jobs:mail",
+        ])
     })
 })
 
 describe("notify", () => {
-    it("sends the payload on the channel through pg_notify with both as parameters", async () => {
-        const subject = await build()
-        const em = mockEntityManager({ query: ["SELECT pg_notify($1, $2)", []] })
+    it("sends the payload on the channel", async () => {
+        const client = await setup()
+        const manager = mockEntityManager({ query: ["SELECT pg_notify($1, $2)", [{}]] })
 
-        await expect(subject.notify(em, "hub", '{"seq":"1"}')).resolves.toBeUndefined()
+        await expect(client.notify(manager, "jobs", '{"id":"job-1"}')).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledWith("SELECT pg_notify($1, $2)", ["hub", '{"seq":"1"}'])
+        expect(manager.query).toHaveBeenCalledWith("SELECT pg_notify($1, $2)", ["jobs", '{"id":"job-1"}'])
     })
 })
 
 describe("listenOn", () => {
     it("subscribes the connection to the named channel", async () => {
-        const subject = await build()
+        const subject = await setup()
         const connection = { query: jest.fn(() => Promise.resolve()) }
 
         await subject.listenOn(connection, "realtime_events")
@@ -90,11 +115,11 @@ describe("listenOn", () => {
     })
 
     it("refuses a channel name that is no identifier and sends nothing", async () => {
-        const subject = await build()
+        const subject = await setup()
         const connection = { query: jest.fn(() => Promise.resolve()) }
 
         await expect(subject.listenOn(connection, "a; drop")).rejects.toThrow(
-            new DatabaseError({ code: DatabaseErrorCode.FunctionRejected }),
+            new DatabaseError({ code: DatabaseErrorCode.IdentifierRejected, params: { name: "a; drop" } }),
         )
 
         expect(connection.query).not.toHaveBeenCalled()
