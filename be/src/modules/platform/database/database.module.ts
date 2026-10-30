@@ -74,7 +74,9 @@ export class DatabaseModule extends ConfigurableModuleClass {
                         entities: [...options.entities],
                         uuidExtension: "pgcrypto",
                         synchronize: false,
-                        retryAttempts: 2,
+                        // A first start brings the database up beside the app: keep retrying for about 30 s while it accepts its first connection.
+                        retryAttempts: 10,
+                        retryDelay: 3000,
                         extra: { types: options.typeParsers() },
                     })
                 }),

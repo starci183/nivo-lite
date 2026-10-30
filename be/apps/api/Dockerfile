@@ -46,6 +46,9 @@ COPY --from=build /app/be/dist be/dist
 COPY be/src/assets be/src/assets
 ENV VIDEO_FONTS_DIR=/app/be/src/assets/fonts
 
+# The AI gateway's SQLite key store volume (AI_ROUTER_KEYS_PATH) mounts here: an empty volume takes this owner, so the node user can write it.
+RUN mkdir -p /var/lib/ai-router && chown node:node /var/lib/ai-router
+
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
