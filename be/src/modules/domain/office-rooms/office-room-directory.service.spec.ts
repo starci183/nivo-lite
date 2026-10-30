@@ -99,10 +99,12 @@ describe("OfficeRoomDirectoryService, staffed rooms", () => {
 })
 
 describe("OfficeRoomDirectoryService, home room", () => {
+    const seatAt = entityOf(OfficeRoomMemberEntity, { roomId: "r1" })
+
     it("answers the name of the home room of an agent, null when it has none", async () => {
         const home = mockEntityManager({
             findOne: [
-                [OfficeRoomMemberEntity, entityOf(OfficeRoomMemberEntity, { roomId: "r1" })()],
+                [OfficeRoomMemberEntity, seatAt()],
                 [OfficeRoomEntity, entityOf(OfficeRoomEntity, { name: "Sales" })()],
             ],
         })
@@ -118,5 +120,16 @@ describe("OfficeRoomDirectoryService, home room", () => {
             where: { id: "r1", workspaceId: "ws-1" },
         })
         await expect((await build(homeless)).homeRoomNameOf("ws-1", "a9")).resolves.toBeNull()
+    })
+
+    it("answers null when the home seat points at a room that is gone", async () => {
+        const gone = mockEntityManager({
+            findOne: [
+                [OfficeRoomMemberEntity, seatAt()],
+                [OfficeRoomEntity, null],
+            ],
+        })
+
+        await expect((await build(gone)).homeRoomNameOf("ws-1", "a1")).resolves.toBeNull()
     })
 })

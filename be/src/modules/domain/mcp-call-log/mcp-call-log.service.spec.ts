@@ -38,12 +38,12 @@ const build = async (entityManager: MockEntityManager) => {
     return Object.assign(moduleRef.get(McpCallLogService), { doubles: { agents } })
 }
 
-/** What an insert query builder was told to write; a function value is read as its source text. */
+/** What an insert query builder was told to write; a function value is read as what it answers. */
 const writtenBy = (fake: FakeQueryBuilder): Record<string, unknown> => {
     const [values] = fake.callsOf("values")[0] ?? []
-    const written = typeof values === "object" && values !== null ? values : {}
+    const written: Record<string, unknown> = typeof values === "object" && values !== null ? values : {}
     return Object.fromEntries(
-        Object.entries(written).map(([key, value]) => [key, typeof value === "function" ? String(value) : value]),
+        Object.entries(written).map(([key, value]) => [key, typeof value === "function" ? Reflect.apply(value, undefined, []) : value]),
     )
 }
 
@@ -73,7 +73,7 @@ describe("McpCallLogService", () => {
         await expect(log.append(LINE)).resolves.toBeUndefined()
 
         const { argsMasked, ...columns } = writtenBy(fake)
-        expect(String(argsMasked)).toContain("CAST(:argsMaskedJson AS jsonb)")
+        expect(argsMasked).toContain("CAST(:argsMaskedJson AS jsonb)")
         expect(columns).toEqual({
             workspaceId: "ws-1",
             connector: "hakuen",
