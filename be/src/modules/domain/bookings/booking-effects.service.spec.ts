@@ -21,6 +21,7 @@ import {
     feeWritten,
     handOffOf,
     found,
+    serviceGone,
     namesCleared,
     releaseOf,
     traceOf,
@@ -152,19 +153,11 @@ describe("BookingEffectsService", () => {
         )
     })
 
-    it("returns no effects when the service of the booking is gone", async () => {
-        const answers = found()
-        SERVICE_NAMES.clear()
-        const { service, reminders, trace } = await build([answers])
-
-        await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(NO_EFFECTS)
-
-        expect(trace()).toEqual([SELECTED])
-        expect(reminders.schedule).not.toHaveBeenCalled()
-    })
-
-    it("returns no effects when the booking no longer exists", async () => {
-        const { service, tx, models, reminders, notifier, events, inbound, trace } = await build([MISSING])
+    it.each([
+        ["the service of the booking is gone", serviceGone],
+        ["the booking no longer exists", () => MISSING],
+    ])("returns no effects when %s", async (_case, answer) => {
+        const { service, tx, models, reminders, notifier, events, inbound, trace } = await build([answer()])
 
         await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(NO_EFFECTS)
 

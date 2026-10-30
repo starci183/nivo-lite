@@ -79,21 +79,19 @@ const build = async () => {
 }
 
 describe("ModuleInstallService > install", () => {
-    it("refuses a blank instance name", async () => {
-        const { service } = await build()
-
-        await expect(service.install("u1", requestOf({ name: "   " }))).rejects.toMatchObject({
-            code: ModulesErrorCode.InstanceNameInvalid,
-        })
-    })
-
-    it("refuses a second instance of a type that allows one", async () => {
+    it.each([
+        ["a blank instance name", CHATBOT_MODULE, { name: "   " }, ModulesErrorCode.InstanceNameInvalid],
+        [
+            "a second instance of a type that allows one",
+            ACCOUNTING_MODULE,
+            { moduleKey: "accounting", newInstance: true },
+            ModulesErrorCode.SingleInstanceOnly,
+        ],
+    ] as const)("refuses %s", async (_case, module, patch, code) => {
         const { service, catalog } = await build()
-        catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
+        catalog.find.mockResolvedValue(module)
 
-        await expect(
-            service.install("u1", requestOf({ moduleKey: "accounting", newInstance: true })),
-        ).rejects.toMatchObject({ code: ModulesErrorCode.SingleInstanceOnly })
+        await expect(service.install("u1", requestOf(patch))).rejects.toMatchObject({ code })
     })
 
     it("answers the installation the type already has, and still seeds its rules and its sync", async () => {
@@ -337,15 +335,6 @@ describe("ModuleInstallService > syncStatus", () => {
         await expect(service.syncStatus("u1", "ws-1", "inst-1")).resolves.toEqual(SYNCED_AGENT_COPY)
     })
 
-    it("refuses an installation of another workspace", async () => {
-        const { service, facts } = await build()
-        facts.syncStatus.mockResolvedValue(null)
-
-        await expect(service.syncStatus("u1", "ws-1", "inst-1")).rejects.toMatchObject({
-            code: ModulesErrorCode.InstallationNotFound,
-        })
-    })
-
     it("answers the installations of the workspace to any member", async () => {
         const { service, installations, members } = await build()
         installations.list.mockResolvedValue([recordOf()])
@@ -354,13 +343,18 @@ describe("ModuleInstallService > syncStatus", () => {
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
     })
 
-    it("refuses a missing installation", async () => {
-        const { service, installations } = await build()
+    it.each([
+        [
+            "the sync status of an installation of another workspace",
+            (service: ModuleInstallService) => service.syncStatus("u1", "ws-1", "inst-1"),
+        ],
+        ["a missing installation", (service: ModuleInstallService) => service.get("u1", "ws-1", "inst-1")],
+    ])("refuses %s", async (_case, read) => {
+        const { service, facts, installations } = await build()
+        facts.syncStatus.mockResolvedValue(null)
         installations.find.mockResolvedValue(null)
 
-        await expect(service.get("u1", "ws-1", "inst-1")).rejects.toMatchObject({
-            code: ModulesErrorCode.InstallationNotFound,
-        })
+        await expect(read(service)).rejects.toMatchObject({ code: ModulesErrorCode.InstallationNotFound })
     })
 })
 

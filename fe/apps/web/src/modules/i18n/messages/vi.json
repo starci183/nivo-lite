@@ -24,7 +24,6 @@
     "emailTitle": "Email",
     "emailCurrent": "Email đăng nhập",
     "emailHint": "Đây là địa chỉ bạn dùng để đăng nhập.",
-    "errEmail": "Nhập địa chỉ email hợp lệ.",
     "passwordTitle": "Mật khẩu",
     "passwordHint": "Dùng ít nhất 8 ký tự. Bạn vẫn đăng nhập trên thiết bị này.",
     "currentPassword": "Mật khẩu hiện tại",

@@ -1,5 +1,11 @@
 import { mockEntityManager } from "@starci/jest-preset"
-import type { InvoiceRow, InvoiceViewRow, NewInvoice, NewRenewalInvoice } from "@modules/domain/invoices"
+import type {
+    InvoiceRow,
+    InvoiceViewRow,
+    NewInvoice,
+    NewRenewalInvoice,
+    ReconcileInvoiceRow,
+} from "@modules/domain/invoices"
 import type { LeadCard } from "@modules/domain/leads"
 import type { OrderSummary } from "@modules/domain/orders"
 import { queueQueryBuilders } from "./entity-query-builder-fake.builder"
@@ -43,6 +49,33 @@ export const RENEWAL_INPUT: NewRenewalInvoice = {
     issuedBy: null,
 }
 export const VIEW: InvoiceViewRow = { ...INVOICE, due_at: DUE_AT, issued_at: NOW, created_at: NOW }
+
+/** The columns the reconciliation read selects for `INVOICE`, before the owners add the order and the customer. */
+export const RECONCILE_RAW = {
+    id: INVOICE.id,
+    order_id: "o1",
+    lead_id: "l1",
+    invoice_no: INVOICE.invoice_no,
+    amount_vnd: INVOICE.amount_vnd,
+    status: INVOICE.status,
+    issued_at: NOW,
+    due_at: DUE_AT,
+}
+
+/** The reconciliation row `RECONCILE_RAW` becomes once `ORDER` and `LEAD` are joined in. */
+export const RECONCILE_ROW: ReconcileInvoiceRow = {
+    id: INVOICE.id,
+    invoice_no: INVOICE.invoice_no,
+    amount_vnd: INVOICE.amount_vnd,
+    status: INVOICE.status,
+    customer: "Minh",
+    company: "Tea Co",
+    order_no: "ORDER-1",
+    order_items: "Tea",
+    order_status: "invoiced",
+    issued_at: NOW,
+    due_at: DUE_AT,
+}
 
 export const ORDER: OrderSummary = { id: "o1", orderNo: "ORDER-1", items: "Tea", amountVnd: 50_000, status: "invoiced" }
 export const LEAD: LeadCard = {

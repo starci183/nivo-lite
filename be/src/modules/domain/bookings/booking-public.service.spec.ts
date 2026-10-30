@@ -210,18 +210,12 @@ describe("BookingPublicService", () => {
             })
         })
 
-        it("refuses a page whose workspace has no name to show", async () => {
-            const { service } = await build({ nameless: true })
-            await expect(service.page({ slug: "spa-anna" })).rejects.toMatchObject({
-                code: BookingsErrorCode.PageNotFound,
-            })
-        })
-
-        it("refuses a slug no published page has", async () => {
-            const { service } = await build({ page: false })
-            await expect(service.page({ slug: "nobody" })).rejects.toMatchObject({
-                code: BookingsErrorCode.PageNotFound,
-            })
+        it.each([
+            ["a page whose workspace has no name to show", { nameless: true }, "spa-anna"],
+            ["a slug no published page has", { page: false }, "nobody"],
+        ])("refuses %s", async (_case, options, slug) => {
+            const { service } = await build(options)
+            await expect(service.page({ slug })).rejects.toMatchObject({ code: BookingsErrorCode.PageNotFound })
         })
     })
 
