@@ -37,6 +37,7 @@ export const rowOf = builder<InstanceType<typeof AutomationTemplateEntity>>({
     definition: {},
     updatedAt: new Date("2026-10-12T10:00:00Z"),
     position: 0,
+    createdAt: new Date("2026-10-12T10:00:00Z"),
 })
 
 /** The stored row of template `a_one` with a valid definition. */

@@ -40,6 +40,7 @@ export const entityOf = builder<AuthorityRuleEntity>({
     approvalPolicy: "any",
     timeoutMinutes: 30,
     agents: [],
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 export const recordOf = builder<AuthorityRuleRecord>({

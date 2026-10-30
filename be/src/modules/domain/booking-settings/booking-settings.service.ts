@@ -35,7 +35,6 @@ export class BookingSettingsService {
                 handoffOrder: params.handoffOrder,
                 address: params.address,
                 timezone: params.timezone,
-                updatedAt: new Date(params.updatedAt),
             },
             ["workspaceId"],
         )
@@ -68,7 +67,6 @@ export class BookingSettingsService {
                 publicEnabled: params.enabled,
                 publicSlug: params.slug,
                 publicNote: params.note,
-                updatedAt: new Date(params.updatedAt),
             },
             ["workspaceId"],
         )

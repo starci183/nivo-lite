@@ -7,8 +7,6 @@ import { BookingServicesService } from "@modules/domain/booking-services"
 import { BookingSettingsService } from "@modules/domain/booking-settings"
 import { BookingWaitlistService } from "@modules/domain/booking-waitlist"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     BookingHoursWindow,
@@ -100,7 +98,6 @@ const isUniqueViolation = (cause: unknown): boolean => {
 export class BookingSetupService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectClock() private readonly clock: Clock,
         private readonly members: WorkspaceMembersService,
         private readonly services: BookingServicesService,
         private readonly resources: BookingResourcesService,
@@ -211,10 +208,7 @@ export class BookingSetupService {
                 timezoneValid(params.timezone),
         )
         const address = text(params.address, 300)
-        this.saved(
-            await this.settings.savePolicy({ ...params, address, updatedAt: this.clock.now().toISOString() }),
-            true,
-        )
+        this.saved(await this.settings.savePolicy({ ...params, address }), true)
         return { workspaceId: params.workspaceId }
     }
 
@@ -237,7 +231,6 @@ export class BookingSetupService {
                     enabled: params.enabled,
                     slug: slug || null,
                     note,
-                    updatedAt: this.clock.now().toISOString(),
                 }),
                 true,
             )

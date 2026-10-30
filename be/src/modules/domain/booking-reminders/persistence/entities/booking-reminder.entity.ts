@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "booking_reminders" })
 /** One reminder of a booking, scheduled for one offset before it starts. */
-export class BookingReminderEntity {
-    /** The reminder id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class BookingReminderEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -38,8 +35,4 @@ export class BookingReminderEntity {
     /** When it was sent. */
     @Column({ name: "sent_at", type: "timestamptz", nullable: true })
     sentAt!: Date | null
-
-    /** When it was planned. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

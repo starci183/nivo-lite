@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "booking_waitlist" })
 /** A customer waiting for a slot of a service to open. */
-export class BookingWaitlistEntity {
-    /** The entry id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class BookingWaitlistEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -58,8 +55,4 @@ export class BookingWaitlistEntity {
     /** What the customer added. */
     @Column({ name: "note", type: "text", default: () => "''::text" })
     note!: string
-
-    /** When the entry was made. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

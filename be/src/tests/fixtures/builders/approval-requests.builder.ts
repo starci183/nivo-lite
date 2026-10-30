@@ -141,6 +141,7 @@ export const approvalRequestEntityOf = builder<ApprovalRequestEntity>({
     resolvedAt: null,
     escalatedTo: null,
     createdAt: new Date(NOW),
+    updatedAt: new Date(NOW),
 })
 
 /** The approve verdict of Anh Minh. */

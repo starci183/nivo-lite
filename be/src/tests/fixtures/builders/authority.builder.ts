@@ -18,6 +18,7 @@ export const entityOf = builder<AuthorityEntity>({
     demoSeededAt: null,
     updatedBy: "An",
     updatedAt: new Date("2026-10-12T10:00:00.000Z"),
+    createdAt: new Date("2026-10-12T10:00:00.000Z"),
 })
 
 /** The stored sheet with a revenue goal of five million. */

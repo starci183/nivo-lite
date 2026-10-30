@@ -1,20 +1,12 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
+import { numeric } from "./numeric-column.mapper"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import type { ApprovalPolicy, RuleMode, RuleUnit } from "../../authority-rules.contracts"
 
-/** Reads a bigint or numeric column as the number the contracts carry, and writes it as it is. */
-const numeric = {
-    to: (value: number | null): number | null => value,
-    from: (value: string | null): number | null => (value === null ? null : Number(value)),
-}
-
 @Entity({ schema: "public", name: "authority_rules" })
 /** What the owner granted one action of a department: its mode, bands, approvers and the agents it applies to. */
-export class AuthorityRuleEntity {
-    /** The rule id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AuthorityRuleEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -42,10 +34,6 @@ export class AuthorityRuleEntity {
     /** A note on the rule. */
     @Column({ name: "note", type: "text", default: () => "''::text" })
     note!: string
-
-    /** When the rule was saved last. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** What the amount is counted in. */
     @Column({ name: "unit", type: "text", default: () => "'vnd'::text" })

@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "api_keys" })
 /** A workspace API key, stored by its hash; an agent key is bound to one agent and carries only the agent scopes. */
-export class ApiKeyEntity {
-    /** The key id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ApiKeyEntity extends UuidAbstractEntity {
     /** The workspace that owns the key. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -36,10 +33,6 @@ export class ApiKeyEntity {
     /** The user who created the key, or null. */
     @Column({ name: "created_by", type: "uuid", nullable: true })
     createdBy!: string | null
-
-    /** When the key was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When the key was last used, or null. */
     @Column({ name: "last_used_at", type: "timestamptz", nullable: true })

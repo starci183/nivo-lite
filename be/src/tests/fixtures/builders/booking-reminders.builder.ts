@@ -33,6 +33,7 @@ export const reminderOf = builder<BookingReminderEntity>({
     note: "",
     sentAt: null,
     createdAt: new Date(NOW),
+    updatedAt: new Date(NOW),
 })
 
 /** The reminder `r2` of booking `b2` in workspace `ws-2`, due at {@link NOW} for the 2-hour offset. */

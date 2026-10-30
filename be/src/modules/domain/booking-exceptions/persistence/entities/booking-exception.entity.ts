@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "booking_exceptions" })
 /** A closing or special opening on a calendar date. */
-export class BookingExceptionEntity {
-    /** The exception id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class BookingExceptionEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

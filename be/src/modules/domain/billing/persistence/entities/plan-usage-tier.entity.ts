@@ -1,3 +1,4 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 /** Reads a bigint column as the number the contracts carry, and writes it as it is. */
@@ -8,7 +9,7 @@ const numeric = {
 
 @Entity({ schema: "public", name: "plan_usage_tiers" })
 /** One usage tier of a plan: a monthly credit allowance and its price. */
-export class PlanUsageTierEntity {
+export class PlanUsageTierEntity extends AbstractEntity {
     /** The plan the tier belongs to. */
     @PrimaryColumn({ name: "plan_code", type: "text" })
     planCode!: string

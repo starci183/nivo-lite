@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "agent_conversations" })
 /** One conversation of an agent: a customer's on a channel, or an owner's test chat. */
-export class AgentConversationEntity {
-    /** The conversation id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AgentConversationEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -26,10 +23,6 @@ export class AgentConversationEntity {
     /** The lead the customer became. */
     @Column({ name: "lead_id", type: "uuid", nullable: true })
     leadId!: string | null
-
-    /** When the conversation began. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The person who holds the conversation, or null while the agent answers. */
     @Column({ name: "handled_by", type: "text", nullable: true })

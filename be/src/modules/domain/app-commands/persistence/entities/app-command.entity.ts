@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "app_commands" })
 /** One ask of the web app, queued for the back end, with its outcome. */
-export class AppCommandEntity {
-    /** The command id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AppCommandEntity extends UuidAbstractEntity {
     /** The workspace it concerns. */
     @Column({ name: "workspace_id", type: "uuid", nullable: true })
     workspaceId!: string | null
@@ -34,10 +31,6 @@ export class AppCommandEntity {
     /** The code the web app shows for a failed command. */
     @Column({ name: "error_code", type: "text", nullable: true })
     errorCode!: string | null
-
-    /** When the command was queued. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When the command ended. */
     @Column({ name: "finished_at", type: "timestamptz", nullable: true })

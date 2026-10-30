@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { BankFeedProvider, FeedReceiptPayload } from "../../bank-feed-inbox.contracts"
 
 @Entity({ schema: "public", name: "bank_feed_inbox" })
 /** A durable receipt of one provider delivery. */
-export class BankFeedInboxEntity {
-    /** The receipt id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class BankFeedInboxEntity extends UuidAbstractEntity {
     /** The provider that delivered. */
     @Column({ name: "provider", type: "text" })
     provider!: BankFeedProvider

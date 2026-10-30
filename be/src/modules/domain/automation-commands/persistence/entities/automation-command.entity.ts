@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "automation_commands" })
 /** A command a manager screen queued for the back end, with its outcome. */
-export class AutomationCommandEntity {
-    /** The command id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AutomationCommandEntity extends UuidAbstractEntity {
     /** The workspace the manager acts in. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -34,10 +31,6 @@ export class AutomationCommandEntity {
     /** The manager who asked. */
     @Column({ name: "created_by", type: "uuid" })
     createdBy!: string
-
-    /** When the command was queued. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When the command ended. */
     @Column({ name: "finished_at", type: "timestamptz", nullable: true })

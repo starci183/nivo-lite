@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "authority" })
 /** The owner goals and house rules of one workspace. */
-export class AuthorityEntity {
+export class AuthorityEntity extends AbstractEntity {
     /** The workspace. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -46,8 +47,4 @@ export class AuthorityEntity {
     /** Who saved it last. */
     @Column({ name: "updated_by", type: "text", nullable: true })
     updatedBy!: string | null
-
-    /** When it was saved last. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

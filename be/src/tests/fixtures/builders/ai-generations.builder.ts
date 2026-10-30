@@ -19,6 +19,7 @@ export const generationRow = entityRowBuilder<AiGenerationEntity>({
     usage: null,
     createdAt: new Date("2026-10-12T10:00:00.000Z"),
     finishedAt: null,
+    updatedAt: new Date("2026-10-12T10:00:00.000Z"),
 })
 
 /** What a lookup of a generation by id and workspace asks of the database. */

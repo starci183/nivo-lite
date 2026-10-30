@@ -7,8 +7,6 @@ import { BookingSettingsService } from "./booking-settings.service"
 import { Not } from "typeorm"
 import { BookingSettingEntity } from "./persistence/entities"
 
-const UPDATED_AT = "2026-10-12T10:00:00.000Z"
-
 const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
     const moduleRef = await Test.createTestingModule({
         providers: [BookingSettingsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
@@ -35,7 +33,6 @@ describe("BookingSettingsService", () => {
                 handoffOrder: false,
                 address: "1 Le Loi",
                 timezone: "Asia/Ho_Chi_Minh",
-                updatedAt: UPDATED_AT,
             })
 
             expect(saved).toEqual([{ id: "ws-1" }])
@@ -55,7 +52,6 @@ describe("BookingSettingsService", () => {
                         handoffOrder: false,
                         address: "1 Le Loi",
                         timezone: "Asia/Ho_Chi_Minh",
-                        updatedAt: new Date(UPDATED_AT),
                     },
                     ["workspaceId"],
                 ],
@@ -104,7 +100,6 @@ describe("BookingSettingsService", () => {
                     enabled: true,
                     slug: null,
                     note: "Book online",
-                    updatedAt: UPDATED_AT,
                 }),
             ).resolves.toEqual([{ id: "ws-1" }])
             expect(em.upsert.mock.calls).toEqual([[BookingSettingEntity, PUBLIC_PAGE_UPSERT_ROW, ["workspaceId"]]])

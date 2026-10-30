@@ -1,15 +1,12 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 /** Where a generation stands; the table holds it under a CHECK. */
 export type AiGenerationStatus = "queued" | "running" | "done" | "error" | "cancelled"
 
 @Entity({ schema: "public", name: "ai_generations" })
 /** One text the app asked OpenClaw to write: the prompt, the answer and the metering of public.ai_generations. */
-export class AiGenerationEntity {
-    /** The generation. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AiGenerationEntity extends UuidAbstractEntity {
     /** The workspace that asked. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -49,10 +46,6 @@ export class AiGenerationEntity {
     /** The usage the run reported. */
     @Column({ name: "usage", type: "jsonb", nullable: true })
     usage!: object | null
-
-    /** Creation instant. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** Completion instant. */
     @Column({ name: "finished_at", type: "timestamptz", nullable: true })

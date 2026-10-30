@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { RunPayload, RunStatus, RunStep } from "../../automation-runs.contracts"
 
 @Entity({ schema: "public", name: "automation_runs" })
 /** One run of a pipeline, unique per pipeline and dedupe key. */
-export class AutomationRunEntity {
-    /** The run id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AutomationRunEntity extends UuidAbstractEntity {
     /** The pipeline. */
     @Column({ name: "pipeline_id", type: "uuid" })
     pipelineId!: string
@@ -51,10 +48,6 @@ export class AutomationRunEntity {
     /** When the run is due. */
     @Column({ name: "run_at", type: "timestamptz", default: () => "now()" })
     runAt!: Date
-
-    /** When the run was recorded. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** When the run ended. */
     @Column({ name: "finished_at", type: "timestamptz", nullable: true })

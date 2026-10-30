@@ -22,6 +22,7 @@ export const conversationOf = builder<AgentConversationEntity>({
     connectorPartyId: null,
     connectorPartyName: null,
     connectorPartyAt: null,
+    updatedAt: new Date("2026-10-13T02:00:00.000Z"),
 })
 
 /** The conversation of the customer 555 on the connection c-1. */

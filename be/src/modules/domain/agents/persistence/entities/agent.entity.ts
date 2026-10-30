@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "agents" })
 /** One agent of a workspace: the persona a department speaks through, with who answers for it. */
-export class AgentEntity {
-    /** The agent id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AgentEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -50,10 +47,6 @@ export class AgentEntity {
     /** Whether the agent is active or paused. */
     @Column({ name: "status", type: "text", default: () => "'active'::text" })
     status!: "active" | "paused"
-
-    /** When the agent was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The member in charge, or null for a legacy agent of an ownerless workspace. */
     @Column({ name: "owner_member_id", type: "uuid", nullable: true })

@@ -1,14 +1,10 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
-
-/** Reads a bigint column as the number the contracts carry, and writes it as it is. */
-const numeric = {
-    to: (value: number | null): number | null => value,
-    from: (value: string | null): number | null => (value === null ? null : Number(value)),
-}
+import { numeric } from "./numeric-column.mapper"
 
 @Entity({ schema: "public", name: "plans" })
 /** One plan of the catalogue: its price, period, seats, allowances and the lists that describe it. */
-export class PlanEntity {
+export class PlanEntity extends AbstractEntity {
     /** The plan code. */
     @PrimaryColumn({ name: "code", type: "text" })
     code!: string

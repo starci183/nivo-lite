@@ -19,6 +19,7 @@ export const serviceRowOf = builder<BookingServiceEntity>({
     active: true,
     sortOrder: 0,
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 })
 
 /** The catalogue service `s-1`, named Cut. */

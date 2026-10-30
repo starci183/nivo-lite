@@ -20,6 +20,7 @@ const waitlistRowOf = builder<BookingWaitlistEntity>({
     notifiedAt: null,
     note: "",
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 })
 
 /** A customer still waiting for a window. */

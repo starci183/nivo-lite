@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "booking_services" })
 /** A service a workspace offers for booking. */
-export class BookingServiceEntity {
-    /** The service id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class BookingServiceEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -46,8 +43,4 @@ export class BookingServiceEntity {
     /** The display order. */
     @Column({ name: "sort_order", type: "integer", default: () => "0" })
     sortOrder!: number
-
-    /** When it was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

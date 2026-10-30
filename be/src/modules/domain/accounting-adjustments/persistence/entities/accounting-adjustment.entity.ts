@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "accounting_adjustments" })
 /** An append-only correction attached to a workspace invoice or bank payment. */
-export class AccountingAdjustmentEntity {
-    /** The correction id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AccountingAdjustmentEntity extends UuidAbstractEntity {
     /** The workspace that owns the correction. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -34,8 +31,4 @@ export class AccountingAdjustmentEntity {
     /** The authenticated database user that appended the correction, when there is one. */
     @Column({ name: "created_by_user", type: "uuid", nullable: true, default: () => "auth.uid()" })
     createdByUser!: string | null
-
-    /** The append time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "agent_messages" })
 /** One message of a conversation between a customer and an agent: what a person wrote, what the agent answered, or a workbench line. */
-export class AgentMessageEntity {
-    /** The message id; an approved answer uses its work item id so retries reuse one message. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AgentMessageEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -22,10 +19,6 @@ export class AgentMessageEntity {
     /** What was said. */
     @Column({ name: "body", type: "text" })
     body!: string
-
-    /** When it was stored. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** Whether an agent message was written by the model (ai) or a person (human). */
     @Column({ name: "author_kind", type: "text", nullable: true })

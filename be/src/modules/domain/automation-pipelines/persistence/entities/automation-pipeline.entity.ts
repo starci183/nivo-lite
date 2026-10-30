@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { PipelineConfig } from "../../automation-pipelines.contracts"
 
 @Entity({ schema: "public", name: "automation_pipelines" })
 /** One automation template switched on, off or hidden in one workspace. */
-export class AutomationPipelineEntity {
-    /** The pipeline id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AutomationPipelineEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -67,12 +64,4 @@ export class AutomationPipelineEntity {
     /** The member that created it. */
     @Column({ name: "created_by", type: "uuid", nullable: true })
     createdBy!: string | null
-
-    /** When created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

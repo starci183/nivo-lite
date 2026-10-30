@@ -18,6 +18,7 @@ export const messageOf = builder<AgentMessageEntity>({
     deliveryError: null,
     inReplyTo: null,
     authorUserId: null,
+    updatedAt: new Date("2026-10-12T10:00:00.000Z"),
 })
 
 /** The customer's first message, stamped in the +07 offset. */

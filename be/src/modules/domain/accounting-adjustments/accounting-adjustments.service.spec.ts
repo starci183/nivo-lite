@@ -47,6 +47,7 @@ const entityOf = builder<AccountingAdjustmentEntity>({
     createdBy: "Lan",
     createdByUser: null,
     createdAt: new Date("2026-10-12T10:00:00Z"),
+    updatedAt: new Date("2026-10-12T10:00:00Z"),
 })
 
 const invoiceOf = builder<InvoiceRow>({

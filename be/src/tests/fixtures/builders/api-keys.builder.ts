@@ -17,6 +17,7 @@ export const keyOf = builder<ApiKeyEntity>({
     lastUsedAt: null,
     revokedAt: null,
     agentId: null,
+    updatedAt: new Date("2026-10-12T10:00:00.000Z"),
 })
 
 /** The public view of {@link keyOf}. */

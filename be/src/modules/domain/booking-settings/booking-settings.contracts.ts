@@ -27,8 +27,6 @@ export interface SaveBookingSettingsPolicyParams {
     readonly address: string
     /** A supported IANA time zone. */
     readonly timezone: string
-    /** The instant recorded for this settings change. */
-    readonly updatedAt: string
 }
 
 /** Publishing values validated by the application operation that saves them. */
@@ -41,8 +39,6 @@ export interface SaveBookingSettingsPublicPageParams {
     readonly slug: BookingSettingsPublicSlug
     /** The note displayed to customers. */
     readonly note: string
-    /** The instant recorded for this settings change. */
-    readonly updatedAt: string
 }
 
 /** The workspace whose booking settings were found or changed. */

@@ -23,6 +23,7 @@ export const runOf = builder<AutomationRunEntity>({
     runAt: new Date(RUN_MOMENT),
     createdAt: new Date(RUN_MOMENT),
     finishedAt: null,
+    updatedAt: new Date(RUN_MOMENT),
 })
 
 /** A second queued run, id `r-2`. */

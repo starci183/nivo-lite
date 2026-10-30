@@ -22,6 +22,7 @@ const commandOf = builder<AppCommandEntity>({
     errorCode: null,
     createdAt: new Date("2026-10-12T10:00:00Z"),
     finishedAt: null,
+    updatedAt: new Date("2026-10-12T10:00:00Z"),
 })
 
 const OPEN = { id: "command-1", state: In(["queued", "running"]) }

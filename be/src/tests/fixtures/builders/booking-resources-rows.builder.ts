@@ -15,6 +15,7 @@ const resourceRowOf = builder<BookingResourceEntity>({
     staffId: null,
     sortOrder: 0,
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 })
 
 /** A named resource of the workspace. */

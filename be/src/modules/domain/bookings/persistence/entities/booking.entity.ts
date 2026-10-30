@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { BookingStatus } from "../../bookings.contracts"
 
 @Entity({ schema: "public", name: "bookings" })
 /** One appointment of a customer for a service on a resource. */
-export class BookingEntity {
-    /** The booking id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class BookingEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -127,14 +124,6 @@ export class BookingEntity {
     /** The key that makes a repeated request answer the same booking, or null. */
     @Column({ name: "idempotency_key", type: "text", nullable: true })
     idempotencyKey!: string | null
-
-    /** When the booking was made. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** When the booking last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** The booking agent instance, filled by a trigger when the insert leaves it empty. */
     @Column({ name: "installation_id", type: "uuid", nullable: true })

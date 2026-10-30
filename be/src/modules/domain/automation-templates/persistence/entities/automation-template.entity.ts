@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "automation_templates" })
 /** One ready-made automation of the catalogue. */
-export class AutomationTemplateEntity {
+export class AutomationTemplateEntity extends AbstractEntity {
     /** The template key. */
     @PrimaryColumn({ name: "key", type: "text" })
     key!: string
@@ -26,10 +27,6 @@ export class AutomationTemplateEntity {
     /** The definition as stored, checked before it is used. */
     @Column({ name: "definition", type: "jsonb" })
     definition!: unknown
-
-    /** When the row last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** The gallery order. */
     @Column({ name: "position", type: "integer", default: () => "0" })

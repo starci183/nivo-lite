@@ -26,6 +26,7 @@ export const agentEntityOf = builder<AgentEntity>({
     assignableRooms: [],
     canTagAgentIds: [],
     avatarUrl: null,
+    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 })
 
 /** An installation of the agents spec workspace, driven by agent a1. */

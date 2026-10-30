@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "booking_settings" })
 /** The booking policy and public page of one workspace. */
-export class BookingSettingEntity {
+export class BookingSettingEntity extends AbstractEntity {
     /** The workspace. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -66,8 +67,4 @@ export class BookingSettingEntity {
     /** The address of the shop. */
     @Column({ name: "address", type: "text", default: () => "''::text" })
     address!: string
-
-    /** When the settings last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

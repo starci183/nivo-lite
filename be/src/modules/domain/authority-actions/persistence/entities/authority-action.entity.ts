@@ -1,9 +1,10 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryColumn } from "typeorm"
 import type { AuthorityActionLabel } from "../../authority-actions.contracts"
 
 @Entity({ schema: "public", name: "authority_actions" })
 /** One action of the authority catalogue. */
-export class AuthorityActionEntity {
+export class AuthorityActionEntity extends AbstractEntity {
     /** The stable action key. */
     @PrimaryColumn({ name: "action", type: "text" })
     action!: string

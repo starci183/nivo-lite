@@ -1,28 +1,20 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
+import { numeric } from "./numeric-column.mapper"
 import type { ApprovalPolicy, RuleUnit } from "@modules/domain/authority-rules"
 import type { ApproverRef } from "@modules/domain/member-grants"
 import type { ApprovalExclusion, ApprovalStatus, ApprovalVerdictRecord } from "../../approval-requests.contracts"
 
-/** Reads a numeric column as the number the contracts carry, and writes it as it is. */
-const numeric = {
-    to: (value: number | null): number | null => value,
-    from: (value: string | null): number | null => (value === null ? null : Number(value)),
-}
-
 @Entity({ schema: "public", name: "approval_requests" })
 /** One request for approval of one chain step, with the verdicts members gave it; the single row every verdict locks. */
-export class ApprovalRequestEntity {
-    /** The request. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
+export class ApprovalRequestEntity extends UuidAbstractEntity {
+    /** The chain step it asks about; a step has at most one pending request. */
+    @Column({ name: "chain_step_id", type: "uuid" })
+    chainStepId!: string
 
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
-
-    /** The chain step it asks about; a step has at most one pending request. */
-    @Column({ name: "chain_step_id", type: "uuid" })
-    chainStepId!: string
 
     /** The module of the action. */
     @Column({ name: "department", type: "text" })
@@ -87,8 +79,4 @@ export class ApprovalRequestEntity {
     /** The member it went to when it expired, or null. */
     @Column({ name: "escalated_to", type: "uuid", nullable: true })
     escalatedTo!: string | null
-
-    /** When it opened. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }
