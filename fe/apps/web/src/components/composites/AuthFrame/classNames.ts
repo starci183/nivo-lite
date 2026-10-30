@@ -14,18 +14,18 @@ export const AUTH_GROUND_CLASS_NAME = cn(
     "rounded-br-[3rem]",
     "[&_img]:w-full",
 )
-/** The scene over the ground: centred and scaled to the half, clear of the logo above and the copy below (SURFACE-6 case-1, aria-hidden). */
+/** The scene inside the ground: clear of the logo above, held inside the pink block so the unicorn never hangs past it (SURFACE-6 case-1). */
 export const AUTH_ART_CLASS_NAME = cn(
     "absolute",
     "inset-x-8",
     "top-24",
-    "bottom-40",
-    "-z-10",
+    "bottom-8",
     "flex",
     "items-center",
     "justify-center",
     "[&>*]:h-full",
-    "[&>*]:w-full",
+    "[&>*]:w-auto",
+    "[&>*]:max-w-full",
     "[&_img]:h-full",
     "[&_img]:w-full",
 )

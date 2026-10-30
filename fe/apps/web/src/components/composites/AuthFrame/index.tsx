@@ -39,16 +39,16 @@ export const AuthFrame = (props: AuthFrameProps) => (
                 <div className={AUTH_ART_PANE_CLASS_NAME}>
                     <div className={AUTH_GROUND_CLASS_NAME} aria-hidden="true">
                         <Image src="/images/entry/login-ground.png" alt="" aspect="auto" fit="cover" plate="none" />
-                    </div>
-                    <div className={AUTH_ART_CLASS_NAME} aria-hidden="true">
-                        <Image
-                            src="/images/entry/login-mascot.webp"
-                            alt=""
-                            aspect="auto"
-                            fit="contain"
-                            plate="none"
-                            loading="eager"
-                        />
+                        <div className={AUTH_ART_CLASS_NAME}>
+                            <Image
+                                src="/images/entry/login-mascot.webp"
+                                alt=""
+                                aspect="portrait"
+                                fit="contain"
+                                plate="none"
+                                loading="eager"
+                            />
+                        </div>
                     </div>
                     <div className={AUTH_ART_COPY_CLASS_NAME}>
                         {props.logo}
