@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./object-storage.module-definition"
-import { S3StorageClient } from "./object-storage.client"
+import { S3StorageClient } from "./storage.client"
 import {
     S3_CLIENT,
     STORAGE_ASSETS,
@@ -9,7 +9,7 @@ import {
     STORAGE_OBJECTS,
     STORAGE_OPTIONS,
     STORAGE_SIGNER,
-} from "./object-storage.decorators"
+} from "./storage.decorators"
 import { createS3Client, createStorageSigner } from "./s3.client"
 import { StorageAssetsService } from "./object-storage-assets.service"
 import { StorageBootstrapService } from "./object-storage-bootstrap.service"

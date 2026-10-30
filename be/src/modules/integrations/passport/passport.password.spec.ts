@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { PASSPORT_PASSWORDS_OPTIONS } from "./passport.decorators"
-import { PassportPasswordsClient } from "./passport-passwords.client"
+import { PassportPasswordsClient } from "./passport.password"
 
 /** The shape every GoTrue user carries: written by Postgres pgcrypto crypt with a blowfish salt of cost 10, an independent bcrypt implementation. */
 const GOTRUE_HASH = "$2a$10$TZfNy6XYihhRMeWbe1wgl.OPgdstCtb8vpneNfP.ahBaA6pfLnRGO"

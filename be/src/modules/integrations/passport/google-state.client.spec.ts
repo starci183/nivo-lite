@@ -5,7 +5,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { IDS } from "@modules/platform/ids"
 import { GOOGLE_STATE_COOKIE, GoogleStateClient } from "./google-state.client"
 import { PASSPORT_OPTIONS, PASSPORT_TOKENS } from "./passport.decorators"
-import type { PassportTokensClient } from "./passport-tokens.client"
+import type { PassportTokensClient } from "./passport.tokens"
 
 const NOW = new Date("2026-11-09T10:00:00.000Z")
 const SIGNED = "signed-state-cookie"

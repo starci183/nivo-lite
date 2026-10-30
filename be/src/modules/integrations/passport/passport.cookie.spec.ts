@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { cookieValue } from "./cookie-read.policy"
+import { cookieValue } from "./passport.cookie"
 
-const SUBJECT = Symbol("cookie-read.policy")
+const SUBJECT = Symbol("passport.cookie")
 type Subject = { cookieValue: typeof cookieValue }
 
 const build = async () => {

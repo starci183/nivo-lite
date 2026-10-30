@@ -4,8 +4,8 @@ import type { GoogleStateClient } from "./google-state.client"
 import type { PassportAuthenticator } from "./passport.contracts"
 import type { PasswordsOptions, PassportOptions } from "./passport.options"
 import type { PassportFlowsService } from "./passport-flows.service"
-import type { PassportPasswordsClient } from "./passport-passwords.client"
-import type { PassportTokensClient } from "./passport-tokens.client"
+import type { PassportPasswordsClient } from "./passport.password"
+import type { PassportTokensClient } from "./passport.tokens"
 
 /** Token of the options of the passport integration, exported so a spec can provide it. */
 export const PASSPORT_OPTIONS: unique symbol = Symbol("integrations.passport.options")

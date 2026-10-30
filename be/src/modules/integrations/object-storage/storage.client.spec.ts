@@ -3,9 +3,9 @@ import { mock } from "@starci/jest-preset"
 import { Secret } from "@modules/platform/config"
 import { isRecord } from "@modules/platform/primitives"
 import { ObjectStorageError, ObjectStorageErrorCode } from "./errors/object-storage.error"
-import { S3StorageClient } from "./object-storage.client"
-import { S3_CLIENT, STORAGE_OPTIONS, STORAGE_SIGNER } from "./object-storage.decorators"
-import type { ObjectStorageOptions } from "./object-storage.options"
+import { S3StorageClient } from "./storage.client"
+import { S3_CLIENT, STORAGE_OPTIONS, STORAGE_SIGNER } from "./storage.decorators"
+import type { ObjectStorageOptions } from "./storage.options"
 import type { StorageSigner } from "./s3.client"
 
 /** The class of a command; the spec reads its name. */

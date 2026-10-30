@@ -6,8 +6,8 @@ import type { Logger } from "@modules/platform/logging"
 import { fakeStorage } from "@tests/fixtures/doubles/fake-storage.client"
 import type { StorageClient } from "./object-storage.contracts"
 import { StorageObjectsService } from "./object-storage-objects.service"
-import { STORAGE_CLIENT, STORAGE_OPTIONS } from "./object-storage.decorators"
-import type { ObjectStorageOptions } from "./object-storage.options"
+import { STORAGE_CLIENT, STORAGE_OPTIONS } from "./storage.decorators"
+import type { ObjectStorageOptions } from "./storage.options"
 import { MAX_PRESIGN_SECONDS, UPLOAD_URL_SECONDS } from "./object-storage.policy"
 
 const options: ObjectStorageOptions = {

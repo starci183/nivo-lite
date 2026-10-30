@@ -5,7 +5,7 @@ import { Secret } from "@modules/platform/config"
 import { PassportErrorCode } from "./errors/passport.error"
 import { PASSPORT_OPTIONS } from "./passport.decorators"
 import type { PassportOptions } from "./passport.options"
-import { PassportTokensClient } from "./passport-tokens.client"
+import { PassportTokensClient } from "./passport.tokens"
 
 const NOW = new Date("2026-11-09T10:00:00.000Z")
 

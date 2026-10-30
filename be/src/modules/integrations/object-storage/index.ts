@@ -1,5 +1,5 @@
-export { parseObjectStorageConfig } from "./object-storage.config"
-export { InjectStorageObjects, STORAGE_ASSETS, STORAGE_OBJECTS } from "./object-storage.decorators"
+export { parseObjectStorageConfig } from "./storage.config"
+export { InjectStorageObjects, STORAGE_ASSETS, STORAGE_OBJECTS } from "./storage.decorators"
 export type { StorageObjectsPort } from "./object-storage.port"
 export { OBJECT_STORAGE_ERROR_KINDS } from "./errors/object-storage.error"
 export { StorageBootstrapService } from "./object-storage-bootstrap.service"
