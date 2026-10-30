@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { AutomationOrderFigures, AutomationOrderRead, OptionalAutomationOrderRead } from "./orders-automation-read.contracts"
+import type {
+    AutomationOrderFigures,
+    AutomationOrderRead,
+    OptionalAutomationOrderRead,
+} from "./orders-automation-read.contracts"
 import { OrderEntity } from "./persistence/entities"
 
 @Injectable()

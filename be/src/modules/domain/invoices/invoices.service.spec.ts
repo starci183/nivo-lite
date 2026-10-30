@@ -205,7 +205,6 @@ describe("InvoicesService lists", () => {
         expect(fakes.map((fake) => fake.callsOf("limit"))).toEqual([[[1000]], [[25]]])
         expect(fakes[0]?.callsOf("orderBy")).toEqual([["i.created_at", "DESC"]])
     })
-
 })
 
 describe("InvoicesService reconciliation lists", () => {
@@ -260,7 +259,13 @@ describe("InvoicesService reconciliation lists", () => {
         const [blank, none] = await service.listForReconcile(WS, ["inv-1", "inv-2"])
 
         expect(blank).toMatchObject({ company: null, order_items: null, customer: "Minh", order_no: "ORDER-1" })
-        expect(none).toMatchObject({ customer: null, company: null, order_no: null, order_items: null, order_status: null })
+        expect(none).toMatchObject({
+            customer: null,
+            company: null,
+            order_no: null,
+            order_items: null,
+            order_status: null,
+        })
     })
 })
 

@@ -57,4 +57,3 @@ export const writtenOf = (row: SalesOrderRow) => ({
 
 /** The customer card the leads owner answers for lead-1. */
 export const MINH = { id: "lead-1", contactName: "Minh", company: "Tea Co", channel: "web", stage: "new", email: null }
-

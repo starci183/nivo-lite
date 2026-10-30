@@ -73,7 +73,6 @@ describe("ContextVersionsService", () => {
 
         await expect((await build(em)).find("missing")).resolves.toBeNull()
     })
-
 })
 
 describe("ContextVersionsService > numbers and newest", () => {

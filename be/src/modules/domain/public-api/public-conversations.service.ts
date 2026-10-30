@@ -26,7 +26,11 @@ export class PublicConversationsService {
     }
 
     /** The latest customer conversation of a customer. */
-    async ofLead(workspaceId: string, leadId: string, manager: EntityManager): Promise<PublicConversationRef | undefined> {
+    async ofLead(
+        workspaceId: string,
+        leadId: string,
+        manager: EntityManager,
+    ): Promise<PublicConversationRef | undefined> {
         const chat = await this.chats.latestCustomerChatOfLead(workspaceId, leadId, manager)
         return chat === null ? undefined : { id: chat.id, lead_id: chat.leadId }
     }

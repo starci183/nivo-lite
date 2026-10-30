@@ -10,7 +10,12 @@ const hasId = (row: unknown): row is BookingServiceSaved =>
 
 /** The ids a statement with `returning id` hands back. */
 const savedOf = (raw: unknown): Array<BookingServiceSaved> =>
-    Array.isArray(raw) ? raw.filter(hasId).slice(0, 1).map((row) => ({ id: row.id })) : []
+    Array.isArray(raw)
+        ? raw
+              .filter(hasId)
+              .slice(0, 1)
+              .map((row) => ({ id: row.id }))
+        : []
 
 @Injectable()
 /** Owns service catalogue persistence; the caller proves its membership and validates the supplied fields. */

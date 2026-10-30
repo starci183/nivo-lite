@@ -131,8 +131,7 @@ export class BookingSetupService {
         const kind = text(params.kind, 40) || "staff"
         ensure(whole(params.capacity, 1, 200) && typeof params.active === "boolean")
         return this.entityManager.transaction(async (manager) => {
-            if (params.staffId !== null)
-                this.saved(await this.resources.lockStaff(params.workspaceId, params.staffId))
+            if (params.staffId !== null) this.saved(await this.resources.lockStaff(params.workspaceId, params.staffId))
             const saved = this.saved(await this.resources.save({ ...params, name, kind }, manager), params.id === null)
             if (params.id === null) await this.hours.defaults(params.workspaceId, saved.id, manager)
             return saved

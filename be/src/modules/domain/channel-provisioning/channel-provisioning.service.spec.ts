@@ -53,11 +53,7 @@ const scenarioOf = (
     }
 }
 
-
-const build = async (
-    overrides: Partial<ChannelProvisioningOptions> = {},
-    scenario: Scenario = scenarioOf(),
-) => {
+const build = async (overrides: Partial<ChannelProvisioningOptions> = {}, scenario: Scenario = scenarioOf()) => {
     const channels = mock<ChannelConnectionsService>()
     channels.connectTelegram.mockResolvedValue({
         connection: TELEGRAM,

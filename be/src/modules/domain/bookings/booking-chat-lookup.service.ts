@@ -2,7 +2,11 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ChatBookingRef, OptionalCancellableBooking, OptionalBookingInstallationId } from "./booking-chat.contracts"
+import type {
+    ChatBookingRef,
+    OptionalCancellableBooking,
+    OptionalBookingInstallationId,
+} from "./booking-chat.contracts"
 import type { CancellableRowFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
 import { cancellableOf } from "./policies/cancellable.policy"

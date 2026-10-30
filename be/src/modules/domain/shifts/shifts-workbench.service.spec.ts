@@ -196,7 +196,10 @@ describe("ShiftsWorkbenchService", () => {
                     }),
                 ],
                 leaves: [leaveEntity(unlinkedLeaveRow()), leaveEntity(orphanLeaveRow(), missing)],
-                swaps: [swapEntity(noticeSwapRow()), Object.assign(swapEntity(orphanSwapRow(), missing), { checks: "stray" })],
+                swaps: [
+                    swapEntity(noticeSwapRow()),
+                    Object.assign(swapEntity(orphanSwapRow(), missing), { checks: "stray" }),
+                ],
                 availability: [availabilityEntity(availabilityRowOf(), missing)],
                 attendance: [attendanceEntity(nullDates ? null : new Date("2026-10-14T00:55:00.000Z"))],
                 shifts: [shiftEntity(strayShiftRow())],

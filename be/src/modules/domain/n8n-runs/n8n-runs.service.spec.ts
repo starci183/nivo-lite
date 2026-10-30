@@ -173,7 +173,6 @@ describe("N8nRunsService startRun", () => {
     })
 })
 
-
 describe("N8nRunsService deliver", () => {
     it("posts the run to n8n with the instant of the delivery", async () => {
         const { runs, n8n } = await build(mockEntityManager())
@@ -228,7 +227,6 @@ describe("N8nRunsService deliver", () => {
         ])
     })
 })
-
 
 describe("N8nRunsService verifyRun", () => {
     const stored = (overrides: Record<string, unknown> = {}) =>
@@ -288,7 +286,6 @@ describe("N8nRunsService verifyRun", () => {
     })
 })
 
-
 describe("N8nRunsService verifyRun refusals", () => {
     const stored = (overrides: Record<string, unknown> = {}) =>
         Object.assign(new N8nRunEntity(), {
@@ -309,9 +306,7 @@ describe("N8nRunsService verifyRun refusals", () => {
     ])("answers none for %s", async (_name, row) => {
         const { runs } = await build(mockEntityManager({ findOne: [N8nRunEntity, row] }))
 
-        await expect(
-            runs.verifyRun({ authorization: `Bearer ${TOKEN}`, expectedRunId: undefined }),
-        ).resolves.toBeNull()
+        await expect(runs.verifyRun({ authorization: `Bearer ${TOKEN}`, expectedRunId: undefined })).resolves.toBeNull()
     })
 })
 
@@ -325,11 +320,7 @@ describe("N8nRunsService completeRun", () => {
         await runs.completeRun(run, { status: "failed", summary: "oops", result: { n: 1 } })
 
         expect(updatesOf(em)).toEqual([
-            [
-                "N8nRunEntity",
-                CLOSING_RUN,
-                { status: "failed", summary: "oops", result: { n: 1 }, finishedAt: "now()" },
-            ],
+            ["N8nRunEntity", CLOSING_RUN, { status: "failed", summary: "oops", result: { n: 1 }, finishedAt: "now()" }],
         ])
     })
 
@@ -372,7 +363,6 @@ describe("N8nRunsService completeRun", () => {
     })
 })
 
-
 describe("N8nRunsService requireWorkflow and requireRun", () => {
     const run: N8nRunContext = { runId: RUN_ID, workspaceId: "ws-1", templateKey: "email-daily-report", config: {} }
 
@@ -392,9 +382,6 @@ describe("N8nRunsService requireWorkflow and requireRun", () => {
         const { runs } = await build(mockEntityManager())
 
         expect(runs.requireRun(run)).toBe(run)
-        expect(thrownBy(() => runs.requireRun(null))).toEqual(
-            objectLike({ code: N8nRunsErrorCode.RunUnauthorized }),
-        )
+        expect(thrownBy(() => runs.requireRun(null))).toEqual(objectLike({ code: N8nRunsErrorCode.RunUnauthorized }))
     })
 })
-

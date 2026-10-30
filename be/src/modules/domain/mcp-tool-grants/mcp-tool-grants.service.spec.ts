@@ -10,7 +10,8 @@ import { McpToolGrantEntity } from "./persistence/entities"
 
 /** Matches the `() => "now()"` function a write hands the database for a time column. */
 const ANY_FUNCTION: unknown = {
-    asymmetricMatch: (value: unknown): boolean => typeof value === "function" && Reflect.apply(value, undefined, []) === "now()",
+    asymmetricMatch: (value: unknown): boolean =>
+        typeof value === "function" && Reflect.apply(value, undefined, []) === "now()",
 }
 
 const grantOf = builder<McpToolGrantView>({ tool: "hakuen.*", mode: "auto", limit_vnd: null, constraints: [] })

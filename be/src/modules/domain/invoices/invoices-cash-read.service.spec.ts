@@ -66,9 +66,7 @@ describe("InvoicesCashReadService", () => {
 
     it("reads the invoiced periods of contracts, skipping rows without a period, and nothing for no contracts", async () => {
         const em = mockEntityManager()
-        queueQueryBuilders(em, [
-            { getMany: [invoiceOf(), undatedInvoiceOf(), uncontractedInvoiceOf()] },
-        ])
+        queueQueryBuilders(em, [{ getMany: [invoiceOf(), undatedInvoiceOf(), uncontractedInvoiceOf()] }])
         const service = await build(em)
 
         await expect(service.invoicedPeriods("ws-1", [])).resolves.toEqual([])

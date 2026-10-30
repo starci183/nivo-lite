@@ -131,9 +131,7 @@ describe("VideoProjectsService > countsOf", () => {
 
         await expect(projects.countsOf("workspace-1")).resolves.toBe(counts)
 
-        expect(fake.callsOf("select")).toEqual([
-            ["count(*) FILTER (WHERE p.status = 'rendering')::int", "rendering"],
-        ])
+        expect(fake.callsOf("select")).toEqual([["count(*) FILTER (WHERE p.status = 'rendering')::int", "rendering"]])
         expect(fake.callsOf("addSelect").map(([, alias]) => alias)).toEqual([
             "scripting",
             "readyToPublish",
@@ -143,7 +141,6 @@ describe("VideoProjectsService > countsOf", () => {
         expect(fake.callsOf("where")).toEqual([["p.workspace_id = :workspaceId", { workspaceId: "workspace-1" }]])
     })
 })
-
 
 describe("VideoProjectsService > titlesOfRenders", () => {
     it("titles each render by the newest project that holds it", async () => {
@@ -156,19 +153,14 @@ describe("VideoProjectsService > titlesOfRenders", () => {
         })
         const projects = await build(manager)
 
-        await expect(
-            projects.titlesOfRenders("workspace-1", ["render-1", "render-2", "render-1"]),
-        ).resolves.toEqual([
+        await expect(projects.titlesOfRenders("workspace-1", ["render-1", "render-2", "render-1"])).resolves.toEqual([
             { renderId: "render-2", title: "Newest" },
             { renderId: "render-1", title: "Newest" },
         ])
 
         expect(fake.callsOf("where")).toEqual([["p.workspace_id = :workspaceId", { workspaceId: "workspace-1" }]])
         expect(fake.callsOf("andWhere")).toEqual([
-            [
-                "(p.render_id = ANY(:ids::uuid[]) OR p.render_ids && :ids::uuid[])",
-                { ids: ["render-1", "render-2"] },
-            ],
+            ["(p.render_id = ANY(:ids::uuid[]) OR p.render_ids && :ids::uuid[])", { ids: ["render-1", "render-2"] }],
         ])
         expect(fake.callsOf("orderBy")).toEqual([["p.updated_at", "DESC"]])
         expect(fake.callsOf("limit")).toEqual([[500]])

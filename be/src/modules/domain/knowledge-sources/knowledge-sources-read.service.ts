@@ -83,7 +83,10 @@ export class KnowledgeSourcesReadService {
             .select("s.id", "id")
             .addSelect("s.title", "title")
             .addSelect("s.topic", "topic")
-            .addSelect(String.raw`left(regexp_replace(s.content, '\s+', ' ', 'g'), CAST(:excerptChars AS integer))`, "excerpt")
+            .addSelect(
+                String.raw`left(regexp_replace(s.content, '\s+', ' ', 'g'), CAST(:excerptChars AS integer))`,
+                "excerpt",
+            )
             .setParameter("excerptChars", excerptChars)
             .orderBy("s.created_at", "DESC")
             .limit(limit)

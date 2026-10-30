@@ -42,7 +42,13 @@ export class AutomationsModule extends ConfigurableModuleClass {
                 AutomationTickService,
                 AutomationReactionsService,
             ],
-            exports: [AutomationsService, AutomationReactionsService, AutomationEngineService, AutomationExtensionsService, AutomationTickService],
+            exports: [
+                AutomationsService,
+                AutomationReactionsService,
+                AutomationEngineService,
+                AutomationExtensionsService,
+                AutomationTickService,
+            ],
         }
     }
 }

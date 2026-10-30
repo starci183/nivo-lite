@@ -2,7 +2,13 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { STEP_FINISHED as FINISHED, STEP_STARTED as STARTED, stepOf, undecidedStepRow, unfinishedStepRow } from "@tests/fixtures/builders/work-chains-history-read.builder"
+import {
+    STEP_FINISHED as FINISHED,
+    STEP_STARTED as STARTED,
+    stepOf,
+    undecidedStepRow,
+    unfinishedStepRow,
+} from "@tests/fixtures/builders/work-chains-history-read.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { CompletedTask } from "./work-chains-history-read.contracts"
 import { WorkChainEntity } from "./persistence/entities"
@@ -39,9 +45,7 @@ describe("WorkChainsHistoryReadService", () => {
 
     it("lists the completed tasks newest first, counting an unfinished step at its start", async () => {
         const em = mockEntityManager()
-        const [fake] = queueQueryBuilders(em, [
-            { getMany: [stepOf(), unfinishedStepRow(), undecidedStepRow()] },
-        ])
+        const [fake] = queueQueryBuilders(em, [{ getMany: [stepOf(), unfinishedStepRow(), undecidedStepRow()] }])
 
         await expect((await build(em)).completedTasks("ws-1", 4, 8)).resolves.toEqual([
             taskOf(),

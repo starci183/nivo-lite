@@ -266,7 +266,9 @@ describe("AutomationPipelinesService trust offer and clock", () => {
     })
 
     it("stores and answers the trust offer instant and stamps the save with the database time", async () => {
-        const { em, fake } = saving(Object.assign(new AutomationPipelineEntity(), { ...ENTITY, trustOfferedAt: new Date(OFFERED) }))
+        const { em, fake } = saving(
+            Object.assign(new AutomationPipelineEntity(), { ...ENTITY, trustOfferedAt: new Date(OFFERED) }),
+        )
 
         await expect(
             (await build(em)).savePipeline("ws-1", "user-1", DEFINITION, { ...WRITE, trustOfferedAt: OFFERED }),

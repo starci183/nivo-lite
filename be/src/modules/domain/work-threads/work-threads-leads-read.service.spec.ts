@@ -7,7 +7,9 @@ import { WorkThreadsLeadsReadService } from "./work-threads-leads-read.service"
 
 describe("WorkThreadsLeadsReadService", () => {
     it("names the customer of each thread, nothing for no threads", async () => {
-        const em = mockEntityManager({ find: [WorkThreadEntity, [workThreadRow(), workThreadRow({ id: "t-2", leadId: null })]] })
+        const em = mockEntityManager({
+            find: [WorkThreadEntity, [workThreadRow(), workThreadRow({ id: "t-2", leadId: null })]],
+        })
         const moduleRef = await Test.createTestingModule({
             providers: [WorkThreadsLeadsReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
         }).compile()

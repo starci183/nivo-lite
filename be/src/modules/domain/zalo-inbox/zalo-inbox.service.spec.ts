@@ -119,7 +119,8 @@ describe("ZaloInboxService deferred effects", () => {
         const [, , set] = tx.em.update.mock.calls[0] ?? []
         expect(stampedValues(set)).toEqual({ processedAt: "function" })
         const processedAt: unknown = Reflect.get(Object(set), "processedAt")
-        const marked: unknown = typeof processedAt === "function" ? Reflect.apply(processedAt, undefined, []) : undefined
+        const marked: unknown =
+            typeof processedAt === "function" ? Reflect.apply(processedAt, undefined, []) : undefined
         expect(marked).toBe("now()")
         expect(tx.commits).toBe(1)
     })

@@ -297,28 +297,31 @@ describe("BookingEffectsService", () => {
         expect(tx.outcomes).toEqual(["commit", "commit"])
     })
 
-    it.each(PUBLIC_CONTACT_CASES)("notifies a public-page booking with lead=$lead_id and email=$customer_email", async (contact) => {
-        const row = rowOf({ ...contact, conversation_id: null })
-        const { service, trace, notices, notifier } = await build([found(row), CLAIMED])
+    it.each(PUBLIC_CONTACT_CASES)(
+        "notifies a public-page booking with lead=$lead_id and email=$customer_email",
+        async (contact) => {
+            const row = rowOf({ ...contact, conversation_id: null })
+            const { service, trace, notices, notifier } = await build([found(row), CLAIMED])
 
-        await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(
-            effectsOf({ reminders: "planned", notified: true }),
-        )
+            await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(
+                effectsOf({ reminders: "planned", notified: true }),
+            )
 
-        expect(notices.factsOf.mock.calls).toEqual([[WORKSPACE, row, settingsOf(), 0]])
-        expect(notices.textOf.mock.calls).toEqual([["confirmed", FACTS]])
-        expect(notices.subjectOf.mock.calls).toEqual([["confirmed", "Cut"]])
-        expect(notifier.notify.mock.calls).toEqual([
-            [
-                noticeOf({
-                    leadId: contact.lead_id,
-                    conversationId: null,
-                    email: contact.customer_email,
-                }),
-            ],
-        ])
-        expect(trace()).toEqual([SELECTED, claimOf("notice:confirmed")])
-    })
+            expect(notices.factsOf.mock.calls).toEqual([[WORKSPACE, row, settingsOf(), 0]])
+            expect(notices.textOf.mock.calls).toEqual([["confirmed", FACTS]])
+            expect(notices.subjectOf.mock.calls).toEqual([["confirmed", "Cut"]])
+            expect(notifier.notify.mock.calls).toEqual([
+                [
+                    noticeOf({
+                        leadId: contact.lead_id,
+                        conversationId: null,
+                        email: contact.customer_email,
+                    }),
+                ],
+            ])
+            expect(trace()).toEqual([SELECTED, claimOf("notice:confirmed")])
+        },
+    )
 
     it.each([true, false])("skips an already claimed notice when conversation exists=%s", async (conversation) => {
         const { service, trace, reminders, notifier, messages, notices } = await build([
@@ -484,15 +487,18 @@ describe("BookingEffectsService", () => {
         expect(tx.outcomes).toEqual(["commit"])
     })
 
-    it.each(SKIPPED_HANDOFF_CASES)("skips hand-off with handoffOrder=$handoffOrder and price=$price", async ({ handoffOrder, price }) => {
-        const { service, trace, inbound, messages } = await build(
-            [found(rowOf({ status: "done", price_vnd: price })), ALREADY_CLAIMED],
-            settingsOf({ handoffOrder }),
-        )
+    it.each(SKIPPED_HANDOFF_CASES)(
+        "skips hand-off with handoffOrder=$handoffOrder and price=$price",
+        async ({ handoffOrder, price }) => {
+            const { service, trace, inbound, messages } = await build(
+                [found(rowOf({ status: "done", price_vnd: price })), ALREADY_CLAIMED],
+                settingsOf({ handoffOrder }),
+            )
 
-        await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(effectsOf({ reminders: "stopped" }))
+            await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(effectsOf({ reminders: "stopped" }))
 
-        expectUntouched(inbound.handOffOrder, messages.get)
-        expect(trace()).toEqual([SELECTED, claimOf("evidence:done")])
-    })
+            expectUntouched(inbound.handOffOrder, messages.get)
+            expect(trace()).toEqual([SELECTED, claimOf("evidence:done")])
+        },
+    )
 })

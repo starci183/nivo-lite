@@ -81,9 +81,7 @@ describe("aiGatewayOf, the gateway", () => {
     it("mounts the api and openclaw virtual keys that are declared, each with its label and profiles", async () => {
         const options = await parse({ OPENROUTER_API_KEY: "k", AI_API_KEY: "api", OPENCLAW_AI_KEY: "claw" })
 
-        expect(
-            options.gateway?.mountedKeys.map((key) => ({ ...key, secret: key.secret.reveal() })),
-        ).toEqual([
+        expect(options.gateway?.mountedKeys.map((key) => ({ ...key, secret: key.secret.reveal() }))).toEqual([
             { label: "nivo_api", secret: "api", profiles: ["work", "embed"] },
             { label: "nivo_openclaw", secret: "claw", profiles: ["work"] },
         ])

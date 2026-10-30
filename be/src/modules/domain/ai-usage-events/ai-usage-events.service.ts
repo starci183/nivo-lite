@@ -111,7 +111,11 @@ export class AiUsageEventsService {
         const row = await this.entityManager
             .createQueryBuilder(AiUsageEventEntity, "u")
             .select("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
-            .where("u.workspace_id = :workspaceId AND u.module = :module", { workspaceId, module, creditUsd: CREDIT_USD_VALUE })
+            .where("u.workspace_id = :workspaceId AND u.module = :module", {
+                workspaceId,
+                module,
+                creditUsd: CREDIT_USD_VALUE,
+            })
             .andWhere("u.created_at >= now() - CAST(:days AS integer) * interval '1 day'", { days })
             .getRawOne<{ credits: number }>()
         return row?.credits ?? 0

@@ -235,7 +235,6 @@ const registerLeadContacts = () => {
                 expect.objectContaining({ where: [{ workspaceId: "ws-1", email: In(["a@x.com"]) }] }),
             )
         })
-
     })
 }
 

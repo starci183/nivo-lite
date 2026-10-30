@@ -227,11 +227,7 @@ export class InstallationRecordsService {
         settings: InstallationSettings,
     ): Promise<InstallationWrite> {
         return this.write(() =>
-            this.entityManager.update(
-                ModuleInstallationEntity,
-                { id: installationId, workspaceId },
-                { settings },
-            ),
+            this.entityManager.update(ModuleInstallationEntity, { id: installationId, workspaceId }, { settings }),
         )
     }
 

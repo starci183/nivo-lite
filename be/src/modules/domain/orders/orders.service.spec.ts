@@ -160,7 +160,6 @@ const registerReads = () => {
             expect(em.exists).toHaveBeenCalledWith(OrderEntity, { where: { workspaceId: "ws-1", id: "order-1" } })
         })
     })
-
 }
 
 const registerListReads = () => {

@@ -356,7 +356,9 @@ const registerOfferDiscovery = () => {
 const registerOfferProgress = () => {
     it("leaves the mark at the newest source when it is later than now, and posts to Facebook by default", async () => {
         const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
-        const { content, settings, items } = await build(em, { sources: [{ ...SOURCE, changedAt: "2026-10-12T05:00:00.000000Z" }] })
+        const { content, settings, items } = await build(em, {
+            sources: [{ ...SOURCE, changedAt: "2026-10-12T05:00:00.000000Z" }],
+        })
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
 
         await content.runTick({})
@@ -385,7 +387,9 @@ const registerOfferProgress = () => {
 
     it("does nothing when no new source talks about an offer", async () => {
         const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
-        const { content, settings, items } = await build(em, { sources: [{ ...SOURCE, title: "Weather", excerpt: "Sunny" }] })
+        const { content, settings, items } = await build(em, {
+            sources: [{ ...SOURCE, title: "Weather", excerpt: "Sunny" }],
+        })
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
 
         await expect(content.runTick({})).resolves.toEqual([])
@@ -414,7 +418,9 @@ const registerOfferProgress = () => {
 const registerOfferTopics = () => {
     it("matches an offer by its topic too", async () => {
         const em = mockEntityManager({ query: [[INSERT_NOTICE, []]] })
-        const { content, settings, items } = await build(em, { sources: [{ ...SOURCE, title: "News", topic: "Summer sale", excerpt: "x" }] })
+        const { content, settings, items } = await build(em, {
+            sources: [{ ...SOURCE, title: "News", topic: "Summer sale", excerpt: "x" }],
+        })
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
 
         await content.runTick({})

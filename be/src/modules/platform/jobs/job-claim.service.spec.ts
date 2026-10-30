@@ -131,7 +131,10 @@ describe("JobClaimService", () => {
 
         it("re-claims a failed or lapsed job in one update that bumps the token in the store", async () => {
             const manager = mockEntityManager()
-            const [, update] = queueQueryBuilders(manager, [{ execute: { raw: [] } }, { execute: { raw: [CLAIM_ROW] } }])
+            const [, update] = queueQueryBuilders(manager, [
+                { execute: { raw: [] } },
+                { execute: { raw: [CLAIM_ROW] } },
+            ])
             const { claims } = await build(manager)
 
             await expect(claims.claim(CLAIM_PARAMS)).resolves.toEqual(claimed)

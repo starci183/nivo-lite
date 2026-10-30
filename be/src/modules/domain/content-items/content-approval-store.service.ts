@@ -129,6 +129,7 @@ export class ContentApprovalStoreService {
     }
 
     private requireWritten(raw: unknown): void {
-        if (returnedRows(raw, rowShape({ id: "string" })).length === 0) throw new ContentItemsError({ code: ContentItemsErrorCode.WrongStatus })
+        if (returnedRows(raw, rowShape({ id: "string" })).length === 0)
+            throw new ContentItemsError({ code: ContentItemsErrorCode.WrongStatus })
     }
 }

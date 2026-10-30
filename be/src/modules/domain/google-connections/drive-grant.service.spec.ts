@@ -14,7 +14,11 @@ import type { GoogleClient } from "@modules/integrations/google"
 import { DriveGrantService } from "./drive-grant.service"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import { GoogleTokensService } from "./google-tokens.service"
-import { driveTokens as tokens, stored, tokensWithoutRenewal } from "@tests/fixtures/builders/google-connections.builder"
+import {
+    driveTokens as tokens,
+    stored,
+    tokensWithoutRenewal,
+} from "@tests/fixtures/builders/google-connections.builder"
 import { runRealGoogleTokens } from "@tests/fixtures/builders/google-tokens.builder"
 
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }

@@ -248,7 +248,6 @@ describe("AgentSyncService requestFor", () => {
     })
 })
 
-
 describe("AgentSyncService process", () => {
     it("syncs the installation a job names", async () => {
         const { service, bundles } = await build({ previousHash: "old" })
@@ -303,7 +302,6 @@ describe("AgentSyncService process", () => {
         expect(installations.onOpenclaw).toHaveBeenCalledWith(null, 500)
     })
 })
-
 
 describe("AgentSyncService syncInstallation", () => {
     it("skips an installation that is not on OpenClaw unless forced", async () => {
@@ -382,7 +380,6 @@ describe("AgentSyncService syncInstallation", () => {
     })
 })
 
-
 describe("AgentSyncService syncInstallation", () => {
     it("records the failure on the sync row and rethrows it", async () => {
         const { service, recorder, logger } = await build({ dirs: false })
@@ -420,7 +417,6 @@ describe("AgentSyncService syncInstallation", () => {
         })
     })
 })
-
 
 describe("AgentSyncService ensureInternalAgent", () => {
     it("writes the files and registers the internal agent on first use", async () => {
@@ -462,7 +458,6 @@ describe("AgentSyncService ensureInternalAgent", () => {
     })
 })
 
-
 describe("AgentSyncService syncInstallation of a removed installation", () => {
     it("takes a removed installation out of OpenClaw unless another instance of the module is left", async () => {
         const removed = installationOf({ removed: true })
@@ -477,4 +472,3 @@ describe("AgentSyncService syncInstallation of a removed installation", () => {
         expect(shared.registry.unregister).not.toHaveBeenCalled()
     })
 })
-

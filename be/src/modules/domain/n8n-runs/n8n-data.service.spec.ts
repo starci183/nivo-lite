@@ -217,16 +217,8 @@ describe("N8nDataService overdueInvoices", () => {
                 so_ngay_tre: 11,
             },
         })
-        expect(owners.invoices.overdueBefore).toHaveBeenCalledWith(
-            "ws-1",
-            new Date("2026-10-07T10:00:00.000Z"),
-            200,
-        )
-        expect(owners.emails.remindedInvoiceIds).toHaveBeenCalledWith(
-            "ws-1",
-            new Date("2026-10-02T10:00:00.000Z"),
-            500,
-        )
+        expect(owners.invoices.overdueBefore).toHaveBeenCalledWith("ws-1", new Date("2026-10-07T10:00:00.000Z"), 200)
+        expect(owners.emails.remindedInvoiceIds).toHaveBeenCalledWith("ws-1", new Date("2026-10-02T10:00:00.000Z"), 500)
         expect(owners.leads.cardsOf).toHaveBeenCalledWith("ws-1", ["l-1", "l-2", "l-3"])
     })
 
@@ -239,14 +231,9 @@ describe("N8nDataService overdueInvoices", () => {
         const result = await service.overdueInvoices("ws-1", {})
 
         expect(result).toEqual({ shop_name: "NIVO", items: [], skipped: { no_email: 1, reminded_recently: 0 } })
-        expect(owners.invoices.overdueBefore).toHaveBeenCalledWith(
-            "ws-1",
-            new Date("2026-10-09T10:00:00.000Z"),
-            200,
-        )
+        expect(owners.invoices.overdueBefore).toHaveBeenCalledWith("ws-1", new Date("2026-10-09T10:00:00.000Z"), 200)
         expect(owners.leads.cardsOf).not.toHaveBeenCalled()
     })
-
 })
 
 describe("N8nDataService overdueInvoices limits", () => {

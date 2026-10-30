@@ -99,7 +99,6 @@ describe("GuideService", () => {
         await expect(service.ask("u1", ASK)).rejects.toMatchObject({ code: AiGenerationsErrorCode.GuideRateLimited })
         expect(generations.request).not.toHaveBeenCalled()
     })
-
 })
 
 describe("GuideService prompt", () => {

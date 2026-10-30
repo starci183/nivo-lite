@@ -1,10 +1,5 @@
 import type { WebhookEvent } from "@modules/domain/webhook-connections"
-import type {
-    DealWonEvent,
-    DecisionMadeEvent,
-    OrderConfirmedEvent,
-    PaymentReconciledEvent,
-} from "@modules/events/api"
+import type { DealWonEvent, DecisionMadeEvent, OrderConfirmedEvent, PaymentReconciledEvent } from "@modules/events/api"
 import type { EventData } from "./automations.contracts"
 
 /** One business event a reactor hands the automation engine, with the webhooks that may hear it. */

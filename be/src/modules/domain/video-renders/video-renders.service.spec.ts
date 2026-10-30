@@ -2,7 +2,12 @@ import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager, QueryBuilderAnswers } from "@starci/jest-preset"
 import { In, LessThanOrEqual } from "typeorm"
-import { COMPLETED_MEDIA, COMPLETED_MEDIA_ROWS, DONE_RENDER, NEW_RENDER } from "@tests/fixtures/builders/video-renders.builder"
+import {
+    COMPLETED_MEDIA,
+    COMPLETED_MEDIA_ROWS,
+    DONE_RENDER,
+    NEW_RENDER,
+} from "@tests/fixtures/builders/video-renders.builder"
 import { writeExpressionOf } from "@tests/fixtures/builders/write-expression.builder"
 import { VideoProjectsService } from "@modules/domain/video-projects"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -290,10 +295,7 @@ describe("VideoRendersService > completed media", () => {
         expect(em.createQueryBuilder).toHaveBeenCalledWith(VideoRenderEntity, "r")
         expect(read.callsOf("addSelect")).toContainEqual(["r.spec #>> '{brand,name}'", "brand_name"])
         expect(read.callsOf("where")).toEqual([["r.workspaceId = :workspaceId", { workspaceId: "workspace-1" }]])
-        expect(read.callsOf("andWhere")).toEqual([
-            ["r.status = :done", { done: "done" }],
-            ["r.outputPath IS NOT NULL"],
-        ])
+        expect(read.callsOf("andWhere")).toEqual([["r.status = :done", { done: "done" }], ["r.outputPath IS NOT NULL"]])
         expect(read.callsOf("limit")).toEqual([[10]])
         expect(projects.titlesOfRenders).toHaveBeenCalledWith("workspace-1", ["render-1", "render-2", "render-3"])
     })

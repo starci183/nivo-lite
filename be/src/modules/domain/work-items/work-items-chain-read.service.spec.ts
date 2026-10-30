@@ -31,7 +31,9 @@ describe("WorkItemsChainReadService", () => {
         const service = await build(em)
 
         await expect(service.topDepth("ws-1", "c-1")).resolves.toBe(2)
-        await expect(service.topDepth("ws-1", "c-9", mockEntityManager({ findOne: [WorkItemEntity, null] }))).resolves.toBeNull()
+        await expect(
+            service.topDepth("ws-1", "c-9", mockEntityManager({ findOne: [WorkItemEntity, null] })),
+        ).resolves.toBeNull()
     })
 
     it("asks whether the chain already ran the action on the subject, with or without a subject", async () => {
@@ -49,10 +51,24 @@ describe("WorkItemsChainReadService", () => {
         await expect(service.repeats(query)).resolves.toBe(true)
         await service.repeats({ ...query, subjectId: null })
         expect(em.exists).toHaveBeenNthCalledWith(1, WorkItemEntity, {
-            where: { workspaceId: "ws-1", chainId: "c-1", action: "send_care", subjectType: "lead", dedupeKey: Not("k-1"), subjectId: "l-1" },
+            where: {
+                workspaceId: "ws-1",
+                chainId: "c-1",
+                action: "send_care",
+                subjectType: "lead",
+                dedupeKey: Not("k-1"),
+                subjectId: "l-1",
+            },
         })
         expect(em.exists).toHaveBeenNthCalledWith(2, WorkItemEntity, {
-            where: { workspaceId: "ws-1", chainId: "c-1", action: "send_care", subjectType: "lead", dedupeKey: Not("k-1"), subjectId: IsNull() },
+            where: {
+                workspaceId: "ws-1",
+                chainId: "c-1",
+                action: "send_care",
+                subjectType: "lead",
+                dedupeKey: Not("k-1"),
+                subjectId: IsNull(),
+            },
         })
     })
 })

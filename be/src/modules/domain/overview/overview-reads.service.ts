@@ -60,7 +60,9 @@ export class OverviewReadsService {
     /** Every responsibility with its lead, due soonest first. */
     async responsibilities(workspaceId: string): Promise<Array<OverviewResponsibility>> {
         const steps = await this.responsibilityReads.dueSoonest(workspaceId, RESPONSIBILITY_LIMIT)
-        const leads = indexById(await this.leadReads.cardsOf(workspaceId, [...new Set(steps.map((step) => step.leadId))]))
+        const leads = indexById(
+            await this.leadReads.cardsOf(workspaceId, [...new Set(steps.map((step) => step.leadId))]),
+        )
         return steps.flatMap((step): Array<OverviewResponsibility> => {
             const lead = leads.get(step.leadId)
             if (lead === undefined) return []
@@ -142,7 +144,8 @@ export class OverviewReadsService {
             reason: item.reason,
             error: item.error,
             executionId: item.executionId,
-            assignedStaffName: item.assignedStaffId === null ? null : (staffName.get(item.assignedStaffId)?.name ?? null),
+            assignedStaffName:
+                item.assignedStaffId === null ? null : (staffName.get(item.assignedStaffId)?.name ?? null),
             createdAt: instant(item.createdAt),
             summary: item.summary,
             contact: item.contact,

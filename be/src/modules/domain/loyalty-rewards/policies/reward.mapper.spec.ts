@@ -8,7 +8,9 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [{ provide: SUBJECT, useValue: { isRewardRaw, toReward, toRewardFromRaw } }],
     }).compile()
-    return moduleRef.get<Pick<typeof import("./reward.mapper"), "isRewardRaw" | "toReward" | "toRewardFromRaw">>(SUBJECT)
+    return moduleRef.get<Pick<typeof import("./reward.mapper"), "isRewardRaw" | "toReward" | "toRewardFromRaw">>(
+        SUBJECT,
+    )
 }
 
 const entityRow = (overrides: Partial<RewardFieldsOfEntity> = {}): RewardFieldsOfEntity => ({

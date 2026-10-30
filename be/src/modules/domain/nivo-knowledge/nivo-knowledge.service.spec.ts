@@ -16,7 +16,8 @@ import { NivoKnowledgeService } from "./nivo-knowledge.service"
 import { NivoKnowledgeItemEntity } from "./persistence/entities"
 
 /** Runs a value that a spec captured as a function, answering what it returns. */
-const called = (value: unknown): unknown => (typeof value === "function" ? Reflect.apply(value, undefined, []) : undefined)
+const called = (value: unknown): unknown =>
+    typeof value === "function" ? Reflect.apply(value, undefined, []) : undefined
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -48,10 +49,7 @@ describe("NivoKnowledgeService", () => {
                     update: [NivoKnowledgeItemEntity, {}],
                 }),
             )
-            const [first] = queueQueryBuilders(tx.em, [
-                { execute: { raw: [{ id: "n1" }] } },
-                { execute: { raw: [] } },
-            ])
+            const [first] = queueQueryBuilders(tx.em, [{ execute: { raw: [{ id: "n1" }] } }, { execute: { raw: [] } }])
             const service = await build(tx.em)
 
             await expect(service.upsert([item("a"), item("b")])).resolves.toEqual({ inserted: 1, updated: 1 })
@@ -65,7 +63,6 @@ describe("NivoKnowledgeService", () => {
             expect(first?.callsOf("returning")).toEqual([["id"]])
             expect(tx.commits).toBe(1)
         })
-
     })
 })
 
@@ -186,13 +183,7 @@ describe("NivoKnowledgeService rulesOf", () => {
 describe("NivoKnowledgeService list", () => {
     it("maps every stored field and serializes timestamps as UTC ISO strings", async () => {
         const em = mockEntityManager({
-            find: [
-                NivoKnowledgeItemEntity,
-                [
-                    editedKnowledgeRow(),
-                    careKnowledgeRow(),
-                ],
-            ],
+            find: [NivoKnowledgeItemEntity, [editedKnowledgeRow(), careKnowledgeRow()]],
         })
         const service = await build(em)
 
@@ -252,9 +243,7 @@ describe("NivoKnowledgeService", () => {
     describe("unembedded", () => {
         it("names the items that need a vector with the text to embed, cut at the limit", async () => {
             const em = mockEntityManager()
-            const read = queueQueryBuilders(em, [
-                { getMany: [longKnowledgeRow(9000)] },
-            ])[0]
+            const read = queueQueryBuilders(em, [{ getMany: [longKnowledgeRow(9000)] }])[0]
             const service = await build(em)
 
             const found = await service.unembedded("m1", 32)

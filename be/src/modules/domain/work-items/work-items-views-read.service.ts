@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { OptionalWorkItemWithCursor, WorkItemsPageQuery, WorkItemWithCursor } from "./work-items-views-read.contracts"
+import type {
+    OptionalWorkItemWithCursor,
+    WorkItemsPageQuery,
+    WorkItemWithCursor,
+} from "./work-items-views-read.contracts"
 import type { WorkItem } from "./work-items.contracts"
 import { toWorkItem, toWorkItemRecord } from "./work-items.mapper"
 import { WorkItemEntity } from "./persistence/entities"

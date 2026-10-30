@@ -1,4 +1,3 @@
-
 /** One selected column: the expression and the name it answers under. */
 export type InvoiceColumn = readonly [expression: string, alias: string]
 

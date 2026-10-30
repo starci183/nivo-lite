@@ -56,7 +56,10 @@ export class AutomationOperationsExecutorsService {
     private async dailyReport(context: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> {
         const say = this.messages.say.bind(this.messages)
         const day = textOf(payload.day) || vnClock(this.clock.now()).day
-        const figures = await this.reads.dayFigures(context.workspaceId, new Date(`${day}T00:00:00+07:00`).toISOString())
+        const figures = await this.reads.dayFigures(
+            context.workspaceId,
+            new Date(`${day}T00:00:00+07:00`).toISOString(),
+        )
         const deals = Math.max(figures.won_leads, figures.confirmed_orders)
         const waiting = figures.waiting.map((summary) => (summary ?? "").slice(0, WAITING_EXCERPT))
         // The renewal-to-cash story of the calendar day: renewals issued and paid, unpaid, ending soon, and money waiting for a match.

@@ -86,14 +86,21 @@ const chainsOf = (queries: Queries, chains: Owners["chains"]): void => {
     const spot: Awaited<ReturnType<WorkItemsChainReadService["spotOf"]>> =
         parent === undefined
             ? null
-            : { id: textAt(parent, "id") ?? "", chainId: textAt(parent, "chain_id"), depth: numberAt(parent, "depth") ?? 0 }
+            : {
+                  id: textAt(parent, "id") ?? "",
+                  chainId: textAt(parent, "chain_id"),
+                  depth: numberAt(parent, "depth") ?? 0,
+              }
     chains.spotOf.mockResolvedValue(spot)
     chains.topDepth.mockResolvedValue(numberAt(top, "depth"))
     chains.repeats.mockResolvedValue(rowsAt(queries, CHAIN_REPEATS_COMMAND).some((row) => row.repeats === true))
 }
 
 /** The readers of the readable label of a subject, answering the named label (or all rejecting when the lookup is unreadable). */
-const labelsOf = (queries: Queries, { orders, leads, invoices }: Pick<Owners, "orders" | "leads" | "invoices">): void => {
+const labelsOf = (
+    queries: Queries,
+    { orders, leads, invoices }: Pick<Owners, "orders" | "leads" | "invoices">,
+): void => {
     const text = textAt(rowsAt(queries, FIND_SUBJECT_LABEL)[0], "label")
     const failing = queries.some(([key]) => key === UNREADABLE)
     const read = <T>(value: T): Promise<T> =>

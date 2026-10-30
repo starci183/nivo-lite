@@ -171,7 +171,6 @@ describe("row mappers policy", () => {
             expect(subject.toCandidate(candidateEntity({ stage }))).toEqual({ ...candidate, stage })
         })
     })
-
 })
 
 describe("row mappers policy interviews", () => {

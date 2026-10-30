@@ -10,7 +10,11 @@ export class EventsActivityReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The instant of the newest line about each of the given customers; customers without a line are missing. */
-    lastAtByLead(workspaceId: string, leadIds: ReadonlyArray<string>, limit: number): Promise<Array<EventsLeadActivity>> {
+    lastAtByLead(
+        workspaceId: string,
+        leadIds: ReadonlyArray<string>,
+        limit: number,
+    ): Promise<Array<EventsLeadActivity>> {
         if (leadIds.length === 0) return Promise.resolve([])
         return this.entityManager
             .createQueryBuilder(EventEntity, "e")

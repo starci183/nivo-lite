@@ -332,7 +332,9 @@ const registerAgentAssignment = () => {
         owners.resolve.mockResolvedValue(agentOwner())
 
         await expect(
-            transaction.transaction((scoped) => service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }), scoped)),
+            transaction.transaction((scoped) =>
+                service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }), scoped),
+            ),
         ).resolves.toEqual(rowOf())
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
         expect(owners.resolve.mock.calls).toEqual([["ws-1", "agent-1"]])

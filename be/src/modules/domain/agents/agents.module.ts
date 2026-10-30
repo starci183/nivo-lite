@@ -31,7 +31,7 @@ export class AgentsModule extends ConfigurableModuleClass {
      */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
-        if ("directoryOnly" in options) {
+        if (options.directoryOnly === true) {
             return {
                 ...base,
                 imports: [...(base.imports ?? []), AgentDirectoryModule.register({})],

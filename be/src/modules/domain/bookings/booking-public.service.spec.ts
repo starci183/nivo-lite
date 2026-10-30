@@ -156,7 +156,9 @@ const build = async (options: BuildOptions = {}) => {
     const reservation = mock<BookingReservationService>()
     reservation.reserve.mockResolvedValue({ kind: "reserved", id: "b1" })
     const names = mock<WorkspaceAdminReadService>()
-    names.namesOf.mockResolvedValue(options.page === false || options.nameless === true ? [] : [{ id: WORKSPACE, name: PAGE.shop }])
+    names.namesOf.mockResolvedValue(
+        options.page === false || options.nameless === true ? [] : [{ id: WORKSPACE, name: PAGE.shop }],
+    )
     const reminders = mock<BookingRemindersService>({ schedule: jest.fn().mockResolvedValue([]) })
     const settingsRead = mock<BookingSettingsReadService>({
         publishedBy: jest.fn(() =>
@@ -317,7 +319,11 @@ describe("BookingPublicService", () => {
             const model = modelOf({
                 settings: settingsOf({ autoConfirm: params.autoConfirm, depositPct: heldForm ? 50 : 0 }),
             })
-            const { service, reservation, reminders, tx } = await build({ page: !chat, model, spans: params.spans ?? [] })
+            const { service, reservation, reminders, tx } = await build({
+                page: !chat,
+                model,
+                spans: params.spans ?? [],
+            })
             const form = bookingRequestOf(heldForm ? { token: "form-token-1", email: "nope" } : {})
             const result = chat ? service.requestIn(workspaceRequestOf(CHAT_LINK)) : service.book(form)
             await expect(result).resolves.toEqual(params.reply)

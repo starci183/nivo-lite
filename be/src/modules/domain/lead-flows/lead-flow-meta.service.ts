@@ -9,7 +9,16 @@ import type { Clock } from "@modules/platform/clock"
 import { pageSecretOf } from "./lead-flow-page.policy"
 import { windowStatus } from "./lead-flow-steps.policy"
 import type { Platform, WindowStatus } from "./lead-flows.contracts"
-import type { CommentOutcome, CommentTarget, DmOutcome, DmTarget, MentionRead, OptionalCommentOutcome, OptionalPage, OptionalText } from "./lead-flow-delivery.contracts"
+import type {
+    CommentOutcome,
+    CommentTarget,
+    DmOutcome,
+    DmTarget,
+    MentionRead,
+    OptionalCommentOutcome,
+    OptionalPage,
+    OptionalText,
+} from "./lead-flow-delivery.contracts"
 
 const refusedDm = (reason: DmOutcome["reason"], detail: OptionalText = null): DmOutcome => ({
     ok: false,

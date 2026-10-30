@@ -36,11 +36,7 @@ interface OverviewCounts {
     readonly deposits: QueryBuilderAnswers
 }
 
-const build = async (
-    bookings: OverviewBookings,
-    counts: OverviewCounts,
-    model: BookingModel = modelOf(),
-) => {
+const build = async (bookings: OverviewBookings, counts: OverviewCounts, model: BookingModel = modelOf()) => {
     const entityManager = mockEntityManager({
         find: [
             [BookingEntity, bookings.week],

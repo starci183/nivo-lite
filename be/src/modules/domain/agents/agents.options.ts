@@ -33,6 +33,8 @@ export interface AgentsFullOptions {
     readonly syncFreshMs: number
     /** Absent or false: the full capability. */
     readonly setupOnly?: false
+    /** Absent or false: not the directory mode. */
+    readonly directoryOnly?: false
 }
 
 /**
@@ -46,6 +48,8 @@ export interface AgentsSetupOptions {
     readonly syncFreshMs: number
     /** Registers the setup mode. */
     readonly setupOnly: true
+    /** Absent or false: not the directory mode. */
+    readonly directoryOnly?: false
 }
 
 /**

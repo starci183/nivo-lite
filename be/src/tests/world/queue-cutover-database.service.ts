@@ -48,7 +48,10 @@ const claimEnvelopes = async (manager: EntityManager, proofs: ReadonlyArray<stri
     await manager.query(CLAIM_ENVELOPES, [proofs])
 }
 
-const readEnvelopes = async (manager: EntityManager, proofs: ReadonlyArray<string>): Promise<Array<CutoverEnvelope>> => {
+const readEnvelopes = async (
+    manager: EntityManager,
+    proofs: ReadonlyArray<string>,
+): Promise<Array<CutoverEnvelope>> => {
     const rows = await manager.query<Array<EnvelopeRow>>(READ_ENVELOPES, [proofs])
     return rows.map(({ msgId, proof }) => ({ msgId: Number(msgId), proof }))
 }

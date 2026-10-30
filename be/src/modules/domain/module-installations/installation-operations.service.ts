@@ -36,11 +36,7 @@ export class InstallationOperationsService {
     }
 
     /** The instances of a module in the workspace with the agent each runs, oldest first, at most `limit`. */
-    async agentLinksOf(
-        workspaceId: string,
-        moduleKey: string,
-        limit: number,
-    ): Promise<Array<InstallationAgentLink>> {
+    async agentLinksOf(workspaceId: string, moduleKey: string, limit: number): Promise<Array<InstallationAgentLink>> {
         const rows = await this.entityManager.find(ModuleInstallationEntity, {
             select: { id: true, agentId: true },
             where: { workspaceId, moduleKey },

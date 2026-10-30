@@ -84,7 +84,16 @@ const build = async (entityManager: MockEntityManager, attempts = 0) => {
             { provide: InventoryOrderMessageService, useValue: messages },
         ],
     }).compile()
-    return { service: moduleRef.get(InventoryDispatchService), office, gate, mail, members, orders, messages, decisions }
+    return {
+        service: moduleRef.get(InventoryDispatchService),
+        office,
+        gate,
+        mail,
+        members,
+        orders,
+        messages,
+        decisions,
+    }
 }
 
 describe("InventoryDispatchService / requestSend", () => {

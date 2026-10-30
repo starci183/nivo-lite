@@ -225,7 +225,10 @@ export class ContentService {
             .filter((source) => pattern.test(`${source.title} ${source.topic ?? ""} ${source.excerpt}`))
             .slice(0, OFFERS_PER_TICK)
         if (fresh.length === 0) return null
-        const [pillars, cadence] = await Promise.all([this.pillars.list(workspaceId), this.cadenceChannels(workspaceId)])
+        const [pillars, cadence] = await Promise.all([
+            this.pillars.list(workspaceId),
+            this.cadenceChannels(workspaceId),
+        ])
         const pillarPattern = new RegExp(this.text("content.offer.pillar"), "iu")
         const offerPillar = pillars.find((pillar) => pillar.active && pillarPattern.test(pillar.name))
         const channels = cadence.length > 0 ? cadence : ["facebook"]

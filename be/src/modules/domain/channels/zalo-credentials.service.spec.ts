@@ -447,7 +447,8 @@ describe("ZaloCredentialsService", () => {
         })
     })
 })
-const SEALED = 'sealed:{"appId":"app-1","appSecret":"app-secret","oaSecret":"oa-secret","accessToken":"access-2","renewalToken":"refresh-2","refreshExpiresAt":"2027-01-10T10:00:00.000Z"}'
+const SEALED =
+    'sealed:{"appId":"app-1","appSecret":"app-secret","oaSecret":"oa-secret","accessToken":"access-2","renewalToken":"refresh-2","refreshExpiresAt":"2027-01-10T10:00:00.000Z"}'
 describe("ZaloCredentialsService", () => {
     describe("accessToken", () => {
         it("saves a second time when the first save fails, because the old refresh token is already spent", async () => {
@@ -471,7 +472,9 @@ describe("ZaloCredentialsService", () => {
             secrets.save.mockRejectedValue(failure)
             secrets.releaseLease.mockRejectedValue(failure)
             await expect(service.accessToken("c-1")).rejects.toBe(failure)
-            expect(logger.error).toHaveBeenCalledWith("channels.zalo.lease-not-released", failure, { connectionId: "c-1" })
+            expect(logger.error).toHaveBeenCalledWith("channels.zalo.lease-not-released", failure, {
+                connectionId: "c-1",
+            })
         })
     })
 })

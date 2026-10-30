@@ -182,7 +182,10 @@ export class AutomationRunsService {
                       .map((key) => key.id)
         if (pipelineIds?.length === 0) return []
         const rows = await this.entityManager.find(AutomationRunEntity, {
-            where: pipelineIds === null ? { workspaceId: query.workspaceId } : { workspaceId: query.workspaceId, pipelineId: In(pipelineIds) },
+            where:
+                pipelineIds === null
+                    ? { workspaceId: query.workspaceId }
+                    : { workspaceId: query.workspaceId, pipelineId: In(pipelineIds) },
             order: { createdAt: "DESC" },
             take: query.limit,
         })

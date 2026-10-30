@@ -1,5 +1,9 @@
 import type { MockOf } from "@starci/jest-preset"
-import type { AgentConversationsReadService, ChatConversation, ConversationTarget } from "@modules/domain/agent-conversations"
+import type {
+    AgentConversationsReadService,
+    ChatConversation,
+    ConversationTarget,
+} from "@modules/domain/agent-conversations"
 import type { AgentMessageDeliveriesService, AgentThreadMessage } from "@modules/domain/agent-messages"
 import type { AgentProfile } from "@modules/domain/agents"
 import type { ChatTurnFacts } from "@modules/domain/agent-chat"

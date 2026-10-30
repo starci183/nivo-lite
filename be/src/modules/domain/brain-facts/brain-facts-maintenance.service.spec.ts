@@ -39,7 +39,9 @@ const registerWithdraw = () => {
             { execute: {} },
             { execute: {} },
         ])
-        await expect((await build(em)).service.withdrawSource(facts.WS, "doc-1", "Removed")).resolves.toEqual(["orphan"])
+        await expect((await build(em)).service.withdrawSource(facts.WS, "doc-1", "Removed")).resolves.toEqual([
+            "orphan",
+        ])
         expect(read?.callsOf("where")[0]?.[1]).toEqual({
             workspaceId: facts.WS,
             pattern: '[{"kind":"document","ref":"doc-1"}]',

@@ -62,7 +62,10 @@ const build = async (entityManager: MockEntityManager) => {
     catalogue.writeSupplier.mockImplementation((_workspaceId, fields) =>
         savedId(
             idColumn(
-                callDbFunction<Record<string, string | null>>(entityManager, "public.inventory_save_supplier", [fields.name, ...Array<null>(10).fill(null)]),
+                callDbFunction<Record<string, string | null>>(entityManager, "public.inventory_save_supplier", [
+                    fields.name,
+                    ...Array<null>(10).fill(null),
+                ]),
                 "inventory_save_supplier",
             ),
             InventoryErrorCode.SupplierNotFound,

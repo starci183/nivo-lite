@@ -75,7 +75,6 @@ describe("VideoDelegationsService > reads", () => {
 
         await expect(service.ofWorkItem("workspace-1", "item-1")).resolves.toBeNull()
     })
-
 })
 
 describe("VideoDelegationsService > settled renders", () => {
@@ -215,7 +214,6 @@ describe("VideoDelegationsService > writes", () => {
         )
         expect(stamped(em)).toBe("now()")
     })
-
 })
 
 describe("VideoDelegationsService > settling", () => {

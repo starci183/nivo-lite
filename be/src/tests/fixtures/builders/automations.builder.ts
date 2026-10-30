@@ -1,7 +1,13 @@
 import type { PipelineRow } from "@modules/domain/automation-pipelines"
 import type { RunRow } from "@modules/domain/automation-runs"
 import type { TemplateDefinition } from "@modules/domain/automation-templates"
-import type { AutomationInstallationRow, OverviewRows, ShopFacts, ShopPatterns, ShopWithHours } from "@modules/domain/automations"
+import type {
+    AutomationInstallationRow,
+    OverviewRows,
+    ShopFacts,
+    ShopPatterns,
+    ShopWithHours,
+} from "@modules/domain/automations"
 
 /** A text in both languages, for a spec. */
 export const TEXT = { vi: "Xin chao", en: "Hello" }

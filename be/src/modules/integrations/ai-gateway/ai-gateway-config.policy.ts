@@ -13,7 +13,11 @@ const EMBED_MODEL = "qwen/qwen3-embedding-8b"
 const KEYS_PATH = "ai-router-keys.sqlite"
 
 /** The virtual keys the gateway mounts: the env variable that holds each one, its label and the profiles it may call. */
-const MOUNTED_KEYS: ReadonlyArray<{ readonly env: string; readonly label: string; readonly profiles: ReadonlyArray<string> }> = [
+const MOUNTED_KEYS: ReadonlyArray<{
+    readonly env: string
+    readonly label: string
+    readonly profiles: ReadonlyArray<string>
+}> = [
     { env: "AI_API_KEY", label: "nivo_api", profiles: ["work", "embed"] },
     { env: "OPENCLAW_AI_KEY", label: "nivo_openclaw", profiles: ["work"] },
 ]

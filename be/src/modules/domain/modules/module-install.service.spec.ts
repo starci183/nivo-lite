@@ -15,8 +15,16 @@ import { ModuleInstallService } from "./module-install.service"
 import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
 import { RecordInstallationService } from "./record-installation.service"
-import { INSTALLING_MEMBER as MEMBER, installAgentOf as agentOf, installationRecordOf as recordOf } from "@tests/fixtures/builders/module-install.builder"
-import { INSTALL_VIEWED as VIEWED, installRequestOf as requestOf, SYNCED_AGENT_COPY } from "@tests/fixtures/builders/module-install-service.builder"
+import {
+    INSTALLING_MEMBER as MEMBER,
+    installAgentOf as agentOf,
+    installationRecordOf as recordOf,
+} from "@tests/fixtures/builders/module-install.builder"
+import {
+    INSTALL_VIEWED as VIEWED,
+    installRequestOf as requestOf,
+    SYNCED_AGENT_COPY,
+} from "@tests/fixtures/builders/module-install-service.builder"
 
 const build = async () => {
     const tx = fakeTransaction(mockEntityManager())

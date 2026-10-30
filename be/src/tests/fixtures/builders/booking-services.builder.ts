@@ -31,7 +31,11 @@ export const DYE_SERVICE = serviceRowOf({ id: "s-2", name: "Dye" })
 export const TIMED_SERVICE = serviceRowOf({ durationMin: 30, bufferMin: 5 })
 
 /** The options `catalogue("ws-1")` reads the services with: the owner's order, at most 200. */
-export const CATALOGUE_FIND = { where: { workspaceId: "ws-1" }, order: { sortOrder: "ASC", createdAt: "ASC" }, take: 200 }
+export const CATALOGUE_FIND = {
+    where: { workspaceId: "ws-1" },
+    order: { sortOrder: "ASC", createdAt: "ASC" },
+    take: 200,
+}
 
 /** The options `namesOf("ws-1", ids)` reads the names with: only id and name, bounded by the ids asked. */
 export const namesFindOf = (ids: ReadonlyArray<string>) => ({

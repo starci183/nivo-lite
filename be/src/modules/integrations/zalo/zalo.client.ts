@@ -83,7 +83,11 @@ export class ZaloClient {
 
     /** Spends the single-use refresh token for a new pair. */
     refreshTokens(appId: string, appSecret: string, renewalToken: string): Promise<ZaloTokens> {
-        return this.tokenCall(appSecret, { [RENEWAL_GRANT_FIELD]: renewalToken, app_id: appId, grant_type: "refresh_token" })
+        return this.tokenCall(appSecret, {
+            [RENEWAL_GRANT_FIELD]: renewalToken,
+            app_id: appId,
+            grant_type: "refresh_token",
+        })
     }
 
     /** Sends a consultation (CS) text message to one user; a refusal is a ZaloError carrying Zalo's numeric error. */

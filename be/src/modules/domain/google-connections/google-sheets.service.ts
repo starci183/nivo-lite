@@ -53,7 +53,11 @@ export class GoogleSheetsService {
 
     /** Applies one NIVO event to the shop sheet; throws on any failure so the automation run is retried. */
     runSheetEvent(workspaceId: string, config: PipelineConfig, event: SheetEventIn): Promise<SheetEventResult> {
-        return this.withToken(workspaceId, (token) => this.google.applyEvent(token, config, event), connectionOf(config))
+        return this.withToken(
+            workspaceId,
+            (token) => this.google.applyEvent(token, config, event),
+            connectionOf(config),
+        )
     }
 
     /** The named Google connection of the workspace, or its oldest live one. */

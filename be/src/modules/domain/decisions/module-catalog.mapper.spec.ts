@@ -7,12 +7,23 @@ const SUBJECT = Symbol("module-catalog.mapper")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: mock<typeof mapper>({ toActionEntry: mapper.toActionEntry, toModuleEntry: mapper.toModuleEntry }) }],
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: mock<typeof mapper>({
+                    toActionEntry: mapper.toActionEntry,
+                    toModuleEntry: mapper.toModuleEntry,
+                }),
+            },
+        ],
     }).compile()
     return moduleRef.get<typeof mapper>(SUBJECT)
 }
 
-const sales = MODULE_CATALOG.filter((module) => module.accepts.length > 0 && module.authorityActions.length > 0).slice(0, 1)
+const sales = MODULE_CATALOG.filter((module) => module.accepts.length > 0 && module.authorityActions.length > 0).slice(
+    0,
+    1,
+)
 
 describe("toModuleEntry", () => {
     it.each(sales)("keeps the audience, instancing, name and the commands $key accepts", async (module) => {
@@ -38,7 +49,9 @@ describe("toModuleEntry", () => {
 })
 
 describe("toActionEntry", () => {
-    it.each(sales.flatMap((module) => module.authorityActions.slice(0, 1).map((action) => ({ key: module.key, action }))))(
+    it.each(
+        sales.flatMap((module) => module.authorityActions.slice(0, 1).map((action) => ({ key: module.key, action }))),
+    )(
         "keeps the cap, the actions queued after it and the label, under the module $key that performs it",
         async ({ key, action }) => {
             const { toActionEntry } = await build()

@@ -292,7 +292,9 @@ export class ContentEditorService {
             .createQueryBuilder(ContentItemEntity, "i")
             .select("i.pillar_id", "pillarId")
             .distinct(true)
-            .where("i.workspace_id = :workspaceId AND i.status <> 'skipped' AND i.pillar_id IS NOT NULL", { workspaceId })
+            .where("i.workspace_id = :workspaceId AND i.status <> 'skipped' AND i.pillar_id IS NOT NULL", {
+                workspaceId,
+            })
             .andWhere("i.scheduled_at >= :from AND i.scheduled_at < :to", { from, to })
             .limit(PILLARS_MAX)
             .getRawMany<{ pillarId: string }>()

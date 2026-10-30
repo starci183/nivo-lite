@@ -1,4 +1,9 @@
-import { benchJobRow, benchCandidateRow, benchInterviewRow, benchOfferRow } from "@tests/fixtures/builders/hiring-rows.builder"
+import {
+    benchJobRow,
+    benchCandidateRow,
+    benchInterviewRow,
+    benchOfferRow,
+} from "@tests/fixtures/builders/hiring-rows.builder"
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"

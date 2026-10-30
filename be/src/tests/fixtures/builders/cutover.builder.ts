@@ -9,7 +9,13 @@ const [JobEntity, JobOutboxEntity] = jobsEntities
 const QUEUE = "content_tick"
 
 /** The columns of public.job_outbox that exist before the expand migration. */
-const OUTBOX_COLUMNS: Array<keyof InstanceType<typeof JobOutboxEntity>> = ["queue", "name", "payload", "dedupeKey", "sentAt"]
+const OUTBOX_COLUMNS: Array<keyof InstanceType<typeof JobOutboxEntity>> = [
+    "queue",
+    "name",
+    "payload",
+    "dedupeKey",
+    "sentAt",
+]
 
 /** The columns of public.jobs written by the cutover proofs. */
 const JOB_COLUMNS: Array<keyof InstanceType<typeof JobEntity>> = [
@@ -61,7 +67,13 @@ const PROOF_FILTER = "payload ->> 'proof' = :proof"
 /** Enqueues one durable delivery per proof tag through the legacy function. */
 export const enqueueCutoverProofs = async (manager: EntityManager, proofs: ReadonlyArray<string>): Promise<void> => {
     await eachInOrder(proofs, (proof) =>
-        callDbFunction(manager, "public.job_enqueue", [null, QUEUE, QUEUE, JSON.stringify({ proof }), `cutover:${proof}`]),
+        callDbFunction(manager, "public.job_enqueue", [
+            null,
+            QUEUE,
+            QUEUE,
+            JSON.stringify({ proof }),
+            `cutover:${proof}`,
+        ]),
     )
 }
 
@@ -156,7 +168,10 @@ export const sendCutoverBusEvent = async (manager: EntityManager): Promise<void>
 }
 
 /** Inserts the fenced claims a legacy worker held on in-flight and done raw messages. */
-export const insertLegacyClaims = async (manager: EntityManager, envelopes: ReadonlyArray<CutoverEnvelope>): Promise<void> => {
+export const insertLegacyClaims = async (
+    manager: EntityManager,
+    envelopes: ReadonlyArray<CutoverEnvelope>,
+): Promise<void> => {
     await eachInOrder(envelopes, async ({ msgId, proof }) => {
         await manager
             .createQueryBuilder(JobEntity, "j")

@@ -159,7 +159,9 @@ describe("ChatReplyStatusService", () => {
                 progress.replyItemOf.mockResolvedValue({ id: "work-1", status: workStatus, conversationId: "c1" })
                 conversations.customerChat.mockResolvedValue({ id: "c1", leadId: null })
                 deliveries.humanReplyOf.mockResolvedValue(
-                    messageId === null && deliveryStatus === null ? null : { id: messageId ?? "message-1", deliveryStatus },
+                    messageId === null && deliveryStatus === null
+                        ? null
+                        : { id: messageId ?? "message-1", deliveryStatus },
                 )
                 entityManager.query.mockResolvedValue(jobAnswer(jobState))
 

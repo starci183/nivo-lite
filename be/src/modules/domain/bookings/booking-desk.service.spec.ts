@@ -11,13 +11,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BookingDeskService } from "./booking-desk.service"
 import { BookingModelService } from "./booking-model.service"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
-import {
-    ADDED_BOOKING,
-    DESK_OWNER,
-    NOW,
-    THURSDAY_NINE,
-    WORKSPACE,
-} from "@tests/fixtures/builders/booking-desk.builder"
+import { ADDED_BOOKING, DESK_OWNER, NOW, THURSDAY_NINE, WORKSPACE } from "@tests/fixtures/builders/booking-desk.builder"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { BookingReservationService } from "./booking-reservation.service"
 import { DEFAULT_SETTINGS } from "./bookings.contracts"

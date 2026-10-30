@@ -297,7 +297,9 @@ const receiptEm = () => {
 const FETCHED: Cursors = { created: PERSISTED_AT }
 
 /** The lookup of a message instant, whichever owner answers it. */
-interface InstantLookup { readonly createdAtOf: unknown }
+interface InstantLookup {
+    readonly createdAtOf: unknown
+}
 
 const expectResolvedCursorWrite = (
     lookups: InstantLookup,

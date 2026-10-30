@@ -105,7 +105,8 @@ export class VideoRendersService {
     /** Writes a queued render in the caller's transaction and answers its id; a workspace that already has the most open renders is refused. */
     async open(manager: EntityManager, render: NewRender): Promise<string> {
         const specRead = parseJsonText(render.spec)
-        if (!specRead.ok || typeof specRead.value !== "object" || specRead.value === null) throw new VideoRendersError({ code: VideoRendersErrorCode.JsonUnreadable })
+        if (!specRead.ok || typeof specRead.value !== "object" || specRead.value === null)
+            throw new VideoRendersError({ code: VideoRendersErrorCode.JsonUnreadable })
         const open = await manager.count(VideoRenderEntity, {
             where: { workspaceId: render.workspaceId, status: In([...OPEN_STATES]) },
         })

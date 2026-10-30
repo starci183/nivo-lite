@@ -19,7 +19,10 @@ const NEXT_ROW: CancellableRowFacts = {
     start_ms: Date.parse(MONDAY_NINE),
 }
 
-const build = async (row?: CancellableRowFacts, names: ReadonlyMap<string, string> = new Map([["service-1", "Cut"]])) => {
+const build = async (
+    row?: CancellableRowFacts,
+    names: ReadonlyMap<string, string> = new Map([["service-1", "Cut"]]),
+) => {
     const entityManager = mockEntityManager()
     const fake = fakeQueryBuilder({ getRawOne: row })
     entityManager.createQueryBuilder.mockReturnValue(fake.builder)
