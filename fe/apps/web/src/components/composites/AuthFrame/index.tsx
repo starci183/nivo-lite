@@ -10,6 +10,7 @@ import {
     AUTH_CENTER_CLASS_NAME,
     AUTH_COMPACT_LOGO_CLASS_NAME,
     AUTH_FORM_PANE_CLASS_NAME,
+    AUTH_GROUND_CLASS_NAME,
     AUTH_LEGAL_CLASS_NAME,
     AUTH_LOCALE_CLASS_NAME,
     AUTH_SPLIT_CLASS_NAME,
@@ -36,12 +37,15 @@ export const AuthFrame = (props: AuthFrameProps) => (
         primary={
             <div className={AUTH_SPLIT_CLASS_NAME}>
                 <div className={AUTH_ART_PANE_CLASS_NAME}>
+                    <div className={AUTH_GROUND_CLASS_NAME} aria-hidden="true">
+                        <Image src="/images/entry/login-ground.png" alt="" aspect="auto" fit="cover" plate="none" />
+                    </div>
                     <div className={AUTH_ART_CLASS_NAME} aria-hidden="true">
                         <Image
-                            src="/images/entry/login-mascot.png"
+                            src="/images/entry/login-mascot.webp"
                             alt=""
                             aspect="auto"
-                            fit="cover"
+                            fit="contain"
                             plate="none"
                             loading="eager"
                         />

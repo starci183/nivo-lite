@@ -4,8 +4,23 @@ import { cn } from "@heroui/react"
 export const AUTH_SPLIT_CLASS_NAME = cn("grid", "min-h-dvh", "lg:grid-cols-2")
 /** Art half: full bleed, edge to edge and top to bottom, with the brand copy over the picture; shown from lg only so the form stays in the first phone screen. */
 export const AUTH_ART_PANE_CLASS_NAME = cn("relative", "isolate", "hidden", "overflow-hidden", "lg:block")
-/** The picture under the copy: fills the half (SURFACE-6 case-1, aria-hidden). */
-export const AUTH_ART_CLASS_NAME = cn("absolute", "inset-0", "-z-10", "[&_img]:h-full", "[&_img]:w-full", "[&>*]:h-full")
+/** The plain ground under everything: a one-colour picture stretched over the whole half (SURFACE-6 case-1, aria-hidden). */
+export const AUTH_GROUND_CLASS_NAME = cn("absolute", "inset-0", "-z-20", "[&>*]:h-full", "[&_img]:h-full", "[&_img]:w-full")
+/** The scene over the ground: centred and scaled to the half, clear of the logo above and the copy below (SURFACE-6 case-1, aria-hidden). */
+export const AUTH_ART_CLASS_NAME = cn(
+    "absolute",
+    "inset-x-8",
+    "top-24",
+    "bottom-40",
+    "-z-10",
+    "flex",
+    "items-center",
+    "justify-center",
+    "[&>*]:h-full",
+    "[&>*]:w-full",
+    "[&_img]:h-full",
+    "[&_img]:w-full",
+)
 /** Brand copy over the picture: the logo at the top, headline and tagline at the bottom, at the stepped inset (PADDING-7). */
 export const AUTH_ART_COPY_CLASS_NAME = cn("flex", "h-full", "flex-col", "justify-between", "gap-6", "p-8")
 /** Headline and tagline (GAP-2). */
