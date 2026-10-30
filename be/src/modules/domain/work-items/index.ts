@@ -29,5 +29,4 @@ export { WorkItemsDecisionsReadService } from "./work-items-decisions-read.servi
 export type { WorkException } from "./work-items-read.contracts"
 export { toProposal } from "./work-items.mapper"
 export type { WorkItemRecord } from "./work-items.contracts"
-export type { WorkItemLeadCard, WorkItemsLeadDirectory } from "./work-items.port"
-export type { WorkItemsOptions, WorkItemsPorts } from "./work-items.options"
+export type { WorkItemsLeadDirectory } from "./work-items.port"

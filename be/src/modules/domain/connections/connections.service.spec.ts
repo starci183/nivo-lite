@@ -39,7 +39,7 @@ const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}, comp
     const upkeep = mock<ConnectionsUpkeepService>()
     const logger = mock<Logger>()
     const options = { channelTokenKey: new Secret("k"), siteUrl: "https://site.example.com", ...urls }
-    const moduleRef = await Test.createTestingModule({
+    const testing = Test.createTestingModule({
         providers: [
             ConnectionsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
@@ -49,9 +49,13 @@ const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}, comp
             { provide: ConnectorInterestService, useValue: interest },
             { provide: ConnectionsUpkeepService, useValue: upkeep },
             { provide: WorkspaceMemberSeatsService, useValue: seats },
-            ...(composed ? [{ provide: CONNECTION_AGENTS, useValue: agents }] : []),
+            { provide: CONNECTION_AGENTS, useValue: agents },
         ],
-    }).compile()
+    })
+    const moduleRef = await (composed
+        ? testing
+        : testing.overrideProvider(CONNECTION_AGENTS).useValue(null)
+    ).compile()
     return { service: moduleRef.get(ConnectionsService), secrets, interest, upkeep, seats, agents }
 }
 const build = async (entityManager: MockEntityManager, urls: Urls = {}) =>

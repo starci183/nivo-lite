@@ -15,3 +15,6 @@ export const bookingHourRowOf = builder<InstanceType<typeof BookingHourEntity>>(
 
 /** The filter that picks every opening window of resource `r-1` in workspace `ws-1`. */
 export const RESOURCE_R1_HOURS_WHERE = { workspaceId: "ws-1", resourceId: "r-1" }
+
+/** The options `week("ws-1")` reads the weekly windows with: the whole workspace, at most 2000. */
+export const WEEK_HOURS_FIND = { where: { workspaceId: "ws-1" }, take: 2000 }

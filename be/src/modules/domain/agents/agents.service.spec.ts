@@ -61,7 +61,7 @@ const build = async (
     })
     const logger = mock<Logger>()
     const ownership = mock<AgentOwnershipService>()
-    const moduleRef = await Test.createTestingModule({
+    const testing = Test.createTestingModule({
         providers: [
             AgentsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
@@ -72,9 +72,13 @@ const build = async (
             { provide: AGENTS_CONNECTIONS, useValue: bindings },
             { provide: AgentOwnershipService, useValue: ownership },
             { provide: AGENTS_WORK, useValue: work },
-            { provide: AGENTS_KNOWLEDGE, useValue: bindKnowledge ? knowledge : null },
+            { provide: AGENTS_KNOWLEDGE, useValue: knowledge },
         ],
-    }).compile()
+    })
+    const moduleRef = await (bindKnowledge
+        ? testing
+        : testing.overrideProvider(AGENTS_KNOWLEDGE).useValue(null)
+    ).compile()
     return {
         service: moduleRef.get(AgentsService),
         members,

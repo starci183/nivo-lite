@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { bookingHourRowOf } from "@tests/fixtures/builders/booking-hours.builder"
+import { WEEK_HOURS_FIND, bookingHourRowOf } from "@tests/fixtures/builders/booking-hours.builder"
 import { BookingHoursReadService } from "./booking-hours-read.service"
 import { BookingHourEntity } from "./persistence/entities"
 
@@ -21,6 +21,6 @@ describe("BookingHoursReadService", () => {
 
         await expect(hours.week("ws-1")).resolves.toEqual(rows)
 
-        expect(em.find.mock.calls).toEqual([[BookingHourEntity, { where: { workspaceId: "ws-1" }, take: 2000 }]])
+        expect(em.find.mock.calls).toEqual([[BookingHourEntity, WEEK_HOURS_FIND]])
     })
 })

@@ -1,4 +1,4 @@
-import type { ZaloFollowEventRow, ZaloInboxFactsRow } from "@modules/domain/zalo-inbox"
+import type { ZaloFollowEventRow, ZaloInboxFactsRow } from "./channels.port"
 import { sepayQrUrlOf } from "./qr-image.policy"
 import type {
     ZaloCheckRow,
