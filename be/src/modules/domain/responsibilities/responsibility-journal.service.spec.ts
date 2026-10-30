@@ -331,12 +331,12 @@ const registerAgentAssignment = () => {
         const { service, members, events, owners } = await build(em)
         owners.resolve.mockResolvedValue(agentOwner())
 
-        await expect(service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }), transaction)).resolves.toEqual(
-            rowOf(),
-        )
+        await expect(
+            transaction.transaction((scoped) => service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }), scoped)),
+        ).resolves.toEqual(rowOf())
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
         expect(owners.resolve.mock.calls).toEqual([["ws-1", "agent-1"]])
-        expect(events.record).toHaveBeenCalledWith(assignedEvent("Sales Agent: Classify"), transaction)
+        expect(events.record).toHaveBeenCalledWith(assignedEvent("Sales Agent: Classify"), expect.anything())
         expect(write.argsOf("values")).toHaveLength(1)
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })

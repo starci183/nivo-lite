@@ -197,6 +197,15 @@ describe("ZaloPageService view", () => {
         expect(feed.lastWritesSince).toHaveBeenCalledWith(["r-0"], new Date("2026-10-26T10:00:00.000Z"), 40)
     })
 
+    it("skips a write whose conversation the connection does not list", async () => {
+        const { service, feed } = await build()
+        feed.lastWritesSince.mockResolvedValue([{ conversationId: "elsewhere", lastAt: NOW }])
+
+        const page = await service.view(actor, "c-1")
+
+        expect(page.recipients).toEqual([])
+    })
+
     it("closes the send and asks for attention when the token ended and nothing can renew it", async () => {
         const { service, credentials } = await build({ [LIST_ZALO_RECIPIENTS]: [], [FIND_LAST_ZALO_REPLY]: [] })
         credentials.load.mockResolvedValue(

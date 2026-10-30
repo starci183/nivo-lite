@@ -185,6 +185,17 @@ describe("BookingBoardService", () => {
 
 describe("BookingBoardService", () => {
     describe("board", () => {
+        it("names a service the catalogue no longer knows with an empty name", async () => {
+            const { em } = boardManager()
+            const { service, servicesRead } = await build(em, [WAITING])
+            servicesRead.namesOf.mockResolvedValue(new Map())
+
+            const board = await service.board(USER, { workspaceId: WORKSPACE })
+
+            expect(board.bookings).toEqual([expect.objectContaining({ id: "b-1", service: "" })])
+            expect(board.waitlist).toEqual([expect.objectContaining({ id: "w-1", service: "" })])
+        })
+
         it("reads exceptions from yesterday when the range starts later", async () => {
             const { em } = boardManager()
             const { service, exceptionsRead } = await build(em)

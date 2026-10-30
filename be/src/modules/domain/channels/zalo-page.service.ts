@@ -190,7 +190,11 @@ export class ZaloPageService {
 
     private async recipientsOf(conversations: ReadonlyArray<ConnectionConversation>) {
         const since = new Date(this.clock.now().getTime() - ZALO_FREE_WINDOW_MS)
-        const reachable = conversations.filter((conversation) => conversation.externalId !== null)
+        const reachable = conversations.flatMap((conversation) =>
+            conversation.externalId === null
+                ? []
+                : [{ id: conversation.id, externalId: conversation.externalId, visitorName: conversation.visitorName }],
+        )
         const writes = await this.feed.lastWritesSince(
             reachable.map((conversation) => conversation.id),
             since,
@@ -199,7 +203,7 @@ export class ZaloPageService {
         const byId = new Map(reachable.map((conversation) => [conversation.id, conversation]))
         const rows = writes.flatMap((write): Array<RecipientRow> => {
             const conversation = byId.get(write.conversationId)
-            return conversation?.externalId === undefined || conversation.externalId === null
+            return conversation === undefined
                 ? []
                 : [
                       {

@@ -75,8 +75,8 @@ describe("BookingResourcesService", () => {
             await expect(resources.save(writeOf({ id: "r-9" }), em)).resolves.toEqual([])
         })
 
-        it("answers nothing when the statement hands back no rows at all", async () => {
-            const { em } = withBuilders({ execute: {} })
+        it.each([[undefined], [[null]], [[{ id: 7 }]]])("answers nothing for raw %j", async (raw) => {
+            const { em } = withBuilders({ execute: { raw } })
             const resources = await build()
 
             await expect(resources.save(writeOf({ id: "r-9" }), em)).resolves.toEqual([])
