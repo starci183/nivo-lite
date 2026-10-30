@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "meta_inbox" })
 /** One signed Meta delivery, claimed once and processed after commit. */
-export class MetaInboxEntity {
-    /** The receipt. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class MetaInboxEntity extends UuidAbstractEntity {
     /** The provider; always `meta`. */
     @Column({ name: "provider", type: "text" })
     provider!: "meta"

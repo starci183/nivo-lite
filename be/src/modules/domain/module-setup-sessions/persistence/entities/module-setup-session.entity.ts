@@ -1,14 +1,12 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { DraftSnapshot, GateEvidence } from "@modules/domain/module-context-versions"
 import type { SetupSessionStatus } from "../../module-setup-sessions.contracts"
 
 @Entity({ schema: "public", name: "module_setup_sessions" })
 /** One draft session of the setup chat of an installation: one row of `public.module_setup_sessions`. */
-export class ModuleSetupSessionEntity {
-    /** The session. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ModuleSetupSessionEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -32,8 +30,4 @@ export class ModuleSetupSessionEntity {
     /** The evidence per gate. */
     @Column({ name: "gate_evidence", type: "jsonb", default: () => "'{}'::jsonb" })
     gateEvidence!: GateEvidence
-
-    /** When it was opened. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

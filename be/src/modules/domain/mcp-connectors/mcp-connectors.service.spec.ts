@@ -117,7 +117,7 @@ describe("McpConnectorsService rows", () => {
         ])
         expect(insert?.callsOf("orUpdate")).toEqual([
             [
-                ["name", "url", "contract_version", "timeout_ms", "updated_at"],
+                ["name", "url", "contract_version", "timeout_ms"],
                 ["workspace_id", "key"],
             ],
         ])
@@ -171,7 +171,6 @@ describe("McpConnectorsService registration", () => {
             catalogHash: "abc",
             status: "active",
             checkedAt: "now()",
-            updatedAt: "now()",
         })
         expect(update?.callsOf("setParameter")).toEqual([["catalogJson", "[]"]])
         expect(update?.callsOf("where")).toEqual([
@@ -199,7 +198,6 @@ describe("McpConnectorsService credential", () => {
             credentialSealed: "sealed-text",
             credentialSetBy: "person-1",
             credentialSetAt: "now()",
-            updatedAt: "now()",
         })
         expect(written?.callsOf("where")).toEqual([
             ["workspace_id = :workspaceId AND key = :key AND kind = 'remote'", { workspaceId: "ws-1", key: "hakuen" }],
@@ -269,7 +267,6 @@ describe("McpConnectorsService approval and health", () => {
             approvedCatalog: "CAST(:approvedJson AS jsonb)",
             approvedBy: "person-1",
             approvedAt: "now()",
-            updatedAt: "now()",
         })
         expect(approved?.callsOf("where")).toEqual([
             [

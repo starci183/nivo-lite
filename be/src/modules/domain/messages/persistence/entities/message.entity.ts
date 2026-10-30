@@ -1,15 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** Who wrote a line of the Office thread. */
 export type MessageAuthorKind = "human" | "agent" | "system"
 
 @Entity({ schema: "public", name: "messages" })
 /** One line of a workspace's team chat and Office thread. */
-export class MessageEntity {
-    /** The line. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class MessageEntity extends UuidAbstractEntity {
     /** The workspace whose chat holds it. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -33,10 +31,6 @@ export class MessageEntity {
     /** The customer it is about. */
     @Column({ name: "lead_id", type: "uuid", nullable: true })
     leadId!: string | null
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The work item it mirrors. */
     @Column({ name: "work_item_id", type: "uuid", nullable: true })

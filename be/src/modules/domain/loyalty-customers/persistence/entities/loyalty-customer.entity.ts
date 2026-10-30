@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "loyalty_customers" })
 /** One person of a workspace's loyalty programme. */
-export class LoyaltyCustomerEntity {
-    /** The customer. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class LoyaltyCustomerEntity extends UuidAbstractEntity {
     /** The workspace that owns the customer. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -42,12 +40,4 @@ export class LoyaltyCustomerEntity {
     /** The note of the owner. */
     @Column({ name: "note", type: "text", default: () => "''::text" })
     note!: string
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** The last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

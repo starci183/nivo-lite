@@ -101,7 +101,6 @@ export class McpToolGrantsService {
                 limitVnd: change.limitVnd,
                 constraints: [...change.constraints],
                 updatedBy: change.updatedBy,
-                updatedAt: () => "now()",
             },
             GRANT_KEY,
         )
@@ -129,7 +128,6 @@ export class McpToolGrantsService {
                 limitVnd: record.limitVnd,
                 constraints: [...record.constraints],
                 updatedBy: null,
-                updatedAt: () => "now()",
             })),
             GRANT_KEY,
         )

@@ -79,7 +79,7 @@ export class McpConnectorsService {
                     contractVersion: record.contractVersion,
                     timeoutMs: record.timeoutMs,
                 })
-                .orUpdate(["name", "url", "contract_version", "timeout_ms", "updated_at"], ["workspace_id", "key"])
+                .orUpdate(["name", "url", "contract_version", "timeout_ms"], ["workspace_id", "key"])
                 .execute()
             if (record.needsCredential) {
                 await manager.update(
@@ -101,7 +101,6 @@ export class McpConnectorsService {
                 credentialSealed: record.sealed,
                 credentialSetBy: record.setBy,
                 credentialSetAt: NOW,
-                updatedAt: NOW,
             })
             .where("workspace_id = :workspaceId AND key = :key AND kind = 'remote'", {
                 workspaceId: record.workspaceId,
@@ -142,7 +141,6 @@ export class McpConnectorsService {
                 catalogHash: snapshot.catalogHash,
                 status: snapshot.status,
                 checkedAt: NOW,
-                updatedAt: NOW,
             })
             .where("workspace_id = :workspaceId AND key = :key", {
                 workspaceId: snapshot.workspaceId,
@@ -161,7 +159,6 @@ export class McpConnectorsService {
                 approvedCatalog: APPROVED_JSON,
                 approvedBy: approval.approvedBy,
                 approvedAt: NOW,
-                updatedAt: NOW,
             })
             .where("workspace_id = :workspaceId AND key = :key AND kind = 'remote' AND catalog_hash = :catalogHash", {
                 workspaceId: approval.workspaceId,
@@ -179,7 +176,7 @@ export class McpConnectorsService {
         await this.entityManager.update(
             McpConnectorEntity,
             { workspaceId: record.workspaceId, key: record.key, status: Not("disabled") },
-            { status: record.status, checkedAt: NOW, updatedAt: NOW },
+            { status: record.status, checkedAt: NOW },
         )
     }
 }

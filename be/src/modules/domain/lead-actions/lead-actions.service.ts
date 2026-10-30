@@ -30,7 +30,7 @@ import type {
 import { inputOf } from "./lead-action-input.policy"
 import type { LeadActionFenceType } from "./types/lead-action-fence.type"
 import { LeadActionEntity } from "./persistence/entities"
-import { NOW, runOfRaw } from "./persistence/lead-action.projection"
+import { runOfRaw } from "./persistence/lead-action.projection"
 
 @Injectable()
 /** Owns backend run rows: membership-proved enqueue, workspace-scoped status and results under the platform-held fence. */
@@ -92,7 +92,7 @@ export class LeadActionsService {
         const begun = await this.entityManager
             .createQueryBuilder(LeadActionEntity, "la")
             .update()
-            .set({ status: "running", jobId: job.jobId, fencingToken: job.fencingToken, updatedAt: NOW })
+            .set({ status: "running", jobId: job.jobId, fencingToken: job.fencingToken })
             .where({ workspaceId: payload.workspaceId, id: payload.runId, status: In(["queued", "running"]) })
             .returning("id, workspace_id, requested_by, action, input, locale, status, result, error_code")
             .execute()
@@ -123,7 +123,7 @@ export class LeadActionsService {
             await this.entityManager
                 .createQueryBuilder(LeadActionEntity, "la")
                 .update()
-                .set({ status: "failed", errorCode: code, updatedAt: NOW })
+                .set({ status: "failed", errorCode: code })
                 .where({ workspaceId: payload.workspaceId, id: payload.runId, status: In(["queued", "running"]) })
                 .andWhere(
                     new Brackets((held) =>
@@ -160,7 +160,7 @@ export class LeadActionsService {
         const written = await this.entityManager
             .createQueryBuilder(LeadActionEntity, "la")
             .update()
-            .set({ ...change, updatedAt: NOW })
+            .set({ ...change })
             .where({
                 id: held.id,
                 workspaceId: held.workspaceId,

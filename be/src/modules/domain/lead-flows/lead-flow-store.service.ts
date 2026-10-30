@@ -7,7 +7,7 @@ import { saveValues, toLeadFlow } from "./lead-flow.mapper"
 import type { Identity, LeadFlow, LeadFlowPatch, NewLeadFlow } from "./lead-flows.contracts"
 import type { OptionalLeadFlow, OptionalText } from "./lead-flow-delivery.contracts"
 import { LeadFlowEntity } from "./persistence/entities"
-import { NOW, leadFlowOfRaw } from "./persistence/lead-flow.projection"
+import { leadFlowOfRaw } from "./persistence/lead-flow.projection"
 
 /** The most flows an identity can match. */
 const CANDIDATES_MAX = 20
@@ -88,7 +88,7 @@ export class LeadFlowStoreService {
         const saved = await this.entityManager
             .createQueryBuilder(LeadFlowEntity, "lf")
             .update()
-            .set({ ...saveValues({ ...flow, ...patch }), updatedAt: NOW })
+            .set({ ...saveValues({ ...flow, ...patch }) })
             .where({ id: flow.id, workspaceId: flow.workspace_id })
             .returning("*")
             .execute()

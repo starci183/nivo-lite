@@ -175,7 +175,6 @@ describe("LoyaltyProgramsService", () => {
                 name: "COALESCE(CAST(:name AS text), name)",
                 enabled: "COALESCE(CAST(:enabled AS boolean), enabled)",
                 config: "COALESCE(CAST(:config AS jsonb), config)",
-                updatedAt: "now()",
             })
             expect(update?.callsOf("where")).toEqual([["workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
             expect(update?.callsOf("setParameters")).toEqual(

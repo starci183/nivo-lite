@@ -1,8 +1,10 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
+import { AbstractEntity } from "@modules/platform/database"
+
 @Entity({ schema: "public", name: "meta_threads" })
 /** The window row of one person on one Page. */
-export class MetaThreadEntity {
+export class MetaThreadEntity extends AbstractEntity {
     /** The Page connection. */
     @PrimaryColumn({ name: "connection_id", type: "uuid" })
     connectionId!: string

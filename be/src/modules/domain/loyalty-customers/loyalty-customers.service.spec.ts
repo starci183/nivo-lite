@@ -48,17 +48,10 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(LoyaltyCustomersService)
 }
 
-/** An update's `set` argument that stamps the save time with the database clock. */
-const hasClock = (value: unknown): value is { readonly updatedAt: () => string } =>
-    typeof value === "object" && value !== null && "updatedAt" in value && typeof value.updatedAt === "function"
-
-/** What an update query builder was told to set, without the always-present save time. */
+/** What an update query builder was told to set. */
 const setOf = (fake: FakeQueryBuilder | undefined): object => {
     const [set] = fake?.callsOf("set")[0] ?? []
-    expect(hasClock(set)).toBe(true)
-    if (!hasClock(set)) return {}
-    expect(set.updatedAt()).toBe("now()")
-    return { ...set, updatedAt: undefined }
+    return typeof set === "object" && set !== null ? set : {}
 }
 
 const registerByPhoneAndById = () => {
@@ -174,7 +167,7 @@ const registerMoveTier = () => {
             await expect(customers.moveTier(move(moved))).resolves.toBe(true)
             await expect(customers.moveTier(move(lost))).resolves.toBe(false)
             const at = new Date("2026-10-12T00:00:00.000Z")
-            expect(update?.callsOf("set")).toEqual([[{ tierKey: "bac", tierSince: at, updatedAt: at }]])
+            expect(update?.callsOf("set")).toEqual([[{ tierKey: "bac", tierSince: at }]])
             expect(update?.callsOf("where")).toEqual([
                 [
                     "workspace_id = :workspaceId AND id = :customerId AND tier_key IS NOT DISTINCT FROM :fromKey",
@@ -290,7 +283,6 @@ const registerUpdateProfile = () => {
                 name: "M".repeat(120),
                 birthday: "1990-05-01",
                 note: "N".repeat(500),
-                updatedAt: undefined,
             })
             expect(update?.callsOf("where")).toEqual([
                 ["workspace_id = :workspaceId AND id = :customerId", { workspaceId: "ws-1", customerId: "c1" }],
@@ -299,11 +291,14 @@ const registerUpdateProfile = () => {
 
         it("leaves omitted fields untouched and reports an unmatched customer", async () => {
             const manager = mockEntityManager()
-            const [update] = queueQueryBuilders(manager, [{ execute: { raw: [] } }])
+            manager.exists.mockResolvedValue(false)
             const customers = await build(manager)
 
             await expect(customers.updateProfile("ws-1", "missing", {})).resolves.toBe(false)
-            expect(setOf(update)).toEqual({ updatedAt: undefined })
+            expect(manager.exists).toHaveBeenCalledWith(LoyaltyCustomerEntity, {
+                where: { workspaceId: "ws-1", id: "missing" },
+            })
+            expect(manager.createQueryBuilder).not.toHaveBeenCalled()
         })
 
         it("keeps a blank name and explicitly clears the birthday and note", async () => {
@@ -314,7 +309,7 @@ const registerUpdateProfile = () => {
             await expect(
                 customers.updateProfile("ws-1", "c1", { name: "  ", birthday: null, note: "  " }),
             ).resolves.toBe(true)
-            expect(setOf(update)).toEqual({ birthday: null, note: "", updatedAt: undefined })
+            expect(setOf(update)).toEqual({ birthday: null, note: "" })
         })
 
         it("turns an invalid birthday into an explicit clear", async () => {
@@ -323,7 +318,7 @@ const registerUpdateProfile = () => {
             const customers = await build(manager)
 
             await expect(customers.updateProfile("ws-1", "c1", { birthday: "2025-02-29" })).resolves.toBe(true)
-            expect(setOf(update)).toEqual({ birthday: null, updatedAt: undefined })
+            expect(setOf(update)).toEqual({ birthday: null })
         })
     })
 }

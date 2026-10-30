@@ -1,13 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { ArgConstraint, GrantMode } from "../../mcp-tool-grants.contracts"
 
 @Entity({ schema: "public", name: "mcp_tool_grants" })
 /** One grant of a gateway tool to an agent of a workspace. */
-export class McpToolGrantEntity {
-    /** The grant. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class McpToolGrantEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -35,8 +33,4 @@ export class McpToolGrantEntity {
     /** Who set the grant, or null. */
     @Column({ name: "updated_by", type: "uuid", nullable: true })
     updatedBy!: string | null
-
-    /** When the grant last changed. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

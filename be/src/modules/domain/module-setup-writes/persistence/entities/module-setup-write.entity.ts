@@ -1,13 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { CardResult, CardStatus, FactCardPayload, RuleCardPayload } from "../../module-setup-writes.contracts"
 
 @Entity({ schema: "public", name: "module_setup_writes" })
 /** One confirm card of the setup chat: one row of `public.module_setup_writes`. */
-export class ModuleSetupWriteEntity {
-    /** The card. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ModuleSetupWriteEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -51,8 +49,4 @@ export class ModuleSetupWriteEntity {
     /** When it was decided. */
     @Column({ name: "decided_at", type: "timestamptz", nullable: true })
     decidedAt!: Date | null
-
-    /** When it was proposed. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

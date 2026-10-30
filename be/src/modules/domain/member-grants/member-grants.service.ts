@@ -115,9 +115,8 @@ export class MemberGrantsService {
                 action,
                 unit: setup?.unit ?? DEFAULT_UNIT,
                 maxAmount: grant.maxAmount === null ? null : String(grant.maxAmount),
-                updatedAt: () => "now()",
             })
-            .orUpdate(["unit", "max_amount", "updated_at"], ["member_id", "action"])
+            .orUpdate(["unit", "max_amount"], ["member_id", "action"])
             .execute()
     }
 

@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** Where a promotion campaign stands. */
 export type LoyaltyCampaignStatus =
@@ -6,11 +8,7 @@ export type LoyaltyCampaignStatus =
 
 @Entity({ schema: "public", name: "loyalty_campaigns" })
 /** One promotion to a segment of the programme. */
-export class LoyaltyCampaignEntity {
-    /** The campaign. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class LoyaltyCampaignEntity extends UuidAbstractEntity {
     /** The workspace that owns it. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -46,10 +44,6 @@ export class LoyaltyCampaignEntity {
     /** The requester's display name. */
     @Column({ name: "created_by", type: "text", default: () => "''::text" })
     createdBy!: string
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The terminal time. */
     @Column({ name: "finished_at", type: "timestamptz", nullable: true })

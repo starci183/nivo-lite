@@ -8,12 +8,6 @@ import type { McpToolGrantRecord, McpToolGrantView } from "./mcp-tool-grants.con
 import { McpToolGrantsService } from "./mcp-tool-grants.service"
 import { McpToolGrantEntity } from "./persistence/entities"
 
-/** Matches the `() => "now()"` function a write hands the database for a time column. */
-const ANY_FUNCTION: unknown = {
-    asymmetricMatch: (value: unknown): boolean =>
-        typeof value === "function" && Reflect.apply(value, undefined, []) === "now()",
-}
-
 const grantOf = builder<McpToolGrantView>({ tool: "hakuen.*", mode: "auto", limit_vnd: null, constraints: [] })
 
 const entityOf = builder<McpToolGrantEntity>({
@@ -25,6 +19,7 @@ const entityOf = builder<McpToolGrantEntity>({
     limitVnd: null,
     constraints: [],
     updatedBy: null,
+    createdAt: new Date("2026-10-20T00:00:00.000Z"),
     updatedAt: new Date("2026-10-20T00:00:00.000Z"),
 })
 
@@ -152,7 +147,6 @@ describe("McpToolGrantsService.set", () => {
                 limitVnd: 500000,
                 constraints: [{ arg: "discountPct", max: 5 }],
                 updatedBy: "person-1",
-                updatedAt: ANY_FUNCTION,
             },
             ["agentId", "tool"],
         )
@@ -201,7 +195,6 @@ describe("McpToolGrantsService.upsert", () => {
                     limitVnd: null,
                     constraints: [{ arg: "discountPct", max: 5 }],
                     updatedBy: null,
-                    updatedAt: ANY_FUNCTION,
                 },
                 {
                     workspaceId: "ws-1",
@@ -211,7 +204,6 @@ describe("McpToolGrantsService.upsert", () => {
                     limitVnd: null,
                     constraints: [],
                     updatedBy: null,
-                    updatedAt: ANY_FUNCTION,
                 },
             ],
             ["agentId", "tool"],

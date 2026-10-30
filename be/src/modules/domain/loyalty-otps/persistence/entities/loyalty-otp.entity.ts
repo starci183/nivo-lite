@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "loyalty_otps" })
 /** One one-time code of the public points check, stored hashed. */
-export class LoyaltyOtpEntity {
-    /** The code. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class LoyaltyOtpEntity extends UuidAbstractEntity {
     /** The workspace that issued it. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -30,8 +28,4 @@ export class LoyaltyOtpEntity {
     /** When it was used, null while unused. */
     @Column({ name: "used_at", type: "timestamptz", nullable: true })
     usedAt!: Date | null
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

@@ -1,15 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** What a grant's limit is counted in. */
 export type MemberGrantUnit = "vnd" | "percent" | "count"
 
 @Entity({ schema: "public", name: "member_grants" })
 /** What one member may approve for one action. */
-export class MemberGrantEntity {
-    /** The grant. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class MemberGrantEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -29,8 +27,4 @@ export class MemberGrantEntity {
     /** The largest amount the member may approve, as exact text; null means no limit. */
     @Column({ name: "max_amount", type: "numeric", nullable: true })
     maxAmount!: string | null
-
-    /** The last save. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

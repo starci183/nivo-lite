@@ -1,12 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "lead_flows" })
 /** The journey of one prospect that came in through Facebook or Instagram: a row of public.lead_flows. */
-export class LeadFlowEntity {
-    /** The flow id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class LeadFlowEntity extends UuidAbstractEntity {
     /** The owning workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -130,14 +128,6 @@ export class LeadFlowEntity {
     /** Why a person took over. */
     @Column({ name: "escalation_reason", type: "text", nullable: true })
     escalationReason!: string | null
-
-    /** Creation instant. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** Last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** The agent instance the flow runs for. */
     @Column({ name: "installation_id", type: "uuid", nullable: true })

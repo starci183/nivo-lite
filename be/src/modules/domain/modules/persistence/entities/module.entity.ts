@@ -1,9 +1,11 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
+
+import { AbstractEntity } from "@modules/platform/database"
 import type { ModuleDefinition } from "../../modules.contracts"
 
 @Entity({ schema: "public", name: "modules" })
 /** One module of the catalogue as the database mirrors it: one row of `public.modules`. */
-export class ModuleEntity {
+export class ModuleEntity extends AbstractEntity {
     /** The module key. */
     @PrimaryColumn({ name: "key", type: "text" })
     key!: string
@@ -39,10 +41,6 @@ export class ModuleEntity {
     /** The whole definition of the module. */
     @Column({ name: "definition", type: "jsonb", default: () => "'{}'::jsonb" })
     definition!: ModuleDefinition
-
-    /** When the catalogue was last mirrored. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** True when the type allows several instances. */
     @Column({ name: "multi_instance", type: "boolean", default: () => "false" })

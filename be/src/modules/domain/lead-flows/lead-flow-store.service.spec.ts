@@ -11,7 +11,6 @@ import { LeadFlowStoreService } from "./lead-flow-store.service"
 import type { Identity, LeadSource, NewLeadFlow } from "./lead-flows.contracts"
 import { storedFlowOf } from "@tests/fixtures/builders/lead-flows.builder"
 import { LeadFlowEntity } from "./persistence/entities"
-import { NOW } from "./persistence/lead-flow.projection"
 
 /** The RETURNING row of a write that answered this flow, as the database names its columns. */
 const returned = (flow: LeadFlowEntity): QueryBuilderAnswers => ({
@@ -200,7 +199,7 @@ describe("LeadFlowStoreService", () => {
             code: LeadFlowsErrorCode.NotStored,
         })
 
-        expect(fakes[0]?.callsOf("set")).toEqual([[{ ...saveValues({ ...flow, state: "greeted" }), updatedAt: NOW }]])
+        expect(fakes[0]?.callsOf("set")).toEqual([[saveValues({ ...flow, state: "greeted" })]])
         expect(fakes[0]?.callsOf("where")).toEqual([[{ id: "flow-1", workspaceId: "ws-1" }]])
         expect(fakes[0]?.callsOf("returning")).toEqual([["*"]])
     })

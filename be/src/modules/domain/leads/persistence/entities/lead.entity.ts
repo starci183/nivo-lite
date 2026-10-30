@@ -1,15 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** Where a lead stands on its journey. */
 export type LeadStage = "new" | "qualified" | "proposal" | "won" | "lost"
 
 @Entity({ schema: "public", name: "leads" })
 /** One customer of a workspace, captured from a conversation, an API call or a campaign. */
-export class LeadEntity {
-    /** The lead. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class LeadEntity extends UuidAbstractEntity {
     /** The workspace that owns the lead. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -37,10 +35,6 @@ export class LeadEntity {
     /** The context brief of the customer. */
     @Column({ name: "context_summary", type: "text", nullable: true })
     contextSummary!: string | null
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The normalised phone. */
     @Column({ name: "phone", type: "text", nullable: true })

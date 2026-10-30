@@ -1,15 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** Where one promotion send stands. */
 export type LoyaltySendStatus = "queued" | "sent" | "failed" | "skipped"
 
 @Entity({ schema: "public", name: "loyalty_sends" })
 /** One promotion message to one customer of a campaign. */
-export class LoyaltySendEntity {
-    /** The send. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class LoyaltySendEntity extends UuidAbstractEntity {
     /** The workspace that owns it. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -45,8 +43,4 @@ export class LoyaltySendEntity {
     /** When it went out. */
     @Column({ name: "sent_at", type: "timestamptz", nullable: true })
     sentAt!: Date | null
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

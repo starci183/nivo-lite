@@ -1,8 +1,10 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
+import { AbstractEntity } from "@modules/platform/database"
+
 @Entity({ schema: "public", name: "mcp_gateway_receipts" })
 /** The sealed pending or final outcome of one gateway operation. */
-export class McpGatewayReceiptEntity {
+export class McpGatewayReceiptEntity extends AbstractEntity {
     /** The workspace that ran the operation. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

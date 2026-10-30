@@ -137,10 +137,8 @@ describe("MemberGrantsService > replaceForAction", () => {
         expect(service.doubles.members.lockMember).toHaveBeenCalledWith(expect.anything(), "ws-1", "member-2")
         expect(service.doubles.actions.exists).toHaveBeenCalledWith(expect.anything(), "give_discount")
         expect(service.doubles.rules.approvalSetup).toHaveBeenCalledWith("ws-1", "give_discount")
-        const { updatedAt: stamp1, ...saved1 } = writtenBy(insert1)
-        const { updatedAt: stamp2, ...saved2 } = writtenBy(insert2)
-        expect(stamp1).toBe("now()")
-        expect(stamp2).toBe("now()")
+        const saved1 = writtenBy(insert1)
+        const saved2 = writtenBy(insert2)
         expect(saved1).toEqual({
             workspaceId: "ws-1",
             memberId: "member-1",
@@ -157,7 +155,7 @@ describe("MemberGrantsService > replaceForAction", () => {
         })
         expect(insert1?.callsOf("orUpdate")).toEqual([
             [
-                ["unit", "max_amount", "updated_at"],
+                ["unit", "max_amount"],
                 ["member_id", "action"],
             ],
         ])

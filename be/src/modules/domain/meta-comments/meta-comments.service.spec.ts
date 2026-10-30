@@ -27,6 +27,8 @@ const entityOf = builder<MetaCommentEntity>({
     platform: "facebook",
     commentAt: new Date(COMMENT_AT),
     privateRepliedAt: null,
+    createdAt: new Date(COMMENT_AT),
+    updatedAt: new Date(COMMENT_AT),
 })
 
 describe("MetaCommentsService", () => {

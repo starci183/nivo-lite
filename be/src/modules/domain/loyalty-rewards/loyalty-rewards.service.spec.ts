@@ -30,6 +30,7 @@ const entityOf = builder<LoyaltyRewardEntity>({
     active: true,
     sortOrder: 100,
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 })
 const rawOf = builder<RewardRaw>({
     id: "r1",

@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 
 /** Whether a connector is native or a remote MCP server. */
 export type McpConnectorKind = "native" | "remote"
@@ -31,11 +33,7 @@ export interface McpApprovedTool {
 
 @Entity({ schema: "public", name: "mcp_connectors" })
 /** One connector of a workspace's MCP gateway. */
-export class McpConnectorEntity {
-    /** The connector. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class McpConnectorEntity extends UuidAbstractEntity {
     /** The workspace that owns the connector. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -75,14 +73,6 @@ export class McpConnectorEntity {
     /** The sha256 of the live catalog text, or empty. */
     @Column({ name: "catalog_hash", type: "text", default: () => "''::text" })
     catalogHash!: string
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** The last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 
     /** The approved { name, hash } pairs. */
     @Column({ name: "approved_catalog", type: "jsonb", default: () => "'[]'::jsonb" })

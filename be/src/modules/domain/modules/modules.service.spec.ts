@@ -1,9 +1,8 @@
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import type { AuthorityActionRecord } from "@modules/domain/authority-actions"
-import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { MODULE_CATEGORIES } from "./categories.contracts"
@@ -26,7 +25,6 @@ const arrayLike = (items: ReadonlyArray<unknown>): unknown => expect.arrayContai
 /** The match-anything matcher, typed `unknown` so it flows into any slot. */
 const anything = (): unknown => expect.anything()
 
-const AT = "2026-03-04T05:06:07.000Z"
 const OPTIONS: ModulesOptions = { categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }
 const KEYS = MODULE_CATALOG.map((module) => ({ key: module.key }))
 const entityOf = (key: string): ModuleEntity => Object.assign(new ModuleEntity(), { key })
@@ -43,7 +41,6 @@ const build = async (
         providers: [
             ModulesService,
             { provide: MODULES_OPTIONS, useValue: options },
-            { provide: CLOCK, useValue: new FakeClock(AT) },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: AuthorityActionsService, useValue: authorityActions },
         ],
@@ -146,7 +143,7 @@ describe("ModulesService > sync", () => {
 })
 
 describe("ModulesService > sync", () => {
-    it("writes each module with its columns and its whole definition, stamped with the clock", async () => {
+    it("writes each module with its columns and its whole definition", async () => {
         const tx = syncTransaction()
         const { service, authorityActions } = await build({}, tx.em)
         authorityActions.upsertAll.mockResolvedValue({ written: 0, stale: [] })
@@ -164,7 +161,6 @@ describe("ModulesService > sync", () => {
             defaultOperatingMode: module.defaultOperatingMode,
             multiInstance: module.multiInstance,
             definition: module,
-            updatedAt: new Date(AT),
         }))
         expect(tx.em.upsert).toHaveBeenCalledWith(ModuleEntity, expected, ["key"])
     })

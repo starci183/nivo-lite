@@ -1,9 +1,6 @@
 import { returnedRows, rowShape } from "@modules/platform/database"
 import { LeadActionEntity } from "./entities"
 
-/** The database instant of a write, for the `updated_at` column. */
-export const NOW = (): string => "now()"
-
 /** The entity property and the column it reads, for the columns the begin of a run returns. */
 const COLUMNS: ReadonlyArray<readonly [string, string]> = [
     ["id", "id"],

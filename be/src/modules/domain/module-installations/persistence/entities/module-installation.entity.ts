@@ -1,13 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { InstallationMode, InstallationSettings, InstallationStatus } from "../../module-installations.contracts"
 
 @Entity({ schema: "public", name: "module_installations" })
 /** One installed agent of a workspace: one row of `public.module_installations`. */
-export class ModuleInstallationEntity {
-    /** The installation. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ModuleInstallationEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -39,10 +37,6 @@ export class ModuleInstallationEntity {
     /** The settings of the instance. */
     @Column({ name: "settings", type: "jsonb", default: () => `'{"processor": "openclaw"}'::jsonb` })
     settings!: InstallationSettings
-
-    /** When it was installed. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The label of the instance. */
     @Column({ name: "name", type: "text" })

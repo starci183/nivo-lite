@@ -1,8 +1,10 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
+import { AbstractEntity } from "@modules/platform/database"
+
 @Entity({ schema: "public", name: "loyalty_programs" })
 /** The loyalty programme of one workspace. */
-export class LoyaltyProgramEntity {
+export class LoyaltyProgramEntity extends AbstractEntity {
     /** The workspace that runs the programme. */
     @PrimaryColumn({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -22,12 +24,4 @@ export class LoyaltyProgramEntity {
     /** The stored rules, as the owner saved them. */
     @Column({ name: "config", type: "jsonb", default: () => "'{}'::jsonb" })
     config!: object
-
-    /** When the programme was created. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** The last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

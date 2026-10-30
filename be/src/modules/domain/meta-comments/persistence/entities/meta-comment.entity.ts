@@ -1,8 +1,10 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
+import { AbstractEntity } from "@modules/platform/database"
+
 @Entity({ schema: "public", name: "meta_comments" })
 /** The private-reply row of one comment. */
-export class MetaCommentEntity {
+export class MetaCommentEntity extends AbstractEntity {
     /** The Page connection. */
     @PrimaryColumn({ name: "connection_id", type: "uuid" })
     connectionId!: string

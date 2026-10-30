@@ -1,13 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { ContextNoteSource, ContextNoteStatus } from "../../context-notes.contracts"
 
 @Entity({ schema: "public", name: "module_context_notes" })
 /** A note that supplements the context of an installation later: one row of `public.module_context_notes`. */
-export class ModuleContextNoteEntity {
-    /** The note. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ModuleContextNoteEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -55,8 +53,4 @@ export class ModuleContextNoteEntity {
     /** When the note was decided. */
     @Column({ name: "decided_at", type: "timestamptz", nullable: true })
     decidedAt!: Date | null
-
-    /** When the note was written. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

@@ -110,7 +110,6 @@ export class LoyaltyProgramsService {
                 name: () => "COALESCE(CAST(:name AS text), name)",
                 enabled: () => "COALESCE(CAST(:enabled AS boolean), enabled)",
                 config: () => "COALESCE(CAST(:config AS jsonb), config)",
-                updatedAt: () => "now()",
             })
             .where("workspace_id = :workspaceId", { workspaceId })
             .setParameters({

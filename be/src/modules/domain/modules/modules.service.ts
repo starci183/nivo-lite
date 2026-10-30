@@ -2,8 +2,6 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import type { AuthorityActionRecord } from "@modules/domain/authority-actions"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import { InjectModulesOptions } from "./modules.decorators"
@@ -16,7 +14,7 @@ import { defaultRulesOf } from "./policies/instance.policy"
 /** How many module rows are read back at once. */
 const MODULES_LIMIT = 500
 
-const toModuleRecord = (module: ModuleDefinition, syncedAt: Date) => ({
+const toModuleRecord = (module: ModuleDefinition) => ({
     key: module.key,
     sortOrder: module.order,
     status: module.status,
@@ -27,7 +25,6 @@ const toModuleRecord = (module: ModuleDefinition, syncedAt: Date) => ({
     defaultOperatingMode: module.defaultOperatingMode,
     multiInstance: module.multiInstance,
     definition: module,
-    updatedAt: syncedAt,
 })
 
 const toActionRecords = (module: ModuleDefinition): ReadonlyArray<AuthorityActionRecord> =>
@@ -48,7 +45,6 @@ const toActionRecords = (module: ModuleDefinition): ReadonlyArray<AuthorityActio
 export class ModulesService {
     constructor(
         @InjectModulesOptions() private readonly options: ModulesOptions,
-        @InjectClock() private readonly clock: Clock,
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly authorityActions: AuthorityActionsService,
     ) {}
@@ -79,8 +75,7 @@ export class ModulesService {
             )
         }
         const actions = this.options.catalog.flatMap(toActionRecords)
-        const syncedAt = this.clock.now()
-        const modules = this.options.catalog.map((module) => toModuleRecord(module, syncedAt))
+        const modules = this.options.catalog.map((module) => toModuleRecord(module))
         return this.entityManager.transaction(async (tx) => {
             const upserted = await tx.upsert(ModuleEntity, modules, ["key"])
             const written = upserted.identifiers.map((identifier) => ({ key: String(identifier.key) }))

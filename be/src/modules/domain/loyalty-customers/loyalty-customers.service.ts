@@ -102,7 +102,7 @@ export class LoyaltyCustomersService {
         const moved = await move.manager
             .createQueryBuilder(LoyaltyCustomerEntity, "lc")
             .update()
-            .set({ tierKey: move.toKey, tierSince: at, updatedAt: at })
+            .set({ tierKey: move.toKey, tierSince: at })
             .where("workspace_id = :workspaceId AND id = :customerId AND tier_key IS NOT DISTINCT FROM :fromKey", {
                 workspaceId: move.workspaceId,
                 customerId: move.customerId,
@@ -160,15 +160,18 @@ export class LoyaltyCustomersService {
     async updateProfile(workspaceId: string, customerId: string, patch: CustomerPatch): Promise<boolean> {
         const name = patch.name?.trim().slice(0, 120) || null
         const note = patch.note?.trim().slice(0, 500) ?? null
+        const fields = {
+            ...(name === null ? {} : { name }),
+            ...(patch.birthday === undefined ? {} : { birthday: customerBirthday(patch.birthday) }),
+            ...(note === null ? {} : { note }),
+        }
+        if (Object.keys(fields).length === 0) {
+            return this.entityManager.exists(LoyaltyCustomerEntity, { where: { workspaceId, id: customerId } })
+        }
         const changed = await this.entityManager
             .createQueryBuilder(LoyaltyCustomerEntity, "lc")
             .update()
-            .set({
-                ...(name === null ? {} : { name }),
-                ...(patch.birthday === undefined ? {} : { birthday: customerBirthday(patch.birthday) }),
-                ...(note === null ? {} : { note }),
-                updatedAt: () => "now()",
-            })
+            .set(fields)
             .where("workspace_id = :workspaceId AND id = :customerId", { workspaceId, customerId })
             .returning("id")
             .execute()

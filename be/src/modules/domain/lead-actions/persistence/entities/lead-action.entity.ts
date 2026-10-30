@@ -1,5 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
 import type { ValueTransformer } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { Locale } from "@modules/platform/i18n"
 import type { LeadAction, LeadActionInput, LeadActionResult, LeadActionStatus } from "../../lead-actions.contracts"
 
@@ -11,11 +13,7 @@ const tokenAsNumber: ValueTransformer = {
 
 @Entity({ schema: "public", name: "lead_actions" })
 /** One queued, running or finished lead action of a workspace: a row of public.lead_actions. */
-export class LeadActionEntity {
-    /** The run id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class LeadActionEntity extends UuidAbstractEntity {
     /** The owning workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -55,12 +53,4 @@ export class LeadActionEntity {
     /** The terminal error code. */
     @Column({ name: "error_code", type: "text", nullable: true })
     errorCode!: string | null
-
-    /** Creation instant. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
-
-    /** Last change. */
-    @Column({ name: "updated_at", type: "timestamptz", default: () => "now()" })
-    updatedAt!: Date
 }

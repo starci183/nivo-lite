@@ -1,5 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity } from "typeorm"
 import type { ValueTransformer } from "typeorm"
+
+import { UuidAbstractEntity } from "@modules/platform/database"
 import type { RewardKind } from "../../loyalty-rewards.contracts"
 
 /** Reads the bigint value (text from the driver) as a number; rewards are priced in whole VND. */
@@ -10,11 +12,7 @@ const valueTransformer: ValueTransformer = {
 
 @Entity({ schema: "public", name: "loyalty_rewards" })
 /** One entry of a workspace's reward catalogue. */
-export class LoyaltyRewardEntity {
-    /** The reward. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class LoyaltyRewardEntity extends UuidAbstractEntity {
     /** The workspace that owns the reward. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -66,8 +64,4 @@ export class LoyaltyRewardEntity {
     /** The position in the catalogue. */
     @Column({ name: "sort_order", type: "integer", default: () => "0" })
     sortOrder!: number
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }
