@@ -28,7 +28,6 @@ const INVALID = objectLike({ code: BillingErrorCode.WebhookInvalid })
 const OPTIONS: BillingOptions = {
     sepayApiKey: new Secret("billing-key"),
     bankAccount: { account: "", bank: "", holder: "" },
-    channelTokenKey: undefined,
 }
 
 const build = async (options: Partial<BillingOptions> = {}, loaded: PaymentSecret | null = null) => {

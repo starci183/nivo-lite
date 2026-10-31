@@ -84,7 +84,6 @@ const options = {
     billing: {
         sepayApiKey: undefined,
         bankAccount: { account: "fixture", bank: "fixture", holder: "Wiring Fixture" },
-        channelTokenKey: wiringSettings.channelConnections.channelTokenKey,
     },
     openclaw: {
         gateway: null,

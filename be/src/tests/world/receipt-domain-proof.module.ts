@@ -32,7 +32,6 @@ const siteUrl = "http://localhost:3000"
 const billingOptions = (): BillingOptions => ({
     sepayApiKey: undefined,
     bankAccount: { account: "", bank: "", holder: "" },
-    channelTokenKey: tokenKey,
 })
 
 @Module({

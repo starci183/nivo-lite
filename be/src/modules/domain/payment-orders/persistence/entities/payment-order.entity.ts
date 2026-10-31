@@ -1,13 +1,8 @@
 import { Column, Entity } from "typeorm"
 
 import { UuidAbstractEntity } from "@modules/platform/database"
+import { bigintNumberTransformer } from "@modules/platform/primitives"
 import type { OrderDetail, OrderKind, OrderStatus } from "../../payment-orders.contracts"
-
-/** Reads a bigint column as a number, as the order contract always did. */
-const amountTransformer = {
-    to: (value: number): number => value,
-    from: Number,
-}
 
 @Entity({ schema: "public", name: "payment_orders" })
 /** One payment order of a workspace: one row of `public.payment_orders`. */
@@ -25,7 +20,7 @@ export class PaymentOrderEntity extends UuidAbstractEntity {
     planCode!: string
 
     /** The amount to transfer in VND. */
-    @Column({ name: "amount_vnd", type: "bigint", transformer: amountTransformer })
+    @Column({ name: "amount_vnd", type: "bigint", transformer: bigintNumberTransformer })
     amountVnd!: number
 
     /** The transfer content that identifies the order. */

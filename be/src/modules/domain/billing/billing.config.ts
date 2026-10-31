@@ -9,5 +9,4 @@ export const parseBillingConfig = (env: EnvSource): BillingOptions => ({
         bank: env.optional("SEPAY_BANK_CODE") ?? "",
         holder: env.optional("SEPAY_ACCOUNT_NAME") ?? "",
     },
-    channelTokenKey: env.has("CHANNEL_TOKEN_KEY") ? env.secret("CHANNEL_TOKEN_KEY") : undefined,
 })

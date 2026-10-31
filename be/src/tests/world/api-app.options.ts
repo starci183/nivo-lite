@@ -118,7 +118,6 @@ const localApiOptions = (): ApiOptions => ({
     billing: {
         sepayApiKey: undefined,
         bankAccount: { account: "proof", bank: "proof", holder: "Proof" },
-        channelTokenKey: TOKEN_KEY,
     },
     ...providerOptions(),
     realtime: { hub: "memory" as const },

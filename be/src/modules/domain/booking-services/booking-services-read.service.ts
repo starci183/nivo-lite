@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, namesById } from "@modules/platform/database"
 import type { BookingServiceRecord, OptionalBookingServiceTiming } from "./booking-services-read.contracts"
 import { BookingServiceEntity } from "./persistence/entities"
 
@@ -23,14 +23,8 @@ export class BookingServicesReadService {
     }
 
     /** The current names of the given services of a workspace, by id; a service that is gone has no entry. */
-    async namesOf(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyMap<string, string>> {
-        if (ids.length === 0) return new Map()
-        const rows = await this.entityManager.find(BookingServiceEntity, {
-            select: { id: true, name: true },
-            where: { workspaceId, id: In([...ids]) },
-            take: ids.length,
-        })
-        return new Map(rows.map((row) => [row.id, row.name]))
+    namesOf(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyMap<string, string>> {
+        return namesById(this.entityManager, BookingServiceEntity, { workspaceId, id: In([...ids]) }, ids)
     }
 
     /** How long a service holds a resource, or none when the service is gone. */

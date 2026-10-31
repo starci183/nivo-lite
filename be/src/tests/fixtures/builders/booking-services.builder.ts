@@ -40,7 +40,7 @@ export const CATALOGUE_FIND = {
 
 /** The options `namesOf("ws-1", ids)` reads the names with: only id and name, bounded by the ids asked. */
 export const namesFindOf = (ids: ReadonlyArray<string>) => ({
-    select: { id: true, name: true },
+    select: ["id", "name"],
     where: { workspaceId: "ws-1", id: In([...ids]) },
     take: ids.length,
 })

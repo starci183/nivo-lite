@@ -1,6 +1,6 @@
 import { UuidAbstractEntity } from "@modules/platform/database"
+import { bigintNumberTransformer } from "@modules/platform/primitives"
 import { Column, Entity } from "typeorm"
-import { amountTransformer } from "./amount-column.mapper"
 
 @Entity({ schema: "public", name: "inbound_events" })
 /** One input the engine received from a channel. */
@@ -30,7 +30,7 @@ export class InboundEventEntity extends UuidAbstractEntity {
     body!: string
 
     /** The money in it, VND. */
-    @Column({ name: "amount_vnd", type: "bigint", nullable: true, transformer: amountTransformer })
+    @Column({ name: "amount_vnd", type: "bigint", nullable: true, transformer: bigintNumberTransformer })
     amountVnd!: number | null
 
     /** The external reference. */

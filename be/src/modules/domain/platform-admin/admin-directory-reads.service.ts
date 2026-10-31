@@ -2,14 +2,18 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AiQuotaOverridesAdminReadService } from "@modules/domain/ai-quota-overrides"
 import { AppErrorsReadService } from "@modules/domain/app-errors"
+import type { AppErrorRow } from "@modules/domain/app-errors"
 import { BillingEventsReadService } from "@modules/domain/billing"
+import type { BillingEventRow } from "@modules/domain/billing"
 import { ConnectionsAdminReadService } from "@modules/domain/connections"
+import type { ConnectionBadgeRow } from "@modules/domain/connections"
 import { KnowledgeSourcesAdminReadService } from "@modules/domain/knowledge-sources"
 import { ContextVersionsAdminReadService } from "@modules/domain/module-context-versions"
 import { ModuleInstallationsAdminReadService } from "@modules/domain/module-installations"
 import { AgentSyncAdminReadService } from "@modules/domain/openclaw-agent-sync"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import { SepayTransactionsAdminReadService } from "@modules/domain/sepay-transactions"
+import type { TransferAdminRow } from "@modules/domain/sepay-transactions"
 import { MemberRosterService } from "@modules/domain/workspace-members"
 import { WorkspaceInvitesAdminReadService } from "@modules/domain/workspace-invites"
 import { WorkspaceAdminReadService } from "@modules/domain/workspaces"
@@ -56,6 +60,46 @@ const workspaceFacts = (row: WorkspaceAdminRow): R.WorkspaceFacts => ({
     created_at: at(row.createdAt),
 })
 
+/** The columns an error row shares between the workspace detail and the platform list. */
+const errorFacts = (row: AppErrorRow): R.WorkspaceErrorFacts => ({
+    id: row.id,
+    scope: row.scope,
+    message: row.message,
+    created_at: at(row.createdAt),
+})
+
+/** The columns a billing event row shares between the workspace detail and the platform list. */
+const billingEventFacts = (row: BillingEventRow): R.BillingEventFacts => ({
+    id: row.id,
+    kind: row.kind,
+    created_at: at(row.createdAt),
+})
+
+/** The columns a connection row shares between the list badge and the workspace detail. */
+const connectionBase = (
+    row: Omit<ConnectionBadgeRow, "workspaceId">,
+): Omit<R.ConnectionBadgeFacts, "workspace_id"> => ({
+    created_at: at(row.createdAt),
+    last_event_at: atOrNull(row.lastEventAt),
+    provider: row.provider,
+    status: row.status,
+    environment: row.environment,
+})
+
+/** The columns a SePay transfer row shares between the order detail and the platform list. */
+const transferBase = (row: TransferAdminRow): R.RecentTransferFacts => ({
+    status: row.status,
+    transfer_amount: row.transferAmount,
+    content: row.content,
+    received_at: at(row.receivedAt),
+})
+
+/** The facts of the rows a read answers, one per row. */
+const factsOf = async <Row, Fact>(
+    read: Promise<ReadonlyArray<Row>>,
+    toFact: (row: Row) => Fact,
+): Promise<Array<Fact>> => (await read).map((row) => toFact(row))
+
 @Injectable()
 /**
  * The console's reads, each bounded as the former statement was. Every table belongs to a capability and is read through its
@@ -80,9 +124,8 @@ export class AdminDirectoryReadsService {
     ) {}
 
     /** The newest customer workspaces. */
-    async workspaces(): Promise<Array<R.WorkspaceFacts>> {
-        const rows = await this.workspaceReads.newest(1000)
-        return rows.map((row) => workspaceFacts(row))
+    workspaces(): Promise<Array<R.WorkspaceFacts>> {
+        return factsOf(this.workspaceReads.newest(1000), (row) => workspaceFacts(row))
     }
 
     /** One workspace, or undefined when it does not exist. */
@@ -99,9 +142,8 @@ export class AdminDirectoryReadsService {
     }
 
     /** The agent installations of every workspace. */
-    async moduleInstalls(): Promise<Array<R.ModuleBadgeFacts>> {
-        const rows = await this.installations.badges(5000)
-        return rows.map((row) => ({
+    moduleInstalls(): Promise<Array<R.ModuleBadgeFacts>> {
+        return factsOf(this.installations.badges(5000), (row) => ({
             workspace_id: row.workspaceId,
             module_key: row.moduleKey,
             status: row.status,
@@ -110,15 +152,10 @@ export class AdminDirectoryReadsService {
     }
 
     /** Every connection that is not disconnected. */
-    async liveConnections(): Promise<Array<R.ConnectionBadgeFacts>> {
-        const rows = await this.connectionReads.live(5000)
-        return rows.map((row) => ({
-            created_at: at(row.createdAt),
-            last_event_at: atOrNull(row.lastEventAt),
+    liveConnections(): Promise<Array<R.ConnectionBadgeFacts>> {
+        return factsOf(this.connectionReads.live(5000), (row) => ({
+            ...connectionBase(row),
             workspace_id: row.workspaceId,
-            provider: row.provider,
-            status: row.status,
-            environment: row.environment,
         }))
     }
 
@@ -136,9 +173,8 @@ export class AdminDirectoryReadsService {
     }
 
     /** The members of a workspace, oldest first. */
-    async members(workspaceId: string): Promise<Array<R.MemberFacts>> {
-        const rows = await this.roster.oldestOf(workspaceId, 500)
-        return rows.map((row) => ({
+    members(workspaceId: string): Promise<Array<R.MemberFacts>> {
+        return factsOf(this.roster.oldestOf(workspaceId, 500), (row) => ({
             user_id: row.userId,
             role: row.role,
             display_name: row.displayName,
@@ -148,9 +184,8 @@ export class AdminDirectoryReadsService {
     }
 
     /** The pending invitations of a workspace, newest first. */
-    async pendingInvites(workspaceId: string): Promise<Array<R.InviteFacts>> {
-        const rows = await this.invites.pendingOf(workspaceId, 200)
-        return rows.map((row) => ({
+    pendingInvites(workspaceId: string): Promise<Array<R.InviteFacts>> {
+        return factsOf(this.invites.pendingOf(workspaceId, 200), (row) => ({
             id: row.id,
             email: row.email,
             role: row.role,
@@ -175,17 +210,12 @@ export class AdminDirectoryReadsService {
 
     /** The newest billing events of a workspace. */
     async billingEvents(workspaceId: string): Promise<Array<R.BillingEventFacts>> {
-        return (await this.billingEventReads.latestOfWorkspace(workspaceId, 20)).map((row) => ({
-            created_at: at(row.createdAt),
-            id: row.id,
-            kind: row.kind,
-        }))
+        return (await this.billingEventReads.latestOfWorkspace(workspaceId, 20)).map((row) => billingEventFacts(row))
     }
 
     /** The agent installations of a workspace. */
-    async installs(workspaceId: string): Promise<Array<R.InstallFacts>> {
-        const rows = await this.installations.ofWorkspace(workspaceId, 50)
-        return rows.map((row) => ({
+    installs(workspaceId: string): Promise<Array<R.InstallFacts>> {
+        return factsOf(this.installations.ofWorkspace(workspaceId, 50), (row) => ({
             id: row.id,
             module_key: row.moduleKey,
             status: row.status,
@@ -197,15 +227,17 @@ export class AdminDirectoryReadsService {
     }
 
     /** The context versions of a workspace. */
-    async contextVersions(workspaceId: string): Promise<Array<R.ContextVersionFacts>> {
-        const rows = await this.contextVersionReads.ofWorkspace(workspaceId, 500)
-        return rows.map((row) => ({ id: row.id, version: row.version, applied_at: at(row.appliedAt) }))
+    contextVersions(workspaceId: string): Promise<Array<R.ContextVersionFacts>> {
+        return factsOf(this.contextVersionReads.ofWorkspace(workspaceId, 500), (row) => ({
+            id: row.id,
+            version: row.version,
+            applied_at: at(row.appliedAt),
+        }))
     }
 
     /** The OpenClaw sync state of a workspace's agents. */
-    async agentSync(workspaceId: string): Promise<Array<R.AgentSyncFacts>> {
-        const rows = await this.agentSyncReads.ofWorkspace(workspaceId, 50)
-        return rows.map((row) => ({
+    agentSync(workspaceId: string): Promise<Array<R.AgentSyncFacts>> {
+        return factsOf(this.agentSyncReads.ofWorkspace(workspaceId, 50), (row) => ({
             installation_id: row.installationId,
             agent_id: row.agentId,
             context_version: row.contextVersion,
@@ -216,29 +248,18 @@ export class AdminDirectoryReadsService {
     }
 
     /** The connections of a workspace, oldest first. */
-    async connections(workspaceId: string): Promise<Array<R.ConnectionFacts>> {
-        const rows = await this.connectionReads.ofWorkspace(workspaceId, 200)
-        return rows.map((row) => ({
-            created_at: at(row.createdAt),
-            last_event_at: atOrNull(row.lastEventAt),
+    connections(workspaceId: string): Promise<Array<R.ConnectionFacts>> {
+        return factsOf(this.connectionReads.ofWorkspace(workspaceId, 200), (row) => ({
+            ...connectionBase(row),
             last_error: row.lastError,
             id: row.id,
-            provider: row.provider,
             name: row.name,
-            status: row.status,
-            environment: row.environment,
         }))
     }
 
     /** The newest captured errors of a workspace. */
-    async workspaceErrors(workspaceId: string): Promise<Array<R.WorkspaceErrorFacts>> {
-        const rows = await this.appErrors.latestOfWorkspace(workspaceId, 20)
-        return rows.map((row) => ({
-            id: row.id,
-            scope: row.scope,
-            message: row.message,
-            created_at: at(row.createdAt),
-        }))
+    workspaceErrors(workspaceId: string): Promise<Array<R.WorkspaceErrorFacts>> {
+        return factsOf(this.appErrors.latestOfWorkspace(workspaceId, 20), (row) => errorFacts(row))
     }
 
     /** The kind and status of a workspace's knowledge sources. */
@@ -247,14 +268,10 @@ export class AdminDirectoryReadsService {
     }
 
     /** The SePay transfers matched to the given orders, newest first. */
-    async transfers(orderIds: ReadonlyArray<string>): Promise<Array<R.TransferFacts>> {
-        const rows = await this.transferReads.matchedTo(orderIds, 30)
-        return rows.map((row) => ({
+    transfers(orderIds: ReadonlyArray<string>): Promise<Array<R.TransferFacts>> {
+        return factsOf(this.transferReads.matchedTo(orderIds, 30), (row) => ({
+            ...transferBase(row),
             sepay_id: row.sepayId,
-            transfer_amount: row.transferAmount,
-            content: row.content,
-            status: row.status,
-            received_at: at(row.receivedAt),
         }))
     }
 
@@ -295,43 +312,26 @@ export class AdminDirectoryReadsService {
     }
 
     /** The newest SePay transfers. */
-    async recentTransfers(): Promise<Array<R.RecentTransferFacts>> {
-        const rows = await this.transferReads.latest(25)
-        return rows.map((row) => ({
-            status: row.status,
-            transfer_amount: row.transferAmount,
-            content: row.content,
-            received_at: at(row.receivedAt),
-        }))
+    recentTransfers(): Promise<Array<R.RecentTransferFacts>> {
+        return factsOf(this.transferReads.latest(25), (row) => transferBase(row))
     }
 
     /** The newest billing events. */
-    async recentBillingEvents(): Promise<Array<R.RecentBillingEventFacts>> {
-        const rows = await this.billingEventReads.latest(25)
-        return rows.map((row) => ({
-            id: row.id,
+    recentBillingEvents(): Promise<Array<R.RecentBillingEventFacts>> {
+        return factsOf(this.billingEventReads.latest(25), (row) => ({
+            ...billingEventFacts(row),
             workspace_id: row.workspaceId,
-            kind: row.kind,
-            created_at: at(row.createdAt),
         }))
     }
 
     /** The newest captured errors. */
-    async recentErrors(): Promise<Array<R.RecentErrorFacts>> {
-        const rows = await this.appErrors.latest(50)
-        return rows.map((row) => ({
-            id: row.id,
-            scope: row.scope,
-            message: row.message,
-            workspace_id: row.workspaceId,
-            created_at: at(row.createdAt),
-        }))
+    recentErrors(): Promise<Array<R.RecentErrorFacts>> {
+        return factsOf(this.appErrors.latest(50), (row) => ({ ...errorFacts(row), workspace_id: row.workspaceId }))
     }
 
     /** The errors captured since an instant, counted by scope. */
-    async errorScopes(since: Date): Promise<Array<R.CountFacts>> {
-        const rows = await this.appErrors.scopesSince(since, 100)
-        return rows.map((row) => ({ key: row.scope, count: row.count }))
+    errorScopes(since: Date): Promise<Array<R.CountFacts>> {
+        return factsOf(this.appErrors.scopesSince(since, 100), (row) => ({ key: row.scope, count: row.count }))
     }
 
     /** The names of workspaces. */

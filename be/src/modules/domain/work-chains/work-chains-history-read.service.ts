@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { findRowsOfIds, InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { CompletedTask, StepThread } from "./work-chains-history-read.contracts"
 import { WorkChainEntity } from "./persistence/entities"
 
@@ -15,12 +15,13 @@ export class WorkChainsHistoryReadService {
 
     /** The thread of each given step of the workspace; a step that does not exist is missing. */
     async threadsOfSteps(workspaceId: string, stepIds: ReadonlyArray<string>): Promise<Array<StepThread>> {
-        if (stepIds.length === 0) return []
-        const rows = await this.entityManager.find(WorkChainEntity, {
-            where: { workspaceId, id: In([...stepIds]) },
-            take: stepIds.length,
-            select: { id: true, threadId: true },
-        })
+        const rows = await findRowsOfIds(
+            this.entityManager,
+            WorkChainEntity,
+            { workspaceId, id: In([...stepIds]) },
+            { id: true, threadId: true },
+            stepIds,
+        )
         return rows.map(({ id, threadId }) => ({ id, threadId }))
     }
 

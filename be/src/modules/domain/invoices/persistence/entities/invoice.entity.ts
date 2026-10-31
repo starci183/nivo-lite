@@ -1,6 +1,6 @@
 import { UuidAbstractEntity } from "@modules/platform/database"
+import { bigintNumberTransformer } from "@modules/platform/primitives"
 import { Column, Entity } from "typeorm"
-import { amountTransformer } from "./amount-column.mapper"
 
 /** Where an invoice stands. */
 export type InvoiceStatus = "draft" | "issued" | "paid" | "void"
@@ -25,7 +25,7 @@ export class InvoiceEntity extends UuidAbstractEntity {
     invoiceNo!: string
 
     /** The amount, whole VND. */
-    @Column({ name: "amount_vnd", type: "bigint", transformer: amountTransformer })
+    @Column({ name: "amount_vnd", type: "bigint", transformer: bigintNumberTransformer })
     amountVnd!: number
 
     /** When payment is due. */

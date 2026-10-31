@@ -164,7 +164,6 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
         isGlobal: true,
         sepayApiKey: new Secret("delivery-proof-key"),
         bankAccount: { account: "", bank: "", holder: "" },
-        channelTokenKey: tokenKey,
     }),
     SepayTransactionsModule.register({ isGlobal: true }),
     DeliveryPeersModule.register(),

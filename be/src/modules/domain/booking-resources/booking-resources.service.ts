@@ -1,19 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { StaffDirectoryService } from "@modules/domain/staff"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedIdRows } from "@modules/platform/database"
 import type { BookingResourceSaved, BookingResourceWrite } from "./booking-resources.contracts"
 import { BookingResourceEntity } from "./persistence/entities"
 
-/** True when a RETURNING row names the key of a stored resource. */
-const isSavedRow = (value: unknown): value is BookingResourceSaved =>
-    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
-
-/** The ids a statement with `returning id` hands back. */
-const savedOf = (raw: unknown): Array<BookingResourceSaved> => {
-    const rows: ReadonlyArray<unknown> = Array.isArray(raw) ? raw : []
-    return rows.flatMap((row) => (isSavedRow(row) ? [{ id: row.id }] : [])).slice(0, 1)
-}
+/** The id of the one resource a statement with `returning id` hands back. */
+const savedOf = (raw: unknown): Array<BookingResourceSaved> => returnedIdRows(raw).slice(0, 1)
 
 @Injectable()
 /** Owns resource persistence; callers authorize setup writes and supply their atomic calendar transaction. */
