@@ -14,6 +14,7 @@ import type {
     AgentTurnRecord,
     AgentWorkView,
     OptionalCustomerWakeProgress,
+    OptionalWakeSource,
     WorkspaceAgentWorkView,
 } from "./agent-work.contracts"
 
@@ -34,6 +35,15 @@ export class AgentWorkReadService {
         private readonly tasks: AgentTasksService,
         private readonly triggers: AgentTriggersService,
     ) {}
+
+    /** The source that woke the agent, or null when the wake is gone. */
+    async wakeSourceOf(workspaceId: string, wakeId: string): Promise<OptionalWakeSource> {
+        const wake = await this.entityManager.findOne(AgentWakeEntity, {
+            select: { source: true },
+            where: { id: wakeId, workspaceId },
+        })
+        return wake?.source ?? null
+    }
 
     /** The work of one agent of the workspace. */
     async agentWork(workspaceId: string, agentId: string): Promise<AgentWorkView> {

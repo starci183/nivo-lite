@@ -24,4 +24,13 @@ export class ApprovalRequestsReadService {
                 : [{ id: request.id, status: request.status, resolvedBy: request.resolvedBy }],
         )
     }
+
+    /** The seats a pending request asked when it opened; empty when it is settled or does not exist. */
+    async askedOf(workspaceId: string, requestId: string): Promise<Array<string>> {
+        const request = await this.entityManager.findOne(ApprovalRequestEntity, {
+            select: { approvers: true },
+            where: { id: requestId, workspaceId, status: "pending" },
+        })
+        return request === null ? [] : request.approvers.map((approver) => approver.memberId)
+    }
 }

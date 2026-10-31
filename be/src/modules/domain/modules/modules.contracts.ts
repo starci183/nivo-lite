@@ -98,6 +98,8 @@ export interface AuthorityActionDefinition {
     readonly requiredFields: ReadonlyArray<string>
     /** Whether an amount limit is meaningful for the action. */
     readonly amountLimit: boolean
+    /** The facts a decide point on this action reads from real records, the first being its amount; none for an action that has no such facts. */
+    readonly graphFacts?: ReadonlyArray<string> | undefined
     /** The loosest mode the action can ever take: set means it can never run alone. */
     readonly maxMode: "ask" | "never" | null
     /** A note shown with the action. */

@@ -77,4 +77,19 @@ export class CardDecisionInput {
     @NullAsAbsent()
     @IsBoolean()
     onlyThisAgent?: boolean
+
+    /** Branch edit: the band the exact boundary amount belongs to, lower or higher. */
+    @Field(() => String, { nullable: true })
+    @IsOptional()
+    @NullAsAbsent()
+    @IsIn(["lower", "higher"])
+    belongsTo?: "lower" | "higher"
+
+    /** Branch edit: the seat asked above the line. */
+    @Field(() => String, { nullable: true })
+    @IsOptional()
+    @NullAsAbsent()
+    @IsString()
+    @MaxLength(36)
+    approverMemberId?: string
 }

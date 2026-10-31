@@ -18,7 +18,9 @@ import { RECORD_INSTALLATION_SOURCES } from "./modules.decorators"
 import type { RecordInstallationSource } from "./modules.port"
 import { ModulesService } from "./modules.service"
 import { RecordInstallationService } from "./record-installation.service"
+import { SetupBranchCardsService } from "./setup-branch-cards.service"
 import { SetupCardsService } from "./setup-cards.service"
+import { SetupGraphService } from "./setup-graph.service"
 import { SetupChatService } from "./setup-chat.service"
 import { SetupTurnService } from "./setup-turn.service"
 import { WorkspaceSetupService } from "./workspace-setup.service"
@@ -45,6 +47,8 @@ export class ModulesModule extends ConfigurableModuleClass {
             InstallationChangesService,
             SetupChatService,
             SetupCardsService,
+            SetupBranchCardsService,
+            SetupGraphService,
         ]
         const providers =
             options.setupOnly === true

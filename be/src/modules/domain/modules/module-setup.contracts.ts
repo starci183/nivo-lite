@@ -91,4 +91,8 @@ export interface CardDecision {
     readonly situation?: string
     /** The fact is for THIS instance only instead of every instance of the type. */
     readonly onlyThisAgent?: boolean
+    /** Branch edit: the band the exact boundary amount belongs to. */
+    readonly belongsTo?: "lower" | "higher"
+    /** Branch edit: the seat asked above the line. */
+    readonly approverMemberId?: string
 }

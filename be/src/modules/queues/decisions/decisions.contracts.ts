@@ -19,6 +19,8 @@ export enum DecisionsJob {
     DrainWork = "decisions.drain-work",
     /** The scheduler tick that expires the requests for approval whose time ran out and reminds the half-way ones. */
     ExpireApprovals = "decisions.expire-approvals",
+    /** The scheduler tick that seeds the graphs of agents that have none, raises what ended decisions teach and compares the Brain rules behind the graphs. */
+    AgentGraphWatch = "decisions.agent-graph-watch",
 }
 
 /** A queued Sales step to process, plus the identity of this retry. */

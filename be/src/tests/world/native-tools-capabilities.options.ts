@@ -1,4 +1,5 @@
 import type { DynamicModule } from "@nestjs/common"
+import { AgentGraphsModule } from "@modules/domain/agent-graphs"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
 import { BrainDossiersModule } from "@modules/domain/brain-dossiers"
@@ -37,9 +38,10 @@ export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     BrainFactsModule.register({ isGlobal: true }),
     BrainDossiersModule.register({ isGlobal: true, readOnly: true }),
     DossierReviewModule.register({ isGlobal: true, readOnly: true }),
-    ConnectionsModule.register({ isGlobal: true, readOnly: true }),
+    ConnectionsModule.readOnly({ isGlobal: true, readOnly: true }),
     AgentConversationsModule.register({ isGlobal: true, readOnly: true }),
     AgentMessagesModule.register({ isGlobal: true, readOnly: true }),
+    AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     NativeToolsModule.register({ isGlobal: true }),
     McpGatewayModule.register({
         isGlobal: true,

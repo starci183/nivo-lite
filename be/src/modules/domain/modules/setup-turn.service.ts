@@ -18,6 +18,7 @@ import { conflictsOf, knownLinesOf, unmentionedConflicts } from "./policies/setu
 import { mergeSetupTurn, readSetupTurn, setupPromptOf } from "./policies/setup-turn.policy"
 import type { SetupTurnResult } from "./policies/setup-turn.policy"
 import { SetupCardsService } from "./setup-cards.service"
+import { SetupGraphService } from "./setup-graph.service"
 
 const HISTORY_TURNS = 16
 const TURN_TIMEOUT_MS = 90_000
@@ -49,6 +50,7 @@ export class SetupTurnService {
         private readonly messages: SetupMessagesService,
         private readonly modules: ModulesService,
         private readonly cards: SetupCardsService,
+        private readonly graph: SetupGraphService,
     ) {}
 
     /** Answers the owner message the payload names; a payload of another shape, a closed draft or a message answered already is left alone. */
@@ -77,6 +79,7 @@ export class SetupTurnService {
             message: message.body,
             gaps: await this.cards.openGapsOf(job.workspaceId, module.key),
             known: knownLinesOf(onRecord.inForce, onRecord.hits),
+            graphGap: await this.graph.gapOf(job.workspaceId, installation.id),
             words: {
                 notApplicable: this.catalog.get("setup.notApplicable", {}, job.locale),
                 applyButton: this.catalog.get("setup.applyButton", {}, job.locale),
@@ -130,7 +133,11 @@ export class SetupTurnService {
     }
 
     /** The reply, with one note per value the owner gave that differs from the one on record and the reply does not name. */
-    private withConflictNotes(job: SetupTurnPayload, turn: SetupTurnResult, inForce: ReadonlyArray<FactRecord>): string {
+    private withConflictNotes(
+        job: SetupTurnPayload,
+        turn: SetupTurnResult,
+        inForce: ReadonlyArray<FactRecord>,
+    ): string {
         const notes = unmentionedConflicts(conflictsOf(turn.writes, inForce), turn.reply).map((conflict) =>
             this.catalog.get("setup.conflictNote", { ...conflict }, job.locale),
         )

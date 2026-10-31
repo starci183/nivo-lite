@@ -141,7 +141,7 @@ export class ApprovalDecidingService {
             this.grants.forAction(row.workspace_id, row.action),
         ])
         return resolveApprovers({
-            group: setup?.group ?? namedGroup(row),
+            group: row.approver_group ?? setup?.group ?? namedGroup(row),
             directory,
             grants,
             need: { unit: row.unit, amount: row.amount },

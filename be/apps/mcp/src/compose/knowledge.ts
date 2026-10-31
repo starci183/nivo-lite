@@ -4,7 +4,11 @@ import {
     AGENT_CONVERSATIONS_MESSAGES,
     AgentConversationsModule,
 } from "@modules/domain/agent-conversations"
-import { AGENT_MESSAGES_ERROR_KINDS, AGENT_MESSAGES_MESSAGES, AgentMessagesModule } from "@modules/domain/agent-messages"
+import {
+    AGENT_MESSAGES_ERROR_KINDS,
+    AGENT_MESSAGES_MESSAGES,
+    AgentMessagesModule,
+} from "@modules/domain/agent-messages"
 import {
     BRAIN_DOSSIERS_ERROR_KINDS,
     BRAIN_DOSSIERS_MESSAGES,
@@ -51,7 +55,7 @@ export const mcpKnowledgeModules = (options: McpAppOptions): Array<DynamicModule
     BrainFactsModule.register({ isGlobal: true }),
     BrainDossiersModule.register({ isGlobal: true, readOnly: true }),
     DossierReviewModule.register({ isGlobal: true, readOnly: true }),
-    ConnectionsModule.register({ isGlobal: true, readOnly: true }),
+    ConnectionsModule.readOnly({ isGlobal: true, readOnly: true }),
     AgentConversationsModule.register({ isGlobal: true, readOnly: true }),
     AgentMessagesModule.register({ isGlobal: true, readOnly: true }),
     NativeToolsModule.register({ isGlobal: true }),

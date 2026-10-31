@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Not, IsNull } from "typeorm"
+import { IsNull, MoreThan, Not } from "typeorm"
 import type { EntityManager, UpdateResult } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
@@ -69,6 +69,16 @@ export class InstallationRecordsService {
             where: { workspaceId, status: Not("removed") },
             order: OLDEST_FIRST,
             take: INSTALLATIONS_LIMIT,
+        })
+        return rows.map(toRecord)
+    }
+
+    /** A page of installations of every workspace after this id (an empty text for the first page), by id, for a job that walks them all; removed ones are left out. */
+    async page(afterId: string, limit: number): Promise<ReadonlyArray<InstallationRecord>> {
+        const rows = await this.entityManager.find(ModuleInstallationEntity, {
+            where: { status: Not("removed"), id: MoreThan(afterId) },
+            order: { id: "ASC" },
+            take: limit,
         })
         return rows.map(toRecord)
     }

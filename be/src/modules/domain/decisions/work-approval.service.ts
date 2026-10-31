@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
+import { InjectWorkBranchDecider, isOverLimit } from "@modules/domain/authority-rules"
+import type { WorkBranchDecider } from "@modules/domain/authority-rules"
 import { ExecutionsService } from "@modules/domain/executions"
 import { InjectAgentDirectory, OfficeLinesService } from "@modules/domain/messages"
 import type { AgentDirectory } from "@modules/domain/messages"
@@ -8,7 +10,6 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { GateVerdict, OptionalAuthorityRule, Proposal, WorkContext, WorkItem } from "./decisions.contracts"
 import { EvidenceService } from "./evidence.service"
-import { isOverLimit } from "@modules/domain/authority-rules"
 import { ModuleCatalogService } from "./module-catalog.service"
 import type { Judgement } from "./work-engine.contracts"
 import { InjectInboundEventStatus } from "./work-engine.decorators"
@@ -31,6 +32,7 @@ export class WorkApprovalService {
         private readonly evidence: EvidenceService,
         private readonly office: OfficeLinesService,
         private readonly responsibilities: ResponsibilityJournalService,
+        @Optional() @InjectWorkBranchDecider() private readonly branches?: WorkBranchDecider,
     ) {}
 
     /** The names of the fields in the language of the reader; a field without a label shows as it is. */
@@ -75,6 +77,13 @@ export class WorkApprovalService {
             work_item_id: waiting.id,
             installation_id: waiting.installation_id,
         })
+        if (judgement.branchDecisionId !== undefined) {
+            await this.branches?.route({
+                workspaceId: ctx.workspaceId,
+                workItemId: waiting.id,
+                decisionId: judgement.branchDecisionId,
+            })
+        }
         if (waiting.inbound_event_id !== null) {
             await this.inbound.mark(ctx, waiting.inbound_event_id, "needs_decision", waiting.lead_id)
         }

@@ -434,3 +434,42 @@ export interface RemoteTarget {
     /** The credential state of its row. */
     readonly credentialState: CredentialState
 }
+
+/** The kinds of stored business data an agent can hold a right over; every native read tool reads one of them. */
+export type DataKind = "brain" | "customers" | "documents" | "payments" | "channels" | "invoices"
+
+/** A kind of data, or null when a tool reads none the store holds. */
+export type OptionalDataKind = DataKind | null
+
+/** The rights of an agent, or null when no enforced graph governs it. */
+export type OptionalDataRights = ReadonlyArray<DataRight> | null
+
+/** The rows a right reaches: only the customer of the conversation the call serves, or the whole workspace. */
+export type DataScope = "conversation" | "workspace"
+
+/** One right of an agent over a kind of data (data kind, scope of the turn, fields). No right is a deny. */
+export interface DataRight {
+    /** What may be read. */
+    readonly kind: DataKind
+    /** Which rows. */
+    readonly scope: DataScope
+    /** Fields the agent never sees. */
+    readonly hide: ReadonlyArray<string>
+    /** Fields shown masked. */
+    readonly mask: ReadonlyArray<string>
+}
+
+/** What the data rights decide about one native read: pass untouched, refuse, or pass narrowed by the right. */
+export type DataRightVerdict =
+    | { readonly kind: "open" }
+    | { readonly kind: "deny"; readonly reason: "no_right" | "no_kind" | "no_conversation" }
+    | { readonly kind: "narrow"; readonly right: DataRight }
+
+/**
+ * The rights of an agent, supplied by the owner of the action graph (bound at the app root). Null means the agent is not governed
+ * by an enforced graph yet and its reads pass as they did; a list, even an empty one, is the whole of what it may read.
+ */
+export interface DataRightsGate {
+    /** The rights of the agent, or null when its graph does not govern it. */
+    rightsOf(workspaceId: string, agentId: string): Promise<OptionalDataRights>
+}

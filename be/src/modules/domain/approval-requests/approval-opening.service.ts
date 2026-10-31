@@ -43,6 +43,7 @@ const RETURNED = [
     'resolved_by AS "resolvedBy"',
     'resolved_at AS "resolvedAt"',
     'escalated_to AS "escalatedTo"',
+    'approver_group AS "approverGroup"',
     'created_at AS "createdAt"',
 ].join(", ")
 
@@ -68,6 +69,17 @@ const toOpened = (row: ApprovalRequestRecord): OpenedApproval => ({
     expiresAt: row.expires_at,
 })
 
+/** The rule with the approver of the branch in place of its own group, policy and wait, when the request comes from a branch. */
+const withBranch = (setup: ApprovalSetup, params: OpenApprovalParams): ApprovalSetup =>
+    params.branch === undefined
+        ? setup
+        : {
+              ...setup,
+              group: params.branch.group,
+              policy: params.branch.policy,
+              timeout_minutes: params.branch.timeoutMinutes,
+          }
+
 const isAmount = (amount: number | null): boolean => amount === null || (Number.isFinite(amount) && amount >= 0)
 
 @Injectable()
@@ -88,7 +100,7 @@ export class ApprovalOpeningService {
      * nobody can approve, the request expires at once and goes to the owner of the agent.
      */
     async open(params: OpenApprovalParams): Promise<OpenedApproval> {
-        const setup = await this.setupFor(params)
+        const setup = withBranch(await this.setupFor(params), params)
         const [directory, grants] = await Promise.all([
             this.grants.directory(params.workspaceId),
             this.grants.forAction(params.workspaceId, params.action),
@@ -154,6 +166,7 @@ export class ApprovalOpeningService {
                 approvers: [...set.approvers],
                 excluded: [...set.excluded],
                 timeoutMinutes: setup.timeout_minutes,
+                approverGroup: params.branch?.group ?? null,
                 expiresAt: input.expiresAt,
             })
             .orIgnore()

@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
+import { InjectWorkBranchDecider } from "@modules/domain/authority-rules"
+import type { WorkBranchDecider } from "@modules/domain/authority-rules"
 import type { EntityManager } from "typeorm"
 import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
@@ -48,6 +50,7 @@ export class WorkDecisionService {
         private readonly responsibilities: ResponsibilityJournalService,
         @InjectLeadDirectory() private readonly leads: LeadDirectory,
         private readonly office: MessagesService,
+        @Optional() @InjectWorkBranchDecider() private readonly branches?: WorkBranchDecider,
     ) {}
 
     /** Proves the caller may act on the queued item before draining the workspace's gated steps. */
@@ -200,6 +203,13 @@ export class WorkDecisionService {
         request: WorkDecisionRequest,
     ): Promise<WorkItem> {
         if (!canDecide(member, assigneeOf(item))) throw new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
+        const named = await this.branches?.mayDecide({
+            workspaceId: item.workspace_id,
+            workItemId: item.id,
+            memberId,
+            isOwner: member.role === "owner",
+        })
+        if (named === false) throw new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
         const basis = request.decision === "approved" ? cleanBasis(request.basis) : ""
         if (request.decision === "approved" && basisMissing(item.action, basis)) {
             throw new DecisionsError({

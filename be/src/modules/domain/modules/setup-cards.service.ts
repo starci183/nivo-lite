@@ -13,11 +13,13 @@ import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import { SetupWritesService } from "@modules/domain/module-setup-writes"
 import type {
     CardRecord,
+    BranchCardPayload,
     FactCardPayload,
     ProposedCardRecord,
     RuleCardPayload,
 } from "@modules/domain/module-setup-writes"
 import { InstallationChangesService } from "./installation-changes.service"
+import { SetupBranchCardsService } from "./setup-branch-cards.service"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
@@ -49,7 +51,7 @@ interface RuleInForce {
 /** Closes a decided setup card with its resulting payload. */
 type CardCloser = (
     status: "applied" | "rejected",
-    payload: FactCardPayload | RuleCardPayload,
+    payload: FactCardPayload | RuleCardPayload | BranchCardPayload,
     result: NonNullable<CardRecord["result"]>,
 ) => Promise<CardRecord>
 
@@ -86,6 +88,7 @@ export class SetupCardsService {
         private readonly gaps: KnowledgeGapsService,
         private readonly events: EventsService,
         private readonly changes: InstallationChangesService,
+        private readonly branches: SetupBranchCardsService,
     ) {}
 
     /** The cards of the given sessions, each waiting one with the value it would replace. */
@@ -133,9 +136,17 @@ export class SetupCardsService {
         const stored = await this.rules.list(workspaceId)
         const catalog = await this.modules.catalog()
         const cards: Array<ProposedCardRecord> = []
-        for (const write of proposed) {
+        const branchCards = await Promise.all(
+            proposed.map((write) => (write.kind === "branch" ? this.branches.cardOf(workspaceId, write) : null)),
+        )
+        for (const [index, write] of proposed.entries()) {
             if (write.kind === "fact") {
                 cards.push(cardOf(write, write.payload))
+                continue
+            }
+            if (write.kind === "branch") {
+                const made = branchCards[index]
+                if (made) cards.push(made)
                 continue
             }
             const have = this.ruleInForce(write.payload.action, stored, catalog.modules)
@@ -170,7 +181,7 @@ export class SetupCardsService {
         const module = await this.modules.find(installation.moduleKey)
         const close = async (
             status: "applied" | "rejected",
-            payload: FactCardPayload | RuleCardPayload,
+            payload: FactCardPayload | RuleCardPayload | BranchCardPayload,
             result: CardRecord["result"] & object,
         ): Promise<CardRecord> => {
             const closed = await this.writes.close(workspaceId, cardId, {
@@ -183,6 +194,16 @@ export class SetupCardsService {
             return closed
         }
         if (change.decision === "reject") return close("rejected", card.payload, { outcome: "rejected" })
+        if (card.kind === "branch") {
+            return this.branches.confirm({
+                workspaceId,
+                installationId: installation.id,
+                messageId: card.sourceMessageId,
+                base: card.payload,
+                change,
+                close,
+            })
+        }
         if (card.kind === "rule") {
             return this.confirmRule(workspaceId, member.displayName, module, card.payload, change, locale, close)
         }
@@ -324,6 +345,7 @@ export class SetupCardsService {
         stored: ReadonlyArray<AuthorityRuleRecord>,
         catalog: ReadonlyArray<ModuleDefinition>,
     ): Promise<CurrentFact | CurrentRule | null> {
+        if (card.kind === "branch") return null
         if (card.kind === "rule") {
             const have = this.ruleInForce(card.payload.action, stored, catalog)
             return { kind: "rule", mode: have.mode, limitVnd: have.limitVnd }

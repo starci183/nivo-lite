@@ -17,6 +17,7 @@ import { CHATBOT_MODULE } from "./chatbot.contracts"
 import type { ModuleDefinition } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
 import { SetupCardsService } from "./setup-cards.service"
+import { SetupGraphService } from "./setup-graph.service"
 import { SetupTurnService } from "./setup-turn.service"
 
 const PAYLOAD = { workspaceId: "ws-1", messageId: "m-2", setupSessionId: "s-1", locale: "en" }
@@ -130,6 +131,7 @@ const build = async () => {
     facts.forView.mockResolvedValue([])
     facts.search.mockResolvedValue([])
     const logger = mock<Logger>({ error: jest.fn() })
+    const graph = mock<SetupGraphService>({ gapOf: jest.fn().mockResolvedValue(null) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             SetupTurnService,
@@ -142,6 +144,7 @@ const build = async () => {
             { provide: SetupCardsService, useValue: cards },
             { provide: BrainFactsService, useValue: facts },
             { provide: LOGGER, useValue: logger },
+            { provide: SetupGraphService, useValue: graph },
         ],
     }).compile()
     return {
@@ -155,6 +158,7 @@ const build = async () => {
         logger,
         catalog,
         modules,
+        graph,
     }
 }
 
@@ -375,5 +379,17 @@ describe("SetupTurnService", () => {
 
         expect(cards.propose).not.toHaveBeenCalled()
         expect(messages.post.mock.calls).toEqual([])
+    })
+})
+
+describe("SetupTurnService > a vague flow", () => {
+    it("tells the model to ask about the first vague place of the flow and nothing else, when there is one", async () => {
+        const { service, generations, graph } = await build()
+        graph.gapOf.mockResolvedValue("boundary")
+
+        await service.run(PAYLOAD)
+
+        expect(graph.gapOf).toHaveBeenCalledWith("ws-1", "inst-1")
+        expect(generations.run.mock.calls[0]?.[0].messages[0]?.content).toContain("The agent flow has one vague place")
     })
 })

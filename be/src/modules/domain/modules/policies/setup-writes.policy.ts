@@ -1,7 +1,7 @@
 import type { RuleMode } from "@modules/domain/authority-rules"
 import { SUBJECT_TYPES, factSlugOf } from "@modules/domain/brain-facts"
 import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
-import type { FactCardPayload, ProposedCardRecord } from "@modules/domain/module-setup-writes"
+import type { BranchCardPayload, FactCardPayload, ProposedCardRecord } from "@modules/domain/module-setup-writes"
 import type { AuthorityActionDefinition, ModuleDefinition, ModuleGate, GateWrite } from "../modules.contracts"
 
 /** The gate key of a write that answers a customer question (a knowledge gap) rather than a checklist item. */
@@ -65,8 +65,18 @@ export interface ProposedRule {
     readonly payload: ProposedRulePayload
 }
 
+/** A branch the model proposed: where the bands of an action meet and who is asked above the line. */
+export interface ProposedBranch {
+    /** The gate it answers. */
+    readonly gateKey: string
+    /** Discriminator. */
+    readonly kind: "branch"
+    /** The branch. */
+    readonly payload: BranchCardPayload
+}
+
 /** One write the model proposed. */
-export type ProposedWrite = ProposedFact | ProposedRule
+export type ProposedWrite = ProposedFact | ProposedRule | ProposedBranch
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
@@ -76,10 +86,12 @@ const clean = (value: unknown, max: number): string => (typeof value === "string
 const FACT_SUBJECTS: ReadonlyArray<BrainSubjectType> = SUBJECT_TYPES
 
 /** The key that makes two cards the same target: one waiting card per target. */
-export const targetKeyOf = (write: ProposedWrite): string =>
-    write.kind === "fact"
+export const targetKeyOf = (write: ProposedWrite): string => {
+    if (write.kind === "branch") return `branch:${write.payload.action}`
+    return write.kind === "fact"
         ? `fact:${factSlugOf(write.payload.subjectLabel)}|${factSlugOf(write.payload.attributeLabel)}`
         : `rule:${write.payload.action}`
+}
 
 /** An amount typed by the model: a number, or "20 trieu" / "1,5 ty" / "20000000" (accents are ignored). */
 export const vndOf = (value: unknown): number | null => {

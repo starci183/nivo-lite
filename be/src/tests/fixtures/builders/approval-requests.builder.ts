@@ -116,6 +116,7 @@ export const approvalRequestOf = builder<ApprovalRequestRecord>({
     resolved_by: null,
     resolved_at: null,
     escalated_to: null,
+    approver_group: null,
     created_at: NOW,
 })
 
@@ -140,6 +141,7 @@ export const approvalRequestEntityOf = builder<ApprovalRequestEntity>({
     resolvedBy: null,
     resolvedAt: null,
     escalatedTo: null,
+    approverGroup: null,
     createdAt: new Date(NOW),
     updatedAt: new Date(NOW),
 })

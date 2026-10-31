@@ -57,6 +57,14 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         payload: { tick: true },
     },
     {
+        name: "agent-graph-watch",
+        cron: "*/15 * * * *",
+        timeZone: "UTC",
+        queue: "decisions",
+        job: "decisions.agent-graph-watch",
+        payload: {},
+    },
+    {
         name: "decisions-drain-work",
         cron: "*/1 * * * *",
         timeZone: "UTC",

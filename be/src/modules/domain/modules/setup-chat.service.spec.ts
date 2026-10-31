@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
+import { installationOf } from "@tests/fixtures/builders/setup-chat.builder"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentsService } from "@modules/domain/agents"
 import { EventsService } from "@modules/domain/events"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
 import type { ContextVersionRecord, GateEntry, GateEvidence } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
 import { SetupMessagesService } from "@modules/domain/module-setup-messages"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
@@ -19,10 +19,11 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { AGENTS_QUEUE_PRODUCER } from "@modules/queues/agents"
 import type { AgentsQueue } from "@modules/queues/agents"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
-import { ModulesErrorCode } from "./errors/modules.error"
+import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
 import { SetupCardsService } from "./setup-cards.service"
+import { SetupGraphService } from "./setup-graph.service"
 import { SetupChatService } from "./setup-chat.service"
 
 const NOW = "2026-10-13T02:00:00.000Z"
@@ -34,21 +35,6 @@ const CONFIRMED: GateEvidence = Object.fromEntries(
         { status: "confirmed", evidence: `About ${gate.key}` },
     ]),
 )
-
-const installationOf = builder<InstallationRecord>({
-    id: "inst-1",
-    workspaceId: "ws-1",
-    moduleKey: "accounting",
-    name: "Books",
-    isMulti: true,
-    agentId: null,
-    status: "setup",
-    operatingMode: "assist",
-    liveEnabled: false,
-    activeContextVersionId: null,
-    settings: {},
-    createdAt: NOW,
-})
 
 const sessionOf = builder<SetupSessionRecord>({
     id: "s-1",
@@ -114,6 +100,10 @@ const build = async () => {
     const events = mock<EventsService>()
     const sync = mock<InstallationChangesService>()
     const cards = mock<SetupCardsService>()
+    const graph = mock<SetupGraphService>({
+        requireWhole: jest.fn().mockResolvedValue(undefined),
+        publish: jest.fn().mockResolvedValue(undefined),
+    })
     const readiness = mock<ModuleReadinessService>()
     readiness.settle.mockResolvedValue("ready")
     readiness.withNeeds.mockImplementation((record) =>
@@ -136,6 +126,7 @@ const build = async () => {
             { provide: EventsService, useValue: events },
             { provide: InstallationChangesService, useValue: sync },
             { provide: SetupCardsService, useValue: cards },
+            { provide: SetupGraphService, useValue: graph },
             { provide: ModuleReadinessService, useValue: readiness },
         ],
     }).compile()
@@ -153,6 +144,7 @@ const build = async () => {
         cards,
         catalog,
         readiness,
+        graph,
     }
 }
 
@@ -443,7 +435,7 @@ describe("SetupChatService", () => {
 
 describe("SetupChatService", () => {
     it("replaces old setup blocks when applying a changed active draft to an installing agent", async () => {
-        const { service, sessions, versions, installations, agents } = await build()
+        const { service, sessions, versions, installations, agents, graph } = await build()
         installations.find.mockResolvedValue(
             installationOf({ agentId: "agent-1", status: "installing", activeContextVersionId: "v-1" }),
         )
@@ -465,6 +457,12 @@ describe("SetupChatService", () => {
 
         await expect(service.apply("u1", "ws-1", "inst-1", "en")).resolves.toBe(2)
         expect(installations.activateVersion).toHaveBeenCalledWith("ws-1", "inst-1", "v-2", "ready")
+        expect(graph.publish).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            principalId: "u1",
+            installationId: "inst-1",
+            contextVersionId: "v-2",
+        })
         expect(agents.profileOf).toHaveBeenCalledWith("ws-1", "agent-1")
         expect(agents.setTexts).toHaveBeenCalledWith("u1", "ws-1", "agent-1", {
             instructions:
@@ -474,5 +472,18 @@ describe("SetupChatService", () => {
             knowledge: `Keep these notes.\n\n### NIVO setup v2\nNew bakery.\n\n${rules}\n### end NIVO setup`,
         })
         expect(sessions.close).toHaveBeenCalledWith("s-1")
+    })
+})
+
+describe("SetupChatService > apply with a vague flow", () => {
+    it("refuses to apply while the flow of the agent is still vague", async () => {
+        const { service, sessions, graph, versions } = await build()
+        sessions.latest.mockResolvedValue(sessionOf({ gateEvidence: CONFIRMED }))
+        graph.requireWhole.mockRejectedValue(new ModulesError({ code: ModulesErrorCode.GraphGapsOpen }))
+
+        await expect(service.apply("u1", "ws-1", "inst-1", "en")).rejects.toMatchObject({
+            code: ModulesErrorCode.GraphGapsOpen,
+        })
+        expect(versions.insert).not.toHaveBeenCalled()
     })
 })

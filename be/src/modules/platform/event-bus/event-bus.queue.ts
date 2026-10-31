@@ -62,6 +62,9 @@ export const APPROVAL_RESOLVED_TOPIC = "approval_resolved"
 /** The queue of the `thread_outcomes` consumer of `approval_resolved`. */
 export const APPROVAL_RESOLVED_THREAD_OUTCOMES_TOPIC_QUEUE = "approval_resolved__thread_outcomes"
 
+/** The queue of the `agent_graphs` consumer of `approval_resolved`. */
+export const APPROVAL_RESOLVED_AGENT_GRAPHS_TOPIC_QUEUE = "approval_resolved__agent_graphs"
+
 /** The event name and pgmq topic of `booking_status_changed`. */
 export const BOOKING_STATUS_CHANGED_TOPIC = "booking_status_changed"
 

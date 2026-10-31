@@ -518,6 +518,8 @@
   "errors.MODULES_CARD_FACT_INCOMPLETE": "A fact needs a subject, an attribute and a value.",
   "errors.MODULES_CARD_NEEDS_RESOLUTION": "Choose what to do with the value already in the Second Brain.",
   "errors.MODULES_CARD_NEEDS_SITUATION": "Name the situation the new value is for.",
+  "errors.MODULES_CARD_BRANCH_INCOMPLETE": "Choose which band the exact amount belongs to and who is asked above the line.",
+  "errors.MODULES_GRAPH_GAPS_OPEN": "The flow of the agent still has a vague place. Answer the question in the chat before applying.",
   "errors.MODULES_CARD_FACT_NOT_APPLIED": "The Second Brain kept this value for review instead of applying it.",
   "errors.MODULES_CARD_RULE_UNKNOWN_ACTION": "The action {{action}} is not in the registry.",
   "errors.MODULES_CARD_RULE_MODE_CAPPED": "The action {{action}} can never run by itself: choose ask first or never.",

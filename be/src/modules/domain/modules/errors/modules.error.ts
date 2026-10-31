@@ -48,6 +48,10 @@ export enum ModulesErrorCode {
     CardNeedsResolution = "MODULES_CARD_NEEDS_RESOLUTION",
     /** Keeping both values needs the situation of the new one. */
     CardNeedsSituation = "MODULES_CARD_NEEDS_SITUATION",
+    /** A branch needs the band its boundary amount belongs to and the person asked above the line. */
+    CardBranchIncomplete = "MODULES_CARD_BRANCH_INCOMPLETE",
+    /** The flow of the agent still has a vague place, so the setup cannot be applied. */
+    GraphGapsOpen = "MODULES_GRAPH_GAPS_OPEN",
     /** The brain held the fact for review instead of applying it. */
     CardFactNotApplied = "MODULES_CARD_FACT_NOT_APPLIED",
     /** The confirmed rule names an action outside the authority registry. */
@@ -81,6 +85,8 @@ export const MODULES_ERROR_KINDS: Record<ModulesErrorCode, ErrorKind> = {
     [ModulesErrorCode.CardFactIncomplete]: "invalid",
     [ModulesErrorCode.CardNeedsResolution]: "invalid",
     [ModulesErrorCode.CardNeedsSituation]: "invalid",
+    [ModulesErrorCode.CardBranchIncomplete]: "invalid",
+    [ModulesErrorCode.GraphGapsOpen]: "conflict",
     [ModulesErrorCode.CardFactNotApplied]: "conflict",
     [ModulesErrorCode.CardRuleUnknownAction]: "invalid",
     [ModulesErrorCode.CardRuleModeCapped]: "invalid",

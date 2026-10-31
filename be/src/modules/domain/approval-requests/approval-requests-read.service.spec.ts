@@ -51,4 +51,25 @@ describe("ApprovalRequestsReadService", () => {
             })
         })
     })
+
+    describe("askedOf", () => {
+        it("answers the seats a pending request asked", async () => {
+            const asked = Object.assign(new ApprovalRequestEntity(), {
+                approvers: [{ memberId: "m1" }, { memberId: "m2" }],
+            })
+            const em = mockEntityManager({ findOne: [ApprovalRequestEntity, asked] })
+
+            await expect((await build(em)).askedOf("ws-1", "r1")).resolves.toEqual(["m1", "m2"])
+            expect(em.findOne).toHaveBeenCalledWith(
+                ApprovalRequestEntity,
+                expect.objectContaining({ where: { id: "r1", workspaceId: "ws-1", status: "pending" } }),
+            )
+        })
+
+        it("answers nobody for a request that is settled or not there", async () => {
+            const em = mockEntityManager({ findOne: [ApprovalRequestEntity, null] })
+
+            await expect((await build(em)).askedOf("ws-1", "r1")).resolves.toEqual([])
+        })
+    })
 })

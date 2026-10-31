@@ -3,3 +3,47 @@ export interface RecordInstallationSource {
     /** The installation the record of the workspace names, or null when the id is none of the owner's rows or the row names no installation. */
     installationIdOf(workspaceId: string, recordId: string): Promise<string | null>
 }
+
+/** A branch the owner confirmed in the setup chat, as the action graph of the installation is told. */
+export interface SetupBranchChange {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The installation whose agent follows the graph. */
+    readonly installationId: string
+    /** The authority action whose bands the branch is about. */
+    readonly action: string
+    /** The amount in dong where the lower band ends and the higher one begins. */
+    readonly boundaryVnd: number
+    /** The band the exact boundary amount belongs to. */
+    readonly belongsTo: "lower" | "higher"
+    /** The seat asked above the line. */
+    readonly approverMemberId: string
+    /** The words of the owner, kept as the source of the branch. */
+    readonly quote: string
+    /** The chat message the words came from, or null. */
+    readonly messageId: string | null
+}
+
+/** Who applies a setup, for the graph to publish under the right of the seat. */
+export interface SetupApplier {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The account applying. */
+    readonly principalId: string
+    /** The installation applied. */
+    readonly installationId: string
+    /** The context version the setup became. */
+    readonly contextVersionId: string
+}
+
+/** The action graph of an installation, seen from the setup chat; absent in an app with no graph, and then the setup runs as it always did. */
+export interface SetupGraphPort {
+    /** Writes a confirmed branch into the draft of the graph of the installation. */
+    applyBranch(change: SetupBranchChange): Promise<void>
+    /** The code of the first vague place of the graph, or an empty text when it has none. */
+    firstGap(workspaceId: string, installationId: string): Promise<string>
+    /** The seat of a person the owner named, or an empty text when nobody is found. */
+    seatNamed(workspaceId: string, name: string): Promise<string>
+    /** Publishes the draft of the graph with the context version the setup became. */
+    publish(applier: SetupApplier): Promise<void>
+}

@@ -476,3 +476,5 @@ export interface AgentTriggerDraft {
     /** Off keeps the trigger and fires nothing. */
     readonly enabled: boolean
 }
+/** The source that woke an agent, or null when the wake is gone (wakes are kept for a while, not for ever). */
+export type OptionalWakeSource = AgentWakeSource | null

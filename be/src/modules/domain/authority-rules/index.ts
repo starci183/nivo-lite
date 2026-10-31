@@ -20,3 +20,11 @@ export { AuthorityRulesService } from "./authority-rules.service"
 export { bandOf, evaluateGate, isOverLimit, ruleAmountOf } from "./gate.policy"
 export { appliesToAgent } from "./rule-settings.policy"
 export { authorityRulesEntities } from "./persistence/entities"
+export { InjectWorkBranchDecider, WORK_BRANCH_DECIDER } from "./branch-decider.decorators"
+export type {
+    BranchAnswerer,
+    BranchRequest,
+    BranchRoute,
+    OptionalBranchJudgement,
+    WorkBranchDecider,
+} from "./branch-decider.port"

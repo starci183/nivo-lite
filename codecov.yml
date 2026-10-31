@@ -190,6 +190,7 @@ component_management:
       paths:
         - "be/src/modules/domain/agent-access-log/**"
         - "be/src/modules/domain/agent-conversations/**"
+        - "be/src/modules/domain/agent-graphs/**"
         - "be/src/modules/domain/agent-messages/**"
         - "be/src/modules/domain/agents/**"
         - "be/src/modules/domain/api-credentials/**"

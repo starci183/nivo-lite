@@ -176,3 +176,19 @@ describe("AgentWorkReadService.customerWake", () => {
         await expect(service.customerWake("ws-1", "msg-9")).resolves.toBeNull()
     })
 })
+
+describe("AgentWorkReadService.wakeSourceOf", () => {
+    it("answers the source that woke the agent, and null when the wake is gone", async () => {
+        const found = mockEntityManager({
+            findOne: [AgentWakeEntity, Object.assign(new AgentWakeEntity(), { source: "tag" })],
+        })
+        const gone = mockEntityManager({ findOne: [AgentWakeEntity, null] })
+
+        await expect((await build(found)).service.wakeSourceOf("ws-1", "wake-1")).resolves.toBe("tag")
+        await expect((await build(gone)).service.wakeSourceOf("ws-1", "wake-1")).resolves.toBeNull()
+        expect(found.findOne).toHaveBeenCalledWith(AgentWakeEntity, {
+            select: { source: true },
+            where: { id: "wake-1", workspaceId: "ws-1" },
+        })
+    })
+})
