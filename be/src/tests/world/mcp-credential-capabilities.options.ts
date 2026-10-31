@@ -1,4 +1,5 @@
 import { McpAgentAuthenticatorService } from "@modules/domain/api-credentials"
+import { AgentsModule } from "@modules/domain/agents"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import {
     CONNECTION_SECRETS_ERROR_KINDS,
@@ -55,6 +56,7 @@ export const MCP_CREDENTIAL_MODULES = [
         credentialAuthenticator: McpAgentAuthenticatorService,
     }),
     TransactionsModule.register({ isGlobal: true }),
+    AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey: MCP_PROOF_TOKEN_KEY }),
     McpGatewayModule.register({ isGlobal: true, remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 4000 }),
 ]

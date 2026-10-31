@@ -70,6 +70,14 @@ export class DossierFindingsService {
     /** One page of findings, the most severe and most recently seen first; rule findings in the reader's locale. */
     async list(userId: string, workspaceId: string, filter: FindingFilter, locale: Locale): Promise<FindingPage> {
         await this.members.require(userId, workspaceId)
+        return this.listForAgent(workspaceId, filter, locale)
+    }
+
+    /**
+     * The page `list` answers, with no member check: for a task the system runs for an agent, whose workspace the caller has
+     * proven (the gateway's tools).
+     */
+    async listForAgent(workspaceId: string, filter: FindingFilter, locale: Locale): Promise<FindingPage> {
         const scope = scopeOf(workspaceId, filter)
         const page = findingPageOf(filter, scope)
         const awaiting =
@@ -131,6 +139,11 @@ export class DossierFindingsService {
     /** The review at a glance: active findings by status and severity, drafts to approve, the newest run and the reviewed dossiers. */
     async summary(userId: string, workspaceId: string): Promise<ReviewSummary> {
         await this.members.require(userId, workspaceId)
+        return this.summaryForAgent(workspaceId)
+    }
+
+    /** The summary `summary` answers, with no member check: for a task the system runs for an agent, whose workspace the caller has proven. */
+    async summaryForAgent(workspaceId: string): Promise<ReviewSummary> {
         const counts = await this.entityManager
             .createQueryBuilder(DossierFindingEntity, "f")
             .select("f.status", "status")

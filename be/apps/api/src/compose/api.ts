@@ -21,6 +21,7 @@ import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
 import { DossierReviewGraphqlModule } from "@features/api/dossier-review"
 import { EvidenceGraphqlModule } from "@features/api/evidence"
+import { AgentGraphsGraphqlModule } from "@features/api/agent-graphs"
 import { McpGatewayGraphqlModule } from "@features/api/mcp-gateway"
 import { AuthGraphqlModule, AuthHttpModule } from "@features/api/auth"
 import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
@@ -55,6 +56,7 @@ export const apiModules = (): Array<DynamicModule> => [
     DossierReviewGraphqlModule.register({}),
     EvidenceGraphqlModule.register({}),
     McpGatewayGraphqlModule.register({}),
+    AgentGraphsGraphqlModule.register({}),
     AuthGraphqlModule.register({}),
     AuthHttpModule.register({}),
     GoogleConnectionsHttpModule.register({}),

@@ -121,6 +121,17 @@ export interface AgentModuleRef {
     readonly module: string
 }
 
+/** What bounds the view of an agent's knowledge: the module it serves and, for a multi-instance type, the instance it is. */
+export interface AgentViewScope {
+    /** The module key. */
+    readonly module: string
+    /** The installation of a multi-instance agent, else null (the shared knowledge only). */
+    readonly installationId: string | null
+}
+
+/** The view scope of an agent, or null when the workspace has no such agent. */
+export type OptionalAgentViewScope = AgentViewScope | null
+
 /** An active agent as a lens of the brain shows it: the module it serves and its name. */
 export interface AgentLens {
     /** The module key. */

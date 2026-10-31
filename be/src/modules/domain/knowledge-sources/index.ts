@@ -28,5 +28,5 @@ export { KNOWLEDGE_SOURCES_MESSAGES } from "./messages/knowledge-sources.message
 export { knowledgeSourcesEntities } from "./persistence/entities"
 export { KnowledgeSourcesAdminReadService } from "./knowledge-sources-admin-read.service"
 export { KnowledgeSourcesReadService } from "./knowledge-sources-read.service"
-export type { ChangedPublicSource } from "./knowledge-sources-read.contracts"
+export type { ChangedPublicSource, OriginSource } from "./knowledge-sources-read.contracts"
 export { KnowledgeSourcesReadableService } from "./knowledge-sources-readable.service"

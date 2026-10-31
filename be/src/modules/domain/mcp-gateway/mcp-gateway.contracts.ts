@@ -45,6 +45,16 @@ export interface GatewayToolSpec {
     readonly idempotencyArg?: string | undefined
     /** The NIVO capability this tool plays, when it declares one (see `CapabilityRole`). */
     readonly role?: CapabilityRole
+    /**
+     * True for a tool no customer conversation and no customer-facing agent may run: with a conversation or a customer audience on the caller it is hidden from search and describe,
+     * and a call is refused `internal_only`, audited, before any adapter runs.
+     */
+    readonly internalOnly?: boolean
+    /**
+     * True for a tool whose answer carries text a stranger may have written (documents, messages): once it answered, a write of the
+     * same turn needs a person's approval, however its grant reads, because the text may be trying to steer the agent.
+     */
+    readonly taints?: boolean
 }
 
 /**
@@ -165,6 +175,11 @@ export interface GatewayCaller {
     readonly conversationId: string | null
     /** The work item the call serves, or null. */
     readonly workItemId: string | null
+    /**
+     * Who the caller's agent talks to: `customer` for a customer-facing or publishing module (or one the catalogue does not know),
+     * `internal` otherwise. A caller that does not say (a performer NIVO runs itself) is internal; the agent door always says.
+     */
+    readonly audience?: "customer" | "internal"
     /** The person who approved this exact call, when it replays an approval. */
     readonly approvedBy?: string
     /**
@@ -317,12 +332,23 @@ export interface NativeConnectorManifest extends GatewayConnectorManifest {
     readonly tools: ReadonlyArray<NativeToolSpec>
 }
 
-/** A native connector: its manifest and how it runs a tool. */
+/** Who a native tool runs for: the agent, and the customer conversation when the call serves one. */
+export interface NativeCaller {
+    /** The agent. */
+    readonly agentId: string
+    /** The customer conversation the call serves, or null. */
+    readonly conversationId: string | null
+}
+
+/**
+ * A native connector: its manifest and how it runs a tool. An adapter that needs no caller declares the three-parameter form; one
+ * that answers for the agent's view (module, instance, audience) takes the caller.
+ */
 export interface NativeAdapter {
     /** The manifest. */
     readonly manifest: NativeConnectorManifest
-    /** Runs one tool for a workspace. */
-    invoke(workspaceId: string, tool: string, args: GatewayJson): Promise<GatewayJson>
+    /** Runs one tool for a workspace, for the caller. An expected refusal is a `NativeRefused` error, which is an answer. */
+    invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson>
 }
 
 /** The caller a request to the gateway's own endpoint proved: the agent its credential names, in the workspace it names. */
@@ -405,4 +431,43 @@ export interface RemoteTarget {
     readonly url: string
     /** The credential state of its row. */
     readonly credentialState: CredentialState
+}
+
+/** The kinds of stored business data an agent can hold a right over; every native read tool reads one of them. */
+export type DataKind = "brain" | "customers" | "documents" | "payments" | "channels" | "invoices"
+
+/** A kind of data, or null when a tool reads none the store holds. */
+export type OptionalDataKind = DataKind | null
+
+/** The rights of an agent, or null when no enforced graph governs it. */
+export type OptionalDataRights = ReadonlyArray<DataRight> | null
+
+/** The rows a right reaches: only the customer of the conversation the call serves, or the whole workspace. */
+export type DataScope = "conversation" | "workspace"
+
+/** One right of an agent over a kind of data (data kind, scope of the turn, fields). No right is a deny. */
+export interface DataRight {
+    /** What may be read. */
+    readonly kind: DataKind
+    /** Which rows. */
+    readonly scope: DataScope
+    /** Fields the agent never sees. */
+    readonly hide: ReadonlyArray<string>
+    /** Fields shown masked. */
+    readonly mask: ReadonlyArray<string>
+}
+
+/** What the data rights decide about one native read: pass untouched, refuse, or pass narrowed by the right. */
+export type DataRightVerdict =
+    | { readonly kind: "open" }
+    | { readonly kind: "deny"; readonly reason: "no_right" | "no_kind" | "no_conversation" }
+    | { readonly kind: "narrow"; readonly right: DataRight }
+
+/**
+ * The rights of an agent, supplied by the owner of the action graph (bound at the app root). Null means the agent is not governed
+ * by an enforced graph yet and its reads pass as they did; a list, even an empty one, is the whole of what it may read.
+ */
+export interface DataRightsGate {
+    /** The rights of the agent, or null when its graph does not govern it. */
+    rightsOf(workspaceId: string, agentId: string): Promise<OptionalDataRights>
 }

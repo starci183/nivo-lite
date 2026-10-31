@@ -15,6 +15,7 @@ export type {
     SyncSchedule,
     WizardSettlement,
 } from "./connections.contracts"
+export type { ConnectionStatusFacts } from "./connection-bindings-read.contracts"
 export { ConnectionsModule } from "./connections.module"
 export { ConnectionsService } from "./connections.service"
 export { connectionsEntities } from "./persistence/entities"
