@@ -1,5 +1,5 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TeamChatService } from "@modules/domain/messages"
+import { OfficeTagService } from "@modules/domain/office-command-candidates"
 import type { PostedMessage } from "@modules/domain/messages"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
@@ -7,21 +7,16 @@ import type { Logger } from "@modules/platform/logging"
 import { PostOfficeMessageCommand } from "./post-office-message.command"
 
 @CommandHandler(PostOfficeMessageCommand)
-/** Posts the line through the team chat service. */
+/** Posts the line through the Office tag service: the line and a wake for each agent it tags the caller may ask, in one transaction. */
 export class PostOfficeMessageHandler extends ICQRSHandler<PostOfficeMessageCommand, PostedMessage> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly chat: TeamChatService,
+        private readonly tags: OfficeTagService,
     ) {
         super(logger)
     }
 
     protected override process(command: PostOfficeMessageCommand): Promise<PostedMessage> {
-        return this.chat.postHuman(
-            command.params.principal.id,
-            command.params.request.workspaceId,
-            command.params.request.body,
-            command.params.request.room,
-        )
+        return this.tags.post(command.params.principal.id, command.params.request.workspaceId, command.params.request)
     }
 }

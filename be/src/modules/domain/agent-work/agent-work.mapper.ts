@@ -1,3 +1,4 @@
+import { isRecord } from "@modules/platform/primitives"
 import type {
     AgentGoalRecord,
     AgentTaskRecord,
@@ -109,6 +110,12 @@ export interface TurnWake {
     readonly createdAt: Date
 }
 
+/** The work item a settled turn opened, which the handler recorded in the outcome; null when the turn opened none. */
+const workItemIdOf = (outcome: unknown): string | null => {
+    if (!isRecord(outcome)) return null
+    return typeof outcome.workItemId === "string" ? outcome.workItemId : null
+}
+
 /** The turn row with its wake as the work tab lists it: no prompt, no proposal, no customer words. */
 export const toTurnRecord = (row: AgentTurnEntity, wake: TurnWake): AgentTurnRecord => ({
     id: row.id,
@@ -121,5 +128,6 @@ export const toTurnRecord = (row: AgentTurnEntity, wake: TurnWake): AgentTurnRec
     completionTokens: row.completionTokens,
     cost: row.cost === null ? null : Number(row.cost),
     durationMs: row.durationMs,
+    workItemId: workItemIdOf(row.outcome),
     wokeAt: wake.createdAt,
 })

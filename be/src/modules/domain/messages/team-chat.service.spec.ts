@@ -61,14 +61,14 @@ describe("TeamChatService", () => {
     describe("postHuman", () => {
         it("posts the trimmed line as the member, including a staff row", async () => {
             const line = posted()
-            const { service, insert, members, activity } = await build(line)
+            const { service, insert, members, activity, entityManager } = await build(line)
 
             await expect(service.postHuman("user-1", "ws-1", "  Hello team  ")).resolves.toEqual(line)
 
             expect(members.require.mock.calls).toEqual([["user-1", "ws-1"]])
             expect(insert?.callsOf("values")).toEqual([[humanLine("Minh", "staff-1", "Hello team", null, "user-1")]])
             expect(insert?.callsOf("insert")).toEqual([[]])
-            expect(activity.message.mock.calls).toEqual([["ws-1", "room:office", "user-1"]])
+            expect(activity.message.mock.calls).toEqual([["ws-1", "room:office", "user-1", entityManager]])
         })
 
         it("posts as the owner when the member has no staff row", async () => {
@@ -85,11 +85,11 @@ describe("TeamChatService", () => {
 
         it("posts in a Hub room", async () => {
             const line = posted({ room: "marketing" })
-            const { service, insert, activity } = await build(line)
+            const { service, insert, activity, entityManager } = await build(line)
 
             await expect(service.postHuman("user-1", "ws-1", "Hello team", "marketing")).resolves.toEqual(line)
 
-            expect(activity.message.mock.calls).toEqual([["ws-1", "room:marketing", "user-1"]])
+            expect(activity.message.mock.calls).toEqual([["ws-1", "room:marketing", "user-1", entityManager]])
 
             expect(insert?.callsOf("values")).toEqual([
                 [humanLine("Minh", "staff-1", "Hello team", "marketing", "user-1")],
@@ -125,4 +125,20 @@ describe("TeamChatService", () => {
             expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
         })
     })
+})
+
+describe("TeamChatService > in a transaction", () => {
+        it("writes the line and its activity in the caller's transaction when it hands one", async () => {
+            const line = posted()
+            const { service, insert, activity, entityManager } = await build(line)
+            const tx = mockEntityManager({})
+            const [txInsert] = queueQueryBuilders(tx, [{ execute: { raw: [line] } }])
+
+            await expect(service.postHuman("user-1", "ws-1", "Hello team", null, tx)).resolves.toEqual(line)
+
+            expect(txInsert?.callsOf("values")).toEqual([[humanLine("Minh", "staff-1", "Hello team", null, "user-1")]])
+            expect(insert?.callsOf("values")).toEqual([])
+            expect(activity.message.mock.calls).toEqual([["ws-1", "room:office", "user-1", tx]])
+            expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
+        })
 })

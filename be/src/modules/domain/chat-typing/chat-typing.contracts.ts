@@ -12,6 +12,14 @@ export interface ChatTypingSignal {
     readonly expiresAt: string
 }
 
+/** An agent that is working on an answer: its id and the name the room shows. */
+export interface TypingAgent {
+    /** The agent id; it can never equal an account id, so no reader mistakes it for themselves. */
+    readonly id: string
+    /** The name the room shows. */
+    readonly name: string
+}
+
 /** One typing frame on the realtime hub: `id` is `${actorId}:${at}`, the `Last-Event-ID` resume point. */
 export interface ChatTypingFrame {
     /** The domain event id of the frame. */

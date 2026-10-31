@@ -4,4 +4,6 @@ export enum OfficeCommandCandidatesLogEvent {
     CommandReadFailed = "office.command_read_failed",
     /** The evidence line of a new candidate could not be written; the candidate stands. */
     EvidenceFailed = "office.evidence_failed",
+    /** The hint that an agent is working could not be published; the turn goes on. */
+    TypingFailed = "office.typing_failed",
 }

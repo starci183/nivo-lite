@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, FakeClock, mock } from "@starci/jest-preset"
 import { ChatMarkersService } from "@modules/domain/chat-markers"
+import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { REALTIME_HUB } from "@modules/platform/realtime"
@@ -24,6 +25,12 @@ const build = async () => {
         requireTarget: jest.fn().mockResolvedValue(memberOf()),
         memberIds: jest.fn().mockResolvedValue(["user-1", "user-2", "user-3"]),
     })
+    const seats = mock<WorkspaceMemberSeatsService>({
+        activeUsers: jest.fn().mockResolvedValue([
+            { userId: "user-1", displayName: "Mai Linh" },
+            { userId: "user-2", displayName: "An" },
+        ]),
+    })
     const realtime = mock<RealtimeHub>({ publish: jest.fn().mockResolvedValue(undefined) })
     const clock = new FakeClock(NOW)
     const now = jest.spyOn(clock, "now")
@@ -31,11 +38,12 @@ const build = async () => {
         providers: [
             ChatTypingService,
             { provide: ChatMarkersService, useValue: markers },
+            { provide: WorkspaceMemberSeatsService, useValue: seats },
             { provide: REALTIME_HUB, useValue: realtime },
             { provide: CLOCK, useValue: clock },
         ],
     }).compile()
-    return { service: container.get(ChatTypingService), markers, realtime, now }
+    return { service: container.get(ChatTypingService), markers, seats, realtime, now }
 }
 
 describe("ChatTypingService.set", () => {
@@ -109,5 +117,47 @@ describe("ChatTypingService.set", () => {
         realtime.publish.mockRejectedValue(failure)
 
         await expect(service.set("principal", "workspace-1", OFFICE, true)).rejects.toBe(failure)
+    })
+})
+
+describe("ChatTypingService.setAgent", () => {
+    const AGENT = { id: "agent-1", name: "Ke toan" }
+
+    it("tells every active account of the workspace that the agent is working, with no caller to prove", async () => {
+        const { service, markers, seats, realtime } = await build()
+
+        await service.setAgent("workspace-1", OFFICE, AGENT, true)
+
+        const frame = { id: `agent-1:${NOW}`, actorId: "agent-1", actorName: "Ke toan", state: "start", at: NOW }
+        expect(seats.activeUsers).toHaveBeenCalledWith("workspace-1", 500)
+        expect(markers.requireTarget).not.toHaveBeenCalled()
+        expect(realtime.publish).toHaveBeenCalledTimes(2)
+        expect(realtime.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ name: "chat-typing:user-1:workspace-1:room:office" }),
+            frame,
+        )
+        expect(realtime.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:room:office" }),
+            frame,
+        )
+    })
+
+    it("clears the indicator in a department room when the turn ends", async () => {
+        const { service, realtime } = await build()
+
+        await service.setAgent("workspace-1", { room: "sales", conversationId: null }, AGENT, false)
+
+        expect(realtime.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ name: "chat-typing:user-1:workspace-1:room:sales" }),
+            { id: `agent-1:${NOW}`, actorId: "agent-1", actorName: "Ke toan", state: "stop", at: NOW },
+        )
+    })
+
+    it("propagates a failed publish", async () => {
+        const { service, realtime } = await build()
+        const failure = new Error("realtime unavailable")
+        realtime.publish.mockRejectedValue(failure)
+
+        await expect(service.setAgent("workspace-1", OFFICE, AGENT, true)).rejects.toBe(failure)
     })
 })

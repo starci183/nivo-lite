@@ -23,16 +23,17 @@ export class TeamChatService {
         private readonly activity: ChatActivityService,
     ) {}
 
-    /** Posts the line as the caller in a room (null = the Office room) and answers the stored line; any member may speak. */
+    /** Posts the line as the caller in a room (null = the Office room) and answers the stored line; any member may speak. It joins the caller's transaction when it hands one. */
     async postHuman(
         principalId: string,
         workspaceId: string,
         body: string,
         room: RoomKeyText = null,
+        manager: EntityManager = this.entityManager,
     ): Promise<PostedMessage> {
         const member = await this.members.require(principalId, workspaceId)
         const target: OptionalRoom = room === null || isOfficeRoomKey(room) ? room : this.unknownRoom(room)
-        const result = await this.entityManager
+        const result = await manager
             .createQueryBuilder(MessageEntity, "m")
             .insert()
             .values({
@@ -52,6 +53,7 @@ export class TeamChatService {
             workspaceId,
             chatActivityTarget({ room: target, conversationId: null }),
             member.userId,
+            manager,
         )
         return row
     }

@@ -12,6 +12,12 @@ export interface OfficeLineInput {
     readonly command?: boolean
     /** The instance whose agent speaks. */
     readonly installation_id?: string | null
+    /** The agent that speaks, by id; it wins over the department. */
+    readonly agent_id?: string
+    /** The Hub room the line is posted in; absent is the general Office room. */
+    readonly room?: string | null
+    /** When set, the line is not posted again if the same speaker already said exactly this since that moment: a retried reply posts once. */
+    readonly unlessSaidSince?: Date
 }
 
 /** The agent that speaks for a department in the Office. */
