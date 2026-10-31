@@ -124,7 +124,7 @@ twice. A failed job ends the run `failed` with its error code (`onFailed`).
 
 Deterministic rules cost no tokens and always run. The AI pass is metered and bounded:
 
-| control           | value (constants of `dossier-review.contracts.ts`)                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| control           | value (constants of `be/src/modules/domain/dossier-review/dossier-review.contracts.ts`)                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | credits           | `UsageMeterService.blockedBy(workspaceId, "brain", bulk)` before every AI call (bulk for a workspace run); blocked: AI is skipped (`ai_state = skipped_credits`), rule findings are still saved                                                                                                                                                                                                                                                                                               |
 | usage             | every model call recorded with `UsageMeterService.record({ kind: "brain", module: "dossier_review" … })`                                                                                                                                                                                                                                                                                                                                                                                      |
@@ -181,7 +181,7 @@ time. Attribute matching uses `factSlugOf` of the pack's Vietnamese and English 
 | `values.minimum_wage`     | unreasonable (medium)  | a salary fact (`muc luong`, `luong co ban`, `luong`) below the pack's regional minimum for its date (region III 4,140,000 VND from 01/01/2026)                                                                                                                                                               |                                                                                       |
 | `values.dates`            | unreasonable (low)     | an end before its start, or a document dated more than one day after today                                                                                                                                                                                                                                   |                                                                                       |
 
-The **rule pack** `vn-llc-64@1` is data in `dossier-pack.policy.ts`, keyed by the template ref of the standard 64-dossier
+The **rule pack** `vn-llc-64@1` is data in `be/src/modules/domain/dossier-review/dossier-pack.policy.ts`, keyed by the template ref of the standard 64-dossier
 set (`1` … `64`, `BKS`), each entry:
 
 ```ts
@@ -259,7 +259,7 @@ OPEN AI FINDINGS (say whether each still applies)   A1 <title> — <detail>
 TODAY  2026-10-31
 ```
 
-### Prompt (`dossier-review-prompt.policy.ts`, version `dossier-review@1`)
+### Prompt (`be/src/modules/domain/dossier-review-ai/dossier-review-prompt.policy.ts`, version `dossier-review@1`)
 
 System, in English with the answer language fixed to the documents' language:
 
@@ -276,7 +276,7 @@ System, in English with the answer language fixed to the documents' language:
 
 User: the bundle text above.
 
-### Output schema (`dossier-review.schema.ts`, zod, bounded)
+### Output schema (`be/src/modules/domain/dossier-review-ai/dossier-review.schema.ts`, zod, bounded)
 
 ```ts
 z.object({
@@ -309,7 +309,7 @@ z.object({
 })
 ```
 
-### Hallucination guard (`evidence.policy.ts`, in the core, applied to rule and AI candidates alike)
+### Hallucination guard (`be/src/modules/domain/dossier-review/evidence.policy.ts`, in the core, applied to rule and AI candidates alike)
 
 1. Every cited key exists in the bundle; a quote, normalised (NFC, whitespace collapsed, case folded), is a substring of
    the cited passage's text or of the cited fact's value or its evidence quote. A quote under 8 characters only counts
@@ -357,7 +357,7 @@ Review: the owner reads the draft in a drawer, edits title and body (saved as th
 
 Each run writes `dossier_reviews` per evaluated dossier. Its status replaces the imported checklist status on the page
 once a dossier has been reviewed; the imported value stays in `brain_dossiers.status` and is shown beside it when they
-differ ("Checklist: Partial"). `dossier-status.policy.ts`:
+differ ("Checklist: Partial"). `be/src/modules/domain/dossier-review/dossier-status.policy.ts`:
 
 1. pack requirement `template` (or no pack entry and checklist `template`) → `template`;
 2. no `actual` and no `draft` source: requirement `optional` → the checklist status, else `missing`;
@@ -387,7 +387,7 @@ document page), assignee and due date; row actions (neutral, `sm`): Confirm, Dis
 to draft / View draft, Mark as done…, Reopen. Dismiss, assign and mark-done open a Dialog (short focused task); the
 draft opens the draft drawer.
 
-**To do tab** (`todo`, new in `BRAIN_TABS`, label with the open count): `DossierTodo` block, a workspace list of
+**To do tab** (`todo`, new in the Brain tab list of `fe/apps/web/src/modules/routes/knowledge-routes.ts`, label with the open count): `DossierTodo` block, a workspace list of
 active findings across dossiers, severity then age, with filters (SegmentedControl All / Mine / Unassigned /
 Drafts to approve; Select severity), Load more (connection paging). A row opens the dossier tab at
 `?dossier=<id>&finding=<id>`.
@@ -398,7 +398,7 @@ the evidence it answers; footer decision group: Reject (neutral), Save (neutral)
 `type="submit"` on the form). The note "NIVO drafts, you approve. It joins the dossier only once you approve it." Members see it
 read-only.
 
-Copy (namespace `dossierReview` in `vi.json` / `en.json`; the table gives the English copy, the Vietnamese strings live in `vi.json`):
+Copy (namespace `dossierReview` in `fe/apps/web/src/modules/i18n/messages/vi.json` / `fe/apps/web/src/modules/i18n/messages/en.json`; the table gives the English copy, the Vietnamese strings live in the first file):
 
 | key                                                                                  | en                                                                                                                                                        |
 | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -571,7 +571,7 @@ CREATE INDEX dossier_remedy_drafts_workspace_idx ON public.dossier_remedy_drafts
 Entities (`persistence/entities/<table>.entity.ts` of `dossier-review`, each `extends UuidAbstractEntity`, every column
 named and typed, `timestamptz`, `uuid` arrays `type: "uuid", array: true`, `due_at` `type: "date"` mapped to `string | null`,
 no relations, BE-PERSISTENCE-3); the barrel exports `dossierReviewEntities` and the registry
-`platform/database/entities.ts` lists it.
+`be/src/modules/platform/database/entities.ts` lists it.
 
 ### GraphQL (`features/api/dossier-review`; statuses as strings like `BrainDossierType`)
 
@@ -730,9 +730,10 @@ failed). A model failure throws the domain error so the queue retries; a credit 
 
 ## 9. Work packages
 
-Three packages with disjoint files. Interfaces between them are the types of `dossier-review.port.ts` and
-`dossier-review.contracts.ts` (written by WP-A exactly as in its brief), the service methods WP-A exports, and the
-GraphQL schema of section 8 (written by WP-B, consumed by WP-C).
+Three packages with disjoint files. Interfaces between them are the types of `be/src/modules/domain/dossier-review/dossier-review.port.ts` and
+`be/src/modules/domain/dossier-review/dossier-review.contracts.ts` (written by WP-A), the service methods WP-A exports, and the
+GraphQL schema of section 8 (written by WP-B, consumed by WP-C). WP-A and WP-B are built and committed, so their briefs are
+retired; the commits carry the history.
 
 | WP             | owns                                                                                                                                                                                   | depends on                                                                                             | integration |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------- |
@@ -740,308 +741,58 @@ GraphQL schema of section 8 (written by WP-B, consumed by WP-C).
 | B AI and doors | `modules/domain/dossier-review-ai`, the two jobs, `features/api/dossier-review`, the hook in `DocumentFactsService`, compose wiring of all three modules, the emitted GraphQL contract | WP-A's exports (codes against the port from the start; verifies once WP-A is committed)                | second      |
 | C Front end    | the blocks, hooks, operations, copy and the page edits                                                                                                                                 | WP-B's emitted `be/contracts/api/schema.graphql` for codegen (writes against section 8 from the start) | third       |
 
-Each brief below is complete; paste it as the whole prompt of a fresh agent.
-
-### Brief WP-A: dossier review core (back end)
-
-```text
-You build WP-A "dossier review core" of the nivo-lite Second Brain. The design is
-D:/starci-lanes/nivo-lite/be/docs/guides/dossier-review.md: read it whole first; it is approved by the owner and you
-build it without asking the owner anything. Where the design is silent, choose the option closest to the existing
-brain-dossiers and brain modules and write the choice in your final report.
-
-Read before planning: D:/.claude/contexts/README.md (load order), harness/rules.md, then the BE canon
-D:/.claude/contexts/code/be/{architecture,domain,services,persistence,queues,jobs,error,messages,naming,typing,test}.md,
-code/shared/{test,typing,naming,comment}.md. Read as templates: be/src/modules/domain/brain-dossiers/** (module,
-options, errors, messages, entity, specs), be/src/modules/domain/brain/document-facts.service.ts (credits, usage,
-eachInOrder), be/src/modules/queues/knowledge/**, be/src/modules/domain/knowledge-sources/source-categories.service.ts
-(REF_EXPRESSION: the dossier ref of a source), db/migrations/20261109100218_brain-dossiers.sql. Read the data set's
-workbooks to transcribe the rule pack: the normalized-data folder under D:/starci-tmp/nivo-data/raw-1793388658/ (`NIVO_*`),
-workbook `00. B*.xlsx` (sheet "status of the 64 dossiers") and `00. R*.xlsx` (sheets
-"conclusion per dossier", "cross-check", "legal basis"); read them with python -I and openpyxl (read_only,
-data_only) from a script in your scratchpad, never from inside that folder. No company-specific value (names, tax
-code, amounts, dates, account numbers) goes into code or specs: specs use synthetic data.
-
-Goal: everything of the design except the model calls, the job processors, the GraphQL doors and the front end.
-
-Files you create:
-- db/migrations/<stamp>_dossier-review.sql via `npm run db:new -- dossier-review`, exactly section 8 of the design,
-  plus the set_updated_at trigger, RLS policies, REVOKE and GRANT for each of the four tables as the brain-dossiers
-  migration does.
-- be/src/modules/domain/dossier-review/: dossier-review.contracts.ts (kinds, severities, statuses, resolutions, remedy
-  actions, the caps of section 3 as named constants, record and input types), dossier-review.port.ts,
-  dossier-review.decorators.ts (DOSSIER_REASONER, REMEDY_WRITER tokens and their Inject decorators),
-  dossier-review.module-definition.ts, dossier-review.module.ts, dossier-review.options.ts
-  ({ reasoner: Type<DossierReasoner>; writer: Type<RemedyWriter> }), dossier-review.log-events.ts,
-  errors/dossier-review.error.ts (codes: FindingNotFound, DraftNotFound, TransitionRefused, ReasonRequired,
-  AssigneeNotMember, DraftDailyLimit, NothingToReview, ModelUnavailable), messages/dossier-review.messages.ts (vi and
-  en: the error texts and every rule finding's `findings.<code>.title` / `findings.<code>.detail` with {{params}}),
-  persistence/entities/{dossier-review-run,dossier-finding,dossier-review,dossier-remedy-draft}.entity.ts + index.ts
-  (dossierReviewEntities), dossier-pack.policy.ts (pack vn-llc-64@1, section 4), document-state.policy.ts (ref of a
-  source mirroring REF_EXPRESSION in TypeScript, document state, document date), review-bundle.policy.ts (keys S/P/F/C/K/A,
-  caps, the bundle text of section 5), one policy per rule family: presence.policy.ts, signatures.policy.ts,
-  expiry.policy.ts, amounts.policy.ts, outdated.policy.ts, roles.policy.ts, facts-conflict.policy.ts,
-  identifiers.policy.ts, citations.policy.ts, values.policy.ts; rule-engine.policy.ts (runs them: candidates + coverage),
-  evidence.policy.ts (section 5 guard, for rule and AI candidates), fingerprint.policy.ts, reconcile.policy.ts (stored
-  findings + verified candidates + coverage → inserts, updates, reopenings, resolutions; AI findings follow rule 4 of the
-  guard), dossier-status.policy.ts (section 6), finding-record.mapper.ts, review-inputs.service.ts (collects the dossier
-  inputs through the owners' read services, sequentially with eachInOrder), dossier-review-runs.service.ts
-  (requestForSource, requestForGoneSource, request(userId, workspaceId, dossierId | null): coalesced row + outbox in one
-  transaction), dossier-review-runner.service.ts (run(payload), fail(payload): claim, rules, AI through the port with
-  the credits gate and the caps, guard, reconcile, statuses, stats), dossier-findings.service.ts (list with the
-  connection cursor, summary, confirm, dismiss, reopen, resolve, assign; locale-rendered titles for rule findings),
-  dossier-remedy-drafts.service.ts (request, generate(payload) through the port, fail(payload), get, save, approve,
-  reject; approval through KnowledgeSourcesService.addSource as the approving user, idempotent by the
-  `remedy:<draftId>` tag), index.ts. A spec beside every logic file.
-- be/src/modules/domain/knowledge-sources/dossier-sources.service.ts (+ .spec.ts) and dossier-sources.contracts.ts:
-  `sourcesOfTopics(workspaceId, topics, limit)` (id, title, topic, tags, origin, kind, status, chunkCount, sizeBytes,
-  updatedAt, createdAt; bounded) and `byTag(workspaceId, tag)` (first match or null).
-- Edits: knowledge-chunks/knowledge-chunks.service.ts + spec: `passagesOfSources(workspaceId, sourceIds, perSource)`
-  (one bounded query, ordered by source then order); brain-facts/brain-facts-read.service.ts + spec:
-  `ofSources(workspaceId, sourceIds, statuses, limit)` (facts whose evidence cites any of the sources, one bounded
-  query) and export BrainFactsReadService from brain-facts.module.ts and index.ts; queues/knowledge/knowledge.contracts.ts
-  and knowledge.queue.ts (+ specs): KnowledgeJob.DossierReview / DossierRemedy, payload types and guards, the two
-  producers; knowledge-sources.module.ts and index.ts (provide and export DossierSourcesService);
-  platform/database/entities.ts (dossierReviewEntities). You do not edit be/apps/api/src/compose: the module's options
-  name WP-B's two services, so WP-B registers DossierReviewModule (after BrainDossiersModule, with
-  DOSSIER_REVIEW_ERROR_KINDS and DOSSIER_REVIEW_MESSAGES registered the way BRAIN_DOSSIERS_* are) together with its own
-  modules. Your specs build the module's services with fakes of the two ports.
-
-Port (write exactly; WP-B implements it):
-  export interface BundleItem { readonly key: string; readonly text: string }
-  export interface DossierBundle {
-      readonly workspaceId: string; readonly today: string; readonly packVersion: string
-      readonly dossier: { readonly ref: string; readonly name: string; readonly category: string; readonly requirement: string;
-                          readonly basis: ReadonlyArray<string> }
-      readonly checklist: BundleItem | null
-      readonly related: ReadonlyArray<{ readonly ref: string; readonly name: string }>
-      readonly documents: ReadonlyArray<{ readonly key: string; readonly title: string; readonly state: string;
-                                          readonly date: string | null; readonly passages: ReadonlyArray<BundleItem> }>
-      readonly facts: ReadonlyArray<BundleItem>
-      readonly known: ReadonlyArray<BundleItem>
-      readonly openAi: ReadonlyArray<BundleItem>
-  }
-  export interface CitedQuote { readonly key: string; readonly quote: string }
-  export interface ReasonedFinding { readonly kind: string; readonly severity: string; readonly title: string;
-      readonly detail: string; readonly evidence: ReadonlyArray<CitedQuote>; readonly relatedRefs: ReadonlyArray<string>;
-      readonly remedyAction: string; readonly documentType: string | null }
-  export interface ReasonedReview { readonly findings: ReadonlyArray<ReasonedFinding>;
-      readonly stillOpen: ReadonlyArray<{ readonly key: string; readonly applies: boolean; readonly evidence: ReadonlyArray<CitedQuote> }>;
-      readonly model: string; readonly promptTokens: number | null; readonly completionTokens: number | null }
-  export interface DossierReasoner { review(bundle: DossierBundle): Promise<ReasonedReview | null> }
-  export interface RemedyRequest { readonly workspaceId: string; readonly today: string;
-      readonly finding: { readonly kind: string; readonly severity: string; readonly title: string; readonly detail: string;
-                          readonly evidence: ReadonlyArray<{ readonly label: string; readonly quote: string | null }> };
-      readonly dossier: { readonly ref: string; readonly name: string; readonly category: string };
-      readonly remedy: { readonly documentType: string | null; readonly guidance: string | null };
-      readonly identity: ReadonlyArray<string>; readonly instructions: string | null }
-  export interface RemedyText { readonly title: string; readonly documentType: string; readonly body: string;
-      readonly placeholders: ReadonlyArray<{ readonly label: string; readonly reason: string }>; readonly model: string }
-  export interface RemedyWriter { draft(request: RemedyRequest): Promise<RemedyText | null> }
-The port answers null when the model is unavailable or its answer did not parse after its own retry; the runner then
-sets ai_state "failed" for that dossier (rule findings are still saved) and the drafts service marks the draft failed.
-The implementations record usage themselves; the core calls UsageMeterService.blockedBy before each call and counts the
-daily caps from its own tables. The draft body gets the fixed tail of section 6 appended by the core, not by the port.
-
-Exports of index.ts (WP-B imports exactly these): DossierReviewModule, DossierReviewRunsService,
-DossierReviewRunnerService, DossierFindingsService, DossierRemedyDraftsService, dossierReviewEntities,
-DOSSIER_REVIEW_ERROR_KINDS, DOSSIER_REVIEW_MESSAGES, the port types, DOSSIER_REVIEW_CAPS, the kind / severity /
-status / remedy enums as const arrays, and the record types the GraphQL mappers read (FindingRecord, FindingPage,
-ReviewSummary, ReviewRunRecord, RemedyDraftRecord) shaped like section 8's GraphQL types. Service signatures:
-  runs.requestForSource(workspaceId, sourceId): Promise<void>
-  runs.requestForGoneSource(workspaceId, sourceId, topic: string | null, title: string): Promise<void>
-  runs.request(userId, workspaceId, dossierId: string | null): Promise<ReviewRunRecord>
-  runner.run(payload: object): Promise<"done" | "skipped">; runner.fail(payload: object): Promise<void>
-  findings.list(userId, workspaceId, filter, locale): Promise<FindingPage>
-  findings.summary(userId, workspaceId): Promise<ReviewSummary>
-  findings.confirm / dismiss / reopen / resolve / assign(userId, workspaceId, input, locale): Promise<FindingRecord>
-  drafts.request(userId, workspaceId, findingId, instructions): Promise<RemedyDraftRecord>
-  drafts.generate(payload: object): Promise<"done" | "skipped">; drafts.fail(payload: object): Promise<void>
-  drafts.get / save / approve / reject(userId, workspaceId, ...): Promise<RemedyDraftRecord | null or RemedyDraftRecord>
-
-Tests: unit specs for every logic file at 100 % lines, branches, functions and statements per file (BE-TEST-5, 9, 13,
-16: builders for test data, exact values). The acceptance set A1 to A4 of the design is a spec of rule-engine.policy.ts
-with synthetic facts and sources that reproduce each case, plus the negative of each (charter dated after the transfer,
-equal amounts, CCCD present, roles not overlapping). evidence.policy.spec covers each drop reason. reconcile.policy.spec
-covers insert, update in place, reopen after dismissal with new evidence, stay dismissed with the same evidence,
-not_detected resolution only inside coverage, AI findings never resolved by absence. Run only your specs:
-cd be && npx jest --selectProjects unit --coverage --collectCoverageFrom='<each logic file you changed>' <their specs>.
-Also run npm run typecheck and npx starci app lint (or npm run lint) and fix everything they report in your files.
-
-Done when: the migration is tested on a copy and applied locally; entities match the migrated schema (run
-`npx starci app db drift` if your CLI offers it); all your specs pass at 100 % per file; typecheck and lint are clean;
-everything is committed; your report lists the commit hashes, each decision you made where the design was silent, and
-any shared file you could not commit.
-
-Repo rules (hard, no exception):
-- Repo D:/starci-lanes/nivo-lite on main. Other agents edit this checkout at the same time. Never git add -A, commit -a,
-  stash, checkout -- <file>, restore, reset --hard, clean, rebase or push; never touch a file outside your list.
-- Commit path-limited through a temporary index, in Git Bash:
-    export GIT_INDEX_FILE="$(mktemp -u)"; git read-tree HEAD
-    git add -- <only your files>
-    git commit -F "$MSG"    # MSG="$(mktemp -u)" holds the message: a short path, the scratchpad path is too long for git on Windows; hooks run, never --no-verify
-    rm -f "$GIT_INDEX_FILE"; unset GIT_INDEX_FILE
-    git reset -q -- <the same files>     # re-syncs the real index for exactly those paths
-  A shared file that already holds someone else's uncommitted change (git diff shows hunks you did not write): save
-  your own change as a patch against the file as it was before your edit, and in the temporary index apply only it
-  (git apply --cached <patch>); if it does not apply, leave that file uncommitted and name it in the report. Commit
-  messages: conventional (feat(be): …), the reason in the body, last line the Co-Authored-By trailer your session's
-  attribution instructions give.
-- Start condition: db/migrations/20261109100218_brain-dossiers.sql and be/src/modules/domain/brain-dossiers are
-  committed (git log --oneline -1 -- <path>). If not, build your new files first and touch the shared files last;
-  wait for that commit with a Monitor until-loop, never a foreground sleep.
-- No eslint-disable, @ts-ignore, @ts-expect-error, `as` casts (only `as const`), `any`, non-null `!` on values, skipped
-  or focused tests, coverage ignores, --no-verify. Narrow with type guards, as the codebase does.
-- Never open, read, print or grep *.enc*, secrets.env, any *.env or .env* file, or .secrets/; never print the
-  environment.
-- Migrations: forward only; never edit a committed one. Test on a copy first, then apply to the local database:
-    docker exec nivo-local-db createdb -U postgres nivo_review_copy
-    docker exec nivo-local-db sh -c "pg_dump -U postgres --schema-only --no-owner postgres | psql -q -U postgres -d nivo_review_copy"
-    docker exec -i nivo-local-db psql -v ON_ERROR_STOP=1 -U postgres -d nivo_review_copy < db/migrations/<file>.sql
-    (check \d of the four tables, insert and update one row per table, try one row per CHECK that must fail)
-    docker exec nivo-local-db dropdb -U postgres nivo_review_copy
-    docker exec -i nivo-local-db psql -v ON_ERROR_STOP=1 -U postgres -d postgres < db/migrations/<file>.sql
-- The local api (port 18787) and web (port 3100) are running: never start, stop, restart or kill them or any node
-  process; no npm run dev:*.
-- Back end only in this WP; the front end has no tests (SHARED-TEST-1).
-```
-
-### Brief WP-B: dossier review AI layer, jobs and GraphQL (back end)
-
-```text
-You build WP-B "dossier review AI and doors" of the nivo-lite Second Brain. The design is
-D:/starci-lanes/nivo-lite/be/docs/guides/dossier-review.md: read it whole first; it is approved by the owner and you
-build it without asking the owner anything. Where the design is silent, choose the option closest to the existing
-code and write the choice in your final report. WP-A builds the core module be/src/modules/domain/dossier-review in
-parallel; its port, exports and service signatures are fixed in the WP-A brief inside the design (section 9): code
-against them exactly, and import only from "@modules/domain/dossier-review".
-
-Read before planning: D:/.claude/contexts/README.md (load order), harness/rules.md, then
-D:/.claude/contexts/code/be/{ai,architecture,domain,services,jobs,queues,transport,api,api-auth,error,messages,naming,
-typing,test}.md and code/shared/{test,typing,naming,comment}.md. Templates: be/src/modules/domain/brain/document-facts.service.ts
-and extraction.policy.ts (how a domain service calls AiService.chat, parses JSON, records usage), be/src/modules/domain/
-ai-tasks/ai-tasks.schema.ts (zod schemas), be/src/features/jobs/extract-knowledge-facts/** (a job), be/src/features/api/
-knowledge/** (resolvers, handlers, commands, queries, mappers, DTOs; brain-dossiers.* and request-lesson-mining.* are
-the closest), be/docs/guides/list-pagination.md and a connection feature it names, be/apps/api/src/compose/*.ts.
-
-Files you create:
-- be/src/modules/domain/dossier-review-ai/: module files (module-definition, module, options if needed), index.ts,
-  dossier-reasoner.service.ts implementing DossierReasoner (prompt of section 5, AiService.chat with json true and the
-  zod schema, timeout 60 s, one retry when the answer does not parse, usage recorded with kind "brain" and module
-  "dossier_review", answers null when the model is unavailable or the retry fails), remedy-writer.service.ts implementing
-  RemedyWriter (section 6, timeout 90 s, same retry and usage rules), dossier-review-prompt.policy.ts (system prompt,
-  the bundle rendered as the text of section 5 with its keys, PROMPT_VERSION "dossier-review@1"),
-  remedy-prompt.policy.ts, dossier-review.schema.ts and remedy.schema.ts (zod, bounded exactly as the design),
-  reasoned.mapper.ts (parsed answer → ReasonedReview / RemedyText, trimming to the bounds), errors/ and messages/ if you
-  add codes; a spec beside every logic file.
-- be/src/features/jobs/review-dossiers/** and be/src/features/jobs/draft-dossier-remedy/** (BE-JOBS-4: FencedProcessor
-  with queue KNOWLEDGE_QUEUE and job KnowledgeJob.DossierReview / DossierRemedy, one step that advances the claim then
-  calls runner.run / drafts.generate; onFailed calls runner.fail / drafts.fail).
-- be/src/features/api/dossier-review/** : the feature module, its GraphQL module, one resolver + mapper per operation
-  of section 8, the queries and commands with their handlers and contracts, DTOs (ObjectType, InputType with
-  class-validator bounds exactly as section 8), the connection cursor as list-pagination.md describes. Resolvers take
-  @CurrentPrincipal, @WorkspaceId and @AcceptedLocale and go through the query / command bus like the knowledge feature.
-- Edits: be/src/modules/domain/brain/document-facts.service.ts and its spec: after `finish` reads a document and after
-  `giveUp`, call DossierReviewRunsService.requestForSource(workspaceId, sourceId); in `withdraw`, call
-  requestForGoneSource(workspaceId, sourceId, null, title); a failure there is logged (a new BrainLogEvent) and never
-  fails the facts job. brain.module.ts only if a provider must be added. be/apps/api/src/compose/*.ts: register
-  DossierReviewAiModule and DossierReviewModule in compose/knowledge.ts after BrainDossiersModule
-  (DossierReviewModule.register({ isGlobal: true, reasoner: DossierReasonerService, writer: RemedyWriterService }),
-  with DOSSIER_REVIEW_ERROR_KINDS and DOSSIER_REVIEW_MESSAGES registered the way BRAIN_DOSSIERS_* are), the two job
-  queue modules where the other knowledge jobs are, the api feature where the knowledge feature is. Then regenerate the contract: npm run contract:emit (be/contracts/api/
-  schema.graphql) and commit it.
-
-Tests: unit specs for every logic file of dossier-review-ai at 100 % per file (BE-TEST-5, 9, 13, 16) with a fake
-AiService (the kit's doubles, BE-TEST-4): the prompt holds every key of the bundle and nothing else, a parse failure
-retries once then answers null, an unavailable model answers null without a retry, usage is recorded once per call with
-the exact numbers, the mapper trims every bound. document-facts.service.spec covers the three new calls and their
-failure. The features tier is thin and unmeasured (BE-TEST-7): keep logic out of it. Run only your specs:
-cd be && npx jest --selectProjects unit --coverage --collectCoverageFrom='<each logic file you changed>' <their specs>.
-Then npm run typecheck and npx starci app lint (or npm run lint); fix everything in your files.
-
-Acceptance on data, when the running api has picked up the build by itself (watch mode) and the local workspace holds
-the reference data set: request a whole-set review through GraphQL on http://localhost:18787 as an owner session you
-already have (never create accounts or type passwords), wait for the run, and list the findings: A1 to A4 of the
-design must be among them. If the api has not reloaded or the data is not there, say so in the report; do not restart
-anything.
-
-Done when: your specs pass at 100 % per file, typecheck and lint are clean, schema.graphql is emitted with exactly the
-section 8 operations, everything is committed, and your report lists the commit hashes, the decisions you made, the
-acceptance result, and the prompt text as committed.
-
-Start and order: begin at once with your new files; before you run typecheck or commit, WP-A's module must be committed
-(git log --oneline -1 -- be/src/modules/domain/dossier-review); wait for it with a Monitor until-loop, never a
-foreground sleep. If WP-A's committed exports differ from the brief, follow the committed code and note the difference.
-
-Repo rules (hard, no exception):
-- Repo D:/starci-lanes/nivo-lite on main. Other agents edit this checkout at the same time. Never git add -A, commit -a,
-  stash, checkout -- <file>, restore, reset --hard, clean, rebase or push; never touch a file outside your list.
-- Commit path-limited through a temporary index, in Git Bash:
-    export GIT_INDEX_FILE="$(mktemp -u)"; git read-tree HEAD
-    git add -- <only your files>
-    git commit -F "$MSG"    # MSG="$(mktemp -u)" holds the message: a short path, the scratchpad path is too long for git on Windows; hooks run, never --no-verify
-    rm -f "$GIT_INDEX_FILE"; unset GIT_INDEX_FILE
-    git reset -q -- <the same files>     # re-syncs the real index for exactly those paths
-  A shared file that already holds someone else's uncommitted change: save your own change as a patch against the file
-  as it was before your edit and apply only it in the temporary index (git apply --cached <patch>); if it does not
-  apply, leave that file uncommitted and name it in the report. Commit messages: conventional (feat(be): …), the reason
-  in the body, last line the Co-Authored-By trailer your session's attribution instructions give.
-- No eslint-disable, @ts-ignore, @ts-expect-error, `as` casts (only `as const`), `any`, non-null `!` on values, skipped
-  or focused tests, coverage ignores, --no-verify. Narrow with type guards; parse model answers with the zod schema.
-- Never open, read, print or grep *.enc*, secrets.env, any *.env or .env* file, or .secrets/; never print the
-  environment; never put a key or token in code, specs or commands.
-- No migration in this WP (WP-A owns the schema). Should you need one anyway: test it on a copy first exactly as the
-  WP-A brief shows, then apply it locally with docker exec -i nivo-local-db psql -v ON_ERROR_STOP=1 -U postgres -d postgres.
-- The local api (port 18787) and web (port 3100) are running: never start, stop, restart or kill them or any node
-  process; no npm run dev:*.
-```
+The WP-C brief below is complete; paste it as the whole prompt of a fresh agent.
 
 ### Brief WP-C: dossier review on the Second Brain page (front end)
 
 ```text
-You build WP-C "dossier review UI" of the nivo-lite Second Brain page (fe/apps/web). The design is
+You build WP-C "dossier review UI" of the nivo-lite Second Brain page, in fe/apps/web. The design is
 D:/starci-lanes/nivo-lite/be/docs/guides/dossier-review.md: read it whole first, sections 2, 6, 7 and 8 closely; it is
 approved by the owner and you build it without asking the owner anything. Where the design is silent, follow the
 existing Second Brain blocks and write the choice in your final report. WP-B emits the GraphQL contract of section 8 in
 be/contracts/api/schema.graphql; write your operations against section 8 from the start.
 
-Read before planning: D:/.claude/contexts/README.md (load order), harness/rules.md, D:/.claude/contexts/code/fe/{README,
-architecture,boundaries,folder,data,form,i18n,ui,error,naming,typing,transport}.md, code/shared/{test,typing,naming,
-comment}.md, D:/.claude/contexts/ui/{README,composition,presentation}.md and ui/components/{pane-grid,list-table,
-dialog-drawer,segmented-control,select,text-field,toast-alert,empty-state,button,chip}.md, grammars/core.md (or the
-grammar hfs.json names). Templates: fe/apps/web/src/components/blocks/{BrainDossiers,BrainReview,BrainGaps,KnowledgeAdd}/**,
-features/pages/BrainPage/**, components/blocks/BrainPageFrame/**, hooks/brain/**, hooks/swr/api/graphql/**,
-modules/api/graphql/{queries,mutations}/**, modules/brain/**, modules/routes/knowledge-routes.ts,
-app/[locale]/(console)/brain/page.tsx, modules/i18n/messages/{vi,en}.json, fe/i18n-dynamic-keys.yaml. Use only
+Read before planning: D:/.claude/contexts/README.md (load order), D:/.claude/contexts/harness/rules.md,
+D:/.claude/contexts/code/fe/{README,architecture,boundaries,folder,data,form,i18n,ui,error,naming,typing,transport}.md,
+D:/.claude/contexts/code/shared/{test,typing,naming,comment}.md, D:/.claude/contexts/ui/{README,composition,presentation}.md and
+D:/.claude/contexts/ui/components/{pane-grid,list-table,dialog-drawer,segmented-control,select,text-field,toast-alert,empty-state,button,chip}.md,
+D:/.claude/contexts/grammars/core.md (or the grammar hfs.json names). Templates:
+fe/apps/web/src/components/blocks/BrainDossiers/, fe/apps/web/src/components/blocks/BrainReview/, fe/apps/web/src/components/blocks/BrainGaps/,
+fe/apps/web/src/components/blocks/KnowledgeAdd/, fe/apps/web/src/features/pages/BrainPage/, fe/apps/web/src/components/blocks/BrainPageFrame/,
+fe/apps/web/src/hooks/brain/, fe/apps/web/src/hooks/swr/api/graphql/, fe/apps/web/src/modules/api/graphql/queries/, fe/apps/web/src/modules/api/graphql/mutations/,
+fe/apps/web/src/modules/brain/, fe/apps/web/src/modules/routes/knowledge-routes.ts, fe/apps/web/src/app/[locale]/(console)/brain/page.tsx,
+fe/apps/web/src/modules/i18n/messages/vi.json, fe/apps/web/src/modules/i18n/messages/en.json, fe/i18n-dynamic-keys.yaml. Use only
 @starci/grammar/common components (0.16.3); no new primitive, no raw HTML control, no inline style.
 
-Files you create:
-- modules/api/graphql/queries/query-dossier-findings.ts, query-dossier-review-summary.ts, query-dossier-remedy-draft.ts;
-  modules/api/graphql/mutations/mutation-{request-dossier-review,confirm-dossier-finding,dismiss-dossier-finding,
+Files you create (names without extension, under the folders named):
+- Queries in fe/apps/web/src/modules/api/graphql/queries/: query-dossier-findings, query-dossier-review-summary,
+  query-dossier-remedy-draft. Mutations in fe/apps/web/src/modules/api/graphql/mutations/:
+  mutation-{request-dossier-review,confirm-dossier-finding,dismiss-dossier-finding,
   reopen-dossier-finding,resolve-dossier-finding,assign-dossier-finding,request-dossier-remedy-draft,
-  save-dossier-remedy-draft,approve-dossier-remedy-draft,reject-dossier-remedy-draft}.ts.
-- hooks/swr/api/graphql/queries/useQueryDossierFindingsSwr.ts (connection, Load more), useQueryDossierReviewSummarySwr.ts
-  (refreshInterval 4 s while isRunning, else 0), useQueryDossierRemedyDraftSwr.ts (4 s while generating, else 0);
-  hooks/swr/api/graphql/mutations/useMutate<Operation>Swr.ts for the ten mutations.
-- hooks/brain/useDossierFindings.ts, useDossierReviewSummary.ts, useDossierReviewCommands.ts (FE-DATA-COMMAND: one
+  save-dossier-remedy-draft,approve-dossier-remedy-draft,reject-dossier-remedy-draft}.
+- Hooks in fe/apps/web/src/hooks/swr/api/graphql/queries/: useQueryDossierFindingsSwr (connection, Load more),
+  useQueryDossierReviewSummarySwr (refreshInterval 4 s while isRunning, else 0), useQueryDossierRemedyDraftSwr (4 s while
+  generating, else 0); in fe/apps/web/src/hooks/swr/api/graphql/mutations/: useMutate<Operation>Swr for the ten mutations.
+- In fe/apps/web/src/hooks/brain/: useDossierFindings, useDossierReviewSummary, useDossierReviewCommands (FE-DATA-COMMAND: one
   domain command hook; each write toasts through useGraphQLWithToast and revalidates exactly the findings, summary,
-  draft and, after an approval, the dossiers and knowledge reads), useDossierRemedyDraft.ts.
-- modules/brain/findings.ts: severity, kind and status tones and order, filter values, view mappers (pure functions).
-- components/blocks/DossierFindings/{index.tsx,component.tsx,classNames.ts} (the detail pane of one dossier),
-  components/blocks/DossierTodo/** (the "To do" tab), components/blocks/DossierRemedyDraft/** (the draft drawer),
-  components/composites/DossierFindingRows/** (rows shared by both lists), components/composites/DossierFindingDialogs/**
-  (dismiss, assign, mark done: Dialog with a form, footer commit type="submit" form=<id>).
-- Edits: components/blocks/BrainDossiers/{component.tsx,index.tsx,classNames.ts} (selectable dossier rows, the
+  draft and, after an approval, the dossiers and knowledge reads), useDossierRemedyDraft.
+- In fe/apps/web/src/modules/brain/: findings (severity, kind and status tones and order, filter values, view mappers; pure functions).
+- Under fe/apps/web/src/components/blocks/: DossierFindings (index, component, classNames: the detail pane of one dossier),
+  DossierTodo (the "To do" tab), DossierRemedyDraft (the draft drawer); under fe/apps/web/src/components/composites/:
+  DossierFindingRows (rows shared by both lists), DossierFindingDialogs (dismiss, assign, mark done: Dialog with a form,
+  footer commit type="submit" form=<id>).
+- Edits: fe/apps/web/src/components/blocks/BrainDossiers/ (component, index, classNames: selectable dossier rows, the
   recomputed status badge with the checklist status beside it when they differ, the worst-severity count badge, the
   "Review all dossiers" header action for owners and managers, the third `detail` pane collapse="drawer" of section 7);
-  features/pages/BrainPage/component.tsx (the todo panel); modules/routes/knowledge-routes.ts (BRAIN_TABS gains "todo"
-  after "dossiers"; the dossier, finding and draft parameters); modules/brain/tabs.ts and index.ts; the brain page
-  route if it must pass the new parameters; components/blocks/BrainPageFrame (the tab label with its count);
-  KnowledgeAdd's preset and its hook so the upload action can preset the topic and the tag dossier:<ref> (add a `tags`
-  field to the preset and pass it into the add mutation); hooks/brain/index.ts, hooks/swr index files;
-  modules/i18n/messages/vi.json and en.json (namespace dossierReview, the copy table of section 7, same keys in both);
-  fe/i18n-dynamic-keys.yaml for every key family built at run time (severity_*, kind_*, resolution_*), each with its
-  reason in the file's format.
+  fe/apps/web/src/features/pages/BrainPage/component.tsx (the todo panel); fe/apps/web/src/modules/routes/knowledge-routes.ts (the Brain tab
+  list gains "todo" after "dossiers"; the dossier, finding and draft parameters); fe/apps/web/src/modules/brain/tabs.ts and the index
+  beside it; the brain page route fe/apps/web/src/app/[locale]/(console)/brain/page.tsx if it must pass the new parameters;
+  fe/apps/web/src/components/blocks/BrainPageFrame/ (the tab label with its count); KnowledgeAdd's preset and its hook in
+  fe/apps/web/src/components/blocks/KnowledgeAdd/ so the upload action can preset the topic and the tag dossier:<ref> (add a `tags`
+  field to the preset and pass it into the add mutation); the index files of fe/apps/web/src/hooks/brain/ and fe/apps/web/src/hooks/swr/;
+  fe/apps/web/src/modules/i18n/messages/vi.json and fe/apps/web/src/modules/i18n/messages/en.json (namespace dossierReview, the copy table of
+  section 7, same keys in both); fe/i18n-dynamic-keys.yaml for every key family built at run time (severity_*, kind_*,
+  resolution_*), each with its reason in the file's format.
 
 Behaviour: section 7. Members read everything and see no write action (useWorkspaceMember().canWrite). The assignee
 Select lists the workspace members from the existing useQueryWorkspaceMembersSwr. Rule and AI findings show title and
@@ -1063,31 +814,26 @@ could not see in the running app.
 Start and order: begin at once with the operations, hooks, modules and blocks against section 8; before codegen,
 typecheck or commit, WP-B's contract must be committed (git log --oneline -1 -- be/contracts/api/schema.graphql shows
 a commit naming dossier review), and the dossier work of BrainDossiers must be committed (git status --short on
-components/blocks/BrainDossiers is clean of changes you did not make); wait with a Monitor until-loop, never a
+fe/apps/web/src/components/blocks/BrainDossiers/ is clean of changes you did not make); wait with a Monitor until-loop, never a
 foreground sleep. If the emitted schema differs from section 8, follow the schema and note the difference.
 
 Repo rules (hard, no exception):
 - Repo D:/starci-lanes/nivo-lite on main. Other agents edit this checkout at the same time. Never git add -A, commit -a,
   stash, checkout -- <file>, restore, reset --hard, clean, rebase or push; never touch a file outside your list.
-- Commit path-limited through a temporary index, in Git Bash:
-    export GIT_INDEX_FILE="$(mktemp -u)"; git read-tree HEAD
-    git add -- <only your files>
-    git commit -F "$MSG"    # MSG="$(mktemp -u)" holds the message: a short path, the scratchpad path is too long for git on Windows; hooks run, never --no-verify
-    rm -f "$GIT_INDEX_FILE"; unset GIT_INDEX_FILE
-    git reset -q -- <the same files>     # re-syncs the real index for exactly those paths
-  A shared file that already holds someone else's uncommitted change (vi.json, en.json, the index files): save your
+- Commit path-limited through a temporary index, following D:/starci-tmp/tino/lanes/LANE-BRIEF.md (hooks run, never --no-verify;
+  reset the real index for exactly those paths afterwards).
+  A shared file that already holds someone else's uncommitted change (the two message catalogs, the index files): save your
   own change as a patch against the file as it was before your edit and apply only it in the temporary index
   (git apply --cached <patch>); if it does not apply, leave that file uncommitted and name it in the report. Commit
   messages: conventional (feat(web): …), the reason in the body, last line the Co-Authored-By trailer your session's
   attribution instructions give.
 - No eslint-disable, @ts-ignore, @ts-expect-error, `as` casts (only `as const`), `any`, non-null `!` on values,
   --no-verify. Narrow with type guards; display text only from the message catalogs (FE-I18N-2).
-- Never open, read, print or grep *.enc*, secrets.env, any *.env or .env* file, or .secrets/; never print the
+- Never open, read, print or grep *.enc*, secrets.env, any *.env or .env* file, or the secrets folder; never print the
   environment.
-- No migration in this WP. Should one be needed: test it on a copy first exactly as the WP-A brief shows, then apply it
-  locally with docker exec -i nivo-local-db psql -v ON_ERROR_STOP=1 -U postgres -d postgres.
+- No migration in this WP.
 - The local api (port 18787) and web (port 3100) are running: never start, stop, restart or kill them or any node
-  process; no npm run dev:*.
+  process; start no dev server.
 ```
 
 ## 10. Decided by default (no owner question)
