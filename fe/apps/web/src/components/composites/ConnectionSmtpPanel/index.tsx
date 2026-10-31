@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Alert, Badge, Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, Cluster, Input, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { RowSmtpView } from "@/modules/types"
 import { connectionSmtpPanelClassNames as classNames } from "./classNames"
 
@@ -31,14 +31,14 @@ type PanelFormProps = {
 const PanelForm = (props: PanelFormProps) => (
     <div className={classNames.full}>
         <SurfaceCard ariaLabel={props.ariaLabel}>
-            <div className={classNames.panel}>
+            <Stack gap="row">
                 {props.field}
                 {props.hint === undefined ? null : (
                     <Text size="xs" tone="muted">
                         {props.hint}
                     </Text>
                 )}
-                <div className={classNames.actions}>
+                <Cluster gap="inline">
                     <Button
                         intent="commit"
                         isPending={props.isPending}
@@ -50,8 +50,8 @@ const PanelForm = (props: PanelFormProps) => (
                     <Button intent="neutral" onPress={props.onCancel}>
                         {props.cancelLabel}
                     </Button>
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
         </SurfaceCard>
     </div>
 )
@@ -59,7 +59,7 @@ const PanelForm = (props: PanelFormProps) => (
 /** The SMTP-only part of a connection row: the default badge, send a test, change the password, make it the default. */
 export const ConnectionSmtpPanel = (props: ConnectionSmtpPanelProps) => (
     <>
-        <div className={classNames.actions}>
+        <Cluster gap="inline">
             {props.isDefault ? <Badge tone="success">{props.labels.defaultBadge}</Badge> : null}
             <Button intent="neutral" isDisabled={props.isPending} onPress={() => props.onToggle("test")}>
                 {props.labels.test}
@@ -72,7 +72,7 @@ export const ConnectionSmtpPanel = (props: ConnectionSmtpPanelProps) => (
                     {props.labels.setDefault}
                 </Button>
             ) : null}
-        </div>
+        </Cluster>
         {props.panel === "test" ? (
             <PanelForm
                 ariaLabel={props.labels.test}

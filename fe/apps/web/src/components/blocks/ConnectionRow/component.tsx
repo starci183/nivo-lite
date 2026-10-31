@@ -6,6 +6,7 @@ import {
     DropdownMenu,
     IconButton,
     ListRow,
+    Stack,
     Text,
     TextAction,
 } from "@starci/grammar/common"
@@ -16,7 +17,6 @@ import { ConnectionSmtpPanel } from "@/components/composites/ConnectionSmtpPanel
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import type { RowDialog, RowPrimary, RowView } from "@/modules/types"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import { connectionRowClassNames as classNames } from "./classNames"
 
 /** What a connection row draws and the commands the owner can give it. */
 export interface ConnectionRowBaseProps {
@@ -102,7 +102,7 @@ const detailsOf = (view: RowView, on: RowHandlers) => (
             />
         )}
         {view.keys === null ? null : (
-            <div className={classNames.full}>
+            <Stack gap="row">
                 <ConnectionCopyInput
                     id={`row-${view.id}-url`}
                     name="webhookUrl"
@@ -118,7 +118,7 @@ const detailsOf = (view: RowView, on: RowHandlers) => (
                     isSecret
                     labels={view.copy}
                 />
-            </div>
+            </Stack>
         )}
         {view.note === null ? null : <Alert title={view.note.text} tone={view.note.tone} />}
     </>

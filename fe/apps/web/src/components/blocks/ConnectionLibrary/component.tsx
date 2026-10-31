@@ -2,8 +2,10 @@ import {
     Alert,
     Badge,
     Button,
+    Cluster,
     EmptyNotice,
     Fieldset,
+    Grid,
     SearchField,
     SurfaceCard,
     TagGroup,
@@ -108,15 +110,14 @@ const tileOf = (props: ConnectionLibraryBaseProps, card: LibraryCard) => {
                 {...(card.isSoon ? { state: "unavailable" as const } : {})}
             >
                 <div className={classNames.card}>
-                    <div className={classNames.cardHead}>
+                    <Cluster gap="row" wrap={false} justify="between">
                         <ProviderLogo glyph={card.glyph} {...(card.logo === undefined ? {} : { src: card.logo })} />
-                        <div className={classNames.cardName} />
                         {card.badge === null ? null : (
                             <Badge tone={card.badge.tone} isDot={card.badge.isDot} isSkeleton={props.props.isSkeleton}>
                                 {card.badge.label}
                             </Badge>
                         )}
-                    </div>
+                    </Cluster>
                     {card.isSoon ? null : (
                         <Text size="sm" tone="muted" overflow="clamp-2">
                             {card.blurb}
@@ -169,7 +170,9 @@ export const ConnectionLibraryBase = (props: ConnectionLibraryBaseProps) => (
         {props.props.cards.length === 0 ? (
             <EmptyNotice message={props.props.emptyMessage} description={props.props.emptyHint} />
         ) : (
-            <div className={classNames.grid}>{props.props.cards.map((card) => tileOf(props, card))}</div>
+            <Grid kind="cards" columns={3}>
+                {props.props.cards.map((card) => tileOf(props, card))}
+            </Grid>
         )}
     </>
 )
