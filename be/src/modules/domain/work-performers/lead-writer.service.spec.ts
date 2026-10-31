@@ -35,6 +35,7 @@ const turnOf = (leadId: string | null): TurnConversation => ({
         approvalRule: "",
         greeting: "Hello",
     },
+    speaksAs: null,
 })
 
 const itemOf = builder<WorkItem>({

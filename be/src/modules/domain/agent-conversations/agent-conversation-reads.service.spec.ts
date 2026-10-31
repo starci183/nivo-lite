@@ -11,6 +11,7 @@ const ROW = builder<AgentConversationEntity>({
     id: "chat-1",
     workspaceId: "ws-1",
     agentId: "agent-1",
+    frontAgentId: null,
     kind: "customer",
     visitorName: null,
     leadId: "lead-1",

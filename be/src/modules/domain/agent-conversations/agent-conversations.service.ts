@@ -18,7 +18,6 @@ import type {
     ChatConversation,
     OpenChatConversation,
     ChatHolder,
-    HandToAgentParams,
     OptionalConversationParty,
     OptionalInstallationId,
     RememberPartyParams,
@@ -107,7 +106,7 @@ const holding = (holder: string | null) => ({
 })
 
 @Injectable()
-/** The conversations customers have with the workspace's agents on a channel; the only writer of agent_conversations. */
+/** The conversations customers have with the workspace's agents on a channel; the only writer of agent_conversations but the hand-over of a conversation to another agent (ConversationHandoverService). */
 export class AgentConversationsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -290,28 +289,6 @@ export class AgentConversationsService {
     }
 
     /**
-     * Hands the conversation to another agent in the caller's transaction; true when it moved. It stays where it is while a person
-     * holds it or when that agent already speaks in it.
-     */
-    async handToAgent(params: HandToAgentParams): Promise<boolean> {
-        const moved = await params.manager
-            .createQueryBuilder(AgentConversationEntity, "ac")
-            .update()
-            .set({ agentId: params.agentId, installationId: params.installationId ?? (() => "installation_id") })
-            .where(
-                "workspace_id = :workspaceId AND id = :conversationId AND handled_by IS NULL AND agent_id <> :agentId",
-                {
-                    workspaceId: params.workspaceId,
-                    conversationId: params.conversationId,
-                    agentId: params.agentId,
-                },
-            )
-            .returning("id")
-            .execute()
-        return Array.isArray(moved.raw) && moved.raw.length > 0
-    }
-
-    /**
      * True for an owner's test chat with an agent: its turns are real, but nothing it says may create a business record (no connector
      * write, no hand-off). A conversation that does not exist is not a test chat.
      */
@@ -410,10 +387,13 @@ export class AgentConversationsService {
                 visitorName: true,
                 installationId: true,
                 agentId: true,
+                frontAgentId: true,
             },
             where: { id: conversationId },
         })
         const agent = row === null ? null : await this.agents.turnFactsOf(row.agentId)
+        const frontId = row !== null && row.frontAgentId !== row.agentId ? row.frontAgentId : null
+        const front = frontId === null ? null : await this.agents.turnFactsOf(frontId)
         if (row === null || agent === null) return refused(AgentConversationsErrorCode.NotFound)
         return ok({
             id: row.id,
@@ -426,6 +406,7 @@ export class AgentConversationsService {
             visitorName: row.visitorName,
             installationId: row.installationId,
             agent,
+            speaksAs: front?.name ?? null,
         })
     }
 }

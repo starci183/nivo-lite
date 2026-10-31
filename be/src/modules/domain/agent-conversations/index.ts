@@ -5,6 +5,7 @@ export type { ConnectionConversation, CustomerConversationRow } from "./agent-co
 export { AgentConversationsModule } from "./agent-conversations.module"
 export { AgentConversationReadService } from "./agent-conversation-reads.service"
 export { AgentConversationsService } from "./agent-conversations.service"
+export { ConversationHandoverService } from "./conversation-handover.service"
 export {
     AGENT_CONVERSATIONS_ERROR_KINDS,
     AgentConversationsError,

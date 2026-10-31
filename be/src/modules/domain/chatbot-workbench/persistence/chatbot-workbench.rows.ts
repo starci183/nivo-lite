@@ -12,12 +12,18 @@ export interface WaitingRow {
     readonly created_at: Date | string
 }
 
-/** The lead name and capture time. */
+/** The lead name, stage and capture time. */
 export interface LeadBriefRow {
     /** The stored id value. */
     readonly id: string
     /** The stored contact name value. */
     readonly contact_name: string
+    /** The stored company value. */
+    readonly company: string
+    /** The stored need value. */
+    readonly need: string
+    /** The stored stage value. */
+    readonly stage: string
     /** The stored created at value. */
     readonly created_at: Date | string
 }

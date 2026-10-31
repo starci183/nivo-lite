@@ -45,6 +45,7 @@ export const runtimeTurn: CustomerTurn = {
             approvalRule: "",
             greeting: "",
         },
+        speaksAs: null,
     },
     messageId: "m1",
     body: "How much is the tea?",

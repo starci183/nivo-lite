@@ -36,6 +36,8 @@ export interface AttentionRow {
     readonly action: string | null
     /** The fields NIVO is missing (clarification). */
     readonly missing: ReadonlyArray<string>
+    /** The newest conversation of the customer, which the row opens beside the thread; null while the customer never wrote. */
+    readonly conversationId: string | null
 }
 
 /** A card on the pipeline board. */
@@ -104,6 +106,8 @@ export interface SalesDecision {
     readonly assignedStaffName: string | null
     /** createdAt. */
     readonly createdAt: string
+    /** The newest conversation of the customer; the decision waits under its last message. */
+    readonly conversationId: string | null
 }
 
 /** One hand-off row of the Accounting hand-off surface. */

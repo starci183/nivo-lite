@@ -9,6 +9,7 @@ export const conversationOf = builder<AgentConversationEntity>({
     id: "conv-1",
     workspaceId: "ws-1",
     agentId: "agent-1",
+    frontAgentId: null,
     kind: "customer",
     visitorName: "Minh",
     leadId: null,

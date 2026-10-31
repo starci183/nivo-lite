@@ -9,7 +9,7 @@ import {
 } from "@modules/domain/customer-turns"
 import type { DynamicModule } from "@nestjs/common"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
-import { NATIVE_TOOL_ADAPTERS, NativeToolsModule } from "@modules/domain/native-tools"
+import { CUSTOMER_TOOL_ADAPTERS, NATIVE_TOOL_ADAPTERS, NativeToolsModule } from "@modules/domain/native-tools"
 import {
     INBOUND_EVENTS_ERROR_KINDS,
     INBOUND_EVENTS_MESSAGES,
@@ -64,13 +64,13 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         runtime: CustomerTurnRuntimeService,
         outcomes: CustomerOutcomesService,
     }),
-    NativeToolsModule.register({ isGlobal: true }),
+    NativeToolsModule.register({ isGlobal: true, customer: true }),
     McpGatewayModule.register({
         isGlobal: true,
         ...options.mcpGateway,
         console: true,
         keyCheck: true,
-        natives: NATIVE_TOOL_ADAPTERS,
+        natives: [...NATIVE_TOOL_ADAPTERS, ...CUSTOMER_TOOL_ADAPTERS],
     }),
     CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),
     TelegramInboxModule.register({ isGlobal: true }),

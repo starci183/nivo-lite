@@ -27,6 +27,7 @@ export const turnOf = (leadId: string | null = null, knowledge = "Tra sua: 50.00
             approvalRule: "",
             greeting: "",
         },
+        speaksAs: null,
     },
     messageId: "m1",
     body: "I want one milk tea",

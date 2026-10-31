@@ -20,6 +20,8 @@ const NOW = Date.parse("2026-10-13T03:00:00.000Z")
 const conversationOf = builder<CustomerConversationRow>({
     id: "c-1",
     channel: "zalo",
+    agent_id: "agent-1",
+    front_agent_id: null,
     visitor_name: null,
     lead_id: "l-1",
     handled_by: null,
@@ -44,6 +46,18 @@ const waitingOf = builder<WaitingRow>({
     created_at: "2026-10-13T01:02:00.000Z",
 })
 
+/** The desk being read, with no other agent and no staff named. */
+const DESK = { agentIds: ["agent-1"], agentNames: new Map<string, string>(), staffNames: new Map<string, string>() }
+
+const LEAD_HOA = {
+    id: "l-1",
+    contact_name: "Hoa",
+    company: "Hoa Shop",
+    need: "T-shirts",
+    stage: "qualified",
+    created_at: "2026-10-06T03:00:00.000Z",
+}
+
 const EMPTY_METRICS = { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 }
 
 const EXPECTED_OVERVIEW = {
@@ -62,6 +76,8 @@ const EXPECTED_OVERVIEW = {
             handledBy: null,
             waiting: false,
             unanswered: false,
+            lead: null,
+            respondent: { kind: "ai", name: null },
         },
         {
             id: "c-2",
@@ -75,6 +91,8 @@ const EXPECTED_OVERVIEW = {
             handledBy: null,
             waiting: false,
             unanswered: false,
+            lead: null,
+            respondent: { kind: "ai", name: null },
         },
         {
             id: "c-1",
@@ -88,9 +106,33 @@ const EXPECTED_OVERVIEW = {
             handledBy: null,
             waiting: true,
             unanswered: false,
+            lead: { stage: "qualified", need: "T-shirts", company: "Hoa Shop" },
+            respondent: { kind: "ai", name: null },
         },
     ],
     metrics: { today: 2, waiting: 1, p50FirstResponseMin: 2, sample: 1, leadsCaptured7d: 1 },
+    waiting: [
+        {
+            workItemId: "w-2",
+            conversationId: "c-1",
+            channel: "zalo",
+            name: "Hoa",
+            question: "Price?",
+            draft: "Yes, 200k",
+            staffName: "Mai",
+            since: "2026-10-13T01:02:00.000Z",
+        },
+        {
+            workItemId: "w-3",
+            conversationId: "c-1",
+            channel: "zalo",
+            name: "Hoa",
+            question: "",
+            draft: "",
+            staffName: null,
+            since: "2026-10-13T01:02:00.000Z",
+        },
+    ],
 }
 
 describe("chatbot overview mapper", () => {
@@ -102,11 +144,13 @@ describe("chatbot overview mapper", () => {
             nowIso: "2026-10-13T03:00:00.000Z",
             conversations: [],
             metrics: EMPTY_METRICS,
+            waiting: [],
         })
         expect(
             subject.buildChatbotOverview({
                 workspaceId: "ws-1",
                 now: NOW,
+                ...DESK,
                 conversations: [],
                 messages: [],
                 waiting: [],
@@ -121,6 +165,7 @@ describe("chatbot overview mapper", () => {
         const result = subject.buildChatbotOverview({
             workspaceId: "ws-1",
             now: NOW,
+            ...DESK,
             conversations: [
                 conversationOf(),
                 conversationOf({ id: "c-2", lead_id: null, created_at: "2026-10-12T16:59:59.999Z" }),
@@ -140,14 +185,21 @@ describe("chatbot overview mapper", () => {
                 }),
             ],
             waiting: [
-                waitingOf({ subject_id: null }),
-                waitingOf({ proposal: { fields: { conversation_id: "c-1" } }, subject_id: "c-2" }),
-                waitingOf(),
+                waitingOf({ id: "w-1", subject_id: null }),
+                waitingOf({
+                    id: "w-2",
+                    assigned_staff_id: "s-1",
+                    proposal: {
+                        summary: "Customer asks the price",
+                        draft: "Yes, 200k",
+                        fields: { conversation_id: "c-1", question: "Price?" },
+                    },
+                    subject_id: "c-2",
+                }),
+                waitingOf({ id: "w-3" }),
             ],
-            leads: [
-                { id: "l-1", contact_name: "Hoa", created_at: "2026-10-06T03:00:00.000Z" },
-                { id: "old", contact_name: "Old", created_at: "2026-10-06T02:59:59.999Z" },
-            ],
+            leads: [LEAD_HOA, { ...LEAD_HOA, id: "old", contact_name: "Old", created_at: "2026-10-06T02:59:59.999Z" }],
+            staffNames: new Map([["s-1", "Mai"]]),
         })
 
         expect(result).toEqual(EXPECTED_OVERVIEW)
@@ -161,6 +213,7 @@ describe("chatbot overview mapper", () => {
         const result = subject.buildChatbotOverview({
             workspaceId: "ws-1",
             now: NOW,
+            ...DESK,
             conversations: [conversationOf()],
             messages: [messageOf(), messageOf({ role: "agent" })],
             waiting: [],
@@ -188,6 +241,7 @@ describe("chatbot overview mapper", () => {
         const result = subject.buildChatbotOverview({
             workspaceId: "ws-1",
             now: NOW,
+            ...DESK,
             conversations,
             messages,
             waiting: [],
@@ -200,5 +254,48 @@ describe("chatbot overview mapper", () => {
             p50FirstResponseMin: expected,
             sample: seconds.length,
         })
+    })
+})
+
+describe("chatbot overview mapper respondent", () => {
+    it("tells the AI of the desk, a person who holds the chat and the other agent a hand-over moved it to", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.buildChatbotOverview({
+            workspaceId: "ws-1",
+            now: NOW,
+            ...DESK,
+            agentNames: new Map([["agent-2", "Sales AI"]]),
+            conversations: [
+                conversationOf({ id: "c-ai", lead_id: null }),
+                conversationOf({ id: "c-person", lead_id: null, handled_by: "Lan" }),
+                conversationOf({ id: "c-agent", lead_id: null, agent_id: "agent-2", front_agent_id: "agent-1" }),
+            ],
+            messages: [],
+            waiting: [],
+            leads: [],
+        })
+
+        expect(Object.fromEntries(result.conversations.map((row) => [row.id, row.respondent]))).toEqual({
+            "c-ai": { kind: "ai", name: null },
+            "c-person": { kind: "person", name: "Lan" },
+            "c-agent": { kind: "agent", name: "Sales AI" },
+        })
+    })
+
+    it("lists a waiting reply only for a conversation in the list", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.buildChatbotOverview({
+            workspaceId: "ws-1",
+            now: NOW,
+            ...DESK,
+            conversations: [conversationOf()],
+            messages: [],
+            waiting: [waitingOf({ id: "w-9", subject_id: "elsewhere" })],
+            leads: [],
+        })
+
+        expect(result.waiting).toEqual([])
     })
 })

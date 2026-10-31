@@ -44,6 +44,10 @@ export interface CustomerConversationRow {
     readonly id: string
     /** The channel. */
     readonly channel: string
+    /** The agent that speaks in it. */
+    readonly agent_id: string
+    /** The agent that opened the door, when a hand-over moved the conversation. */
+    readonly front_agent_id: string | null
     /** The name on the conversation, or null. */
     readonly visitor_name: string | null
     /** The lead, or null. */

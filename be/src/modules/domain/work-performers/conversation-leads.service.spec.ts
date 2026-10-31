@@ -30,6 +30,7 @@ const turnOf = (leadId: string | null): TurnConversation => ({
     visitorName: "Lan",
     installationId: null,
     agent,
+    speaksAs: null,
 })
 
 describe("ConversationLeadsService", () => {

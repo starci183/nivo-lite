@@ -394,9 +394,15 @@ it("flags one unanswered conversation per open lead after three minutes from the
     })
 
     expect(result.attention).toEqual([
-        replyOf({ key: "reply:step", leadId: "step", need: "Call me", owner: "Mai" }),
-        replyOf({ key: "reply:unowned", leadId: "unowned", need: "Help" }),
-        replyOf({ key: "reply:handled", need: "Need tea", owner: "Handler", since: boundary }),
+        replyOf({ key: "reply:step", leadId: "step", need: "Call me", owner: "Mai", conversationId: "step" }),
+        replyOf({ key: "reply:unowned", leadId: "unowned", need: "Help", conversationId: "unowned" }),
+        replyOf({
+            key: "reply:handled",
+            need: "Need tea",
+            owner: "Handler",
+            since: boundary,
+            conversationId: "handled",
+        }),
     ])
 })
 
@@ -433,4 +439,31 @@ it("sorts active contracts first by expiry without mutating input and retains st
         })),
     )
     expect(result.leadOptions).toHaveLength(200)
+})
+
+it("opens each row of a customer on the newest conversation of that customer, and none for a customer who never wrote", async () => {
+    const result = benchOf(await build(), {
+        leads: [leadOf(), leadOf({ id: "silent" })],
+        conversations: [
+            { id: "newest", lead_id: "lead-1", handled_by: null },
+            { id: "older", lead_id: "lead-1", handled_by: null },
+        ],
+        items: [
+            itemOf({ id: "ask", status: "waiting_decision" }),
+            itemOf({ id: "broken", status: "failed", lead_id: "silent", lead: null }),
+        ],
+        steps: [stepOf({ due_at: YESTERDAY })],
+        drafts: [{ id: "legacy", responsibility_id: "step-1", draft: "Legacy text", created_at: NOW }],
+    })
+
+    expect(result.decisions.map(({ id, conversationId }) => [id, conversationId])).toEqual([
+        ["ask", "newest"],
+        ["legacy", "newest"],
+    ])
+    expect(result.attention.map(({ key, conversationId }) => [key, conversationId])).toEqual([
+        ["decision:ask", "newest"],
+        ["decision:legacy", "newest"],
+        ["failed:broken", null],
+        ["overdue:step-1", "newest"],
+    ])
 })

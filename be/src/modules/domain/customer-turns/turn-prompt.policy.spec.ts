@@ -26,7 +26,7 @@ describe("personaOf", () => {
     it("fills the empty knowledge and approval rule", async () => {
         const subject = await build()
 
-        expect(subject.personaOf(agent)).toBe(
+        expect(subject.personaOf(agent, null)).toBe(
             `You are Bot (@bot), role: Chatbot.
 Instructions: Be brief.
 Business knowledge: (none)
@@ -37,9 +37,22 @@ Approval rule: Commitments need human approval.`,
     it("keeps the knowledge and approval rule the owner wrote", async () => {
         const subject = await build()
 
-        expect(subject.personaOf({ ...agent, knowledge: "Tea is 50k", approvalRule: "Ask over 1m" })).toContain(
+        expect(subject.personaOf({ ...agent, knowledge: "Tea is 50k", approvalRule: "Ask over 1m" }, null)).toContain(
             "Business knowledge: Tea is 50k\nApproval rule: Ask over 1m",
         )
+    })
+})
+
+describe("personaOf after a hand-over", () => {
+    it("keeps the speaker's role and instructions under the name of the front agent, without its handle", async () => {
+        const subject = await build()
+
+        const persona = subject.personaOf({ ...agent, name: "Sales AI", handle: "sales-ai", role: "Sales" }, "Bot")
+
+        expect(persona).toContain("You are Bot, role: Sales.")
+        expect(persona).toContain("Instructions: Be brief.")
+        expect(persona).not.toContain("Sales AI")
+        expect(persona).not.toContain("@sales-ai")
     })
 })
 

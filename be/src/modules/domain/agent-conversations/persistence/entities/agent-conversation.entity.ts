@@ -12,6 +12,10 @@ export class AgentConversationEntity extends UuidAbstractEntity {
     @Column({ name: "agent_id", type: "uuid" })
     agentId!: string
 
+    /** The agent that opened the door: set by the first hand-over and kept by the next ones, so the customer sees one name. */
+    @Column({ name: "front_agent_id", type: "uuid", nullable: true })
+    frontAgentId!: string | null
+
     /** A customer's conversation or an owner's test chat. */
     @Column({ name: "kind", type: "text" })
     kind!: "customer" | "test"

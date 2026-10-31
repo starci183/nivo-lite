@@ -164,6 +164,7 @@ export const decisionOf = builder<SalesDecision>({
     assignedStaffId: null,
     assignedStaffName: null,
     createdAt: CREATED,
+    conversationId: null,
 })
 /** Builds the expected attention view. */
 export const attentionOf = builder<AttentionRow>({
@@ -180,6 +181,7 @@ export const attentionOf = builder<AttentionRow>({
     decisionId: null,
     action: "send_quote",
     missing: [],
+    conversationId: null,
 })
 /** Builds failed-item attention. */
 export const failureOf = builder<AttentionRow>(attentionOf({ kind: "failed", since: UPDATED }))

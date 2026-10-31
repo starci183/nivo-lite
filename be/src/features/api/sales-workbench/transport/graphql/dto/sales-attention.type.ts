@@ -54,4 +54,8 @@ export class SalesAttentionType {
     /** The missing. */
     @Field(() => [String])
     missing!: ReadonlyArray<string>
+
+    /** The newest conversation of the customer. */
+    @Field(() => ID, { nullable: true })
+    conversationId!: string | null
 }

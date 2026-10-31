@@ -29,6 +29,24 @@ export interface ChatbotMessage {
     readonly deliveryError: string | null
 }
 
+/** The customer record behind a conversation, as the list shows it: where the deal stands and what the customer needs. */
+export interface ChatbotConversationLead {
+    /** The journey stage of the customer (`leads.stage`). */
+    readonly stage: string
+    /** What the customer needs. */
+    readonly need: string
+    /** The customer's company, empty when unknown. */
+    readonly company: string
+}
+
+/** Who answers the customer next: the AI of this desk, a person who holds the chat, or the other agent a hand-over moved it to. */
+export interface ChatbotRespondent {
+    /** `ai` for the AI of this desk, `person` for a staff member who holds the chat, `agent` for the other agent of a hand-over. */
+    readonly kind: "ai" | "person" | "agent"
+    /** The person or the agent; null for the AI of this desk. */
+    readonly name: string | null
+}
+
 /** One customer conversation as the list shows it. */
 export interface ChatbotConversation {
     /** The id value. */
@@ -53,6 +71,10 @@ export interface ChatbotConversation {
     readonly waiting: boolean
     /** The customer wrote last and nobody (AI or person) has answered yet. */
     readonly unanswered: boolean
+    /** The customer record, null while the customer was not captured. */
+    readonly lead: ChatbotConversationLead | null
+    /** Who answers next. */
+    readonly respondent: ChatbotRespondent
 }
 
 /** The figures above the inbox. */
@@ -117,6 +139,26 @@ export interface ChatbotThread {
     readonly handledAt: string | null
 }
 
+/** A customer reply that waits for a person: the question, the AI's draft and who was asked. */
+export interface ChatbotWaiting {
+    /** The work item that waits. */
+    readonly workItemId: string
+    /** The conversation it answers in. */
+    readonly conversationId: string
+    /** The channel of that conversation. */
+    readonly channel: ChatbotChannel
+    /** The customer's name as the list shows it. */
+    readonly name: string
+    /** What the customer asked. */
+    readonly question: string
+    /** The AI's draft answer, empty when it wrote none. */
+    readonly draft: string
+    /** The staff member the reply was assigned to, when assigned. */
+    readonly staffName: string | null
+    /** When it began to wait. */
+    readonly since: string
+}
+
 /** The conversations of one Chatbot instance, newest activity first, with the header figures. */
 export interface ChatbotOverview {
     /** The workspace id value. */
@@ -127,6 +169,8 @@ export interface ChatbotOverview {
     readonly conversations: ReadonlyArray<ChatbotConversation>
     /** The metrics value. */
     readonly metrics: ChatbotMetrics
+    /** The customer replies that wait for a person, oldest first. */
+    readonly waiting: ReadonlyArray<ChatbotWaiting>
 }
 
 /** Which workspace and installation's customer inbox to inspect. */

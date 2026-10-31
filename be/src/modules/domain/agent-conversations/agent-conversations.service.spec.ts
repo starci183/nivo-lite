@@ -378,8 +378,27 @@ describe("AgentConversationsService turnOf", () => {
                 visitorName: "Minh",
                 installationId: "inst-1",
                 agent: TURN_AGENT,
+                speaksAs: null,
             },
         })
+    })
+
+    it("speaks under the name of the front agent once a hand-over moved the conversation, and as itself when it is the front agent", async () => {
+        const handed = await build(
+            mockEntityManager({ findOne: [AgentConversationEntity, { ...turnConversation(), frontAgentId: "front-1" }] }),
+        )
+        handed.agents.turnFactsOf.mockImplementation((id) =>
+            Promise.resolve(id === "front-1" ? { ...TURN_AGENT, id, name: "Chatbot" } : { ...TURN_AGENT, name: "Sales AI" }),
+        )
+        const own = await build(
+            mockEntityManager({ findOne: [AgentConversationEntity, { ...turnConversation(), frontAgentId: "agent-1" }] }),
+        )
+
+        await expect(handed.service.turnOf("conv-1")).resolves.toMatchObject({
+            value: { speaksAs: "Chatbot", agent: { name: "Sales AI" } },
+        })
+        await expect(own.service.turnOf("conv-1")).resolves.toMatchObject({ value: { speaksAs: null } })
+        expect(own.agents.turnFactsOf).toHaveBeenCalledTimes(1)
     })
 
     it("refuses a conversation that does not exist and one whose agent is gone", async () => {
@@ -392,31 +411,7 @@ describe("AgentConversationsService turnOf", () => {
     })
 })
 
-describe("AgentConversationsService hand-over", () => {
-    it("hands the conversation to another agent in the given transaction and says whether it moved", async () => {
-        const { service, em } = await build()
-        const inside = mockEntityManager()
-        const [moved, stayed] = queueQueryBuilders(inside, [
-            { execute: { raw: [{ id: "conv-1" }] } },
-            { execute: { raw: [] } },
-        ])
-        const move = { manager: inside, workspaceId: "ws-1", conversationId: "conv-1", agentId: "agent-2" }
-
-        await expect(service.handToAgent({ ...move, installationId: "inst-2" })).resolves.toBe(true)
-        await expect(service.handToAgent({ ...move, installationId: null })).resolves.toBe(false)
-        expect(moved?.callsOf("set")).toEqual([[{ agentId: "agent-2", installationId: "inst-2" }]])
-        expect(evaluatedCalls(stayed?.callsOf("set") ?? [], 0)).toEqual([
-            [{ agentId: "agent-2", installationId: "installation_id" }],
-        ])
-        expect(moved?.callsOf("where")).toEqual([
-            [
-                "workspace_id = :workspaceId AND id = :conversationId AND handled_by IS NULL AND agent_id <> :agentId",
-                { workspaceId: "ws-1", conversationId: "conv-1", agentId: "agent-2" },
-            ],
-        ])
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
-    })
-
+describe("AgentConversationsService test chats", () => {
     it("tells an owner's test chat from a customer's conversation and a missing one", async () => {
         const { service } = await build(mockEntityManager({ findOne: [AgentConversationEntity, testConversation()] }))
         await expect(service.isTestChat("conv-1")).resolves.toBe(true)
