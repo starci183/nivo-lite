@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
-import { Badge, ChatBubble, SurfaceCard } from "@starci/grammar/common"
+import { Badge, ChatBubble, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { OfficeCardIdentity } from "@/modules/types"
-import { AVATAR_SLOT_CLASS_NAME, BODY_CLASS_NAME, CARD_CLASS_NAME, ROW_FIRST_CLASS_NAME } from "./classNames"
+import { AVATAR_SLOT_CLASS_NAME, CARD_CLASS_NAME } from "./classNames"
 
 /** What the frame of a decision card in the thread draws. */
 type OfficeCardFrameProps = {
@@ -34,8 +34,7 @@ export const OfficeCardFrame = (props: OfficeCardFrameProps) => {
     const meta = props.identity?.time ?? props.meta
     const isHighlight = props.identity?.isFocused ?? props.isHighlight
     return (
-        <div className={ROW_FIRST_CLASS_NAME}>
-            <ChatBubble
+        <ChatBubble
                 {...(anchor === undefined ? {} : { id: anchor })}
                 author={props.identity?.author ?? props.author ?? ""}
                 avatar={<div className={AVATAR_SLOT_CLASS_NAME}>{props.avatar}</div>}
@@ -47,13 +46,12 @@ export const OfficeCardFrame = (props: OfficeCardFrameProps) => {
                             ariaLabel={props.identity?.title ?? props.label ?? ""}
                             {...(isHighlight === undefined ? {} : { isHighlight })}
                         >
-                            <div className={BODY_CLASS_NAME}>{props.children}</div>
+                            <Stack gap="row">{props.children}</Stack>
                         </SurfaceCard>
                     </div>
                 }
             >
                 {props.head}
-            </ChatBubble>
-        </div>
+        </ChatBubble>
     )
 }

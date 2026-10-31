@@ -1,6 +1,5 @@
-import { Button, Text } from "@starci/grammar/common"
+import { Button, Cluster, Text } from "@starci/grammar/common"
 import type { OfficeResultCardView, OfficeText } from "@/modules/types"
-import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** What the actions of a result card draw and do. */
 type OfficeCardActionsProps = {
@@ -16,7 +15,7 @@ type OfficeCardActionsProps = {
 export const OfficeCardActions = (props: OfficeCardActionsProps) => {
     const { card, text, isBusy, isEditing } = props
     return (
-        <div className={ACTIONS_CLASS_NAME}>
+        <Cluster gap="inline">
             {card.canApprove ? (
                 <Button
                     intent="commit"
@@ -48,6 +47,6 @@ export const OfficeCardActions = (props: OfficeCardActionsProps) => {
                     {text("waitingManager")}
                 </Text>
             ) : null}
-        </div>
+        </Cluster>
     )
 }

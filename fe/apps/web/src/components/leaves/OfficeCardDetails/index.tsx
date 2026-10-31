@@ -1,6 +1,5 @@
-import { DescriptionList, Text } from "@starci/grammar/common"
+import { Cluster, DescriptionList, Text } from "@starci/grammar/common"
 import type { OfficeResultCardView, OfficeText } from "@/modules/types"
-import { LINE_CLASS_NAME, SOURCES_CLASS_NAME } from "./classNames"
 
 /** What the details of a result card draw. */
 type OfficeCardDetailsProps = {
@@ -21,23 +20,25 @@ export const OfficeCardDetails = (props: OfficeCardDetailsProps) => (
                 }))}
             />
         )}
-        {props.card.lines.map((line) => (
-            <div key={`${line.at}-${line.text}`} className={LINE_CLASS_NAME}>
-                <Text size="sm" tone="muted">
-                    {line.at}
-                </Text>
-                <Text size="sm">{line.text}</Text>
-            </div>
-        ))}
+        {props.card.lines.length === 0 ? null : (
+            <DescriptionList
+                layout="columns"
+                items={props.card.lines.map((line) => ({
+                    id: `${line.at}-${line.text}`,
+                    term: line.at,
+                    description: <Text size="sm">{line.text}</Text>,
+                }))}
+            />
+        )}
         {props.card.sources.length === 0 ? null : (
-            <div className={SOURCES_CLASS_NAME}>
+            <Cluster gap="inline">
                 <Text size="xs" tone="muted" weight="medium">
                     {props.text("cardSources")}
                 </Text>
                 <Text size="xs" tone="muted">
                     {props.card.sources.map((source) => source.label).join(" · ")}
                 </Text>
-            </div>
+            </Cluster>
         )}
     </>
 )
