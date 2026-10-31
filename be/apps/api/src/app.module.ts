@@ -21,6 +21,7 @@ import { bookingsModules } from "./compose/bookings"
 import { salesModules } from "./compose/sales"
 import { adminModules } from "./compose/admin"
 import { agentsModules } from "./compose/agents"
+import { agentWorkModules } from "./compose/agent-work"
 import { accountingModules } from "./compose/accounting"
 import { agentApiModules } from "./compose/agent-api"
 import { modulesModules } from "./compose/modules"
@@ -55,6 +56,7 @@ export class AppModule {
                 ...salesModules(),
                 ...adminModules(options),
                 ...agentsModules(options),
+                ...agentWorkModules(),
                 ...accountingModules(),
                 ...agentApiModules(),
                 ...modulesModules(),

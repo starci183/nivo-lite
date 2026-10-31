@@ -35,6 +35,7 @@ import { accountingErrorKinds, accountingMessages } from "./accounting"
 import { adminErrorKinds, adminMessages } from "./admin"
 import { agentApiErrorKinds, agentApiMessages } from "./agent-api"
 import { agentsErrorKinds, agentsMessages } from "./agents"
+import { agentWorkErrorKinds, agentWorkMessages } from "./agent-work"
 import { apiErrorKinds, apiMessages } from "./api"
 import { authenticationErrorKinds, authenticationMessages } from "./authentication"
 import { automationsErrorKinds, automationsMessages } from "./automations"
@@ -65,6 +66,7 @@ export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
             ...adminMessages,
             ...agentApiMessages,
             ...agentsMessages,
+            ...agentWorkMessages,
             ...apiMessages,
             ...authenticationMessages,
             ...automationsMessages,
@@ -91,6 +93,7 @@ export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
             ...adminErrorKinds,
             ...agentApiErrorKinds,
             ...agentsErrorKinds,
+            ...agentWorkErrorKinds,
             ...apiErrorKinds,
             ...authenticationErrorKinds,
             ...automationsErrorKinds,
