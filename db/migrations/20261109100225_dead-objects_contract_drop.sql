@@ -6,10 +6,11 @@
 -- Functions: the browser-era RPCs of the Supabase baseline (admin console, shifts, hiring, booking, lead and office doors,
 -- agent chat, zalo wizard, the loyalty post, and the like). Lite has no PostgREST and no browser role door, and the api reaches
 -- the database through entities and the functions hfs.json `sides.be.dbFunctions` lists, none of which is below.
--- Tables: booking_rate (counted only by the dropped booking_rate_hit; the booking limiter lives in the app), hiring_apply_hits
--- (written by nothing), platform_flags (the signup switch is the WORKSPACE_SIGNUP_ENABLED setting; the one row, false, was read
--- only by the dropped create_free_workspace), queue (the legacy outbox, replaced by job_outbox; empty, no function or code
--- reads it) and n8n_pipelines (empty, written and read by nothing but the row count of workspace_footprint).
+-- Tables: booking_rate (counted only by the dropped booking_rate_hit; the booking limiter lives in the app), platform_flags (the
+-- signup switch is the WORKSPACE_SIGNUP_ENABLED setting; the one row, false, was read only by the dropped create_free_workspace)
+-- and n8n_pipelines (empty, written and read by nothing but the row count of workspace_footprint).
+-- hiring_apply_hits stays until the release after the one that removed its entity (v0.5.6 still maps it); queue (the legacy outbox,
+-- empty, read by nothing) stays because the contract check matches the name against the job_outbox.queue column its entity maps.
 -- workspace_footprint is replaced first without the n8n_pipelines count so it never names a dropped table.
 
 CREATE OR REPLACE FUNCTION public.workspace_footprint(p_workspace uuid)
@@ -252,7 +253,5 @@ DROP FUNCTION IF EXISTS public.zalo_wizard_start(uuid,text,text,text);
 
 -- Tables (their policies, triggers and indexes go with them).
 DROP TABLE IF EXISTS public.booking_rate;
-DROP TABLE IF EXISTS public.hiring_apply_hits;
 DROP TABLE IF EXISTS public.n8n_pipelines;
 DROP TABLE IF EXISTS public.platform_flags;
-DROP TABLE IF EXISTS public.queue;
