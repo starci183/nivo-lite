@@ -48,7 +48,7 @@ describe("AgentGraphProposalsService.learn", () => {
             baseVersionId: "version-1",
             nodeKey: "decide",
             branchKey: "middle",
-            patch: { signal: "trust" },
+            patch: { signal: "trust", amounts: approvals(20).map((entry) => entry.amount) },
             widens: true,
         })
         expect(fake?.callsOf("values")[0]?.[0]).toMatchObject({ evidence: approvals(20).map((entry) => entry.id) })
@@ -88,6 +88,61 @@ describe("AgentGraphProposalsService.openOf", () => {
         expect(em.find).toHaveBeenCalledWith(
             AgentGraphProposalEntity,
             expect.objectContaining({ where: { workspaceId: "ws-1", agentId: "agent-1", status: "open" } }),
+        )
+    })
+})
+
+describe("AgentGraphProposalsService the road to a confirmed change", () => {
+    it("reads an open learned proposal as the patch it makes", async () => {
+        const row = Object.assign(proposalRow(), { patch: { signal: "trust", amounts: [6_000_000, "x", 7_200_000] } })
+        const em = mockEntityManager({ findOne: [AgentGraphProposalEntity, row] })
+        const { service } = await build([], em)
+
+        await expect(service.learnedOf("ws-1", "agent-1", "p1")).resolves.toEqual({
+            signal: "trust",
+            branchKey: "middle",
+            amounts: [6_000_000, 7_200_000],
+        })
+        expect(em.findOne).toHaveBeenCalledWith(
+            AgentGraphProposalEntity,
+            { where: { id: "p1", workspaceId: "ws-1", agentId: "agent-1", status: "open", kind: "learned" } },
+        )
+    })
+
+    it("reads a patch without amounts as one with none, and refuses what is not open, not a signal or has no branch", async () => {
+        const bare = Object.assign(proposalRow(), { patch: { signal: "timeout" } })
+        const odd = Object.assign(proposalRow(), { patch: { signal: "dance" } })
+        const loose = Object.assign(proposalRow(), { patch: { signal: "trust" }, branchKey: null })
+
+        await expect((await build([], mockEntityManager({ findOne: [AgentGraphProposalEntity, bare] }))).service.learnedOf("ws-1", "agent-1", "p1")).resolves.toEqual({ signal: "timeout", branchKey: "middle", amounts: [] })
+        await expect((await build([], mockEntityManager({ findOne: [AgentGraphProposalEntity, odd] }))).service.learnedOf("ws-1", "agent-1", "p1")).resolves.toBeNull()
+        await expect((await build([], mockEntityManager({ findOne: [AgentGraphProposalEntity, loose] }))).service.learnedOf("ws-1", "agent-1", "p1")).resolves.toBeNull()
+        await expect((await build([], mockEntityManager({ findOne: [AgentGraphProposalEntity, null] }))).service.learnedOf("ws-1", "agent-1", "p1")).resolves.toBeNull()
+    })
+
+    it("keeps who confirmed a proposal, when, and the version it made", async () => {
+        const em = mockEntityManager({ update: [AgentGraphProposalEntity, { affected: 1 }] })
+        const { service } = await build([], em)
+
+        await service.confirm("ws-1", "agent-1", "p1", "member-1", "version-3")
+
+        expect(em.update).toHaveBeenCalledWith(
+            AgentGraphProposalEntity,
+            { id: "p1", workspaceId: "ws-1", agentId: "agent-1", status: "open" },
+            { status: "confirmed", decidedBy: "member-1", decidedAt: new Date("2026-11-01T02:00:00.000Z"), resultVersionId: "version-3" },
+        )
+    })
+
+    it("marks a proposal overtaken when its change no longer applies", async () => {
+        const em = mockEntityManager({ update: [AgentGraphProposalEntity, { affected: 1 }] })
+        const { service } = await build([], em)
+
+        await service.supersede("ws-1", "agent-1", "p1")
+
+        expect(em.update).toHaveBeenCalledWith(
+            AgentGraphProposalEntity,
+            { id: "p1", workspaceId: "ws-1", agentId: "agent-1", status: "open" },
+            { status: "superseded" },
         )
     })
 })

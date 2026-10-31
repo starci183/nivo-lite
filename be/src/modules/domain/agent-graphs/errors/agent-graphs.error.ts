@@ -19,6 +19,8 @@ export enum AgentGraphsErrorCode {
     DocumentInvalid = "AGENT_GRAPHS_DOCUMENT_INVALID",
     /** Only the owner or a manager of the workspace may read or change an agent graph. */
     Forbidden = "AGENT_GRAPHS_FORBIDDEN",
+    /** The graph never decided this work item. */
+    RunNotFound = "AGENT_GRAPHS_RUN_NOT_FOUND",
 }
 
 /** How each agent-graphs code travels. */
@@ -31,6 +33,7 @@ export const AGENT_GRAPHS_ERROR_KINDS: Record<AgentGraphsErrorCode, ErrorKind> =
     [AgentGraphsErrorCode.WidensNeedsOwner]: "forbidden",
     [AgentGraphsErrorCode.DocumentInvalid]: "internal",
     [AgentGraphsErrorCode.Forbidden]: "forbidden",
+    [AgentGraphsErrorCode.RunNotFound]: "not-found",
 }
 
 /** The one error class of the agent-graphs capability. */

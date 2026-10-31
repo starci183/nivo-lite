@@ -24,6 +24,7 @@ const proposal = (
     branchKey,
     widens,
     evidence: evidence.map((decision) => decision.id),
+    amounts: evidence.flatMap((decision) => (decision.amount === null ? [] : [decision.amount])),
     dedupeKey: `learned:${signal}:${branchKey}:${anchor}`,
 })
 

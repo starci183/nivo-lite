@@ -25,6 +25,34 @@ export interface AgentGraphWire {
     readonly proposalsJson: string
 }
 
+/** One run of the graph over a work item: which trigger, which branch, the version and the nodes, the structured parts as JSON text. */
+export interface AgentGraphRunWire {
+    /** The decision. */
+    readonly decisionId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The version that decided. */
+    readonly versionId: string
+    /** The number of that version. */
+    readonly version: number
+    /** The trigger that woke the agent, or null when the wake is gone. */
+    readonly trigger: string | null
+    /** The branch the condition took. */
+    readonly branchKey: string
+    /** What the branch did: auto, ask or stop. */
+    readonly outcome: string
+    /** How the work ended, or null while it is open. */
+    readonly closedAs: string | null
+    /** True when the graph, in shadow, answered differently from the gate. */
+    readonly shadowDiff: boolean
+    /** The request that is open for it, or null. */
+    readonly approvalRequestId: string | null
+    /** The facts as they were read, as JSON text. */
+    readonly factsJson: string
+    /** The nodes the work went through, as JSON text. */
+    readonly traceJson: string
+}
+
 /** The language a request names, when it names one. */
 export type OptionalLanguage = string | null | undefined
 

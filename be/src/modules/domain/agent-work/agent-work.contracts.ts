@@ -421,3 +421,6 @@ export interface WorkspaceAgentWorkView {
     /** Wakes held by a switch. */
     readonly heldWakes: number
 }
+
+/** The source that woke an agent, or null when the wake is gone (wakes are kept for a while, not for ever). */
+export type OptionalWakeSource = AgentWakeSource | null

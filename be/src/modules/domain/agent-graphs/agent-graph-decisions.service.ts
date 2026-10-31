@@ -33,6 +33,34 @@ export interface DecisionView {
     readonly closed: boolean
 }
 
+/** One run of the graph over a work item, as the trace screen reads it. */
+export interface DecisionRun {
+    /** The decision. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The version that decided. */
+    readonly versionId: string
+    /** The wake that started the turn, or null. */
+    readonly wakeId: string | null
+    /** The action key. */
+    readonly action: string
+    /** The branch that matched. */
+    readonly branchKey: string
+    /** What the branch did: auto, ask or stop. */
+    readonly outcome: string
+    /** How the work ended, or null while it is open. */
+    readonly closedAs: string | null
+    /** True when the graph, in shadow, answered differently from the gate. */
+    readonly shadowDiff: boolean
+    /** The facts as they were read, with the model amount beside the real one when they differed. */
+    readonly facts: Readonly<Record<string, FactValue>>
+    /** The request that is open for it, or null. */
+    readonly approvalRequestId: string | null
+}
+
 /** What a decision records. */
 export interface DecisionRecord {
     /** The workspace id. */
@@ -100,6 +128,27 @@ export class AgentGraphDecisionsService {
     /** The decision of a work item, or null. */
     async byItem(workItemId: string): Promise<DecisionView | null> {
         return this.viewOf(await this.entityManager.findOneBy(AgentGraphDecisionEntity, { workItemId }))
+    }
+
+    /** The run of a work item: what the graph decided for it, or null when it never reached a graph. */
+    async runOf(workspaceId: string, workItemId: string): Promise<DecisionRun | null> {
+        const row = await this.entityManager.findOneBy(AgentGraphDecisionEntity, { workspaceId, workItemId })
+        return row === null
+            ? null
+            : {
+                  id: row.id,
+                  workspaceId: row.workspaceId,
+                  agentId: row.agentId,
+                  versionId: row.versionId,
+                  wakeId: row.wakeId,
+                  action: row.action,
+                  branchKey: row.branchKey,
+                  outcome: row.outcome,
+                  closedAs: row.closedAs,
+                  shadowDiff: row.shadowDiff,
+                  facts: row.facts,
+                  approvalRequestId: row.approvalRequestId,
+              }
     }
 
     /** Names the request that is open for the decision. */

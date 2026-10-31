@@ -4,8 +4,10 @@ import { InstallationRecordsService } from "@modules/domain/module-installations
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphAdminService } from "./agent-graph-admin.service"
+import { AgentGraphContextService } from "./agent-graph-context.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
 import { AgentGraphPublishService } from "./agent-graph-publish.service"
+import { AgentGraphRunService } from "./agent-graph-run.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
@@ -16,7 +18,14 @@ const ACTOR = { workspaceId: "ws-1", principalId: "user-1" }
 const VIEW = { agentId: "agent-1" }
 const VERSION = { id: "version-2" }
 
-const build = async (options: { role?: "owner" | "manager" | "staff" | null; state?: OptionalGraphState; installed?: boolean } = {}) => {
+const build = async (
+    options: {
+        role?: "owner" | "manager" | "staff" | null
+        state?: OptionalGraphState
+        installed?: boolean
+        patch?: { readonly signal: "trust" | "reject" | "timeout"; readonly branchKey: string; readonly amounts: ReadonlyArray<number> } | null
+    } = {},
+) => {
     const role = options.role === undefined ? "manager" : options.role
     const seats = mock<WorkspaceMemberSeatsService>({
         activeSeatOfUser: jest.fn().mockResolvedValue(role === null ? null : { memberId: "member-1", userId: "user-1", role, displayName: "An", status: "active" }),
@@ -30,12 +39,21 @@ const build = async (options: { role?: "owner" | "manager" | "staff" | null; sta
     const view = mock<AgentGraphViewService>({ viewOf: jest.fn().mockResolvedValue(VIEW) })
     const publishing = mock<AgentGraphPublishService>({
         publishDraft: jest.fn().mockResolvedValue(VERSION),
+        publishLearned: jest.fn().mockResolvedValue(VERSION),
         restore: jest.fn().mockResolvedValue(VERSION),
         setMode: jest.fn().mockResolvedValue(stateOf()),
     })
-    const proposals = mock<AgentGraphProposalsService>({ decline: jest.fn().mockResolvedValue(undefined) })
+    const proposals = mock<AgentGraphProposalsService>({
+        decline: jest.fn().mockResolvedValue(undefined),
+        learnedOf: jest.fn().mockResolvedValue(options.patch === undefined ? { signal: "trust", branchKey: "middle", amounts: [7_200_000] } : options.patch),
+        confirm: jest.fn().mockResolvedValue(undefined),
+        supersede: jest.fn().mockResolvedValue(undefined),
+    })
+    const running = mock<AgentGraphRunService>({ runOf: jest.fn().mockResolvedValue({ decisionId: "decision-1" }) })
+    const context = mock<AgentGraphContextService>({ coverageOf: jest.fn().mockResolvedValue([{ nodeKey: "decide" }]) })
     const installations = mock<InstallationRecordsService>({
         ofAgent: jest.fn().mockResolvedValue(options.installed === false ? null : { id: "inst-1" }),
+        findById: jest.fn().mockResolvedValue(options.installed === false ? null : { id: "inst-1", moduleKey: "accounting" }),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -47,9 +65,11 @@ const build = async (options: { role?: "owner" | "manager" | "staff" | null; sta
             { provide: AgentGraphPublishService, useValue: publishing },
             { provide: AgentGraphProposalsService, useValue: proposals },
             { provide: InstallationRecordsService, useValue: installations },
+            { provide: AgentGraphRunService, useValue: running },
+            { provide: AgentGraphContextService, useValue: context },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentGraphAdminService), graphs, seed, view, publishing, proposals }
+    return { service: moduleRef.get(AgentGraphAdminService), graphs, seed, view, publishing, proposals, running, context }
 }
 
 describe("AgentGraphAdminService access", () => {
@@ -63,6 +83,9 @@ describe("AgentGraphAdminService access", () => {
         await expect(service.restore(ACTOR, "agent-1", "v")).rejects.toBeInstanceOf(AgentGraphsError)
         await expect(service.setMode(ACTOR, "agent-1", "shadow")).rejects.toBeInstanceOf(AgentGraphsError)
         await expect(service.decline(ACTOR, "agent-1", "p")).rejects.toBeInstanceOf(AgentGraphsError)
+        await expect(service.confirm(ACTOR, "agent-1", "p")).rejects.toBeInstanceOf(AgentGraphsError)
+        await expect(service.run(ACTOR, "item")).rejects.toBeInstanceOf(AgentGraphsError)
+        await expect(service.coverage(ACTOR, "agent-1")).rejects.toBeInstanceOf(AgentGraphsError)
     })
 })
 
@@ -124,5 +147,64 @@ describe("AgentGraphAdminService changes", () => {
 
         expect(publishing.setMode).toHaveBeenCalledWith("ws-1", "agent-1", "shadow", { memberId: "member-1", role: "manager" })
         expect(proposals.decline).toHaveBeenCalledWith("ws-1", "agent-1", "p1", "member-1")
+    })
+})
+
+describe("AgentGraphAdminService.confirm", () => {
+    it("makes the change the proposal proposes to the graph that decides and publishes it as the seat that asked", async () => {
+        const { service, publishing, proposals } = await build({ role: "owner" })
+
+        await expect(service.confirm(ACTOR, "agent-1", "p1")).resolves.toBe(VERSION)
+
+        const [, , document, by] = publishing.publishLearned.mock.calls[0] ?? []
+        expect(by).toEqual({ memberId: "member-1", role: "owner" })
+        expect(document?.nodes.find((node) => node.decide !== undefined)?.decide?.branches[0]?.when).toEqual({
+            fact: "supplier_payment.amount_vnd",
+            op: "lt",
+            value: 8_000_000,
+        })
+        expect(proposals.confirm).toHaveBeenCalledWith("ws-1", "agent-1", "p1", "member-1", "version-2")
+    })
+
+    it("overtakes a proposal whose change no longer applies, and publishes nothing", async () => {
+        const { service, publishing, proposals } = await build({ patch: { signal: "trust", branchKey: "gone", amounts: [9_000_000] } })
+
+        await expect(service.confirm(ACTOR, "agent-1", "p1")).rejects.toEqual(expect.objectContaining({ code: AgentGraphsErrorCode.ProposalNotFound }))
+
+        expect(proposals.supersede).toHaveBeenCalledWith("ws-1", "agent-1", "p1")
+        expect(publishing.publishLearned).not.toHaveBeenCalled()
+    })
+
+    it("refuses a proposal that is not open and a graph with no version that decides", async () => {
+        const closed = await build({ patch: null })
+        const fresh = await build({ state: stateOf({ active: null, activeVersionId: null }) })
+
+        await expect(closed.service.confirm(ACTOR, "agent-1", "p1")).rejects.toEqual(expect.objectContaining({ code: AgentGraphsErrorCode.ProposalNotFound }))
+        await expect(fresh.service.confirm(ACTOR, "agent-1", "p1")).rejects.toBeInstanceOf(AgentGraphsError)
+        expect(closed.publishing.publishLearned).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphAdminService the run and the coverage", () => {
+    it("reads the trace of a run for a seat that may see the graph", async () => {
+        const { service, running } = await build()
+
+        await expect(service.run(ACTOR, "item-9")).resolves.toEqual({ decisionId: "decision-1" })
+        expect(running.runOf).toHaveBeenCalledWith("ws-1", "item-9")
+    })
+
+    it("reads who can answer each ask of the draft graph", async () => {
+        const { service, context } = await build()
+
+        await expect(service.coverage(ACTOR, "agent-1")).resolves.toEqual([{ nodeKey: "decide" }])
+        expect(context.coverageOf).toHaveBeenCalledWith(expect.objectContaining({ agentId: "agent-1", moduleKey: "accounting" }), stateOf().draft)
+    })
+
+    it("refuses the coverage of an agent with no graph or no installation", async () => {
+        const none = await build({ state: null })
+        const gone = await build({ installed: false })
+
+        await expect(none.service.coverage(ACTOR, "agent-1")).rejects.toEqual(expect.objectContaining({ code: AgentGraphsErrorCode.GraphNotFound }))
+        await expect(gone.service.coverage(ACTOR, "agent-1")).rejects.toBeInstanceOf(AgentGraphsError)
     })
 })

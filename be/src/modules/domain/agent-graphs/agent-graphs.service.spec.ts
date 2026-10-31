@@ -102,6 +102,22 @@ describe("AgentGraphsService reads", () => {
     })
 })
 
+describe("AgentGraphsService.versionAt", () => {
+    it("opens one version with its number and its graph", async () => {
+        const service = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow(4)] }))
+
+        await expect(service.versionAt("ws-1", "agent-1", "version-1")).resolves.toEqual({ version: 4, document: DOCUMENT })
+    })
+
+    it("refuses a version that is not the agent or cannot be read", async () => {
+        const missing = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, null] }))
+        const broken = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow(2, UNREADABLE_DOCUMENT)] }))
+
+        expect(await codeOf(missing.versionAt("ws-1", "agent-1", "v"))).toBe(AgentGraphsErrorCode.VersionNotFound)
+        expect(await codeOf(broken.versionAt("ws-1", "agent-1", "v"))).toBe(AgentGraphsErrorCode.DocumentInvalid)
+    })
+})
+
 describe("AgentGraphsService.saveDraft", () => {
     it("saves the draft under the revision it read and moves the revision on", async () => {
         const em = mockEntityManager({

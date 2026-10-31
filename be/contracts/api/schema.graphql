@@ -904,6 +904,35 @@ type AgentGenerationUsageType {
   prompt_tokens: Int!
 }
 
+type AgentGraphCoverageType {
+  approvers: [String!]!
+  branchKey: String
+  covered: Boolean!
+  excluded: [AgentGraphExcludedType!]!
+  nodeKey: String!
+  top: Float
+}
+
+type AgentGraphExcludedType {
+  name: String!
+  reason: String!
+}
+
+type AgentGraphRunType {
+  agentId: String!
+  approvalRequestId: String
+  branchKey: String!
+  closedAs: String
+  decisionId: String!
+  factsJson: String!
+  outcome: String!
+  shadowDiff: Boolean!
+  traceJson: String!
+  trigger: String
+  version: Float!
+  versionId: String!
+}
+
 type AgentGraphType {
   activeVersionId: String
   agentId: String!
@@ -2055,6 +2084,11 @@ input CompleteBookingInput {
 type CompleteBookingType {
   feeDue: Boolean!
   status: String!
+}
+
+input ConfirmAgentGraphProposalInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  proposalId: String! @inputBounds(maxLength: 36)
 }
 
 input ConfirmBookingInput {
@@ -3377,6 +3411,10 @@ input GetAgentGraphInput {
   locale: String @inputBounds(maxLength: 2)
 }
 
+input GetAgentGraphRunInput {
+  workItemId: String! @inputBounds(maxLength: 36)
+}
+
 input GetConnectionFirstEventInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
@@ -4474,6 +4512,10 @@ type LinkStaffType {
   staffId: ID!
 }
 
+input ListAgentGraphCoverageInput {
+  agentId: String! @inputBounds(maxLength: 36)
+}
+
 input ListAgentGraphVersionsInput {
   agentId: String! @inputBounds(maxLength: 36)
 }
@@ -5278,6 +5320,7 @@ type Mutation {
   checkMeta(input: CheckMetaInput!): MetaCheckType!
   chooseMetaPage(input: ChooseMetaPageInput!): MetaWizardConnectionType!
   completeBooking(input: CompleteBookingInput!): CompleteBookingType!
+  confirmAgentGraphProposal(input: ConfirmAgentGraphProposalInput!): AgentGraphVersionType!
   confirmBooking(input: ConfirmBookingInput!): ConfirmBookingType!
   confirmDossierFinding(input: DossierFindingNoteInput!): DossierFindingType!
   confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
@@ -6168,6 +6211,8 @@ type Query {
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
+  agentGraphCoverage(input: ListAgentGraphCoverageInput!): [AgentGraphCoverageType!]!
+  agentGraphRun(input: GetAgentGraphRunInput!): AgentGraphRunType!
   agentKnowledgeLenses: [AgentKnowledgeLensType!]!
   agentPage(input: AgentIdInput!): AgentPageType!
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!

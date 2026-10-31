@@ -353,6 +353,8 @@ export interface LearnedProposal {
     readonly widens: boolean
     /** The evidence. */
     readonly evidence: ReadonlyArray<string>
+    /** The amounts the evidence decisions carried, which a confirmed proposal moves a boundary to. */
+    readonly amounts: ReadonlyArray<number>
 }
 
 /** One reason a change widens what the agent may do. */
