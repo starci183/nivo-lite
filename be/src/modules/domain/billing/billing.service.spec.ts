@@ -29,7 +29,6 @@ import { PlanEntity, PlanUsageTierEntity } from "./persistence/entities"
 const OPTIONS: BillingOptions = {
     sepayApiKey: new Secret("key"),
     bankAccount: { account: "0123", bank: "MB", holder: "NIVO" },
-    channelTokenKey: undefined,
 }
 const ORDER: PaymentOrder = {
     id: "order-1",

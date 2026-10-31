@@ -16,6 +16,4 @@ export interface BillingOptions {
     readonly sepayApiKey: Secret | undefined
     /** The bank account of the billing QR code. */
     readonly bankAccount: BankAccountOptions
-    /** The 32-byte key (base64) that encrypts connection credentials; undefined makes every connection credential unreadable. */
-    readonly channelTokenKey: Secret | undefined
 }
