@@ -1,6 +1,6 @@
 import { UuidAbstractEntity } from "@modules/platform/database"
+import { bigintNumberTransformer } from "@modules/platform/primitives"
 import { Column, Entity } from "typeorm"
-import { amountTransformer } from "./amount-column.mapper"
 
 @Entity({ schema: "public", name: "contracts" })
 /** One row of public.contracts: a recurring contract the renewal automation reads. */
@@ -30,7 +30,7 @@ export class ContractEntity extends UuidAbstractEntity {
     endsOn!: string
 
     /** The contract value in VND; null when not recorded. */
-    @Column({ name: "amount_vnd", type: "bigint", nullable: true, transformer: amountTransformer })
+    @Column({ name: "amount_vnd", type: "bigint", nullable: true, transformer: bigintNumberTransformer })
     amountVnd!: number | null
 
     /** The stored lifecycle status. */

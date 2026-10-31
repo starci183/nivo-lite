@@ -1,8 +1,8 @@
 import { Column, Entity } from "typeorm"
 
 import { UuidAbstractEntity } from "@modules/platform/database"
+import { bigintNumberTransformer } from "@modules/platform/primitives"
 import type { OrderStatus } from "../../orders.contracts"
-import { amountTransformer } from "./amount-column.mapper"
 
 @Entity({ schema: "public", name: "orders" })
 /** One sales order of a workspace: one row of `public.orders`. */
@@ -28,7 +28,7 @@ export class OrderEntity extends UuidAbstractEntity {
     items!: string
 
     /** The money, VND, or null. */
-    @Column({ name: "amount_vnd", type: "bigint", nullable: true, transformer: amountTransformer })
+    @Column({ name: "amount_vnd", type: "bigint", nullable: true, transformer: bigintNumberTransformer })
     amountVnd!: number | null
 
     /** Where the order stands. */
