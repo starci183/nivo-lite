@@ -1,3 +1,15 @@
+/** What a reading of a document must do. */
+export interface ReadingPlan {
+    /** True when some passages are unchanged, so only the others are read. */
+    readonly partial: boolean
+    /** The hashes of every passage of the document. */
+    readonly hashes: ReadonlyArray<string>
+    /** The unchanged passages, as one text. */
+    readonly unchangedText: string
+    /** What the model reads. */
+    readonly windows: ReadonlyArray<string>
+}
+
 /** What a delivery of the event bus gives the inbox: the consumer's queue and the business key, claimed once per effect. */
 export interface InboxClaim {
     /** The reactor's queue, the first half of the inbox key. */

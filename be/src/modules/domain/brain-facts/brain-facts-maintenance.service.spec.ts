@@ -56,6 +56,25 @@ const registerWithdraw = () => {
         expect(em.createQueryBuilder).toHaveBeenCalledTimes(6)
     })
 
+    it("leaves a fact resting on the unchanged text and counts what it took", async () => {
+        const em = mockEntityManager()
+        const quoted = { ...facts.PROOF, quote: "Open from 8 to 21" }
+        const [, reject] = queueQueryBuilders(em, [
+            { getMany: [facts.rowOf({ evidence: [quoted] }), facts.rowOf({ id: "gone", evidence: [facts.PROOF] })] },
+            { execute: { raw: [facts.rowOf({ id: "gone", status: "rejected" })] } },
+        ])
+        const service = (await build(em)).service
+
+        await expect(service.withdrawChanged(facts.WS, "doc-1", "Changed", "open from 8 to 21 daily")).resolves.toEqual(
+            {
+                orphans: [],
+                withdrawn: 1,
+            },
+        )
+        expect(reject?.callsOf("where")).toEqual([[{ workspaceId: facts.WS, id: "gone", status: "proposed" }]])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
+    })
+
     it("rejects an unsupported proposal with no decision note when the note is blank", async () => {
         const em = mockEntityManager()
         const [, reject] = queueQueryBuilders(em, [

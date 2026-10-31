@@ -91,4 +91,8 @@ export class KnowledgeSourceEntity extends UuidAbstractEntity {
     /** How many passages the stage has in all; null when the stage has no count. */
     @Column({ name: "stage_total", type: "integer", nullable: true })
     stageTotal!: number | null
+
+    /** The SHA-256 of the text whose passages and facts are complete; null while the work on the text is unfinished. */
+    @Column({ name: "content_hash", type: "text", nullable: true })
+    contentHash!: string | null
 }

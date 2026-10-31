@@ -31,6 +31,8 @@ const rowOf = entityRowBuilder<BrainExtractionEntity>({
     windowsDone: 2,
     attempts: 1,
     orphanFactIds: ["f1", "f2"],
+    passageHashes: ["h1"],
+    factsChanged: false,
     updatedAt: new Date("2026-10-13T02:00:00.000Z"),
     createdAt: new Date("2026-10-13T02:00:00.000Z"),
 })
@@ -92,6 +94,8 @@ describe("BrainExtractionsService", () => {
                 windowsDone: 2,
                 attempts: 1,
                 orphanFactIds: ["f1", "f2"],
+                passageHashes: ["h1"],
+                factsChanged: false,
             })
 
             expect(em.findOne).toHaveBeenCalledWith(BrainExtractionEntity, {
@@ -116,6 +120,8 @@ describe("BrainExtractionsService", () => {
                 windowsDone: 2,
                 attempts: 1,
                 orphanFactIds: [],
+                passageHashes: ["h1"],
+                factsChanged: false,
             })
         })
 
@@ -142,6 +148,7 @@ describe("BrainExtractionsService", () => {
                     contentHash: "hash-1",
                     windowsTotal: 5,
                     orphanFactIds,
+                    factsChanged: true,
                 }),
             ).resolves.toBeUndefined()
 
@@ -158,6 +165,7 @@ describe("BrainExtractionsService", () => {
                 windowsDone: 0,
                 attempts: 0,
                 orphanFactIds: ["f1", "f2"],
+                factsChanged: true,
             }
             const upserts = () => evaluatedCalls(em.upsert.mock.calls, 1)
             expect(upserts()).toEqual([["BrainExtractionEntity", started, ["sourceId"]]])
@@ -237,13 +245,20 @@ describe("BrainExtractionsService", () => {
             const em = mockEntityManager({ update: [BrainExtractionEntity, { affected: 1 }] })
             const service = await build(em)
 
-            await expect(service.finish(WS, "s1", "model-1")).resolves.toBeUndefined()
+            await expect(service.finish(WS, "s1", "model-1", ["h1"])).resolves.toBeUndefined()
 
             expect(updatesOf(em)).toEqual([
                 [
                     "BrainExtractionEntity",
                     { workspaceId: WS, sourceId: "s1" },
-                    { status: "done", error: null, model: "model-1", orphanFactIds: [] },
+                    {
+                        status: "done",
+                        error: null,
+                        model: "model-1",
+                        orphanFactIds: [],
+                        passageHashes: ["h1"],
+                        factsChanged: false,
+                    },
                 ],
             ])
         })

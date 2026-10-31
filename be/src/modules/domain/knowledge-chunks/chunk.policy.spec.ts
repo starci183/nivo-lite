@@ -1,9 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { CHUNK_OVERLAP, CHUNK_SIZE, chunkText, normalizeText } from "./chunk.policy"
+import { CHUNK_OVERLAP, CHUNK_SIZE, chunkPassages, chunkText, normalizeText } from "./chunk.policy"
+import fixtures from "./chunk.policy.fixtures.json"
 
 type Subject = {
     normalizeText: typeof normalizeText
     chunkText: typeof chunkText
+    chunkPassages: typeof chunkPassages
 }
 
 const words = (count: number): string => Array.from({ length: count }, (_, index) => `w${index}`).join(" ")
@@ -12,7 +14,7 @@ const SUBJECT = Symbol("chunk.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { normalizeText, chunkText } }],
+        providers: [{ provide: SUBJECT, useValue: { normalizeText, chunkText, chunkPassages } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -304,5 +306,158 @@ describe("chunkText", () => {
                 "name|price\nlatte|40\nmocha|45",
             ])
         })
+    })
+})
+
+describe("chunkPassages", () => {
+    it("answers nothing for an empty file", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.chunkPassages("")).toEqual([])
+        expect(subject.chunkPassages("  \n\n \t ")).toEqual([])
+    })
+
+    it("uses the size of a passage as its default cap and never goes over it", async () => {
+        const subject = await buildSubject()
+        const passages = subject.chunkPassages(`${"x".repeat(CHUNK_SIZE * 3)}\n\n${words(900)}`)
+
+        expect(passages.length).toBeGreaterThan(3)
+        expect(Math.max(...passages.map((passage) => passage.length))).toBeLessThanOrEqual(CHUNK_SIZE)
+    })
+
+    it("cuts at a legal heading, with or without accents, and never packs across one", async () => {
+        const subject = await buildSubject()
+        const text =
+            "\u0110i\u1ec1u 1. Scope\nFirst rule.\nDieu 2: Terms\nSecond rule.\nCh\u01b0\u01a1ng III\nThird rule."
+
+        expect(subject.chunkPassages(text)).toEqual([
+            "\u0110i\u1ec1u 1. Scope\nFirst rule.",
+            "Dieu 2: Terms\nSecond rule.",
+            "Ch\u01b0\u01a1ng III\nThird rule.",
+        ])
+    })
+
+    it("cuts at a Markdown heading, a Roman numeral and a short line in capitals", async () => {
+        const subject = await buildSubject()
+        const text = "## One\nBody one.\nII. Two\nBody two.\nTHREE\nBody three."
+
+        expect(subject.chunkPassages(text)).toEqual(["## One\nBody one.", "II. Two\nBody two.", "THREE\nBody three."])
+    })
+
+    it("keeps headings in a row with the body that follows them", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.chunkPassages("Ch\u01b0\u01a1ng I\nGENERAL\nDieu 1. Scope\nBody.")).toEqual([
+            "Ch\u01b0\u01a1ng I\nGENERAL\nDieu 1. Scope\nBody.",
+        ])
+    })
+
+    it("does not take a list in capitals or a long line in capitals for a heading", async () => {
+        const subject = await buildSubject()
+        const long = "L".repeat(130)
+
+        expect(subject.chunkPassages(`Intro.\nA, B, C\nMore.\n${long}\nEnd.`)).toEqual([
+            `Intro.\nA, B, C\nMore.\n${long}\nEnd.`,
+        ])
+    })
+})
+
+describe("chunkPassages tables, repeats and what a passage carries", () => {
+    it("keeps a table whole with its header, even when a row reads like a heading", async () => {
+        const subject = await buildSubject()
+        const table = "Item | Fee\nDieu 1 | 100\nDieu 2 | 200\nDieu 3 | 300"
+
+        expect(subject.chunkPassages(`Dieu 9. Fees\nBelow.\n\n${table}`)).toEqual(["Dieu 9. Fees\nBelow.", table])
+    })
+
+    it("treats a block of clauses ending in semicolons as prose when a heading sits inside it", async () => {
+        const subject = await buildSubject()
+        const text = "Dieu 1. A\na) one;\nb) two;\nc) three;\nDieu 2. B\na) four;\nb) five;\nc) six;"
+
+        const passages = subject.chunkPassages(text)
+
+        expect(passages).toHaveLength(2)
+        expect(passages[1]).toContain("Dieu 2. B")
+    })
+
+    it("keeps one of two identical sections and a repeated long paragraph once", async () => {
+        const subject = await buildSubject()
+        const footer = "This footer repeats at the end of every section."
+
+        expect(subject.chunkPassages(`## A\nSame.\n## A\nSame.`)).toEqual(["## A\nSame."])
+        expect(subject.chunkPassages(`## A\n\n${footer}\n\n## B\n\n${footer}`)).toEqual([`## A\n\n${footer}`, "## B"])
+    })
+
+    it("carries no tail of the passage before it, so a hash depends on its own text", async () => {
+        const subject = await buildSubject()
+        const first = `${"a ".repeat(390)}end.`
+        const second = `${"b ".repeat(390)}end.`
+
+        expect(subject.chunkPassages(`${first}\n\n${second}`)).toEqual([first, second])
+    })
+
+    it("stores text that normalising leaves as it is, as the hash backfill relies on", async () => {
+        const subject = await buildSubject()
+
+        for (const text of Object.values(fixtures.documents)) {
+            for (const passage of subject.chunkPassages(text)) expect(subject.normalizeText(passage)).toBe(passage)
+        }
+    })
+})
+
+/** How the passages of a document survive a one-line edit at every fifth line. */
+const survivalOf = (cut: (text: string) => ReadonlyArray<string>, text: string, edit: LineEdit) => {
+    const lines = text.split("\n")
+    const had = new Set(cut(text))
+    const tally = { kept: 0, total: 0, worst: 1 }
+    lines.forEach((line, index) => {
+        if (index % 5 !== 0 || line.trim() === "") return
+        const now = cut(edit(lines, index).join("\n"))
+        const kept = now.filter((passage) => had.has(passage)).length
+        tally.kept += kept
+        tally.total += now.length
+        tally.worst = Math.min(tally.worst, kept / now.length)
+    })
+    return { mean: tally.kept / tally.total, worst: tally.worst }
+}
+
+/** One edit of a document at a line. */
+type LineEdit = (lines: ReadonlyArray<string>, index: number) => ReadonlyArray<string>
+
+const EDITS: ReadonlyArray<readonly [string, LineEdit]> = [
+    ["edit a line", (lines, index) => lines.map((line, at) => (at === index ? `${line} (changed)` : line))],
+    [
+        "add a line",
+        (lines, index) => [
+            ...lines.slice(0, index + 1),
+            "One added line. ".repeat(4).trim(),
+            ...lines.slice(index + 1),
+        ],
+    ],
+    ["drop a line", (lines, index) => lines.filter((_, at) => at !== index)],
+]
+
+describe("chunkPassages one-line edits on the Vietnamese samples", () => {
+    const documents = Object.entries(fixtures.documents)
+
+    it.each(EDITS)("keeps at least 91% of passages on average and 80% at worst: %s", async (_name, edit) => {
+        const subject = await buildSubject()
+
+        for (const [, text] of documents) {
+            const { mean, worst } = survivalOf((body) => subject.chunkPassages(body), text, edit)
+            expect(mean).toBeGreaterThanOrEqual(0.91)
+            expect(worst).toBeGreaterThanOrEqual(0.8)
+        }
+    })
+
+    it("beats the fixed cut on a text broken at a fixed width, as a PDF gives it", async () => {
+        const subject = await buildSubject()
+        const add = EDITS[1]?.[1] ?? ((lines) => lines)
+
+        const fixed = survivalOf((body) => subject.chunkText(body), fixtures.documents.wrappedDecree, add)
+        const structural = survivalOf((body) => subject.chunkPassages(body), fixtures.documents.wrappedDecree, add)
+
+        expect(structural.mean).toBeGreaterThan(fixed.mean)
+        expect(structural.worst).toBeGreaterThan(fixed.worst)
     })
 })

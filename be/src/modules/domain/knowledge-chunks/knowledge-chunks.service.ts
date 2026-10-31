@@ -1,21 +1,24 @@
 import { Injectable } from "@nestjs/common"
-import { Brackets, In, MoreThanOrEqual } from "typeorm"
+import { Brackets, In, IsNull, MoreThanOrEqual, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { hybridHit, hybridScore } from "./hybrid-score.policy"
 import type {
+    ChunkArrangement,
     ChunkBatchWrite,
     ChunkHit,
     ChunkDraft,
     ChunkQuery,
     ChunkWrite,
     EmbeddedChunk,
+    ModelInUse,
     PassageView,
     SourcePassage,
     StaleChunk,
     VectorWrite,
 } from "./knowledge-chunks.contracts"
+import { passageHashOf } from "./passage-hash.policy"
 import { KnowledgeChunkEntity } from "./persistence/entities"
 
 /** The most passages one source lists or reports as embedded. */
@@ -28,6 +31,14 @@ const SOURCES_PASSAGE_LIMIT = 10_000
 /** The vector of each id, picked from the two arrays the write carries. */
 const VECTOR_OF_ID =
     '(SELECT t.embedding::extensions.vector FROM unnest(CAST(:ids AS uuid[]), CAST(:vectors AS text[])) AS t(id, embedding) WHERE t.id = "knowledge_chunks"."id")'
+
+/** The hash of each id, picked from the two arrays the write carries. */
+const HASH_OF_ID =
+    '(SELECT t.hash FROM unnest(CAST(:ids AS uuid[]), CAST(:hashes AS text[])) AS t(id, hash) WHERE t.id = "knowledge_chunks"."id")'
+
+/** The new order of each id, picked from the two arrays the write carries. */
+const ORDER_OF_ID =
+    '(SELECT t.ord FROM unnest(CAST(:ids AS uuid[]), CAST(:orders AS integer[])) AS t(id, ord) WHERE t.id = "knowledge_chunks"."id")'
 
 /** The most passages one search answers. */
 const SEARCH_MAX = 40
@@ -54,6 +65,7 @@ const rowOf = (write: Omit<ChunkWrite, "drafts">, draft: ChunkDraft, order: numb
     content: draft.text,
     embedding: draft.vector,
     embeddingModel: draft.vector === null ? null : write.model,
+    contentHash: draft.vector === null ? null : passageHashOf(draft.text, write.model),
 })
 
 /** How many passages one insert statement stores. */
@@ -98,9 +110,31 @@ export class KnowledgeChunksService {
         })
     }
 
-    /** Removes the passages of a source from this order on (the text got shorter). */
-    async trim(workspaceId: string, sourceId: string, count: number): Promise<void> {
-        await this.entityManager.delete(KnowledgeChunkEntity, { sourceId, workspaceId, ord: MoreThanOrEqual(count) })
+    /**
+     * Puts the stored passages in the places of a new text in one transaction: moved passages keep their id and vector, what sat where one
+     * lands goes, and so do the passages past the end. Any other passage stays searchable until its order is written.
+     */
+    async arrange(arrangement: ChunkArrangement): Promise<void> {
+        const { workspaceId, sourceId, moves, count } = arrangement
+        const ids = moves.map((move) => move.id)
+        await this.entityManager.transaction(async (tx) => {
+            if (moves.length > 0) {
+                await tx.delete(KnowledgeChunkEntity, {
+                    sourceId,
+                    workspaceId,
+                    ord: In(moves.map((move) => move.order)),
+                    id: Not(In(ids)),
+                })
+                await tx
+                    .createQueryBuilder(KnowledgeChunkEntity, "kc")
+                    .update()
+                    .set({ ord: () => ORDER_OF_ID })
+                    .where("workspace_id = :workspaceId AND id = ANY(CAST(:ids AS uuid[]))")
+                    .setParameters({ workspaceId, ids, orders: moves.map((move) => move.order) })
+                    .execute()
+            }
+            await tx.delete(KnowledgeChunkEntity, { sourceId, workspaceId, ord: MoreThanOrEqual(count) })
+        })
     }
 
     /**
@@ -195,7 +229,7 @@ export class KnowledgeChunksService {
     async embeddedOf(workspaceId: string, sourceId: string): Promise<ReadonlyArray<EmbeddedChunk>> {
         const rows = await this.entityManager
             .createQueryBuilder(KnowledgeChunkEntity, "c")
-            .select(["c.ord", "c.content", "c.embeddingModel"])
+            .select(["c.id", "c.ord", "c.content", "c.contentHash", "c.embeddingModel"])
             .where("c.sourceId = :sourceId AND c.workspaceId = :workspaceId AND c.embedding IS NOT NULL", {
                 sourceId,
                 workspaceId,
@@ -203,7 +237,27 @@ export class KnowledgeChunksService {
             .orderBy("c.ord", "ASC")
             .limit(EMBEDDED_LIMIT)
             .getMany()
-        return rows.map((row) => ({ order: row.ord, text: row.content, model: row.embeddingModel }))
+        return rows.map((row) => ({
+            id: row.id,
+            order: row.ord,
+            text: row.content,
+            hash: row.contentHash,
+            model: row.embeddingModel,
+        }))
+    }
+
+    /** Whether a source has passages and every one has a vector of `model`; with a null `model` (no embeddings here) passages are enough. */
+    async holds(workspaceId: string, sourceId: string, model: ModelInUse): Promise<boolean> {
+        const own = { workspaceId, sourceId }
+        if (!(await this.entityManager.exists(KnowledgeChunkEntity, { where: own }))) return false
+        if (model === null) return true
+        const stale = await this.entityManager.exists(KnowledgeChunkEntity, {
+            where: [
+                { ...own, embeddingModel: IsNull() },
+                { ...own, embeddingModel: Not(model) },
+            ],
+        })
+        return !stale
     }
 
     /** Up to `limit` passages of a workspace that have no vector, or one made by another model than `model`. */
@@ -226,9 +280,14 @@ export class KnowledgeChunksService {
         await this.entityManager
             .createQueryBuilder(KnowledgeChunkEntity, "kc")
             .update()
-            .set({ embedding: () => VECTOR_OF_ID, embeddingModel: write.model })
+            .set({ embedding: () => VECTOR_OF_ID, embeddingModel: write.model, contentHash: () => HASH_OF_ID })
             .where("workspace_id = :workspaceId AND id = ANY(CAST(:ids AS uuid[]))")
-            .setParameters({ workspaceId: write.workspaceId, ids: [...write.ids], vectors: [...write.vectors] })
+            .setParameters({
+                workspaceId: write.workspaceId,
+                ids: [...write.ids],
+                vectors: [...write.vectors],
+                hashes: [...write.hashes],
+            })
             .execute()
     }
 }

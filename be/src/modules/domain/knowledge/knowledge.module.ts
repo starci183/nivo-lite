@@ -7,6 +7,7 @@ import { KnowledgeIndexingService } from "./knowledge-indexing.service"
 import { KnowledgeJobsService } from "./knowledge-jobs.service"
 import { KnowledgeReembedService } from "./knowledge-reembed.service"
 import { KnowledgeSearchService } from "./knowledge-search.service"
+import { UnchangedSourceService } from "./unchanged-source.service"
 import { DRIVE_ACCESS_SOURCE } from "./knowledge.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./knowledge.module-definition"
 import { SourceReaderService } from "./source-reader.service"
@@ -39,6 +40,7 @@ export class KnowledgeModule extends ConfigurableModuleClass {
                 KnowledgeJobsService,
                 KnowledgeReembedService,
                 KnowledgeSearchService,
+                UnchangedSourceService,
             ],
             exports: [
                 UsageMeterService,

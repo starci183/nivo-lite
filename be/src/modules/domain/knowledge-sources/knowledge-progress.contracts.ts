@@ -49,4 +49,6 @@ export interface ProgressChange {
     readonly error?: string | null
     /** How many passages are stored. */
     readonly chunkCount?: number
+    /** The hash of the text now complete. */
+    readonly contentHash?: string
 }

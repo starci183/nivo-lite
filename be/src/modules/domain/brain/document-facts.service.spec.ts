@@ -1,10 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
+import { DOC_AT, DOC_CONTENT, DOC_SOURCE, DOC_WS, docSourceOf } from "@tests/fixtures/builders/document-facts.builder"
 import { BrainExtractionsService, ExtractionNote } from "@modules/domain/brain-extractions"
 import { BrainFactsService } from "@modules/domain/brain-facts"
+import { passageTextHashOf } from "@modules/domain/knowledge-chunks"
 import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
-import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { KnowledgeSourcesService, StoredNote } from "@modules/domain/knowledge-sources"
 import { AI } from "@modules/integrations/ai"
 import type { AiService } from "@modules/integrations/ai"
@@ -17,32 +18,17 @@ import { MAX_FACTS_PER_DOC, PROMPT_VERSION, SYSTEM_PROMPT } from "./extraction.p
 import { DocumentReviewService } from "./document-review.service"
 import { ModelJsonService } from "./model-json.service"
 
-const WS = "11111111-1111-4111-8111-111111111111"
-const SOURCE = "22222222-2222-4222-8222-222222222222"
-const AT = "2026-10-12T10:00:00.000Z"
-const CONTENT = "Hours 8am-9pm. Price 20 USD."
+const WS = DOC_WS
+const SOURCE = DOC_SOURCE
+const AT = DOC_AT
+const CONTENT = DOC_CONTENT
 const HASH = "81a3438226c4b1fe964fb95e85cdfe3a"
 const PAYLOAD = { workspaceId: WS, sourceId: SOURCE }
 const PROMPT = `Document: "Hours"\nUpdated: 2026-10-12\nPart 1 of 1\nEXCERPT:\n<<<\n${CONTENT}\n>>>`
 const USAGE = { promptTokens: 10, completionTokens: 20, totalTokens: 30, costUsd: 0.001 }
 const REPLY = { text: "answer", model: "m1", usage: USAGE, parsed: null, retrieved: 0 }
 
-const sourceOf = builder<SourceRecord>({
-    id: SOURCE,
-    workspaceId: WS,
-    module: "chatbot",
-    installationId: "i1",
-    kind: "text",
-    topic: "Open",
-    visibility: "public",
-    title: "Hours",
-    content: CONTENT,
-    status: "extracting_facts",
-    storagePath: null,
-    sourceUrl: null,
-    createdBy: "u1",
-    updatedAt: AT,
-})
+const sourceOf = docSourceOf
 type ExtractionRecord = NonNullable<Awaited<ReturnType<BrainExtractionsService["get"]>>>
 
 const extractionOf = builder<ExtractionRecord>({
@@ -55,9 +41,21 @@ const extractionOf = builder<ExtractionRecord>({
     windowsDone: 0,
     attempts: 0,
     orphanFactIds: [],
+    passageHashes: [],
+    factsChanged: false,
 })
 
 type Progress = Parameters<BrainExtractionsService["save"]>[2]
+
+const startOf = builder<Parameters<BrainExtractionsService["start"]>[0]>({
+    workspaceId: WS,
+    sourceId: SOURCE,
+    promptVersion: 1,
+    contentHash: HASH,
+    windowsTotal: 1,
+    orphanFactIds: [],
+    factsChanged: false,
+})
 
 const progressOf = builder<Progress>({
     status: "running",
@@ -163,7 +161,7 @@ describe("DocumentFactsService", () => {
         await expect(service.run(PAYLOAD)).resolves.toBe("skipped")
 
         expect(reviews.requestForSource).not.toHaveBeenCalled()
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
+        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
         expect(extractions.start).not.toHaveBeenCalled()
         expect(ai.chat).not.toHaveBeenCalled()
     })
@@ -176,14 +174,7 @@ describe("DocumentFactsService", () => {
 
         await expect(service.run(PAYLOAD)).resolves.toBe("blocked")
 
-        expect(extractions.start).toHaveBeenCalledWith({
-            workspaceId: WS,
-            sourceId: SOURCE,
-            promptVersion: 1,
-            contentHash: HASH,
-            windowsTotal: 1,
-            orphanFactIds: [],
-        })
+        expect(extractions.start).toHaveBeenCalledWith(startOf({ orphanFactIds: [], factsChanged: false }))
         expect(facts.withdrawSource).not.toHaveBeenCalled()
         expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ status: "blocked_credits" }))
         expect(usage.blockedBy).toHaveBeenCalledWith(WS, "brain", false)
@@ -197,20 +188,15 @@ describe("DocumentFactsService", () => {
         extractions.get.mockResolvedValueOnce(
             extractionOf({ attempts: 2, factsProposed: 3, orphanFactIds: ["f1", "f2", "f3"] }),
         )
-        facts.withdrawSource.mockResolvedValue(["f2", "f3"])
+        facts.withdrawChanged.mockResolvedValue({ orphans: ["f2", "f3"], withdrawn: 2 })
         usage.blockedBy.mockResolvedValue(true)
 
         await expect(service.run(PAYLOAD)).resolves.toBe("blocked")
 
-        expect(facts.withdrawSource).toHaveBeenCalledWith(WS, SOURCE, "source changed")
-        expect(extractions.start).toHaveBeenCalledWith({
-            workspaceId: WS,
-            sourceId: SOURCE,
-            promptVersion: 1,
-            contentHash: HASH,
-            windowsTotal: 1,
-            orphanFactIds: ["f1", "f2", "f3"],
-        })
+        expect(facts.withdrawChanged).toHaveBeenCalledWith(WS, SOURCE, "source changed", "")
+        expect(extractions.start).toHaveBeenCalledWith(
+            startOf({ orphanFactIds: ["f1", "f2", "f3"], factsChanged: true }),
+        )
         expect(extractions.save).toHaveBeenCalledWith(
             WS,
             SOURCE,
@@ -223,24 +209,17 @@ describe("DocumentFactsService", () => {
         const { service, extractions, facts, reviews } = await build()
         extractions.get.mockResolvedValueOnce(extractionOf({ promptVersion: 0 }))
         extractions.get.mockResolvedValueOnce(extractionOf({ windowsDone: 1, orphanFactIds: ["f1"] }))
-        facts.withdrawSource.mockResolvedValue([])
+        facts.withdrawChanged.mockResolvedValue({ orphans: [], withdrawn: 0 })
 
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
 
-        expect(extractions.start).toHaveBeenCalledWith({
-            workspaceId: WS,
-            sourceId: SOURCE,
-            promptVersion: 1,
-            contentHash: HASH,
-            windowsTotal: 1,
-            orphanFactIds: [],
-        })
+        expect(extractions.start).toHaveBeenCalledWith(startOf({ orphanFactIds: [], factsChanged: false }))
         expect(facts.finalizeOrphans).toHaveBeenCalledWith(WS, ["f1"], {
             kind: "note",
             ref: `gone:${SOURCE}`,
             label: 'The document "Hours" changed: no source supports this value any more',
         })
-        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "")
+        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "", expect.anything())
         expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE)
     })
 
@@ -252,7 +231,7 @@ describe("DocumentFactsService", () => {
 
         expect(gaps.resolve).not.toHaveBeenCalled()
         expect(usage.blockedBy).not.toHaveBeenCalled()
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
+        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
     })
 
     it("retries a busy model without charging usage", async () => {
@@ -327,7 +306,7 @@ describe("DocumentFactsService", () => {
         ai.chat.mockResolvedValueOnce(REPLY).mockResolvedValueOnce(answer)
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
         expect(ai.chat).toHaveBeenCalledTimes(2)
-        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, model === "" ? "" : "m1")
+        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, model === "" ? "" : "m1", expect.anything())
     })
 })
 describe("DocumentFactsService", () => {
@@ -376,14 +355,14 @@ describe("DocumentFactsService", () => {
             ],
         })
         expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ windowsDone: 1, factsProposed: 1 }))
-        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "m1")
+        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "m1", expect.anything())
         expect(gaps.resolve).toHaveBeenCalledWith(WS, {
             text: `Hours Open ${CONTENT}`,
             minimum: DOC_ANSWERS,
             module: "chatbot",
             by: `document:${SOURCE}`,
         })
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
+        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
     })
 })
 describe("DocumentFactsService", () => {
@@ -473,8 +452,36 @@ describe("DocumentFactsService", () => {
             by: `document:${SOURCE}`,
         })
         expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.GapsFailed, cause, { sourceId: SOURCE })
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
+        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
         extractions.get.mockResolvedValue(extractionOf({ windowsDone: -1 }))
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
     })
+})
+
+describe("DocumentFactsService an edited document", () => {
+    const read = [passageTextHashOf("## Hours\nOpen 8.")]
+    it.each<["done" | "failed", boolean, number, number, boolean]>([
+        ["done", false, 0, 0, false],
+        ["done", false, 1, 0, true],
+        ["done", true, 0, 1, true],
+        ["failed", true, 0, 0, true],
+    ])(
+        "from a %s reading (changed %s, withdrew %i, filed %i): review %s",
+        async (status, was, withdrawn, filed, reviewed) => {
+            const { service, ai, extractions, facts, reviews } = await build(
+                sourceOf({ content: "## Hours\nOpen 8.\n## Fees\nNew." }),
+            )
+            extractions.get.mockResolvedValueOnce(
+                extractionOf({ contentHash: "old", status, factsChanged: was, passageHashes: read }),
+            )
+            extractions.get.mockResolvedValueOnce(
+                extractionOf({ factsChanged: withdrawn > 0 || was, factsProposed: filed, passageHashes: read }),
+            )
+            facts.withdrawChanged.mockResolvedValue({ orphans: [], withdrawn })
+            await expect(service.run(PAYLOAD)).resolves.toBe("done")
+            expect(facts.withdrawChanged).toHaveBeenCalledWith(WS, SOURCE, "source changed", "## Hours\nOpen 8.")
+            expect(ai.chat.mock.calls[0]?.[0].messages[1]?.content).not.toContain("Open 8.")
+            expect(reviews.requestForSource).toHaveBeenCalledTimes(reviewed ? 1 : 0)
+        },
+    )
 })

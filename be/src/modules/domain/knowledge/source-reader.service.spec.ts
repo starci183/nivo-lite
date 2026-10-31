@@ -24,6 +24,7 @@ const sourceOf = builder<SourceRecord>({
     storagePath: null,
     sourceUrl: null,
     createdBy: "u1",
+    contentHash: null,
     updatedAt: "2026-10-12T10:00:00.000Z",
 })
 

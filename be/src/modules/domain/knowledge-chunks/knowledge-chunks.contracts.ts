@@ -36,14 +36,57 @@ export interface ChunkBatchWrite extends Omit<ChunkWrite, "drafts"> {
     readonly drafts: ReadonlyArray<PlacedChunkDraft>
 }
 
+/** The embedding model in use, or null when the deployment has none. */
+export type ModelInUse = string | null
+
 /** One stored passage that has a vector. */
 export interface EmbeddedChunk {
+    /** The passage id. */
+    readonly id: string
     /** The order of the passage in its source. */
     readonly order: number
     /** The text. */
     readonly text: string
+    /** The hash of its text and model, or null for a passage stored before hashes. */
+    readonly hash: string | null
     /** The model that made the vector. */
     readonly model: string | null
+}
+
+/** A stored passage that goes to another order and keeps its vector. */
+export interface ChunkMove {
+    /** The passage id. */
+    readonly id: string
+    /** Its new order. */
+    readonly order: number
+}
+
+/** A piece of the text that has no stored vector. */
+export interface MissingPassage {
+    /** Its order in the source. */
+    readonly order: number
+    /** The text. */
+    readonly text: string
+}
+
+/** How the pieces of a text use the stored vectors. */
+export interface ReusePlan {
+    /** The stored passages that change order. */
+    readonly moves: ReadonlyArray<ChunkMove>
+    /** The pieces to embed. */
+    readonly missing: ReadonlyArray<MissingPassage>
+}
+
+/** The stored passages of a source put in the places of a new text. */
+export interface ChunkArrangement {
+    /** The workspace that owns the source. */
+    readonly workspaceId: string
+    /** The source. */
+    readonly sourceId: string
+    /** The stored passages that change order. */
+    readonly moves: ReadonlyArray<ChunkMove>
+    /** How many passages the text has: the passages past it go. */
+    readonly count: number
 }
 
 /** One stored passage that needs a vector. */
@@ -64,6 +107,8 @@ export interface VectorWrite {
     readonly ids: ReadonlyArray<string>
     /** One vector per id, in the pgvector text form. */
     readonly vectors: ReadonlyArray<string>
+    /** One passage hash per id, of its text and this model. */
+    readonly hashes: ReadonlyArray<string>
 }
 
 /** One stored passage of a source as the Knowledge page shows it. */

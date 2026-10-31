@@ -1,5 +1,10 @@
 import type { RealtimeTopic } from "@modules/platform/realtime"
-import type { KnowledgeProgressFrame, ProgressChange, SourceProgress, SourceStage } from "./knowledge-progress.contracts"
+import type {
+    KnowledgeProgressFrame,
+    ProgressChange,
+    SourceProgress,
+    SourceStage,
+} from "./knowledge-progress.contracts"
 import type { KnowledgeSourceEntity } from "./persistence/entities"
 
 const STAGES: ReadonlySet<string> = new Set(["read", "chunk", "embed", "store", "facts"])
@@ -74,4 +79,5 @@ export const columnsOf = (change: ProgressChange): Partial<KnowledgeSourceEntity
     ...(change.total === undefined ? {} : { stageTotal: change.total }),
     ...(change.error === undefined ? {} : { error: change.error }),
     ...(change.chunkCount === undefined ? {} : { chunkCount: change.chunkCount }),
+    ...(change.contentHash === undefined ? {} : { contentHash: change.contentHash }),
 })

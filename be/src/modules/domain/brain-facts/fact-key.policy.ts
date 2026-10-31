@@ -17,6 +17,16 @@ export const TRUST: Readonly<Record<FactSource, number>> = {
 /** Only an owner or manager statement may become active without a review. */
 export const AUTO_APPLY_TRUST = 85
 
+/** Text folded for comparison: lower case, no accents (d with stroke becomes d), single spaces, letters and digits only. */
+export const foldedText = (text: string): string =>
+    text
+        .toLowerCase()
+        .replaceAll("\u0111", "d")
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim()
+
 /** Lower case, accents removed (d with stroke becomes d), anything else turned into single dashes: "Combo Thu gian!" becomes "combo-thu-gian". */
 export const factSlugOf = (text: string): string =>
     text

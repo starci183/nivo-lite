@@ -48,6 +48,7 @@ const rowOf = builder<KnowledgeSourceEntity>({
     origin: null,
     sizeBytes: 0,
     createdBy: "u1",
+    contentHash: "hash",
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
     updatedAt: new Date("2026-10-02T00:00:00.000Z"),
 })
@@ -70,6 +71,7 @@ describe("toSourceRecord", () => {
             storagePath: null,
             sourceUrl: "https://x.test",
             createdBy: "u1",
+            contentHash: "hash",
             updatedAt: "2026-10-02T00:00:00.000Z",
         })
     })

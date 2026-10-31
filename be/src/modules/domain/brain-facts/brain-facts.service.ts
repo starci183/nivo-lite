@@ -21,6 +21,7 @@ import type {
     MaintenanceResult,
     MaybeFact,
     ProposeResult,
+    WithdrawnFacts,
 } from "./brain-facts.contracts"
 import { RETURNED, factKeyOf, returnedFacts } from "./fact-columns.policy"
 import type { FactChanges, NewFact } from "./fact-columns.policy"
@@ -326,6 +327,11 @@ export class BrainFactsService {
     /** Takes one document's contribution back; answers the ids of active document facts left with no evidence. */
     withdrawSource(workspaceId: string, sourceId: string, note: string): Promise<ReadonlyArray<string>> {
         return this.maintenance.withdrawSource(workspaceId, sourceId, note)
+    }
+
+    /** Takes back what a changed document no longer says; a fact resting on its unchanged text stays. */
+    withdrawChanged(workspaceId: string, sourceId: string, note: string, unchanged: string): Promise<WithdrawnFacts> {
+        return this.maintenance.withdrawChanged(workspaceId, sourceId, note, unchanged)
     }
 
     /**

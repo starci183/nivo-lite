@@ -43,4 +43,8 @@ export class KnowledgeChunkEntity extends UuidAbstractEntity {
     /** The agent instance the source is kept for, or null for every instance. */
     @Column({ name: "installation_id", type: "uuid", nullable: true })
     installationId!: string | null
+
+    /** The SHA-256 of the normalised text and the model of the vector; null for a passage with no vector, or one stored before the column. */
+    @Column({ name: "content_hash", type: "text", nullable: true })
+    contentHash!: string | null
 }

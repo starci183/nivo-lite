@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService, passageHashOf } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { EmbeddingService } from "./embedding.service"
 import { KnowledgeReembedService } from "./knowledge-reembed.service"
@@ -83,6 +83,7 @@ describe("KnowledgeReembedService", () => {
                 model: "m1",
                 ids: ["c0", "c1"],
                 vectors: ["[1,2]", "[]"],
+                hashes: [passageHashOf("text 0", "m1"), passageHashOf("text 1", "m1")],
             })
         })
 
