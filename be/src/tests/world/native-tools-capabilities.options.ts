@@ -1,10 +1,13 @@
 import type { DynamicModule } from "@nestjs/common"
+import { AgentGraphsModule } from "@modules/domain/agent-graphs"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
 import { BrainDossiersModule } from "@modules/domain/brain-dossiers"
 import { BrainFactsModule } from "@modules/domain/brain-facts"
 import { ConnectionsModule } from "@modules/domain/connections"
+import { DataRecordsModule } from "@modules/domain/data-records"
 import { DossierReviewModule } from "@modules/domain/dossier-review"
+import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { KnowledgeModule } from "@modules/domain/knowledge"
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesModule } from "@modules/domain/knowledge-sources"
@@ -25,6 +28,8 @@ const isGateway = (entry: DynamicModule): boolean => entry.module === McpGateway
  */
 export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     ...MCP_CREDENTIAL_MODULES.filter((entry) => !isGateway(entry)),
+    InboundEventsModule.register({ isGlobal: true }),
+    DataRecordsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true }),
     AiModule.register({
@@ -44,6 +49,7 @@ export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     ConnectionsModule.readOnly({ isGlobal: true, readOnly: true }),
     AgentConversationsModule.register({ isGlobal: true, readOnly: true }),
     AgentMessagesModule.register({ isGlobal: true, readOnly: true }),
+    AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     NativeToolsModule.register({ isGlobal: true }),
     McpGatewayModule.register({
         isGlobal: true,

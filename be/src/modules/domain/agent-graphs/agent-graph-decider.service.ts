@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type {
     BranchAnswerer,
     BranchRequest,
@@ -9,7 +9,8 @@ import type {
 import type { Proposal } from "@modules/domain/work-items"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
+import type { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
+import { InjectAgentGraphApprovals } from "./agent-graphs.decorators"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
@@ -52,17 +53,17 @@ export class AgentGraphDeciderService implements WorkBranchDecider {
         private readonly graphs: AgentGraphsService,
         private readonly facts: GraphFactsService,
         private readonly decisions: AgentGraphDecisionsService,
-        private readonly approvals: AgentGraphApprovalsService,
+        @Optional() @InjectAgentGraphApprovals() private readonly approvals: AgentGraphApprovalsService | null = null,
     ) {}
 
     /** Puts a waiting item in front of the approver its branch named. */
     route(route: BranchRoute): Promise<void> {
-        return this.approvals.route(route)
+        return this.approvals === null ? Promise.resolve() : this.approvals.route(route)
     }
 
     /** Whether this seat may answer the waiting item while the request of its branch is open. */
     mayDecide(answerer: BranchAnswerer): Promise<boolean> {
-        return this.approvals.mayDecide(answerer)
+        return this.approvals === null ? Promise.resolve(true) : this.approvals.mayDecide(answerer)
     }
 
     /** The judgement of the branch for one item, or null when the gate decides alone. */

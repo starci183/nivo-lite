@@ -7,6 +7,7 @@ import {
     CONNECTION_SECRETS_ERROR_KINDS,
     ConnectionSecretsModule,
 } from "@modules/domain/connection-secrets"
+import { AgentGraphsModule } from "@modules/domain/agent-graphs"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { AgentsModule } from "@modules/domain/agents"
 import { DataRecordsModule } from "@modules/domain/data-records"
@@ -102,6 +103,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     TransactionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
     DataRecordsModule.register({ isGlobal: true }),
+    AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     ...mcpKnowledgeModules(options),
     McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, keyCheck: true, natives: NATIVE_TOOL_ADAPTERS }),
     SystemHealthHttpModule.register({}),

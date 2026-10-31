@@ -5,7 +5,8 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AMOUNT_FACT, FACTS, OWNER_EXAMPLE, branchOf, graphOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { itemOf } from "@tests/fixtures/builders/work-engine.builder"
-import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
+import type { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
+import { AGENT_GRAPH_APPROVALS } from "./agent-graphs.decorators"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphDeciderService } from "./agent-graph-decider.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
@@ -35,7 +36,7 @@ const build = async (state: GraphState | null, facts: Record<string, number> | E
             { provide: AgentGraphsService, useValue: graphs },
             { provide: GraphFactsService, useValue: reader },
             { provide: AgentGraphDecisionsService, useValue: decisions },
-            { provide: AgentGraphApprovalsService, useValue: approvals },
+            { provide: AGENT_GRAPH_APPROVALS, useValue: approvals },
         ],
     }).compile()
     return { service: moduleRef.get(AgentGraphDeciderService), graphs, reader, decisions, logger, approvals }
@@ -202,5 +203,22 @@ describe("AgentGraphDeciderService the approval road", () => {
         await expect(service.mayDecide(answerer)).resolves.toBe(false)
         expect(approvals.route).toHaveBeenCalledWith(route)
         expect(approvals.mayDecide).toHaveBeenCalledWith(answerer)
+    })
+
+    it("leaves a waiting item with the people who govern, and lets any seat answer, when no approval road is bound", async () => {
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                AgentGraphDeciderService,
+                { provide: LOGGER, useValue: mock<Logger>() },
+                { provide: AgentGraphsService, useValue: mock<AgentGraphsService>() },
+                { provide: GraphFactsService, useValue: mock<GraphFactsService>() },
+                { provide: AgentGraphDecisionsService, useValue: mock<AgentGraphDecisionsService>() },
+                { provide: AGENT_GRAPH_APPROVALS, useValue: null },
+            ],
+        }).compile()
+        const service = moduleRef.get(AgentGraphDeciderService)
+
+        await expect(service.route({ workspaceId: "ws-1", workItemId: "item-9", decisionId: "decision-1" })).resolves.toBeUndefined()
+        await expect(service.mayDecide({ workspaceId: "ws-1", workItemId: "item-9", memberId: "member-1", isOwner: false })).resolves.toBe(true)
     })
 })
