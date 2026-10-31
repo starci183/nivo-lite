@@ -86,7 +86,16 @@ describe("AgentProbesService.decide, what the probe found", () => {
         expect(invoicesDue.check).not.toHaveBeenCalled()
     })
 
-    it("always runs a wake that names no probe", async () => {
+    it.each([{ triggerId: "trigger-1", slot: "1" }, { eventName: "bank_credit_booked" }])(
+        "skips a clock or event wake that names no probe, since there is nothing to look at: no probe, no model",
+        async (context) => {
+            const { service } = await build()
+
+            await expect(service.decide(AGENT, context)).resolves.toEqual({ kind: "skip", reason: "no_probe" })
+        },
+    )
+
+    it("runs a wake that is neither a clock nor an event, and names no probe", async () => {
         const { service } = await build()
 
         await expect(service.decide(AGENT, {})).resolves.toEqual({ kind: "run", brief: null, subjectIds: [] })

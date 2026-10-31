@@ -114,7 +114,7 @@ export class AgentWorkSweepService {
         const next = await this.sync.reconcile(item.workspaceId, trigger)
         const now = this.clock.now()
         if (next === null || trigger.preset === null || item.at === null || !isMissed(item.at, now)) return "triggers"
-        const slot = latestMissedSlot(item.at, next, trigger.preset)
+        const slot = latestMissedSlot(item.at, next, { ...trigger, preset: trigger.preset }, item.agentId)
         await this.entityManager.transaction(async (tx) => {
             await this.wakes.wake(tx, {
                 workspaceId: item.workspaceId,

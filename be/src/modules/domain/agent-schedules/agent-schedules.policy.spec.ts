@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import type { AgentTriggerPreset } from "@modules/domain/agent-work"
 import {
     MIN_PERIOD_MINUTES,
     isMissed,
@@ -24,6 +25,11 @@ const buildSubject = async () => {
         scheduleOf: typeof scheduleOf
     }>(SUBJECT)
 }
+
+const slotted = (
+    preset: AgentTriggerPreset,
+    over: Partial<Parameters<typeof scheduleOf>[0]> = {},
+): Parameters<typeof latestMissedSlot>[2] => ({ ...clock(over), preset })
 
 const clock = (over: Partial<Parameters<typeof scheduleOf>[0]> = {}): Parameters<typeof scheduleOf>[0] => ({
     kind: "schedule",
@@ -101,15 +107,93 @@ describe("latestMissedSlot", () => {
         const { latestMissedSlot } = await buildSubject()
         const missed = new Date("2026-11-10T03:15:00.000Z")
 
-        expect(latestMissedSlot(missed, new Date("2026-11-10T03:30:00.000Z"), "every_15m")).toEqual(missed)
+        expect(latestMissedSlot(missed, new Date("2026-11-10T03:30:00.000Z"), slotted("every_15m"), "x")).toEqual(
+            missed,
+        )
     })
 
     it("takes the slot just before the next one when many were missed", async () => {
         const { latestMissedSlot } = await buildSubject()
 
         expect(
-            latestMissedSlot(new Date("2026-11-07T03:00:00.000Z"), new Date("2026-11-10T03:00:00.000Z"), "daily_at"),
+            latestMissedSlot(
+                new Date("2026-11-07T03:00:00.000Z"),
+                new Date("2026-11-10T03:00:00.000Z"),
+                slotted("daily_at"),
+                "x",
+            ),
         ).toEqual(new Date("2026-11-09T03:00:00.000Z"))
+    })
+})
+
+describe("latestMissedSlot, a weekday preset", () => {
+    // 08:00 in Ho Chi Minh is 01:00 UTC; agent "x" has no spread. 2026-11-13 is a Friday, 2026-11-16 a Monday.
+    it("falls back to the Friday before a Monday, never the Sunday", async () => {
+        const { latestMissedSlot } = await buildSubject()
+        const friday = new Date("2026-11-13T01:00:00.000Z")
+
+        expect(
+            latestMissedSlot(
+                new Date("2026-11-06T01:00:00.000Z"),
+                new Date("2026-11-16T01:00:00.000Z"),
+                slotted("weekdays_at"),
+                "x",
+            ),
+        ).toEqual(friday)
+    })
+
+    it("steps back one day in the middle of the week", async () => {
+        const { latestMissedSlot } = await buildSubject()
+
+        expect(
+            latestMissedSlot(
+                new Date("2026-11-02T01:00:00.000Z"),
+                new Date("2026-11-12T01:00:00.000Z"),
+                slotted("weekdays_at"),
+                "x",
+            ),
+        ).toEqual(new Date("2026-11-11T01:00:00.000Z"))
+    })
+
+    it("follows a time pushed past midnight, whose days are Tuesday to Saturday", async () => {
+        const { latestMissedSlot } = await buildSubject()
+        // 23:55 + spread 13 (agent-1) is 00:08 the next day: slots 00:08 local, Tue-Sat. Tuesday 2026-11-17 00:08 +07 is Monday 17:08 UTC.
+        const saturday = new Date("2026-11-13T17:08:00.000Z")
+
+        expect(
+            latestMissedSlot(
+                new Date("2026-11-01T17:08:00.000Z"),
+                new Date("2026-11-16T17:08:00.000Z"),
+                slotted("weekdays_at", { atTime: "23:55" }),
+                "agent-1",
+            ),
+        ).toEqual(saturday)
+    })
+
+    it("keeps the local time across a change of offset", async () => {
+        const { latestMissedSlot } = await buildSubject()
+        // New York leaves daylight time on 2026-11-01: 08:00 is 12:00 UTC before and 13:00 UTC after. Monday 2026-11-02 08:00 EST.
+        const slot = latestMissedSlot(
+            new Date("2026-10-20T12:00:00.000Z"),
+            new Date("2026-11-02T13:00:00.000Z"),
+            slotted("weekdays_at", { timeZone: "America/New_York" }),
+            "x",
+        )
+
+        expect(slot).toEqual(new Date("2026-10-30T12:00:00.000Z"))
+    })
+
+    it("treats a daily preset with no time as one day back", async () => {
+        const { latestMissedSlot } = await buildSubject()
+
+        expect(
+            latestMissedSlot(
+                new Date("2026-11-01T01:00:00.000Z"),
+                new Date("2026-11-12T01:00:00.000Z"),
+                slotted("weekdays_at", { atTime: null }),
+                "x",
+            ),
+        ).toEqual(new Date("2026-11-11T01:00:00.000Z"))
     })
 })
 

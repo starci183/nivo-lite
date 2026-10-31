@@ -27,7 +27,7 @@ export interface AgentProbe {
 /** What the probes decided for one wake. */
 export type ProbeDecision =
     | { readonly kind: "run"; readonly brief: string | null; readonly subjectIds: ReadonlyArray<string> }
-    | { readonly kind: "skip"; readonly reason: "no_work" | "probe_failed" }
+    | { readonly kind: "skip"; readonly reason: "no_work" | "no_probe" | "probe_failed" }
 
 /** A trigger a module wants on its agent: seeded once per key. */
 export interface TriggerSeed {

@@ -18,7 +18,7 @@ const TIMED_OUT = "timed_out"
 @Injectable()
 /**
  * The code-first gate: a `schedule` or `event` wake reaches the model only when its probe finds work. A wake that carries a task needs no
- * probe, a wake that names none always runs, and a probe that fails or takes over two seconds skips the wake with no model call.
+ * probe, a clock or event wake that names none is skipped (no probe, no model), a wake of a person always runs, and a probe that fails or takes over two seconds skips the wake with no model call.
  */
 export class AgentProbesService {
     private readonly probes: ReadonlyMap<string, AgentProbe>
@@ -37,13 +37,19 @@ export class AgentProbesService {
 
     /** Decides whether the wake runs the model: with the brief of what the probe found, or skipped with the reason. */
     async decide(agent: ProbeAgent, context: AgentWakeContext): Promise<ProbeDecision> {
-        if (context.taskId !== undefined || context.probeKey === undefined) {
-            return { kind: "run", brief: null, subjectIds: context.taskId === undefined ? [] : [context.taskId] }
+        if (context.taskId !== undefined) return { kind: "run", brief: null, subjectIds: [context.taskId] }
+        if (context.probeKey === undefined) {
+            // A clock or an event with no probe has nothing to look at: no probe, no model. Any other wake (a person's) always runs.
+            const fromClock = context.triggerId !== undefined || context.eventName !== undefined
+            return fromClock ? { kind: "skip", reason: "no_probe" } : { kind: "run", brief: null, subjectIds: [] }
         }
         const probe = this.probes.get(context.probeKey)
         const answer = probe === undefined ? null : await this.answerOf(probe, agent)
         if (answer === null) {
-            this.logger.warn(AgentSchedulesLogEvent.ProbeSkipped, { agentId: agent.agentId, probeKey: context.probeKey })
+            this.logger.warn(AgentSchedulesLogEvent.ProbeSkipped, {
+                agentId: agent.agentId,
+                probeKey: context.probeKey,
+            })
             return { kind: "skip", reason: "probe_failed" }
         }
         if (!answer.work) return { kind: "skip", reason: "no_work" }
