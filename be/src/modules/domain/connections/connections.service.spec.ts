@@ -157,10 +157,10 @@ describe("ConnectionsService > find, get, findMany, list, listByProvider", () =>
         expect(fakes[0]?.callsOf("limit")).toEqual([[500]])
     })
 
-    it("lists the workspace connections without the Drive grant", async () => {
+    it("lists every connection of the workspace, the Drive grant among them", async () => {
         const { em, fakes } = withBuilders([{ getRawMany: [ROW, ROW] }])
         await expect((await build(em)).list("ws-1")).resolves.toHaveLength(2)
-        expect(whereOf(fakes[0])?.[0]?.[0]).toContain("c.provider <> 'google_drive'")
+        expect(whereOf(fakes[0])?.[0]?.[0]).toBe("c.workspaceId = :workspaceId")
     })
 
     it.each([

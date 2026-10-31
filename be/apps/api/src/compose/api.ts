@@ -28,6 +28,7 @@ import { MetaHttpModule } from "@features/webhooks/meta"
 import { ConnectionsGraphqlModule } from "@features/api/connections"
 import { SepayConnectionGraphqlModule } from "@features/api/sepay-connection"
 import { ZaloConnectionPageGraphqlModule } from "@features/api/zalo-connection-page"
+import { TelegramConnectionPageGraphqlModule } from "@features/api/telegram-connection-page"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The api area of the API, in registration order. */
@@ -43,6 +44,7 @@ export const apiModules = (): Array<DynamicModule> => [
     ConnectionsGraphqlModule.register({}),
     SepayConnectionGraphqlModule.register({}),
     ZaloConnectionPageGraphqlModule.register({}),
+    TelegramConnectionPageGraphqlModule.register({}),
     DataHubGraphqlModule.register({}),
     InboxGraphqlModule.register({}),
     AgentChatGraphqlModule.register({}),

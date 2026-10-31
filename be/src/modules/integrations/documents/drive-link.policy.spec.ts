@@ -1,13 +1,13 @@
 import { Test } from "@nestjs/testing"
-import { DRIVE_MIME, driveReadMode, isDriveId, resolveLink } from "./drive-link.policy"
+import { DRIVE_MIME, driveFileUrl, driveReadMode, isDriveId, resolveLink } from "./drive-link.policy"
 
 const SUBJECT = Symbol("drive-link.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { driveReadMode, isDriveId, resolveLink } }],
+        providers: [{ provide: SUBJECT, useValue: { driveFileUrl, driveReadMode, isDriveId, resolveLink } }],
     }).compile()
-    return moduleRef.get<Pick<typeof import("./drive-link.policy"), "driveReadMode" | "isDriveId" | "resolveLink">>(
+    return moduleRef.get<Pick<typeof import("./drive-link.policy"), "driveFileUrl" | "driveReadMode" | "isDriveId" | "resolveLink">>(
         SUBJECT,
     )
 }
@@ -175,6 +175,20 @@ describe("resolveLink", () => {
         const subject = await build()
 
         expect(subject.resolveLink(raw)).toEqual({ kind: "web", fetchUrl: raw })
+    })
+})
+
+describe("driveFileUrl", () => {
+    it.each([
+        ["application/vnd.google-apps.document", "https://docs.google.com/document/d/ID/edit"],
+        ["application/vnd.google-apps.spreadsheet", "https://docs.google.com/spreadsheets/d/ID/edit"],
+        ["application/vnd.google-apps.presentation", "https://docs.google.com/presentation/d/ID/edit"],
+        ["application/pdf", "https://drive.google.com/file/d/ID/view"],
+        ["", "https://drive.google.com/file/d/ID/view"],
+    ])("opens a file of type %j at %s", async (mimeType, expected) => {
+        const subject = await build()
+
+        expect(subject.driveFileUrl("ID", mimeType)).toBe(expected)
     })
 })
 

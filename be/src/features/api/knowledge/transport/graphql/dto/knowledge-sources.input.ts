@@ -13,4 +13,13 @@ export class KnowledgeSourcesInput {
     @MinLength(1)
     @MaxLength(64)
     module?: string
+
+    /** Only the documents that came from this origin, e.g. `google_drive`. */
+    @Field(() => String, { nullable: true })
+    @NullAsAbsent()
+    @IsOptional()
+    @IsString()
+    @MinLength(1)
+    @MaxLength(64)
+    origin?: string
 }

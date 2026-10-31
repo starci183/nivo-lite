@@ -36,7 +36,7 @@ const STATUS_BY_ID: Readonly<Record<string, ConnectorStatus>> = {
     ghn: "soon",
     ghtk: "soon",
     google_calendar: "soon",
-    google_drive: "soon",
+    google_drive: "early",
     notion: "soon",
     slack: "soon",
     airtable: "soon",

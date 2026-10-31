@@ -15,6 +15,10 @@ export class DriveFileType {
     @Field(() => String)
     mimeType!: string
 
+    /** The address that opens the file in the browser. */
+    @Field(() => String)
+    url!: string
+
     /** The size in bytes, when Drive reports it. */
     @Field(() => Float, { nullable: true })
     size?: number | null

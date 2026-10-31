@@ -94,12 +94,21 @@ export class KnowledgeSourcesService {
         @InjectIds() private readonly ids: Ids,
     ) {}
 
-    /** The documents of a workspace, newest first and without their text; any member may read them. */
-    async list(userId: string, workspaceId: string, module?: string): Promise<ReadonlyArray<SourceSummary>> {
+    /** The documents of a workspace, newest first and without their text, of one module and one origin when named; any member may read them. */
+    async list(
+        userId: string,
+        workspaceId: string,
+        module?: string,
+        origin?: string,
+    ): Promise<ReadonlyArray<SourceSummary>> {
         await this.members.require(userId, workspaceId)
         const rows = await this.entityManager.find(KnowledgeSourceEntity, {
             select: SUMMARY_COLUMNS,
-            where: module === undefined ? { workspaceId } : { workspaceId, module },
+            where: {
+                workspaceId,
+                ...(module === undefined ? {} : { module }),
+                ...(origin === undefined ? {} : { origin }),
+            },
             order: { createdAt: "DESC" },
             take: LIST_MAX,
         })

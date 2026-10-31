@@ -13,9 +13,10 @@ import { ChannelDeliveryService } from "./channel-delivery.service"
 import { InjectZaloInboxReads } from "./channels.decorators"
 import type { ZaloInboxReads } from "./channels.port"
 import type { LoadedZalo } from "./channels.contracts"
+import { CONVERSATIONS_MAX, EVENTS_MAX, messageRowsOf } from "./connection-events.policy"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
-import type { LastReplyRow, MessageEventRow, RecipientRow } from "./persistence/zalo-page.rows"
+import type { LastReplyRow, RecipientRow } from "./persistence/zalo-page.rows"
 import type { ZaloPageEvent, ZaloPageView, ZaloTestSendResult } from "./zalo-page.contracts"
 import { checksOf, eventsOf, maskTail, recipientsOf, sendBlockOf, tokenUsable, tokenViewOf } from "./zalo-page.policy"
 import { ZALO_FREE_WINDOW_MS } from "./zalo-delivery.service"
@@ -25,11 +26,7 @@ import { znsRenewalOf } from "./zns-renewal.policy"
 /** The channel of the conversations this page lists. */
 const ZALO_CHANNEL = "zalo"
 
-/** The most conversations of one connection the page looks across. */
-const CONVERSATIONS_MAX = 500
-
-/** The most events and recipients the page lists. */
-const EVENTS_MAX = 40
+/** The most recipients the page lists. */
 const RECIPIENTS_MAX = 40
 
 const MANAGER = ["owner", "manager"] as const
@@ -81,17 +78,7 @@ export class ZaloPageService {
             ),
             this.inboxReads.followEvents(connection.id),
         ])
-        const nameOf = new Map(conversations.map((conversation) => [conversation.id, conversation.visitorName]))
-        const messages = feed.map((message): MessageEventRow => ({
-            id: message.id,
-            role: message.role,
-            body: message.body,
-            created_at: message.createdAt,
-            delivery_status: message.deliveryStatus,
-            delivery_error: message.deliveryError,
-            visitor_name: nameOf.get(message.conversationId) ?? null,
-        }))
-        return eventsOf(messages, follows, token.view)
+        return eventsOf(messageRowsOf(feed, conversations), follows, token.view)
     }
 
     /**

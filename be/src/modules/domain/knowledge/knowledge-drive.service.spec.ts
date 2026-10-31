@@ -13,7 +13,7 @@ import type { DriveAccessSource } from "./knowledge.contracts"
 const WS = "11111111-1111-4111-8111-111111111111"
 const TOKEN = "ya29.a0AfH6SMB-xyz_123abcdefghij"
 const LISTING = { name: "Menus", files: [], truncated: false }
-const FILE = { id: "a", name: "menu.pdf", mimeType: "application/pdf", size: null, modifiedTime: null, path: "" }
+const FILE = { id: "a", name: "menu.pdf", mimeType: "application/pdf", url: "https://drive.google.com/file/d/a/view", size: null, modifiedTime: null, path: "" }
 
 const build = async (access: DriveAccess | null = null) => {
     const documents = mock<DocumentsPort>()

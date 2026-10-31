@@ -73,6 +73,14 @@ export const driveReadMode = (mimeType: string, name: string): DriveReadModeResu
     return UPLOADED_MIME.test(mimeType) ? "media" : null
 }
 
+/** The address that opens a Drive file in the browser: Docs, Sheets and Slides at their `docs.google.com` editors, anything else in the Drive viewer. */
+export const driveFileUrl = (id: string, mimeType: string): string => {
+    if (mimeType === DRIVE_MIME.doc) return `https://docs.google.com/document/d/${id}/edit`
+    if (mimeType === DRIVE_MIME.sheet) return `https://docs.google.com/spreadsheets/d/${id}/edit`
+    if (mimeType === DRIVE_MIME.slides) return `https://docs.google.com/presentation/d/${id}/edit`
+    return `https://drive.google.com/file/d/${id}/view`
+}
+
 /** What a Google Docs address points at: the document, the sheet (with its tab), the slides. */
 const docsTarget = (url: URL): LinkTarget => {
     const path = url.pathname

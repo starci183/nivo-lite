@@ -29,6 +29,7 @@ describe("connector catalog policy", () => {
         expect(subject.connectorStatusOf("sepay")).toBe("official")
         expect(subject.connectorStatusOf("meta")).toBe("early")
         expect(subject.connectorStatusOf("shopee")).toBe("soon")
+        expect(subject.connectorStatusOf("google_drive")).toBe("early")
     })
 
     it("answers undefined for an id the catalog does not list, whatever its spelling", async () => {

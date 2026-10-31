@@ -149,6 +149,18 @@ export interface ZaloWizardConnection {
     readonly agentIds: ReadonlyArray<string>
 }
 
+/** What connecting a bot again in its existing row sets. */
+export interface TelegramReconnect {
+    /** The name of the connection. */
+    readonly name: string
+    /** The bot facts: its id and username. */
+    readonly meta: Readonly<Record<string, string>>
+    /** The bot token, sealed on write. */
+    readonly token: string
+    /** The new webhook secret. */
+    readonly secret: string
+}
+
 /** What asking a provider about a connection answers. */
 export interface ConnectionCheck {
     /** The provider. */
