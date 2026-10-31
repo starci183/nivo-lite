@@ -18,19 +18,17 @@ schema: starci/application-stacks@1
 sources:
   - repository: nivo-lite
 # CI custody by consumer (one key, one class): GitHub Actions reads these names; values live only in GitHub (owner sets them with
-# starci app ci secret set / var set). App containers never read them; sealed members under .starcistacks/*/secrets hold app keys only.
+# starci app ci secret set / var set). App containers never read them; sealed members under .starcistacks/*/secrets hold app keys only,
+# and the CI deploy transport (key, pinned host keys, manager host and account) is the sealed member production/secrets/vps-ci.enc.yaml,
+# opened by the deploy jobs with SOPS_AGE_KEY: GitHub holds no SSH key, host key, host or account.
 ci:
   github: {repository: starci183/nivo-lite, defaultBranch: main, workflow: ci.yml}
   secrets:
     - {name: SONAR_TOKEN, scope: repository, purpose: sonar.starci.org project token of nivo-lite for the release-tag scan and quality gate}
     - {name: CODECOV_TOKEN, scope: repository, purpose: Codecov upload token fallback; uploads authenticate with GitHub OIDC, optional: true}
-    - {name: SOPS_AGE_KEY, scope: environment, environment: production, purpose: age identity that decrypts the sealed members in the deploy and database workflows}
-    - {name: VPS_SSH_KEY, scope: environment, environment: production, purpose: CI deploy SSH private key for the swarm manager}
-    - {name: VPS_KNOWN_HOSTS, scope: environment, environment: production, purpose: pinned SSH host keys of the swarm manager}
+    - {name: SOPS_AGE_KEY, scope: environment, environment: production, purpose: age identity that decrypts the sealed members (the CI transport vps-ci included) in the deploy and database workflows}
   vars:
     - {name: SONAR_HOST_URL, scope: repository, value: https://sonar.starci.org, purpose: public Sonar server of the host}
-    - {name: VPS_HOST, scope: environment, environment: production, value: 103.142.27.9, purpose: swarm manager address}
-    - {name: VPS_USER, scope: environment, environment: production, value: nivo, purpose: swarm manager SSH user}
 # Application image digests are illustrative all-zero placeholders (the canon lite skeleton form <repo>/<app>:<x.y.z>@sha256:0...0),
 # never a completed release: the deploy workflow binds each build's immutable digest per release (release.json).
 components:
@@ -393,7 +391,7 @@ environments:
         version: 1
         where: secrets/vps
         keys: [VPS_HOST, VPS_USER, privateKey, knownHosts, ciPrivateKey]
-        recipientPolicy: SOPS/age, one member per provider (vps.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys VPS_HOST, VPS_USER, privateKey (operator SSH key), knownHosts (pinned host keys, GitHub VPS_KNOWN_HOSTS) and ciPrivateKey (GitHub environment secret VPS_SSH_KEY), every VPS credential in one member, operator only, never granted.
+        recipientPolicy: SOPS/age, one member per provider (vps.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys VPS_HOST, VPS_USER, privateKey (operator SSH key), knownHosts (pinned host keys) and ciPrivateKey (the operator copy of the CI deploy key; CI itself reads the sealed member vps-ci), every operator VPS credential in one member, operator only, never granted.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: test-accounts
         runtimeName: nivo-custody-test-accounts-v1
@@ -656,7 +654,7 @@ environments:
           - {name: openclaw-data, volume: nivo-engine_openclaw-data}
           - {name: redis-data, volume: nivo-engine_redis-data}
           - {name: ai-router-data, volume: nivo-engine_ai-router-data}
-      # The swarm Traefik is the SHARED ingress of VPS 103.142.27.9 (INGRESS-INVENTORY.md): nivo plus the compose tenants, which are
+      # The swarm Traefik is the SHARED ingress of the VPS (INGRESS-INVENTORY.md): nivo plus the compose tenants, which are
       # reached over the attachable overlay. Tenant route files (academy.yml, tayson.yml) stay in the legacy dynamic directory.
       ingress:
         name: ingress

@@ -126,7 +126,7 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | `WORKSPACE_PROFILE_INPUT` | `test-accounts` | Private profile input `{"schema":"nivo/workspace-profile-input@1","connectors":{"hakuen":{"url":"https://..."}}}`: the endpoint of each remote MCP connector the profile registers. The same workflow hands it to `cli seed-workspace profile` as `WORKSPACE_PROFILE_INPUT_FILE`; a dry run refuses when a connector endpoint is missing. |
 | `privateKey` | `vps` | The operator SSH key (`starci app stack` reads it from the member `deploy.remote.sealed.sshKey` names). |
 | `knownHosts` | `vps` | The pinned host keys (`starci app stack` reads them from the member `deploy.remote.sealed.knownHosts` names). |
-| `ciPrivateKey` | `vps` | The CI deploy key (GitHub environment secret `VPS_SSH_KEY`), kept apart from the operator `privateKey`. |
+| `ciPrivateKey` | `vps` | The operator copy of the CI deploy key (CI itself reads the sealed member `vps-ci`), kept apart from the operator `privateKey`. |
 | `SOPS_AGE_KEY` | not sealed | The owner's age identity (untracked `.claude/secret.env` and the CI environment secret); never an application key. |
 
 ## web: public build values

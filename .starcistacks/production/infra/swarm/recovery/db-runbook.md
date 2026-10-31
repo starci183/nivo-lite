@@ -63,7 +63,7 @@ Restore into a fresh `db` (empty volume; run step 1.1 to 1.2 first, keep the api
 (cd <dir> && sha256sum -c nivo-db-<stamp>.dump.age.sha256)
 bash D:/starci-tmp/nivo-demo/bin/with-age.sh bash -c 'printf "%s\n" "$SOPS_AGE_KEY" | age -d -i - -o <scratch>/r.dump <dir>/nivo-db-<stamp>.dump.age'
 # 2. stream it into the container (the identity and the plain dump never touch the VPS; resolve the id with DOCKER_HOST=ssh://nivo@<vps>)
-export DOCKER_HOST=ssh://nivo@103.142.27.9; C=$(docker ps -q -f name=nivo_db.)
+export DOCKER_HOST=ssh://nivo@<vps>; C=$(docker ps -q -f name=nivo_db.)
 docker cp <scratch>/r.dump $C:/tmp/r.dump
 docker exec $C pg_restore -U supabase_admin -h 127.0.0.1 -d postgres --clean --if-exists --no-owner --exit-on-error /tmp/r.dump
 docker exec $C rm /tmp/r.dump

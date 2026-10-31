@@ -20,7 +20,7 @@ All commands run at the app root of an owner machine that holds the age identity
 
 1. **DNS at Tino**: A records `nivo.vn`, `www.nivo.vn`, `app.nivo.vn` and `api.nivo.vn` pointing at the VPS (`103.142.27.9`). Nothing scripts DNS; receipt: `nslookup api.nivo.vn 1.1.1.1`. The ingress cannot obtain a certificate before this.
 2. **Approve `docker swarm init` on the VPS, once** (already done on the live host). Creating a swarm is an effect with its own recovery: afterwards back up the Swarm state (`starci app stack backup --env production --swarm-state --execute`) and decide on autolock before adding nodes.
-3. **GitHub environment `production`**: secrets `SOPS_AGE_KEY`, `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS`; variables `VPS_HOST`, `VPS_USER`; required reviewers. The age identity stays backed up in the owner's untracked runtime secret file: losing it loses every sealed secret.
+3. **GitHub environment `production`**: secret `SOPS_AGE_KEY` only (the CI transport is the sealed member `vps-ci`, opened with it); required reviewers. The age identity stays backed up in the owner's untracked runtime secret file: losing it loses every sealed secret.
 4. **Packages**: the GHCR packages `nivo-lite-api`, `nivo-lite-mcp`, `nivo-lite-web` and `nivo-lite-landing` are created private by the first run; keep them linked to the repository.
 5. **Database deploy**: the `db-deploy` workflow is retired with Supabase (its SUPABASE_* keys are dropped), and needs a tracked backup receipt path as its input.
 
@@ -62,7 +62,7 @@ The key roster with semantics is `.starcistacks/production/runtime/env/KEYS.md`.
 | `openclaw` | openclaw, api | secrets: `OPENCLAW_GATEWAY_TOKEN` (also granted to the api); `OPENCLAW_MANAGE_AGENTS` (`true` or `false`, granted to the api), `OPENCLAW_TURN_TIMEOUT`; configuration read at render time: `OPENCLAW_MODEL` |
 | `redis` | `nivo-redis`, api task | `QUEUE_REDIS_PASSWORD` |
 | `postgres` | `db` (`POSTGRES_PASSWORD_FILE`), `nivo-postgres-backup`; api task; operator | `POSTGRES_PASSWORD` (superuser), `APP_BE_DB_PASSWORD` (the `app_be` login role), `PRIMARY_DB_URL` |
-| `vps` | operator verbs | `VPS_HOST`, `VPS_USER`, `privateKey` (operator SSH key), `knownHosts` (pinned host keys), `ciPrivateKey` (the CI deploy key, GitHub `VPS_SSH_KEY`); never granted |
+| `vps` | operator verbs | `VPS_HOST`, `VPS_USER`, `privateKey` (operator SSH key), `knownHosts` (pinned host keys), `ciPrivateKey` (the operator copy of the CI deploy key; CI reads the sealed member `vps-ci`); never granted |
 | `web` | web image build | the public build values of the console (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL` and their siblings, never sealed) read by `starci app stack build-args` |
 | `test-accounts` | smoke tests | `READY_OWNER_*`, `READY_STAFF_*`, `DEMO_*` |
 
