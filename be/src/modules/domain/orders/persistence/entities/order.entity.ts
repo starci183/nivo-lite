@@ -2,12 +2,7 @@ import { Column, Entity } from "typeorm"
 
 import { UuidAbstractEntity } from "@modules/platform/database"
 import type { OrderStatus } from "../../orders.contracts"
-
-/** Reads a bigint column as a number, as the order contract always did. */
-const amountTransformer = {
-    to: (value: number | null): number | null => value,
-    from: (value: string | null): number | null => (value === null ? null : Number(value)),
-}
+import { amountTransformer } from "./amount-column.mapper"
 
 @Entity({ schema: "public", name: "orders" })
 /** One sales order of a workspace: one row of `public.orders`. */

@@ -2,12 +2,7 @@ import { Column, Entity } from "typeorm"
 
 import { UuidAbstractEntity } from "@modules/platform/database"
 import type { PaymentOrderRequestKind } from "../../payment-order-requests.contracts"
-
-/** Reads a bigint column as a number, as the request contract always did. */
-const tierTransformer = {
-    to: (value: number | null): number | null => value,
-    from: (value: string | null): number | null => (value === null ? null : Number(value)),
-}
+import { tierTransformer } from "./tier-column.mapper"
 
 @Entity({ schema: "public", name: "payment_order_requests" })
 /** One request to open a payment order, answered by a job: one row of `public.payment_order_requests`. */
