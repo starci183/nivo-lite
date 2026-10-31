@@ -122,11 +122,11 @@ interface CategoryPaneProps extends GridProps {
     readonly selected: CategoryRowView | undefined
 }
 
-/** The pane of the categories on the surface ground: the allowance meter over the list. */
-const CategoryPane = (props: CategoryPaneProps) => {
+/** What the pane of the categories holds: the allowance meter over the list (the Pane itself is the grid's direct child). */
+const CategoryList = (props: CategoryPaneProps) => {
     const view = props.props
     return (
-        <Pane area="list" surface scroll label={view.categoriesLabel}>
+        <>
             {view.usage === undefined ? null : (
                 <div className={METER_CLASS_NAME}>
                     <Meter
@@ -156,7 +156,7 @@ const CategoryPane = (props: CategoryPaneProps) => {
                     description: category.meta,
                 }))}
             />
-        </Pane>
+        </>
     )
 }
 
@@ -172,7 +172,9 @@ const Grid = (props: GridProps) => {
             columns={{ base: ["fill"], medium: ["standard", "fill"] }}
             rows={{ base: ["auto", "fill"], medium: ["fill"] }}
         >
-            <CategoryPane {...props} selected={selected} />
+            <Pane area="list" surface scroll label={view.categoriesLabel}>
+                <CategoryList {...props} selected={selected} />
+            </Pane>
             <Pane area="main" scroll label={view.title}>
                 <div className={MAIN_PANE_CLASS_NAME}>
                     <SectionHeader
