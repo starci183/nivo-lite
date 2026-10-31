@@ -62,6 +62,8 @@ export interface DriveFile {
     readonly modifiedTime: string | null
     /** The folders between the pasted folder and the file, joined by "/"; empty at the top. */
     readonly path: string
+    /** The address that opens the file in the browser. */
+    readonly url: string
 }
 
 /** The files of a Drive folder and whether the listing was cut at the limits. */

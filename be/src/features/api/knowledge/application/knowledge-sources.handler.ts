@@ -21,6 +21,7 @@ export class KnowledgeSourcesHandler extends ICQRSHandler<KnowledgeSourcesQuery,
             query.params.principal.id,
             query.params.request.workspaceId,
             query.params.request.module,
+            query.params.request.origin,
         )
     }
 }

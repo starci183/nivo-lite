@@ -110,17 +110,31 @@ describe("ChannelConnectionsService connectTelegram", () => {
         await expect(attempt()).rejects.toMatchObject({ code: ChannelConnectionsErrorCode.Failed })
         await expect(attempt()).rejects.toMatchObject({ code: ChannelConnectionsErrorCode.Failed })
     })
+})
+describe("ChannelConnectionsService connectTelegram refusing and retrying", () => {
     it("marks the connection broken when Telegram refuses the webhook address", async () => {
         const { service, connections, setup } = await build()
         setup.telegramGetMe.mockResolvedValue({ id: "42", username: "b" })
         setup.telegramSetWebhook.mockRejectedValue(refused(ChannelSetupErrorCode.Refused))
-        await expect(service.connectTelegram(actor, { name: "Shop", token: TOKEN })).rejects.toMatchObject({
-            code: ChannelConnectionsErrorCode.WebhookRefused,
-        })
-        expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
-            status: "error",
-            lastError: ChannelConnectionsErrorCode.WebhookRefused,
-        })
+        const code = ChannelConnectionsErrorCode.WebhookRefused
+        await expect(service.connectTelegram(actor, { name: "Shop", token: TOKEN })).rejects.toMatchObject({ code })
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", { status: "error", lastError: code })
+    })
+    it("connects the bot again in the row of its own workspace and registers the webhook", async () => {
+        const { service, connections, setup } = await build()
+        const hex = matching(/^[0-9a-f]{64}$/u)
+        setup.telegramGetMe.mockResolvedValue({ id: "42", username: "shop_bot" })
+        connections.findLiveByMeta.mockResolvedValue({ id: "c9", workspaceId: "ws-1" })
+        connections.get.mockResolvedValue(record({ id: "c9", provider: "telegram", status: "connected" }))
+        await service.connectTelegram(actor, { name: "Shop bot", token: TOKEN })
+        expect(connections.create).not.toHaveBeenCalled()
+        expect(connections.writeSecret).toHaveBeenCalledWith("c9", TOKEN, hex)
+        expect(connections.patch).toHaveBeenCalledWith(
+            "ws-1",
+            "c9",
+            objectLike({ status: "connected", lastError: null }),
+        )
+        expect(setup.telegramSetWebhook).toHaveBeenCalledWith(TOKEN, "https://nivo.vn/hook/telegram/c9", hex)
     })
 })
 describe("ChannelConnectionsService startMoneyConnection", () => {
@@ -374,10 +388,7 @@ describe("ChannelConnectionsService check", () => {
         for (const [index, [url, lastError, webhookOk]] of cases.entries()) {
             setup.telegramWebhookInfo.mockResolvedValue({ url, pendingUpdateCount: 0, lastErrorMessage: lastError })
             await expect(service.check(actor, "c1")).resolves.toMatchObject({ webhookOk, lastError })
-            expect(connections.patch).toHaveBeenNthCalledWith(index + 1, "ws-1", "c1", {
-                status: "error",
-                lastError,
-            })
+            expect(connections.patch).toHaveBeenNthCalledWith(index + 1, "ws-1", "c1", { status: "error", lastError })
         }
     })
     it("is healthy on a local site whatever Telegram says", async () => {
@@ -397,13 +408,9 @@ describe("ChannelConnectionsService check", () => {
         connections.get.mockResolvedValue(record({ provider: "telegram" }))
         connections.readSecret.mockResolvedValue({ plain: TOKEN, webhookSecret: "h" })
         setup.telegramGetMe.mockRejectedValue(refused(ChannelSetupErrorCode.CredentialRejected))
-        await expect(service.check(actor, "c1")).rejects.toMatchObject({
-            code: ChannelConnectionsErrorCode.TokenRejected,
-        })
-        expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
-            status: "error",
-            lastError: ChannelConnectionsErrorCode.TokenRejected,
-        })
+        const code = ChannelConnectionsErrorCode.TokenRejected
+        await expect(service.check(actor, "c1")).rejects.toMatchObject({ code })
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", { status: "error", lastError: code })
     })
 })
 describe("ChannelConnectionsService check", () => {
@@ -417,13 +424,8 @@ describe("ChannelConnectionsService check", () => {
     })
     it("answers nothing to ask for the other providers", async () => {
         const { service } = await build()
-        await expect(service.check(actor, "c1")).resolves.toEqual({
-            provider: "sepay",
-            webhookOk: false,
-            localOnly: false,
-            pending: 0,
-            lastError: null,
-        })
+        const none = { provider: "sepay", webhookOk: false, localOnly: false, pending: 0, lastError: null }
+        await expect(service.check(actor, "c1")).resolves.toEqual(none)
     })
     it("checks that the Zalo tokens are still usable and heals a connection that was in error", async () => {
         const { service, connections } = await build()

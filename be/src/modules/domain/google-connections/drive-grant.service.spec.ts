@@ -120,6 +120,16 @@ describe("DriveGrantService / grant, authorize and disconnect", () => {
         )
     })
 
+    it("lets only an owner disconnect, a manager is refused", async () => {
+        const { service, connections } = await build()
+        const refusal = new Error("forbidden")
+        connections.authorize.mockRejectedValueOnce(refusal)
+
+        await expect(service.disconnect(actor)).rejects.toBe(refusal)
+        expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner"])
+        expect(connections.remove).not.toHaveBeenCalled()
+    })
+
     it("deletes every grant row of the workspace", async () => {
         const { service, connections } = await build()
         connections.listByProvider.mockResolvedValueOnce([record(), record({ id: "d2", status: "disconnected" })])

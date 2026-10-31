@@ -425,6 +425,23 @@ describe("KnowledgeSourcesService reading", () => {
         )
     })
 
+    it("lists only the sources of one origin, with or without a module", async () => {
+        const em = mockEntityManager({ find: [KnowledgeSourceEntity, [listRowOf()]] })
+        const { service } = await build(em)
+        await service.list("u1", WS, undefined, "google_drive")
+        await service.list("u1", WS, "chatbot", "google_drive")
+        expect(em.find).toHaveBeenNthCalledWith(
+            1,
+            KnowledgeSourceEntity,
+            expect.objectContaining({ where: { workspaceId: WS, origin: "google_drive" } }),
+        )
+        expect(em.find).toHaveBeenNthCalledWith(
+            2,
+            KnowledgeSourceEntity,
+            expect.objectContaining({ where: { workspaceId: WS, module: "chatbot", origin: "google_drive" } }),
+        )
+    })
+
     it("answers no summaries when the workspace has no sources", async () => {
         const em = mockEntityManager({ find: [KnowledgeSourceEntity, []] })
         const { service } = await build(em)

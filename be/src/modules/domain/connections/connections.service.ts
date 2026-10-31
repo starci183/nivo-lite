@@ -174,7 +174,7 @@ export class ConnectionsService {
     /** Every connection of the workspace, oldest first. */
     async list(workspaceId: string): Promise<ReadonlyArray<ConnectionRecord>> {
         const rows = await this.selectConnections(this.entityManager)
-            .where("c.workspaceId = :workspaceId AND c.provider <> 'google_drive'", { workspaceId })
+            .where("c.workspaceId = :workspaceId", { workspaceId })
             .orderBy("c.createdAt")
             .limit(LIST_MAX)
             .getRawMany<ConnectionProjection>()

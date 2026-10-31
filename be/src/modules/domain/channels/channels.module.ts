@@ -12,6 +12,7 @@ import { ZaloProofService } from "./zalo-proof.service"
 import { ZaloConnectService } from "./zalo-connect.service"
 import { ZaloWizardService } from "./zalo-wizard.service"
 import { ZaloPageService } from "./zalo-page.service"
+import { TelegramPageService } from "./telegram-page.service"
 
 @Module({})
 /** Delivery to the customer channel, the Zalo token lifecycle, the connection health check and the webhook proofs of the messaging channels. */
@@ -33,6 +34,7 @@ export class ChannelsModule extends ConfigurableModuleClass {
                 ZaloWizardService,
                 ZaloConnectService,
                 ZaloPageService,
+                TelegramPageService,
                 { provide: CHANNEL_SENDER_REGISTRY, useExisting: ChannelSenderRegistryService },
                 { provide: ZALO_INBOX_READS, useExisting: options.ports.inbox },
             ],
@@ -41,6 +43,7 @@ export class ChannelsModule extends ConfigurableModuleClass {
                 ZaloWizardService,
                 ZaloConnectService,
                 ZaloPageService,
+                TelegramPageService,
                 ChannelDeliveryService,
                 ConnectionHealthService,
                 CHANNEL_SENDER_REGISTRY,

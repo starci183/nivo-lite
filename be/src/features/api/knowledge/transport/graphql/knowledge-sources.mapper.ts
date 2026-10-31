@@ -11,6 +11,7 @@ export const toKnowledgeSourcesRequest = (
 ): KnowledgeSourcesRequest => ({
     workspaceId,
     module: input.module,
+    origin: input.origin,
 })
 
 /** Maps the answer to the GraphQL type. */

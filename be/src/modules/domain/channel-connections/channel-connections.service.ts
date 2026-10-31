@@ -18,6 +18,7 @@ import type { Logger } from "@modules/platform/logging"
 import { ChannelConnectionsLogEvent } from "./channel-connections.log-events"
 import { ChannelConnectionsError, ChannelConnectionsErrorCode } from "./errors/channel-connections.error"
 import type {
+    TelegramReconnect,
     TelegramStart,
     ConnectionCheck,
     ProviderKeyValues,
@@ -74,21 +75,27 @@ export class ChannelConnectionsService {
             throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.TokenFormat })
         }
         const me = await this.viaSetup(() => this.setup.telegramGetMe(token))
-        // One bot has one webhook: refuse a bot that is already live in a connection instead of stealing its customers.
-        if ((await this.connections.findLiveByMeta("telegram", "bot_id", me.id)) !== null) {
+        // One bot has one webhook: refuse a bot that is live in another workspace instead of stealing its customers. The bot of
+        // this workspace (a retry after a refused webhook) is connected again in its own row.
+        const held = await this.connections.findLiveByMeta("telegram", "bot_id", me.id)
+        if (held !== null && held.workspaceId !== actor.workspaceId) {
             throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.BotInUse })
         }
         const secret = randomSecret()
-        const id = await this.connections.create({
-            workspaceId: actor.workspaceId,
-            createdBy: actor.principalId,
-            provider: "telegram",
-            name,
-            status: "connected",
-            environment: "live",
-            meta: { bot_id: me.id, bot_username: me.username },
-            secret: { plain: token, webhookSecret: secret },
-        })
+        const meta = { bot_id: me.id, bot_username: me.username }
+        const id =
+            held === null
+                ? await this.connections.create({
+                      workspaceId: actor.workspaceId,
+                      createdBy: actor.principalId,
+                      provider: "telegram",
+                      name,
+                      status: "connected",
+                      environment: "live",
+                      meta,
+                      secret: { plain: token, webhookSecret: secret },
+                  })
+                : await this.reconnectTelegram(actor, held.id, { name, meta, token, secret })
         // setWebhook only works on a public https address; on localhost the connection is stored and registered later on the real domain.
         const origin = this.connections.publicOrigin()
         if (origin !== null) {
@@ -108,6 +115,22 @@ export class ChannelConnectionsService {
             accountMasked: null,
             webhookRegistered: origin !== null,
         }
+    }
+
+    /** Connects the bot again in the row it already has: a new token and webhook secret, a clean status. */
+    private async reconnectTelegram(
+        actor: ConnectionActor,
+        id: string,
+        fresh: TelegramReconnect,
+    ): Promise<string> {
+        await this.connections.writeSecret(id, fresh.token, fresh.secret)
+        await this.connections.patch(actor.workspaceId, id, {
+            name: fresh.name,
+            meta: fresh.meta,
+            status: "connected",
+            lastError: null,
+        })
+        return id
     }
 
     /**

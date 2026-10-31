@@ -1,4 +1,5 @@
 import type { DriveFile } from "./documents.contracts"
+import { driveFileUrl } from "./drive-link.policy"
 import { fieldOf, textOf } from "./response-body.mapper"
 
 /** The metadata of one Drive item, as far as reading needs it. */
@@ -45,6 +46,7 @@ export const fileOf = (meta: DriveMeta, id: string, path: string): DriveFile => 
     id,
     name: meta.name ?? id,
     mimeType: meta.mimeType ?? "",
+    url: driveFileUrl(id, meta.mimeType ?? ""),
     size: meta.size === undefined ? null : Number(meta.size),
     modifiedTime: meta.modifiedTime ?? null,
     path,

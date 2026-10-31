@@ -3263,6 +3263,7 @@ type DriveFileType {
   name: String!
   path: String!
   size: Float
+  url: String!
 }
 
 type DriveFolderType {
@@ -3366,6 +3367,10 @@ input GetRecentTitlesInput {
 }
 
 input GetSepayConnectionInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+}
+
+input GetTelegramPageInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
@@ -4044,6 +4049,7 @@ type KnowledgeSourceType {
 
 input KnowledgeSourcesInput {
   module: String @inputBounds(maxLength: 64)
+  origin: String @inputBounds(maxLength: 64)
 }
 
 type KnowledgeSuggestionContextType {
@@ -4468,6 +4474,10 @@ input ListSepayEventsInput {
 }
 
 input ListTelegramChatsInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+}
+
+input ListTelegramEventsInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
@@ -6268,6 +6278,8 @@ type Query {
   setupVersions(input: ModuleInstallationIdInput!): SetupVersionsType!
   shiftsMine: ShiftsMineType!
   shiftsWorkbench(week: String): ShiftsBenchType!
+  telegramEvents(input: ListTelegramEventsInput!): [TelegramEventType!]!
+  telegramPage(input: GetTelegramPageInput!): TelegramPageType!
   telegramUserReady: TelegramUserReadyType!
   testDatabase(input: TestDatabaseInput!): [DatabaseTableType!]!
   testImapConnection(input: TestImapConnectionInput!): ImapFoldersType!
@@ -8248,6 +8260,15 @@ type TelegramConnectedType {
   webhookRegistered: Boolean!
 }
 
+type TelegramEventType {
+  at: String!
+  id: ID!
+  kind: String!
+  outcome: String!
+  reason: String
+  who: String!
+}
+
 type TelegramLoginStageType {
   stage: String!
 }
@@ -8255,6 +8276,18 @@ type TelegramLoginStageType {
 type TelegramLoginStartedType {
   connectionId: ID!
   viaApp: Boolean!
+}
+
+type TelegramPageType {
+  agentIds: [ID!]!
+  botUsername: String!
+  healthy: Boolean!
+  id: ID!
+  lastError: String
+  lastEventAt: String
+  name: String!
+  status: String!
+  webhookUrl: String!
 }
 
 input TelegramPickedChatInput {

@@ -4,4 +4,6 @@ export interface KnowledgeSourcesRequest {
     readonly workspaceId: string
     /** Only the documents of this module. */
     readonly module?: string | undefined
+    /** Only the documents that came from this origin, e.g. `google_drive`. */
+    readonly origin?: string | undefined
 }

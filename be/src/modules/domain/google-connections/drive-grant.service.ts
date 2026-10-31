@@ -12,6 +12,7 @@ import { GoogleTokensService } from "./google-tokens.service"
 import { grantsDriveRead } from "./policies/google-tokens.policy"
 
 const MANAGER = ["owner", "manager"] as const
+const OWNER = ["owner"] as const
 const PROVIDER = "google_drive"
 
 const isRejectedToken = (error: unknown): boolean =>
@@ -52,9 +53,9 @@ export class DriveGrantService implements DriveAccessSource {
         return this.tokens.consent({ actor, returnTo, scope: DRIVE_READ_SCOPE, purpose: DRIVE_PURPOSE })
     }
 
-    /** Forgets the grant: the connection and its sealed tokens are deleted (the access can still be removed on the Google side). */
+    /** Forgets the grant (owner only, like Zalo and SePay): the connection and its sealed tokens are deleted (the access can still be removed on the Google side). */
     async disconnect(actor: ConnectionActor): Promise<void> {
-        await this.connections.authorize(actor, MANAGER)
+        await this.connections.authorize(actor, OWNER)
         const rows = await this.connections.listByProvider(actor.workspaceId, PROVIDER, { includeDisconnected: true })
         await Promise.all(rows.map((row) => this.connections.remove(actor.workspaceId, row.id)))
     }
