@@ -15,8 +15,8 @@ const GATEWAY_HOST = "0.0.0.0"
 const KEY_OWNER = "nivo-lite"
 
 /**
- * The gateway over the registered router: virtual keys in a SQLite file plus the keys mounted from sealed secrets, the admin token
- * read at each admin request, its own port (the app port plus one).
+ * The gateway over the registered router: the key store (usage and quota of the mounted keys) in a SQLite file, the keys mounted
+ * from sealed secrets, its own port (the app port plus one). No admin token: a key changes only by resealing it and deploying.
  */
 const gatewayOf = (gateway: AiGatewayHost, router: DynamicModule): DynamicModule =>
     AiRouterGatewayModule.registerAsync({
@@ -30,7 +30,6 @@ const gatewayOf = (gateway: AiGatewayHost, router: DynamicModule): DynamicModule
                 profiles: key.profiles,
                 owner: KEY_OWNER,
             })),
-            adminToken: () => gateway.adminToken?.reveal(),
             listen: { offset: 1, host: GATEWAY_HOST },
         }),
     })

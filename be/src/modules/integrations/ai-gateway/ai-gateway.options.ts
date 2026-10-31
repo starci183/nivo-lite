@@ -40,8 +40,6 @@ export interface AiGatewayMountedKey {
 export interface AiGatewayHost {
     /** Where the SQLite file of the virtual keys lives. */
     readonly keysPath: string
-    /** The admin API token: always null, the app runs no admin API (a key changes by resealing and deploying). */
-    readonly adminToken: Secret | null
     /** The virtual keys mounted from sealed secrets, so a deploy issues no key by hand. */
     readonly mountedKeys: ReadonlyArray<AiGatewayMountedKey>
 }

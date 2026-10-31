@@ -41,7 +41,11 @@ describe("aiGatewayOf", () => {
         })
 
         it("pools the numbered siblings of the upstream key, in order, and skips a gap", async () => {
-            const options = await parse({ OPENROUTER_API_KEY: "a", OPENROUTER_API_KEY_2: "b", OPENROUTER_API_KEY_4: "d" })
+            const options = await parse({
+                OPENROUTER_API_KEY: "a",
+                OPENROUTER_API_KEY_2: "b",
+                OPENROUTER_API_KEY_4: "d",
+            })
 
             expect(options.providers[0]?.keys.map((key) => [key.alias, key.secret.reveal()])).toEqual([
                 ["OPENROUTER_API_KEY", "a"],
@@ -85,7 +89,7 @@ describe("aiGatewayOf, the gateway", () => {
     it("keeps the default key file and reads no port (it is the app port plus one)", async () => {
         const options = await parse({ OPENROUTER_API_KEY: "k" })
 
-        expect(options.gateway).toEqual({ keysPath: "ai-router-keys.sqlite", adminToken: null, mountedKeys: [] })
+        expect(options.gateway).toEqual({ keysPath: "ai-router-keys.sqlite", mountedKeys: [] })
     })
 
     it("mounts the one StarCi virtual key when it is declared, with its label and profiles", async () => {

@@ -19,9 +19,7 @@ const MOUNTED_KEYS: ReadonlyArray<{
     readonly env: string
     readonly label: string
     readonly profiles: ReadonlyArray<string>
-}> = [
-    { env: "STARCI_AI_KEY", label: "nivo", profiles: ["work", "embed"] },
-]
+}> = [{ env: "STARCI_AI_KEY", label: "nivo", profiles: ["work", "embed"] }]
 
 /** The part of the env reader the pool reads through, so a `<KEY>_FILE` mount supplies a key like a plain variable. */
 export interface AiGatewayEnv {
@@ -49,7 +47,10 @@ const keysOf = (env: AiGatewayEnv, names: ReadonlyArray<string>): Array<AiGatewa
     const name = names.find((candidate) => env.has(candidate))
     if (name === undefined) return []
     const siblings = Array.from({ length: POOL_SIZE - 1 }, (_, index) => `${name}_${String(index + 2)}`)
-    return [name, ...siblings.filter((sibling) => env.has(sibling))].map((alias) => ({ alias, secret: env.secret(alias) }))
+    return [name, ...siblings.filter((sibling) => env.has(sibling))].map((alias) => ({
+        alias,
+        secret: env.secret(alias),
+    }))
 }
 
 /** The mounted keys whose variable is declared; an undeclared one is simply not mounted. */
@@ -63,7 +64,6 @@ const mountedKeysOf = (env: AiGatewayEnv): Array<AiGatewayMountedKey> =>
 /** The gateway this process hosts; its port is the app port plus one (BE-AI-1), so no port is read here. */
 const gatewayOf = (env: AiGatewayEnv): AiGatewayHost => ({
     keysPath: env.optional("AI_ROUTER_KEYS_PATH") ?? KEYS_PATH,
-    adminToken: null,
     mountedKeys: mountedKeysOf(env),
 })
 
