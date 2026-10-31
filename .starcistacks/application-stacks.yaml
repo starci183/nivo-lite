@@ -516,6 +516,8 @@ environments:
     # Shared VPS ingress and the verbs of the canon (starci app stack ...): the data below is the only app-specific deploy configuration.
     deploy:
       stack: nivo
+      # Every green release tag (v*) deploys through ci.yml (owner approval 2026-10-31); the GitHub variable STARCI_DEPLOY_PAUSED=true is the brake.
+      auto: true
       remote:
         host: vps
         releasesBase: /srv/nivo
@@ -710,6 +712,8 @@ release:
     - {name: test, command: [npm, run, test], summary: jest}
 # Database history for `starci app db migrate` / `post-cutover` (the 24 restamped versions come from be/docs/runbooks/migration-restamp.md).
 database:
+  target: stack
+  service: db
   migrationsDir: db/migrations
   archiveDir: db/migrations/archive
   baseline: baseline
