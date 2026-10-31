@@ -125,6 +125,17 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         dashboard: { live: "https://sheets.google.com" },
         credentials: [],
     },
+    google_drive: {
+        id: "google_drive",
+        kind: "drive",
+        brand: "Drive",
+        module: null,
+        earlyAccess: true,
+        environments: ["live"],
+        needsBank: false,
+        dashboard: { live: "https://drive.google.com" },
+        credentials: [],
+    },
     smtp: {
         id: "smtp",
         kind: "email",
@@ -146,6 +157,7 @@ export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {
     zalo_oa: "/logos/providers/zalo.svg",
     meta: "/logos/providers/meta.svg",
     google: "/logos/providers/googlesheets.svg",
+    google_drive: "/logos/connectors/google_drive_generic.svg",
     webhook: "/logos/providers/n8n.svg",
     // The app's own connector artwork (public/logos/connectors): the data sources have no brand of their own.
     database: "/logos/connectors/database.svg",

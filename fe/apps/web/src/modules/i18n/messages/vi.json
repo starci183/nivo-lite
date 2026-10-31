@@ -1170,6 +1170,15 @@
     "guide_webhook_n8n_0_text": "Trong n8n, thêm node Webhook: Method POST, rồi sao chép Production URL.",
     "provider_google_title": "Google (Sheets)",
     "provider_google_blurb": "Kết nối tài khoản Google để NIVO ghi đơn hàng vào bảng tính của bạn.",
+    "errWebhookRefused": "Token hợp lệ, nhưng Telegram từ chối địa chỉ webhook.",
+    "errZaloTokenRefused": "Zalo từ chối token của OA này. Hãy kết nối lại OA.",
+    "errTokenRejected": "Telegram từ chối token này. Hãy kiểm tra bạn đã sao chép đủ token từ @BotFather, hoặc tạo token mới bằng lệnh /token.",
+    "errTokenFormat": "Đây không giống token bot Telegram. Token có dạng 123456789:AAE... - hãy sao chép lại từ @BotFather.",
+    "errBotInUse": "Bot này đang được kết nối ở một workspace khác. Hãy ngắt kết nối ở đó trước, hoặc tạo bot mới bằng @BotFather.",
+    "errNetwork": "Không kết nối được tới dịch vụ. Hãy kiểm tra mạng rồi thử lại.",
+    "driveReconnect": "Cấp lại quyền",
+    "provider_google_drive_title": "Google Drive",
+    "provider_google_drive_blurb": "Tài liệu trong thư mục bạn chọn.",
     "provider_smtp_title": "Email gửi đi",
     "provider_smtp_blurb": "Gửi báo cáo, biên nhận và nhắc công nợ bằng chính email của cửa hàng bạn.",
     "catalog_sepay_brings": "Giao dịch tiền vào tài khoản ngân hàng",
@@ -2408,7 +2417,11 @@
     "office": {
       "title": "Office",
       "what": "Phòng làm việc chung: nhắn với đội và các agent AI, duyệt việc AI đề xuất.",
-      "steps": ["Mở Office", "Gõ @tên-agent để gọi agent", "Duyệt hoặc sửa các thẻ chờ duyệt"],
+      "steps": [
+        "Mở Office",
+        "Gõ @tên-agent để gọi agent",
+        "Duyệt hoặc sửa các thẻ chờ duyệt"
+      ],
       "keywords": [
         "office",
         "van phong",
@@ -2429,8 +2442,20 @@
     "overview": {
       "title": "Tổng quan",
       "what": "Bức tranh chung: kết quả, việc đang chờ, ngoại lệ cần chú ý.",
-      "steps": ["Mở Tổng quan", "Xem các thẻ kết quả và việc chờ"],
-      "keywords": ["tong quan", "dashboard", "bao cao", "ket qua", "doanh thu", "tinh hinh", "overview", "report"]
+      "steps": [
+        "Mở Tổng quan",
+        "Xem các thẻ kết quả và việc chờ"
+      ],
+      "keywords": [
+        "tong quan",
+        "dashboard",
+        "bao cao",
+        "ket qua",
+        "doanh thu",
+        "tinh hinh",
+        "overview",
+        "report"
+      ]
     },
     "authority": {
       "title": "Giao quyền",
@@ -2457,13 +2482,28 @@
     "inbox": {
       "title": "Đầu vào",
       "what": "Mọi thứ đi vào: tin nhắn khách, đơn, giao dịch ngân hàng, từ mọi kênh.",
-      "steps": ["Mở Đầu vào", "Lọc theo kênh hoặc loại"],
-      "keywords": ["dau vao", "inbox", "tin nhan den", "tin nhan khach", "giao dich den", "don moi", "hop thu"]
+      "steps": [
+        "Mở Đầu vào",
+        "Lọc theo kênh hoặc loại"
+      ],
+      "keywords": [
+        "dau vao",
+        "inbox",
+        "tin nhan den",
+        "tin nhan khach",
+        "giao dich den",
+        "don moi",
+        "hop thu"
+      ]
     },
     "leads": {
       "title": "Khách hàng",
       "what": "Danh sách khách và cơ hội bán hàng, ai phụ trách và việc tiếp theo.",
-      "steps": ["Mở Khách hàng", "Bấm Thêm khách hàng để thêm một khách", "Mở một khách để xem lịch sử và giao việc"],
+      "steps": [
+        "Mở Khách hàng",
+        "Bấm Thêm khách hàng để thêm một khách",
+        "Mở một khách để xem lịch sử và giao việc"
+      ],
       "keywords": [
         "khach hang",
         "lead",
@@ -2480,19 +2520,44 @@
     "responsibilities": {
       "title": "Trách nhiệm",
       "what": "Ai đang chịu trách nhiệm việc gì, hạn chót và bước tiếp theo.",
-      "steps": ["Mở Trách nhiệm", "Lọc theo người phụ trách hoặc trạng thái"],
-      "keywords": ["trach nhiem", "ai lam gi", "viec cua ai", "han chot", "phu trach", "responsibility", "task"]
+      "steps": [
+        "Mở Trách nhiệm",
+        "Lọc theo người phụ trách hoặc trạng thái"
+      ],
+      "keywords": [
+        "trach nhiem",
+        "ai lam gi",
+        "viec cua ai",
+        "han chot",
+        "phu trach",
+        "responsibility",
+        "task"
+      ]
     },
     "decisions": {
       "title": "Lịch sử quyết định",
       "what": "Nhật ký mọi quyết định: AI tự làm, người duyệt, người sửa, kèm lý do.",
-      "steps": ["Mở Lịch sử quyết định", "Lọc theo bộ phận hoặc người quyết định"],
-      "keywords": ["lich su quyet dinh", "quyet dinh", "nhat ky", "ai da duyet", "decision", "audit"]
+      "steps": [
+        "Mở Lịch sử quyết định",
+        "Lọc theo bộ phận hoặc người quyết định"
+      ],
+      "keywords": [
+        "lich su quyet dinh",
+        "quyet dinh",
+        "nhat ky",
+        "ai da duyet",
+        "decision",
+        "audit"
+      ]
     },
     "automations": {
       "title": "Tự động hoá",
       "what": "Quy trình tự chạy theo lịch hoặc sự kiện: nhắc nợ, báo cáo, chăm sóc khách.",
-      "steps": ["Mở Tự động hoá", "Chọn một mẫu có sẵn hoặc tạo mới", "Bật quy trình"],
+      "steps": [
+        "Mở Tự động hoá",
+        "Chọn một mẫu có sẵn hoặc tạo mới",
+        "Bật quy trình"
+      ],
       "keywords": [
         "tu dong hoa",
         "tu dong",
@@ -2508,7 +2573,12 @@
     "knowledge": {
       "title": "Tri thức",
       "what": "Dạy AI về doanh nghiệp: bảng giá, chính sách, câu hỏi thường gặp, tài liệu, link.",
-      "steps": ["Mở Tri thức", "Bấm Thêm nguồn", "Dán nội dung, tải tệp hoặc dán link", "Lưu để AI dùng khi trả lời"],
+      "steps": [
+        "Mở Tri thức",
+        "Bấm Thêm nguồn",
+        "Dán nội dung, tải tệp hoặc dán link",
+        "Lưu để AI dùng khi trả lời"
+      ],
       "keywords": [
         "tri thuc",
         "kien thuc",
@@ -2548,7 +2618,11 @@
     "modules": {
       "title": "Agent",
       "what": "Cài và cấu hình các agent: Chatbot, Bán hàng, Kế toán, Đặt lịch, Kho, Tuyển dụng…",
-      "steps": ["Mở Agent", "Chọn agent cần dùng và bấm Cài", "Làm theo các bước thiết lập"],
+      "steps": [
+        "Mở Agent",
+        "Chọn agent cần dùng và bấm Cài",
+        "Làm theo các bước thiết lập"
+      ],
       "keywords": [
         "module",
         "modules",
@@ -2567,7 +2641,12 @@
     "team": {
       "title": "Đội ngũ",
       "what": "Mời người vào workspace và chọn vai trò: Chủ sở hữu, Quản lý, Nhân viên.",
-      "steps": ["Mở Đội ngũ", "Bấm Mời thành viên", "Nhập email và chọn vai trò", "Gửi lời mời hoặc sao chép link mời"],
+      "steps": [
+        "Mở Đội ngũ",
+        "Bấm Mời thành viên",
+        "Nhập email và chọn vai trò",
+        "Gửi lời mời hoặc sao chép link mời"
+      ],
       "keywords": [
         "doi ngu",
         "moi nhan vien",
@@ -2585,8 +2664,17 @@
     "connections": {
       "title": "Kết nối",
       "what": "Nối NIVO với ngân hàng, Telegram, Zalo OA, email, Google Sheets, n8n.",
-      "steps": ["Mở Kết nối", "Chọn dịch vụ và bấm Thêm kết nối", "Làm theo hướng dẫn từng bước"],
-      "keywords": ["ket noi", "tich hop", "connection", "integration"]
+      "steps": [
+        "Mở Kết nối",
+        "Chọn dịch vụ và bấm Thêm kết nối",
+        "Làm theo hướng dẫn từng bước"
+      ],
+      "keywords": [
+        "ket noi",
+        "tich hop",
+        "connection",
+        "integration"
+      ]
     },
     "connections-sepay": {
       "title": "Kết nối SePay (tiền về)",
@@ -2642,7 +2730,12 @@
         "Dán Callback URL và Webhook URL sang Zalo, bật sự kiện tin nhắn",
         "Bấm Kết nối Zalo OA để chủ OA đồng ý"
       ],
-      "keywords": ["zalo", "zalo oa", "official account", "oa"]
+      "keywords": [
+        "zalo",
+        "zalo oa",
+        "official account",
+        "oa"
+      ]
     },
     "connections-smtp": {
       "title": "Email gửi đi",
@@ -2652,13 +2745,29 @@
         "Nhập máy chủ SMTP hoặc chọn nhà cung cấp",
         "Gửi thử một email"
       ],
-      "keywords": ["email", "smtp", "gui email", "gmail", "thu dien tu"]
+      "keywords": [
+        "email",
+        "smtp",
+        "gui email",
+        "gmail",
+        "thu dien tu"
+      ]
     },
     "connections-google": {
       "title": "Google Sheets",
       "what": "NIVO ghi đơn hàng vào bảng tính Google của bạn.",
-      "steps": ["Mở Kết nối › Google (Sheets) › Thêm kết nối", "Đăng nhập Google và cho phép", "Chọn bảng tính"],
-      "keywords": ["google sheet", "google sheets", "bang tinh", "excel", "spreadsheet"]
+      "steps": [
+        "Mở Kết nối › Google (Sheets) › Thêm kết nối",
+        "Đăng nhập Google và cho phép",
+        "Chọn bảng tính"
+      ],
+      "keywords": [
+        "google sheet",
+        "google sheets",
+        "bang tinh",
+        "excel",
+        "spreadsheet"
+      ]
     },
     "connections-webhook": {
       "title": "n8n / Webhook",
@@ -2668,13 +2777,29 @@
         "Dán URL webhook của n8n",
         "Chọn sự kiện cần gửi và gửi thử"
       ],
-      "keywords": ["n8n", "webhook", "zapier", "make.com", "make"]
+      "keywords": [
+        "n8n",
+        "webhook",
+        "zapier",
+        "make.com",
+        "make"
+      ]
     },
     "developers": {
       "title": "Nhà phát triển (API)",
       "what": "Tạo khóa API để phần mềm khác đọc và ghi dữ liệu NIVO.",
-      "steps": ["Mở Nhà phát triển", "Đặt tên khóa và bấm Tạo", "Sao chép khóa ngay, NIVO chỉ hiện một lần"],
-      "keywords": ["api", "khoa api", "api key", "developer", "lap trinh"]
+      "steps": [
+        "Mở Nhà phát triển",
+        "Đặt tên khóa và bấm Tạo",
+        "Sao chép khóa ngay, NIVO chỉ hiện một lần"
+      ],
+      "keywords": [
+        "api",
+        "khoa api",
+        "api key",
+        "developer",
+        "lap trinh"
+      ]
     },
     "billing": {
       "title": "Credit và gói",
@@ -2704,7 +2829,10 @@
     "account": {
       "title": "Tài khoản của bạn",
       "what": "Đổi tên hiển thị, email, mật khẩu và đăng xuất các thiết bị khác.",
-      "steps": ["Mở menu ảnh đại diện › Tài khoản", "Sửa thông tin và bấm Lưu"],
+      "steps": [
+        "Mở menu ảnh đại diện › Tài khoản",
+        "Sửa thông tin và bấm Lưu"
+      ],
       "keywords": [
         "tai khoan cua toi",
         "thong tin tai khoan",
@@ -2840,6 +2968,8 @@
     "driveErrScope": "Quyền Drive đã bị bỏ chọn trên màn hình của Google. Hãy cấp lại và giữ nguyên ô đó.",
     "driveErrUnavailable": "NIVO chưa bật quyền Google Drive. Hãy báo cho chúng tôi để bật.",
     "driveErrGeneric": "Chưa kết nối được Google Drive. Hãy thử lại.",
+    "driveErrNoRefresh": "Google chưa cấp quyền lâu dài. Hãy cấp quyền Google Drive lại và đồng ý mọi quyền.",
+    "driveErrState": "Liên kết kết nối đã hết hạn. Hãy cấp quyền Google Drive lại.",
     "errNeedGrant": "Cần cấp quyền Google Drive",
     "zipReading": "Đang mở tệp ZIP…",
     "errNestedZip": "ZIP nằm trong ZIP không được mở. Hãy giải nén và thêm riêng.",
@@ -6908,6 +7038,9 @@
   },
   "mcpGateway": {
     "label": "Cổng MCP",
+    "toolAgents": "Agent được dùng {tool}",
+    "grantSwitch": "Cho phép dùng công cụ:",
+    "grantSaved": "Đã lưu quyền dùng công cụ.",
     "connectors": "Các kết nối sau một cổng MCP duy nhất",
     "connectorsEmpty": "Chưa có kết nối",
     "connectorsEmptyHint": "Kết nối có sẵn luôn ở đây; kết nối từ xa hiện ra khi được đăng ký.",
@@ -7338,5 +7471,195 @@
     "settingRetryValue": "Bật",
     "settingAccount": "Tài khoản",
     "matchingRule": "Tự đối soát khi nội dung chuyển khoản chứa đúng một số hoá đơn hoặc mã đơn đã phát hành và số tiền khớp tuyệt đối. Còn lại NIVO giữ khoản tiền và gợi ý cho bạn chọn hoá đơn."
+  },
+  "driveConnection": {
+    "title": "Google Drive",
+    "crumbLabel": "Đường dẫn",
+    "crumbConnections": "Kết nối",
+    "crumbDrive": "Google Drive",
+    "loadFailed": "Không tải được kết nối Google Drive.",
+    "mainLabel": "Thiết lập và tình trạng",
+    "chipNone": "Chưa kết nối",
+    "chipOk": "Đã kết nối",
+    "chipCheck": "Cần kiểm tra",
+    "factsNone": "Chưa có tài khoản Google",
+    "toastDisconnected": "Đã ngắt kết nối Google Drive.",
+    "cancel": "Hủy",
+    "grant": "Cấp quyền Google Drive",
+    "regrant": "Cấp lại quyền",
+    "emptyTitle": "Cần cấp quyền Google Drive",
+    "emptyBody": "NIVO chỉ đọc, không sửa hay xoá gì trong Drive của bạn, và bạn có thể ngắt kết nối bất cứ lúc nào.",
+    "lostTitle": "Quyền Google Drive đã bị thu hồi. Hãy cấp lại.",
+    "lostBody": "Quyền Drive đã bị thu hồi trong tài khoản Google của bạn. Hãy cấp lại để đọc tệp và thư mục riêng tư.",
+    "tileScope": "Quyền",
+    "tileScopeValue": "Chỉ đọc",
+    "tileScopeMeta": "drive.readonly",
+    "tileAccount": "Tài khoản Google",
+    "tileAccountMeta": "Một quyền cho cả workspace",
+    "tileUsage": "Dữ liệu thô đã dùng",
+    "tileUsageMeta": "Tính chung cả workspace",
+    "factsEmpty": "Chưa có thông tin.",
+    "stepGrant": "Cấp quyền",
+    "stepChoose": "Chọn tài liệu",
+    "stepBrain": "Second Brain",
+    "stepGrantHint": "NIVO chỉ đọc, không sửa hay xoá gì trong Drive của bạn, và bạn có thể ngắt kết nối bất cứ lúc nào.",
+    "stepChooseHint": "Chọn thư mục hoặc tệp trên Drive. NIVO đọc thư mục và 3 cấp bên dưới, tối đa 300 tệp.",
+    "stepBrainHint": "Tài liệu đã nạp hiện ở tab Nguồn của Second Brain.",
+    "stepTodo": "Cần làm",
+    "stepGrantDone": "Xong · {email}",
+    "stepGrantLost": "Cần cấp lại",
+    "stepChooseDone": "Đã nạp {count} tài liệu",
+    "stepBrainSummary": "Tab Nguồn",
+    "openBrain": "Mở Second Brain",
+    "linkLabel": "Link thư mục Drive",
+    "linkPlaceholder": "https://drive.google.com/drive/folders/…",
+    "linkHelp": "Trang web, Google Docs, Sheets, Slides, tệp Drive đã chia sẻ hoặc thư mục Drive. Tài khoản Google đã cấp quyền phải mở được thư mục này.",
+    "linkRead": "Đọc thư mục",
+    "pick": "Chọn từ Google Drive",
+    "pickFailed": "Chưa mở được Google Picker. Hãy thử lại hoặc dán link thư mục.",
+    "pickedFiles": "Tệp đã chọn",
+    "listingCount": "{total} tệp · đã chọn {ticked}",
+    "filesLabel": "Tệp trong thư mục",
+    "fileSize": "{size} MB",
+    "fileModified": "sửa {date}",
+    "fileUnreadable": "Chưa đọc được loại tệp này. Hỗ trợ trang web, văn bản, PDF và Word.",
+    "truncated": "Thư mục này vượt giới hạn nên NIVO chỉ liệt kê 300 tệp đầu. Hãy chọn thư mục nhỏ hơn cho phần còn lại.",
+    "pickedEmptyTitle": "Chưa đọc được thư mục này",
+    "pickedEmptyBody": "Google không cho liệt kê thư mục đã chọn. Hãy mở thư mục trong Google Picker và chọn từng tệp bên trong.",
+    "visibilityLabel": "Ai được dùng",
+    "visInternal": "Nội bộ",
+    "visPublic": "Công khai",
+    "visInternalHelp": "Nội bộ: chỉ agent nội bộ và nhân viên",
+    "visPublicHelp": "Công khai: cả agent chăm sóc khách hàng được trả lời từ tài liệu này",
+    "add": "Thêm {count} tài liệu",
+    "addedBody": "Đã đưa {count} tài liệu vào hàng chờ. NIVO đọc trong nền, bạn có thể đóng cửa sổ.",
+    "disconnectTitle": "Ngắt kết nối",
+    "disconnectBody": "NIVO xóa token đã lưu. Tài liệu đã nạp vẫn ở lại Second Brain, tệp và link riêng tư sẽ không đọc lại được. Quyền vẫn còn trong tài khoản Google cho tới khi bạn thu hồi ở đó.",
+    "disconnectEntry": "Ngắt kết nối…",
+    "disconnectQuestion": "Ngắt Google Drive?",
+    "disconnectConfirmBody": "NIVO xóa token đã lưu. Tài liệu đã nạp vẫn ở lại Second Brain, nhưng tệp riêng tư sẽ không đọc lại được. Bạn vẫn cần thu hồi quyền trong tài khoản Google nếu muốn gỡ hẳn.",
+    "disconnectConfirm": "Ngắt kết nối",
+    "progressTitle": "Tiến độ nạp",
+    "progressOpen": "Mở tiến độ nạp",
+    "progressClose": "Đóng tiến độ nạp",
+    "progressLive": "Trực tiếp",
+    "progressFootnote": "Cập nhật mỗi 5 giây.",
+    "progressEmpty": "Chưa có tài liệu nào đến từ Google Drive.",
+    "retry": "Thử lại"
+  },
+  "driveWizard": {
+    "stepGrant": "Cấp quyền",
+    "stepChoose": "Chọn tài liệu",
+    "stepDone": "Xong",
+    "allowTitle": "NIVO sẽ được phép làm gì",
+    "allowRead": "NIVO chỉ đọc, không sửa hay xoá gì trong Drive của bạn, và bạn có thể ngắt kết nối bất cứ lúc nào.",
+    "allowFiles": "Tệp đọc được là tệp tài khoản Google này mở được. NIVO chỉ nạp những tệp hoặc thư mục bạn chọn.",
+    "allowRevoke": "Bạn có thể thu hồi quyền bất cứ lúc nào trong phần cài đặt tài khoản Google, hoặc bấm Ngắt kết nối tại đây.",
+    "grant": "Cấp quyền Google Drive",
+    "regrant": "Cấp lại quyền",
+    "connected": "Đã kết nối Drive: {email}",
+    "connectedNoEmail": "Đã kết nối Drive.",
+    "later": "Để sau",
+    "doneBody": "Đã đưa {count} tài liệu vào hàng chờ. NIVO đọc trong nền, bạn có thể đóng cửa sổ.",
+    "doneHint": "Theo dõi tiến độ ở trang Google Drive hoặc Second Brain, tab Nguồn.",
+    "failTitle": "Chưa kết nối được Google Drive",
+    "failDenied": "Chưa cấp quyền Google Drive.",
+    "failScope": "Quyền Drive đã bị bỏ chọn trên màn hình của Google. Hãy cấp lại và giữ nguyên ô đó.",
+    "failUnavailable": "NIVO chưa bật quyền Google Drive. Hãy báo cho chúng tôi để bật.",
+    "failNoRefresh": "Google chưa cấp quyền lâu dài. Hãy bấm Cấp quyền Google Drive lại và đồng ý mọi quyền.",
+    "failState": "Liên kết kết nối đã hết hạn. Hãy bấm Cấp quyền Google Drive lại.",
+    "failGeneric": "Chưa kết nối được Google Drive. Hãy thử lại."
+  },
+  "telegramConnection": {
+    "title": "Kết nối Bot Telegram",
+    "crumbLabel": "Đường dẫn",
+    "crumbConnections": "Kết nối",
+    "crumbTelegram": "Bot Telegram",
+    "loadFailed": "Không tải được kết nối Bot Telegram.",
+    "mainLabel": "Thiết lập và tình trạng",
+    "chipOk": "Đã kết nối",
+    "chipCheck": "Cần kiểm tra",
+    "chipOff": "Đã ngắt",
+    "facts": "Bot Telegram · {handle}",
+    "recheck": "Kiểm tra lại",
+    "toastRechecked": "Đã kiểm tra lại.",
+    "toastDisconnected": "Đã ngắt kết nối Bot Telegram.",
+    "cancel": "Hủy",
+    "disconnectTitle": "Ngắt kết nối",
+    "disconnectBody": "NIVO xóa webhook khỏi bot và xóa token đã lưu. Agent đang dùng sẽ ngừng nhận tin nhắn. Bot trên Telegram vẫn còn, bạn có thể kết nối lại sau.",
+    "disconnectEntry": "Ngắt kết nối…",
+    "disconnectQuestion": "Ngắt kết nối Bot Telegram này?",
+    "disconnectConfirm": "Ngắt kết nối",
+    "webhookRefusedHint": "Hãy ngắt rồi kết nối lại, hoặc kiểm tra địa chỉ trang web.",
+    "localTitle": "Trang đang chạy trên máy",
+    "localBody": "Kết nối đã được lưu, nhưng Telegram chỉ gọi tới được khi ứng dụng chạy trên tên miền công khai. Webhook sẽ được đăng ký ở đó.",
+    "noAgentTitle": "Chưa gắn agent",
+    "noAgentBody": "Chưa có agent nào gắn với kết nối này nên tin nhắn sẽ không được trả lời.",
+    "tileWebhook": "Webhook",
+    "tileWebhookOk": "Đã ghi nhận",
+    "tileWebhookRefused": "Bị Telegram từ chối",
+    "tileWebhookCheck": "Cần kiểm tra",
+    "tileWebhookUnregistered": "Chưa đăng ký",
+    "tileWebhookNoEvent": "Chưa có tin nào",
+    "tileWebhookLastEvent": "Tin gần nhất {at}",
+    "tilePending": "Tin đang chờ",
+    "tilePendingAsk": "Bấm Kiểm tra lại để hỏi Telegram",
+    "tilePendingMeta": "Tin Telegram giữ lại chưa giao",
+    "tileAgents": "Agent dùng kết nối",
+    "tileAgentsMeta": "Gắn ở bước 4",
+    "factsEmpty": "Chưa có thông tin.",
+    "stepBot": "Tạo bot và dán token",
+    "stepWebhook": "Webhook",
+    "stepCheck": "Kiểm tra",
+    "stepAgents": "Gắn vào agent",
+    "stepBotHint": "NIVO lưu token mã hóa và không hiện lại. Muốn đổi bot thì ngắt kết nối rồi tạo kết nối mới.",
+    "stepWebhookHint": "NIVO tự đăng ký địa chỉ này với Telegram, bạn không phải dán ở đâu cả.",
+    "stepCheckHint": "Từng phần một. Mục nào lỗi thì dòng của nó nói cách sửa. Nhắn thử một tin bất kỳ cho bot từ điện thoại, tin sẽ hiện ở cột Sự kiện.",
+    "stepAgentsHint": "Chỉ những agent làm việc được qua Telegram mới hiện ở đây.",
+    "stepBotDone": "Xong · {handle}",
+    "stepWebhookDone": "Xong · NIVO tự đăng ký",
+    "stepTodo": "Cần làm",
+    "stepCheckCount": "{ok}/{total} ổn",
+    "stepAgentsDone": "{count} agent đang dùng",
+    "stepAgentsTodo": "Chưa gắn agent",
+    "webhookLabel": "URL webhook",
+    "webhookHelp": "Telegram gửi kèm khóa bí mật riêng của kết nối. Yêu cầu sai khóa bị từ chối.",
+    "webhookEmpty": "Chưa có địa chỉ webhook.",
+    "copyFailed": "Không sao chép được. Hãy thử lại.",
+    "checksTitle": "Kiểm tra từng phần",
+    "checksEmpty": "Chưa có gì để kiểm tra.",
+    "markOk": "Ổn",
+    "markFail": "Lỗi",
+    "markWarn": "Cần xem",
+    "checkToken": "Token của bot",
+    "checkWebhook": "Webhook",
+    "checkLastError": "Lỗi gần nhất",
+    "detailTokenOk": "Telegram nhận ra bot {handle}",
+    "detailTokenRejected": "Telegram từ chối token này. Hãy tạo token mới bằng lệnh /token ở @BotFather rồi kết nối lại.",
+    "detailWebhookOk": "Telegram đã ghi nhận webhook của kết nối này. Tin đang chờ: {pending}.",
+    "detailWebhookMissing": "Telegram chưa có webhook của kết nối này. Hãy ngắt rồi kết nối lại, hoặc kiểm tra địa chỉ trang web.",
+    "detailWebhookLocal": "Đây là trang chạy trên máy: webhook chỉ được đăng ký trên tên miền công khai. Token của bot vẫn hợp lệ.",
+    "detailWebhookRefused": "Token hợp lệ, nhưng Telegram từ chối địa chỉ webhook.",
+    "detailWebhookRegistered": "Telegram đã ghi nhận webhook. Bấm Kiểm tra lại để xem số tin đang chờ.",
+    "detailWebhookUnchecked": "Chưa kiểm tra. Bấm Kiểm tra lại để hỏi Telegram.",
+    "detailNoError": "Không có lỗi gửi tin nào từ Telegram",
+    "detailLastError": "Lỗi gửi tin gần nhất của Telegram: {error}",
+    "agentsTitle": "Gắn agent",
+    "agentsEmpty": "Workspace chưa có agent nào.",
+    "agentsSwitch": "Dùng bot này:",
+    "agentsOn": "Đang dùng",
+    "eventsTitle": "Sự kiện Telegram",
+    "eventsOpen": "Mở sự kiện",
+    "eventsClose": "Đóng sự kiện",
+    "eventsLive": "Trực tiếp",
+    "eventsFootnote": "Cập nhật mỗi 5 giây. Sự kiện chỉ cho biết ai và lúc nào, không hiện nội dung tin.",
+    "eventsEmpty": "Chưa có sự kiện nào.",
+    "eventUserMessage": "Tin khách gửi",
+    "eventReplySent": "Đã gửi qua Telegram",
+    "eventReplyNotSent": "Chưa gửi được qua Telegram",
+    "outcomeReceived": "Nhận",
+    "outcomeSent": "Đã gửi",
+    "outcomeNotSent": "Chưa gửi",
+    "eventWho": "Khách {who}"
   }
 }

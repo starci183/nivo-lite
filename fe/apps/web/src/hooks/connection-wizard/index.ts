@@ -3,6 +3,7 @@ export {
     POLL_MS,
     agentChoicesOf,
     allAgentIds,
+    connectionErrorOf,
     guideScreensOf,
     resumeNoteOf,
     resumeSlotOf,

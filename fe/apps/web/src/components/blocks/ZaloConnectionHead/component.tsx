@@ -1,6 +1,5 @@
 import {
     Alert,
-    AlertDialog,
     Badge,
     Button,
     IconTile,
@@ -8,11 +7,13 @@ import {
     Pane,
     PaneGrid,
     PaneSection,
-    SectionHeader,
 } from "@starci/grammar/common"
 import type { BreadcrumbItem, PresentationState } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { nivoIconSource } from "@/components/leaves/Icon"
+import { ConnectionDisconnectBand } from "@/components/composites/ConnectionDisconnectBand"
+import { ConnectionDisconnectDialog } from "@/components/composites/ConnectionDisconnectDialog"
+import { railPaneProps } from "@/components/composites/ConnectionRailPane"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZaloHeadView } from "@/modules/types"
 
@@ -116,25 +117,6 @@ const NoticesBand = (props: ZaloBandProps) => {
     )
 }
 
-const DisconnectBand = (props: ZaloBandProps) => {
-    const { disconnect } = props.props
-    if (disconnect === undefined) return null
-    return (
-        <PaneSection>
-            <SectionHeader
-                level={2}
-                title={disconnect.title}
-                description={disconnect.description}
-                action={
-                    <Button intent="destructive" step="entry" onPress={props.on.askDisconnect}>
-                        {disconnect.label}
-                    </Button>
-                }
-            />
-        </PaneSection>
-    )
-}
-
 /**
  * Draws the page of the OA as one page with no tabs (`Page chrome="panes"`): the header band (mark, name, status, facts, "Check
  * again"), then a main pane of bands (notices, health, the numbered setup steps, ZNS, disconnect) beside the live events rail, which
@@ -176,37 +158,19 @@ export const ZaloConnectionHeadBase = (props: ZaloConnectionHeadBaseProps) => {
                     <Pane area="main" surface scroll label={props.props.mainLabel}>
                         <NoticesBand props={props.props} on={props.on} />
                         {head === undefined && isFailed(props.props.head) ? null : props.shape.main}
-                        <DisconnectBand props={props.props} on={props.on} />
+                        {props.props.disconnect === undefined ? null : (
+                            <ConnectionDisconnectBand {...props.props.disconnect} onPress={props.on.askDisconnect} />
+                        )}
                     </Pane>
-                    <Pane
-                        area="rail"
-                        surface
-                        scroll
-                        label={rail.label}
-                        collapse="drawer"
-                        collapseLabel={rail.label}
-                        openLabel={rail.openLabel}
-                        closeLabel={rail.closeLabel}
-                        isOpen={rail.isOpen}
-                        onOpenChange={props.on.openRail}
-                    >
+                    <Pane area="rail" surface scroll {...railPaneProps(rail, props.on.openRail)}>
                         {props.shape.rail}
                     </Pane>
                 </PaneGrid>
             </Page>
-            <AlertDialog
-                isOpen={props.props.confirm.isOpen}
-                onOpenChange={(open) => {
-                    if (!open) props.on.dismiss()
-                }}
-                title={props.props.confirm.title}
-                description={props.props.confirm.description}
-                tone="negative"
-                confirmLabel={props.props.confirm.confirmLabel}
-                cancelLabel={props.props.confirm.cancelLabel}
-                isConfirmPending={props.props.confirm.isPending}
+            <ConnectionDisconnectDialog
+                confirm={props.props.confirm}
                 onConfirm={props.on.confirmDisconnect}
-                onCancel={props.on.dismiss}
+                onDismiss={props.on.dismiss}
             />
         </>
     )

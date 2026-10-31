@@ -35,7 +35,7 @@ export interface ConnectionRowActions {
  */
 export const useConnectionRowActions = (connection: Connection): ConnectionRowActions => {
     const t = useTranslations("connections")
-    const commands = useConnectionRowCommands(connection.id)
+    const commands = useConnectionRowCommands(connection.id, connection.provider)
     const syncNow = useSyncNow()
     const [, startTransition] = useTransition()
     const [busy, setBusy] = useState<RowBusy>(null)

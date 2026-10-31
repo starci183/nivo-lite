@@ -6,8 +6,8 @@ import { navigation } from "@/modules/i18n"
 import type { Provider } from "@/modules/types"
 import { URL_PARAMS } from "./connections.shared"
 
-/** The search params an OAuth return (Zalo, Meta, Google) leaves in the URL besides the overlay params. */
-const RETURN_PARAMS = ["id", "zalo", "meta", "google"] as const
+/** The search params an OAuth return (Zalo, Meta, Google, Google Drive) leaves in the URL besides the overlay params. */
+const RETURN_PARAMS = ["id", "zalo", "meta", "google", "drive", "reason"] as const
 
 /** The commands the console's overlays share: open or close the wizard and the connector detail, switch the tab. State lives in the URL. */
 export interface ConnectionOverlays {

@@ -1,4 +1,4 @@
-import { Badge, Button, ButtonGroup, EmptyNotice, List, ListRow, SurfaceListCard } from "@starci/grammar/common"
+import { Badge, Button, ButtonGroup, EmptyNotice, List, ListRow, SurfaceListCard, Switch } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 
 /** One badge of a gateway row. */
@@ -16,6 +16,22 @@ interface McpGatewayAction {
     readonly onPress: () => void
 }
 
+/** One agent's switch for one tool: on means the agent may call it. */
+interface McpGatewayAgentSwitch {
+    readonly id: string
+    readonly name: string
+    readonly isOn: boolean
+    readonly isDisabled: boolean
+    readonly onToggle: (isOn: boolean) => void
+}
+
+/** The agents a tool can be turned on for, each with a switch (default deny: a tool nobody switched on is called by nobody). */
+interface McpGatewayAgents {
+    readonly label: string
+    readonly switchLabel: string
+    readonly rows: ReadonlyArray<McpGatewayAgentSwitch>
+}
+
 /** One row of a gateway list: a title, a line under it, its badges, its commands and the rows it holds (a connector's tools). */
 interface McpGatewayRow {
     readonly id: string
@@ -24,6 +40,7 @@ interface McpGatewayRow {
     readonly badges: ReadonlyArray<McpGatewayBadge>
     readonly actions?: ReadonlyArray<McpGatewayAction>
     readonly tools?: { readonly label: string; readonly rows: ReadonlyArray<McpGatewayRow> }
+    readonly agents?: McpGatewayAgents
 }
 
 /** One card of the gateway region. */
@@ -91,6 +108,34 @@ const RowActions = (props: RowActionsProps) =>
         </ButtonGroup>
     )
 
+/** The agent switches of one tool, as a list under its row. */
+interface AgentSwitchesProps {
+    readonly agents: McpGatewayAgents
+}
+
+/** The agents that may call a tool, each with a switch; nothing when no agent can be switched. */
+const AgentSwitches = (props: AgentSwitchesProps) =>
+    props.agents.rows.length === 0 ? null : (
+        <List label={props.agents.label}>
+            {props.agents.rows.map((agent) => (
+                <ListRow
+                    key={agent.id}
+                    title={agent.name}
+                    actions={
+                        <Switch
+                            name={`grant-${agent.id}`}
+                            label={`${props.agents.switchLabel} ${agent.name}`}
+                            isLabelHidden
+                            isSelected={agent.isOn}
+                            isDisabled={agent.isDisabled}
+                            onSelectedChange={agent.onToggle}
+                        />
+                    }
+                />
+            ))}
+        </List>
+    )
+
 /** One gateway row with its commands and, under it, the rows it holds. */
 const GatewayRow = (props: GatewayRowProps) => (
     <ListRow
@@ -107,7 +152,9 @@ const GatewayRow = (props: GatewayRowProps) => (
                         title={tool.title}
                         description={tool.description}
                         badges={<RowBadges badges={tool.badges} />}
-                    />
+                    >
+                        {tool.agents === undefined ? null : <AgentSwitches agents={tool.agents} />}
+                    </ListRow>
                 ))}
             </List>
         )}

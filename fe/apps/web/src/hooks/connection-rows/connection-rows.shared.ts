@@ -1,5 +1,6 @@
 import { isDataConnector } from "@/hooks/connection-access"
 import { PROVIDERS } from "@/hooks/connection-providers"
+import { connectionErrorOf } from "@/hooks/connection-wizard"
 import type { Connection, Provider, RowAlert, RowDialog, RowMenuSection, RowPrimary } from "@/modules/types"
 
 /** A catalog reader as the row builders receive it: a key and the values of its placeholders. */
@@ -13,8 +14,8 @@ export type RowConfirm = "disconnect" | "remove" | null
 
 const MONEY: ReadonlySet<string> = new Set(["sepay", "payos", "casso"])
 const BANK_LOGO: ReadonlySet<string> = new Set(["sepay", "casso"])
-const NO_AGENTS: ReadonlySet<string> = new Set(["webhook", "google", "smtp"])
-const RESUMABLE_KINDS: ReadonlySet<string> = new Set(["money", "zalo", "meta", "data"])
+const NO_AGENTS: ReadonlySet<string> = new Set(["webhook", "google", "google_drive", "smtp"])
+const RESUMABLE_KINDS: ReadonlySet<string> = new Set(["money", "zalo", "meta", "data", "drive"])
 
 /** Bank feeds (SePay, payOS, Casso): money arriving for the Accounting agent. */
 export const isBankFeed = (provider: Provider): boolean => MONEY.has(provider)
@@ -37,6 +38,7 @@ export const connectionFactsOf = (c: Connection, t: RowTranslate, bankName: (cod
         case "smtp":
             return join([c.meta.from_email, c.meta.host])
         case "google":
+        case "google_drive":
             return c.meta.email ?? ""
         case "webhook":
             return t("webhookFacts", {
@@ -143,7 +145,7 @@ export const alertsOf = (
     return [
         ...(needsAgent ? [{ id: "agent", tone: "cautionary" as const, title: t("noAgent"), description: hint }] : []),
         ...(c.lastError !== null && live
-            ? [{ id: "error", tone: "negative" as const, title: t("statusError"), description: c.lastError }]
+            ? [{ id: "error", tone: "negative" as const, title: t("statusError"), description: connectionErrorOf(c.lastError, t) }]
             : []),
     ]
 }
@@ -165,16 +167,21 @@ export const notesOf = (
     ]
 }
 
+/** The words of the button that sends a broken connection back through its authorization. */
+const reconnectLabelOf = (provider: Provider, t: RowTranslate): string => {
+    if (provider === "zalo_oa") return t("zaloReauthorize")
+    return provider === "google_drive" ? t("driveReconnect") : t("metaReconnect")
+}
+
 /** Offers continuation or reauthorization when an editable provider can resume its wizard. */
 const reopenPrimaryOf = (c: Connection, canManage: boolean, t: RowTranslate): RowPrimary | null => {
     const broken = c.status === "error"
-    const reconnects = c.provider === "zalo_oa" || c.provider === "meta"
+    const reconnects = c.provider === "zalo_oa" || c.provider === "meta" || c.provider === "google_drive"
     const reopens = c.status === "pending" || (broken && reconnects)
     if (!canManage || !canReopen(c.provider) || !reopens) return null
-    const reconnectLabel = c.provider === "zalo_oa" ? "zaloReauthorize" : "metaReconnect"
     return {
         id: "continue",
-        label: broken ? t(reconnectLabel) : t("continue"),
+        label: broken ? reconnectLabelOf(c.provider, t) : t("continue"),
         intent: "alternative",
         isPending: false,
     }

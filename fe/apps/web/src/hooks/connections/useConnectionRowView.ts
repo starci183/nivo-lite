@@ -18,6 +18,7 @@ import { connectionPageHref, rowState, statusKey, statusTone } from "./connectio
 import { useAgentAccess } from "./useAgentAccess"
 import type { AgentAccess } from "./useAgentAccess"
 import { useConnectionOverlays } from "./useConnectionOverlays"
+import { useConnectionsRole } from "./useConnectionsRole"
 import { useConnectionRowActions } from "./useConnectionRowActions"
 import { useSetConnectionGrant } from "./useSetConnectionGrant"
 import { useSmtpRowPanel } from "./useSmtpRowPanel"
@@ -58,6 +59,7 @@ export const useConnectionRowView = (
     const { connection: c } = input
     const t = useTranslations("connections")
     const bankName = useBankName()
+    const { role } = useConnectionsRole()
     const overlays = useConnectionOverlays()
     const actions = useConnectionRowActions(c)
     const setGrant = useSetConnectionGrant()
@@ -92,7 +94,7 @@ export const useConnectionRowView = (
         page: pageOf(c, t("openPage")),
         menuLabel: t("more", { name: c.name }),
         menuIsDisabled: actions.busy === "keys",
-        menu: menuOf(c, input.canManage, t),
+        menu: menuOf(c, input.canManage && (c.provider !== "google_drive" || role === "owner"), t),
         alerts: alertsOf(c, input.agentNames, t),
         notes: notesOf(c, input.localOnly, input.agentNames, t),
         smtp: c.provider === "smtp" && live ? smtp.view : null,

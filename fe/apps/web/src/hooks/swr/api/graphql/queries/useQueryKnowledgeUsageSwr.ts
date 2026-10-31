@@ -8,8 +8,8 @@ import { queryKnowledgeUsage } from "@/modules/api/graphql/queries/query-knowled
 export const QUERY_KNOWLEDGE_USAGE_SWR_KEY = "QUERY_KNOWLEDGE_USAGE_SWR"
 
 /** How much of its raw document allowance the active workspace has used (the back end `knowledgeUsage` query). */
-export const useQueryKnowledgeUsageSwr = () => {
-    const key = useWorkspaceKey(QUERY_KNOWLEDGE_USAGE_SWR_KEY, [])
+export const useQueryKnowledgeUsageSwr = (enabled = true) => {
+    const key = useWorkspaceKey(QUERY_KNOWLEDGE_USAGE_SWR_KEY, [], enabled)
     return useSWR(key, async () => {
         const result = await queryKnowledgeUsage()
         if (!result.data) throw new Error("knowledgeUsage answered no data")

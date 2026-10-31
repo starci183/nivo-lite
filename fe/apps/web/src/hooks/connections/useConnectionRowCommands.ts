@@ -8,14 +8,14 @@ import {
     useMutateCheckConnectionSwr,
     useMutateCheckMetaSwr,
     useMutateDeleteConnectionSwr,
-    useMutateDisconnectConnectionSwr,
     useMutateRevealSepayKeySwr,
     useMutateTestWebhookConnectionSwr,
 } from "@/hooks/swr"
-import type { ConnectionCheck, MetaCheckSummary, SepayKeys, WebhookTestVerdict } from "@/modules/types"
+import type { ConnectionCheck, MetaCheckSummary, Provider, SepayKeys, WebhookTestVerdict } from "@/modules/types"
 import { connectionCheckOf, metaCheckSummaryOf, webhookVerdictOf } from "@/hooks/connection-wire"
 import { useAuthorizeGoogle } from "./useAuthorizeGoogle"
 import { useConnectionsRefresh } from "./useConnectionsRefresh"
+import { useDisconnectConnection } from "./useDisconnectConnection"
 
 /** The commands one connection row can run, already bound to its connection. */
 export interface RowCommands {
@@ -28,8 +28,11 @@ export interface RowCommands {
     readonly remove: () => Promise<Settled<true>>
 }
 
-/** The GraphQL commands of the row of one connection: check, test, reveal the keys, reconnect Google, disconnect, remove. */
-export const useConnectionRowCommands = (connectionId: string): RowCommands => {
+/**
+ * The GraphQL commands of the row of one connection: check, test, reveal the keys, reconnect Google, disconnect, remove. The Google
+ * Drive row disconnects through the Drive grant itself, which also forgets its sealed tokens.
+ */
+export const useConnectionRowCommands = (connectionId: string, provider: Provider): RowCommands => {
     const t = useTranslations("connections")
     const settle = useSettledGraphQL()
     const refresh = useConnectionsRefresh()
@@ -38,7 +41,7 @@ export const useConnectionRowCommands = (connectionId: string): RowCommands => {
     const { trigger: triggerCheckMeta } = useMutateCheckMetaSwr()
     const { trigger: triggerTest } = useMutateTestWebhookConnectionSwr()
     const { trigger: triggerReveal } = useMutateRevealSepayKeySwr()
-    const { trigger: triggerDisconnect } = useMutateDisconnectConnectionSwr()
+    const { trigger: triggerDisconnect } = useDisconnectConnection(provider)
     const { trigger: triggerRemove } = useMutateDeleteConnectionSwr()
 
     return useMemo(() => {
@@ -72,7 +75,9 @@ export const useConnectionRowCommands = (connectionId: string): RowCommands => {
             },
             reconnectGoogle,
             disconnect: async () =>
-                removed(await settle(() => triggerDisconnect({ connectionId }), t("toastDisconnected"))),
+                removed(
+                    await settle(() => triggerDisconnect(connectionId), t("toastDisconnected")),
+                ),
             remove: async () => removed(await settle(() => triggerRemove({ connectionId }), t("toastRemoved"))),
         }
     }, [

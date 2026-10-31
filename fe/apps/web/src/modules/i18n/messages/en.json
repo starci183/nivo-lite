@@ -1170,6 +1170,15 @@
     "guide_webhook_n8n_0_text": "In n8n add a Webhook node: Method POST, then copy the Production URL.",
     "provider_google_title": "Google (Sheets)",
     "provider_google_blurb": "Connect your Google account so NIVO can record orders in your spreadsheet.",
+    "errWebhookRefused": "The token is valid, but Telegram refused the webhook address.",
+    "errZaloTokenRefused": "Zalo refused this OA's token. Connect the OA again.",
+    "errTokenRejected": "Telegram refused this token. Check that you copied the whole token from @BotFather, or create a new one with /token.",
+    "errTokenFormat": "This does not look like a Telegram bot token. A token looks like 123456789:AAE... - copy it again from @BotFather.",
+    "errBotInUse": "This bot is connected in another workspace. Disconnect it there first, or create a new bot with @BotFather.",
+    "errNetwork": "Could not reach the service. Check the network and try again.",
+    "driveReconnect": "Grant access again",
+    "provider_google_drive_title": "Google Drive",
+    "provider_google_drive_blurb": "Documents in the folders you choose.",
     "provider_smtp_title": "Outgoing email",
     "provider_smtp_blurb": "Send reports, receipts and payment reminders from your own shop email.",
     "catalog_sepay_brings": "Incoming bank transfers",
@@ -2408,7 +2417,11 @@
     "office": {
       "title": "Office",
       "what": "The shared office: talk to your team and AI agents, approve what the AI proposes.",
-      "steps": ["Open Office", "Type @agent-name to call an agent", "Approve or edit the cards waiting for you"],
+      "steps": [
+        "Open Office",
+        "Type @agent-name to call an agent",
+        "Approve or edit the cards waiting for you"
+      ],
       "keywords": [
         "office",
         "van phong",
@@ -2429,13 +2442,30 @@
     "overview": {
       "title": "Overview",
       "what": "The big picture: results, waiting work, exceptions to look at.",
-      "steps": ["Open Overview", "Read the result and waiting-work cards"],
-      "keywords": ["tong quan", "dashboard", "bao cao", "ket qua", "doanh thu", "tinh hinh", "overview", "report"]
+      "steps": [
+        "Open Overview",
+        "Read the result and waiting-work cards"
+      ],
+      "keywords": [
+        "tong quan",
+        "dashboard",
+        "bao cao",
+        "ket qua",
+        "doanh thu",
+        "tinh hinh",
+        "overview",
+        "report"
+      ]
     },
     "authority": {
       "title": "Authority",
       "what": "Set goals, policies, tone, and which actions the AI may do alone or must ask about.",
-      "steps": ["Open Authority", "Set each action to Auto, Ask me or Never", "Set an amount limit if needed", "Save"],
+      "steps": [
+        "Open Authority",
+        "Set each action to Auto, Ask me or Never",
+        "Set an amount limit if needed",
+        "Save"
+      ],
       "keywords": [
         "giao quyen",
         "quyen han",
@@ -2452,13 +2482,28 @@
     "inbox": {
       "title": "Inbox",
       "what": "Everything coming in: customer messages, orders, bank transactions, from every channel.",
-      "steps": ["Open Inbox", "Filter by channel or kind"],
-      "keywords": ["dau vao", "inbox", "tin nhan den", "tin nhan khach", "giao dich den", "don moi", "hop thu"]
+      "steps": [
+        "Open Inbox",
+        "Filter by channel or kind"
+      ],
+      "keywords": [
+        "dau vao",
+        "inbox",
+        "tin nhan den",
+        "tin nhan khach",
+        "giao dich den",
+        "don moi",
+        "hop thu"
+      ]
     },
     "leads": {
       "title": "Customers",
       "what": "Customers and sales leads, who owns each, and the next step.",
-      "steps": ["Open Customers", "Press New lead to add one", "Open a customer to see history and assign work"],
+      "steps": [
+        "Open Customers",
+        "Press New lead to add one",
+        "Open a customer to see history and assign work"
+      ],
       "keywords": [
         "khach hang",
         "lead",
@@ -2475,19 +2520,44 @@
     "responsibilities": {
       "title": "Responsibilities",
       "what": "Who owns which piece of work, due dates and next steps.",
-      "steps": ["Open Responsibilities", "Filter by owner or status"],
-      "keywords": ["trach nhiem", "ai lam gi", "viec cua ai", "han chot", "phu trach", "responsibility", "task"]
+      "steps": [
+        "Open Responsibilities",
+        "Filter by owner or status"
+      ],
+      "keywords": [
+        "trach nhiem",
+        "ai lam gi",
+        "viec cua ai",
+        "han chot",
+        "phu trach",
+        "responsibility",
+        "task"
+      ]
     },
     "decisions": {
       "title": "Decisions",
       "what": "A log of every decision: done by the AI, approved or edited by a person, with reasons.",
-      "steps": ["Open Decisions", "Filter by department or decider"],
-      "keywords": ["lich su quyet dinh", "quyet dinh", "nhat ky", "ai da duyet", "decision", "audit"]
+      "steps": [
+        "Open Decisions",
+        "Filter by department or decider"
+      ],
+      "keywords": [
+        "lich su quyet dinh",
+        "quyet dinh",
+        "nhat ky",
+        "ai da duyet",
+        "decision",
+        "audit"
+      ]
     },
     "automations": {
       "title": "Automations",
       "what": "Workflows that run on a schedule or event: payment reminders, reports, customer care.",
-      "steps": ["Open Automations", "Pick a template or create one", "Turn it on"],
+      "steps": [
+        "Open Automations",
+        "Pick a template or create one",
+        "Turn it on"
+      ],
       "keywords": [
         "tu dong hoa",
         "tu dong",
@@ -2503,7 +2573,12 @@
     "knowledge": {
       "title": "Knowledge",
       "what": "Teach the AI about your business: prices, policies, FAQs, documents, links.",
-      "steps": ["Open Knowledge", "Press Add source", "Paste text, upload a file or a link", "Save so the AI uses it"],
+      "steps": [
+        "Open Knowledge",
+        "Press Add source",
+        "Paste text, upload a file or a link",
+        "Save so the AI uses it"
+      ],
       "keywords": [
         "tri thuc",
         "kien thuc",
@@ -2520,7 +2595,11 @@
     "brain": {
       "title": "Brain",
       "what": "What the business knows (prices, hours, policies, customers...) in one place; each agent reads its own view. Review proposals and conflicts here.",
-      "steps": ["Open Brain", "Check To review: apply or reject as NIVO suggests", "Facts tab: Add fact or New value"],
+      "steps": [
+        "Open Brain",
+        "Check To review: apply or reject as NIVO suggests",
+        "Facts tab: Add fact or New value"
+      ],
       "keywords": [
         "bo nao",
         "second brain",
@@ -2539,7 +2618,11 @@
     "modules": {
       "title": "Agents",
       "what": "Install and set up agents: Chatbot, Sales, Accounting, Booking, Inventory, Hiring…",
-      "steps": ["Open Agents", "Pick an agent and install it", "Follow the setup steps"],
+      "steps": [
+        "Open Agents",
+        "Pick an agent and install it",
+        "Follow the setup steps"
+      ],
       "keywords": [
         "module",
         "modules",
@@ -2558,7 +2641,12 @@
     "team": {
       "title": "Team",
       "what": "Invite people to the workspace and choose their role: Owner, Manager, Staff.",
-      "steps": ["Open Team", "Press Invite member", "Enter the email and role", "Send the invite or copy the link"],
+      "steps": [
+        "Open Team",
+        "Press Invite member",
+        "Enter the email and role",
+        "Send the invite or copy the link"
+      ],
       "keywords": [
         "doi ngu",
         "moi nhan vien",
@@ -2576,8 +2664,17 @@
     "connections": {
       "title": "Connections",
       "what": "Connect NIVO to your bank, Telegram, Zalo OA, email, Google Sheets, n8n.",
-      "steps": ["Open Connections", "Pick a service and press Add connection", "Follow the steps"],
-      "keywords": ["ket noi", "tich hop", "connection", "integration"]
+      "steps": [
+        "Open Connections",
+        "Pick a service and press Add connection",
+        "Follow the steps"
+      ],
+      "keywords": [
+        "ket noi",
+        "tich hop",
+        "connection",
+        "integration"
+      ]
     },
     "connections-sepay": {
       "title": "SePay bank feed",
@@ -2633,7 +2730,12 @@
         "Paste the callback and webhook URLs into Zalo, enable message events",
         "Press Connect Zalo OA so the OA owner consents"
       ],
-      "keywords": ["zalo", "zalo oa", "official account", "oa"]
+      "keywords": [
+        "zalo",
+        "zalo oa",
+        "official account",
+        "oa"
+      ]
     },
     "connections-smtp": {
       "title": "Outgoing email",
@@ -2643,7 +2745,13 @@
         "Enter the SMTP server or pick a provider",
         "Send a test email"
       ],
-      "keywords": ["email", "smtp", "gui email", "gmail", "thu dien tu"]
+      "keywords": [
+        "email",
+        "smtp",
+        "gui email",
+        "gmail",
+        "thu dien tu"
+      ]
     },
     "connections-google": {
       "title": "Google Sheets",
@@ -2653,7 +2761,13 @@
         "Sign in to Google and allow access",
         "Pick the spreadsheet"
       ],
-      "keywords": ["google sheet", "google sheets", "bang tinh", "excel", "spreadsheet"]
+      "keywords": [
+        "google sheet",
+        "google sheets",
+        "bang tinh",
+        "excel",
+        "spreadsheet"
+      ]
     },
     "connections-webhook": {
       "title": "n8n / Webhook",
@@ -2663,13 +2777,29 @@
         "Paste the n8n webhook URL",
         "Pick events and send a test"
       ],
-      "keywords": ["n8n", "webhook", "zapier", "make.com", "make"]
+      "keywords": [
+        "n8n",
+        "webhook",
+        "zapier",
+        "make.com",
+        "make"
+      ]
     },
     "developers": {
       "title": "Developers (API)",
       "what": "Create API keys so other software can read and write NIVO data.",
-      "steps": ["Open Developers", "Name the key and create it", "Copy it now; it is shown once"],
-      "keywords": ["api", "khoa api", "api key", "developer", "lap trinh"]
+      "steps": [
+        "Open Developers",
+        "Name the key and create it",
+        "Copy it now; it is shown once"
+      ],
+      "keywords": [
+        "api",
+        "khoa api",
+        "api key",
+        "developer",
+        "lap trinh"
+      ]
     },
     "billing": {
       "title": "Credits and plan",
@@ -2699,7 +2829,10 @@
     "account": {
       "title": "Your account",
       "what": "Change your name, email, password and sign out other devices.",
-      "steps": ["Open the avatar menu › Account", "Edit and save"],
+      "steps": [
+        "Open the avatar menu › Account",
+        "Edit and save"
+      ],
       "keywords": [
         "tai khoan cua toi",
         "thong tin tai khoan",
@@ -2835,6 +2968,8 @@
     "driveErrScope": "The Drive permission was left unticked on Google's screen. Grant access again and keep it ticked.",
     "driveErrUnavailable": "Google Drive access is not enabled for NIVO yet. Tell us and we will turn it on.",
     "driveErrGeneric": "Could not connect Google Drive. Try again.",
+    "driveErrNoRefresh": "Google did not give lasting access. Grant Google Drive access again and accept every permission.",
+    "driveErrState": "The connection link has expired. Grant Google Drive access again.",
     "errNeedGrant": "Google Drive access needed",
     "zipReading": "Opening the ZIP file…",
     "errNestedZip": "A ZIP inside a ZIP is not opened. Extract it and add it on its own.",
@@ -6903,6 +7038,9 @@
   },
   "mcpGateway": {
     "label": "MCP gateway",
+    "toolAgents": "Agents allowed to use {tool}",
+    "grantSwitch": "Allow to use the tool:",
+    "grantSaved": "Tool access saved.",
     "connectors": "Connectors behind the one MCP endpoint",
     "connectorsEmpty": "No connector yet",
     "connectorsEmptyHint": "Native connectors are always here; a remote connector appears once it is registered.",
@@ -7333,5 +7471,195 @@
     "settingRetryValue": "On",
     "settingAccount": "Account",
     "matchingRule": "A credit is matched on its own when the transfer note holds exactly one invoice or order number already issued and the amount matches exactly. Anything else NIVO holds and suggests invoices for you to pick."
+  },
+  "driveConnection": {
+    "title": "Google Drive",
+    "crumbLabel": "Breadcrumb",
+    "crumbConnections": "Connections",
+    "crumbDrive": "Google Drive",
+    "loadFailed": "Could not load the Google Drive connection.",
+    "mainLabel": "Setup and status",
+    "chipNone": "Not connected",
+    "chipOk": "Connected",
+    "chipCheck": "Needs a check",
+    "factsNone": "No Google account yet",
+    "toastDisconnected": "Google Drive disconnected.",
+    "cancel": "Cancel",
+    "grant": "Grant Google Drive access",
+    "regrant": "Grant access again",
+    "emptyTitle": "Google Drive access is needed",
+    "emptyBody": "NIVO only reads. It never edits or deletes anything in your Drive, and you can disconnect at any time.",
+    "lostTitle": "Google Drive access was revoked. Grant it again.",
+    "lostBody": "The Drive access was revoked in your Google account. Grant it again to read private files and folders.",
+    "tileScope": "Access",
+    "tileScopeValue": "Read only",
+    "tileScopeMeta": "drive.readonly",
+    "tileAccount": "Google account",
+    "tileAccountMeta": "One grant for the whole workspace",
+    "tileUsage": "Raw data used",
+    "tileUsageMeta": "Counted across the workspace",
+    "factsEmpty": "No information yet.",
+    "stepGrant": "Grant access",
+    "stepChoose": "Choose documents",
+    "stepBrain": "Second Brain",
+    "stepGrantHint": "NIVO only reads. It never edits or deletes anything in your Drive, and you can disconnect at any time.",
+    "stepChooseHint": "Choose a folder or files on Drive. NIVO reads the folder and three levels below it, up to 300 files.",
+    "stepBrainHint": "Added documents show in the Sources tab of Second Brain.",
+    "stepTodo": "To do",
+    "stepGrantDone": "Done · {email}",
+    "stepGrantLost": "Grant again",
+    "stepChooseDone": "{count} documents added",
+    "stepBrainSummary": "Sources tab",
+    "openBrain": "Open Second Brain",
+    "linkLabel": "Drive folder link",
+    "linkPlaceholder": "https://drive.google.com/drive/folders/…",
+    "linkHelp": "A web page, Google Docs, Sheets, Slides, a shared Drive file or a Drive folder. The Google account that gave access must be able to open it.",
+    "linkRead": "Read folder",
+    "pick": "Choose from Google Drive",
+    "pickFailed": "Could not open Google Picker. Try again or paste the folder link.",
+    "pickedFiles": "Chosen files",
+    "listingCount": "{total} files · {ticked} ticked",
+    "filesLabel": "Files in the folder",
+    "fileSize": "{size} MB",
+    "fileModified": "edited {date}",
+    "fileUnreadable": "This file type cannot be read yet. Supported: web pages, text, PDF and Word.",
+    "truncated": "This folder is over the limit, so NIVO only lists the first 300 files. Choose a smaller folder for the rest.",
+    "pickedEmptyTitle": "This folder cannot be read yet",
+    "pickedEmptyBody": "Google does not let the chosen folder be listed. Open the folder in Google Picker and choose the files inside it.",
+    "visibilityLabel": "Who can use them",
+    "visInternal": "Internal",
+    "visPublic": "Public",
+    "visInternalHelp": "Internal: only internal agents and staff",
+    "visPublicHelp": "Public: customer-facing agents may answer from these documents",
+    "add": "Add {count} documents",
+    "addedBody": "{count} documents were queued. NIVO reads them in the background; you can close this window.",
+    "disconnectTitle": "Disconnect",
+    "disconnectBody": "NIVO deletes the stored token. Added documents stay in Second Brain, but private files and links cannot be read again. The access stays in your Google account until you revoke it there.",
+    "disconnectEntry": "Disconnect…",
+    "disconnectQuestion": "Disconnect Google Drive?",
+    "disconnectConfirmBody": "NIVO deletes the stored token. Added documents stay in Second Brain, but private files cannot be read again. You still need to revoke the access in your Google account to remove it fully.",
+    "disconnectConfirm": "Disconnect",
+    "progressTitle": "Reading progress",
+    "progressOpen": "Open reading progress",
+    "progressClose": "Close reading progress",
+    "progressLive": "Live",
+    "progressFootnote": "Updates every 5 seconds.",
+    "progressEmpty": "No document has come from Google Drive yet.",
+    "retry": "Retry"
+  },
+  "driveWizard": {
+    "stepGrant": "Grant access",
+    "stepChoose": "Choose documents",
+    "stepDone": "Done",
+    "allowTitle": "What NIVO will be allowed to do",
+    "allowRead": "NIVO only reads. It never edits or deletes anything in your Drive, and you can disconnect at any time.",
+    "allowFiles": "Readable files are the ones this Google account can open. NIVO only loads the files or folders you choose.",
+    "allowRevoke": "You can revoke the access at any time in your Google account settings, or press Disconnect here.",
+    "grant": "Grant Google Drive access",
+    "regrant": "Grant access again",
+    "connected": "Drive connected: {email}",
+    "connectedNoEmail": "Drive connected.",
+    "later": "Later",
+    "doneBody": "{count} documents were queued. NIVO reads them in the background; you can close this window.",
+    "doneHint": "Follow the progress on the Google Drive page or in Second Brain, Sources tab.",
+    "failTitle": "Could not connect Google Drive",
+    "failDenied": "Google Drive access was not granted.",
+    "failScope": "The Drive permission was unticked on Google's screen. Grant it again and keep that box ticked.",
+    "failUnavailable": "NIVO has not turned on Google Drive access. Tell us so we can turn it on.",
+    "failNoRefresh": "Google did not give lasting access. Press Grant Google Drive access again and accept every permission.",
+    "failState": "The connection link has expired. Press Grant Google Drive access again.",
+    "failGeneric": "Could not connect Google Drive. Try again."
+  },
+  "telegramConnection": {
+    "title": "Telegram bot connection",
+    "crumbLabel": "Breadcrumb",
+    "crumbConnections": "Connections",
+    "crumbTelegram": "Telegram bot",
+    "loadFailed": "Could not load the Telegram bot connection.",
+    "mainLabel": "Setup and status",
+    "chipOk": "Connected",
+    "chipCheck": "Needs a check",
+    "chipOff": "Disconnected",
+    "facts": "Telegram bot · {handle}",
+    "recheck": "Check again",
+    "toastRechecked": "Checked again.",
+    "toastDisconnected": "Telegram bot disconnected.",
+    "cancel": "Cancel",
+    "disconnectTitle": "Disconnect",
+    "disconnectBody": "NIVO removes the webhook from the bot and deletes the stored token. Agents using it stop receiving messages. The bot itself stays on Telegram and you can connect it again later.",
+    "disconnectEntry": "Disconnect…",
+    "disconnectQuestion": "Disconnect this Telegram bot?",
+    "disconnectConfirm": "Disconnect",
+    "webhookRefusedHint": "Disconnect and connect again, or check the site address.",
+    "localTitle": "This page runs on your machine",
+    "localBody": "The connection is saved, but Telegram can only reach the app on a public domain. The webhook will be registered there.",
+    "noAgentTitle": "No agent attached",
+    "noAgentBody": "No agent is attached to this connection, so messages will not be answered.",
+    "tileWebhook": "Webhook",
+    "tileWebhookOk": "Registered",
+    "tileWebhookRefused": "Refused by Telegram",
+    "tileWebhookCheck": "Needs a check",
+    "tileWebhookUnregistered": "Not registered",
+    "tileWebhookNoEvent": "No message yet",
+    "tileWebhookLastEvent": "Last message {at}",
+    "tilePending": "Messages waiting",
+    "tilePendingAsk": "Press Check again to ask Telegram",
+    "tilePendingMeta": "Messages Telegram holds back, not delivered",
+    "tileAgents": "Agents on this connection",
+    "tileAgentsMeta": "Attached in step 4",
+    "factsEmpty": "No information yet.",
+    "stepBot": "Create the bot and paste the token",
+    "stepWebhook": "Webhook",
+    "stepCheck": "Check",
+    "stepAgents": "Attach to agents",
+    "stepBotHint": "NIVO stores the token encrypted and never shows it again. To change the bot, disconnect and create a new connection.",
+    "stepWebhookHint": "NIVO registers this address with Telegram itself; you paste it nowhere.",
+    "stepCheckHint": "One part at a time. A failing part says how to fix it. Send the bot any message from your phone and it appears in the Events column.",
+    "stepAgentsHint": "Only agents that can work through Telegram appear here.",
+    "stepBotDone": "Done · {handle}",
+    "stepWebhookDone": "Done · NIVO registers it",
+    "stepTodo": "To do",
+    "stepCheckCount": "{ok}/{total} fine",
+    "stepAgentsDone": "{count} agents using it",
+    "stepAgentsTodo": "No agent attached",
+    "webhookLabel": "Webhook URL",
+    "webhookHelp": "Telegram sends this connection's own secret key along. A request with the wrong key is refused.",
+    "webhookEmpty": "No webhook address yet.",
+    "copyFailed": "Could not copy. Try again.",
+    "checksTitle": "Check each part",
+    "checksEmpty": "Nothing to check yet.",
+    "markOk": "Fine",
+    "markFail": "Error",
+    "markWarn": "Look at it",
+    "checkToken": "Bot token",
+    "checkWebhook": "Webhook",
+    "checkLastError": "Last error",
+    "detailTokenOk": "Telegram recognises the bot {handle}",
+    "detailTokenRejected": "Telegram refused this token. Create a new one with /token in @BotFather, then connect again.",
+    "detailWebhookOk": "Telegram has this connection's webhook. Messages waiting: {pending}.",
+    "detailWebhookMissing": "Telegram has no webhook for this connection. Disconnect and connect again, or check the site address.",
+    "detailWebhookLocal": "This page runs on your machine: the webhook is only registered on a public domain. The bot token is still valid.",
+    "detailWebhookRefused": "The token is valid, but Telegram refused the webhook address.",
+    "detailWebhookRegistered": "Telegram has the webhook. Press Check again to see the messages waiting.",
+    "detailWebhookUnchecked": "Not checked yet. Press Check again to ask Telegram.",
+    "detailNoError": "No delivery error from Telegram",
+    "detailLastError": "Telegram's last delivery error: {error}",
+    "agentsTitle": "Attach agents",
+    "agentsEmpty": "The workspace has no agent yet.",
+    "agentsSwitch": "Use this bot:",
+    "agentsOn": "In use",
+    "eventsTitle": "Telegram events",
+    "eventsOpen": "Open events",
+    "eventsClose": "Close events",
+    "eventsLive": "Live",
+    "eventsFootnote": "Updates every 5 seconds. Events say who and when, never what was written.",
+    "eventsEmpty": "No events yet.",
+    "eventUserMessage": "Customer message",
+    "eventReplySent": "Sent through Telegram",
+    "eventReplyNotSent": "Could not send through Telegram",
+    "outcomeReceived": "Received",
+    "outcomeSent": "Sent",
+    "outcomeNotSent": "Not sent",
+    "eventWho": "Customer {who}"
   }
 }

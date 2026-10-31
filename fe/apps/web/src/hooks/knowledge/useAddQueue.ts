@@ -19,6 +19,12 @@ interface ZipSkip {
     readonly count: number
 }
 
+/** A link chosen in a service: its address and the name the document is stored under. */
+export interface ChosenLink {
+    readonly url: string
+    readonly title: string
+}
+
 /** What the queue gives the drawer. */
 interface AddQueue {
     readonly items: ReadonlyArray<QueueItem>
@@ -27,6 +33,8 @@ interface AddQueue {
     readonly zipSkips: ReadonlyArray<ZipSkip>
     readonly addFiles: (all: ReadonlyArray<File>) => void
     readonly addLinks: (urls: ReadonlyArray<string>) => ReadonlyArray<QueueItem>
+    /** Adds links the person chose in a service (a Drive file), each stored under its own name and marked with where it came from. */
+    readonly addChosenLinks: (links: ReadonlyArray<ChosenLink>, origin: string) => ReadonlyArray<QueueItem>
     readonly removeItem: (id: string) => void
     /** Sends every item that can be sent, a few at a time; answers how many were queued. */
     readonly sendAll: (queue: ReadonlyArray<QueueItem>, meta: BatchMeta) => Promise<number>
@@ -35,6 +43,16 @@ interface AddQueue {
 
 const isSameFile = (one: QueueItem, file: File): boolean =>
     one.kind === "file" && one.name === file.name && one.size === file.size
+
+/** The queue items of links chosen in a service, leaving out the ones already queued. */
+const chosenItemsOf = (
+    queued: ReadonlyArray<QueueItem>,
+    links: ReadonlyArray<ChosenLink>,
+    origin: string,
+): ReadonlyArray<QueueItem> =>
+    links
+        .filter((link) => !queued.some((one) => one.kind === "link" && one.name === link.url))
+        .map((link) => ({ ...itemOfLink(link.url), title: link.title, origin }))
 
 /** The queue of files and links of the Add documents drawer: files and archive entries are checked, then uploaded and handed to the job queue. */
 export const useAddQueue = (actions: QueueActions): AddQueue => {
@@ -89,6 +107,12 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
         return fresh
     }
 
+    const addChosenLinks = (links: ReadonlyArray<ChosenLink>, origin: string): ReadonlyArray<QueueItem> => {
+        const fresh = chosenItemsOf(items, links, origin)
+        setItems((now) => [...now, ...fresh])
+        return fresh
+    }
+
     const sendOne = sendOneOf(patch, actions)
 
     const sendAll = sendAllOf(sendOne)
@@ -100,6 +124,7 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
         zipSkips,
         addFiles,
         addLinks,
+        addChosenLinks,
         removeItem: (id) => setItems((now) => now.filter((one) => one.id !== id)),
         sendAll,
         reset: () => {
@@ -144,7 +169,7 @@ const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => void, acti
         }
         const queued = await actions.enqueue({
             kind: item.kind === "link" ? "url" : "file",
-            title: item.kind === "link" ? item.name.replace(/^https?:\/\//i, "") : stripExt(item.name),
+            title: item.title ?? (item.kind === "link" ? item.name.replace(/^https?:\/\//i, "") : stripExt(item.name)),
             storagePath: path,
             url: item.kind === "link" ? item.name : null,
             meta: info,
