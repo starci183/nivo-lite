@@ -31,6 +31,12 @@ export type AgentTriggerPreset = "every_15m" | "hourly" | "daily_at" | "weekdays
 /** A trigger wakes the agent on a clock or on an internal event. */
 export type AgentTriggerKind = "schedule" | "event"
 
+/** An id, or none. */
+export type OptionalId = string | null
+
+/** A moment, or none. */
+export type OptionalDate = Date | null
+
 /** The language of a reply. */
 export type AgentLocale = "vi" | "en"
 
@@ -338,11 +344,16 @@ export interface AgentTriggerRecord {
     readonly probeKey: string | null
     /** Off means the trigger stays and fires nothing. */
     readonly enabled: boolean
+    /** The stable key a module seeded it under, so a graph can name it; null for a trigger an owner wrote. */
+    readonly seedKey: string | null
     /** The next slot the scheduler holds. */
     readonly nextRunAt: Date | null
     /** The last slot that fired. */
     readonly lastFiredAt: Date | null
 }
+
+/** A trigger, or none. */
+export type OptionalAgentTriggerRecord = AgentTriggerRecord | null
 
 /** What an owner writes for a trigger. */
 export interface AgentTriggerWrite {

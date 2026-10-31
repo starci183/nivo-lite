@@ -92,6 +92,7 @@ export const toTriggerRecord = (row: AgentTriggerEntity): AgentTriggerRecord => 
     eventName: row.eventName,
     probeKey: row.probeKey,
     enabled: row.enabled,
+    seedKey: row.seedKey,
     nextRunAt: row.nextRunAt,
     lastFiredAt: row.lastFiredAt,
 })

@@ -35,6 +35,7 @@ export class JobRunnerService implements JobProcessorRegistry {
             queue: processor.queue,
             job: processor.job,
             concurrency: processor.concurrency,
+            scheduled: processor.scheduled,
             handle: (delivery) => this.run(processor, delivery),
             failed: (delivery, cause) => processor.onFailed(delivery, cause),
         })

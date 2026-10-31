@@ -25,6 +25,17 @@ export interface QueueSchedulerDefinition {
     readonly payload?: object
 }
 
+/** The next slot a scheduler holds, or none. */
+export type OptionalSlot = Date | null
+
+/** When a scheduler fires: a five-field cron pattern read in a time zone. */
+export interface QueueSchedule {
+    /** The five-field cron pattern. */
+    readonly pattern: string
+    /** The IANA time zone the pattern is read in. */
+    readonly tz: string
+}
+
 /** The broker job fields a delivery is built from: its id, its name and the payload the producer wrote. */
 export interface QueueDeliverySource {
     /** The job id: the outbox row id the relay published it under. */
@@ -84,6 +95,8 @@ export interface QueueHandler {
     readonly job?: string | undefined
     /** At most this many deliveries of the queue run at once; the app default when absent. */
     readonly concurrency?: number | undefined
+    /** True when the jobs of the queue come from a job scheduler keyed by a row, not from the outbox: no durable job row exists, so the worker skips the admission. */
+    readonly scheduled?: boolean | undefined
     /** Handles one delivery. */
     handle(delivery: QueueDelivery): Promise<void>
     /** Runs once when the job ends as failed (attempts used up or an unrecoverable error): write the failure the owner sees. */
