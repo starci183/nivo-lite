@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto"
 import { createServer } from "node:http"
 import type { IncomingMessage, Server as HttpServer, ServerResponse } from "node:http"
 import { parseJsonText } from "@modules/platform/primitives"
+import { allowingLoopback } from "./loopback-mcp.world"
 
 /** What the local remote server saw: how many requests carried the expected bearer and how many it refused. */
 export interface RemoteServerSeen {
@@ -109,6 +110,7 @@ const answer = async (
 /** Creates the local server (it listens once `listen` resolves); `bearer` names the one credential it accepts, read on every request. */
 export const createRemoteServer = (bearer: () => string): RemoteServer => {
     const seen: RemoteServerSeen = { authorized: 0, refused: 0, calls: [] }
+    let allowing: jest.SpyInstance | null = null
     const http: HttpServer = createServer((request, response) => {
         void answer(request, response, bearer, seen)
     })
@@ -121,10 +123,12 @@ export const createRemoteServer = (bearer: () => string): RemoteServer => {
         seen,
         listen: () =>
             new Promise<void>((resolve) => {
+                allowing = allowingLoopback("127.0.0.1")
                 http.listen(0, "127.0.0.1", resolve)
             }),
         close: () =>
             new Promise<void>((resolve) => {
+                allowing?.mockRestore()
                 http.closeAllConnections()
                 http.close(() => {
                     resolve()

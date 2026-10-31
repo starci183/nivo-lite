@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { AgentOwnershipService } from "@modules/domain/agents"
+import { AgentOwnershipService, AgentsModule } from "@modules/domain/agents"
 import {
     APPROVAL_REQUESTS_ERROR_KINDS,
     APPROVAL_REQUESTS_MESSAGES,
@@ -8,6 +8,9 @@ import {
     ApprovalRequestsService,
 } from "@modules/domain/approval-requests"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
+import { ModuleInstallationsModule } from "@modules/domain/module-installations"
+import { LeadReadService } from "@modules/domain/leads"
+import { OrdersService } from "@modules/domain/orders"
 import {
     AUTHORITY_RULES_ERROR_KINDS,
     AUTHORITY_RULES_MESSAGES,
@@ -26,6 +29,7 @@ import {
 import { WORK_CHAINS_ERROR_KINDS, WORK_CHAINS_MESSAGES, WorkChainsModule } from "@modules/domain/work-chains"
 import { WORK_THREADS_ERROR_KINDS, WORK_THREADS_MESSAGES, WorkThreadsModule } from "@modules/domain/work-threads"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
+import { WorkspacesModule } from "@modules/domain/workspaces"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { I18nModule } from "@modules/platform/i18n"
@@ -54,9 +58,18 @@ class OfficeAgentOwnersModule {
                 AgentOwnershipService,
                 OfficeRoomDirectoryService,
                 AuthorityActionsService,
+                LeadReadService,
+                OrdersService,
                 { provide: OFFICE_ACCOUNTS, useClass: UnreadAccountDirectory },
             ],
-            exports: [AgentOwnershipService, OfficeRoomDirectoryService, AuthorityActionsService, OFFICE_ACCOUNTS],
+            exports: [
+                AgentOwnershipService,
+                OfficeRoomDirectoryService,
+                AuthorityActionsService,
+                LeadReadService,
+                OrdersService,
+                OFFICE_ACCOUNTS,
+            ],
         }
     }
 }
@@ -92,8 +105,11 @@ export const OFFICE_CHAIN_MODULES = [
     }),
     EventsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),
+    AgentsModule.register({ isGlobal: true, directoryOnly: true }),
+    WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: false }),
     OfficeAgentOwnersModule.register(),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: OFFICE_ACCOUNTS }),
+    ModuleInstallationsModule.register({ isGlobal: true }),
     AuthorityRulesModule.register({ isGlobal: true }),
     MemberGrantsModule.register({ isGlobal: true }),
     WorkChainsModule.register({ isGlobal: true, ownerDirectory: AgentOwnershipService }),

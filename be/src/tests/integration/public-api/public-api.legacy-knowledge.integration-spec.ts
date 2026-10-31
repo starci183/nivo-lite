@@ -13,7 +13,7 @@ describe("Public API legacy-knowledge (persisted local integration)", () => {
         const sourceId = world.id()
         await persistPublicApiSource(world.db.primary, {
             id: sourceId,
-            workspace_id: identity.workspaceId,
+            workspaceId: identity.workspaceId,
             kind: "text",
             title: "Existing historical source",
             content: "Already admitted before the ledger",

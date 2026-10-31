@@ -160,9 +160,10 @@ type Contracts = ReturnType<typeof loadContracts>
 /** The testing module of one replica: real hub over the shared Redis, typing publisher, SSE door and default-deny guard. */
 const compileReplica = (world: LiteWorld, identity: ChatMarkersIdentity, prefix: string, contracts: Contracts) => {
     const redis = redisProofOptions(prefix)
+    const login = redis.redisPassword === undefined ? "" : `:${encodeURIComponent(redis.redisPassword.reveal())}@`
     const options: RedisHubOptions = {
         hub: "redis",
-        url: new Secret(`redis://127.0.0.1:${redis.redisPort}`),
+        url: new Secret(`redis://${login}127.0.0.1:${redis.redisPort}`),
         db: 0,
         prefix,
         isGlobal: true,

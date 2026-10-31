@@ -18,11 +18,14 @@ import { ConnectionSecretsModule, ConnectionSecretsService } from "@modules/doma
 import { ConversationsService, CONVERSATIONS_MESSAGES } from "@modules/domain/conversations"
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
+import { AgentConnectionsModule } from "@modules/domain/agent-connections"
+import { AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { EventsModule } from "@modules/domain/events"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
+import { WorkspacesModule } from "@modules/domain/workspaces"
 import { PaymentOrdersModule } from "@modules/domain/payment-orders"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
@@ -144,11 +147,14 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
         publicSiteUrl: undefined,
     }),
     AgentConversationsModule.register({ isGlobal: true }),
+    AgentsModule.register({ isGlobal: true, directoryOnly: true }),
+    AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
     AgentMessagesModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
     EventsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: ProofAccounts }),
+    WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: false }),
     PaymentOrdersModule.register({ isGlobal: true }),
     BankFeedInboxModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),

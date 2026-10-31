@@ -15,7 +15,7 @@ import {
     OfficeRoomReadsService,
     OfficeRoomsService,
 } from "@modules/domain/office-rooms"
-import { StaffService } from "@modules/domain/staff"
+import { StaffDirectoryService, StaffService } from "@modules/domain/staff"
 import {
     ACCOUNT_DIRECTORY,
     WorkspaceMembersReadService,
@@ -43,6 +43,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
         { provide: OFFICE_ROOMS_TEST_CHATS, useExisting: AgentTestChatsService },
         EventsService,
         StaffService,
+        StaffDirectoryService,
         { provide: ACCOUNT_DIRECTORY, useFactory: () => mock<AccountDirectory>({ accountOf: jest.fn() }) },
         { provide: OfficeCardsService, useFactory: () => mock<OfficeCardsService>({ post: jest.fn() }) },
         { provide: MESSAGE_CATALOG, useFactory: () => mock<MessageCatalog>({ get: jest.fn() }) },

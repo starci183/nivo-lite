@@ -6,6 +6,7 @@ import { agentsEntities } from "@modules/domain/agents"
 import { apiKeysEntities } from "@modules/domain/api-keys"
 import { authorityRulesEntities } from "@modules/domain/authority-rules"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
+import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
 import { leadsEntities } from "@modules/domain/leads"
 import { workspacesEntities } from "@modules/domain/workspaces"
 
@@ -20,6 +21,7 @@ const [ApiKeyEntity] = apiKeysEntities
 
 const [InboundEventEntity] = inboundEventsEntities
 const [LeadEntity] = leadsEntities
+const [KnowledgeSourceEntity] = knowledgeSourcesEntities
 
 /** All identities are supplied by the suite's isolated local world. */
 export interface PublicApiIdentity {
@@ -104,7 +106,7 @@ export const persistPublicApiConversation = async (
 /** A historical source already admitted by the API before the request ledger existed. */
 export interface PublicApiSourceFixture {
     readonly id: string
-    readonly workspace_id: string
+    readonly workspaceId: string
     readonly kind: "text"
     readonly title: string
     readonly content: string
@@ -126,7 +128,7 @@ export interface PublicApiInboundFixture {
 
 /** Creates a historical text source under the scenario's existing workspace. */
 export const persistPublicApiSource = async (manager: EntityManager, source: PublicApiSourceFixture): Promise<void> => {
-    await manager.insert("public.knowledge_sources", source)
+    await manager.insert(KnowledgeSourceEntity, source)
 }
 
 /** Creates an historical inbound row without inventing another domain identity during delivery. */

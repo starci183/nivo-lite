@@ -1,3 +1,4 @@
+import { CqrsModule } from "@nestjs/cqrs"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
 import { AutomationsService } from "@modules/domain/automations"
@@ -203,6 +204,8 @@ beforeAll(async () => {
     story.second = yearlyEnding(10, story.second)
     // The world compiles the api without booting it: the performers join the work engine as they do at boot.
     world.resolve(WorkPerformersRegistrarService).onModuleInit()
+    // The command handlers of the reactors register with the bus at bootstrap, which the world does not run.
+    world.resolve(CqrsModule).onApplicationBootstrap()
     await world.resolve(ModulesService).sync()
     await world.resolve(AutomationTemplatesService).syncFromCatalog()
     await persistRenewalWorld(db(), { identity, account: ACCOUNT, contract: story.first })

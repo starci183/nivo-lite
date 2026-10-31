@@ -11,8 +11,6 @@ import { KnowledgeSourcesModule } from "@modules/domain/knowledge-sources"
 import { McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { NativeToolsModule, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
-import { StaffModule } from "@modules/domain/staff"
-import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { AiModule } from "@modules/integrations/ai"
 import { MCP_CREDENTIAL_MODULES } from "./mcp-credential-capabilities.options"
 
@@ -25,8 +23,6 @@ const isGateway = (entry: DynamicModule): boolean => entry.module === McpGateway
  */
 export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     ...MCP_CREDENTIAL_MODULES.filter((entry) => !isGateway(entry)),
-    StaffModule.register({ isGlobal: true }),
-    WorkspaceMembersModule.register({ isGlobal: true }),
     AiModule.register({
         isGlobal: true,
         gatewayUrl: null,

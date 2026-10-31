@@ -41,6 +41,24 @@ class LocalDatabaseModule {
     }
 }
 
+/** The creation and update instants the entities leave to the database: a proof must be able to write them to set the scene of an earlier day. */
+const STAMP_PROPERTIES: ReadonlySet<string> = new Set(["createdAt", "updatedAt"])
+
+/**
+ * Production never writes the stamps of a row (the entity base marks them `insert: false, update: false` and the database sets
+ * them), so a persisting builder that names a past instant would be ignored. In the world only, the stamps are writable; a row whose
+ * builder names none still gets the database default, and the update trigger still moves `updated_at` on a change.
+ */
+const letProofsStampRows = (source: DataSource): void => {
+    source.entityMetadatas
+        .flatMap((metadata) => metadata.columns)
+        .filter((column) => STAMP_PROPERTIES.has(column.propertyName))
+        .forEach((column) => {
+            column.isInsert = true
+            column.isUpdate = true
+        })
+}
+
 /** Attaches only to migrated local Supabase; the closure owns resources rather than injecting a DataSource into services. */
 export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?: WorldSandbox) => {
     let source: DataSource | undefined
@@ -73,6 +91,7 @@ export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?:
                 connectTimeoutMS: 5000,
             })
             await source.initialize()
+            letProofsStampRows(source)
             container = await Test.createTestingModule({
                 imports: [
                     LocalDatabaseModule.register(database().primary),

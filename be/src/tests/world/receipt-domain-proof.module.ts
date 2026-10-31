@@ -1,12 +1,17 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
+import { AgentConnectionsModule } from "@modules/domain/agent-connections"
+import { AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { CHANNELS_OPTIONS } from "../../modules/domain/channels/channels.decorators"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
+import { EventsModule } from "@modules/domain/events"
+import { StaffModule } from "@modules/domain/staff"
+import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
@@ -60,6 +65,8 @@ export const RECEIPT_DOMAIN_MODULES: ReadonlyArray<DynamicModule> = [
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey }),
     ConnectionsModule.register({ isGlobal: true, channelTokenKey: tokenKey, siteUrl, publicSiteUrl: undefined }),
     AgentConversationsModule.register({ isGlobal: true }),
+    AgentsModule.register({ isGlobal: true, directoryOnly: true }),
+    AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
     AgentMessagesModule.register({ isGlobal: true }),
     I18nModule.register({ isGlobal: true, bundles: [] }),
     ZaloModule.register({
@@ -70,5 +77,8 @@ export const RECEIPT_DOMAIN_MODULES: ReadonlyArray<DynamicModule> = [
         timeoutMs: 100,
     }),
     ZaloInboxModule.register({ isGlobal: true }),
+    EventsModule.register({ isGlobal: true }),
+    StaffModule.register({ isGlobal: true }),
+    WorkspaceMembersModule.register({ isGlobal: true }),
     ReceiptDomainProofModule.register(),
 ]

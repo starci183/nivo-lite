@@ -10,7 +10,11 @@ import { EventsModule } from "@modules/domain/events"
 import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions } from "@modules/domain/identity"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
+import { DataRecordsModule } from "@modules/domain/data-records"
+import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
+import { StaffModule } from "@modules/domain/staff"
+import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { Secret } from "@modules/platform/config"
@@ -55,6 +59,10 @@ export const MCP_CREDENTIAL_MODULES = [
         verifyAccessToken: refuseSessions,
         credentialAuthenticator: McpAgentAuthenticatorService,
     }),
+    DataRecordsModule.register({ isGlobal: true }),
+    StaffModule.register({ isGlobal: true }),
+    WorkspaceMembersModule.register({ isGlobal: true }),
+    InboundEventsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey: MCP_PROOF_TOKEN_KEY }),

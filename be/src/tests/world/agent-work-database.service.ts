@@ -39,13 +39,14 @@ export const endRetryWait = async (manager: EntityManager, wakeId: string): Prom
     await manager.update(AgentWakeEntity, { id: wakeId }, { notBefore: LONG_AGO })
 }
 
-/** Leaves the workspace as a proof found it: open wakes skipped, leases free, every agent switched on with no failures. */
+/** Leaves the workspace as a proof found it: open wakes skipped, running turns abandoned, leases free, every agent switched on with no failures. */
 export const settleAgentWork = async (manager: EntityManager, workspaceId: string): Promise<void> => {
     await manager.update(
         AgentWakeEntity,
         { workspaceId, status: In(["pending", "held", "running"]) },
         { status: "skipped" },
     )
+    await manager.update(AgentTurnEntity, { workspaceId, status: "running" }, { status: "abandoned" })
     await manager.update(AgentWorkLeaseEntity, { workspaceId }, { runningTurnId: null, leaseUntil: null })
     await manager.update(AgentWorkStateEntity, { workspaceId }, { workEnabled: true, failures: 0, breakerUntil: null })
 }

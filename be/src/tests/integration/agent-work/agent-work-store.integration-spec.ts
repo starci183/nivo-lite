@@ -124,7 +124,10 @@ describe("agent-work/lock: one turn per scope", () => {
         const first = customerWake("conv-a-1", "conv-a")
         const second = customerWake("conv-a-2", "conv-a")
         const other = customerWake("conv-b-1", "conv-b")
-        await Promise.all([post(first), post(second), post(other)])
+        // The oldest wake of a conversation runs first, so the two of one conversation are written in order.
+        await post(first)
+        await post(second)
+        await post(other)
 
         const runs = [drain("conversation:conv-a"), drain("conversation:conv-b")]
         await scripted().entered(2)

@@ -12,7 +12,7 @@ const world = useTestWorld({ modules: NATIVE_TOOLS_MODULES })
 const tenant = () => ({ userId: world.id(), workspaceId: world.id(), agentId: world.id() })
 
 /** Calls a tool through the endpoint's service as the agent the credential names, in its own workspace. */
-const call = (who: ReturnType<typeof tenant>, name: string, args: Record<string, unknown>) =>
+const call = (who: ReturnType<typeof tenant>, name: string, args: Record<string, unknown>, opKey?: string) =>
     world.resolve(GatewaySurfaceService).answer({
         workspaceId: who.workspaceId,
         principal: { agentId: who.agentId, workspaceId: who.workspaceId },
@@ -20,7 +20,7 @@ const call = (who: ReturnType<typeof tenant>, name: string, args: Record<string,
             jsonrpc: "2.0",
             id: 1,
             method: "tools/call",
-            params: { name: "tool.call", arguments: { name, arguments: args } },
+            params: { name: "tool.call", arguments: { name, arguments: args, ...(opKey === undefined ? {} : { opKey }) } },
         },
     })
 
@@ -72,7 +72,9 @@ describe("NIVO MCP native Brain tools", () => {
     })
 
     it("answers not granted for a tool the agent holds no grant on, and audits the refusal", async () => {
-        const reply = await call(own, "brain.facts.list", {})
+        // A call that names its operation reaches the gateway, which audits the refusal; one that does not is answered by the surface
+        // as "not granted or unknown" before the gateway, so a probe for tool names leaves no line.
+        const reply = await call(own, "brain.facts.list", {}, "probe-1")
 
         expect(reply.body).toMatchObject({ result: { isError: true } })
         expect(JSON.stringify(reply.body)).toContain("not_granted")
