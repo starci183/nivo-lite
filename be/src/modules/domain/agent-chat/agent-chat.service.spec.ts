@@ -6,6 +6,8 @@ import {
     AgentConversationsService,
 } from "@modules/domain/agent-conversations"
 import { AgentMessageDeliveriesService, AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentWorkReadService } from "@modules/domain/agent-work"
+import { CustomerIntakeService } from "@modules/domain/conversations"
 import {
     CONVERSATION,
     PROFILE,
@@ -58,6 +60,8 @@ const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | 
     const events = mock<EventsReadService>()
     events.existsOfKindBetween.mockResolvedValue(false)
     const turns = mock<ChatTurnQueue>()
+    const intake = mock<CustomerIntakeService>()
+    const work = mock<AgentWorkReadService>({ customerWake: jest.fn().mockResolvedValue(null) })
     const queueStatus = mock<QueueStatusService>()
     members.require.mockResolvedValue(MEMBER)
     const moduleRef = await Test.createTestingModule({
@@ -74,6 +78,8 @@ const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | 
             { provide: AgentMessagesService, useValue: messages },
             { provide: EventsReadService, useValue: events },
             { provide: ChatTurnQueue, useValue: turns },
+            { provide: CustomerIntakeService, useValue: intake },
+            { provide: AgentWorkReadService, useValue: work },
             { provide: QUEUE_STATUS, useValue: queueStatus },
         ],
     }).compile()
@@ -87,6 +93,8 @@ const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | 
         messages,
         events,
         turns,
+        intake,
+        work,
         queueStatus,
         directory,
         deliveries,
@@ -247,7 +255,7 @@ describe("AgentChatService", () => {
 describe("AgentChatService", () => {
     describe("send", () => {
         it("stores a customer message and queues a turn", async () => {
-            const { service, conversations, messages, turns, tx } = await build()
+            const { service, conversations, messages, intake, tx } = await build()
             conversations.lockChat.mockResolvedValue({ ...CONVERSATION, kind: "customer", handledBy: null })
             messages.storeCustomer.mockResolvedValue("m1")
 
@@ -257,9 +265,8 @@ describe("AgentChatService", () => {
                 status: "queued",
             })
             expect(messages.storeCustomer).toHaveBeenCalledWith("w1", "c1", "Hello", expect.anything(), "u1")
-            expect(turns.enqueueChatTurn).toHaveBeenCalledWith(
+            expect(intake.answerChat).toHaveBeenCalledWith(
                 {
-                    kind: "turn",
                     workspaceId: "w1",
                     conversationId: "c1",
                     messageId: "m1",
@@ -423,6 +430,13 @@ describe("AgentChatService", () => {
     })
 })
 
+it("follows the wake of a message the core road answers, since it has no chat-turn job", async () => {
+    const { service, queueStatus, work } = await build(null, TURN)
+    queueStatus.status.mockResolvedValue(null)
+    work.customerWake.mockResolvedValue({ id: "wake-1", state: "failed" })
+    const status = service.turnStatus("u1", { workspaceId: "w1", id: "m1" })
+    await expect(status).resolves.toMatchObject({ jobId: "wake-1", status: "failed" })
+})
 describe("AgentChatService", () => {
     it.each([
         { kind: "test", visitorName: "Lan" },

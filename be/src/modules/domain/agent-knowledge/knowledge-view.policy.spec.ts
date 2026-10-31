@@ -86,3 +86,12 @@ describe("knowledge view policy", () => {
         expect(subject.withinBudget([], 0)).toEqual([])
     })
 })
+
+describe("knowledge view policy for Sales", () => {
+    it("reads the team's knowledge in the Office and public knowledge only when it answers a customer on a channel", async () => {
+        const subject = await build()
+
+        expect(subject.viewOf({ workspaceId: "ws-1", module: "sales" }).audience).toBe("internal")
+        expect(subject.viewOf({ workspaceId: "ws-1", module: "sales", audience: "customer" }).audience).toBe("customer")
+    })
+})

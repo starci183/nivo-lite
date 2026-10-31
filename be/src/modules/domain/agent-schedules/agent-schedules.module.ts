@@ -1,5 +1,9 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { BackgroundWorkHandlerService } from "./background-work-handler.service"
+import { INBOX, InboxService } from "@modules/platform/inbox"
+import { WakeAgentExecutorService } from "./wake-agent-executor.service"
+import { AgentEventWakesService } from "./agent-event-wakes.service"
 import { AgentDrainJobService } from "./agent-drain-job.service"
 import { AgentProbesService } from "./agent-probes.service"
 import { AgentScheduleFireService } from "./agent-schedule-fire.service"
@@ -21,6 +25,15 @@ export class AgentSchedulesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        const reactive =
+            options.reactive === true
+                ? [
+                      BackgroundWorkHandlerService,
+                      AgentEventWakesService,
+                      WakeAgentExecutorService,
+                      { provide: INBOX, useClass: InboxService },
+                  ]
+                : []
         return {
             ...base,
             providers: [
@@ -34,8 +47,10 @@ export class AgentSchedulesModule extends ConfigurableModuleClass {
                 AgentTriggerSyncService,
                 AgentScheduleFireService,
                 AgentWorkSweepService,
+                ...reactive,
             ],
             exports: [
+                ...(options.reactive === true ? [AgentEventWakesService] : []),
                 AgentDrainJobService,
                 AgentProbesService,
                 AgentTriggerSyncService,

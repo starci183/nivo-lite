@@ -1,4 +1,5 @@
 import type { DynamicModule } from "@nestjs/common"
+import { AgentWakesMessageModule } from "@features/reactors/agent-wakes"
 import { AgentSyncMessageModule } from "@features/reactors/agent-sync"
 import { AutomationTriggersMessageModule } from "@features/reactors/automation-triggers"
 import { BankCreditSettlementMessageModule } from "@features/reactors/bank-credit-settlement"
@@ -14,6 +15,7 @@ import { VideoScriptingMessageModule } from "@features/reactors/video-scripting"
 /** The event reactors the api runs: each message module subscribes its consumers to their queues on the event bus. */
 export const API_REACTORS: Array<DynamicModule> = [
     AgentSyncMessageModule.register({}),
+    AgentWakesMessageModule.register({}),
     AutomationTriggersMessageModule.register({}),
     BankCreditSettlementMessageModule.register({}),
     BookingEffectsMessageModule.register({}),

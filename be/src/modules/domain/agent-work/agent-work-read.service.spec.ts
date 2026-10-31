@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
-import { agentTurnRowOf, agentWakeRowOf } from "@tests/fixtures/builders/agent-work.builder"
+import { agentTurnRowOf, agentWakeRowOf, runningWakeRowOf } from "@tests/fixtures/builders/agent-work.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentGoalsService } from "./agent-goals.service"
 import { AgentTasksService } from "./agent-tasks.service"
@@ -154,5 +154,24 @@ describe("AgentWorkReadService.workspaceWork", () => {
             where: { workspaceId: "ws-1", workEnabled: false },
         })
         expect(em.count).toHaveBeenCalledWith(AgentWakeEntity, { where: { workspaceId: "ws-1", status: "held" } })
+    })
+})
+
+describe("AgentWorkReadService.customerWake", () => {
+    it("tells where the wake of a stored customer message stands in the words of a job", async () => {
+        const { service, em } = await build(
+            mockEntityManager({ findOne: [AgentWakeEntity, runningWakeRowOf("wake-7")] }),
+        )
+
+        await expect(service.customerWake("ws-1", "msg-1")).resolves.toEqual({ id: "wake-7", state: "running" })
+        expect(em.findOne).toHaveBeenCalledWith(AgentWakeEntity, {
+            where: { workspaceId: "ws-1", source: "customer", eventKey: "msg-1" },
+        })
+    })
+
+    it("answers null for a message no wake was written for", async () => {
+        const { service } = await build(mockEntityManager({ findOne: [AgentWakeEntity, null] }))
+
+        await expect(service.customerWake("ws-1", "msg-9")).resolves.toBeNull()
     })
 })

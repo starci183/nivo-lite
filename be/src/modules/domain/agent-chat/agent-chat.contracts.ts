@@ -143,3 +143,14 @@ export interface ChatTurnFacts {
     /** The reply's delivery verdict. */
     readonly replyDeliveryStatus: string | null
 }
+
+/** Where the job or wake behind a submitted message stands. */
+export interface TurnJobState {
+    /** The job or wake. */
+    readonly id: string
+    /** Waiting, running, done or failed. */
+    readonly state: "queued" | "running" | "done" | "failed"
+}
+
+/** The state of the job or wake behind a message, or none. */
+export type OptionalTurnJobState = TurnJobState | null

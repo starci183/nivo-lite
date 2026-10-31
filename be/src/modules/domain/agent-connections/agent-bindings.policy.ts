@@ -13,9 +13,11 @@ import type {
 
 /**
  * The modules that may be bound inbound_chat to a chat connection, in front-door order. The chatbot is the front door whenever it
- * is bound; booking and loyalty are reached by intent. With no chatbot bound, the first of the others answers as the front door.
+ * is bound; booking, loyalty and sales are reached by intent, and the conversation lock keeps two of them from answering one message:
+ * the chatbot hands the conversation over to Sales and the customer sees one thread. With no chatbot bound, the first of the others
+ * answers as the front door. A Sales agent on a channel is customer-facing: it reads public knowledge only.
  */
-export const INBOUND_MODULES: ReadonlyArray<string> = ["chatbot", "booking", "loyalty"]
+export const INBOUND_MODULES: ReadonlyArray<string> = ["chatbot", "booking", "loyalty", "sales"]
 
 /** Every purpose a binding can have. */
 export const PURPOSES: ReadonlyArray<Purpose> = [

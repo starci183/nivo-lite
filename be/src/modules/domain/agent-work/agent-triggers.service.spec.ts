@@ -49,9 +49,9 @@ describe("AgentTriggersService reads", () => {
         const row = eventTriggerRowOf()
         const { service, em } = await build(mockEntityManager({ find: [AgentTriggerEntity, [row]] }))
 
-        await expect(service.enabledForEvent("bank_credit_booked", 25)).resolves.toHaveLength(1)
+        await expect(service.enabledForEvent("ws-1", "bank_credit_booked", 25)).resolves.toHaveLength(1)
         expect(em.find).toHaveBeenCalledWith(AgentTriggerEntity, {
-            where: { kind: "event", eventName: "bank_credit_booked", enabled: true },
+            where: { workspaceId: "ws-1", kind: "event", eventName: "bank_credit_booked", enabled: true },
             order: { createdAt: "ASC" },
             take: 25,
         })
@@ -140,14 +140,14 @@ describe("AgentTriggersService.seed", () => {
         await expect(service.seed(agentTriggerWriteOf(), "morning")).resolves.toMatchObject({ seedKey: "morning" })
 
         expect(access.manager).not.toHaveBeenCalled()
-        expect(em.findOne).toHaveBeenCalledWith(AgentTriggerEntity, { where: { agentId: "agent-1", seedKey: "morning" } })
+        expect(em.findOne).toHaveBeenCalledWith(AgentTriggerEntity, {
+            where: { agentId: "agent-1", seedKey: "morning" },
+        })
         expect(em.save).toHaveBeenCalledWith(AgentTriggerEntity, expect.objectContaining({ seedKey: "morning" }))
     })
 
     it("finds the row a key already wrote and writes no second one", async () => {
-        const { service, em } = await build(
-            mockEntityManager({ findOne: [AgentTriggerEntity, seededTriggerRowOf()] }),
-        )
+        const { service, em } = await build(mockEntityManager({ findOne: [AgentTriggerEntity, seededTriggerRowOf()] }))
 
         await expect(service.seed(agentTriggerWriteOf(), "morning")).resolves.toMatchObject({
             id: "trigger-1",

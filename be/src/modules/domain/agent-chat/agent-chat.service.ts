@@ -2,7 +2,9 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentConversationsReadService, AgentConversationsService } from "@modules/domain/agent-conversations"
 import { AgentMessageDeliveriesService, AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentWorkReadService } from "@modules/domain/agent-work"
 import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
+import { CustomerIntakeService } from "@modules/domain/conversations"
 import { EventsReadService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -23,6 +25,7 @@ import type {
     AgentChatTurnStatusRequest,
     ChatAgentFacts,
     ChatTurnFacts,
+    OptionalTurnJobState,
     QueuedAgentChatTurn,
     SendAgentChatRequest,
     StartAgentChatRequest,
@@ -50,6 +53,8 @@ export class AgentChatService {
         private readonly messages: AgentMessagesService,
         private readonly events: EventsReadService,
         private readonly turns: ChatTurnQueue,
+        private readonly intake: CustomerIntakeService,
+        private readonly work: AgentWorkReadService,
         @InjectQueueStatusService() private readonly queueStatus: QueueStatusService,
     ) {}
 
@@ -128,17 +133,15 @@ export class AgentChatService {
                           manager,
                           member.userId,
                       )
-            await this.turns.enqueueChatTurn(
-                {
-                    kind,
-                    workspaceId: request.workspaceId,
-                    conversationId: conversation.id,
-                    messageId: id,
-                    channelEventId: `agentchat:${id}`,
-                    lookupName: false,
-                },
-                manager,
-            )
+            const queued = {
+                workspaceId: request.workspaceId,
+                conversationId: conversation.id,
+                messageId: id,
+                channelEventId: `agentchat:${id}`,
+                lookupName: false,
+            }
+            if (kind === "turn") await this.intake.answerChat(queued, manager)
+            else await this.turns.enqueueChatTurn({ ...queued, kind }, manager)
             return { id, conversationId: conversation.id, status: "queued" }
         })
     }
@@ -182,11 +185,7 @@ export class AgentChatService {
             replyDeliveryStatus: reply?.deliveryStatus ?? null,
         }
         const kind = message.role === "agent" ? "deliver" : "turn"
-        const queued = await this.queueStatus.status(
-            request.workspaceId,
-            "chat_turn",
-            `chat-turn.${kind}:${message.id}`,
-        )
+        const queued = await this.jobOf(request.workspaceId, kind, message.id)
         if (queued === null) throw new AgentChatError({ code: AgentChatErrorCode.TurnNotFound })
         const deliveryFailed =
             message.channel !== "website" &&
@@ -205,6 +204,17 @@ export class AgentChatService {
             resultMessageId: kind === "deliver" ? message.id : message.replyId,
             errorCode,
         }
+    }
+
+    /** The chat-turn job of a message; a message the core road answers has a wake and no job, and the wake says where it stands in the same words. */
+    private async jobOf(
+        workspaceId: string,
+        kind: "turn" | "deliver",
+        messageId: string,
+    ): Promise<OptionalTurnJobState> {
+        const queued = await this.queueStatus.status(workspaceId, "chat_turn", `chat-turn.${kind}:${messageId}`)
+        if (queued !== null || kind === "deliver") return queued
+        return this.work.customerWake(workspaceId, messageId)
     }
 
     private async requireAgent(request: AgentChatAgentRequest): Promise<ChatAgentFacts> {

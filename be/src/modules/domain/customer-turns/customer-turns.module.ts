@@ -4,6 +4,9 @@ import { AgentKnowledgeModule } from "@modules/domain/agent-knowledge"
 import { ConversationOwnershipEventsModule } from "@modules/domain/conversation-ownership-events"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./customer-turns.module-definition"
+import { CustomerCorePlanService } from "./customer-core-plan.service"
+import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
+import { CustomerWorkHandlerService } from "./customer-work-handler.service"
 import { PaymentClaimsService } from "./payment-claims.service"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
@@ -18,7 +21,8 @@ import { TurnToolAccessService } from "./turn-tool-access.service"
 @Module({})
 /**
  * What a customer chat turn starts besides the reply: the payment claims, the staff escalation, the purchases, and the connector
- * meta-tools and the agent hand-off the tool bridge serves to OpenClaw. The OpenClaw AI step
+ * meta-tools and the agent hand-off the tool bridge serves to OpenClaw, and the handler that answers a customer's wake on the core road
+ * (it registers itself with the agent-work drain, and shares the turn code of the conversations capability). The OpenClaw AI step
  * (CustomerTurnRuntimeService) and the outcome handler (CustomerOutcomesService) are plugged into the conversations capability by the
  * app root, which runs the queued turn and delivers the reply; they reach these services, and what an agent knows (agent-knowledge,
  * registered here so the agents capability and the knowledge.search tool read it too), through this global module.
@@ -38,6 +42,9 @@ export class CustomerTurnsModule extends ConfigurableModuleClass {
             TurnSourcesService,
             TurnToolAccessService,
             TurnModulesService,
+            CustomerTurnRuntimeService,
+            CustomerCorePlanService,
+            CustomerWorkHandlerService,
         ]
         const knowledge = AgentKnowledgeModule.register({ isGlobal: false })
         return {

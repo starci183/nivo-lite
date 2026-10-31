@@ -125,6 +125,18 @@ describe("CustomerOutcomesService", () => {
         expect(engine.runWork.mock.calls[0]?.[1]?.forceAsk).toBe("unclear_outcome")
     })
 
+    it("hands the turn and wake of the core road to the item a held-over question opens, and nothing on the legacy road", async () => {
+        const core = await build()
+        const legacy = await build()
+        const turn = turnOf()
+
+        await core.outcomes.holdOver({ ...turn, origin: { turnId: "turn-1", wakeId: "wake-1" } }, "quota_exceeded")
+        await legacy.outcomes.holdOver(turn, "quota_exceeded")
+
+        expect(core.engine.runWork.mock.calls[0]?.[1]?.origin).toEqual({ turnId: "turn-1", wakeId: "wake-1" })
+        expect(legacy.engine.runWork.mock.calls[0]?.[1]?.origin).toBeUndefined()
+    })
+
     it.each<[WorkStatus, boolean, string | undefined]>([
         ["done", false, undefined],
         ["waiting_decision", true, "Lan"],
