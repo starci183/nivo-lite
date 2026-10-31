@@ -29,7 +29,6 @@ interface ContentEditorVariantsProps {
 export const ContentEditorVariants = (props: ContentEditorVariantsProps) => (
     <>
         <Tabs
-            variant="secondary"
             label={props.t("fieldChannels")}
             selectedKey={props.open.id}
             inset="none"

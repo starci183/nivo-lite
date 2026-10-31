@@ -40,10 +40,7 @@ export const useDatabaseCommands = (): DatabaseCommands => {
     const refresh = useConnectionsRefresh()
     return useMemo(
         () => ({
-            test: (connectionId, target) =>
-                settle(async () => {
-                    return testDatabase({ connectionId, target })
-                }),
+            test: (connectionId, target) => settle(() => testDatabase({ connectionId, target })),
             preview: (connectionId, target, mapping) =>
                 settle(async () => {
                     const { columns, rows } = await previewTable({ connectionId, target, mapping })

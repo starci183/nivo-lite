@@ -59,10 +59,7 @@ export const useOpenApiCommands = (): OpenApiCommands => {
                         authName: spec.authHint.name,
                     }
                 }),
-            test: (request) =>
-                settle(async () => {
-                    return testOperation(request)
-                }),
+            test: (request) => settle(() => testOperation(request)),
             save: async (request) => {
                 const settled = await settle(() => triggerSave(request))
                 if (settled.kind === "ok") await refresh()
