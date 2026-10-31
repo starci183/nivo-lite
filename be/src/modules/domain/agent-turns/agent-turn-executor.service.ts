@@ -39,19 +39,24 @@ export class AgentTurnExecutorService implements AgentTurnExecutor {
             return { kind: "blocked", reason }
         }
         const started = this.clock.now()
-        const result = await this.runner.run(
-            {
-                workspaceId: turn.workspaceId,
-                agentId: turn.agentId,
-                module: plan.module,
-                runtimeAgentId: plan.runtimeAgentId,
-                threadKey: plan.threadKey,
-                message: plan.message,
-                runKey: `wake-${turn.wakeId}:${String(turn.fence)}`,
-                timeoutMs: plan.timeoutMs,
-            },
-            signal,
-        )
+        const result = await this.runner
+            .run(
+                {
+                    workspaceId: turn.workspaceId,
+                    agentId: turn.agentId,
+                    module: plan.module,
+                    runtimeAgentId: plan.runtimeAgentId,
+                    threadKey: plan.threadKey,
+                    message: plan.message,
+                    runKey: `wake-${turn.wakeId}:${String(turn.fence)}`,
+                    timeoutMs: plan.timeoutMs,
+                },
+                signal,
+            )
+            .catch(async (cause: unknown) => {
+                await this.meterFailure(turn, plan)
+                throw cause
+            })
         await this.usage.record({
             workspaceId: turn.workspaceId,
             kind: usageKindFor(turn.source),
@@ -70,6 +75,18 @@ export class AgentTurnExecutorService implements AgentTurnExecutor {
                 durationMs: this.clock.now().getTime() - started.getTime(),
             },
         }
+    }
+
+    /** A run that threw may still have reached the model, so it is metered by what was sent, as an estimate. */
+    private meterFailure(turn: AgentTurnView, plan: AgentTurnPlan): Promise<void> {
+        return this.usage.record({
+            workspaceId: turn.workspaceId,
+            kind: usageKindFor(turn.source),
+            module: plan.module,
+            usage: null,
+            completionChars: 0,
+            promptChars: plan.message.length,
+        })
     }
 
     /** The first gate that stops the turn, or null. */

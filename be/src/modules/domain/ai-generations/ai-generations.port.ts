@@ -22,6 +22,8 @@ export interface GenerationUsageRecord {
     readonly usage: RunUsage | null
     /** The length of the generated text. */
     readonly completionChars: number
+    /** The length of the prompt, for a run that reported no usage: the estimate then has something to count. */
+    readonly promptChars?: number
 }
 
 /**

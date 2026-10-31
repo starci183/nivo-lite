@@ -109,3 +109,22 @@ describe("UsageGateService", () => {
         })
     })
 })
+
+describe("UsageGateService, a run that reported nothing", () => {
+    describe("record", () => {
+        it("hands the prompt length on, so a run that reported nothing is still estimated", async () => {
+            const { gate, usage } = await build()
+
+            await gate.record({
+                workspaceId: "ws-1",
+                kind: "agent_work",
+                module: "accounting",
+                usage: null,
+                completionChars: 0,
+                promptChars: 900,
+            })
+
+            expect(usage.record.mock.calls[0]?.[0]).toMatchObject({ promptChars: 900, completionChars: 0, usage: null })
+        })
+    })
+})

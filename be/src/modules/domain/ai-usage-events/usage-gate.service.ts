@@ -39,7 +39,7 @@ export class UsageGateService implements UsageGate {
                           total_tokens: run.prompt_tokens + run.completion_tokens,
                           cost: run.cost,
                       },
-            promptChars: 0,
+            promptChars: entry.promptChars ?? 0,
             completionChars: entry.completionChars,
         })
     }
