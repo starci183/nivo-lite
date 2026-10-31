@@ -11,9 +11,11 @@ import { SepayNativeService } from "./adapters/sepay-native.service"
 import { GatewaySurfaceService } from "./gateway-surface.service"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayAdminService } from "./mcp-gateway-admin.service"
+import type { NativeAdapter } from "./mcp-gateway.contracts"
 import { NATIVE_ADAPTERS } from "./mcp-gateway.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./mcp-gateway.module-definition"
 import { McpGatewayService } from "./mcp-gateway.service"
+import { NativeRunnerService } from "./native-runner.service"
 
 @Module({})
 /**
@@ -45,10 +47,11 @@ export class McpGatewayModule extends ConfigurableModuleClass {
                 EinvoiceNativeService,
                 {
                     provide: NATIVE_ADAPTERS,
-                    useFactory: (sepay: SepayNativeService, einvoice: EinvoiceNativeService) => [sepay, einvoice],
-                    inject: [SepayNativeService, EinvoiceNativeService],
+                    useFactory: (...adapters: ReadonlyArray<NativeAdapter>) => adapters,
+                    inject: [SepayNativeService, EinvoiceNativeService, ...(options.natives ?? [])],
                 },
                 McpConnectorCredentialService,
+                NativeRunnerService,
                 McpGatewayService,
                 ...admin,
                 ...keyCheck,

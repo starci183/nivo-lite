@@ -5,18 +5,16 @@ import { McpConnectorsService } from "@modules/domain/mcp-connectors"
 import { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import type { GatewayReceiptOperation } from "@modules/domain/mcp-gateway-receipts"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
-import { InjectMcpRemote, McpError, McpErrorCode } from "@modules/integrations/mcp"
+import { InjectMcpRemote } from "@modules/integrations/mcp"
 import type { McpRemote } from "@modules/integrations/mcp"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { InjectQueueTimeout } from "@modules/platform/queue"
-import type { QueueTimeout } from "@modules/platform/queue"
 import { argsHashOf, masked, summaryOf } from "./audit-mask.policy"
 import { breakerAfter, breakerGate, CLOSED } from "./circuit-breaker.policy"
+import { failureCodeOf, isTimeout, roleIn, usable, visibleTo } from "./connector-call.policy"
 import { grantOf, nativeConnectorOf, remoteConnectorOf } from "./connector-row.mapper"
-import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import { judgeGrant } from "./grant.policy"
 import { gatewayArgumentsSchema } from "./gateway-tools.schema"
 import { withReplayKey } from "./idempotency-key.policy"
@@ -40,6 +38,7 @@ import type {
     WorkspaceConnector,
 } from "./mcp-gateway.contracts"
 import type { McpGatewayOptions } from "./mcp-gateway.options"
+import { NativeRunnerService } from "./native-runner.service"
 import { addressOf, fullNameOf, grantFor, searchTools, specOf } from "./tool-name.policy"
 
 /** A resolved call: the connector, the spec and the full name. */
@@ -88,30 +87,6 @@ const failure = (code: "invalid_name" | "unknown_tool" | "connector_disabled", d
     detail,
 })
 
-/** True when the connector may run the tool: a native tool, or a remote tool whose live schema is the approved one. */
-const usable = (connector: WorkspaceConnector, tool: string): boolean =>
-    connector.approvedTools === null || connector.approvedTools.has(tool)
-
-/**
- * The tool of a role among connectors: the first tool declaring it among those not disabled (natives first, then remotes by
- * key) that may run; none is `no_capability`.
- */
-const roleIn = (connectors: ReadonlyArray<WorkspaceConnector>, role: CapabilityRole): RoleResolution => {
-    const [tool] = connectors
-        .filter((connector) => connector.status !== "disabled")
-        .flatMap((connector) =>
-            connector.manifest.tools
-                .filter((spec) => spec.role === role && usable(connector, spec.name))
-                .map((spec) => ({
-                    role,
-                    name: fullNameOf(connector.manifest.key, spec.name),
-                    connector: connector.manifest.key,
-                    connectorName: connector.manifest.name,
-                })),
-        )
-    return tool === undefined ? { ok: false, code: "no_capability", role } : { ok: true, tool }
-}
-
 /**
  * True when a timed-out write carries a nonblank string replay key, so the server can return its stored result instead of acting twice.
  */
@@ -126,15 +101,6 @@ const replayable = (spec: GatewayToolSpec, args: GatewayJson, ran: Ran): boolean
     const key = args[spec.idempotencyArg]
     return typeof key === "string" && key.trim() !== ""
 }
-
-/** True for the gateway's own time-limit errors and the remote client's. */
-const isTimeout = (cause: unknown): boolean =>
-    (cause instanceof McpError && cause.code === McpErrorCode.Timeout) ||
-    (cause instanceof McpGatewayError && cause.code === McpGatewayErrorCode.Timeout)
-
-/** The code a failed run is audited with. */
-const failureCodeOf = (cause: unknown): string =>
-    cause instanceof McpError || cause instanceof McpGatewayError ? cause.code : "internal"
 
 @Injectable()
 /**
@@ -154,12 +120,12 @@ export class McpGatewayService {
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         @InjectMcpRemote() private readonly remote: McpRemote,
-        @InjectQueueTimeout() private readonly timeout: QueueTimeout,
         private readonly connectors: McpConnectorsService,
         private readonly grants: McpToolGrantsService,
         private readonly callLog: McpCallLogService,
         private readonly credentials: McpConnectorCredentialService,
         private readonly receipts: GatewayReceiptsService,
+        private readonly nativeRunner: NativeRunnerService,
     ) {}
 
     /** The connectors of a workspace: every native one, and the remote ones it registered. */
@@ -231,7 +197,7 @@ export class McpGatewayService {
         const active = connectors.filter((connector) => connector.status !== "disabled")
         const manifests = active.map((connector) => ({
             ...connector.manifest,
-            tools: connector.manifest.tools.filter((spec) => usable(connector, spec.name)),
+            tools: connector.manifest.tools.filter((spec) => usable(connector, spec.name) && visibleTo(caller, spec)),
         }))
         return searchTools(manifests, grants, query, limit)
     }
@@ -244,6 +210,7 @@ export class McpGatewayService {
         ])
         const grant = grantFor(grants, name)
         if ("ok" in resolved || !usable(resolved.connector, resolved.spec.name)) return null
+        if (!visibleTo(caller, resolved.spec)) return null
         if (grant === null || grant.mode === "never") return null
         const { spec } = resolved
         return {
@@ -264,6 +231,15 @@ export class McpGatewayService {
         const resolved = await this.resolve(caller.workspaceId, name)
         if (!parsed.success) return this.refuseArguments(caller, resolved, UNRECORDED_ARGUMENTS, started)
         if ("ok" in resolved) return resolved
+        if (!visibleTo(caller, resolved.spec)) {
+            await this.audit(caller, resolved, parsed.data, {
+                outcome: "refused",
+                code: "internal_only",
+                summary: "",
+                started,
+            })
+            return { ok: false, code: "internal_only", detail: name }
+        }
         if (resolved.spec.argumentSchema?.safeParse(parsed.data).success === false)
             return this.refuseArguments(caller, resolved, parsed.data, started)
         const sent = withReplayKey(resolved.spec, caller, resolved.name, parsed.data)
@@ -364,8 +340,8 @@ export class McpGatewayService {
             })
             return { ok: false, code: "unavailable", detail: "circuit_open" }
         }
-        const first = await this.run(caller.workspaceId, resolved, args)
-        const ran = replayable(resolved.spec, args, first) ? await this.run(caller.workspaceId, resolved, args) : first
+        const first = await this.run(caller, resolved, args)
+        const ran = replayable(resolved.spec, args, first) ? await this.run(caller, resolved, args) : first
         const now = this.clock.now().getTime()
         this.breakers.set(breakerKey, breakerAfter(this.breakerOf(breakerKey), ran.kind !== "failed", now))
         return this.answer(caller, resolved, args, ran, started)
@@ -406,17 +382,15 @@ export class McpGatewayService {
     }
 
     /** Runs the adapter under the connector's time limit; every failure is an answer. */
-    private async run(workspaceId: string, resolved: Resolved, args: GatewayJson): Promise<Ran> {
+    private async run(caller: GatewayCaller, resolved: Resolved, args: GatewayJson): Promise<Ran> {
+        const { workspaceId } = caller
         const { connector, spec } = resolved
         const adapter = this.natives.find(
             (entry) => connector.manifest.kind === "native" && entry.manifest.key === connector.manifest.key,
         )
         try {
             if (adapter !== undefined) {
-                return {
-                    kind: "ok",
-                    value: await this.native(adapter, workspaceId, spec.name, connector.timeoutMs, args),
-                }
+                return await this.nativeRunner.run(adapter, caller, spec.name, connector.timeoutMs, args)
             }
             const endpoint = await this.credentials.endpointOf(workspaceId, {
                 key: connector.manifest.key,
@@ -437,32 +411,6 @@ export class McpGatewayService {
                 tool: spec.name,
             })
             return { kind: "failed", outcome: isTimeout(cause) ? "timeout" : "error", code: failureCodeOf(cause) }
-        }
-    }
-
-    /**
-     * Runs a native adapter, refused with `MCP_GATEWAY_TIMEOUT` when it outlasts the connector's time limit; the deadline is the
-     * platform timer port (the one the readiness probe uses), released as soon as the adapter answers.
-     */
-    private async native(
-        adapter: NativeAdapter,
-        workspaceId: string,
-        tool: string,
-        timeoutMs: number,
-        args: GatewayJson,
-    ): Promise<GatewayJson> {
-        const cancels: Array<() => void> = []
-        const deadline = new Promise<never>((_resolve, reject) => {
-            cancels.push(
-                this.timeout.schedule(() => {
-                    reject(new McpGatewayError({ code: McpGatewayErrorCode.Timeout, params: { tool } }))
-                }, timeoutMs),
-            )
-        })
-        try {
-            return await Promise.race([adapter.invoke(workspaceId, tool, args), deadline])
-        } finally {
-            for (const cancel of cancels) cancel()
         }
     }
 

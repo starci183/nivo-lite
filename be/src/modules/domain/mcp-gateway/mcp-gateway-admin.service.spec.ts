@@ -4,7 +4,6 @@ import { builder, mock } from "@starci/jest-preset"
 import { ConnectionsService } from "@modules/domain/connections"
 import { McpCallLogService } from "@modules/domain/mcp-call-log"
 import { McpConnectorsService } from "@modules/domain/mcp-connectors"
-import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import { MCP_REMOTE } from "@modules/integrations/mcp"
 import type { McpRemote } from "@modules/integrations/mcp"
@@ -15,33 +14,17 @@ import { SEPAY_MANIFEST } from "./adapters/sepay-native.service"
 import { argsHashOf } from "./audit-mask.policy"
 import { McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
-import type { GrantInput, RemoteConnectorInput } from "./mcp-gateway.contracts"
-import { MCP_GATEWAY_OPTIONS } from "./mcp-gateway.decorators"
+import type { GrantInput, NativeAdapter, RemoteConnectorInput } from "./mcp-gateway.contracts"
+import { MCP_GATEWAY_OPTIONS, NATIVE_ADAPTERS } from "./mcp-gateway.decorators"
 import { McpGatewayAdminService } from "./mcp-gateway-admin.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import { McpGatewayService } from "./mcp-gateway.service"
 import { GATEWAY_BEARER as BEARER, openedEndpointOf } from "@tests/fixtures/builders/mcp-gateway.builder"
+import { hakuenConnectorRowOf as rowOf } from "@tests/fixtures/builders/mcp-gateway-admin.builder"
 
 const ACTOR = { principalId: "person-1", workspaceId: "ws-1" }
 const MANAGER = ["owner", "manager"]
 const HOLD = { name: "order.hold", description: "Hold", inputSchema: { type: "object" }, annotations: {}, meta: {} }
-
-const rowOf = builder<McpConnectorRow>({
-    key: "hakuen",
-    name: "HAKUEN",
-    kind: "remote",
-    url: "https://hakuen.test/mcp",
-    credential_state: "set",
-    credential_set_at: "2026-10-22T01:00:00.000Z",
-    status: "active",
-    contract_version: "hakuen-mcp@1",
-    timeout_ms: 3000,
-    tool_catalog: [{ name: "old.tool", hash: "h-old" }],
-    catalog_hash: "catalog-1",
-    approved_catalog: [],
-    approved_at: null,
-    checked_at: null,
-})
 
 const grantInputOf = builder<GrantInput>({ agentId: "agent-1", tool: "hakuen.booking.confirm", mode: "auto" })
 
@@ -71,6 +54,7 @@ const build = async () => {
         providers: [
             McpGatewayAdminService,
             { provide: MCP_GATEWAY_OPTIONS, useValue: { defaultTimeoutMs: 4000 } },
+            { provide: NATIVE_ADAPTERS, useValue: [mock<NativeAdapter>({ manifest: SEPAY_MANIFEST })] },
             { provide: MCP_REMOTE, useValue: remote },
             { provide: LOGGER, useValue: logger },
             { provide: McpGatewayService, useValue: gateway },
@@ -309,11 +293,12 @@ describe("McpGatewayAdminService.registerRemote and setCredential", () => {
         expect(remote.listTools.mock.calls).toEqual([[{ url, bearer: null }, 3000]])
     })
 
-    it("refuses a bad key, name, URL or bearer before writing anything", async () => {
+    it("refuses a bad or native-held key, name, URL or bearer before writing anything", async () => {
         const { admin, connectorRows, credentials } = await build()
         const register = (input: RemoteConnectorInput) => admin.registerRemote(ACTOR, input)
 
         await expect(register(connectorInputOf({ key: "Hakuen" }))).rejects.toMatchObject({ params: { field: "key" } })
+        await expect(register(connectorInputOf({ key: "sepay" }))).rejects.toMatchObject({ params: { field: "key" } })
         await expect(register(connectorInputOf({ name: "  " }))).rejects.toMatchObject({ params: { field: "name" } })
         await expect(register(connectorInputOf({ url: "ftp://x.test" }))).rejects.toMatchObject({
             params: { field: "url" },

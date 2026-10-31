@@ -16,6 +16,7 @@ export type GatewayFailure =
     | "schema_unapproved"
     | "not_granted"
     | "idempotency_key_required"
+    | "internal_only"
     | "unavailable"
     | "tool_error"
     | "unknown_outcome"

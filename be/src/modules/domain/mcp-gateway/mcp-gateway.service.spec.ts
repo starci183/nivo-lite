@@ -10,15 +10,14 @@ import type { McpRemote } from "@modules/integrations/mcp"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { QUEUE_TIMEOUT } from "@modules/platform/queue"
 import type { QueueTimeout } from "@modules/platform/queue"
 import { SEPAY_MANIFEST } from "./adapters/sepay-native.service"
-import { McpGatewayErrorCode } from "./errors/mcp-gateway.error"
-import type { GatewayCaller, NativeAdapter } from "./mcp-gateway.contracts"
+import type { GatewayCaller, NativeAdapter, NativeConnectorManifest } from "./mcp-gateway.contracts"
 import { MCP_GATEWAY_OPTIONS, NATIVE_ADAPTERS } from "./mcp-gateway.decorators"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import { McpGatewayService } from "./mcp-gateway.service"
+import { NativeRunnerService } from "./native-runner.service"
 import {
     GATEWAY_CALLER as CALLER,
     GATEWAY_CATALOG as CATALOG,
@@ -51,7 +50,11 @@ import {
     VALID_WRITE_IDENTITIES,
 } from "@tests/fixtures/builders/mcp-gateway-scenario.builder"
 
-const build = async (setup: GatewaySpecSetup = {}, manifest = SEPAY_MANIFEST) => {
+const build = async (
+    setup: GatewaySpecSetup = {},
+    manifest = SEPAY_MANIFEST,
+    added: ReadonlyArray<NativeConnectorManifest> = [],
+) => {
     const clock = new FakeClock("2026-10-20T02:00:00.000Z")
     const logger = mock<Logger>()
     const remote = mock<McpRemote>()
@@ -64,21 +67,24 @@ const build = async (setup: GatewaySpecSetup = {}, manifest = SEPAY_MANIFEST) =>
     const credentials = mock<McpConnectorCredentialService>({ endpointOf: openedEndpointOf })
     const receipts = mock<GatewayReceiptsService>()
     const cancel = jest.fn()
+    const runner = mock<NativeRunnerService>({
+        run: (...call) => new NativeRunnerService(timeout).run(...call),
+    })
     arrangeGatewayScenario(setup, { remote, timeout, cancel, connectors, grants, receipts })
     const moduleRef = await Test.createTestingModule({
         providers: [
             McpGatewayService,
             { provide: MCP_GATEWAY_OPTIONS, useValue: { defaultTimeoutMs: setup.timeoutMs ?? 4000 } },
-            { provide: NATIVE_ADAPTERS, useValue: [native] },
+            { provide: NATIVE_ADAPTERS, useValue: [native, ...added.map((extra) => mock<NativeAdapter>({ manifest: extra }))] },
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
             { provide: MCP_REMOTE, useValue: remote },
-            { provide: QUEUE_TIMEOUT, useValue: timeout },
             { provide: McpConnectorsService, useValue: connectors },
             { provide: McpToolGrantsService, useValue: grants },
             { provide: McpCallLogService, useValue: callLog },
             { provide: McpConnectorCredentialService, useValue: credentials },
             { provide: GatewayReceiptsService, useValue: receipts },
+            { provide: NativeRunnerService, useValue: runner },
         ],
     }).compile()
     const gateway = moduleRef.get(McpGatewayService)
@@ -96,6 +102,18 @@ describe("McpGatewayService registry and discovery", () => {
         )
         expect(connectors[0]?.approvedTools).toBeNull()
         expect(connectors[1]?.approvedTools?.size).toBe(CATALOG.length)
+    })
+
+    it("finds an adapter an app added beside the first, with the same time limit", async () => {
+        const { gateway, native } = await build(gatewayScenarioOf("registry"), SEPAY_MANIFEST, [
+            { ...SEPAY_MANIFEST, key: "brain", name: "Brain" },
+        ])
+
+        const connectors = await gateway.connectorsOf("ws-1")
+
+        expect(native.invoke).not.toHaveBeenCalled()
+        expect(connectors.map((connector) => connector.manifest.key)).toEqual(["sepay", "brain", "hakuen"])
+        expect(connectors[1]).toMatchObject({ status: "active", timeoutMs: 4000, approvedTools: null })
     })
 
     it("answers the grants of an agent and the agents granted a tool", async () => {
@@ -457,38 +475,20 @@ describe("McpGatewayService.call native connectors", () => {
     })
 })
 
-describe("McpGatewayService.call native connector execution", () => {
-    it("runs the native adapter under the connector's time limit and releases the deadline", async () => {
-        const { gateway, native, remote, timeout, cancel } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
+const INTERNAL_SEPAY = { ...SEPAY_MANIFEST, tools: SEPAY_MANIFEST.tools.map((tool) => ({ ...tool, internalOnly: true })) }
 
-        await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 5 })).resolves.toEqual(EXPECTED.native)
-        expect(native.invoke).toHaveBeenCalledWith("ws-1", "transactions.list", { limit: 5 })
-        expect(timeout.schedule.mock.calls[0]?.[1]).toBe(4000)
-        expect(cancel).toHaveBeenCalledTimes(1)
-        expect(remote.call).not.toHaveBeenCalled()
-    })
+describe("McpGatewayService internal-only tools", () => {
+    it("keeps a customer conversation from the tool, audited before the adapter, and shows it outside one", async () => {
+        const name = "sepay.transactions.list"
+        const { gateway, native, callLog } = await build({ grants: [grantOf({ tool: "sepay.*" })] }, INTERNAL_SEPAY)
 
-    it("answers unavailable with the adapter's code when it refuses", async () => {
-        const { gateway, native } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
-        native.invoke.mockRejectedValue(EXPECTED.nativeUnknownTool)
-
-        await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(
-            refusalOf("unavailable", McpGatewayErrorCode.UnknownTool),
-        )
-    })
-
-    it("answers timeout when the adapter outlasts the connector's time limit", async () => {
-        const { gateway, native, callLog, timeout, cancel } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
-        native.invoke.mockReturnValue(new Promise(() => undefined))
-        timeout.schedule.mockImplementation((expire) => {
-            expire()
-            return cancel
-        })
-
-        await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(
-            refusalOf("unavailable", McpGatewayErrorCode.Timeout),
-        )
-        expect(linesOf(callLog)[0]).toMatchObject({ outcome: "timeout", errorCode: McpGatewayErrorCode.Timeout })
-        expect(cancel).toHaveBeenCalledTimes(1)
+        await expect(gateway.call(CALLER, name, {})).resolves.toEqual(refusalOf("internal_only", name))
+        await expect(gateway.search(CALLER, "bank transactions", 5)).resolves.toEqual([])
+        await expect(gateway.describe(CALLER, name)).resolves.toBeNull()
+        expect(native.invoke).not.toHaveBeenCalled()
+        expect(linesOf(callLog)[0]).toMatchObject({ outcome: "refused", errorCode: "internal_only" })
+        const outside = { ...CALLER, conversationId: null }
+        await expect(gateway.call(outside, name, {})).resolves.toMatchObject({ ok: true })
+        await expect(gateway.describe(outside, name)).resolves.toMatchObject({ name })
     })
 })
