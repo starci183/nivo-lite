@@ -7,6 +7,7 @@ import { TABLE_COPY } from "./messages/table.messages"
 import { docExportUrl, isNotPublicAnswer, sheetExportUrl } from "./table-google.policy"
 import {
     assertFileSize,
+    cellText,
     decodeText,
     documentKind,
     isZip,
@@ -70,6 +71,26 @@ export class TableClient {
             sheets: sheets.map((candidate) => candidate.sheet),
             sheet: chosen.sheet,
         })
+    }
+
+    /**
+     * The cells of one named tab of an uploaded .xlsx as text, row by row exactly as laid out (no row is taken for the headers),
+     * so a tab with a title above its header row can be read by the caller.
+     */
+    async readWorkbookCells(
+        name: string,
+        bytes: Uint8Array,
+        sheet: string,
+    ): Promise<ReadonlyArray<ReadonlyArray<string>>> {
+        assertFileSize(bytes)
+        if (tableFileKind(name) !== "xlsx") throw rejected(TABLE_COPY.onlyWorkbooks)
+        if (!isZip(bytes)) throw rejected(TABLE_COPY.badXlsx)
+        const sheets = await this.workbookReader.read(bytes).catch((cause: unknown) => {
+            throw rejected(TABLE_COPY.unreadableExcel, cause)
+        })
+        const chosen = sheets.find((candidate) => candidate.sheet === sheet)
+        if (chosen === undefined) throw rejected(TABLE_COPY.noSuchSheet(sheet))
+        return chosen.data.map((row) => row.map(cellText))
     }
 
     /** The table of a public Google Sheets tab. */

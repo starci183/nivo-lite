@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common"
 import { KnowledgeSourcesHandler } from "./application/knowledge-sources.handler"
 import { KnowledgeUsageHandler } from "./application/knowledge-usage.handler"
+import { KnowledgeCategoriesHandler } from "./application/knowledge-categories.handler"
+import { BrainDossiersHandler } from "./application/brain-dossiers.handler"
+import { ImportBrainDossiersHandler } from "./application/import-brain-dossiers.handler"
 import { KnowledgeSourceHandler } from "./application/knowledge-source.handler"
 import { NivoKnowledgeCountHandler } from "./application/nivo-knowledge-count.handler"
 import { NivoKnowledgeHandler } from "./application/nivo-knowledge.handler"
@@ -37,6 +40,9 @@ import { ConfigurableModuleClass } from "./knowledge.module-definition"
         KnowledgeSourcesHandler,
         KnowledgeSourceHandler,
         KnowledgeUsageHandler,
+        KnowledgeCategoriesHandler,
+        BrainDossiersHandler,
+        ImportBrainDossiersHandler,
         NivoKnowledgeCountHandler,
         NivoKnowledgeHandler,
         KnowledgeSuggestionsHandler,

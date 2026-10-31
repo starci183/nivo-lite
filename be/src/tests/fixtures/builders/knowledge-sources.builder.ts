@@ -45,6 +45,7 @@ export const summary = {
     status: "queued",
     error: null,
     chunkCount: 0,
+    sizeBytes: 0,
     progress: 0,
     createdAt: "2026-10-11T10:00:00.000Z",
     updatedAt: AT,

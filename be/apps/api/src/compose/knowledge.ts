@@ -3,6 +3,11 @@ import { DecisionCorrectionsService } from "@modules/domain/decisions"
 import type { DynamicModule } from "@nestjs/common"
 import { BRAIN_ERROR_KINDS, BRAIN_MESSAGES, BrainModule } from "@modules/domain/brain"
 import { BrainCommandsModule } from "@modules/domain/brain-commands"
+import {
+    BRAIN_DOSSIERS_ERROR_KINDS,
+    BRAIN_DOSSIERS_MESSAGES,
+    BrainDossiersModule,
+} from "@modules/domain/brain-dossiers"
 import { BrainEvalCasesModule } from "@modules/domain/brain-eval-cases"
 import { BrainExtractionsModule } from "@modules/domain/brain-extractions"
 import { BRAIN_FACTS_ERROR_KINDS, BRAIN_FACTS_MESSAGES, BrainFactsModule } from "@modules/domain/brain-facts"
@@ -44,6 +49,7 @@ export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
     }),
     KnowledgeModule.register({ isGlobal: true, driveAccess: DriveGrantService }),
     BrainFactsModule.register({ isGlobal: true }),
+    BrainDossiersModule.register({ isGlobal: true }),
     KnowledgeGapsModule.register({ isGlobal: true }),
     BrainLessonsModule.register({ isGlobal: true }),
     BrainExtractionsModule.register({ isGlobal: true }),
@@ -55,6 +61,7 @@ export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
 /** The error kinds of the capabilities this group registers, in registration order. */
 export const knowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     BRAIN_ERROR_KINDS,
+    BRAIN_DOSSIERS_ERROR_KINDS,
     BRAIN_FACTS_ERROR_KINDS,
     BRAIN_LESSONS_ERROR_KINDS,
     KNOWLEDGE_ERROR_KINDS,
@@ -64,6 +71,7 @@ export const knowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
 
 /** The message bundles of the capabilities this group registers, in registration order. */
 export const knowledgeMessages: ReadonlyArray<MessageBundle> = [
+    BRAIN_DOSSIERS_MESSAGES,
     BRAIN_FACTS_MESSAGES,
     BRAIN_LESSONS_MESSAGES,
     BRAIN_MESSAGES,

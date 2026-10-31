@@ -1597,6 +1597,26 @@ type BrainCommandRefType {
   id: ID!
 }
 
+type BrainDossierImportType {
+  imported: Int!
+  removed: Int!
+  skipped: Int!
+}
+
+type BrainDossierType {
+  category: String!
+  categoryOrder: Int!
+  documentCount: Int!
+  drafts: String
+  existing: String
+  id: ID!
+  missing: String
+  name: String!
+  position: Int!
+  ref: String!
+  status: String!
+}
+
 type BrainEvidenceType {
   at: String
   kind: String!
@@ -3564,6 +3584,12 @@ type ImapFoldersType {
   folders: [String!]!
 }
 
+input ImportBrainDossiersInput {
+  contentBase64: String! @inputBounds(maxLength: 14000000)
+  name: String! @inputBounds(maxLength: 255)
+  sheet: String @inputBounds(maxLength: 120)
+}
+
 input ImportContractsInput {
   file: ContractImportFileInput
   mapping: ContractImportMappingInput!
@@ -3808,6 +3834,13 @@ input KeepCurrentBrainFactInput {
   subjectKey: String! @inputBounds(maxLength: 300)
 }
 
+type KnowledgeCategoryType {
+  documentCount: Int!
+  order: Int
+  sizeBytes: Int!
+  topic: String!
+}
+
 type KnowledgeSourceDetailType {
   chunks: [DocumentPassageType!]!
   source: KnowledgeSourceTextType!
@@ -3827,6 +3860,7 @@ type KnowledgeSourceTextType {
   kind: String!
   module: String
   progress: Int!
+  sizeBytes: Int!
   status: String!
   tags: [String!]!
   title: String!
@@ -3845,6 +3879,7 @@ type KnowledgeSourceType {
   kind: String!
   module: String
   progress: Int!
+  sizeBytes: Int!
   status: String!
   tags: [String!]!
   title: String!
@@ -5099,6 +5134,7 @@ type Mutation {
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   handoffToAccounting(input: HandoffToAccountingInput!): SalesActionType!
   holdWorkItem(input: HoldWorkItemInput!): WorkItemType!
+  importBrainDossiers(input: ImportBrainDossiersInput!): BrainDossierImportType!
   importContracts(input: ImportContractsInput!): ImportContractsType!
   importInventoryPaste(input: ImportInventoryPasteInput!): ImportPasteType!
   installModule(input: InstallModuleInput!): ModuleInstallResultType!
@@ -5943,6 +5979,7 @@ type Query {
   billingWorkspaces: [BillingWorkspaceType!]!
   bookingBoard(input: BookingBoardInput): BookingBoardType!
   brain: BrainType!
+  brainDossiers: [BrainDossierType!]!
   brandProposals(input: BrandProposalsInput!): [BrandProposalType!]!
   chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
   chatMarkerState(input: ChatTargetInput!): ChatMarkerStateType!
@@ -5987,6 +6024,7 @@ type Query {
   inventoryTemplates: [InventoryTemplateType!]!
   inventoryWorkbench: InventoryWorkbenchType!
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
+  knowledgeCategories: [KnowledgeCategoryType!]!
   knowledgeSource(input: KnowledgeSourceInput!): KnowledgeSourceDetailType!
   knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
   knowledgeSuggestions: KnowledgeSuggestionContextType!

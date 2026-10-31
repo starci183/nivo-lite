@@ -104,6 +104,42 @@ const registerReadTextAndReadGrid = () => {
     })
 }
 
+const registerReadWorkbookCells = () => {
+    describe("readWorkbookCells", () => {
+        it("answers the cells of the named tab as text, with no row taken for headers", async () => {
+            const { client, workbookReader } = await build()
+            workbookReader.read.mockResolvedValue([{ sheet: "Status", data: [["Title"], [], [1, null, " x "]] }])
+
+            await expect(client.readWorkbookCells("list.xlsx", zip, "Status")).resolves.toEqual([
+                ["Title"],
+                [],
+                ["1", "", "x"],
+            ])
+        })
+
+        it("refuses a file that is not an .xlsx, a broken or unreadable one, an empty one and a missing tab", async () => {
+            const { client, workbookReader } = await build()
+
+            await expect(client.readWorkbookCells("list.csv", zip, "First")).rejects.toMatchObject({
+                params: { detail: TABLE_COPY.onlyWorkbooks },
+            })
+            await expect(client.readWorkbookCells("list.xlsx", csv("Name"), "First")).rejects.toMatchObject({
+                params: { detail: TABLE_COPY.badXlsx },
+            })
+            await expect(client.readWorkbookCells("list.xlsx", new Uint8Array(), "First")).rejects.toMatchObject({
+                params: { detail: TABLE_COPY.fileEmpty },
+            })
+            await expect(client.readWorkbookCells("list.xlsx", zip, "Nope")).rejects.toMatchObject({
+                params: { detail: TABLE_COPY.noSuchSheet("Nope") },
+            })
+            workbookReader.read.mockRejectedValueOnce(new Error("invalid workbook"))
+            await expect(client.readWorkbookCells("list.xlsx", zip, "First")).rejects.toMatchObject({
+                params: { detail: TABLE_COPY.unreadableExcel },
+            })
+        })
+    })
+}
+
 const registerReadFile = () => {
     describe("readFile", () => {
         it("reads a csv and refuses an empty, oversized, unknown or binary file", async () => {
@@ -378,6 +414,7 @@ describe("TableClient", () => {
     registerTableClient()
     registerReadTextAndReadGrid()
     registerReadFile()
+    registerReadWorkbookCells()
     registerReadDocumentFile()
     registerGoogleLinks()
 })

@@ -68,6 +68,7 @@ const SUMMARY_COLUMNS = {
     status: true,
     error: true,
     chunkCount: true,
+    sizeBytes: true,
     progress: true,
     createdAt: true,
     updatedAt: true,

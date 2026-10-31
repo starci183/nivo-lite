@@ -3,6 +3,9 @@ import { KnowledgeApiModule } from "../../knowledge.module"
 import { ConfigurableModuleClass } from "./knowledge-graphql.module-definition"
 import { KnowledgeSourcesResolver } from "./knowledge-sources.resolver"
 import { KnowledgeUsageResolver } from "./knowledge-usage.resolver"
+import { KnowledgeCategoriesResolver } from "./knowledge-categories.resolver"
+import { BrainDossiersResolver } from "./brain-dossiers.resolver"
+import { ImportBrainDossiersResolver } from "./import-brain-dossiers.resolver"
 import { KnowledgeSourceResolver } from "./knowledge-source.resolver"
 import { NivoKnowledgeCountResolver } from "./nivo-knowledge-count.resolver"
 import { NivoKnowledgeResolver } from "./nivo-knowledge.resolver"
@@ -39,6 +42,9 @@ import { AgentKnowledgeLensesResolver } from "./agent-knowledge-lenses.resolver"
         KnowledgeSourcesResolver,
         KnowledgeSourceResolver,
         KnowledgeUsageResolver,
+        KnowledgeCategoriesResolver,
+        BrainDossiersResolver,
+        ImportBrainDossiersResolver,
         NivoKnowledgeCountResolver,
         NivoKnowledgeResolver,
         KnowledgeSuggestionsResolver,

@@ -19,6 +19,7 @@ const sourceOf = builder<SourceDetail>({
     status: "ready",
     error: null,
     chunkCount: 1,
+    sizeBytes: 12,
     progress: 100,
     createdAt: "2026-10-12T10:00:00.000Z",
     updatedAt: "2026-10-12T10:00:00.000Z",

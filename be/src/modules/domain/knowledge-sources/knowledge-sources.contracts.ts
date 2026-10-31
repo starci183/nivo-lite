@@ -208,6 +208,8 @@ export interface SourceSummary {
     readonly error: string | null
     /** How many passages are stored. */
     readonly chunkCount: number
+    /** The raw bytes it holds: the uploaded file, or the pasted text. */
+    readonly sizeBytes: number
     /** 0-100 while a worker is on it. */
     readonly progress: number
     /** Creation instant, ISO 8601. */
@@ -288,4 +290,26 @@ export interface SourceBrief {
     readonly title: string
     /** The topic, or null. */
     readonly topic: string | null
+}
+
+/** What the documents of one category (their `topic`) hold together. */
+export interface SourceCategory {
+    /** The topic label the documents share. */
+    readonly topic: string
+    /** The number its folder carries, from the folder:<n> tag of its documents; null when no document carries one. */
+    readonly order: number | null
+    /** How many documents carry it. */
+    readonly documentCount: number
+    /** The raw bytes those documents hold. */
+    readonly sizeBytes: number
+}
+
+/** How many documents a category holds for one dossier reference: the leading number of a title, or a `dossier:<n>` tag. */
+export interface DossierDocumentCount {
+    /** The topic label (the category) of the documents. */
+    readonly topic: string
+    /** The dossier reference, without leading zeros. */
+    readonly ref: string
+    /** How many documents name that reference. */
+    readonly documentCount: number
 }

@@ -51,6 +51,10 @@ export class KnowledgeSourceType {
     @Field(() => Int)
     chunkCount!: number
 
+    /** The raw bytes it holds: the uploaded file, or the pasted text. */
+    @Field(() => Int)
+    sizeBytes!: number
+
     /** 0 to 100 while a worker is on it. */
     @Field(() => Int)
     progress!: number

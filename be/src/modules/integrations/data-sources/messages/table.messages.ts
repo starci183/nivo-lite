@@ -20,6 +20,10 @@ export const TABLE_COPY = {
     badXlsx: "File .xlsx không hợp lệ. File .xls cũ cần lưu lại thành .xlsx.",
     /** An unreadable workbook. */
     unreadableExcel: "Không đọc được file Excel này.",
+    /** A workbook was needed and the file is not an .xlsx. */
+    onlyWorkbooks: "Chỉ nhận file .xlsx.",
+    /** The workbook has no tab of that name. */
+    noSuchSheet: (sheet: string): string => `File Excel không có trang tính "${sheet}".`,
     /** A workbook with no tabs. */
     noSheets: "File Excel không có trang tính nào.",
     /** Unbalanced quotes. */
