@@ -1,6 +1,5 @@
 import { DataSource } from "typeorm"
 import type { PostgresRow, PostgresSession, PostgresSessionTarget } from "./postgres-session.contracts"
-import { POSTGRES_SESSION_READ_ONLY } from "./persistence/postgres-session.sql"
 
 /** The part of a TypeORM connection a session uses: statement text in, rows out. */
 interface SessionRunner {
@@ -17,8 +16,7 @@ const closeQuietly = (source: DataSource): Promise<void> =>
 
 /**
  * Opens a read only PostgreSQL session to the resolved target through the TypeORM client the database capability
- * already owns. The session is read only at connection and statement level, connect and query have time limits,
- * and one refusal while the read-only setting is applied closes what was opened.
+ * already owns. The connection starts read only through the pg startup option, and connect and query have time limits.
  */
 export const openPostgresSession = async (target: PostgresSessionTarget): Promise<PostgresSession> => {
     const source = new DataSource({
@@ -40,12 +38,6 @@ export const openPostgresSession = async (target: PostgresSessionTarget): Promis
     })
     const runner: SessionRunner = source
     await source.initialize()
-    try {
-        await runner.query(POSTGRES_SESSION_READ_ONLY)
-    } catch (error) {
-        await closeQuietly(source)
-        throw error
-    }
     return {
         query: (text, params) => runner.query<Array<PostgresRow>>(text, params === undefined ? undefined : [...params]),
         close: () => closeQuietly(source),

@@ -23,7 +23,6 @@ const buildSubject = async () => {
 /** How one fake connection answers: the failures to raise and the queries it saw. */
 class DriverControl {
     connectError: Error | undefined = undefined
-    setError: Error | undefined = undefined
     destroyError: Error | undefined = undefined
 }
 
@@ -58,7 +57,6 @@ const registerPostgresDoubles = () => {
             params?: unknown,
         ) {
             recordOf(this).queries.push({ sql, params })
-            if (sql.startsWith("SET SESSION") && control.setError !== undefined) return Promise.reject(control.setError)
             return Promise.resolve([{ id: "1" }])
         })
         jest.spyOn(DataSource.prototype, "destroy").mockImplementation(function (this: DataSource) {
@@ -94,14 +92,11 @@ const registerPostgresSessions = () => {
                 max: 1,
             },
         })
-        expect(opened[0]?.queries[0]).toEqual({
-            sql: "SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY",
-            params: undefined,
-        })
+        expect(opened[0]?.queries).toEqual([])
         await expect(session.query("select 1", ["a"])).resolves.toEqual([{ id: "1" }])
         await expect(session.query("select 2")).resolves.toEqual([{ id: "1" }])
-        expect(opened[0]?.queries[1]).toEqual({ sql: "select 1", params: ["a"] })
-        expect(opened[0]?.queries[2]).toEqual({ sql: "select 2", params: undefined })
+        expect(opened[0]?.queries[0]).toEqual({ sql: "select 1", params: ["a"] })
+        expect(opened[0]?.queries[1]).toEqual({ sql: "select 2", params: undefined })
         await session.close()
         expect(opened[0]?.destroyed).toBe(true)
     })
@@ -116,18 +111,6 @@ const registerPostgresSessions = () => {
 }
 
 const registerPostgresFailures = () => {
-    it("closes the connection when the read-only setting is refused, even if closing fails", async () => {
-        const subject = await buildSubject()
-        const refused = new Error("readonly")
-
-        control.setError = refused
-        await expect(subject.openPostgresSession(target())).rejects.toBe(refused)
-        expect(opened[0]?.destroyed).toBe(true)
-
-        control.destroyError = new Error("destroy")
-        await expect(subject.openPostgresSession(target())).rejects.toBe(refused)
-    })
-
     it("propagates a refused connect", async () => {
         const subject = await buildSubject()
         const refused = new Error("connect")

@@ -90,14 +90,17 @@ export const callDbFunction = <T>(
     return manager.query<Array<T>>(`SELECT * FROM "${target.schema}"."${target.name}"(${parameters})`, [...args])
 }
 
-/** Takes a transaction-scoped advisory lock on the 64-bit hash of `key`; it is released when the manager's transaction ends. */
+/** Takes a transaction-scoped advisory lock on the 64-bit hash of `key` (node-postgres returns a bigint as a string); it is released when the manager's transaction ends. */
 export const advisoryXactLock = async (manager: EntityManager, key: string): Promise<void> => {
-    await manager.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [key])
+    const [row] = await callDbFunction<{ readonly hashtextextended?: unknown }>(manager, "hashtextextended", [key, 0])
+    const hash = row?.hashtextextended
+    if (typeof hash !== "string") throw new DatabaseError({ code: DatabaseErrorCode.ReturningRowRejected })
+    await callDbFunction(manager, "pg_advisory_xact_lock", [hash])
 }
 
 /** Sends one NOTIFY on `channel` with `payload`, delivered when the manager's transaction commits. */
 export const notify = async (manager: EntityManager, channel: string, payload: string): Promise<void> => {
-    await manager.query("SELECT pg_notify($1, $2)", [channel, payload])
+    await callDbFunction(manager, "pg_notify", [channel, payload])
 }
 
 /** A connection that runs one statement: a `pg` client the realtime hub holds open to listen on. */

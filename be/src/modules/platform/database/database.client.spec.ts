@@ -80,27 +80,49 @@ describe("callDbFunction", () => {
     })
 })
 
+const HASH_CALL = 'SELECT * FROM "pg_catalog"."hashtextextended"($1, $2)'
+const LOCK_CALL = 'SELECT * FROM "pg_catalog"."pg_advisory_xact_lock"($1)'
+
 describe("advisoryXactLock", () => {
     it("locks the 64-bit hash of the key for the transaction", async () => {
         const client = await setup()
-        const manager = mockEntityManager({ query: ["SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [{}]] })
+        const manager = mockEntityManager({
+            query: [
+                [HASH_CALL, [{ hashtextextended: "-7449279462573581543" }]],
+                [LOCK_CALL, [{}]],
+            ],
+        })
 
         await expect(client.advisoryXactLock(manager, "jobs:mail")).resolves.toBeUndefined()
 
-        expect(manager.query).toHaveBeenCalledWith("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
-            "jobs:mail",
-        ])
+        expect(manager.query).toHaveBeenNthCalledWith(1, HASH_CALL, ["jobs:mail", 0])
+        expect(manager.query).toHaveBeenNthCalledWith(2, LOCK_CALL, ["-7449279462573581543"])
     })
+
+    it.each([[[]], [[{}]], [[{ hashtextextended: 5 }]]])(
+        "refuses a hash answer of %j without locking",
+        async (rows) => {
+            const client = await setup()
+            const manager = mockEntityManager({ query: [HASH_CALL, rows] })
+
+            await expect(client.advisoryXactLock(manager, "jobs:mail")).rejects.toEqual(
+                new DatabaseError({ code: DatabaseErrorCode.ReturningRowRejected }),
+            )
+
+            expect(manager.query).toHaveBeenCalledTimes(1)
+        },
+    )
 })
 
 describe("notify", () => {
     it("sends the payload on the channel", async () => {
         const client = await setup()
-        const manager = mockEntityManager({ query: ["SELECT pg_notify($1, $2)", [{}]] })
+        const call = 'SELECT * FROM "pg_catalog"."pg_notify"($1, $2)'
+        const manager = mockEntityManager({ query: [call, [{}]] })
 
         await expect(client.notify(manager, "jobs", '{"id":"job-1"}')).resolves.toBeUndefined()
 
-        expect(manager.query).toHaveBeenCalledWith("SELECT pg_notify($1, $2)", ["jobs", '{"id":"job-1"}'])
+        expect(manager.query).toHaveBeenCalledWith(call, ["jobs", '{"id":"job-1"}'])
     })
 })
 

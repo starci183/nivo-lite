@@ -3,6 +3,7 @@ import type { CustomerRow, CustomerSession } from "./customer-sessions.contracts
 import type { PostgresSessionTarget } from "./postgres-session.contracts"
 
 const MYSQL_READ_ONLY = "SET SESSION TRANSACTION READ ONLY"
+const MYSQL_STATEMENT_LIMIT = "SET SESSION MAX_EXECUTION_TIME = ?"
 
 /** The part of a TypeORM connection a session uses: statement text in, an answer out. */
 interface SessionRunner {
@@ -66,7 +67,7 @@ export const openMysqlSession = async (target: PostgresSessionTarget): Promise<C
     const runner: SessionRunner = source
     await prepared(source, async () => {
         await runner.query(MYSQL_READ_ONLY)
-        await runner.query(`SET SESSION MAX_EXECUTION_TIME=${target.queryMs}`).then(
+        await runner.query(MYSQL_STATEMENT_LIMIT, [target.queryMs]).then(
             () => undefined,
             () => undefined,
         )

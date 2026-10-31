@@ -138,9 +138,9 @@ const registerMysql = () => {
                 bigNumberStrings: true,
                 poolSize: 1,
             })
-            expect(opened[0]?.queries.map((entry) => entry.sql)).toEqual([
-                "SET SESSION TRANSACTION READ ONLY",
-                "SET SESSION MAX_EXECUTION_TIME=15000",
+            expect(opened[0]?.queries.slice(0, 2)).toEqual([
+                { sql: "SET SESSION TRANSACTION READ ONLY", params: undefined },
+                { sql: "SET SESSION MAX_EXECUTION_TIME = ?", params: [15_000] },
             ])
             await expect(session.query("select 1", ["a"])).resolves.toEqual([{ id: "1" }])
             await expect(session.query("select 2")).resolves.toEqual([{ id: "1" }])

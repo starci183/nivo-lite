@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "./primary.decorators"
-import type { RateLimitRow } from "./persistence/rate-limit.rows"
-import { RATE_LIMIT_CONSUME } from "./persistence/rate-limit.sql"
 import { PostgresRateLimitStoreClient } from "./postgres-rate-limit-store.client"
 
-const build = async (rows: ReadonlyArray<RateLimitRow> = [{ allowed: true }]) => {
+const RATE_LIMIT_CONSUME = 'SELECT * FROM "public"."http_rate_limit_consume"($1, $2, $3)'
+
+const build = async (rows: ReadonlyArray<unknown> = [{ http_rate_limit_consume: true }]) => {
     const manager = mockEntityManager({ query: [RATE_LIMIT_CONSUME, rows] })
     const moduleRef = await Test.createTestingModule({
         providers: [PostgresRateLimitStoreClient, { provide: PRIMARY_ENTITY_MANAGER, useValue: manager }],
@@ -14,7 +14,7 @@ const build = async (rows: ReadonlyArray<RateLimitRow> = [{ allowed: true }]) =>
 }
 
 describe("PostgresRateLimitStoreClient", () => {
-    it("consumes a request through one atomic statement on the primary database", async () => {
+    it("consumes a request through one atomic function call on the primary database", async () => {
         const { store, manager } = await build()
 
         await expect(store.consume("default:127.0.0.1", 60_000, 600)).resolves.toBe(true)
@@ -23,13 +23,19 @@ describe("PostgresRateLimitStoreClient", () => {
     })
 
     it("returns the database's refusal", async () => {
-        const { store } = await build([{ allowed: false }])
+        const { store } = await build([{ http_rate_limit_consume: false }])
 
         await expect(store.consume("strict:127.0.0.1", 60_000, 30)).resolves.toBe(false)
     })
 
     it("refuses admission if the database returns no counter result", async () => {
         const { store } = await build([])
+
+        await expect(store.consume("default:127.0.0.1", 60_000, 600)).resolves.toBe(false)
+    })
+
+    it("refuses admission if the database answers something other than a boolean", async () => {
+        const { store } = await build([{ http_rate_limit_consume: "t" }])
 
         await expect(store.consume("default:127.0.0.1", 60_000, 600)).resolves.toBe(false)
     })
