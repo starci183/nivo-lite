@@ -1,3 +1,4 @@
+import { Stack } from "@starci/grammar/common"
 import type { ComponentProps, ReactNode } from "react"
 import { AgentDashboardFrame } from "@/components/blocks/AgentDashboardFrame"
 import { VideoBrandCard } from "@/components/blocks/VideoBrandCard"
@@ -13,7 +14,6 @@ import { VideoResultStep } from "@/components/blocks/VideoResultStep"
 import { VideoScriptStep } from "@/components/blocks/VideoScriptStep"
 import { VideoStepGate } from "@/components/blocks/VideoStepGate"
 import { VideoWorkbenchStatus } from "@/components/blocks/VideoWorkbenchStatus"
-import { PANEL_CLASS_NAME } from "./classNames"
 
 /** The step a part of the wizard belongs to. */
 type VideoStepScope = ComponentProps<typeof VideoStepGate>["scope"]
@@ -80,13 +80,13 @@ export const VideoWorkbenchPageBase = (props: VideoWorkbenchPageBaseProps) => {
                     id: "library",
                     label: tabs.library,
                     content: (
-                        <div className={PANEL_CLASS_NAME}>
+                        <Stack gap="section">
                             <VideoWorkbenchStatus tab={tab} focus={focus} />
                             <VideoLibraryGate placeholder={tabs.library}>
                                 <VideoNewLink />
                                 <VideoLibrary />
                             </VideoLibraryGate>
-                        </div>
+                        </Stack>
                     ),
                 },
                 {

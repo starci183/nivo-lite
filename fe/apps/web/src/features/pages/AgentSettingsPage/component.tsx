@@ -1,3 +1,4 @@
+import { Grid, Stack } from "@starci/grammar/common"
 import type { ModuleIconName } from "@/modules/types"
 import { AgentAutomations } from "@/components/blocks/AgentAutomations"
 import { AgentConnectionAccess } from "@/components/blocks/AgentConnectionAccess"
@@ -9,7 +10,6 @@ import { AgentRemoveCard } from "@/components/blocks/AgentRemoveCard"
 import { AgentReplyCard } from "@/components/blocks/AgentReplyCard"
 import { AgentSyncCard } from "@/components/blocks/AgentSyncCard"
 import type { ModuleKey } from "@/modules/catalog"
-import { COLUMN, GRID, PAGE } from "./classNames"
 
 /** The facts of the type and the instance the settings cards read. */
 export interface AgentSettingsPageBaseProps {
@@ -26,13 +26,13 @@ export interface AgentSettingsPageBaseProps {
 export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
     const { module, installationId } = props.props
     return (
-        <div className={PAGE}>
-            <div className={GRID}>
-                <div className={COLUMN}>
+        <Stack gap="region">
+            <Grid kind="cards" columns={2}>
+                <Stack gap="section">
                     <AgentIdentityCard installationId={installationId} module={module} glyph={props.props.glyph} />
                     <AgentModeCard installationId={installationId} module={module} />
-                </div>
-                <div className={COLUMN}>
+                </Stack>
+                <Stack gap="section">
                     <AgentLiveCard installationId={installationId} module={module} />
                     <AgentConnectionAccess installationId={installationId} module={module} />
                     <AgentAutomations />
@@ -41,9 +41,9 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
                         <AgentReplyCard installationId={installationId} module={module} />
                     ) : null}
                     {props.props.extrasKey === "loyalty_program" ? <LoyaltyProgramSettings /> : null}
-                </div>
-            </div>
+                </Stack>
+            </Grid>
             <AgentRemoveCard installationId={installationId} module={module} />
-        </div>
+        </Stack>
     )
 }

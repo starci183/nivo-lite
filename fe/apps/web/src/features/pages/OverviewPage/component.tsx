@@ -1,4 +1,4 @@
-import { Page, PrimaryRailLayout } from "@starci/grammar/common"
+import { Page, PrimaryRailLayout, Stack } from "@starci/grammar/common"
 import { OnboardingChecklist } from "@/components/blocks/OnboardingChecklist"
 import { OverviewGovernance } from "@/components/blocks/OverviewGovernance"
 import { OverviewHeader } from "@/components/blocks/OverviewHeader"
@@ -6,7 +6,6 @@ import { OverviewKpiBand } from "@/components/blocks/OverviewKpiBand"
 import { OverviewOwners } from "@/components/blocks/OverviewOwners"
 import { OverviewRail } from "@/components/blocks/OverviewRail"
 import { OverviewStatus } from "@/components/blocks/OverviewStatus"
-import { PAGE_CLASS_NAME, RAIL_CLASS_NAME } from "./classNames"
 
 /** The words the overview page supplies. */
 export interface OverviewPageBaseProps {
@@ -24,7 +23,7 @@ export const OverviewPageBase = (props: OverviewPageBaseProps) => (
             actions: <OverviewHeader part="actions" />,
         }}
     >
-        <div className={PAGE_CLASS_NAME}>
+        <Stack gap="section">
             <OverviewStatus />
             <OverviewGovernance />
             <OverviewKpiBand />
@@ -33,12 +32,12 @@ export const OverviewPageBase = (props: OverviewPageBaseProps) => (
                 align="start"
                 primary={<OverviewOwners />}
                 rail={
-                    <div className={RAIL_CLASS_NAME}>
+                    <Stack gap="region">
                         <OnboardingChecklist />
                         <OverviewRail />
-                    </div>
+                    </Stack>
                 }
             />
-        </div>
+        </Stack>
     </Page>
 )
