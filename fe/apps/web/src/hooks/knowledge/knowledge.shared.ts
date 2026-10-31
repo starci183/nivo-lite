@@ -1,6 +1,6 @@
 import type { useTranslations } from "next-intl"
 import type { ModuleKey } from "@/modules/catalog"
-import { AGENT_MODULES, canRetry } from "@/modules/documents"
+import { AGENT_MODULES, BYTES_PER_MB, canRetry } from "@/modules/documents"
 import type { QueueItem, UsageView } from "@/modules/documents"
 import type { AddMode, useAddDocuments } from "./useAddDocuments"
 import type { useAddInstances } from "./useAddInstances"

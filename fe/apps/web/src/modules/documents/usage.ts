@@ -1,4 +1,5 @@
-const BYTES_PER_MB = 1024 * 1024
+/** Bytes in a megabyte, as the allowance meter counts them. */
+export const BYTES_PER_MB = 1024 * 1024
 
 /** The app formatter, narrowed to the one call the meter makes. */
 interface UsageFormatter {

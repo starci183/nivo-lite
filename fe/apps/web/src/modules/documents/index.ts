@@ -19,7 +19,7 @@ export {
     topicsOf,
 } from "./status"
 export type { AgentModule } from "./status"
-export { usageMeterOf } from "./usage"
+export { BYTES_PER_MB, usageMeterOf } from "./usage"
 export type { UsageView } from "./usage"
 export { readArchive } from "./zip"
 export { isArchiveName } from "./zip-names"
