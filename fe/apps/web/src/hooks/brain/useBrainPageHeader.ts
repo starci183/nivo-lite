@@ -5,6 +5,7 @@ import { navigation } from "@/modules/i18n"
 import { BRAIN_TABS, brainTabHref } from "@/modules/routes"
 import type { BrainTab } from "@/modules/routes"
 import { useBrainStats } from "./useBrainStats"
+import { useDossierReviewSummary } from "./useDossierReviewSummary"
 
 /**
  * The Second Brain's page header with its tabs: the selected tab lives in the address, and the tabs that hold a count carry
@@ -14,8 +15,10 @@ export const useBrainPageHeader = (selected: BrainTab, header: PageHeaderContent
     const t = useTranslations("secondBrain")
     const router = navigation.useRouter()
     const { figures, canDecide } = useBrainStats()
+    const { activeCount } = useDossierReviewSummary()
     const labelOf = (tab: BrainTab): string => {
         if (tab === "review" && figures.waiting > 0) return t("tab_review_count", { n: figures.waiting })
+        if (tab === "todo" && activeCount > 0) return t("tab_todo_count", { n: activeCount })
         return tab === "gaps" && figures.gaps > 0 ? t("tab_gaps_count", { n: figures.gaps }) : t(`tab_${tab}`)
     }
     const shown = BRAIN_TABS.filter((tab) => tab !== "gaps" || canDecide || selected === "gaps")

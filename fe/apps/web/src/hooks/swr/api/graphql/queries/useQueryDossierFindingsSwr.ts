@@ -21,9 +21,16 @@ type DossierFindingsPage = ConnectionPage<DossierFindingsQuery["dossierFindings"
 /** The identity of one page: its name, workspace, position and the filter it answers. */
 type DossierFindingsPageKey = readonly [name: string, workspaceId: string, after: string | null, filter: string]
 
-/** Reads the loaded pages of the findings of the active workspace that match the filter; a new filter starts from the first page. */
-export const useQueryDossierFindingsSwr = (workspaceId: string | undefined, filter: DossierFindingsFilter) => {
-    const filterKey = JSON.stringify(filter)
+/**
+ * Reads the loaded pages of the findings of the active workspace that match the filter; a new filter starts from the first page.
+ * A new `revision` (what the caller knows changed the findings, such as a review run ending) reads them again.
+ */
+export const useQueryDossierFindingsSwr = (
+    workspaceId: string | undefined,
+    filter: DossierFindingsFilter,
+    revision = "",
+) => {
+    const filterKey = JSON.stringify([filter, revision])
     const getKey: SWRInfiniteKeyLoader<DossierFindingsPage, DossierFindingsPageKey | null> = (index, previous) => {
         const page = connectionPageKey(QUERY_DOSSIER_FINDINGS_SWR_KEY, workspaceId, index, previous)
         return page === null ? null : [page[0], page[1], page[2], filterKey]

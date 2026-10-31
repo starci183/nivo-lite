@@ -69,7 +69,7 @@ export const SepaySetup = (props: SepaySetupProps) => {
                 holderLabel: t("holderLabel"),
                 saveLabel: t("saveAccount"),
                 form: account.form,
-                canEdit: role === "owner",
+                canEdit: role === "owner" && connection?.status !== "disconnected",
                 isPending: account.isPending,
                 rotate: {
                     label: t("rotateKey"),

@@ -30,7 +30,7 @@ export const SepayAgents = (props: SepayAgentsProps) => {
                 slot: connection.slot.isError === true ? { isError: true } : agents.slot,
                 placeholder,
                 labels: slotLabels(t("agentsEmpty")),
-                isDisabled: role !== "owner",
+                isDisabled: role !== "owner" || connection.slot.items?.status === "disconnected",
             }}
             on={{
                 retry: () => {

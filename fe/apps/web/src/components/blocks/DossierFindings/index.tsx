@@ -109,7 +109,7 @@ export const DossierFindings = (props: DossierFindingsProps) => {
     const slotLabels = useSlotLabels()
     const { dossier } = useDossierRecord(props.dossierId)
     const summary = useDossierReviewSummary()
-    const list = useDossierFindings(queryOfDossier(props.dossierId))
+    const list = useDossierFindings(queryOfDossier(props.dossierId), true, summary.revision)
     const commands = useDossierReviewCommands()
     const { rowOf } = useFindingRows()
     const [picked, setPicked] = useState<FindingFilter | undefined>(undefined)
@@ -137,7 +137,7 @@ export const DossierFindings = (props: DossierFindingsProps) => {
         <DossierFindingsBase
             props={{
                 title: dossier?.name ?? "-",
-                badges: badgesOf(t, brain, standing),
+                badges: dossier === undefined ? [] : badgesOf(t, brain, standing),
                 reviewedLine: reviewedLineOf(t, format, review),
                 isRunning: summary.isRunning,
                 runningLabel: t("reviewRunning"),

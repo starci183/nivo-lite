@@ -82,6 +82,12 @@ describe("SepayConnectionService rotateKey", () => {
         )
     })
 
+    it("refuses a disconnected connection, which has no key to replace, and writes nothing", async () => {
+        const { service, connections } = await build(feed({ status: "disconnected" }))
+        await expect(service.rotateKey(actor, "c1")).rejects.toMatchObject({ code: ConnectionsErrorCode.NotFound })
+        expect(connections.writeSecret).not.toHaveBeenCalled()
+    })
+
     it("refuses a connection that is not a SePay feed and writes nothing", async () => {
         const { service, connections } = await build(feed({ provider: "casso" }))
         await expect(service.rotateKey(actor, "c1")).rejects.toMatchObject({ code: ConnectionsErrorCode.NotFound })
@@ -118,6 +124,23 @@ describe("SepayConnectionService read", () => {
         })
         expect(JSON.stringify(view)).not.toContain("secretvalue")
         expect(JSON.stringify(view)).not.toContain("0123456789")
+    })
+
+    it("counts the last delivery only from when the current key was written, and none without a key", async () => {
+        const { service, connections, seen } = await build()
+        connections.readSecret.mockResolvedValueOnce({
+            plain: "nivo_secretvalue3f9a",
+            webhookSecret: "digest",
+            sealedAt: "2026-10-28T06:00:00.000Z",
+        })
+        await service.read(actor, "c1")
+        connections.readSecret.mockResolvedValueOnce(null)
+        await service.read(actor, "c1")
+
+        expect(seen.queries.map((query) => query.callsOf("setParameter"))).toEqual([
+            [["keySealedAt", "2026-10-28T06:00:00.000Z"]],
+            [["keySealedAt", null]],
+        ])
     })
 
     it("reads a connection with no delivery yet as empty health", async () => {

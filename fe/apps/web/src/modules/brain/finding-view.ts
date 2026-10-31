@@ -262,17 +262,22 @@ export const isActive = (finding: FindingView): boolean => finding.status === "o
 /** A draft that can still be read: written, being written, filed or turned down; a failed one is asked for again. */
 const hasDraft = (finding: FindingView): boolean => finding.draftId !== null && finding.draftStatus !== "failed"
 
+/** A draft being written or waiting for a decision: asking for another is refused until it is decided, as the back end does. */
+const hasLiveDraft = (finding: FindingView): boolean =>
+    finding.draftId !== null && (finding.draftStatus === "generating" || finding.draftStatus === "proposed")
+
 /**
  * The actions a row offers. Everyone who reads may open a draft; owners and managers decide the rest. An active finding can be
- * confirmed (while open), dismissed, given to someone and marked done; a dismissed or resolved one can be reopened. The upload
+ * confirmed (while open), dismissed, given to someone and marked done; a dismissed or resolved one can be reopened. A turned down or failed draft can be asked for again. The upload
  * leads to the document the finding names, and NIVO drafts only what the finding says it can.
  */
 export const findingActionsOf = (finding: FindingView, canWrite: boolean): ReadonlyArray<FindingAction> => {
     const viewDraft: ReadonlyArray<FindingAction> = hasDraft(finding) ? ["viewDraft"] : []
     if (!canWrite) return viewDraft
     if (!isActive(finding)) return [...viewDraft, "reopen"]
-    const drafting: ReadonlyArray<FindingAction> =
-        finding.remedyAction !== "draft" || hasDraft(finding) ? viewDraft : ["askDraft"]
+    const asking: ReadonlyArray<FindingAction> =
+        finding.remedyAction === "draft" && !hasLiveDraft(finding) ? ["askDraft"] : []
+    const drafting: ReadonlyArray<FindingAction> = [...asking, ...viewDraft]
     return [
         ...(finding.status === "open" ? (["confirm"] as const) : []),
         "dismiss",

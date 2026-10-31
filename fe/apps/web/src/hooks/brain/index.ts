@@ -54,6 +54,7 @@ export type {
     FindingTextFieldView,
     FindingView,
     MapSelection,
+    MapStatusOf,
     MapStatusFilter,
     ReviewedStatus,
     TodoFilter,

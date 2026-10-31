@@ -38,13 +38,18 @@ interface DossierFindings {
 
 /**
  * The findings of the dossier review that match a read, a page at a time, with the members of the workspace who may be given
- * one. The viewer's own findings wait until the viewer is known, and nothing is read while `isEnabled` is false.
+ * one. The viewer's own findings wait until the viewer is known, and nothing is read while `isEnabled` is false. A new `revision`
+ * (a review run ending) reads the findings again.
  */
-export const useDossierFindings = (query: FindingsQuery, isEnabled = true): DossierFindings => {
+export const useDossierFindings = (query: FindingsQuery, isEnabled = true, revision = ""): DossierFindings => {
     const { activeWorkspaceId } = useActiveWorkspace()
     const viewerId = useViewerKeyId()
     const filter = filterOf(query, viewerId)
-    const read = useQueryDossierFindingsSwr(filter === null || !isEnabled ? undefined : activeWorkspaceId, filter ?? {})
+    const read = useQueryDossierFindingsSwr(
+        filter === null || !isEnabled ? undefined : activeWorkspaceId,
+        filter ?? {},
+        revision,
+    )
     const people = useQueryWorkspaceMembersSwr(activeWorkspaceId)
     const members = useMemo(() => memberOptionsOf(people.data ?? []), [people.data])
     const views = useMemo(

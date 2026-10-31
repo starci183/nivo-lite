@@ -13,6 +13,8 @@ interface DossierReviewSummary {
     readonly isFailed: boolean
     /** A review run is queued or going: the summary is read again every few seconds meanwhile. */
     readonly isRunning: boolean
+    /** Changes when a run starts or ends, so a read keyed on it asks again once the run has written its findings. */
+    readonly revision: string
     /** Findings that still need somebody: open and confirmed. */
     readonly activeCount: number
     readonly draftsAwaiting: number
@@ -34,6 +36,7 @@ export const useDossierReviewSummary = (): DossierReviewSummary => {
         isReady: summary !== undefined,
         isFailed: summary === undefined && read.error !== undefined,
         isRunning: summary?.isRunning === true,
+        revision: summary?.isRunning === true ? "running" : (summary?.latestRun?.id ?? "none"),
         activeCount: (summary?.open ?? 0) + (summary?.confirmed ?? 0),
         draftsAwaiting: summary?.draftsAwaiting ?? 0,
         aiNotice: aiState === null || aiState === undefined ? null : (NOTICE_OF_AI_STATE[aiState] ?? null),

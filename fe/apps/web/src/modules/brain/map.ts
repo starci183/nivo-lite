@@ -56,8 +56,11 @@ export interface MapGraph {
     readonly edges: ReadonlyArray<FlowGraphEdge>
 }
 
-const isShown = (dossier: DossierView, filter: MapStatusFilter): boolean =>
-    filter === "all" || dossier.status === filter
+/** The status a dossier stands at: the review's own once it has looked, else the checklist's. */
+export type MapStatusOf = (dossier: DossierView) => DossierStatus
+
+const isShown = (dossier: DossierView, filter: MapStatusFilter, statusOf: MapStatusOf): boolean =>
+    filter === "all" || statusOf(dossier) === filter
 
 /** The number of a category as it is printed: "01", and the part of its name before the dash ("Members"). */
 const categoryLabelOf = (category: CategoryView): string => {
@@ -68,19 +71,20 @@ const categoryLabelOf = (category: CategoryView): string => {
 /**
  * The map of the brain as nodes and edges for a radial layout: the workspace in the centre, its categories on the first ring
  * and the dossiers of each category on the second, each dossier toned by its status. A filter keeps only the dossiers at one
- * status and the categories that still hold one; a category with no dossier at all stays as an unfilled slot.
+ * status and the categories that still hold one; the status of a dossier is the one `statusOf` gives. A category with no dossier at all stays as an unfilled slot.
  */
 export const mapGraphOf = (
     categories: ReadonlyArray<CategoryView>,
     words: MapWords,
     filter: MapStatusFilter,
+    statusOf: MapStatusOf,
 ): MapGraph => {
     const nodes: FlowGraphNode[] = [
         { id: MAP_ROOT_ID, label: words.root, description: words.rootMeta, isRoot: true, shape: "circle", size: "lg" },
     ]
     const edges: FlowGraphEdge[] = []
     for (const category of categories) {
-        const shown = category.dossiers.filter((one) => isShown(one, filter))
+        const shown = category.dossiers.filter((one) => isShown(one, filter, statusOf))
         if (filter !== "all" && shown.length === 0) continue
         const categoryId = mapCategoryId(category.id)
         nodes.push({
@@ -97,7 +101,7 @@ export const mapGraphOf = (
                 id: dossier.id,
                 label: dossier.ref,
                 description: dossier.name,
-                tone: MAP_STATUS_TONE[dossier.status],
+                tone: MAP_STATUS_TONE[statusOf(dossier)],
                 size: "sm",
                 count: dossier.documentCount,
             })

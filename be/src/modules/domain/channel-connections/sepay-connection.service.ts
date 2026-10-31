@@ -159,11 +159,15 @@ export class SepayConnectionService {
 
     /**
      * Issues a new SePay API key (owner): the old one stops verifying calls at once, so the owner pastes the new one into the SePay
-     * webhook settings. The key is sealed for re-display and its hash verifies the calls; the answer carries it for the clipboard.
+     * webhook settings. A disconnected connection has no key to replace and refuses. The key is sealed for re-display and its hash
+     * verifies the calls; the answer carries it for the clipboard.
      */
     async rotateKey(actor: ConnectionActor, connectionId: string): Promise<SepayKeyReveal> {
         await this.connections.authorize(actor, OWNER)
         const connection = await this.sepayOf(actor, connectionId)
+        if (connection.status === "disconnected") {
+            throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: connectionId } })
+        }
         const apiKey = `nivo_${randomSecret()}`
         await this.connections.writeSecret(connection.id, apiKey, sha256(apiKey))
         return { apiKey, webhookUrl: this.connections.webhookUrl("sepay", connection.id) }
@@ -224,11 +228,17 @@ export class SepayConnectionService {
         }
     }
 
-    /** The delivery counters of the connection, one aggregate row. */
-    private statsOf(connection: ConnectionRecord): Promise<ReadonlyArray<unknown>> {
+    /**
+     * The delivery counters of the connection, one aggregate row. The last delivery counts only an authorized one that came after the
+     * current key was written: a refused key proves nothing, and a ping made with a key that was since replaced says nothing of the new one.
+     */
+    private statsOf(connection: ConnectionRecord, keySealedAt: string | null): Promise<ReadonlyArray<unknown>> {
         return this.entityManager
             .createQueryBuilder(ChannelConnectionsSepayEventEntity, "e")
-            .select(`to_char(max(e.received_at) AT TIME ZONE 'UTC', ${UTC_MS})`, "lastAt")
+            .select(
+                `to_char(max(e.received_at) FILTER (WHERE e.outcome <> 'unauthorized' AND e.received_at >= CAST(:keySealedAt AS timestamptz)) AT TIME ZONE 'UTC', ${UTC_MS})`,
+                "lastAt",
+            )
             .addSelect(
                 `to_char(max(e.received_at) FILTER (WHERE e.kind = 'ping' AND e.outcome <> 'unauthorized') AT TIME ZONE 'UTC', ${UTC_MS})`,
                 "pingAt",
@@ -250,6 +260,7 @@ export class SepayConnectionService {
                 workspaceId: connection.workspaceId,
                 connectionId: connection.id,
             })
+            .setParameter("keySealedAt", keySealedAt)
             .limit(1)
             .getRawMany()
     }
@@ -263,9 +274,9 @@ export class SepayConnectionService {
     }
 
     private async view(connection: ConnectionRecord): Promise<SepayConnectionView> {
-        const [secret, stats, agentIds] = await Promise.all([
-            this.connections.readSecret(connection.id),
-            this.statsOf(connection),
+        const secret = await this.connections.readSecret(connection.id)
+        const [stats, agentIds] = await Promise.all([
+            this.statsOf(connection, secret?.sealedAt ?? null),
             this.connections.agentIds(connection.workspaceId, connection.id),
         ])
         const row = stats.find(isStatsRead)
