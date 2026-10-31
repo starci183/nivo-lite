@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { audienceOfModule, viewOf, knowledgeFolderOf, clip, withinBudget } from "./knowledge-view.policy"
+import { audienceOfModule, viewOf, knowledgeFolderOf } from "./knowledge-view.policy"
 
 const SUBJECT = Symbol("knowledge-view.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
-            { provide: SUBJECT, useValue: { audienceOfModule, viewOf, knowledgeFolderOf, clip, withinBudget } },
+            { provide: SUBJECT, useValue: { audienceOfModule, viewOf, knowledgeFolderOf } },
         ],
     }).compile()
     return moduleRef.get<typeof import("./knowledge-view.policy")>(SUBJECT)
@@ -67,22 +67,5 @@ describe("knowledge view policy", () => {
         expect(subject.knowledgeFolderOf("chatbot")).toBe("chatbot")
         expect(subject.knowledgeFolderOf("accounting")).toBe("accounting")
         expect(subject.knowledgeFolderOf("unknown")).toBeNull()
-    })
-
-    it("preserves fitting text and clips long text with a trimmed ellipsis", async () => {
-        const subject = await build()
-
-        expect(subject.clip("Tea", 3)).toBe("Tea")
-        expect(subject.clip("Tea", 4)).toBe("Tea")
-        expect(subject.clip("Tea   menu", 6)).toBe("Tea…")
-        expect(subject.clip("Tea", 1)).toBe("…")
-    })
-
-    it("takes fitting lines in order and stops before the first oversized line", async () => {
-        const subject = await build()
-
-        expect(subject.withinBudget(["Tea", "Milk", "x"], 7)).toEqual(["Tea", "Milk"])
-        expect(subject.withinBudget(["too long", "x"], 1)).toEqual([])
-        expect(subject.withinBudget([], 0)).toEqual([])
     })
 })

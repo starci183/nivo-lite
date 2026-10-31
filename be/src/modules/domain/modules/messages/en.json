@@ -526,5 +526,6 @@
   "setup.business": "Business",
   "setup.notApplicable": "Not applicable:",
   "setup.applyButton": "Apply",
-  "setup.ownerAddress": "you"
+  "setup.ownerAddress": "you",
+  "setup.conflictNote": "Note: the record says {{attribute}} of {{subject}} is {{current}}, while you just said {{proposed}}. Please tell me which one holds."
 }

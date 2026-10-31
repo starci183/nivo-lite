@@ -526,5 +526,6 @@
   "setup.business": "Doanh nghiệp",
   "setup.notApplicable": "Không áp dụng:",
   "setup.applyButton": "Áp dụng",
-  "setup.ownerAddress": "bạn"
+  "setup.ownerAddress": "bạn",
+  "setup.conflictNote": "Lưu ý: hồ sơ đang ghi {{attribute}} của {{subject}} là {{current}}, còn bạn vừa nói {{proposed}}. Bạn cho mình biết bên nào đúng nhé."
 }
