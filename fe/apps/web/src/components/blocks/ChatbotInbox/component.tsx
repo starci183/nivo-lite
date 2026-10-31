@@ -30,6 +30,7 @@ export interface ChatbotInboxView {
     readonly list: ListWords
     readonly thread: ThreadWords
     readonly sideLabel: string
+    readonly closeSideLabel: string
     readonly isInfoOpen: boolean
     readonly side: SideWords
 }
@@ -54,7 +55,7 @@ export interface ChatbotInboxBaseProps {
     }
 }
 
-/** Draws the inbox of one Chatbot instance: the conversation list, the open thread and the customer side panel. */
+/** Draws the inbox of one Chatbot instance as panes: the conversation list, the open thread and the customer side panel. */
 export const ChatbotInboxBase = (props: ChatbotInboxBaseProps) => {
     const { props: p, on } = props
     return (
@@ -69,6 +70,10 @@ export const ChatbotInboxBase = (props: ChatbotInboxBaseProps) => {
                     pickTitle={inbox.pickTitle}
                     pickBody={inbox.pickBody}
                     sideLabel={inbox.sideLabel}
+                    closeSideLabel={inbox.closeSideLabel}
+                    onInfoOpenChange={(isOpen) => {
+                        if (isOpen !== inbox.isInfoOpen) on.toggleInfo()
+                    }}
                     isInfoOpen={inbox.isInfoOpen}
                     isSkeleton={isSkeleton}
                     list={

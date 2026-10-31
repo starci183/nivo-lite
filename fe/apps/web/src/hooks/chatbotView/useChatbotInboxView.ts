@@ -184,6 +184,7 @@ const propsOf = ({
             isSending: actions.busy !== null,
         }),
         sideLabel: t("customerTitle"),
+        closeSideLabel: t("infoClose"),
         isInfoOpen: view.isInfoOpen,
         side: sideViewOf(t, {
             thread,

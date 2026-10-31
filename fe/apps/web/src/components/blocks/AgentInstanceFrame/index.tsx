@@ -29,8 +29,8 @@ interface AgentInstanceFrameProps {
     readonly children?: ReactNode
 }
 
-/** The tab whose body is panes, attached flush under the tab line; the other tabs are card bodies. */
-const PANES_TAB = "setup"
+/** The tabs whose body is panes, attached flush under the tab line; the other tabs are card bodies. */
+const PANES_TABS: ReadonlySet<string> = new Set(["setup", "inbox"])
 
 /** The connected frame of an agent instance: the page band (trail, person, facts, agent switcher, actions, instance link tabs) and the routed tab. */
 export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
@@ -45,7 +45,7 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
         <AgentInstanceFrameBase
             shape={{ body: props.children }}
             props={{
-                hasPanes: selected === PANES_TAB,
+                hasPanes: PANES_TABS.has(selected),
                 ariaLabel: header.name === "" ? header.typeName : header.name,
                 crumbLabel: ts("crumbLabel"),
                 crumbs: [
