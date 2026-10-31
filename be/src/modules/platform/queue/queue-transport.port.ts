@@ -1,10 +1,11 @@
 import type { QueueHandler } from "./queue.contracts"
+import type { QueueSchedules } from "./queue.port"
 
 /** The Redis-side state of a job, as the relay reconciles it; "missing" means the broker holds nothing under the id. */
 export type QueueTransportState = "waiting" | "delayed" | "active" | "completed" | "failed" | "missing" | "unknown"
 
 /** BullMQ on Redis as the queue capability sees it: the one port the BullMQ client implements. */
-export interface QueueTransport {
+export interface QueueTransport extends QueueSchedules {
     /**
      * Adds the job to its queue under the outbox row id `jobId`; an id BullMQ already holds makes the add a no-op, so a
      * repeated relay pass is harmless. The retry budget and backoff of the platform are fixed here.
@@ -19,6 +20,11 @@ export interface QueueTransport {
     republish(queue: string, job: string, jobId: string, payload: object): Promise<void>
     /** Starts a worker of the queue the handler names that runs it for every job, `concurrency` at a time. */
     work(handler: QueueHandler, concurrency: number): Promise<void>
+    /**
+     * Starts a worker of the queue the handler names for jobs a scheduler fires: no outbox row exists for them, so the worker runs
+     * the handler without the durable admission, and the broker alone retries a failure.
+     */
+    workFires(handler: QueueHandler, concurrency: number): Promise<void>
     /** Resolves after `ms` milliseconds: the only clock of the relay loop. */
     wait(ms: number): Promise<void>
     /** Signals the running deliveries, gives them the shutdown grace, then closes the workers and the queues. */
@@ -91,6 +97,30 @@ export interface BullmqWorkerOptions extends BullmqConnection {
     readonly backoffStrategy: (attemptsMade: number, error?: Error) => number
 }
 
+/** The next job a scheduler holds, as the transport reads it: when it was made and how long it waits. */
+export interface BullmqScheduledJob {
+    /** When the job was made, epoch ms. */
+    readonly timestamp: number
+    /** How long it waits, in milliseconds. */
+    readonly delay: number
+}
+
+/** The options of the job a scheduler adds at every firing. */
+export interface BullmqSchedulerTemplate {
+    /** The job name. */
+    readonly name: string
+    /** The payload. */
+    readonly data: object
+    /** The retry budget and retention of every fired job. */
+    readonly opts: Omit<BullmqJobOptions, "jobId">
+}
+
+/** A scheduler as the transport reads it: its next slot in epoch ms, when it has one. */
+export interface BullmqSchedulerState {
+    /** The next slot, epoch ms. */
+    readonly next?: number | undefined
+}
+
 /** A job as the transport uses it: the worker's delivery plus the reconciliation handles. */
 export interface BullmqJob {
     /** The job id: the outbox row id of every job the relay published. */
@@ -125,6 +155,16 @@ export interface BullmqQueue {
     add(name: string, payload: object, options: BullmqJobOptions): Promise<unknown>
     /** The job held under `id`, or nothing. */
     getJob(id: string): Promise<BullmqJobLookup>
+    /** Creates or replaces the scheduler `id`; answers the next job it holds. */
+    upsertJobScheduler(
+        id: string,
+        repeat: { readonly pattern: string; readonly tz: string },
+        template: BullmqSchedulerTemplate,
+    ): Promise<BullmqScheduledJob>
+    /** Removes the scheduler `id`; true when there was one. */
+    removeJobScheduler(id: string): Promise<boolean>
+    /** The scheduler `id`, or nothing. */
+    getJobScheduler(id: string): Promise<BullmqSchedulerState | undefined>
     /** Closes the queue. */
     close(): Promise<void>
 }

@@ -6,6 +6,7 @@ import {
     agentTriggerWriteOf,
     disabledTriggerRowOf,
     eventTriggerRowOf,
+    seededTriggerRowOf,
 } from "@tests/fixtures/builders/agent-work.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentTriggersService } from "./agent-triggers.service"
@@ -88,6 +89,7 @@ describe("AgentTriggersService.save", () => {
             eventName: null,
             probeKey: "invoices_due",
             enabled: true,
+            seedKey: null,
         })
     })
 
@@ -122,6 +124,47 @@ describe("AgentTriggersService.save", () => {
             code: AgentWorkErrorCode.TriggerShapeInvalid,
         })
         expect(em.count).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentTriggersService.seed", () => {
+    it("writes the trigger under its key the first time, as the system, within the cap", async () => {
+        const { service, em, access } = await build(
+            mockEntityManager({
+                findOne: [AgentTriggerEntity, null],
+                count: [AgentTriggerEntity, 2],
+                save: [AgentTriggerEntity, seededTriggerRowOf()],
+            }),
+        )
+
+        await expect(service.seed(agentTriggerWriteOf(), "morning")).resolves.toMatchObject({ seedKey: "morning" })
+
+        expect(access.manager).not.toHaveBeenCalled()
+        expect(em.findOne).toHaveBeenCalledWith(AgentTriggerEntity, { where: { agentId: "agent-1", seedKey: "morning" } })
+        expect(em.save).toHaveBeenCalledWith(AgentTriggerEntity, expect.objectContaining({ seedKey: "morning" }))
+    })
+
+    it("finds the row a key already wrote and writes no second one", async () => {
+        const { service, em } = await build(
+            mockEntityManager({ findOne: [AgentTriggerEntity, seededTriggerRowOf()] }),
+        )
+
+        await expect(service.seed(agentTriggerWriteOf(), "morning")).resolves.toMatchObject({
+            id: "trigger-1",
+            seedKey: "morning",
+        })
+
+        expect(em.save).not.toHaveBeenCalled()
+    })
+
+    it("refuses a seed past the cap of eight", async () => {
+        const { service } = await build(
+            mockEntityManager({ findOne: [AgentTriggerEntity, null], count: [AgentTriggerEntity, 8] }),
+        )
+
+        await expect(service.seed(agentTriggerWriteOf(), "morning")).rejects.toMatchObject({
+            code: AgentWorkErrorCode.TooManyTriggers,
+        })
     })
 })
 

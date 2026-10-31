@@ -20,6 +20,7 @@ import {
     retryAfterSecondsOf,
     routeOf,
     secondsOf,
+    slotOf,
     workspaceOf,
 } from "./queue.policy"
 import type { BullmqJob } from "./queue-transport.port"
@@ -61,6 +62,7 @@ class QueuePolicySubject {
     readonly retryAfterSecondsOf = retryAfterSecondsOf
     readonly routeOf = routeOf
     readonly secondsOf = secondsOf
+    readonly slotOf = slotOf
     readonly workspaceOf = workspaceOf
 }
 
@@ -123,6 +125,18 @@ it("exhausts a job on its last attempt", async () => {
         subject.isExhausted(subject.ATTEMPTS),
         subject.isExhausted(subject.ATTEMPTS + 1),
     ]).toEqual([false, true, true])
+})
+
+it("exhausts a job of another budget on its own last attempt", async () => {
+    const subject = await build()
+    expect([subject.isExhausted(2, 3), subject.isExhausted(3, 3)]).toEqual([false, true])
+})
+
+it("reads the slot of a job of a scheduler from its broker id, and nothing from any other id", async () => {
+    const subject = await build()
+    expect(subject.slotOf("repeat:agent-trigger:3f1c:1794283200000")).toBe("1794283200000")
+    expect(subject.slotOf("row-1")).toBeNull()
+    expect(subject.slotOf("repeat:agent-trigger:3f1c:soon")).toBeNull()
 })
 
 describe("failures", () => {

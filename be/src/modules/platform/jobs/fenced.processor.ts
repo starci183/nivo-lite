@@ -12,6 +12,9 @@ export abstract class FencedProcessor {
     /** The only job of the queue this processor runs (its `<JOB>` constant); every job of the queue when absent. It is the kind of the job row when set. */
     readonly job?: string | undefined
 
+    /** True when the jobs of the queue come from a job scheduler keyed by a row, so no outbox row stands behind them: the worker skips the admission and the claim alone fences the delivery. */
+    readonly scheduled?: boolean | undefined
+
     /** The most deliveries of this processor's queue that run at once; the app default when absent. */
     readonly concurrency?: number | undefined
 

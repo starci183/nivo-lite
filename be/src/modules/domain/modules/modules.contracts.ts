@@ -1,3 +1,4 @@
+import type { AgentTriggerPreset } from "@modules/domain/agent-work"
 import type { CapabilityRole } from "@modules/domain/mcp-gateway"
 import type { ModuleAudience } from "@modules/domain/module-audiences"
 import type { InstallationLifecycle, InstallationRecord } from "@modules/domain/module-installations"
@@ -153,6 +154,18 @@ export interface ModuleAgent {
     readonly instructions: Bilingual
 }
 
+/** A clock trigger a module seeds for its agent when it is installed or applied. */
+export interface ModuleTrigger {
+    /** The stable key the trigger is seeded under: a re-install finds the row it wrote, and a base graph's start node names it. */
+    readonly key: string
+    /** How often it fires; the owner can change it later. */
+    readonly preset: AgentTriggerPreset
+    /** The time of day (`HH:MM`) of a daily preset. */
+    readonly atTime?: string
+    /** The probe that decides whether a fire has work; always works when absent. */
+    readonly probeKey?: string
+}
+
 /** One module of the catalogue: everything the product knows about an installable agent type. */
 export interface ModuleDefinition {
     /** The stable module key, short lowercase ASCII. */
@@ -207,6 +220,8 @@ export interface ModuleDefinition {
     readonly authorityActions: ReadonlyArray<AuthorityActionDefinition>
     /** The commands other agents may ask the module to run. */
     readonly accepts: ReadonlyArray<AcceptedCommand>
+    /** The clock triggers seeded for the module's agent; none when absent. */
+    readonly triggers?: ReadonlyArray<ModuleTrigger>
 }
 
 /** The whole catalogue as the front end reads it. */

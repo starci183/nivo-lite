@@ -113,6 +113,14 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         payload: { tick: true },
     },
     {
+        name: "agent-work-sweep",
+        cron: "*/1 * * * *",
+        timeZone: "UTC",
+        queue: "agent_turn",
+        job: "agent-turn.sweep",
+        payload: {},
+    },
+    {
         name: "system-history-retention",
         cron: "30 16 * * *",
         timeZone: "UTC",

@@ -45,6 +45,7 @@ const deliveryOf = (queue: string, job: string): QueueDelivery => ({
 const build = async (overrides: Partial<QueueOptions> = {}) => {
     const transport = mock<QueueTransport>()
     transport.work.mockResolvedValue(undefined)
+    transport.workFires.mockResolvedValue(undefined)
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -89,6 +90,19 @@ describe("onApplicationBootstrap", () => {
         expect(transport.work).toHaveBeenCalledTimes(2)
         expect(transport.work).toHaveBeenCalledWith(expect.objectContaining({ queue: "knowledge" }), 3)
         expect(transport.work).toHaveBeenCalledWith(expect.objectContaining({ queue: "sweep" }), 3)
+    })
+
+    it("starts the worker of fired jobs for a queue whose handler is scheduled", async () => {
+        const { workers, transport } = await build()
+        workers.add(handlerOf("fires", "fire", { scheduled: true, concurrency: 2 }))
+        workers.add(handlerOf("knowledge"))
+
+        await workers.onApplicationBootstrap()
+
+        expect(transport.workFires).toHaveBeenCalledTimes(1)
+        expect(transport.workFires).toHaveBeenCalledWith(expect.objectContaining({ queue: "fires" }), 2)
+        expect(transport.work).toHaveBeenCalledTimes(1)
+        expect(transport.work).toHaveBeenCalledWith(expect.objectContaining({ queue: "knowledge" }), 3)
     })
 
     it("runs a queue as many deliveries at once as its busiest handler asks for", async () => {

@@ -35,6 +35,12 @@ export const TASK_WAKE_MAX_MS = 7 * 24 * 60 * 60_000
 /** How old a held customer or tag wake may be and still run when work is switched back on, in milliseconds. */
 export const RESTORE_WINDOW_MS = 24 * 60 * 60_000
 
+/** How long a wake that was skipped is kept, in milliseconds. */
+export const SKIPPED_WAKE_RETENTION_MS = 2 * 24 * 60 * 60_000
+
+/** How long any other ended wake is kept, in milliseconds. */
+export const WAKE_RETENTION_MS = 30 * 24 * 60 * 60_000
+
 /** The default time zone of a schedule. */
 export const DEFAULT_TIME_ZONE = "Asia/Ho_Chi_Minh"
 

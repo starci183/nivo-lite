@@ -11,6 +11,7 @@ import { JobOpsTickService } from "./job-ops-tick.service"
 
 const EXPECTED = [
     ["accounting-desk-morning", "accounting_desk", "accounting_desk.morning", {}, 1440],
+    ["agent-work-sweep", "agent_turn", "agent-turn.sweep", {}, 1],
     ["agents-sync-all", "agents", "agents.sync", {}, 5],
     ["automation-tick", "automation", "automation.tick", {}, 1],
     ["connection-health-tick", "connection_health", "connection_health", { silentAfterHours: 72 }, 15],

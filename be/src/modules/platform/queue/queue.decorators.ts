@@ -2,7 +2,7 @@ import type { QueueTimeout } from "./queue-timeout.port"
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { QueueOptions } from "./queue.options"
-import type { QueueOutbox, QueueWorkerRegistry } from "./queue.port"
+import type { QueueOutbox, QueueSchedules, QueueWorkerRegistry } from "./queue.port"
 import type { QueueFactory, QueueTransport } from "./queue-transport.port"
 import type { QueueStatusService } from "./queue-status.service"
 
@@ -50,3 +50,10 @@ export const QUEUE_TIMEOUT: unique symbol = Symbol("platform.queue.timeout")
 
 /** Injects the deadline port. Parameter type: QueueTimeout. */
 export const InjectQueueTimeout = (): TypedParameterDecorator<QueueTimeout> => injector<QueueTimeout>(QUEUE_TIMEOUT)
+
+/** Token of the registry of keyed job schedulers. */
+export const QUEUE_SCHEDULES: unique symbol = Symbol("platform.queue.schedules")
+
+/** Injects the registry of keyed job schedulers. Parameter type: QueueSchedules. */
+export const InjectQueueSchedules = (): TypedParameterDecorator<QueueSchedules> =>
+    injector<QueueSchedules>(QUEUE_SCHEDULES)
