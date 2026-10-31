@@ -570,6 +570,8 @@ Build: tables, entities and `agentGraphEntities`, with `SELECT, INSERT` only on 
 
 Specs, each pure policy to every branch: `condition`: each operator on each type, a wrong type refused, depth and term limits, words in vi and en. `graph-problems`: cycle, dead end, node limit, no `else`, `else` auto, a gap at the exact bound, an overlap, each ceiling and rights hit, an approver short of a grant, a blank node answer. `graph-gaps`: the fixed order, one at a time. `graph-diff`: each widening kind, self-approver, a tightening is not one. `node-card`: the 36 character line, each tone, shape and source word. `learn-signals`: each threshold, below it nothing, dedupe. `base-graph`: `alwaysAsk`, each executor, a template version rise. Decider: no graph, shadow, no decide point, a read failure, stricter in each direction, the amount replaced, the decision written once on a retry. Web: no spec (SHARED-TEST-1). Integration: all of section 15.12.
 
+Also build section 15.13: data rights per agent in the graph, enforced at the gateway on every native read tool, default deny, with specs for each layer.
+
 Done: section 13.0, plus lint and `cd fe/apps/web && npx tsc --noEmit -p tsconfig.json` clean, the schema emitted, and a walk of every mockup screen in owner and manager role at 1280 and 390, reporting what could not be walked. No agent is set to `enforced` by this work. Report the statement that flips one agent; do not run it. Grammar stays as installed (`deps source` is on the never list), so nothing may rely on `isDimmed` or `orbit`; a gap there goes in the report.
 
 ## 14. Noticed, outside these briefs
@@ -843,3 +845,21 @@ Unit specs per file (BE-TEST-5, R273). Integration in `be/src/tests/integration/
 | `brain-change-conflict`  | A superseded fact raises one conflict, and the next decision still takes the confirmed branch |
 | `learned-never-widens`   | Twenty approvals raise a proposal and change no version                                       |
 | `shadow-no-effect`       | In shadow the verdict is the gate's and the decision is written                               |
+
+### 15.13 One store, rights per agent
+
+Owner ruling. NIVO has one store of business data, Postgres; data belongs to the business and never to an agent. An agent holds rights over it, and a new agent can read nothing until a right is turned on. Rights are held in the graph, so the owner sees and edits them.
+
+Every right has three layers:
+
+| Layer             | Answers          | Example                                                                                                         |
+| ----------------- | ---------------- | --------------------------------------------------------------------------------------------------------------- |
+| Data kind         | what may be read | Sales reads customer records, never the ledger                                                                  |
+| Scope of the turn | which rows       | Chatbot reads orders, only those of the customer in this conversation                                           |
+| Fields            | which columns    | Chatbot sees the selling price, never the cost; a phone number or payer name is masked unless the step needs it |
+
+An agent has no direct road to the store. Every read is a tool on NIVO MCP; the backend applies the three layers and writes the audit line, and the model never writes a free query, so it cannot widen its own scope.
+
+An agent that faces outsiders is always narrow, because a customer can talk it into repeating what it can read. An internal agent, with no outside channel, may read wider.
+
+Work across agents is a hand-over, not a read: Chatbot asks through a tool such as payment status and gets "paid" or "owing", and never sees the books.
