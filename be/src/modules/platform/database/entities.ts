@@ -113,6 +113,7 @@ import { staffEntities } from "@modules/domain/staff"
 import { telegramInboxEntities } from "@modules/domain/telegram-inbox"
 import { threadMessagesEntities } from "@modules/domain/thread-messages"
 import { threadWorkEntities } from "@modules/domain/thread-work"
+import { agentWorkEntities } from "@modules/domain/agent-work"
 import { transactionsEntities } from "@modules/domain/transactions"
 import { videoBrandKitsEntities } from "@modules/domain/video-brand-kits"
 import { videoDelegationsEntities } from "@modules/domain/video-delegations"
@@ -253,6 +254,7 @@ export const PRIMARY_ENTITIES = [
     ...telegramInboxEntities,
     ...threadMessagesEntities,
     ...threadWorkEntities,
+    ...agentWorkEntities,
     ...transactionsEntities,
     ...videoBrandKitsEntities,
     ...videoDelegationsEntities,

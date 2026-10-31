@@ -42,6 +42,34 @@
       ],
       "dbFunctions": [
         {
+          "name": "public.agent_turn_begin",
+          "reason": "starts one turn of an agent in one scope: takes the scope lease, bumps the fence and marks the next wake running"
+        },
+        {
+          "name": "public.agent_turn_touch",
+          "reason": "extends the lease of a running turn under its fence"
+        },
+        {
+          "name": "public.agent_turn_propose",
+          "reason": "stores the proposal of a running turn under its fence"
+        },
+        {
+          "name": "public.agent_turn_finish",
+          "reason": "ends a running turn under its fence, settles its wake and releases the lease"
+        },
+        {
+          "name": "public.agent_work_due",
+          "reason": "lists the lapsed leases, due wakes, due tasks and overdue triggers the minute sweep drives"
+        },
+        {
+          "name": "public.agent_work_has_agent",
+          "reason": "proves an agent belongs to a workspace before a write that names both"
+        },
+        {
+          "name": "public.agent_work_switch",
+          "reason": "switches work on or off for one agent of a workspace, creating its state row"
+        },
+        {
           "name": "public.event_bus_send",
           "reason": "sends a typed event once to its pgmq topic in the publisher transaction"
         },
