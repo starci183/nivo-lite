@@ -18,6 +18,8 @@ export interface QueueRowView {
     readonly statusTone: "neutral" | "warning" | "success" | "danger"
     readonly error?: string | undefined
     readonly canRemove: boolean
+    /** The words of the button that sends only this failed file again; absent when it cannot be retried. */
+    readonly retryLabel?: string | undefined
 }
 
 /** The bytes of the batch on their way to storage. */
@@ -32,6 +34,8 @@ export interface BatchBytesView {
 export interface StoppedUploadsView {
     readonly text: string
     readonly dismissLabel: string
+    /** Reopens the file picker: a browser cannot resume a file after a reload. */
+    readonly pickLabel: string
 }
 
 /** The words, values and state of the files and links panel. */
@@ -57,6 +61,7 @@ type AddFilesPanelProps = {
     readonly onAddLink: () => void
     readonly onRemoveLink: (id: string) => void
     readonly onRemoveItem: (id: string) => void
+    readonly onRetryItem: (id: string) => void
     readonly onDismissStopped: () => void
 }
 
@@ -117,6 +122,9 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
                 <Text size="sm" tone="muted" live="polite">
                     {props.stopped.text}
                 </Text>
+                <Button intent="commit" isDisabled={props.isBusy} onPress={() => document.getElementById("knowledge-add-files")?.click()}>
+                    {props.stopped.pickLabel}
+                </Button>
                 <Button intent="neutral" onPress={props.onDismissStopped}>
                     {props.stopped.dismissLabel}
                 </Button>
@@ -134,11 +142,22 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
                         description={item.error ?? item.detail}
                         badges={<Badge tone={item.statusTone}>{item.statusLabel}</Badge>}
                         actions={
-                            item.canRemove ? (
-                                <Button intent="destructive" step="entry" onPress={() => props.onRemoveItem(item.id)}>
-                                    {props.removeLabel}
-                                </Button>
-                            ) : null
+                            <>
+                                {item.retryLabel === undefined ? null : (
+                                    <Button intent="alternative" onPress={() => props.onRetryItem(item.id)}>
+                                        {item.retryLabel}
+                                    </Button>
+                                )}
+                                {item.canRemove ? (
+                                    <Button
+                                        intent="destructive"
+                                        step="entry"
+                                        onPress={() => props.onRemoveItem(item.id)}
+                                    >
+                                        {props.removeLabel}
+                                    </Button>
+                                ) : null}
+                            </>
                         }
                     />
                 ))}

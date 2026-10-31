@@ -121,6 +121,7 @@ export interface KnowledgeAddBaseProps {
         readonly addLink: () => void
         readonly removeLink: (id: string) => void
         readonly removeItem: (id: string) => void
+        readonly retryItem: (id: string) => void
         readonly dismissStopped: () => void
         readonly setTitle: (value: string) => void
         readonly setContent: (value: string) => void
@@ -207,6 +208,7 @@ const KnowledgeAddDrawer = (props: KnowledgeAddBaseProps) => (
                     onAddLink={props.on.addLink}
                     onRemoveLink={props.on.removeLink}
                     onRemoveItem={props.on.removeItem}
+                    onRetryItem={props.on.retryItem}
                     onDismissStopped={props.on.dismissStopped}
                 />
             ) : (

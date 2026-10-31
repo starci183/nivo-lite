@@ -1,6 +1,6 @@
 import type { useTranslations } from "next-intl"
 import type { ModuleKey } from "@/modules/catalog"
-import { AGENT_MODULES } from "@/modules/documents"
+import { AGENT_MODULES, canRetry } from "@/modules/documents"
 import type { QueueItem } from "@/modules/documents"
 import type { AddMode, useAddDocuments } from "./useAddDocuments"
 import type { useAddInstances } from "./useAddInstances"
@@ -86,6 +86,7 @@ const queueRowOf = (t: Translate, locale: string, add: ReturnType<typeof useAddD
     statusTone: STATUS_TONE[item.status],
     error: item.error === undefined ? undefined : t(item.error),
     canRemove: item.status !== "uploading" && !add.isBusy,
+    retryLabel: item.status === "failed" && canRetry(item) && !add.isBusy ? t("itemRetry") : undefined,
 })
 
 /** The label of the main action of the drawer. */
@@ -123,7 +124,7 @@ const batchViewOf = (t: Translate, locale: string, items: ReadonlyArray<QueueIte
 
 /** The notice that says the uploads of an earlier page stopped when it reloaded. */
 const stoppedViewOf = (t: Translate, names: ReadonlyArray<string>) =>
-    names.length === 0 ? undefined : { text: t("uploadStopped", { names: names.join(", ") }), dismissLabel: t("uploadStoppedDismiss") }
+    names.length === 0 ? undefined : { text: t("uploadStopped", { names: names.join(", ") }), dismissLabel: t("uploadStoppedDismiss"), pickLabel: t("uploadStoppedPick") }
 
 /** Builds the files and links section of the drawer. */
 const buildDocumentFilesView = (t: Translate, locale: string, add: ReturnType<typeof useAddDocuments>) =>

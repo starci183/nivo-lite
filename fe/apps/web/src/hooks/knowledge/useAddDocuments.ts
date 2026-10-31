@@ -64,6 +64,17 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
         return queued ? 1 : 0
     }
 
+    const retryItem = async (id: string) => {
+        const item = queue.items.find((one) => one.id === id)
+        if (isBusy || item === undefined || !canRetry(item)) return
+        setBusy(true)
+        setFailure(null)
+        const queued = await queue.sendAll([item], options.meta())
+        setBusy(false)
+        setQueuedCount((now) => now + queued)
+        if (queued > 0) input.onAdded()
+    }
+
     const close = () => {
         if (isBusy) return
         queue.reset()
@@ -105,6 +116,7 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
             note.setTried(false)
         },
         submit: () => void submit(),
+        retryItem: (id: string) => void retryItem(id),
         close,
     }
 }

@@ -2738,6 +2738,8 @@
     "batchBytes": "{count} tệp · {sent} / {total} MB · {percent}%",
     "uploadStopped": "Trang đã tải lại khi tệp đang truyền nên tải lên đã dừng: {names}. Chọn lại tệp để tải từ đầu.",
     "uploadStoppedDismiss": "Đã hiểu",
+    "itemRetry": "Thử lại tệp này",
+    "uploadStoppedPick": "Chọn lại tệp",
     "itemRemove": "Bỏ khỏi danh sách",
     "itemFile": "Tệp",
     "itemLink": "Link",

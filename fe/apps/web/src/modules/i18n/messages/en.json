@@ -2733,6 +2733,8 @@
     "batchBytes": "{count} files · {sent} / {total} MB · {percent}%",
     "uploadStopped": "The page reloaded while files were uploading, so the upload stopped: {names}. Choose the files again to upload from the start.",
     "uploadStoppedDismiss": "Got it",
+    "itemRetry": "Retry this file",
+    "uploadStoppedPick": "Choose files again",
     "itemRemove": "Remove from the list",
     "itemFile": "File",
     "itemLink": "Link",
