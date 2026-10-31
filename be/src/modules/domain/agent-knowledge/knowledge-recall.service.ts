@@ -8,9 +8,9 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { ellipsize, withinBudget } from "@modules/platform/primitives"
 import { AgentKnowledgeLogEvent } from "./agent-knowledge.log-events"
 import type { KnowledgeView, RecallLimits, Recalled } from "./agent-knowledge.contracts"
-import { clip, withinBudget } from "./knowledge-view.policy"
 
 /** The whole view of facts is read at most this many at a time; a workspace keeps a few hundred. */
 const VIEW_LIMIT = 500
@@ -73,7 +73,7 @@ export class KnowledgeRecallService {
         const left = limits.budget - factLines.join("").length
         const passageLines = withinBudget(
             passages.map(
-                (passage) => `- ${passage.title}: ${clip(passage.content.replace(/\s+/g, " "), PASSAGE_LINE_MAX)}`,
+                (passage) => `- ${passage.title}: ${ellipsize(passage.content.replace(/\s+/g, " "), PASSAGE_LINE_MAX)}`,
             ),
             left,
         )
