@@ -99,7 +99,7 @@ export class SetupChatService {
         }
     }
 
-    /** Stores one message of the owner in the open draft and queues the answer of NIVO. */
+    /** Stores one message of the owner in the open draft and queues the answer of NIVO in the same transaction: a message is never left without its turn. */
     async postMessage(
         principalId: string,
         workspaceId: string,
@@ -109,17 +109,23 @@ export class SetupChatService {
     ): Promise<SetupMessageRecord> {
         const member = await this.members.require(principalId, workspaceId, GOVERNORS)
         await this.draftOf(workspaceId, sessionId)
-        const message = await this.messages.post({
-            workspaceId,
-            setupSessionId: sessionId,
-            role: "user",
-            author: member.displayName,
-            body: text.trim().slice(0, MESSAGE_MAX),
+        return this.entityManager.transaction(async (tx) => {
+            const message = await this.messages.post(
+                {
+                    workspaceId,
+                    setupSessionId: sessionId,
+                    role: "user",
+                    author: member.displayName,
+                    body: text.trim().slice(0, MESSAGE_MAX),
+                },
+                tx,
+            )
+            await this.queue.enqueueSetupTurn(
+                { workspaceId, messageId: message.id, setupSessionId: sessionId, locale },
+                tx,
+            )
+            return message
         })
-        await this.entityManager.transaction((tx) =>
-            this.queue.enqueueSetupTurn({ workspaceId, messageId: message.id, setupSessionId: sessionId, locale }, tx),
-        )
-        return message
     }
 
     /** Confirms, reopens or edits one gate of the open draft; editing sets the own wording of the owner and confirms it. */

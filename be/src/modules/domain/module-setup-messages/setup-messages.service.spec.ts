@@ -116,7 +116,10 @@ describe("SetupMessagesService > lines", () => {
             workspaceId: "ws-1",
             createdAt: new Date(stored.createdAt),
         })
-        const em = mockEntityManager({ save: [ModuleSetupMessageEntity, savedRow] })
+        const em = mockEntityManager({
+            save: [ModuleSetupMessageEntity, Object.assign(new ModuleSetupMessageEntity(), { id: "msg-2" })],
+            findOneOrFail: [ModuleSetupMessageEntity, savedRow],
+        })
 
         await expect((await build(em)).service.post(posted)).resolves.toEqual(stored)
 
@@ -130,5 +133,19 @@ describe("SetupMessagesService > lines", () => {
                 body: "Noted",
             }),
         )
+        expect(em.findOneOrFail).toHaveBeenCalledWith(ModuleSetupMessageEntity, { where: { id: "msg-2" } })
+    })
+
+    it("stores and reads the line back through the transaction it is given", async () => {
+        const own = mockEntityManager()
+        const tx = mockEntityManager({
+            save: [ModuleSetupMessageEntity, Object.assign(new ModuleSetupMessageEntity(), { id: "msg-1" })],
+            findOneOrFail: [ModuleSetupMessageEntity, row],
+        })
+
+        await expect((await build(own)).service.post(posted, tx)).resolves.toEqual(message)
+
+        expect(tx.save).toHaveBeenCalledTimes(1)
+        expect(own.save).not.toHaveBeenCalled()
     })
 })

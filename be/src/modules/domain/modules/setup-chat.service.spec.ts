@@ -227,13 +227,17 @@ describe("SetupChatService > postMessage", () => {
         await expect(service.postMessage("u1", "ws-1", "s-1", "  We open at 7  ", "vi")).resolves.toEqual(
             lineOf({ id: "m-9" }),
         )
-        expect(messages.post).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            setupSessionId: "s-1",
-            role: "user",
-            author: "Lan",
-            body: "We open at 7",
-        })
+        expect(messages.post).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                setupSessionId: "s-1",
+                role: "user",
+                author: "Lan",
+                body: "We open at 7",
+            },
+            expect.anything(),
+        )
+        expect(messages.post.mock.calls[0]?.[1]).toBe(queue.enqueueSetupTurn.mock.calls[0]?.[1])
         expect(queue.enqueueSetupTurn.mock.calls[0]?.[0]).toEqual({
             workspaceId: "ws-1",
             messageId: "m-9",
@@ -241,6 +245,15 @@ describe("SetupChatService > postMessage", () => {
             locale: "vi",
         })
         expect(tx.commits).toBe(1)
+    })
+
+    it("rolls the message back when its turn cannot be queued", async () => {
+        const { service, messages, queue, tx } = await build()
+        messages.post.mockResolvedValue(lineOf({ id: "m-9" }))
+        queue.enqueueSetupTurn.mockRejectedValue(new Error("queue down"))
+
+        await expect(service.postMessage("u1", "ws-1", "s-1", "Hi", "en")).rejects.toThrow("queue down")
+        expect(tx.rollbacks).toBe(1)
     })
 
     it("refuses a closed draft", async () => {

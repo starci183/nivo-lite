@@ -91,8 +91,11 @@ describe("SetupSessionsService", () => {
         })
     })
 
-    it("opens the next draft", async () => {
-        const em = mockEntityManager({ save: [ModuleSetupSessionEntity, row] })
+    it("opens the next draft and reads it back for the time the database set", async () => {
+        const em = mockEntityManager({
+            save: [ModuleSetupSessionEntity, Object.assign(new ModuleSetupSessionEntity(), { id: "ses-1" })],
+            findOneOrFail: [ModuleSetupSessionEntity, row],
+        })
 
         await expect((await build(em)).open(opening)).resolves.toEqual(session)
 
@@ -106,8 +109,11 @@ describe("SetupSessionsService", () => {
                 gateEvidence: session.gateEvidence,
             }),
         )
+        expect(em.findOneOrFail).toHaveBeenCalledWith(ModuleSetupSessionEntity, { where: { id: "ses-1" } })
     })
+})
 
+describe("SetupSessionsService > open races", () => {
     it("answers nothing when the same revision was opened first", async () => {
         const em = mockEntityManager()
         em.save.mockRejectedValueOnce(Object.assign(new Error("duplicate"), { code: "23505" }))

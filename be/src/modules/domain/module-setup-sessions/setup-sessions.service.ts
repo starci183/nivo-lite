@@ -58,9 +58,9 @@ export class SetupSessionsService {
         return rows.map((row) => ({ id: row.id, revision: row.revision, status: row.status }))
     }
 
-    /** Opens the next draft; null when another call opened the same revision first. */
+    /** Opens the next draft; null when another call opened the same revision first. The opened row is read again for the time the database set. */
     async open(session: NewSetupSession): Promise<OptionalSetupSessionRecord> {
-        const row = await this.entityManager
+        const saved = await this.entityManager
             .save(ModuleSetupSessionEntity, {
                 workspaceId: session.workspaceId,
                 installationId: session.installationId,
@@ -72,7 +72,9 @@ export class SetupSessionsService {
                 if (isUniqueViolation(cause)) return null
                 throw cause
             })
-        return row === null ? null : toRecord(row)
+        if (saved === null) return null
+        const row = await this.entityManager.findOneOrFail(ModuleSetupSessionEntity, { where: { id: saved.id } })
+        return toRecord(row)
     }
 
     /** Stores the draft and the gate evidence on the open draft; null when the session is not a draft any more. */

@@ -57,15 +57,19 @@ export class SetupMessagesService {
         return row === null ? null : toRecord(row)
     }
 
-    /** Stores one line of the chat and answers it. */
-    async post(message: NewSetupMessage): Promise<SetupMessageRecord> {
-        const row = await this.entityManager.save(ModuleSetupMessageEntity, {
+    /**
+     * Stores one line of the chat and answers it as stored. The database sets the time of the line, which an insert does not hand
+     * back, so the line is read again; a caller that queues work on the line passes its transaction, so both commit or neither.
+     */
+    async post(message: NewSetupMessage, manager: EntityManager = this.entityManager): Promise<SetupMessageRecord> {
+        const saved = await manager.save(ModuleSetupMessageEntity, {
             workspaceId: message.workspaceId,
             setupSessionId: message.setupSessionId,
             role: message.role,
             author: message.author,
             body: message.body,
         })
+        const row = await manager.findOneOrFail(ModuleSetupMessageEntity, { where: { id: saved.id } })
         return toRecord(row)
     }
 }
