@@ -1128,6 +1128,12 @@ input AssignAgentWorkInput {
   text: String! @inputBounds(maxLength: 4000)
 }
 
+input AssignDossierFindingInput {
+  assigneeId: ID = null @inputBounds(maxLength: 36)
+  dueAt: String = null @inputBounds(maxLength: 10)
+  findingId: ID! @inputBounds(maxLength: 36)
+}
+
 input AssignResponsibilityInput {
   dueAt: String = null @inputBounds(maxLength: 40)
   nextAction: String! @inputBounds(maxLength: 1000)
@@ -3065,6 +3071,11 @@ input DismissContextNoteInput {
   noteId: ID! @inputBounds(maxLength: 36)
 }
 
+input DismissDossierFindingInput {
+  findingId: ID! @inputBounds(maxLength: 36)
+  reason: String! @inputBounds(maxLength: 500)
+}
+
 input DismissKnowledgeGapInput {
   id: ID! @inputBounds(maxLength: 36)
 }
@@ -3074,6 +3085,148 @@ type DocumentPassageType {
   hasEmbedding: Boolean!
   id: ID!
   order: Int!
+}
+
+type DossierDraftPlaceholderType {
+  label: String!
+  reason: String!
+}
+
+type DossierFindingConnectionType {
+  nodes: [DossierFindingType!]!
+  pageInfo: DossierFindingPageInfoType!
+}
+
+type DossierFindingEvidenceType {
+  factId: ID
+  factLine: String
+  label: String!
+  passageId: ID
+  quote: String
+  role: String!
+  sourceId: ID
+  sourceTitle: String
+}
+
+input DossierFindingNoteInput {
+  findingId: ID! @inputBounds(maxLength: 36)
+  note: String = null @inputBounds(maxLength: 500)
+}
+
+type DossierFindingPageInfoType {
+  endCursor: String
+  hasNextPage: Boolean!
+}
+
+type DossierFindingParamType {
+  name: String!
+  value: String!
+}
+
+input DossierFindingRefInput {
+  findingId: ID! @inputBounds(maxLength: 36)
+}
+
+type DossierFindingType {
+  assigneeId: ID
+  code: String
+  createdAt: String!
+  decidedAt: String
+  decisionNote: String
+  detail: String!
+  dismissReason: String
+  dossierId: ID
+  dossierName: String
+  dossierRef: String
+  draftId: ID
+  draftStatus: String
+  dueAt: String
+  evidence: [DossierFindingEvidenceType!]!
+  firstSeenAt: String!
+  id: ID!
+  kind: String!
+  lastSeenAt: String!
+  origin: String!
+  params: [DossierFindingParamType!]!
+  relatedDossierIds: [ID!]!
+  remedyAction: String!
+  remedyDocumentType: String
+  reopenedCount: Int!
+  resolution: String
+  resolvedAt: String
+  severity: String!
+  status: String!
+  title: String!
+  updatedAt: String!
+}
+
+input DossierFindingsInput {
+  after: String = null @inputBounds(maxLength: 2048)
+  assigneeId: ID = null @inputBounds(maxLength: 36)
+  dossierId: ID = null @inputBounds(maxLength: 36)
+  draftsAwaiting: Boolean = null
+  first: Int = 50 @inputBounds(min: 1, max: 100)
+  severities: [String!] = null @inputBounds(maxItems: 4)
+  statuses: [String!] = null @inputBounds(maxItems: 4)
+  unassigned: Boolean = null
+}
+
+input DossierRemedyDraftRefInput {
+  draftId: ID! @inputBounds(maxLength: 36)
+}
+
+type DossierRemedyDraftType {
+  body: String!
+  createdAt: String!
+  decidedAt: String
+  documentType: String!
+  dossierId: ID
+  error: String
+  findingId: ID!
+  id: ID!
+  instructions: String
+  placeholders: [DossierDraftPlaceholderType!]!
+  rejectReason: String
+  sourceId: ID
+  status: String!
+  title: String!
+  updatedAt: String!
+}
+
+type DossierReviewRunType {
+  aiState: String
+  createdAt: String!
+  dossierId: ID
+  dropped: Int!
+  finishedAt: String
+  id: ID!
+  opened: Int!
+  resolved: Int!
+  scope: String!
+  startedAt: String
+  status: String!
+  trigger: String!
+}
+
+type DossierReviewSummaryType {
+  confirmed: Int!
+  critical: Int!
+  dossiers: [DossierReviewType!]!
+  draftsAwaiting: Int!
+  high: Int!
+  isRunning: Boolean!
+  latestRun: DossierReviewRunType
+  open: Int!
+}
+
+type DossierReviewType {
+  checklistStatus: String!
+  criticalCount: Int!
+  dossierId: ID!
+  highCount: Int!
+  openCount: Int!
+  reviewedAt: String!
+  status: String!
 }
 
 input DraftCampaignInput {
@@ -5059,12 +5212,14 @@ type Mutation {
   applySetup(input: ModuleInstallationIdInput!): SetupApplyResultType!
   applyShiftsImport(input: ApplyShiftsImportInput!): ApplyImportType!
   applyToHiringJob(input: ApplyToHiringJobInput!): ApplyResultType!
+  approveDossierRemedyDraft(input: DossierRemedyDraftRefInput!): DossierRemedyDraftType!
   approveLeadGenComment(input: ApproveLeadGenCommentInput!): LeadGenCommentStatusType!
   approveMcpConnector(input: ApproveMcpConnectorInput!): Int!
   approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
   askGuide(input: AskGuideInput!): GuideAskedType!
   assignAgentWork(input: AssignAgentWorkInput!): AgentAssignmentType!
+  assignDossierFinding(input: AssignDossierFindingInput!): DossierFindingType!
   assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
   assignWorkItem(input: AssignWorkItemInput!): WorkItemType!
   authorizeDrive(input: AuthorizeDriveInput!): DriveAuthorizeUrlType!
@@ -5087,6 +5242,7 @@ type Mutation {
   chooseMetaPage(input: ChooseMetaPageInput!): MetaWizardConnectionType!
   completeBooking(input: CompleteBookingInput!): CompleteBookingType!
   confirmBooking(input: ConfirmBookingInput!): ConfirmBookingType!
+  confirmDossierFinding(input: DossierFindingNoteInput!): DossierFindingType!
   confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
   connectTelegram(input: ConnectTelegramInput!): TelegramConnectedType!
   copyInviteLink(input: InviteRefInput!): InviteResultType!
@@ -5121,6 +5277,7 @@ type Mutation {
   disconnectConnection(input: DisconnectConnectionInput!): Boolean!
   disconnectDrive: Boolean!
   dismissContextNote(input: DismissContextNoteInput!): Boolean!
+  dismissDossierFinding(input: DismissDossierFindingInput!): DossierFindingType!
   dismissKnowledgeGap(input: DismissKnowledgeGapInput!): Boolean!
   draftInventoryLowStock: DraftLowStockType!
   draftLeadExecution(input: DraftLeadExecutionInput!): LeadActionQueuedType!
@@ -5173,6 +5330,7 @@ type Mutation {
   refreshLeadContext(input: RefreshLeadContextInput!): LeadActionQueuedType!
   registerMcpConnector(input: RegisterMcpConnectorInput!): Boolean!
   reindexKnowledgeSource(input: ReindexKnowledgeSourceInput!): SourceRefType!
+  rejectDossierRemedyDraft(input: RejectDossierRemedyDraftInput!): DossierRemedyDraftType!
   removeAgent(input: ModuleInstallationIdInput!): ModuleInstallationType!
   removeBookingException(input: RemoveBookingExceptionInput!): RemoveBookingExceptionType!
   removeBookingResource(input: RemoveBookingResourceInput!): RemoveBookingResourceType!
@@ -5187,6 +5345,7 @@ type Mutation {
   renameAgent(input: RenameAgentInput!): AgentAckType!
   renameInstallationAgent(input: RenameInstallationAgentInput!): ModuleInstallationType!
   renameModuleInstallation(input: RenameModuleInstallationInput!): ModuleInstallationType!
+  reopenDossierFinding(input: DossierFindingRefInput!): DossierFindingType!
   requestAgentAvatarUpload(input: RequestAgentAvatarUploadInput!): AgentAvatarUploadType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
@@ -5197,6 +5356,8 @@ type Mutation {
   requestContentMonthPlan(input: RequestContentMonthPlanInput!): ContentAiRequestedType!
   requestContentQuickDraft(input: RequestContentQuickDraftInput!): ContentAiRequestedType!
   requestDataSync(input: RequestDataSyncInput!): DataSyncRunType!
+  requestDossierRemedyDraft(input: RequestDossierRemedyDraftInput!): DossierRemedyDraftType!
+  requestDossierReview(input: RequestDossierReviewInput!): DossierReviewRunType!
   requestHiringInterview(input: RequestHiringInterviewInput!): HiringOutcomeType!
   requestHiringOffer(input: RequestHiringOfferInput!): HiringOutcomeType!
   requestInventorySend(input: RequestInventorySendInput!): RequestSendType!
@@ -5213,6 +5374,7 @@ type Mutation {
   rescreenHiringCandidate(input: HiringCandidateRefInput!): HiringOutcomeType!
   resendInvite(input: InviteRefInput!): InviteResultType!
   resendTelegramCode(input: ResendTelegramCodeInput!): Boolean!
+  resolveDossierFinding(input: ResolveDossierFindingInput!): DossierFindingType!
   respondHiringInterview(input: RespondHiringInterviewInput!): RespondSlotType!
   respondHiringOffer(input: RespondHiringOfferInput!): RespondOfferType!
   retryFailedStep(input: RetryFailedStepInput!): SalesActionType!
@@ -5243,6 +5405,7 @@ type Mutation {
   saveContentPillars(input: SaveContentPillarsInput!): SavedContentRowsType!
   saveContract(input: SaveContractInput!): SaveContractType!
   saveDatabaseConnection(input: SaveDatabaseConnectionInput!): ID!
+  saveDossierRemedyDraft(input: SaveDossierRemedyDraftInput!): DossierRemedyDraftType!
   saveHiringAvailability(input: SaveHiringAvailabilityInput!): SaveAvailabilityType!
   saveHiringJob(input: SaveHiringJobInput!): SaveJobType!
   saveHiringNotes(input: SaveHiringNotesInput!): Boolean!
@@ -6013,6 +6176,9 @@ type Query {
   dashboard: DashboardType!
   dataSyncRun(input: DataSyncRunInput!): DataSyncRunType!
   decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
+  dossierFindings(input: DossierFindingsInput! = {}): DossierFindingConnectionType!
+  dossierRemedyDraft(input: DossierRemedyDraftRefInput!): DossierRemedyDraftType
+  dossierReviewSummary: DossierReviewSummaryType!
   driveGrant: DriveGrantType!
   driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
   drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
@@ -6255,6 +6421,11 @@ input ReindexKnowledgeSourceInput {
   sourceId: ID! @inputBounds(maxLength: 36)
 }
 
+input RejectDossierRemedyDraftInput {
+  draftId: ID! @inputBounds(maxLength: 36)
+  reason: String = null @inputBounds(maxLength: 500)
+}
+
 input RemoveBookingExceptionInput {
   id: ID! @inputBounds(maxLength: 36)
 }
@@ -6399,6 +6570,15 @@ input RequestDataSyncInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
+input RequestDossierRemedyDraftInput {
+  findingId: ID! @inputBounds(maxLength: 36)
+  instructions: String = null @inputBounds(maxLength: 1000)
+}
+
+input RequestDossierReviewInput {
+  dossierId: ID = null @inputBounds(maxLength: 36)
+}
+
 input RequestHiringInterviewInput {
   candidateId: ID! @inputBounds(maxLength: 36)
   durationMin: Int! @inputBounds(min: 5, max: 480)
@@ -6518,6 +6698,11 @@ type RequestVideoScriptType {
 
 input ResendTelegramCodeInput {
   connectionId: ID! @inputBounds(maxLength: 64)
+}
+
+input ResolveDossierFindingInput {
+  findingId: ID! @inputBounds(maxLength: 36)
+  note: String! @inputBounds(maxLength: 500)
 }
 
 input RespondHiringInterviewInput {
@@ -7047,6 +7232,12 @@ input SaveDatabaseConnectionInput {
   name: String! @inputBounds(maxLength: 200)
   tables: DataJson!
   target: DatabaseTargetInput!
+}
+
+input SaveDossierRemedyDraftInput {
+  body: String! @inputBounds(maxLength: 40000)
+  draftId: ID! @inputBounds(maxLength: 36)
+  title: String! @inputBounds(maxLength: 160)
 }
 
 input SaveHiringAvailabilityInput {
