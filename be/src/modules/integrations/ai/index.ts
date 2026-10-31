@@ -1,6 +1,6 @@
 export { AiService } from "./ai.service"
 export { parseAiConfig } from "./ai.config"
-export type { AiContext, AiUsage } from "./ai.contracts"
+export type { AiChatAnswer, AiContext, AiUsage } from "./ai.contracts"
 export { InjectAi, AI } from "./ai.decorators"
 export { AiModule } from "./ai.module"
 export type { AiOptions } from "./ai.options"
