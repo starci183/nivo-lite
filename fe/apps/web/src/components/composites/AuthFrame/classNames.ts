@@ -2,8 +2,10 @@ import { cn } from "@heroui/react"
 
 /** The split screen: the art half and the form half side by side from lg, the form alone below it. */
 export const AUTH_SPLIT_CLASS_NAME = cn("grid", "min-h-dvh", "lg:grid-cols-2")
-/** Art half: the Backdrop fills it top to bottom; shown from lg only so the form stays in the first phone screen. */
-export const AUTH_ART_PANE_CLASS_NAME = cn("hidden", "min-h-dvh", "flex-col", "lg:flex", "[&>*]:flex-1")
+/** Art half, one screen tall: the brand art takes the height the brand line leaves; shown from lg only so the form stays in the first phone screen. */
+export const AUTH_ART_PANE_CLASS_NAME = cn("hidden", "h-dvh", "flex-col", "lg:flex")
+/** The brand line under the art, on the page canvas (PADDING-7). */
+export const AUTH_ART_COPY_CLASS_NAME = cn("flex", "max-w-xl", "flex-col", "gap-2", "p-8")
 /** Form half: the language menu at the top, the auth card centred, the legal links at the bottom (PADDING-7). */
 export const AUTH_FORM_PANE_CLASS_NAME = cn("flex", "min-h-dvh", "flex-col", "p-6", "lg:p-8")
 /** Language menu row, aligned to the end. */
