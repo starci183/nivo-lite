@@ -1,11 +1,11 @@
 import { AccountingEvidenceFields } from "@/components/leaves/AccountingEvidenceFields"
 import type { AccountingEvidenceFieldName } from "@/components/leaves/AccountingEvidenceFields"
 
-import { Alert, Button, Form, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, Form, SurfaceCard, Text } from "@starci/grammar/common"
 import { AccountingFormActions } from "@/components/branches/AccountingFormActions"
 import { AccountingRecordSection } from "@/components/branches/AccountingRecordSection"
 import type { AccountingRecordView } from "@/hooks/accountingRecords"
-import { FORM_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
+import { FORM_CLASS_NAME, NEED_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** The words and entered values of the manual evidence form. */
 interface EvidenceForm {
@@ -33,6 +33,15 @@ interface EvidenceForm {
     readonly notice: string | null
 }
 
+/** A feature that works once a connector is connected: what it gives and where to connect it. */
+interface EvidenceNeed {
+    readonly title: string
+    readonly body: string
+    readonly badge: string
+    readonly actionLabel: string
+    readonly actionHref: string
+}
+
 /** The resolved words and rows of the Evidence tab. */
 interface AccountingEvidenceProps {
     readonly props: {
@@ -52,6 +61,8 @@ interface AccountingEvidenceProps {
         readonly ordersEmpty: string
         readonly ordersEmptyBody: string
         readonly orders: ReadonlyArray<AccountingRecordView>
+        /** Supplier invoices need an invoice connector: drawn only while none is connected. */
+        readonly supplierNeed: EvidenceNeed | null
         readonly isFormOpen: boolean
         readonly formOpenLabel: string
         readonly form: EvidenceForm
@@ -140,6 +151,23 @@ export const AccountingEvidence = (props: AccountingEvidenceProps) => {
                 records={data.orders}
                 isSkeleton={isSkeleton}
             />
+            {data.supplierNeed === null ? null : (
+                <SurfaceCard label={data.supplierNeed.title}>
+                    <div className={NEED_CLASS_NAME}>
+                        <Badge tone="warning" isSkeleton={isSkeleton}>
+                            {data.supplierNeed.badge}
+                        </Badge>
+                        <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                            {data.supplierNeed.body}
+                        </Text>
+                        <div>
+                            <Button intent="neutral" href={data.supplierNeed.actionHref} isSkeleton={isSkeleton}>
+                                {data.supplierNeed.actionLabel}
+                            </Button>
+                        </div>
+                    </div>
+                </SurfaceCard>
+            )}
         </div>
     )
 }

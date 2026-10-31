@@ -2,6 +2,7 @@ import type { AccountingAdjustmentRow } from "@modules/domain/accounting-adjustm
 import type { AccountingDecisionRow } from "@modules/domain/decisions"
 import type { InvoiceAccountingRow } from "@modules/domain/invoices"
 import type { SalesOrderListRow } from "@modules/domain/orders"
+import type { SupplierPayableRow } from "@modules/domain/supplier-payables"
 import type { TransactionAccountingRow } from "@modules/domain/transactions"
 import type { WorkItemsService } from "@modules/domain/work-items"
 
@@ -35,6 +36,8 @@ export interface AccountingBook {
     readonly decisions: ReadonlyArray<AccountingDecisionRow>
     /** Append-only corrections. */
     readonly adjustments: ReadonlyArray<AccountingAdjustmentRow>
+    /** Supplier invoices, open and paid. */
+    readonly payables: ReadonlyArray<SupplierPayableRow>
     /** Whether correction persistence is available. */
     readonly adjustmentsReady: boolean
 }

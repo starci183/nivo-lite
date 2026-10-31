@@ -1,5 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
+import { BrainFactsService } from "@modules/domain/brain-facts"
+import type { FactRecord } from "@modules/domain/brain-facts"
 import { DecisionsService } from "@modules/domain/decisions"
 import { StaffService } from "@modules/domain/staff"
 import type { StaffRow } from "@modules/domain/staff"
@@ -23,8 +25,12 @@ const EMPTY_BOOK: AccountingBook = {
     works: [],
     decisions: [],
     adjustments: [],
+    payables: [],
     adjustmentsReady: true,
 }
+
+const fact = (attribute: string, value: string): FactRecord =>
+    mock<FactRecord>({ subjectKey: "tax_profile", attribute, value })
 
 const STAFF: StaffRow = {
     id: "s-1",
@@ -45,12 +51,16 @@ const memberOf = (role: WorkspaceRole): WorkspaceMember => ({
     status: "active",
 })
 
-const build = async (role: WorkspaceRole = "owner") => {
+const build = async (role: WorkspaceRole = "owner", facts: ReadonlyArray<FactRecord> = []) => {
     const books = mock<AccountingBookService>({ read: jest.fn(() => Promise.resolve(EMPTY_BOOK)) })
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(memberOf(role))) })
     const decisions = mock<DecisionsService>({ listAccountingWaiting: jest.fn(() => Promise.resolve([])) })
     const staff = mock<StaffService>({ list: jest.fn(() => Promise.resolve([STAFF])) })
-    const gateway = mock<AccountingGateway>({ creditsSource: jest.fn(() => Promise.resolve("SePay")) })
+    const gateway = mock<AccountingGateway>({
+        creditsSource: jest.fn(() => Promise.resolve("SePay")),
+        payablesSource: jest.fn(() => Promise.resolve("Viettel S-Invoice")),
+    })
+    const brain = mock<BrainFactsService>({ list: jest.fn(() => Promise.resolve(facts)) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AccountingService,
@@ -58,14 +68,44 @@ const build = async (role: WorkspaceRole = "owner") => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: DecisionsService, useValue: decisions },
             { provide: StaffService, useValue: staff },
+            { provide: BrainFactsService, useValue: brain },
             { provide: ACCOUNTING_GATEWAY, useValue: gateway },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
         ],
     }).compile()
-    return { service: moduleRef.get(AccountingService), books, members }
+    return { service: moduleRef.get(AccountingService), books, members, gateway, brain }
+}
+
+const registerPayables = () => {
+    it("names the invoice connector and has no upcoming dues while the Brain holds no tax profile", async () => {
+        const { service } = await build()
+
+        await expect(service.workbench(USER, WORKSPACE)).resolves.toMatchObject({
+            payablesSource: "Viettel S-Invoice",
+            upcoming: null,
+            reminderDays: null,
+        })
+    })
+
+    it("lists the dues of the tax profile from stored rows and reads no payable tool", async () => {
+        const { service, gateway, brain } = await build("owner", [
+            fact("tax_code", "0100109106"),
+            fact("reminder_days", "5"),
+        ])
+
+        const workbench = await service.workbench(USER, WORKSPACE)
+
+        expect(brain.list).toHaveBeenCalledWith(WORKSPACE, { statuses: ["active"] })
+        expect(workbench.reminderDays).toBe(5)
+        expect(workbench.upcoming?.length).toBeGreaterThan(0)
+        expect(gateway.listOpenPayables).not.toHaveBeenCalled()
+        expect(gateway.listPaymentDebits).not.toHaveBeenCalled()
+    })
 }
 
 describe("AccountingService", () => {
+    describe("payables", registerPayables)
+
     describe("book", () => {
         it("answers the raw book of the workspace to a member", async () => {
             const { service, members } = await build()

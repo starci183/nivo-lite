@@ -1,4 +1,4 @@
-import type { GatewayPayable, PayableMatches, UnclearPayment } from "./accounting-desk.contracts"
+import type { GatewayPayable, PayableMatches, PayablePayment } from "./accounting-desk.contracts"
 import type { PaymentCredit } from "./accounting-gateway.port"
 
 /** Letters and digits only, upper case: how an invoice number is looked for inside a transfer memo. */
@@ -20,9 +20,9 @@ export const matchPayables = (
     debits: ReadonlyArray<PaymentCredit>,
 ): PayableMatches => {
     const used = new Set<string>()
-    const paid: Array<GatewayPayable> = []
+    const paid: Array<PayablePayment> = []
     const open: Array<GatewayPayable> = []
-    const unclear: Array<UnclearPayment> = []
+    const unclear: Array<PayablePayment> = []
     for (const payable of payables) {
         const exact = debits.find(
             (debit) =>
@@ -30,7 +30,7 @@ export const matchPayables = (
         )
         if (exact !== undefined) {
             used.add(exact.creditRef)
-            paid.push(payable)
+            paid.push({ payable, debit: exact })
             continue
         }
         open.push(payable)

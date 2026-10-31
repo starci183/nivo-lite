@@ -75,6 +75,8 @@ export interface AccountingGateway {
     recordPayment(workspaceId: string, payment: ReceivablePayment): Promise<boolean>
     /** The display name of the connector whose tool plays `payment.credits.list`, or null when the workspace has none. */
     creditsSource(workspaceId: string): Promise<OptionalConnectorName>
+    /** The display name of the connector whose tool plays `invoice.list`, or null when the workspace has none. */
+    payablesSource(workspaceId: string): Promise<OptionalConnectorName>
     /** Which optional features of the desk the workspace has tools for (e-invoices, the reconcile). */
     connections(workspaceId: string): Promise<DeskConnections>
 }

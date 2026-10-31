@@ -9,6 +9,7 @@ import type { TransactionAccountingRow as LedgerTransaction } from "@modules/dom
 import type { WorkItemsService } from "@modules/domain/work-items"
 import type { AccountingDecisionRow as LedgerDecision } from "@modules/domain/decisions"
 import type { AccountingAdjustmentRow as LedgerAdjustment } from "@modules/domain/accounting-adjustments"
+import type { SupplierPayableRow as LedgerPayable } from "@modules/domain/supplier-payables"
 
 /** The accounting lineage returned by the work-item owner. */
 type LedgerWork = Awaited<ReturnType<WorkItemsService["listAccounting"]>>[number]
@@ -36,6 +37,8 @@ export interface LedgerInput {
     readonly decisions: ReadonlyArray<LedgerDecision>
     /** The append-only correction notes. */
     readonly adjustments: ReadonlyArray<LedgerAdjustment>
+    /** The supplier invoices; only the paid ones are ledger lines (expenses). */
+    readonly payables: ReadonlyArray<LedgerPayable>
 }
 
 const LEDGER_LIMIT = 400
@@ -219,6 +222,9 @@ export const buildLedger = (input: LedgerInput): ReadonlyArray<AccountingLedgerE
             adjustmentCount: bucket(adjustmentsByTarget, `transaction:${tx.id}`).length,
         })
     }
+    for (const payable of input.payables) {
+        if (payable.status === "paid") ledger.push(expenseEntryOf(payable, workBySubject, decisionsByWork))
+    }
     ledger.sort((a, b) => toMs(b.at) - toMs(a.at))
     return ledger.slice(0, LEDGER_LIMIT)
 }
@@ -256,3 +262,40 @@ const invoiceEntryOf = (
         adjustmentCount: bucket(adjustmentsByTarget, `invoice:${invoice.id}`).length,
     }
 }
+
+/** One paid supplier invoice as an expense line: the invoice, the outgoing payment and the decision behind it. */
+const expenseEntryOf = (
+    payable: LedgerPayable,
+    workBySubject: ReadonlyMap<string, ReadonlyArray<LedgerWork>>,
+    decisionsByWork: ReadonlyMap<string, ReadonlyArray<LedgerDecision>>,
+): AccountingLedgerEntry => ({
+    id: `pay:${payable.id}`,
+    targetType: "supplier_payable",
+    targetId: payable.id,
+    at: payable.paidAt ?? payable.firstSeenAt,
+    description: [payable.supplier, payable.invoiceNo].filter(Boolean).join(" / "),
+    kind: "expense",
+    amount: payable.amountVnd,
+    status: "paid",
+    linked: payable.invoiceNo,
+    lineage: sortSteps([
+        {
+            kind: "invoice",
+            title: payable.invoiceNo,
+            detail: payable.supplier || null,
+            at: payable.issuedOn,
+            status: "paid",
+            amount: payable.amountVnd,
+        },
+        {
+            kind: "payment",
+            title: payable.debitRef ?? "-",
+            detail: payable.decidedBy,
+            at: payable.paidAt,
+            status: "paid",
+            amount: payable.amountVnd,
+        },
+        ...decisionSteps(workBySubject, decisionsByWork, [payable.id]),
+    ]),
+    adjustmentCount: 0,
+})

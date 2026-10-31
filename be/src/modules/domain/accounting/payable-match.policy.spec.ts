@@ -32,12 +32,14 @@ describe("payable-match.policy", () => {
     it("pays an invoice with a debit of its exact amount whose memo names its number, ignoring zeros and punctuation", async () => {
         const policy = await build()
 
-        const matches = policy.matchPayables(
-            [payable("0000017", 4_620_000)],
-            [debit("d-1", "TT HD-17 Linh An", 4_620_000)],
-        )
+        const paying = debit("d-1", "TT HD-17 Linh An", 4_620_000)
+        const matches = policy.matchPayables([payable("0000017", 4_620_000)], [paying])
 
-        expect(matches).toEqual({ paid: [payable("0000017", 4_620_000)], open: [], unclear: [] })
+        expect(matches).toEqual({
+            paid: [{ payable: payable("0000017", 4_620_000), debit: paying }],
+            open: [],
+            unclear: [],
+        })
     })
 
     it("lets one debit pay one invoice only and keeps the second invoice open", async () => {
@@ -45,9 +47,10 @@ describe("payable-match.policy", () => {
         const first = payable("17", 1_000_000)
         const second = payable("17", 1_000_000)
 
-        const matches = policy.matchPayables([first, second], [debit("d-1", "HD 17", 1_000_000)])
+        const paying = debit("d-1", "HD 17", 1_000_000)
+        const matches = policy.matchPayables([first, second], [paying])
 
-        expect(matches.paid).toEqual([first])
+        expect(matches.paid).toEqual([{ payable: first, debit: paying }])
         expect(matches.open).toEqual([second])
         expect(matches.unclear).toEqual([])
     })

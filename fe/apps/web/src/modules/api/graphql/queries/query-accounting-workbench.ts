@@ -77,6 +77,17 @@ const query1: TypedDocumentNode<QueryAccountingWorkbenchResponse> = gql`
                 unknownAmount
             }
             creditsSource
+            payablesSource
+            reminderDays
+            upcoming {
+                source
+                kind
+                ref
+                dueOn
+                daysLeft
+                amountVnd
+                note
+            }
             credits {
                 id
                 occurredAt

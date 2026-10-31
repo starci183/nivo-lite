@@ -4,24 +4,27 @@ import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkPerformerRegistry } from "@modules/domain/decisions"
 import { AccountingPerformersRegistrarService } from "./accounting-performers-registrar.service"
 import { ReceivablePaymentPerformerService } from "./receivable-payment-performer.service"
+import { SupplierPaymentPerformerService } from "./supplier-payment-performer.service"
 
 describe("AccountingPerformersRegistrarService", () => {
-    it("registers the receivable payment performer at boot", async () => {
+    it("registers the receivable payment and the supplier payment performers at boot", async () => {
         const registry = mock<WorkPerformerRegistry>({ add: jest.fn() })
         const payment = mock<ReceivablePaymentPerformerService>()
+        const supplierPayment = mock<SupplierPaymentPerformerService>()
         const moduleRef = await Test.createTestingModule({
             providers: [
                 AccountingPerformersRegistrarService,
                 { provide: WORK_PERFORMER_REGISTRY, useValue: registry },
                 { provide: ReceivablePaymentPerformerService, useValue: payment },
+                { provide: SupplierPaymentPerformerService, useValue: supplierPayment },
             ],
         }).compile()
 
         moduleRef.get(AccountingPerformersRegistrarService).onModuleInit()
 
-        expect(registry.add).toHaveBeenCalledTimes(1)
-        const [action, performer] = registry.add.mock.calls[0] ?? []
-        expect(action).toBe("record_receivable_payment")
-        expect(performer).toBe(payment)
+        expect(registry.add.mock.calls).toEqual([
+            ["record_receivable_payment", payment],
+            ["confirm_supplier_payment", supplierPayment],
+        ])
     })
 })

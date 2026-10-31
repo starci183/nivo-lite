@@ -59,6 +59,7 @@ export const input = (patch: Partial<LedgerInput> = {}): LedgerInput => ({
     works: [],
     decisions: [],
     adjustments: [],
+    payables: [],
     ...patch,
 })
 

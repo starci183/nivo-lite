@@ -2,6 +2,8 @@ import type { AccountingWaitingWorkRow as WorkItemView } from "@modules/domain/d
 import type { StaffRow as Staff } from "@modules/domain/staff"
 import type { InvoiceAccountingRow as BookInvoice } from "@modules/domain/invoices"
 import type { TransactionAccountingRow as BookTransaction } from "@modules/domain/transactions"
+import type { TaxProfile } from "./accounting-desk.contracts"
+import { upcomingOf } from "./accounting-upcoming.policy"
 import type {
     AccountingAgeing,
     AccountingCredit,
@@ -37,6 +39,12 @@ export interface AccountingWorkbenchInput {
     readonly role: string
     /** The display name of the connector that feeds payment credits, or null when none is connected. */
     readonly creditsSource: string | null
+    /** The display name of the connector that feeds supplier invoices, or null when none is connected. */
+    readonly payablesSource: string | null
+    /** The tax profile in the Brain, or null when there is none. */
+    readonly profile: TaxProfile | null
+    /** The calendar day in Vietnam of `now`, `YYYY-MM-DD`. */
+    readonly today: string
 }
 /** A money and count accumulator. */
 interface MutableMeasure {
@@ -266,8 +274,10 @@ export const buildAccountingWorkbench = (input: AccountingWorkbenchInput): Accou
     const ordersKept = withoutTests(book.orders, (order) =>
         isTestRunName(order.order_no, order.items, customerOf(order.lead)),
     )
+    const payablesKept = withoutTests(book.payables, (payable) => isTestRunName(payable.supplier, payable.invoiceNo))
     const invoices = invoicesKept.rows
     const transactions = txsKept.rows
+    const payables = payablesKept.rows
 
     /* questions: waiting accounting work (the existing decide UI renders them) */
     const waitingItems = input.exceptions.filter(
@@ -296,6 +306,9 @@ export const buildAccountingWorkbench = (input: AccountingWorkbenchInput): Accou
             .slice(0, 200)
             .map((tx) => toCredit(tx, (invoiceId) => invoiceNos.get(invoiceId) ?? null, waitingTxIds)),
         creditsSource: input.creditsSource,
+        payablesSource: input.payablesSource,
+        upcoming: upcomingOf(input.profile, payables, input.today),
+        reminderDays: input.profile === null ? null : input.profile.reminderDays,
         invoices: invoices.slice(0, 200).map(toInvoice),
         ordersWithoutInvoice: ordersKept.rows
             .filter((order) => order.status !== "cancelled" && !invoicedOrders.has(order.id))
@@ -309,9 +322,10 @@ export const buildAccountingWorkbench = (input: AccountingWorkbenchInput): Accou
             works: book.works,
             decisions: book.decisions,
             adjustments: book.adjustments,
+            payables,
         }),
         canAdjust: book.adjustmentsReady && (input.role === "owner" || input.role === "manager"),
         adjustmentsReady: book.adjustmentsReady,
-        excludedTest: invoicesKept.excluded + txsKept.excluded + ordersKept.excluded,
+        excludedTest: invoicesKept.excluded + txsKept.excluded + ordersKept.excluded + payablesKept.excluded,
     }
 }

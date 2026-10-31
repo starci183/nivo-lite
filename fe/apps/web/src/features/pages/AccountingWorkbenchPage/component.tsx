@@ -3,6 +3,8 @@ import { AccountingFigures } from "@/components/blocks/AccountingFigures"
 import { AccountingLedgerPanel } from "@/components/blocks/AccountingLedgerPanel"
 import { AccountingOverviewPanel } from "@/components/blocks/AccountingOverviewPanel"
 import { AccountingQuestionsPanel } from "@/components/blocks/AccountingQuestionsPanel"
+import { AccountingUpcoming } from "@/components/blocks/AccountingUpcoming"
+import { AccountingWaiting } from "@/components/blocks/AccountingWaiting"
 import { AgentDashboardFrame } from "@/components/blocks/AgentDashboardFrame"
 
 /** Props for {@link AccountingWorkbenchPageBase}. */
@@ -23,7 +25,16 @@ export interface AccountingWorkbenchPageBaseProps {
 export const AccountingWorkbenchPageBase = (props: AccountingWorkbenchPageBaseProps) => {
     const p = props.props
     const tabs = [
-        { id: "overview", label: p.tabs.overview, content: <AccountingOverviewPanel /> },
+        {
+            id: "overview",
+            label: p.tabs.overview,
+            content: (
+                <>
+                    <AccountingUpcoming />
+                    <AccountingOverviewPanel />
+                </>
+            ),
+        },
         { id: "evidence", label: p.tabs.evidence, content: <AccountingEvidencePanel /> },
         { id: "questions", label: p.tabs.questions, content: <AccountingQuestionsPanel /> },
         { id: "ledger", label: p.tabs.ledger, content: <AccountingLedgerPanel /> },
@@ -34,6 +45,7 @@ export const AccountingWorkbenchPageBase = (props: AccountingWorkbenchPageBasePr
             installationId={p.installationId}
             initialTab={p.initialTab}
             ribbon={<AccountingFigures />}
+            waiting={<AccountingWaiting />}
             waitingTab="questions"
             tabs={tabs}
         />

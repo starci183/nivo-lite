@@ -3,6 +3,8 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import type { AuthorityActionRecord } from "@modules/domain/authority-actions"
+import { evaluateGate } from "@modules/domain/authority-rules"
+import type { AuthorityRule } from "@modules/domain/authority-rules"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { MODULE_CATEGORIES } from "./categories.contracts"
@@ -235,5 +237,42 @@ describe("ModulesService > ensure", () => {
             code: ModulesErrorCode.CatalogInvalid,
         })
         expect(authorityActions.list).not.toHaveBeenCalled()
+    })
+})
+
+describe("the default rule of a supplier payment", () => {
+    const seeded = ACCOUNTING_MODULE.authorityActions.find((action) => action.action === "confirm_supplier_payment")
+    const ruleOf = (patch: Partial<AuthorityRule> = {}): AuthorityRule => ({
+        id: "rule-1",
+        department: "accounting",
+        action: "confirm_supplier_payment",
+        mode: seeded?.mode ?? "ask",
+        limit_vnd: seeded?.limitVnd ?? null,
+        required_fields: seeded?.requiredFields ?? [],
+        ...patch,
+    })
+    const verdictOf = (rule: AuthorityRule, amount: number | null): string =>
+        evaluateGate({
+            action: "confirm_supplier_payment",
+            rule,
+            maxMode: null,
+            proposal: { summary: "Paid Linh An", amount_vnd: amount, fields: { debit_ref: "d-1" } },
+        }).verdict
+
+    it("is automatic under 5,000,000 VND for a new install, checked on the amount", () => {
+        expect(seeded).toMatchObject({ mode: "auto", limitVnd: 5_000_000, amountLimit: true, requiredFields: ["amount_vnd"] })
+    })
+
+    it("runs a payment of 4,999,999 VND alone and asks at 5,000,000 and when the amount is unknown", () => {
+        expect(verdictOf(ruleOf(), 4_999_999)).toBe("auto")
+        expect(verdictOf(ruleOf(), 5_000_000)).toBe("ask")
+        expect(verdictOf(ruleOf(), null)).toBe("ask")
+    })
+
+    it("asks at any amount when the workspace kept its stored rule of ask", () => {
+        const stored = ruleOf({ mode: "ask", limit_vnd: null, required_fields: [] })
+
+        expect(verdictOf(stored, 1)).toBe("ask")
+        expect(verdictOf(stored, 4_999_999)).toBe("ask")
     })
 })

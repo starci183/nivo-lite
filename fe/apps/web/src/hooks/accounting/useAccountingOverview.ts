@@ -44,6 +44,13 @@ const unmatchedOf = (
           }
         : measureOf(t, format, "Unmatched", measure, "countPayments", t("mUnmatchedSource", { source: creditsSource }))
 
+/** The three ageing buckets as gauges: how much is owed at each age, the oldest drawn as the most serious. */
+const AGEING_BUCKETS = [
+    { id: "d0", key: "ageingD0", tone: "neutral" },
+    { id: "d30", key: "ageingD30", tone: "cautionary" },
+    { id: "d60", key: "ageingD60", tone: "negative" },
+] as const
+
 /** The Period overview tab: the period choice lives here, the drawing in the pure half. */
 export const useAccountingOverview = (data: AccountingWorkbenchData) => {
     const t = useTranslations("workbenchAccounting")
@@ -54,6 +61,7 @@ export const useAccountingOverview = (data: AccountingWorkbenchData) => {
     const waitingTotal = data.waiting.count
 
     const weekMax = Math.max(1, ...period.weeks.map((week) => week.vnd))
+    const ageingMax = Math.max(1, ...AGEING_BUCKETS.map((bucket) => data.ageing[bucket.id].vnd))
 
     const waitingAmount =
         data.waiting.knownVnd > 0 ? `${t("waitingAmount", { amount: moneyOf(format, data.waiting.knownVnd) })} · ` : ""
@@ -85,6 +93,16 @@ export const useAccountingOverview = (data: AccountingWorkbenchData) => {
             trendTitle: t("trendTitle"),
             trendIntro: t("trendIntro"),
             trendSource: `${t("sourceLabel")}: ${t("mIncomeSource")}`,
+            ageingTitle: t("ageingTitle"),
+            ageingIntro: t("ageingIntro"),
+            ageingMax,
+            ageing: AGEING_BUCKETS.map((bucket) => ({
+                id: bucket.id,
+                label: t(bucket.key, { n: data.ageing[bucket.id].count }),
+                total: data.ageing[bucket.id].vnd,
+                reading: moneyOf(format, data.ageing[bucket.id].vnd),
+                tone: bucket.tone,
+            })),
             weekMax,
             weeks: period.weeks.map((week) => ({
                 id: week.startIso,

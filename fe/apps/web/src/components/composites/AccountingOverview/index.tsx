@@ -22,6 +22,15 @@ interface AccountingOverviewWeek {
     readonly reading: string
 }
 
+/** One ageing bucket: the money owed at that age, with the judgement of how late it is. */
+interface AccountingOverviewAgeing {
+    readonly id: string
+    readonly label: string
+    readonly total: number
+    readonly reading: string
+    readonly tone: "neutral" | "cautionary" | "negative"
+}
+
 /** The resolved words and figures of the Period overview. */
 interface AccountingOverviewProps {
     readonly props: {
@@ -32,6 +41,10 @@ interface AccountingOverviewProps {
         readonly selectedPeriod: string
         readonly measures: ReadonlyArray<AccountingOverviewMeasure>
         readonly excludedNote: string | null
+        readonly ageingTitle: string
+        readonly ageingIntro: string
+        readonly ageingMax: number
+        readonly ageing: ReadonlyArray<AccountingOverviewAgeing>
         readonly trendTitle: string
         readonly trendIntro: string
         readonly trendSource: string
@@ -73,7 +86,50 @@ const MeasureMeta = (props: MeasureMetaProps) => (
     </div>
 )
 
-/** Period selector, four honest measures and the weekly trend. */
+/** A titled card of gauges, one per row, with an optional line saying where the figures come from. */
+interface MeterBlockProps {
+    readonly title: string
+    readonly intro: string
+    readonly rows: ReadonlyArray<{
+        readonly id: string
+        readonly label: string
+        readonly total: number
+        readonly reading: string
+        readonly tone?: AccountingOverviewAgeing["tone"]
+    }>
+    readonly max: number
+    readonly source?: string
+    readonly isSkeleton: boolean
+}
+
+/** One region of gauges: the ageing buckets or the weeks of income. */
+const MeterBlock = (props: MeterBlockProps) => (
+    <AccountingBlock label={props.title}>
+        <SectionHeader level={2} title={props.title} description={props.intro} isSkeleton={props.isSkeleton} />
+        <SurfaceCard ariaLabel={props.title}>
+            <div className={WEEKS_CLASS_NAME}>
+                {props.rows.map((row) => (
+                    <Meter
+                        key={row.id}
+                        label={row.label}
+                        value={row.total}
+                        maxValue={props.max}
+                        valueLabel={row.reading}
+                        {...(row.tone === undefined ? {} : { tone: row.tone })}
+                        isSkeleton={props.isSkeleton}
+                    />
+                ))}
+            </div>
+        </SurfaceCard>
+        {props.source === undefined ? null : (
+            <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
+                {props.source}
+            </Text>
+        )}
+    </AccountingBlock>
+)
+
+/** Period selector, four honest measures, the receivable ageing and the weekly trend. */
 export const AccountingOverview = (props: AccountingOverviewProps) => {
     const isSkeleton = props.isSkeleton
     return (
@@ -114,31 +170,21 @@ export const AccountingOverview = (props: AccountingOverviewProps) => {
                     </Text>
                 )}
             </AccountingSectionHead>
-            <AccountingBlock label={props.props.trendTitle}>
-                <SectionHeader
-                    level={2}
-                    title={props.props.trendTitle}
-                    description={props.props.trendIntro}
-                    isSkeleton={isSkeleton}
-                />
-                <SurfaceCard ariaLabel={props.props.trendTitle}>
-                    <div className={WEEKS_CLASS_NAME}>
-                        {props.props.weeks.map((week) => (
-                            <Meter
-                                key={week.id}
-                                label={week.label}
-                                value={week.total}
-                                maxValue={props.props.weekMax}
-                                valueLabel={week.reading}
-                                isSkeleton={isSkeleton}
-                            />
-                        ))}
-                    </div>
-                </SurfaceCard>
-                <Text size="xs" tone="muted" isSkeleton={isSkeleton}>
-                    {props.props.trendSource}
-                </Text>
-            </AccountingBlock>
+            <MeterBlock
+                title={props.props.ageingTitle}
+                intro={props.props.ageingIntro}
+                rows={props.props.ageing}
+                max={props.props.ageingMax}
+                isSkeleton={isSkeleton}
+            />
+            <MeterBlock
+                title={props.props.trendTitle}
+                intro={props.props.trendIntro}
+                rows={props.props.weeks}
+                max={props.props.weekMax}
+                source={props.props.trendSource}
+                isSkeleton={isSkeleton}
+            />
         </div>
     )
 }

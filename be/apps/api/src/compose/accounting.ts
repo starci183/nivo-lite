@@ -8,6 +8,7 @@ import {
     AccountingModule,
     McpAccountingGatewayService,
 } from "@modules/domain/accounting"
+import { SupplierPayablesModule } from "@modules/domain/supplier-payables"
 import { STAFF_ERROR_KINDS, STAFF_MESSAGES, StaffModule } from "@modules/domain/staff"
 import {
     ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
@@ -42,6 +43,7 @@ export const accountingModules = (): Array<DynamicModule> => [
     OrdersGraphqlModule.register({}),
     StaffModule.register({ isGlobal: true }),
     AccountingAdjustmentsModule.register({ isGlobal: true }),
+    SupplierPayablesModule.register({ isGlobal: true }),
     AccountingModule.register({ isGlobal: true, gateway: McpAccountingGatewayService }),
     AccountingGraphqlModule.register({}),
     AdjustmentsGraphqlModule.register({}),

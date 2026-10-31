@@ -41,6 +41,17 @@ export const accountingPlaceholderOf = (t: AccountingTranslator): AccountingWork
         sourceKind: "other" as const,
     })),
     creditsSource: t("mUnmatched"),
+    payablesSource: t("mUnmatched"),
+    upcoming: [1, 2].map((n) => ({
+        source: "supplier" as const,
+        kind: "supplier_payment",
+        ref: String(n),
+        dueOn: STAMP.slice(0, 10),
+        daysLeft: 0,
+        amountVnd: 0,
+        note: t("noReference"),
+    })),
+    reminderDays: 0,
     invoices: [1, 2, 3].map((n) => ({
         id: `invoice-${n}`,
         invoiceNo: String(n),

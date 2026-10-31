@@ -199,6 +199,7 @@ describe("toAccountingBookView", () => {
                     created_at: "2026-10-14T10:04:00Z",
                 },
             ],
+            payables: [],
             adjustmentsReady: true,
         }
 
@@ -215,6 +216,7 @@ describe("toAccountingBookView", () => {
             works: [],
             decisions: [],
             adjustments: [],
+            payables: [],
             adjustmentsReady: false,
         })
 

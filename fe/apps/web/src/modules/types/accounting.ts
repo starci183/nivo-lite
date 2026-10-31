@@ -47,7 +47,7 @@ export interface AccountingAgeing {
 }
 
 /** Work items waiting for a person, with the money already known. */
-export interface AccountingWaiting {
+export interface AccountingWaitingCount {
     readonly count: number
     readonly knownVnd: number
     readonly unknownAmount: number
@@ -109,16 +109,16 @@ export interface AccountingLineageStep {
     readonly amount: number | null
 }
 
-/** Whether a ledger line is money in or an amount owed. */
-export type AccountingLedgerKind = "income" | "receivable"
+/** Whether a ledger line is money in, an amount owed to the shop or money paid out to a supplier. */
+export type AccountingLedgerKind = "income" | "receivable" | "expense"
 /** The state of a ledger line. */
 export type AccountingLedgerStatus = "issued" | "paid" | "void" | "settled" | "matched" | "unmatched" | "needs_review"
 /** The kind of record a correction points at. */
-export type AccountingTargetType = "invoice" | "transaction"
+export type AccountingTargetType = "invoice" | "transaction" | "supplier_payable"
 
 /** One line of the ledger derived from invoices and payments. */
 export interface AccountingLedgerEntry {
-    /** "inv:<id>" or "tx:<id>" */
+    /** "inv:<id>", "tx:<id>" or "pay:<id>" */
     readonly id: string
     readonly targetType: AccountingTargetType
     readonly targetId: string
@@ -130,6 +130,24 @@ export interface AccountingLedgerEntry {
     readonly linked: string | null
     readonly lineage: ReadonlyArray<AccountingLineageStep>
     readonly adjustmentCount: number
+}
+
+/** One tax deadline or supplier payment falling due. */
+export interface AccountingUpcomingDue {
+    /** A tax deadline or a supplier invoice. */
+    readonly source: "tax" | "supplier"
+    /** The obligation kind (a tax kind), or `supplier_payment`. */
+    readonly kind: string
+    /** The covered period of a tax deadline, or the invoice number. */
+    readonly ref: string
+    /** The due date, `YYYY-MM-DD`. */
+    readonly dueOn: string
+    /** Whole days from today; negative once past. */
+    readonly daysLeft: number
+    /** The amount of a supplier invoice; null for a tax deadline. */
+    readonly amountVnd: number | null
+    /** The legal basis of a tax deadline, or the supplier name. */
+    readonly note: string
 }
 
 /** What a waiting accounting question is about. */
@@ -146,10 +164,16 @@ export interface AccountingWorkbenchData {
     readonly now: string
     readonly periods: { readonly this: AccountingPeriod; readonly last: AccountingPeriod }
     readonly ageing: AccountingAgeing
-    readonly waiting: AccountingWaiting
+    readonly waiting: AccountingWaitingCount
     readonly credits: ReadonlyArray<AccountingCredit>
     /** The display name of the connector that feeds payment credits; null when none is connected. */
     readonly creditsSource: string | null
+    /** The display name of the connector that feeds supplier invoices; null when none is connected. */
+    readonly payablesSource: string | null
+    /** The dues of the next days; null when the Brain holds no tax profile. */
+    readonly upcoming: ReadonlyArray<AccountingUpcomingDue> | null
+    /** The days before a due date from which it counts as near; null when the Brain holds no tax profile. */
+    readonly reminderDays: number | null
     readonly invoices: ReadonlyArray<AccountingInvoice>
     readonly ordersWithoutInvoice: ReadonlyArray<AccountingOrder>
     readonly questions: ReadonlyArray<AccountingQuestion>

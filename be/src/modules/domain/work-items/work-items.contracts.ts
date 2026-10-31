@@ -73,6 +73,7 @@ export type SubjectType =
     | "purchase_order"
     | "stock"
     | "video_project"
+    | "supplier_payable"
 
 /** What a performer reported it did. */
 export interface WorkResult {

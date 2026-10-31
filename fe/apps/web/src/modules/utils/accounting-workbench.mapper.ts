@@ -14,6 +14,7 @@ import type {
     AccountingLedgerEntry,
     AccountingOrder,
     AccountingQuestion,
+    AccountingUpcomingDue,
     AccountingWorkbenchData,
 } from "@/modules/types"
 
@@ -31,8 +32,9 @@ const workStatusSchema = z.enum(["queued", "done", "waiting_decision", "rejected
 const decisionPathSchema = z.enum(["auto", "human"]).nullable()
 const reasonSchema = z.enum(["routine", "missing_data", "over_authority", "unclear_outcome", "not_allowed"]).nullable()
 const evidenceStateSchema = z.enum(["pending", "captured", "reviewed", "verified", "customer_confirmed"])
-const ledgerTargetSchema = z.enum(["invoice", "transaction"])
-const ledgerKindSchema = z.enum(["income", "receivable"])
+const ledgerTargetSchema = z.enum(["invoice", "transaction", "supplier_payable"])
+const ledgerKindSchema = z.enum(["income", "receivable", "expense"])
+const upcomingSourceSchema = z.enum(["tax", "supplier"])
 const ledgerStatusSchema = z.enum(["issued", "paid", "void", "settled", "matched", "unmatched", "needs_review"])
 const lineageKindSchema = z.enum(["order", "invoice", "payment", "decision", "adjustment"])
 const matchSchema = z.enum(["matched", "unclear", "unmatched"])
@@ -177,4 +179,14 @@ export const accountingWorkbenchOf = (data: AccountingWorkbenchType): Accounting
         created_at: member.createdAt,
     })),
     ledger: data.ledger.map(ledgerEntryOf),
+    payablesSource: data.payablesSource ?? null,
+    upcoming:
+        data.upcoming == null
+            ? null
+            : data.upcoming.map((due): AccountingUpcomingDue => ({
+                  ...due,
+                  source: upcomingSourceSchema.parse(due.source),
+                  amountVnd: due.amountVnd ?? null,
+              })),
+    reminderDays: data.reminderDays ?? null,
 })
