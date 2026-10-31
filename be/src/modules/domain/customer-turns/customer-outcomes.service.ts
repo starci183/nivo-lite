@@ -187,7 +187,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
     async holdOver(turn: CustomerTurn, reason: string): Promise<ReadonlyArray<string>> {
         const ctx = this.ctxOf(turn)
         const { conversation } = turn
-        const { item, existed } = await this.openReplyItem(ctx, conversation, {
+        const { item, existed } = await this.openReplyItem(ctx, turn, {
             dedupeKey: `reply_customer:message:${turn.messageId}`,
             question: turn.body,
             draft: "",
@@ -268,7 +268,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
     private async approvalOf(ctx: WorkContext, turn: CustomerTurn, reply: string): Promise<ReadonlyArray<string>> {
         const { conversation } = turn
         if (!(await this.needsApproval(conversation))) return []
-        const { item, existed } = await this.openReplyItem(ctx, conversation, {
+        const { item, existed } = await this.openReplyItem(ctx, turn, {
             dedupeKey: `reply_customer:access:${turn.messageId}`,
             question: turn.body,
             draft: reply,
@@ -356,7 +356,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
     ): Promise<ReadonlyArray<string>> {
         const { conversation } = turn
         const question = latestQuestionOf(turn.transcript, turn.body)
-        const { item, existed } = await this.openReplyItem(ctx, conversation, {
+        const { item, existed } = await this.openReplyItem(ctx, turn, {
             dedupeKey: `reply_customer:message:${turn.messageId}`,
             question,
             draft: reply.proposedAnswer ?? reply.reply,
@@ -375,12 +375,12 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         return [this.catalog.get("conversations.chatNeedsHuman", {}, LOCALE)]
     }
 
-    /** A preset reply_customer item that always asks a person; `existed` when an earlier delivery of the turn already opened it. */
-    private async openReplyItem(
-        ctx: WorkContext,
-        conversation: TurnConversation,
-        spec: ReplyItemSpec,
-    ): Promise<OpenedReplyItem> {
+    /**
+     * A preset reply_customer item that always asks a person; `existed` when an earlier delivery of the turn already opened it. On the
+     * core road the item carries the turn and wake it came from.
+     */
+    private async openReplyItem(ctx: WorkContext, turn: CustomerTurn, spec: ReplyItemSpec): Promise<OpenedReplyItem> {
+        const { conversation } = turn
         const existed = (await this.items.findByDedupe(ctx.workspaceId, spec.dedupeKey)) !== null
         const item = await this.engine.runWork(ctx, {
             action: "reply_customer",
@@ -391,6 +391,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             preset: true,
             noChain: true,
             forceAsk: spec.forceAsk,
+            origin: turn.origin,
             seed: {
                 summary: this.text("replySummary", { question: spec.question.slice(0, SUMMARY_QUESTION_MAX) }),
                 draft: spec.draft,

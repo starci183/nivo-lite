@@ -1,4 +1,6 @@
+import type { AgentWakeContext } from "@modules/domain/agent-work"
 import type { TranscriptLine } from "@modules/domain/agent-messages"
+import type { TurnRef } from "@modules/domain/conversations"
 
 /** A paid invoice counts as "just confirmed" for a customer's late "I have paid" within this window. */
 export const RECENTLY_PAID_MS = 14 * 86_400_000
@@ -34,3 +36,32 @@ export const handoffTranscriptOf = (
     [...transcript, { role: "agent" as const, body: reply }]
         .map((line) => `${line.role === "user" ? customer : agent}: ${line.body}`)
         .join("\n")
+
+/** A customer wake older than this when its turn begins is not answered: the question was asked a long time ago. */
+export const STALE_WAKE_MS = 10 * 60_000
+
+/** How the reasons the drain and the executor give map to the ones the outcome handler knows from the legacy road. */
+const HOLD_REASONS: Readonly<Record<string, string>> = {
+    quota: "quota_exceeded",
+    breaker: "openclaw_unavailable",
+    openclaw_unavailable: "openclaw_unavailable",
+    openclaw_not_configured: "openclaw_not_configured",
+    killed: "installation_not_running",
+    stale: "stale_wake",
+}
+
+/** True when a wake written at `createdAt` is too old to answer at `now`. */
+export const isStaleWake = (createdAt: Date, now: Date): boolean => now.getTime() - createdAt.getTime() > STALE_WAKE_MS
+
+/** The reason the legacy road would give for a turn the core road could not run; a reason the legacy road knows stays as it is. */
+export const holdReasonOf = (reason: string): string => HOLD_REASONS[reason] ?? reason
+
+/** The message a customer wake answers, or null when the wake does not carry one. */
+export const turnRefOf = (context: AgentWakeContext): TurnRef | null =>
+    context.conversationId === undefined || context.messageId === undefined || context.channelEventId === undefined
+        ? null
+        : {
+              conversationId: context.conversationId,
+              messageId: context.messageId,
+              channelEventId: context.channelEventId,
+          }

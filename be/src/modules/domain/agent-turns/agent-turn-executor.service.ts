@@ -9,7 +9,7 @@ import type { Logger } from "@modules/platform/logging"
 import { InjectAgentTurnRunner } from "./agent-turns.decorators"
 import { stateBlockOf, storedProposalOf, usageKindFor } from "./agent-turn.policy"
 import { AgentTurnsLogEvent } from "./agent-turns.log-events"
-import type { AgentTurnBlock } from "./agent-turns.contracts"
+import type { AgentTurnBlock, AgentTurnResult } from "./agent-turns.contracts"
 import type { AgentTurnRunner } from "./agent-turns.port"
 
 /** The language the allowance notice is asked in; the notice itself is never shown from here. */
@@ -39,7 +39,8 @@ export class AgentTurnExecutorService implements AgentTurnExecutor {
             return { kind: "blocked", reason }
         }
         const started = this.clock.now()
-        const result = await this.runner.run(
+        const result = await this.ran(
+            turn,
             {
                 workspaceId: turn.workspaceId,
                 agentId: turn.agentId,
@@ -52,6 +53,7 @@ export class AgentTurnExecutorService implements AgentTurnExecutor {
             },
             signal,
         )
+        if (result === null) return { kind: "blocked", reason: "openclaw_unavailable" }
         await this.usage.record({
             workspaceId: turn.workspaceId,
             kind: usageKindFor(turn.source),
@@ -69,6 +71,24 @@ export class AgentTurnExecutorService implements AgentTurnExecutor {
                 cost: result.usage?.cost ?? 0,
                 durationMs: this.clock.now().getTime() - started.getTime(),
             },
+        }
+    }
+
+    /**
+     * What the runtime answered. A customer waits on a phone, so a runtime that fails or is too slow ends in null and the holding line,
+     * at once and with no retry, as on the legacy road; every other source lets the failure reach the drain, which retries the wake.
+     */
+    private async ran(
+        turn: AgentTurnView,
+        request: Parameters<AgentTurnRunner["run"]>[0],
+        signal: AbortSignal,
+    ): Promise<AgentTurnResult | null> {
+        try {
+            return await this.runner.run(request, signal)
+        } catch (cause) {
+            if (turn.source !== "customer") throw cause
+            this.logger.error(AgentTurnsLogEvent.TurnFailed, cause, { agentId: turn.agentId, wakeId: turn.wakeId })
+            return null
         }
     }
 

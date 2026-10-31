@@ -1,4 +1,4 @@
-export type { InstallationView, ModuleDefinition, ModulesCatalog } from "./modules.contracts"
+export type { InstallationView, ModuleDefinition, ModuleTrigger, ModulesCatalog } from "./modules.contracts"
 export { MODULES_ERROR_KINDS } from "./errors/modules.error"
 export { MODULES_MESSAGES } from "./messages/modules.messages"
 export { MODULE_CATEGORIES } from "./categories.contracts"

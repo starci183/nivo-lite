@@ -1,4 +1,10 @@
-import type { AgentWakeContext, AgentWakeSource, BackgroundCount } from "./agent-work.contracts"
+import type {
+    AgentWakeContext,
+    AgentWakeSource,
+    AgentWakeStatus,
+    BackgroundCount,
+    OptionalDate,
+} from "./agent-work.contracts"
 
 /** The scope of work that locks the whole agent: tags, internal events and schedules. */
 export const AGENT_SCOPE = "agent"
@@ -81,5 +87,12 @@ export const backgroundCapSpent = (state: BackgroundCount, cap: number, today: s
     state.backgroundDay === today && state.backgroundTurns >= cap
 
 /** Whether the breaker is open at this moment. */
-export const breakerOpen = (breakerUntil: Date | null, now: Date): boolean =>
+export const breakerOpen = (breakerUntil: OptionalDate, now: Date): boolean =>
     breakerUntil !== null && breakerUntil.getTime() > now.getTime()
+
+/** Where a wake stands in the words of a job's state: waiting (pending or held by a switch), running, done (answered or skipped) or failed (dead). */
+export const wakeProgressOf = (status: AgentWakeStatus): "queued" | "running" | "done" | "failed" => {
+    if (status === "running") return "running"
+    if (status === "done" || status === "skipped") return "done"
+    return status === "failed" || status === "dead" ? "failed" : "queued"
+}

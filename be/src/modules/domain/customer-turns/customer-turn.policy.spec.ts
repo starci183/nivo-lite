@@ -1,11 +1,15 @@
 import { Test } from "@nestjs/testing"
 import {
     RECENTLY_PAID_MS,
+    STALE_WAKE_MS,
     clipText,
     handoffTranscriptOf,
+    holdReasonOf,
     isRecentlyPaid,
+    isStaleWake,
     latestQuestionOf,
     sameItems,
+    turnRefOf,
 } from "./customer-turn.policy"
 
 type Subject = {
@@ -14,6 +18,9 @@ type Subject = {
     isRecentlyPaid: typeof isRecentlyPaid
     latestQuestionOf: typeof latestQuestionOf
     handoffTranscriptOf: typeof handoffTranscriptOf
+    isStaleWake: typeof isStaleWake
+    holdReasonOf: typeof holdReasonOf
+    turnRefOf: typeof turnRefOf
 }
 
 const SUBJECT = Symbol("customer-turn.policy")
@@ -23,7 +30,16 @@ const build = async () => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { clipText, sameItems, isRecentlyPaid, latestQuestionOf, handoffTranscriptOf },
+                useValue: {
+                    clipText,
+                    sameItems,
+                    isRecentlyPaid,
+                    latestQuestionOf,
+                    handoffTranscriptOf,
+                    isStaleWake,
+                    holdReasonOf,
+                    turnRefOf,
+                },
             },
         ],
     }).compile()
@@ -97,5 +113,59 @@ describe("handoffTranscriptOf", () => {
                 "Bot",
             ),
         ).toBe("Lan: I need tea\nBot: Which size?\nBot: Noted")
+    })
+})
+
+describe("isStaleWake", () => {
+    it("is stale only after ten minutes", async () => {
+        const subject = await build()
+
+        expect(subject.isStaleWake(new Date(NOW.getTime() - STALE_WAKE_MS), NOW)).toBe(false)
+        expect(subject.isStaleWake(new Date(NOW.getTime() - STALE_WAKE_MS - 1), NOW)).toBe(true)
+        expect(subject.isStaleWake(NOW, NOW)).toBe(false)
+    })
+})
+
+describe("holdReasonOf", () => {
+    it("maps what the executor and the drain say to what the legacy road says", async () => {
+        const subject = await build()
+
+        expect(subject.holdReasonOf("quota")).toBe("quota_exceeded")
+        expect(subject.holdReasonOf("breaker")).toBe("openclaw_unavailable")
+        expect(subject.holdReasonOf("openclaw_unavailable")).toBe("openclaw_unavailable")
+        expect(subject.holdReasonOf("openclaw_not_configured")).toBe("openclaw_not_configured")
+        expect(subject.holdReasonOf("killed")).toBe("installation_not_running")
+        expect(subject.holdReasonOf("stale")).toBe("stale_wake")
+    })
+
+    it("keeps a reason the legacy road already knows", async () => {
+        const subject = await build()
+
+        expect(subject.holdReasonOf("needs_connection")).toBe("needs_connection")
+        expect(subject.holdReasonOf("installation_not_running")).toBe("installation_not_running")
+    })
+})
+
+describe("turnRefOf", () => {
+    it("reads the message a wake answers", async () => {
+        const subject = await build()
+
+        expect(
+            subject.turnRefOf({
+                conversationId: "conv-1",
+                messageId: "msg-1",
+                channelEventId: "tg:1:2",
+                lookupName: true,
+            }),
+        ).toEqual({ conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:1:2" })
+    })
+
+    it("is null when any of the three ids is missing", async () => {
+        const subject = await build()
+
+        expect(subject.turnRefOf({ messageId: "msg-1", channelEventId: "x" })).toBeNull()
+        expect(subject.turnRefOf({ conversationId: "conv-1", channelEventId: "x" })).toBeNull()
+        expect(subject.turnRefOf({ conversationId: "conv-1", messageId: "msg-1" })).toBeNull()
+        expect(subject.turnRefOf({})).toBeNull()
     })
 })

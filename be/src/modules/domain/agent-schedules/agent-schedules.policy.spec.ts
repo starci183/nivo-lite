@@ -6,6 +6,8 @@ import {
     offsetMinutesOf,
     periodMsOf,
     scheduleOf,
+    triggersOfModule,
+    wakeKeyOf,
 } from "./agent-schedules.policy"
 
 const SUBJECT = Symbol("agent-schedules.policy")
@@ -13,7 +15,18 @@ const SUBJECT = Symbol("agent-schedules.policy")
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
-            { provide: SUBJECT, useValue: { isMissed, latestMissedSlot, offsetMinutesOf, periodMsOf, scheduleOf } },
+            {
+                provide: SUBJECT,
+                useValue: {
+                    isMissed,
+                    latestMissedSlot,
+                    offsetMinutesOf,
+                    periodMsOf,
+                    scheduleOf,
+                    triggersOfModule,
+                    wakeKeyOf,
+                },
+            },
         ],
     }).compile()
     return moduleRef.get<{
@@ -22,6 +35,8 @@ const buildSubject = async () => {
         offsetMinutesOf: typeof offsetMinutesOf
         periodMsOf: typeof periodMsOf
         scheduleOf: typeof scheduleOf
+        triggersOfModule: typeof triggersOfModule
+        wakeKeyOf: typeof wakeKeyOf
     }>(SUBJECT)
 }
 
@@ -120,5 +135,31 @@ describe("isMissed", () => {
 
         expect(isMissed(new Date("2026-11-10T03:07:00.000Z"), now)).toBe(true)
         expect(isMissed(new Date("2026-11-10T03:08:00.000Z"), now)).toBe(false)
+    })
+})
+
+describe("wakeKeyOf", () => {
+    it("keys the wake of a fact by its event and business key, so a replay is one wake", async () => {
+        const { wakeKeyOf } = await buildSubject()
+
+        expect(wakeKeyOf("bank_credit_booked", "tx-1")).toBe("bank_credit_booked:tx-1")
+        expect(wakeKeyOf("bank_credit_booked", "tx-1")).toBe(wakeKeyOf("bank_credit_booked", "tx-1"))
+    })
+})
+
+describe("triggersOfModule", () => {
+    const catalog = [
+        { key: "accounting", triggers: [{ key: "morning", preset: "daily_at" as const, atTime: "08:00" }] },
+        { key: "chatbot" },
+    ]
+
+    it("answers the triggers a module declares, and none for a module that declares none or is not in the catalogue", async () => {
+        const { triggersOfModule } = await buildSubject()
+
+        expect(triggersOfModule(catalog, "accounting")).toEqual([
+            { key: "morning", preset: "daily_at", atTime: "08:00" },
+        ])
+        expect(triggersOfModule(catalog, "chatbot")).toEqual([])
+        expect(triggersOfModule(catalog, "unknown")).toEqual([])
     })
 })

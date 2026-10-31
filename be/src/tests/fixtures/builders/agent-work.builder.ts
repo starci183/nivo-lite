@@ -249,6 +249,9 @@ export const orphanTurnRowOf = (): AgentTurnEntity =>
 /** A trigger row a module seeded under the key `morning`. */
 export const seededTriggerRowOf = (): AgentTriggerEntity => agentTriggerRowOf({ seedKey: "morning" })
 
+/** A wake row of agent-1 whose turn is running. */
+export const runningWakeRowOf = (id: string): AgentWakeEntity => agentWakeRowOf({ id, status: "running" })
+
 /** A wake row a switch held: a customer's message of conversation conv-1. */
 export const heldCustomerWakeRowOf = (id: string): AgentWakeEntity => agentWakeRowOf({ id, eventKey: id })
 
@@ -292,4 +295,13 @@ export const dueTaskOf = async (
         status: "open",
         nextActionAt: new Date("2026-01-01T00:00:00.000Z"),
     })
+}
+
+/** Moves a workspace to a road: the data statement that moves one workspace is this upsert of its settings row. */
+export const persistRoad = async (
+    manager: EntityManager,
+    workspaceId: string,
+    road: AgentWorkSettingsEntity["road"],
+): Promise<void> => {
+    await manager.upsert(AgentWorkSettingsEntity, { workspaceId, road }, ["workspaceId"])
 }

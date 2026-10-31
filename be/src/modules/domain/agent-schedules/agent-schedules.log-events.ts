@@ -8,6 +8,12 @@ export enum AgentSchedulesLogEvent {
     SweepItemFailed = "agent_schedules.sweep_item_failed",
     /** A trigger fired for a row that is gone or off, so its scheduler was removed. */
     OrphanUnscheduled = "agent_schedules.orphan_unscheduled",
+    /** A background turn had something to say but no voice is bound, so nothing was said. */
+    LineUnsaid = "agent_schedules.line_unsaid",
+    /** A background wake ended without a model call, with its reason. */
+    WakeEnded = "agent_schedules.wake_ended",
+    /** The triggers a module declares were seeded for its agent. */
+    TriggersSeeded = "agent_schedules.triggers_seeded",
     /** The minute sweep ended one pass. */
     SweepDone = "agent_schedules.sweep_done",
 }

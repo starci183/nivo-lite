@@ -6,6 +6,8 @@ export enum AgentTurnsLogEvent {
     ActionDropped = "agent_turns.action_dropped",
     /** A turn was refused before the model ran. */
     TurnBlocked = "agent_turns.turn_blocked",
+    /** The runtime failed or was too slow for a customer's turn, so the customer gets the holding line. */
+    TurnFailed = "agent_turns.turn_failed",
     /** The runtime agent of a turn could not be synced, so the turn ran on the workspace's internal agent. */
     AgentSyncFailed = "agent_turns.agent_sync_failed",
 }

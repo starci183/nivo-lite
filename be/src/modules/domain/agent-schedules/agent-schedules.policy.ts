@@ -1,4 +1,5 @@
 import type { AgentTriggerPreset, AgentTriggerRecord } from "@modules/domain/agent-work"
+import type { ModuleTrigger } from "@modules/domain/modules"
 import type { QueueSchedule } from "@modules/platform/queue"
 
 const MINUTE_MS = 60_000
@@ -20,6 +21,18 @@ export const PROBE_WINDOW_MS = 24 * 60 * MINUTE_MS
 
 /** The most items a probe names in its brief. */
 export const BRIEF_ITEMS = 5
+
+/** The triggers the module with this key declares for its agent; none when the catalogue has no such module or it declares none. */
+export const triggersOfModule = (
+    catalog: ReadonlyArray<{ readonly key: string; readonly triggers?: ReadonlyArray<ModuleTrigger> }>,
+    moduleKey: string,
+): ReadonlyArray<ModuleTrigger> => catalog.find((entry) => entry.key === moduleKey)?.triggers ?? []
+
+/** The most agents one internal fact wakes. */
+export const EVENT_WAKE_AGENTS_MAX = 100
+
+/** The key of the wake an internal fact writes for an agent: the event and its business key, so a replay is one wake. */
+export const wakeKeyOf = (eventName: string, dedupeKey: string): string => `${eventName}:${dedupeKey}`
 
 /** The shortest time between two fires of a trigger, in minutes. */
 export const MIN_PERIOD_MINUTES = 15

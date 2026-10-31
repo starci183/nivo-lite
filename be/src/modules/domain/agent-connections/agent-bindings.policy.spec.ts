@@ -183,7 +183,7 @@ describe("agent bindings policy", () => {
             ])
 
             expect(route.front?.id).toBe("c1")
-            expect(route.handovers.map((agent) => agent.id)).toEqual(["b1", "l1"])
+            expect(route.handovers.map((agent) => agent.id)).toEqual(["b1", "l1", "s1"])
         })
 
         it("lets the first of the others answer without a chatbot, and nobody when none is bound", async () => {
@@ -193,7 +193,8 @@ describe("agent bindings policy", () => {
                 subject.splitRoute([agentOf({ id: "l1", module: "loyalty" }), agentOf({ id: "b1", module: "booking" })])
                     .front?.id,
             ).toBe("b1")
-            expect(subject.splitRoute([agentOf({ module: "sales" })])).toEqual({ front: null, handovers: [] })
+            expect(subject.splitRoute([agentOf({ id: "s1", module: "sales" })]).front?.id).toBe("s1")
+            expect(subject.splitRoute([agentOf({ module: "accounting" })])).toEqual({ front: null, handovers: [] })
         })
     })
 

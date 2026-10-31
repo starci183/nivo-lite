@@ -38,10 +38,14 @@ export class AgentTriggersService {
         return rows.map(toTriggerRecord)
     }
 
-    /** The enabled event triggers that name this event, at most `limit`, so an internal event wakes only the agents that asked for it. */
-    async enabledForEvent(eventName: string, limit: number): Promise<ReadonlyArray<AgentTriggerRecord>> {
+    /** The enabled event triggers of the workspace that name this event, at most `limit`, so an internal event wakes only the agents that asked for it. */
+    async enabledForEvent(
+        workspaceId: string,
+        eventName: string,
+        limit: number,
+    ): Promise<ReadonlyArray<AgentTriggerRecord>> {
         const rows = await this.entityManager.find(AgentTriggerEntity, {
-            where: { kind: "event", eventName, enabled: true },
+            where: { workspaceId, kind: "event", eventName, enabled: true },
             order: { createdAt: "ASC" },
             take: limit,
         })
@@ -81,7 +85,9 @@ export class AgentTriggersService {
      */
     async seed(write: AgentTriggerWrite, seedKey: string): Promise<AgentTriggerRecord> {
         await this.access.agent(write.workspaceId, write.agentId)
-        const known = await this.entityManager.findOne(AgentTriggerEntity, { where: { agentId: write.agentId, seedKey } })
+        const known = await this.entityManager.findOne(AgentTriggerEntity, {
+            where: { agentId: write.agentId, seedKey },
+        })
         if (known !== null) return toTriggerRecord(known)
         return this.create(write, triggerFields(write), seedKey)
     }

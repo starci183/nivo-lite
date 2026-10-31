@@ -432,3 +432,14 @@ export interface WorkspaceAgentWorkView {
     /** Wakes held by a switch. */
     readonly heldWakes: number
 }
+
+/** Where the customer wake of one stored message stands, or none. */
+export type OptionalCustomerWakeProgress = CustomerWakeProgress | null
+
+/** Where the customer wake of one stored message stands, in the words of a job's state. */
+export interface CustomerWakeProgress {
+    /** The wake. */
+    readonly id: string
+    /** Waiting, running, done or failed. */
+    readonly state: "queued" | "running" | "done" | "failed"
+}
