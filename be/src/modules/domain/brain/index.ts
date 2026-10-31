@@ -9,3 +9,4 @@ export type { BrainLens, BrainOverview, LessonMiningState } from "./brain-page.s
 export { BrainService } from "./brain.service"
 export type { Correction, CorrectionSource } from "./brain.contracts"
 export { IndexedSourcesService } from "./indexed-sources.service"
+export { brainEntities } from "./persistence/entities"

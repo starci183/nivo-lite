@@ -28,6 +28,7 @@ import { bookingServicesEntities } from "@modules/domain/booking-services"
 import { bookingSettingsEntities } from "@modules/domain/booking-settings"
 import { bookingWaitlistEntities } from "@modules/domain/booking-waitlist"
 import { bookingsEntities } from "@modules/domain/bookings"
+import { brainEntities } from "@modules/domain/brain"
 import { brainCommandsEntities } from "@modules/domain/brain-commands"
 import { brainEvalCasesEntities } from "@modules/domain/brain-eval-cases"
 import { brainExtractionsEntities } from "@modules/domain/brain-extractions"
@@ -164,6 +165,7 @@ export const PRIMARY_ENTITIES = [
     ...bookingSettingsEntities,
     ...bookingWaitlistEntities,
     ...bookingsEntities,
+    ...brainEntities,
     ...brainCommandsEntities,
     ...brainEvalCasesEntities,
     ...brainExtractionsEntities,
