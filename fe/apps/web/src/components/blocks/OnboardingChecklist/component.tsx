@@ -1,6 +1,6 @@
-import { Button, IconButton, List, ListRow, Meter, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Cluster, IconButton, List, ListRow, Meter, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { Icon, nivoIconSource } from "@/components/leaves/Icon"
-import { ALL_SET, CHECK_BODY } from "./classNames"
+import { ALL_SET } from "./classNames"
 
 /** One onboarding step as the checklist draws it; `done` comes from real rows and events only. */
 export type OnboardingChecklistStep = {
@@ -96,12 +96,14 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
         return (
             <SurfaceCard>
                 <output className={ALL_SET}>
-                    <Text as="span" weight="medium">
-                        {props.allSet}
-                    </Text>
-                    <Text as="span" size="xs">
-                        {props.allSetCount}
-                    </Text>
+                    <Cluster gap="row" justify="between">
+                        <Text as="span" weight="medium">
+                            {props.allSet}
+                        </Text>
+                        <Text as="span" size="xs">
+                            {props.allSetCount}
+                        </Text>
+                    </Cluster>
                 </output>
             </SurfaceCard>
         )
@@ -122,7 +124,7 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
                 />
             }
         >
-            <div className={CHECK_BODY}>
+            <Stack gap="section">
                 <Meter
                     label={props.progressLabel}
                     value={doneCount}
@@ -133,7 +135,7 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
                     isSkeleton={props.isSkeleton}
                 />
                 {props.isOpen ? <Steps props={props} /> : null}
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 }

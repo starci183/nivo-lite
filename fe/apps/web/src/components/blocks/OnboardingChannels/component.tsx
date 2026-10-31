@@ -1,7 +1,6 @@
-import { Badge, Button, ListRow, SurfaceListCard } from "@starci/grammar/common"
+import { Badge, Button, Cluster, ListRow, SurfaceListCard } from "@starci/grammar/common"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { FirstRunCard } from "@/components/composites/FirstRunCard"
-import { ACTIONS_END_CLASS_NAME } from "./classNames"
 
 /** One channel the step offers: its name, what it brings, its mark and whether the workspace already has it. */
 export interface OnboardingChannelView {
@@ -44,14 +43,14 @@ export const OnboardingChannelsBase = (props: OnboardingChannelsBaseProps) => {
                     <Button intent="neutral" href={view.backHref}>
                         {view.backLabel}
                     </Button>
-                    <div className={ACTIONS_END_CLASS_NAME}>
+                    <Cluster gap="row">
                         <Button intent="neutral" href={view.nextHref}>
                             {view.laterLabel}
                         </Button>
                         <Button intent="commit" href={view.nextHref}>
                             {view.continueLabel}
                         </Button>
-                    </div>
+                    </Cluster>
                 </>
             }
         >
