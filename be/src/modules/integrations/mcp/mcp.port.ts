@@ -13,6 +13,8 @@ export interface McpRemote {
     listTools(endpoint: McpEndpoint, timeoutMs: number): Promise<ReadonlyArray<McpRemoteTool>>
     /** Checks that the server answers MCP at all (`ping`). */
     ping(endpoint: McpEndpoint, timeoutMs: number): Promise<void>
+    /** Whether a server address may be connected to at all: an http(s) URL whose host resolves to public addresses only. */
+    isReachable(url: string): Promise<boolean>
     /** Calls one tool by its remote name. */
     call(request: McpCallRequest): Promise<McpRemoteResult>
 }

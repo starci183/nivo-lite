@@ -15,6 +15,7 @@ import type {
 } from "./mcp.contracts"
 import { InjectMcpOptions } from "./mcp.decorators"
 import { McpLogEvent } from "./mcp.log-events"
+import { McpPublicFetchClient } from "./mcp-public-fetch.client"
 import { isPublicEndpoint } from "./public-endpoint.policy"
 import type { McpOptions } from "./mcp.options"
 import type { McpRemote } from "./mcp.port"
@@ -29,9 +30,6 @@ interface SessionRequest {
     /** Aborts the session at the time limit. */
     readonly signal: AbortSignal
 }
-
-/** A redirect status: a server may not send the client elsewhere, where the address check would not have run. */
-const isRedirect = (status: number): boolean => status >= 300 && status < 400
 
 /** The client version NIVO announces to remote servers. */
 const CLIENT_VERSION = "1.0.0"
@@ -66,6 +64,7 @@ export class McpRemoteClient implements McpRemote {
     constructor(
         @InjectLogger() private readonly logger: Logger,
         @InjectMcpOptions() private readonly options: McpOptions,
+        private readonly publicFetch: McpPublicFetchClient,
     ) {}
 
     /** The tools the server lists. */
@@ -85,6 +84,11 @@ export class McpRemoteClient implements McpRemote {
     /** Checks that the server answers MCP at all (`ping`), within the time limit. */
     async ping(endpoint: McpEndpoint, timeoutMs: number): Promise<void> {
         await this.within(endpoint, timeoutMs, (client, signal) => client.ping({ signal }))
+    }
+
+    /** Whether the address may be connected to: http(s) and public only. */
+    isReachable(url: string): Promise<boolean> {
+        return isPublicEndpoint(url)
     }
 
     /** Calls one tool by its remote name. */
@@ -118,22 +122,6 @@ export class McpRemoteClient implements McpRemote {
         return attempt.value
     }
 
-    /**
-     * The fetch every request of a session goes through: the address is checked again after resolution, right before the request,
-     * and a redirect is refused instead of followed, so no response can lead the client to an address the check did not see.
-     */
-    private readonly guardedFetch = async (input: string | URL, init?: RequestInit): Promise<Response> => {
-        const url = String(input)
-        if (!(await isPublicEndpoint(url))) {
-            throw new McpError({ code: McpErrorCode.Unavailable, params: { url, reason: "private" } })
-        }
-        const response = await fetch(input, { ...init, redirect: "manual" })
-        if (isRedirect(response.status)) {
-            throw new McpError({ code: McpErrorCode.Unavailable, params: { url, reason: "redirect" } })
-        }
-        return response
-    }
-
     /** Opens the session and runs the work, answering what came of it; the caller closes the session either way. */
     private async attempt<T>(
         client: Client,
@@ -145,7 +133,7 @@ export class McpRemoteClient implements McpRemote {
             // The SDK class types sessionId as `string | undefined`, which an exact-optional `Transport` refuses; the session id is not read here.
             const transport: Omit<StreamableHTTPClientTransport, "sessionId"> = new StreamableHTTPClientTransport(
                 new URL(endpoint.url),
-                { requestInit: request, fetch: this.guardedFetch },
+                { requestInit: request, fetch: this.publicFetch.fetch },
             )
             await client.connect(transport, { signal: request.signal })
             return { ok: true, value: await work(client, request.signal) }
