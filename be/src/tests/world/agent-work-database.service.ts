@@ -1,11 +1,13 @@
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { jobsEntities } from "@modules/platform/jobs"
+import { messagesEntities } from "@modules/domain/messages"
 import { agentWorkEntities } from "../../modules/domain/agent-work"
 import type { AgentWakeSource } from "../../modules/domain/agent-work/agent-work.contracts"
 
 const [, AgentWorkStateEntity, AgentWorkLeaseEntity, , , , AgentWakeEntity, AgentTurnEntity] = agentWorkEntities
 const [, JobOutboxEntity] = jobsEntities
+const [MessageEntity] = messagesEntities
 
 /** The most rows one read of the proofs takes. */
 const ROWS_MAX = 20
@@ -54,3 +56,7 @@ export const settleAgentWork = async (manager: EntityManager, workspaceId: strin
 export const removeDrainJobs = async (manager: EntityManager, workspaceId: string): Promise<void> => {
     await manager.delete(JobOutboxEntity, { queue: "agent_turn", workspaceId })
 }
+
+/** The lines of the workspace's chat, oldest first. */
+export const linesOfWorkspace = (manager: EntityManager, workspaceId: string) =>
+    manager.find(MessageEntity, { where: { workspaceId }, order: { createdAt: "ASC" }, take: ROWS_MAX })
