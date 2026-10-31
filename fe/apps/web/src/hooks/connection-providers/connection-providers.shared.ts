@@ -1,4 +1,4 @@
-import type { Environment, Provider, ProviderGroup, ProviderKind } from "@/modules/types"
+import type { Environment, Provider, ProviderKind } from "@/modules/types"
 
 /** One connection provider as data: ids, kinds and links. Every word the owner reads is a catalog key (`providerKey`). */
 export interface ProviderDef {
@@ -136,14 +136,6 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         credentials: [],
     },
 }
-
-/** The page groups providers by what they bring in; order inside a group is the display order. */
-export const PROVIDER_GROUPS: ReadonlyArray<ProviderGroup> = [
-    { id: "money", providers: ["sepay", "payos", "casso"] },
-    { id: "chat", providers: ["telegram", "zalo_oa", "meta"] },
-    { id: "data", providers: ["database", "openapi", "csv_import", "imap", "telegram_user"] },
-    { id: "tools", providers: ["google", "smtp"] },
-]
 
 /** The provider's own mark (public/logos/providers). Outgoing email has none: it is the shop's own mailbox. */
 export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {

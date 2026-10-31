@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import type { ComponentProps, ReactNode } from "react"
-import { ConnectionAddButton } from "@/components/blocks/ConnectionAddButton"
 import { ConnectionAttention } from "@/components/blocks/ConnectionAttention"
 import { ConnectionLibrary } from "@/components/blocks/ConnectionLibrary"
 import { ConnectionRow } from "@/components/blocks/ConnectionRow"
@@ -23,7 +22,6 @@ import {
     useConnectionOverlays,
     useConnectionsData,
     useConnectionsRole,
-    connectionGroups,
     boardSlotOf,
 } from "@/hooks/connections"
 import { webSiteOrigin } from "@/modules/config"
@@ -44,7 +42,6 @@ type ConnectorDetailOverlayProps = {
     readonly canManage?: boolean
 }
 
-const renderAddButton = (props: ComponentProps<typeof ConnectionAddButton>) => <ConnectionAddButton {...props} />
 const renderAttention = (props: ComponentProps<typeof ConnectionAttention>) => <ConnectionAttention {...props} />
 const renderLibrary = (props: ComponentProps<typeof ConnectionLibrary>) => <ConnectionLibrary {...props} />
 const renderRow = (props: ComponentProps<typeof ConnectionRow>) => <ConnectionRow {...props} />
@@ -69,7 +66,8 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
     const live = liveConnections(data.items)
     const attention = attentionConnections(data.items)
     const showsLibrary = props.tab === "library" || (props.tab !== "connected" && live.length === 0)
-    const groups = connectionGroups(data.items, data.agentNames, t)
+    const namesOf = (connection: Connection) =>
+        connection.agentIds.map((id) => data.agentNames[id]).filter((name): name is string => name !== undefined)
     const board: ConnectionsBoard = {
         view: showsLibrary ? "library" : "connected",
         ownerEmail: user.items?.email ?? "",
@@ -79,13 +77,8 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
         agents: data.activeAgents,
         agentNames: data.agentNames,
         liveCount: live.length,
-        attentions: attention.map((connection) => ({
-            connection,
-            agentNames: connection.agentIds
-                .map((id) => data.agentNames[id])
-                .filter((name): name is string => name !== undefined),
-        })),
-        groups,
+        attentions: attention.map((connection) => ({ connection, agentNames: namesOf(connection) })),
+        rows: sortRows(live).map((connection) => ({ connection, agentNames: namesOf(connection) })),
     }
     const slot = boardSlotOf(
         {
@@ -108,6 +101,8 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
                         automationsHref: CONNECTION_ROUTES.automations,
                         backLabel: t("crumbHome"),
                         backHref: CONNECTION_ROUTES.dashboard,
+                        inUseTitle: t("inUseTitle"),
+                        inUseOrder: t("inUseOrder"),
                     },
                     board: slot,
                     slotLabels: slotLabelsOf(t("connectedEmpty")),
@@ -115,7 +110,6 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
                     gateway: <RenderGateway isEnabled={isReady && manager} />,
                 }}
                 on={{ retry: data.retry }}
-                renderAddButton={renderAddButton}
                 renderAttention={renderAttention}
                 renderLibrary={renderLibrary}
                 renderRow={renderRow}

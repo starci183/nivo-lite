@@ -71,15 +71,6 @@ export interface AgentOption {
     readonly module: string
 }
 
-/** The Connections page groups providers by what they bring in. */
-type ProviderGroupId = "money" | "chat" | "data" | "tools"
-
-/** One group of the page: its id and the providers inside, in display order. */
-export interface ProviderGroup {
-    readonly id: ProviderGroupId
-    readonly providers: ReadonlyArray<Provider>
-}
-
 /** The library's categories. */
 export type ConnectorCategory =
     "payments" | "chat" | "commerce" | "accounting" | "data" | "email" | "productivity" | "automation"

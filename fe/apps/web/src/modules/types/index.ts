@@ -68,7 +68,6 @@ export type {
     FirstEventState,
     MetaCheckSummary,
     Provider,
-    ProviderGroup,
     ProviderKind,
     Purpose,
     SepayKeys,

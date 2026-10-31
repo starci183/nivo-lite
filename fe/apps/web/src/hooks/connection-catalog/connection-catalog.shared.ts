@@ -35,9 +35,6 @@ export const CATEGORIES: ReadonlyArray<ConnectorCategory> = [
     "automation",
 ]
 
-/** The agents a connector can be for, in display order (`any` is not a filter value). */
-export const AUDIENCES: ReadonlyArray<Exclude<ConnectorAudience, "any">> = ["chatbot", "sales", "accounting"]
-
 const real = (
     provider: Provider,
     category: ConnectorCategory,
@@ -134,30 +131,17 @@ const foldText = (text: string): string =>
 /** The words of a search (accents ignored). */
 export const searchWords = (text: string): ReadonlyArray<string> => foldText(text).split(/\s+/u).filter(Boolean)
 
-/** Whether a connector passes the category and agent filters. */
-export const passesFilters = (
-    entry: CatalogEntry,
-    category: ConnectorCategory | "all",
-    audience: Exclude<ConnectorAudience, "any"> | "all",
-): boolean => {
-    if (category !== "all" && entry.category !== category) return false
-    return audience === "all" || entry.audience.includes(audience) || entry.audience.includes("any")
-}
-
 /** Whether every search word appears in the connector text (name, blurb and keywords joined). */
 export const matchesWords = (haystack: string, words: ReadonlyArray<string>): boolean => {
     const folded = foldText(haystack)
     return words.every((word) => folded.includes(word))
 }
 
-type Audience = Exclude<ConnectorAudience, "any">
 type Translate = (key: string, values?: Record<string, string | number>) => string
 
 /** Resolves a supported category from a control value. */
 export const asCategory = (id: string): ConnectorCategory | "all" =>
     CATEGORIES.find((category) => category === id) ?? "all"
-/** Resolves a supported audience from a control value. */
-export const asAudience = (id: string): Audience | "all" => AUDIENCES.find((audience) => audience === id) ?? "all"
 
 /** Summarizes what the workspace runs of a connector, or the connector's own availability. */
 export const catalogBadgeOf = (
