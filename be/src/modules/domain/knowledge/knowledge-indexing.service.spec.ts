@@ -1,8 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import { KnowledgeChunksService, chunkText } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService, chunkText, passageHashOf } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "@modules/domain/knowledge-sources"
 import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote } from "@modules/domain/knowledge-sources"
+import type { EmbeddedChunk } from "@modules/domain/knowledge-chunks"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { DocumentsError, DocumentsErrorCode } from "@modules/integrations/documents"
 import { LOGGER } from "@modules/platform/logging"
@@ -27,6 +28,12 @@ const flush = async (): Promise<void> => {
 
 const MANY = Array.from({ length: 70 }, (_, i) => `Paragraph ${i} ${"y".repeat(700)}`).join("\n\n")
 const TABLE_WITHOUT_ROWS = "|---|---|\n|---|---|\n|---|---|"
+
+/** A stored passage with its hash. */
+const stored = (text: string, order: number): EmbeddedChunk => ({ ...legacy(text, order), hash: passageHashOf(text, "m1") })
+
+/** A stored passage from before hashes, of the model in use unless named. */
+const legacy = (text: string, order: number, model = "m1"): EmbeddedChunk => ({ id: `c${order}`, order, text, hash: null, model })
 
 const sourceOf = builder<SourceRecord>({
     id: "s1",
@@ -120,7 +127,7 @@ describe("KnowledgeIndexingService", () => {
                 texts: ["Open 8 to 21"],
                 timeoutMs: 20_000,
             })
-            expect(chunks.trim).toHaveBeenCalledWith(WS, "s1", 1)
+            expect(chunks.arrange).toHaveBeenCalledWith({ workspaceId: WS, sourceId: "s1", moves: [], count: 1 })
             expect(chunks.keep).toHaveBeenCalledWith({
                 workspaceId: WS,
                 sourceId: "s1",
@@ -220,7 +227,7 @@ describe("KnowledgeIndexingService", () => {
 
         it("keeps the stored passages when they are already the embedded passages of the text", async () => {
             const { service, sources, chunks, embeddings } = await build()
-            chunks.embeddedOf.mockResolvedValue([{ order: 0, text: "Open 8 to 21", model: "m1" }])
+            chunks.embeddedOf.mockResolvedValue([legacy("Open 8 to 21", 0)])
 
             await expect(service.index(run)).resolves.toBe("indexed")
 
@@ -230,9 +237,9 @@ describe("KnowledgeIndexingService", () => {
         })
 
         it.each([
-            ["another text", [{ order: 0, text: "Other", model: "m1" }]],
-            ["another model", [{ order: 0, text: "Open 8 to 21", model: "m0" }]],
-            ["another order", [{ order: 1, text: "Open 8 to 21", model: "m1" }]],
+            ["another text", [legacy("Other", 0)]],
+            ["another model", [legacy("Open 8 to 21", 0, "m0")]],
+            ["another order", [legacy("Open 8 to 21", 1)]],
             ["another count", []],
         ])("embeds again when the stored passages differ (%s)", async (_name, have) => {
             const { service, chunks, embeddings } = await build()
@@ -281,9 +288,7 @@ describe("KnowledgeIndexingService", () => {
         it("keeps the vectors already paid for when a retry meets no credits, and stores only the missing passages", async () => {
             const { service, sources, usage, embeddings, chunks } = await build(sourceOf({ content: MANY }))
             const pieces = chunkText(MANY)
-            chunks.embeddedOf.mockResolvedValue(
-                pieces.slice(0, 10).map((text, order) => ({ order, text, model: "m1" })),
-            )
+            chunks.embeddedOf.mockResolvedValue(pieces.slice(0, 10).map(stored))
             usage.blockedBy.mockResolvedValue(true)
 
             await expect(service.index(run)).resolves.toBe("blocked")
@@ -307,34 +312,17 @@ describe("KnowledgeIndexingService", () => {
             expect(usage.blockedBy).not.toHaveBeenCalled()
         })
 
-        it("closes a source with no text as failed", async () => {
+        it.each<[string, string, string]>([
+            ["no text", "   ", StoredNote.Empty],
+            ["too much text", "x".repeat(MAX_SOURCE_CHARS + 1), StoredNote.TooLong],
+            ["text that makes no passage", TABLE_WITHOUT_ROWS, StoredNote.NoPassages],
+        ])("closes a source with %s as failed", async (_name, text, note) => {
             const { service, sources, reader } = await build()
-            reader.read.mockResolvedValue({ kind: "ok", value: { text: "   ", title: null } })
+            reader.read.mockResolvedValue({ kind: "ok", value: { text, title: null } })
 
             await expect(service.index(run)).resolves.toBe("failed")
 
-            expect(sources.fail).toHaveBeenCalledWith(WS, "s1", StoredNote.Empty)
-        })
-
-        it("closes a source with too much text as failed", async () => {
-            const { service, sources, reader } = await build()
-            reader.read.mockResolvedValue({
-                kind: "ok",
-                value: { text: "x".repeat(MAX_SOURCE_CHARS + 1), title: null },
-            })
-
-            await expect(service.index(run)).resolves.toBe("failed")
-
-            expect(sources.fail).toHaveBeenCalledWith(WS, "s1", StoredNote.TooLong)
-        })
-
-        it("closes a source whose text makes no passage as failed", async () => {
-            const { service, sources, reader } = await build()
-            reader.read.mockResolvedValue({ kind: "ok", value: { text: TABLE_WITHOUT_ROWS, title: null } })
-
-            await expect(service.index(run)).resolves.toBe("failed")
-
-            expect(sources.fail).toHaveBeenCalledWith(WS, "s1", StoredNote.NoPassages)
+            expect(sources.fail).toHaveBeenCalledWith(WS, "s1", note)
         })
 
         it("closes a source the reader refuses with the code of the reason", async () => {
@@ -384,6 +372,21 @@ describe("KnowledgeIndexingService", () => {
             await expect(service.index(run)).resolves.toBe("failed")
 
             expect(sources.fail).toHaveBeenCalledWith(WS, "s1", StoredNote.Unreadable)
+        })
+    })
+
+    describe("a passage that moved", () => {
+        it("keeps its vector at the new order, is not embedded, and counts as done", async () => {
+            const content = `${"n".repeat(500)}\n\n${"o".repeat(500)}`
+            const { service, sources, chunks, embeddings } = await build(sourceOf({ content }))
+            const [first, second] = chunkText(content)
+            chunks.embeddedOf.mockResolvedValue([stored(second ?? "", 0)])
+
+            await expect(service.index(run)).resolves.toBe("indexed")
+
+            expect(chunks.arrange).toHaveBeenCalledWith(expect.objectContaining({ moves: [{ id: "c0", order: 1 }], count: 2 }))
+            expect(embeddings.embed.mock.calls.flatMap(([request]) => request.texts)).toEqual([first])
+            expect(sources.enterStage).toHaveBeenCalledWith(WS, "s1", expect.objectContaining({ stage: "embed", done: 1 }))
         })
     })
 
@@ -439,9 +442,7 @@ describe("KnowledgeIndexingService resume and pacing", () => {
 
         expect(chunks.keep).toHaveBeenCalledTimes(1)
 
-        chunks.embeddedOf.mockResolvedValue(
-            pieces.slice(0, EMBED_BATCH).map((text, order) => ({ order, text, model: "m1" })),
-        )
+        chunks.embeddedOf.mockResolvedValue(pieces.slice(0, EMBED_BATCH).map(stored))
         embeddings.embed.mockReset()
         embeddings.embed.mockImplementation((request) => Promise.resolve(request.texts.map(() => [1])))
 
@@ -455,7 +456,7 @@ describe("KnowledgeIndexingService resume and pacing", () => {
     it("counts the passages kept from the failed run as done", async () => {
         const { service, sources, chunks } = await build(sourceOf({ content: MANY }))
         const pieces = chunkText(MANY)
-        chunks.embeddedOf.mockResolvedValue(pieces.slice(0, 10).map((text, order) => ({ order, text, model: "m1" })))
+        chunks.embeddedOf.mockResolvedValue(pieces.slice(0, 10).map(stored))
 
         await service.index(run)
 

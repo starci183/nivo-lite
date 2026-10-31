@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { KnowledgeChunksService, toVector } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService, passageHashOf, toVector } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { EmbeddingService } from "./embedding.service"
 import { REEMBED_BATCH, REEMBED_MAX_BATCHES } from "./knowledge.contracts"
@@ -53,6 +53,7 @@ export class KnowledgeReembedService {
             model,
             ids: stale.map((chunk) => chunk.id),
             vectors: stale.map((_, index) => toVector(vectors[index] ?? [])),
+            hashes: stale.map((chunk) => passageHashOf(chunk.text, model)),
         })
         return stale.length < REEMBED_BATCH ? "done" : this.batchFrom(workspaceId, model, batch + 1)
     }
