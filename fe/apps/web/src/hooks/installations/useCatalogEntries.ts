@@ -9,6 +9,7 @@ import {
     installationPersonName,
     agentHref,
     agentLifecycleOf,
+    agentListHref,
     agentLifecycleTone,
     foldText,
     instancesOf,
@@ -24,6 +25,8 @@ export interface CatalogRole {
     readonly searchText: string
     /** At least one agent of this role is installed. */
     readonly installed: boolean
+    /** Where another agent of an installed role that runs several is added by name; null when the card installs instead. */
+    readonly addHref: string | null
     readonly isEarly: boolean
     readonly name: string
     readonly description: string
@@ -68,6 +71,7 @@ export const useCatalogEntries = (): {
                 key,
                 categoryKey: def.category,
                 installed: installation !== undefined,
+                addHref: installation !== undefined && def.multiInstance ? agentListHref(key) : null,
                 isEarly: def.status === "early",
                 searchText: foldText(
                     [

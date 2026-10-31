@@ -6,6 +6,7 @@ import type { CatalogRole } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { ALL_CATEGORIES, useCatalogView } from "@/hooks/modules"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { navigation } from "@/modules/i18n"
 import { AgentCatalogBase } from "./component"
 import type { AgentCatalogData } from "./component"
 
@@ -35,7 +36,7 @@ const roleItemOf = (role: CatalogRole, t: CatalogCopy, state: RoleCardState) => 
         detailsPointsTitle: t("detailsPoints"),
         closeLabel: t("detailsClose"),
         canInstall: state.canInstall,
-        installLabel: t("install"),
+        installLabel: role.addHref === null ? t("install") : t("roleAddAnother"),
     },
 })
 
@@ -72,9 +73,10 @@ const PLACEHOLDER: AgentCatalogData = {
     roles: ["a", "b", "c"].map(placeholderRoleOf),
 }
 
-/** The connected agent catalogue: the installed agents, then the roles to add; search and group kept in the URL; install opens the new agent. */
+/** The connected agent catalogue: the installed agents, then the roles to add; search and group kept in the URL; install opens the new agent, and an installed role of several agents opens its list to add another. */
 export const AgentCatalog = () => {
     const t = useTranslations("modulesCore")
+    const router = navigation.useRouter()
     const member = useMember()
     const { agents, roles, categories, slot, reload } = useCatalogEntries()
     const slotLabels = useSlotLabels()
@@ -127,7 +129,9 @@ export const AgentCatalog = () => {
                 retry: reload,
                 install: (key) => {
                     const role = roles.find((candidate) => candidate.key === key)
-                    if (role !== undefined) void installing.install(role.key)
+                    if (role === undefined) return
+                    if (role.addHref === null) void installing.install(role.key)
+                    else router.push(role.addHref)
                 },
             }}
         />

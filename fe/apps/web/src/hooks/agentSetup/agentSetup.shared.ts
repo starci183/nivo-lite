@@ -12,6 +12,33 @@ import type {
 /** How often the setup is read again while NIVO is answering. */
 export const SETUP_POLL_MS = 2000
 
+/** How long NIVO may take on one turn before the composer opens again: past the turn timeout of the server, the turn was lost. */
+export const TURN_STALE_MS = 120_000
+
+/** Where the turn of the setup chat stands: none waits, NIVO is answering, or the last owner message waited past the timeout. */
+export type SetupTurnState = "idle" | "answering" | "stale"
+
+/** The messages a turn is dated by. */
+type TurnMessages = ReadonlyArray<{
+    readonly setupSessionId: string
+    readonly role: string
+    readonly createdAt: string
+}>
+
+/** When the waiting turn counts as lost: the last owner message of the open draft plus the timeout; null when no turn waits. */
+export const setupTurnStaleAt = (isPending: boolean, messages: TurnMessages, sessionId: string): number | null => {
+    if (!isPending) return null
+    const last = messages.findLast((message) => message.setupSessionId === sessionId && message.role === "user")
+    const sentMs = last === undefined ? Number.NaN : Date.parse(last.createdAt)
+    return Number.isNaN(sentMs) ? Number.POSITIVE_INFINITY : sentMs + TURN_STALE_MS
+}
+
+/** The turn state at a moment, from the moment the waiting turn counts as lost. */
+export const setupTurnStateAt = (staleAt: number | null, nowMs: number): SetupTurnState => {
+    if (staleAt === null) return "idle"
+    return nowMs < staleAt ? "answering" : "stale"
+}
+
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 

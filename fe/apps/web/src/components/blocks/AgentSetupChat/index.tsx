@@ -78,6 +78,7 @@ export const AgentSetupChat = (props: AgentSetupChatProps) => {
         instance: state?.instance.isMulti === true ? { name: state.instance.name, typeName } : null,
         sendingLabel: t("sending"),
         isSending: chat.isSending,
+        staleLabel: state?.turn === "stale" && !chat.isSending ? t("turnStale") : "",
         composerLabel: t("chatPlaceholder"),
         text: chat.text,
         sendLabel: t("send"),

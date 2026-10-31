@@ -54,6 +54,8 @@ export interface AgentSetupChatContent {
     readonly instance: SetupWriteInstance | null
     readonly sendingLabel: string
     readonly isSending: boolean
+    /** The last owner message waited past the timeout without a reply: the owner may write again. Empty when no turn was lost. */
+    readonly staleLabel: string
     readonly composerLabel: string
     readonly text: string
     readonly sendLabel: string
@@ -176,6 +178,13 @@ const Conversation = (props: ChatPartProps) => (
                 <BrandCards content={props.content} on={props.on} />
             </div>
         ) : null}
+        {props.content.staleLabel === "" ? null : (
+            <div className={SENDING}>
+                <Text size="sm" tone="muted" live="polite">
+                    {props.content.staleLabel}
+                </Text>
+            </div>
+        )}
         {props.content.isSending || props.content.brand?.isReading === true ? (
             <div className={SENDING}>
                 <Text size="sm" tone="muted" live="polite">

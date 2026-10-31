@@ -116,6 +116,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
             on={{
                 add: () => {
                     form.reset({ name: list.defaultName })
+                    void form.trigger("name")
                     setOpen(true)
                 },
             }}
