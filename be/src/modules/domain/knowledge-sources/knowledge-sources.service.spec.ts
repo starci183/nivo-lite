@@ -447,16 +447,6 @@ describe("KnowledgeSourcesService reading", () => {
         )
     })
 
-    it("narrows the list to one origin when asked", async () => {
-        const em = mockEntityManager({ find: [KnowledgeSourceEntity, [listRowOf()]] })
-        const { service } = await build(em)
-        await expect(service.list("u1", WS, undefined, "google_drive")).resolves.toEqual([summary])
-        expect(em.find).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            expect.objectContaining({ where: { workspaceId: WS, origin: "google_drive" } }),
-        )
-    })
-
     it("lists only the sources of one origin, with or without a module", async () => {
         const em = mockEntityManager({ find: [KnowledgeSourceEntity, [listRowOf()]] })
         const { service } = await build(em)
