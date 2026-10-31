@@ -57,7 +57,7 @@ export class ApiCredentialAuthenticatorService implements CredentialAuthenticato
             return { kind: metadata.kind, subject: principal.keyId, workspaceId: principal.workspaceId }
         }
         if (metadata.kind === "tool-token") {
-            const principal = this.tools.authenticateBearer(authorization)
+            const principal = await this.tools.authenticate(authorization)
             return { kind: metadata.kind, subject: principal.jobId, workspaceId: principal.workspaceId }
         }
         const verified = await this.runs.verifyRun({ authorization, expectedRunId: resourceId })

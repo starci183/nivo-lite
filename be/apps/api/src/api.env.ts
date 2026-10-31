@@ -24,6 +24,7 @@ import { parseAiGatewayConfig } from "@modules/integrations/ai-gateway"
 import { parseAiConfig } from "@modules/integrations/ai"
 import { parseN8nConfig } from "@modules/integrations/n8n"
 import { parseAiTasksConfig } from "@modules/domain/ai-tasks"
+import { parseAgentTurnsConfig } from "@modules/domain/agent-turns"
 import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
 import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
@@ -64,6 +65,8 @@ export interface ApiOptions {
     readonly billing: ReturnType<typeof parseBillingConfig>
     /** The OpenClaw gateway and the agent workspaces. */
     readonly openclaw: ReturnType<typeof parseOpenclawConfig>
+    /** The secret that signs the calls of the OpenClaw bridge plugin. */
+    readonly agentTurns: ReturnType<typeof parseAgentTurnsConfig>
     /** The prompt library tunables and the AI endpoint it calls. */
     readonly aiTasks: ReturnType<typeof parseAiTasksConfig>
     /** The key that seals the credentials of the connections. */
@@ -131,6 +134,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     workspaceInvites: parseWorkspaceInvitesConfig(env),
     billing: parseBillingConfig(env),
     openclaw: parseOpenclawConfig(env),
+    agentTurns: parseAgentTurnsConfig(env),
     aiTasks: parseAiTasksConfig(env, parseAiConfig(env)),
     connectionSecrets: parseConnectionSecretsConfig(env),
     loyaltyOtps: parseLoyaltyOtpsConfig(env),

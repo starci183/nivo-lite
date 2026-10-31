@@ -115,7 +115,7 @@ describe("AgentRegistryService", () => {
                     id: AGENT,
                     name: "Bot",
                     workspace: `/home/node/.openclaw/workspace-${AGENT}`,
-                    tools: { profile: "minimal" },
+                    tools: { profile: "minimal", alsoAllow: ["nivo_call"] },
                     skills: [],
                     bootstrapMaxChars: 40_000,
                     bootstrapTotalMaxChars: 60_000,
@@ -124,6 +124,32 @@ describe("AgentRegistryService", () => {
             ])
             expect(disk.files.writeText).toHaveBeenCalledWith(CONFIG, disk.store.get(CONFIG), 0o600)
             expect(logger.info).toHaveBeenCalledTimes(1)
+        })
+
+        it("gives the agent the minimal profile and the bridge tool only, never a shell, file or web tool", async () => {
+            const disk = memoryFiles()
+            const { registry } = await build({}, disk)
+
+            registry.register(AGENT, "Bot")
+
+            expect(stored(disk.store).agents.list[1]?.tools).toEqual({ profile: "minimal", alsoAllow: ["nivo_call"] })
+        })
+
+        it("rewrites an entry that still has the bare minimal profile, so the bridge tool is added", async () => {
+            const old = {
+                id: AGENT,
+                name: "Bot",
+                workspace: `/home/node/.openclaw/workspace-${AGENT}`,
+                tools: { profile: "minimal" },
+            }
+            const disk = memoryFiles({
+                [CONFIG]: JSON.stringify({ agents: { list: [{ id: "main", default: true }, old] } }),
+            })
+            const { registry } = await build({}, disk)
+
+            expect(registry.isCurrent(AGENT, "Bot")).toBe(false)
+            expect(registry.register(AGENT, "Bot")).toBe(true)
+            expect(registry.isCurrent(AGENT, "Bot")).toBe(true)
         })
     })
 })

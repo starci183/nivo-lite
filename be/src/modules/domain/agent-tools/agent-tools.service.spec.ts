@@ -13,6 +13,8 @@ import {
     TOOL_TOKENS,
 } from "./agent-tools.decorators"
 import { AgentToolsService } from "./agent-tools.service"
+import { BridgeCallsService } from "./bridge-calls.service"
+import type { BridgeTurn } from "./agent-tools.contracts"
 import type {
     AgentHandoff,
     ApprovalRequester,
@@ -31,7 +33,33 @@ const claims = { jobId: "job-1", workspaceId: "ws-1", conversationId: "conv-1", 
 const ctx = { jobId: "job-1", workspaceId: "ws-1", conversationId: "conv-1" }
 
 /** The service with every collaborator replaced; a null `verified` makes the token invalid. */
-const build = async (verified: typeof claims | null = claims) => {
+const customerTurn: BridgeTurn = {
+    jobId: "msg-1",
+    workspaceId: "ws-1",
+    agentId: "agent-1",
+    turnId: "turn-1",
+    wakeId: "wake-1",
+    source: "customer",
+    conversationId: "conv-7",
+    authorUserId: null,
+}
+const tagTurn: BridgeTurn = {
+    ...customerTurn,
+    jobId: "wake-2",
+    wakeId: "wake-2",
+    source: "tag",
+    conversationId: null,
+}
+
+const build = async (verified: typeof claims | null = claims, admitted: BridgeTurn | null = customerTurn) => {
+    const bridge = mock<BridgeCallsService>({
+        admit: jest.fn(() =>
+            admitted === null
+                ? Promise.reject(new AgentToolsError({ code: AgentToolsErrorCode.TokenInvalid }))
+                : Promise.resolve(admitted),
+        ),
+        runInternal: jest.fn(() => Promise.resolve({ tools: [] })),
+    })
     const tokens = mock<ToolTokens>({
         mint: jest.fn(() => "signed-token"),
         revoke: jest.fn(),
@@ -69,6 +97,7 @@ const build = async (verified: typeof claims | null = claims) => {
             { provide: CONVERSATION_LEADS, useValue: conversations },
             { provide: GATEWAY_TOOLS, useValue: gatewayTools },
             { provide: AGENT_HANDOFF, useValue: agentHandoff },
+            { provide: BridgeCallsService, useValue: bridge },
         ],
     }).compile()
     return {
@@ -82,6 +111,7 @@ const build = async (verified: typeof claims | null = claims) => {
         handoffs,
         gatewayTools,
         agentHandoff,
+        bridge,
     }
 }
 
@@ -385,5 +415,69 @@ describe("AgentToolsService > connector meta-tools and agent hand-off", () => {
             code: AgentToolsErrorCode.ArgumentMissing,
         })
         expect(agentHandoff.handOff).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentToolsService > the bridge credential", () => {
+    it("admits a bridge credential as the workspace and job of the running turn it names, and not as a per-job token", async () => {
+        const { service, bridge, tokens } = await build()
+
+        await expect(service.authenticate("Bearer bridge.body.mac")).resolves.toEqual({
+            jobId: "msg-1",
+            workspaceId: "ws-1",
+        })
+        expect(bridge.admit).toHaveBeenCalledWith("bridge.body.mac")
+        expect(tokens.verify).not.toHaveBeenCalled()
+    })
+
+    it("admits a per-job token as before, without asking the bridge", async () => {
+        const { service, bridge } = await build()
+
+        await expect(service.authenticate("Bearer signed-token")).resolves.toEqual(ctx)
+        expect(bridge.admit).not.toHaveBeenCalled()
+    })
+
+    it("refuses a bridge credential that names no running turn, before any tool runs", async () => {
+        const { service, knowledge } = await build(claims, null)
+
+        const refused = await rejectionOf(service.authenticate("Bearer bridge.body.mac"))
+        const call = await rejectionOf(service.runBearerTool("Bearer bridge.body.mac", "knowledge.search", {}))
+
+        expect(refused?.code).toBe(AgentToolsErrorCode.TokenInvalid)
+        expect(call?.code).toBe(AgentToolsErrorCode.TokenInvalid)
+        expect(knowledge.search).not.toHaveBeenCalled()
+    })
+
+    it("runs a customer turn's tool for the conversation of the turn and not the arguments", async () => {
+        const { service, knowledge } = await build()
+
+        await service.runBearerTool("Bearer bridge.body.mac", "knowledge.search", {
+            query: "hours",
+            workspaceId: "ws-evil",
+            conversationId: "conv-evil",
+        })
+
+        expect(knowledge.search).toHaveBeenCalledWith(
+            { jobId: "msg-1", workspaceId: "ws-1", conversationId: "conv-7" },
+            "hours",
+        )
+    })
+
+    it("refuses an unknown tool of a bridge call", async () => {
+        const { service } = await build()
+
+        const error = await rejectionOf(service.runBearerTool("Bearer bridge.body.mac", "shell.exec", {}))
+
+        expect(error?.code).toBe(AgentToolsErrorCode.UnknownTool)
+    })
+
+    it("hands a turn with no conversation to the bridge calls, which keep it to the connector tools", async () => {
+        const { service, bridge, knowledge } = await build(claims, tagTurn)
+
+        await expect(service.runBearerTool("Bearer bridge.body.mac", "tool.search", { query: "x" })).resolves.toEqual({
+            tools: [],
+        })
+        expect(bridge.runInternal).toHaveBeenCalledWith(tagTurn, "tool.search", { query: "x" })
+        expect(knowledge.search).not.toHaveBeenCalled()
     })
 })

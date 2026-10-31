@@ -1,11 +1,18 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
+import { In } from "typeorm"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
+import {
+    agentTurnViewOf,
+    agentWakeRowOf,
+    orphanTurnRowOf,
+    runningTurnRowOf,
+    sessionlessTurnRowOf,
+} from "@tests/fixtures/builders/agent-work.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentTurnsService } from "./agent-turns.service"
 import { AgentWorkErrorCode } from "./errors/agent-work.error"
-import { AgentTurnEntity } from "./persistence/entities"
+import { AgentTurnEntity, AgentWakeEntity } from "./persistence/entities"
 import type { AgentTurnEnding } from "./agent-work.contracts"
 
 const call = (name: string, args: number): string =>
@@ -243,5 +250,53 @@ describe("AgentTurnsService.bind", () => {
             { id: "turn-1", status: "running" },
             { runtimeAgentId: "runtime-1", threadKey: "thread-1" },
         )
+    })
+})
+
+describe("AgentTurnsService.runningOn", () => {
+    it("lists the running turns of a runtime agent with the wake each answers", async () => {
+        const em = mockEntityManager({
+            find: [
+                [AgentTurnEntity, [runningTurnRowOf()]],
+                [AgentWakeEntity, [agentWakeRowOf({ context: { conversationId: "conv-1", messageId: "msg-1" } })]],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.runningOn("runtime-1")).resolves.toEqual([
+            {
+                turnId: "turn-1",
+                workspaceId: "ws-1",
+                agentId: "agent-1",
+                wakeId: "wake-1",
+                source: "customer",
+                threadKey: "agent:runtime-1:conv-1",
+                context: { conversationId: "conv-1", messageId: "msg-1" },
+            },
+        ])
+        expect(em.find).toHaveBeenCalledWith(AgentTurnEntity, {
+            where: { runtimeAgentId: "runtime-1", status: "running" },
+            take: 50,
+        })
+        expect(em.find).toHaveBeenCalledWith(AgentWakeEntity, { where: { id: In(["wake-1"]) }, take: 50 })
+    })
+
+    it("answers nothing, without reading wakes, when no turn runs", async () => {
+        const em = mockEntityManager({ find: [AgentTurnEntity, []] })
+        const service = await build(em)
+
+        await expect(service.runningOn("runtime-1")).resolves.toEqual([])
+    })
+
+    it("leaves out a turn whose session was never recorded or whose wake is gone", async () => {
+        const em = mockEntityManager({
+            find: [
+                [AgentTurnEntity, [sessionlessTurnRowOf(), orphanTurnRowOf()]],
+                [AgentWakeEntity, [agentWakeRowOf()]],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.runningOn("runtime-1")).resolves.toEqual([])
     })
 })

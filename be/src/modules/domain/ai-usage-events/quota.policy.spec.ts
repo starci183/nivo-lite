@@ -233,16 +233,22 @@ describe("quota policy > stopsCall", () => {
         expect(subject.stopsCall(status, kind)).toBe(false)
     })
 
-    it.each<UsageKind>(["setup", "owner_chat", "embedding", "engine", "guide", "brain", "office_command"])(
-        "stops %s at tokens or credits, and lets it pass a message allowance",
-        async (kind) => {
-            const subject = await build()
+    it.each<UsageKind>([
+        "setup",
+        "owner_chat",
+        "embedding",
+        "engine",
+        "guide",
+        "brain",
+        "office_command",
+        "agent_work",
+    ])("stops %s at tokens or credits, and lets it pass a message allowance", async (kind) => {
+        const subject = await build()
 
-            expect(subject.stopsCall({ ...status, messagesExceeded: true, level: "exceeded" }, kind)).toBe(false)
-            expect(subject.stopsCall({ ...status, tokensExceeded: true, level: "exceeded" }, kind)).toBe(true)
-            expect(subject.stopsCall({ ...status, creditsExceeded: true, level: "exceeded" }, kind)).toBe(true)
-        },
-    )
+        expect(subject.stopsCall({ ...status, messagesExceeded: true, level: "exceeded" }, kind)).toBe(false)
+        expect(subject.stopsCall({ ...status, tokensExceeded: true, level: "exceeded" }, kind)).toBe(true)
+        expect(subject.stopsCall({ ...status, creditsExceeded: true, level: "exceeded" }, kind)).toBe(true)
+    })
 })
 
 const record: QuotaRecord = {

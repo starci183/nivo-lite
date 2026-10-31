@@ -60,6 +60,14 @@ export interface Decider {
     readonly memberId?: string
 }
 
+/** The turn that asked for a piece of work: set by the agent-turn settler, read only by the action graph. */
+export interface WorkOrigin {
+    /** The turn whose proposal carried the action. */
+    readonly turnId: string
+    /** The wake that turn answered. */
+    readonly wakeId: string
+}
+
 /** Everything `runWork` takes. */
 export interface WorkSpec {
     /** The action key. */
@@ -94,6 +102,8 @@ export interface WorkSpec {
     readonly installationId?: string | null
     /** Called once, only when this call really inserted the row, before the gate runs. */
     readonly onInserted?: (row: WorkItem) => Promise<void>
+    /** The agent turn that asked for it; nothing in the engine reads it yet. */
+    readonly origin?: WorkOrigin | undefined
 }
 
 /** What a performer prepares: the proposal and the patch of the item's address. */

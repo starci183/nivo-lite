@@ -4,9 +4,11 @@ import type {
     AgentHandoff,
     ApprovalRequester,
     BookingTools,
+    BridgeTurns,
     ConversationLeads,
     GatewayTools,
     HandoffTool,
+    InternalTools,
     KnowledgeSearch,
     LeadWriter,
     ToolTokens,
@@ -68,3 +70,15 @@ export const InjectGatewayTools = (): TypedParameterDecorator<GatewayTools> => i
 
 /** Injects the agent hand-off port. Parameter type: AgentHandoff. */
 export const InjectAgentHandoff = (): TypedParameterDecorator<AgentHandoff> => injector<AgentHandoff>(AGENT_HANDOFF)
+
+/** Token of the bridge turns port. */
+export const BRIDGE_TURNS: unique symbol = Symbol("domain.agent-tools.bridge-turns")
+
+/** Token of the internal tools port. */
+export const INTERNAL_TOOLS: unique symbol = Symbol("domain.agent-tools.internal-tools")
+
+/** Injects the bridge turns port. Parameter type: BridgeTurns. */
+export const InjectBridgeTurns = (): TypedParameterDecorator<BridgeTurns> => injector<BridgeTurns>(BRIDGE_TURNS)
+
+/** Injects the internal tools port. Parameter type: InternalTools. */
+export const InjectInternalTools = (): TypedParameterDecorator<InternalTools> => injector<InternalTools>(INTERNAL_TOOLS)

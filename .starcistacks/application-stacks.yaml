@@ -551,7 +551,7 @@ environments:
               - {member: storage}
               - {member: ai}
               - {member: n8n, keys: [N8N_SIGNING_SECRET]}
-              - {member: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS, OPENCLAW_TURN_TIMEOUT], fill: true}
+              - {member: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS, OPENCLAW_TURN_TIMEOUT, OPENCLAW_BRIDGE_SECRET], fill: true}
           # Redis starts with --requirepass from /run/secrets/QUEUE_REDIS_PASSWORD, so a boot without it fails instead of serving an open broker.
           - service: nivo-redis
             from:
@@ -573,6 +573,8 @@ environments:
           - service: nivo-openclaw
             from:
               - {member: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN], required: true}
+              # The bridge plugin signs its calls with it; absent, the plugin registers no tool (the owner adds the key to the sealed member).
+              - {member: openclaw, keys: [OPENCLAW_BRIDGE_SECRET]}
               # openclaw calls the in-process AI gateway with the same StarCi virtual key as the api.
               - {member: ai, keys: [STARCI_AI_KEY], required: true}
           - service: nivo-n8n
@@ -620,6 +622,10 @@ environments:
         - {name: openclaw-entrypoint, file: infra/swarm/openclaw/entrypoint.sh, env: NIVO_CFG_OPENCLAW_ENTRYPOINT}
         - {name: openclaw-init, file: infra/swarm/openclaw/openclaw-init.mjs, env: NIVO_CFG_OPENCLAW_INIT}
         - {name: openclaw-relay, file: infra/swarm/openclaw/openclaw-relay.mjs, env: NIVO_CFG_OPENCLAW_RELAY}
+        - {name: nivo-bridge-manifest, file: infra/swarm/openclaw/nivo-bridge/openclaw.plugin.json, env: NIVO_CFG_NIVO_BRIDGE_MANIFEST}
+        - {name: nivo-bridge-package, file: infra/swarm/openclaw/nivo-bridge/package.json, env: NIVO_CFG_NIVO_BRIDGE_PACKAGE}
+        - {name: nivo-bridge-index, file: infra/swarm/openclaw/nivo-bridge/index.js, env: NIVO_CFG_NIVO_BRIDGE_INDEX}
+        - {name: nivo-bridge-token, file: infra/swarm/openclaw/nivo-bridge/bridge-token.js, env: NIVO_CFG_NIVO_BRIDGE_TOKEN}
         - {name: postgres-backup, file: infra/swarm/postgres/backup.sh, env: NIVO_CFG_POSTGRES_BACKUP}
       verify:
         http:

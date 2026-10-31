@@ -10,6 +10,7 @@ const KINDS: Readonly<Record<UsageKind, UsageKind>> = {
     guide: "guide",
     brain: "brain",
     office_command: "office_command",
+    agent_work: "agent_work",
 }
 
 const isUsageKind = (kind: string): kind is UsageKind => Object.hasOwn(KINDS, kind)

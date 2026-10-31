@@ -225,6 +225,24 @@ export const disabledTriggerRowOf = (): AgentTriggerEntity => agentTriggerRowOf(
 /** A turn row of agent-1 whose cost nobody measured. */
 export const unmeteredTurnRowOf = (): AgentTurnEntity => agentTurnRowOf({ cost: null })
 
+/** A turn row of agent-1 that is running on runtime agent runtime-1, in the session of conversation conv-1. */
+export const runningTurnRowOf = (): AgentTurnEntity =>
+    agentTurnRowOf({ runtimeAgentId: "runtime-1", threadKey: "agent:runtime-1:conv-1", status: "running" })
+
+/** A turn row running on runtime-1 whose session was never recorded. */
+export const sessionlessTurnRowOf = (): AgentTurnEntity =>
+    agentTurnRowOf({ id: "turn-a", runtimeAgentId: "runtime-1", threadKey: null, status: "running" })
+
+/** A turn row running on runtime-1 whose wake no longer exists. */
+export const orphanTurnRowOf = (): AgentTurnEntity =>
+    agentTurnRowOf({
+        id: "turn-b",
+        wakeId: "wake-gone",
+        runtimeAgentId: "runtime-1",
+        threadKey: "k",
+        status: "running",
+    })
+
 /** A wake row a switch held: a customer's message of conversation conv-1. */
 export const heldCustomerWakeRowOf = (id: string): AgentWakeEntity => agentWakeRowOf({ id, eventKey: id })
 

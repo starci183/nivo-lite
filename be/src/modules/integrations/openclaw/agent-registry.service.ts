@@ -12,14 +12,17 @@ import type { OpenclawFiles } from "./openclaw-files.port"
 
 const CONFIG_FILE = "openclaw.json"
 const CONFIG_MODE = 0o600
+/** The one tool the NIVO bridge plugin adds on top of the minimal profile. */
+export const BRIDGE_TOOL = "nivo_call"
 
 @Injectable()
 /**
  * Keeps the agents the sync registers in OpenClaw's own config. The schema of OpenClaw 2026.7.1 is `agents.list[]`
  * (`{ id, name, workspace, tools, skills }`); the gateway watches openclaw.json and hot-applies `agents.*` without a restart.
  * Writes are atomic, only happen when the entry changed, and never touch any other key: whatever OpenClaw or an operator put in
- * the file stays. A customer-facing agent is registered with the `minimal` tool profile (session_status only): it has no shell, no
- * file and no web tools, so a customer message can never become a command on the host.
+ * the file stays. A customer-facing agent is registered with the `minimal` tool profile (session_status only) plus the one tool
+ * `nivo_call` of the NIVO bridge plugin: it has no shell, no file and no web tools, so a customer message can never become a command on
+ * the host, and every call it makes comes back to the api, which finds the running turn and applies the agent's grants.
  */
 export class AgentRegistryService {
     constructor(
@@ -137,7 +140,7 @@ export class AgentRegistryService {
             id: agentId,
             name,
             workspace: gatewayDir,
-            tools: { profile: "minimal" },
+            tools: { profile: "minimal", alsoAllow: [BRIDGE_TOOL] },
             skills: [],
             bootstrapMaxChars: 40_000,
             bootstrapTotalMaxChars: 60_000,
