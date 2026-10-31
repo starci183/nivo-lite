@@ -85,7 +85,7 @@ describe("aiGatewayOf, the gateway", () => {
     it("keeps the default key file and reads no port (it is the app port plus one)", async () => {
         const options = await parse({ OPENROUTER_API_KEY: "k" })
 
-        expect(options.gateway).toEqual({ keysPath: "ai-router-keys.sqlite", mountedKeys: [] })
+        expect(options.gateway).toEqual({ keysPath: "ai-router-keys.sqlite", adminToken: null, mountedKeys: [] })
     })
 
     it("mounts the one StarCi virtual key when it is declared, with its label and profiles", async () => {

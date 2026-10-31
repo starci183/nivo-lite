@@ -63,6 +63,7 @@ const mountedKeysOf = (env: AiGatewayEnv): Array<AiGatewayMountedKey> =>
 /** The gateway this process hosts; its port is the app port plus one (BE-AI-1), so no port is read here. */
 const gatewayOf = (env: AiGatewayEnv): AiGatewayHost => ({
     keysPath: env.optional("AI_ROUTER_KEYS_PATH") ?? KEYS_PATH,
+    adminToken: null,
     mountedKeys: mountedKeysOf(env),
 })
 
