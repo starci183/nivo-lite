@@ -9,8 +9,6 @@ import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
 import { unwrapOutcome } from "@modules/platform/primitives"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { KnowledgeSourceIndexedEvent } from "@modules/events/api"
@@ -20,6 +18,8 @@ import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
+import type { ProgressChange } from "./knowledge-progress.contracts"
+import { KnowledgeProgressService } from "./knowledge-progress.service"
 import { KNOWLEDGE_UPLOAD_BUCKET, STORAGE_OBJECT_MISSING } from "./knowledge-sources.contracts"
 import type {
     AddSourceInput,
@@ -37,7 +37,6 @@ import type {
     UploadAddress,
 } from "./knowledge-sources.contracts"
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
-import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import { removedTitle } from "./persistence/knowledge-source.projection"
 import {
@@ -74,6 +73,9 @@ const SUMMARY_COLUMNS = {
     updatedAt: true,
 } as const
 
+/** The stage columns of a source no worker is on. */
+const NO_STAGE = { stage: null, stageDone: null, stageTotal: null } as const
+
 /** Who may change the knowledge of a workspace. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 
@@ -84,13 +86,13 @@ export class KnowledgeSourcesService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectKnowledgeStorage() private readonly storage: StorageObjectsPort,
-        @InjectLogger() private readonly logger: Logger,
         private readonly members: WorkspaceMembersService,
         private readonly queue: KnowledgeQueue,
         @InjectEventBus() private readonly bus: EventBus,
         private readonly entitlements: EntitlementsService,
         private readonly installations: InstallationRecordsService,
         private readonly quota: SourceQuotaService,
+        private readonly progress: KnowledgeProgressService,
         @InjectIds() private readonly ids: Ids,
     ) {}
 
@@ -124,7 +126,7 @@ export class KnowledgeSourcesService {
         const instance = await this.instanceOf(workspaceId, source.installationId)
         const sizeBytes = await this.quota.measure(source)
         try {
-            return await this.entityManager.transaction(async (tx) => {
+            const ref = await this.entityManager.transaction(async (tx) => {
                 await this.quota.admit(tx, workspaceId, sizeBytes)
                 const inserted = await tx.insert(KnowledgeSourceEntity, {
                     workspaceId,
@@ -150,6 +152,8 @@ export class KnowledgeSourcesService {
                 await this.queue.enqueueIndex({ sourceId: row.id, workspaceId }, tx)
                 return { id: row.id }
             })
+            await this.progress.announce(workspaceId, ref.id)
+            return ref
         } catch (failure) {
             await this.quota.discardRefused(source.storagePath, failure)
             throw failure
@@ -159,15 +163,17 @@ export class KnowledgeSourcesService {
     /** Puts a failed or credit-blocked source back on the queue; any other source is left as it is. */
     async retrySource(userId: string, workspaceId: string, sourceId: string): Promise<SourceRef> {
         await this.members.require(userId, workspaceId, MANAGERS)
-        await this.entityManager.transaction(async (tx) => {
+        const queued = await this.entityManager.transaction(async (tx) => {
             const requeued = await tx.update(
                 KnowledgeSourceEntity,
                 { id: sourceId, workspaceId, status: In(["failed", "blocked_credits"]) },
-                { status: "queued", progress: 0, error: null, updatedAt: NOW },
+                { status: "queued", progress: 0, error: null, ...NO_STAGE, updatedAt: NOW },
             )
-            if (requeued.affected === 0) return
+            if (requeued.affected === 0) return false
             await this.queue.enqueueIndex({ sourceId, workspaceId }, tx, this.clock.now().getTime())
+            return true
         })
+        if (queued) await this.progress.announce(workspaceId, sourceId)
         return { id: sourceId }
     }
 
@@ -183,6 +189,7 @@ export class KnowledgeSourcesService {
                     status: "queued",
                     progress: 0,
                     error: null,
+                    ...NO_STAGE,
                     ...(content === null ? {} : { content }),
                     updatedAt: NOW,
                 },
@@ -191,6 +198,7 @@ export class KnowledgeSourcesService {
                 throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
             await this.queue.enqueueIndex({ sourceId: input.sourceId, workspaceId }, tx, this.clock.now().getTime())
         })
+        await this.progress.announce(workspaceId, input.sourceId)
         return { id: input.sourceId }
     }
 
@@ -273,40 +281,55 @@ export class KnowledgeSourcesService {
     }
 
     /** The worker starts reading the source. */
-    async begin(workspaceId: string, sourceId: string): Promise<void> {
-        await this.entityManager.update(
-            KnowledgeSourceEntity,
-            { id: sourceId, workspaceId },
-            { status: "reading", error: null, progress: 5, updatedAt: NOW },
-        )
+    begin(workspaceId: string, sourceId: string): Promise<void> {
+        return this.progress.write(workspaceId, sourceId, {
+            status: "reading",
+            error: null,
+            progress: 5,
+            stage: "read",
+            done: null,
+            total: null,
+        })
     }
 
-    /** The text of the source is known: it is stored with its title and the source moves to indexing. */
+    /** The text of the source is known: it is stored with its title and the source moves to indexing, at the stage of cutting it into passages. */
     async startIndexing(workspaceId: string, sourceId: string, content: string, title: string): Promise<void> {
         await this.entityManager.update(
             KnowledgeSourceEntity,
             { id: sourceId, workspaceId },
-            { status: "indexing", content, title, progress: 20, updatedAt: NOW },
+            {
+                status: "indexing",
+                content,
+                title,
+                progress: 20,
+                stage: "chunk",
+                stageDone: null,
+                stageTotal: null,
+                updatedAt: NOW,
+            },
         )
+        await this.progress.announce(workspaceId, sourceId)
     }
 
-    /** Moves the progress bar of a source; never fails the job. */
-    async advance(workspaceId: string, sourceId: string, percent: number): Promise<void> {
-        const clamped = Math.max(0, Math.min(100, Math.round(percent)))
-        await this.entityManager
-            .update(KnowledgeSourceEntity, { id: sourceId, workspaceId }, { progress: clamped, updatedAt: NOW })
-            .catch((cause: unknown) => {
-                this.logger.error(KnowledgeSourcesLogEvent.ProgressFailed, cause, { sourceId })
-            })
+    /** Moves the stage, count and progress bar of a source, at most about once a second; never fails the job. */
+    advance(workspaceId: string, sourceId: string, change: ProgressChange): Promise<void> {
+        return this.progress.count(workspaceId, sourceId, change)
+    }
+
+    /** Moves the source to a stage at once: a change of stage is never held back by the throttle. */
+    enterStage(workspaceId: string, sourceId: string, change: ProgressChange): Promise<void> {
+        return this.progress.write(workspaceId, sourceId, change)
     }
 
     /** Closes a source as failed with the stored code the front end shows its own text for. */
-    async fail(workspaceId: string, sourceId: string, note: string): Promise<void> {
-        await this.entityManager.update(
-            KnowledgeSourceEntity,
-            { id: sourceId, workspaceId },
-            { status: "failed", error: note, updatedAt: NOW },
-        )
+    fail(workspaceId: string, sourceId: string, note: string): Promise<void> {
+        return this.progress.write(workspaceId, sourceId, {
+            status: "failed",
+            error: note,
+            stage: null,
+            done: null,
+            total: null,
+        })
     }
 
     /** The passages are stored: the source records them and a note, and `knowledge_source_indexed` is published with the move to that stage in one transaction. */
@@ -326,36 +349,53 @@ export class KnowledgeSourcesService {
             await tx.update(
                 KnowledgeSourceEntity,
                 { id: sourceId, workspaceId },
-                { status: "extracting_facts", progress: 85, updatedAt: NOW },
+                {
+                    status: "extracting_facts",
+                    progress: 85,
+                    stage: "facts",
+                    stageDone: null,
+                    stageTotal: null,
+                    updatedAt: NOW,
+                },
             )
         })
+        await this.progress.announce(workspaceId, sourceId)
     }
 
     /** The passages are stored without vectors and the source waits for credits. */
-    async blockIndexing(workspaceId: string, sourceId: string, note: StoredNote, chunks: number): Promise<void> {
-        await this.entityManager.update(
-            KnowledgeSourceEntity,
-            { id: sourceId, workspaceId },
-            { status: "blocked_credits", error: note, chunkCount: chunks, progress: 80, updatedAt: NOW },
-        )
+    blockIndexing(workspaceId: string, sourceId: string, note: StoredNote, chunks: number): Promise<void> {
+        return this.progress.write(workspaceId, sourceId, {
+            status: "blocked_credits",
+            error: note,
+            chunkCount: chunks,
+            progress: 80,
+            stage: null,
+            done: null,
+            total: null,
+        })
     }
 
     /** The facts are read (or could not be): the source is ready, with a stored note when the reading failed. */
-    async ready(workspaceId: string, sourceId: string, note: MaybeNote): Promise<void> {
-        await this.entityManager.update(
-            KnowledgeSourceEntity,
-            { id: sourceId, workspaceId },
-            { status: "ready", progress: 100, ...(note === null ? {} : { error: note }), updatedAt: NOW },
-        )
+    ready(workspaceId: string, sourceId: string, note: MaybeNote): Promise<void> {
+        return this.progress.write(workspaceId, sourceId, {
+            status: "ready",
+            progress: 100,
+            stage: null,
+            done: null,
+            total: null,
+            ...(note === null ? {} : { error: note }),
+        })
     }
 
     /** The facts cannot be read because the workspace has no credits left: the source waits for them. */
-    async blockFacts(workspaceId: string, sourceId: string, note: StoredNote): Promise<void> {
-        await this.entityManager.update(
-            KnowledgeSourceEntity,
-            { id: sourceId, workspaceId },
-            { status: "blocked_credits", error: note, updatedAt: NOW },
-        )
+    blockFacts(workspaceId: string, sourceId: string, note: StoredNote): Promise<void> {
+        return this.progress.write(workspaceId, sourceId, {
+            status: "blocked_credits",
+            error: note,
+            stage: null,
+            done: null,
+            total: null,
+        })
     }
 
     /** The agent instance a document is kept for, which must belong to the workspace; null when the document is for every instance. */

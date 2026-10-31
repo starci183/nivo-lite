@@ -6,8 +6,11 @@ import {
     isArchiveName,
     itemOfFile,
     itemOfLink,
+    forgetUploads,
+    interruptedUploads,
     itemsOfZip,
     readArchive,
+    rememberUploads,
     stripExt,
 } from "@/modules/documents"
 import type { BatchMeta, QueueActions, QueueItem } from "@/modules/documents"
@@ -25,6 +28,9 @@ interface AddQueue {
     readonly isReading: boolean
     readonly zipTruncated: boolean
     readonly zipSkips: ReadonlyArray<ZipSkip>
+    /** Files an earlier page was uploading when it went away: those uploads stopped and must be chosen again. */
+    readonly interrupted: ReadonlyArray<string>
+    readonly dismissInterrupted: () => void
     readonly addFiles: (all: ReadonlyArray<File>) => void
     readonly addLinks: (urls: ReadonlyArray<string>) => ReadonlyArray<QueueItem>
     readonly removeItem: (id: string) => void
@@ -43,6 +49,7 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
     const [zipTruncated, setZipTruncated] = useState(false)
     const [zipSkips, setZipSkips] = useState<ReadonlyArray<ZipSkip>>([])
     const zipSeen = useRef<Set<string>>(new Set())
+    const [interrupted, setInterrupted] = useState<ReadonlyArray<string>>(interruptedUploads)
 
     const patch = (id: string, change: Partial<QueueItem>) =>
         setItems((now) => now.map((item) => (item.id === id ? { ...item, ...change } : item)))
@@ -92,12 +99,18 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
     const sendOne = sendOneOf(patch, actions)
 
     const sendAll = sendAllOf(sendOne)
+    const dismissInterrupted = () => {
+        forgetUploads()
+        setInterrupted([])
+    }
 
     return {
         items,
         isReading,
         zipTruncated,
         zipSkips,
+        interrupted,
+        dismissInterrupted,
         addFiles,
         addLinks,
         removeItem: (id) => setItems((now) => now.filter((one) => one.id !== id)),
@@ -113,6 +126,10 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
 
 const sendAllOf = (sendOne: (item: QueueItem, meta: BatchMeta) => Promise<boolean>) => {
     return async (queue: ReadonlyArray<QueueItem>, meta: BatchMeta): Promise<number> => {
+        rememberUploads(
+            queue.flatMap((item) => (item.file === undefined ? [] : [item.name])),
+            Date.now(),
+        )
         let next = 0
         const lane = async (): Promise<number> => {
             const item = queue[next]
@@ -122,13 +139,14 @@ const sendAllOf = (sendOne: (item: QueueItem, meta: BatchMeta) => Promise<boolea
             return sent + (await lane())
         }
         const lanes = await Promise.all(Array.from({ length: Math.min(UPLOAD_PARALLEL, queue.length) }, lane))
+        forgetUploads()
         return lanes.reduce((sum, count) => sum + count, 0)
     }
 }
 
 const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => void, actions: QueueActions) => {
     return async (item: QueueItem, meta: BatchMeta): Promise<boolean> => {
-        patch(item.id, { status: "uploading", error: undefined })
+        patch(item.id, { status: "uploading", error: undefined, uploaded: 0 })
         const info = {
             topic: meta.topic ?? item.topic ?? null,
             tags: meta.tags,
@@ -137,9 +155,12 @@ const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => void, acti
             installationId: meta.installationId,
             origin: item.origin ?? null,
         }
-        const path = item.file === undefined ? null : await actions.upload(item.file)
+        const path =
+            item.file === undefined
+                ? null
+                : await actions.upload(item.file, (fraction) => patch(item.id, { uploaded: fraction }))
         if (item.kind === "file" && path === null) {
-            patch(item.id, { status: "failed", error: "errUpload" })
+            patch(item.id, { status: "failed", error: "errUpload", uploaded: undefined })
             return false
         }
         const queued = await actions.enqueue({
@@ -149,7 +170,12 @@ const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => void, acti
             url: item.kind === "link" ? item.name : null,
             meta: info,
         })
-        patch(item.id, queued ? { status: "queued" } : { status: "failed", error: "errEnqueue" })
+        patch(
+            item.id,
+            queued
+                ? { status: "queued", uploaded: undefined }
+                : { status: "failed", error: "errEnqueue", uploaded: undefined },
+        )
         return queued
     }
 }

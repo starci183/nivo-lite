@@ -24,6 +24,18 @@ export interface ChunkWrite {
     readonly drafts: ReadonlyArray<ChunkDraft>
 }
 
+/** A passage to store at a fixed place in its source. */
+export interface PlacedChunkDraft extends ChunkDraft {
+    /** The order of the passage in its source (from 0). */
+    readonly order: number
+}
+
+/** Some passages of one source, stored in place of the passages at the same orders; the other passages stay. */
+export interface ChunkBatchWrite extends Omit<ChunkWrite, "drafts"> {
+    /** The passages, each with its order. */
+    readonly drafts: ReadonlyArray<PlacedChunkDraft>
+}
+
 /** One stored passage that has a vector. */
 export interface EmbeddedChunk {
     /** The order of the passage in its source. */

@@ -4,12 +4,13 @@ import {
     EmptyNotice,
     IconButton,
     ListRow,
-    Meter,
     SurfaceListCard,
     Text,
     TextAction,
     Tooltip,
 } from "@starci/grammar/common"
+import { KnowledgeProgressRow } from "@/components/branches/KnowledgeProgressRow"
+import type { KnowledgeProgressRowProps } from "@/components/branches/KnowledgeProgressRow"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { IconName } from "@/components/leaves/Icon"
 import { ACTIONS_CLASS_NAME, DETAIL_CLASS_NAME, LINE_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
@@ -50,7 +51,7 @@ export interface KnowledgeRowView {
     readonly actions?: ReadonlyArray<RowActionView>
     readonly parts?: ReadonlyArray<RowPartView>
     /** The reading of a worker, 0-100; nothing is drawn for it while undefined. */
-    readonly progress?: { readonly label: string; readonly value: number } | undefined
+    readonly progress?: KnowledgeProgressRowProps | undefined
     /** A link on the title. */
     readonly href?: string
 }
@@ -170,9 +171,7 @@ const Row = (props: RowProps) => (
     >
         {props.row.progress === undefined && (props.row.parts ?? []).length === 0 ? null : (
             <div className={DETAIL_CLASS_NAME}>
-                {props.row.progress === undefined ? null : (
-                    <Meter label={props.row.progress.label} value={props.row.progress.value} isLabelHidden />
-                )}
+                {props.row.progress === undefined ? null : <KnowledgeProgressRow {...props.row.progress} />}
                 {(props.row.parts ?? []).map((part) => (
                     <div key={part.id} className={LINE_CLASS_NAME}>
                         <div className={TEXT_CLASS_NAME}>

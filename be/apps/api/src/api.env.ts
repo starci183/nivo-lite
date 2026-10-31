@@ -1,3 +1,4 @@
+import { parseKnowledgeConfig } from "@modules/domain/knowledge"
 import { parseBillingConfig } from "@modules/domain/billing"
 import { parseServerConfig, type EnvSource } from "@modules/platform/config"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
@@ -108,6 +109,8 @@ export interface ApiOptions {
     readonly webhookDelivery: ReturnType<typeof parseWebhookDeliveryConfig>
     /** The signing secret and the webhook base of the shared n8n workflows. */
     readonly n8n: ReturnType<typeof parseN8nConfig>
+    /** The knowledge capability: the demo pacing knob of indexing (`KNOWLEDGE_INDEX_CHUNK_DELAY_MS`, 0 unless a demo asks). */
+    readonly knowledge: ReturnType<typeof parseKnowledgeConfig>
     /** How ffmpeg is run. */
     readonly ffmpeg: ReturnType<typeof parseFfmpegConfig>
     /** The text-to-speech provider of the video voiceover. */
@@ -152,6 +155,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     channelSetup: parseChannelSetupConfig(env),
     webhookDelivery: parseWebhookDeliveryConfig(env),
     n8n: parseN8nConfig(env),
+    knowledge: parseKnowledgeConfig(env),
     ffmpeg: parseFfmpegConfig(env),
     tts: parseTtsConfig(env),
     video: parseVideoConfig(env),

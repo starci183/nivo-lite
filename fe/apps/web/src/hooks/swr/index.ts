@@ -25,6 +25,7 @@ export { QUERY_MODULE_INSTALLATIONS_SWR_KEY, QUERY_MY_ACCOUNT_SWR_KEY, QUERY_MY_
 export { useQueryChatMarkerStateSwr } from "./api"
 export { useSubscribeChatTypingSwr } from "./api"
 export { useSubscribeOfficeActivitySwr } from "./api"
+export { useSubscribeKnowledgeProgressSwr } from "./api"
 export { useMutateMarkChatDeliveredSwr, useMutateMarkChatReadSwr, useMutateSetChatMutedSwr } from "./api"
 export { useMutateSetChatTypingSwr } from "./api"
 export { QUERY_OFFICE_COMMAND_CANDIDATES_SWR_KEY } from "./api"

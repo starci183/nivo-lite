@@ -10,6 +10,7 @@ import {
     isReadyNote,
     moduleFilterOf,
     noteKeyOf,
+    useKnowledgeProgressViewOf,
     useKnowledgeSources,
     useLibraryCommands,
     useWorkspaceMember,
@@ -96,7 +97,8 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
     const router = navigation.useRouter()
     const commands = useLibraryCommands()
     const member = useWorkspaceMember()
-    const { sources, slot, reload } = useKnowledgeSources()
+    const { sources, live, slot, reload } = useKnowledgeSources()
+    const progressOf = useKnowledgeProgressViewOf(live)
     const slotLabels = useSlotLabels()
     const board = useBrainBoard()
     const shown = (sources ?? []).filter((source) => props.module === "all" || source.module === props.module)
@@ -121,10 +123,7 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
             href: knowledgeSourceHref(source.id),
             lines: [parts.join(" · "), ...(source.error === null ? [] : [t(noteKeyOf(source.error))])],
             badges: badgesOf(t, source, status, reading),
-            progress:
-                isDocumentActive(source.status) && source.progress > 0
-                    ? { label: status, value: source.progress }
-                    : undefined,
+            progress: progressOf(source.id) ?? undefined,
             actions: retryActionsOf(t, commands, source.id, { canRetry, canRetryFacts }),
         }
     }

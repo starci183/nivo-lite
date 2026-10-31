@@ -1,11 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { Brackets } from "typeorm"
+import { Brackets, In, MoreThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { hybridHit, hybridScore } from "./hybrid-score.policy"
 import type {
+    ChunkBatchWrite,
     ChunkHit,
+    ChunkDraft,
     ChunkQuery,
     ChunkWrite,
     EmbeddedChunk,
@@ -41,6 +43,19 @@ interface ChunkHitRow {
     readonly ord: number
 }
 
+/** The row of a passage at its order, with the vector it was given. */
+const rowOf = (write: Omit<ChunkWrite, "drafts">, draft: ChunkDraft, order: number) => ({
+    workspaceId: write.workspaceId,
+    sourceId: write.sourceId,
+    module: write.module,
+    visibility: write.visibility,
+    installationId: write.installationId,
+    ord: order,
+    content: draft.text,
+    embedding: draft.vector,
+    embeddingModel: draft.vector === null ? null : write.model,
+})
+
 /** How many passages one insert statement stores. */
 const INSERT_BATCH = 50
 
@@ -61,20 +76,31 @@ export class KnowledgeChunksService {
                 const drafts = write.drafts.slice(from, from + INSERT_BATCH)
                 return tx.insert(
                     KnowledgeChunkEntity,
-                    drafts.map((draft, offset) => ({
-                        workspaceId: write.workspaceId,
-                        sourceId: write.sourceId,
-                        module: write.module,
-                        visibility: write.visibility,
-                        installationId: write.installationId,
-                        ord: from + offset,
-                        content: draft.text,
-                        embedding: draft.vector,
-                        embeddingModel: draft.vector === null ? null : write.model,
-                    })),
+                    drafts.map((draft, offset) => rowOf(write, draft, from + offset)),
                 )
             })
         })
+    }
+
+    /** Stores these passages in place of the passages at the same orders in one transaction; the passages of other orders stay, so a retry keeps what is already stored. */
+    async keep(write: ChunkBatchWrite): Promise<void> {
+        if (write.drafts.length === 0) return
+        await this.entityManager.transaction(async (tx) => {
+            await tx.delete(KnowledgeChunkEntity, {
+                sourceId: write.sourceId,
+                workspaceId: write.workspaceId,
+                ord: In(write.drafts.map((draft) => draft.order)),
+            })
+            await tx.insert(
+                KnowledgeChunkEntity,
+                write.drafts.map((draft) => rowOf(write, draft, draft.order)),
+            )
+        })
+    }
+
+    /** Removes the passages of a source from this order on (the text got shorter). */
+    async trim(workspaceId: string, sourceId: string, count: number): Promise<void> {
+        await this.entityManager.delete(KnowledgeChunkEntity, { sourceId, workspaceId, ord: MoreThanOrEqual(count) })
     }
 
     /**

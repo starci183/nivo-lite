@@ -79,4 +79,16 @@ export class KnowledgeSourceEntity extends UuidAbstractEntity {
     /** 0-100 while a worker is on it. */
     @Column({ name: "progress", type: "integer", default: () => "0" })
     progress!: number
+
+    /** The stage the worker is on while it works (read, chunk, embed, store or facts); null when no worker is on it. */
+    @Column({ name: "stage", type: "text", nullable: true })
+    stage!: "read" | "chunk" | "embed" | "store" | "facts" | null
+
+    /** How many passages of the stage are done (the embed stage: passages with their vector); null when the stage has no count. */
+    @Column({ name: "stage_done", type: "integer", nullable: true })
+    stageDone!: number | null
+
+    /** How many passages the stage has in all; null when the stage has no count. */
+    @Column({ name: "stage_total", type: "integer", nullable: true })
+    stageTotal!: number | null
 }
