@@ -908,6 +908,28 @@ input AgentIdInput {
   agentId: ID! @inputBounds(maxLength: 36)
 }
 
+type AgentGraphType {
+  activeVersionId: String
+  agentId: String!
+  cardsJson: String!
+  draftJson: String!
+  draftRev: Int!
+  gapsJson: String!
+  installationId: String!
+  mode: String!
+  problemsJson: String!
+  proposalsJson: String!
+}
+
+type AgentGraphVersionType {
+  changeKind: String!
+  id: String!
+  note: String!
+  publishedAt: String!
+  publishedBy: String
+  version: Int!
+}
+
 type AgentKnowledgeLaneType {
   count: Int
   lane: String!
@@ -3046,6 +3068,11 @@ type DeleteCandidateType {
   files: Int!
 }
 
+input DeclineAgentGraphProposalInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  proposalId: String! @inputBounds(maxLength: 36)
+}
+
 input DeleteConnectionInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
@@ -3343,6 +3370,11 @@ type GenerateAdType {
   sanitised: Boolean!
   topcv: String!
   zalo: String!
+}
+
+input GetAgentGraphInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  locale: String
 }
 
 input GetConnectionFirstEventInput {
@@ -4442,6 +4474,10 @@ type LinkStaffType {
   staffId: ID!
 }
 
+input ListAgentGraphVersionsInput {
+  agentId: String! @inputBounds(maxLength: 36)
+}
+
 input ListAgentsInput {
   module: String @inputBounds(maxLength: 60)
 }
@@ -5271,6 +5307,7 @@ type Mutation {
   decideShiftsAvailability(input: DecideShiftsAvailabilityInput!): Boolean!
   decideThreadApproval(input: DecideThreadApprovalInput!): ThreadMessageType!
   decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
+  declineAgentGraphProposal(input: DeclineAgentGraphProposalInput!): Boolean!
   deleteConnection(input: DeleteConnectionInput!): Boolean!
   deleteHiringCandidate(input: HiringCandidateRefInput!): DeleteCandidateType!
   deleteInventoryRecipe(input: InventoryRecipeRefInput!): Boolean!
@@ -5321,6 +5358,7 @@ type Mutation {
   proposeBrandKit(input: ProposeBrandKitInput!): BrandProposalType!
   proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
   proposeShiftsWeek(input: ProposeShiftsWeekInput!): ProposeWeekType!
+  publishAgentGraph(input: PublishAgentGraphInput!): AgentGraphVersionType!
   reassignShiftsShift(input: ReassignShiftsShiftInput!): ReassignShiftsShiftType!
   receiveInventoryPo(input: ReceiveInventoryPoInput!): ReceivePoType!
   recheckZaloConnection(input: RecheckZaloConnectionInput!): ZaloPageType!
@@ -5378,6 +5416,7 @@ type Mutation {
   resolveDossierFinding(input: ResolveDossierFindingInput!): DossierFindingType!
   respondHiringInterview(input: RespondHiringInterviewInput!): RespondSlotType!
   respondHiringOffer(input: RespondHiringOfferInput!): RespondOfferType!
+  restoreAgentGraphVersion(input: RestoreAgentGraphVersionInput!): AgentGraphVersionType!
   retryFailedStep(input: RetryFailedStepInput!): SalesActionType!
   retryKnowledgeSource(input: RetryKnowledgeSourceInput!): SourceRefType!
   returnZaloAuthorization(input: ReturnZaloAuthorizationInput!): ZaloWizardConnectionType!
@@ -5391,6 +5430,7 @@ type Mutation {
   runCsvImport(input: RunCsvImportInput!): CsvImportResultType!
   runDocumentImport(input: RunDocumentImportInput!): CsvImportResultType!
   runFlow(input: RunFlowInput!): RunFlowType!
+  saveAgentGraphDraft(input: SaveAgentGraphDraftInput!): Int!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
   saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
   saveBookingHours(input: SaveBookingHoursInput!): SaveBookingHoursType!
@@ -5438,6 +5478,7 @@ type Mutation {
   sendZaloTestMessage(input: SendZaloTestInput!): ZaloTestSendType!
   setAgentAvatar(input: SetAgentAvatarInput!): AgentAckType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
+  setAgentGraphMode(input: SetAgentGraphModeInput!): Boolean!
   setAgentOwnership(input: SetAgentOwnershipInput!): AgentAckType!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
@@ -6122,6 +6163,8 @@ type Query {
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
+  agentGraph(input: GetAgentGraphInput!): AgentGraphType!
+  agentGraphVersions(input: ListAgentGraphVersionsInput!): [AgentGraphVersionType!]!
   agentKnowledgeLenses: [AgentKnowledgeLensType!]!
   agentPage(input: AgentIdInput!): AgentPageType!
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
@@ -6299,6 +6342,11 @@ type QueuedAgentChatTurnType {
   conversationId: ID!
   id: ID!
   status: String!
+}
+
+input PublishAgentGraphInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  note: String! @inputBounds(maxLength: 500)
 }
 
 input ReadLeadGenCommentStatusInput {
@@ -6770,6 +6818,11 @@ type RetrievedPassageType {
   visibility: String!
 }
 
+input RestoreAgentGraphVersionInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  versionId: String! @inputBounds(maxLength: 36)
+}
+
 input RetryFailedStepInput {
   id: ID! @inputBounds(maxLength: 36)
 }
@@ -7066,6 +7119,12 @@ type SalesWorkbenchType {
   metrics: SalesMetricsType!
   nowIso: String!
   staff: [SalesChoiceType!]!
+}
+
+input SaveAgentGraphDraftInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  documentJson: String! @inputBounds(maxLength: 400000)
+  rev: Int! @inputBounds(min: 0)
 }
 
 input SaveAuthorityRuleInput {
@@ -7582,6 +7641,11 @@ input SetAgentAvatarInput {
 input SetAgentConnectionsInput {
   agentId: ID! @inputBounds(maxLength: 64)
   connections: [ConnectionWishInput!]! @inputBounds(maxItems: 200)
+}
+
+input SetAgentGraphModeInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  mode: String!
 }
 
 input SetAgentOwnershipInput {

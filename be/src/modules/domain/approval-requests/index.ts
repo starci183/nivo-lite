@@ -4,6 +4,7 @@ export type { ResolvedRequestLine } from "./approval-requests-history-read.contr
 export { APPROVAL_REQUESTS_ERROR_KINDS } from "./errors/approval-requests.error"
 export { APPROVAL_REQUESTS_MESSAGES } from "./messages/approval-requests.messages"
 export { ApprovalRequestsModule } from "./approval-requests.module"
+export { resolveApprovers } from "./approver-set.policy"
 export { ApprovalRequestsService } from "./approval-requests.service"
 export { ApprovalRequestsReadService } from "./approval-requests-read.service"
 export type { OpenApprovalParams } from "./approval-requests.contracts"

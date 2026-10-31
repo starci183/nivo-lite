@@ -1,5 +1,6 @@
-import { Injectable } from "@nestjs/common"
-import { AuthorityRulesService, evaluateGate } from "@modules/domain/authority-rules"
+import { Injectable, Optional } from "@nestjs/common"
+import { AuthorityRulesService, evaluateGate, InjectWorkBranchDecider } from "@modules/domain/authority-rules"
+import type { WorkBranchDecider } from "@modules/domain/authority-rules"
 import { WorkItemsService } from "@modules/domain/work-items"
 import type { OptionalWorkItem } from "@modules/domain/work-items"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -16,6 +17,7 @@ import type {
     WorkContext,
     WorkEdits,
     WorkItem,
+    WorkOrigin,
     WorkPerformer,
     WorkSpec,
 } from "./decisions.contracts"
@@ -75,6 +77,7 @@ export class WorkEngineService {
         private readonly chain: WorkChainService,
         private readonly approval: WorkApprovalService,
         private readonly recorder: WorkRecorderService,
+        @Optional() @InjectWorkBranchDecider() private readonly branches?: WorkBranchDecider,
     ) {}
 
     /**
@@ -86,7 +89,12 @@ export class WorkEngineService {
         if (!created || spec.queue === true) return item
         const claimed = await this.items.claim(ctx.workspaceId, item.id)
         if (claimed === null) return item
-        return this.process(ctx, claimed, { preset: spec.preset, noChain: spec.noChain, forceAsk: spec.forceAsk })
+        return this.process(
+            ctx,
+            claimed,
+            { preset: spec.preset, noChain: spec.noChain, forceAsk: spec.forceAsk },
+            spec.origin ?? null,
+        )
     }
 
     /** Queues the next department's step for a finished item. */
@@ -179,7 +187,12 @@ export class WorkEngineService {
     }
 
     /** One pass of the gate over a claimed item: prepare, judge, then perform or ask. Any failure fails the item. */
-    private async process(ctx: WorkContext, claimed: WorkItem, options: ProcessOptions): Promise<WorkItem> {
+    private async process(
+        ctx: WorkContext,
+        claimed: WorkItem,
+        options: ProcessOptions,
+        origin: WorkOrigin | null = null,
+    ): Promise<WorkItem> {
         const opts = processOptionsOf(claimed.proposal, options)
         let current = claimed
         try {
@@ -195,10 +208,11 @@ export class WorkEngineService {
                     leadId: prepared.patch?.lead_id ?? null,
                 })
             }
-            const judgement = await this.judge(ctx, current, proposal, opts)
-            if (judgement.verdict.verdict === "ask") return await this.approval.ask(ctx, current, proposal, judgement)
+            const judgement = await this.judge(ctx, current, proposal, opts, origin)
+            const judged = judgement.proposal ?? proposal
+            if (judgement.verdict.verdict === "ask") return await this.approval.ask(ctx, current, judged, judgement)
             const plan: FinishPlan = { path: "auto", by: NIVO_BY, outcome: "auto_done" }
-            return await this.finish(ctx, performer, current, proposal, plan, opts.noChain === true)
+            return await this.finish(ctx, performer, current, judged, plan, opts.noChain === true)
         } catch (cause) {
             return this.fail(ctx, current, cause)
         }
@@ -231,13 +245,24 @@ export class WorkEngineService {
         item: WorkItem,
         proposal: Proposal,
         opts: ProcessOptions,
+        origin: WorkOrigin | null,
     ): Promise<Judgement> {
         const rule = await this.rules.ruleFor(ctx, item.action, item.installation_id)
-        const base = await this.gate(item, rule, proposal, false)
+        const branch = await this.branches?.decide({
+            workspaceId: ctx.workspaceId,
+            item,
+            proposal,
+            gate: (read) => this.gate(item, rule, read, false),
+            turnId: origin?.turnId ?? null,
+            wakeId: origin?.wakeId ?? null,
+        })
+        const judged = branch?.proposal ?? proposal
+        const base = branch?.verdict ?? (await this.gate(item, rule, proposal, false))
         const forced = opts.forceAsk === undefined ? base : askBecause(base, opts.forceAsk)
-        if (forced.verdict !== "auto" || !isCustomerOutbound(item.action)) return { verdict: forced, rule }
-        const access = await this.access.accessOf(ctx, item, proposal)
-        return { verdict: accessLetsRunAlone(access) ? forced : askBecause(forced, "over_authority"), rule }
+        const carried = branch === null || branch === undefined ? {} : { proposal: judged, branchDecisionId: branch.decisionId }
+        if (forced.verdict !== "auto" || !isCustomerOutbound(item.action)) return { verdict: forced, rule, ...carried }
+        const access = await this.access.accessOf(ctx, item, judged)
+        return { verdict: accessLetsRunAlone(access) ? forced : askBecause(forced, "over_authority"), rule, ...carried }
     }
 
     private async gate(

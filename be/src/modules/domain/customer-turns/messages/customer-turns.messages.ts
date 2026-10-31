@@ -22,6 +22,7 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
         "customerTurns.reason.over_authority": "Vượt quyền",
         "customerTurns.reason.unclear_outcome": "Chưa rõ kết quả",
         "customerTurns.reason.not_allowed": "Chưa được giao quyền",
+        "customerTurns.reason.branch_ask": "Cần người duyệt",
         "customerTurns.orderRecorded": "Đã ghi nhận đơn từ cuộc trò chuyện: {{items}} · {{amount}} → Sales AI",
         "customerTurns.claimRecorded":
             "Khách báo đã chuyển khoản {{no}} — chờ chủ doanh nghiệp kiểm tra tài khoản ngân hàng",
@@ -69,6 +70,7 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
         "customerTurns.reason.over_authority": "Over authority",
         "customerTurns.reason.unclear_outcome": "Unclear outcome",
         "customerTurns.reason.not_allowed": "Not granted",
+        "customerTurns.reason.branch_ask": "Needs an approver",
         "customerTurns.orderRecorded": "Order recorded from the chat: {{items}} · {{amount}} → Sales AI",
         "customerTurns.claimRecorded":
             "The customer says they paid {{no}}: waiting for the owner to check the bank account",

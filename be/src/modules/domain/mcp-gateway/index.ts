@@ -33,3 +33,6 @@ export type {
     RoleResolution,
     SurfaceReply,
 } from "./mcp-gateway.contracts"
+export { dataKindOfTool } from "./data-rights.policy"
+export { DATA_RIGHTS_GATE } from "./mcp-gateway.decorators"
+export type { DataRight, DataRightsGate, OptionalDataRights } from "./mcp-gateway.contracts"

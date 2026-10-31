@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { McpCallLogService } from "@modules/domain/mcp-call-log"
 import { McpConnectorsService } from "@modules/domain/mcp-connectors"
 import { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
@@ -19,13 +19,17 @@ import { grantOf, nativeConnectorOf, remoteConnectorOf } from "./connector-row.m
 import { judgeGrant } from "./grant.policy"
 import { gatewayArgumentsSchema } from "./gateway-tools.schema"
 import { withReplayKey } from "./idempotency-key.policy"
-import { InjectMcpGatewayOptions, InjectNativeAdapters } from "./mcp-gateway.decorators"
+import { InjectDataRightsGate, InjectMcpGatewayOptions, InjectNativeAdapters } from "./mcp-gateway.decorators"
+import { applyFields, judgeDataRight } from "./data-rights.policy"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import type {
     BreakerState,
     CapabilityRole,
     CallOutcome,
+    DataRight,
+    DataRightsGate,
+    DataRightVerdict,
     DiscoveredTool,
     GatewayCaller,
     GatewayCallResult,
@@ -129,6 +133,7 @@ export class McpGatewayService {
         private readonly credentials: McpConnectorCredentialService,
         private readonly receipts: GatewayReceiptsService,
         private readonly nativeRunner: NativeRunnerService,
+        @Optional() @InjectDataRightsGate() private readonly dataRights?: DataRightsGate,
     ) {}
 
     /** The connectors of a workspace: every native one, and the remote ones it registered. */
@@ -270,11 +275,24 @@ export class McpGatewayService {
             })
             return { ok: false, code: "approval_required", reason: verdict.reason }
         }
+        const reach = await this.reachOf(caller, resolved)
+        if (reach.kind === "deny") {
+            await this.audit(caller, resolved, sent, { outcome: "refused", code: "no_data_right", summary: reach.reason, started })
+            return { ok: false, code: "not_granted", detail: "no_data_right" }
+        }
         if (this.mustAsk(caller, resolved)) {
             await this.audit(caller, resolved, sent, { outcome: "approval", code: "tainted_input", summary: "", started })
             return { ok: false, code: "approval_required", reason: "tainted_input" }
         }
-        return this.guarded(caller, resolved, { original: args, forwarded: sent }, started)
+        return this.guarded(caller, resolved, { original: args, forwarded: sent }, started, reach.kind === "narrow" ? reach.right : null)
+    }
+
+    /** What the agent's data rights decide about a native read: every other call, and an agent no enforced graph governs, passes untouched. */
+    private async reachOf(caller: GatewayCaller, resolved: Resolved): Promise<DataRightVerdict> {
+        const gate = this.dataRights
+        if (gate === undefined || resolved.connector.manifest.kind !== "native" || resolved.spec.scope !== "read")
+            return { kind: "open" }
+        return judgeDataRight(await gate.rightsOf(caller.workspaceId, caller.agentId), resolved.name, caller)
     }
 
     /** True for a write of a turn that read tainted text, unless a person approved this exact call: the grant alone does not carry it. */
@@ -314,6 +332,7 @@ export class McpGatewayService {
         resolved: Resolved,
         args: GatewayArguments,
         started: number,
+        right: DataRight | null,
     ): Promise<GatewayCallResult> {
         const step = caller.opKey ?? caller.workItemId
         if (resolved.spec.scope !== "read" && (step === null || step.trim() === "")) {
@@ -328,12 +347,12 @@ export class McpGatewayService {
         const breakerKey = `${caller.workspaceId}:${resolved.connector.manifest.key}`
         const gate = breakerGate(this.breakerOf(breakerKey), started)
         if (resolved.spec.scope === "read" || !gate.allowed) {
-            return this.execute(caller, resolved, args.forwarded, started)
+            return this.execute(caller, resolved, args.forwarded, started, right)
         }
         const key = createHash("sha256")
             .update(JSON.stringify([caller.workspaceId, step, resolved.name, argsHashOf(args.original)]))
             .digest("hex")
-        const operation: GatewayReceiptOperation = () => this.execute(caller, resolved, args.forwarded, started)
+        const operation: GatewayReceiptOperation = () => this.execute(caller, resolved, args.forwarded, started, right)
         return this.receipts.run(caller.workspaceId, key, operation)
     }
 
@@ -343,6 +362,7 @@ export class McpGatewayService {
         resolved: Resolved,
         args: GatewayJson,
         started: number,
+        right: DataRight | null,
     ): Promise<GatewayCallResult> {
         const breakerKey = `${caller.workspaceId}:${resolved.connector.manifest.key}`
         const gate = breakerGate(this.breakerOf(breakerKey), started)
@@ -360,7 +380,7 @@ export class McpGatewayService {
         const ran = replayable(resolved.spec, args, first) ? await this.run(caller, resolved, args) : first
         const now = this.clock.now().getTime()
         this.breakers.set(breakerKey, breakerAfter(this.breakerOf(breakerKey), ran.kind !== "failed", now))
-        return this.answer(caller, resolved, args, ran, started)
+        return this.answer(caller, resolved, args, ran, started, right)
     }
 
     private async answer(
@@ -369,6 +389,7 @@ export class McpGatewayService {
         args: GatewayJson,
         ran: Ran,
         started: number,
+        right: DataRight | null,
     ): Promise<GatewayCallResult> {
         if (ran.kind === "failed") {
             const unknown = ran.outcome === "timeout" && resolved.spec.scope !== "read"
@@ -376,14 +397,15 @@ export class McpGatewayService {
             await this.audit(caller, resolved, args, { outcome: ran.outcome, code, summary: "", started })
             return { ok: false, code: unknown ? "unknown_outcome" : "unavailable", detail: ran.code }
         }
-        const summary = summaryOf(ran.value, resolved.spec.secretFields)
+        const shown = ran.kind === "ok" && right !== null ? applyFields(ran.value, right) : ran.value
+        const summary = summaryOf(shown, resolved.spec.secretFields)
         if (ran.kind === "tool_error") {
             await this.audit(caller, resolved, args, { outcome: "error", code: "tool_error", summary, started })
             return { ok: false, code: "tool_error", detail: summary }
         }
         await this.audit(caller, resolved, args, { outcome: "ok", code: null, summary, started })
         if (resolved.spec.taints === true) this.tainted = withTaint(this.tainted, caller, this.clock.now().getTime())
-        return { ok: true, value: ran.value }
+        return { ok: true, value: shown }
     }
 
     /** The connector and spec of a full name, or the failure that stops the call before any grant is read. */
