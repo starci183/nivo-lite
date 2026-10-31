@@ -1,13 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, FakeClock, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { In } from "typeorm"
+import { In, IsNull } from "typeorm"
 import {
     agentWorkSettingsRowOf,
     agentWorkStateRowOf,
     heldCustomerWakeRowOf,
     heldOldWakeRowOf,
     heldScheduleWakeRowOf,
+    heldTaskWakeRowOf,
     heldTagWakeRowOf,
     agentTurnQueueProviderOf,
 } from "@tests/fixtures/builders/agent-work.builder"
@@ -16,7 +17,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentWorkAccessService } from "./agent-work-access.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
 import { AgentWorkErrorCode } from "./errors/agent-work.error"
-import { AgentWakeEntity, AgentWorkSettingsEntity, AgentWorkStateEntity } from "./persistence/entities"
+import { AgentTaskEntity, AgentWakeEntity, AgentWorkSettingsEntity, AgentWorkStateEntity } from "./persistence/entities"
 
 const NOW = "2026-11-10T03:00:00.000Z"
 const SWITCH = 'SELECT * FROM "public"."agent_work_switch"($1, $2, $3, $4)'
@@ -129,6 +130,30 @@ describe("AgentWorkSettingsService.setWorkspaceWork", () => {
             { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "conversation:conv-1" },
             { workspaceId: "ws-1", agentId: "agent-2", scopeKey: "agent" },
         ])
+    })
+})
+
+describe("AgentWorkSettingsService.setWorkspaceWork, a task whose wake was held", () => {
+    it("makes the task due again when its wake goes stale, so a held wake is not the end of the task", async () => {
+        const { service, em } = await build(
+            mockEntityManager({
+                upsert: [AgentWorkSettingsEntity, {}],
+                update: [
+                    [AgentWakeEntity, { affected: 1 }],
+                    [AgentTaskEntity, { affected: 1 }],
+                ],
+                findOne: [AgentWorkSettingsEntity, agentWorkSettingsRowOf()],
+            }),
+        )
+        em.find.mockResolvedValueOnce([heldTaskWakeRowOf("w-task")]).mockResolvedValueOnce([])
+
+        await service.setWorkspaceWork("user-1", "ws-1", true)
+
+        expect(em.update).toHaveBeenCalledWith(
+            AgentTaskEntity,
+            { id: In(["task-1"]), status: "open", nextActionAt: IsNull() },
+            { nextActionAt: new Date(NOW) },
+        )
     })
 })
 
