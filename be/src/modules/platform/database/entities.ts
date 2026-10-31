@@ -128,7 +128,6 @@ import { zaloWizardDraftsEntities } from "@modules/domain/zalo-wizard-drafts"
 import { databaseEntities } from "./persistence/entities"
 import { inboxEntities } from "@modules/platform/inbox"
 import { jobsEntities } from "@modules/platform/jobs"
-import { queueEntities } from "@modules/platform/queue"
 import { realtimeEntities } from "@modules/platform/realtime"
 
 /**
@@ -267,6 +266,5 @@ export const PRIMARY_ENTITIES = [
     ...databaseEntities,
     ...inboxEntities,
     ...jobsEntities,
-    ...queueEntities,
     ...realtimeEntities,
 ] as const

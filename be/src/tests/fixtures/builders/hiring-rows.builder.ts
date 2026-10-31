@@ -4,12 +4,12 @@ import { CREATED, LINK_TOKEN } from "./hiring-data.builder"
 const NOW = "2026-10-15T03:00:00.000Z"
 import { entityRowBuilder } from "./entity-row.builder"
 
-type HiringAvailabilityEntity = InstanceType<(typeof hiringEntities)[1]>
-type HiringCandidateEntity = InstanceType<(typeof hiringEntities)[2]>
-type HiringInterviewEntity = InstanceType<(typeof hiringEntities)[5]>
-type HiringJobEntity = InstanceType<(typeof hiringEntities)[6]>
-type HiringOfferEntity = InstanceType<(typeof hiringEntities)[7]>
-type HiringSettingEntity = InstanceType<(typeof hiringEntities)[10]>
+type HiringAvailabilityEntity = InstanceType<(typeof hiringEntities)[0]>
+type HiringCandidateEntity = InstanceType<(typeof hiringEntities)[1]>
+type HiringInterviewEntity = InstanceType<(typeof hiringEntities)[4]>
+type HiringJobEntity = InstanceType<(typeof hiringEntities)[5]>
+type HiringOfferEntity = InstanceType<(typeof hiringEntities)[6]>
+type HiringSettingEntity = InstanceType<(typeof hiringEntities)[9]>
 
 export const settingsRow = entityRowBuilder<HiringSettingEntity>({
     workspaceId: "ws-1",

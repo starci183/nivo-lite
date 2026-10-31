@@ -1,4 +1,3 @@
-import { HiringApplyHitEntity } from "./hiring-apply-hit.entity"
 import { HiringAvailabilityEntity } from "./hiring-availability.entity"
 import { HiringCandidateEntity } from "./hiring-candidate.entity"
 import { HiringConsentEntity } from "./hiring-consent.entity"
@@ -11,7 +10,6 @@ import { HiringRetentionLogEntity } from "./hiring-retention-log.entity"
 import { HiringSettingEntity } from "./hiring-setting.entity"
 
 export {
-    HiringApplyHitEntity,
     HiringAvailabilityEntity,
     HiringCandidateEntity,
     HiringConsentEntity,
@@ -30,7 +28,6 @@ export type { HiringOfferTerms } from "./hiring-offer.entity"
 
 /** The entities the hiring capability owns, collected by the database module. */
 export const hiringEntities = [
-    HiringApplyHitEntity,
     HiringAvailabilityEntity,
     HiringCandidateEntity,
     HiringConsentEntity,
