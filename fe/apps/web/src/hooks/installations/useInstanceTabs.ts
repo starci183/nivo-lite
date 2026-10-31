@@ -4,7 +4,7 @@ import { navigation } from "@/modules/i18n"
 import { agentHref } from "@/modules/installations"
 import type { AgentTab } from "@/modules/installations"
 
-const ALL_TABS: ReadonlyArray<AgentTab> = ["setup", "workbench", "performance", "settings"]
+const ALL_TABS: ReadonlyArray<AgentTab> = ["setup", "workbench", "work", "performance", "settings"]
 
 /** The agent types that have the Performance tab: the AI Marketing (content) agent reads its weekly report there. */
 const PERFORMANCE_MODULES: ReadonlySet<ModuleKey> = new Set<ModuleKey>(["content"])

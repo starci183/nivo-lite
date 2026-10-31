@@ -429,3 +429,15 @@ export type {
     SepayEventView,
     SepayStepView,
 } from "./sepay-connection"
+export type {
+    AgentWorkGoalView,
+    AgentWorkPreset,
+    AgentWorkStatusView,
+    AgentWorkSwitchView,
+    AgentWorkTaskView,
+    AgentWorkTriggerView,
+    AgentWorkTurnView,
+    AgentWorkTurnsView,
+    AgentWorkView,
+    WorkspaceAgentWorkView,
+} from "./agentWork"

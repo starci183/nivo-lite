@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { useMutatePostOfficeMessageSwr, useMutateProposeOfficeCommandSwr } from "@/hooks/swr"
+import { useMutatePostOfficeMessageSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { bodyPartsOf } from "@/modules/office"
 import type { OfficeOutboxView } from "@/modules/types"
@@ -18,8 +18,6 @@ interface SendPlan {
     readonly body: string
     /** The Hub room the line is posted in; null is the Office room. */
     readonly room: string | null
-    /** True when an owner or manager's line should also be read as a command. */
-    readonly shouldPropose: boolean
     /** The names of the agents the line calls, drawn as "typing". */
     readonly callNames: ReadonlyArray<string>
     readonly reading: ReadingAgent | null
@@ -33,11 +31,14 @@ interface OutboxRow {
     readonly postedId: string | null
 }
 
-/** Posts a line to the Office: an optimistic bubble kept until the server copy is in the thread data, the post, then (for an owner or manager) the read as a command. */
+/**
+ * Posts a line to the Office: an optimistic bubble kept until the server copy is in the thread data, then the post. The server reads the
+ * tags of the line in the same transaction and wakes each agent it may ask, so the command card and the answer arrive by the chat
+ * activity refresh; the client no longer asks for the command read.
+ */
 export const useOfficeSend = (knownIds: ReadonlySet<string>) => {
     const runGraphQL = useGraphQLWithToast()
     const post = useMutatePostOfficeMessageSwr()
-    const propose = useMutateProposeOfficeCommandSwr()
     const [outbox, setOutbox] = useState<ReadonlyArray<OutboxRow>>([])
     const [typing, setTyping] = useState<string | null>(null)
     const [reading, setReading] = useState<ReadingAgent | null>(null)
@@ -62,15 +63,12 @@ export const useOfficeSend = (knownIds: ReadonlySet<string>) => {
                 return false
             }
             setOutbox((current) => current.map((row) => (row.id === id ? { ...row, postedId: posted.id } : row)))
-            if (plan.shouldPropose) {
-                await runGraphQL(() => propose.trigger({ messageId: posted.id }), { showSuccessToast: false })
-            }
             await refreshOffice()
             setTyping(null)
             setReading(null)
             return true
         },
-        [runGraphQL, post, propose, isSettled],
+        [runGraphQL, post, isSettled],
     )
 
     const dismissFailed = useCallback(() => setOutbox((current) => current.filter((row) => !row.isFailed)), [])
@@ -81,5 +79,5 @@ export const useOfficeSend = (knownIds: ReadonlySet<string>) => {
                 .map((row) => ({ id: row.id, parts: bodyPartsOf(row.body), isFailed: row.isFailed })),
         [outbox, isSettled],
     )
-    return { send, dismissFailed, outbox: views, typing, reading, isSending: post.isMutating || propose.isMutating }
+    return { send, dismissFailed, outbox: views, typing, reading, isSending: post.isMutating }
 }
