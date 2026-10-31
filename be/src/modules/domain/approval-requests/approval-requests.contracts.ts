@@ -33,6 +33,18 @@ export interface OpenApprovalParams {
     readonly unit: RuleUnit
     /** The agent that asks; the owner of this agent receives the request when nobody answers in time. */
     readonly requestedByAgentId: string
+    /** Who to ask, how and for how long, when a branch of an action graph names its own approver in place of the rule. */
+    readonly branch?: BranchApproval | undefined
+}
+
+/** The approver a branch of an action graph names; it replaces the group, policy and wait of the rule for this request only. */
+export interface BranchApproval {
+    /** The people to ask. */
+    readonly group: ApproverGroup
+    /** How they decide. */
+    readonly policy: ApprovalPolicy
+    /** Minutes the request waits. */
+    readonly timeoutMinutes: number
 }
 
 /** A member of the approver group who cannot approve this request, and why. */
@@ -225,6 +237,8 @@ export interface ApprovalRequestRecord {
     readonly resolved_at: string | null
     /** The member it went to when it expired, or null. */
     readonly escalated_to: string | null
+    /** The group a branch of an action graph asked, or null for a request of a rule. */
+    readonly approver_group?: ApproverGroup | null | undefined
     /** When it opened, as ISO text. */
     readonly created_at: string
 }

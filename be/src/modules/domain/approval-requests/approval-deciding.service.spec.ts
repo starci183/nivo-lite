@@ -257,6 +257,17 @@ describe("ApprovalDecidingService > who may answer", () => {
     })
 })
 
+describe("ApprovalDecidingService > a request a branch asked", () => {
+    it("asks the group the request kept and not the live group of the rule", async () => {
+        const group = { roles: [], rooms: [], members: ["member-ha"] } as const
+        const { service } = await build(deciding(Object.assign(requestForMinhAndHa(), { approverGroup: group })).em)
+
+        await expect(service.decide(answer("member-minh"))).rejects.toMatchObject({
+            code: ApprovalRequestsErrorCode.NotInGroup,
+        })
+    })
+})
+
 describe("ApprovalDecidingService > what changed since the request opened", () => {
     it("lets a member answer who was granted the right after it opened", async () => {
         const grants = [...GRANTS, grantOf({ id: "grant-9", member_id: "member-lan", max_amount: 50 })]

@@ -5,6 +5,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AMOUNT_FACT, FACTS, OWNER_EXAMPLE, branchOf, graphOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { itemOf } from "@tests/fixtures/builders/work-engine.builder"
+import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphDeciderService } from "./agent-graph-decider.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
@@ -26,6 +27,7 @@ const build = async (state: GraphState | null, facts: Record<string, number> | E
         read: facts instanceof Error ? jest.fn().mockRejectedValue(facts) : jest.fn().mockResolvedValue(facts),
     })
     const decisions = mock<AgentGraphDecisionsService>({ record: jest.fn().mockResolvedValue("decision-1") })
+    const approvals = mock<AgentGraphApprovalsService>({ route: jest.fn().mockResolvedValue(undefined), mayDecide: jest.fn().mockResolvedValue(false) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentGraphDeciderService,
@@ -33,9 +35,10 @@ const build = async (state: GraphState | null, facts: Record<string, number> | E
             { provide: AgentGraphsService, useValue: graphs },
             { provide: GraphFactsService, useValue: reader },
             { provide: AgentGraphDecisionsService, useValue: decisions },
+            { provide: AgentGraphApprovalsService, useValue: approvals },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentGraphDeciderService), graphs, reader, decisions, logger }
+    return { service: moduleRef.get(AgentGraphDeciderService), graphs, reader, decisions, logger, approvals }
 }
 
 const requestOf = (gate: BranchRequest["gate"], overrides: Partial<BranchRequest> = {}): BranchRequest => ({
@@ -186,5 +189,19 @@ describe("AgentGraphDeciderService.decide enforced", () => {
         await built.service.decide(requestOf(gateOf(AUTO), { turnId: null, wakeId: null }))
 
         expect(built.decisions.record).toHaveBeenCalledWith(expect.objectContaining({ turnId: null, wakeId: null }))
+    })
+})
+
+describe("AgentGraphDeciderService the approval road", () => {
+    it("hands a waiting item to the approval road of its branch, and asks it who may answer", async () => {
+        const { service, approvals } = await build(stateOf())
+        const route = { workspaceId: "ws-1", workItemId: "item-9", decisionId: "decision-1" }
+        const answerer = { workspaceId: "ws-1", workItemId: "item-9", memberId: "member-1", isOwner: false }
+
+        await service.route(route)
+
+        await expect(service.mayDecide(answerer)).resolves.toBe(false)
+        expect(approvals.route).toHaveBeenCalledWith(route)
+        expect(approvals.mayDecide).toHaveBeenCalledWith(answerer)
     })
 })

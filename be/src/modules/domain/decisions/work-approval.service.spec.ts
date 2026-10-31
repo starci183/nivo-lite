@@ -5,6 +5,8 @@ import { AGENT_DIRECTORY, OfficeLinesService } from "@modules/domain/messages"
 import type { AgentDirectory, OptionalAgentIdentity } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
+import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
+import type { WorkBranchDecider } from "@modules/domain/authority-rules"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -85,6 +87,7 @@ const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdenti
     const open = jest.fn().mockResolvedValue("exec-1")
     const ensureFor = jest.fn().mockResolvedValue({ id: "resp-ensured" } satisfies Partial<ResponsibilityRecord>)
     const markWaitingApproval = jest.fn().mockResolvedValue(undefined)
+    const route = jest.fn().mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkApprovalService,
@@ -103,6 +106,7 @@ const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdenti
                 provide: ResponsibilityJournalService,
                 useValue: mock<ResponsibilityJournalService>({ ensureFor, markWaitingApproval }),
             },
+            { provide: WORK_BRANCH_DECIDER, useValue: mock<WorkBranchDecider>({ route }) },
         ],
     }).compile()
     return {
@@ -115,6 +119,7 @@ const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdenti
         open,
         ensureFor,
         markWaitingApproval,
+        route,
     }
 }
 
@@ -270,6 +275,26 @@ describe("WorkApprovalService", () => {
                 expect(built.open).not.toHaveBeenCalled()
                 expect(built.markWaiting).toHaveBeenCalledWith("item-1", expect.objectContaining({ executionId: kept }))
             })
+        })
+    })
+})
+
+describe("WorkApprovalService", () => {
+    describe("ask of a branch", () => {
+        it("puts the item in front of the approver its branch named, when a branch asked", async () => {
+            const { service, route } = await build()
+
+            await service.ask(ctx, itemOf(), proposalOf(), { ...askOf(), branchDecisionId: "decision-1" })
+
+            expect(route).toHaveBeenCalledWith({ workspaceId: "ws-1", workItemId: "item-1", decisionId: "decision-1" })
+        })
+
+        it("routes nothing when the rule asked and no branch did", async () => {
+            const { service, route } = await build()
+
+            await service.ask(ctx, itemOf(), proposalOf(), askOf())
+
+            expect(route).not.toHaveBeenCalled()
         })
     })
 })

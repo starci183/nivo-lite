@@ -17,6 +17,28 @@ export interface BranchRequest {
     readonly wakeId: string | null
 }
 
+/** An item that waits because a branch of the graph asked: the decision that asked, so the named approver can be put in front of it. */
+export interface BranchRoute {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The item that waits. */
+    readonly workItemId: string
+    /** The decision the graph recorded for it. */
+    readonly decisionId: string
+}
+
+/** Who is answering a waiting item, for the check that a branch ask is answered by the approver it named. */
+export interface BranchAnswerer {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The item that waits. */
+    readonly workItemId: string
+    /** The seat that answers. */
+    readonly memberId: string
+    /** True for the owner of the workspace, who may always answer. */
+    readonly isOwner: boolean
+}
+
 /** What the action graph decided for one item. */
 export interface BranchJudgement {
     /** The proposal the verdict was reached on; in an enforced graph its amount is the one the records hold. */
@@ -37,4 +59,10 @@ export interface WorkBranchDecider {
      * the graph has no say (no graph, a graph still in shadow, no decide point for the action, or a failure) and the gate decides alone.
      */
     decide(request: BranchRequest): Promise<OptionalBranchJudgement>
+
+    /** Puts the waiting item in front of the approver its branch named; an item whose branch named nobody stays with the people who govern. */
+    route(route: BranchRoute): Promise<void>
+
+    /** False while a request the branch opened is open and the answerer is neither one of the people it asked nor the owner of the workspace. */
+    mayDecide(answerer: BranchAnswerer): Promise<boolean>
 }
