@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Divider, FillViewport, Page, Region, SurfaceCard, Tabs, type BreadcrumbItem } from "@starci/grammar/common"
+import { Page, Pane, PaneGrid, PaneSection, Tabs, type BreadcrumbItem } from "@starci/grammar/common"
 
 import { AgentChatComposer, type AgentChatComposerProps } from "@/components/composites/AgentChatComposer"
 
@@ -18,14 +18,6 @@ import { PromoWelcomeBand, type PromoWelcomeBandProps } from "@/components/compo
 
 import { SlotView } from "@/components/composites/SlotView"
 import type { ModuleIconName, DataSlot, SlotLabels } from "@/modules/types"
-import {
-    CHANNEL_BAR_CLASS_NAME,
-    FRAME_CLASS_NAME,
-    LIST_COLUMN_CLASS_NAME,
-    LIST_COLUMN_OPEN_CLASS_NAME,
-    LIST_SCROLL_CLASS_NAME,
-    MAIN_CLASS_NAME,
-} from "./classNames"
 
 /** Which channel the owner is looking at. */
 export type AgentChatTab = "test" | "customer"
@@ -52,18 +44,18 @@ export interface AgentChatViewProps {
     readonly glyph: ModuleIconName
     readonly module: string
     readonly railTitle: string
+    /** The trigger that opens the conversation rail where it is a drawer, and the control that closes it. */
+    readonly historyLabel: string
+    readonly historyCloseLabel: string
     readonly newLabel: string
     readonly isStarting: boolean
     readonly railSlot: DataSlot<ReadonlyArray<AgentChatRailRow>>
     readonly railLabels: SlotLabels
-    readonly header: Omit<
-        AgentChatHeaderProps,
-        "glyph" | "module" | "onBack" | "onTakeover" | "onOpenLead" | "onToggleList"
-    >
+    readonly header: Omit<AgentChatHeaderProps, "glyph" | "module" | "onBack" | "onTakeover" | "onOpenLead">
     readonly channelTabs: ChannelTabsView | null
     readonly threadSlot: DataSlot<ThreadView>
     readonly threadLabels: SlotLabels
-    readonly thread: Omit<AgentChatThreadProps, "children">
+    readonly thread: Omit<AgentChatThreadProps, "children"> & { readonly label: string }
     readonly welcome: Omit<PromoWelcomeBandProps, "onClose"> | null
     readonly messages: Omit<AgentChatMessagesProps, "glyph" | "module" | "isSkeleton">
     readonly empty: Omit<AgentChatEmptyProps, "glyph" | "module" | "onVisitorName" | "onPrompt" | "onStart">
@@ -93,41 +85,13 @@ export interface AgentChatBaseProps {
 const NO_ROWS: ReadonlyArray<AgentChatRailRow> = []
 const SKELETON_THREAD: ThreadView = { hasSelection: true }
 
-/** The base props of the chat and the way a picked row is handled. */
-interface RailProps extends AgentChatBaseProps {
-    readonly onPick: (id: string, kind: AgentChatTab) => void
-}
-
-/** The conversation rail: its head and its rows, wherever it is drawn. */
-const Rail = (props: RailProps) => (
-    <>
-        <AgentChatRailHead
-            title={props.props.railTitle}
-            newLabel={props.props.newLabel}
-            isDisabled={props.props.isStartDisabled}
-            isStarting={props.props.isStarting}
-            onStart={props.on.start}
-        />
-        <div className={LIST_SCROLL_CLASS_NAME}>
-            <SlotView slot={props.props.railSlot} placeholder={NO_ROWS} labels={props.props.railLabels}>
-                {(rows, isSkeleton) => (
-                    <AgentChatRailList
-                        label={props.props.railTitle}
-                        rows={rows}
-                        glyph={props.props.glyph}
-                        module={props.props.module}
-                        isSkeleton={isSkeleton}
-                        onPick={props.onPick}
-                    />
-                )}
-            </SlotView>
-        </div>
-    </>
-)
-
-/** The open conversation: its messages, or the greeting when none is open. */
+/** The content of the open conversation: its messages, or the greeting when none is open. */
 const Thread = (props: AgentChatBaseProps) => (
-    <AgentChatThread {...props.props.thread}>
+    <AgentChatThread
+        scrollKey={props.props.thread.scrollKey}
+        handoff={props.props.thread.handoff}
+        takenOverNotice={props.props.thread.takenOverNotice}
+    >
         {props.props.welcome === null ? null : (
             <PromoWelcomeBand {...props.props.welcome} onClose={props.on.closeWelcome} />
         )}
@@ -155,7 +119,62 @@ const Thread = (props: AgentChatBaseProps) => (
     </AgentChatThread>
 )
 
-/** Presentational agent chat, Zalo style: history list, then a thread that fills the page with the composer pinned at the bottom. */
+/** The header of the open conversation. */
+const Head = (props: AgentChatBaseProps) => (
+    <AgentChatHeader
+        {...props.props.header}
+        glyph={props.props.glyph}
+        module={props.props.module}
+        onBack={props.on.back}
+        onTakeover={props.on.toggleTakeover}
+        onOpenLead={props.on.openLead}
+    />
+)
+
+/** The tabs and what picking one does. */
+interface ChannelTabsProps {
+    readonly tabs: ChannelTabsView
+    readonly onTab: (tab: AgentChatTab) => void
+}
+
+/** The channel tabs under the header; none when the agent has no customer channel. */
+const ChannelTabs = (props: ChannelTabsProps) => (
+    <Tabs
+        label={props.tabs.label}
+        selectedKey={props.tabs.selectedKey}
+        items={[...props.tabs.items]}
+        onSelect={(key) => props.onTab(key === "customer" ? "customer" : "test")}
+        inset="none"
+        labelVisibility="always"
+    />
+)
+
+/** The rail the list draws and what picking a row does. */
+interface RailListProps {
+    readonly view: AgentChatViewProps
+    readonly onPick: (id: string, kind: AgentChatTab) => void
+}
+
+/** The conversations of the rail with the pick that also closes the drawer. */
+const RailList = (props: RailListProps) => (
+    <SlotView slot={props.view.railSlot} placeholder={NO_ROWS} labels={props.view.railLabels}>
+        {(rows, isSkeleton) => (
+            <AgentChatRailList
+                label={props.view.railTitle}
+                rows={rows}
+                glyph={props.view.glyph}
+                module={props.view.module}
+                isSkeleton={isSkeleton}
+                onPick={props.onPick}
+            />
+        )}
+    </SlotView>
+)
+
+/**
+ * Presentational agent chat, Zalo style, as panes under the breadcrumb trail: the conversation rail on the surface at the
+ * left (a drawer on a phone), and beside it the header, the channel tabs, the thread and the composer pinned under it.
+ */
 export const AgentChatBase = (props: AgentChatBaseProps) => {
     const view = props.props
     const [isListOpen, setIsListOpen] = useState(false)
@@ -164,61 +183,57 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
         setIsListOpen(false)
     }
     return (
-        <Page chrome="bleed" header={{ breadcrumbs: { label: view.crumbLabel, items: [...view.crumbs] } }}>
-            <FillViewport minHeight="md" bottomInset="page">
-                {/* FillViewport owns the page height below the chrome; SURFACE-2 / BOUNDARY-6: the chat is one top-level card, its
-          columns are joined faces inside it. */}
-                <SurfaceCard ariaLabel={view.pageLabel} composition="joined" height="fill">
-                    <div className={FRAME_CLASS_NAME}>
-                        <aside className={LIST_COLUMN_CLASS_NAME} aria-label={view.railTitle}>
-                            <Rail {...props} onPick={onPick} />
-                        </aside>
-                        {isListOpen ? (
-                            <aside className={LIST_COLUMN_OPEN_CLASS_NAME} aria-label={view.railTitle}>
-                                <Rail {...props} onPick={onPick} />
-                            </aside>
-                        ) : null}
-                        <Region
-                            className={MAIN_CLASS_NAME}
-                            data-list={isListOpen ? "open" : "closed"}
-                            label={view.pageLabel}
-                        >
-                            <AgentChatHeader
-                                {...view.header}
-                                glyph={view.glyph}
-                                module={view.module}
-                                onBack={props.on.back}
-                                onTakeover={props.on.toggleTakeover}
-                                onOpenLead={props.on.openLead}
-                                onToggleList={() => setIsListOpen((open) => !open)}
-                            />
-                            {view.channelTabs === null ? null : (
-                                <>
-                                    <div className={CHANNEL_BAR_CLASS_NAME}>
-                                        <Tabs
-                                            variant="secondary"
-                                            label={view.channelTabs.label}
-                                            selectedKey={view.channelTabs.selectedKey}
-                                            items={[...view.channelTabs.items]}
-                                            onSelect={(key) => props.on.tab(key === "customer" ? "customer" : "test")}
-                                            inset="none"
-                                            labelVisibility="always"
-                                        />
-                                    </div>
-                                    <Divider semantics="presentation" />
-                                </>
-                            )}
-                            <Thread {...props} />
-                            <AgentChatComposer
-                                {...view.composer}
-                                onDraft={props.on.draft}
-                                onPrompt={props.on.send}
-                                onSend={props.on.send}
-                            />
-                        </Region>
-                    </div>
-                </SurfaceCard>
-            </FillViewport>
+        <Page chrome="panes" header={{ breadcrumbs: { label: view.crumbLabel, items: [...view.crumbs] } }}>
+            <PaneGrid
+                label={view.pageLabel}
+                areas={{ base: ["main"], medium: ["list main"] }}
+                columns={{ base: ["fill"], medium: ["standard", "fill"] }}
+            >
+                <Pane
+                    area="list"
+                    surface
+                    collapse="drawer"
+                    collapseLabel={view.railTitle}
+                    openLabel={view.historyLabel}
+                    closeLabel={view.historyCloseLabel}
+                    isOpen={isListOpen}
+                    onOpenChange={setIsListOpen}
+                >
+                    <PaneSection align="center">
+                        <AgentChatRailHead
+                            title={view.railTitle}
+                            newLabel={view.newLabel}
+                            isDisabled={view.isStartDisabled}
+                            isStarting={view.isStarting}
+                            onStart={props.on.start}
+                        />
+                    </PaneSection>
+                    <PaneSection scroll={{ label: view.railTitle }}>
+                        <RailList view={view} onPick={onPick} />
+                    </PaneSection>
+                </Pane>
+                <Pane area="main">
+                    <PaneSection align="center">
+                        <Head {...props} />
+                    </PaneSection>
+                    {view.channelTabs === null ? null : (
+                        <PaneSection bleed="inline">
+                            <ChannelTabs tabs={view.channelTabs} onTab={props.on.tab} />
+                        </PaneSection>
+                    )}
+                    <PaneSection scroll={{ label: view.thread.label, role: "log", tone: "background" }}>
+                        <Thread {...props} />
+                    </PaneSection>
+                    <PaneSection>
+                        <AgentChatComposer
+                            {...view.composer}
+                            onDraft={props.on.draft}
+                            onPrompt={props.on.send}
+                            onSend={props.on.send}
+                        />
+                    </PaneSection>
+                </Pane>
+            </PaneGrid>
         </Page>
     )
 }

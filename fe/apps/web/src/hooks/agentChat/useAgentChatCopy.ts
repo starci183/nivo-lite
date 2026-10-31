@@ -141,7 +141,6 @@ const headerOf = (
                 ? { label: t(chat.isTakenOver ? "giveBack" : "takeOver"), isPending: chat.isTakingOver }
                 : null,
         openLeadLabel: chat.leadId === null ? null : t("openLead"),
-        historyLabel: t("historyToggle"),
         setup: agent === undefined ? null : { label: t("setupLink"), href: agentSetupHref(agent.id) },
     }
 }

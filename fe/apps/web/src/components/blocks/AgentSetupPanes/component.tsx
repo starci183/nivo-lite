@@ -1,4 +1,15 @@
-import { Alert, Button, Divider, EmptyNotice, Heading, Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
+import {
+    Alert,
+    Button,
+    Divider,
+    EmptyNotice,
+    Heading,
+    Pane,
+    PaneGrid,
+    PaneSection,
+    Stack,
+    Text,
+} from "@starci/grammar/common"
 import type { PaneGridProps } from "@starci/grammar/common"
 import type { ReactNode, Ref } from "react"
 import { SetupMeter } from "@/components/branches/SetupMeter"
@@ -232,11 +243,13 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                 </PaneSection>
             </Pane>
             <Pane area="head" surface>
-                <PaneSection align="center" gap="inline">
-                    <Heading level={2}>{copy.chatTitle}</Heading>
-                    <Text size="xs" tone="muted">
-                        {copy.chatHint}
-                    </Text>
+                <PaneSection align="center">
+                    <Stack gap="identity">
+                        <Heading level={2}>{copy.chatTitle}</Heading>
+                        <Text size="xs" tone="muted">
+                            {copy.chatHint}
+                        </Text>
+                    </Stack>
                 </PaneSection>
             </Pane>
             <Pane area="thread">

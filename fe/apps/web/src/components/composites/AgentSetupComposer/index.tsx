@@ -1,5 +1,5 @@
-import { Button, FileDropzone, Form, TagGroup, Textarea } from "@starci/grammar/common"
-import { SEND_ROW } from "./classNames"
+import { Button, Cluster, FileDropzone, Form, TagGroup, Textarea } from "@starci/grammar/common"
+import { FIELD } from "./classNames"
 
 /** What the composer draws: the starts of a message, the field with its hint, the send action and the brand PDF. */
 export interface AgentSetupComposerContent {
@@ -65,22 +65,24 @@ export const AgentSetupComposer = (props: AgentSetupComposerProps) => (
                 props.on.send()
             }}
         >
-            <Textarea
-                id="setup-composer"
-                name="message"
-                label={props.content.composerLabel}
-                isLabelHidden
-                placeholder={props.content.composerLabel}
-                description={props.content.composerHint}
-                rows={2}
-                maxLength={4000}
-                value={props.content.text}
-                isSkeleton={props.isSkeleton}
-                isDisabled={props.content.isSending}
-                onValueChange={props.on.text}
-                onSubmitShortcut={props.on.send}
-            />
-            <div className={SEND_ROW}>
+            <Cluster gap="inline" align="end" wrap={false}>
+                <div className={FIELD}>
+                    <Textarea
+                        id="setup-composer"
+                        name="message"
+                        label={props.content.composerLabel}
+                        isLabelHidden
+                        placeholder={props.content.composerLabel}
+                        description={props.content.composerHint}
+                        rows={2}
+                        maxLength={4000}
+                        value={props.content.text}
+                        isSkeleton={props.isSkeleton}
+                        isDisabled={props.content.isSending}
+                        onValueChange={props.on.text}
+                        onSubmitShortcut={props.on.send}
+                    />
+                </div>
                 <Button
                     intent="commit"
                     isPending={props.content.isSending}
@@ -89,7 +91,7 @@ export const AgentSetupComposer = (props: AgentSetupComposerProps) => (
                 >
                     {props.content.sendLabel}
                 </Button>
-            </div>
+            </Cluster>
         </Form>
         {props.content.attach === null ? null : (
             <FileDropzone

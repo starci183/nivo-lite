@@ -1,2 +1,2 @@
-/** The send action at the end of the composer row. */
-export const SEND_ROW = "flex justify-end"
+/** The message field takes the width the send action leaves. */
+export const FIELD = "min-w-0 flex-1"

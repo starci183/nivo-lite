@@ -1,9 +1,16 @@
-import { EmptyNotice, Region, SearchField, SectionHeader, SurfaceListCard, TagGroup } from "@starci/grammar/common"
+import {
+    EmptyNotice,
+    Grid,
+    Region,
+    SearchField,
+    SectionHeader,
+    SurfaceListCard,
+    TagGroup,
+} from "@starci/grammar/common"
 import { AgentCatalogCard, type AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
 import { AgentTeamRow, type AgentTeamRowProps } from "@/components/composites/AgentTeamRow"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { GRID } from "./classNames"
 
 /** One installed agent of the first section with the key the row is listed by. */
 export interface AgentCatalogTeamEntry {
@@ -129,7 +136,7 @@ const Roles = (props: CatalogSectionProps) => (
                         : { actionLabel: props.props.emptyAction, onAction: props.on.clear })}
                 />
             ) : (
-                <div className={GRID}>
+                <Grid kind="cards" columns={3}>
                     {props.data.roles.map((entry) => (
                         <AgentCatalogCard
                             key={entry.key}
@@ -140,7 +147,7 @@ const Roles = (props: CatalogSectionProps) => (
                             onInstall={() => props.on.install(entry.key)}
                         />
                     ))}
-                </div>
+                </Grid>
             )}
         </Region>
     </>

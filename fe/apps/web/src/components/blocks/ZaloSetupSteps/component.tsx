@@ -30,6 +30,8 @@ export interface ZaloSetupStepsBaseProps {
     /** The body of each step, connected by the page: what step 3 shows is its guidance and its command alone. */
     readonly shape: Readonly<Record<Exclude<ZaloStepId, "authorize">, ReactNode>>
     readonly props: {
+        /** Names the stepper above the steps. */
+        readonly stepsLabel: string
         readonly steps: ReadonlyArray<ZaloSetupStepView>
         readonly commands: ZaloSetupStepCommands
         /** Why the last authorization did not start, worded by the back end; empty when there is none. */
@@ -73,6 +75,7 @@ const authorizeBodyOf = (notice: string): ReactNode =>
  */
 export const ZaloSetupStepsBase = (props: ZaloSetupStepsBaseProps) => (
     <ConnectionSteps
+        label={props.props.stepsLabel}
         steps={props.props.steps.map((step) => ({
             ...step,
             body: step.id === "authorize" ? authorizeBodyOf(props.props.authorizeNotice) : props.shape[step.id],

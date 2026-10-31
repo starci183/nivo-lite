@@ -41,6 +41,7 @@ export const ZaloSetupSteps = (props: ZaloSetupStepsProps) => {
         <ZaloSetupStepsBase
             shape={props.shape}
             props={{
+                stepsLabel: t("stepsLabel"),
                 steps: steps.map((step) => ({
                     id: step.id,
                     title: t(TITLE_KEYS[step.id]),
