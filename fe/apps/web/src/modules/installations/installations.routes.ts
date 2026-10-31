@@ -2,10 +2,10 @@ import type { ModuleKey } from "@/modules/catalog"
 import { AGENTS_ROUTE } from "@/modules/routes"
 
 /** A tab of one agent instance; `performance` (the weekly report) belongs to the AI Marketing (content) agent only. */
-export type AgentTab = "setup" | "workbench" | "performance" | "settings"
+export type AgentTab = "setup" | "workbench" | "work" | "performance" | "settings"
 
 /**
- * The route of an agent instance: /agents/<type>/<installationId>[/workbench|/performance|/settings][?query]. Without an installation id it is the
+ * The route of an agent instance: /agents/<type>/<installationId>[/workbench|/work|/performance|/settings][?query]. Without an installation id it is the
  * type-level URL (/agents/<type>[/tab]), which redirects to the only instance, or to the instance that owns `?focus=`, or to the list.
  */
 export const agentHref = (

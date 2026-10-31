@@ -41,7 +41,7 @@ const scopedBoard = (full: OfficeBoard, current: OfficeRoom | null): OfficeBoard
     decidedCards: roomWorksOf(current, full.decidedCards, full.agents),
 })
 
-/** The lines the sender needs about a body: the agents it calls and, for an owner or manager, the one command it reads. */
+/** The lines the sender needs about a body: the agents it calls and, for an owner or manager, the one command the server reads. */
 const useSendLine = (
     agents: OfficeBoard["agents"],
     sender: ReturnType<typeof useOfficeSend>,
@@ -57,7 +57,6 @@ const useSendLine = (
             return sender.send({
                 body,
                 room: roomKey,
-                shouldPropose: canRead && called.length > 0,
                 callNames: active.filter((agent) => called.includes(agent.handle)).map((agent) => agent.name),
                 reading:
                     canRead && target !== undefined && acceptsCommands(target.module)
