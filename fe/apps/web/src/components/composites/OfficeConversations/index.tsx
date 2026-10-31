@@ -1,6 +1,6 @@
 import { useState } from "react"
 import type { ReactNode } from "react"
-import { AvatarGroup, Badge, ListBox, NavLandmark, SearchField, Tabs, Text } from "@starci/grammar/common"
+import { AvatarGroup, Badge, ListBox, PaneSection, SearchField, Tabs, Text } from "@starci/grammar/common"
 import type { AvatarGroupItem, ListBoxItem } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { Icon } from "@/components/leaves/Icon"
@@ -10,13 +10,7 @@ import type {
     OfficeText,
     OfficeUnreadBadgeView,
 } from "@/modules/types"
-import {
-    BODY_CLASS_NAME,
-    INDICATOR_CLASS_NAME,
-    SEARCH_CLASS_NAME,
-    TABS_CLASS_NAME,
-    TRAILING_CLASS_NAME,
-} from "./classNames"
+import { INDICATOR_CLASS_NAME, TRAILING_CLASS_NAME } from "./classNames"
 
 const contains = (value: string, query: string): boolean => value.toLowerCase().includes(query.toLowerCase())
 
@@ -130,7 +124,10 @@ const itemsOf = (rows: ReadonlyArray<OfficeConversationRowView>, text: OfficeTex
         trailing: trailingOf(row),
     }))
 
-/** The left column body: search, the filter tabs and one conversation list, newest first. */
+/**
+ * The left column body as three bands of its pane: the search, the filter tabs, and the one conversation list (newest
+ * first), which scrolls alone under them.
+ */
 export const OfficeConversations = (props: OfficeConversationsProps) => {
     const { list, text, isSkeleton } = props.props
     const [query, setQuery] = useState("")
@@ -148,7 +145,7 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
 
     return (
         <>
-            <div className={SEARCH_CLASS_NAME}>
+            <PaneSection>
                 <SearchField
                     label={text("searchLabel")}
                     isLabelHidden
@@ -158,8 +155,8 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
                     onValueChange={setQuery}
                     onClear={() => setQuery("")}
                 />
-            </div>
-            <div className={TABS_CLASS_NAME}>
+            </PaneSection>
+            <PaneSection>
                 <Tabs
                     label={text("filterLabel")}
                     variant="secondary"
@@ -169,8 +166,8 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
                     }}
                     items={FILTER_IDS.map((id) => ({ id, label: text(FILTER_KEYS[id]) }))}
                 />
-            </div>
-            <NavLandmark label={text("listLabel")} layout="scrolling" className={BODY_CLASS_NAME}>
+            </PaneSection>
+            <PaneSection scroll={{ label: text("listLabel") }}>
                 <ListBox
                     label={text("listLabel")}
                     selectionMode="single"
@@ -186,7 +183,7 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
                     emptyContent={emptyContentOf(q, filter, text)}
                     items={itemsOf(rows, text)}
                 />
-            </NavLandmark>
+            </PaneSection>
         </>
     )
 }

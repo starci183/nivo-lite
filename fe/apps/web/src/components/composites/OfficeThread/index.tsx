@@ -1,5 +1,4 @@
-import { useEffect, useRef } from "react"
-import { Button, ChatBubbleSkeletons, Divider, EmptyNotice, Text, VerticalScrollRegion } from "@starci/grammar/common"
+import { Button, ChatBubbleSkeletons, Divider, EmptyNotice, Text } from "@starci/grammar/common"
 import { OfficeApprovalCard } from "@/components/branches/OfficeApprovalCard"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { OfficeCommandCard } from "@/components/branches/OfficeCommandCard"
@@ -10,86 +9,56 @@ import { OfficeMessageRow } from "@/components/branches/OfficeMessageRow"
 import { OfficeOutboxBubble } from "@/components/branches/OfficeOutboxBubble"
 import { OfficeResultCard } from "@/components/branches/OfficeResultCard"
 import type { OfficeCommandView, OfficeThreadProps } from "@/modules/types"
-import { BAND_CLASS_NAME, BODY_CLASS_NAME, DAY_CLASS_NAME, SCROLL_CLASS_NAME, TYPING_CLASS_NAME } from "./classNames"
-
-const STICK_PX = 80
+import { BAND_CLASS_NAME, BODY_CLASS_NAME, DAY_CLASS_NAME, TYPING_CLASS_NAME } from "./classNames"
 
 /** A thread item that sits in an inset band: every kind but the day divider. */
 type OfficeThreadBandItem = Exclude<OfficeThreadProps["props"]["items"][number], { readonly kind: "day" }>
 
-/** The thread: day dividers, lines, approval, exception and command cards, the unsent lines, pinned to the newest. */
+/**
+ * The thread's message column, inside the scroll band of its pane: the earlier button, day dividers, lines, approval,
+ * exception and command cards, the unsent lines, the line being read and the typing row.
+ */
 export const OfficeThread = (props: OfficeThreadProps) => {
     const view = props.props
     const { text } = view
-    const scrollRef = useRef<HTMLDivElement | null>(null)
-    const stickRef = useRef(true)
-
-    useEffect(() => {
-        const node = scrollRef.current
-        if (node !== null && stickRef.current) node.scrollTop = node.scrollHeight
-    }, [view.items.length, view.outbox.length, view.typing, view.reading])
-
-    useEffect(() => {
-        const node = scrollRef.current
-        if (node === null) return undefined
-        const onScroll = () => {
-            stickRef.current = node.scrollHeight - node.scrollTop - node.clientHeight < STICK_PX
-        }
-        node.addEventListener("scroll", onScroll, { passive: true })
-        return () => node.removeEventListener("scroll", onScroll)
-    }, [])
-
     return (
-        <VerticalScrollRegion
-            isScrollable
-            ref={scrollRef}
-            className={SCROLL_CLASS_NAME}
-            role="log"
-            aria-label={text("conversationLabel")}
-        >
-            <div className={BODY_CLASS_NAME}>
-                {view.isSkeleton ? (
-                    <div className={BAND_CLASS_NAME}>
-                        <ChatBubbleSkeletons count={3} hasAvatar />
-                    </div>
-                ) : null}
-                {!view.isSkeleton && view.hasEarlier ? (
-                    <div className={BAND_CLASS_NAME}>
-                        <Button
-                            intent="neutral"
-                            size="sm"
-                            isPending={view.isLoadingEarlier}
-                            onPress={props.on.loadEarlier}
-                        >
-                            {text("loadEarlier")}
-                        </Button>
-                    </div>
-                ) : null}
-                {!view.isSkeleton && view.items.length === 0 ? (
-                    <div className={BAND_CLASS_NAME}>
-                        <EmptyNotice message={text("emptyMessage")} description={text("emptyMessageHint")} />
-                    </div>
-                ) : null}
-                {renderOfficeThreadItems(props)}
-                {view.outbox.map((line) => (
-                    <div key={line.id} className={BAND_CLASS_NAME}>
-                        <OfficeOutboxBubble line={line} text={text} />
-                    </div>
-                ))}
-                {view.reading === null ? null : (
-                    <div className={BAND_CLASS_NAME}>{renderOfficeThreadCommand(null, view.reading, props)}</div>
-                )}
+        <div className={BODY_CLASS_NAME}>
+            {view.isSkeleton ? (
                 <div className={BAND_CLASS_NAME}>
-                    <div className={TYPING_CLASS_NAME}>
-                        {view.typing === "" ? null : (
-                            <Text size="sm" tone="muted" live="polite">
-                                {view.typing}
-                            </Text>
-                        )}
-                    </div>
+                    <ChatBubbleSkeletons count={3} hasAvatar />
+                </div>
+            ) : null}
+            {!view.isSkeleton && view.hasEarlier ? (
+                <div className={BAND_CLASS_NAME}>
+                    <Button intent="neutral" size="sm" isPending={view.isLoadingEarlier} onPress={props.on.loadEarlier}>
+                        {text("loadEarlier")}
+                    </Button>
+                </div>
+            ) : null}
+            {!view.isSkeleton && view.items.length === 0 ? (
+                <div className={BAND_CLASS_NAME}>
+                    <EmptyNotice message={text("emptyMessage")} description={text("emptyMessageHint")} />
+                </div>
+            ) : null}
+            {renderOfficeThreadItems(props)}
+            {view.outbox.map((line) => (
+                <div key={line.id} className={BAND_CLASS_NAME}>
+                    <OfficeOutboxBubble line={line} text={text} />
+                </div>
+            ))}
+            {view.reading === null ? null : (
+                <div className={BAND_CLASS_NAME}>{renderOfficeThreadCommand(null, view.reading, props)}</div>
+            )}
+            <div className={BAND_CLASS_NAME}>
+                <div className={TYPING_CLASS_NAME}>
+                    {view.typing === "" ? null : (
+                        <Text size="sm" tone="muted" live="polite">
+                            {view.typing}
+                        </Text>
+                    )}
                 </div>
             </div>
-        </VerticalScrollRegion>
+        </div>
     )
 }
 

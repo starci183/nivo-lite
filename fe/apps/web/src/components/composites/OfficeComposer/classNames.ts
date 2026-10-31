@@ -1,11 +1,5 @@
-/** The composer: the closing band of its pane; the grid draws the line above it. */
-export const COMPOSER_CLASS_NAME = "flex shrink-0 flex-col"
-
-/** The inset body of the composer band. */
-export const COMPOSER_BODY_CLASS_NAME = "flex flex-col gap-2 px-4 pt-3 pb-4"
-
-/** Quick prompt chips: one row that scrolls sideways. */
-export const CHIPS_CLASS_NAME = "flex gap-2 pb-1"
+/** Quick prompt chips: one row that scrolls sideways; its band reaches both pane edges. */
+export const CHIPS_CLASS_NAME = "flex gap-2"
 
 /** Input row: "@", the field, Send. */
 export const ROW_CLASS_NAME = "flex items-end gap-2"

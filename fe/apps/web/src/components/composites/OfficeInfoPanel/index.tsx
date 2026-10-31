@@ -1,11 +1,10 @@
-import { Button, IconButton, Region, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, IconButton, PaneSection, Region, SurfaceCard, Text } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { OfficeMemberRow } from "@/components/branches/OfficeMemberRow"
 import { OfficeRoomResources } from "@/components/branches/OfficeRoomResources"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeInfoPanelProps, OfficeJumpRowView, OfficeText, OfficeWaitingRowView } from "@/modules/types"
 import {
-    BODY_CLASS_NAME,
     HEAD_CLASS_NAME,
     HEAD_TEXT_CLASS_NAME,
     JUMP_ROW_CLASS_NAME,
@@ -76,67 +75,67 @@ interface OfficeInfoHeadProps {
     readonly on: { readonly close: () => void }
 }
 
-/** The head of the docked info column: its title and the close control. */
+/** The head band of the docked info column, centred in the shared head row: its title and the close control. */
 export const OfficeInfoHead = (props: OfficeInfoHeadProps) => {
     const { text } = props.props
     return (
-        <div className={HEAD_CLASS_NAME}>
-            <div className={HEAD_TEXT_CLASS_NAME}>
-                <Text weight="semibold">{text("infoTitle")}</Text>
+        <PaneSection align="center">
+            <div className={HEAD_CLASS_NAME}>
+                <div className={HEAD_TEXT_CLASS_NAME}>
+                    <Text weight="semibold">{text("infoTitle")}</Text>
+                </div>
+                <IconButton
+                    intent="dismiss"
+                    source={nivoIconSource("close", "leading")}
+                    label={text("infoClose")}
+                    onPress={props.on.close}
+                />
             </div>
-            <IconButton
-                intent="dismiss"
-                source={nivoIconSource("close", "leading")}
-                label={text("infoClose")}
-                onPress={props.on.close}
-            />
-        </div>
+        </PaneSection>
     )
 }
 
-/** The right column body: what waits for approval, who is in the chat and the team's tasks. */
+/** The right column body as one band of its pane (docked or in the drawer), its blocks a section step apart: what waits for approval, who is in the chat and the team's tasks. */
 export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
     const { info, text } = props.props
     return (
-        <>
-            <div className={BODY_CLASS_NAME}>
-                <JumpList
-                    title={text("pendingTitle")}
-                    none={text("pendingNone")}
-                    jumpLabel={text("pendingJump")}
-                    rows={info.approvals}
-                    onJump={(row: OfficeWaitingRowView) =>
-                        row.target === "approval" ? props.on.jumpApproval(row.id) : props.on.jumpException(row.id)
-                    }
-                />
-                <JumpList
-                    title={text("exceptionsTitle")}
-                    none={text("exceptionsNone")}
-                    jumpLabel={text("exceptionJump")}
-                    rows={info.exceptions}
-                    onJump={(row) => props.on.jumpException(row.id)}
-                />
-                {renderOfficeInfoPanelMembers(text, info, props)}
-                <OfficeRoomResources
-                    cards={info.cards}
-                    channels={info.channels}
-                    pins={info.pins}
-                    text={text}
-                    onJump={props.on.jumpCard}
-                />
-                <Region label={text("tasksTitle")} className={SECTION_CLASS_NAME}>
-                    <div className={TITLE_CLASS_NAME}>
-                        <Text weight="semibold">{text("tasksTitle")}</Text>
-                    </div>
-                    <Text size="sm" tone="muted">
-                        {info.tasksSummary}
-                    </Text>
-                    <Button intent="neutral" size="sm" width="fill" onPress={props.on.openTasks}>
-                        {text("tasksOpen")}
-                    </Button>
-                </Region>
-            </div>
-        </>
+        <PaneSection gap="section">
+            <JumpList
+                title={text("pendingTitle")}
+                none={text("pendingNone")}
+                jumpLabel={text("pendingJump")}
+                rows={info.approvals}
+                onJump={(row: OfficeWaitingRowView) =>
+                    row.target === "approval" ? props.on.jumpApproval(row.id) : props.on.jumpException(row.id)
+                }
+            />
+            <JumpList
+                title={text("exceptionsTitle")}
+                none={text("exceptionsNone")}
+                jumpLabel={text("exceptionJump")}
+                rows={info.exceptions}
+                onJump={(row) => props.on.jumpException(row.id)}
+            />
+            {renderOfficeInfoPanelMembers(text, info, props)}
+            <OfficeRoomResources
+                cards={info.cards}
+                channels={info.channels}
+                pins={info.pins}
+                text={text}
+                onJump={props.on.jumpCard}
+            />
+            <Region label={text("tasksTitle")} className={SECTION_CLASS_NAME}>
+                <div className={TITLE_CLASS_NAME}>
+                    <Text weight="semibold">{text("tasksTitle")}</Text>
+                </div>
+                <Text size="sm" tone="muted">
+                    {info.tasksSummary}
+                </Text>
+                <Button intent="neutral" size="sm" width="fill" onPress={props.on.openTasks}>
+                    {text("tasksOpen")}
+                </Button>
+            </Region>
+        </PaneSection>
     )
 }
 

@@ -5,20 +5,14 @@ import {
     HorizontalScrollRegion,
     Icon,
     IconButton,
+    PaneSection,
     Text,
     Textarea,
     Tooltip,
 } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeComposerProps } from "@/modules/types"
-import {
-    CHIPS_CLASS_NAME,
-    COMPOSER_BODY_CLASS_NAME,
-    COMPOSER_CLASS_NAME,
-    FIELD_CLASS_NAME,
-    HINT_CLASS_NAME,
-    ROW_CLASS_NAME,
-} from "./classNames"
+import { CHIPS_CLASS_NAME, FIELD_CLASS_NAME, HINT_CLASS_NAME, ROW_CLASS_NAME } from "./classNames"
 
 /** Resolves quick questions, including the optional connected chatbot. */
 const promptsOf = (view: OfficeComposerProps["props"]): ReadonlyArray<string> => [
@@ -62,7 +56,7 @@ const QuickPrompts = (props: QuickPromptsProps) => (
     </Fieldset>
 )
 
-/** The pinned composer: a slim row of quick questions, then "@", the message field and Send. */
+/** The pinned composer as two bands of its pane: a slim row of quick questions reaching both edges, then "@", the message field and Send over the hint. */
 export const OfficeComposer = (props: OfficeComposerProps) => {
     const view = props.props
     const { text } = view
@@ -86,9 +80,11 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
     }
 
     return (
-        <div className={COMPOSER_CLASS_NAME}>
-            <div className={COMPOSER_BODY_CLASS_NAME}>
+        <>
+            <PaneSection bleed="inline">
                 <QuickPrompts view={view} prompts={prompts} onPrompt={onPrompt} />
+            </PaneSection>
+            <PaneSection gap="inline">
                 <div className={ROW_CLASS_NAME}>
                     <Tooltip content={text("mentionButton")}>
                         <IconButton
@@ -127,7 +123,7 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
                         {text("composerHint")}
                     </Text>
                 </div>
-            </div>
-        </div>
+            </PaneSection>
+        </>
     )
 }

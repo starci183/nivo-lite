@@ -1,4 +1,4 @@
-import { Pane, PaneGrid, FillViewport, Page, Text } from "@starci/grammar/common"
+import { Page, Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
@@ -6,6 +6,7 @@ import { OfficeHeader } from "@/components/composites/OfficeHeader"
 import { OfficeInfoHead, OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
 import { OfficeTasks } from "@/components/composites/OfficeTasks"
 import { OfficeThread } from "@/components/composites/OfficeThread"
+import { OfficeThreadScroll } from "@/components/composites/OfficeThreadScroll"
 import type {
     Arrangement,
     DataSlot,
@@ -17,7 +18,6 @@ import type {
     OfficeThreadProps,
     SlotLabels,
 } from "@/modules/types"
-import { CONVERSATION_CLASS_NAME, LIST_HEAD_CLASS_NAME, TASKS_CLASS_NAME } from "./classNames"
 
 /** What the thread draws once its messages are in. */
 export type OfficeMessengerThread = Omit<OfficeThreadProps["props"], "isSkeleton">
@@ -78,9 +78,10 @@ export interface OfficeMessengerBaseProps {
 }
 
 /**
- * Office as a messenger, full-bleed, on a PaneGrid: the conversation list, the Office column (header row, thread, composer
- * pinned at the bottom) and the group info column, flush with a divider between and all on the surface. Below the compact
- * boundary the grid is one column: the list is its own screen on a phone, and the info column opens as a drawer.
+ * Office as a messenger: a panes page whose PaneGrid fills the region to the viewport bottom, with the conversation list,
+ * the Office column (head band, thread, composer pinned at the bottom) and the group info column, flush with a divider
+ * between. Every band is a PaneSection, so all of them start at the pane inset. Below the compact boundary the grid is one
+ * column: the list is its own screen on a phone, and the info column opens as a drawer.
  */
 export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const view = props.props
@@ -95,74 +96,70 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const hasDrawerInfo = view.isCompact && !isListScreen
 
     return (
-        <Page chrome="bleed">
-            <FillViewport minHeight="md" bottomInset="none">
-                <PaneGrid
-                    label={text("messengerLabel")}
-                    areas={arrangement.areas}
-                    columns={arrangement.columns}
-                    rows={arrangement.rows}
-                >
-                    {hasList ? (
-                        <Pane area="listHead" surface>
-                            <div className={LIST_HEAD_CLASS_NAME}>
-                                <Text weight="semibold">{text("listTitle")}</Text>
-                            </div>
-                        </Pane>
-                    ) : null}
-                    {hasList ? (
-                        <Pane area="list" surface scroll label={text("listLabel")}>
-                            <MessengerList {...props} />
-                        </Pane>
-                    ) : null}
-                    {hasCentre ? (
-                        <Pane area="head" surface>
-                            <MessengerHeader {...props} />
-                        </Pane>
-                    ) : null}
-                    {hasCentre ? (
-                        <Pane area="thread" surface>
-                            <div className={CONVERSATION_CLASS_NAME}>
-                                <MessengerCentre {...props} />
-                            </div>
-                        </Pane>
-                    ) : null}
-                    {hasCentre && !isTasks ? (
-                        <Pane area="composer" surface>
-                            <MessengerComposer {...props} />
-                        </Pane>
-                    ) : null}
-                    {hasDockedInfo ? (
-                        <Pane area="infoHead" surface>
-                            <OfficeInfoHead props={{ text }} on={{ close: on.closeInfo }} />
-                        </Pane>
-                    ) : null}
-                    {hasDockedInfo ? (
-                        <Pane area="info" surface scroll label={text("infoTitle")}>
-                            <MessengerInfoPanel {...props} />
-                        </Pane>
-                    ) : null}
-                    {hasDrawerInfo ? (
-                        <Pane
-                            area="info"
-                            surface
-                            collapse="drawer"
-                            collapseLabel={text("infoTitle")}
-                            openLabel={text("infoOpen")}
-                            closeLabel={text("infoClose")}
-                            isOpen={view.isInfoOpen}
-                            onOpenChange={on.infoOpenChange}
-                        >
-                            <MessengerInfoPanel {...props} />
-                        </Pane>
-                    ) : null}
-                </PaneGrid>
-            </FillViewport>
+        <Page chrome="panes">
+            <PaneGrid
+                label={text("messengerLabel")}
+                areas={arrangement.areas}
+                columns={arrangement.columns}
+                rows={arrangement.rows}
+            >
+                {hasList ? (
+                    <Pane area="listHead" surface>
+                        <PaneSection align="center">
+                            <Text weight="semibold">{text("listTitle")}</Text>
+                        </PaneSection>
+                    </Pane>
+                ) : null}
+                {hasList ? (
+                    <Pane area="list" surface>
+                        <MessengerList {...props} />
+                    </Pane>
+                ) : null}
+                {hasCentre ? (
+                    <Pane area="head" surface>
+                        <MessengerHeader {...props} />
+                    </Pane>
+                ) : null}
+                {hasCentre ? (
+                    <Pane area="thread">
+                        <MessengerCentre {...props} />
+                    </Pane>
+                ) : null}
+                {hasCentre && !isTasks ? (
+                    <Pane area="composer" surface>
+                        <MessengerComposer {...props} />
+                    </Pane>
+                ) : null}
+                {hasDockedInfo ? (
+                    <Pane area="infoHead" surface>
+                        <OfficeInfoHead props={{ text }} on={{ close: on.closeInfo }} />
+                    </Pane>
+                ) : null}
+                {hasDockedInfo ? (
+                    <Pane area="info" surface scroll label={text("infoTitle")}>
+                        <MessengerInfoPanel {...props} />
+                    </Pane>
+                ) : null}
+                {hasDrawerInfo ? (
+                    <Pane
+                        area="info"
+                        surface
+                        collapse="drawer"
+                        collapseLabel={text("infoTitle")}
+                        openLabel={text("infoOpen")}
+                        closeLabel={text("infoClose")}
+                        isOpen={view.isInfoOpen}
+                        onOpenChange={on.infoOpenChange}
+                    >
+                        <MessengerInfoPanel {...props} />
+                    </Pane>
+                ) : null}
+            </PaneGrid>
         </Page>
     )
 }
 
-/** The conversation list content of the list pane. */
+/** The bands of the list pane: the search, the filter and the conversation list. */
 const MessengerList = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
@@ -205,39 +202,41 @@ const MessengerHeader = (props: OfficeMessengerBaseProps) => {
     )
 }
 
-/** The conversation scroll content: the tasks view, or the thread. */
+/** The scroll band of the conversation pane: the tasks view, or the thread pinned to the newest. */
 const MessengerCentre = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
     const { text } = view
     return view.centre === "tasks" ? (
-        <div className={TASKS_CLASS_NAME}>
+        <PaneSection scroll={{ label: text("tasksTitle") }}>
             <OfficeTasks props={{ tasks: view.tasks, text }} on={{ openLeads: on.openLeads }} />
-        </div>
+        </PaneSection>
     ) : (
-        <SlotView
-            slot={view.threadSlot}
-            placeholder={view.threadPlaceholder}
-            labels={view.slotLabels}
-            onRetry={on.retry}
-        >
-            {(thread, isSkeleton) => (
-                <OfficeThread
-                    props={{ ...thread, isSkeleton }}
-                    on={{
-                        decideApproval: on.decideApproval,
-                        decideWork: on.decideWork,
-                        decideCard: on.decideCard,
-                        sendCommand: on.sendCommand,
-                        cancelCommand: on.cancelCommand,
-                        reply: on.reply,
-                        loadEarlier: on.loadEarlier,
-                        editCard: on.editCard,
-                        copy: on.copy,
-                    }}
-                />
-            )}
-        </SlotView>
+        <OfficeThreadScroll label={text("conversationLabel")}>
+            <SlotView
+                slot={view.threadSlot}
+                placeholder={view.threadPlaceholder}
+                labels={view.slotLabels}
+                onRetry={on.retry}
+            >
+                {(thread, isSkeleton) => (
+                    <OfficeThread
+                        props={{ ...thread, isSkeleton }}
+                        on={{
+                            decideApproval: on.decideApproval,
+                            decideWork: on.decideWork,
+                            decideCard: on.decideCard,
+                            sendCommand: on.sendCommand,
+                            cancelCommand: on.cancelCommand,
+                            reply: on.reply,
+                            loadEarlier: on.loadEarlier,
+                            editCard: on.editCard,
+                            copy: on.copy,
+                        }}
+                    />
+                )}
+            </SlotView>
+        </OfficeThreadScroll>
     )
 }
 
