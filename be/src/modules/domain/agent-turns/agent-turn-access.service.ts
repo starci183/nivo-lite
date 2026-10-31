@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AgentTurnsService } from "@modules/domain/agent-work"
+import { AgentTurnsService, AgentWorkSettingsService } from "@modules/domain/agent-work"
 import type { AgentRunningTurn } from "@modules/domain/agent-work"
 import type { BridgeTurn, BridgeTurns, OptionalBridgeTurn } from "@modules/domain/agent-tools"
 import { InjectClock } from "@modules/platform/clock"
@@ -24,14 +24,17 @@ const toBridgeTurn = (turn: AgentRunningTurn): BridgeTurn => ({
 /**
  * Who a call of the OpenClaw bridge plugin is for. The plugin signs the agent and session OpenClaw gave its tool; this finds the one turn
  * running on that session and builds the context of the call from the turn's own wake: the workspace, the agent and the conversation
- * come from the database, and nothing the model sent can set them. No running turn, no call; the one-turn lock per scope makes the
- * match exact.
+ * come from the database, and nothing the model sent can set them. No running turn, no call. The session key of a turn carries its agent
+ * (the drain adds it), so two agents that share a runtime agent never match each other's turn; a key that still names more than one
+ * running turn matches none. A call is refused once work was switched off for the agent or its workspace, since a running turn may
+ * finish its model call but must not act any more.
  */
 export class AgentTurnAccessService implements BridgeTurns {
     constructor(
         @InjectAgentTurnsOptions() private readonly options: AgentTurnsOptions,
         @InjectClock() private readonly clock: Clock,
         private readonly turns: AgentTurnsService,
+        private readonly settings: AgentWorkSettingsService,
     ) {}
 
     /** The running turn a signed credential names; null for a wrong secret, an expired or forged credential, a foreign session or no running turn. */
@@ -42,10 +45,20 @@ export class AgentTurnAccessService implements BridgeTurns {
         return claims === null ? null : this.resolve(claims.agentId, claims.sessionKey)
     }
 
-    /** The turn running on this runtime agent and session, or null. */
+    /** The one turn running on this runtime agent and session, or null: none, several, or one whose work was switched off. */
     async resolve(runtimeAgentId: string, threadKey: string): Promise<OptionalBridgeTurn> {
         const running = await this.turns.runningOn(runtimeAgentId)
-        const turn = running.find((candidate) => sameSession(candidate.threadKey, threadKey))
-        return turn === undefined ? null : toBridgeTurn(turn)
+        const matching = running.filter((candidate) => sameSession(candidate.threadKey, threadKey))
+        const [turn] = matching
+        if (turn === undefined || matching.length > 1) return null
+        return (await this.switchedOn(turn)) ? toBridgeTurn(turn) : null
+    }
+
+    private async switchedOn(turn: AgentRunningTurn): Promise<boolean> {
+        const [state, settings] = await Promise.all([
+            this.settings.stateOf(turn.agentId),
+            this.settings.settingsOf(turn.workspaceId),
+        ])
+        return state.workEnabled && settings.workEnabled
     }
 }

@@ -47,7 +47,7 @@ const BUNDLE: AgentBundle = {
     installationId: "i1",
     workspaceId: WORKSPACE,
     module: "chatbot",
-    agentId: "ws-12345678-chatbot",
+    agentId: "ws-12345678aaaabbbb-chatbot",
     agentName: "Bot",
     contextVersion: 3,
     audience: "customer",
@@ -57,7 +57,7 @@ const BUNDLE: AgentBundle = {
 const RECORD = {
     installationId: "i1",
     workspaceId: WORKSPACE,
-    agentId: "ws-12345678-chatbot",
+    agentId: "ws-12345678aaaabbbb-chatbot",
     checkedAt: new Date(AT),
     status: "ok",
     error: null,
@@ -323,7 +323,7 @@ describe("AgentSyncService syncInstallation", () => {
         const outcome = await service.syncInstallation(WORKSPACE, "i1", false)
 
         expect(outcome).toEqual({
-            agentId: "ws-12345678-chatbot",
+            agentId: "ws-12345678aaaabbbb-chatbot",
             contextVersion: 3,
             files: 1,
             contentHash: "hash-1",
@@ -333,7 +333,7 @@ describe("AgentSyncService syncInstallation", () => {
             registered: true,
         })
         expect(writer.write).toHaveBeenCalledWith("/cfg/workspace-x", BUNDLE.files)
-        expect(registry.register).toHaveBeenCalledWith("ws-12345678-chatbot", "Bot")
+        expect(registry.register).toHaveBeenCalledWith("ws-12345678aaaabbbb-chatbot", "Bot")
         expect(pause.wait).toHaveBeenCalledWith(2000)
         expect(tx.em.findOne).toHaveBeenCalledWith(OpenclawAgentSyncEntity, {
             select: { contentHash: true, status: true },
@@ -344,7 +344,7 @@ describe("AgentSyncService syncInstallation", () => {
             [[...CHECKED_COLUMNS.slice(0, 3), "synced_at", ...CHECKED_COLUMNS.slice(3)], ["installation_id"]],
         ])
         expect(logger.info).toHaveBeenCalledWith(OpenclawAgentSyncLogEvent.AgentSynced, {
-            agentId: "ws-12345678-chatbot",
+            agentId: "ws-12345678aaaabbbb-chatbot",
             written: 1,
             removed: 0,
             registered: true,
@@ -393,7 +393,7 @@ describe("AgentSyncService syncInstallation", () => {
                 {
                     installationId: "i1",
                     workspaceId: WORKSPACE,
-                    agentId: "ws-12345678-chatbot",
+                    agentId: "ws-12345678aaaabbbb-chatbot",
                     checkedAt: new Date(AT),
                     status: "error",
                     error: "OPENCLAW_AGENT_SYNC_WORKSPACE_UNAVAILABLE",
@@ -423,17 +423,17 @@ describe("AgentSyncService ensureInternalAgent", () => {
         const { service, writer, registry, pause } = await build({ internalRegistered: true })
         writer.matches.mockReturnValue(false)
 
-        await expect(service.ensureInternalAgent(WORKSPACE)).resolves.toBe("ws-12345678-nivo")
+        await expect(service.ensureInternalAgent(WORKSPACE)).resolves.toBe("ws-12345678aaaabbbb-nivo")
 
         expect(writer.write).toHaveBeenCalledWith("/cfg/workspace-x", INTERNAL_FILES)
-        expect(registry.register).toHaveBeenCalledWith("ws-12345678-nivo", "NIVO")
+        expect(registry.register).toHaveBeenCalledWith("ws-12345678aaaabbbb-nivo", "NIVO")
         expect(pause.wait).toHaveBeenCalledWith(2000)
     })
 
     it("only verifies an internal agent that is already current", async () => {
         const { service, writer, registry, pause } = await build({ internalCurrent: true })
 
-        await expect(service.ensureInternalAgent(WORKSPACE)).resolves.toBe("ws-12345678-nivo")
+        await expect(service.ensureInternalAgent(WORKSPACE)).resolves.toBe("ws-12345678aaaabbbb-nivo")
 
         expect(writer.write).not.toHaveBeenCalled()
         expect(registry.register).not.toHaveBeenCalled()
@@ -463,7 +463,7 @@ describe("AgentSyncService syncInstallation of a removed installation", () => {
         const removed = installationOf({ removed: true })
         const alone = await build({ installation: removed })
         await expect(alone.service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
-        expect(alone.registry.unregister).toHaveBeenCalledWith("ws-12345678-chatbot")
+        expect(alone.registry.unregister).toHaveBeenCalledWith("ws-12345678aaaabbbb-chatbot")
         expect(alone.pause.wait).toHaveBeenCalledWith(2000)
         expect(alone.bundles.build).not.toHaveBeenCalled()
 

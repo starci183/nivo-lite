@@ -100,7 +100,7 @@ describe("AgentBundleService", () => {
             installationId: "i1",
             workspaceId: "12345678-aaaa-bbbb-cccc-000000000000",
             module: "chatbot",
-            agentId: "ws-12345678-chatbot",
+            agentId: "ws-12345678aaaabbbb-chatbot",
             agentName: "Bot",
             contextVersion: 4,
             audience: "customer",
