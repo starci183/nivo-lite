@@ -1,4 +1,4 @@
-# Managed by starci app sync (slot app.db.image); do not edit: run "npx starci app sync --write".
+# Managed by starci app sync (slot app.db.image); do not edit: run "npx starci app sync --execute".
 # The image of the db service of a lite app, kept with the stacks (rulings lite-official-postgres-image, lite-pgmq-bus-bullmq-jobs and
 # lite-db-image-in-stacks): the Docker Official postgres image, pinned by digest, plus pgvector from the PGDG repository the image
 # already configures and pgmq, the event bus, from its pinned release source verified by sha256 (pgmq is SQL objects only, so its
@@ -16,16 +16,3 @@ RUN apt-get update \
     && cp /tmp/pgmq-1.13.1/pgmq-extension/sql/pgmq.sql "$extension/pgmq--1.13.1.sql" \
     && cp /tmp/pgmq-1.13.1/pgmq-extension/sql/pgmq--*--*.sql "$extension/" \
     && rm -rf /tmp/pgmq.tar.gz /tmp/pgmq-1.13.1
-
-# On the first start of an empty cluster, create the app_be login role with the sealed APP_BE_DB_PASSWORD (granted to db as a file), so the
-# api and mcp connect as soon as the migrations ran. The baseline migration creates the role only when it is absent, so it keeps this password.
-COPY --chmod=755 <<'EOF' /docker-entrypoint-initdb.d/10-app-be.sh
-#!/bin/sh
-set -eu
-file="${APP_BE_DB_PASSWORD_FILE:-}"
-[ -n "$file" ] && [ -r "$file" ] || exit 0
-password="$(cat "$file")"
-psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER:-postgres}" --dbname "${POSTGRES_DB:-postgres}" -v password="$password" <<'SQL'
-SELECT format('CREATE ROLE app_be LOGIN NOINHERIT PASSWORD %L', :'password') WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_be') \gexec
-SQL
-EOF
