@@ -13,9 +13,16 @@ import { ConnectionSecretReadsService } from "./connection-secret-reads.service"
 @Module({})
 /** The connections capability over the primary Supabase PostgreSQL connection. */
 export class ConnectionsModule extends ConfigurableModuleClass {
-    /** Registers the capability once in the API app. */
+    /** Registers the capability once in the API app; the read-only mode registers the bindings read alone. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if ("readOnly" in options) {
+            return {
+                ...base,
+                providers: [...(base.providers ?? []), ConnectionBindingsReadService],
+                exports: [ConnectionBindingsReadService],
+            }
+        }
         return {
             ...base,
             imports: [...(base.imports ?? []), ConnectorInterestModule.register({})],

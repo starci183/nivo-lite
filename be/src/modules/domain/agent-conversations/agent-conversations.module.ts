@@ -9,9 +9,16 @@ import { AgentConversationsService } from "./agent-conversations.service"
 @Module({})
 /** The conversations customers have with the workspace's agents, over the primary Supabase PostgreSQL connection. */
 export class AgentConversationsModule extends ConfigurableModuleClass {
-    /** Registers the capability once in the API app. */
+    /** Registers the capability once in the API app; the read-only mode registers the conversation lookups alone. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.readOnly === true) {
+            return {
+                ...base,
+                providers: [...(base.providers ?? []), AgentConversationsReadService],
+                exports: [AgentConversationsReadService],
+            }
+        }
         return {
             ...base,
             providers: [

@@ -9,6 +9,7 @@ import { EinvoiceNativeService } from "./adapters/einvoice-native.service"
 import { ConnectionKeyCheckService } from "./connection-key-check.service"
 import { SepayNativeService } from "./adapters/sepay-native.service"
 import { GatewaySurfaceService } from "./gateway-surface.service"
+import { withoutShadowed } from "./native-adapters.policy"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayAdminService } from "./mcp-gateway-admin.service"
 import type { NativeAdapter } from "./mcp-gateway.contracts"
@@ -47,7 +48,7 @@ export class McpGatewayModule extends ConfigurableModuleClass {
                 EinvoiceNativeService,
                 {
                     provide: NATIVE_ADAPTERS,
-                    useFactory: (...adapters: ReadonlyArray<NativeAdapter>) => adapters,
+                    useFactory: (...adapters: ReadonlyArray<NativeAdapter>) => withoutShadowed(adapters),
                     inject: [SepayNativeService, EinvoiceNativeService, ...(options.natives ?? [])],
                 },
                 McpConnectorCredentialService,

@@ -4,6 +4,9 @@ import { McpGatewayError, McpGatewayErrorCode } from "../errors/mcp-gateway.erro
 import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "../mcp-gateway.contracts"
 import { SEPAY_BANK_MOVE_INPUT_SCHEMA, SEPAY_BANK_MOVE_SCHEMA } from "./sepay-native.schema"
 
+/** The members of a bank move the audit masks: who paid and the memo they wrote, which often carry a name or an order. */
+const BANK_MOVE_SECRET_FIELDS: ReadonlyArray<string> = ["payer", "reference"]
+
 /** The SePay native connector: the bank credits and debits SePay delivered to the workspace, read from NIVO's own ledger. */
 export const SEPAY_MANIFEST: NativeConnectorManifest = {
     key: "sepay",
@@ -20,6 +23,7 @@ export const SEPAY_MANIFEST: NativeConnectorManifest = {
             role: "payment.credits.list",
             inputSchema: SEPAY_BANK_MOVE_INPUT_SCHEMA,
             argumentSchema: SEPAY_BANK_MOVE_SCHEMA,
+            secretFields: BANK_MOVE_SECRET_FIELDS,
         },
         {
             name: "transactions.debits",
@@ -30,6 +34,7 @@ export const SEPAY_MANIFEST: NativeConnectorManifest = {
             role: "payment.debits.list",
             inputSchema: SEPAY_BANK_MOVE_INPUT_SCHEMA,
             argumentSchema: SEPAY_BANK_MOVE_SCHEMA,
+            secretFields: BANK_MOVE_SECRET_FIELDS,
         },
     ],
 }

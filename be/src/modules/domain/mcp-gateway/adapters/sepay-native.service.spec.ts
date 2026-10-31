@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { TransactionsService } from "@modules/domain/transactions"
 import type { BankCreditRow } from "@modules/domain/transactions"
+import { summaryOf } from "../audit-mask.policy"
 import { McpGatewayErrorCode } from "../errors/mcp-gateway.error"
 import { SEPAY_MANIFEST, SepayNativeService } from "./sepay-native.service"
 
@@ -43,6 +44,25 @@ describe("SepayNativeService manifest", () => {
                 additionalProperties: false,
             })
         }
+    })
+})
+
+describe("SepayNativeService audit", () => {
+    it("declares the payer and the memo as masked on both bank tools", () => {
+        for (const tool of SEPAY_MANIFEST.tools) expect(tool.secretFields).toEqual(["payer", "reference"])
+    })
+
+    it("keeps the payer and the memo out of the summary the audit stores while the answer is unchanged", async () => {
+        const { sepay } = await build()
+
+        const answer = await sepay.invoke("ws-1", "transactions.list", {})
+        const summary = summaryOf(answer, SEPAY_MANIFEST.tools[0]?.secretFields)
+
+        expect(answer).toMatchObject({ transactions: [{ payer: "NGUYEN VAN A", reference: "HAKUEN F7K2Q9" }] })
+        expect(summary).not.toContain("NGUYEN VAN A")
+        expect(summary).not.toContain("HAKUEN F7K2Q9")
+        expect(summary).toContain('"payer":"***"')
+        expect(summary).toContain('"amountVnd":3600000')
     })
 })
 

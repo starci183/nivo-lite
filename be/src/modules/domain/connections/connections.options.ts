@@ -24,3 +24,15 @@ export interface ConnectionsPorts {
 
 /** What the environment alone decides; the app root adds the ports. */
 export type ConnectionsConfig = Omit<ConnectionsOptions, "ports">
+
+/**
+ * The options of the read-only mode (the mcp app): the status reads of the agent bindings, with no sealing key, no site address and
+ * nothing that writes or calls a provider.
+ */
+export interface ConnectionsReadOnlyOptions {
+    /** Registers the read-only mode. */
+    readonly readOnly: true
+}
+
+/** What the connections capability needs from the composition root: the full options, or the read-only mode. */
+export type ConnectionsModuleOptions = ConnectionsOptions | ConnectionsReadOnlyOptions

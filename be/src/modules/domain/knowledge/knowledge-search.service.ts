@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { KnowledgeChunksService, toVector } from "@modules/domain/knowledge-chunks"
 import type { ChunkHit } from "@modules/domain/knowledge-chunks"
-import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import { catalogAudienceOf } from "@modules/domain/module-audiences"
 import { NivoKnowledgeSearchService } from "@modules/domain/nivo-knowledge"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -30,7 +30,7 @@ export class KnowledgeSearchService {
         private readonly members: WorkspaceMembersService,
         private readonly embeddings: EmbeddingService,
         private readonly chunks: KnowledgeChunksService,
-        private readonly sources: KnowledgeSourcesService,
+        private readonly sources: KnowledgeSourcesReadService,
         private readonly nivo: NivoKnowledgeSearchService,
     ) {}
 
@@ -64,18 +64,26 @@ export class KnowledgeSearchService {
             requestedAudience: request.audience,
             installationId: request.installationId,
         })
-        return this.passages(lens, question, request.limit)
+        return this.passages(lens, question, request.limit, request.embedTimeoutMs ?? QUERY_TIMEOUT_MS)
     }
 
-    /** Hybrid search over both layers, filtered by the lens in SQL; the embedding of the query is metered against the workspace. */
-    async passages(lens: Lens, query: string, limit: number): Promise<ReadonlyArray<Passage>> {
+    /**
+     * Hybrid search over both layers, filtered by the lens in SQL; the embedding of the query is metered against the workspace and
+     * gets `embedTimeoutMs` before the search falls back to words.
+     */
+    async passages(
+        lens: Lens,
+        query: string,
+        limit: number,
+        embedTimeoutMs: number = QUERY_TIMEOUT_MS,
+    ): Promise<ReadonlyArray<Passage>> {
         const vectors =
             query.trim() === ""
                 ? null
                 : await this.embeddings.embed({
                       workspaceId: lens.workspaceId,
                       texts: [query],
-                      timeoutMs: QUERY_TIMEOUT_MS,
+                      timeoutMs: embedTimeoutMs,
                   })
         const vector = vectors?.[0]
         return this.match(lens, query, limit, vector === undefined ? null : toVector(vector))
