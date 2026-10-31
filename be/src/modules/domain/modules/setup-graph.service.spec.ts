@@ -7,12 +7,17 @@ import { SetupGraphService } from "./setup-graph.service"
 
 const APPLIER: SetupApplier = { workspaceId: "ws-1", principalId: "user-1", installationId: "inst-1", contextVersionId: "cv-1" }
 
-const build = async (port?: Partial<SetupGraphPort>) => {
-    const graph = mock<SetupGraphPort>(port ?? {})
+const build = async (port: Partial<SetupGraphPort>) => {
+    const graph = mock<SetupGraphPort>(port)
     const moduleRef = await Test.createTestingModule({
-        providers: [SetupGraphService, ...(port === undefined ? [] : [{ provide: SETUP_GRAPH, useValue: graph }])],
+        providers: [SetupGraphService, { provide: SETUP_GRAPH, useValue: graph }],
     }).compile()
     return { service: moduleRef.get(SetupGraphService), graph }
+}
+
+const buildWithoutGraph = async () => {
+    const moduleRef = await Test.createTestingModule({ providers: [SetupGraphService, { provide: SETUP_GRAPH, useValue: null }] }).compile()
+    return { service: moduleRef.get(SetupGraphService) }
 }
 
 describe("SetupGraphService with a graph", () => {
@@ -48,7 +53,7 @@ describe("SetupGraphService with a graph", () => {
 
 describe("SetupGraphService with no graph", () => {
     it("answers as if the flow were whole, finds no seat, and publishes nothing", async () => {
-        const { service } = await build()
+        const { service } = await buildWithoutGraph()
 
         await expect(service.gapOf("ws-1", "inst-1")).resolves.toBeNull()
         await expect(service.requireWhole("ws-1", "inst-1")).resolves.toBeUndefined()

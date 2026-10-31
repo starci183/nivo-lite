@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ACCOUNTING_GATEWAY } from "./accounting-gateway.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./accounting.module-definition"
 import { AccountingBookService } from "./accounting-book.service"
+import { AccountingFactReaderService } from "./accounting-fact-reader.service"
 import { AccountingDecisionsService } from "./accounting-decisions.service"
 import { AccountingPerformersRegistrarService } from "./accounting-performers-registrar.service"
 import { AccountingRoomService } from "./accounting-room.service"
@@ -41,12 +42,13 @@ export class AccountingModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 AccountingBookService,
                 AccountingService,
+                AccountingFactReaderService,
                 ...desk,
                 ...decisions,
                 gateway,
                 { provide: ACCOUNTING_GATEWAY, useExisting: gateway },
             ],
-            exports: [AccountingBookService, AccountingService, DeskDailyService],
+            exports: [AccountingBookService, AccountingFactReaderService, AccountingService, DeskDailyService],
         }
     }
 }

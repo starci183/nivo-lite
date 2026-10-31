@@ -19,17 +19,21 @@ const PAYLOAD: BranchCardPayload = {
 }
 const WRITE: ProposedBranch = { gateKey: "g1", kind: "branch", payload: PAYLOAD }
 
-const build = async (options: { seat?: string | null; graph?: boolean } = {}) => {
+const build = async (seat: string | null = null) => {
     const graph = mock<SetupGraphPort>({ applyBranch: jest.fn().mockResolvedValue(undefined) })
-    const seats = mock<SetupGraphService>({ seatNamed: jest.fn().mockResolvedValue(options.seat ?? null) })
+    const seats = mock<SetupGraphService>({ seatNamed: jest.fn().mockResolvedValue(seat) })
     const moduleRef = await Test.createTestingModule({
-        providers: [
-            SetupBranchCardsService,
-            { provide: SetupGraphService, useValue: seats },
-            ...(options.graph === false ? [] : [{ provide: SETUP_GRAPH, useValue: graph }]),
-        ],
+        providers: [SetupBranchCardsService, { provide: SetupGraphService, useValue: seats }, { provide: SETUP_GRAPH, useValue: graph }],
     }).compile()
     return { service: moduleRef.get(SetupBranchCardsService), graph, seats }
+}
+
+const buildWithoutGraph = async () => {
+    const seats = mock<SetupGraphService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [SetupBranchCardsService, { provide: SetupGraphService, useValue: seats }, { provide: SETUP_GRAPH, useValue: null }],
+    }).compile()
+    return { service: moduleRef.get(SetupBranchCardsService) }
 }
 
 const closed: CardRecord = mock<CardRecord>({})
@@ -46,7 +50,7 @@ const confirmOf = (overrides: Partial<ConfirmBranch> = {}): ConfirmBranch => ({
 
 describe("SetupBranchCardsService.cardOf", () => {
     it("fills the seat of the person the owner named when it is found", async () => {
-        const { service, seats } = await build({ seat: "nam" })
+        const { service, seats } = await build("nam")
 
         const card = await service.cardOf("ws-1", WRITE)
 
@@ -55,7 +59,7 @@ describe("SetupBranchCardsService.cardOf", () => {
     })
 
     it("leaves the seat open when nobody is found, and keys the card by the action", async () => {
-        const { service } = await build({ seat: null })
+        const { service } = await build()
 
         await expect(service.cardOf("ws-1", WRITE)).resolves.toMatchObject({ payload: { approverMemberId: null } })
         expect(service.targetOf(WRITE)).toBe("branch:issue_invoice")
@@ -108,7 +112,7 @@ describe("SetupBranchCardsService.confirm", () => {
     })
 
     it("refuses when the app has no graph to write into", async () => {
-        const { service } = await build({ graph: false })
+        const { service } = await buildWithoutGraph()
 
         await expect(service.confirm(confirmOf())).rejects.toMatchObject({ code: ModulesErrorCode.CardBranchIncomplete })
     })

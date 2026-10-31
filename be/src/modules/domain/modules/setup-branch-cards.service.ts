@@ -36,7 +36,7 @@ export interface ConfirmBranch {
 export class SetupBranchCardsService {
     constructor(
         private readonly seats: SetupGraphService,
-        @Optional() @InjectSetupGraph() private readonly graph?: SetupGraphPort,
+        @Optional() @InjectSetupGraph() private readonly graph: SetupGraphPort | null = null,
     ) {}
 
     /** The card to store for a proposed branch: the seat of the named person filled in when it is found. */
@@ -54,7 +54,7 @@ export class SetupBranchCardsService {
     async confirm(input: ConfirmBranch): Promise<CardRecord> {
         const belongsTo = input.change.belongsTo ?? input.base.belongsTo
         const approverMemberId = input.change.approverMemberId ?? input.base.approverMemberId
-        if (belongsTo === null || approverMemberId === null || this.graph === undefined) {
+        if (belongsTo === null || approverMemberId === null || this.graph === null) {
             throw new ModulesError({ code: ModulesErrorCode.CardBranchIncomplete })
         }
         await this.graph.applyBranch({

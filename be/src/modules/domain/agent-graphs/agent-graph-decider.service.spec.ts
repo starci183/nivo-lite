@@ -174,13 +174,12 @@ describe("AgentGraphDeciderService.decide enforced", () => {
         expect(built.decisions.record).toHaveBeenCalledWith(expect.objectContaining({ branchKey: "else", facts: {} }))
     })
 
-    it("reads no fact for an item with no record, and takes the else", async () => {
+    it("names the work item to the reader, and an empty record for an item that has none", async () => {
         const built = await build(stateOf({ mode: "enforced" }))
 
-        const judgement = await built.service.decide(requestOf(gateOf(AUTO), { item: itemOf({ ...item, subject_id: null }) }))
+        await built.service.decide(requestOf(gateOf(AUTO), { item: itemOf({ ...item, subject_id: null }) }))
 
-        expect(built.reader.read).not.toHaveBeenCalled()
-        expect(judgement?.verdict).toMatchObject({ reason: "branch_ask" })
+        expect(built.reader.read).toHaveBeenCalledWith(expect.anything(), { type: "order", id: "", workItemId: "item-9" }, expect.anything())
     })
 
     it("records no turn for work that did not come from one", async () => {

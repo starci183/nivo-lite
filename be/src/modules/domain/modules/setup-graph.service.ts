@@ -10,7 +10,7 @@ import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
  * became. With no graph bound each call answers as if the flow were whole.
  */
 export class SetupGraphService {
-    constructor(@Optional() @InjectSetupGraph() private readonly graph?: SetupGraphPort) {}
+    constructor(@Optional() @InjectSetupGraph() private readonly graph: SetupGraphPort | null = null) {}
 
     /** The code of the first vague place of the graph of the installation, or null when it has none or there is no graph. */
     async gapOf(workspaceId: string, installationId: string): Promise<string | null> {

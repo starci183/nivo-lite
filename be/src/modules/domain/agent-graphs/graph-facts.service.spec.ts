@@ -10,7 +10,7 @@ import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 import type { GraphFactReader } from "./agent-graphs.port"
 import { GraphFactsService } from "./graph-facts.service"
 
-const SUBJECT = { type: "order", id: "payment-1" }
+const SUBJECT = { type: "order", id: "payment-1", workItemId: "item-1" }
 
 const readerOf = (keys: ReadonlyArray<string>, read: GraphFactReader["read"]): GraphFactReader => ({
     facts: Object.values(FACTS).filter((fact) => keys.includes(fact.key)),

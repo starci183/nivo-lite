@@ -1,6 +1,7 @@
 export { ACCOUNTING_ERROR_KINDS } from "./errors/accounting.error"
 export { ACCOUNTING_MESSAGES } from "./messages/accounting.messages"
 export { AccountingModule } from "./accounting.module"
+export { AccountingFactReaderService } from "./accounting-fact-reader.service"
 export { AccountingService } from "./accounting.service"
 export { DeskDailyService } from "./desk-daily.service"
 export { renewalSectionOf } from "./daily-summary.policy"

@@ -232,7 +232,10 @@ export interface FactSpec {
 export type FactRegistry = Readonly<Record<string, FactSpec>>
 
 /** The facts as read from real records; a fact that could not be read is absent. */
-export type FactValues = Readonly<Record<string, FactValue | undefined>>
+export interface FactValues {
+    /** The value read for the fact of that key; absent when it could not be read. */
+    readonly [fact: string]: FactValue | undefined
+}
 
 /** What a node looks like at a glance in the graph: the shape of grammar's `FlowGraphNode`, without importing grammar. */
 export interface GraphNodeCard {

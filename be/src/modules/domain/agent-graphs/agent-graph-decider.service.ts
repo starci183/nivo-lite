@@ -83,10 +83,11 @@ export class AgentGraphDeciderService implements WorkBranchDecider {
         const versionId = state?.activeVersionId ?? null
         if (state === null || versionId === null || decide === undefined) return null
         const registry = this.facts.registry()
-        const read =
-            item.subject_id === null
-                ? {}
-                : await this.facts.read(item.workspace_id, { type: item.subject_type, id: item.subject_id }, decide.facts)
+        const read = await this.facts.read(
+            item.workspace_id,
+            { type: item.subject_type, id: item.subject_id ?? "", workItemId: item.id },
+            decide.facts,
+        )
         const branch = pickBranch(decide, read, registry)
         if (branch === null) return null
         const amount = recordAmountOf(read, registry)
