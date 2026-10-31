@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
 import { useConnectionNeedsCopy, useInstanceHeader, useInstanceRail, useInstanceTabs } from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
+import { useWorkbenchWhyKey } from "@/hooks/workbench"
 import { AGENT_ROLES_HREF, AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
 import { AgentInstanceFrameBase } from "./component"
 import type { InstanceHeaderView } from "./component"
@@ -39,11 +40,12 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
     const header = useInstanceHeader(props.module, props.installationId)
     const needs = useConnectionNeedsCopy()
     const rail = useInstanceRail(props.installationId)
+    const why = useWorkbenchWhyKey()
     return (
         <AgentInstanceFrameBase
             shape={{ body: props.children }}
             props={{
-                hasPanes: PANES_TABS.has(selected),
+                hasPanes: PANES_TABS.has(selected) || (selected === "workbench" && why.workItemId !== null),
                 ariaLabel: props.installationId,
                 crumbLabel: ts("crumbLabel"),
                 crumbs: [
