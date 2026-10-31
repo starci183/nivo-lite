@@ -52,7 +52,10 @@ describe("PostgresRealtimeHubService start and stop", () => {
 
         await handlers.current.probe("probe:abc")
 
-        expect(em.query).toHaveBeenCalledWith("SELECT pg_notify($1, $2)", [NOTIFY_CHANNEL, "probe:abc"])
+        expect(em.query).toHaveBeenCalledWith('SELECT * FROM "pg_catalog"."pg_notify"($1, $2)', [
+            NOTIFY_CHANNEL,
+            "probe:abc",
+        ])
     })
 
     it("stops the listener when the app shuts down", async () => {

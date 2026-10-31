@@ -7,6 +7,7 @@ import { NOTIFY_CHANNEL, REALTIME_LOCK_NAMESPACE, REPLAY_FRAMES } from "./realti
 import { REALTIME_MANAGERS } from "./realtime.decorators"
 import type { RealtimeTopic } from "./realtime.port"
 import { RealtimeEventEntity } from "./persistence/entities"
+import { HASH_STATEMENT, advisoryLockAnswers } from "@tests/fixtures/builders/advisory-lock.builder"
 
 interface Frame {
     readonly id: string
@@ -27,13 +28,13 @@ const frameOf = (value: number): Frame => ({ id: `e-${value}`, value })
 
 const settle = () => new Promise<void>((resolve) => setImmediate(resolve))
 
-const LOCK = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
-const NOTIFY = "SELECT pg_notify($1, $2)"
+const NOTIFY = 'SELECT * FROM "pg_catalog"."pg_notify"($1, $2)'
 
-/** The hub on a scripted database: the lock and the notification answer no rows, the insert answers the sequence number the spec names. */
+const scriptedQueries = [...advisoryLockAnswers, [NOTIFY, []]] as const
+
+/** The hub on a scripted database: the lock and the notification answer as the database does, the insert answers the sequence number the spec names. */
 const build = async (insert: QueryBuilderAnswers = { execute: { raw: [{ seq: "12" }] } }) => {
-    const em = mockEntityManager()
-    em.query.mockResolvedValue([])
+    const em = mockEntityManager({ query: scriptedQueries })
     const [fake] = queueQueryBuilders(em, [insert])
     const transactions = fakeTransaction(em)
     const moduleRef = await Test.createTestingModule({
@@ -48,12 +49,12 @@ describe("PostgresReplayHubService publish", () => {
 
         await hub.publish(topicOf("t:pub"), frameOf(1))
 
-        expect(em.query).toHaveBeenNthCalledWith(1, LOCK, [`${REALTIME_LOCK_NAMESPACE}t:pub`])
+        expect(em.query).toHaveBeenNthCalledWith(1, HASH_STATEMENT, [`${REALTIME_LOCK_NAMESPACE}t:pub`, 0])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(RealtimeEventEntity, "e")
         expect(fake?.callsOf("insert")).toEqual([[]])
         expect(fake?.callsOf("values")).toEqual([[{ topic: "t:pub", eventId: "e-1", payload: frameOf(1) }]])
         expect(fake?.callsOf("returning")).toEqual([["seq"]])
-        expect(em.query).toHaveBeenNthCalledWith(2, NOTIFY, [NOTIFY_CHANNEL, '{"topic":"t:pub","seq":12}'])
+        expect(em.query).toHaveBeenNthCalledWith(3, NOTIFY, [NOTIFY_CHANNEL, '{"topic":"t:pub","seq":12}'])
         expect(transactions.outcomes).toEqual(["commit"])
     })
 
@@ -71,15 +72,14 @@ describe("PostgresReplayHubService publish", () => {
 
     it("writes inside the transaction the publisher gives, so the frame commits with the publisher write", async () => {
         const { hub, em, transactions } = await build()
-        const inside = mockEntityManager()
-        inside.query.mockResolvedValue([])
+        const inside = mockEntityManager({ query: scriptedQueries })
         const [insideFake] = queueQueryBuilders(inside, [{ execute: { raw: [{ seq: "13" }] } }])
 
         await hub.publish(topicOf("t:inside"), frameOf(2), inside)
 
-        expect(inside.query).toHaveBeenNthCalledWith(1, LOCK, [`${REALTIME_LOCK_NAMESPACE}t:inside`])
+        expect(inside.query).toHaveBeenNthCalledWith(1, HASH_STATEMENT, [`${REALTIME_LOCK_NAMESPACE}t:inside`, 0])
         expect(insideFake?.callsOf("values")).toEqual([[{ topic: "t:inside", eventId: "e-2", payload: frameOf(2) }]])
-        expect(inside.query).toHaveBeenNthCalledWith(2, NOTIFY, [NOTIFY_CHANNEL, '{"topic":"t:inside","seq":13}'])
+        expect(inside.query).toHaveBeenNthCalledWith(3, NOTIFY, [NOTIFY_CHANNEL, '{"topic":"t:inside","seq":13}'])
         expect(em.query).not.toHaveBeenCalled()
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
         expect(transactions.outcomes).toEqual([])

@@ -16,9 +16,7 @@ import type { ContractLinkRead, CustomerRecordRead } from "./contract-link.polic
 import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
 import type { TableQuery } from "@tests/fixtures/builders/table-query-builder.builder"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
-
-/** The statement `advisoryXactLock` sends. */
-const LOCK_CONTRACT_LINKING = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
+import { advisoryLockAnswers } from "@tests/fixtures/builders/advisory-lock.builder"
 
 /** The customer record each run's manager is paired with. */
 const recordsOf = new WeakMap<MockEntityManager, CustomerRecordRead>()
@@ -96,7 +94,7 @@ const linkRunOf = (
     contracts: ReadonlyArray<ContractLinkRead>,
     ...relinks: ReadonlyArray<ReadonlyArray<unknown>>
 ) => {
-    const tx = fakeTransaction(mockEntityManager({ query: [LOCK_CONTRACT_LINKING, []] }))
+    const tx = fakeTransaction(mockEntityManager({ query: advisoryLockAnswers }))
     let relinked = 0
     recordsOf.set(tx.em, record)
     const seen = answerByTable(tx.em, {

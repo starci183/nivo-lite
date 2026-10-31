@@ -13,9 +13,8 @@ import { JobsLogEvent } from "./jobs.log-events"
 import { JobsModule, cronSchedulerOf } from "./jobs.module"
 import type { JobTickScheduler } from "./jobs.port"
 import { JobTickService, tickMinute } from "./job-tick.service"
+import { HASH_STATEMENT, advisoryLockAnswers } from "@tests/fixtures/builders/advisory-lock.builder"
 
-// The statements advisoryXactLock and callDbFunction of platform/database send for one firing.
-const LOCK_TICK = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
 const CLAIM_TICK = 'SELECT * FROM "public"."job_tick_claim"($1, $2)'
 
 const AT = "2026-02-03T04:05:06.000Z"
@@ -31,10 +30,7 @@ const TICK: JobTick = {
 const build = async (claimed: boolean | null) => {
     const transaction = fakeTransaction(
         mockEntityManager({
-            query: [
-                [LOCK_TICK, []],
-                [CLAIM_TICK, claimed === null ? [] : [{ claimed }]],
-            ],
+            query: [...advisoryLockAnswers, [CLAIM_TICK, claimed === null ? [] : [{ claimed }]]],
         }),
     )
     const outbox = recordingQueueOutbox()
@@ -65,8 +61,8 @@ describe("JobTickService", () => {
 
         await expect(ticks.fire(TICK)).resolves.toBe(true)
 
-        expect(transaction.em.query).toHaveBeenNthCalledWith(1, LOCK_TICK, ["tick:nightly-digest"])
-        expect(transaction.em.query).toHaveBeenNthCalledWith(2, CLAIM_TICK, ["nightly-digest", "2026-02-03T04:05"])
+        expect(transaction.em.query).toHaveBeenNthCalledWith(1, HASH_STATEMENT, ["tick:nightly-digest", 0])
+        expect(transaction.em.query).toHaveBeenNthCalledWith(3, CLAIM_TICK, ["nightly-digest", "2026-02-03T04:05"])
         expect(outbox.jobs).toEqual([{ queue: "digests", payload: { kind: "nightly" } }])
         expect(outbox.allInTransaction).toBe(true)
         expect(write).toHaveBeenCalledWith(

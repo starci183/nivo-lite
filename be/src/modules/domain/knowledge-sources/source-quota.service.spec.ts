@@ -9,11 +9,11 @@ import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowl
 import { KNOWLEDGE_STORAGE } from "./knowledge-sources.decorators"
 import type { NormalizedSource } from "./source-input.policy"
 import { SourceQuotaService } from "./source-quota.service"
+import { HASH_STATEMENT, advisoryLockAnswers } from "@tests/fixtures/builders/advisory-lock.builder"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const MB = 1024 * 1024
 const PATH = `${WS}/u/menu.pdf`
-const LOCK = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
 const codes = KnowledgeSourcesErrorCode
 const sourceOf = (fields: Partial<NormalizedSource>): NormalizedSource => ({
     kind: "text",
@@ -91,15 +91,15 @@ describe("SourceQuotaService measure", () => {
 
 describe("SourceQuotaService admit", () => {
     it("takes the workspace lock, then lets in what fits up to the last byte", async () => {
-        const em = mockEntityManager({ query: [LOCK, []] })
+        const em = mockEntityManager({ query: advisoryLockAnswers })
         holding(em, String(40 * MB))
         const { service } = await build(em)
         await expect(service.admit(em, WS, 10 * MB)).resolves.toBeUndefined()
-        expect(em.query).toHaveBeenCalledWith(LOCK, [`knowledge-sources:${WS}`])
+        expect(em.query).toHaveBeenCalledWith(HASH_STATEMENT, [`knowledge-sources:${WS}`, 0])
     })
 
     it("refuses what would pass the allowance and says what is used and left", async () => {
-        const em = mockEntityManager({ query: [LOCK, []] })
+        const em = mockEntityManager({ query: advisoryLockAnswers })
         holding(em, String(48.4 * MB))
         const { service } = await build(em)
         await expect(service.admit(em, WS, 2 * MB)).rejects.toMatchObject({

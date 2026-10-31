@@ -13,6 +13,12 @@ import type { WorkspacesOptions } from "./workspaces.options"
 import { WORKSPACES_OPTIONS } from "./workspaces.port"
 import { WorkspacesService } from "./workspaces.service"
 import { FIRST_WORKSPACE_NAME } from "./workspaces.templates"
+import {
+    HASH_STATEMENT,
+    LOCK_HASH,
+    LOCK_STATEMENT,
+    advisoryLockAnswers,
+} from "@tests/fixtures/builders/advisory-lock.builder"
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -36,8 +42,6 @@ const seatOf = builder<WorkspaceMember>({
     displayName: "An",
     status: "active",
 })
-
-const LOCK_FIRST_WORKSPACE = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
 
 const INSERTED = (id: string) => ({ identifiers: [{ id }], generatedMaps: [], raw: [] })
 
@@ -64,14 +68,14 @@ const serviceOf = async (entityManager: MockEntityManager, overrides: Partial<Wo
 describe("WorkspacesService > ensureNamed", () => {
     it("keeps the exact owned name even when new signup is disabled", async () => {
         const em = mockEntityManager({
-            query: [LOCK_FIRST_WORKSPACE, []],
+            query: advisoryLockAnswers,
             find: [WorkspaceEntity, [ownedWorkspaceRow("ws-1")]],
         })
         const transaction = fakeTransaction(em)
         const { service, members } = await build(em)
         members.isActiveOwner.mockResolvedValue(true)
         await expect(service.ensureNamed("owner-1", "Explicit")).resolves.toEqual({ id: "ws-1" })
-        expect(em.query).toHaveBeenCalledWith(LOCK_FIRST_WORKSPACE, ["workspace-first:owner-1"])
+        expect(em.query).toHaveBeenCalledWith(HASH_STATEMENT, ["workspace-first:owner-1", 0])
         expect(em.find).toHaveBeenCalledWith(WorkspaceEntity, {
             select: { id: true, status: true },
             where: { ownerId: "owner-1", name: "Explicit" },
@@ -82,7 +86,7 @@ describe("WorkspacesService > ensureNamed", () => {
     })
 
     it("creates only after the serialized exact-name lookup found none", async () => {
-        const em = mockEntityManager({ query: [LOCK_FIRST_WORKSPACE, []], find: [WorkspaceEntity, []] })
+        const em = mockEntityManager({ query: advisoryLockAnswers, find: [WorkspaceEntity, []] })
         em.insert.mockResolvedValue(INSERTED("ws-new"))
         const transaction = fakeTransaction(em)
         await expect(
@@ -106,7 +110,7 @@ describe("WorkspacesService > ensureNamed", () => {
         { owned: [ownedWorkspaceRow("ws-1", "past_due")], owner: true, code: WorkspacesErrorCode.NameUnavailable },
         { owned: [], owner: true, code: WorkspacesErrorCode.SignupDisabled },
     ])("refuses a non-unique or unavailable selector without creating", async ({ owned, owner, code }) => {
-        const em = mockEntityManager({ query: [LOCK_FIRST_WORKSPACE, []], find: [WorkspaceEntity, owned] })
+        const em = mockEntityManager({ query: advisoryLockAnswers, find: [WorkspaceEntity, owned] })
         const transaction = fakeTransaction(em)
         const { service, members } = await build(em)
         members.isActiveOwner.mockResolvedValue(owner)
@@ -323,13 +327,16 @@ describe("WorkspacesService > startFirst", () => {
     })
 
     it("locks the person first load and keeps their existing membership", async () => {
-        const em = mockEntityManager({ query: [LOCK_FIRST_WORKSPACE, []] })
+        const em = mockEntityManager({ query: advisoryLockAnswers })
         const transaction = fakeTransaction(em)
         const { service, members } = await build(em, { allowFreeWorkspace: true })
         members.holdsAny.mockResolvedValue(true)
 
         await expect(service.startFirst("user-1")).resolves.toEqual({ id: null })
-        expect(em.query.mock.calls).toEqual([[LOCK_FIRST_WORKSPACE, ["workspace-first:user-1"]]])
+        expect(em.query.mock.calls).toEqual([
+            [HASH_STATEMENT, ["workspace-first:user-1", 0]],
+            [LOCK_STATEMENT, [LOCK_HASH]],
+        ])
         expect(members.holdsAny).toHaveBeenCalledWith("user-1", expect.anything())
         expect(em.insert).not.toHaveBeenCalled()
         expect(transaction.commits).toBe(1)
@@ -337,7 +344,7 @@ describe("WorkspacesService > startFirst", () => {
     })
 
     it("keeps the workspace the person owns without a membership", async () => {
-        const em = mockEntityManager({ query: [LOCK_FIRST_WORKSPACE, []] })
+        const em = mockEntityManager({ query: advisoryLockAnswers })
         em.exists.mockResolvedValue(true)
         const transaction = fakeTransaction(em)
         const { service, members } = await build(em, { allowFreeWorkspace: true })
@@ -350,7 +357,7 @@ describe("WorkspacesService > startFirst", () => {
     })
 
     it("creates the first workspace when the person holds none", async () => {
-        const em = mockEntityManager({ query: [LOCK_FIRST_WORKSPACE, []] })
+        const em = mockEntityManager({ query: advisoryLockAnswers })
         em.exists.mockResolvedValue(false)
         em.insert.mockResolvedValue(INSERTED("ws-first"))
         const transaction = fakeTransaction(em)
@@ -358,7 +365,10 @@ describe("WorkspacesService > startFirst", () => {
         members.holdsAny.mockResolvedValue(false)
 
         await expect(service.startFirst("user-1")).resolves.toEqual({ id: "ws-first" })
-        expect(em.query.mock.calls).toEqual([[LOCK_FIRST_WORKSPACE, ["workspace-first:user-1"]]])
+        expect(em.query.mock.calls).toEqual([
+            [HASH_STATEMENT, ["workspace-first:user-1", 0]],
+            [LOCK_STATEMENT, [LOCK_HASH]],
+        ])
         expect(em.insert).toHaveBeenCalledWith(WorkspaceEntity, {
             ownerId: "user-1",
             name: FIRST_WORKSPACE_NAME,

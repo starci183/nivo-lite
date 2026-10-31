@@ -15,15 +15,13 @@ import { GenerationsService } from "./generations.service"
 import { GUIDE_ASKS_PER_WINDOW, GUIDE_TIMEOUT_MS, guidePrompt } from "./guide.policy"
 import { GuideService } from "./guide.service"
 import { AiGenerationEntity } from "./persistence/entities"
-
-/** The statement `advisoryXactLock` sends. */
-const LOCK_GUIDE_ASKER = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
+import { HASH_STATEMENT, advisoryLockAnswers } from "@tests/fixtures/builders/advisory-lock.builder"
 
 const NOW = new Date("2026-10-13T10:00:00.000Z")
 const ASK: GuideAsk = { workspaceId: "w1", question: "Where are my leads?", path: "/chat", history: [], locale: "vi" }
 
 const build = async (asked: number | undefined, role: WorkspaceMember["role"] = "staff") => {
-    const tx: FakeTransaction = fakeTransaction(mockEntityManager({ query: [LOCK_GUIDE_ASKER, []] }))
+    const tx: FakeTransaction = fakeTransaction(mockEntityManager({ query: advisoryLockAnswers }))
     const [count] = queueQueryBuilders(tx.em, [{ getCount: asked ?? 0 }])
     const generations = mock<GenerationsService>({
         request: jest.fn(() => Promise.resolve({ id: "g1", status: "queued" as const })),
@@ -80,7 +78,7 @@ describe("GuideService", () => {
 
         await service.ask("u1", ASK)
 
-        expect(tx.em.query).toHaveBeenCalledWith(LOCK_GUIDE_ASKER, ["guide:w1:u1"])
+        expect(tx.em.query).toHaveBeenCalledWith(HASH_STATEMENT, ["guide:w1:u1", 0])
         expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(AiGenerationEntity, "g")
         expect(count?.callsOf("where")).toEqual([
             [

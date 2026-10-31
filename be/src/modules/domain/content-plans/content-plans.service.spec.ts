@@ -7,9 +7,7 @@ import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builde
 import { ContentPlansErrorCode } from "./errors/content-plans.error"
 import { ContentPlansService } from "./content-plans.service"
 import { ContentPlanEntity } from "./persistence/entities"
-
-/** The statement `advisoryXactLock` sends. */
-const LOCK_CONTENT_PLAN = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
+import { advisoryLockAnswers } from "@tests/fixtures/builders/advisory-lock.builder"
 
 const PLAN: ContentGeneratedPlan = {
     month: "2026-10",
@@ -31,7 +29,7 @@ const PLAN: ContentGeneratedPlan = {
 
 const build = async () => {
     const entityManager = mockEntityManager({
-        query: [LOCK_CONTENT_PLAN, []],
+        query: advisoryLockAnswers,
         insert: [ContentPlanEntity, { identifiers: [{ id: "plan-1" }] }],
     })
     const tx = fakeTransaction(entityManager)
@@ -70,7 +68,7 @@ describe("ContentPlansService", () => {
     it("uses the caller's transaction instead of opening one", async () => {
         const { plans, tx, items } = await build()
         const handed = mockEntityManager({
-            query: [LOCK_CONTENT_PLAN, []],
+            query: advisoryLockAnswers,
             insert: [ContentPlanEntity, { identifiers: [{ id: "plan-2" }] }],
         })
 
@@ -81,7 +79,7 @@ describe("ContentPlansService", () => {
 
     it("refuses when the insert writes no row", async () => {
         const entityManager = mockEntityManager({
-            query: [LOCK_CONTENT_PLAN, []],
+            query: advisoryLockAnswers,
             insert: [ContentPlanEntity, { identifiers: [] }],
         })
         const tx = fakeTransaction(entityManager)
