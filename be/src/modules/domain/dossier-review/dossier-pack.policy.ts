@@ -13,8 +13,11 @@ const basisOf = (ref: string): ReadonlyArray<string> =>
 /** The key of an expectation the words name. */
 type ExpectationKey = keyof typeof DOSSIER_PACK_WORDS.labels
 
-const remedyOf = (ref: string, action: RemedyAction): PackEntry["remedy"] =>
-    isKeyOf(DOSSIER_PACK_WORDS.remedies, ref) ? { ...DOSSIER_PACK_WORDS.remedies[ref], action } : null
+const remedyOf = (ref: string, action: RemedyAction): PackEntry["remedy"] => {
+    if (!isKeyOf(DOSSIER_PACK_WORDS.remedies, ref)) return null
+    const words = DOSSIER_PACK_WORDS.remedies[ref]
+    return { documentType: words.documentType, guidance: words.guidance, action }
+}
 
 /** One expectation: folded words of a title or a passage, the role whose holder it must name, whether it must be signed. */
 const expect = (
