@@ -13,6 +13,12 @@ interface BrainSearch {
     readonly answer?: string
     readonly module?: string
     readonly add?: string
+    readonly topic?: string
+    readonly tag?: string
+    readonly dossier?: string
+    readonly finding?: string
+    readonly draft?: string
+    readonly node?: string
 }
 
 /** What the page receives from Next. */
@@ -22,8 +28,23 @@ interface BrainRouteProps {
 
 /** The Second Brain: the shared memory of the business, its documents and what each agent sees of it. Everyone reads; owners and managers decide. */
 const Page = async ({ searchParams }: BrainRouteProps) => {
-    const { tab, fact, edit, answer, module, add } = await searchParams
-    return <BrainPage tab={tab} fact={fact} edit={edit} answer={answer} module={module} add={add} />
+    const { tab, fact, edit, answer, module, add, topic, tag, dossier, finding, draft, node } = await searchParams
+    return (
+        <BrainPage
+            tab={tab}
+            fact={fact}
+            edit={edit}
+            answer={answer}
+            module={module}
+            add={add}
+            topic={topic}
+            tag={tag}
+            dossier={dossier}
+            finding={finding}
+            draft={draft}
+            node={node}
+        />
+    )
 }
 
 export default Page

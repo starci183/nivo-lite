@@ -8,10 +8,14 @@ import type { DocumentVisibility } from "@/modules/types"
 /** The module value of the "For" select: a type, or one instance of a type. */
 const INSTANCE_PREFIX = "inst:"
 
-/** Opens the drawer on "Write" with a topic (and visibility) already chosen, e.g. from a suggestion. */
+/** Opens the drawer with a topic (and visibility, tags) already chosen: on "Write" for a suggestion, on the files for a dossier. */
 export interface AddPreset {
     readonly topic: string
     readonly visibility?: DocumentVisibility
+    /** Comma-separated tags the batch carries, e.g. the one that files a document under a dossier. */
+    readonly tags?: string
+    /** The mode the drawer opens on; "write" when absent. */
+    readonly mode?: "files" | "write"
 }
 
 /** The options of the batch as the person chose them. */
@@ -39,7 +43,7 @@ interface BatchOptions extends Options {
 export const useBatchOptions = (preset: AddPreset | null, instances: ReadonlyArray<InstanceOption>): BatchOptions => {
     const [options, setOptions] = useState<Options>({
         topic: preset?.topic ?? "",
-        tags: "",
+        tags: preset?.tags ?? "",
         visibility: preset?.visibility ?? "internal",
         module: "all",
         instanceId: null,

@@ -40,6 +40,8 @@ export interface CategoryTotals {
 /** A dossier, worded for the list. */
 export interface DossierView {
     readonly id: string
+    /** The number the checklist gives it ("02"): what files a document under it and what the map prints on its node. */
+    readonly ref: string
     readonly name: string
     readonly status: DossierStatus
     /** The first of: what is missing, what is already held; null when the checklist says neither. */
@@ -84,6 +86,7 @@ const viewOf = (record: DossierRecord): DossierView | undefined =>
     isStatus(record.status)
         ? {
               id: record.id,
+              ref: record.ref,
               name: record.name,
               status: record.status,
               note: noteOf((record.missing ?? "").trim(), (record.existing ?? "").trim()),
@@ -131,12 +134,28 @@ export const categoriesOf = (
         })
 }
 
-/** How many dossiers stand at each status, in the order the counts are listed. */
+/** The category that holds a dossier, so the list shows the dossier that is open; undefined when none is open or it is not among them. */
+export const categoryIdOf = (
+    categories: ReadonlyArray<CategoryView>,
+    dossierId: string | undefined,
+): string | undefined =>
+    dossierId === undefined
+        ? undefined
+        : categories.find((category) => category.dossiers.some((one) => one.id === dossierId))?.id
+
+/**
+ * How many dossiers stand at each status, in the order the counts are listed. The status of a dossier is the checklist's own
+ * unless the caller says otherwise (the review recomputes it).
+ */
 export const statusCountsOf = (
     categories: ReadonlyArray<CategoryView>,
+    statusOf: (dossier: DossierView) => DossierStatus = (dossier) => dossier.status,
 ): ReadonlyArray<{ readonly status: DossierStatus; readonly count: number }> => {
     const all = categories.flatMap((category) => category.dossiers)
-    return DOSSIER_STATUS_ORDER.map((status) => ({ status, count: all.filter((one) => one.status === status).length }))
+    return DOSSIER_STATUS_ORDER.map((status) => ({
+        status,
+        count: all.filter((one) => statusOf(one) === status).length,
+    }))
 }
 
 /** Formats a number with at most the given digits after the point, in the language of the viewer. */

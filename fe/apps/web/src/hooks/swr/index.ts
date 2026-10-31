@@ -9,6 +9,15 @@ export { QUERY_INVENTORY_WORKBENCH_SWR_KEY, QUERY_KNOWLEDGE_SOURCES_SWR_KEY } fr
 export { QUERY_KNOWLEDGE_USAGE_SWR_KEY, useQueryKnowledgeUsageSwr } from "./api"
 export { QUERY_BRAIN_DOSSIERS_SWR_KEY, QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY } from "./api"
 export { useQueryBrainDossiersSwr, useQueryKnowledgeCategoriesSwr } from "./api"
+export { QUERY_DOSSIER_FINDINGS_SWR_KEY, QUERY_DOSSIER_REMEDY_DRAFT_SWR_KEY } from "./api"
+export { QUERY_DOSSIER_REVIEW_SUMMARY_SWR_KEY } from "./api"
+export { useQueryDossierFindingsSwr, useQueryDossierRemedyDraftSwr, useQueryDossierReviewSummarySwr } from "./api"
+export type { DossierFindingsFilter } from "./api"
+export { useMutateApproveDossierRemedyDraftSwr, useMutateAssignDossierFindingSwr } from "./api"
+export { useMutateConfirmDossierFindingSwr, useMutateDismissDossierFindingSwr } from "./api"
+export { useMutateRejectDossierRemedyDraftSwr, useMutateReopenDossierFindingSwr } from "./api"
+export { useMutateRequestDossierRemedyDraftSwr, useMutateRequestDossierReviewSwr } from "./api"
+export { useMutateResolveDossierFindingSwr, useMutateSaveDossierRemedyDraftSwr } from "./api"
 export {
     QUERY_KNOWLEDGE_SOURCE_SWR_KEY,
     QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY,

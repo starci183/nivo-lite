@@ -4,30 +4,21 @@ import {
     Button,
     EmptyNotice,
     ListBox,
-    ListRow,
     Meter,
     Page,
     Pane,
     PaneGrid,
     PaneSection,
     SectionHeader,
-    SurfaceListCard,
 } from "@starci/grammar/common"
 import type { BadgeTone, PageHeaderContent } from "@starci/grammar/common"
+import { DossierRowsCard } from "@/components/composites/DossierRowsCard"
+import type { DossierRowView } from "@/components/composites/DossierRowsCard"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { CATEGORY_CLASS_NAME, COUNTS_CLASS_NAME } from "./classNames"
 
-/** One dossier of the selected category, already worded. */
-export interface DossierRowView {
-    readonly id: string
-    readonly name: string
-    /** The one line under the name: what is missing, or what is already held; null when the checklist says neither. */
-    readonly note: string | null
-    readonly status: { readonly label: string; readonly tone: BadgeTone }
-    /** How many documents name it, already worded. */
-    readonly documents: string
-}
+export type { DossierRowView } from "@/components/composites/DossierRowsCard"
 
 /** One category of the documents, already worded. */
 export interface CategoryRowView {
@@ -58,6 +49,8 @@ interface MeterView {
 
 /** Copy and values the dossiers block supplies. */
 export interface BrainDossiersBaseProps {
+    /** The findings of the open dossier and its draft drawer, drawn in the detail pane. */
+    readonly shape: { readonly detail: ReactNode; readonly draftDrawer: ReactNode }
     readonly props: {
         /** The Second Brain header with its tabs: the grid attaches flush under the tab line. */
         readonly header: PageHeaderContent
@@ -78,6 +71,16 @@ export interface BrainDossiersBaseProps {
         readonly emptyAll: string
         readonly usage: MeterView | undefined
         readonly selectedId: string | undefined
+        /** The command that reviews the whole set; null for a member who may only read. */
+        readonly reviewAll: {
+            readonly label: string
+            readonly isRunning: boolean
+            readonly runningLabel: string
+        } | null
+        /** A dossier is open: its detail pane takes the third column from the wide breakpoint and is a drawer below it. */
+        readonly hasDetail: boolean
+        readonly detailLabel: string
+        readonly detailCloseLabel: string
         readonly slot: DataSlot<DossiersContent>
         readonly placeholder: DossiersContent
         readonly slotLabels: SlotLabels
@@ -86,51 +89,20 @@ export interface BrainDossiersBaseProps {
         readonly select: (id: string) => void
         readonly retry: () => void
         readonly categoriesOpenChange: (isOpen: boolean) => void
+        readonly reviewAll: () => void
+        readonly closeDetail: () => void
     }
 }
 
 /** What a band draws once the slot has its content. */
-interface ContentProps extends BrainDossiersBaseProps {
+interface ContentProps extends Pick<BrainDossiersBaseProps, "props" | "on"> {
     readonly content: DossiersContent
-    readonly isSkeleton: boolean
-}
-
-/** What the card of dossiers draws: the copy, the selected category and whether its rows are a placeholder. */
-interface DossiersProps {
-    readonly listLabel: string
-    readonly emptyCategory: string
-    readonly category: CategoryRowView
     readonly isSkeleton: boolean
 }
 
 /** The category that is open: the one picked, else the first. */
 const selectedOf = (content: DossiersContent, selectedId: string | undefined): CategoryRowView | undefined =>
     content.categories.find((category) => category.id === selectedId) ?? content.categories[0]
-
-/** The dossiers of the selected category as rows of one card. */
-const Dossiers = (props: DossiersProps) => (
-    <SurfaceListCard
-        ariaLabel={props.listLabel}
-        isLoading={props.isSkeleton}
-        empty={<EmptyNotice message={props.emptyCategory} />}
-    >
-        {props.isSkeleton
-            ? null
-            : props.category.dossiers.map((dossier) => (
-                  <ListRow
-                      key={dossier.id}
-                      title={dossier.name}
-                      description={dossier.note}
-                      badges={
-                          <>
-                              <Badge tone={dossier.status.tone}>{dossier.status.label}</Badge>
-                              <Badge tone="muted">{dossier.documents}</Badge>
-                          </>
-                      }
-                  />
-              ))}
-    </SurfaceListCard>
-)
 
 /** The categories of the documents: the rows of the list band, each opening its dossiers. */
 const Categories = (props: ContentProps) => {
@@ -157,7 +129,26 @@ const Categories = (props: ContentProps) => {
     )
 }
 
-/** The status of every dossier and the dossiers of the open category, under the heading and its add command. */
+/** The commands of the heading: review the whole set (owners and managers) and add a document. */
+const Commands = (props: Pick<BrainDossiersBaseProps, "props" | "on">) => {
+    const view = props.props
+    return (
+        <>
+            {view.reviewAll === null ? null : (
+                <Button intent="neutral" isDisabled={view.reviewAll.isRunning} onPress={props.on.reviewAll}>
+                    {view.reviewAll.isRunning ? view.reviewAll.runningLabel : view.reviewAll.label}
+                </Button>
+            )}
+            {view.addHref === null ? null : (
+                <Button intent="commit" href={view.addHref}>
+                    {view.addLabel}
+                </Button>
+            )}
+        </>
+    )
+}
+
+/** The status of every dossier and the dossiers of the open category, under the heading and its commands. */
 const Status = (props: ContentProps) => {
     const view = props.props
     const selected = selectedOf(props.content, view.selectedId)
@@ -167,13 +158,7 @@ const Status = (props: ContentProps) => {
                 level={2}
                 title={view.title}
                 isSkeleton={props.isSkeleton}
-                action={
-                    view.addHref === null || props.isSkeleton ? undefined : (
-                        <Button intent="commit" href={view.addHref}>
-                            {view.addLabel}
-                        </Button>
-                    )
-                }
+                action={props.isSkeleton ? undefined : <Commands {...props} />}
             />
             <div className={COUNTS_CLASS_NAME}>
                 {props.content.counts.map((count) => (
@@ -187,10 +172,10 @@ const Status = (props: ContentProps) => {
             ) : (
                 <div className={CATEGORY_CLASS_NAME}>
                     <SectionHeader level={3} title={selected.title} isSkeleton={props.isSkeleton} />
-                    <Dossiers
-                        listLabel={view.listLabel}
-                        emptyCategory={view.emptyCategory}
-                        category={selected}
+                    <DossierRowsCard
+                        label={view.listLabel}
+                        emptyLabel={view.emptyCategory}
+                        rows={selected.dossiers}
                         isSkeleton={props.isSkeleton}
                     />
                 </div>
@@ -200,7 +185,7 @@ const Status = (props: ContentProps) => {
 }
 
 /** What one band draws through the slot: its content once ready, and whether its status offers the retry. */
-interface InSlotProps extends BrainDossiersBaseProps {
+interface InSlotProps extends Pick<BrainDossiersBaseProps, "props" | "on"> {
     readonly children: (content: DossiersContent, isSkeleton: boolean) => ReactNode
     readonly withRetry: boolean
 }
@@ -217,6 +202,26 @@ const InSlot = (props: InSlotProps) => (
     </SlotView>
 )
 
+/** The pane of the open dossier: the third column from the wide breakpoint, a drawer below it that closes the dossier. */
+const DetailPane = (props: BrainDossiersBaseProps) => (
+    <Pane
+        area="detail"
+        surface
+        scroll
+        label={props.props.detailLabel}
+        collapse="drawer"
+        collapseLabel={props.props.detailLabel}
+        openLabel={props.props.detailLabel}
+        closeLabel={props.props.detailCloseLabel}
+        isOpen
+        onOpenChange={(isOpen) => {
+            if (!isOpen) props.on.closeDetail()
+        }}
+    >
+        <PaneSection>{props.shape.detail}</PaneSection>
+    </Pane>
+)
+
 /**
  * Draws the dossiers tab of the Second Brain as a panes page: the header with its tabs, then a PaneGrid attached flush
  * under the tab line and reaching the viewport bottom. The categories pane, on the surface, holds the allowance meter over
@@ -226,53 +231,67 @@ const InSlot = (props: InSlotProps) => (
 export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
     const view = props.props
     return (
-        <Page chrome="panes" header={view.header} measure="product">
-            <PaneGrid
-                label={view.gridLabel}
-                role="tabpanel"
-                id={view.panelId}
-                areas={{ base: ["main"], medium: ["list main"] }}
-                columns={{ base: ["fill"], medium: ["standard", "fill"] }}
-                rows={{ base: ["fill"], medium: ["fill"] }}
-            >
-                <Pane
-                    area="list"
-                    surface
-                    collapse="drawer"
-                    collapseLabel={view.categoriesLabel}
-                    openLabel={view.categoriesLabel}
-                    closeLabel={view.categoriesCloseLabel}
-                    isOpen={view.isCategoriesOpen}
-                    onOpenChange={props.on.categoriesOpenChange}
+        <>
+            <Page chrome="panes" header={view.header} measure="product">
+                <PaneGrid
+                    label={view.gridLabel}
+                    role="tabpanel"
+                    id={view.panelId}
+                    areas={
+                        view.hasDetail
+                            ? { base: ["main"], medium: ["list main"], wide: ["list main detail"] }
+                            : { base: ["main"], medium: ["list main"] }
+                    }
+                    columns={
+                        view.hasDetail
+                            ? { base: ["fill"], medium: ["standard", "fill"], wide: ["standard", "fill", "wide"] }
+                            : { base: ["fill"], medium: ["standard", "fill"] }
+                    }
+                    rows={{ base: ["fill"], medium: ["fill"] }}
                 >
-                    {view.usage === undefined ? null : (
-                        <PaneSection>
-                            <Meter
-                                label={view.usage.label}
-                                value={view.usage.value}
-                                minValue={0}
-                                maxValue={view.usage.max}
-                                valueLabel={view.usage.valueLabel}
-                                tone={view.usage.tone}
-                            />
+                    <Pane
+                        area="list"
+                        surface
+                        collapse="drawer"
+                        collapseLabel={view.categoriesLabel}
+                        openLabel={view.categoriesLabel}
+                        closeLabel={view.categoriesCloseLabel}
+                        isOpen={view.isCategoriesOpen}
+                        onOpenChange={props.on.categoriesOpenChange}
+                    >
+                        {view.usage === undefined ? null : (
+                            <PaneSection>
+                                <Meter
+                                    label={view.usage.label}
+                                    value={view.usage.value}
+                                    minValue={0}
+                                    maxValue={view.usage.max}
+                                    valueLabel={view.usage.valueLabel}
+                                    tone={view.usage.tone}
+                                />
+                            </PaneSection>
+                        )}
+                        <PaneSection scroll={{ label: view.categoriesLabel }}>
+                            <InSlot {...props} withRetry={false}>
+                                {(content, isSkeleton) => (
+                                    <Categories {...props} content={content} isSkeleton={isSkeleton} />
+                                )}
+                            </InSlot>
                         </PaneSection>
-                    )}
-                    <PaneSection scroll={{ label: view.categoriesLabel }}>
-                        <InSlot {...props} withRetry={false}>
-                            {(content, isSkeleton) => (
-                                <Categories {...props} content={content} isSkeleton={isSkeleton} />
-                            )}
-                        </InSlot>
-                    </PaneSection>
-                </Pane>
-                <Pane area="main" scroll label={view.title}>
-                    <PaneSection gap="section">
-                        <InSlot {...props} withRetry>
-                            {(content, isSkeleton) => <Status {...props} content={content} isSkeleton={isSkeleton} />}
-                        </InSlot>
-                    </PaneSection>
-                </Pane>
-            </PaneGrid>
-        </Page>
+                    </Pane>
+                    <Pane area="main" scroll label={view.title}>
+                        <PaneSection gap="section">
+                            <InSlot {...props} withRetry>
+                                {(content, isSkeleton) => (
+                                    <Status {...props} content={content} isSkeleton={isSkeleton} />
+                                )}
+                            </InSlot>
+                        </PaneSection>
+                    </Pane>
+                    {view.hasDetail ? <DetailPane {...props} /> : null}
+                </PaneGrid>
+            </Page>
+            {props.shape.draftDrawer}
+        </>
     )
 }

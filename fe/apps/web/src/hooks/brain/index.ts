@@ -13,5 +13,49 @@ export { LENS_LANES } from "@/modules/brain"
 export type { AgentLens } from "@/modules/brain"
 export { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 export { useBrainDossiers } from "./useBrainDossiers"
-export { DOSSIER_STATUS_TONE, sizeLabelOf, statusCountsOf } from "@/modules/brain"
+export { DOSSIER_STATUS_TONE, categoryIdOf, sizeLabelOf, statusCountsOf } from "@/modules/brain"
 export type { CategoryView, DossierView, NumberFormatter } from "@/modules/brain"
+export { useDossierFindings } from "./useDossierFindings"
+export { useDossierRecord } from "./useDossierRecord"
+export { useDossierRemedyDraft } from "./useDossierRemedyDraft"
+export { useDossierReviewCommands } from "./useDossierReviewCommands"
+export { useDossierReviewSummary } from "./useDossierReviewSummary"
+export { useFindingDialog } from "./useFindingDialog"
+export { useFindingRows } from "./useFindingRows"
+export type { UploadTarget } from "./useFindingRows"
+export {
+    DIALOG_OF_ACTION,
+    FINDING_FILTERS,
+    MAP_ROOT_ID,
+    MAP_STATUS_FILTERS,
+    NO_ASSIGNEE,
+    SEVERITY_TONE,
+    TODO_FILTERS,
+    TODO_SEVERITY_FILTERS,
+    dossierTagOf,
+    filterOfStatus,
+    mapGraphOf,
+    queryOfDossier,
+    queryOfTodo,
+    reviewedStatusOf,
+    selectionOf,
+    worstSeverityOf,
+} from "@/modules/brain"
+export type {
+    DossierReviewRecord,
+    DraftView,
+    EvidenceItemView,
+    FindingAction,
+    FindingAssignFieldsView,
+    FindingDialogValues,
+    FindingDialogView,
+    FindingFilter,
+    FindingRowView,
+    FindingTextFieldView,
+    FindingView,
+    MapSelection,
+    MapStatusFilter,
+    ReviewedStatus,
+    TodoFilter,
+    TodoSeverityFilter,
+} from "@/modules/brain"

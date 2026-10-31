@@ -6,6 +6,7 @@ export type {
     LoadOpenApiConnectionQuery,
     LeadGenWorkbenchQuery,
     LeadBoardQuery,
+    DossierFindingsQuery,
     WorkThreadsQuery,
     SalesOrdersQuery,
 } from "./graphql/__generated__/graphql"

@@ -36,7 +36,7 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
     const linkRows = useLinkRows()
     const note = useNoteDraft()
     const options = useBatchOptions(preset, instances)
-    const [mode, setMode] = useState<AddMode>(preset === null ? "files" : "write")
+    const [mode, setMode] = useState<AddMode>(preset === null ? "files" : (preset.mode ?? "write"))
     const [isBusy, setBusy] = useState(false)
     const [failure, setFailure] = useState<string | null>(null)
     const [queuedCount, setQueuedCount] = useState(0)

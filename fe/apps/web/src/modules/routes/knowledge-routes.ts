@@ -1,5 +1,15 @@
 /** The tabs of the Second Brain page, in the order they are drawn. */
-export const BRAIN_TABS = ["dossiers", "sources", "review", "facts", "lessons", "gaps", "agents"] as const
+export const BRAIN_TABS = [
+    "dossiers",
+    "map",
+    "todo",
+    "sources",
+    "review",
+    "facts",
+    "lessons",
+    "gaps",
+    "agents",
+] as const
 
 /** One tab of the Second Brain page. */
 export type BrainTab = (typeof BRAIN_TABS)[number]
@@ -28,3 +38,17 @@ export const KNOWLEDGE_ROUTES = {
 
 /** The detail page of one document. */
 export const knowledgeSourceHref = (sourceId: string): string => `/knowledge/${encodeURIComponent(sourceId)}`
+
+/** What the address of a dossier may carry besides the dossier: the finding in view and the draft that is open. */
+interface DossierParams {
+    readonly finding?: string | undefined
+    readonly draft?: string | undefined
+}
+
+/** The address of one dossier on the dossiers tab, with the finding in view and the draft open when they are named. */
+export const brainDossierHref = (dossierId: string, params: DossierParams = {}): string =>
+    brainTabHref("dossiers", { dossier: dossierId, finding: params.finding, draft: params.draft })
+
+/** The address of the add documents drawer on the sources tab, preset with the topic and the tag that file the document under a dossier. */
+export const brainUploadHref = (topic: string, tag: string): string =>
+    brainTabHref("sources", { add: "upload", topic, tag })

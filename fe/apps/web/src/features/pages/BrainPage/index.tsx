@@ -20,6 +20,12 @@ interface BrainPageProps {
     readonly edit: string | undefined
     readonly answer: string | undefined
     readonly add: string | undefined
+    readonly topic: string | undefined
+    readonly tag: string | undefined
+    readonly dossier: string | undefined
+    readonly finding: string | undefined
+    readonly draft: string | undefined
+    readonly node: string | undefined
     readonly module: string | undefined
 }
 
@@ -49,9 +55,18 @@ const copyOf = (t: Translate, brain: SecondBrainTranslate, knowledge: KnowledgeT
 /** The drawer, as the address asks for it: closed, open on files, or open on a note about an idea. */
 const addOf = (
     knowledge: KnowledgeTranslate,
-    add: string | undefined,
+    props: Pick<BrainPageProps, "add" | "topic" | "tag">,
 ): Pick<BrainPageBaseProps["props"], "isAddOpen" | "addKey" | "addPreset"> => {
+    const add = props.add
     if (add === undefined) return { isAddOpen: false, addKey: "base", addPreset: null }
+    if (add === "upload" && props.topic !== undefined) {
+        const preset: AddPresetView = {
+            topic: props.topic,
+            mode: "files",
+            ...(props.tag === undefined ? {} : { tags: props.tag }),
+        }
+        return { isAddOpen: true, addKey: `upload:${props.topic}:${props.tag ?? ""}`, addPreset: preset }
+    }
     const idea = DOCUMENT_IDEAS.find((one) => one.key === add)
     if (idea === undefined) return { isAddOpen: true, addKey: "base", addPreset: null }
     const preset: AddPresetView = { topic: knowledge(`suggest_${idea.key}_topic`), visibility: idea.visibility }
@@ -69,11 +84,15 @@ export const BrainPage = async (props: BrainPageProps) => {
         <BrainPageBase
             props={{
                 ...copyOf(t, brain, knowledge),
-                ...addOf(knowledge, props.add),
+                ...addOf(knowledge, props),
                 tab: brainTabOf(props),
                 fact: props.fact,
                 edit: props.edit,
                 answer: props.answer,
+                dossier: props.dossier,
+                finding: props.finding,
+                draft: props.draft,
+                node: props.node,
                 module: moduleFilterOf(props.module),
             }}
         />
@@ -94,10 +113,14 @@ export const BrainLoadingPage = async () => {
                 isAddOpen: false,
                 addKey: "base",
                 addPreset: null,
-                tab: "sources",
+                tab: "dossiers",
                 fact: undefined,
                 edit: undefined,
                 answer: undefined,
+                dossier: undefined,
+                finding: undefined,
+                draft: undefined,
+                node: undefined,
                 module: "all",
             }}
         />

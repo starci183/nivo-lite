@@ -6,6 +6,10 @@ import { BrainFactForm } from "@/components/blocks/BrainFactForm"
 import { BrainFacts } from "@/components/blocks/BrainFacts"
 import { BrainGaps } from "@/components/blocks/BrainGaps"
 import { BrainLessons } from "@/components/blocks/BrainLessons"
+import { BrainMap } from "@/components/blocks/BrainMap"
+import { DossierFindings } from "@/components/blocks/DossierFindings"
+import { DossierRemedyDraft } from "@/components/blocks/DossierRemedyDraft"
+import { DossierTodo } from "@/components/blocks/DossierTodo"
 import { BrainPipeline } from "@/components/blocks/BrainPipeline"
 import { BrainReview } from "@/components/blocks/BrainReview"
 import { BrainPageFrame } from "@/components/blocks/BrainPageFrame"
@@ -24,10 +28,12 @@ import {
     SOURCES_SIDE_CLASS_NAME,
 } from "./classNames"
 
-/** The idea the add drawer was opened from: the topic to write about and who may read it. */
+/** What the add drawer was opened from: the topic to write about, who may read it, the tags it files under and the mode it opens on. */
 export interface AddPresetView {
     readonly topic: string
     readonly visibility?: "public" | "internal"
+    readonly tags?: string
+    readonly mode?: "files" | "write"
 }
 
 /** Copy and values the Second Brain page supplies. */
@@ -44,6 +50,12 @@ export interface BrainPageBaseProps {
         readonly fact: string | undefined
         readonly edit: string | undefined
         readonly answer: string | undefined
+        /** The dossier open in the dossiers tab, the finding in view and the draft in the drawer. */
+        readonly dossier: string | undefined
+        readonly finding: string | undefined
+        readonly draft: string | undefined
+        /** The node selected on the map. */
+        readonly node: string | undefined
         /** The agent the documents are filtered to. */
         readonly module: ModuleKey | "all"
         /** Whether the address asks for the add drawer to be open, and what it was opened from. */
@@ -56,6 +68,7 @@ export interface BrainPageBaseProps {
 /** Draws the open tab of the Second Brain. */
 const Panel = (props: BrainPageBaseProps) => {
     const page = props.props
+    if (page.tab === "todo") return <DossierTodo />
     if (page.tab === "review") return <BrainReview />
     if (page.tab === "facts") {
         return (
@@ -109,16 +122,43 @@ const Panel = (props: BrainPageBaseProps) => {
  * (its grid attaches flush under the tab line); every other tab sits in the page measure under the pipeline (sources,
  * review, facts, lessons, questions, what each agent sees).
  */
-export const BrainPageBase = (props: BrainPageBaseProps) =>
-    props.props.tab === "dossiers" ? (
-        <BrainDossiers header={props.props.header} />
-    ) : (
-        <BrainPageFrame selected={props.props.tab} header={props.props.header}>
+export const BrainPageBase = (props: BrainPageBaseProps) => {
+    const page = props.props
+    if (page.tab === "dossiers") {
+        return (
+            <BrainDossiers
+                header={page.header}
+                dossier={page.dossier}
+                detail={
+                    page.dossier === undefined ? null : (
+                        <DossierFindings dossierId={page.dossier} findingId={page.finding} />
+                    )
+                }
+                draftDrawer={
+                    <DossierRemedyDraft draftId={page.draft} dossierId={page.dossier} findingId={page.finding} />
+                }
+            />
+        )
+    }
+    if (page.tab === "map") {
+        return (
+            <BrainMap
+                header={page.header}
+                node={page.node}
+                findings={
+                    page.node === undefined ? null : <DossierFindings dossierId={page.node} findingId={undefined} />
+                }
+            />
+        )
+    }
+    return (
+        <BrainPageFrame selected={page.tab} header={page.header}>
             <div className={PAGE_CLASS_NAME}>
                 <BrainPipeline />
-                <div className={PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${props.props.tab}`}>
+                <div className={PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${page.tab}`}>
                     <Panel {...props} />
                 </div>
             </div>
         </BrainPageFrame>
     )
+}
