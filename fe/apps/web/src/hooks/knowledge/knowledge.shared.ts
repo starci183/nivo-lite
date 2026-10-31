@@ -51,12 +51,38 @@ const QUEUE_STATUS_KEYS: Readonly<
     failed: "itemFailed",
 }
 
+/** Megabytes with the reader's decimal mark. */
+const megabytesOf = (locale: string, bytes: number): string =>
+    new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(bytes / BYTES_PER_MB)
+
+/** The bytes of a file that reached storage: the whole size once it is queued, the fraction while it travels, 0 before. */
+const sentBytesOf = (item: QueueItem): number => {
+    const size = item.size ?? 0
+    return item.status === "queued" ? size : Math.round(size * (item.uploaded ?? 0))
+}
+
+/** What a file row says about its bytes: how far it got while it travels, or where it stopped; empty for a link or a file not sent yet. */
+const bytesDetailOf = (t: Translate, locale: string, item: QueueItem): string => {
+    const size = item.size ?? 0
+    if (item.file === undefined || size === 0 || item.uploaded === undefined) return ""
+    const sent = megabytesOf(locale, sentBytesOf(item))
+    const all = megabytesOf(locale, size)
+    const percent = Math.round((sentBytesOf(item) / size) * 100)
+    return t(item.status === "failed" ? "uploadStoppedAt" : "uploadBytes", { sent, size: all, percent })
+}
+
+/** The status badge of a row: a file whose bytes all arrived is being put in the queue. */
+const statusLabelOf = (t: Translate, item: QueueItem): string =>
+    item.status === "uploading" && item.uploaded === 1 ? t("itemEnqueuing") : t(QUEUE_STATUS_KEYS[item.status])
+
 /** The row of the queue for one file or link, already worded. */
-const queueRowOf = (t: Translate, add: ReturnType<typeof useAddDocuments>, item: QueueItem) => ({
+const queueRowOf = (t: Translate, locale: string, add: ReturnType<typeof useAddDocuments>, item: QueueItem) => ({
     id: item.id,
     name: item.name,
-    detail: [t(item.kind === "link" ? "itemLink" : "itemFile"), item.origin ?? ""].filter(Boolean).join(" · "),
-    statusLabel: t(QUEUE_STATUS_KEYS[item.status]),
+    detail: [t(item.kind === "link" ? "itemLink" : "itemFile"), item.origin ?? "", bytesDetailOf(t, locale, item)]
+        .filter(Boolean)
+        .join(" · "),
+    statusLabel: statusLabelOf(t, item),
     statusTone: STATUS_TONE[item.status],
     error: item.error === undefined ? undefined : t(item.error),
     canRemove: item.status !== "uploading" && !add.isBusy,
@@ -76,8 +102,31 @@ const filesNoteOf = (t: Translate, add: ReturnType<typeof useAddDocuments>): str
     return add.note.tried && add.mode === "files" && add.pendingCount === 0 ? t("hintNoDocs") : undefined
 }
 
+/** The bytes of the whole batch while it travels, or undefined when no file is on its way. */
+const batchViewOf = (t: Translate, locale: string, items: ReadonlyArray<QueueItem>) => {
+    const files = items.filter((item) => item.file !== undefined && (item.size ?? 0) > 0)
+    if (!files.some((item) => item.status === "uploading")) return undefined
+    const total = files.reduce((sum, item) => sum + (item.size ?? 0), 0)
+    const sent = files.reduce((sum, item) => sum + sentBytesOf(item), 0)
+    const percent = Math.round((sent / total) * 100)
+    return {
+        label: t("batchBytesLabel"),
+        value: percent,
+        valueText: t("batchBytes", {
+            count: files.length,
+            sent: megabytesOf(locale, sent),
+            total: megabytesOf(locale, total),
+            percent,
+        }),
+    }
+}
+
+/** The notice that says the uploads of an earlier page stopped when it reloaded. */
+const stoppedViewOf = (t: Translate, names: ReadonlyArray<string>) =>
+    names.length === 0 ? undefined : { text: t("uploadStopped", { names: names.join(", ") }), dismissLabel: t("uploadStoppedDismiss") }
+
 /** Builds the files and links section of the drawer. */
-const buildDocumentFilesView = (t: Translate, add: ReturnType<typeof useAddDocuments>) =>
+const buildDocumentFilesView = (t: Translate, locale: string, add: ReturnType<typeof useAddDocuments>) =>
     ({
         dropPrompt: t("filesDrop"),
         dropHint: t("filesHint"),
@@ -97,7 +146,9 @@ const buildDocumentFilesView = (t: Translate, add: ReturnType<typeof useAddDocum
                 error: problem === undefined ? undefined : t(problem),
             }
         }),
-        queue: add.queue.items.map((item) => queueRowOf(t, add, item)),
+        queue: add.queue.items.map((item) => queueRowOf(t, locale, add, item)),
+        batch: batchViewOf(t, locale, add.queue.items),
+        stopped: stoppedViewOf(t, add.queue.interrupted),
         note: filesNoteOf(t, add),
     }) as const
 
@@ -191,6 +242,7 @@ export const usageViewOf = (
 /** What the view of the drawer is built from. */
 interface ViewContext {
     readonly t: Translate
+    readonly locale: string
     readonly props: AddDocumentsViewInput
     readonly add: ReturnType<typeof useAddDocuments>
     readonly canWrite: boolean
@@ -200,7 +252,7 @@ interface ViewContext {
 }
 
 /** Builds everything the connected drawer and its drop zone draw. */
-export const buildAddDocumentsView = ({ t, props, add, canWrite, instances, zone, usage }: ViewContext) =>
+export const buildAddDocumentsView = ({ t, locale, props, add, canWrite, instances, zone, usage }: ViewContext) =>
     ({
         zone,
         usage,
@@ -216,7 +268,7 @@ export const buildAddDocumentsView = ({ t, props, add, canWrite, instances, zone
         modeLabel: t("addTitle"),
         modeOptions: MODES.map((mode) => ({ id: mode, label: t(MODE_KEYS[mode]) })),
         mode: add.mode,
-        files: buildDocumentFilesView(t, add),
+        files: buildDocumentFilesView(t, locale, add),
         note: buildNoteView(t, add),
         options: buildOptionsView(t, add.options, instances),
         notice: add.queuedCount > 0 ? t("batchQueued", { count: add.queuedCount }) : undefined,

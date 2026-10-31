@@ -40,6 +40,6 @@ export const useAddDocumentsView = (props: AddDocumentsViewInput) => {
     return {
         add,
         open,
-        view: buildAddDocumentsView({ t, props, add, canWrite, instances, zone, usage: usageViewOf(t, locale, usage) }),
+        view: buildAddDocumentsView({ t, locale, props, add, canWrite, instances, zone, usage: usageViewOf(t, locale, usage) }),
     }
 }

@@ -1,5 +1,11 @@
 import { Drawer, Meter, SegmentedControl, Text } from "@starci/grammar/common"
-import { AddFilesPanel, type LinkRowView, type QueueRowView } from "@/components/composites/AddFilesPanel"
+import {
+    AddFilesPanel,
+    type BatchBytesView,
+    type LinkRowView,
+    type QueueRowView,
+    type StoppedUploadsView,
+} from "@/components/composites/AddFilesPanel"
 
 import { AddNotePanel, type PairView } from "@/components/composites/AddNotePanel"
 
@@ -23,6 +29,8 @@ interface FilesView {
     readonly removeLabel: string
     readonly links: ReadonlyArray<LinkRowView>
     readonly queue: ReadonlyArray<QueueRowView>
+    readonly batch?: BatchBytesView | undefined
+    readonly stopped?: StoppedUploadsView | undefined
     readonly note?: string | undefined
 }
 
@@ -113,6 +121,7 @@ export interface KnowledgeAddBaseProps {
         readonly addLink: () => void
         readonly removeLink: (id: string) => void
         readonly removeItem: (id: string) => void
+        readonly dismissStopped: () => void
         readonly setTitle: (value: string) => void
         readonly setContent: (value: string) => void
         readonly setPair: (id: string, field: "q" | "a", value: string) => void
@@ -198,6 +207,7 @@ const KnowledgeAddDrawer = (props: KnowledgeAddBaseProps) => (
                     onAddLink={props.on.addLink}
                     onRemoveLink={props.on.removeLink}
                     onRemoveItem={props.on.removeItem}
+                    onDismissStopped={props.on.dismissStopped}
                 />
             ) : (
                 <AddNotePanel

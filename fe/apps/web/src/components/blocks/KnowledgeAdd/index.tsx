@@ -39,6 +39,7 @@ export const KnowledgeAdd = (props: KnowledgeAddProps) => {
                 addLink: add.linkRows.add,
                 removeLink: add.linkRows.remove,
                 removeItem: queue.removeItem,
+                dismissStopped: queue.dismissInterrupted,
                 setTitle: note.setTitle,
                 setContent: note.setContent,
                 setPair: note.setPair,
