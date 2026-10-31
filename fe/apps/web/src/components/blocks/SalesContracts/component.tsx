@@ -1,4 +1,4 @@
-import { Badge, Button, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { SalesContractDrawer } from "@/components/composites/SalesContractDrawer"
 import type { SalesContractDrawerProps } from "@/components/composites/SalesContractDrawer"
@@ -6,7 +6,6 @@ import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ContractImportDialog } from "@/components/composites/ContractImportDialog"
 import type { ContractImportDialogProps } from "@/components/composites/ContractImportDialog"
-import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** One recurring contract, every word already resolved. */
 export interface ContractItemView {
@@ -61,14 +60,14 @@ export const SalesContractsBase = (props: SalesContractsBaseProps) => {
             <Text size="sm" tone="muted">
                 {p.intro}
             </Text>
-            <div className={ACTIONS_CLASS_NAME}>
+            <Cluster gap="inline">
                 <Button intent="commit" size="sm" onPress={on.add}>
                     {p.addLabel}
                 </Button>
                 <Button intent="neutral" size="sm" onPress={on.openImport}>
                     {p.importLabel}
                 </Button>
-            </div>
+            </Cluster>
             <Text size="sm" weight="medium" live="polite">
                 {p.note}
             </Text>

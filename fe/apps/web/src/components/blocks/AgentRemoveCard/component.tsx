@@ -1,5 +1,4 @@
-import { AlertDialog, Button, SurfaceCard, Text } from "@starci/grammar/common"
-import { BODY, ROW } from "./classNames"
+import { AlertDialog, Button, Cluster, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 
 /** Copy and state of the danger section that removes an agent. */
 export interface AgentRemoveCardBaseProps {
@@ -21,7 +20,7 @@ export interface AgentRemoveCardBaseProps {
 /** Draws the danger section at the foot of the settings: what removing does, and the entry to the confirmation. */
 export const AgentRemoveCardBase = (props: AgentRemoveCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2} state="negative">
-        <div className={ROW}>
+        <Cluster gap="row" justify="between">
             <Text size="sm" tone="muted">
                 {props.props.hint}
             </Text>
@@ -38,14 +37,14 @@ export const AgentRemoveCardBase = (props: AgentRemoveCardBaseProps) => (
                     </Button>
                 }
             >
-                <div className={BODY}>
+                <Stack gap="inline">
                     {props.props.lines.map((line) => (
                         <Text key={line} size="sm">
                             {line}
                         </Text>
                     ))}
-                </div>
+                </Stack>
             </AlertDialog>
-        </div>
+        </Cluster>
     </SurfaceCard>
 )

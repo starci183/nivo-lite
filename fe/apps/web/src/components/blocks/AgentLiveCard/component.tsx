@@ -1,7 +1,6 @@
-import { Badge, SurfaceCard, Switch, Text } from "@starci/grammar/common"
+import { Badge, Cluster, Stack, SurfaceCard, Switch, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { STACK, SWITCH_ROW } from "./classNames"
 
 /** What the card draws once the installation arrived, every word resolved. */
 export interface LiveView {
@@ -33,8 +32,8 @@ export const AgentLiveCardBase = (props: AgentLiveCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <SlotView {...props.props.read} onRetry={props.on.retry}>
             {(view, isSkeleton) => (
-                <div className={STACK}>
-                    <div className={SWITCH_ROW}>
+                <Stack gap="section">
+                    <Cluster gap="row" wrap={false}>
                         <Switch
                             name="live"
                             label={props.props.switchLabel}
@@ -45,7 +44,7 @@ export const AgentLiveCardBase = (props: AgentLiveCardBaseProps) => (
                             onSelectedChange={props.on.live}
                         />
                         <Text weight="medium">{props.props.switchLabel}</Text>
-                    </div>
+                    </Cluster>
                     <Badge isDot isSkeleton={isSkeleton} tone={view.isLive ? "success" : "neutral"}>
                         {view.statusLabel}
                     </Badge>
@@ -53,7 +52,7 @@ export const AgentLiveCardBase = (props: AgentLiveCardBaseProps) => (
                         {props.props.help}
                     </Text>
                     {view.blocker === "" ? null : <Text size="sm">{view.blocker}</Text>}
-                </div>
+                </Stack>
             )}
         </SlotView>
     </SurfaceCard>

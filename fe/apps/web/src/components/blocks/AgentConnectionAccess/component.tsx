@@ -1,7 +1,6 @@
-import { Alert, Badge, Select, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Alert, Badge, Cluster, Select, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { ACTIONS, STACK } from "./classNames"
 
 /** One connection of the workspace this agent can work through. */
 export interface AgentConnectionAccessRow {
@@ -40,7 +39,7 @@ export interface AgentConnectionAccessBaseProps {
 /** Draws the connections an agent uses, each with its access level. */
 export const AgentConnectionAccessBase = (props: AgentConnectionAccessBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <div className={STACK}>
+        <Stack gap="section">
             <Text size="sm" tone="muted">
                 {props.props.hint}
             </Text>
@@ -48,7 +47,7 @@ export const AgentConnectionAccessBase = (props: AgentConnectionAccessBaseProps)
                 {(rows, isSkeleton) => (
                     <>
                         {rows.map((row) => (
-                            <div key={row.id} className={ACTIONS}>
+                            <Cluster key={row.id} gap="row">
                                 <Select
                                     label={row.label}
                                     description={
@@ -71,13 +70,13 @@ export const AgentConnectionAccessBase = (props: AgentConnectionAccessBaseProps)
                                     onValueChange={(level) => props.on.pick(row.id, level)}
                                     isDisabled={props.props.isDisabled || isSkeleton}
                                 />
-                            </div>
+                            </Cluster>
                         ))}
                     </>
                 )}
             </SlotView>
             {props.props.notice === "" ? null : <Alert tone="informative" title={props.props.notice} />}
-            <div className={ACTIONS}>
+            <Cluster gap="row">
                 <TextAction href={props.props.manageHref} size="sm" appearance="inline">
                     {props.props.manageLabel}
                 </TextAction>
@@ -86,7 +85,7 @@ export const AgentConnectionAccessBase = (props: AgentConnectionAccessBaseProps)
                         {props.props.ownerOnlyText}
                     </Text>
                 )}
-            </div>
-        </div>
+            </Cluster>
+        </Stack>
     </SurfaceCard>
 )

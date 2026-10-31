@@ -2,7 +2,17 @@ import { nivoIconSource } from "@/components/leaves/Icon"
 
 import type * as React from "react"
 import type { DateValue } from "@internationalized/date"
-import { Alert, Badge, Button, DescriptionList, EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
+import {
+    Alert,
+    Badge,
+    Button,
+    Cluster,
+    DescriptionList,
+    EmptyNotice,
+    Stack,
+    SurfaceCard,
+    Text,
+} from "@starci/grammar/common"
 
 import { SlotView } from "@/components/composites/SlotView"
 import { StepForm, type StepFormLabels } from "@/components/composites/StepForm"
@@ -11,17 +21,7 @@ import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { BadgeTone } from "@starci/grammar/common"
 import type { DataSlot, ModuleIconName, SlotLabels, StepFormView } from "@/modules/types"
-import {
-    ACTIONS_CLASS_NAME,
-    BODY_CLASS_NAME,
-    DUE_CLASS_NAME,
-    FOCAL_CLASS_NAME,
-    OWNER_CLASS_NAME,
-    OWNER_COPY_CLASS_NAME,
-    OWNER_ROW_CLASS_NAME,
-    PANEL_CLASS_NAME,
-    TITLE_ROW_CLASS_NAME,
-} from "./classNames"
+import { PANEL_CLASS_NAME } from "./classNames"
 
 /** The words of the panel. */
 export interface ResponsibilityLabels {
@@ -105,41 +105,43 @@ export const LeadResponsibilityBase = (props: LeadResponsibilityBaseProps) => {
     const formActions = { change: on.change, changeDue: on.changeDue, submit: on.submit, close: on.close }
     return (
         <div id="responsibility" className={PANEL_CLASS_NAME}>
-            <SurfaceCard label={l.cardLabel} headingLevel={2}>
-                <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
-                    {(view, isSkeleton) => {
-                        const current = view.current
-                        const form =
-                            p.form === null ? null : (
-                                <StepForm form={p.form} labels={l.form} isPending={p.isPending} on={formActions} />
-                            )
-                        if (current === null) {
-                            return (
-                                <>
-                                    {form ?? (
-                                        <EmptyNotice
-                                            message={l.noOwnerTitle}
-                                            description={l.noOwnerHint}
-                                            actionLabel={l.proposeLabel}
-                                            actionVariant="primary"
-                                            isActionPending={p.isPending}
-                                            onAction={on.propose}
-                                        />
-                                    )}
-                                    {p.proposeError === null ? null : (
-                                        <Alert
-                                            title={l.proposeFailTitle}
-                                            description={p.proposeError}
-                                            tone="negative"
-                                        />
-                                    )}
-                                </>
-                            )
-                        }
-                        return renderCurrentStep({ isSkeleton, current, l, form, on })
-                    }}
-                </SlotView>
-            </SurfaceCard>
+            <Stack gap="section">
+                <SurfaceCard label={l.cardLabel} headingLevel={2}>
+                    <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
+                        {(view, isSkeleton) => {
+                            const current = view.current
+                            const form =
+                                p.form === null ? null : (
+                                    <StepForm form={p.form} labels={l.form} isPending={p.isPending} on={formActions} />
+                                )
+                            if (current === null) {
+                                return (
+                                    <>
+                                        {form ?? (
+                                            <EmptyNotice
+                                                message={l.noOwnerTitle}
+                                                description={l.noOwnerHint}
+                                                actionLabel={l.proposeLabel}
+                                                actionVariant="primary"
+                                                isActionPending={p.isPending}
+                                                onAction={on.propose}
+                                            />
+                                        )}
+                                        {p.proposeError === null ? null : (
+                                            <Alert
+                                                title={l.proposeFailTitle}
+                                                description={p.proposeError}
+                                                tone="negative"
+                                            />
+                                        )}
+                                    </>
+                                )
+                            }
+                            return renderCurrentStep({ isSkeleton, current, l, form, on })
+                        }}
+                    </SlotView>
+                </SurfaceCard>
+            </Stack>
         </div>
     )
 }
@@ -153,8 +155,8 @@ interface RenderStepOwnerContext {
 /** Builds the accountableLabel section from the current view. */
 const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => (
     <SurfaceCard ariaLabel={l.accountableLabel}>
-        <div className={OWNER_ROW_CLASS_NAME}>
-            <div className={OWNER_CLASS_NAME}>
+        <Cluster gap="section" justify="between">
+            <Cluster gap="row" wrap={false}>
                 {current.isAgent ? (
                     <AgentMark
                         glyph={nivoIconSource(current.agentGlyph, "leading")}
@@ -165,15 +167,15 @@ const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => 
                 ) : (
                     <PersonAvatar name={current.ownerName} size="md" />
                 )}
-                <div className={OWNER_COPY_CLASS_NAME}>
+                <Stack gap="identity">
                     <Text weight="semibold" isSkeleton={isSkeleton}>
                         {current.ownerName}
                     </Text>
                     <Text size="xs" tone="muted">
                         {current.ownerKindText}
                     </Text>
-                </div>
-            </div>
+                </Stack>
+            </Cluster>
             <DescriptionList
                 layout="stacked"
                 isLoading={isSkeleton}
@@ -185,7 +187,7 @@ const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => 
                             current.due === null ? (
                                 <Text tone="muted">{l.noDueLabel}</Text>
                             ) : (
-                                <div className={DUE_CLASS_NAME}>
+                                <Cluster gap="inline">
                                     <Text as="span" weight="semibold">
                                         {current.due.date}
                                     </Text>
@@ -195,12 +197,12 @@ const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => 
                                     {current.due.isOverdue && !current.isDone ? (
                                         <Badge tone="danger">{l.overdueLabel}</Badge>
                                     ) : null}
-                                </div>
+                                </Cluster>
                             ),
                     },
                 ]}
             />
-        </div>
+        </Cluster>
     </SurfaceCard>
 )
 
@@ -214,25 +216,25 @@ interface RenderCurrentStepContext {
 }
 /** Builds the Body section from the current view. */
 const renderCurrentStep = ({ isSkeleton, current, l, form, on }: RenderCurrentStepContext) => (
-    <div className={BODY_CLASS_NAME}>
-        <div className={TITLE_ROW_CLASS_NAME}>
+    <Stack gap="region">
+        <Cluster gap="row" justify="between">
             <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
                 {current.title}
             </Text>
             <Badge tone={current.statusTone}>{current.statusLabel}</Badge>
-        </div>
-        <div className={FOCAL_CLASS_NAME}>
+        </Cluster>
+        <Stack gap="identity">
             <Text size="xs" tone="muted" weight="semibold">
                 {l.nextStepLabel}
             </Text>
             <Text size="md" weight="semibold" isSkeleton={isSkeleton}>
                 {current.nextAction}
             </Text>
-        </div>
+        </Stack>
         {renderStepOwner({ l, current, isSkeleton })}
         {form}
         {isSkeleton || form !== null ? null : (
-            <div className={ACTIONS_CLASS_NAME}>
+            <Cluster gap="row">
                 {current.isDone ? (
                     <Button intent="neutral" onPress={() => on.open("add")}>
                         {l.addLabel}
@@ -252,7 +254,7 @@ const renderCurrentStep = ({ isSkeleton, current, l, form, on }: RenderCurrentSt
                         ) : null}
                     </>
                 )}
-            </div>
+            </Cluster>
         )}
-    </div>
+    </Stack>
 )

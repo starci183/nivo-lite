@@ -1,7 +1,6 @@
-import { Button, CheckboxGroup, Input, NumberField, SurfaceCard, Switch } from "@starci/grammar/common"
+import { Button, CheckboxGroup, Cluster, Input, NumberField, Stack, SurfaceCard, Switch } from "@starci/grammar/common"
 import type { ContentChannel, ContentNoteView, ContentT } from "@/modules/types"
 import { ContentCommandNote, ContentSettingsCard } from "@/components/composites/ContentSettingsCard"
-import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** One channel row of the posting rhythm. */
 export interface CadenceRow {
@@ -39,7 +38,7 @@ export const ContentCadenceCardBase = (props: ContentCadenceCardBaseProps) => {
         <ContentSettingsCard title={t("settingsCadence")} description={t("settingsCadenceBody")}>
             {props.props.rows.map((row) => (
                 <SurfaceCard key={row.channel} ariaLabel={row.label}>
-                    <div className={FORM_CLASS_NAME}>
+                    <Stack gap="row">
                         <Switch
                             label={`${t("cadenceOn")}: ${row.label}`}
                             isSelected={row.on}
@@ -80,18 +79,18 @@ export const ContentCadenceCardBase = (props: ContentCadenceCardBaseProps) => {
                                 />
                             </>
                         ) : null}
-                    </div>
+                    </Stack>
                 </SurfaceCard>
             ))}
             <ContentCommandNote note={props.props.note} closeLabel={t("close")} onDismiss={props.on.dismissNote} />
-            <div className={ACTIONS_CLASS_NAME}>
+            <Cluster gap="inline">
                 <Button intent="alternative" size="sm" onPress={props.on.preset} isDisabled={locked}>
                     {t("cadencePreset")}
                 </Button>
                 <Button intent="commit" size="sm" isPending={isPending} isDisabled={!canManage} onPress={props.on.save}>
                     {t("cadenceSave")}
                 </Button>
-            </div>
+            </Cluster>
         </ContentSettingsCard>
     )
 }

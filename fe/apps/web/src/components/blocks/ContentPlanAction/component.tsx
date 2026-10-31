@@ -1,4 +1,4 @@
-import { Button, Dialog, Select, Text } from "@starci/grammar/common"
+import { Button, Dialog, Select, Stack, Text } from "@starci/grammar/common"
 import {
     ContentCommandNote,
     getContentCommandProgressProps,
@@ -6,7 +6,6 @@ import {
 } from "@/components/composites/ContentSettingsCard"
 import { SlotView } from "@/components/composites/SlotView"
 import type { ContentNoteView, ContentT } from "@/modules/types"
-import { FORM_CLASS_NAME } from "./classNames"
 
 /** What the plan command draws. */
 export interface ContentPlanActionBaseProps {
@@ -59,7 +58,7 @@ export const ContentPlanActionBase = (props: ContentPlanActionBaseProps) => {
                 isDismissable={!isPending}
                 footer={<PlanFooter {...props} />}
             >
-                <div className={FORM_CLASS_NAME}>
+                <Stack gap="row">
                     <Select
                         label={t("planMonthLabel")}
                         options={props.props.months}
@@ -82,7 +81,7 @@ export const ContentPlanActionBase = (props: ContentPlanActionBaseProps) => {
                         closeLabel={t("close")}
                         onDismiss={props.on.dismissNote}
                     />
-                </div>
+                </Stack>
             </Dialog>
         </>
     )

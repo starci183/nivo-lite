@@ -1,6 +1,7 @@
 import {
     Button,
     ChatBubble,
+    Cluster,
     Divider,
     Drawer,
     Form,
@@ -8,20 +9,11 @@ import {
     Input,
     List,
     ListItem,
+    Stack,
     Text,
 } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import {
-    ASK_INPUT_CLASS,
-    ASK_ROW_CLASS,
-    BUBBLE_CLASS,
-    FOOT_CLASS,
-    LINKS_CLASS,
-    MESSAGES_CLASS,
-    REPLY_CLASS,
-    STEPS_CLASS,
-    SUGGEST_CLASS,
-} from "./classNames"
+import { ASK_INPUT_CLASS, BUBBLE_CLASS, FOOT_CLASS, MESSAGES_CLASS, SUGGEST_CLASS } from "./classNames"
 
 /** One button of a guide reply that opens a page. */
 interface GuideBubbleLink {
@@ -96,31 +88,35 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
             placement="right"
         >
             <div className={MESSAGES_CLASS} aria-live="polite">
-                <ChatBubble side="incoming">
-                    <Text size="sm">{props.props.greeting}</Text>
-                </ChatBubble>
-                <GuideMessages {...props} />{" "}
-                {props.props.isThinking ? (
+                <Stack gap="row">
                     <ChatBubble side="incoming">
-                        <Text size="sm" tone="muted">
-                            {props.props.thinking}
-                        </Text>
+                        <Text size="sm">{props.props.greeting}</Text>
                     </ChatBubble>
-                ) : null}
+                    <GuideMessages {...props} />{" "}
+                    {props.props.isThinking ? (
+                        <ChatBubble side="incoming">
+                            <Text size="sm" tone="muted">
+                                {props.props.thinking}
+                            </Text>
+                        </ChatBubble>
+                    ) : null}
+                </Stack>
             </div>
             {props.props.messages.length > 0 ? null : (
                 <div className={SUGGEST_CLASS}>
-                    {props.props.suggestions.map((suggestion) => (
-                        <Button
-                            key={suggestion}
-                            intent="neutral"
-                            size="sm"
-                            isDisabled={props.props.isThinking}
-                            onPress={() => props.on.ask(suggestion)}
-                        >
-                            {suggestion}
-                        </Button>
-                    ))}
+                    <Cluster gap="inline">
+                        {props.props.suggestions.map((suggestion) => (
+                            <Button
+                                key={suggestion}
+                                intent="neutral"
+                                size="sm"
+                                isDisabled={props.props.isThinking}
+                                onPress={() => props.on.ask(suggestion)}
+                            >
+                                {suggestion}
+                            </Button>
+                        ))}
+                    </Cluster>
                 </div>
             )}
             <GuideComposer {...props} />{" "}
@@ -132,36 +128,43 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
 const GuideComposer = (props: GuideBubbleBaseProps) => {
     return (
         <div className={FOOT_CLASS}>
-            <Divider semantics="presentation" />
-            <Form label={props.props.title} onSubmit={props.on.send} isPending={props.props.isThinking}>
-                <div className={ASK_ROW_CLASS}>
-                    <div className={ASK_INPUT_CLASS}>
-                        <Input
-                            id="guide-question"
-                            name="question"
-                            label={props.props.questionLabel}
-                            placeholder={props.props.placeholder}
-                            value={props.props.question}
-                            onValueChange={props.on.changeQuestion}
-                        />
+            <Stack gap="inline">
+                <Divider semantics="presentation" />
+                <Form label={props.props.title} onSubmit={props.on.send} isPending={props.props.isThinking}>
+                    <Cluster gap="inline" align="end" wrap={false}>
+                        <div className={ASK_INPUT_CLASS}>
+                            <Input
+                                id="guide-question"
+                                name="question"
+                                label={props.props.questionLabel}
+                                placeholder={props.props.placeholder}
+                                value={props.props.question}
+                                onValueChange={props.on.changeQuestion}
+                            />
+                        </div>
+                        <Button
+                            type="submit"
+                            intent="commit"
+                            isPending={props.props.isThinking}
+                            isDisabled={props.props.question.trim() === ""}
+                        >
+                            {props.props.sendLabel}
+                        </Button>
+                    </Cluster>
+                </Form>
+                {props.props.messages.length === 0 ? null : (
+                    <div>
+                        <Button
+                            intent="neutral"
+                            size="sm"
+                            isDisabled={props.props.isThinking}
+                            onPress={props.on.restart}
+                        >
+                            {props.props.restartLabel}
+                        </Button>
                     </div>
-                    <Button
-                        type="submit"
-                        intent="commit"
-                        isPending={props.props.isThinking}
-                        isDisabled={props.props.question.trim() === ""}
-                    >
-                        {props.props.sendLabel}
-                    </Button>
-                </div>
-            </Form>
-            {props.props.messages.length === 0 ? null : (
-                <div>
-                    <Button intent="neutral" size="sm" isDisabled={props.props.isThinking} onPress={props.on.restart}>
-                        {props.props.restartLabel}
-                    </Button>
-                </div>
-            )}
+                )}
+            </Stack>
         </div>
     )
 }
@@ -187,14 +190,14 @@ const GuideMessages = (props: GuideBubbleBaseProps) => {
                             )
                         }
                     >
-                        <div className={REPLY_CLASS}>
+                        <Stack gap="inline">
                             <Text size="sm">{message.text}</Text>
                             {message.steps.length === 0 ? null : (
                                 <>
                                     <Text size="xs" tone="muted">
                                         {props.props.stepsLabel}
                                     </Text>
-                                    <List as="ol" className={STEPS_CLASS} label={props.props.stepsLabel}>
+                                    <List as="ol" label={props.props.stepsLabel}>
                                         {message.steps.map((step, position) => (
                                             <ListItem key={step}>
                                                 <Text size="sm">{`${position + 1}. ${step}`}</Text>
@@ -204,7 +207,7 @@ const GuideMessages = (props: GuideBubbleBaseProps) => {
                                 </>
                             )}
                             {message.links.length === 0 ? null : (
-                                <div className={LINKS_CLASS}>
+                                <Cluster gap="inline">
                                     {message.links.map((link) => (
                                         <Button
                                             key={link.id}
@@ -215,9 +218,9 @@ const GuideMessages = (props: GuideBubbleBaseProps) => {
                                             {link.label}
                                         </Button>
                                     ))}
-                                </div>
+                                </Cluster>
                             )}
-                        </div>
+                        </Stack>
                     </ChatBubble>
                 ),
             )}

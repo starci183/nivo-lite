@@ -1,17 +1,19 @@
 import {
     Badge,
     Button,
+    Cluster,
     Dialog,
     EmptyNotice,
     HorizontalScrollRegion,
     ListRow,
     SegmentedControl,
+    Stack,
     SurfaceListCard,
     Text,
     TextAction,
     Textarea,
 } from "@starci/grammar/common"
-import { BOARD_CLASS_NAME, DETAIL_CLASS_NAME, FORM_CLASS_NAME, LANE_CLASS_NAME } from "./classNames"
+import { LANE_CLASS_NAME } from "./classNames"
 
 /** One deal card, every word already resolved. */
 export interface DealView {
@@ -105,7 +107,7 @@ export const SalesPipelineBase = (props: SalesPipelineBaseProps) => {
                 }
             >
                 {dialog === null ? null : (
-                    <div className={FORM_CLASS_NAME}>
+                    <Stack gap="row">
                         <SegmentedControl
                             label={dialog.title}
                             options={dialog.options}
@@ -134,7 +136,7 @@ export const SalesPipelineBase = (props: SalesPipelineBaseProps) => {
                                 {dialog.error}
                             </Text>
                         )}
-                    </div>
+                    </Stack>
                 )}
             </Dialog>
         </>
@@ -143,7 +145,7 @@ export const SalesPipelineBase = (props: SalesPipelineBaseProps) => {
 
 const renderPipelineLanes = ({ p, on }: RenderPipelineLanesInput) => (
     <HorizontalScrollRegion overflow="needed" aria-label={p.label}>
-        <div className={BOARD_CLASS_NAME}>
+        <Cluster gap="row" wrap={false} align="start">
             {p.lanes.map((lane) => (
                 <div key={lane.stage} className={LANE_CLASS_NAME}>
                     <SurfaceListCard
@@ -175,7 +177,7 @@ const renderPipelineLanes = ({ p, on }: RenderPipelineLanesInput) => (
                                     </Button>
                                 }
                             >
-                                <div className={DETAIL_CLASS_NAME}>
+                                <Stack gap="identity">
                                     <Text size="sm" weight="semibold">
                                         {deal.value}
                                     </Text>
@@ -189,13 +191,13 @@ const renderPipelineLanes = ({ p, on }: RenderPipelineLanesInput) => (
                                     <Text size="xs" tone="muted">
                                         {deal.facts}
                                     </Text>
-                                </div>
+                                </Stack>
                             </ListRow>
                         ))}
                     </SurfaceListCard>
                 </div>
             ))}
-        </div>
+        </Cluster>
     </HorizontalScrollRegion>
 )
 

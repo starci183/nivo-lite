@@ -1,9 +1,8 @@
 import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
-import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, Button, EmptyNotice, ListRow, Stack, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { TileIcon } from "@/components/composites/TileIcon"
 import type { ModuleIconName } from "@/modules/types"
-import { RAIL_CLASS_NAME } from "./classNames"
 
 /** One agent row. */
 interface OverviewRailAgent {
@@ -51,7 +50,7 @@ interface OverviewRailBaseProps {
 export const OverviewRailBase = (props: OverviewRailBaseProps) => {
     const activity = props.props.activity.map((item) => ({ item, iconProps: { icon: item.icon } }))
     return (
-        <div className={RAIL_CLASS_NAME}>
+        <Stack gap="region">
             <SurfaceListCard
                 label={props.props.agentsTitle}
                 isLoading={props.props.isSkeleton}
@@ -111,6 +110,6 @@ export const OverviewRailBase = (props: OverviewRailBaseProps) => {
                     </ListRow>
                 ))}
             </SurfaceListCard>
-        </div>
+        </Stack>
     )
 }

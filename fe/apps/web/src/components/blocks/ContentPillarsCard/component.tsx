@@ -1,7 +1,6 @@
-import { Button, Input, NumberField, Switch } from "@starci/grammar/common"
+import { Button, Cluster, Input, NumberField, Stack, Switch } from "@starci/grammar/common"
 import type { ContentNoteView, ContentT } from "@/modules/types"
 import { ContentCommandNote, ContentSettingsCard } from "@/components/composites/ContentSettingsCard"
-import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** One editable theme row. */
 export interface PillarRow {
@@ -63,7 +62,7 @@ export const ContentPillarsCardBase = (props: ContentPillarsCardBaseProps) => {
     return (
         <ContentSettingsCard title={t("settingsPillars")} description={t("settingsPillarsBody")}>
             {props.props.rows.map((row) => (
-                <div key={row.key} className={FORM_CLASS_NAME}>
+                <Stack key={row.key} gap="row">
                     <PillarTextField
                         row={row}
                         field="name"
@@ -86,7 +85,7 @@ export const ContentPillarsCardBase = (props: ContentPillarsCardBaseProps) => {
                         isDisabled={locked}
                         onValueChange={(v) => props.on.change(row.key, { weight: v })}
                     />
-                    <div className={ACTIONS_CLASS_NAME}>
+                    <Cluster gap="inline">
                         <Switch
                             label={t("pillarActive")}
                             isSelected={row.active}
@@ -101,11 +100,11 @@ export const ContentPillarsCardBase = (props: ContentPillarsCardBaseProps) => {
                         >
                             {t("remove")}
                         </Button>
-                    </div>
-                </div>
+                    </Cluster>
+                </Stack>
             ))}
             <ContentCommandNote note={props.props.note} closeLabel={t("close")} onDismiss={props.on.dismissNote} />
-            <div className={ACTIONS_CLASS_NAME}>
+            <Cluster gap="inline">
                 <Button intent="neutral" size="sm" isDisabled={locked} onPress={props.on.add}>
                     {t("pillarAdd")}
                 </Button>
@@ -117,7 +116,7 @@ export const ContentPillarsCardBase = (props: ContentPillarsCardBaseProps) => {
                 <Button intent="commit" size="sm" onPress={props.on.save} isDisabled={!canManage} isPending={isPending}>
                     {t("pillarSave")}
                 </Button>
-            </div>
+            </Cluster>
         </ContentSettingsCard>
     )
 }

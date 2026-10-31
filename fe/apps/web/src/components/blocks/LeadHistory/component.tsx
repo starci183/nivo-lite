@@ -1,7 +1,7 @@
-import { EmptyNotice, Region, SectionHeader, SurfaceAccordionCard, Text, Timeline } from "@starci/grammar/common"
+import { EmptyNotice, Region, SectionHeader, Stack, SurfaceAccordionCard, Text, Timeline } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { LeadMark } from "@/components/composites/LeadMark"
-import { ENTRY_STACK_CLASS_NAME, HISTORY_ANCHOR_CLASS_NAME } from "./classNames"
+import { HISTORY_ANCHOR_CLASS_NAME } from "./classNames"
 import type { LeadIcon, DataSlot, SlotLabels } from "@/modules/types"
 
 /** One line of the audit trail, already resolved to text. */
@@ -78,7 +78,7 @@ export const LeadHistoryBase = (props: LeadHistoryBaseProps) => {
                                     timeLabel: entry.timeLabel,
                                     marker: <LeadMark icon={entry.icon} />,
                                     description: (
-                                        <div className={ENTRY_STACK_CLASS_NAME}>
+                                        <Stack gap="identity">
                                             <Text as="p" size="xs" tone="muted" weight="medium">
                                                 {entry.kindLabel}
                                             </Text>
@@ -103,7 +103,7 @@ export const LeadHistoryBase = (props: LeadHistoryBaseProps) => {
                                                     )}
                                                 />
                                             ) : null}
-                                        </div>
+                                        </Stack>
                                     ),
                                 }))}
                             />

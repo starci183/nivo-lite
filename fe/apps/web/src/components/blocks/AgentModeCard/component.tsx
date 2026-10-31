@@ -1,7 +1,6 @@
-import { SegmentedControl, SurfaceCard, Text } from "@starci/grammar/common"
+import { SegmentedControl, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { STACK } from "./classNames"
 
 /** What the mode card shows once the installation arrived. */
 export interface ModeView {
@@ -33,7 +32,7 @@ export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <SlotView {...props.props.read} onRetry={props.on.retry}>
             {(view, isSkeleton) => (
-                <div className={STACK}>
+                <Stack gap="section">
                     <SegmentedControl
                         label={props.props.title}
                         isLabelHidden
@@ -54,7 +53,7 @@ export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
                             {view.sharedNote}
                         </Text>
                     )}
-                </div>
+                </Stack>
             )}
         </SlotView>
     </SurfaceCard>

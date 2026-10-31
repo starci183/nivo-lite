@@ -1,7 +1,6 @@
-import { Button, Input, SectionHeader, SurfaceCard, Textarea } from "@starci/grammar/common"
+import { Button, Cluster, Input, SectionHeader, Stack, SurfaceCard, Textarea } from "@starci/grammar/common"
 import { ContentCommandNote } from "@/components/composites/ContentSettingsCard"
 import type { ContentNoteView, ContentT } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What the brand voice card draws. */
 export interface ContentBrandCardBaseProps {
@@ -31,7 +30,7 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
     const locked = !canManage || isPending
     return (
         <SurfaceCard ariaLabel={t("settingsBrand")}>
-            <div className={FORM_CLASS_NAME}>
+            <Stack gap="row">
                 <SectionHeader level={2} title={t("settingsBrand")} description={t("settingsBrandBody")} />
                 <Textarea
                     label={t("brandVoice")}
@@ -65,7 +64,7 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
                     onValueChange={props.on.tags}
                 />
                 <ContentCommandNote note={props.props.note} closeLabel={t("close")} onDismiss={props.on.dismissNote} />
-                <div className={ACTIONS_CLASS_NAME}>
+                <Cluster gap="inline">
                     <Button
                         intent="commit"
                         size="sm"
@@ -75,8 +74,8 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
                     >
                         {t("brandSave")}
                     </Button>
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
         </SurfaceCard>
     )
 }

@@ -1,7 +1,6 @@
-import { EmptyNotice, ListRow, Meter, SectionHeader, SurfaceListCard } from "@starci/grammar/common"
+import { EmptyNotice, ListRow, Meter, SectionHeader, Stack, SurfaceListCard } from "@starci/grammar/common"
 import { ContentMonthBar } from "@/components/leaves/ContentMonthBar"
 import type { ContentT } from "@/modules/types"
-import { PANEL_CLASS_NAME } from "./classNames"
 
 /** One meter row of the balance. */
 export interface BalanceMeter {
@@ -43,7 +42,7 @@ export interface ContentBalancePanelBaseProps {
 export const ContentBalancePanelBase = (props: ContentBalancePanelBaseProps) => {
     const { t } = props.props
     return (
-        <div className={PANEL_CLASS_NAME}>
+        <Stack gap="row">
             <ContentMonthBar title={props.props.monthTitle} t={t} onShift={props.on.shift} onToday={props.on.today} />
             <SectionHeader level={2} title={props.props.title} description={t("balanceBody")} />
             <SurfaceListCard ariaLabel={t("balanceTitle")} empty={<EmptyNotice message={t("balanceEmpty")} />}>
@@ -77,6 +76,6 @@ export const ContentBalancePanelBase = (props: ContentBalancePanelBaseProps) => 
                     </SurfaceListCard>
                 </>
             ) : null}
-        </div>
+        </Stack>
     )
 }

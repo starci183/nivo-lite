@@ -1,6 +1,5 @@
-import { Alert, Page } from "@starci/grammar/common"
+import { Alert, Page, Stack } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
-import { PAGE } from "./classNames"
 
 /** Copy, trail and the retry command supplied by the connected route error block. */
 export interface RouteErrorBaseProps {
@@ -24,13 +23,13 @@ export const RouteErrorBase = (props: RouteErrorBaseProps) => (
             title: props.props.title,
         }}
     >
-        <div className={PAGE}>
+        <Stack gap="region">
             <Alert
                 tone="negative"
                 title={props.props.alertTitle}
                 description={props.props.message}
                 {...(props.on.retry ? { action: { label: props.props.retryLabel, onAction: props.on.retry } } : {})}
             />
-        </div>
+        </Stack>
     </Page>
 )

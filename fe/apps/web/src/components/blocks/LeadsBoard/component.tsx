@@ -2,9 +2,11 @@ import type { useTranslations, useFormatter } from "next-intl"
 import {
     Badge,
     Button,
+    Cluster,
     EmptyNotice,
     ListRow,
     SearchField,
+    Stack,
     SurfaceListCard,
     Tabs,
     Text,
@@ -15,7 +17,7 @@ import { SlotView } from "@/components/composites/SlotView"
 import { LeadRowMenu } from "@/components/composites/LeadRowMenu"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { BOARD_CLASS_NAME, FILTERS_CLASS_NAME, SEARCH_CLASS_NAME } from "./classNames"
+import { SEARCH_CLASS_NAME } from "./classNames"
 
 /** One lead of the list, every word already resolved. */
 export interface LeadRowView {
@@ -100,7 +102,7 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
     const { props: p, on } = props
     const l = p.labels
     return (
-        <div className={BOARD_CLASS_NAME}>
+        <Stack gap="region">
             <SlotView
                 slot={p.slot}
                 placeholder={{ ...PLACEHOLDER, tabs: l.loadingTabs }}
@@ -109,7 +111,7 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
             >
                 {(view, isSkeleton) => (
                     <>
-                        <div className={FILTERS_CLASS_NAME}>
+                        <Cluster gap="section" align="end">
                             <div className={SEARCH_CLASS_NAME}>
                                 <SearchField
                                     label={l.searchLabel}
@@ -120,7 +122,7 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
                                 />
                             </div>
                             {view.isFiltered ? <TextAction onPress={on.clear}>{l.clearLabel}</TextAction> : null}
-                        </div>
+                        </Cluster>
                         <Tabs
                             variant="primary"
                             label={l.tabsLabel}
@@ -155,7 +157,7 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
                     {p.pagination.loadMoreError === null ? p.pagination.loadMoreLabel : p.pagination.retryLabel}
                 </Button>
             ) : null}
-        </div>
+        </Stack>
     )
 }
 

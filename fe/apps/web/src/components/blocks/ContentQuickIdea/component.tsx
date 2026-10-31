@@ -1,4 +1,4 @@
-import { Button, CheckboxGroup, Dialog, Textarea } from "@starci/grammar/common"
+import { Button, CheckboxGroup, Dialog, Stack, Textarea } from "@starci/grammar/common"
 import {
     ContentCommandNote,
     getContentCommandProgressProps,
@@ -6,7 +6,6 @@ import {
 } from "@/components/composites/ContentSettingsCard"
 import { SlotView } from "@/components/composites/SlotView"
 import type { ContentChannel, ContentNoteView, ContentT } from "@/modules/types"
-import { FORM_CLASS_NAME } from "./classNames"
 
 /** What the quick idea command draws. */
 export interface ContentQuickIdeaBaseProps {
@@ -62,7 +61,7 @@ export const ContentQuickIdeaBase = (props: ContentQuickIdeaBaseProps) => {
                     </>
                 }
             >
-                <div className={FORM_CLASS_NAME}>
+                <Stack gap="row">
                     <Textarea
                         label={t("quickTopic")}
                         rows={4}
@@ -87,7 +86,7 @@ export const ContentQuickIdeaBase = (props: ContentQuickIdeaBaseProps) => {
                         closeLabel={t("close")}
                         onDismiss={props.on.dismissNote}
                     />
-                </div>
+                </Stack>
             </Dialog>
         </>
     )
