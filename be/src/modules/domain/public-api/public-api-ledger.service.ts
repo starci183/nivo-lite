@@ -48,7 +48,7 @@ export class PublicApiLedgerService {
             })
             .setParameters({ prefix: request.prefix, suffix: request.suffix })
             .orIgnore()
-            .returning(["id", "lead_id"])
+            .returning("id, lead_id")
             .execute()
         const [fresh] = returnedRows(written.raw, isRequestRow)
         if (fresh !== undefined) return { ...fresh, inserted: true }
@@ -57,7 +57,7 @@ export class PublicApiLedgerService {
             .update()
             .set({ duplicates: () => "duplicates + 1" })
             .where({ workspaceId: request.workspaceId, dedupeKey: `${request.prefix}${request.suffix}` })
-            .returning(["id", "lead_id"])
+            .returning("id, lead_id")
             .execute()
         const [earlier] = returnedRows(counted.raw, isRequestRow)
         return earlier === undefined ? undefined : { ...earlier, inserted: false }

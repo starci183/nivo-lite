@@ -83,7 +83,7 @@ export const ledgerExpected = (expected: LedgerRecord): LedgerCalls => ({
     ],
     parameters: [[{ prefix: expected.prefix, suffix: expected.suffix }]],
     orIgnore: [[]],
-    returning: [[["id", "lead_id"]]],
+    returning: [["id, lead_id"]],
 })
 
 /**
