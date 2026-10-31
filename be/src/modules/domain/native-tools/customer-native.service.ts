@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
 import { LeadReadService } from "@modules/domain/leads"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { CUSTOMER_BRIEF_INPUT_SCHEMA, CUSTOMER_BRIEF_SCHEMA } from "./customer-native.schema"
@@ -43,7 +43,7 @@ export class CustomerNativeService implements NativeAdapter {
     constructor(
         private readonly conversations: AgentConversationsReadService,
         private readonly leads: LeadReadService,
-        private readonly messages: AgentMessagesService,
+        private readonly messages: AgentMessagesFeedReadService,
     ) {}
 
     /** Runs the one customer tool. */
@@ -58,14 +58,14 @@ export class CustomerNativeService implements NativeAdapter {
         if (lead === undefined) throw nativeRefusal("not_found")
         const [contact, last] = await Promise.all([
             this.leads.contactOf(workspaceId, lead.id),
-            this.messages.lastCustomerAt(conversation.id),
+            this.messages.lastCustomerAtIn(conversation.id),
         ])
         return {
             stage: lead.stage,
             need: clipped(lead.need, TEXT_CHARS),
             company: clipped(lead.company, TEXT_CHARS),
             source: lead.channel,
-            lastCustomerAt: last.kind === "ok" ? last.value.toISOString() : null,
+            lastCustomerAt: last?.toISOString() ?? null,
             phoneMasked: customerMasked(contact?.phone ?? null),
         }
     }

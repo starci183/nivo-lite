@@ -5,4 +5,6 @@
 export interface NativeToolsOptions {
     /** Adds `customer.brief`. */
     readonly customer?: boolean
+    /** Provides the lead reader the customer tool reads with, for an app that does not run the leads capability (the mcp app). */
+    readonly leadReader?: boolean
 }

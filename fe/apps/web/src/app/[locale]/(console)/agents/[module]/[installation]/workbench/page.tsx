@@ -17,7 +17,7 @@ export { agentWorkbenchMetadata as generateMetadata } from "@/features/pages/Age
 
 type PageProps = {
     readonly params: Promise<{ module: string; installation: string }>
-    readonly searchParams: Promise<{ tab?: string | string[]; focus?: string | string[] }>
+    readonly searchParams: Promise<{ tab?: string | string[]; focus?: string | string[]; conversation?: string | string[] }>
 }
 
 /** The workbench of each module, by the workbench key of its catalogue entry. A module without a line shows the pending state. */
@@ -47,6 +47,7 @@ const Page = async (props: PageProps) => {
             installationId={installation}
             tab={first(query.tab)}
             focus={first(query.focus)}
+            conversation={first(query.conversation)}
             workbenches={WORKBENCHES}
         />
     )

@@ -10,6 +10,7 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { ChatbotEscalationForm } from "@/components/branches/ChatbotEscalationForm"
+import { ChatbotStageSteps, type ChatbotStageStepsProps } from "@/components/branches/ChatbotStageSteps"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import {
     ACTIONS_CLASS_NAME,
@@ -63,6 +64,8 @@ export interface ChatbotSidePanelProps {
     readonly channelLine: string
     readonly escalation: ChatbotSideEscalation | null
     readonly handling: ChatbotSideHandling
+    /** The stage of the customer's deal; null while the customer was not captured. */
+    readonly stage: ChatbotStageStepsProps | null
     readonly leadTitle: string
     readonly leadNone: string
     readonly lead: ChatbotSideLead | null
@@ -128,6 +131,7 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
                 />
             )}
             {renderChatbotSidePanelHandling(handling, props)}
+            {props.stage === null ? null : <ChatbotStageSteps {...props.stage} />}
             <Region label={props.leadTitle}>
                 <div className={SIDE_SECTION_CLASS_NAME}>
                     <SectionHeader level={3} title={props.leadTitle} />

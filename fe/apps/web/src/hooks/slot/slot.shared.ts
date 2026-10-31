@@ -1,5 +1,5 @@
 import type { SWRResponse } from "swr"
-import type { DataSlot } from "@/modules/types"
+import type { DataSlot, WorkbenchRowView } from "@/modules/types"
 
 /** A slot whose data has not arrived: the same tree draws as a skeleton. */
 export const loadingSlot = <T>(): DataSlot<T> => ({ isLoading: true })
@@ -24,3 +24,20 @@ export const slotOfSwr = <T>(read: SlotRead<T>): DataSlot<T> => {
     if (read.error !== undefined) return { isError: true }
     return read.isLoading ? { isLoading: true } : {}
 }
+
+/** One empty row, drawn as a skeleton while a desk's waiting list is read. */
+export const WAITING_ROWS_PLACEHOLDER: ReadonlyArray<WorkbenchRowView> = [
+    {
+        id: "loading",
+        title: "",
+        description: "",
+        badges: [],
+        amount: null,
+        proposal: "",
+        trace: null,
+        expiry: null,
+        primary: null,
+        menu: [],
+        waitingFor: null,
+    },
+]

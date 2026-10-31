@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule, Type } from "@nestjs/common"
+import { LeadReadService } from "@modules/domain/leads"
 import { SepayNativeService } from "@modules/domain/mcp-gateway"
 import type { NativeAdapter } from "@modules/domain/mcp-gateway"
 import { BrainNativeService } from "./brain-native.service"
@@ -39,6 +40,7 @@ export class NativeToolsModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
         const customer = options.customer === true ? CUSTOMER_TOOL_ADAPTERS : []
+        const leadReader = options.leadReader === true ? [LeadReadService] : []
         return {
             ...base,
             providers: [
@@ -48,6 +50,7 @@ export class NativeToolsModule extends ConfigurableModuleClass {
                 SepayNativeService,
                 ...NATIVE_TOOL_ADAPTERS,
                 ...customer,
+                ...leadReader,
             ],
             exports: [...NATIVE_TOOL_ADAPTERS, ...customer],
         }

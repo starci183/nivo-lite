@@ -8,6 +8,8 @@ interface SalesWorkbenchPageProps {
     readonly tab?: string | null
     /** The pending decision to highlight. */
     readonly focus?: string | null
+    /** `?conversation=` of the route: the thread of a customer to draw. */
+    readonly conversation?: string | null
     /** The Sales agent instance the workbench opens for. */
     readonly installationId?: string
 }
@@ -20,9 +22,11 @@ export const SalesWorkbenchPage = async (props: SalesWorkbenchPageProps) => {
         <SalesWorkbenchPageBase
             props={{
                 installationId: props.installationId ?? null,
-                tab: salesTabOf(props.tab) ?? (focus ? "decisions" : "attention"),
+                tab: props.conversation ? "conversation" : (salesTabOf(props.tab) ?? (focus ? "decisions" : "attention")),
                 focus,
+                conversation: props.conversation ?? null,
                 tabs: {
+                    conversation: t("tab_conversation"),
                     attention: t("tab_attention"),
                     pipeline: t("tab_pipeline"),
                     decisions: t("tab_decisions"),

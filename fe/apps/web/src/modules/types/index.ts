@@ -42,6 +42,7 @@ export type {
     ChatbotRespondent,
     ChatbotRole,
     ChatbotThread,
+    ChatbotWaitingReply,
 } from "./chatbot"
 export type {
     BookingAction,

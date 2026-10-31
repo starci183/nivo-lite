@@ -7,6 +7,8 @@ interface ChatbotWorkbenchPageProps {
     readonly focus?: string | null
     /** The Chatbot instance the workbench opens for. */
     readonly installationId?: string
+    /** `?tab=` of the route: inbox, customers or gaps. */
+    readonly tab?: string | null
 }
 
 /** /agents/chatbot/workbench: the server shell words the inbox and hands the page the ids; every panel reads its own data. */
@@ -18,6 +20,9 @@ export const ChatbotWorkbenchPage = async (props: ChatbotWorkbenchPageProps) => 
                 installationId: props.installationId ?? null,
                 focus: props.focus ?? null,
                 inboxLabel: t("title"),
+                tab: props.tab ?? null,
+                customersLabel: t("tabCustomers"),
+                gapsLabel: t("tabGaps"),
             }}
         />
     )

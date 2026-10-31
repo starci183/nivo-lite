@@ -25,7 +25,7 @@ export {
 } from "./accounting-question"
 export { isWorkspaceSwitchSwrKey, matchesSwrKey } from "./swr-key"
 export { newIdempotencyToken } from "./token"
-export { isLeadStage, leadStageLabel, leadStageOf } from "./leadStage"
+export { isLeadStage, leadStageLabel, leadStageOf, leadStageSteps } from "./leadStage"
 export { toLeadGenWorkbenchData } from "./leadgen"
 export { DB_DEFAULT_PORT, DB_ENGINES } from "./database-engines"
 export { EMPTY_TYPED, fieldKey } from "./sales-decision-typed"

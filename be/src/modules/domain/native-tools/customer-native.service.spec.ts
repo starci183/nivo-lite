@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
-import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
 import { LeadReadService } from "@modules/domain/leads"
 import type { LeadView } from "@modules/domain/leads"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
@@ -31,15 +31,15 @@ const build = async () => {
         listByIds: jest.fn().mockResolvedValue([LEAD]),
         contactOf: jest.fn().mockResolvedValue({ id: "lead-1", contact_name: "Lan", phone: "84901234567", email: null }),
     })
-    const messages = mock<AgentMessagesService>({
-        lastCustomerAt: jest.fn().mockResolvedValue({ kind: "ok", value: WROTE }),
+    const messages = mock<AgentMessagesFeedReadService>({
+        lastCustomerAtIn: jest.fn().mockResolvedValue(WROTE),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [
             CustomerNativeService,
             { provide: AgentConversationsReadService, useValue: conversations },
             { provide: LeadReadService, useValue: leads },
-            { provide: AgentMessagesService, useValue: messages },
+            { provide: AgentMessagesFeedReadService, useValue: messages },
         ],
     }).compile()
     return { customer: moduleRef.get(CustomerNativeService), conversations, leads, messages }
@@ -68,12 +68,12 @@ describe("CustomerNativeService brief", () => {
         })
         expect(conversations.customerChat).toHaveBeenCalledWith(WS, "conv-1")
         expect(leads.listByIds).toHaveBeenCalledWith(WS, ["lead-1"])
-        expect(messages.lastCustomerAt).toHaveBeenCalledWith("conv-1")
+        expect(messages.lastCustomerAtIn).toHaveBeenCalledWith("conv-1")
     })
 
     it("answers a null last message and an empty phone for a customer who never wrote or shared one", async () => {
         const { customer, leads, messages } = await build()
-        messages.lastCustomerAt.mockResolvedValueOnce({ kind: "refused", code: AgentMessagesErrorCode.NotFound })
+        messages.lastCustomerAtIn.mockResolvedValueOnce(null)
         leads.contactOf.mockResolvedValueOnce(null)
 
         await expect(customer.invoke(WS, "brief", {}, CALLER)).resolves.toMatchObject({

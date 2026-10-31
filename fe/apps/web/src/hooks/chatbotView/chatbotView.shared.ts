@@ -1,3 +1,4 @@
+import { leadStageSteps } from "@/modules/utils"
 import {
     INBOX_FILTERS,
     chatChannelLabelOf,
@@ -114,6 +115,7 @@ export const sideViewOf = (t: ChatbotTranslator, input: SideViewInput) => {
     const escalation = input.thread?.escalation ?? null
     const lead = input.thread?.lead ?? null
     const handledBy = conversation?.handledBy ?? null
+    const stageLead = conversation?.lead ?? null
     return {
         title: t("customerTitle"),
         closeLabel: t("infoClose"),
@@ -141,9 +143,21 @@ export const sideViewOf = (t: ChatbotTranslator, input: SideViewInput) => {
                       noticeTitle: t("notSent"),
                       noticeText: input.answerFailure,
                   },
+        stage:
+            stageLead === null
+                ? null
+                : {
+                      title: t("stageTitle"),
+                      label: t("stageStepperLabel"),
+                      steps: leadStageSteps(t),
+                      currentId: stageLead.stage,
+                  },
         handling: {
             title: t("handlingTitle"),
-            text: handlingTextOf(t, handledBy, input.userName),
+            text:
+                handledBy === null && conversation?.respondent.kind === "agent"
+                    ? t("handlingAgent", { name: conversation.respondent.name })
+                    : handlingTextOf(t, handledBy, input.userName),
             buttonLabel: handledBy === null ? t("takeOver") : t("handBack"),
             hint: handledBy === null ? t("takeOverHint") : null,
             isBusy: input.busy !== null,

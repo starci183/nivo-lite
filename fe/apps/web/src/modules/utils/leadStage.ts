@@ -14,5 +14,9 @@ export const leadStageOf = (value: string): LeadStageId => LEAD_STAGES.find((sta
 /** A translator that carries the five `leadStage_*` words of a desk. */
 type LeadStageTranslator = (key: `leadStage_${LeadStageId}`) => string
 
+/** The five steps of a deal with their words, for a stepper. */
+export const leadStageSteps = (t: LeadStageTranslator): ReadonlyArray<{ readonly id: LeadStageId; readonly label: string }> =>
+    LEAD_STAGES.map((stage) => ({ id: stage, label: leadStageLabel(t, stage) }))
+
 /** The one word of a stage, the same on the Chatbot desk and the Sales desk: New, Qualified, Proposal, Won, Lost. */
 export const leadStageLabel = (t: LeadStageTranslator, stage: LeadStageId): string => t(`leadStage_${stage}`)

@@ -2,7 +2,12 @@ import { Injectable } from "@nestjs/common"
 import { In, IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ConversationWrite, FeedMessage, OptionalDeliveredReply } from "./agent-messages-feed-read.contracts"
+import type {
+    ConversationWrite,
+    FeedMessage,
+    OptionalCustomerMoment,
+    OptionalDeliveredReply,
+} from "./agent-messages-feed-read.contracts"
 import { AgentMessageEntity } from "./persistence/entities"
 
 /** The creation moment as Postgres words it in text. */
@@ -47,6 +52,16 @@ export class AgentMessagesFeedReadService {
         })
         const deliveryStatus = row?.deliveryStatus ?? null
         return row === null || deliveryStatus === null ? null : { deliveryStatus, deliveryError: row.deliveryError }
+    }
+
+    /** When the customer of the conversation last wrote; null when they never did. */
+    async lastCustomerAtIn(conversationId: string): Promise<OptionalCustomerMoment> {
+        const row = await this.entityManager.findOne(AgentMessageEntity, {
+            select: { createdAt: true },
+            where: { conversationId, role: "user" },
+            order: { createdAt: "DESC" },
+        })
+        return row?.createdAt ?? null
     }
 
     /** When each conversation's customer last wrote, among the writes after `since`, newest first, at most `limit`. */

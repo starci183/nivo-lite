@@ -54,7 +54,7 @@ export const mcpKnowledgeModules = (options: McpAppOptions): Array<DynamicModule
     ConnectionsModule.readOnly({ isGlobal: true, readOnly: true }),
     AgentConversationsModule.register({ isGlobal: true, readOnly: true }),
     AgentMessagesModule.register({ isGlobal: true, readOnly: true }),
-    NativeToolsModule.register({ isGlobal: true }),
+    NativeToolsModule.register({ isGlobal: true, customer: true, leadReader: true }),
 ]
 
 /** The error kinds of the capabilities this group registers. */

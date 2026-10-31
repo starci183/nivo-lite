@@ -20,6 +20,8 @@ type AgentWorkbenchPageProps = {
     readonly tab: string | null
     /** The `focus` of the query: the record a waiting row leads to. */
     readonly focus: string | null
+    /** The `conversation` of the query: the thread of a customer a desk draws beside its areas. */
+    readonly conversation?: string | null
     /** The workbench of each module by the workbench key of its catalogue entry; the route registers them. A module without one shows the pending state. */
     readonly workbenches: Readonly<Record<string, WorkbenchComponent>>
 }
@@ -36,7 +38,12 @@ export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps) => {
     const key = MODULE_REGISTRY[props.module].workbench
     const Workbench = key === null ? undefined : props.workbenches[key]
     if (Workbench !== undefined)
-        return <Workbench tab={props.tab} focus={props.focus} installationId={props.installationId} />
+        return <Workbench
+                tab={props.tab}
+                focus={props.focus}
+                conversation={props.conversation ?? null}
+                installationId={props.installationId}
+            />
     const t = await getTranslations("modulesCore")
     return (
         <AgentWorkbenchPageBase
