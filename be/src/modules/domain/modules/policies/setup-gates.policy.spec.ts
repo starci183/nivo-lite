@@ -14,6 +14,7 @@ import {
     gateEntry as realGateEntry,
     gateLabelOf as realGateLabelOf,
     sameSnapshot as realSameSnapshot,
+    setupProgressOf as realSetupProgressOf,
     snapshotOf as realSnapshotOf,
     stripSetupBlock as realStripSetupBlock,
 } from "./setup-gates.policy"
@@ -28,6 +29,7 @@ const buildSubject = async () => {
                 useValue: {
                     agentTextsOf: realAgentTextsOf,
                     allGatesConfirmed: realAllGatesConfirmed,
+                    setupProgressOf: realSetupProgressOf,
                     gateAfter: realGateAfter,
                     gateEntry: realGateEntry,
                     gateLabelOf: realGateLabelOf,
@@ -41,6 +43,7 @@ const buildSubject = async () => {
     const subject = moduleRef.get<{
         agentTextsOf: typeof realAgentTextsOf
         allGatesConfirmed: typeof realAllGatesConfirmed
+        setupProgressOf: typeof realSetupProgressOf
         gateAfter: typeof realGateAfter
         gateEntry: typeof realGateEntry
         gateLabelOf: typeof realGateLabelOf
@@ -56,9 +59,11 @@ const buildSubject = async () => {
     const sameSnapshot = subject.sameSnapshot
     const snapshotOf = subject.snapshotOf
     const stripSetupBlock = subject.stripSetupBlock
+    const setupProgressOf = subject.setupProgressOf
     return {
         agentTextsOf,
         allGatesConfirmed,
+        setupProgressOf,
         gateAfter,
         gateEntry,
         gateLabelOf,
@@ -163,6 +168,28 @@ describe("allGatesConfirmed", () => {
         const evidence: GateEvidence = { tone: confirmed("warm"), hours: { status: "proposed", evidence: "8-5" } }
 
         expect(allGatesConfirmed(definition, evidence)).toBe(false)
+    })
+})
+
+describe("setupProgressOf", () => {
+    it("counts the confirmed gates of the module, not the proposed or missing ones", async () => {
+        const { setupProgressOf } = await buildSubject()
+
+        const evidence: GateEvidence = { tone: confirmed("warm"), hours: { status: "proposed", evidence: "8-5" } }
+
+        expect(setupProgressOf(definition, evidence)).toEqual({ confirmed: 1, total: 2 })
+    })
+
+    it("ignores evidence for a gate the module does not require", async () => {
+        const { setupProgressOf } = await buildSubject()
+
+        expect(setupProgressOf(definition, { other: confirmed("x") })).toEqual({ confirmed: 0, total: 2 })
+    })
+
+    it("is zero of zero for a module without gates", async () => {
+        const { setupProgressOf } = await buildSubject()
+
+        expect(setupProgressOf(moduleOf([]), {})).toEqual({ confirmed: 0, total: 0 })
     })
 })
 

@@ -1,7 +1,7 @@
 import type { VersionSnapshot, DraftSnapshot, GateEntry, GateEvidence } from "@modules/domain/module-context-versions"
 import type { AgentTexts } from "@modules/domain/agents"
 import type { Locale } from "@modules/platform/i18n"
-import type { ModuleDefinition, ModuleGate } from "../modules.contracts"
+import type { ModuleDefinition, ModuleGate, SetupProgress } from "../modules.contracts"
 
 const BLOCK_END = "### end NIVO setup"
 const BLOCK_START = "### NIVO setup"
@@ -16,6 +16,12 @@ export const gateEntry = (evidence: GateEvidence, key: string): GateEntry =>
 /** True when every gate of the module is confirmed. */
 export const allGatesConfirmed = (module: ModuleDefinition, evidence: GateEvidence): boolean =>
     module.gates.every((gate) => gateEntry(evidence, gate.key).status === "confirmed")
+
+/** How many of the module's gates the evidence confirms, of all of them. */
+export const setupProgressOf = (module: ModuleDefinition, evidence: GateEvidence): SetupProgress => ({
+    confirmed: module.gates.filter((gate) => gateEntry(evidence, gate.key).status === "confirmed").length,
+    total: module.gates.length,
+})
 
 /** The title of a gate in the language of the reader. */
 export const gateLabelOf = (gate: ModuleGate, locale: Locale): string =>

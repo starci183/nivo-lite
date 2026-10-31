@@ -243,6 +243,14 @@ export interface ConnectionNeed {
     readonly providers: ReadonlyArray<string>
 }
 
+/** How far the setup of an installation got: the required gates the owner confirmed on the newest draft, of all of them. */
+export interface SetupProgress {
+    /** The gates confirmed. */
+    readonly confirmed: number
+    /** The gates the module requires. */
+    readonly total: number
+}
+
 /** An installation as the product shows it: the record with its agent and version, and what it still needs connected to run (empty when ready). */
 export interface InstallationView extends InstallationRecord {
     /** The display name of the agent; empty when it has none. */
@@ -257,4 +265,6 @@ export interface InstallationView extends InstallationRecord {
     readonly connectionNeeds: ReadonlyArray<ConnectionNeed>
     /** What the product may say about the installation, derived from the facts (see InstallationLifecycle). */
     readonly lifecycle: InstallationLifecycle
+    /** The required setup gates confirmed on the newest draft, of all of them; none confirmed before the setup chat opened. */
+    readonly setupProgress: SetupProgress
 }

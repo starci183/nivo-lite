@@ -10,6 +10,7 @@ export const INSTALL_VIEWED = {
     activeVersion: 1,
     connectionNeeds: [],
     lifecycle: "ready",
+    setupProgress: { confirmed: 0, total: 8 },
 } as const
 
 /** An install request for the chatbot of the first workspace, in English, without a new instance. */

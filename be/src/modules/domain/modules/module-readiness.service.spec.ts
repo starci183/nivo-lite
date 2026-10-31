@@ -5,6 +5,8 @@ import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import type { RoleReadiness } from "@modules/domain/mcp-gateway"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
+import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
+import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { CHATBOT_MODULE } from "./chatbot.contracts"
@@ -41,6 +43,17 @@ const readinessOf = builder<RoleReadiness>({
     },
 })
 
+const sessionOf = builder<SetupSessionRecord>({
+    id: "session-1",
+    workspaceId: "ws-1",
+    installationId: "inst-1",
+    revision: 1,
+    status: "draft",
+    draft: { summary: "", facts: [] },
+    gateEvidence: {},
+    createdAt: "2026-10-20T00:00:00.000Z",
+})
+
 const build = async () => {
     const installations = mock<InstallationRecordsService>()
     installations.find.mockResolvedValue(recordOf())
@@ -55,6 +68,8 @@ const build = async () => {
     ])
     const versions = mock<ContextVersionsService>()
     versions.numbersOf.mockResolvedValue([{ id: "version-1", version: 3 }])
+    const sessions = mock<SetupSessionsService>()
+    sessions.latest.mockResolvedValue(null)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleReadinessService,
@@ -63,9 +78,18 @@ const build = async () => {
             { provide: McpGatewayService, useValue: gateway },
             { provide: AgentDirectoryService, useValue: agents },
             { provide: ContextVersionsService, useValue: versions },
+            { provide: SetupSessionsService, useValue: sessions },
         ],
     }).compile()
-    return { readiness: moduleRef.get(ModuleReadinessService), installations, catalog, gateway, agents, versions }
+    return {
+        readiness: moduleRef.get(ModuleReadinessService),
+        installations,
+        catalog,
+        gateway,
+        agents,
+        versions,
+        sessions,
+    }
 }
 
 describe("ModuleReadinessService.needsOf", () => {
@@ -106,6 +130,7 @@ describe("ModuleReadinessService.needsOf", () => {
             activeVersion: 3,
             connectionNeeds: [{ role: "payment.credits.list", providers: ["SePay"] }],
             lifecycle: "needs_connection",
+            setupProgress: { confirmed: 0, total: ACCOUNTING_MODULE.gates.length },
         })
         expect(agents.identitiesOf).toHaveBeenCalledWith("ws-1", ["agent-1"])
         expect(versions.numbersOf).toHaveBeenCalledWith(["version-1"])
@@ -126,6 +151,37 @@ describe("ModuleReadinessService.needsOf", () => {
         })
         expect(agents.identitiesOf).toHaveBeenCalledWith("ws-1", [])
         expect(versions.numbersOf).toHaveBeenCalledWith([])
+    })
+})
+
+describe("ModuleReadinessService.withNeeds setup progress", () => {
+    it("counts the gates the newest draft confirms, and none it only proposes", async () => {
+        const { readiness, sessions } = await build()
+        const [first, second, third] = CHATBOT_MODULE.gates
+        sessions.latest.mockResolvedValue(
+            sessionOf({
+                gateEvidence: {
+                    [first?.key ?? "a"]: {
+                        status: "confirmed",
+                        evidence: "Tea",
+                        confirmed_by: "Lan",
+                        confirmed_at: "2026-10-20T00:00:00.000Z",
+                    },
+                    [second?.key ?? "b"]: {
+                        status: "confirmed",
+                        evidence: "8-5",
+                        confirmed_by: "Lan",
+                        confirmed_at: "2026-10-20T00:00:00.000Z",
+                    },
+                    [third?.key ?? "c"]: { status: "proposed", evidence: "warm" },
+                },
+            }),
+        )
+
+        await expect(readiness.withNeeds(recordOf({ moduleKey: "chatbot" }))).resolves.toMatchObject({
+            setupProgress: { confirmed: 2, total: CHATBOT_MODULE.gates.length },
+        })
+        expect(sessions.latest).toHaveBeenCalledWith("inst-1")
     })
 })
 

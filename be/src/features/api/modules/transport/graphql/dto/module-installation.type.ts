@@ -1,6 +1,7 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
 import { GraphqlJsonObject } from "@modules/platform/graphql"
 import { ConnectionNeedType } from "./connection-need.type"
+import { SetupProgressType } from "./setup-progress.type"
 
 @ObjectType()
 /** One installed agent of a workspace, with its agent and its active context version. */
@@ -79,4 +80,8 @@ export class ModuleInstallationType {
     /** The required capability roles it still needs connected to run, each with its possible providers; empty when ready. */
     @Field(() => [ConnectionNeedType])
     connectionNeeds!: ReadonlyArray<ConnectionNeedType>
+
+    /** The required setup gates confirmed on the newest draft, of all of them (for example 3 of 8). */
+    @Field(() => SetupProgressType)
+    setupProgress!: SetupProgressType
 }

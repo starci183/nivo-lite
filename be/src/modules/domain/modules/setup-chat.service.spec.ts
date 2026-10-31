@@ -80,7 +80,13 @@ const versionOf = builder<ContextVersionRecord>({
 })
 
 /** The agent and version fields of an installation view. */
-const VIEWED_AGENT = { agentName: "Chatbot", agentHandle: "chatbot", agentAvatarUrl: null, activeVersion: 1 } as const
+const VIEWED_AGENT = {
+    agentName: "Chatbot",
+    agentHandle: "chatbot",
+    agentAvatarUrl: null,
+    activeVersion: 1,
+    setupProgress: { confirmed: 0, total: 8 },
+} as const
 
 const build = async () => {
     const tx = fakeTransaction(mockEntityManager())

@@ -5142,6 +5142,7 @@ type ModuleInstallationType {
   name: String!
   operatingMode: String!
   settings: JsonObject!
+  setupProgress: SetupProgressType!
   status: String!
   workspaceId: ID!
 }
@@ -7748,6 +7749,11 @@ type SetupMessageType {
   id: ID!
   role: String!
   setupSessionId: ID!
+}
+
+type SetupProgressType {
+  confirmed: Int!
+  total: Int!
 }
 
 type SetupRevisionType {

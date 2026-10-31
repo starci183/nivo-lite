@@ -3,10 +3,12 @@ import { AgentDirectoryService } from "@modules/domain/agents"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService, lifecycleOf } from "@modules/domain/module-installations"
+import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import type { ConnectionNeed, InstallationView } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
+import { setupProgressOf } from "./policies/setup-gates.policy"
 
 @Injectable()
 /**
@@ -21,6 +23,7 @@ export class ModuleReadinessService {
         private readonly gateway: McpGatewayService,
         private readonly agents: AgentDirectoryService,
         private readonly versions: ContextVersionsService,
+        private readonly sessions: SetupSessionsService,
     ) {}
 
     /** The required roles of a module that the workspace cannot play now, each with the connectors that could play it. */
@@ -32,12 +35,14 @@ export class ModuleReadinessService {
         return readiness.missing.map((role) => ({ role, providers: readiness.providers[role] }))
     }
 
-    /** An installation with its agent, the number of its active version and what it still needs connected. */
+    /** An installation with its agent, the number of its active version, how far its setup got and what it still needs connected. */
     async withNeeds(record: InstallationRecord): Promise<InstallationView> {
-        const [connectionNeeds, [identity], [version]] = await Promise.all([
+        const [connectionNeeds, [identity], [version], module, session] = await Promise.all([
             this.needsOf(record.workspaceId, record.moduleKey),
             this.agents.identitiesOf(record.workspaceId, record.agentId === null ? [] : [record.agentId]),
             this.versions.numbersOf(record.activeContextVersionId === null ? [] : [record.activeContextVersionId]),
+            this.catalog.find(record.moduleKey),
+            this.sessions.latest(record.id),
         ])
         return {
             ...record,
@@ -47,6 +52,7 @@ export class ModuleReadinessService {
             activeVersion: version?.version ?? null,
             connectionNeeds,
             lifecycle: lifecycleOf(record, connectionNeeds.length),
+            setupProgress: setupProgressOf(module, session?.gateEvidence ?? {}),
         }
     }
 
