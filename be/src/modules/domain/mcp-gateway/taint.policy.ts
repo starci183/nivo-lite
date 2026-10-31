@@ -4,11 +4,11 @@ import type { GatewayCaller } from "./mcp-gateway.contracts"
 export const TAINT_WINDOW_MS = 15 * 60_000
 
 /**
- * The turn a call belongs to: the customer conversation, else the work item, else the agent's own session on the door (the door has
- * no turn id, so the window bounds it). A key never mixes two agents or two workspaces.
+ * The turn a call belongs to: the agent turn when the caller names one, else the customer conversation, else the work item, else the
+ * agent's own session on the door (the door has no turn id, so the window bounds it). A key never mixes two agents or two workspaces.
  */
 export const turnKeyOf = (caller: GatewayCaller): string =>
-    `${caller.workspaceId}:${caller.agentId}:${caller.conversationId ?? caller.workItemId ?? "door"}`
+    `${caller.workspaceId}:${caller.agentId}:${caller.turnId ?? caller.conversationId ?? caller.workItemId ?? "door"}`
 
 /** True when the turn read tainted text within the window ending at `now`. */
 export const isTainted = (marks: ReadonlyMap<string, number>, caller: GatewayCaller, now: number): boolean => {

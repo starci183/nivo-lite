@@ -18,7 +18,7 @@ const turn = (over: Partial<BridgeTurn> = {}): BridgeTurn => ({
     ...over,
 })
 
-const caller = { workspaceId: "ws-1", agentId: "agent-1", conversationId: null, workItemId: null }
+const caller = { workspaceId: "ws-1", agentId: "agent-1", conversationId: null, workItemId: null, turnId: "turn-1" }
 
 type Described = NonNullable<Awaited<ReturnType<McpGatewayService["describe"]>>>
 

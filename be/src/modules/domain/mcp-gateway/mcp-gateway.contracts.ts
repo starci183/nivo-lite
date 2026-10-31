@@ -187,6 +187,8 @@ export interface GatewayCaller {
      * same step passes the same key. A side-effect remote call derives its replay key from it, else from the work item.
      */
     readonly opKey?: string | undefined
+    /** The agent turn the call runs in (the bridge of a running turn knows it); the agent door has none. */
+    readonly turnId?: string | undefined
 }
 
 /** What the grant check decided for one call. */

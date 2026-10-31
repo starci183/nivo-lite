@@ -22,9 +22,10 @@ const build = async (): Promise<Subject> => {
 const CALLER: GatewayCaller = { workspaceId: "w1", agentId: "a1", conversationId: null, workItemId: null }
 
 describe("taint.policy", () => {
-    it("names the turn by conversation, else work item, else the agent's session on the door", async () => {
+    it("names the turn by turn id, else conversation, else work item, else the agent's session on the door", async () => {
         const subject = await build()
 
+        expect(subject.turnKeyOf({ ...CALLER, turnId: "t1", conversationId: "c1" })).toBe("w1:a1:t1")
         expect(subject.turnKeyOf({ ...CALLER, conversationId: "c1", workItemId: "i1" })).toBe("w1:a1:c1")
         expect(subject.turnKeyOf({ ...CALLER, workItemId: "i1" })).toBe("w1:a1:i1")
         expect(subject.turnKeyOf(CALLER)).toBe("w1:a1:door")
@@ -38,6 +39,7 @@ describe("taint.policy", () => {
         expect(subject.isTainted(marks, CALLER, 1001 + TAINT_WINDOW_MS)).toBe(false)
         expect(subject.isTainted(marks, { ...CALLER, agentId: "a2" }, 2000)).toBe(false)
         expect(subject.isTainted(marks, { ...CALLER, conversationId: "c9" }, 2000)).toBe(false)
+        expect(subject.isTainted(marks, { ...CALLER, turnId: "t2" }, 2000)).toBe(false)
         expect(subject.isTainted(new Map(), CALLER, 2000)).toBe(false)
     })
 

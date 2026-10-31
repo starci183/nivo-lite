@@ -44,6 +44,7 @@ export class InternalGatewayToolsService implements InternalTools {
             agentId: turn.agentId,
             conversationId: null,
             workItemId: null,
+            turnId: turn.turnId,
         }
         if (tool === "tool.search") return this.search(caller, args)
         if (tool === "tool.describe") return this.describe(caller, args)
