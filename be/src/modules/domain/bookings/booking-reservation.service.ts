@@ -187,7 +187,6 @@ export class BookingReservationService {
                 status: () =>
                     `CASE WHEN ${moved} AND status IN ('confirmed', 'rescheduled') THEN 'rescheduled' ELSE status END`,
                 conflictNote: "",
-                updatedAt: new Date(params.nowMs),
             })
             .where({ workspaceId: params.workspaceId, id: params.bookingId })
             .setParameter("startAt", new Date(params.startMs))

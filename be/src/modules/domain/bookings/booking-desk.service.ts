@@ -174,7 +174,7 @@ export class BookingDeskService {
             await manager.update(
                 BookingEntity,
                 { workspaceId: ref.workspaceId, id: ref.id },
-                { status: "confirmed", holdsSlot: true, conflictNote: "", updatedAt: new Date(nowMs) },
+                { status: "confirmed", holdsSlot: true, conflictNote: "" },
             )
             await this.reminders.schedule({
                 manager,
@@ -197,7 +197,7 @@ export class BookingDeskService {
             await manager.update(
                 BookingEntity,
                 { workspaceId: ref.workspaceId, id: ref.id },
-                { checkedInAt: new Date(nowMs), status: "confirmed", updatedAt: new Date(nowMs) },
+                { checkedInAt: new Date(nowMs), status: "confirmed" },
             )
             return { status: "confirmed", feeDue: false }
         })
@@ -216,7 +216,6 @@ export class BookingDeskService {
                     status: "done",
                     doneAt: new Date(nowMs),
                     checkedInAt: () => "COALESCE(checked_in_at, :now)",
-                    updatedAt: new Date(nowMs),
                 })
                 .where({ workspaceId: ref.workspaceId, id: ref.id })
                 .setParameter("now", new Date(nowMs))
@@ -230,14 +229,9 @@ export class BookingDeskService {
     async noShow(userId: string, ref: BookingRef): Promise<StatusChange> {
         await this.members.require(userId, ref.workspaceId, ["owner", "manager"])
         const settings = await this.models.settings(ref.workspaceId)
-        const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
-            await manager.update(
-                BookingEntity,
-                { workspaceId: ref.workspaceId, id: ref.id },
-                { status: "no_show", updatedAt: new Date(nowMs) },
-            )
+            await manager.update(BookingEntity, { workspaceId: ref.workspaceId, id: ref.id }, { status: "no_show" })
             await this.reminders.cancel(manager, ref.id, "no_show")
             return { status: "no_show", feeDue: settings.noShowFeeVnd > 0 }
         })
@@ -290,7 +284,6 @@ export class BookingDeskService {
                 holdsSlot: false,
                 cancelledAt: new Date(nowMs),
                 cancelReason: reason,
-                updatedAt: new Date(nowMs),
             },
         )
     }

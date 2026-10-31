@@ -203,7 +203,6 @@ describe("BookingReservationService", () => {
                 rescheduleCount: `reschedule_count + CASE WHEN ${moved} THEN 1 ELSE 0 END`,
                 status: `CASE WHEN ${moved} AND status IN ('confirmed', 'rescheduled') THEN 'rescheduled' ELSE status END`,
                 conflictNote: "",
-                updatedAt: new Date(START - HOUR),
             })
             expect(write.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "b1" }]])
             expect(write.callsOf("setParameter")).toEqual([["startAt", new Date(START)]])

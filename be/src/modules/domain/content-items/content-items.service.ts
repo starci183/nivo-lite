@@ -170,7 +170,6 @@ export class ContentItemsService {
             .set({
                 published: () =>
                     "jsonb_set(published, ARRAY[:channel::text], COALESCE(published -> :channel::text, '{}'::jsonb) || jsonb_build_object('failed_at', :at::text, 'reason', :reason::text))",
-                updatedAt: () => "now()",
             })
             .where({ workspaceId, id })
             .setParameters({ channel, at, reason: reason.slice(0, 300) })
@@ -185,7 +184,7 @@ export class ContentItemsService {
         await this.entityManager
             .createQueryBuilder(ContentItemEntity, "ci")
             .update()
-            .set({ published: () => "jsonb_concat(published, CAST(:published AS jsonb))", updatedAt: () => "now()" })
+            .set({ published: () => "jsonb_concat(published, CAST(:published AS jsonb))" })
             .where({ workspaceId, id })
             .setParameter("published", JSON.stringify(published))
             .execute()

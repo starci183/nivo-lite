@@ -172,7 +172,6 @@ describe("ContentItemsService", () => {
             ])
             expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
                 published: "jsonb_concat(published, CAST(:published AS jsonb))",
-                updatedAt: "now()",
             })
         })
     })
@@ -223,7 +222,6 @@ describe("ContentItemsService", () => {
             expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
                 published:
                     "jsonb_set(published, ARRAY[:channel::text], COALESCE(published -> :channel::text, '{}'::jsonb) || jsonb_build_object('failed_at', :at::text, 'reason', :reason::text))",
-                updatedAt: "now()",
             })
         })
     })

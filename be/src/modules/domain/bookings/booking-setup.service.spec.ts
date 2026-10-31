@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { BookingExceptionsService } from "@modules/domain/booking-exceptions"
 import { BookingHoursService } from "@modules/domain/booking-hours"
 import { BookingResourcesService } from "@modules/domain/booking-resources"
@@ -7,7 +7,6 @@ import { BookingServicesService } from "@modules/domain/booking-services"
 import { BookingSettingsService } from "@modules/domain/booking-settings"
 import { BookingWaitlistService } from "@modules/domain/booking-waitlist"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type {
     SaveBookingExceptionParams,
@@ -22,7 +21,6 @@ const USER = "user-1"
 const WORKSPACE = "0b5d3f4e-1c2a-4b6d-8e7f-9a0b1c2d3e4f"
 const RESOURCE = "1c6e4a5f-2d3b-4c7e-9f80-ab1c2d3e4f50"
 const STAFF = "2d7f5b60-3e4c-4d8f-a091-bc2d3e4f5061"
-const NOW = "2026-10-12T10:00:00.000Z"
 
 const serviceOf = builder<SaveBookingServiceParams>({
     workspaceId: WORKSPACE,
@@ -98,7 +96,6 @@ const build = async () => {
         providers: [
             BookingSetupService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
-            { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: BookingServicesService, useValue: services },
             { provide: BookingResourcesService, useValue: resources },
@@ -287,7 +284,6 @@ describe("BookingSetupService", () => {
             expect(settings.savePolicy.mock.calls[0]?.[0]).toEqual({
                 ...policyOf(),
                 address: "1 Le Loi",
-                updatedAt: NOW,
             })
         })
 
@@ -316,7 +312,6 @@ describe("BookingSetupService", () => {
                 enabled: true,
                 slug: "tiem-hoa",
                 note: "Hi",
-                updatedAt: NOW,
             })
         })
 
@@ -476,7 +471,6 @@ describe("BookingSetupService", () => {
                 enabled: false,
                 slug: null,
                 note: "Closed",
-                updatedAt: NOW,
             })
         })
 

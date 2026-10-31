@@ -345,7 +345,7 @@ describe("BookingDeskService", () => {
             const { service, access, tx } = await buildLocked("requested")
             await expect(service.confirm(USER, REF)).resolves.toEqual({ status: "confirmed", feeDue: false })
             expect(access.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
-            expectUpdated(tx, { status: "confirmed", holdsSlot: true, conflictNote: "", updatedAt: new Date(NOW) })
+            expectUpdated(tx, { status: "confirmed", holdsSlot: true, conflictNote: "" })
         })
     })
 
@@ -356,7 +356,7 @@ describe("BookingDeskService", () => {
             expect(access.require).not.toHaveBeenCalled()
             expect(models.settings).toHaveBeenCalledWith(WORKSPACE)
             expectLocked(lock)
-            expectUpdated(tx, { status: "confirmed", updatedAt: new Date(NOW) })
+            expectUpdated(tx, { status: "confirmed" })
             expect(reminders.schedule).toHaveBeenCalledWith(scheduleOf(THURSDAY_NINE))
             expect(tx.commits).toBe(1)
         })
@@ -378,7 +378,7 @@ describe("BookingDeskService", () => {
         it("records the arrival of the customer", async () => {
             const { service, tx } = await buildLocked("confirmed")
             await expect(service.checkIn(USER, REF)).resolves.toEqual({ status: "confirmed", feeDue: false })
-            expectUpdated(tx, { checkedInAt: new Date(NOW), status: "confirmed", updatedAt: new Date(NOW) })
+            expectUpdated(tx, { checkedInAt: new Date(NOW), status: "confirmed" })
         })
     })
 
@@ -390,7 +390,6 @@ describe("BookingDeskService", () => {
                 status: "done",
                 doneAt: new Date(NOW),
                 checkedInAt: "COALESCE(checked_in_at, :now)",
-                updatedAt: new Date(NOW),
             })
             expect(finish.callsOf("where")).toEqual([[{ workspaceId: WORKSPACE, id: "b1" }]])
             expect(finish.callsOf("setParameter")).toEqual([["now", new Date(NOW)]])
@@ -406,7 +405,7 @@ describe("BookingDeskService", () => {
             const model = modelOf({ settings: { ...DEFAULT_SETTINGS, noShowFeeVnd: fee } })
             const { service, reminders, tx } = await buildLocked("confirmed", model)
             await expect(service.noShow(USER, REF)).resolves.toEqual({ status: "no_show", feeDue })
-            expectUpdated(tx, { status: "no_show", updatedAt: new Date(NOW) })
+            expectUpdated(tx, { status: "no_show" })
             expect(reminders.cancel).toHaveBeenCalledWith(anything(), "b1", "no_show")
         })
     })
@@ -422,7 +421,6 @@ describe("BookingDeskService", () => {
                 holdsSlot: false,
                 cancelledAt: new Date(NOW),
                 cancelReason: "owner_cancelled",
-                updatedAt: new Date(NOW),
             })
             expect(reminders.cancel).toHaveBeenCalledWith(anything(), "b1", "owner_cancelled")
         })
