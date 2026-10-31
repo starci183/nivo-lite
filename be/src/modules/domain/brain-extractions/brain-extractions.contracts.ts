@@ -31,6 +31,10 @@ export interface ExtractionRecord {
     readonly attempts: number
     /** Active facts that lost their last evidence when the document changed. */
     readonly orphanFactIds: ReadonlyArray<string>
+    /** The hashes of the passages the last finished reading covered. */
+    readonly passageHashes: ReadonlyArray<string>
+    /** Whether this reading already withdrew facts. */
+    readonly factsChanged: boolean
 }
 
 /** A reading, or null when there is none. */
@@ -50,6 +54,8 @@ export interface ExtractionStart {
     readonly windowsTotal: number
     /** Active facts that lost their evidence and wait for the new reading. */
     readonly orphanFactIds: ReadonlyArray<string>
+    /** Whether starting this reading withdrew facts. */
+    readonly factsChanged: boolean
 }
 
 /** How far a reading got. */

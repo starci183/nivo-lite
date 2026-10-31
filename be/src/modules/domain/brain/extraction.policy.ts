@@ -1,4 +1,4 @@
-import { SUBJECT_TYPES, factSlugOf } from "@modules/domain/brain-facts"
+import { SUBJECT_TYPES, factSlugOf, foldedText } from "@modules/domain/brain-facts"
 import type { BrainSubjectType } from "@modules/domain/brain-facts"
 import { chunkText } from "@modules/domain/knowledge-chunks"
 
@@ -93,16 +93,6 @@ export interface ParsedFacts {
     readonly valid: boolean
 }
 
-/** Text folded for comparison: lower case, no accents, single spaces. */
-const fold = (text: string): string =>
-    text
-        .toLowerCase()
-        .replaceAll("\u0111", "d")
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim()
-
 /** A bounded single-line text from a JSON value, or "". */
 const textOf = (value: unknown, max: number): string => {
     const raw = typeof value === "number" && Number.isFinite(value) ? String(value) : value
@@ -141,11 +131,11 @@ const groundedFact = (
     const subjectLabel = textOf(fields.get("subjectLabel"), 160)
     const attributeLabel = textOf(fields.get("attributeLabel"), 120)
     const value = textOf(fields.get("value"), 500)
-    if (factSlugOf(subjectLabel) === "" || factSlugOf(attributeLabel) === "" || fold(value) === "") return null
+    if (factSlugOf(subjectLabel) === "" || factSlugOf(attributeLabel) === "" || foldedText(value) === "") return null
     const quote = textOf(fields.get("quote"), 300)
-    const quoteOk = fold(quote).length >= 3 && grounded.includes(fold(quote).slice(0, 60))
+    const quoteOk = foldedText(quote).length >= 3 && grounded.includes(foldedText(quote).slice(0, 60))
     // Grounded = the quote is in the text, or the value is (a number may be rewritten: spaces and dots are ignored for it).
-    const folded = fold(value)
+    const folded = foldedText(value)
     const valueOk =
         grounded.includes(folded) ||
         (folded.replaceAll(" ", "").length >= 3 && compact.includes(folded.replaceAll(" ", "")))
@@ -171,7 +161,7 @@ const groundedFact = (
 export const parseFacts = (answer: unknown, window: string): ParsedFacts => {
     const parsed = itemsOf(answer)
     const found = parsed ?? []
-    const grounded = fold(window)
+    const grounded = foldedText(window)
     const compact = grounded.replaceAll(" ", "")
     const seen = new Set<string>()
     const facts: Array<ExtractedFact> = []
@@ -181,7 +171,7 @@ export const parseFacts = (answer: unknown, window: string): ParsedFacts => {
         if (fields === null) continue
         const fact = groundedFact(fields, grounded, compact)
         if (fact === null) continue
-        const dedupe = `${factSlugOf(fact.subjectLabel)}|${factSlugOf(fact.attributeLabel)}|${fold(fact.value)}`
+        const dedupe = `${factSlugOf(fact.subjectLabel)}|${factSlugOf(fact.attributeLabel)}|${foldedText(fact.value)}`
         if (seen.has(dedupe)) continue
         seen.add(dedupe)
         facts.push(fact)

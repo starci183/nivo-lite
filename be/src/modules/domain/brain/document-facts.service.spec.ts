@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { BrainExtractionsService, ExtractionNote } from "@modules/domain/brain-extractions"
 import { BrainFactsService } from "@modules/domain/brain-facts"
+import { passageTextHashOf } from "@modules/domain/knowledge-chunks"
 import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
@@ -56,9 +57,21 @@ const extractionOf = builder<ExtractionRecord>({
     windowsDone: 0,
     attempts: 0,
     orphanFactIds: [],
+    passageHashes: [],
+    factsChanged: false,
 })
 
 type Progress = Parameters<BrainExtractionsService["save"]>[2]
+
+const startOf = builder<Parameters<BrainExtractionsService["start"]>[0]>({
+    workspaceId: WS,
+    sourceId: SOURCE,
+    promptVersion: 1,
+    contentHash: HASH,
+    windowsTotal: 1,
+    orphanFactIds: [],
+    factsChanged: false,
+})
 
 const progressOf = builder<Progress>({
     status: "running",
@@ -177,14 +190,7 @@ describe("DocumentFactsService", () => {
 
         await expect(service.run(PAYLOAD)).resolves.toBe("blocked")
 
-        expect(extractions.start).toHaveBeenCalledWith({
-            workspaceId: WS,
-            sourceId: SOURCE,
-            promptVersion: 1,
-            contentHash: HASH,
-            windowsTotal: 1,
-            orphanFactIds: [],
-        })
+        expect(extractions.start).toHaveBeenCalledWith(startOf({ orphanFactIds: [], factsChanged: false }))
         expect(facts.withdrawSource).not.toHaveBeenCalled()
         expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ status: "blocked_credits" }))
         expect(usage.blockedBy).toHaveBeenCalledWith(WS, "brain", false)
@@ -198,20 +204,13 @@ describe("DocumentFactsService", () => {
         extractions.get.mockResolvedValueOnce(
             extractionOf({ attempts: 2, factsProposed: 3, orphanFactIds: ["f1", "f2", "f3"] }),
         )
-        facts.withdrawSource.mockResolvedValue(["f2", "f3"])
+        facts.withdrawChanged.mockResolvedValue({ orphans: ["f2", "f3"], withdrawn: 2 })
         usage.blockedBy.mockResolvedValue(true)
 
         await expect(service.run(PAYLOAD)).resolves.toBe("blocked")
 
-        expect(facts.withdrawSource).toHaveBeenCalledWith(WS, SOURCE, "source changed")
-        expect(extractions.start).toHaveBeenCalledWith({
-            workspaceId: WS,
-            sourceId: SOURCE,
-            promptVersion: 1,
-            contentHash: HASH,
-            windowsTotal: 1,
-            orphanFactIds: ["f1", "f2", "f3"],
-        })
+        expect(facts.withdrawChanged).toHaveBeenCalledWith(WS, SOURCE, "source changed", "")
+        expect(extractions.start).toHaveBeenCalledWith(startOf({ orphanFactIds: ["f1", "f2", "f3"], factsChanged: true }))
         expect(extractions.save).toHaveBeenCalledWith(
             WS,
             SOURCE,
@@ -224,24 +223,17 @@ describe("DocumentFactsService", () => {
         const { service, extractions, facts, reviews } = await build()
         extractions.get.mockResolvedValueOnce(extractionOf({ promptVersion: 0 }))
         extractions.get.mockResolvedValueOnce(extractionOf({ windowsDone: 1, orphanFactIds: ["f1"] }))
-        facts.withdrawSource.mockResolvedValue([])
+        facts.withdrawChanged.mockResolvedValue({ orphans: [], withdrawn: 0 })
 
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
 
-        expect(extractions.start).toHaveBeenCalledWith({
-            workspaceId: WS,
-            sourceId: SOURCE,
-            promptVersion: 1,
-            contentHash: HASH,
-            windowsTotal: 1,
-            orphanFactIds: [],
-        })
+        expect(extractions.start).toHaveBeenCalledWith(startOf({ orphanFactIds: [], factsChanged: false }))
         expect(facts.finalizeOrphans).toHaveBeenCalledWith(WS, ["f1"], {
             kind: "note",
             ref: `gone:${SOURCE}`,
             label: 'The document "Hours" changed: no source supports this value any more',
         })
-        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "")
+        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "", expect.anything())
         expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE)
     })
 
@@ -328,7 +320,7 @@ describe("DocumentFactsService", () => {
         ai.chat.mockResolvedValueOnce(REPLY).mockResolvedValueOnce(answer)
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
         expect(ai.chat).toHaveBeenCalledTimes(2)
-        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, model === "" ? "" : "m1")
+        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, model === "" ? "" : "m1", expect.anything())
     })
 })
 describe("DocumentFactsService", () => {
@@ -377,7 +369,7 @@ describe("DocumentFactsService", () => {
             ],
         })
         expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ windowsDone: 1, factsProposed: 1 }))
-        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "m1")
+        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "m1", expect.anything())
         expect(gaps.resolve).toHaveBeenCalledWith(WS, {
             text: `Hours Open ${CONTENT}`,
             minimum: DOC_ANSWERS,
@@ -477,5 +469,24 @@ describe("DocumentFactsService", () => {
         expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
         extractions.get.mockResolvedValue(extractionOf({ windowsDone: -1 }))
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
+    })
+})
+
+describe("DocumentFactsService an edited document", () => {
+    const read = [passageTextHashOf("## Hours\nOpen 8.")]
+    it.each<["done" | "failed", boolean, number, number, boolean]>([
+        ["done", false, 0, 0, false],
+        ["done", false, 1, 0, true],
+        ["done", true, 0, 1, true],
+        ["failed", true, 0, 0, true],
+    ])("from a %s reading (changed %s, withdrew %i, filed %i): review %s", async (status, was, withdrawn, filed, reviewed) => {
+        const { service, ai, extractions, facts, reviews } = await build(sourceOf({ content: "## Hours\nOpen 8.\n## Fees\nNew." }))
+        extractions.get.mockResolvedValueOnce(extractionOf({ contentHash: "old", status, factsChanged: was, passageHashes: read }))
+        extractions.get.mockResolvedValueOnce(extractionOf({ factsChanged: withdrawn > 0 || was, factsProposed: filed, passageHashes: read }))
+        facts.withdrawChanged.mockResolvedValue({ orphans: [], withdrawn })
+        await expect(service.run(PAYLOAD)).resolves.toBe("done")
+        expect(facts.withdrawChanged).toHaveBeenCalledWith(WS, SOURCE, "source changed", "## Hours\nOpen 8.")
+        expect(ai.chat.mock.calls[0]?.[0].messages[1]?.content).not.toContain("Open 8.")
+        expect(reviews.requestForSource).toHaveBeenCalledTimes(reviewed ? 1 : 0)
     })
 })

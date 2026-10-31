@@ -30,7 +30,15 @@ export type ProposalKind = "set" | "retire"
 /** Who the answer is for; `customer` only ever sees public facts. */
 export type FactAudience = "customer" | "internal"
 
-/** Where a piece of evidence came from; `ref` is the row id in its own table (or an address for a document). */
+/** What taking a document's contribution back did. */
+export interface WithdrawnFacts {
+    /** The active document facts left with no evidence. */
+    readonly orphans: ReadonlyArray<string>
+    /** How many facts lost this document. */
+    readonly withdrawn: number
+}
+
+/** One piece of evidence a fact rests on. */
 export interface Evidence {
     /** The kind of evidence. */
     readonly kind: "message" | "data_record" | "knowledge" | "decision" | "note" | "manual" | "document"

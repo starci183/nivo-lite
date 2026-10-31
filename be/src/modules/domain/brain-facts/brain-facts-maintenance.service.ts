@@ -4,9 +4,11 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { BrainFactsReadService } from "./brain-facts-read.service"
-import type { FactRecord, MaintenanceResult } from "./brain-facts.contracts"
+import type { FactRecord, MaintenanceResult, WithdrawnFacts } from "./brain-facts.contracts"
 import { BrainFactsError, BrainFactsErrorCode } from "./errors/brain-facts.error"
 import { RETURNED, returnedFacts } from "./fact-columns.policy"
+import { factStandsIn } from "./fact-evidence.policy"
+import { foldedText } from "./fact-key.policy"
 import { toFactRecord } from "./fact-record.mapper"
 import { SUPERSEDE, decisionOf } from "./fact-write.policy"
 import { BrainFactEntity } from "./persistence/entities"
@@ -27,6 +29,16 @@ export class BrainFactsMaintenanceService {
      * sources also support only loses this document from its evidence. Answers the ids of active document facts left with no evidence.
      */
     async withdrawSource(workspaceId: string, sourceId: string, note: string): Promise<ReadonlyArray<string>> {
+        return (await this.withdrawChanged(workspaceId, sourceId, note, "")).orphans
+    }
+
+    /** Takes back what a changed document no longer says: a fact whose quote is in `unchanged`, the text of its unchanged passages, stays as it is. */
+    async withdrawChanged(
+        workspaceId: string,
+        sourceId: string,
+        note: string,
+        unchanged: string,
+    ): Promise<WithdrawnFacts> {
         const rows = await this.entityManager
             .createQueryBuilder(BrainFactEntity, "f")
             .where(
@@ -39,7 +51,9 @@ export class BrainFactsMaintenanceService {
             .limit(2000)
             .getMany()
         const orphans: Array<string> = []
-        await eachInOrder(rows.map(toFactRecord), async (fact) => {
+        const folded = foldedText(unchanged)
+        const taken = rows.map(toFactRecord).filter((fact) => !factStandsIn(fact, sourceId, folded))
+        await eachInOrder(taken, async (fact) => {
             const rest = fact.evidence.filter((item) => !(item.kind === "document" && item.ref === sourceId))
             if (fact.status === "proposed" && rest.length === 0) {
                 await this.reject(workspaceId, fact.id, note)
@@ -54,7 +68,7 @@ export class BrainFactsMaintenanceService {
                 .execute()
             if (fact.status === "active" && rest.length === 0 && fact.sourceKind === "document") orphans.push(fact.id)
         })
-        return orphans
+        return { orphans, withdrawn: taken.length }
     }
 
     /** Scheduled facts whose time has come take over and ended facts expire. */

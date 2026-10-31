@@ -22,6 +22,8 @@ const toRecord = (row: BrainExtractionEntity): ExtractionRecord => ({
     windowsDone: row.windowsDone,
     attempts: row.attempts,
     orphanFactIds: row.orphanFactIds,
+    passageHashes: row.passageHashes,
+    factsChanged: row.factsChanged,
 })
 
 @Injectable()
@@ -62,6 +64,7 @@ export class BrainExtractionsService {
                 windowsDone: 0,
                 attempts: 0,
                 orphanFactIds: [...start.orphanFactIds],
+                factsChanged: start.factsChanged,
             },
             ["sourceId"],
         )
@@ -83,12 +86,17 @@ export class BrainExtractionsService {
         )
     }
 
-    /** Closes the reading as done. */
-    async finish(workspaceId: string, sourceId: string, model: string): Promise<void> {
+    /** Closes the reading as done, with the hashes of the passages it covers. */
+    async finish(
+        workspaceId: string,
+        sourceId: string,
+        model: string,
+        passageHashes: ReadonlyArray<string>,
+    ): Promise<void> {
         await this.entityManager.update(
             BrainExtractionEntity,
             { workspaceId, sourceId },
-            { status: "done", error: null, model, orphanFactIds: [] },
+            { status: "done", error: null, model, orphanFactIds: [], passageHashes: [...passageHashes], factsChanged: false },
         )
     }
 

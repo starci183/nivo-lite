@@ -462,11 +462,13 @@ const registerUpkeep = () => {
         const done = { activated: listed, expired: 1 }
         for (const method of ["list", "forView", "search"] as const) jest.spyOn(reads, method).mockResolvedValue(listed)
         jest.spyOn(maintenance, "withdrawSource").mockResolvedValue(["orphan"])
+        jest.spyOn(maintenance, "withdrawChanged").mockResolvedValue({ orphans: [], withdrawn: 1 })
         jest.spyOn(maintenance, "maintain").mockResolvedValue(done)
         await expect(service.list(facts.WS, { statuses: ["active"] })).resolves.toBe(listed)
         await expect(service.forView(facts.WS, "customer", "chatbot", null, 5)).resolves.toBe(listed)
         await expect(service.search(facts.WS, "internal", "sales", "i1", "hours", 3)).resolves.toBe(listed)
         await expect(service.withdrawSource(facts.WS, "doc-1", "Removed")).resolves.toEqual(["orphan"])
+        await expect(service.withdrawChanged(facts.WS, "d", "n", "t")).resolves.toMatchObject({ withdrawn: 1 })
         await expect(service.maintain(facts.WS)).resolves.toBe(done)
         expect(reads.list).toHaveBeenCalledWith(facts.WS, { statuses: ["active"] })
         expect(reads.forView).toHaveBeenCalledWith(facts.WS, "customer", "chatbot", null, 5)

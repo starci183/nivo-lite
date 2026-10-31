@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import { BrainExtractionsService, ExtractionNote } from "@modules/domain/brain-extractions"
+import type { MaybeExtraction } from "@modules/domain/brain-extractions"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { Evidence } from "@modules/domain/brain-facts"
 import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
@@ -23,9 +24,9 @@ import {
     SYSTEM_PROMPT,
     parseFacts,
     userPrompt,
-    windowsOf,
 } from "./extraction.policy"
-import type { FactsOutcome } from "./brain.contracts"
+import type { FactsOutcome, ReadingPlan } from "./brain.contracts"
+import { readingPlanOf } from "./reading-plan.policy"
 import { BrainLogEvent } from "./brain.log-events"
 
 /** How many windows in a row may fail before the reading is given up. */
@@ -88,36 +89,46 @@ export class DocumentFactsService {
         await this.reviews.requestForGoneSource(workspaceId, sourceId, title)
     }
 
-    /** Reads one document window by window, filing every valid fact as a proposal (document trust is below auto-apply, so the owner reviews them). */
+    /** Reads what changed in a document window by window, filing every valid fact as a proposal (document trust is below auto-apply, so the owner reviews them). */
     private async read(source: SourceRecord): Promise<FactsOutcome> {
         const workspaceId = source.workspaceId
         const hash = hashOf(source.content)
-        const windows = windowsOf(source.content)
         const known = await this.extractions.get(workspaceId, source.id)
         const same = known !== null && known.contentHash === hash && known.promptVersion === PROMPT_VERSION
         if (same && known.status === "done") {
             await this.sources.settle(workspaceId, source.id, source.content)
             return "skipped"
         }
-        if (!same) {
-            const orphans =
-                known === null ? [] : await this.facts.withdrawSource(workspaceId, source.id, "source changed")
-            await this.extractions.start({
-                workspaceId,
-                sourceId: source.id,
-                promptVersion: PROMPT_VERSION,
-                contentHash: hash,
-                windowsTotal: windows.length,
-                orphanFactIds: [...new Set([...(known?.orphanFactIds ?? []), ...orphans])],
-            })
-        }
+        const plan = readingPlanOf(source.content, known?.promptVersion === PROMPT_VERSION ? known.passageHashes : [])
+        if (!same) await this.restart(source, hash, plan, known)
         const resume = same ? known : await this.extractions.get(workspaceId, source.id)
-        return this.window(source, windows, {
+        return this.window(source, plan.windows, {
+            partial: plan.partial,
+            passages: plan.hashes,
+            changed: resume?.factsChanged ?? false,
             done: resume?.windowsDone ?? 0,
             filed: resume?.factsProposed ?? 0,
             attempts: resume?.attempts ?? 0,
             orphans: resume?.orphanFactIds ?? [],
             model: "",
+        })
+    }
+
+    /** The text changed: what it no longer says is withdrawn, facts resting on unchanged passages stay, and a new reading starts. */
+    private async restart(source: SourceRecord, hash: string, plan: ReadingPlan, known: MaybeExtraction): Promise<void> {
+        const workspaceId = source.workspaceId
+        const taken =
+            known === null
+                ? { orphans: [], withdrawn: 0 }
+                : await this.facts.withdrawChanged(workspaceId, source.id, "source changed", plan.unchangedText)
+        await this.extractions.start({
+            workspaceId,
+            sourceId: source.id,
+            promptVersion: PROMPT_VERSION,
+            contentHash: hash,
+            windowsTotal: plan.windows.length,
+            orphanFactIds: [...new Set([...(known?.orphanFactIds ?? []), ...taken.orphans])],
+            factsChanged: taken.withdrawn > 0 || (known?.status !== "done" && known?.factsChanged === true),
         })
     }
 
@@ -224,7 +235,7 @@ export class DocumentFactsService {
         return filed
     }
 
-    /** The document is read: facts that lost their evidence are proposed for retirement, the gaps it covers are answered, the source is ready. */
+    /** The document is read: facts that lost their evidence are proposed for retirement, the gaps it covers are answered, the source is ready, and its dossier is reviewed again when the facts changed or the whole document was read. */
     private async finish(source: SourceRecord, state: Reading): Promise<FactsOutcome> {
         const workspaceId = source.workspaceId
         await this.facts.finalizeOrphans(
@@ -232,7 +243,7 @@ export class DocumentFactsService {
             state.orphans,
             this.goneEvidence(source.id, source.title, "changed"),
         )
-        await this.extractions.finish(workspaceId, source.id, state.model)
+        await this.extractions.finish(workspaceId, source.id, state.model, state.passages)
         if (source.visibility === "public") {
             try {
                 await this.gaps.resolve(workspaceId, {
@@ -246,7 +257,7 @@ export class DocumentFactsService {
             }
         }
         await this.sources.settle(workspaceId, source.id, source.content)
-        await this.reviews.requestForSource(workspaceId, source.id)
+        if (!state.partial || state.changed || state.filed > 0) await this.reviews.requestForSource(workspaceId, source.id)
         return "done"
     }
 
@@ -275,6 +286,12 @@ export class DocumentFactsService {
 
 /** Where a reading stands between two windows. */
 interface Reading {
+    /** True when only changed passages are read. */
+    readonly partial: boolean
+    /** The hashes of every passage of the document. */
+    readonly passages: ReadonlyArray<string>
+    /** Whether this reading already withdrew facts. */
+    readonly changed: boolean
     /** Windows read. */
     readonly done: number
     /** Facts filed. */

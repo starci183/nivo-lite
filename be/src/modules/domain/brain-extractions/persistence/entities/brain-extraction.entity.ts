@@ -51,4 +51,12 @@ export class BrainExtractionEntity extends AbstractEntity {
     /** The orphan fact ids. */
     @Column({ name: "orphan_fact_ids", type: "uuid", array: true, default: () => "'{}'::uuid[]" })
     orphanFactIds!: Array<string>
+
+    /** The hashes of the passages the last finished reading covered. */
+    @Column({ name: "passage_hashes", type: "text", array: true, default: () => "'{}'::text[]" })
+    passageHashes!: Array<string>
+
+    /** Whether this reading already withdrew facts, so a retry still asks for the review. */
+    @Column({ name: "facts_changed", type: "boolean", default: () => "false" })
+    factsChanged!: boolean
 }
