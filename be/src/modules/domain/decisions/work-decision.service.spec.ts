@@ -9,6 +9,8 @@ import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
 import { CLAIM_LEASE_SECONDS } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
+import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
+import type { WorkBranchDecider } from "@modules/domain/authority-rules"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -86,6 +88,7 @@ interface Setup {
     readonly settled?: ExecutionRow | null
     readonly record?: ExecutionRecordRow | null
     readonly responsibility?: ResponsibilityRecord | null
+    readonly mayDecide?: boolean
 }
 const build = async (setup: Setup = {}) => {
     const done = itemOf({ status: "done" })
@@ -114,6 +117,7 @@ const build = async (setup: Setup = {}) => {
     const engine = mock<WorkEngineService>({ resumeWork })
     engine.runQueuedItem.mockResolvedValue(done)
     engine.runQueued.mockResolvedValue(3)
+    const branches = mock<WorkBranchDecider>({ mayDecide: jest.fn().mockResolvedValue(setup.mayDecide ?? true) })
     const executions = mock<ExecutionsService>({ find, findRecord, settle })
     const evidence = mock<EvidenceService>({ log })
     const moduleRef = await Test.createTestingModule({
@@ -130,6 +134,7 @@ const build = async (setup: Setup = {}) => {
             { provide: ResponsibilityJournalService, useValue: responsibilities },
             { provide: LEAD_DIRECTORY, useValue: leads },
             { provide: MessagesService, useValue: office },
+            { provide: WORK_BRANCH_DECIDER, useValue: branches },
         ],
     }).compile()
     return {
@@ -147,6 +152,7 @@ const build = async (setup: Setup = {}) => {
         members,
         decisions,
         engine,
+        branches,
     }
 }
 const owner: Decider = { name: "An", kind: "owner", memberId: "member-1" }
@@ -183,6 +189,12 @@ describe("WorkDecisionService", () => {
                 { name: "Binh", kind: "staff", memberId: "member-1" },
                 null,
             )
+        })
+        it("asks the action graph whether this seat may answer, and refuses a seat the branch did not name", async () => {
+            const { service, resumeWork, branches } = await build({ mayDecide: false })
+            await expect(service.decide("user-1", "ws-1", requestOf())).rejects.toThrow(DecisionsErrorCode.NotAllowed)
+            expect(branches.mayDecide).toHaveBeenCalledWith({ workspaceId: "ws-1", workItemId: "item-1", memberId: "member-1", isOwner: true })
+            expect(resumeWork).not.toHaveBeenCalled()
         })
         it("refuses staff an item that is not assigned to them", async () => {
             const { service, resumeWork } = await build({ member: memberOf({ role: "staff", staffId: "staff-1" }) })

@@ -1,5 +1,8 @@
 import { Module } from "@nestjs/common"
 import { AgentGraphsApiModule } from "../../agent-graphs.module"
+import { ConfirmAgentGraphProposalResolver } from "./confirm-agent-graph-proposal.resolver"
+import { GetAgentGraphRunResolver } from "./get-agent-graph-run.resolver"
+import { ListAgentGraphCoverageResolver } from "./list-agent-graph-coverage.resolver"
 import { ConfigurableModuleClass } from "./agent-graphs-graphql.module-definition"
 import { GetAgentGraphResolver } from "./get-agent-graph.resolver"
 import { ListAgentGraphVersionsResolver } from "./list-agent-graph-versions.resolver"
@@ -12,6 +15,9 @@ import { DeclineAgentGraphProposalResolver } from "./decline-agent-graph-proposa
 @Module({
     imports: [AgentGraphsApiModule.register({})],
     providers: [
+        ConfirmAgentGraphProposalResolver,
+        GetAgentGraphRunResolver,
+        ListAgentGraphCoverageResolver,
         GetAgentGraphResolver,
         ListAgentGraphVersionsResolver,
         SaveAgentGraphDraftResolver,

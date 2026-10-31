@@ -35,6 +35,7 @@ describe("approval requests mapper", () => {
             resolved_by: null,
             resolved_at: null,
             escalated_to: null,
+            approver_group: null,
             created_at: "2026-10-22T09:30:00.000Z",
         })
     })

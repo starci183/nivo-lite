@@ -8,6 +8,7 @@ import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.er
 import type { GraphDocument, GraphProposalView, LearnedProposal } from "./agent-graphs.contracts"
 import { AgentGraphProposalEntity } from "./persistence/entities"
 import { learnSignals } from "./policies/learn-signals.policy"
+import type { LearnedPatch } from "./policies/proposal-patch.policy"
 
 /** The most proposals one listing answers. */
 const PROPOSAL_LIMIT = 100
@@ -67,6 +68,30 @@ export class AgentGraphProposalsService {
         if (declined.affected !== 1) throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
     }
 
+    /** An open proposal of the agent, as the patch it makes; null when it is not open or is not a learned one. */
+    async learnedOf(workspaceId: string, agentId: string, proposalId: string): Promise<LearnedPatch | null> {
+        const row = await this.entityManager.findOne(AgentGraphProposalEntity, {
+            where: { id: proposalId, workspaceId, agentId, status: "open", kind: "learned" },
+        })
+        const { signal, amounts } = row?.patch ?? {}
+        if (row?.branchKey == null || (signal !== "trust" && signal !== "reject" && signal !== "timeout")) return null
+        return { signal, branchKey: row.branchKey, amounts: Array.isArray(amounts) ? amounts.filter((entry) => typeof entry === "number") : [] }
+    }
+
+    /** A person confirmed a proposal; the version it made is kept with it. */
+    async confirm(workspaceId: string, agentId: string, proposalId: string, memberId: string, versionId: string): Promise<void> {
+        await this.entityManager.update(
+            AgentGraphProposalEntity,
+            { id: proposalId, workspaceId, agentId, status: "open" },
+            { status: "confirmed", decidedBy: memberId, decidedAt: this.clock.now(), resultVersionId: versionId },
+        )
+    }
+
+    /** A proposal whose branch is gone, or whose change already stands, is overtaken. */
+    async supersede(workspaceId: string, agentId: string, proposalId: string): Promise<void> {
+        await this.entityManager.update(AgentGraphProposalEntity, { id: proposalId, workspaceId, agentId, status: "open" }, { status: "superseded" })
+    }
+
     private async raise(
         workspaceId: string,
         agentId: string,
@@ -86,7 +111,7 @@ export class AgentGraphProposalsService {
                 baseVersionId: versionId,
                 nodeKey: nodeOfBranch(graph, proposal.branchKey),
                 branchKey: proposal.branchKey,
-                patch: { signal: proposal.signal },
+                patch: { signal: proposal.signal, amounts: [...proposal.amounts] },
                 widens: proposal.widens,
                 evidence: [...proposal.evidence],
             })

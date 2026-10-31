@@ -1,7 +1,7 @@
 import { UuidAbstractEntity } from "@modules/platform/database"
 import { Column, Entity } from "typeorm"
 import { numeric } from "./numeric-column.mapper"
-import type { ApprovalPolicy, RuleUnit } from "@modules/domain/authority-rules"
+import type { ApprovalPolicy, ApproverGroup, RuleUnit } from "@modules/domain/authority-rules"
 import type { ApproverRef } from "@modules/domain/member-grants"
 import type { ApprovalExclusion, ApprovalStatus, ApprovalVerdictRecord } from "../../approval-requests.contracts"
 
@@ -11,6 +11,10 @@ export class ApprovalRequestEntity extends UuidAbstractEntity {
     /** The chain step it asks about; a step has at most one pending request. */
     @Column({ name: "chain_step_id", type: "uuid" })
     chainStepId!: string
+
+    /** The group a branch of an action graph asked, which the request keeps in place of the live group of the rule; null for a request of a rule. */
+    @Column({ name: "approver_group", type: "jsonb", nullable: true })
+    approverGroup!: ApproverGroup | null
 
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })

@@ -4,6 +4,7 @@ import { AGENT_GRAPH_BRIEF } from "@modules/domain/agent-turns"
 import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
 import { DATA_RIGHTS_GATE } from "@modules/domain/mcp-gateway"
 import { AgentDataRightsService } from "./agent-data-rights.service"
+import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
 import { AgentGraphBriefService } from "./agent-graph-brief.service"
 import { AgentGraphDeciderService } from "./agent-graph-decider.service"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
@@ -13,6 +14,7 @@ import { AgentGraphAdminService } from "./agent-graph-admin.service"
 import { AgentGraphContextService } from "./agent-graph-context.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
 import { AgentGraphPublishService } from "./agent-graph-publish.service"
+import { AgentGraphRunService } from "./agent-graph-run.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -41,6 +43,8 @@ export class AgentGraphsModule extends ConfigurableModuleClass {
             AgentGraphProposalsService,
             AgentGraphViewService,
             AgentGraphAdminService,
+            AgentGraphApprovalsService,
+            AgentGraphRunService,
         ]
         return {
             ...base,

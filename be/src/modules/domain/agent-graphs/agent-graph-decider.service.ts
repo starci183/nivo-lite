@@ -1,8 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import type { BranchJudgement, BranchRequest, WorkBranchDecider } from "@modules/domain/authority-rules"
+import type {
+    BranchAnswerer,
+    BranchRequest,
+    BranchRoute,
+    OptionalBranchJudgement,
+    WorkBranchDecider,
+} from "@modules/domain/authority-rules"
 import type { Proposal } from "@modules/domain/work-items"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
@@ -45,10 +52,21 @@ export class AgentGraphDeciderService implements WorkBranchDecider {
         private readonly graphs: AgentGraphsService,
         private readonly facts: GraphFactsService,
         private readonly decisions: AgentGraphDecisionsService,
+        private readonly approvals: AgentGraphApprovalsService,
     ) {}
 
+    /** Puts a waiting item in front of the approver its branch named. */
+    route(route: BranchRoute): Promise<void> {
+        return this.approvals.route(route)
+    }
+
+    /** Whether this seat may answer the waiting item while the request of its branch is open. */
+    mayDecide(answerer: BranchAnswerer): Promise<boolean> {
+        return this.approvals.mayDecide(answerer)
+    }
+
     /** The judgement of the branch for one item, or null when the gate decides alone. */
-    async decide(request: BranchRequest): Promise<BranchJudgement | null> {
+    async decide(request: BranchRequest): Promise<OptionalBranchJudgement> {
         try {
             return await this.judge(request)
         } catch (cause) {
@@ -57,7 +75,7 @@ export class AgentGraphDeciderService implements WorkBranchDecider {
         }
     }
 
-    private async judge({ item, proposal, gate, turnId, wakeId }: BranchRequest): Promise<BranchJudgement | null> {
+    private async judge({ item, proposal, gate, turnId, wakeId }: BranchRequest): Promise<OptionalBranchJudgement> {
         if (item.installation_id === null) return null
         const state = await this.graphs.stateOfInstallation(item.installation_id)
         const node = state?.active?.nodes.find((entry) => entry.decide?.intent === item.action)

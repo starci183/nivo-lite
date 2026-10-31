@@ -135,6 +135,24 @@ describe("AgentGraphPublishService.publishDraft", () => {
     })
 })
 
+describe("AgentGraphPublishService.publishLearned", () => {
+    it("publishes the graph a confirmed proposal made as a learned version, under the same checks", async () => {
+        const { service, graphs } = await build(stateOf())
+        const document = raised(stateOf())
+
+        await expect(service.publishLearned("ws-1", "agent-1", document, OWNER)).resolves.toBe(VERSION)
+
+        expect(graphs.publish).toHaveBeenCalledWith(expect.objectContaining({ kind: "learned", document, memberId: "boss" }))
+    })
+
+    it("leaves a widening to the owner even when a streak proposed it", async () => {
+        const { service, graphs } = await build(stateOf())
+
+        expect(await codeOf(service.publishLearned("ws-1", "agent-1", raised(stateOf()), MANAGER))).toBe(AgentGraphsErrorCode.WidensNeedsOwner)
+        expect(graphs.publish).not.toHaveBeenCalled()
+    })
+})
+
 describe("AgentGraphPublishService.restore", () => {
     it("publishes an older version again as a new one, under the same checks", async () => {
         const { service, graphs } = await build(stateOf())

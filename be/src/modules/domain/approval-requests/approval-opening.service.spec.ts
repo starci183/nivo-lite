@@ -120,6 +120,31 @@ describe("ApprovalOpeningService > open", () => {
         })
     })
 
+    it("asks the group, policy and wait a branch of an action graph names, and keeps the group on the request", async () => {
+        const { em, values } = inserting(sequentialRequest())
+        const { service } = await build(em)
+        const group = { roles: [], rooms: [], members: ["member-minh"] } as const
+
+        await service.open(openOf({ branch: { group, policy: "all", timeoutMinutes: 90 } }))
+
+        expect(values()).toMatchObject({
+            policy: "all",
+            approvers: [MINH_REF],
+            timeoutMinutes: 90,
+            approverGroup: group,
+            expiresAt: new Date("2026-10-22T11:00:00.000Z"),
+        })
+    })
+
+    it("keeps no group on a request of the rule", async () => {
+        const { em, values } = inserting(approvalRequestEntityOf())
+        const { service } = await build(em)
+
+        await service.open(openOf())
+
+        expect(values()).toMatchObject({ approverGroup: null })
+    })
+
     it("opens a request for an action that carries no amount, covered by any grant", async () => {
         const { em, values } = inserting(requestWithoutAmount())
         const { service } = await build(em)

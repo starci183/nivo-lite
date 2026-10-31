@@ -8,6 +8,23 @@ import type { DirectoryMember, MemberGrant } from "@modules/domain/member-grants
 import { ModulesService } from "@modules/domain/modules"
 import type { CeilingRule, GraphContext, GraphDocument } from "./agent-graphs.contracts"
 import { GraphFactsService } from "./graph-facts.service"
+import { intervalOf, topOf } from "./policies/interval.policy"
+
+/** Who can answer one ask of the graph, and who was left out. */
+export interface AskCoverage {
+    /** The node that asks. */
+    readonly nodeKey: string
+    /** The branch that asks, or null for an approval step. */
+    readonly branchKey: string | null
+    /** The top of the amounts the branch covers, or null when it has none. */
+    readonly top: number | null
+    /** The names of the people a request would go to. */
+    readonly approvers: ReadonlyArray<string>
+    /** The people of the group left out, with the reason. */
+    readonly excluded: ReadonlyArray<{ readonly name: string; readonly reason: string }>
+    /** False when nobody can approve up to the top of the branch. */
+    readonly covered: boolean
+}
 
 /** The agent the context is built for. */
 export interface ContextScope {
@@ -80,6 +97,40 @@ export class AgentGraphContextService {
             },
             facesCustomers: catalog.audience === "customer",
         }
+    }
+
+    /** Who can answer each ask of the graph: the people, those left out and why, and whether the amounts at the top of the branch are covered. */
+    async coverageOf(scope: ContextScope, graph: GraphDocument): Promise<ReadonlyArray<AskCoverage>> {
+        const asks = graph.nodes.flatMap((node) => [
+            ...(node.approver === null ? [] : [{ nodeKey: node.key, branchKey: null, action: node.action ?? "", approver: node.approver, when: null }]),
+            ...(node.decide?.branches ?? []).flatMap((branch) =>
+                branch.approver === null || branch.then !== "ask"
+                    ? []
+                    : [{ nodeKey: node.key, branchKey: branch.key, action: node.decide?.intent ?? "", approver: branch.approver, when: branch.when }],
+            ),
+        ])
+        const facts = this.facts.registry()
+        const amountFact = Object.values(facts).find((spec) => spec.unit === "vnd")?.key
+        const directory = await this.members.directory(scope.workspaceId)
+        return Promise.all(
+            asks.map(async (ask) => {
+                const interval = amountFact === undefined || ask.when === null || ask.when === "else" ? null : intervalOf(ask.when, amountFact)
+                const top = interval === null ? null : topOf(interval)
+                const grants = await this.members.forAction(scope.workspaceId, ask.action)
+                const set = resolveApprovers({ group: ask.approver.group, directory, grants, need: { unit: "vnd", amount: top } })
+                return {
+                    nodeKey: ask.nodeKey,
+                    branchKey: ask.branchKey,
+                    top,
+                    approvers: set.approvers.map((person) => person.name),
+                    excluded: set.excluded.map((entry) => ({
+                        name: directory.find((person) => person.memberId === entry.memberId)?.name ?? entry.memberId,
+                        reason: entry.reason,
+                    })),
+                    covered: set.approvers.length > 0,
+                }
+            }),
+        )
     }
 
     private approversOf(

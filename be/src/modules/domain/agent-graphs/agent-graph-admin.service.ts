@@ -1,16 +1,20 @@
 import { Injectable } from "@nestjs/common"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
+import { AgentGraphContextService } from "./agent-graph-context.service"
+import type { AskCoverage } from "./agent-graph-context.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
 import { AgentGraphPublishService } from "./agent-graph-publish.service"
 import type { Publisher } from "./agent-graph-publish.service"
+import { AgentGraphRunService } from "./agent-graph-run.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { AgentGraphsService } from "./agent-graphs.service"
 import type { GraphMode, GraphVersionView } from "./agent-graphs.contracts"
 import { localeOf, wireOfView } from "./policies/graph-wire.policy"
-import type { AgentGraphWire, OptionalLanguage } from "./policies/graph-wire.policy"
+import { applyLearned } from "./policies/proposal-patch.policy"
+import type { AgentGraphRunWire, AgentGraphWire, OptionalLanguage } from "./policies/graph-wire.policy"
 
 /** Who asks: the account and the workspace it acts in. */
 export interface GraphActor {
@@ -43,6 +47,8 @@ export class AgentGraphAdminService {
         private readonly publishing: AgentGraphPublishService,
         private readonly proposals: AgentGraphProposalsService,
         private readonly installations: InstallationRecordsService,
+        private readonly running: AgentGraphRunService,
+        private readonly context: AgentGraphContextService,
     ) {}
 
     /** The graph of the agent for the editor, seeded on the first open. */
@@ -81,6 +87,43 @@ export class AgentGraphAdminService {
     /** Sets whether the graph decides or only records. */
     async setMode(actor: GraphActor, agentId: string, mode: GraphMode): Promise<void> {
         await this.publishing.setMode(actor.workspaceId, agentId, mode, await this.publisherOf(actor))
+    }
+
+    /**
+     * Confirms a learned proposal: makes the change it proposes to the graph that decides and publishes it as the next version. A
+     * proposal whose change no longer applies (the branch is gone, the boundary already stands there) is overtaken, and a change that
+     * widens what the agent may do is the owner's alone.
+     */
+    async confirm(actor: GraphActor, agentId: string, proposalId: string): Promise<GraphVersionView> {
+        const by = await this.publisherOf(actor)
+        const [patch, state] = await Promise.all([
+            this.proposals.learnedOf(actor.workspaceId, agentId, proposalId),
+            this.graphs.stateOfAgent(actor.workspaceId, agentId),
+        ])
+        if (patch === null || state?.active == null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
+        const document = applyLearned(state.active, patch)
+        if (document === null) {
+            await this.proposals.supersede(actor.workspaceId, agentId, proposalId)
+            throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
+        }
+        const version = await this.publishing.publishLearned(actor.workspaceId, agentId, document, by)
+        await this.proposals.confirm(actor.workspaceId, agentId, proposalId, by.memberId, version.id)
+        return version
+    }
+
+    /** The trace of the run of a work item through the graph. */
+    async run(actor: GraphActor, workItemId: string): Promise<AgentGraphRunWire> {
+        await this.publisherOf(actor)
+        return this.running.runOf(actor.workspaceId, workItemId)
+    }
+
+    /** Who can answer each ask of the draft graph. */
+    async coverage(actor: GraphActor, agentId: string): Promise<ReadonlyArray<AskCoverage>> {
+        await this.publisherOf(actor)
+        const state = await this.graphs.stateOfAgent(actor.workspaceId, agentId)
+        const installation = state === null ? null : await this.installations.findById(state.installationId)
+        if (state === null || installation === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
+        return this.context.coverageOf({ ...state, moduleKey: installation.moduleKey }, state.draft)
     }
 
     /** Declines a proposal. */

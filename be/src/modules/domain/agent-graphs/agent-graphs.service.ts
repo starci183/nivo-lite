@@ -36,6 +36,14 @@ export interface GraphState {
     readonly active: GraphDocument | null
 }
 
+/** A version with its number. */
+export interface VersionAt {
+    /** The number of the version within the agent. */
+    readonly version: number
+    /** The graph it froze. */
+    readonly document: GraphDocument
+}
+
 /** What publishing a version takes. */
 export interface PublishInput {
     /** The workspace id. */
@@ -171,6 +179,15 @@ export class AgentGraphsService {
         const parsed = graphDocumentSchema.safeParse(row.document)
         if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
         return parsed.data
+    }
+
+    /** One version with its number and its graph, for the trace of a run; refused when it is not the agent's or cannot be read. */
+    async versionAt(workspaceId: string, agentId: string, versionId: string): Promise<VersionAt> {
+        const row = await this.entityManager.findOne(AgentGraphVersionEntity, { where: { id: versionId, workspaceId, agentId } })
+        if (row === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.VersionNotFound })
+        const parsed = graphDocumentSchema.safeParse(row.document)
+        if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
+        return { version: row.version, document: parsed.data }
     }
 
     /** Sets whether the graph decides (`enforced`) or only records (`shadow`); setting `shadow` rolls back with nothing lost. */

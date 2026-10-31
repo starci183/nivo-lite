@@ -140,3 +140,48 @@ describe("AgentGraphContextService.contextOf grants and approvers", () => {
         expect(AMOUNT_FACT).toBeDefined()
     })
 })
+
+describe("AgentGraphContextService.coverageOf", () => {
+    it("says who a request would go to for each ask, up to the top of the branch, and who was left out and why", async () => {
+        const { service } = await build()
+
+        const coverage = await service.coverageOf(SCOPE, DOCUMENT)
+
+        expect(coverage).toEqual([
+            {
+                nodeKey: "decide",
+                branchKey: "middle",
+                top: 20_000_000,
+                approvers: ["dinh"],
+                excluded: [{ name: "gone", reason: "inactive" }],
+                covered: true,
+            },
+            {
+                nodeKey: "decide",
+                branchKey: "else",
+                top: null,
+                approvers: [],
+                excluded: [{ name: "nam", reason: "no_grant" }],
+                covered: false,
+            },
+            {
+                nodeKey: "ask",
+                branchKey: null,
+                top: null,
+                approvers: ["dinh"],
+                excluded: [{ name: "gone", reason: "inactive" }],
+                covered: true,
+            },
+        ])
+    })
+
+    it("names a person left out by the id when the directory does not know them, and has nothing to say about a graph that asks nobody", async () => {
+        const { service, members } = await build()
+        members.directory.mockResolvedValue([])
+
+        const lost = await service.coverageOf(SCOPE, DOCUMENT)
+
+        expect(lost.every((entry) => entry.approvers.length === 0 && entry.excluded.length === 0)).toBe(true)
+        await expect(service.coverageOf(SCOPE, { nodes: [], rights: [] })).resolves.toEqual([])
+    })
+})

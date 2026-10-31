@@ -58,6 +58,62 @@ describe("AgentGraphDecisionsService.close", () => {
     })
 })
 
+describe("AgentGraphDecisionsService lookups", () => {
+    it("reads a decision by its id, its open request or its work item, with the amount that was read", async () => {
+        const em = mockEntityManager({ findOneBy: [AgentGraphDecisionEntity, decisionRow("decision-1", "approved")] })
+        const service = await build(em)
+        const expected = {
+            id: "decision-1",
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            workItemId: "item-9",
+            versionId: undefined,
+            action: undefined,
+            branchKey: "middle",
+            amount: 7_200_000,
+            approvalRequestId: undefined,
+            closed: true,
+        }
+
+        await expect(service.byId("decision-1")).resolves.toEqual(expected)
+        await expect(service.byRequest("request-1")).resolves.toEqual(expected)
+        await expect(service.byItem("item-9")).resolves.toEqual(expected)
+        expect(em.findOneBy.mock.calls.map((call) => call[1])).toEqual([{ id: "decision-1" }, { approvalRequestId: "request-1" }, { workItemId: "item-9" }])
+    })
+
+    it("answers nothing for a decision that is not there, and names the request that is open for one", async () => {
+        const em = mockEntityManager({ findOneBy: [AgentGraphDecisionEntity, null], update: [AgentGraphDecisionEntity, { affected: 1 }] })
+        const service = await build(em)
+
+        await expect(service.byId("nothing")).resolves.toBeNull()
+        await service.attachRequest("decision-1", "request-2")
+
+        expect(em.update).toHaveBeenCalledWith(AgentGraphDecisionEntity, { id: "decision-1" }, { approvalRequestId: "request-2" })
+    })
+})
+
+describe("AgentGraphDecisionsService.runOf", () => {
+    it("reads the run of a work item: the version, the branch, how it ended and the facts", async () => {
+        const em = mockEntityManager({ findOneBy: [AgentGraphDecisionEntity, decisionRow("decision-1", "approved")] })
+        const service = await build(em)
+
+        await expect(service.runOf("ws-1", "item-9")).resolves.toMatchObject({
+            id: "decision-1",
+            agentId: "agent-1",
+            branchKey: "middle",
+            closedAs: "approved",
+            facts: { "supplier_payment.amount_vnd": 7_200_000 },
+        })
+        expect(em.findOneBy).toHaveBeenCalledWith(AgentGraphDecisionEntity, { workspaceId: "ws-1", workItemId: "item-9" })
+    })
+
+    it("answers nothing for a work item the graph never decided", async () => {
+        const service = await build(mockEntityManager({ findOneBy: [AgentGraphDecisionEntity, null] }))
+
+        await expect(service.runOf("ws-1", "item-9")).resolves.toBeNull()
+    })
+})
+
 describe("AgentGraphDecisionsService.closedOf", () => {
     it("reads the closed decisions oldest first with the amount that was read, and skips the ones still open", async () => {
         const em = mockEntityManager({

@@ -47,6 +47,11 @@ export class AgentGraphPublishService {
         return version
     }
 
+    /** Publishes the graph a confirmed proposal made as the next version, under the same checks as any change (a widening is the owner's alone). */
+    async publishLearned(workspaceId: string, agentId: string, document: GraphDocument, by: Publisher): Promise<GraphVersionView> {
+        return this.publishDocument(await this.requireState(workspaceId, agentId), document, by, "", "learned")
+    }
+
     /** Goes back to an older version by publishing it again as a new one, so nothing in the history changes. */
     async restore(workspaceId: string, agentId: string, versionId: string, by: Publisher): Promise<GraphVersionView> {
         const state = await this.requireState(workspaceId, agentId)

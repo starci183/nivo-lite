@@ -9,7 +9,7 @@ import { AgentWorkAccessService } from "./agent-work-access.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
 import { toTurnRecord } from "./agent-work.mapper"
 import { AgentTurnEntity, AgentWakeEntity, AgentWorkStateEntity } from "./persistence/entities"
-import type { AgentTurnRecord, AgentWorkView, WorkspaceAgentWorkView } from "./agent-work.contracts"
+import type { AgentTurnRecord, AgentWorkView, OptionalWakeSource, WorkspaceAgentWorkView } from "./agent-work.contracts"
 
 /** The turns the work tab lists. */
 const RECENT_TURNS = 20
@@ -28,6 +28,15 @@ export class AgentWorkReadService {
         private readonly tasks: AgentTasksService,
         private readonly triggers: AgentTriggersService,
     ) {}
+
+    /** The source that woke the agent, or null when the wake is gone. */
+    async wakeSourceOf(workspaceId: string, wakeId: string): Promise<OptionalWakeSource> {
+        const wake = await this.entityManager.findOne(AgentWakeEntity, {
+            select: { source: true },
+            where: { id: wakeId, workspaceId },
+        })
+        return wake?.source ?? null
+    }
 
     /** The work of one agent of the workspace. */
     async agentWork(workspaceId: string, agentId: string): Promise<AgentWorkView> {

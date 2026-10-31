@@ -904,8 +904,33 @@ type AgentGenerationUsageType {
   prompt_tokens: Int!
 }
 
-input AgentIdInput {
-  agentId: ID! @inputBounds(maxLength: 36)
+type AgentGraphCoverageType {
+  approvers: [String!]!
+  branchKey: String
+  covered: Boolean!
+  excluded: [AgentGraphExcludedType!]!
+  nodeKey: String!
+  top: Float
+}
+
+type AgentGraphExcludedType {
+  name: String!
+  reason: String!
+}
+
+type AgentGraphRunType {
+  agentId: String!
+  approvalRequestId: String
+  branchKey: String!
+  closedAs: String
+  decisionId: String!
+  factsJson: String!
+  outcome: String!
+  shadowDiff: Boolean!
+  traceJson: String!
+  trigger: String
+  version: Float!
+  versionId: String!
 }
 
 type AgentGraphType {
@@ -928,6 +953,10 @@ type AgentGraphVersionType {
   publishedAt: String!
   publishedBy: String
   version: Int!
+}
+
+input AgentIdInput {
+  agentId: ID! @inputBounds(maxLength: 36)
 }
 
 type AgentKnowledgeLaneType {
@@ -2057,6 +2086,11 @@ type CompleteBookingType {
   status: String!
 }
 
+input ConfirmAgentGraphProposalInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  proposalId: String! @inputBounds(maxLength: 36)
+}
+
 input ConfirmBookingInput {
   id: ID! @inputBounds(maxLength: 36)
 }
@@ -3064,13 +3098,13 @@ type DecisionRecordType {
   work_item_id: ID
 }
 
-type DeleteCandidateType {
-  files: Int!
-}
-
 input DeclineAgentGraphProposalInput {
   agentId: String! @inputBounds(maxLength: 36)
   proposalId: String! @inputBounds(maxLength: 36)
+}
+
+type DeleteCandidateType {
+  files: Int!
 }
 
 input DeleteConnectionInput {
@@ -3374,7 +3408,11 @@ type GenerateAdType {
 
 input GetAgentGraphInput {
   agentId: String! @inputBounds(maxLength: 36)
-  locale: String
+  locale: String @inputBounds(maxLength: 2)
+}
+
+input GetAgentGraphRunInput {
+  workItemId: String! @inputBounds(maxLength: 36)
 }
 
 input GetConnectionFirstEventInput {
@@ -4474,6 +4512,10 @@ type LinkStaffType {
   staffId: ID!
 }
 
+input ListAgentGraphCoverageInput {
+  agentId: String! @inputBounds(maxLength: 36)
+}
+
 input ListAgentGraphVersionsInput {
   agentId: String! @inputBounds(maxLength: 36)
 }
@@ -5278,6 +5320,7 @@ type Mutation {
   checkMeta(input: CheckMetaInput!): MetaCheckType!
   chooseMetaPage(input: ChooseMetaPageInput!): MetaWizardConnectionType!
   completeBooking(input: CompleteBookingInput!): CompleteBookingType!
+  confirmAgentGraphProposal(input: ConfirmAgentGraphProposalInput!): AgentGraphVersionType!
   confirmBooking(input: ConfirmBookingInput!): ConfirmBookingType!
   confirmDossierFinding(input: DossierFindingNoteInput!): DossierFindingType!
   confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
@@ -6146,6 +6189,11 @@ type PublicTermsType {
   title: String!
 }
 
+input PublishAgentGraphInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  note: String! @inputBounds(maxLength: 500)
+}
+
 type Query {
   accountingBook: AccountingBookType!
   accountingLedger: [AccountingLedgerEntryType!]!
@@ -6163,8 +6211,8 @@ type Query {
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
-  agentGraph(input: GetAgentGraphInput!): AgentGraphType!
-  agentGraphVersions(input: ListAgentGraphVersionsInput!): [AgentGraphVersionType!]!
+  agentGraphCoverage(input: ListAgentGraphCoverageInput!): [AgentGraphCoverageType!]!
+  agentGraphRun(input: GetAgentGraphRunInput!): AgentGraphRunType!
   agentKnowledgeLenses: [AgentKnowledgeLensType!]!
   agentPage(input: AgentIdInput!): AgentPageType!
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
@@ -6227,6 +6275,7 @@ type Query {
   driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
   drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
   foundingMember: Boolean!
+  getAgentGraph(input: GetAgentGraphInput!): AgentGraphType!
   googleConnectionState: GoogleStateType!
   hiringCandidateDetail(input: HiringCandidateRefInput!): HiringCandidateDetailType!
   hiringWorkbench: HiringBenchType!
@@ -6248,6 +6297,7 @@ type Query {
   leadJourney(input: LeadJourneyInput!): LeadJourneyType!
   leadWait(input: LeadWaitInput!): LeadWaitType!
   lessonMiningStatus(input: LessonMiningStatusInput!): LessonMiningStatusType!
+  listAgentGraphVersions(input: ListAgentGraphVersionsInput!): [AgentGraphVersionType!]!
   listTelegramChats(input: ListTelegramChatsInput!): [TelegramChatChoiceType!]!
   loadCsvImport(input: LoadCsvImportInput!): CsvSavedImportType!
   loadDatabaseConnection(input: LoadDatabaseConnectionInput!): SavedDatabaseType!
@@ -6342,11 +6392,6 @@ type QueuedAgentChatTurnType {
   conversationId: ID!
   id: ID!
   status: String!
-}
-
-input PublishAgentGraphInput {
-  agentId: String! @inputBounds(maxLength: 36)
-  note: String! @inputBounds(maxLength: 500)
 }
 
 input ReadLeadGenCommentStatusInput {
@@ -6804,6 +6849,11 @@ type ResponsibilityType {
   workspace_id: ID!
 }
 
+input RestoreAgentGraphVersionInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  versionId: String! @inputBounds(maxLength: 36)
+}
+
 type RetrievedPassageType {
   content: String!
   id: ID!
@@ -6816,11 +6866,6 @@ type RetrievedPassageType {
   title: String!
   topic: String
   visibility: String!
-}
-
-input RestoreAgentGraphVersionInput {
-  agentId: String! @inputBounds(maxLength: 36)
-  versionId: String! @inputBounds(maxLength: 36)
 }
 
 input RetryFailedStepInput {

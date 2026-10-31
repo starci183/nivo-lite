@@ -6,10 +6,16 @@ import { PublishAgentGraphHandler } from "./application/publish-agent-graph.hand
 import { RestoreAgentGraphVersionHandler } from "./application/restore-agent-graph-version.handler"
 import { SetAgentGraphModeHandler } from "./application/set-agent-graph-mode.handler"
 import { DeclineAgentGraphProposalHandler } from "./application/decline-agent-graph-proposal.handler"
+import { ConfirmAgentGraphProposalHandler } from "./application/confirm-agent-graph-proposal.handler"
+import { GetAgentGraphRunHandler } from "./application/get-agent-graph-run.handler"
+import { ListAgentGraphCoverageHandler } from "./application/list-agent-graph-coverage.handler"
 import { ConfigurableModuleClass } from "./agent-graphs.module-definition"
 
 @Module({
     providers: [
+        ConfirmAgentGraphProposalHandler,
+        GetAgentGraphRunHandler,
+        ListAgentGraphCoverageHandler,
         GetAgentGraphHandler,
         ListAgentGraphVersionsHandler,
         SaveAgentGraphDraftHandler,

@@ -24,5 +24,6 @@ export const toRequestRecord = (row: ApprovalRequestEntity): ApprovalRequestReco
     resolved_by: row.resolvedBy,
     resolved_at: iso(row.resolvedAt),
     escalated_to: row.escalatedTo,
+    approver_group: row.approverGroup,
     created_at: row.createdAt.toISOString(),
 })
