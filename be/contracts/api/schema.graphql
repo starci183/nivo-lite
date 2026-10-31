@@ -5223,6 +5223,7 @@ type Mutation {
   revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
   revokeInvite(input: InviteRefInput!): Boolean!
   revokeSession(input: RevokeSessionInput!): Boolean!
+  rotateSepayKey(input: RotateSepayKeyInput!): SepayKeyType!
   runAutomationNow(input: TemplateKeyInput!): Boolean!
   runCsvImport(input: RunCsvImportInput!): CsvImportResultType!
   runDocumentImport(input: RunDocumentImportInput!): CsvImportResultType!
@@ -6612,6 +6613,10 @@ input RevokeApiKeyInput {
 
 input RevokeSessionInput {
   sessionId: ID! @inputBounds(maxLength: 36)
+}
+
+input RotateSepayKeyInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input RunCsvImportInput {

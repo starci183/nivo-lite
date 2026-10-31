@@ -1002,15 +1002,11 @@
     "accessHint_ask": "Mọi thứ định gửi đi đều chờ bạn duyệt",
     "accessHint_auto": "Tự làm theo luật ở trang Giao quyền",
     "ownerOnly": "Chỉ chủ workspace mới thêm, sửa hoặc xóa kết nối.",
-    "groupMoney": "Tiền về và thanh toán",
-    "groupChat": "Kênh chat",
     "tabLibrary": "Thư viện",
     "tabConnected": "Đã kết nối",
     "libSearch": "Tìm connector",
     "libClear": "Xóa tìm kiếm",
     "libCategory": "Nhóm",
-    "libAudience": "Cho agent",
-    "libAnyAgent": "Mọi agent",
     "libAllCategories": "Tất cả",
     "libInUse": "{count} đang dùng",
     "libNeedsCheck": "Cần kiểm tra",
@@ -1019,9 +1015,6 @@
     "libWanted": "Đã ghi nhận",
     "openPage": "Mở trang",
     "attentionImpact": "Agent {names} tạm không dùng được kết nối này.",
-    "libSort": "Sắp xếp",
-    "libSortPopular": "Phổ biến",
-    "libSortName": "Tên",
     "libEmpty": "Không có connector nào khớp",
     "libEmptyHint": "Thử từ khác hoặc bỏ bộ lọc. Cần connector nào thì bấm Muốn dùng ở connector sắp có.",
     "statusSoon": "Sắp có",
@@ -1049,10 +1042,8 @@
     "detailSoon": "Connector này đang được lên kế hoạch. Bấm Muốn dùng để NIVO ưu tiên làm trước.",
     "connectedEmpty": "Chưa có kết nối nào",
     "connectedEmptyHint": "Mở Thư viện để kết nối nguồn tiền, kênh chat hoặc nguồn dữ liệu.",
-    "groupData": "Nguồn dữ liệu",
     "syncNow": "Đồng bộ ngay",
     "syncDone": "Đã đồng bộ: cập nhật {rows} dòng.",
-    "groupTools": "Công cụ",
     "notConnected": "Chưa kết nối",
     "connectionCount": "{count} kết nối",
     "summary": "{live} đang dùng · {attention} cần xử lý",
@@ -1085,7 +1076,7 @@
     "guide_sepay_basic_0_label": "Tên webhook",
     "guide_sepay_basic_1_label": "URL nhận webhook",
     "guide_sepay_basic_2_label": "Loại giao dịch",
-    "guide_sepay_basic_2_option": "Tiền vào",
+    "guide_sepay_basic_2_option": "Cả tiền vào và tiền ra",
     "guide_sepay_basic_3_label": "Định dạng dữ liệu",
     "guide_sepay_basic_3_option": "JSON",
     "guide_sepay_basic_4_label": "Tự động gửi lại khi server trả lỗi",
@@ -1326,7 +1317,10 @@
     "smtpTestSend": "Gửi email thử",
     "smtpNewPassword": "Mật khẩu mới",
     "smtpPasswordStored": "Mật khẩu được lưu đã mã hoá và sẽ không hiển thị lại.",
-    "smtpSavePassword": "Lưu mật khẩu"
+    "smtpSavePassword": "Lưu mật khẩu",
+    "inUseTitle": "Đang dùng",
+    "inUseOrder": "Sắp theo: cần xử lý trước",
+    "libFilter": "Lọc connector"
   },
   "connectorCsv": {
     "title": "Nhập dữ liệu",
@@ -2330,11 +2324,7 @@
     "office": {
       "title": "Office",
       "what": "Phòng làm việc chung: nhắn với đội và các agent AI, duyệt việc AI đề xuất.",
-      "steps": [
-        "Mở Office",
-        "Gõ @tên-agent để gọi agent",
-        "Duyệt hoặc sửa các thẻ chờ duyệt"
-      ],
+      "steps": ["Mở Office", "Gõ @tên-agent để gọi agent", "Duyệt hoặc sửa các thẻ chờ duyệt"],
       "keywords": [
         "office",
         "van phong",
@@ -2355,20 +2345,8 @@
     "overview": {
       "title": "Tổng quan",
       "what": "Bức tranh chung: kết quả, việc đang chờ, ngoại lệ cần chú ý.",
-      "steps": [
-        "Mở Tổng quan",
-        "Xem các thẻ kết quả và việc chờ"
-      ],
-      "keywords": [
-        "tong quan",
-        "dashboard",
-        "bao cao",
-        "ket qua",
-        "doanh thu",
-        "tinh hinh",
-        "overview",
-        "report"
-      ]
+      "steps": ["Mở Tổng quan", "Xem các thẻ kết quả và việc chờ"],
+      "keywords": ["tong quan", "dashboard", "bao cao", "ket qua", "doanh thu", "tinh hinh", "overview", "report"]
     },
     "authority": {
       "title": "Giao quyền",
@@ -2395,28 +2373,13 @@
     "inbox": {
       "title": "Đầu vào",
       "what": "Mọi thứ đi vào: tin nhắn khách, đơn, giao dịch ngân hàng, từ mọi kênh.",
-      "steps": [
-        "Mở Đầu vào",
-        "Lọc theo kênh hoặc loại"
-      ],
-      "keywords": [
-        "dau vao",
-        "inbox",
-        "tin nhan den",
-        "tin nhan khach",
-        "giao dich den",
-        "don moi",
-        "hop thu"
-      ]
+      "steps": ["Mở Đầu vào", "Lọc theo kênh hoặc loại"],
+      "keywords": ["dau vao", "inbox", "tin nhan den", "tin nhan khach", "giao dich den", "don moi", "hop thu"]
     },
     "leads": {
       "title": "Khách hàng",
       "what": "Danh sách khách và cơ hội bán hàng, ai phụ trách và việc tiếp theo.",
-      "steps": [
-        "Mở Khách hàng",
-        "Bấm Thêm khách hàng để thêm một khách",
-        "Mở một khách để xem lịch sử và giao việc"
-      ],
+      "steps": ["Mở Khách hàng", "Bấm Thêm khách hàng để thêm một khách", "Mở một khách để xem lịch sử và giao việc"],
       "keywords": [
         "khach hang",
         "lead",
@@ -2433,44 +2396,19 @@
     "responsibilities": {
       "title": "Trách nhiệm",
       "what": "Ai đang chịu trách nhiệm việc gì, hạn chót và bước tiếp theo.",
-      "steps": [
-        "Mở Trách nhiệm",
-        "Lọc theo người phụ trách hoặc trạng thái"
-      ],
-      "keywords": [
-        "trach nhiem",
-        "ai lam gi",
-        "viec cua ai",
-        "han chot",
-        "phu trach",
-        "responsibility",
-        "task"
-      ]
+      "steps": ["Mở Trách nhiệm", "Lọc theo người phụ trách hoặc trạng thái"],
+      "keywords": ["trach nhiem", "ai lam gi", "viec cua ai", "han chot", "phu trach", "responsibility", "task"]
     },
     "decisions": {
       "title": "Lịch sử quyết định",
       "what": "Nhật ký mọi quyết định: AI tự làm, người duyệt, người sửa, kèm lý do.",
-      "steps": [
-        "Mở Lịch sử quyết định",
-        "Lọc theo bộ phận hoặc người quyết định"
-      ],
-      "keywords": [
-        "lich su quyet dinh",
-        "quyet dinh",
-        "nhat ky",
-        "ai da duyet",
-        "decision",
-        "audit"
-      ]
+      "steps": ["Mở Lịch sử quyết định", "Lọc theo bộ phận hoặc người quyết định"],
+      "keywords": ["lich su quyet dinh", "quyet dinh", "nhat ky", "ai da duyet", "decision", "audit"]
     },
     "automations": {
       "title": "Tự động hoá",
       "what": "Quy trình tự chạy theo lịch hoặc sự kiện: nhắc nợ, báo cáo, chăm sóc khách.",
-      "steps": [
-        "Mở Tự động hoá",
-        "Chọn một mẫu có sẵn hoặc tạo mới",
-        "Bật quy trình"
-      ],
+      "steps": ["Mở Tự động hoá", "Chọn một mẫu có sẵn hoặc tạo mới", "Bật quy trình"],
       "keywords": [
         "tu dong hoa",
         "tu dong",
@@ -2486,12 +2424,7 @@
     "knowledge": {
       "title": "Tri thức",
       "what": "Dạy AI về doanh nghiệp: bảng giá, chính sách, câu hỏi thường gặp, tài liệu, link.",
-      "steps": [
-        "Mở Tri thức",
-        "Bấm Thêm nguồn",
-        "Dán nội dung, tải tệp hoặc dán link",
-        "Lưu để AI dùng khi trả lời"
-      ],
+      "steps": ["Mở Tri thức", "Bấm Thêm nguồn", "Dán nội dung, tải tệp hoặc dán link", "Lưu để AI dùng khi trả lời"],
       "keywords": [
         "tri thuc",
         "kien thuc",
@@ -2531,11 +2464,7 @@
     "modules": {
       "title": "Agent",
       "what": "Cài và cấu hình các agent: Chatbot, Bán hàng, Kế toán, Đặt lịch, Kho, Tuyển dụng…",
-      "steps": [
-        "Mở Agent",
-        "Chọn agent cần dùng và bấm Cài",
-        "Làm theo các bước thiết lập"
-      ],
+      "steps": ["Mở Agent", "Chọn agent cần dùng và bấm Cài", "Làm theo các bước thiết lập"],
       "keywords": [
         "module",
         "modules",
@@ -2554,12 +2483,7 @@
     "team": {
       "title": "Đội ngũ",
       "what": "Mời người vào workspace và chọn vai trò: Chủ sở hữu, Quản lý, Nhân viên.",
-      "steps": [
-        "Mở Đội ngũ",
-        "Bấm Mời thành viên",
-        "Nhập email và chọn vai trò",
-        "Gửi lời mời hoặc sao chép link mời"
-      ],
+      "steps": ["Mở Đội ngũ", "Bấm Mời thành viên", "Nhập email và chọn vai trò", "Gửi lời mời hoặc sao chép link mời"],
       "keywords": [
         "doi ngu",
         "moi nhan vien",
@@ -2577,17 +2501,8 @@
     "connections": {
       "title": "Kết nối",
       "what": "Nối NIVO với ngân hàng, Telegram, Zalo OA, email, Google Sheets, n8n.",
-      "steps": [
-        "Mở Kết nối",
-        "Chọn dịch vụ và bấm Thêm kết nối",
-        "Làm theo hướng dẫn từng bước"
-      ],
-      "keywords": [
-        "ket noi",
-        "tich hop",
-        "connection",
-        "integration"
-      ]
+      "steps": ["Mở Kết nối", "Chọn dịch vụ và bấm Thêm kết nối", "Làm theo hướng dẫn từng bước"],
+      "keywords": ["ket noi", "tich hop", "connection", "integration"]
     },
     "connections-sepay": {
       "title": "Kết nối SePay (tiền về)",
@@ -2643,12 +2558,7 @@
         "Dán Callback URL và Webhook URL sang Zalo, bật sự kiện tin nhắn",
         "Bấm Kết nối Zalo OA để chủ OA đồng ý"
       ],
-      "keywords": [
-        "zalo",
-        "zalo oa",
-        "official account",
-        "oa"
-      ]
+      "keywords": ["zalo", "zalo oa", "official account", "oa"]
     },
     "connections-smtp": {
       "title": "Email gửi đi",
@@ -2658,29 +2568,13 @@
         "Nhập máy chủ SMTP hoặc chọn nhà cung cấp",
         "Gửi thử một email"
       ],
-      "keywords": [
-        "email",
-        "smtp",
-        "gui email",
-        "gmail",
-        "thu dien tu"
-      ]
+      "keywords": ["email", "smtp", "gui email", "gmail", "thu dien tu"]
     },
     "connections-google": {
       "title": "Google Sheets",
       "what": "NIVO ghi đơn hàng vào bảng tính Google của bạn.",
-      "steps": [
-        "Mở Kết nối › Google (Sheets) › Thêm kết nối",
-        "Đăng nhập Google và cho phép",
-        "Chọn bảng tính"
-      ],
-      "keywords": [
-        "google sheet",
-        "google sheets",
-        "bang tinh",
-        "excel",
-        "spreadsheet"
-      ]
+      "steps": ["Mở Kết nối › Google (Sheets) › Thêm kết nối", "Đăng nhập Google và cho phép", "Chọn bảng tính"],
+      "keywords": ["google sheet", "google sheets", "bang tinh", "excel", "spreadsheet"]
     },
     "connections-webhook": {
       "title": "n8n / Webhook",
@@ -2690,29 +2584,13 @@
         "Dán URL webhook của n8n",
         "Chọn sự kiện cần gửi và gửi thử"
       ],
-      "keywords": [
-        "n8n",
-        "webhook",
-        "zapier",
-        "make.com",
-        "make"
-      ]
+      "keywords": ["n8n", "webhook", "zapier", "make.com", "make"]
     },
     "developers": {
       "title": "Nhà phát triển (API)",
       "what": "Tạo khóa API để phần mềm khác đọc và ghi dữ liệu NIVO.",
-      "steps": [
-        "Mở Nhà phát triển",
-        "Đặt tên khóa và bấm Tạo",
-        "Sao chép khóa ngay, NIVO chỉ hiện một lần"
-      ],
-      "keywords": [
-        "api",
-        "khoa api",
-        "api key",
-        "developer",
-        "lap trinh"
-      ]
+      "steps": ["Mở Nhà phát triển", "Đặt tên khóa và bấm Tạo", "Sao chép khóa ngay, NIVO chỉ hiện một lần"],
+      "keywords": ["api", "khoa api", "api key", "developer", "lap trinh"]
     },
     "billing": {
       "title": "Credit và gói",
@@ -2742,10 +2620,7 @@
     "account": {
       "title": "Tài khoản của bạn",
       "what": "Đổi tên hiển thị, email, mật khẩu và đăng xuất các thiết bị khác.",
-      "steps": [
-        "Mở menu ảnh đại diện › Tài khoản",
-        "Sửa thông tin và bấm Lưu"
-      ],
+      "steps": ["Mở menu ảnh đại diện › Tài khoản", "Sửa thông tin và bấm Lưu"],
       "keywords": [
         "tai khoan cua toi",
         "thong tin tai khoan",
@@ -3809,7 +3684,6 @@
   },
   "moduleSetup": {
     "chatTitle": "Chat thiết lập với NIVO",
-    "chatPrivate": "Riêng tư cho chủ và quản lý",
     "chatPlaceholder": "Kể về doanh nghiệp của bạn bằng lời của bạn...",
     "send": "Gửi",
     "sending": "NIVO đang soạn…",
@@ -3836,6 +3710,18 @@
     "applying": "Đang áp dụng...",
     "applyHint": "Xác nhận đủ mọi mục mới áp dụng được. Sau đó agent chạy theo bản này.",
     "applyUnchanged": "Bản nháp này đã là bản đang dùng.",
+    "applyRun": "Cho chạy",
+    "applyNeedsAll": "Cho chạy (cần đủ {total}/{total})",
+    "gateAsking": "NIVO đang hỏi trong chat",
+    "proposalTitle": "Mục {position} · {label}",
+    "proposalsLabel": "Đề xuất của NIVO",
+    "proposalEdit": "Sửa lại",
+    "chatHint": "Riêng tư cho chủ và quản lý · mỗi câu trả lời được ghi vào mục bên trái",
+    "composerHint": "Ctrl+Enter để gửi · {count}/4000",
+    "suggestionsLabel": "Gợi ý",
+    "paneLabel": "Thiết lập agent",
+    "checklistLabel": "Các mục cần xong",
+    "chatLabel": "Cuộc trò chuyện thiết lập",
     "applied": "Đã áp dụng bản {version}. Trợ lý đang dùng bản này.",
     "requirementsTitle": "Agent chạy tốt nhất khi đã có những thứ này",
     "requirementsBody": "Chưa có:",
@@ -3919,11 +3805,9 @@
     "eyebrow": "AGENT",
     "catalogTitle": "Agent",
     "catalogDescription": "Mỗi agent là một thành viên AI trong đội của bạn. Cài một lần bằng cách kể về doanh nghiệp, bạn vẫn là người quyết định nó được làm gì.",
-    "install": "Cài đặt",
     "installing": "Đang cài đặt...",
     "openModule": "Mở",
     "earlyBadge": "Sớm",
-    "earlyHint": "Bản dùng sớm: agent chạy được qua cuộc trò chuyện thiết lập và quyền hạn của bạn; màn hình làm việc đang được hoàn thiện.",
     "workbenchTitle": "Đang hoàn thiện",
     "workbenchBody": "Màn hình làm việc của agent này chưa sẵn sàng. Bạn vẫn có thể thiết lập agent ở tab Thiết lập và chọn việc nó được tự làm ở trang Quyền hạn.",
     "workbenchSetup": "Đến Thiết lập",
@@ -3946,7 +3830,6 @@
     "needsRole": "Cần một kết nối cung cấp {role}",
     "providersOr": " hoặc ",
     "openConnections": "Mở Cài đặt → Kết nối",
-    "navLabel": "Agent",
     "tabsLabel": "Các mục của agent",
     "tab_setup": "Thiết lập",
     "tab_workbench": "Bàn làm việc",
@@ -4031,14 +3914,15 @@
     "yoursEmptyTitle": "Chưa có agent nào",
     "yoursEmptyHint": "Chọn một vai trò bên dưới để thêm agent đầu tiên.",
     "addTitle": "Thêm agent theo vai trò",
-    "roleInstalled": "Đã cài",
     "roleNotInstalled": "Chưa cài",
     "roleAddAnother": "Tạo thêm",
-    "viewDetails": "Xem chi tiết",
-    "detailsPoints": "Agent làm được gì",
-    "detailsClose": "Đóng",
-    "railTitle": "Agent của bạn",
     "railAdd": "Thêm agent",
+    "switchAgent": "Đổi agent",
+    "createAgent": "+ Tạo agent",
+    "roleCreate": "Tạo agent",
+    "roleInstalledCount": "Đã cài {count}",
+    "setupProgress": "Thiết lập",
+    "continueSetup": "Tiếp tục thiết lập",
     "privateChat": "Chat riêng",
     "profileShort": "Hồ sơ",
     "headerNoChannels": "Chưa gắn kênh",
@@ -4064,8 +3948,6 @@
     "quickLabel": "Câu hỏi nhanh",
     "quickPrevious": "Câu hỏi trước",
     "quickNext": "Câu hỏi tiếp",
-    "crumbLabel": "Đường dẫn",
-    "crumbHome": "Tổng quan",
     "title": "Office",
     "messengerLabel": "Trò chuyện Office",
     "listLabel": "Cuộc trò chuyện",
@@ -4315,6 +4197,8 @@
     "ruleApproval": "Duyệt trước khi AI gửi",
     "ruleApprovalText": "Bật cho tới khi bạn tin AI",
     "ruleApprovalValue": "Bật",
+    "ruleApprovalOff": "Tắt",
+    "ruleApprovalNever": "AI chưa được gửi",
     "finish": "Hoàn tất",
     "readyTitle": "Workspace đã sẵn sàng",
     "readyHeading": "{name} đã sẵn sàng",
@@ -4667,6 +4551,7 @@
     "lane_factRestricted": "Sự thật hạn chế theo agent",
     "dossiersGridLabel": "Hồ sơ theo danh mục",
     "dossiersCategories": "Danh mục hồ sơ",
+    "dossiersCategoriesClose": "Đóng danh mục hồ sơ",
     "dossiersList": "Hồ sơ của danh mục",
     "dossiersTitle": "Tình trạng {count} hồ sơ",
     "dossiersAdd": "+ Thêm tài liệu",
@@ -7064,31 +6949,34 @@
     "stepStopped": "Đã dừng"
   },
   "zalo": {
-      "err_ZALO_UNAVAILABLE": "Zalo hiện không phản hồi. Hãy thử lại sau ít phút.",
-      "err_ZALO_REJECTED": "Zalo từ chối yêu cầu này. Kiểm tra lại kết nối Zalo OA rồi thử lại.",
-      "err_ZALO_BODY_UNREADABLE": "Nội dung webhook Zalo gửi về không đọc được.",
-      "err_ZALO_WINDOW_CLOSED": "Khách chưa tương tác với Official Account gần đây nên Zalo không cho gửi tin tư vấn.",
-      "err_ZALO_NOT_FOLLOWER": "Khách không còn quan tâm Official Account.",
-      "err_ZALO_NIGHT_HOURS": "Zalo không gửi loại tin này vào ban đêm.",
-      "err_ZALO_TOKEN_REJECTED": "Mã truy cập Zalo OA không hợp lệ hoặc đã hết hạn. Hãy kết nối lại Zalo OA.",
-      "err_ZALO_RECIPIENT_UNREACHABLE": "Số điện thoại không hợp lệ, chưa có tài khoản Zalo hoặc khách đã tắt nhận thông báo.",
-      "err_ZALO_TEMPLATE_REJECTED": "Mẫu ZNS chưa được duyệt hoặc dữ liệu không khớp với mẫu.",
-      "err_ZALO_QUOTA_EXHAUSTED": "Official Account đã hết hạn mức gửi hoặc hết số dư ZNS.",
-      "err_ZALO_NOT_PERMITTED": "Official Account chưa được cấp quyền dùng tính năng này của Zalo.",
-      "err_CHANNELS_ZALO_NOT_AUTHORIZED": "Kết nối Zalo chưa được cấp quyền. Hãy bấm Kết nối Zalo OA trước.",
-      "err_CHANNELS_ZALO_REFRESH_BUSY": "Zalo đang làm mới quyền truy cập. Hãy thử lại sau giây lát.",
-      "err_CHANNELS_ZALO_STATE_REJECTED": "Phiên đăng nhập Zalo không khớp với lần kết nối đã bắt đầu. Hãy bấm Kết nối Zalo OA lại.",
-      "err_CHANNELS_ZALO_STATE_EXPIRED": "Lần đăng nhập Zalo đó đã quá lâu. Hãy bấm Kết nối Zalo OA lại.",
-      "err_zalo_window_expired": "Đã quá cửa sổ trả lời của Zalo: khách phải nhắn trước.",
-      "err_zalo_unfollowed": "Khách không còn quan tâm Official Account.",
-      "err_zalo_night_hours": "Zalo không cho gửi loại tin này từ 22:00 đến 06:00.",
-      "err_zalo_token": "Zalo từ chối quyền truy cập của NIVO: hãy kết nối lại Zalo OA.",
-      "err_zalo_not_connected": "Cuộc trò chuyện này chưa có kết nối Zalo để gửi.",
-      "err_zalo_recipient": "Số điện thoại không hợp lệ hoặc chưa có tài khoản Zalo.",
-      "err_zalo_template": "Mẫu ZNS chưa được duyệt hoặc dữ liệu không khớp với mẫu.",
-      "err_zalo_quota": "Official Account đã hết hạn mức gửi hoặc hết số dư ZNS.",
-      "err_zalo_not_permitted": "Official Account chưa được cấp quyền dùng tính năng này của Zalo.",
-      "err_zalo_error": "Zalo từ chối tin nhắn này."
+    "err_ZALO_UNAVAILABLE": "Zalo hiện không phản hồi. Hãy thử lại sau ít phút.",
+    "err_ZALO_REJECTED": "Zalo từ chối yêu cầu này. Kiểm tra lại kết nối Zalo OA rồi thử lại.",
+    "err_ZALO_BODY_UNREADABLE": "Nội dung webhook Zalo gửi về không đọc được.",
+    "err_ZALO_WINDOW_CLOSED": "Khách chưa tương tác với Official Account gần đây nên Zalo không cho gửi tin tư vấn.",
+    "err_ZALO_NOT_FOLLOWER": "Khách không còn quan tâm Official Account.",
+    "err_ZALO_NIGHT_HOURS": "Zalo không gửi loại tin này vào ban đêm.",
+    "err_ZALO_TOKEN_REJECTED": "Mã truy cập Zalo OA không hợp lệ hoặc đã hết hạn. Hãy kết nối lại Zalo OA.",
+    "err_ZALO_RECIPIENT_UNREACHABLE": "Số điện thoại không hợp lệ, chưa có tài khoản Zalo hoặc khách đã tắt nhận thông báo.",
+    "err_ZALO_TEMPLATE_REJECTED": "Mẫu ZNS chưa được duyệt hoặc dữ liệu không khớp với mẫu.",
+    "err_ZALO_QUOTA_EXHAUSTED": "Official Account đã hết hạn mức gửi hoặc hết số dư ZNS.",
+    "err_ZALO_NOT_PERMITTED": "Official Account chưa được cấp quyền dùng tính năng này của Zalo.",
+    "err_CHANNELS_ZALO_NOT_AUTHORIZED": "Kết nối Zalo chưa được cấp quyền. Hãy bấm Kết nối Zalo OA trước.",
+    "err_CHANNELS_ZALO_REFRESH_BUSY": "Zalo đang làm mới quyền truy cập. Hãy thử lại sau giây lát.",
+    "err_CHANNELS_ZALO_STATE_REJECTED": "Phiên đăng nhập Zalo không khớp với lần kết nối đã bắt đầu. Hãy bấm Kết nối Zalo OA lại.",
+    "err_CHANNELS_ZALO_STATE_EXPIRED": "Lần đăng nhập Zalo đó đã quá lâu. Hãy bấm Kết nối Zalo OA lại.",
+    "err_CHANNELS_CONNECTION_NOT_FOUND": "Không tìm thấy kết nối Zalo OA này.",
+    "err_CHANNELS_SECRET_UNREADABLE": "Không đọc được khóa đã lưu của Zalo OA. Hãy kết nối lại Zalo OA.",
+    "err_zalo_window_expired": "Đã quá cửa sổ trả lời của Zalo: khách phải nhắn trước.",
+    "err_zalo_unfollowed": "Khách không còn quan tâm Official Account.",
+    "err_zalo_night_hours": "Zalo không cho gửi loại tin này từ 22:00 đến 06:00.",
+    "err_zalo_token": "Zalo từ chối quyền truy cập của NIVO: hãy kết nối lại Zalo OA.",
+    "err_zalo_not_connected": "Cuộc trò chuyện này chưa có kết nối Zalo để gửi.",
+    "err_zalo_recipient": "Số điện thoại không hợp lệ hoặc chưa có tài khoản Zalo.",
+    "err_zalo_template": "Mẫu ZNS chưa được duyệt hoặc dữ liệu không khớp với mẫu.",
+    "err_zalo_quota": "Official Account đã hết hạn mức gửi hoặc hết số dư ZNS.",
+    "err_zalo_not_permitted": "Official Account chưa được cấp quyền dùng tính năng này của Zalo.",
+    "err_zalo_error": "Zalo từ chối tin nhắn này.",
+    "err_token_expired": "Mã truy cập Zalo OA đã hết hạn. Hãy kết nối lại Zalo OA."
   },
   "zaloConnection": {
     "title": "Kết nối Zalo OA",
@@ -7096,18 +6984,17 @@
     "crumbConnections": "Kết nối",
     "crumbZalo": "Zalo OA",
     "headEmpty": "Không tìm thấy kết nối Zalo OA này.",
+    "loadFailed": "Không tải được kết nối Zalo OA.",
     "chipOk": "Đã kết nối",
+    "chipWaiting": "Chờ tin nhắn đầu tiên",
     "chipCheck": "Cần kiểm tra",
     "facts": "Zalo OA · OA ID {oaId} · App ID {appId}",
     "bannerExpired": "Token truy cập của OA đã hết hạn {ago} và không tự làm mới được. Bấm Kết nối lại để đăng nhập Zalo và cấp quyền lần nữa.",
+    "bannerExpiredAsk": "Token truy cập của OA đã hết hạn {ago} và không tự làm mới được. Nhờ chủ workspace bấm Kết nối lại.",
     "bannerNone": "OA này chưa được cấp quyền. Bấm Kết nối lại để đăng nhập Zalo và cấp quyền.",
+    "bannerNoneAsk": "OA này chưa được cấp quyền. Nhờ chủ workspace bấm Kết nối lại để đăng nhập Zalo và cấp quyền.",
     "reconnect": "Kết nối lại",
     "disconnect": "Ngắt kết nối",
-    "tabsLabel": "Các phần của kết nối",
-    "tabOverview": "Tổng quan",
-    "tabSetup": "Thiết lập",
-    "tabCheck": "Kiểm tra",
-    "tabAgents": "Gắn agent",
     "disconnectQuestion": "Ngắt kết nối Zalo OA này? Agent sẽ không nhận và trả lời tin qua OA nữa.",
     "disconnectConfirm": "Ngắt kết nối",
     "cancel": "Hủy",
@@ -7160,20 +7047,12 @@
     "blockTokenExpired": "Gửi thử cần token còn hạn: bấm Kết nối lại trước.",
     "blockNoRecipient": "Chưa có ai nhắn tới OA trong 48 giờ qua. Nhắn từ Zalo cá nhân của bạn tới OA rồi quay lại.",
     "recipientLine": "{name} · nhắn {ago}",
-    "pasteTitle": "Thông tin dán vào Zalo",
     "copyFailed": "Không sao chép được. Hãy thử lại.",
     "pasteCallback": "Official Account Callback URL",
     "pasteWebhook": "Webhook URL",
     "pasteEmpty": "Chưa có địa chỉ để dán.",
-    "overviewTitle": "Tổng quan",
-    "overviewHint": "Tình trạng của OA này trong một nhìn.",
-    "setupTitle": "Thiết lập",
-    "setupHint": "Những gì đã lưu cho OA này. Khóa bí mật chỉ hiện bốn ký tự cuối.",
     "factsEmpty": "Chưa có thông tin.",
-    "factStatus": "Trạng thái",
-    "factToken": "Token hết hạn lúc",
     "factTokenNone": "Chưa cấp quyền",
-    "factOaId": "OA ID",
     "factAppId": "App ID",
     "factAppSecret": "App Secret",
     "factOaSecret": "OA Secret Key",
@@ -7183,6 +7062,7 @@
     "agentsTitle": "Gắn agent",
     "agentsEmpty": "Workspace chưa có agent nào.",
     "agentsSwitch": "Dùng Zalo OA này:",
+    "agentsOn": "Đang dùng",
     "eventsTitle": "Sự kiện Zalo",
     "eventsLive": "Trực tiếp",
     "eventsEmpty": "Chưa có sự kiện nào.",
@@ -7204,7 +7084,52 @@
     "outcomeReceived": "Nhận",
     "outcomeSent": "Đã gửi",
     "outcomeNotSent": "Chưa gửi",
-    "detailNotSent": "{time} · {reason} · giữ lại trong Bàn làm việc"
+    "detailNotSent": "{time} · {reason} · giữ lại trong Bàn làm việc",
+    "mainLabel": "Thiết lập và tình trạng",
+    "tileToken": "Token",
+    "tileTokenExpired": "Đã hết hạn",
+    "tileTokenAuto": "Tự gia hạn",
+    "tileTokenManual": "Cần kết nối lại khi hết hạn",
+    "tileTokenAsk": "Cấp quyền ở bước 3",
+    "tileFollowersMeta": "Chỉ trả lời được những người này",
+    "tileAgentsMeta": "Gắn ở bước 5",
+    "waitingTitle": "Đã cấp quyền OA. Còn một bước:",
+    "waitingBody": "Nhắn thử một tin bất kỳ vào OA từ điện thoại của bạn. Khi NIVO nhận được tin đầu tiên, trạng thái chuyển sang \"Đã kết nối\".",
+    "stepApp": "Tên và khóa ứng dụng",
+    "stepAppHint": "App ID và App Secret của ứng dụng bạn tạo ở Zalo Developers. Muốn đổi thì ngắt kết nối rồi tạo kết nối mới.",
+    "stepPaste": "Thiết lập ứng dụng Zalo",
+    "stepPasteHint": "Dán 2 URL này vào ứng dụng trên Zalo Developers, rồi dán OA Secret Key về đây.",
+    "stepAuthorize": "Kết nối OA",
+    "stepAuthorizeHint": "Đăng nhập Zalo, chọn OA và cấp quyền. Liên kết đăng nhập hết hạn sau 15 phút.",
+    "stepAuthorizeHintAsk": "Nhờ chủ workspace đăng nhập Zalo, chọn OA và cấp quyền.",
+    "stepAuthorizeHintDone": "Đã cấp quyền. NIVO tự gia hạn token, bạn không cần làm lại.",
+    "stepCheck": "Kiểm tra",
+    "stepCheckHint": "Từng phần một. Mục nào lỗi thì dòng của nó nói cách sửa.",
+    "stepAgents": "Gắn vào agent",
+    "stepAgentsHint": "Chỉ những agent làm việc được qua Zalo OA mới hiện ở đây.",
+    "stepTodo": "Cần làm",
+    "stepAppDone": "Xong · App ID {appId}",
+    "stepPasteDone": "Xong · đã lưu OA Secret Key",
+    "stepAuthorizeDone": "Xong · đã cấp quyền",
+    "stepAuthorizeExpired": "Token hết hạn · cần kết nối lại",
+    "stepCheckCount": "{ok}/{total} ổn",
+    "stepAgentsDone": "{count} agent",
+    "stepAgentsTodo": "Chưa gắn agent",
+    "openZalo": "Mở Zalo Developers",
+    "authorize": "Kết nối Zalo OA",
+    "oaSecretMissing": "Ở mục Webhook của ứng dụng trên Zalo. Thiếu khóa này thì NIVO từ chối mọi sự kiện Zalo gửi về.",
+    "oaSecretStored": "Đã lưu {mask}. Dán khóa mới để thay.",
+    "oaSecretSave": "Lưu khóa",
+    "oaSecretRequired": "Dán OA Secret Key trước khi lưu.",
+    "toastOaSecretSaved": "Đã lưu OA Secret Key.",
+    "znsOff": "Đang tắt",
+    "znsOn": "Mẫu {id}",
+    "eventsOpen": "Sự kiện",
+    "eventsClose": "Đóng",
+    "eventsFootnote": "Cập nhật mỗi 5 giây.",
+    "disconnectTitle": "Ngắt kết nối",
+    "disconnectBody": "NIVO xóa App Secret, OA Secret Key và token. Muốn dùng lại thì phải nhập lại từ bước 1. Bên Zalo không bị thay đổi gì.",
+    "disconnectEntry": "Ngắt kết nối…"
   },
   "sepayConnection": {
     "title": "Kết nối SePay",
@@ -7213,34 +7138,29 @@
     "crumbHome": "Tổng quan",
     "crumbConnections": "Kết nối",
     "status_connected": "Đã kết nối",
-    "status_pending": "Chờ kiểm tra",
+    "status_pending": "Chưa hoàn tất",
     "status_error": "Cần kiểm tra",
     "status_disconnected": "Đã ngắt",
     "envTest": "Thử nghiệm · không ghi sổ",
     "envLive": "Chính thức",
     "facts": "SePay · {bank} · {account}",
-    "switchToLive": "Chuyển sang Chính thức",
-    "switchToTest": "Chuyển sang Thử nghiệm",
     "disconnect": "Ngắt kết nối",
+    "disconnectTitle": "Ngắt kết nối SePay này?",
+    "disconnectBody": "Khóa API ngừng hoạt động ngay. SePay vẫn gửi webhook nhưng sẽ bị từ chối (401) cho tới khi bạn xóa webhook bên SePay. Agent Kế toán không nhận tiền về từ kết nối này nữa.",
+    "disconnectConfirm": "Ngắt kết nối",
+    "cancel": "Hủy",
     "toastLive": "Đã chuyển sang Chính thức. Giao dịch từ giờ được ghi sổ.",
     "toastTest": "Đã chuyển sang Thử nghiệm. Không ghi sổ khoản nào.",
     "toastAccountSaved": "Đã lưu tài khoản ngân hàng.",
+    "toastRotated": "Đã tạo khóa mới. Bấm sao chép để dán vào SePay.",
     "toastDisconnected": "Đã ngắt kết nối SePay.",
-    "tabsLabel": "Các phần của kết nối SePay",
-    "tabOverview": "Tổng quan",
-    "tabSetup": "Thiết lập",
-    "tabTest": "Kiểm tra",
-    "tabAgents": "Gắn agent",
-    "overviewTitle": "Tóm tắt",
-    "overviewAccount": "Tài khoản",
-    "overviewEnvironment": "Môi trường",
-    "overviewAgents": "Agent sử dụng",
-    "overviewAgentCount": "{count, plural, =0 {Chưa gắn agent nào} other {# agent}}",
-    "pasteTitle": "Thông tin dán vào SePay",
     "copyFailed": "Không sao chép được. Hãy thử lại.",
     "webhookLabel": "URL nhận webhook",
     "keyLabel": "API Key (kiểu xác thực)",
-    "pasteFacts": "Loại giao dịch: Tiền vào · Định dạng: JSON · Tự động gửi lại khi server trả lỗi: bật",
+    "rotateKey": "Tạo khóa mới",
+    "rotateTitle": "Tạo khóa API mới?",
+    "rotateBody": "Khóa cũ ngừng hoạt động ngay. Dán khóa mới vào webhook trên SePay, nếu không SePay sẽ bị từ chối (401) cho tới khi bạn đổi.",
+    "rotateConfirm": "Tạo khóa mới",
     "accountTitle": "Tài khoản ngân hàng",
     "bankLabel": "Ngân hàng",
     "bankPlaceholder": "Chọn ngân hàng",
@@ -7250,21 +7170,18 @@
     "holderLabel": "Chủ tài khoản",
     "saveAccount": "Lưu tài khoản",
     "checklistTitle": "Kiểm tra kết nối (chế độ thử nghiệm)",
-    "step_ping": "Trên SePay, bật công tắc Test Mode ở góc trên bên phải.",
-    "step_simulate": "Vào Giao dịch và bấm Mô phỏng giao dịch.",
-    "step_wait": "Chọn đúng tài khoản {account}, nhập 2.000đ rồi tạo giao dịch.",
+    "step_ping": "Trên SePay, bật Test Mode rồi gửi Ping thử tới webhook này.",
+    "step_simulate": "Vào Giao dịch, bấm Mô phỏng giao dịch, chọn tài khoản {account} và ghi mã đơn vào nội dung (ví dụ HD0012).",
     "waitingText": "Đang chờ webhook từ SePay… NIVO sẽ báo ngay khi nhận được.",
     "waitingLabel": "Đang chờ webhook",
     "checklistTitleLive": "Kiểm tra kết nối (chính thức)",
     "step_ping_live": "Trên SePay, tắt Test Mode để dùng dữ liệu thật.",
-    "step_simulate_live": "Chuyển một khoản nhỏ vào tài khoản {account} từ ngân hàng của bạn.",
-    "step_wait_live": "Đợi SePay báo giao dịch của {account} về NIVO.",
+    "step_simulate_live": "Chuyển một khoản nhỏ vào tài khoản {account} từ ngân hàng của bạn, nội dung có mã đơn.",
     "stepMarkerDone": "Đã xong",
-    "step_receive": "NIVO nhận giao dịch, xác thực API Key và báo agent Kế toán",
+    "step_receive": "NIVO nhận giao dịch, xác thực API Key và đối soát",
     "pingSeenAt": "Đã thấy SePay gửi ping thử lúc {time}.",
     "receiveNoteTest": "Ở môi trường thử, không ghi sổ khoản nào.",
     "receiveNoteLive": "Ở môi trường chính thức, khoản tiền thật SẼ được ghi sổ và đối soát với hoá đơn.",
-    "healthTitle": "Sức khoẻ",
     "tileLast": "Webhook gần nhất",
     "tileNever": "Chưa có",
     "tileValid": "Xác thực hợp lệ (24h)",
@@ -7282,10 +7199,45 @@
     "detailOk": "{time} · Mã sự kiện {id} · xác thực OK",
     "detailDuplicate": "{time} · cùng mã sự kiện, không xử lý lại",
     "detailRefused": "{time} · sai API Key, đã từ chối",
-    "agentsTitle": "Agent dùng kết nối này",
-    "agentsHint": "Chỉ agent Kế toán được ghi sổ các khoản tiền vào từ SePay. Bật agent để cho phép.",
     "agentsEmpty": "Chưa có agent Kế toán nào đang hoạt động.",
     "placeholderBank": "Tên ngân hàng",
-    "placeholderHolder": "CHỦ TÀI KHOẢN"
+    "placeholderHolder": "CHỦ TÀI KHOẢN",
+    "mainLabel": "Thiết lập và tình trạng",
+    "eventsOpen": "Sự kiện",
+    "eventsClose": "Đóng",
+    "eventsFootnote": "Cập nhật mỗi 5 giây.",
+    "lastErrorTitle": "Lần nhận webhook gần nhất bị lỗi",
+    "disconnectEntry": "Ngắt kết nối…",
+    "envTestShort": "Thử nghiệm",
+    "environmentTestNote": "Thử nghiệm dùng chế độ thử của SePay: tiền không thật, NIVO không ghi sổ.",
+    "environmentLiveNote": "Chính thức: mọi khoản tiền vào và tiền ra thật được ghi sổ và đối soát với hoá đơn.",
+    "stepEnvironment": "Chọn môi trường",
+    "stepEnvironmentHint": "Chỉ chủ workspace đổi được môi trường. Nên chạy thử nghiệm trước rồi mới chuyển sang chính thức.",
+    "stepAccount": "Tài khoản ngân hàng",
+    "stepAccountHint": "Tài khoản SePay báo giao dịch về. NIVO cần số đầy đủ để tạo mã VietQR trên hoá đơn.",
+    "stepPaste": "Làm theo trên SePay",
+    "stepPasteHint": "Trên SePay, thêm một webhook mới và dán đúng các giá trị dưới đây.",
+    "stepTestHint": "NIVO tự đánh dấu từng bước khi nhận được dữ liệu.",
+    "stepAgents": "Đối soát và agent",
+    "stepAgentsHint": "Chưa gắn agent Kế toán thì tiền vào vẫn được lưu nhưng chưa ai xử lý.",
+    "stepTodo": "Cần làm",
+    "stepAccountDone": "{bank} · {account}",
+    "stepAccountTodo": "Cần nhập số tài khoản đầy đủ",
+    "stepPasteDone": "Xong · SePay đã gửi về",
+    "stepTestDone": "Xong · đã nhận giao dịch",
+    "stepAgentsDone": "{count} agent",
+    "stepAgentsTodo": "Chưa gắn agent Kế toán",
+    "openSepay": "Mở SePay",
+    "keyNote": "SePay gửi về header Authorization: Apikey …. Tạo khóa mới làm khóa cũ hết hiệu lực ngay.",
+    "settingsLabel": "Các mục trên form webhook của SePay",
+    "settingName": "Tên webhook",
+    "settingNameValue": "NIVO · {name}",
+    "settingEvents": "Sự kiện",
+    "settingEventsValue": "Cả tiền vào và tiền ra",
+    "settingFormat": "Kiểu dữ liệu",
+    "settingRetry": "Tự động gửi lại khi server trả lỗi",
+    "settingRetryValue": "Bật",
+    "settingAccount": "Tài khoản",
+    "matchingRule": "Tự đối soát khi nội dung chuyển khoản chứa đúng một số hoá đơn hoặc mã đơn đã phát hành và số tiền khớp tuyệt đối. Còn lại NIVO giữ khoản tiền và gợi ý cho bạn chọn hoá đơn."
   }
 }
