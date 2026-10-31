@@ -56,7 +56,7 @@ describe("BookingResourcesReadService", () => {
         await expect(resources.namesOf("ws-1", ["r-1"])).resolves.toEqual(new Map([["r-1", "Chair"]]))
 
         expect(em.find.mock.calls).toEqual(
-            callOn({ select: { id: true, name: true }, where: { workspaceId: "ws-1", id: In(["r-1"]) }, take: 1 }),
+            callOn({ select: ["id", "name"], where: { workspaceId: "ws-1", id: In(["r-1"]) }, take: 1 }),
         )
     })
 

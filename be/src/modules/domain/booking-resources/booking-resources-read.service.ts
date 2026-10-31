@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { In, IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, namesById } from "@modules/platform/database"
 import type {
     BookingResourceRecord,
     OptionalBookingResourceCapacity,
@@ -36,16 +36,8 @@ export class BookingResourcesReadService {
     }
 
     /** The names of the given resources of a workspace, by id; a resource that is gone has no entry. */
-    async namesOf(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyMap<string, string>> {
-        const found =
-            ids.length === 0
-                ? []
-                : await this.entityManager.find(BookingResourceEntity, {
-                      select: { id: true, name: true },
-                      where: { workspaceId, id: In([...ids]) },
-                      take: ids.length,
-                  })
-        return new Map(found.map(({ id, name }) => [id, name]))
+    namesOf(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyMap<string, string>> {
+        return namesById(this.entityManager, BookingResourceEntity, { workspaceId, id: In([...ids]) }, ids)
     }
 
     /** Locks a resource inside the caller's transaction and answers its capacity, or none when it is not in the workspace. */

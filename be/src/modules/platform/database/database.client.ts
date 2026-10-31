@@ -1,4 +1,4 @@
-import type { EntityManager } from "typeorm"
+import type { EntityManager, EntityTarget, FindOptionsSelect, FindOptionsWhere } from "typeorm"
 import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 
 declare const functionPartBrand: unique symbol
@@ -112,4 +112,36 @@ export interface StatementConnection {
 /** Subscribes the connection to the channel; the name is checked like a function name and spliced as the identifier it is. */
 export const listenOn = async (connection: StatementConnection, channel: string): Promise<void> => {
     await connection.query(`LISTEN ${channelPart(channel)}`)
+}
+
+/** The columns a named row carries. */
+interface NamedRow {
+    readonly id: string
+    readonly name: string
+}
+
+/**
+ * The names of the rows `where` selects, by id; a row that is gone has no entry. `where` is the caller's own filter for `ids`, so
+ * the entity keeps its own column names and scope; no ids reads nothing.
+ */
+export const namesById = async <Row extends NamedRow>(
+    manager: EntityManager,
+    target: EntityTarget<Row>,
+    where: FindOptionsWhere<Row>,
+    ids: ReadonlyArray<string>,
+): Promise<ReadonlyMap<string, string>> => {
+    if (ids.length === 0) return new Map()
+    const rows = await manager.find(target, { select: ["id", "name"], where, take: ids.length })
+    return new Map(rows.map(({ id, name }) => [id, name]))
+}
+
+/** The rows `where` selects among the given ids, each holding only the `select`ed columns; no ids reads nothing, and the read never exceeds the ids. */
+export const findRowsOfIds = <Row extends { readonly id: string }>(
+    manager: EntityManager,
+    target: EntityTarget<Row>,
+    where: FindOptionsWhere<Row>,
+    select: FindOptionsSelect<Row>,
+    ids: ReadonlyArray<string>,
+): Promise<Array<Row>> => {
+    return ids.length === 0 ? Promise.resolve([]) : manager.find(target, { select, where, take: ids.length })
 }

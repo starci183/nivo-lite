@@ -1,21 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedIdRows } from "@modules/platform/database"
 import type { BookingServiceSaved, BookingServiceWrite } from "./booking-services.contracts"
 import { BookingServiceEntity } from "./persistence/entities"
 
-/** True when a returned row carries a text id. */
-const hasId = (row: unknown): row is BookingServiceSaved =>
-    typeof row === "object" && row !== null && "id" in row && typeof row.id === "string"
-
-/** The ids a statement with `returning id` hands back. */
-const savedOf = (raw: unknown): Array<BookingServiceSaved> =>
-    Array.isArray(raw)
-        ? raw
-              .filter(hasId)
-              .slice(0, 1)
-              .map((row) => ({ id: row.id }))
-        : []
+/** The id of the one service a statement with `returning id` hands back. */
+const savedOf = (raw: unknown): Array<BookingServiceSaved> => returnedIdRows(raw).slice(0, 1)
 
 @Injectable()
 /** Owns service catalogue persistence; the caller proves its membership and validates the supplied fields. */
