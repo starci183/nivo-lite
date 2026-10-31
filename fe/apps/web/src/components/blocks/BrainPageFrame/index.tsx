@@ -1,11 +1,8 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { useTranslations } from "next-intl"
 import type { PageHeaderContent } from "@starci/grammar/common"
-import { BRAIN_PANEL_PREFIX, useBrainStats } from "@/hooks/brain"
-import { navigation } from "@/modules/i18n"
-import { BRAIN_TABS, brainTabHref } from "@/modules/routes"
+import { useBrainPageHeader } from "@/hooks/brain"
 import type { BrainTab } from "@/modules/routes"
 import { BrainPageFrameBase } from "./component"
 
@@ -16,34 +13,8 @@ interface BrainPageFrameProps {
     readonly children: ReactNode
 }
 
-/** The Second Brain page: the selected tab lives in the address, and the tabs that hold a count carry it once it is known (a count of zero is no label). */
+/** The Second Brain page of a tab that sits in the page measure: the header with the tabs, then the body. */
 export const BrainPageFrame = (props: BrainPageFrameProps) => {
-    const t = useTranslations("secondBrain")
-    const router = navigation.useRouter()
-    const { figures, canDecide } = useBrainStats()
-    const labelOf = (tab: BrainTab): string => {
-        if (tab === "review" && figures.waiting > 0) return t("tab_review_count", { n: figures.waiting })
-        return tab === "gaps" && figures.gaps > 0 ? t("tab_gaps_count", { n: figures.gaps }) : t(`tab_${tab}`)
-    }
-    const shown = BRAIN_TABS.filter((tab) => tab !== "gaps" || canDecide || props.selected === "gaps")
-    const header: PageHeaderContent = {
-        ...props.header,
-        tabs: {
-            label: t("tabsLabel"),
-            selectedKey: props.selected,
-            labelVisibility: "always",
-            panelId: (key) => `${BRAIN_PANEL_PREFIX}${key}`,
-            items: shown.map((tab) => ({ id: tab, label: labelOf(tab) })),
-            onSelect: (id) => {
-                const next = BRAIN_TABS.find((tab) => tab === id)
-                if (next !== undefined) router.replace(brainTabHref(next))
-            },
-        },
-    }
-    return (
-        <BrainPageFrameBase
-            shape={{ body: props.children }}
-            props={{ header, isBleed: props.selected === "dossiers" }}
-        />
-    )
+    const header = useBrainPageHeader(props.selected, props.header)
+    return <BrainPageFrameBase shape={{ body: props.children }} props={{ header }} />
 }

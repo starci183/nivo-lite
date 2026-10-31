@@ -1,20 +1,22 @@
+import type { ReactNode } from "react"
 import {
     Badge,
     Button,
     EmptyNotice,
-    FillViewport,
     ListBox,
     ListRow,
     Meter,
+    Page,
     Pane,
     PaneGrid,
+    PaneSection,
     SectionHeader,
     SurfaceListCard,
 } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import type { BadgeTone, PageHeaderContent } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { CATEGORY_CLASS_NAME, COUNTS_CLASS_NAME, MAIN_PANE_CLASS_NAME, METER_CLASS_NAME } from "./classNames"
+import { CATEGORY_CLASS_NAME, COUNTS_CLASS_NAME } from "./classNames"
 
 /** One dossier of the selected category, already worded. */
 export interface DossierRowView {
@@ -57,8 +59,16 @@ interface MeterView {
 /** Copy and values the dossiers block supplies. */
 export interface BrainDossiersBaseProps {
     readonly props: {
+        /** The Second Brain header with its tabs: the grid attaches flush under the tab line. */
+        readonly header: PageHeaderContent
+        /** The id of the dossiers tab panel, which the grid is. */
+        readonly panelId: string
         readonly gridLabel: string
         readonly categoriesLabel: string
+        /** The close control of the categories drawer, below the medium breakpoint. */
+        readonly categoriesCloseLabel: string
+        /** Whether the categories drawer is open (below the medium breakpoint the categories are a drawer). */
+        readonly isCategoriesOpen: boolean
         readonly listLabel: string
         readonly title: string
         readonly addLabel: string
@@ -75,11 +85,12 @@ export interface BrainDossiersBaseProps {
     readonly on: {
         readonly select: (id: string) => void
         readonly retry: () => void
+        readonly categoriesOpenChange: (isOpen: boolean) => void
     }
 }
 
-/** What the grid draws once the slot has its content. */
-interface GridProps extends BrainDossiersBaseProps {
+/** What a band draws once the slot has its content. */
+interface ContentProps extends BrainDossiersBaseProps {
     readonly content: DossiersContent
     readonly isSkeleton: boolean
 }
@@ -91,6 +102,10 @@ interface DossiersProps {
     readonly category: CategoryRowView
     readonly isSkeleton: boolean
 }
+
+/** The category that is open: the one picked, else the first. */
+const selectedOf = (content: DossiersContent, selectedId: string | undefined): CategoryRowView | undefined =>
+    content.categories.find((category) => category.id === selectedId) ?? content.categories[0]
 
 /** The dossiers of the selected category as rows of one card. */
 const Dossiers = (props: DossiersProps) => (
@@ -117,117 +132,147 @@ const Dossiers = (props: DossiersProps) => (
     </SurfaceListCard>
 )
 
-/** What the pane of the categories draws: the grid props and the category that is open. */
-interface CategoryPaneProps extends GridProps {
-    readonly selected: CategoryRowView | undefined
+/** The categories of the documents: the rows of the list band, each opening its dossiers. */
+const Categories = (props: ContentProps) => {
+    const view = props.props
+    const selected = selectedOf(props.content, view.selectedId)
+    return (
+        <ListBox
+            label={view.categoriesLabel}
+            inset="panel"
+            selectionMode="single"
+            selectionIndicator="none"
+            selectedIds={selected === undefined ? [] : [selected.id]}
+            onSelectionChange={(ids) => {
+                const next = ids[0]
+                if (next !== undefined) props.on.select(next)
+            }}
+            isLoading={props.isSkeleton}
+            items={props.content.categories.map((category) => ({
+                id: category.id,
+                label: category.label,
+                description: category.meta,
+            }))}
+        />
+    )
 }
 
-/** What the pane of the categories holds: the allowance meter over the list (the Pane itself is the grid's direct child). */
-const CategoryList = (props: CategoryPaneProps) => {
+/** The status of every dossier and the dossiers of the open category, under the heading and its add command. */
+const Status = (props: ContentProps) => {
     const view = props.props
+    const selected = selectedOf(props.content, view.selectedId)
     return (
         <>
-            {view.usage === undefined ? null : (
-                <div className={METER_CLASS_NAME}>
-                    <Meter
-                        label={view.usage.label}
-                        value={view.usage.value}
-                        minValue={0}
-                        maxValue={view.usage.max}
-                        valueLabel={view.usage.valueLabel}
-                        tone={view.usage.tone}
+            <SectionHeader
+                level={2}
+                title={view.title}
+                isSkeleton={props.isSkeleton}
+                action={
+                    view.addHref === null || props.isSkeleton ? undefined : (
+                        <Button intent="commit" href={view.addHref}>
+                            {view.addLabel}
+                        </Button>
+                    )
+                }
+            />
+            <div className={COUNTS_CLASS_NAME}>
+                {props.content.counts.map((count) => (
+                    <Badge key={count.id} tone={count.tone} isSkeleton={props.isSkeleton}>
+                        {count.label}
+                    </Badge>
+                ))}
+            </div>
+            {selected === undefined ? (
+                <EmptyNotice message={view.emptyAll} />
+            ) : (
+                <div className={CATEGORY_CLASS_NAME}>
+                    <SectionHeader level={3} title={selected.title} isSkeleton={props.isSkeleton} />
+                    <Dossiers
+                        listLabel={view.listLabel}
+                        emptyCategory={view.emptyCategory}
+                        category={selected}
+                        isSkeleton={props.isSkeleton}
                     />
                 </div>
             )}
-            <ListBox
-                label={view.categoriesLabel}
-                inset="panel"
-                selectionMode="single"
-                selectionIndicator="none"
-                selectedIds={props.selected === undefined ? [] : [props.selected.id]}
-                onSelectionChange={(ids) => {
-                    const next = ids[0]
-                    if (next !== undefined) props.on.select(next)
-                }}
-                isLoading={props.isSkeleton}
-                items={props.content.categories.map((category) => ({
-                    id: category.id,
-                    label: category.label,
-                    description: category.meta,
-                }))}
-            />
         </>
     )
 }
 
-/** The two panes: the categories on the surface, and the status with the dossiers of the selected one. */
-const Grid = (props: GridProps) => {
-    const view = props.props
-    const categories = props.content.categories
-    const selected = categories.find((category) => category.id === view.selectedId) ?? categories[0]
-    return (
-        <PaneGrid
-            label={view.gridLabel}
-            areas={{ base: ["list", "main"], medium: ["list main"] }}
-            columns={{ base: ["fill"], medium: ["standard", "fill"] }}
-            rows={{ base: ["auto", "fill"], medium: ["fill"] }}
-        >
-            <Pane area="list" surface scroll label={view.categoriesLabel}>
-                <CategoryList {...props} selected={selected} />
-            </Pane>
-            <Pane area="main" scroll label={view.title}>
-                <div className={MAIN_PANE_CLASS_NAME}>
-                    <SectionHeader
-                        level={2}
-                        title={view.title}
-                        isSkeleton={props.isSkeleton}
-                        action={
-                            view.addHref === null || props.isSkeleton ? undefined : (
-                                <Button intent="commit" href={view.addHref}>
-                                    {view.addLabel}
-                                </Button>
-                            )
-                        }
-                    />
-                    <div className={COUNTS_CLASS_NAME}>
-                        {props.content.counts.map((count) => (
-                            <Badge key={count.id} tone={count.tone} isSkeleton={props.isSkeleton}>
-                                {count.label}
-                            </Badge>
-                        ))}
-                    </div>
-                    {selected === undefined ? (
-                        <EmptyNotice message={view.emptyAll} />
-                    ) : (
-                        <div className={CATEGORY_CLASS_NAME}>
-                            <SectionHeader level={3} title={selected.title} isSkeleton={props.isSkeleton} />
-                            <Dossiers
-                                listLabel={view.listLabel}
-                                emptyCategory={view.emptyCategory}
-                                category={selected}
-                                isSkeleton={props.isSkeleton}
-                            />
-                        </div>
-                    )}
-                </div>
-            </Pane>
-        </PaneGrid>
-    )
+/** What one band draws through the slot: its content once ready, and whether its status offers the retry. */
+interface InSlotProps extends BrainDossiersBaseProps {
+    readonly children: (content: DossiersContent, isSkeleton: boolean) => ReactNode
+    readonly withRetry: boolean
 }
 
-/**
- * Draws the dossiers of the Second Brain on a PaneGrid filling the page: the categories of the documents on the surface, with the
- * allowance meter over them, and beside them the status of all dossiers and the dossiers of the selected category.
- */
-export const BrainDossiersBase = (props: BrainDossiersBaseProps) => (
-    <FillViewport minHeight="md" bottomInset="none">
-        <SlotView
-            slot={props.props.slot}
-            placeholder={props.props.placeholder}
-            labels={props.props.slotLabels}
-            onRetry={props.on.retry}
-        >
-            {(content, isSkeleton) => <Grid {...props} content={content} isSkeleton={isSkeleton} />}
-        </SlotView>
-    </FillViewport>
+/** The slot of the block drawn in one band: its content, or its status in place. */
+const InSlot = (props: InSlotProps) => (
+    <SlotView
+        slot={props.props.slot}
+        placeholder={props.props.placeholder}
+        labels={props.props.slotLabels}
+        {...(props.withRetry ? { onRetry: props.on.retry } : {})}
+    >
+        {props.children}
+    </SlotView>
 )
+
+/**
+ * Draws the dossiers tab of the Second Brain as a panes page: the header with its tabs, then a PaneGrid attached flush
+ * under the tab line and reaching the viewport bottom. The categories pane, on the surface, holds the allowance meter over
+ * the categories and becomes a drawer below the medium breakpoint; the main pane holds the status of all dossiers and the
+ * dossiers of the open category. Each pane draws the slot's status in its own band.
+ */
+export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
+    const view = props.props
+    return (
+        <Page chrome="panes" header={view.header} measure="product">
+            <PaneGrid
+                label={view.gridLabel}
+                role="tabpanel"
+                id={view.panelId}
+                areas={{ base: ["main"], medium: ["list main"] }}
+                columns={{ base: ["fill"], medium: ["standard", "fill"] }}
+                rows={{ base: ["fill"], medium: ["fill"] }}
+            >
+                <Pane
+                    area="list"
+                    surface
+                    collapse="drawer"
+                    collapseLabel={view.categoriesLabel}
+                    openLabel={view.categoriesLabel}
+                    closeLabel={view.categoriesCloseLabel}
+                    isOpen={view.isCategoriesOpen}
+                    onOpenChange={props.on.categoriesOpenChange}
+                >
+                    {view.usage === undefined ? null : (
+                        <PaneSection>
+                            <Meter
+                                label={view.usage.label}
+                                value={view.usage.value}
+                                minValue={0}
+                                maxValue={view.usage.max}
+                                valueLabel={view.usage.valueLabel}
+                                tone={view.usage.tone}
+                            />
+                        </PaneSection>
+                    )}
+                    <PaneSection scroll={{ label: view.categoriesLabel }}>
+                        <InSlot {...props} withRetry={false}>
+                            {(content, isSkeleton) => (
+                                <Categories {...props} content={content} isSkeleton={isSkeleton} />
+                            )}
+                        </InSlot>
+                    </PaneSection>
+                </Pane>
+                <Pane area="main" scroll label={view.title}>
+                    <PaneSection gap="section">
+                        <InSlot {...props} withRetry>
+                            {(content, isSkeleton) => <Status {...props} content={content} isSkeleton={isSkeleton} />}
+                        </InSlot>
+                    </PaneSection>
+                </Pane>
+            </PaneGrid>
+        </Page>
+    )
+}

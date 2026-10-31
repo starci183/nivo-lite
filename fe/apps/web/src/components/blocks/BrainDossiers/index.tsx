@@ -2,8 +2,15 @@
 
 import { useState } from "react"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import type { BadgeTone } from "@starci/grammar/common"
-import { DOSSIER_STATUS_TONE, sizeLabelOf, statusCountsOf, useBrainDossiers } from "@/hooks/brain"
+import type { BadgeTone, PageHeaderContent } from "@starci/grammar/common"
+import {
+    BRAIN_PANEL_PREFIX,
+    DOSSIER_STATUS_TONE,
+    sizeLabelOf,
+    statusCountsOf,
+    useBrainDossiers,
+    useBrainPageHeader,
+} from "@/hooks/brain"
 import type { CategoryView, DossierView, NumberFormatter } from "@/hooks/brain"
 import { useWorkspaceMember, usageViewOf } from "@/hooks/knowledge"
 import { loadingSlot, mapSlot, useSlotLabels } from "@/hooks/slot"
@@ -61,8 +68,16 @@ const categoryRowOf = (t: Translate, format: NumberFormatter, category: Category
     dossiers: category.dossiers.map((dossier) => dossierRowOf(t, dossier)),
 })
 
-/** The connected dossiers of the Second Brain: the categories of the documents with the allowance meter, and the dossiers of the selected one. */
-export const BrainDossiers = () => {
+/** What the page hands the dossiers tab: the header without its tabs. */
+interface BrainDossiersProps {
+    readonly header: PageHeaderContent
+}
+
+/**
+ * The dossiers tab of the Second Brain, a panes page of its own: the header with the tabs, the categories of the documents
+ * with the allowance meter (a drawer on a phone), and the dossiers of the selected one.
+ */
+export const BrainDossiers = (props: BrainDossiersProps) => {
     const t = useTranslations("secondBrain")
     const knowledge = useTranslations("knowledge")
     const locale = useLocale()
@@ -71,14 +86,20 @@ export const BrainDossiers = () => {
     const member = useWorkspaceMember()
     const slotLabels = useSlotLabels()
     const { categories, slot, reload, usage } = useBrainDossiers()
+    const header = useBrainPageHeader("dossiers", props.header)
     const [picked, setPicked] = useState<string | undefined>(undefined)
+    const [isCategoriesOpen, setCategoriesOpen] = useState(false)
     const counts = statusCountsOf(categories ?? [])
     const total = counts.reduce((sum, one) => sum + one.count, 0)
     return (
         <BrainDossiersBase
             props={{
+                header,
+                panelId: `${BRAIN_PANEL_PREFIX}dossiers`,
                 gridLabel: t("dossiersGridLabel"),
                 categoriesLabel: t("dossiersCategories"),
+                categoriesCloseLabel: t("dossiersCategoriesClose"),
+                isCategoriesOpen,
                 listLabel: t("dossiersList"),
                 title: t("dossiersTitle", { count: total }),
                 addLabel: t("dossiersAdd"),
@@ -100,7 +121,14 @@ export const BrainDossiers = () => {
                 placeholder: PLACEHOLDER,
                 slotLabels: slotLabels(t("dossiersEmpty")),
             }}
-            on={{ select: setPicked, retry: reload }}
+            on={{
+                select: (id) => {
+                    setPicked(id)
+                    setCategoriesOpen(false)
+                },
+                retry: reload,
+                categoriesOpenChange: setCategoriesOpen,
+            }}
         />
     )
 }

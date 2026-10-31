@@ -3,9 +3,6 @@ import { cn } from "@heroui/react"
 /** Vertical rhythm between the heading, the pipeline, the tabs and the open tab (GAP-5: page regions). */
 export const PAGE_CLASS_NAME = cn("flex", "flex-col", "gap-6")
 
-/** The dossiers tab fills the region edge to edge; its panes own their insets. */
-export const BLEED_PANEL_CLASS_NAME = cn("flex", "min-w-0", "flex-col")
-
 /** The open tab; its regions keep the page rhythm (GAP-5). */
 export const PANEL_CLASS_NAME = cn("flex", "flex-col", "gap-6")
 
