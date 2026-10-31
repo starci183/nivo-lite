@@ -297,6 +297,15 @@ BEGIN
   IF public.agent_work_is_off(p_agent, v_workspace) THEN
     UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
      WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending';
+    -- A turn whose worker crashed before the switch is taken over here too, or its lease would lapse for the sweep to drain again every minute.
+    SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+    IF FOUND AND v_lease.running_turn_id IS NOT NULL AND v_lease.lease_until <= now() THEN
+      UPDATE public.agent_turns t SET status = 'abandoned' WHERE t.id = v_lease.running_turn_id AND t.status IN ('running', 'proposed');
+      UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
+       WHERE w.status = 'running' AND w.id = (SELECT t.wake_id FROM public.agent_turns t WHERE t.id = v_lease.running_turn_id);
+      UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
+       WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+    END IF;
     RETURN jsonb_build_object('result', 'killed');
   END IF;
   INSERT INTO public.agent_work_leases (agent_id, scope_key, workspace_id) VALUES (p_agent, p_scope, v_workspace)
@@ -391,7 +400,7 @@ $$;
 
 -- Ends the turn under the fence. p_status is the end of the wake: 'done', 'skipped', 'held' or 'failed' (retried after p_retry_wait_s
 -- until its budget is spent, then dead). A failure counts toward the breaker: p_breaker_after failures in a row hold the agent's
--- background work for p_breaker_s. A done background turn counts toward the day's cap. Releases the lease and answers {fenced, more}:
+-- background work for p_breaker_s; a done turn closes the breaker only when the model answered. A done or failed background turn counts toward the day's cap. Releases the lease and answers {fenced, more}:
 -- more says a wake of the same scope is due now, so the caller enqueues the next drain.
 CREATE FUNCTION public.agent_turn_finish(
     p_agent uuid, p_scope text, p_fence bigint, p_turn uuid, p_status text, p_reason text, p_outcome jsonb, p_error_code text,
@@ -408,6 +417,9 @@ DECLARE
   v_turn_status text;
   v_today date := (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
   v_more boolean;
+  v_failed boolean;
+  v_answered boolean;
+  v_spends boolean;
 BEGIN
   SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
   IF NOT FOUND OR v_lease.fence <> p_fence OR v_lease.running_turn_id IS DISTINCT FROM p_turn THEN
@@ -441,25 +453,29 @@ BEGIN
       not_before = CASE WHEN v_wake_status = 'pending' THEN now() + make_interval(secs => p_retry_wait_s) ELSE w.not_before END,
       finished_at = CASE WHEN v_wake_status = 'pending' THEN NULL ELSE now() END
    WHERE w.id = v_wake.id;
-  IF p_status = 'failed' THEN
-    UPDATE public.agent_work_state s SET
-        failures = s.failures + 1,
-        breaker_until = CASE WHEN s.failures + 1 >= p_breaker_after THEN now() + make_interval(secs => p_breaker_s) ELSE s.breaker_until END,
-        last_turn_at = now()
-     WHERE s.agent_id = p_agent;
-  ELSIF p_status = 'done' THEN
-    UPDATE public.agent_work_state s SET
-        failures = 0,
-        breaker_until = NULL,
-        last_turn_at = now(),
-        background_turns = CASE
-          WHEN v_wake.source NOT IN ('internal', 'schedule') THEN s.background_turns
-          WHEN s.background_day = v_today THEN s.background_turns + 1
-          ELSE 1 END,
-        background_day = CASE WHEN v_wake.source IN ('internal', 'schedule') THEN v_today ELSE s.background_day END
-     WHERE s.agent_id = p_agent;
-  ELSE
-    UPDATE public.agent_work_state s SET last_turn_at = now() WHERE s.agent_id = p_agent;
+  -- A failure is a failed turn, or a customer's wake ended by the holding line after an error (p_error_code set). The breaker closes only on a
+  -- turn the model really answered (a stored proposal): a hold-over, a skip or a turn with no model run says nothing about the runtime. A
+  -- background turn spends the day's cap whether it was done or failed, since the model may have run either way.
+  v_failed := p_status = 'failed' OR p_error_code IS NOT NULL;
+  v_answered := p_status = 'done' AND p_error_code IS NULL AND v_turn.proposal IS NOT NULL;
+  v_spends := v_wake.source IN ('internal', 'schedule') AND (v_failed OR p_status = 'done');
+  UPDATE public.agent_work_state s SET
+      failures = CASE WHEN v_failed THEN s.failures + 1 WHEN v_answered THEN 0 ELSE s.failures END,
+      breaker_until = CASE
+        WHEN v_failed AND s.failures + 1 >= p_breaker_after THEN now() + make_interval(secs => p_breaker_s)
+        WHEN v_answered THEN NULL
+        ELSE s.breaker_until END,
+      last_turn_at = now(),
+      background_turns = CASE
+        WHEN NOT v_spends THEN s.background_turns
+        WHEN s.background_day = v_today THEN s.background_turns + 1
+        ELSE 1 END,
+      background_day = CASE WHEN v_spends THEN v_today ELSE s.background_day END
+   WHERE s.agent_id = p_agent;
+  -- A task wake that was skipped (quota, cap) must not end the task: the wake cleared the task's time, so it is armed again for an hour on.
+  IF p_status = 'skipped' AND v_wake.context ->> 'taskId' IS NOT NULL THEN
+    UPDATE public.agent_tasks t SET next_action_at = now() + interval '1 hour'
+     WHERE t.id = (v_wake.context ->> 'taskId')::uuid AND t.status = 'open' AND t.next_action_at IS NULL;
   END IF;
   UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
    WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
