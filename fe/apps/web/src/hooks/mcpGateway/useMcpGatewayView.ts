@@ -1,12 +1,25 @@
 "use client"
 
-import { useQueryMcpCallLogSwr, useQueryMcpConnectorsSwr, useQueryMcpToolGrantsSwr } from "@/hooks/swr"
+import {
+    useQueryConnectionAgentsSwr,
+    useQueryMcpCallLogSwr,
+    useQueryMcpConnectorsSwr,
+    useQueryMcpToolGrantsSwr,
+} from "@/hooks/swr"
 import { useFormatter, useTranslations } from "next-intl"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { connectorRowsOf } from "./mcpGateway.shared"
-import type { McpBadgeView, McpFormatter, McpTone, McpToolRowView, McpTranslator } from "./mcpGateway.shared"
+import type {
+    McpBadgeView,
+    McpFormatter,
+    McpTone,
+    McpToolRowView,
+    McpTranslator,
+} from "./mcpGateway.shared"
 import { useMcpConnectorCommands } from "./useMcpConnectorCommands"
 import { useMcpConnectorForms } from "./useMcpConnectorForms"
+import { grantKeyOf, useMcpGrantCommands } from "@/hooks/mcpGrants"
+import type { McpToolAgentsOf } from "@/hooks/mcpGrants"
 
 /** How many audit lines the Connections page shows. */
 const LOG_LIMIT = 20
@@ -86,16 +99,33 @@ export const useMcpGatewayView = (enabled: boolean) => {
     const connectors = useQueryMcpConnectorsSwr(enabled)
     const grants = useQueryMcpToolGrantsSwr(enabled)
     const log = useQueryMcpCallLogSwr(LOG_LIMIT, enabled)
+    const agents = useQueryConnectionAgentsSwr()
     const reload = () => connectors.mutate()
     const commands = useMcpConnectorCommands(reload)
+    const grantCommands = useMcpGrantCommands(grants.data ?? [], () => grants.mutate())
     const forms = useMcpConnectorForms(reload, connectors.data ?? [])
+    const held = new Map((grants.data ?? []).map((grant) => [grantKeyOf(grant.agentId, grant.tool), grant.mode]))
+    /** Every active agent gets a switch on every tool; on means a grant exists that is not `never`. */
+    const agentsOf: McpToolAgentsOf = (tool) => ({
+        label: t("toolAgents", { tool }),
+        switchLabel: t("grantSwitch"),
+        rows: (agents.data ?? [])
+            .filter((agent) => agent.status === "active")
+            .map((agent) => ({
+                id: `${agent.id}:${tool}`,
+                name: agent.name,
+                isOn: held.has(grantKeyOf(agent.id, tool)) && held.get(grantKeyOf(agent.id, tool)) !== "never",
+                isDisabled: grantCommands.busyKey !== null,
+                onToggle: (isOn: boolean) => void grantCommands.toggle(agent.id, tool, isOn),
+            })),
+    })
     const cards = {
         cards: [
             {
                 label: t("connectors"),
                 emptyMessage: t("connectorsEmpty"),
                 emptyDescription: t("connectorsEmptyHint"),
-                rows: connectorRowsOf(t, format, connectors.data ?? [], commands, forms.openCredential),
+                rows: connectorRowsOf(t, format, connectors.data ?? [], commands, forms.openCredential, agentsOf),
             },
             {
                 label: t("grants"),

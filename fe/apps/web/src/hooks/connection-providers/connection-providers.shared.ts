@@ -125,6 +125,17 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         dashboard: { live: "https://sheets.google.com" },
         credentials: [],
     },
+    google_drive: {
+        id: "google_drive",
+        kind: "drive",
+        brand: "Drive",
+        module: null,
+        earlyAccess: true,
+        environments: ["live"],
+        needsBank: false,
+        dashboard: { live: "https://drive.google.com" },
+        credentials: [],
+    },
     smtp: {
         id: "smtp",
         kind: "email",
@@ -142,7 +153,7 @@ export const PROVIDER_GROUPS: ReadonlyArray<ProviderGroup> = [
     { id: "money", providers: ["sepay", "payos", "casso"] },
     { id: "chat", providers: ["telegram", "zalo_oa", "meta"] },
     { id: "data", providers: ["database", "openapi", "csv_import", "imap", "telegram_user"] },
-    { id: "tools", providers: ["google", "smtp"] },
+    { id: "tools", providers: ["google", "google_drive", "smtp"] },
 ]
 
 /** The provider's own mark (public/logos/providers). Outgoing email has none: it is the shop's own mailbox. */
@@ -154,6 +165,7 @@ export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {
     zalo_oa: "/logos/providers/zalo.svg",
     meta: "/logos/providers/meta.svg",
     google: "/logos/providers/googlesheets.svg",
+    google_drive: "/logos/connectors/google_drive_generic.svg",
     webhook: "/logos/providers/n8n.svg",
     // The app's own connector artwork (public/logos/connectors): the data sources have no brand of their own.
     database: "/logos/connectors/database.svg",

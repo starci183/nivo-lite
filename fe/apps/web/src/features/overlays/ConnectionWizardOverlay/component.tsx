@@ -4,6 +4,7 @@ import { SlotView } from "@/components/composites/SlotView"
 import { WizardFrame } from "@/components/composites/WizardFrame"
 import { CsvImportWizard } from "@/components/blocks/CsvImportWizard"
 import { DatabaseWizard } from "@/components/blocks/DatabaseWizard"
+import { DriveWizard } from "@/components/blocks/DriveWizard"
 import { GoogleWizard } from "@/components/blocks/GoogleWizard"
 import { ImapWizard } from "@/components/blocks/ImapWizard"
 import { MetaWizard } from "@/components/blocks/MetaWizard"
@@ -143,6 +144,7 @@ const KIND_WIZARDS: Readonly<Record<ProviderKind, (props: KindWizardProps) => Re
     ),
     webhook: ({ onClose }) => <WebhookWizard onClose={onClose} />,
     google: ({ onClose }) => <GoogleWizard onClose={onClose} />,
+    drive: ({ onClose }) => <DriveWizard onClose={onClose} />,
     email: ({ board, ownerEmail, onClose }) => (
         <SmtpWizard ownerEmail={ownerEmail} hasDefault={board.hasDefaultSender} onClose={onClose} />
     ),

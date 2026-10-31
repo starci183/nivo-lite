@@ -1,6 +1,6 @@
-import { Alert, Button, Text } from "@starci/grammar/common"
+import { Alert, Button } from "@starci/grammar/common"
+import { WizardConsentCopy } from "@/components/composites/WizardConsentCopy"
 import { WizardFrame } from "@/components/composites/WizardFrame"
-import { googleWizardClassNames as classNames } from "./classNames"
 
 /** Copy, state and commands of the Google wizard. */
 export interface GoogleWizardBaseProps {
@@ -64,19 +64,12 @@ export const GoogleWizardBase = (props: GoogleWizardBaseProps) => {
             footer={footer}
         >
             {view.index === 0 ? (
-                <div className={classNames.copy}>
-                    <Text weight="semibold">{text.allowTitle}</Text>
-                    <Text size="sm">{text.allowOnlyFiles}</Text>
-                    <Text size="sm" tone="muted">
-                        {text.allowNoOthers}
-                    </Text>
-                    <Text size="sm" tone="muted">
-                        {text.allowRevoke}
-                    </Text>
-                    {view.refusal === null ? null : (
-                        <Alert tone="negative" title={`${text.failTitle}. ${view.refusal}`} />
-                    )}
-                </div>
+                <WizardConsentCopy
+                    title={text.allowTitle}
+                    lines={[text.allowOnlyFiles, text.allowNoOthers, text.allowRevoke]}
+                    refusal={view.refusal}
+                    failTitle={text.failTitle}
+                />
             ) : (
                 <Alert tone="affirmative" title={`${text.doneTitle}. ${text.doneBody}`} />
             )}

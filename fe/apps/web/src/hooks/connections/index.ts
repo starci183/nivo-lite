@@ -13,7 +13,9 @@ export {
     wizardQuery,
     wizardTargetOf,
 } from "./connections.shared"
+export { useConnectionAgentRows } from "./useConnectionAgentRows"
 export { useConnectionOverlays } from "./useConnectionOverlays"
+export { useDisconnectConnection } from "./useDisconnectConnection"
 export { useConnectionRowView } from "./useConnectionRowView"
 export { useConnectionsRefresh } from "./useConnectionsRefresh"
 export { useSetConnectionAgents } from "./useSetConnectionAgents"

@@ -61,6 +61,8 @@ export { useMutateChangeSmtpPasswordSwr, useMutateLogoutOtherSessionsSwr } from 
 export { useMutateChatbotDismissKnowledgeGapSwr, useMutateCheckConnectionSwr } from "./api"
 export { useMutateCheckInBookingSwr, useMutateCheckInShiftsSwr, useMutateCheckMcpConnectorSwr } from "./api"
 export { useMutateRegisterMcpConnectorSwr, useMutateSetMcpConnectorCredentialSwr } from "./api"
+export { useMutateSetMcpToolGrantSwr } from "./api"
+export { useMutateCheckTelegramConnectionSwr, useMutateDriveLinkedFolderSwr, useMutateDrivePickedFolderSwr } from "./api"
 export { useMutateSyncMcpConnectorSwr } from "./api"
 export { useMutateCheckMetaSwr } from "./api"
 export { useMutateChooseMetaPageSwr, useMutateCompleteBookingSwr, useMutateConfirmBookingSwr } from "./api"
@@ -373,3 +375,4 @@ export { useMutateRecheckZaloConnectionSwr, useMutateSaveZnsRenewalSwr, useMutat
 export { useQuerySepayConnectionEventsSwr, useQuerySepayConnectionSwr } from "./api"
 export { useMutateSetSepayEnvironmentSwr } from "./api"
 export { QUERY_SEPAY_CONNECTION_SWR_KEY } from "./api"
+export { useQueryTelegramConnectionEventsSwr, useQueryTelegramConnectionPageSwr } from "./api"

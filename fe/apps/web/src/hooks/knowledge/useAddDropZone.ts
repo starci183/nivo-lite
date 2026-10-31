@@ -8,10 +8,14 @@ import { useDriveGrant } from "./useDriveGrant"
 type Translate = ReturnType<typeof useTranslations<"knowledge">>
 
 /** The reasons the Google callback puts in `?drive=error&reason=`, with the sentence of each. */
-const DRIVE_FAILURE_KEYS: Readonly<Record<string, "driveErrDenied" | "driveErrScope" | "driveErrUnavailable">> = {
+const DRIVE_FAILURE_KEYS: Readonly<
+    Record<string, "driveErrDenied" | "driveErrScope" | "driveErrUnavailable" | "driveErrNoRefresh" | "driveErrState">
+> = {
     denied: "driveErrDenied",
     scope: "driveErrScope",
     unavailable: "driveErrUnavailable",
+    no_refresh: "driveErrNoRefresh",
+    state: "driveErrState",
 }
 
 /** What the drop zone is built from. */

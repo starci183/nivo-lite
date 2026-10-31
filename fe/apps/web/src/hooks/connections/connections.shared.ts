@@ -46,16 +46,22 @@ export const CONNECTION_ROUTES = {
 } as const
 
 /** The URL segment of the providers that have a page of their own: `/connections/<segment>/<connection id>`. */
-const PAGE_SEGMENT: Readonly<Partial<Record<Provider, string>>> = { sepay: "sepay", zalo_oa: "zalo" }
+const PAGE_SEGMENT: Readonly<Partial<Record<Provider, string>>> = { sepay: "sepay", zalo_oa: "zalo", telegram: "telegram" }
+
+/** The providers whose page is the only one of the workspace (a single grant), so its address carries no connection id. */
+const SINGLE_PAGE: Readonly<Partial<Record<Provider, string>>> = { google_drive: "drive" }
 
 /**
- * The page of one connection when its provider has one (SePay, Zalo OA) and the page has something to show, else null. A connection
- * that is still pending is finished in its wizard and a disconnected one has no page, so only a connected or failing one links.
+ * The page of one connection when its provider has one (SePay, Zalo OA, Telegram, Google Drive) and the page has something to show,
+ * else null. A connection that is still pending is finished in its wizard and a disconnected one has no page, so only a connected or
+ * failing one links. Google Drive has one grant per workspace, so its page has no id in the address.
  */
 export const connectionPageHref = (connection: Pick<Connection, "id" | "provider" | "status">): string | null => {
+    if (connection.status !== "connected" && connection.status !== "error") return null
+    const single = SINGLE_PAGE[connection.provider]
+    if (single !== undefined) return `${CONNECTION_ROUTES.connections}/${single}`
     const segment = PAGE_SEGMENT[connection.provider]
-    if (segment === undefined || (connection.status !== "connected" && connection.status !== "error")) return null
-    return `${CONNECTION_ROUTES.connections}/${segment}/${connection.id}`
+    return segment === undefined ? null : `${CONNECTION_ROUTES.connections}/${segment}/${connection.id}`
 }
 
 /** The search params the console uses to remember which overlay is open. */
@@ -107,6 +113,7 @@ export const wizardTargetOf = (
     const meta = ownedBy(items, id, "meta")
     if (meta !== undefined) return { provider: "meta", resumeId: meta, ...returnedOf(read, "meta") }
     if ((read("google") ?? "") !== "") return { provider: "google" }
+    if ((read("drive") ?? "") !== "") return { provider: "google_drive", ...returnedOf(read, "drive") }
     const connect = read(URL_PARAMS.connect)
     if (connect === null || !isProvider(connect)) return null
     const resume = ownedBy(items, read(URL_PARAMS.connection), connect)

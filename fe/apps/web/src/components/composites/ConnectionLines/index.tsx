@@ -1,4 +1,4 @@
-import { Badge, List, ListRow } from "@starci/grammar/common"
+import { Badge, Button, List, ListRow } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 
 /** One line of a connection list: what it is, the line under it and the verdict badge. */
@@ -7,7 +7,16 @@ interface ConnectionLine {
     readonly title: string
     readonly description: string
     readonly badge: { readonly label: string; readonly tone: BadgeTone; readonly isDot?: boolean }
+    /** A command on the line (retry a failed file). */
+    readonly action?: { readonly label: string; readonly run: () => void }
 }
+
+/** Fake rows of the same shape: a block's skeleton reuses the ready tree. */
+export const CONNECTION_LINES_PLACEHOLDER: ReadonlyArray<ConnectionLine> = [
+    { id: "one", title: "-", description: "-", badge: { label: "-", tone: "neutral" } },
+    { id: "two", title: "-", description: "-", badge: { label: "-", tone: "neutral" } },
+    { id: "three", title: "-", description: "-", badge: { label: "-", tone: "neutral" } },
+]
 
 /** Props for {@link ConnectionLines}. */
 type ConnectionLinesProps = {
@@ -25,6 +34,13 @@ export const ConnectionLines = (props: ConnectionLinesProps) => (
                 title={line.title}
                 description={line.description}
                 isSkeleton={props.isSkeleton}
+                actions={
+                    line.action === undefined ? undefined : (
+                        <Button intent="neutral" size="sm" onPress={line.action.run}>
+                            {line.action.label}
+                        </Button>
+                    )
+                }
                 badges={
                     <Badge
                         tone={line.badge.tone}

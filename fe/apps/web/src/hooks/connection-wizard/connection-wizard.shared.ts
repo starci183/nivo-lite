@@ -159,3 +159,26 @@ export const resumeSlotOf = (resumeId: string | undefined, read: ResumeRead): Da
     if (resumeId === undefined) return { items: { isResumed: false } }
     return mapSlot(slotOfSwr(read), () => ({ isResumed: true }))
 }
+
+/**
+ * What a stored `last_error` says to the reader. The database keeps the code, so the words follow the reader's language: a code NIVO
+ * knows reads as its sentence, anything else (a message Telegram sent) reads as it was stored.
+ */
+export const connectionErrorOf = (lastError: string, t: CatalogReader): string => {
+    switch (lastError) {
+        case "CHANNEL_CONNECTIONS_WEBHOOK_REFUSED":
+            return t("errWebhookRefused")
+        case "CHANNEL_CONNECTIONS_ZALO_TOKEN_REFUSED":
+            return t("errZaloTokenRefused")
+        case "CHANNEL_CONNECTIONS_TOKEN_REJECTED":
+            return t("errTokenRejected")
+        case "CHANNEL_CONNECTIONS_TOKEN_FORMAT":
+            return t("errTokenFormat")
+        case "CHANNEL_CONNECTIONS_BOT_IN_USE":
+            return t("errBotInUse")
+        case "CHANNEL_CONNECTIONS_NETWORK":
+            return t("errNetwork")
+        default:
+            return lastError
+    }
+}

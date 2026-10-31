@@ -12,8 +12,10 @@ export interface QueueItem {
     readonly file?: File
     /** Topic used when the topic field is empty (the top-level folder of a ZIP entry). */
     readonly topic?: string
-    /** The ZIP and folders it came from. */
+    /** The ZIP and folders it came from, or the service it was chosen in (`google_drive`). */
     readonly origin?: string
+    /** The name the document is stored under when the address says less than the person who chose it knew (a Drive file). */
+    readonly title?: string
     readonly status: ItemStatus
     /** The catalog key of why it failed. */
     readonly error?: string | undefined

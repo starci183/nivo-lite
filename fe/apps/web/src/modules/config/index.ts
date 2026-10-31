@@ -42,4 +42,13 @@ export const landingUrl = (): string => {
 /** The public origin of the site (providers call back to it); `undefined` when it is not set. */
 export const webSiteOrigin = (): string | undefined => process.env.NEXT_PUBLIC_SITE_URL
 
+/** The public settings of Google Picker: a browser API key and the OAuth client id of the console; `null` when either is unset, which hides the Picker. */
+export const googlePickerSettings = (): { readonly apiKey: string; readonly clientId: string } | null => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PICKER_API_KEY
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    return apiKey === undefined || apiKey === "" || clientId === undefined || clientId === ""
+        ? null
+        : { apiKey, clientId }
+}
+
 export { creditsContactHref } from "./credits"

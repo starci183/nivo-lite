@@ -1,5 +1,7 @@
 import type { useQueryMcpConnectorsSwr } from "@/hooks/swr"
 import type { useFormatter, useTranslations } from "next-intl"
+import { agentsRowOf } from "@/hooks/mcpGrants"
+import type { McpToolAgentsOf, McpToolAgentsView } from "@/hooks/mcpGrants"
 import type { McpConnectorCommands } from "./useMcpConnectorCommands"
 
 /** One gateway connector as the `mcpConnectors` read answers it. */
@@ -23,12 +25,13 @@ interface McpActionView {
     readonly onPress: () => void
 }
 
-/** One pinned tool of a connector: its name, scope, description and whether it is approved. */
+/** One pinned tool of a connector: its name, scope, description, whether it is approved and, for a tool with agents to switch, the switches. */
 export interface McpToolRowView {
     readonly id: string
     readonly title: string
     readonly description: string
     readonly badges: ReadonlyArray<McpBadgeView>
+    readonly agents?: McpToolAgentsView
 }
 
 /** One connector row: its state, its pinned tools and, for a remote connector, its credential, Test, Approve and Check. */
@@ -77,9 +80,14 @@ const stampOf = (format: McpFormatter, iso: string): string =>
 /** The scope words of a tool: the catalog word for read or write, else the scope as the connector named it. */
 const scopeOf = (t: McpTranslator, scope: string): string => (SCOPES.has(scope) ? t(`scope_${scope}`) : scope)
 
-/** The pinned tools of a connector, each with an approved or not-approved badge. */
-const toolRowsOf = (t: McpTranslator, connector: McpConnectorType): ReadonlyArray<McpToolRowView> =>
+/** The pinned tools of a connector, each with an approved or not-approved badge and the agents it can be switched on for. */
+const toolRowsOf = (
+    t: McpTranslator,
+    connector: McpConnectorType,
+    agentsOf: McpToolAgentsOf,
+): ReadonlyArray<McpToolRowView> =>
     connector.tools.map((tool) => ({
+        ...agentsRowOf(agentsOf(tool.name)),
         id: tool.name,
         title: tool.name,
         description: [scopeOf(t, tool.scope), toolDescriptionOf(t, tool.name, tool.description)]
@@ -167,6 +175,7 @@ export const connectorRowsOf = (
     connectors: ReadonlyArray<McpConnectorType>,
     commands: McpConnectorCommands,
     openCredential: (key: string) => void,
+    agentsOf: McpToolAgentsOf,
 ): ReadonlyArray<McpConnectorRowView> =>
     connectors.map((connector) => ({
         id: connector.key,
@@ -184,6 +193,6 @@ export const connectorRowsOf = (
         actions: actionsOf(t, connector, commands, openCredential),
         tools: {
             label: t("toolsOf", { name: connectorTitleOf(t, connector.key, connector.name) }),
-            rows: toolRowsOf(t, connector),
+            rows: toolRowsOf(t, connector, agentsOf),
         },
     }))

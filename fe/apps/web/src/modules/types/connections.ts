@@ -1,3 +1,5 @@
+import type { DataSlot } from "./slot"
+
 /** Every provider a workspace can connect. */
 export type Provider =
     | "telegram"
@@ -14,12 +16,13 @@ export type Provider =
     | "imap"
     | "telegram_user"
     | "meta"
+    | "google_drive"
 
 /** The provider's mode: test money is not real and NIVO books none of it, live is real. */
 export type Environment = "test" | "live"
 
 /** What the console does with a provider: which wizard sets it up. */
-export type ProviderKind = "money" | "telegram" | "zalo" | "meta" | "webhook" | "google" | "email" | "data"
+export type ProviderKind = "money" | "telegram" | "zalo" | "meta" | "webhook" | "google" | "drive" | "email" | "data"
 
 /** `pending`: created by the wizard but no first event yet (or the wizard was abandoned). */
 export type ConnectionStatus = "pending" | "connected" | "error" | "disconnected"
@@ -133,4 +136,118 @@ export interface SepayKeys {
 /** The Google consent page the owner is sent to. */
 export interface GoogleConsent {
     readonly url: string
+}
+
+/** The tone of a status mark on a provider page. */
+export type ConnectionTone = "success" | "danger" | "warning" | "neutral" | "accent"
+
+/** The header of a provider page: the connection, its status chip and the facts line. */
+export interface ConnectionHeadView {
+    readonly name: string
+    readonly chipLabel: string
+    readonly chipTone: ConnectionTone
+    readonly facts: string
+}
+
+/** One labelled fact: a health tile of a provider page, with the line under its figure. */
+export interface ConnectionFactView {
+    readonly id: string
+    readonly label: string
+    readonly value: string
+    readonly meta?: string
+}
+
+/** One line of a provider page list (a check, an event, a file being read): a title, the line under it and a verdict badge. */
+export interface ConnectionLineView {
+    readonly id: string
+    readonly title: string
+    readonly description: string
+    readonly badge: { readonly label: string; readonly tone: ConnectionTone; readonly isDot?: boolean }
+    /** A command on the line (retry a failed file); absent on most lines. */
+    readonly action?: { readonly label: string; readonly run: () => void }
+}
+
+/** One notice under the header of a provider page: why the connection cannot work, a refused command, or the one step left. */
+export interface ConnectionNotice {
+    readonly id: string
+    readonly tone: "negative" | "cautionary" | "informative" | "affirmative"
+    readonly title: string
+    readonly description?: string
+    /** A command beside the notice (read the page again when it could not be read). */
+    readonly action?: { readonly label: string; readonly run: () => void }
+}
+
+/** One agent of the workspace and whether it works through the connection. */
+export interface ConnectionAgentRowView {
+    readonly id: string
+    readonly name: string
+    readonly isOn: boolean
+}
+
+/** One step of the trail above a provider page. */
+interface ConnectionCrumb {
+    readonly id: string
+    readonly label: string
+    readonly href?: string
+}
+
+/** The live rail of a provider page, beside the main pane (a drawer on a narrow screen). */
+interface ConnectionRailView {
+    readonly label: string
+    readonly openLabel: string
+    readonly closeLabel: string
+    readonly isOpen: boolean
+}
+
+/** The frame of a provider page: the header, the trail, the notices, the owner's disconnect and its question. */
+export interface ConnectionPageHeadView {
+    /** The connection's name, status and facts once read; absent while it loads or when it could not be read (a notice then says why). */
+    readonly head?: ConnectionHeadView
+    readonly isSkeleton: boolean
+    readonly icon: "chat" | "apps"
+    readonly crumbLabel: string
+    readonly crumbs: ReadonlyArray<ConnectionCrumb>
+    readonly gridLabel: string
+    readonly mainLabel: string
+    readonly rail: ConnectionRailView
+    /** The one command of the header band (check again, grant again); absent when the page has none. */
+    readonly action?: { readonly label: string; readonly intent: "commit" | "neutral"; readonly isPending: boolean }
+    readonly notices: ReadonlyArray<ConnectionNotice>
+    /** Disconnect belongs to the workspace owner; absent for everyone else, whom the back end refuses. */
+    readonly disconnect?: { readonly title: string; readonly description: string; readonly label: string }
+    readonly confirm: {
+        readonly isOpen: boolean
+        readonly title: string
+        readonly description: string
+        readonly confirmLabel: string
+        readonly cancelLabel: string
+        readonly isPending: boolean
+    }
+}
+
+/** What the frame of a provider page can be told to do. */
+export interface ConnectionPageHeadCommands {
+    readonly act: () => void
+    readonly askDisconnect: () => void
+    readonly confirmDisconnect: () => void
+    readonly dismiss: () => void
+    readonly openRail: (isOpen: boolean) => void
+    readonly retry: () => void
+}
+
+/** The health tiles of a provider page, with the sentence for when there is nothing to show. */
+export interface ConnectionTilesView {
+    readonly facts: DataSlot<ReadonlyArray<ConnectionFactView>>
+    readonly emptyLabel: string
+    readonly retry: () => void
+}
+
+/** The live rail of a provider page: its heading, the lines, and how it keeps itself current. */
+export interface ConnectionRailLinesView {
+    readonly title: string
+    readonly liveLabel: string
+    readonly footnote: string
+    readonly emptyLabel: string
+    readonly lines: DataSlot<ReadonlyArray<ConnectionLineView>>
+    readonly retry: () => void
 }
