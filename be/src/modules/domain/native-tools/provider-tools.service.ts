@@ -3,9 +3,10 @@ import { AgentConversationsReadService } from "@modules/domain/agent-conversatio
 import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
-import type { GatewayJson } from "@modules/domain/mcp-gateway"
+import type { GatewayJson, NativeCaller } from "@modules/domain/mcp-gateway"
 import { customerMasked, isoOf } from "./native-masking.policy"
 import { argumentsOf, nativeRefusal, unknownTool } from "./native-refusal.policy"
+import { NativeViewService } from "./native-view.service"
 import { PROVIDER_EVENTS_SCHEMA, PROVIDER_STATUS_SCHEMA } from "./provider-tools.schema"
 
 /** The most connections of one provider a status read lists. */
@@ -48,13 +49,21 @@ export interface EventsInput {
  */
 export class ProviderToolsService {
     constructor(
+        private readonly views: NativeViewService,
         private readonly bindings: ConnectionBindingsReadService,
         private readonly conversations: AgentConversationsReadService,
         private readonly feed: AgentMessagesFeedReadService,
     ) {}
 
-    /** Runs the `status` tool of a provider connector, and its `events` tool when the provider is a channel; any other tool is unknown. */
-    async answer(workspaceId: string, route: ProviderRoute, tool: string, args: GatewayJson): Promise<GatewayJson> {
+    /** Runs the `status` tool of a provider connector, and its `events` tool when the provider is a channel, for an internal caller only; any other tool is unknown. */
+    async answer(
+        workspaceId: string,
+        route: ProviderRoute,
+        tool: string,
+        args: GatewayJson,
+        caller: NativeCaller,
+    ): Promise<GatewayJson> {
+        await this.views.internalOf(workspaceId, caller)
         if (tool === "status") {
             argumentsOf(tool, PROVIDER_STATUS_SCHEMA, args)
             return { connections: (await this.connectionsOf(workspaceId, route.provider)).map(route.line) }

@@ -3,11 +3,13 @@ import { mock } from "@starci/jest-preset"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
 import { McpGatewayErrorCode, SEPAY_MANIFEST, SepayNativeService } from "@modules/domain/mcp-gateway"
 import { nativeRefusal } from "./native-refusal.policy"
+import { NativeViewService } from "./native-view.service"
 import { ProviderToolsService } from "./provider-tools.service"
 import type { ProviderRoute } from "./provider-tools.service"
 import { SEPAY_STATUS_MANIFEST, SepayStatusNativeService } from "./sepay-status-native.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
+const CALLER = { agentId: "a1", conversationId: null }
 
 const bank = (changes: Partial<ConnectionStatusFacts> = {}): ConnectionStatusFacts => ({
     id: "c1",
@@ -28,14 +30,16 @@ const build = async () => {
     tools.answer.mockResolvedValue({ connections: [] })
     const sepay = mock<SepayNativeService>()
     sepay.invoke.mockResolvedValue({ transactions: [] })
+    const views = mock<NativeViewService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             SepayStatusNativeService,
+            { provide: NativeViewService, useValue: views },
             { provide: ProviderToolsService, useValue: tools },
             { provide: SepayNativeService, useValue: sepay },
         ],
     }).compile()
-    return { status: moduleRef.get(SepayStatusNativeService), tools, sepay }
+    return { status: moduleRef.get(SepayStatusNativeService), tools, sepay, views }
 }
 
 /** The route the service hands the shared tools, read from its first call. */
@@ -62,7 +66,7 @@ describe("SepayStatusNativeService", () => {
     it("runs the bank tools through the ledger as before, and never through the status route", async () => {
         const { status, tools, sepay } = await build()
 
-        await expect(status.invoke(WS, "transactions.list", { limit: 5 })).resolves.toEqual({ transactions: [] })
+        await expect(status.invoke(WS, "transactions.list", { limit: 5 }, CALLER)).resolves.toEqual({ transactions: [] })
 
         expect(sepay.invoke).toHaveBeenCalledWith(WS, "transactions.list", { limit: 5 })
         expect(tools.answer).not.toHaveBeenCalled()
@@ -72,26 +76,27 @@ describe("SepayStatusNativeService", () => {
         const { status, sepay } = await build()
         sepay.invoke.mockRejectedValue({ code: McpGatewayErrorCode.UnknownTool })
 
-        await expect(status.invoke(WS, "events", {})).rejects.toMatchObject({ code: McpGatewayErrorCode.UnknownTool })
+        await expect(status.invoke(WS, "events", {}, CALLER)).rejects.toMatchObject({ code: McpGatewayErrorCode.UnknownTool })
     })
 
     it("runs the status tool of the sepay provider, which is no channel, through the shared tools", async () => {
         const { status, tools, sepay } = await build()
 
-        await status.invoke(WS, "status", {})
+        await status.invoke(WS, "status", {}, CALLER)
 
         expect(tools.answer).toHaveBeenCalledWith(
             WS,
             expect.objectContaining({ provider: "sepay", channel: null }),
             "status",
             {},
+            CALLER,
         )
         expect(sepay.invoke).not.toHaveBeenCalled()
     })
 
     it("words a bank connection with its masked account and says whether it needs the owner", async () => {
         const { status, tools } = await build()
-        await status.invoke(WS, "status", {})
+        await status.invoke(WS, "status", {}, CALLER)
         const { line } = routeOf(tools)
 
         expect(line(bank())).toEqual({
@@ -114,9 +119,24 @@ describe("SepayStatusNativeService", () => {
         const { status, tools } = await build()
         tools.answer.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(status.invoke(WS, "status", {})).rejects.toMatchObject({
+        await expect(status.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })
     })
+
+    it.each(["status", "transactions.list", "transactions.debits"])(
+        "refuses %s to a caller the view policy keeps out, before any bank or connection read",
+        async (tool) => {
+            const { status, tools, sepay, views } = await build()
+            views.internalOf.mockRejectedValue(nativeRefusal("internal_only"))
+
+            await expect(status.invoke(WS, tool, {}, { agentId: "a1", conversationId: "c1" })).rejects.toMatchObject({
+                code: McpGatewayErrorCode.NativeRefused,
+                params: { reason: "internal_only" },
+            })
+            expect(tools.answer).not.toHaveBeenCalled()
+            expect(sepay.invoke).not.toHaveBeenCalled()
+        },
+    )
 })

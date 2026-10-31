@@ -8,6 +8,7 @@ import type { ProviderRoute } from "./provider-tools.service"
 import { TELEGRAM_MANIFEST, TelegramNativeService } from "./telegram-native.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
+const CALLER = { agentId: "a1", conversationId: null }
 
 const bot = (changes: Partial<ConnectionStatusFacts> = {}): ConnectionStatusFacts => ({
     id: "c1",
@@ -53,19 +54,19 @@ describe("TelegramNativeService", () => {
     it("runs the tools of the telegram provider on the telegram channel", async () => {
         const { telegram, tools } = await build()
 
-        await expect(telegram.invoke(WS, "events", { connectionId: "c1" })).resolves.toEqual({ connections: [] })
+        await expect(telegram.invoke(WS, "events", { connectionId: "c1" }, CALLER)).resolves.toEqual({ connections: [] })
 
         expect(tools.answer).toHaveBeenCalledWith(
             WS,
             expect.objectContaining({ provider: "telegram", channel: "telegram" }),
             "events",
-            { connectionId: "c1" },
+            { connectionId: "c1" }, CALLER,
         )
     })
 
     it("words a bot by its handle and says whether it needs the owner, never giving the failure text", async () => {
         const { telegram, tools } = await build()
-        await telegram.invoke(WS, "status", {})
+        await telegram.invoke(WS, "status", {}, CALLER)
         const { line } = routeOf(tools)
 
         expect(line(bot())).toEqual({
@@ -88,7 +89,7 @@ describe("TelegramNativeService", () => {
         const { telegram, tools } = await build()
         tools.answer.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(telegram.invoke(WS, "status", {})).rejects.toMatchObject({
+        await expect(telegram.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })

@@ -14,6 +14,8 @@ interface McpAgentIdentity {
     readonly userId: string
     readonly workspaceId: string
     readonly agentId: string
+    /** The module the agent serves: a staff-facing one reads the bank tools; the default is the customer-facing chatbot. */
+    readonly module?: string
 }
 
 /** Persists the owner, the workspace (its owner member comes from the workspace trigger), one agent and its grant of the bank tool. */
@@ -26,6 +28,7 @@ export const persistMcpAgentRows = async (manager: EntityManager, identity: McpA
             workspaceId: identity.workspaceId,
             name: "Desk agent",
             handle: "desk",
+            module: identity.module ?? "chatbot",
             role: "Reads the bank feed",
             instructions: "Answer from the bank feed only.",
         })

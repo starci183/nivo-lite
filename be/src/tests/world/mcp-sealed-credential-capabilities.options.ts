@@ -1,3 +1,4 @@
+import { AgentsModule } from "@modules/domain/agents"
 import {
     CONNECTION_SECRETS_ERROR_KINDS,
     CONNECTION_SECRETS_MESSAGES,
@@ -48,6 +49,7 @@ export const MCP_SEALED_CREDENTIAL_MODULES = [
     ...QUEUE_MODULES,
     EventsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
+    AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey: SEALED_PROOF_TOKEN_KEY }),
     ConnectionsModule.register({
         isGlobal: true,

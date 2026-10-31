@@ -50,9 +50,12 @@ import {
     VALID_WRITE_IDENTITIES,
 } from "@tests/fixtures/builders/mcp-gateway-scenario.builder"
 
+/** The SePay connector as an open tool of every caller, so the specs of the call path do not depend on who asks. */
+const OPEN_SEPAY: NativeConnectorManifest = { ...SEPAY_MANIFEST, tools: SEPAY_MANIFEST.tools.map((tool) => ({ ...tool, internalOnly: false })) }
+
 const build = async (
     setup: GatewaySpecSetup = {},
-    manifest = SEPAY_MANIFEST,
+    manifest = OPEN_SEPAY,
     added: ReadonlyArray<NativeConnectorManifest> = [],
 ) => {
     const clock = new FakeClock("2026-10-20T02:00:00.000Z")
@@ -487,6 +490,9 @@ describe("McpGatewayService internal-only tools", () => {
         await expect(gateway.describe(CALLER, name)).resolves.toBeNull()
         expect(native.invoke).not.toHaveBeenCalled()
         expect(linesOf(callLog)[0]).toMatchObject({ outcome: "refused", errorCode: "internal_only" })
+        const facing = { ...CALLER, conversationId: null, audience: "customer" as const }
+        await expect(gateway.call(facing, name, {})).resolves.toEqual(refusalOf("internal_only", name))
+        await expect(gateway.search(facing, "bank transactions", 5)).resolves.toEqual([])
         const outside = { ...CALLER, conversationId: null }
         await expect(gateway.call(outside, name, {})).resolves.toMatchObject({ ok: true })
         await expect(gateway.describe(outside, name)).resolves.toMatchObject({ name })

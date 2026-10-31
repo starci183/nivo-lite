@@ -7,9 +7,11 @@ import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
 import { summaryOf } from "@modules/domain/mcp-gateway/audit-mask.policy"
 import { DRIVE_MANIFEST, DriveNativeService } from "./drive-native.service"
 import { nativeRefusal } from "./native-refusal.policy"
+import { NativeViewService } from "./native-view.service"
 import { ProviderToolsService } from "./provider-tools.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
+const CALLER = { agentId: "a1", conversationId: null }
 
 const grant = (changes: Partial<ConnectionStatusFacts> = {}): ConnectionStatusFacts => ({
     id: "c1",
@@ -46,14 +48,23 @@ const build = async () => {
         source({ id: "s4", status: "blocked_credits", sizeBytes: 250 }),
         source({ id: "s5", status: "queued", sizeBytes: 0 }),
     ])
+    const views = mock<NativeViewService>()
+    views.internalOf.mockResolvedValue({
+        workspaceId: WS,
+        module: "sales",
+        audience: "internal",
+        installationId: null,
+        searchable: true,
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DriveNativeService,
+            { provide: NativeViewService, useValue: views },
             { provide: ProviderToolsService, useValue: tools },
             { provide: KnowledgeSourcesReadService, useValue: sources },
         ],
     }).compile()
-    return { drive: moduleRef.get(DriveNativeService), tools, sources }
+    return { drive: moduleRef.get(DriveNativeService), tools, sources, views }
 }
 
 describe("DriveNativeService manifest", () => {
@@ -72,7 +83,7 @@ describe("DriveNativeService unknown tool and arguments", () => {
     it("refuses a tool the connector does not have", async () => {
         const { drive } = await build()
 
-        await expect(drive.invoke(WS, "files.read", {})).rejects.toMatchObject({
+        await expect(drive.invoke(WS, "files.read", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.UnknownTool,
             params: { tool: "files.read" },
         })
@@ -84,7 +95,7 @@ describe("DriveNativeService unknown tool and arguments", () => {
     ])("refuses invalid arguments for %s before reading anything", async (tool, args) => {
         const { drive, tools, sources } = await build()
 
-        await expect(drive.invoke(WS, tool, args)).rejects.toMatchObject({
+        await expect(drive.invoke(WS, tool, args, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.InvalidArguments,
             params: { tool },
         })
@@ -97,7 +108,7 @@ describe("DriveNativeService status", () => {
     it("answers the grant state, the account masked, the bytes and the sources by stage", async () => {
         const { drive, tools, sources } = await build()
 
-        const answer = await drive.invoke(WS, "status", {})
+        const answer = await drive.invoke(WS, "status", {}, CALLER)
 
         expect(answer).toEqual({
             state: "connected",
@@ -114,14 +125,14 @@ describe("DriveNativeService status", () => {
         const { drive, tools } = await build()
         tools.connectionsOf.mockResolvedValue([grant({ status: "error", email: null })])
 
-        await expect(drive.invoke(WS, "status", {})).resolves.toMatchObject({ state: "error", accountMasked: "" })
+        await expect(drive.invoke(WS, "status", {}, CALLER)).resolves.toMatchObject({ state: "error", accountMasked: "" })
     })
 
     it("reads an empty list of grants as not connected too, before reading any source", async () => {
         const { drive, tools, sources } = await build()
         tools.connectionsOf.mockResolvedValue([])
 
-        await expect(drive.invoke(WS, "status", {})).rejects.toMatchObject({ params: { reason: "not_connected" } })
+        await expect(drive.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({ params: { reason: "not_connected" } })
         expect(sources.ofOrigin).not.toHaveBeenCalled()
     })
 
@@ -129,7 +140,7 @@ describe("DriveNativeService status", () => {
         const { drive, tools, sources } = await build()
         tools.connectionsOf.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(drive.invoke(WS, "status", {})).rejects.toMatchObject({
+        await expect(drive.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })
@@ -141,7 +152,7 @@ describe("DriveNativeService sources.list", () => {
     it("lists the sources of the Drive origin, bounded, without text", async () => {
         const { drive, sources } = await build()
 
-        const answer = await drive.invoke(WS, "sources.list", { status: "ready", limit: 1 })
+        const answer = await drive.invoke(WS, "sources.list", { status: "ready", limit: 1 }, CALLER)
 
         expect(answer).toEqual({
             sources: [
@@ -164,7 +175,7 @@ describe("DriveNativeService sources.list", () => {
             Array.from({ length: 30 }, (_, index) => source({ id: `s${String(index)}`, status: "queued" })),
         )
 
-        const answer = await drive.invoke(WS, "sources.list", {})
+        const answer = await drive.invoke(WS, "sources.list", {}, CALLER)
 
         expect(tools.connectionsOf).toHaveBeenCalledWith(WS, "google_drive")
         expect(answer["sources"]).toHaveLength(20)
@@ -173,7 +184,7 @@ describe("DriveNativeService sources.list", () => {
     it("keeps to the stage asked for", async () => {
         const { drive } = await build()
 
-        const answer = await drive.invoke(WS, "sources.list", { status: "failed" })
+        const answer = await drive.invoke(WS, "sources.list", { status: "failed" }, CALLER)
 
         expect(answer).toMatchObject({ sources: [{ id: "s3", status: "failed" }] })
     })
@@ -182,9 +193,24 @@ describe("DriveNativeService sources.list", () => {
         const { drive, tools, sources } = await build()
         tools.connectionsOf.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(drive.invoke(WS, "sources.list", {})).rejects.toMatchObject({
+        await expect(drive.invoke(WS, "sources.list", {}, CALLER)).rejects.toMatchObject({
             params: { reason: "not_connected" },
         })
+        expect(sources.ofOrigin).not.toHaveBeenCalled()
+    })
+})
+
+describe("DriveNativeService internal use", () => {
+    it.each(["status", "sources.list"])("refuses %s to a caller the view policy keeps out, before reading anything", async (tool) => {
+        const { drive, tools, sources, views } = await build()
+        views.internalOf.mockRejectedValue(nativeRefusal("internal_only"))
+
+        await expect(drive.invoke(WS, tool, {}, { agentId: "a1", conversationId: "c1" })).rejects.toMatchObject({
+            code: McpGatewayErrorCode.NativeRefused,
+            params: { reason: "internal_only" },
+        })
+        expect(views.internalOf).toHaveBeenCalledWith(WS, { agentId: "a1", conversationId: "c1" })
+        expect(tools.connectionsOf).not.toHaveBeenCalled()
         expect(sources.ofOrigin).not.toHaveBeenCalled()
     })
 })

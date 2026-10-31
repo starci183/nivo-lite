@@ -48,3 +48,37 @@ describe("NativeViewService", () => {
         })
     })
 })
+
+describe("NativeViewService internalOf", () => {
+    it("gives an internal agent outside any conversation its view", async () => {
+        const { view, scopes } = await build()
+        scopes.lensOf.mockResolvedValue({ module: "sales", installationId: null })
+
+        await expect(view.internalOf(WS, { agentId: "a1", conversationId: null })).resolves.toMatchObject({
+            audience: "internal",
+        })
+    })
+
+    it("refuses a conversation before reading the agent", async () => {
+        const { view, scopes } = await build()
+
+        await expect(view.internalOf(WS, { agentId: "a1", conversationId: "c1" })).rejects.toMatchObject({
+            code: McpGatewayErrorCode.NativeRefused,
+            params: { reason: "internal_only" },
+        })
+        expect(scopes.lensOf).not.toHaveBeenCalled()
+    })
+
+    it("refuses an agent whose view is the customer's, and one the workspace does not hold", async () => {
+        const { view, scopes } = await build()
+        scopes.lensOf.mockResolvedValueOnce({ module: "chatbot", installationId: null })
+        scopes.lensOf.mockResolvedValueOnce(null)
+
+        await expect(view.internalOf(WS, { agentId: "a1", conversationId: null })).rejects.toMatchObject({
+            params: { reason: "internal_only" },
+        })
+        await expect(view.internalOf(WS, { agentId: "a1", conversationId: null })).rejects.toMatchObject({
+            params: { reason: "not_found" },
+        })
+    })
+})

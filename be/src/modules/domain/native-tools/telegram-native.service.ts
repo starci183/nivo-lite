@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
-import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { needsAttention } from "./native-masking.policy"
 import { providerTools } from "./provider-tools.manifest"
 import type { ProviderRoute } from "./provider-tools.service"
@@ -34,7 +34,7 @@ export class TelegramNativeService implements NativeAdapter {
     constructor(private readonly tools: ProviderToolsService) {}
 
     /** Runs one Telegram tool. */
-    invoke(workspaceId: string, tool: string, args: GatewayJson): Promise<GatewayJson> {
-        return this.tools.answer(workspaceId, ROUTE, tool, args)
+    invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
+        return this.tools.answer(workspaceId, ROUTE, tool, args, caller)
     }
 }

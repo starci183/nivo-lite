@@ -1,7 +1,6 @@
 import type { DynamicModule } from "@nestjs/common"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
-import { AgentsModule } from "@modules/domain/agents"
 import { BrainDossiersModule } from "@modules/domain/brain-dossiers"
 import { BrainFactsModule } from "@modules/domain/brain-facts"
 import { ConnectionsModule } from "@modules/domain/connections"
@@ -28,7 +27,6 @@ export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     ...MCP_CREDENTIAL_MODULES.filter((entry) => !isGateway(entry)),
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true }),
-    AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     AiModule.register({
         isGlobal: true,
         gatewayUrl: null,

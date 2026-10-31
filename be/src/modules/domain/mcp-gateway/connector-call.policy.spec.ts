@@ -73,6 +73,16 @@ describe("visibleTo", () => {
         expect(policy.visibleTo(conversation, specOf())).toBe(true)
         expect(policy.visibleTo(conversation, specOf({ internalOnly: false }))).toBe(true)
     })
+
+    it("hides an internal-only tool from a customer-facing agent outside any conversation, and shows it to an internal one", async () => {
+        const policy = await build()
+        const facing = { ...CALLER, audience: "customer" as const }
+        const staff = { ...CALLER, audience: "internal" as const }
+
+        expect(policy.visibleTo(facing, specOf({ internalOnly: true }))).toBe(false)
+        expect(policy.visibleTo(staff, specOf({ internalOnly: true }))).toBe(true)
+        expect(policy.visibleTo(facing, specOf())).toBe(true)
+    })
 })
 
 describe("roleIn", () => {

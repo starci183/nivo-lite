@@ -5,10 +5,13 @@ import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
+import { nativeRefusal } from "./native-refusal.policy"
+import { NativeViewService } from "./native-view.service"
 import { ProviderToolsService } from "./provider-tools.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const CONNECTION = "22222222-2222-4222-8222-222222222222"
+const CALLER = { agentId: "a1", conversationId: null }
 const TELEGRAM = { provider: "telegram", channel: "telegram" }
 
 const connection = (changes: Partial<ConnectionStatusFacts> = {}): ConnectionStatusFacts => ({
@@ -63,15 +66,17 @@ const build = async () => {
             deliveryError: null,
         },
     ])
+    const views = mock<NativeViewService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ProviderToolsService,
+            { provide: NativeViewService, useValue: views },
             { provide: ConnectionBindingsReadService, useValue: bindings },
             { provide: AgentConversationsReadService, useValue: conversations },
             { provide: AgentMessagesFeedReadService, useValue: feed },
         ],
     }).compile()
-    return { tools: moduleRef.get(ProviderToolsService), bindings, conversations, feed }
+    return { tools: moduleRef.get(ProviderToolsService), bindings, conversations, feed, views }
 }
 
 describe("ProviderToolsService connectionsOf", () => {
@@ -150,7 +155,7 @@ describe("ProviderToolsService answer", () => {
     it("answers the status of the connections as the route words them", async () => {
         const { tools } = await build()
 
-        await expect(tools.answer(WS, route, "status", {})).resolves.toEqual({
+        await expect(tools.answer(WS, route, "status", {}, CALLER)).resolves.toEqual({
             connections: [{ id: CONNECTION, handle: "shop_bot" }],
         })
     })
@@ -159,18 +164,18 @@ describe("ProviderToolsService answer", () => {
         const { tools } = await build()
 
         await expect(
-            tools.answer(WS, route, "events", { connectionId: CONNECTION, limit: 1 }),
+            tools.answer(WS, route, "events", { connectionId: CONNECTION, limit: 1 }, CALLER),
         ).resolves.toMatchObject({ events: expect.any(Array) })
     })
 
     it("refuses invalid arguments before reading anything", async () => {
         const { tools, bindings } = await build()
 
-        await expect(tools.answer(WS, route, "status", { x: 1 })).rejects.toMatchObject({
+        await expect(tools.answer(WS, route, "status", { x: 1 }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.InvalidArguments,
             params: { tool: "status" },
         })
-        await expect(tools.answer(WS, route, "events", { connectionId: "c1" })).rejects.toMatchObject({
+        await expect(tools.answer(WS, route, "events", { connectionId: "c1" }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.InvalidArguments,
         })
         expect(bindings.ofProvider).not.toHaveBeenCalled()
@@ -180,10 +185,21 @@ describe("ProviderToolsService answer", () => {
         const { tools } = await build()
 
         await expect(
-            tools.answer(WS, { ...route, channel: null }, "events", { connectionId: CONNECTION }),
+            tools.answer(WS, { ...route, channel: null }, "events", { connectionId: CONNECTION }, CALLER),
         ).rejects.toMatchObject({ code: McpGatewayErrorCode.UnknownTool, params: { tool: "events" } })
-        await expect(tools.answer(WS, route, "send", {})).rejects.toMatchObject({
+        await expect(tools.answer(WS, route, "send", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.UnknownTool,
         })
+    })
+
+    it("refuses a caller the view policy keeps out before reading a connection", async () => {
+        const { tools, bindings, views } = await build()
+        views.internalOf.mockRejectedValue(nativeRefusal("internal_only"))
+
+        await expect(tools.answer(WS, route, "status", {}, { agentId: "a1", conversationId: "c1" })).rejects.toMatchObject({
+            params: { reason: "internal_only" },
+        })
+        expect(views.internalOf).toHaveBeenCalledWith(WS, { agentId: "a1", conversationId: "c1" })
+        expect(bindings.ofProvider).not.toHaveBeenCalled()
     })
 })

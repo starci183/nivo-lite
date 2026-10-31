@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
+import { AgentViewScopeService } from "@modules/domain/agents"
 import { InjectMcpServer } from "@modules/integrations/mcp"
 import type { McpServedResult, McpServedTool, McpServing } from "@modules/integrations/mcp"
+import { audienceOfModule } from "./caller-audience.policy"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import {
     GATEWAY_CALL_INPUT_SCHEMA,
@@ -52,18 +54,21 @@ export class GatewaySurfaceService {
     constructor(
         @InjectMcpServer() private readonly server: McpServing,
         private readonly gateway: McpGatewayService,
+        private readonly scopes: AgentViewScopeService,
     ) {}
 
     /** Answers one JSON-RPC message of the endpoint of a workspace; a credential of another workspace is refused. */
-    answer(request: SurfaceRequest): Promise<SurfaceReply> {
+    async answer(request: SurfaceRequest): Promise<SurfaceReply> {
         if (request.principal.workspaceId !== request.workspaceId) {
-            return Promise.reject(new McpGatewayError({ code: McpGatewayErrorCode.WorkspaceMismatch }))
+            throw new McpGatewayError({ code: McpGatewayErrorCode.WorkspaceMismatch })
         }
+        const scope = await this.scopes.lensOf(request.workspaceId, request.principal.agentId)
         const caller: GatewayCaller = {
             workspaceId: request.workspaceId,
             agentId: request.principal.agentId,
             conversationId: null,
             workItemId: null,
+            audience: audienceOfModule(scope?.module ?? null),
         }
         return this.server.answer({
             message: request.message,

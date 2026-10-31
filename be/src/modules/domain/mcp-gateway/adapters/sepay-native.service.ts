@@ -24,6 +24,7 @@ export const SEPAY_MANIFEST: NativeConnectorManifest = {
             inputSchema: SEPAY_BANK_MOVE_INPUT_SCHEMA,
             argumentSchema: SEPAY_BANK_MOVE_SCHEMA,
             secretFields: BANK_MOVE_SECRET_FIELDS,
+            internalOnly: true,
         },
         {
             name: "transactions.debits",
@@ -35,6 +36,7 @@ export const SEPAY_MANIFEST: NativeConnectorManifest = {
             inputSchema: SEPAY_BANK_MOVE_INPUT_SCHEMA,
             argumentSchema: SEPAY_BANK_MOVE_SCHEMA,
             secretFields: BANK_MOVE_SECRET_FIELDS,
+            internalOnly: true,
         },
     ],
 }

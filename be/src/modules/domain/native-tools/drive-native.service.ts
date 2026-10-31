@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import type { OriginSource } from "@modules/domain/knowledge-sources"
-import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import {
     DRIVE_SOURCES_LIST_INPUT_SCHEMA,
     DRIVE_SOURCES_LIST_SCHEMA,
@@ -11,6 +11,7 @@ import {
 import type { DriveSourceStatus } from "./drive-native.schema"
 import { emailMasked } from "./native-masking.policy"
 import { argumentsOf, nativeRefusal, unknownTool } from "./native-refusal.policy"
+import { NativeViewService } from "./native-view.service"
 import { ProviderToolsService } from "./provider-tools.service"
 
 /** The provider of the Drive grant of a workspace. */
@@ -71,12 +72,14 @@ export class DriveNativeService implements NativeAdapter {
     readonly manifest = DRIVE_MANIFEST
 
     constructor(
+        private readonly views: NativeViewService,
         private readonly tools: ProviderToolsService,
         private readonly sources: KnowledgeSourcesReadService,
     ) {}
 
     /** Runs one Drive tool. */
-    async invoke(workspaceId: string, tool: string, args: GatewayJson): Promise<GatewayJson> {
+    async invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
+        await this.views.internalOf(workspaceId, caller)
         if (tool === "status") {
             argumentsOf(tool, DRIVE_STATUS_SCHEMA, args)
             return this.status(workspaceId)

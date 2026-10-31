@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
 import { SEPAY_MANIFEST, SepayNativeService } from "@modules/domain/mcp-gateway"
-import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { needsAttention } from "./native-masking.policy"
+import { NativeViewService } from "./native-view.service"
 import { providerTools } from "./provider-tools.manifest"
 import type { ProviderRoute } from "./provider-tools.service"
 import { ProviderToolsService } from "./provider-tools.service"
@@ -26,20 +27,22 @@ const ROUTE: ProviderRoute = { provider: "sepay", channel: null, line: lineOf }
 
 @Injectable()
 /**
- * The SePay connector of the apps that serve a workspace: `transactions.list` and `transactions.debits` run as before, through the
+ * The SePay connector of the apps that serve a workspace, for internal callers only: `transactions.list` and `transactions.debits` run as before, through the
  * ledger, and `status` reads the bank connections. It takes the place of the gateway's own SePay adapter, which has no status.
  */
 export class SepayStatusNativeService implements NativeAdapter {
     readonly manifest = SEPAY_STATUS_MANIFEST
 
     constructor(
+        private readonly views: NativeViewService,
         private readonly sepay: SepayNativeService,
         private readonly tools: ProviderToolsService,
     ) {}
 
     /** Runs one SePay tool: the bank tools through the ledger, `status` through the connections. */
-    invoke(workspaceId: string, tool: string, args: GatewayJson): Promise<GatewayJson> {
-        if (tool === "status") return this.tools.answer(workspaceId, ROUTE, tool, args)
+    async invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
+        await this.views.internalOf(workspaceId, caller)
+        if (tool === "status") return this.tools.answer(workspaceId, ROUTE, tool, args, caller)
         return this.sepay.invoke(workspaceId, tool, args)
     }
 }

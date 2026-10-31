@@ -16,4 +16,15 @@ export class NativeViewService {
         if (scope === null) throw nativeRefusal("not_found")
         return viewOfCall(workspaceId, scope, caller.conversationId)
     }
+
+    /**
+     * The view of a caller of an internal tool: the same as `of`, and a customer conversation or an agent whose view is the
+     * customer's is refused `internal_only`. The gateway hides and refuses these tools first; this keeps them closed if it ever does not.
+     */
+    async internalOf(workspaceId: string, caller: NativeCaller): Promise<NativeView> {
+        if (caller.conversationId !== null) throw nativeRefusal("internal_only")
+        const view = await this.of(workspaceId, caller)
+        if (view.audience === "customer") throw nativeRefusal("internal_only")
+        return view
+    }
 }

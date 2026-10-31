@@ -27,6 +27,7 @@ export const EINVOICE_MANIFEST: NativeConnectorManifest = {
             role: "invoice.list",
             inputSchema: EINVOICE_LIST_INPUT_SCHEMA,
             argumentSchema: EinvoiceListSchema,
+            internalOnly: true,
         },
         {
             name: "get",
@@ -35,6 +36,7 @@ export const EINVOICE_MANIFEST: NativeConnectorManifest = {
             defaultMode: "auto",
             inputSchema: EINVOICE_GET_INPUT_SCHEMA,
             argumentSchema: EinvoiceGetSchema,
+            internalOnly: true,
         },
     ],
 }

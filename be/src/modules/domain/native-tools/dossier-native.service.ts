@@ -9,7 +9,7 @@ import {
     DOSSIER_STATUS_SCHEMA,
 } from "./dossier-native.schema"
 import { clipped } from "./native-masking.policy"
-import { argumentsOf, nativeRefusal, unknownTool } from "./native-refusal.policy"
+import { argumentsOf, unknownTool } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 
 /** The longest finding title a tool answers, in characters. */
@@ -77,9 +77,9 @@ export class DossierNativeService implements NativeAdapter {
         throw unknownTool(tool)
     }
 
-    /** Refuses an agent whose view is the customer's. */
+    /** Refuses a conversation and an agent whose view is the customer's. */
     private async admit(workspaceId: string, caller: NativeCaller): Promise<void> {
-        if ((await this.views.of(workspaceId, caller)).audience === "customer") throw nativeRefusal("internal_only")
+        await this.views.internalOf(workspaceId, caller)
     }
 
     private async status(workspaceId: string): Promise<GatewayJson> {

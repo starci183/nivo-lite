@@ -8,6 +8,7 @@ import type { ProviderRoute } from "./provider-tools.service"
 import { ZALO_MANIFEST, ZaloNativeService } from "./zalo-native.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
+const CALLER = { agentId: "a1", conversationId: null }
 
 const account = (changes: Partial<ConnectionStatusFacts> = {}): ConnectionStatusFacts => ({
     id: "c1",
@@ -51,19 +52,19 @@ describe("ZaloNativeService", () => {
     it("runs the tools of the zalo_oa provider on the zalo channel", async () => {
         const { zalo, tools } = await build()
 
-        await expect(zalo.invoke(WS, "status", {})).resolves.toEqual({ connections: [] })
+        await expect(zalo.invoke(WS, "status", {}, CALLER)).resolves.toEqual({ connections: [] })
 
         expect(tools.answer).toHaveBeenCalledWith(
             WS,
             expect.objectContaining({ provider: "zalo_oa", channel: "zalo" }),
             "status",
-            {},
+            {}, CALLER,
         )
     })
 
     it("words an official account by its id and says whether it needs the owner, never giving the failure text", async () => {
         const { zalo, tools } = await build()
-        await zalo.invoke(WS, "status", {})
+        await zalo.invoke(WS, "status", {}, CALLER)
         const { line } = routeOf(tools)
 
         expect(line(account())).toEqual({
@@ -86,7 +87,7 @@ describe("ZaloNativeService", () => {
         const { zalo, tools } = await build()
         tools.answer.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(zalo.invoke(WS, "events", { connectionId: "c1" })).rejects.toMatchObject({
+        await expect(zalo.invoke(WS, "events", { connectionId: "c1" }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })
