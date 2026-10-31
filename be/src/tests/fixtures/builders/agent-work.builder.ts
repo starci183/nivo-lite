@@ -10,7 +10,7 @@ import type { AgentGoalWrite, AgentTriggerWrite, AgentTurnView, AgentWake } from
 const [
     AgentWorkSettingsEntity,
     AgentWorkStateEntity,
-    ,
+    AgentWorkLeaseEntity,
     AgentGoalEntity,
     AgentTaskEntity,
     AgentTriggerEntity,
@@ -19,6 +19,7 @@ const [
 ] = agentWorkEntities
 type AgentWorkSettingsEntity = InstanceType<typeof AgentWorkSettingsEntity>
 type AgentWorkStateEntity = InstanceType<typeof AgentWorkStateEntity>
+type AgentWorkLeaseEntity = InstanceType<typeof AgentWorkLeaseEntity>
 type AgentGoalEntity = InstanceType<typeof AgentGoalEntity>
 type AgentTaskEntity = InstanceType<typeof AgentTaskEntity>
 type AgentTriggerEntity = InstanceType<typeof AgentTriggerEntity>
@@ -131,6 +132,25 @@ export const agentWakeRowOf = builder<AgentWakeEntity>({
     createdAt: new Date("2026-11-10T01:00:00.000Z"),
     updatedAt: WHEN,
 })
+
+/** The idle lease row of agent-1 in a customer conversation, last touched a long time ago. */
+export const agentWorkLeaseRowOf = builder<AgentWorkLeaseEntity>({
+    agentId: "agent-1",
+    scopeKey: "conversation:conv-1",
+    workspaceId: "ws-1",
+    fence: 4,
+    leaseOwner: null,
+    leaseUntil: null,
+    runningTurnId: null,
+    createdAt: WHEN,
+    updatedAt: WHEN,
+})
+
+/** The idle lease rows of agent-1 in conversations conv-1 and conv-2. */
+export const idleLeaseRowsOf = (): ReadonlyArray<AgentWorkLeaseEntity> => [
+    agentWorkLeaseRowOf({ scopeKey: "conversation:conv-1" }),
+    agentWorkLeaseRowOf({ scopeKey: "conversation:conv-2" }),
+]
 
 /** A settled turn row of agent-1 with its usage, whose proposal holds words the work tab must never show. */
 export const agentTurnRowOf = builder<AgentTurnEntity>({
@@ -246,6 +266,7 @@ export const orphanTurnRowOf = (): AgentTurnEntity =>
         threadKey: "k",
         status: "running",
     })
+
 /** A trigger row a module seeded under the key `morning`. */
 export const seededTriggerRowOf = (): AgentTriggerEntity => agentTriggerRowOf({ seedKey: "morning" })
 
@@ -263,6 +284,10 @@ export const heldOldWakeRowOf = (id: string): AgentWakeEntity =>
 /** A wake row a switch held: a schedule of agent-1. */
 export const heldScheduleWakeRowOf = (id: string): AgentWakeEntity =>
     agentWakeRowOf({ id, eventKey: id, source: "schedule", scopeKey: "agent" })
+
+/** A wake row a switch held: the internal wake of task task-1 that fell due. */
+export const heldTaskWakeRowOf = (id: string): AgentWakeEntity =>
+    agentWakeRowOf({ id, eventKey: id, source: "internal", scopeKey: "agent", context: { taskId: "task-1" } })
 
 /** The provider of the agent-turn queue producer over a recording outbox, so a spec reads the drain jobs a service wrote. */
 export const agentTurnQueueProviderOf = (outbox: RecordingQueueOutbox) => ({
