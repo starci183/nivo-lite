@@ -7,6 +7,7 @@ import type {
     ToolArgs,
     ToolContext,
     ToolManifestEntry,
+    ToolPrincipal,
 } from "./agent-tools.contracts"
 import {
     InjectAgentHandoff,
@@ -32,7 +33,8 @@ import type {
 } from "./agent-tools.port"
 import { AgentToolsError, AgentToolsErrorCode } from "./errors/agent-tools.error"
 import { agentHandoffOf, approvalOf, clipText, handoffReasonOf, leadOf, queryOf } from "./tool-args.policy"
-import { bearerTokenOf } from "./tool-bearer.policy"
+import { BridgeCallsService } from "./bridge-calls.service"
+import { bearerTokenOf, isBridgeToken } from "./tool-bearer.policy"
 import { isBookingTool, isGatewayTool, isToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
 import type { ToolName } from "./tool-manifest.policy"
 
@@ -50,13 +52,15 @@ const SUMMARY_QUERY_CHARS = 100
 @Injectable()
 /**
  * The tool bridge of the agents. A tool call carries the per-job token of the OpenClaw turn; the workspace and
- * conversation are taken from its claims only, never from the arguments. Each call is dispatched to a port and leaves
- * an evidence line.
+ * conversation are taken from its claims only, never from the arguments. The OpenClaw bridge plugin calls with a signed credential
+ * that names a session instead: the running turn of that session gives the workspace, the agent and the conversation, so a call with
+ * no running turn is refused. Each call is dispatched to a port and leaves an evidence line.
  */
 export class AgentToolsService {
     constructor(
         @InjectToolTokens() private readonly tokens: ToolTokens,
         private readonly events: EventsService,
+        private readonly bridge: BridgeCallsService,
         @InjectKnowledgeSearch() private readonly knowledge: KnowledgeSearch,
         @InjectLeadWriter() private readonly leads: LeadWriter,
         @InjectBookingTools() private readonly booking: BookingTools,
@@ -94,6 +98,14 @@ export class AgentToolsService {
         return { jobId: claims.jobId, workspaceId: claims.workspaceId, conversationId: claims.conversationId }
     }
 
+    /** Authenticates either credential of the tool door (a per-job token or the bridge plugin's signed one) without running anything. */
+    async authenticate(authorization: OptionalAuthorization): Promise<ToolPrincipal> {
+        const token = bearerTokenOf(authorization)
+        if (!isBridgeToken(token)) return this.authenticateBearer(authorization)
+        const turn = await this.bridge.admit(token)
+        return { jobId: turn.jobId, workspaceId: turn.workspaceId }
+    }
+
     /** Runs one tool for the job named by the token. */
     async runTool(token: string, tool: string, args: ToolArgs): Promise<JsonResult> {
         const claims = this.tokens.verify(token)
@@ -114,7 +126,25 @@ export class AgentToolsService {
      * refused token.
      */
     runBearerTool(authorization: OptionalAuthorization, tool: string, args: ToolArgs): Promise<JsonResult> {
-        return this.runTool(bearerTokenOf(authorization), tool, args)
+        const token = bearerTokenOf(authorization)
+        return isBridgeToken(token) ? this.runBridgeTool(token, tool, args) : this.runTool(token, tool, args)
+    }
+
+    /** Runs one tool for the turn a bridge credential names; a turn with a conversation runs as a customer turn does, any other only reaches the connector tools. */
+    private async runBridgeTool(token: string, tool: string, args: ToolArgs): Promise<JsonResult> {
+        const turn = await this.bridge.admit(token)
+        if (!isToolName(tool)) {
+            throw new AgentToolsError({ code: AgentToolsErrorCode.UnknownTool, params: { tool } })
+        }
+        if (turn.conversationId !== null) {
+            const ctx: ToolContext = {
+                jobId: turn.jobId,
+                workspaceId: turn.workspaceId,
+                conversationId: turn.conversationId,
+            }
+            return await this.dispatch(ctx, tool, args)
+        }
+        return await this.bridge.runInternal(turn, tool, args)
     }
 
     private dispatch(ctx: ToolContext, tool: ToolName, args: ToolArgs): Promise<JsonResult> {

@@ -1,0 +1,17 @@
+{
+  "id": "nivo-bridge",
+  "name": "NIVO bridge",
+  "description": "Gives a NIVO agent one tool, nivo_call, that runs a NIVO tool through the api for the turn that is running.",
+  "version": "1.0.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": ["nivo_call"]
+  }
+}

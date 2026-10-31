@@ -21,6 +21,10 @@ export interface AgentToolsPorts {
     readonly agentHandoff: InjectionToken
     /** Provider that mints and verifies tool tokens (OpenClaw). */
     readonly toolTokens: InjectionToken
+    /** Provider that admits the bridge plugin's call and finds the running turn (the agent turns). */
+    readonly bridgeTurns: InjectionToken
+    /** Provider that runs the connector meta-tools of a turn with no conversation (the agent turns). */
+    readonly internalTools: InjectionToken
 }
 
 /** What the agent tools capability needs from the app root. */

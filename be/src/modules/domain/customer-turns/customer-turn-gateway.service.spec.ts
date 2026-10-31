@@ -2,13 +2,13 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { Installation } from "@modules/domain/agents"
 import type { CustomerTurn } from "@modules/domain/conversations"
+import { AgentTurnsLogEvent } from "@modules/domain/agent-turns"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { OPENCLAW_AGENT_REGISTRY, OPENCLAW_GATEWAY, agentIdFor, threadKeyFor } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, GatewayClient, TurnResult } from "@modules/integrations/openclaw"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { CustomerTurnGatewayService } from "./customer-turn-gateway.service"
-import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 
 const WORKSPACE_ID = "11111111-1111-4111-8111-111111111111"
 const MODULE = "chatbot"
@@ -127,7 +127,7 @@ describe("CustomerTurnGatewayService", () => {
         sync.syncInstallation.mockRejectedValueOnce(cause)
 
         await expect(service.agentFor(WORKSPACE_ID, MODULE, installation)).resolves.toBe("internal-agent")
-        expect(logger.error).toHaveBeenCalledWith(CustomerTurnsLogEvent.AgentSyncFailed, cause, {
+        expect(logger.error).toHaveBeenCalledWith(AgentTurnsLogEvent.AgentSyncFailed, cause, {
             installationId: "i1",
         })
         expect(logger.error.mock.invocationCallOrder[0]).toBeLessThan(

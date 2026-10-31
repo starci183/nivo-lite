@@ -172,10 +172,18 @@ services:
     entrypoint: ["tini", "-s", "--", "sh", "/opt/nivo/entrypoint.sh"]
     environment:
       OPENCLAW_RELAY_PORT: "18790"
+      # NIVO schedules and wakes the agents itself: OpenClaw's own cron scheduler stays off (openclaw-init.mjs also writes cron.enabled false and heartbeat 0m).
+      OPENCLAW_SKIP_CRON: "1"
+      # Where the nivo-bridge plugin posts a tool call: the api on the private `agents` network. OPENCLAW_BRIDGE_SECRET comes from /run/secrets (entrypoint.sh).
+      OPENCLAW_BRIDGE_URL: http://nivo-api:8787/agent-tools
     configs:
       - { source: openclaw-entrypoint, target: /opt/nivo/entrypoint.sh, mode: 0555 }
       - { source: openclaw-init, target: /opt/nivo/openclaw-init.mjs, mode: 0444 }
       - { source: openclaw-relay, target: /opt/nivo/openclaw-relay.mjs, mode: 0444 }
+      - { source: nivo-bridge-manifest, target: /opt/nivo/nivo-bridge/openclaw.plugin.json, mode: 0444 }
+      - { source: nivo-bridge-package, target: /opt/nivo/nivo-bridge/package.json, mode: 0444 }
+      - { source: nivo-bridge-index, target: /opt/nivo/nivo-bridge/index.js, mode: 0444 }
+      - { source: nivo-bridge-token, target: /opt/nivo/nivo-bridge/bridge-token.js, mode: 0444 }
     volumes:
       - openclaw-data:/home/node/.openclaw
     networks: [agents]
@@ -362,6 +370,10 @@ configs:
   openclaw-entrypoint: { external: true, name: "${NIVO_CFG_OPENCLAW_ENTRYPOINT:?}" }
   openclaw-init: { external: true, name: "${NIVO_CFG_OPENCLAW_INIT:?}" }
   openclaw-relay: { external: true, name: "${NIVO_CFG_OPENCLAW_RELAY:?}" }
+  nivo-bridge-manifest: { external: true, name: "${NIVO_CFG_NIVO_BRIDGE_MANIFEST:?}" }
+  nivo-bridge-package: { external: true, name: "${NIVO_CFG_NIVO_BRIDGE_PACKAGE:?}" }
+  nivo-bridge-index: { external: true, name: "${NIVO_CFG_NIVO_BRIDGE_INDEX:?}" }
+  nivo-bridge-token: { external: true, name: "${NIVO_CFG_NIVO_BRIDGE_TOKEN:?}" }
   postgres-backup: { external: true, name: "${NIVO_CFG_POSTGRES_BACKUP:?}" }
 
 # Custody records, declaration only: one external stub per sealed member of .starcistacks/production/secrets, named by the runtimeName and version

@@ -8,9 +8,11 @@ import type {
     KnowledgePassages,
     LeadDraft,
     LeadWriteResult,
+    OptionalBridgeTurn,
     OptionalLeadId,
     ToolArgs,
     ToolContext,
+    BridgeTurn,
     OptionalToolClaims,
 } from "./agent-tools.contracts"
 
@@ -80,4 +82,16 @@ export interface ToolTokens {
     revoke(jobId: string): void
     /** The claims of a valid token of a running job, or null; admission passes false to avoid consuming a call. */
     verify(token: string, consume?: boolean): OptionalToolClaims
+}
+
+/** Admits the call of the OpenClaw bridge plugin: checks its signed credential and finds the one turn that is running (owner: the agent turns). */
+export interface BridgeTurns {
+    /** The running turn the signed token names; null for a forged or expired token, a foreign session or a turn that is not running. */
+    admit(token: string): Promise<OptionalBridgeTurn>
+}
+
+/** Runs the connector meta-tools for a turn that has no customer conversation (a tag, an event or a clock; owner: the agent turns). */
+export interface InternalTools {
+    /** Runs one meta-tool as the turn's agent, under its grants. */
+    run(turn: BridgeTurn, tool: GatewayToolName, args: ToolArgs): Promise<JsonResult>
 }

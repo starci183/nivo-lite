@@ -23,6 +23,7 @@ import {
 } from "@tests/fixtures/builders/customer-turn-runtime.builder"
 import type { RuntimeBuildOptions } from "@tests/fixtures/builders/customer-turn-runtime.builder"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
+import { AgentTurnsLogEvent } from "@modules/domain/agent-turns"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { GatewayContextService } from "./gateway-context.service"
 import { TurnModulesService } from "./turn-modules.service"
@@ -379,7 +380,7 @@ describe("CustomerTurnRuntimeService", () => {
         const cause = new Error("sync failed")
         failed.sync.syncInstallation.mockRejectedValue(cause)
         await expect(failed.runtime.propose(turn)).resolves.toMatchObject({ reply: "50k" })
-        expect(failed.logger.error).toHaveBeenCalledWith(CustomerTurnsLogEvent.AgentSyncFailed, cause, {
+        expect(failed.logger.error).toHaveBeenCalledWith(AgentTurnsLogEvent.AgentSyncFailed, cause, {
             installationId: "inst-1",
         })
         expect(failed.gateway.runTurn.mock.calls[0]?.[0]?.agentId).toBe("ws-internal")

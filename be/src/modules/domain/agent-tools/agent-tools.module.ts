@@ -4,20 +4,23 @@ import {
     AGENT_HANDOFF,
     APPROVAL_REQUESTER,
     BOOKING_TOOLS,
+    BRIDGE_TURNS,
     CONVERSATION_LEADS,
     GATEWAY_TOOLS,
     HANDOFF_TOOL,
+    INTERNAL_TOOLS,
     KNOWLEDGE_SEARCH,
     LEAD_WRITER,
     TOOL_TOKENS,
 } from "./agent-tools.decorators"
 import { AgentToolsService } from "./agent-tools.service"
+import { BridgeCallsService } from "./bridge-calls.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-tools.module-definition"
 
 @Module({})
 /**
  * The tool bridge OpenClaw calls through: manifest, token issue and tool dispatch. The ports (knowledge, leads, booking, approvals, handoffs, connector meta-tools)
- * are bound by the app root; the OpenClaw and events capabilities must be reachable from it.
+ * are bound by the app root, and so are the two ports that serve the OpenClaw bridge plugin (the running turn of a call, the connector tools of a turn with no conversation); the OpenClaw and events capabilities must be reachable from it.
  */
 export class AgentToolsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
@@ -37,6 +40,9 @@ export class AgentToolsModule extends ConfigurableModuleClass {
                 { provide: GATEWAY_TOOLS, useExisting: ports.gatewayTools },
                 { provide: AGENT_HANDOFF, useExisting: ports.agentHandoff },
                 { provide: TOOL_TOKENS, useExisting: ports.toolTokens },
+                { provide: BRIDGE_TURNS, useExisting: ports.bridgeTurns },
+                { provide: INTERNAL_TOOLS, useExisting: ports.internalTools },
+                BridgeCallsService,
                 AgentToolsService,
             ],
             exports: [AgentToolsService],

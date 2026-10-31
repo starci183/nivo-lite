@@ -95,6 +95,7 @@ const options = {
         manageAgents: false,
         toolSecret: null,
     },
+    agentTurns: { bridgeSecret: null },
     aiTasks: {
         jsonRetries: 1,
         timeoutMs: 1000,

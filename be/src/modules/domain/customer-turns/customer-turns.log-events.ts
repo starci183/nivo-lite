@@ -1,7 +1,5 @@
 /** Log events of the customer-turns capability. */
 export enum CustomerTurnsLogEvent {
-    /** The agent's own OpenClaw copy could not be made ready; the turn runs on the internal agent with the full context. */
-    AgentSyncFailed = "customer-turns.agent.sync-failed",
     /** A per-turn context block (hiring, authority) could not be read; the turn goes on without it. */
     ContextPartFailed = "customer-turns.context.part-failed",
     /** The OpenClaw turn failed or timed out; the customer gets the holding line. */

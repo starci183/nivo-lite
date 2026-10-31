@@ -1,14 +1,16 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { LEASE_SECONDS, BREAKER_AFTER, BREAKER_SECONDS, retryWaitOf } from "./agent-work.policy"
 import { parseBegin, parseDue, parseFinish, parsePropose } from "./agent-work-results.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
-import { AgentTurnEntity } from "./persistence/entities"
+import { AgentTurnEntity, AgentWakeEntity } from "./persistence/entities"
 import type {
     AgentBegin,
     AgentFinish,
     AgentProposeResult,
+    AgentRunningTurn,
     AgentTurnEnding,
     AgentTurnView,
     AgentWorkDue,
@@ -16,6 +18,9 @@ import type {
 
 /** One row a database function answered: the value sits under the function's own name. */
 type FunctionRow = Readonly<Record<string, unknown>>
+
+/** The most running turns one runtime agent is looked up among: the worker concurrency bounds the real number. */
+const RUNNING_MAX = 50
 
 const rejected = (): AgentWorkError => new AgentWorkError({ code: AgentWorkErrorCode.ResultRejected })
 
@@ -106,5 +111,33 @@ export class AgentTurnsService {
             { id: turn.turnId, status: "running" },
             { runtimeAgentId, threadKey },
         )
+    }
+
+    /** The turns running on a runtime agent, each with the wake it answers; a turn whose session or wake is unknown is left out. */
+    async runningOn(runtimeAgentId: string): Promise<ReadonlyArray<AgentRunningTurn>> {
+        const turns = await this.entityManager.find(AgentTurnEntity, {
+            where: { runtimeAgentId, status: "running" },
+            take: RUNNING_MAX,
+        })
+        if (turns.length === 0) return []
+        const wakes = await this.entityManager.find(AgentWakeEntity, {
+            where: { id: In(turns.map((t) => t.wakeId)) },
+            take: RUNNING_MAX,
+        })
+        return turns.flatMap((turn) => {
+            const wake = wakes.find((candidate) => candidate.id === turn.wakeId)
+            if (wake === undefined || turn.threadKey === null) return []
+            return [
+                {
+                    turnId: turn.id,
+                    workspaceId: turn.workspaceId,
+                    agentId: turn.agentId,
+                    wakeId: wake.id,
+                    source: wake.source,
+                    threadKey: turn.threadKey,
+                    context: wake.context,
+                },
+            ]
+        })
     }
 }

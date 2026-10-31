@@ -1,6 +1,15 @@
 /** What a model call was for. `guide` is paid by NIVO and never counts toward the allowance. */
 export type UsageKind =
-    "chat_reply" | "setup" | "owner_chat" | "relay" | "embedding" | "engine" | "guide" | "brain" | "office_command"
+    | "chat_reply"
+    | "setup"
+    | "owner_chat"
+    | "relay"
+    | "embedding"
+    | "engine"
+    | "guide"
+    | "brain"
+    | "office_command"
+    | "agent_work"
 
 /** How far a workspace is through its allowance. */
 export type QuotaLevel = "ok" | "warn" | "exceeded"

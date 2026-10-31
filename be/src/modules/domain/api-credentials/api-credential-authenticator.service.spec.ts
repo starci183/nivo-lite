@@ -59,14 +59,14 @@ describe("ApiCredentialAuthenticatorService", () => {
 
     it("proves a tool token without executing its tool", async () => {
         const { authenticator, tools } = await build()
-        tools.authenticateBearer.mockReturnValue({ jobId: "job-1", workspaceId: "ws-1", conversationId: "chat-1" })
+        tools.authenticate.mockResolvedValue({ jobId: "job-1", workspaceId: "ws-1" })
 
         await expect(authenticator.authenticate({ kind: "tool-token" }, "Bearer tool", undefined)).resolves.toEqual({
             kind: "tool-token",
             subject: "job-1",
             workspaceId: "ws-1",
         })
-        expect(tools.authenticateBearer).toHaveBeenCalledWith("Bearer tool")
+        expect(tools.authenticate).toHaveBeenCalledWith("Bearer tool")
         expect(tools.runBearerTool).not.toHaveBeenCalled()
     })
 
@@ -190,9 +190,7 @@ describe("credential refusal ownership", () => {
             const refusal = new IdentityError({ code: IdentityErrorCode.Unauthenticated })
             keys.verifyCredential.mockRejectedValue(refusal)
             runs.verifyRun.mockRejectedValue(refusal)
-            tools.authenticateBearer.mockImplementation(() => {
-                throw refusal
-            })
+            tools.authenticate.mockRejectedValue(refusal)
             posting.requireOpen.mockRejectedValue(refusal)
             offers.authenticateLink.mockRejectedValue(refusal)
             interviews.authenticateLink.mockRejectedValue(refusal)

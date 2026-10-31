@@ -1,16 +1,11 @@
+import { runtimeAgentFor } from "@modules/domain/agent-turns"
 import type { Installation } from "@modules/domain/agents"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
-import {
-    InjectOpenclawAgentRegistry,
-    InjectOpenclawGateway,
-    agentIdFor,
-    threadKeyFor,
-} from "@modules/integrations/openclaw"
+import { InjectOpenclawAgentRegistry, InjectOpenclawGateway, threadKeyFor } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, GatewayClient, TurnResult } from "@modules/integrations/openclaw"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 
 /** The socket gets a little longer than the turn, so the gateway's own timeout answers first. */
 const ABORT_GRACE_MS = 5000
@@ -34,18 +29,17 @@ export class CustomerTurnGatewayService {
      * The module's own agent when OpenClaw already knows it; otherwise its copy is built now. When that cannot be done,
      * the turn runs on the workspace's internal agent with the complete context prepared by the runtime.
      */
-    async agentFor(workspaceId: string, module: string, installation: Installation | null): Promise<string> {
-        const own = agentIdFor(workspaceId, module)
-        if (this.registry.has(own)) return own
-        if (installation !== null) {
-            try {
-                const synced = await this.sync.syncInstallation(workspaceId, installation.id, true)
-                if (synced !== null) return synced.agentId
-            } catch (cause) {
-                this.logger.error(CustomerTurnsLogEvent.AgentSyncFailed, cause, { installationId: installation.id })
-            }
-        }
-        return this.sync.ensureInternalAgent(workspaceId)
+    agentFor(workspaceId: string, module: string, installation: Installation | null): Promise<string> {
+        return runtimeAgentFor(
+            {
+                registry: this.registry,
+                sync: this.sync,
+                logger: this.logger,
+            },
+            workspaceId,
+            module,
+            installation,
+        )
     }
 
     /** Runs the prepared message with one stable replay key per customer message and unchanged abort grace. */

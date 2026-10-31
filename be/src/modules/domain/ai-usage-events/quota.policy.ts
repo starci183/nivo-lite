@@ -11,7 +11,11 @@ import { creditsOf } from "./usage-cost.policy"
 /** The soft warning starts at this share of the monthly allowance. */
 export const WARN_AT = 0.8
 
-/** Customer-facing kinds stop when ANY allowance is used up; everything else when the credits (or a legacy token budget) are. */
+/**
+ * Customer-facing kinds stop when ANY allowance is used up; everything else when the credits (or a legacy token budget) are. `agent_work`
+ * (a tag or background turn) speaks to no customer, so it is metered into the tokens and credits like a chat reply but never spends the
+ * customer message allowance.
+ */
 const CUSTOMER_FACING: ReadonlySet<UsageKind> = new Set<UsageKind>(["chat_reply", "relay"])
 
 const ratioOf = (used: number, limit: number | null): number => {

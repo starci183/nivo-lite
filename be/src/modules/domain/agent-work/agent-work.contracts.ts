@@ -117,6 +117,24 @@ export interface AgentTurnView {
     readonly proposal: unknown
 }
 
+/** A turn that is running, with the wake it answers: what a tool call of that turn is looked up by. */
+export interface AgentRunningTurn {
+    /** The turn row. */
+    readonly turnId: string
+    /** The workspace of the agent. */
+    readonly workspaceId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The wake it answers. */
+    readonly wakeId: string
+    /** What woke the agent. */
+    readonly source: AgentWakeSource
+    /** The runtime's session key of the turn. */
+    readonly threadKey: string
+    /** Ids and flags of the fact. */
+    readonly context: AgentWakeContext
+}
+
 /** What `begin` answered. */
 export type AgentBegin =
     { readonly result: "killed" | "busy" | "idle" } | { readonly result: "begun"; readonly turn: AgentTurnView }

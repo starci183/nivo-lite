@@ -23,6 +23,36 @@ export interface ToolContext {
     readonly conversationId: string
 }
 
+/** Who a credential admits: the job and the workspace it acts for, nothing else. */
+export interface ToolPrincipal {
+    /** The job (or, on the bridge, the wake or message) whose turn runs. */
+    readonly jobId: string
+    /** The workspace of the turn. */
+    readonly workspaceId: string
+}
+
+/** What woke the turn a bridge call serves. */
+export type BridgeSource = "customer" | "tag" | "internal" | "schedule"
+
+/** The running turn a bridge call belongs to: read from the turn row and never from what the model sent. */
+export interface BridgeTurn extends ToolPrincipal {
+    /** The agent of the turn. */
+    readonly agentId: string
+    /** The turn row. */
+    readonly turnId: string
+    /** The wake it answers. */
+    readonly wakeId: string
+    /** What woke the agent. */
+    readonly source: BridgeSource
+    /** The customer conversation of the wake, or null for a tag, an event or a clock. */
+    readonly conversationId: string | null
+    /** The account that wrote the tagging message, or null. */
+    readonly authorUserId: string | null
+}
+
+/** A running turn, or null when the credential names none. */
+export type OptionalBridgeTurn = BridgeTurn | null
+
 /** One tool OpenClaw may call. */
 export interface ToolManifestEntry {
     /** The supported dotted name used to dispatch this tool to its capability. */

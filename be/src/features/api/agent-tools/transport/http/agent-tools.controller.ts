@@ -12,7 +12,8 @@ import { ToolManifestResponse, ToolResultResponse } from "./dto/tool-result.resp
 @Controller("agent-tools")
 /**
  * The HTTP door OpenClaw agents call back into: the tool manifest and one call per tool. The caller is an agent running
- * in the gateway, not a person: a call carries the short-lived per-job tool token as bearer and the domain verifies it;
+ * in the gateway, not a person: a call carries as bearer either the short-lived per-job tool token or the credential the
+ * OpenClaw bridge plugin signs for its session (the domain finds the running turn of that session and refuses a call with none);
  * no session is involved.
  */
 export class AgentToolsController {

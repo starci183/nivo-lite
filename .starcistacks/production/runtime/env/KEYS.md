@@ -57,6 +57,9 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `OPENCLAW_GATEWAY_PASSWORD` | Alternative gateway credential when no token exists; not used in production. |
 | `BACKUP_RUN_ONCE` | Stack environment of `nivo-postgres-backup`: `1` takes one backup now and exits (tests and the manual run); unset keeps the daily schedule. |
 | `OPENCLAW_TOOL_SECRET` | Sealed `api`, read only through `OPENCLAW_TOOL_SECRET_FILE`: signs the per-turn tool token OpenClaw calls the api back with. Without it no token is minted, so a turn of an agent holding connector grants fails closed (`tools_not_configured`); other agents answer without tools. |
+| `OPENCLAW_BRIDGE_SECRET` | Sealed `openclaw`, granted to the api and to nivo-openclaw (the api reads it through `OPENCLAW_BRIDGE_SECRET_FILE`): the nivo-bridge plugin signs each `nivo_call` with it and the api finds the running turn from the signed agent and session. Without it on the api every bridge call is refused; without it on openclaw the plugin registers no tool. Adding it to the sealed member is a deploy step for the owner. |
+| `OPENCLAW_BRIDGE_URL` | Where the plugin posts a tool call (`http://nivo-api:8787/agent-tools`); set on nivo-openclaw by `stack.yaml`, not read by the api. |
+| `OPENCLAW_SKIP_CRON` | `1` on nivo-openclaw (`stack.yaml`): OpenClaw's own cron scheduler stays off, because NIVO owns every schedule. |
 | `OPENCLAW_MANAGE_AGENTS` | `true` or `false`; granted from the sealed `openclaw`/`n8n` member. |
 | `META_APP_ID` | The Meta app credentials (both or none); the Meta channels are off while absent. |
 | `META_APP_SECRET` | The Meta app credentials (both or none); the Meta channels are off while absent. |
