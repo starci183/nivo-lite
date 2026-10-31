@@ -1,3 +1,4 @@
+import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
@@ -36,14 +37,16 @@ const build = async () => {
 /** The route the service hands the shared tools, read from its first call. */
 const routeOf = (tools: jest.Mocked<ProviderToolsService>): ProviderRoute => {
     const [, route] = tools.answer.mock.calls[0] ?? []
-    if (route === undefined) throw new Error("the shared tools were not called")
+    assert(route !== undefined, "the shared tools were not called")
     return route
 }
 
 describe("ZaloNativeService", () => {
     it("declares a status and an events tool for internal use, the customer masked in the audit", () => {
         expect(ZALO_MANIFEST.key).toBe("zalo")
-        expect(ZALO_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields])).toEqual([
+        expect(
+            ZALO_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields]),
+        ).toEqual([
             ["status", "read", true, undefined],
             ["events", "read", true, ["customerMasked"]],
         ])
@@ -58,7 +61,8 @@ describe("ZaloNativeService", () => {
             WS,
             expect.objectContaining({ provider: "zalo_oa", channel: "zalo" }),
             "status",
-            {}, CALLER,
+            {},
+            CALLER,
         )
     })
 

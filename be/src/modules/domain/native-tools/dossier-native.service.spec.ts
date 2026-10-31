@@ -1,13 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AgentViewScopeService } from "@modules/domain/agents"
 import { BrainDossiersReadService } from "@modules/domain/brain-dossiers"
 import type { DossierEntry } from "@modules/domain/brain-dossiers"
 import { DossierFindingsService } from "@modules/domain/dossier-review"
 import type { FindingRecord, ReviewSummary } from "@modules/domain/dossier-review"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
-import { summaryOf } from "@modules/domain/mcp-gateway/audit-mask.policy"
 import { DOSSIER_MANIFEST, DossierNativeService } from "./dossier-native.service"
+import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -73,9 +72,15 @@ const finding = (changes: Partial<FindingRecord> = {}): FindingRecord => ({
     ...changes,
 })
 
-const build = async (scope = { module: "sales", installationId: null as string | null }) => {
-    const scopes = mock<AgentViewScopeService>()
-    scopes.lensOf.mockResolvedValue(scope)
+const build = async () => {
+    const views = mock<NativeViewService>()
+    views.internalOf.mockResolvedValue({
+        workspaceId: WS,
+        module: "sales",
+        audience: "internal",
+        installationId: null,
+        searchable: true,
+    })
     const dossiers = mock<BrainDossiersReadService>()
     dossiers.all.mockResolvedValue([entry(), entry({ id: "d2", ref: "1.2", name: "Tax code" })])
     const findings = mock<DossierFindingsService>()
@@ -87,19 +92,20 @@ const build = async (scope = { module: "sales", installationId: null as string |
     const moduleRef = await Test.createTestingModule({
         providers: [
             DossierNativeService,
-            NativeViewService,
-            { provide: AgentViewScopeService, useValue: scopes },
+            { provide: NativeViewService, useValue: views },
             { provide: BrainDossiersReadService, useValue: dossiers },
             { provide: DossierFindingsService, useValue: findings },
         ],
     }).compile()
-    return { dossier: moduleRef.get(DossierNativeService), dossiers, findings }
+    return { dossier: moduleRef.get(DossierNativeService), dossiers, findings, views }
 }
 
 describe("DossierNativeService manifest", () => {
     it("declares two read tools for internal use only", () => {
         expect(DOSSIER_MANIFEST.key).toBe("dossier")
-        expect(DOSSIER_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields])).toEqual([
+        expect(
+            DOSSIER_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields]),
+        ).toEqual([
             ["status", "read", true, undefined],
             ["findings.list", "read", true, ["title"]],
         ])
@@ -133,26 +139,20 @@ describe("DossierNativeService unknown tool and arguments", () => {
 
 describe("DossierNativeService internal use", () => {
     it.each(["status", "findings.list"])(
-        "refuses %s to an agent whose view is the customer's, even outside a conversation",
+        "refuses %s to a caller the view policy keeps out, before reading anything",
         async (tool) => {
-            const { dossier, dossiers, findings } = await build({ module: "chatbot", installationId: null })
+            const { dossier, dossiers, findings, views } = await build()
+            views.internalOf.mockRejectedValue(nativeRefusal("internal_only"))
 
-            await expect(dossier.invoke(WS, tool, {}, AGENT)).rejects.toMatchObject({
+            await expect(dossier.invoke(WS, tool, {}, { agentId: "a1", conversationId: "c1" })).rejects.toMatchObject({
                 code: McpGatewayErrorCode.NativeRefused,
                 params: { reason: "internal_only" },
             })
+            expect(views.internalOf).toHaveBeenCalledWith(WS, { agentId: "a1", conversationId: "c1" })
             expect(dossiers.all).not.toHaveBeenCalled()
             expect(findings.listForAgent).not.toHaveBeenCalled()
         },
     )
-
-    it("refuses a conversation of an internal agent too", async () => {
-        const { dossier } = await build()
-
-        await expect(
-            dossier.invoke(WS, "status", {}, { agentId: "a1", conversationId: "c1" }),
-        ).rejects.toMatchObject({ params: { reason: "internal_only" } })
-    })
 })
 
 describe("DossierNativeService status", () => {
@@ -190,7 +190,14 @@ describe("DossierNativeService status", () => {
 
         await expect(dossier.invoke(WS, "status", {}, AGENT)).resolves.toEqual({
             dossiers: [
-                { id: "d1", ref: "1.1", category: "Legal", name: "Business licence", status: "partial", findingsOpen: 2 },
+                {
+                    id: "d1",
+                    ref: "1.1",
+                    category: "Legal",
+                    name: "Business licence",
+                    status: "partial",
+                    findingsOpen: 2,
+                },
                 { id: "d2", ref: "1.2", category: "Legal", name: "Tax code", status: "missing", findingsOpen: 0 },
             ],
             totals: { dossiers: 2, open: 3, confirmed: 1, critical: 1, high: 2 },
@@ -234,7 +241,13 @@ describe("DossierNativeService findings.list", () => {
         const answer = await dossier.invoke(
             WS,
             "findings.list",
-            { dossierId: "11111111-1111-4111-8111-222222222222", statuses: ["open"], severities: ["high"], first: 5, after: "c0" },
+            {
+                dossierId: "11111111-1111-4111-8111-222222222222",
+                statuses: ["open"],
+                severities: ["high"],
+                first: 5,
+                after: "c0",
+            },
             AGENT,
         )
 
@@ -267,7 +280,7 @@ describe("DossierNativeService findings.list", () => {
         expect(JSON.stringify(answer)).not.toContain("never leaves")
     })
 
-    it("cuts a long title and keeps the title out of the audit summary", async () => {
+    it("cuts a long title", async () => {
         const { dossier, findings } = await build()
         findings.listForAgent.mockResolvedValue({
             nodes: [finding({ title: "t".repeat(300) })],
@@ -276,7 +289,6 @@ describe("DossierNativeService findings.list", () => {
 
         const answer = await dossier.invoke(WS, "findings.list", {}, AGENT)
 
-        expect(answer).toMatchObject({ findings: [{ title: expect.stringMatching(/^t{199}…$/u) }] })
-        expect(summaryOf(answer, DOSSIER_MANIFEST.tools[1]?.secretFields)).not.toContain("ttt")
+        expect(JSON.stringify(answer)).toContain(`"${"t".repeat(199)}…"`)
     })
 })

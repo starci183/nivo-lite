@@ -1,3 +1,4 @@
+import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
@@ -36,7 +37,7 @@ const build = async () => {
 /** The route the service hands the shared tools, read from its first call. */
 const routeOf = (tools: jest.Mocked<ProviderToolsService>): ProviderRoute => {
     const [, route] = tools.answer.mock.calls[0] ?? []
-    if (route === undefined) throw new Error("the shared tools were not called")
+    assert(route !== undefined, "the shared tools were not called")
     return route
 }
 
@@ -54,13 +55,16 @@ describe("TelegramNativeService", () => {
     it("runs the tools of the telegram provider on the telegram channel", async () => {
         const { telegram, tools } = await build()
 
-        await expect(telegram.invoke(WS, "events", { connectionId: "c1" }, CALLER)).resolves.toEqual({ connections: [] })
+        await expect(telegram.invoke(WS, "events", { connectionId: "c1" }, CALLER)).resolves.toEqual({
+            connections: [],
+        })
 
         expect(tools.answer).toHaveBeenCalledWith(
             WS,
             expect.objectContaining({ provider: "telegram", channel: "telegram" }),
             "events",
-            { connectionId: "c1" }, CALLER,
+            { connectionId: "c1" },
+            CALLER,
         )
     })
 

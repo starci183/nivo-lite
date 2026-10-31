@@ -50,6 +50,11 @@ export interface GatewayToolSpec {
      * and a call is refused `internal_only`, audited, before any adapter runs.
      */
     readonly internalOnly?: boolean
+    /**
+     * True for a tool whose answer carries text a stranger may have written (documents, messages): once it answered, a write of the
+     * same turn needs a person's approval, however its grant reads, because the text may be trying to steer the agent.
+     */
+    readonly taints?: boolean
 }
 
 /**

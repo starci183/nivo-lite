@@ -8,7 +8,7 @@ import {
     DRIVE_STATUS_INPUT_SCHEMA,
     DRIVE_STATUS_SCHEMA,
 } from "./drive-native.schema"
-import type { DriveSourceStatus } from "./drive-native.schema"
+import type { DriveSourcesListInput } from "./drive-native.schema"
 import { emailMasked } from "./native-masking.policy"
 import { argumentsOf, nativeRefusal, unknownTool } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
@@ -57,7 +57,13 @@ export const DRIVE_MANIFEST: NativeConnectorManifest = {
 }
 
 /** How many of the sources are ready, being read, and failed. */
-const countsOf = (sources: ReadonlyArray<OriginSource>): { ready: number; working: number; failed: number } => ({
+interface SourceCounts {
+    readonly ready: number
+    readonly working: number
+    readonly failed: number
+}
+
+const countsOf = (sources: ReadonlyArray<OriginSource>): SourceCounts => ({
     ready: sources.filter((source) => source.status === "ready").length,
     working: sources.filter((source) => source.status !== "ready" && !FAILED.has(source.status)).length,
     failed: sources.filter((source) => FAILED.has(source.status)).length,
@@ -102,10 +108,7 @@ export class DriveNativeService implements NativeAdapter {
         }
     }
 
-    private async list(
-        workspaceId: string,
-        input: { readonly status?: DriveSourceStatus | undefined; readonly limit: number },
-    ): Promise<GatewayJson> {
+    private async list(workspaceId: string, input: DriveSourcesListInput): Promise<GatewayJson> {
         await this.tools.connectionsOf(workspaceId, PROVIDER)
         const sources = await this.sources.ofOrigin(workspaceId, ORIGIN, SOURCES_WINDOW)
         return {

@@ -1,3 +1,4 @@
+import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
@@ -45,7 +46,7 @@ const build = async () => {
 /** The route the service hands the shared tools, read from its first call. */
 const routeOf = (tools: jest.Mocked<ProviderToolsService>): ProviderRoute => {
     const [, route] = tools.answer.mock.calls[0] ?? []
-    if (route === undefined) throw new Error("the shared tools were not called")
+    assert(route !== undefined, "the shared tools were not called")
     return route
 }
 
@@ -66,7 +67,9 @@ describe("SepayStatusNativeService", () => {
     it("runs the bank tools through the ledger as before, and never through the status route", async () => {
         const { status, tools, sepay } = await build()
 
-        await expect(status.invoke(WS, "transactions.list", { limit: 5 }, CALLER)).resolves.toEqual({ transactions: [] })
+        await expect(status.invoke(WS, "transactions.list", { limit: 5 }, CALLER)).resolves.toEqual({
+            transactions: [],
+        })
 
         expect(sepay.invoke).toHaveBeenCalledWith(WS, "transactions.list", { limit: 5 })
         expect(tools.answer).not.toHaveBeenCalled()
@@ -76,9 +79,13 @@ describe("SepayStatusNativeService", () => {
         const { status, sepay } = await build()
         sepay.invoke.mockRejectedValue({ code: McpGatewayErrorCode.UnknownTool })
 
-        await expect(status.invoke(WS, "events", {}, CALLER)).rejects.toMatchObject({ code: McpGatewayErrorCode.UnknownTool })
+        await expect(status.invoke(WS, "events", {}, CALLER)).rejects.toMatchObject({
+            code: McpGatewayErrorCode.UnknownTool,
+        })
     })
+})
 
+describe("SepayStatusNativeService status", () => {
     it("runs the status tool of the sepay provider, which is no channel, through the shared tools", async () => {
         const { status, tools, sepay } = await build()
 

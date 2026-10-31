@@ -19,6 +19,15 @@ export const BRAIN_FACTS_LIST_SCHEMA = z
 /** `brain.facts.get`: one fact in force of the caller's view with its evidence. */
 export const BRAIN_FACTS_GET_SCHEMA = z.object({ id: z.uuid() }).strict()
 
+/** The arguments of `brain.search` as its validator reads them. */
+export type BrainSearchInput = z.output<typeof BRAIN_SEARCH_SCHEMA>
+
+/** The arguments of `brain.facts.list` as its validator reads them. */
+export type BrainFactsListInput = z.output<typeof BRAIN_FACTS_LIST_SCHEMA>
+
+/** The arguments of `brain.facts.get` as its validator reads them. */
+export type BrainFactsGetInput = z.output<typeof BRAIN_FACTS_GET_SCHEMA>
+
 /** The schemas the manifest advertises, generated from the validators. */
 export const BRAIN_SEARCH_INPUT_SCHEMA = z.toJSONSchema(BRAIN_SEARCH_SCHEMA, { io: "input" })
 export const BRAIN_FACTS_LIST_INPUT_SCHEMA = z.toJSONSchema(BRAIN_FACTS_LIST_SCHEMA, { io: "input" })

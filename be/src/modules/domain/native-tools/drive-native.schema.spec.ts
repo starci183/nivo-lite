@@ -10,7 +10,10 @@ describe("DRIVE_STATUS_SCHEMA", () => {
 describe("DRIVE_SOURCES_LIST_SCHEMA", () => {
     it("supplies the default limit and takes a stage", () => {
         expect(DRIVE_SOURCES_LIST_SCHEMA.parse({})).toEqual({ limit: 20 })
-        expect(DRIVE_SOURCES_LIST_SCHEMA.parse({ status: "failed", limit: 50 })).toEqual({ status: "failed", limit: 50 })
+        expect(DRIVE_SOURCES_LIST_SCHEMA.parse({ status: "failed", limit: 50 })).toEqual({
+            status: "failed",
+            limit: 50,
+        })
     })
 
     it.each([

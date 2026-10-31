@@ -8,6 +8,7 @@ import {
     DOSSIER_STATUS_INPUT_SCHEMA,
     DOSSIER_STATUS_SCHEMA,
 } from "./dossier-native.schema"
+import type { DossierFindingsListInput } from "./dossier-native.schema"
 import { clipped } from "./native-masking.policy"
 import { argumentsOf, unknownTool } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
@@ -27,7 +28,8 @@ export const DOSSIER_MANIFEST: NativeConnectorManifest = {
     tools: [
         {
             name: "status",
-            description: "Where the dossiers of the business stand: each one's status and open findings, the totals and the last review.",
+            description:
+                "Where the dossiers of the business stand: each one's status and open findings, the totals and the last review.",
             scope: "read",
             defaultMode: "auto",
             inputSchema: DOSSIER_STATUS_INPUT_SCHEMA,
@@ -104,20 +106,12 @@ export class DossierNativeService implements NativeAdapter {
                 critical: summary.critical,
                 high: summary.high,
             },
-            latestRunAt: summary.latestRun === null ? null : (summary.latestRun.finishedAt ?? summary.latestRun.createdAt),
+            latestRunAt:
+                summary.latestRun === null ? null : (summary.latestRun.finishedAt ?? summary.latestRun.createdAt),
         }
     }
 
-    private async list(
-        workspaceId: string,
-        input: {
-            readonly dossierId?: string | undefined
-            readonly statuses?: ReadonlyArray<string> | undefined
-            readonly severities?: ReadonlyArray<string> | undefined
-            readonly first: number
-            readonly after?: string | undefined
-        },
-    ): Promise<GatewayJson> {
+    private async list(workspaceId: string, input: DossierFindingsListInput): Promise<GatewayJson> {
         const page = await this.findings.listForAgent(workspaceId, input, LOCALE)
         return {
             findings: page.nodes.map((finding) => ({

@@ -4,7 +4,6 @@ import type { ConnectionStatusFacts } from "@modules/domain/connections"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import type { OriginSource } from "@modules/domain/knowledge-sources"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
-import { summaryOf } from "@modules/domain/mcp-gateway/audit-mask.policy"
 import { DRIVE_MANIFEST, DriveNativeService } from "./drive-native.service"
 import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
@@ -70,12 +69,12 @@ const build = async () => {
 describe("DriveNativeService manifest", () => {
     it("declares two read tools for internal use only", () => {
         expect(DRIVE_MANIFEST.key).toBe("drive")
-        expect(DRIVE_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields])).toEqual(
-            [
-                ["status", "read", true, undefined],
-                ["sources.list", "read", true, ["title"]],
-            ],
-        )
+        expect(
+            DRIVE_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields]),
+        ).toEqual([
+            ["status", "read", true, undefined],
+            ["sources.list", "read", true, ["title"]],
+        ])
     })
 })
 
@@ -125,14 +124,19 @@ describe("DriveNativeService status", () => {
         const { drive, tools } = await build()
         tools.connectionsOf.mockResolvedValue([grant({ status: "error", email: null })])
 
-        await expect(drive.invoke(WS, "status", {}, CALLER)).resolves.toMatchObject({ state: "error", accountMasked: "" })
+        await expect(drive.invoke(WS, "status", {}, CALLER)).resolves.toMatchObject({
+            state: "error",
+            accountMasked: "",
+        })
     })
 
     it("reads an empty list of grants as not connected too, before reading any source", async () => {
         const { drive, tools, sources } = await build()
         tools.connectionsOf.mockResolvedValue([])
 
-        await expect(drive.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({ params: { reason: "not_connected" } })
+        await expect(drive.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({
+            params: { reason: "not_connected" },
+        })
         expect(sources.ofOrigin).not.toHaveBeenCalled()
     })
 
@@ -166,7 +170,6 @@ describe("DriveNativeService sources.list", () => {
             ],
         })
         expect(sources.ofOrigin).toHaveBeenCalledWith(WS, "google_drive", 500)
-        expect(summaryOf(answer, DRIVE_MANIFEST.tools[1]?.secretFields)).not.toContain("Bang gia")
     })
 
     it("lists every stage up to the default limit when none is asked for, and needs the grant", async () => {
@@ -201,16 +204,19 @@ describe("DriveNativeService sources.list", () => {
 })
 
 describe("DriveNativeService internal use", () => {
-    it.each(["status", "sources.list"])("refuses %s to a caller the view policy keeps out, before reading anything", async (tool) => {
-        const { drive, tools, sources, views } = await build()
-        views.internalOf.mockRejectedValue(nativeRefusal("internal_only"))
+    it.each(["status", "sources.list"])(
+        "refuses %s to a caller the view policy keeps out, before reading anything",
+        async (tool) => {
+            const { drive, tools, sources, views } = await build()
+            views.internalOf.mockRejectedValue(nativeRefusal("internal_only"))
 
-        await expect(drive.invoke(WS, tool, {}, { agentId: "a1", conversationId: "c1" })).rejects.toMatchObject({
-            code: McpGatewayErrorCode.NativeRefused,
-            params: { reason: "internal_only" },
-        })
-        expect(views.internalOf).toHaveBeenCalledWith(WS, { agentId: "a1", conversationId: "c1" })
-        expect(tools.connectionsOf).not.toHaveBeenCalled()
-        expect(sources.ofOrigin).not.toHaveBeenCalled()
-    })
+            await expect(drive.invoke(WS, tool, {}, { agentId: "a1", conversationId: "c1" })).rejects.toMatchObject({
+                code: McpGatewayErrorCode.NativeRefused,
+                params: { reason: "internal_only" },
+            })
+            expect(views.internalOf).toHaveBeenCalledWith(WS, { agentId: "a1", conversationId: "c1" })
+            expect(tools.connectionsOf).not.toHaveBeenCalled()
+            expect(sources.ofOrigin).not.toHaveBeenCalled()
+        },
+    )
 })

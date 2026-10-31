@@ -15,6 +15,9 @@ export const DOSSIER_FINDINGS_LIST_SCHEMA = z
     })
     .strict()
 
+/** The arguments of `dossier.findings.list` as its validator reads them. */
+export type DossierFindingsListInput = z.output<typeof DOSSIER_FINDINGS_LIST_SCHEMA>
+
 /** The schemas the manifest advertises, generated from the validators. */
 export const DOSSIER_STATUS_INPUT_SCHEMA = z.toJSONSchema(DOSSIER_STATUS_SCHEMA, { io: "input" })
 export const DOSSIER_FINDINGS_LIST_INPUT_SCHEMA = z.toJSONSchema(DOSSIER_FINDINGS_LIST_SCHEMA, { io: "input" })

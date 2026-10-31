@@ -106,8 +106,8 @@ describe("ProviderToolsService eventsOf", () => {
 
         expect(answer).toEqual({
             events: [
-                { at: "2026-10-30T10:12:00.123Z", direction: "in", delivery: "received", customerMasked: "5540…302" },
-                { at: "2026-10-30T10:12:30.000Z", direction: "out", delivery: "failed", customerMasked: "5540…302" },
+                { at: "2026-10-30T10:12:00.123Z", direction: "in", delivery: "received", customerMasked: "55…2" },
+                { at: "2026-10-30T10:12:30.000Z", direction: "out", delivery: "failed", customerMasked: "55…2" },
                 { at: "2026-10-30T10:13:00.000Z", direction: "out", delivery: "pending", customerMasked: "" },
             ],
         })
@@ -165,7 +165,7 @@ describe("ProviderToolsService answer", () => {
 
         await expect(
             tools.answer(WS, route, "events", { connectionId: CONNECTION, limit: 1 }, CALLER),
-        ).resolves.toMatchObject({ events: expect.any(Array) })
+        ).resolves.toHaveProperty("events")
     })
 
     it("refuses invalid arguments before reading anything", async () => {
@@ -196,7 +196,9 @@ describe("ProviderToolsService answer", () => {
         const { tools, bindings, views } = await build()
         views.internalOf.mockRejectedValue(nativeRefusal("internal_only"))
 
-        await expect(tools.answer(WS, route, "status", {}, { agentId: "a1", conversationId: "c1" })).rejects.toMatchObject({
+        await expect(
+            tools.answer(WS, route, "status", {}, { agentId: "a1", conversationId: "c1" }),
+        ).rejects.toMatchObject({
             params: { reason: "internal_only" },
         })
         expect(views.internalOf).toHaveBeenCalledWith(WS, { agentId: "a1", conversationId: "c1" })

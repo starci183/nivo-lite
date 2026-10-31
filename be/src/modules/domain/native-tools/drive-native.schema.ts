@@ -1,30 +1,29 @@
 import { z } from "zod"
 
-/** The stages of a source, in the words its row keeps. */
-export const DRIVE_SOURCE_STATUSES = [
-    "pending",
-    "queued",
-    "reading",
-    "indexing",
-    "extracting_facts",
-    "ready",
-    "failed",
-    "blocked_credits",
-] as const
-
-/** One stage of a source. */
-export type DriveSourceStatus = (typeof DRIVE_SOURCE_STATUSES)[number]
-
 /** `drive.status`: takes no argument. */
 export const DRIVE_STATUS_SCHEMA = z.object({}).strict()
 
 /** `drive.sources.list`: the sources the Drive feeds into the Brain, optionally in one stage. */
 export const DRIVE_SOURCES_LIST_SCHEMA = z
     .object({
-        status: z.enum(DRIVE_SOURCE_STATUSES).optional(),
+        status: z
+            .enum([
+                "pending",
+                "queued",
+                "reading",
+                "indexing",
+                "extracting_facts",
+                "ready",
+                "failed",
+                "blocked_credits",
+            ])
+            .optional(),
         limit: z.number().int().min(1).max(50).default(20),
     })
     .strict()
+
+/** The arguments of `drive.sources.list` as its validator reads them. */
+export type DriveSourcesListInput = z.output<typeof DRIVE_SOURCES_LIST_SCHEMA>
 
 /** The schemas the manifest advertises, generated from the validators. */
 export const DRIVE_STATUS_INPUT_SCHEMA = z.toJSONSchema(DRIVE_STATUS_SCHEMA, { io: "input" })

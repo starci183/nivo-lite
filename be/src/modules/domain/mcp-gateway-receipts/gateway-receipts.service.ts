@@ -22,7 +22,13 @@ const FAILURE_CODES: ReadonlySet<string> = new Set([
     "tool_error",
     "unknown_outcome",
 ])
-const APPROVAL_REASONS: ReadonlySet<string> = new Set(["ask_mode", "over_constraint", "over_limit_vnd", "no_rule"])
+const APPROVAL_REASONS: ReadonlySet<string> = new Set([
+    "ask_mode",
+    "over_constraint",
+    "over_limit_vnd",
+    "no_rule",
+    "tainted_input",
+])
 
 const isObject = (value: unknown): value is GatewayJson =>
     typeof value === "object" && value !== null && !Array.isArray(value)

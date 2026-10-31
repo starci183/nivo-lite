@@ -14,6 +14,7 @@ import type { Logger } from "@modules/platform/logging"
 import { argsHashOf, masked, summaryOf } from "./audit-mask.policy"
 import { breakerAfter, breakerGate, CLOSED } from "./circuit-breaker.policy"
 import { failureCodeOf, isTimeout, roleIn, usable, visibleTo } from "./connector-call.policy"
+import { isTainted, withTaint } from "./taint.policy"
 import { grantOf, nativeConnectorOf, remoteConnectorOf } from "./connector-row.mapper"
 import { judgeGrant } from "./grant.policy"
 import { gatewayArgumentsSchema } from "./gateway-tools.schema"
@@ -113,6 +114,8 @@ const replayable = (spec: GatewayToolSpec, args: GatewayJson, ran: Ran): boolean
  */
 export class McpGatewayService {
     private readonly breakers = new Map<string, BreakerState>()
+    /** The turns that read text a stranger may have written, and when (per process, like the breakers). */
+    private tainted: ReadonlyMap<string, number> = new Map()
 
     constructor(
         @InjectMcpGatewayOptions() private readonly options: McpGatewayOptions,
@@ -267,7 +270,20 @@ export class McpGatewayService {
             })
             return { ok: false, code: "approval_required", reason: verdict.reason }
         }
+        if (this.mustAsk(caller, resolved)) {
+            await this.audit(caller, resolved, sent, { outcome: "approval", code: "tainted_input", summary: "", started })
+            return { ok: false, code: "approval_required", reason: "tainted_input" }
+        }
         return this.guarded(caller, resolved, { original: args, forwarded: sent }, started)
+    }
+
+    /** True for a write of a turn that read tainted text, unless a person approved this exact call: the grant alone does not carry it. */
+    private mustAsk(caller: GatewayCaller, resolved: Resolved): boolean {
+        return (
+            resolved.spec.scope !== "read" &&
+            caller.approvedBy === undefined &&
+            isTainted(this.tainted, caller, this.clock.now().getTime())
+        )
     }
 
     /** Refuses invalid arguments, with a receipt when the tool resolves (an unknown tool has no connector to file it under). */
@@ -366,6 +382,7 @@ export class McpGatewayService {
             return { ok: false, code: "tool_error", detail: summary }
         }
         await this.audit(caller, resolved, args, { outcome: "ok", code: null, summary, started })
+        if (resolved.spec.taints === true) this.tainted = withTaint(this.tainted, caller, this.clock.now().getTime())
         return { ok: true, value: ran.value }
     }
 
