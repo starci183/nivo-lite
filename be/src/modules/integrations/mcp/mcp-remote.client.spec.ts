@@ -1,3 +1,4 @@
+import dns from "node:dns/promises"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
@@ -66,6 +67,16 @@ const build = async () => {
     }).compile()
     return { client: moduleRef.get(McpRemoteClient), logger }
 }
+
+/** Makes every name resolve to these addresses. */
+const resolvingTo = (...addresses: ReadonlyArray<string>) =>
+    jest
+        .spyOn(dns, "lookup")
+        .mockImplementation((): never => Promise.resolve(addresses.map((address) => ({ address, family: 4 }))) as never)
+
+beforeEach(() => {
+    resolvingTo("93.184.216.34")
+})
 
 afterEach(() => {
     jest.restoreAllMocks()
@@ -204,5 +215,62 @@ describe("McpRemoteClient.call failures", () => {
             value: { ok: true },
         })
         expect(logger.error).toHaveBeenCalledWith(McpLogEvent.CloseFailed, closing, { url: OPEN.url })
+    })
+})
+
+describe("McpRemoteClient private addresses", () => {
+    const calls = [
+        ["listTools", (client: McpRemoteClient, endpoint: typeof OPEN) => client.listTools(endpoint, 4000)],
+        ["ping", (client: McpRemoteClient, endpoint: typeof OPEN) => client.ping(endpoint, 4000)],
+        [
+            "call",
+            (client: McpRemoteClient, endpoint: typeof OPEN) =>
+                client.call({ endpoint, name: "a.b", args: {}, timeoutMs: 4000 }),
+        ],
+    ] as const
+
+    it.each(calls)("refuses a name that resolves inside before %s connects", async (_name, run) => {
+        const fetch = jest.spyOn(globalThis, "fetch").mockImplementation(serverFetch({}))
+        resolvingTo("10.0.0.7")
+        const { client } = await build()
+
+        await expect(run(client, OPEN)).rejects.toMatchObject({
+            code: McpErrorCode.Unavailable,
+            params: { reason: "private" },
+        })
+        expect(fetch).not.toHaveBeenCalled()
+    })
+
+    it("refuses a metadata or loopback address given as the host", async () => {
+        const fetch = jest.spyOn(globalThis, "fetch").mockImplementation(serverFetch({}))
+        const { client } = await build()
+
+        for (const url of ["http://169.254.169.254/mcp", "http://127.0.0.1:3001/mcp", "http://[::1]/mcp"]) {
+            await expect(client.ping({ url, bearer: null }, 4000)).rejects.toMatchObject({
+                code: McpErrorCode.Unavailable,
+            })
+        }
+        expect(fetch).not.toHaveBeenCalled()
+    })
+
+    it("checks the address again at each request, so a name that turns private mid-session is refused", async () => {
+        jest.spyOn(globalThis, "fetch").mockImplementation(serverFetch({}))
+        const lookup = resolvingTo("93.184.216.34")
+        lookup.mockImplementationOnce((): never => Promise.resolve([{ address: "93.184.216.34", family: 4 }]) as never)
+        lookup.mockImplementationOnce((): never => Promise.resolve([{ address: "192.168.0.9", family: 4 }]) as never)
+        const { client } = await build()
+
+        await expect(client.ping(OPEN, 4000)).rejects.toMatchObject({ code: McpErrorCode.Unavailable })
+    })
+
+    it("refuses to follow a redirect, which could lead inside", async () => {
+        const fetch = jest
+            .spyOn(globalThis, "fetch")
+            .mockResolvedValue(new Response(null, { status: 302, headers: { location: "http://169.254.169.254/" } }))
+        const { client } = await build()
+
+        await expect(client.ping(OPEN, 4000)).rejects.toMatchObject({ code: McpErrorCode.Unavailable })
+        expect(fetch).toHaveBeenCalledTimes(1)
+        expect(fetch.mock.calls[0]?.[1]).toMatchObject({ redirect: "manual" })
     })
 })

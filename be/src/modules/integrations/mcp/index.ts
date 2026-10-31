@@ -3,6 +3,7 @@ export { MCP_MESSAGES } from "./messages/mcp.messages"
 export { parseMcpConfig } from "./mcp.config"
 export { InjectMcpRemote, InjectMcpServer, MCP_REMOTE, MCP_SERVER } from "./mcp.decorators"
 export { McpModule } from "./mcp.module"
+export { isPublicEndpoint } from "./public-endpoint.policy"
 export type {
     McpEndpoint,
     McpRemoteResult,

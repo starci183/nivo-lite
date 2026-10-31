@@ -6,7 +6,7 @@ import { McpCallLogService } from "@modules/domain/mcp-call-log"
 import { McpConnectorsService, credentialStateOf } from "@modules/domain/mcp-connectors"
 import type { CheckStatus, McpConnectorRow } from "@modules/domain/mcp-connectors"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
-import { InjectMcpRemote } from "@modules/integrations/mcp"
+import { InjectMcpRemote, isPublicEndpoint } from "@modules/integrations/mcp"
 import type { McpEndpoint, McpRemote } from "@modules/integrations/mcp"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -68,9 +68,6 @@ const viewOf = (connector: WorkspaceConnector): ConnectorView => ({
         description: spec.description,
     })),
 })
-
-/** True for an http(s) URL. */
-const isUrl = (value: string): boolean => URL.canParse(value) && /^https?:$/u.test(new URL(value).protocol)
 
 @Injectable()
 /**
@@ -143,7 +140,7 @@ export class McpGatewayAdminService {
         const credential = input.credential ?? null
         if (!KEY.test(input.key) || this.natives.some((adapter) => adapter.manifest.key === input.key)) throw invalid("key")
         if (input.name.trim() === "") throw invalid("name")
-        if (!isUrl(input.url)) throw invalid("url")
+        if (!(await isPublicEndpoint(input.url))) throw invalid("url")
         if (credential !== null && !isBearerCredential(credential)) throw invalid("credential")
         await this.connectorRows.upsertRemote({
             workspaceId: actor.workspaceId,

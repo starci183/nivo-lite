@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import dns from "node:dns/promises"
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { ConnectionsService } from "@modules/domain/connections"
@@ -21,6 +22,20 @@ import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import { McpGatewayService } from "./mcp-gateway.service"
 import { GATEWAY_BEARER as BEARER, openedEndpointOf } from "@tests/fixtures/builders/mcp-gateway.builder"
 import { hakuenConnectorRowOf as rowOf } from "@tests/fixtures/builders/mcp-gateway-admin.builder"
+
+/** Makes every name resolve to these addresses. */
+const resolving = (...addresses: ReadonlyArray<string>) =>
+    jest
+        .spyOn(dns, "lookup")
+        .mockImplementation((): never => Promise.resolve(addresses.map((address) => ({ address, family: 4 }))) as never)
+
+beforeEach(() => {
+    resolving("93.184.216.34")
+})
+
+afterEach(() => {
+    jest.restoreAllMocks()
+})
 
 const ACTOR = { principalId: "person-1", workspaceId: "ws-1" }
 const MANAGER = ["owner", "manager"]
@@ -278,7 +293,7 @@ describe("McpGatewayAdminService.registerRemote and setCredential", () => {
 
     it("registers a server that takes no bearer without storing one, or leaves one not entered yet unread", async () => {
         const { admin, connectorRows, remote, credentials } = await build()
-        const url = "http://127.0.0.1:3001/mcp"
+        const url = "http://plain.shop.test/mcp"
         connectorRows.list.mockResolvedValueOnce([rowOf({ credential_state: "none", url })])
 
         await admin.registerRemote(ACTOR, connectorInputOf({ url, timeoutMs: 2000 }))
@@ -303,6 +318,14 @@ describe("McpGatewayAdminService.registerRemote and setCredential", () => {
         await expect(register(connectorInputOf({ url: "ftp://x.test" }))).rejects.toMatchObject({
             params: { field: "url" },
         })
+        for (const url of ["http://127.0.0.1:3001/mcp", "http://169.254.169.254/mcp", "https://[::1]/mcp"]) {
+            await expect(register(connectorInputOf({ url }))).rejects.toMatchObject({ params: { field: "url" } })
+        }
+        resolving("10.0.0.8")
+        await expect(register(connectorInputOf({ url: "https://rebind.shop.test/mcp" }))).rejects.toMatchObject({
+            params: { field: "url" },
+        })
+        resolving("93.184.216.34")
         await expect(register(connectorInputOf({ credential: "line\nbreak" }))).rejects.toMatchObject({
             code: McpGatewayErrorCode.Invalid,
             params: { field: "credential" },

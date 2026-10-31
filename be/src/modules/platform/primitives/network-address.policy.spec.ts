@@ -22,6 +22,9 @@ describe("isPrivateAddress", () => {
         "feb0::1",
         "::ffff:10.0.0.1",
         "::ffff:127.0.0.1",
+        "::ffff:c0a8:105",
+        "::ffff:7f00:1",
+        "::ffff:a9fe:a9fe",
         "0.0.0.0",
         "10.1.2.3",
         "127.0.0.1",
@@ -50,6 +53,7 @@ describe("isPrivateAddress", () => {
         "100.128.0.1",
         "169.253.1.1",
         "::ffff:8.8.8.8",
+        "::ffff:808:808",
         "2001:4860:4860::8888",
         "fe70::1",
     ])("treats %s as public", async (address) => {
