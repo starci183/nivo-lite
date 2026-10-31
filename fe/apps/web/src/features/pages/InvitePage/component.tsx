@@ -1,7 +1,6 @@
-import { Page, WorkspaceShell } from "@starci/grammar/common"
+import { Page, Stack, WorkspaceShell } from "@starci/grammar/common"
 import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { InviteOverview } from "@/components/blocks/InviteOverview"
-import { INVITE_COLUMN_CLASS_NAME } from "./classNames"
 
 /** Props for {@link InvitePageBase}. */
 export interface InvitePageBaseProps {
@@ -18,10 +17,10 @@ export const InvitePageBase = (props: InvitePageBaseProps) => (
         primaryLabel={props.props.label}
         primary={
             <Page measure="reading">
-                <div className={INVITE_COLUMN_CLASS_NAME}>
+                <Stack gap="section" measure="form">
                     <BrandLogo variant="full" height={40} />
                     <InviteOverview token={props.props.token} />
-                </div>
+                </Stack>
             </Page>
         }
     />
