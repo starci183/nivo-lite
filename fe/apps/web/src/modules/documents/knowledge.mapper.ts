@@ -161,5 +161,6 @@ export const toWireInstallation = (row: ModuleInstallationType): Installation | 
         activeVersion: row.activeVersion ?? null,
         settings: isSettings(row.settings) ? row.settings : {},
         createdAt: row.createdAt,
+        setupProgress: { confirmed: row.setupProgress.confirmed, total: row.setupProgress.total },
     }
 }
