@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { DocumentsError, DocumentsErrorCode } from "@modules/integrations/documents"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode, StoredNote } from "@modules/domain/knowledge-sources"
+import { KnowledgeError, KnowledgeErrorCode } from "./errors/knowledge.error"
 import { failureOf } from "./source-failure.policy"
 
 const SUBJECT = Symbol("source-failure.policy")
@@ -14,6 +15,15 @@ const build = async () => {
 }
 
 describe("failureOf", () => {
+    it("treats an embeddings provider that failed as worth another try, stored as unreadable if the tries run out", async () => {
+        const subject = await build()
+
+        expect(subject.failureOf(new KnowledgeError({ code: KnowledgeErrorCode.EmbeddingUnavailable }))).toEqual({
+            note: StoredNote.Unreadable,
+            transient: true,
+        })
+    })
+
     it("keeps the code of a documents error and says whether it is worth another try", async () => {
         const subject = await build()
 

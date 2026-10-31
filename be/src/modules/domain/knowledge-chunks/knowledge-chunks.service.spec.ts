@@ -321,3 +321,65 @@ describe("KnowledgeChunksService passagesOfSources", () => {
         expect(read?.callsOf("limit")).toEqual([[10_000]])
     })
 })
+
+describe("KnowledgeChunksService keep and trim", () => {
+    const anyOrder: unknown = expect.anything()
+
+    const placed = (orders: ReadonlyArray<number>, vector: string | null) =>
+        orders.map((order) => ({ text: `p${order}`, vector, order }))
+
+    it("replaces only the passages of the orders it is given and leaves the others", async () => {
+        const tx = fakeTransaction(
+            mockEntityManager({ delete: [KnowledgeChunkEntity, { affected: 1 }], insert: [KnowledgeChunkEntity, {}] }),
+        )
+        const service = await build(tx.em)
+
+        await service.keep({ ...write([]), drafts: placed([32, 33], "[1]") })
+
+        expect(tx.em.delete).toHaveBeenCalledTimes(1)
+        expect(tx.em.delete).toHaveBeenCalledWith(KnowledgeChunkEntity, {
+            sourceId: "s1",
+            workspaceId: WS,
+            ord: anyOrder,
+        })
+        expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [
+            { ...passage(32, "[1]", "m1"), content: "p32" },
+            { ...passage(33, "[1]", "m1"), content: "p33" },
+        ])
+        expect(tx.commits).toBe(1)
+    })
+
+    it("stores a passage without a vector with no model", async () => {
+        const tx = fakeTransaction(
+            mockEntityManager({ delete: [KnowledgeChunkEntity, { affected: 0 }], insert: [KnowledgeChunkEntity, {}] }),
+        )
+        const service = await build(tx.em)
+
+        await service.keep({ ...write([]), drafts: placed([4], null) })
+
+        expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [{ ...passage(4, null, null), content: "p4" }])
+    })
+
+    it("writes nothing for no passage", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        const service = await build(tx.em)
+
+        await service.keep({ ...write([]), drafts: [] })
+
+        expect(tx.em.delete).not.toHaveBeenCalled()
+        expect(tx.em.insert).not.toHaveBeenCalled()
+    })
+
+    it("removes the passages from an order on", async () => {
+        const em = mockEntityManager({ delete: [KnowledgeChunkEntity, { affected: 2 }] })
+        const service = await build(em)
+
+        await service.trim(WS, "s1", 5)
+
+        expect(em.delete).toHaveBeenCalledWith(KnowledgeChunkEntity, {
+            sourceId: "s1",
+            workspaceId: WS,
+            ord: anyOrder,
+        })
+    })
+})

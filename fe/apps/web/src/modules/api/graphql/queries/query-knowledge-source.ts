@@ -23,6 +23,9 @@ const query1: TypedDocumentNode<QueryKnowledgeSourceResponse, InputVariables<Que
                 kind
                 module
                 progress
+                stage
+                stageDone
+                stageTotal
                 status
                 tags
                 title

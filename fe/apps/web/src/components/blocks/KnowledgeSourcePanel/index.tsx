@@ -62,6 +62,7 @@ export const KnowledgeSourcePanel = (props: KnowledgeSourcePanelProps) => {
                         contentTitle: t("contentTitle"),
                         content: found.source.content,
                         isBusy,
+                        isReindexDisabled: isDocumentActive(status),
                     },
                 })),
                 docLabels: slotLabels(t("detailFailed")),

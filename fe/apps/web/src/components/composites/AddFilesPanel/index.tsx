@@ -1,4 +1,4 @@
-import { Badge, Button, FileDropzone, Input, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Badge, Button, FileDropzone, Input, ListRow, Progress, SurfaceListCard, Text } from "@starci/grammar/common"
 import { LINK_FIELD_CLASS_NAME, LINK_ROW_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** One link input. */
@@ -18,6 +18,24 @@ export interface QueueRowView {
     readonly statusTone: "neutral" | "warning" | "success" | "danger"
     readonly error?: string | undefined
     readonly canRemove: boolean
+    /** The words of the button that sends only this failed file again; absent when it cannot be retried. */
+    readonly retryLabel?: string | undefined
+}
+
+/** The bytes of the batch on their way to storage. */
+export interface BatchBytesView {
+    readonly label: string
+    /** 0 to 100, by bytes. */
+    readonly value: number
+    readonly valueText: string
+}
+
+/** The notice that uploads stopped when the page reloaded. */
+export interface StoppedUploadsView {
+    readonly text: string
+    readonly dismissLabel: string
+    /** Reopens the file picker: a browser cannot resume a file after a reload. */
+    readonly pickLabel: string
 }
 
 /** The words, values and state of the files and links panel. */
@@ -34,6 +52,8 @@ type AddFilesPanelProps = {
     readonly links: ReadonlyArray<LinkRowView>
     readonly queue: ReadonlyArray<QueueRowView>
     readonly note?: string | undefined
+    readonly batch?: BatchBytesView | undefined
+    readonly stopped?: StoppedUploadsView | undefined
     readonly isBusy: boolean
     readonly onFiles: (files: Array<File>) => void
     readonly onLink: (id: string, value: string) => void
@@ -41,6 +61,8 @@ type AddFilesPanelProps = {
     readonly onAddLink: () => void
     readonly onRemoveLink: (id: string) => void
     readonly onRemoveItem: (id: string) => void
+    readonly onRetryItem: (id: string) => void
+    readonly onDismissStopped: () => void
 }
 
 /** The files, the links and what is waiting to be added. */
@@ -95,6 +117,22 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
                 {props.note}
             </Text>
         )}
+        {props.stopped === undefined ? null : (
+            <>
+                <Text size="sm" tone="muted" live="polite">
+                    {props.stopped.text}
+                </Text>
+                <Button intent="commit" isDisabled={props.isBusy} onPress={() => document.getElementById("knowledge-add-files")?.click()}>
+                    {props.stopped.pickLabel}
+                </Button>
+                <Button intent="neutral" onPress={props.onDismissStopped}>
+                    {props.stopped.dismissLabel}
+                </Button>
+            </>
+        )}
+        {props.batch === undefined ? null : (
+            <Progress label={props.batch.label} value={props.batch.value} valueText={props.batch.valueText} />
+        )}
         {props.queue.length === 0 ? null : (
             <SurfaceListCard ariaLabel={props.queueTitle} empty={null}>
                 {props.queue.map((item) => (
@@ -104,11 +142,22 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
                         description={item.error ?? item.detail}
                         badges={<Badge tone={item.statusTone}>{item.statusLabel}</Badge>}
                         actions={
-                            item.canRemove ? (
-                                <Button intent="destructive" step="entry" onPress={() => props.onRemoveItem(item.id)}>
-                                    {props.removeLabel}
-                                </Button>
-                            ) : null
+                            <>
+                                {item.retryLabel === undefined ? null : (
+                                    <Button intent="alternative" onPress={() => props.onRetryItem(item.id)}>
+                                        {item.retryLabel}
+                                    </Button>
+                                )}
+                                {item.canRemove ? (
+                                    <Button
+                                        intent="destructive"
+                                        step="entry"
+                                        onPress={() => props.onRemoveItem(item.id)}
+                                    >
+                                        {props.removeLabel}
+                                    </Button>
+                                ) : null}
+                            </>
                         }
                     />
                 ))}

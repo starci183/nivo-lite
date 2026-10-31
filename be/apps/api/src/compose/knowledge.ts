@@ -53,7 +53,11 @@ export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
         isGlobal: true,
         folders: [CORE_FOLDER, ...MODULE_KNOWLEDGE_FOLDERS],
     }),
-    KnowledgeModule.register({ isGlobal: true, driveAccess: DriveGrantService }),
+    KnowledgeModule.register({
+        isGlobal: true,
+        driveAccess: DriveGrantService,
+        indexChunkDelayMs: options.knowledge.indexChunkDelayMs,
+    }),
     BrainFactsModule.register({ isGlobal: true }),
     BrainDossiersModule.register({ isGlobal: true }),
     DossierReviewAiModule.register({ isGlobal: true }),

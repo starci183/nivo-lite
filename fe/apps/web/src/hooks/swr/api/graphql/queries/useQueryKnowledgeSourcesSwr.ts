@@ -21,8 +21,8 @@ const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["pending", "queued", "read
 /**
  * The documents of the active workspace, optionally filtered to one module or to the origin they came from (`google_drive`)
  * (the back end `knowledgeSources` query).
- * Polls while a worker is on a document (every `pollMs`), so status and progress move on their own; nothing is read while
- * `enabled` is false.
+ * Polls while a worker is on a document (every `pollMs`: a slow check, which catches a frame the stream lost, while the progress
+ * stream is open), so status and progress move on their own; nothing is read while `enabled` is false.
  */
 export const useQueryKnowledgeSourcesSwr = (input?: QueryKnowledgeSourcesRequest, pollMs = ACTIVE_POLL_MS, enabled = true) => {
     const key = useWorkspaceKey(

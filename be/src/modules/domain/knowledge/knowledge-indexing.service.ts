@@ -1,15 +1,21 @@
 import { Injectable } from "@nestjs/common"
 import { KnowledgeChunksService, chunkText, toVector } from "@modules/domain/knowledge-chunks"
 import type { ChunkDraft } from "@modules/domain/knowledge-chunks"
-import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote, embedPercent } from "@modules/domain/knowledge-sources"
 import type { MaybeSource, SourceRecord } from "@modules/domain/knowledge-sources"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { eachInOrder } from "@modules/platform/primitives"
+import { InjectTimer } from "@modules/platform/retry"
+import type { Timer } from "@modules/platform/retry"
 import { EmbeddingService } from "./embedding.service"
 import type { VectorsResult } from "./embedding.service"
-import { BULK_CHUNKS } from "./knowledge.contracts"
+import { BULK_CHUNKS, EMBED_BATCH } from "./knowledge.contracts"
 import type { IndexOutcome, IndexRun } from "./knowledge.contracts"
 import { KnowledgeLogEvent } from "./knowledge.log-events"
+import { InjectKnowledgeOptions } from "./knowledge.decorators"
+import type { KnowledgeOptions } from "./knowledge.options"
+import { KnowledgeError, KnowledgeErrorCode } from "./errors/knowledge.error"
 import { failureOf } from "./source-failure.policy"
 import { SourceReaderService } from "./source-reader.service"
 import { UsageMeterService } from "./usage-meter.service"
@@ -20,12 +26,15 @@ const CLOSED: ReadonlySet<string> = new Set(["ready", "extracting_facts", "faile
 /** How long one embeddings batch may take while a document is indexed. */
 const EMBED_TIMEOUT_MS = 20_000
 
+/** One passage with its vector, or without one when the provider gave none. */
+const draftOf = (text: string, vector: ReadonlyArray<number> | undefined): ChunkDraft => ({
+    text,
+    vector: vector === undefined ? null : toVector(vector),
+})
+
 /** The passages to store: each piece with its vector, or without one when there are no vectors. */
 const draftsOf = (pieces: ReadonlyArray<string>, vectors: VectorsResult): Array<ChunkDraft> =>
-    pieces.map((text, index) => {
-        const vector = vectors?.[index]
-        return { text, vector: vector === undefined ? null : toVector(vector) }
-    })
+    pieces.map((text, index) => draftOf(text, vectors?.[index]))
 
 @Injectable()
 /** Reads a document, cuts it into passages, embeds them and stores them, then hands the source on to the reading of its facts. */
@@ -37,6 +46,8 @@ export class KnowledgeIndexingService {
         private readonly reader: SourceReaderService,
         private readonly embeddings: EmbeddingService,
         private readonly usage: UsageMeterService,
+        @InjectKnowledgeOptions() private readonly options: KnowledgeOptions,
+        @InjectTimer() private readonly timer: Timer,
     ) {}
 
     /**
@@ -84,54 +95,117 @@ export class KnowledgeIndexingService {
     }
 
     /**
-     * Stores the passages of the source (keeping the vectors of passages that are unchanged), then queues the facts job and moves the
-     * source to its facts stage. A large document with no credits left is stored without vectors and waits.
+     * Stores the passages of the source, stage by stage: the passages already stored with a vector of the model in use are kept, only
+     * the others are embedded, and every batch is stored as soon as it has its vectors, so a retry after a failure resumes where the
+     * failed one stopped. A provider that fails a batch throws, so the queue retries and the retry resumes. Then the facts job is
+     * queued and the source moves to its facts stage. A large document with no credits left keeps the vectors it already paid for,
+     * stores only the missing passages without vectors, and waits.
      */
     private async store(source: SourceRecord): Promise<IndexOutcome> {
         const pieces = chunkText(source.content)
         if (pieces.length === 0) return this.close(source, StoredNote.NoPassages)
-        if (await this.alreadyEmbedded(source, pieces)) {
-            await this.sources.finishIndexing(source.workspaceId, source.id, null, pieces.length)
-            return "indexed"
+        const { workspaceId, id } = source
+        await this.sources.enterStage(workspaceId, id, { stage: "chunk", done: pieces.length, total: pieces.length })
+        if (!this.embeddings.configured()) {
+            await this.chunks.replace({ ...this.writeOf(source), drafts: draftsOf(pieces, null) })
+            return this.finish(source, StoredNote.KeywordOnly, pieces.length)
         }
-        const noCredits =
-            pieces.length > BULK_CHUNKS && (await this.usage.blockedBy(source.workspaceId, "embedding", true))
-        const vectors = noCredits
-            ? null
-            : await this.embeddings.embed(
-                  { workspaceId: source.workspaceId, texts: pieces, timeoutMs: EMBED_TIMEOUT_MS },
-                  (done, total) => this.sources.advance(source.workspaceId, source.id, 25 + (55 * done) / total),
-              )
-        await this.chunks.replace({
+        const kept = await this.keptOrders(source, pieces)
+        await this.chunks.trim(workspaceId, id, pieces.length)
+        const missing = pieces.length - kept.size
+        const noCredits = missing > BULK_CHUNKS && (await this.usage.blockedBy(workspaceId, "embedding", true))
+        await this.embedMissing(source, pieces, kept, noCredits)
+        if (!noCredits) return this.finish(source, null, pieces.length)
+        await this.sources.blockIndexing(workspaceId, id, StoredNote.NoCreditsForIndex, pieces.length)
+        return "blocked"
+    }
+
+    /** The stored passages become the passages of the source and it moves on to its facts. */
+    private async finish(source: SourceRecord, note: StoredNote | null, count: number): Promise<IndexOutcome> {
+        await this.sources.enterStage(source.workspaceId, source.id, {
+            stage: "store",
+            done: count,
+            total: count,
+            progress: 80,
+        })
+        await this.sources.finishIndexing(source.workspaceId, source.id, note, count)
+        return "indexed"
+    }
+
+    /** Embeds the passages that have no vector of the model in use, one batch at a time, and stores each batch at once. With `withoutVectors` (no credits left) it only stores them as keyword passages. A batch the provider fails throws, so nothing is stored keyword-only by accident. */
+    private async embedMissing(
+        source: SourceRecord,
+        pieces: ReadonlyArray<string>,
+        kept: ReadonlySet<number>,
+        withoutVectors: boolean,
+    ): Promise<void> {
+        const todo = pieces.flatMap((text, order) => (kept.has(order) ? [] : [{ order, text }]))
+        const size = this.options.indexChunkDelayMs > 0 ? 1 : EMBED_BATCH
+        const batches = Array.from({ length: Math.ceil(todo.length / size) }, (_, index) =>
+            todo.slice(index * size, index * size + size),
+        )
+        const state = { done: kept.size }
+        await this.sources.enterStage(source.workspaceId, source.id, {
+            stage: "embed",
+            done: state.done,
+            total: pieces.length,
+            progress: embedPercent(state.done, pieces.length),
+        })
+        await eachInOrder(batches, async (batch, index) => {
+            if (index > 0) await this.pause()
+            const vectors = withoutVectors ? null : await this.embeddings.embed(this.requestOf(source, batch))
+            if (vectors === null && !withoutVectors) throw new KnowledgeError({ code: KnowledgeErrorCode.EmbeddingUnavailable })
+            await this.chunks.keep({
+                ...this.writeOf(source),
+                drafts: batch.map((entry, offset) => ({ ...draftOf(entry.text, vectors?.[offset]), order: entry.order })),
+            })
+            state.done += batch.length
+            await this.sources.advance(source.workspaceId, source.id, {
+                stage: "embed",
+                done: state.done,
+                total: pieces.length,
+                progress: embedPercent(state.done, pieces.length),
+            })
+        })
+    }
+
+    /** The demo pause between two passages (`KNOWLEDGE_INDEX_CHUNK_DELAY_MS`); no wait at all when it is 0. */
+    private pause(): Promise<void> {
+        const ms = this.options.indexChunkDelayMs
+        return ms <= 0
+            ? Promise.resolve()
+            : new Promise((resolve) => {
+                  this.timer.schedule(resolve, ms)
+              })
+    }
+
+    /** The embeddings call of one batch. */
+    private requestOf(source: SourceRecord, batch: ReadonlyArray<{ readonly text: string }>) {
+        return {
+            workspaceId: source.workspaceId,
+            texts: batch.map((entry) => entry.text),
+            timeoutMs: EMBED_TIMEOUT_MS,
+        }
+    }
+
+    /** What every write of the passages of a source names besides the passages. */
+    private writeOf(source: SourceRecord) {
+        return {
             workspaceId: source.workspaceId,
             sourceId: source.id,
             module: source.module,
             visibility: source.visibility,
             installationId: source.installationId,
             model: this.embeddings.model(),
-            drafts: draftsOf(pieces, vectors),
-        })
-        if (noCredits) {
-            await this.sources.blockIndexing(source.workspaceId, source.id, StoredNote.NoCreditsForIndex, pieces.length)
-            return "blocked"
         }
-        await this.sources.finishIndexing(
-            source.workspaceId,
-            source.id,
-            vectors === null ? StoredNote.KeywordOnly : null,
-            pieces.length,
-        )
-        return "indexed"
     }
 
-    /** The stored passages are exactly these pieces, all embedded with the model in use. */
-    private async alreadyEmbedded(source: SourceRecord, pieces: ReadonlyArray<string>): Promise<boolean> {
-        if (!this.embeddings.configured()) return false
+    /** The orders of the stored passages that are already these pieces, embedded with the model in use. */
+    private async keptOrders(source: SourceRecord, pieces: ReadonlyArray<string>): Promise<ReadonlySet<number>> {
         const model = this.embeddings.model()
         const have = await this.chunks.embeddedOf(source.workspaceId, source.id)
-        return (
-            have.length === pieces.length &&
-            have.every((chunk, index) => chunk.order === index && chunk.text === pieces[index] && chunk.model === model)
+        return new Set(
+            have.filter((chunk) => chunk.model === model && chunk.text === pieces[chunk.order]).map((chunk) => chunk.order),
         )
     }
 }

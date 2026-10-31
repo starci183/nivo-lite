@@ -33,6 +33,10 @@ export interface KnowledgeDocument {
     readonly chunkCount: number
     /** 0-100 while a worker is on it. */
     readonly progress: number
+    /** The stage a worker is on, or null when none is. */
+    readonly stage: string | null
+    readonly stageDone: number | null
+    readonly stageTotal: number | null
     readonly createdAt: string
     readonly updatedAt: string
 }

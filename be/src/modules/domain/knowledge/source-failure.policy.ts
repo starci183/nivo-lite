@@ -1,4 +1,5 @@
 import { DocumentsError, isTransientDocumentsError } from "@modules/integrations/documents"
+import { KnowledgeError, KnowledgeErrorCode } from "./errors/knowledge.error"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode, StoredNote } from "@modules/domain/knowledge-sources"
 
 /** Why reading a source failed, as the source stores it, and whether trying again can help. */
@@ -13,6 +14,9 @@ export interface SourceFailure {
 export const failureOf = (cause: unknown): SourceFailure => {
     if (cause instanceof KnowledgeSourcesError) {
         return { note: cause.code, transient: cause.code === KnowledgeSourcesErrorCode.UploadUnavailable }
+    }
+    if (cause instanceof KnowledgeError) {
+        return { note: StoredNote.Unreadable, transient: cause.code === KnowledgeErrorCode.EmbeddingUnavailable }
     }
     return {
         note: cause instanceof DocumentsError ? cause.code : StoredNote.Unreadable,

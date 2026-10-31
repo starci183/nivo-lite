@@ -8,6 +8,8 @@ export enum StorageId {
     Dismissed = "NIVO_DISMISSED",
     /** The Zalo connection whose permission page the browser was sent to from its own page, so the return lands back there. */
     ZaloReturn = "NIVO_ZALO_RETURN",
+    /** The files of an upload batch whose bytes were on their way to storage, so a reload says the upload stopped. */
+    UploadInFlight = "NIVO_UPLOAD_IN_FLIGHT",
 }
 
 /** The cookie that remembers the active workspace for the server-rendered console pages, which still read it until they move to GraphQL. */

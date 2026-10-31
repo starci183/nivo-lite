@@ -19,6 +19,10 @@ export interface QueueItem {
     readonly status: ItemStatus
     /** The catalog key of why it failed. */
     readonly error?: string | undefined
+    /** The storage object the file already reached, so a retry of the queueing never uploads it again. */
+    readonly storagePath?: string | undefined
+    /** How much of the file has reached storage while it uploads, 0 to 1; the browser holds it, no database does. */
+    readonly uploaded?: number | undefined
 }
 
 /** What a send of one item needs: where it goes and the options chosen once for the batch. */
@@ -49,7 +53,8 @@ export interface EnqueueItem {
 
 /** The two things a send needs from the outside: bytes to storage, and a document to the queue. */
 export interface QueueActions {
-    readonly upload: (file: File) => Promise<string | null>
+    /** Sends the bytes to storage; `onProgress` is told the fraction sent, 0 to 1, while they travel. */
+    readonly upload: (file: File, onProgress?: (fraction: number) => void) => Promise<string | null>
     readonly enqueue: (input: EnqueueItem) => Promise<boolean>
 }
 

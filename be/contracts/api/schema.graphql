@@ -4019,6 +4019,9 @@ type KnowledgeSourceTextType {
   module: String
   progress: Int!
   sizeBytes: Int!
+  stage: String
+  stageDone: Int
+  stageTotal: Int
   status: String!
   tags: [String!]!
   title: String!
@@ -4038,6 +4041,9 @@ type KnowledgeSourceType {
   module: String
   progress: Int!
   sizeBytes: Int!
+  stage: String
+  stageDone: Int
+  stageTotal: Int
   status: String!
   tags: [String!]!
   title: String!

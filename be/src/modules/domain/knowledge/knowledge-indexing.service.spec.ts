@@ -1,19 +1,31 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService, chunkText } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "@modules/domain/knowledge-sources"
 import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote } from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { DocumentsError, DocumentsErrorCode } from "@modules/integrations/documents"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { TIMER } from "@modules/platform/retry"
+import type { CancelTimer, Timer } from "@modules/platform/retry"
 import { EmbeddingService } from "./embedding.service"
 import { KnowledgeIndexingService } from "./knowledge-indexing.service"
+import { KnowledgeErrorCode } from "./errors/knowledge.error"
+import { EMBED_BATCH } from "./knowledge.contracts"
+import { KNOWLEDGE_OPTIONS } from "./knowledge.decorators"
 import { SourceReaderService } from "./source-reader.service"
 import { UsageMeterService } from "./usage-meter.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const run = { sourceId: "s1", workspaceId: WS }
+/** A document of many passages, so the embedding goes in more than one batch. */
+/** Lets the pending promise chain of the service run. */
+const flush = async (): Promise<void> => {
+    for (let turn = 0; turn < 20; turn += 1) await Promise.resolve()
+}
+
+const MANY = Array.from({ length: 70 }, (_, i) => `Paragraph ${i} ${"y".repeat(700)}`).join("\n\n")
 const TABLE_WITHOUT_ROWS = "|---|---|\n|---|---|\n|---|---|"
 
 const sourceOf = builder<SourceRecord>({
@@ -33,13 +45,19 @@ const sourceOf = builder<SourceRecord>({
     updatedAt: "2026-10-12T10:00:00.000Z",
 })
 
-const build = async (source: SourceRecord | null = sourceOf()) => {
+const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs = 0) => {
     const sources = mock<KnowledgeSourcesService>()
     const chunks = mock<KnowledgeChunksService>()
     const reader = mock<SourceReaderService>()
     const embeddings = mock<EmbeddingService>()
     const usage = mock<UsageMeterService>()
     const logger = mock<Logger>()
+    const timer = mock<Timer>()
+    const waiting: Array<{ readonly callback: () => void; readonly delayMs: number }> = []
+    timer.schedule.mockImplementation((callback: () => void, delayMs: number): CancelTimer => {
+        waiting.push({ callback, delayMs })
+        return () => undefined
+    })
     sources.sourceOf.mockResolvedValue(source)
     reader.read.mockResolvedValue({ kind: "ok", value: { text: source?.content ?? "", title: null } })
     embeddings.configured.mockReturnValue(true)
@@ -56,9 +74,20 @@ const build = async (source: SourceRecord | null = sourceOf()) => {
             { provide: EmbeddingService, useValue: embeddings },
             { provide: UsageMeterService, useValue: usage },
             { provide: LOGGER, useValue: logger },
+            { provide: KNOWLEDGE_OPTIONS, useValue: { driveAccess: Symbol("drive"), indexChunkDelayMs } },
+            { provide: TIMER, useValue: timer },
         ],
     }).compile()
-    return { service: moduleRef.get(KnowledgeIndexingService), sources, chunks, reader, embeddings, usage, logger }
+    return {
+        service: moduleRef.get(KnowledgeIndexingService),
+        sources,
+        chunks,
+        reader,
+        embeddings,
+        usage,
+        logger,
+        held: { waiting },
+    }
 }
 
 describe("KnowledgeIndexingService", () => {
@@ -80,22 +109,53 @@ describe("KnowledgeIndexingService", () => {
 
             expect(sources.begin).toHaveBeenCalledWith(WS, "s1")
             expect(sources.startIndexing).toHaveBeenCalledWith(WS, "s1", "Open 8 to 21", "Hours")
-            expect(embeddings.embed).toHaveBeenCalledWith(
-                { workspaceId: WS, texts: ["Open 8 to 21"], timeoutMs: 20_000 },
-                expect.any(Function),
-            )
-            expect(chunks.replace).toHaveBeenCalledWith({
+            expect(embeddings.embed).toHaveBeenCalledWith({
+                workspaceId: WS,
+                texts: ["Open 8 to 21"],
+                timeoutMs: 20_000,
+            })
+            expect(chunks.trim).toHaveBeenCalledWith(WS, "s1", 1)
+            expect(chunks.keep).toHaveBeenCalledWith({
                 workspaceId: WS,
                 sourceId: "s1",
                 module: "chatbot",
                 visibility: "internal",
                 installationId: null,
                 model: "m1",
-                drafts: [{ text: "Open 8 to 21", vector: "[0.5,1]" }],
+                drafts: [{ text: "Open 8 to 21", vector: "[0.5,1]", order: 0 }],
             })
             expect(sources.finishIndexing).toHaveBeenCalledWith(WS, "s1", null, 1)
         })
 
+        it("moves through the stages chunk, embed and store in order", async () => {
+            const { service, sources } = await build()
+
+            await service.index(run)
+
+            expect(sources.enterStage.mock.calls.map(([, , change]) => change.stage)).toEqual([
+                "chunk",
+                "embed",
+                "store",
+            ])
+            expect(sources.enterStage).toHaveBeenCalledWith(WS, "s1", {
+                stage: "embed",
+                done: 0,
+                total: 1,
+                progress: 25,
+            })
+            expect(sources.enterStage).toHaveBeenCalledWith(WS, "s1", {
+                stage: "store",
+                done: 1,
+                total: 1,
+                progress: 80,
+            })
+        })
+
+    })
+})
+
+describe("KnowledgeIndexingService", () => {
+    describe("index", () => {
         it("takes the title the reader found", async () => {
             const { service, sources, reader } = await build()
             reader.read.mockResolvedValue({ kind: "ok", value: { text: " Page ", title: "Page title" } })
@@ -105,34 +165,36 @@ describe("KnowledgeIndexingService", () => {
             expect(sources.startIndexing).toHaveBeenCalledWith(WS, "s1", "Page", "Page title")
         })
 
-        it("reports the embedding progress of the passages", async () => {
-            const { service, sources, embeddings } = await build()
-            embeddings.embed.mockImplementation(async (_request, progress) => {
-                await progress?.(1, 4)
-                await progress?.(4, 4)
-                return [[1]]
-            })
+        it("embeds and stores the passages batch by batch and reports the count after each", async () => {
+            const { service, sources, chunks, embeddings } = await build(sourceOf({ content: MANY }))
+            embeddings.embed.mockImplementation((request) => Promise.resolve(request.texts.map(() => [1])))
+            const total = chunkText(MANY).length
 
             await service.index(run)
 
-            expect(sources.advance).toHaveBeenCalledWith(WS, "s1", 38.75)
-            expect(sources.advance).toHaveBeenCalledWith(WS, "s1", 80)
+            expect(embeddings.embed).toHaveBeenCalledTimes(Math.ceil(total / EMBED_BATCH))
+            expect(chunks.keep).toHaveBeenCalledTimes(Math.ceil(total / EMBED_BATCH))
+            expect(sources.advance).toHaveBeenLastCalledWith(WS, "s1", {
+                stage: "embed",
+                done: total,
+                total,
+                progress: 80,
+            })
         })
     })
 })
 
 describe("KnowledgeIndexingService", () => {
     describe("index", () => {
-        it("stores passages for keyword search only when there are no vectors", async () => {
+        it("fails the batch into the queue retry when the provider gives no vectors, storing nothing keyword-only", async () => {
             const { service, sources, chunks, embeddings } = await build()
             embeddings.embed.mockResolvedValue(null)
 
-            await expect(service.index(run)).resolves.toBe("indexed")
+            await expect(service.index(run)).rejects.toMatchObject({ code: KnowledgeErrorCode.EmbeddingUnavailable })
 
-            expect(chunks.replace).toHaveBeenCalledWith(
-                expect.objectContaining({ drafts: [{ text: "Open 8 to 21", vector: null }] }),
-            )
-            expect(sources.finishIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.KeywordOnly, 1)
+            expect(chunks.keep).not.toHaveBeenCalled()
+            expect(sources.finishIndexing).not.toHaveBeenCalled()
+            expect(sources.fail).not.toHaveBeenCalled()
         })
     })
 })
@@ -145,8 +207,8 @@ describe("KnowledgeIndexingService", () => {
 
             await service.index(run)
 
-            expect(chunks.replace).toHaveBeenCalledWith(
-                expect.objectContaining({ drafts: [{ text: "Open 8 to 21", vector: null }] }),
+            expect(chunks.keep).toHaveBeenCalledWith(
+                expect.objectContaining({ drafts: [{ text: "Open 8 to 21", vector: null, order: 0 }] }),
             )
         })
 
@@ -157,7 +219,7 @@ describe("KnowledgeIndexingService", () => {
             await expect(service.index(run)).resolves.toBe("indexed")
 
             expect(embeddings.embed).not.toHaveBeenCalled()
-            expect(chunks.replace).not.toHaveBeenCalled()
+            expect(chunks.keep).not.toHaveBeenCalled()
             expect(sources.finishIndexing).toHaveBeenCalledWith(WS, "s1", null, 1)
         })
 
@@ -175,13 +237,17 @@ describe("KnowledgeIndexingService", () => {
             expect(embeddings.embed).toHaveBeenCalled()
         })
 
-        it("embeds again without looking when embeddings are not configured", async () => {
-            const { service, chunks, embeddings } = await build()
+        it("stores keyword-only passages without looking when embeddings are not configured", async () => {
+            const { service, sources, chunks, embeddings } = await build()
             embeddings.configured.mockReturnValue(false)
 
             await service.index(run)
 
             expect(chunks.embeddedOf).not.toHaveBeenCalled()
+            expect(chunks.replace).toHaveBeenCalledWith(
+                expect.objectContaining({ drafts: [{ text: "Open 8 to 21", vector: null }] }),
+            )
+            expect(sources.finishIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.KeywordOnly, 1)
         })
 
         it("stores a large document without vectors and waits when the workspace has no credits left", async () => {
@@ -193,11 +259,34 @@ describe("KnowledgeIndexingService", () => {
 
             expect(usage.blockedBy).toHaveBeenCalledWith(WS, "embedding", true)
             expect(embeddings.embed).not.toHaveBeenCalled()
-            const drafts = chunks.replace.mock.calls[0]?.[0].drafts ?? []
-            expect(drafts.length).toBeGreaterThan(1)
+            expect(chunks.replace).not.toHaveBeenCalled()
+            const drafts = chunks.keep.mock.calls.flatMap(([write]) => write.drafts)
+            expect(drafts.length).toBe(chunkText(content).length)
             expect(drafts.every((draft) => draft.vector === null)).toBe(true)
             expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, drafts.length)
             expect(sources.finishIndexing).not.toHaveBeenCalled()
+        })
+
+    })
+})
+
+describe("KnowledgeIndexingService", () => {
+    describe("index", () => {
+        it("keeps the vectors already paid for when a retry meets no credits, and stores only the missing passages", async () => {
+            const { service, sources, usage, embeddings, chunks } = await build(sourceOf({ content: MANY }))
+            const pieces = chunkText(MANY)
+            chunks.embeddedOf.mockResolvedValue(
+                pieces.slice(0, 10).map((text, order) => ({ order, text, model: "m1" })),
+            )
+            usage.blockedBy.mockResolvedValue(true)
+
+            await expect(service.index(run)).resolves.toBe("blocked")
+
+            expect(chunks.replace).not.toHaveBeenCalled()
+            expect(embeddings.embed).not.toHaveBeenCalled()
+            const orders = chunks.keep.mock.calls.flatMap(([write]) => write.drafts.map((draft) => draft.order))
+            expect(orders).toEqual(pieces.map((_, order) => order).slice(10))
+            expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, pieces.length)
         })
     })
 })
@@ -316,5 +405,78 @@ describe("KnowledgeIndexingService", () => {
             const gone = await build(null)
             await expect(gone.service.sourceForFacts(WS, "s1")).resolves.toBeNull()
         })
+    })
+})
+
+describe("KnowledgeIndexingService resume and pacing", () => {
+    const unavailable = new DocumentsError({ code: DocumentsErrorCode.Unavailable })
+
+    it("keeps the batches stored before a failure and embeds only the rest on the retry", async () => {
+        const { service, chunks, embeddings } = await build(sourceOf({ content: MANY }))
+        const pieces = chunkText(MANY)
+        embeddings.embed
+            .mockImplementationOnce((request) => Promise.resolve(request.texts.map(() => [1])))
+            .mockRejectedValueOnce(unavailable)
+
+        await expect(service.index(run)).rejects.toBe(unavailable)
+
+        expect(chunks.keep).toHaveBeenCalledTimes(1)
+
+        chunks.embeddedOf.mockResolvedValue(
+            pieces.slice(0, EMBED_BATCH).map((text, order) => ({ order, text, model: "m1" })),
+        )
+        embeddings.embed.mockReset()
+        embeddings.embed.mockImplementation((request) => Promise.resolve(request.texts.map(() => [1])))
+
+        await expect(service.index(run)).resolves.toBe("indexed")
+
+        const embedded = embeddings.embed.mock.calls.flatMap(([request]) => request.texts)
+        expect(embedded).toEqual(pieces.slice(EMBED_BATCH))
+        expect(chunks.keep.mock.calls.at(-1)?.[0].drafts.at(0)?.order).toBe(EMBED_BATCH * 2)
+    })
+
+    it("counts the passages kept from the failed run as done", async () => {
+        const { service, sources, chunks } = await build(sourceOf({ content: MANY }))
+        const pieces = chunkText(MANY)
+        chunks.embeddedOf.mockResolvedValue(pieces.slice(0, 10).map((text, order) => ({ order, text, model: "m1" })))
+
+        await service.index(run)
+
+        expect(sources.enterStage).toHaveBeenCalledWith(
+            WS,
+            "s1",
+            expect.objectContaining({ stage: "embed", done: 10, total: pieces.length }),
+        )
+    })
+
+    it("waits the demo delay between passages, one passage at a time, and not before the first", async () => {
+        const content = ["a", "b", "c"].map((letter) => letter.repeat(700)).join("\n\n")
+        const { service, embeddings, held } = await build(sourceOf({ content }), 10_000)
+        const total = chunkText(content).length
+        embeddings.embed.mockImplementation((request) => Promise.resolve(request.texts.map(() => [1])))
+
+        const running = service.index(run)
+        await flush()
+        expect(embeddings.embed).toHaveBeenCalledTimes(1)
+        expect(held.waiting.map((entry) => entry.delayMs)).toEqual([10_000])
+
+        held.waiting.splice(0).forEach((entry) => entry.callback())
+        await flush()
+        expect(embeddings.embed).toHaveBeenCalledTimes(2)
+
+        for (let left = total - 2; left > 0; left -= 1) {
+            held.waiting.splice(0).forEach((entry) => entry.callback())
+            await flush()
+        }
+        await expect(running).resolves.toBe("indexed")
+        expect(embeddings.embed).toHaveBeenCalledTimes(total)
+    })
+
+    it("embeds as fast as the provider answers when no delay is asked", async () => {
+        const { service, embeddings, held } = await build(sourceOf({ content: MANY }))
+        embeddings.embed.mockImplementation((request) => Promise.resolve(request.texts.map(() => [1])))
+
+        await expect(service.index(run)).resolves.toBe("indexed")
+        expect(held.waiting).toEqual([])
     })
 })

@@ -212,6 +212,12 @@ export interface SourceSummary {
     readonly sizeBytes: number
     /** 0-100 while a worker is on it. */
     readonly progress: number
+    /** The stage a worker is on (read, chunk, embed, store or facts), or null when none is. */
+    readonly stage: "read" | "chunk" | "embed" | "store" | "facts" | null
+    /** Passages of the stage that are done, or null. */
+    readonly stageDone: number | null
+    /** Passages of the stage in all, or null. */
+    readonly stageTotal: number | null
     /** Creation instant, ISO 8601. */
     readonly createdAt: string
     /** Last change, ISO 8601. */

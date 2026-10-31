@@ -17,6 +17,7 @@ export type {
     UploadAddress,
 } from "./knowledge-sources.contracts"
 export { KnowledgeSourcesModule } from "./knowledge-sources.module"
+export { embedPercent, knowledgeProgressTopic } from "./knowledge-progress.policy"
 export { KnowledgeSourcesService } from "./knowledge-sources.service"
 export { SourceQuotaService } from "./source-quota.service"
 export { SourceCategoriesService } from "./source-categories.service"

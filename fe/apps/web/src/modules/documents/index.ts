@@ -36,3 +36,6 @@ export {
 } from "./knowledge.mapper"
 export type { SuggestionContext } from "./knowledge.mapper"
 export { itemOfFile, itemOfLink, itemsOfZip } from "./queue-items"
+export { KNOWLEDGE_STAGE_KEYS, liveOf, overlayPush } from "./live-progress"
+export type { KnowledgeProgressRowView, LiveProgress } from "./live-progress"
+export { interruptedUploads, rememberUploads, forgetUploads } from "./upload-marker"
