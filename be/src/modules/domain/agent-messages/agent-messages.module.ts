@@ -13,9 +13,16 @@ import { AgentTestChatsService } from "./agent-test-chats.service"
 @Module({})
 /** The messages of a customer conversation, over the primary Supabase PostgreSQL connection. */
 export class AgentMessagesModule extends ConfigurableModuleClass {
-    /** Registers the capability once in the API app. */
+    /** Registers the capability once in the API app; the read-only mode registers the message feed read alone. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.readOnly === true) {
+            return {
+                ...base,
+                providers: [...(base.providers ?? []), AgentMessagesFeedReadService],
+                exports: [AgentMessagesFeedReadService],
+            }
+        }
         return {
             ...base,
             providers: [

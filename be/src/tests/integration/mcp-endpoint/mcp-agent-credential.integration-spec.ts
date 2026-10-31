@@ -80,7 +80,7 @@ const committedTools = (): unknown => {
 }
 
 describe("MCP endpoint per-agent credential", () => {
-    const identity = { userId: world.id(), workspaceId: world.id(), agentId: world.id() }
+    const identity = { userId: world.id(), workspaceId: world.id(), agentId: world.id(), module: "sales" }
     let agentKey = ""
 
     beforeAll(async () => {

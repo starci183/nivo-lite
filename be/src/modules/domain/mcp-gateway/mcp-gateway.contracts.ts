@@ -46,10 +46,15 @@ export interface GatewayToolSpec {
     /** The NIVO capability this tool plays, when it declares one (see `CapabilityRole`). */
     readonly role?: CapabilityRole
     /**
-     * True for a tool no customer conversation may run: with a conversation on the caller it is hidden from search and describe,
+     * True for a tool no customer conversation and no customer-facing agent may run: with a conversation or a customer audience on the caller it is hidden from search and describe,
      * and a call is refused `internal_only`, audited, before any adapter runs.
      */
     readonly internalOnly?: boolean
+    /**
+     * True for a tool whose answer carries text a stranger may have written (documents, messages): once it answered, a write of the
+     * same turn needs a person's approval, however its grant reads, because the text may be trying to steer the agent.
+     */
+    readonly taints?: boolean
 }
 
 /**
@@ -170,6 +175,11 @@ export interface GatewayCaller {
     readonly conversationId: string | null
     /** The work item the call serves, or null. */
     readonly workItemId: string | null
+    /**
+     * Who the caller's agent talks to: `customer` for a customer-facing or publishing module (or one the catalogue does not know),
+     * `internal` otherwise. A caller that does not say (a performer NIVO runs itself) is internal; the agent door always says.
+     */
+    readonly audience?: "customer" | "internal"
     /** The person who approved this exact call, when it replays an approval. */
     readonly approvedBy?: string
     /**

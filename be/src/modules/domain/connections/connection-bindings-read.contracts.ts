@@ -16,6 +16,16 @@ export interface ConnectionBindingFacts {
     readonly accountMasked: string | null
 }
 
+/** A connection as a status read shows it: the binding facts and the code of its last failure. */
+export interface ConnectionStatusFacts extends ConnectionBindingFacts {
+    /** The code of the last failure, or null when it is healthy. */
+    readonly lastError: string | null
+    /** The Zalo OA id the provider reported, trimmed, or null. */
+    readonly oaId: string | null
+    /** The Google account email the grant reported, trimmed, or null. */
+    readonly email: string | null
+}
+
 /** The name and the environment a connection runs in. */
 export interface ConnectionState {
     /** The display name. */

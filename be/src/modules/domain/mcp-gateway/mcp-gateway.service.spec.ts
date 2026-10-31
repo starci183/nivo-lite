@@ -49,12 +49,9 @@ import {
     TIMED_OUT_WRITES,
     VALID_WRITE_IDENTITIES,
 } from "@tests/fixtures/builders/mcp-gateway-scenario.builder"
+import { INTERNAL_SEPAY_MANIFEST, OPEN_SEPAY_MANIFEST, TAINTING_MANIFEST, taintedTurnExpected, taintedTurnOf } from "@tests/fixtures/builders/mcp-gateway-taint.builder"
 
-const build = async (
-    setup: GatewaySpecSetup = {},
-    manifest = SEPAY_MANIFEST,
-    added: ReadonlyArray<NativeConnectorManifest> = [],
-) => {
+const build = async (setup: GatewaySpecSetup = {}, manifest = OPEN_SEPAY_MANIFEST, added: ReadonlyArray<NativeConnectorManifest> = []) => {
     const clock = new FakeClock("2026-10-20T02:00:00.000Z")
     const logger = mock<Logger>()
     const remote = mock<McpRemote>()
@@ -475,12 +472,10 @@ describe("McpGatewayService.call native connectors", () => {
     })
 })
 
-const INTERNAL_SEPAY = { ...SEPAY_MANIFEST, tools: SEPAY_MANIFEST.tools.map((tool) => ({ ...tool, internalOnly: true })) }
-
 describe("McpGatewayService internal-only tools", () => {
     it("keeps a customer conversation from the tool, audited before the adapter, and shows it outside one", async () => {
         const name = "sepay.transactions.list"
-        const { gateway, native, callLog } = await build({ grants: [grantOf({ tool: "sepay.*" })] }, INTERNAL_SEPAY)
+        const { gateway, native, callLog } = await build({ grants: [grantOf({ tool: "sepay.*" })] }, INTERNAL_SEPAY_MANIFEST)
 
         await expect(gateway.call(CALLER, name, {})).resolves.toEqual(refusalOf("internal_only", name))
         await expect(gateway.search(CALLER, "bank transactions", 5)).resolves.toEqual([])
@@ -490,5 +485,14 @@ describe("McpGatewayService internal-only tools", () => {
         const outside = { ...CALLER, conversationId: null }
         await expect(gateway.call(outside, name, {})).resolves.toMatchObject({ ok: true })
         await expect(gateway.describe(outside, name)).resolves.toMatchObject({ name })
+    })
+})
+
+describe("McpGatewayService tainted turns", () => {
+    it("asks a person for a write of a turn that read tainted text, until one approves it or the window ends", async () => {
+        const { gateway, callLog, clock } = await build({ grants: [grantOf({ tool: "sepay.*" })] }, TAINTING_MANIFEST)
+
+        await expect(taintedTurnOf(gateway, clock, CALLER)).resolves.toEqual(taintedTurnExpected)
+        expect(linesOf(callLog).map((line) => line.errorCode)).toContain("tainted_input")
     })
 })

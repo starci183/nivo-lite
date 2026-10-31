@@ -39,6 +39,7 @@ const build = async () => {
     const remote = mock<McpRemote>()
     remote.listTools.mockResolvedValue([HOLD])
     remote.ping.mockResolvedValue(undefined)
+    remote.isReachable.mockResolvedValue(true)
     const logger = mock<Logger>()
     const gateway = mock<McpGatewayService>()
     const credentials = mock<McpConnectorCredentialService>()
@@ -294,15 +295,15 @@ describe("McpGatewayAdminService.registerRemote and setCredential", () => {
     })
 
     it("refuses a bad or native-held key, name, URL or bearer before writing anything", async () => {
-        const { admin, connectorRows, credentials } = await build()
+        const { admin, connectorRows, credentials, remote } = await build()
         const register = (input: RemoteConnectorInput) => admin.registerRemote(ACTOR, input)
 
         await expect(register(connectorInputOf({ key: "Hakuen" }))).rejects.toMatchObject({ params: { field: "key" } })
         await expect(register(connectorInputOf({ key: "sepay" }))).rejects.toMatchObject({ params: { field: "key" } })
         await expect(register(connectorInputOf({ name: "  " }))).rejects.toMatchObject({ params: { field: "name" } })
-        await expect(register(connectorInputOf({ url: "ftp://x.test" }))).rejects.toMatchObject({
-            params: { field: "url" },
-        })
+        await expect(register(connectorInputOf({ url: "ftp://x.test" }))).rejects.toMatchObject({ params: { field: "url" } })
+        remote.isReachable.mockResolvedValueOnce(false)
+        await expect(register(connectorInputOf({ url: "https://10.0.0.5/mcp" }))).rejects.toMatchObject({ params: { field: "url" } })
         await expect(register(connectorInputOf({ credential: "line\nbreak" }))).rejects.toMatchObject({
             code: McpGatewayErrorCode.Invalid,
             params: { field: "credential" },

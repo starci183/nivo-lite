@@ -28,7 +28,6 @@ import type {
     MaybeSource,
     MaybeUploadedFile,
     ReindexInput,
-    SourceBrief,
     SourceDetail,
     SourceRef,
     SourceSummary,
@@ -94,12 +93,21 @@ export class KnowledgeSourcesService {
         @InjectIds() private readonly ids: Ids,
     ) {}
 
-    /** The documents of a workspace, newest first and without their text; any member may read them. */
-    async list(userId: string, workspaceId: string, module?: string): Promise<ReadonlyArray<SourceSummary>> {
+    /** The documents of a workspace, newest first and without their text, optionally of one module or one origin; any member may read them. */
+    async list(
+        userId: string,
+        workspaceId: string,
+        module?: string,
+        origin?: string,
+    ): Promise<ReadonlyArray<SourceSummary>> {
         await this.members.require(userId, workspaceId)
         const rows = await this.entityManager.find(KnowledgeSourceEntity, {
             select: SUMMARY_COLUMNS,
-            where: module === undefined ? { workspaceId } : { workspaceId, module },
+            where: {
+                workspaceId,
+                ...(module === undefined ? {} : { module }),
+                ...(origin === undefined ? {} : { origin }),
+            },
             order: { createdAt: "DESC" },
             take: LIST_MAX,
         })
@@ -251,17 +259,6 @@ export class KnowledgeSourcesService {
     async sourceOf(workspaceId: string, sourceId: string): Promise<MaybeSource> {
         const row = await this.entityManager.findOne(KnowledgeSourceEntity, { where: { id: sourceId, workspaceId } })
         return row === null ? null : toSourceRecord(row)
-    }
-
-    /** The kind, title and topic of these sources of a workspace, for the passages a search found; an unknown id is left out. */
-    async briefsOf(workspaceId: string, sourceIds: ReadonlyArray<string>): Promise<ReadonlyArray<SourceBrief>> {
-        if (sourceIds.length === 0) return []
-        const rows = await this.entityManager.find(KnowledgeSourceEntity, {
-            select: { id: true, kind: true, title: true, topic: true },
-            where: { workspaceId, id: In([...sourceIds]) },
-            take: sourceIds.length,
-        })
-        return rows.map((row) => ({ id: row.id, kind: row.kind, title: row.title, topic: row.topic }))
     }
 
     /** The bytes of an uploaded document; null when the object is not in storage. Any other storage failure is thrown for the queue to retry. */

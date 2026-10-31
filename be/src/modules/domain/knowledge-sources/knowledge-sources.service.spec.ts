@@ -415,6 +415,16 @@ describe("KnowledgeSourcesService reading", () => {
         )
     })
 
+    it("narrows the list to one origin when asked", async () => {
+        const em = mockEntityManager({ find: [KnowledgeSourceEntity, [listRowOf()]] })
+        const { service } = await build(em)
+        await expect(service.list("u1", WS, undefined, "google_drive")).resolves.toEqual([summary])
+        expect(em.find).toHaveBeenCalledWith(
+            KnowledgeSourceEntity,
+            expect.objectContaining({ where: { workspaceId: WS, origin: "google_drive" } }),
+        )
+    })
+
     it("answers no summaries when the workspace has no sources", async () => {
         const em = mockEntityManager({ find: [KnowledgeSourceEntity, []] })
         const { service } = await build(em)
@@ -440,29 +450,5 @@ describe("KnowledgeSourcesService reading", () => {
         const em = mockEntityManager({ findOne: [KnowledgeSourceEntity, null] })
         const { service } = await build(em)
         await expect(service.detail("u1", WS, "s1")).rejects.toMatchObject(missing)
-    })
-})
-
-describe("KnowledgeSourcesService briefsOf", () => {
-    it("answers the kind, title and topic of the sources of the workspace", async () => {
-        const em = mockEntityManager({ find: [KnowledgeSourceEntity, [listRowOf({ topic: "hours" })]] })
-        const { service } = await build(em)
-
-        await expect(service.briefsOf(WS, ["s1"])).resolves.toEqual([
-            { id: "s1", kind: "text", title: "T", topic: "hours" },
-        ])
-        expect(em.find).toHaveBeenCalledWith(KnowledgeSourceEntity, {
-            select: { id: true, kind: true, title: true, topic: true },
-            where: { workspaceId: WS, id: In(["s1"]) },
-            take: 1,
-        })
-    })
-
-    it("reads nothing for no ids", async () => {
-        const em = mockEntityManager()
-        const { service } = await build(em)
-
-        await expect(service.briefsOf(WS, [])).resolves.toEqual([])
-        expect(em.find).not.toHaveBeenCalled()
     })
 })

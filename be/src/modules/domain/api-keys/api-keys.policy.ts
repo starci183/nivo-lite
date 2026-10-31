@@ -57,6 +57,12 @@ export const cleanName = (raw: string): Outcome<string, ApiKeysErrorCode> => {
 /** Seconds until the current minute ends. */
 export const secondsToRenewal = (now: Date): number => 60 - now.getUTCSeconds()
 
+/** Refuses a key that used up its minute budget (what the rate hit of the database answered), else lets it through. */
+export const withinMinuteBudget = (answer: ApiKeyAuthAnswer | null, now: Date): Outcome<null, ApiKeysErrorCode> =>
+    (answer?.hits ?? 0) > RATE_LIMIT_PER_MINUTE
+        ? refused(ApiKeysErrorCode.RateLimited, { limit: RATE_LIMIT_PER_MINUTE, retryAfter: secondsToRenewal(now) })
+        : ok(null)
+
 /** Decides what the database answered for a bearer key: the principal when the key works and carries the scope, a refusal otherwise. */
 export const admitKey = (
     answer: ApiKeyAuthAnswer | null,

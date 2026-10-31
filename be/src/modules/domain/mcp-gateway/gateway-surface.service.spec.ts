@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { AgentViewScopeService } from "@modules/domain/agents"
 import { MCP_SERVER } from "@modules/integrations/mcp"
 import type { McpServing, McpSurface } from "@modules/integrations/mcp"
 import { McpGatewayErrorCode } from "./errors/mcp-gateway.error"
@@ -13,7 +14,7 @@ import {
 import type { GatewayCaller } from "./mcp-gateway.contracts"
 import { McpGatewayService } from "./mcp-gateway.service"
 
-const CALLER: GatewayCaller = { workspaceId: "ws-1", agentId: "agent-1", conversationId: null, workItemId: null }
+const CALLER: GatewayCaller = { workspaceId: "ws-1", agentId: "agent-1", conversationId: null, workItemId: null, audience: "internal" }
 const MESSAGE = { jsonrpc: "2.0", id: 1, method: "tools/list" }
 const REPLY = { body: { jsonrpc: "2.0" as const, id: 1, result: { tools: [] } } }
 const READ = {
@@ -30,14 +31,17 @@ const build = async () => {
     const server = mock<McpServing>()
     server.answer.mockResolvedValue(REPLY)
     const gateway = mock<McpGatewayService>()
+    const scopes = mock<AgentViewScopeService>()
+    scopes.lensOf.mockResolvedValue({ module: "sales", installationId: null })
     const moduleRef = await Test.createTestingModule({
         providers: [
             GatewaySurfaceService,
             { provide: MCP_SERVER, useValue: server },
             { provide: McpGatewayService, useValue: gateway },
+            { provide: AgentViewScopeService, useValue: scopes },
         ],
     }).compile()
-    return { surface: moduleRef.get(GatewaySurfaceService), server, gateway }
+    return { surface: moduleRef.get(GatewaySurfaceService), server, gateway, scopes }
 }
 
 /** The surface the service handed to the MCP server for the one message it answered. */
@@ -102,6 +106,31 @@ describe("GatewaySurfaceService.answer", () => {
             }),
         ).rejects.toMatchObject({ code: McpGatewayErrorCode.WorkspaceMismatch })
         expect(server.answer).not.toHaveBeenCalled()
+    })
+})
+
+describe("GatewaySurfaceService audience", () => {
+    it.each([
+        ["a customer-facing module", { module: "chatbot", installationId: null }, "customer"],
+        ["a publishing module", { module: "content", installationId: null }, "customer"],
+        ["an agent the workspace does not hold", null, "customer"],
+        ["a staff-facing module", { module: "sales", installationId: null }, "internal"],
+    ] as const)("gives the agent of %s the %s audience on the door", async (_label, scope, audience) => {
+        const { surface, server, gateway, scopes } = await build()
+        scopes.lensOf.mockResolvedValue(scope)
+        gateway.search.mockResolvedValue([])
+        await surface.answer({
+            workspaceId: "ws-1",
+            principal: { agentId: "agent-1", workspaceId: "ws-1" },
+            message: MESSAGE,
+        })
+        const handed = server.answer.mock.calls[0]?.[0].surface
+        assert(handed !== undefined, "the surface was not handed to the server")
+
+        await handed.call("tool.search", { query: "bank" })
+
+        expect(scopes.lensOf).toHaveBeenCalledWith("ws-1", "agent-1")
+        expect(gateway.search).toHaveBeenCalledWith(expect.objectContaining({ conversationId: null, audience }), "bank", 5)
     })
 })
 

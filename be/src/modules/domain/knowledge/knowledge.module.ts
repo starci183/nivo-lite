@@ -15,9 +15,16 @@ import { UsageMeterService } from "./usage-meter.service"
 @Module({})
 /** Indexing, searching and metering the knowledge of a workspace and the base knowledge of NIVO. */
 export class KnowledgeModule extends ConfigurableModuleClass {
-    /** Registers the capability once per app. */
+    /** Registers the capability once per app; the search-only mode registers the metered embedding and the search alone. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.searchOnly === true) {
+            return {
+                ...base,
+                providers: [...(base.providers ?? []), UsageMeterService, EmbeddingService, KnowledgeSearchService],
+                exports: [UsageMeterService, EmbeddingService, KnowledgeSearchService],
+            }
+        }
         return {
             ...base,
             providers: [
