@@ -1,8 +1,8 @@
 import type { ReactNode } from "react"
-import { Badge, Button, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import { Badge, Button, Cluster, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
 import type { OfficeApprovalView, OfficeCardDraft, OfficeText } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, LINK_CLASS_NAME, QUOTE_CLASS_NAME, STATUS_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
+import { QUOTE_CLASS_NAME } from "./classNames"
 
 /** What one approval request draws. */
 type OfficeApprovalCardProps = {
@@ -52,12 +52,12 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
             label={approval.title}
             isHighlight={approval.isFocused}
             head={
-                <div className={TEXT_CLASS_NAME}>
+                <Stack gap="identity">
                     {approval.title === "" ? null : <Text weight="semibold">{approval.title}</Text>}
                     <Text size="sm" tone="muted">
                         {approval.target}
                     </Text>
-                </div>
+                </Stack>
             }
         >
             {renderOfficeApprovalCardStatus(approval, text)}
@@ -110,7 +110,7 @@ const renderOfficeApprovalCardActions = (
     onToggleEdit: () => void,
     approval: NonNullable<OfficeApprovalCardProps["approval"]>,
 ) => (
-    <div className={ACTIONS_CLASS_NAME}>
+    <Cluster gap="inline">
         <Button
             intent="commit"
             size="sm"
@@ -131,7 +131,7 @@ const renderOfficeApprovalCardActions = (
         >
             {text("reject")}
         </Button>
-    </div>
+    </Cluster>
 )
 
 /** Renders the OfficeApprovalCard status section. */
@@ -139,17 +139,17 @@ const renderOfficeApprovalCardStatus = (
     approval: NonNullable<OfficeApprovalCardProps["approval"]>,
     text: NonNullable<OfficeApprovalCardProps["text"]>,
 ) => (
-    <div className={STATUS_CLASS_NAME}>
-        <Badge tone={TONES[approval.status]} isDot>
-            {approval.statusLabel}
-        </Badge>
-        <Badge tone="neutral">{text("aiBadge")}</Badge>
+    <Cluster gap="inline" justify="between">
+        <Cluster gap="inline">
+            <Badge tone={TONES[approval.status]} isDot>
+                {approval.statusLabel}
+            </Badge>
+            <Badge tone="neutral">{text("aiBadge")}</Badge>
+        </Cluster>
         {approval.leadHref === null ? null : (
-            <div className={LINK_CLASS_NAME}>
-                <Button intent="neutral" size="sm" href={approval.leadHref}>
-                    {text("openLead")}
-                </Button>
-            </div>
+            <Button intent="neutral" size="sm" href={approval.leadHref}>
+                {text("openLead")}
+            </Button>
         )}
-    </div>
+    </Cluster>
 )

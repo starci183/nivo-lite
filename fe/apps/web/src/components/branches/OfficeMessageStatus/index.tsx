@@ -1,8 +1,7 @@
-import { AvatarGroup, Text } from "@starci/grammar/common"
+import { AvatarGroup, Cluster, Text } from "@starci/grammar/common"
 import { Icon } from "@/components/leaves/Icon"
 import type { IconName } from "@/components/leaves/Icon"
 import type { OfficeMessageStatusKind, OfficeMessageStatusView, OfficeText } from "@/modules/types"
-import { STATUS_CLASS_NAME } from "./classNames"
 
 /** What the status line draws. */
 type OfficeMessageStatusProps = {
@@ -30,7 +29,7 @@ const seenMark = (
 export const OfficeMessageStatus = (props: OfficeMessageStatusProps) => {
     const { status, text } = props
     return (
-        <div className={STATUS_CLASS_NAME}>
+        <Cluster gap="inline" justify="end">
             <Text
                 size="xs"
                 tone={status.kind === "seen" ? "accent" : "muted"}
@@ -60,6 +59,6 @@ export const OfficeMessageStatus = (props: OfficeMessageStatusProps) => {
                     {text("readersOverflow", { n: status.moreReaders })}
                 </Text>
             ) : null}
-        </div>
+        </Cluster>
     )
 }

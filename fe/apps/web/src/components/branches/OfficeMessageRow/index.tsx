@@ -1,8 +1,8 @@
 import type { ReactNode } from "react"
-import { Badge, Button, ChatBubble, IconButton, Text, Tooltip } from "@starci/grammar/common"
+import { Badge, Button, ChatBubble, Cluster, IconButton, Text, Tooltip } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeBodyPart, OfficeMessageView, OfficeText } from "@/modules/types"
-import { AVATAR_SLOT_CLASS_NAME, NOTICE_CLASS_NAME, rowClassNameOf } from "./classNames"
+import { AVATAR_SLOT_CLASS_NAME, NOTICE_CLASS_NAME } from "./classNames"
 
 /** What one chat line draws. */
 type OfficeMessageRowProps = {
@@ -86,19 +86,21 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
     if (message.variant === "notice") {
         return (
             <div className={NOTICE_CLASS_NAME}>
-                <Text size="sm" tone="muted">
-                    {message.copyText}
-                </Text>
-                {message.workHref === null ? null : (
-                    <Button intent="neutral" size="sm" href={message.workHref}>
-                        {props.text("cmdOpenWork")}
-                    </Button>
-                )}
-                {message.leadHref === null ? null : (
-                    <Button intent="neutral" size="sm" href={message.leadHref}>
-                        {message.leadLabel}
-                    </Button>
-                )}
+                <Cluster gap="inline">
+                    <Text size="sm" tone="muted">
+                        {message.copyText}
+                    </Text>
+                    {message.workHref === null ? null : (
+                        <Button intent="neutral" size="sm" href={message.workHref}>
+                            {props.text("cmdOpenWork")}
+                        </Button>
+                    )}
+                    {message.leadHref === null ? null : (
+                        <Button intent="neutral" size="sm" href={message.leadHref}>
+                            {message.leadLabel}
+                        </Button>
+                    )}
+                </Cluster>
             </div>
         )
     }
@@ -130,5 +132,5 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
             ) : null}
         </ChatBubble>
     )
-    return <div className={rowClassNameOf(message.side === "outgoing", message.isContinuation)}>{bubble}</div>
+    return bubble
 }

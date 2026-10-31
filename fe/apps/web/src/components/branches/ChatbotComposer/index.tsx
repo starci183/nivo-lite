@@ -1,11 +1,6 @@
-import { Alert, Button, Divider, Icon, Text, Textarea } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Icon, Stack, Text, Textarea } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import {
-    COMPOSER_BODY_CLASS_NAME,
-    COMPOSER_CLASS_NAME,
-    COMPOSER_FIELD_CLASS_NAME,
-    COMPOSER_ROW_CLASS_NAME,
-} from "./classNames"
+import { COMPOSER_FIELD_CLASS_NAME } from "./classNames"
 
 /** The composer: active only while the signed-in member holds the conversation. */
 interface ChatbotComposerProps {
@@ -25,15 +20,13 @@ interface ChatbotComposerProps {
 
 /** The band under the thread: the reply field and its send action, or the reason the member cannot reply. */
 export const ChatbotComposer = (props: ChatbotComposerProps) => (
-    <div className={COMPOSER_CLASS_NAME}>
-        <Divider semantics="presentation" />
-        <div className={COMPOSER_BODY_CLASS_NAME}>
+    <Stack gap="inline">
             {props.error === null ? null : (
                 <Alert tone="negative" title={props.notSentTitle} description={props.error} />
             )}
             {props.canReply ? (
                 <>
-                    <div className={COMPOSER_ROW_CLASS_NAME}>
+                    <Cluster gap="inline" align="end" wrap={false}>
                         <div className={COMPOSER_FIELD_CLASS_NAME}>
                             <Textarea
                                 label={props.label}
@@ -54,7 +47,7 @@ export const ChatbotComposer = (props: ChatbotComposerProps) => (
                         >
                             {props.sendLabel}
                         </Button>
-                    </div>
+                    </Cluster>
                     <Text size="xs" tone="muted">
                         {props.hint}
                     </Text>
@@ -64,6 +57,5 @@ export const ChatbotComposer = (props: ChatbotComposerProps) => (
                     {props.lockedText}
                 </Text>
             )}
-        </div>
-    </div>
+    </Stack>
 )

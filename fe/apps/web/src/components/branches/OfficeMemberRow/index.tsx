@@ -1,17 +1,8 @@
-import { Badge, IconButton, ItemActions, Text, TextAction, Tooltip } from "@starci/grammar/common"
+import { Badge, Cluster, IconButton, ItemActions, Text, TextAction, Tooltip } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeMemberRowView } from "@/modules/types"
-import {
-    ACTIONS_CLASS_NAME,
-    CHIP_CLASS_NAME,
-    CONTENT_CLASS_NAME,
-    DETAIL_LINE_CLASS_NAME,
-    NAME_CLASS_NAME,
-    NAME_LINE_CLASS_NAME,
-    ROW_CLASS_NAME,
-    TEXT_CLASS_NAME,
-} from "./classNames"
+import { CHIP_CLASS_NAME, CONTENT_CLASS_NAME, LINE_CLASS_NAME, NAME_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
 
 /** One member of the info panel, with its words. */
 type OfficeMemberRowProps = {
@@ -26,33 +17,38 @@ type OfficeMemberRowProps = {
 
 /** One member: the avatar beside the name with its chips and the lines under it, then the quick actions as one button row. */
 export const OfficeMemberRow = (props: OfficeMemberRowProps) => (
-    <div className={ROW_CLASS_NAME}>
+    <Cluster gap="row" wrap={false}>
         {props.avatar}
         <div className={CONTENT_CLASS_NAME}>
+            <Cluster gap="inline" wrap={false}>
             <div className={TEXT_CLASS_NAME}>
-                <div className={NAME_LINE_CLASS_NAME}>
-                    <div className={NAME_CLASS_NAME}>
-                        <Text weight="medium" overflow="truncate">
-                            {props.member.name}
-                        </Text>
-                    </div>
-                    {props.member.isMe ? (
-                        <div className={CHIP_CLASS_NAME}>
-                            <Badge tone="accent">{props.youLabel}</Badge>
+                <div className={LINE_CLASS_NAME}>
+                    <Cluster gap="inline">
+                        <div className={NAME_CLASS_NAME}>
+                            <Text weight="medium" overflow="truncate">
+                                {props.member.name}
+                            </Text>
                         </div>
-                    ) : null}
+                        {props.member.isMe ? (
+                            <div className={CHIP_CLASS_NAME}>
+                                <Badge tone="accent">{props.youLabel}</Badge>
+                            </div>
+                        ) : null}
+                    </Cluster>
                 </div>
-                <div className={DETAIL_LINE_CLASS_NAME}>
-                    {props.member.presence === null ? null : (
-                        <div className={CHIP_CLASS_NAME}>
-                            <Badge tone="success" isDot>
-                                {props.member.presence}
-                            </Badge>
-                        </div>
-                    )}
-                    <Text size="sm" tone="muted" overflow="truncate">
-                        {props.member.detail}
-                    </Text>
+                <div className={LINE_CLASS_NAME}>
+                    <Cluster gap="inline" wrap={false}>
+                        {props.member.presence === null ? null : (
+                            <div className={CHIP_CLASS_NAME}>
+                                <Badge tone="success" isDot>
+                                    {props.member.presence}
+                                </Badge>
+                            </div>
+                        )}
+                        <Text size="sm" tone="muted" overflow="truncate">
+                            {props.member.detail}
+                        </Text>
+                    </Cluster>
                 </div>
                 {props.member.seen === null ? null : (
                     <Text size="xs" tone="muted" overflow="truncate">
@@ -72,7 +68,7 @@ export const OfficeMemberRow = (props: OfficeMemberRowProps) => (
             </div>
             {props.member.mention === null && props.member.chatHref === null ? null : (
                 <ItemActions>
-                    <div className={ACTIONS_CLASS_NAME}>
+                    <Cluster gap="identity" wrap={false}>
                         {props.member.mention === null ? null : (
                             <Tooltip content={props.mentionLabel}>
                                 <IconButton
@@ -93,9 +89,10 @@ export const OfficeMemberRow = (props: OfficeMemberRowProps) => (
                                 />
                             </Tooltip>
                         )}
-                    </div>
+                    </Cluster>
                 </ItemActions>
             )}
+            </Cluster>
         </div>
-    </div>
+    </Cluster>
 )

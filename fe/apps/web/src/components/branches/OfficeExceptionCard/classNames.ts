@@ -1,8 +1,2 @@
-/** Status row: badges. */
-export const STATUS_CLASS_NAME = "flex flex-wrap items-center gap-2"
-
-/** Text stack under the author line. */
-export const TEXT_CLASS_NAME = "flex flex-col gap-1"
-
-/** The proposal text inside its nested surface: layout only. */
-export const QUOTE_CLASS_NAME = "flex flex-col gap-1 whitespace-pre-wrap break-words"
+/** The long text inside its nested surface: it keeps its line breaks. */
+export const QUOTE_CLASS_NAME = "whitespace-pre-wrap break-words"

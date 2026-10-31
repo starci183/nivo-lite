@@ -1,8 +1,7 @@
 import type { ReactNode } from "react"
-import { Alert, Badge, Button, DescriptionList, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, Cluster, DescriptionList, Text } from "@starci/grammar/common"
 import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
 import type { OfficeCommandView, OfficeText } from "@/modules/types"
-import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** What the confirm card of a command draws. */
 type OfficeCommandCardProps = {
@@ -69,7 +68,7 @@ export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
                 <Alert tone="negative" title={text("cmdFailed")} description={command.detail} />
             )}
             {isSkeleton || status === "pending" ? (
-                <div className={ACTIONS_CLASS_NAME}>
+                <Cluster gap="inline">
                     <Button
                         intent="neutral"
                         size="sm"
@@ -89,14 +88,14 @@ export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
                     >
                         {text("cmdSend")}
                     </Button>
-                </div>
+                </Cluster>
             ) : null}
             {command?.workHref === undefined || command.workHref === null ? null : (
-                <div className={ACTIONS_CLASS_NAME}>
+                <Cluster gap="inline">
                     <Button intent="neutral" size="sm" href={command.workHref}>
                         {text("cmdOpenWork")}
                     </Button>
-                </div>
+                </Cluster>
             )}
         </OfficeCardFrame>
     )
