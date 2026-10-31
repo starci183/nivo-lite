@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AgentTasksService, AgentTurnsService, isBackground } from "@modules/domain/agent-work"
+import { AgentTasksService, AgentTurnsService } from "@modules/domain/agent-work"
 import type { AgentTaskOp, AgentTurnView } from "@modules/domain/agent-work"
 import { ModuleCatalogService, WorkEngineService } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
@@ -7,6 +7,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { proposalTextOf } from "./agent-turn.policy"
+import { AgentWriteRightService } from "./agent-write-right.service"
 import { AgentTurnsLogEvent } from "./agent-turns.log-events"
 import { readInternalProposal } from "./internal-contract.policy"
 import type {
@@ -25,7 +26,7 @@ const OUTSIDE_MODULE = "outside_module"
 /**
  * Applies what a tag or background turn proposed, and nothing more. A task change is written under the agent's own key, so applying the
  * same proposal twice changes nothing the second time. An action is a request and never an effect: it goes to the work engine with the
- * agent as actor and the key `agentturn:<wakeId>:<index>`, so the authority gate decides, and a background turn always asks a person. An
+ * agent as actor and the key `agentturn:<wakeId>:<index>`, so the authority gate decides, and a turn whose person may not write (a staff tag, a background turn) always asks one. An
  * unknown action, or one outside the agent's module, is dropped and audited. A worker that lost its lease runs nothing.
  */
 export class InternalProposalSettlerService {
@@ -36,6 +37,7 @@ export class InternalProposalSettlerService {
         private readonly engine: WorkEngineService,
         private readonly catalog: ModuleCatalogService,
         private readonly events: EventsService,
+        private readonly right: AgentWriteRightService,
     ) {}
 
     /**
@@ -70,6 +72,7 @@ export class InternalProposalSettlerService {
         const entry = await this.catalog.actionOf(action.action)
         if (entry === null) return this.drop(turn, action, index, input, UNKNOWN_ACTION)
         if (entry.moduleKey !== input.module) return this.drop(turn, action, index, input, OUTSIDE_MODULE)
+        const mayWrite = await this.right.mayWrite(turn.source, turn.context.authorUserId ?? null, turn.workspaceId)
         const item = await this.engine.runWork(
             { workspaceId: turn.workspaceId, actor: input.actorName, locale: input.locale },
             {
@@ -79,7 +82,7 @@ export class InternalProposalSettlerService {
                 lead_id: action.leadId,
                 dedupeKey: `agentturn:${turn.wakeId}:${String(index)}`,
                 preset: true,
-                forceAsk: isBackground(turn.source) ? "over_authority" : undefined,
+                forceAsk: mayWrite ? undefined : "over_authority",
                 installationId: input.installationId,
                 seed: { summary: action.summary, fields: action.fields },
                 origin: { turnId: turn.turnId, wakeId: turn.wakeId },

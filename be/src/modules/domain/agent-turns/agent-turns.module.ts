@@ -4,6 +4,7 @@ import { AGENT_TURN_EXECUTOR } from "@modules/domain/agent-work"
 import { AgentTurnBriefService } from "./agent-turn-brief.service"
 import { AgentTurnAccessService } from "./agent-turn-access.service"
 import { AgentTurnExecutorService } from "./agent-turn-executor.service"
+import { AgentWriteRightService } from "./agent-write-right.service"
 import { AGENT_TURN_RUNNER } from "./agent-turns.decorators"
 import { InternalGatewayToolsService } from "./internal-gateway-tools.service"
 import { InternalProposalSettlerService } from "./internal-proposal-settler.service"
@@ -27,6 +28,7 @@ export class AgentTurnsModule extends ConfigurableModuleClass {
             AgentTurnExecutorService,
             AgentTurnBriefService,
             AgentTurnAccessService,
+            AgentWriteRightService,
             InternalGatewayToolsService,
             InternalProposalSettlerService,
             InternalTurnContextService,

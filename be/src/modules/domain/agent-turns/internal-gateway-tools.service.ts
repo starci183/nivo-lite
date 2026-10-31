@@ -8,8 +8,8 @@ import {
     McpGatewayService,
 } from "@modules/domain/mcp-gateway"
 import type { GatewayCaller, GatewayJson } from "@modules/domain/mcp-gateway"
-import { PresentedRole, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { parseJsonText } from "@modules/platform/primitives"
+import { AgentWriteRightService } from "./agent-write-right.service"
 import { internalCallSchema } from "./internal-gateway-tools.schema"
 
 /** How many tools a search answers when the agent names no limit. */
@@ -34,7 +34,7 @@ const argumentsOf = (value: string | undefined): GatewayJson | null => {
 export class InternalGatewayToolsService implements InternalTools {
     constructor(
         private readonly gateway: McpGatewayService,
-        private readonly members: WorkspaceMembersService,
+        private readonly right: AgentWriteRightService,
     ) {}
 
     /** Runs one meta-tool for the turn's agent. */
@@ -78,18 +78,15 @@ export class InternalGatewayToolsService implements InternalTools {
         if (callArgs === null) return { error: "invalid_arguments", detail: "arguments_json is not a JSON object" }
         const described = await this.gateway.describe(caller, name)
         if (described === null) return { error: "not_granted_or_unknown" }
-        if (described.scope !== "read" && !(await this.mayWrite(turn))) return { error: "read_only_turn" }
+        if (
+            described.scope !== "read" &&
+            !(await this.right.mayWrite(turn.source, turn.authorUserId, turn.workspaceId))
+        )
+            return { error: "read_only_turn" }
         const opKey = `${turn.wakeId}:${name}:${argsHashOf(callArgs).slice(0, 16)}`
         const result = await this.gateway.call({ ...caller, opKey }, name, callArgs)
         if (result.ok) return { result: result.value }
         if (result.code === "approval_required") return { error: "approval_required", reason: result.reason }
         return { error: result.code, detail: result.detail }
-    }
-
-    /** Only a tag written by an owner or a manager may write; a background turn never does. */
-    private async mayWrite(turn: BridgeTurn): Promise<boolean> {
-        if (turn.source !== "tag" || turn.authorUserId === null) return false
-        const role = await this.members.roleOf(turn.authorUserId, turn.workspaceId)
-        return role === PresentedRole.Owner || role === PresentedRole.Manager
     }
 }
