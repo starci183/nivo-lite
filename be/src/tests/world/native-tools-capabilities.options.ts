@@ -41,7 +41,7 @@ export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     BrainFactsModule.register({ isGlobal: true }),
     BrainDossiersModule.register({ isGlobal: true, readOnly: true }),
     DossierReviewModule.register({ isGlobal: true, readOnly: true }),
-    ConnectionsModule.register({ isGlobal: true, readOnly: true }),
+    ConnectionsModule.readOnly({ isGlobal: true, readOnly: true }),
     AgentConversationsModule.register({ isGlobal: true, readOnly: true }),
     AgentMessagesModule.register({ isGlobal: true, readOnly: true }),
     NativeToolsModule.register({ isGlobal: true }),
