@@ -59,6 +59,18 @@ export class KnowledgeSourceType {
     @Field(() => Int)
     progress!: number
 
+    /** The stage a worker is on (`read`, `chunk`, `embed`, `store` or `facts`), or null when none is. */
+    @Field(() => String, { nullable: true })
+    stage?: string | null
+
+    /** Passages of the stage that are done, or null. */
+    @Field(() => Int, { nullable: true })
+    stageDone?: number | null
+
+    /** Passages of the stage in all, or null. */
+    @Field(() => Int, { nullable: true })
+    stageTotal?: number | null
+
     /** When it was added, ISO 8601. */
     @Field(() => String)
     createdAt!: string

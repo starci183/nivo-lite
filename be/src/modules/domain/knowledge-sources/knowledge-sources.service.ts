@@ -70,6 +70,9 @@ const SUMMARY_COLUMNS = {
     chunkCount: true,
     sizeBytes: true,
     progress: true,
+    stage: true,
+    stageDone: true,
+    stageTotal: true,
     createdAt: true,
     updatedAt: true,
 } as const

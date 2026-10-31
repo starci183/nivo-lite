@@ -50,6 +50,9 @@ export const summary = {
     chunkCount: 0,
     sizeBytes: 0,
     progress: 0,
+    stage: null,
+    stageDone: null,
+    stageTotal: null,
     createdAt: "2026-10-11T10:00:00.000Z",
     updatedAt: AT,
 }
