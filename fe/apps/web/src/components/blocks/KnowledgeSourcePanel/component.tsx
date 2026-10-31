@@ -27,6 +27,8 @@ interface HeadView {
     readonly contentTitle: string
     readonly content: string
     readonly isBusy: boolean
+    /** True while a worker is on the document: reading it again would start a second job on the same passages. */
+    readonly isReindexDisabled: boolean
 }
 
 /** The document as its slot carries it: the heading, the head and the text. */
@@ -52,6 +54,7 @@ const SOURCE_DOC_PLACEHOLDER: SourceDocView = {
         contentTitle: "-",
         content: "-",
         isBusy: false,
+        isReindexDisabled: false,
     },
 }
 
@@ -105,6 +108,7 @@ const Head = (props: HeadProps) => (
                     intent="neutral"
                     isSkeleton={props.isSkeleton}
                     isPending={props.view.isBusy}
+                    isDisabled={props.view.isReindexDisabled}
                     onPress={props.on.reindex}
                 >
                     {props.view.reindexLabel}

@@ -17,6 +17,8 @@ export interface QueueItem {
     readonly status: ItemStatus
     /** The catalog key of why it failed. */
     readonly error?: string | undefined
+    /** The storage object the file already reached, so a retry of the queueing never uploads it again. */
+    readonly storagePath?: string | undefined
     /** How much of the file has reached storage while it uploads, 0 to 1; the browser holds it, no database does. */
     readonly uploaded?: number | undefined
 }

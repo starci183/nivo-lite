@@ -7,6 +7,9 @@ import { liveOf, overlayPush, toKnowledgeDocument } from "@/modules/documents"
 import type { ModuleKey } from "@/modules/catalog"
 import { readError } from "@/hooks/workspaceread"
 
+/** How often the list is read while the stream is open: a check for a frame the stream lost. */
+const LIVE_POLL_MS = 15_000
+
 /**
  * The documents of the active workspace, in the shape the blocks know. While a worker is on a document its progress arrives on
  * the progress stream and is laid over the stored list; when the stream is not open the list polls as before.
@@ -17,7 +20,7 @@ export const useKnowledgeSources = (module?: ModuleKey | "all") => {
     const pushed = stream.data?.bySource
     const swrRead = useQueryKnowledgeSourcesSwr(
         module === undefined || module === "all" ? {} : { module },
-        stream.data?.isLive !== true,
+        stream.data?.isLive === true ? LIVE_POLL_MS : undefined,
     )
     const { data, isLoading } = swrRead
     const error = readError(swrRead)

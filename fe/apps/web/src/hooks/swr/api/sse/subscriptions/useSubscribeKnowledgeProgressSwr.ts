@@ -20,6 +20,9 @@ export interface KnowledgeProgressState {
     readonly bySource: Readonly<Record<string, KnowledgeProgressPush>>
 }
 
+/** A burst of settles reads the list once, this long after the last of them, so 200 settles are not 200 reads. */
+const SETTLE_DEBOUNCE_MS = 1_000
+
 const NOT_LIVE: KnowledgeProgressState = { isLive: false, bySource: {} }
 
 /** Statuses after which a worker is no longer on the source: the stored list is read again for what only it holds (the passage count, the note). */
@@ -50,8 +53,13 @@ export const useSubscribeKnowledgeProgressSwr = () => {
         key,
         ([, workspaceId], { next }) => {
             const controller = new AbortController()
+            let pending: ReturnType<typeof setTimeout> | undefined
             const staleList = (read: unknown): boolean =>
                 Array.isArray(read) && read[1] === workspaceId && read[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY
+            const refreshSoon = () => {
+                clearTimeout(pending)
+                pending = setTimeout(() => void mutate(staleList), SETTLE_DEBOUNCE_MS)
+            }
             void streamKnowledgeProgress({
                 signal: controller.signal,
                 onOpen: () => {
@@ -60,12 +68,15 @@ export const useSubscribeKnowledgeProgressSwr = () => {
                 },
                 onPush: (push) => {
                     next(null, (state) => withPush(state ?? NOT_LIVE, push))
-                    if (SETTLED.has(push.status)) void mutate(staleList)
+                    if (SETTLED.has(push.status)) refreshSoon()
                 },
                 onDrop: () => next(null, (state) => ({ ...(state ?? NOT_LIVE), isLive: false })),
                 report: (line) => next(new Error(line)),
             })
-            return () => controller.abort()
+            return () => {
+                controller.abort()
+                clearTimeout(pending)
+            }
         },
     )
 }

@@ -158,12 +158,13 @@ const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => void, acti
         const path =
             item.file === undefined
                 ? null
-                : await actions.upload(item.file, (fraction) => patch(item.id, { uploaded: Math.min(fraction, 1) }))
+                : (item.storagePath ??
+                  (await actions.upload(item.file, (fraction) => patch(item.id, { uploaded: Math.min(fraction, 1) }))))
         if (item.kind === "file" && path === null) {
             patch(item.id, { status: "failed", error: "errUpload" })
             return false
         }
-        if (path !== null) patch(item.id, { uploaded: 1 })
+        if (path !== null) patch(item.id, { uploaded: 1, storagePath: path })
         const queued = await actions.enqueue({
             kind: item.kind === "link" ? "url" : "file",
             title: item.kind === "link" ? item.name.replace(/^https?:\/\//i, "") : stripExt(item.name),

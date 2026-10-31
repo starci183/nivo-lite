@@ -50,14 +50,20 @@ export const overlayPush = (document: KnowledgeDocument, push: KnowledgeProgress
               updatedAt: push.at,
           }
 
+/** The stage a stored text names, or null for none or one this page does not know. */
+const stageOf = (value: string | null): KnowledgeProgressStage | null =>
+    value === "read" || value === "chunk" || value === "embed" || value === "store" || value === "facts"
+        ? value
+        : null
+
 /** What a worker is doing on a document, or null when no worker is on it. */
 export const liveOf = (document: KnowledgeDocument, push: KnowledgeProgressPush | undefined): LiveProgress | null => {
     if (!isDocumentActive(document.status)) return null
     const fresh = push !== undefined && push.at >= document.updatedAt
     return {
-        stage: fresh ? push.stage : null,
-        done: fresh ? push.done : null,
-        total: fresh ? push.total : null,
+        stage: stageOf(fresh ? push.stage : document.stage),
+        done: fresh ? push.done : document.stageDone,
+        total: fresh ? push.total : document.stageTotal,
         percent: document.progress,
     }
 }
