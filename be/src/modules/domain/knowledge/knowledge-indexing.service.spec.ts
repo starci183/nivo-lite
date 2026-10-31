@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import { KnowledgeChunksService, chunkText, passageHashOf } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService, chunkPassages, passageHashOf } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "@modules/domain/knowledge-sources"
 import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote } from "@modules/domain/knowledge-sources"
 import type { EmbeddedChunk } from "@modules/domain/knowledge-chunks"
@@ -181,7 +181,7 @@ describe("KnowledgeIndexingService", () => {
         it("embeds and stores the passages batch by batch and reports the count after each", async () => {
             const { service, sources, chunks, embeddings } = await build(sourceOf({ content: MANY }))
             embeddings.embed.mockImplementation((request) => Promise.resolve(request.texts.map(() => [1])))
-            const total = chunkText(MANY).length
+            const total = chunkPassages(MANY).length
 
             await service.index(run)
 
@@ -274,7 +274,7 @@ describe("KnowledgeIndexingService", () => {
             expect(embeddings.embed).not.toHaveBeenCalled()
             expect(chunks.replace).not.toHaveBeenCalled()
             const drafts = chunks.keep.mock.calls.flatMap(([write]) => write.drafts)
-            expect(drafts.length).toBe(chunkText(content).length)
+            expect(drafts.length).toBe(chunkPassages(content).length)
             expect(drafts.every((draft) => draft.vector === null)).toBe(true)
             expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, drafts.length)
             expect(sources.finishIndexing).not.toHaveBeenCalled()
@@ -287,7 +287,7 @@ describe("KnowledgeIndexingService", () => {
     describe("index", () => {
         it("keeps the vectors already paid for when a retry meets no credits, and stores only the missing passages", async () => {
             const { service, sources, usage, embeddings, chunks } = await build(sourceOf({ content: MANY }))
-            const pieces = chunkText(MANY)
+            const pieces = chunkPassages(MANY)
             chunks.embeddedOf.mockResolvedValue(pieces.slice(0, 10).map(stored))
             usage.blockedBy.mockResolvedValue(true)
 
@@ -417,7 +417,7 @@ describe("KnowledgeIndexingService a passage that moved", () => {
     it("keeps its vector at the new order, is not embedded, and counts as done", async () => {
         const content = `${"n".repeat(500)}\n\n${"o".repeat(500)}`
         const { service, sources, chunks, embeddings } = await build(sourceOf({ content }))
-        const [first, second] = chunkText(content)
+        const [first, second] = chunkPassages(content)
         chunks.embeddedOf.mockResolvedValue([stored(second ?? "", 0)])
 
         await expect(service.index(run)).resolves.toBe("indexed")
@@ -433,7 +433,7 @@ describe("KnowledgeIndexingService resume and pacing", () => {
 
     it("keeps the batches stored before a failure and embeds only the rest on the retry", async () => {
         const { service, chunks, embeddings } = await build(sourceOf({ content: MANY }))
-        const pieces = chunkText(MANY)
+        const pieces = chunkPassages(MANY)
         embeddings.embed
             .mockImplementationOnce((request) => Promise.resolve(request.texts.map(() => [1])))
             .mockRejectedValueOnce(unavailable)
@@ -455,7 +455,7 @@ describe("KnowledgeIndexingService resume and pacing", () => {
 
     it("counts the passages kept from the failed run as done", async () => {
         const { service, sources, chunks } = await build(sourceOf({ content: MANY }))
-        const pieces = chunkText(MANY)
+        const pieces = chunkPassages(MANY)
         chunks.embeddedOf.mockResolvedValue(pieces.slice(0, 10).map(stored))
 
         await service.index(run)
@@ -470,7 +470,7 @@ describe("KnowledgeIndexingService resume and pacing", () => {
     it("waits the demo delay between passages, one passage at a time, and not before the first", async () => {
         const content = ["a", "b", "c"].map((letter) => letter.repeat(700)).join("\n\n")
         const { service, embeddings, held } = await build(sourceOf({ content }), 10_000)
-        const total = chunkText(content).length
+        const total = chunkPassages(content).length
         embeddings.embed.mockImplementation((request) => Promise.resolve(request.texts.map(() => [1])))
 
         const running = service.index(run)

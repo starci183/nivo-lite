@@ -1,6 +1,6 @@
 export { EMBEDDING_DIMENSIONS } from "./knowledge-chunks.contracts"
 export type { ChunkDraft, EmbeddedChunk, MissingPassage } from "./knowledge-chunks.contracts"
-export { chunkText } from "./chunk.policy"
+export { chunkPassages, chunkText } from "./chunk.policy"
 export { passageHashOf } from "./passage-hash.policy"
 export { reusePlanOf } from "./passage-reuse.policy"
 export { hybridHit, hybridScore } from "./hybrid-score.policy"

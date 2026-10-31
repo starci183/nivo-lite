@@ -6,6 +6,16 @@ export const CHUNK_OVERLAP = 120
 
 const D_STROKE = String.fromCodePoint(0x111)
 
+/** The longest line that counts as a heading for being written in capitals. */
+const SHOUTED_HEADING_MAX = 120
+
+/** A heading of a Vietnamese legal text, with or without its accents: Phan, Chuong, Muc, Dieu or Phu luc and a number. */
+const LEGAL_HEADING =
+    /^(?:ph\u1ea7n|phan|ch\u01b0\u01a1ng|chuong|m\u1ee5c|muc|\u0111i\u1ec1u|dieu|ph\u1ee5 l\u1ee5c|phu luc)\s+[\dIVXLC]+(?:[.:)\s]|$)/iu
+
+/** A Markdown heading, or a Roman numeral opening a part of a text. */
+const MARKED_HEADING = /^(?:#{1,6}\s|[IVXLC]+[.)]\s)/u
+
 /** The most common count of a delimiter per line and how many lines carry it. */
 interface Mode {
     /** The count. */
@@ -138,9 +148,8 @@ const tablePieces = (lines: ReadonlyArray<string>, size: number): Array<Piece> =
     return out.length > 0 ? out : [{ text: header, table: true }]
 }
 
-/** The prose pieces of a body and its tables, in order; a repeated long paragraph is kept once. */
-const piecesOf = (body: string, size: number): Array<Piece> => {
-    const seenBlocks = new Set<string>()
+/** The prose pieces of a body and its tables, in order; a repeated long paragraph (seen in `seenBlocks`, across sections too) is kept once. */
+const piecesOf = (body: string, size: number, seenBlocks: Set<string>): Array<Piece> => {
     const pieces: Array<Piece> = []
     for (const block of body.split(/\n{2,}/u)) {
         const lines = block.split("\n")
@@ -157,6 +166,48 @@ const piecesOf = (body: string, size: number): Array<Piece> => {
         for (const part of splitLong(block, size)) pieces.push({ text: part, table: false })
     }
     return pieces
+}
+
+/** Whether a line opens a section: never a table row, else a legal, Markdown or Roman heading, or a short line in capitals with no list in it. */
+const isHeading = (line: string): boolean => {
+    if (/[|\t]/u.test(line)) return false
+    if (LEGAL_HEADING.test(line) || MARKED_HEADING.test(line)) return true
+    if (line.length > SHOUTED_HEADING_MAX || /[,;]/u.test(line)) return false
+    return line === line.toUpperCase() && line !== line.toLowerCase()
+}
+
+/**
+ * The text cut at its headings: each section keeps its blank lines and headings in a row open one section. A table block stays whole; a
+ * block with a heading inside it is prose, however many of its lines end in a semicolon, as the clauses of a legal text do.
+ */
+const sectionsOf = (body: string): Array<string> => {
+    const sections: Array<string> = []
+    let current = ""
+    let hasBody = false
+    const add = (text: string, separator: string): void => {
+        current = current === "" ? text : `${current}${separator}${text}`
+    }
+    const close = (): void => {
+        if (current !== "") sections.push(current)
+        current = ""
+        hasBody = false
+    }
+    for (const block of body.split(/\n{2,}/u)) {
+        const lines = block.split("\n")
+        if (delimiterOf(lines) !== null && !lines.slice(1).some(isHeading)) {
+            add(block, "\n\n")
+            hasBody = true
+            continue
+        }
+        lines.forEach((line, index) => {
+            const heading = isHeading(line)
+            if (heading && hasBody) close()
+            add(line, index === 0 ? "\n\n" : "\n")
+            hasBody ||= !heading
+        })
+    }
+    close()
+    return sections
 }
 
 /** Prose pieces packed into passages of up to `size` characters; every table piece stands alone. */
@@ -182,6 +233,16 @@ const packed = (pieces: ReadonlyArray<Piece>, size: number): Array<Piece> => {
     return out
 }
 
+/** A filter that lets a piece through the first time its text is seen in `seen`. */
+const firstSeen =
+    (seen: Set<string>) =>
+    (piece: Piece): boolean => {
+        const key = sameKey(piece.text) || piece.text
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+    }
+
 /** The passage with the tail of the previous prose passage in front, cut at a word boundary; a table or the first passage has none. */
 const overlapped = (piece: Piece, previous: Piece | undefined, overlap: number): string => {
     if (previous === undefined || piece.table || previous.table) return piece.text
@@ -199,13 +260,25 @@ const overlapped = (piece: Piece, previous: Piece | undefined, overlap: number):
 export const chunkText = (text: string, size: number = CHUNK_SIZE, overlap: number = CHUNK_OVERLAP): Array<string> => {
     const body = normalizeText(text)
     if (body === "") return []
-    const seen = new Set<string>()
-    const unique = packed(piecesOf(body, size), size).filter((piece) => {
-        const key = sameKey(piece.text) || piece.text
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-    })
+    const unique = packed(piecesOf(body, size, new Set()), size).filter(firstSeen(new Set()))
     if (overlap <= 0) return unique.map((piece) => piece.text)
     return unique.map((piece, index) => overlapped(piece, unique[index - 1], overlap))
+}
+
+/**
+ * The passages a document is stored as: it is cut at its headings first and nothing crosses a section, so an edit touches its own section
+ * only. In a section paragraphs are packed up to `size` as `chunkText` does, tables stay cut by row with their header, a section over `size`
+ * is split at its paragraphs and sentences, and identical passages and repeated long paragraphs are kept once. Unlike `chunkText` a passage
+ * carries no tail of the one before it, which would tie its hash to its neighbour.
+ */
+export const chunkPassages = (text: string, size: number = CHUNK_SIZE): Array<string> => {
+    const body = normalizeText(text)
+    if (body === "") return []
+    const seenBlocks = new Set<string>()
+    const isNew = firstSeen(new Set())
+    return sectionsOf(body).flatMap((section) =>
+        packed(piecesOf(section, size, seenBlocks), size)
+            .filter(isNew)
+            .map((piece) => piece.text),
+    )
 }

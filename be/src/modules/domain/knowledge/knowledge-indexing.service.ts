@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { KnowledgeChunksService, chunkText, reusePlanOf, toVector } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService, chunkPassages, reusePlanOf, toVector } from "@modules/domain/knowledge-chunks"
 import type { ChunkDraft, MissingPassage } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote, embedPercent } from "@modules/domain/knowledge-sources"
 import type { MaybeSource, SourceRecord } from "@modules/domain/knowledge-sources"
@@ -109,7 +109,7 @@ export class KnowledgeIndexingService {
      * stores only the missing passages without vectors, and waits.
      */
     private async store(source: SourceRecord): Promise<IndexOutcome> {
-        const pieces = chunkText(source.content)
+        const pieces = chunkPassages(source.content)
         if (pieces.length === 0) return this.close(source, StoredNote.NoPassages)
         const { workspaceId, id } = source
         await this.sources.enterStage(workspaceId, id, { stage: "chunk", done: pieces.length, total: pieces.length })
