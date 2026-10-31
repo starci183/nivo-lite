@@ -584,23 +584,23 @@ Done: section 13.0, plus lint and `cd fe/apps/web && npx tsc --noEmit -p tsconfi
 
 ## 15. Action graph
 
-Each agent is a flow the owner can read and change, in the spirit of n8n, but built for a shop owner: what it does, with what data, on whose rule, and who gets which work. Owner's example: under 5tr do action A, above 5tr tell Định, above 20tr tell anh Nam. The drawing is `D:/starci-tmp/tino/mockups/agent-action-graph-mockup.html`. Read against main at `0260db8b0` and the uncommitted store in `lane/core-w1` on 2026-10-31. The sections above stay the road; this part adds what decides on it.
+Each agent is a flow the owner can read and change, in the spirit of n8n, but built for a shop owner: what it does, with what data, on whose rule, and who gets which work. Owner's example: under 5tr do action A, above 5tr tell Dinh, above 20tr tell Mr Nam. The drawing is `D:/starci-tmp/tino/mockups/agent-action-graph-mockup.html`. Read against main at `0260db8b0` and the uncommitted store in `lane/core-w1` on 2026-10-31. The sections above stay the road; this part adds what decides on it.
 
 ### 15.1 Decisions
 
-| Question                                 | Decision                                                                                                                   | Why                                                                                                                                                                                                                                                                                 |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Extend authority rules, or replace them? | Extend. `authority_rules` stays the workspace ceiling, the graph decides inside it per agent, and the stricter answer wins | A rule has one action, amount bands and one approver group, so "5tr to Định, 20tr to anh Nam" cannot fit in one row. `evaluateGate`, `max_mode`, `applyOperatingMode`, the Authority page and every caller of `runWork` keep working, and a graph can never open what a rule closed |
-| Where does the branch run?               | In `WorkEngineService.judge`, the one door every action already passes: agents, automations, module approvals              | Nothing has to be taught twice. It works on both roads of section 11                                                                                                                                                                                                                |
-| Automation templates?                    | They seed the base graph. The engine keeps running them                                                                    | A `TemplateDefinition` already has a trigger, needs, settings, guardrails and an authority action. A second executor would be a second truth (15.7)                                                                                                                                 |
-| Condition language?                      | A closed JSON tree over a registry of facts, with no text form to parse                                                    | No code means nothing to escape, and the editor is rows, never a text box (15.5)                                                                                                                                                                                                    |
-| Migration?                               | Seed every agent from what it has today, run in shadow, flip per agent                                                     | Same shape as `road`: reversible per agent, no flag day (15.11)                                                                                                                                                                                                                     |
-| Editor?                                  | `FlowGraph` to read and select, a form to change. No dragging of wires                                                     | The owner changes a boundary or a person, not the topology. FlowGraph has no edit mode: its handles are `isConnectable={false}`                                                                                                                                                     |
-| Add W6?                                  | Yes                                                                                                                        | The store is in flight in `lane/core-w1`, and a new capability with its own tables, approval routing and an editor would make every other brief unreviewable                                                                                                                        |
+| Question                                 | Decision                                                                                                                   | Why                                                                                                                                                                                                                                                                                |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Extend authority rules, or replace them? | Extend. `authority_rules` stays the workspace ceiling, the graph decides inside it per agent, and the stricter answer wins | A rule has one action, amount bands and one approver group, so "5tr to Dinh, 20tr to Mr Nam" cannot fit in one row. `evaluateGate`, `max_mode`, `applyOperatingMode`, the Authority page and every caller of `runWork` keep working, and a graph can never open what a rule closed |
+| Where does the branch run?               | In `WorkEngineService.judge`, the one door every action already passes: agents, automations, module approvals              | Nothing has to be taught twice. It works on both roads of section 11                                                                                                                                                                                                               |
+| Automation templates?                    | They seed the base graph. The engine keeps running them                                                                    | A `TemplateDefinition` already has a trigger, needs, settings, guardrails and an authority action. A second executor would be a second truth (15.7)                                                                                                                                |
+| Condition language?                      | A closed JSON tree over a registry of facts, with no text form to parse                                                    | No code means nothing to escape, and the editor is rows, never a text box (15.5)                                                                                                                                                                                                   |
+| Migration?                               | Seed every agent from what it has today, run in shadow, flip per agent                                                     | Same shape as `road`: reversible per agent, no flag day (15.11)                                                                                                                                                                                                                    |
+| Editor?                                  | `FlowGraph` to read and select, a form to change. No dragging of wires                                                     | The owner changes a boundary or a person, not the topology. FlowGraph has no edit mode: its handles are `isConnectable={false}`                                                                                                                                                    |
+| Add W6?                                  | Yes                                                                                                                        | The store is in flight in `lane/core-w1`, and a new capability with its own tables, approval routing and an editor would make every other brief unreviewable                                                                                                                       |
 
 ### 15.2 What the owner sees: a node says everything in plain words
 
-Every node carries the same seven answers, for a shop owner and not a developer. Publishing refuses a node with a blank answer; "Không có" is an answer, and a blank is not. The answers are structured data, and words come from registries (a provider's name, a data field's label, an approver's name), so the model cannot describe a tool it does not use.
+Every node carries the same seven answers, for a shop owner and not a developer. Publishing refuses a node with a blank answer; "None" is an answer, and a blank is not. The answers are structured data, and words come from registries (a provider's name, a data field's label, an approver's name), so the model cannot describe a tool it does not use.
 
 ```ts
 type GraphNodeKind = "start" | "understand" | "decide" | "act" | "approve" | "tell" | "stop"
@@ -639,19 +639,19 @@ interface DataUse {
 }
 ```
 
-| Answer           | Field      | Reads as, on the accounting agent                                         |
-| ---------------- | ---------- | ------------------------------------------------------------------------- |
-| Biết gì ở đây    | `knows`    | Quy chế chi tiêu mục 4 (Brain), hợp đồng nhà cung cấp trên Drive          |
-| Làm gì           | `does`     | Xác nhận khoản chi rồi ghi vào sổ                                         |
-| Dùng gì          | `uses`     | SePay, with the tool name `sepay.transactions.debits` on a secondary line |
-| Đọc dữ liệu nào  | `reads`    | Số tiền, tên nhà cung cấp, từ Sao kê SePay                                |
-| Ghi dữ liệu nào  | `writes`   | Dòng chi, vào Sổ công nợ                                                  |
-| Ai duyệt         | `approver` | Định, 4 giờ không trả lời thì sang anh Nam                                |
-| Theo quy tắc nào | `sources`  | A Brain passage, a template, a chat line or a learned feedback            |
+| Answer         | Field      | Reads as, on the accounting agent                                         |
+| -------------- | ---------- | ------------------------------------------------------------------------- |
+| What it knows  | `knows`    | Spending policy section 4 (Brain), supplier contract on Drive             |
+| What it does   | `does`     | Confirms the expense, then records it in the ledger                       |
+| What it uses   | `uses`     | SePay, with the tool name `sepay.transactions.debits` on a secondary line |
+| What it reads  | `reads`    | Amount and supplier name, from the SePay statement                        |
+| What it writes | `writes`   | An expense line, into the payables ledger                                 |
+| Who approves   | `approver` | Dinh, and Mr Nam after 4 hours without an answer                          |
+| On which rule  | `sources`  | A Brain passage, a template, a chat line or a learned feedback            |
 
-`nodeCardOf(node, locale)` in `policies/node-card.policy.ts` maps a node to `FlowGraphNode`, so the at-a-glance card needs no grammar change: `label` is `title`, `description` is one line of at most 36 characters built from `uses` and `approver` ("SePay · Định duyệt"), and `count` is the source kind as a word ("Brain", "Mẫu", "Chat", "Học", "Tự sửa"). A longer line would break the 100 unit row of a `TB` layered graph (`FLOW_GRAPH_LAYER_GAP`). Selecting a node opens all seven answers in the side pane. `tone` follows the kind, and `shape` follows `diagram.choose.shape` (`D:/.claude/contexts/ui/components/diagram.md`): `diamond` for a decision with labelled edges, `round` for a step a person answers, `rect` otherwise. No node is a bare terminal `circle`, because each must carry its card.
+`nodeCardOf(node, locale)` in `policies/node-card.policy.ts` maps a node to `FlowGraphNode`, so the at-a-glance card needs no grammar change: `label` is `title`, `description` is one line of at most 36 characters built from `uses` and `approver` ("SePay · Dinh approves"), and `count` is the source kind as a word ("Brain", "Template", "Chat", "Learned", "Self-corrected"). A longer line would break the 100 unit row of a `TB` layered graph (`FLOW_GRAPH_LAYER_GAP`). Selecting a node opens all seven answers in the side pane. `tone` follows the kind, and `shape` follows `diagram.choose.shape` (`D:/.claude/contexts/ui/components/diagram.md`): `diamond` for a decision with labelled edges, `round` for a step a person answers, `rect` otherwise. No node is a bare terminal `circle`, because each must carry its card.
 
-`uses` is checked against the agent's rights, never granted by the graph. A tool with no row in `mcp_tool_grants` for that agent fails `rightsProblems`, and the editor shows "Chưa có quyền" with a link to the grant console. A write tool that does not exist yet (`zalo.send`, nivo-mcp.md section 5.3) draws as `isPlaceholder` and cannot be published as live.
+`uses` is checked against the agent's rights, never granted by the graph. A tool with no row in `mcp_tool_grants` for that agent fails `rightsProblems`, and the editor shows "No right yet" with a link to the grant console. A write tool that does not exist yet (`zalo.send`, nivo-mcp.md section 5.3) draws as `isPlaceholder` and cannot be published as live.
 
 ### 15.3 What a branch records
 
@@ -742,7 +742,7 @@ A fact declares type, unit and allowed values in the registry, and `op` and `val
 - over one numeric fact and unit, a gap or an overlap between branches: "under 5tr" and "above 5tr" leave 5,000,000 itself open. Bounds are explicit, `lt` or `lte`. The code holds both meanings today, `limit_vnd` strictly below and `auto_max` inclusive, so the graph never assumes one;
 - a `ceilingProblems` hit: a branch `auto` where the rule or `max_mode` caps it;
 - a `rightsProblems` hit (15.2);
-- an approver whose `member_grants` do not cover the top of the branch's range. `resolveApprovers` would leave them out and the card would go to nobody. The editor says "anh Nam chưa có quyền duyệt tới mức này" and links to where it is granted.
+- an approver whose `member_grants` do not cover the top of the branch's range. `resolveApprovers` would leave them out and the card would go to nobody. The editor says "Mr Nam has no right to approve up to this amount" and links to where it is granted.
 
 ### 15.6 Where the graph comes from
 
@@ -810,11 +810,11 @@ Two more migrations: `20261110000500_work-item-reason-branch_contract_widen.sql`
 
 ### 15.10 The owner's screens
 
-Setup tab, `AgentSetupPanes`, on `PaneGrid`: the graph is the main pane, and the right pane holds Trò chuyện, Chi tiết, Đề xuất and Phiên bản as its tabs, so a selection replaces the chat and never adds a third column.
+Setup tab, `AgentSetupPanes`, on `PaneGrid`: the graph is the main pane, and the right pane holds Chat, Details, Proposals and Versions as its tabs, so a selection replaces the chat and never adds a third column.
 
 `FlowGraph` with `direction="TB"`, `layout="layered"`, `fit="readable"`, `onSelect`, `selectedId`. Four lanes need about 830 px at the readable zoom, which fits beside a 340 px chat from a 1280 window. Installed grammar is 0.17.1: it has `layered`, `shape`, `headers` and `tone`, and lacks `isDimmed` and any outline on a selected pill. So selection and a trace paint by `tone`: selected or visited `accent`, the rest `muted`. That works now, and the later `isDimmed` can replace it with no design change.
 
-Phone: four lanes cannot be read at 390, so the phone opens on a list of branches as sentences, the graph sits behind one tab and pans, and a node's detail is a drawer. Editing a branch is a form in the pane or drawer: condition rows, approver, backup, time, with the source kept and `Tự sửa` added on save.
+Phone: four lanes cannot be read at 390, so the phone opens on a list of branches as sentences, the graph sits behind one tab and pans, and a node's detail is a drawer. Editing a branch is a form in the pane or drawer: condition rows, approver, backup, time, with the source kept and `Self-corrected` added on save.
 
 GraphQL, `be/src/features/api/agent-graphs`: `agentGraph(installationId)` gives draft, active version, gaps, problems and open proposals; `agentGraphVersions`, `agentGraphRun(workItemId)`, `agentGraphProposals`. Mutations `saveAgentGraphDraft`, `publishAgentGraph`, `decideAgentGraphProposal`, `restoreAgentGraphVersion`, `setAgentGraphMode`. Owner or manager, within 15.8.
 
@@ -835,7 +835,7 @@ Unit specs per file (BE-TEST-5, R273). Integration in `be/src/tests/integration/
 | ------------------------ | --------------------------------------------------------------------------------------------- |
 | `seed-matches-gate`      | A seeded graph answers as the gate does                                                       |
 | `model-amount-ignored`   | A proposal of 4.9tr on a 7.2tr record takes the 5tr branch, and the gate reads 7.2tr          |
-| `branch-routes-approver` | 7.2tr reaches Định, 25tr reaches anh Nam, and neither can answer the other's request          |
+| `branch-routes-approver` | 7.2tr reaches Dinh, 25tr reaches Mr Nam, and neither can answer the other's request           |
 | `boundary-exact`         | Exactly 5,000,000 follows the confirmed bound                                                 |
 | `unread-fact-asks`       | A failed read takes `else` and never runs alone                                               |
 | `stricter-wins`          | Branch `auto` under a rule `ask` asks; a rule `never` beats any branch                        |
