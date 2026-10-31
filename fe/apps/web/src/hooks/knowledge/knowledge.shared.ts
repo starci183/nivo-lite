@@ -1,7 +1,7 @@
 import type { useTranslations } from "next-intl"
 import type { ModuleKey } from "@/modules/catalog"
 import { AGENT_MODULES } from "@/modules/documents"
-import type { QueueItem } from "@/modules/documents"
+import type { QueueItem, UsageView } from "@/modules/documents"
 import type { AddMode, useAddDocuments } from "./useAddDocuments"
 import type { useAddInstances } from "./useAddInstances"
 import type { AddPreset } from "./useBatchOptions"
@@ -150,43 +150,6 @@ const buildOptionsView = (
             { id: "public", label: t("visPublic") },
         ],
     }) as const
-
-const BYTES_PER_MB = 1024 * 1024
-
-/** How the meter judges a share of the allowance: nearly full is cautionary, full is negative. */
-const usageToneOf = (share: number): UsageView["tone"] => {
-    if (share >= 1) return "negative"
-    return share >= 0.9 ? "cautionary" : "affirmative"
-}
-
-/** The workspace's raw document allowance as the meter draws it. */
-export interface UsageView {
-    readonly label: string
-    readonly value: number
-    readonly max: number
-    readonly valueLabel: string
-    readonly tone: "affirmative" | "cautionary" | "negative"
-}
-
-/** The meter of the raw document allowance, in megabytes with one decimal in the viewer's language; nothing until the usage is known. */
-export const usageViewOf = (
-    t: Translate,
-    locale: string,
-    usage: { readonly usedBytes: number; readonly limitBytes: number } | undefined,
-): UsageView | undefined => {
-    if (usage === undefined) return undefined
-    const megabytes = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 })
-    return {
-        label: t("usageLabel"),
-        value: usage.usedBytes,
-        max: usage.limitBytes,
-        valueLabel: t("usageValue", {
-            used: megabytes.format(usage.usedBytes / BYTES_PER_MB),
-            limit: megabytes.format(usage.limitBytes / BYTES_PER_MB),
-        }),
-        tone: usageToneOf(usage.usedBytes / usage.limitBytes),
-    }
-}
 
 /** What the view of the drawer is built from. */
 interface ViewContext {

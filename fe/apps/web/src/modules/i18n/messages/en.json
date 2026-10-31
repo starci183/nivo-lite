@@ -7089,7 +7089,6 @@
     "bannerNone": "This OA has not been authorized yet. Press Reconnect to sign in to Zalo and grant access.",
     "bannerNoneAsk": "This OA has not been authorized yet. Ask the workspace owner to press Reconnect to sign in to Zalo and grant access.",
     "reconnect": "Reconnect",
-    "disconnect": "Disconnect",
     "disconnectQuestion": "Disconnect this Zalo OA? Agents will stop receiving and answering messages through it.",
     "disconnectConfirm": "Disconnect",
     "cancel": "Cancel",

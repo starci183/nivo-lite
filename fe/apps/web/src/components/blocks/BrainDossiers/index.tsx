@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import type { ReactNode } from "react"
-import { useFormatter, useLocale, useTranslations } from "next-intl"
+import { useFormatter, useTranslations } from "next-intl"
 import type { PageHeaderContent } from "@starci/grammar/common"
 import {
     BRAIN_PANEL_PREFIX,
@@ -19,7 +19,7 @@ import {
     worstSeverityOf,
 } from "@/hooks/brain"
 import type { CategoryView, DossierReviewRecord, DossierView, NumberFormatter } from "@/hooks/brain"
-import { useWorkspaceMember, usageViewOf } from "@/hooks/knowledge"
+import { useUsageView, useWorkspaceMember } from "@/hooks/knowledge"
 import { loadingSlot, mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { brainDossierHref, brainTabHref } from "@/modules/routes"
@@ -120,14 +120,13 @@ interface BrainDossiersProps {
 export const BrainDossiers = (props: BrainDossiersProps) => {
     const t = useTranslations("secondBrain")
     const review = useTranslations("dossierReview")
-    const knowledge = useTranslations("knowledge")
     const router = navigation.useRouter()
-    const locale = useLocale()
     const formatter = useFormatter()
     const format: NumberFormatter = (value, digits) => formatter.number(value, { maximumFractionDigits: digits })
     const member = useWorkspaceMember()
     const slotLabels = useSlotLabels()
     const { categories, slot, reload, usage } = useBrainDossiers()
+    const usageView = useUsageView(usage)
     const header = useBrainPageHeader("dossiers", props.header)
     const summary = useDossierReviewSummary()
     const commands = useDossierReviewCommands()
@@ -155,7 +154,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
                 addHref: member.canWrite ? brainTabHref("sources", { add: "base" }) : null,
                 emptyCategory: t("dossiersEmptyCategory"),
                 emptyAll: t("dossiersEmpty"),
-                usage: usageViewOf(knowledge, locale, usage),
+                usage: usageView,
                 selectedId: picked ?? categoryIdOf(categories ?? [], props.dossier),
                 reviewAll: member.canWrite
                     ? {

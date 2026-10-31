@@ -19,6 +19,8 @@ export {
     topicsOf,
 } from "./status"
 export type { AgentModule } from "./status"
+export { usageMeterOf } from "./usage"
+export type { UsageView } from "./usage"
 export { readArchive } from "./zip"
 export { isArchiveName } from "./zip-names"
 export type { RetrievedPassage } from "./passages"

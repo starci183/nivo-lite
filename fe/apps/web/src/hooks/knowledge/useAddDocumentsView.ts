@@ -1,15 +1,16 @@
 "use client"
 
-import { useLocale, useTranslations } from "next-intl"
+import { useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref } from "@/modules/routes"
 import { useQueryKnowledgeUsageSwr } from "@/hooks/swr"
-import { buildAddDocumentsView, usageViewOf } from "./knowledge.shared"
+import { buildAddDocumentsView } from "./knowledge.shared"
 import type { AddDocumentsViewInput } from "./knowledge.shared"
 import { useAddDocuments } from "./useAddDocuments"
 import { useAddDropZone } from "./useAddDropZone"
 import { useAddInstances } from "./useAddInstances"
 import { useQueueActions } from "./useQueueActions"
+import { useUsageView } from "./useUsageView"
 
 /**
  * The drop zone and the drawer that adds documents, as the connected block draws them: the drawer opens and closes through
@@ -17,8 +18,8 @@ import { useQueueActions } from "./useQueueActions"
  */
 export const useAddDocumentsView = (props: AddDocumentsViewInput) => {
     const t = useTranslations("knowledge")
-    const locale = useLocale()
     const { data: usage } = useQueryKnowledgeUsageSwr()
+    const usageView = useUsageView(usage)
     const router = navigation.useRouter()
     const actions = useQueueActions()
     const { canWrite, instances } = useAddInstances()
@@ -40,6 +41,6 @@ export const useAddDocumentsView = (props: AddDocumentsViewInput) => {
     return {
         add,
         open,
-        view: buildAddDocumentsView({ t, props, add, canWrite, instances, zone, usage: usageViewOf(t, locale, usage) }),
+        view: buildAddDocumentsView({ t, props, add, canWrite, instances, zone, usage: usageView }),
     }
 }

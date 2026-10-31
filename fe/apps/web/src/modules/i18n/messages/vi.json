@@ -7094,7 +7094,6 @@
     "bannerNone": "OA này chưa được cấp quyền. Bấm Kết nối lại để đăng nhập Zalo và cấp quyền.",
     "bannerNoneAsk": "OA này chưa được cấp quyền. Nhờ chủ workspace bấm Kết nối lại để đăng nhập Zalo và cấp quyền.",
     "reconnect": "Kết nối lại",
-    "disconnect": "Ngắt kết nối",
     "disconnectQuestion": "Ngắt kết nối Zalo OA này? Agent sẽ không nhận và trả lời tin qua OA nữa.",
     "disconnectConfirm": "Ngắt kết nối",
     "cancel": "Hủy",

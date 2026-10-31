@@ -130,11 +130,6 @@ namespaces:
   modulesCore:
     - key: "installing"
       reason: 'Read as the string "installing" in hooks/installations/installations.shared.ts, modules/documents/knowledge.mapper.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  office:
-    - key: "crumbHome"
-      reason: 'Read as the string "crumbHome" in components/blocks/AgentInstanceHeader/index.tsx, components/blocks/AgentInstances/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "crumbLabel"
-      reason: 'Read as the string "crumbLabel" in components/blocks/AgentInstanceHeader/index.tsx, components/blocks/AgentInstances/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   onboarding:
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."

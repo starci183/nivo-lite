@@ -1,4 +1,4 @@
-import { Button, CloseButton, Heading, Image, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, CloseButton, Heading, Mascot, SurfaceCard, Text } from "@starci/grammar/common"
 import { WELCOME_ACTIONS, WELCOME_COPY, WELCOME_HEAD } from "./classNames"
 
 /** Copy, links and handler of the welcome band. */
@@ -22,7 +22,15 @@ export const PromoWelcomeBand = (props: PromoWelcomeBandProps) => (
     <SurfaceCard
         treatment="ink"
         ariaLabel={props.ariaLabel}
-        artwork={<Image src="/images/promo/mascot-celebrate.png" alt="" aspect="auto" fit="contain" />}
+        artwork={
+            <Mascot
+                src="/images/promo/mascot-celebrate.png"
+                size="lg"
+                assetSlot="promo-welcome-celebrate"
+                assetSha256="52c3b94bc74a2dafdd7e394b4e2df383bedaa73d4a3dfaf42c566538c78ebc4e"
+                assetPrompt="The NIVO unicorn celebrates with confetti, transparent ground"
+            />
+        }
     >
         <div className={WELCOME_COPY}>
             <div className={WELCOME_HEAD}>
