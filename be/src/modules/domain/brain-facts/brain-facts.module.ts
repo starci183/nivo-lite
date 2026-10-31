@@ -19,7 +19,7 @@ export class BrainFactsModule extends ConfigurableModuleClass {
                 BrainFactsReadService,
                 BrainFactsMaintenanceService,
             ],
-            exports: [BrainFactsService],
+            exports: [BrainFactsService, BrainFactsReadService],
         }
     }
 }

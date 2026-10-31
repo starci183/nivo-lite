@@ -10,6 +10,7 @@ import type {
     ChunkWrite,
     EmbeddedChunk,
     PassageView,
+    SourcePassage,
     StaleChunk,
     VectorWrite,
 } from "./knowledge-chunks.contracts"
@@ -18,6 +19,9 @@ import { KnowledgeChunkEntity } from "./persistence/entities"
 /** The most passages one source lists or reports as embedded. */
 const EMBEDDED_LIMIT = 2000
 const PASSAGE_LIMIT = 500
+
+/** The most passages one read of several sources answers. */
+const SOURCES_PASSAGE_LIMIT = 10_000
 
 /** The vector of each id, picked from the two arrays the write carries. */
 const VECTOR_OF_ID =
@@ -137,6 +141,28 @@ export class KnowledgeChunksService {
             content: row.content,
             hasEmbedding: row.hasEmbedding,
         }))
+    }
+
+    /** The first `perSource` passages of each of these sources in one bounded read, ordered by source then order; the caller has proven the workspace. */
+    async passagesOfSources(
+        workspaceId: string,
+        sourceIds: ReadonlyArray<string>,
+        perSource: number,
+    ): Promise<ReadonlyArray<SourcePassage>> {
+        if (sourceIds.length === 0) return []
+        const rows = await this.entityManager
+            .createQueryBuilder(KnowledgeChunkEntity, "c")
+            .select(["c.id", "c.sourceId", "c.ord", "c.content"])
+            .where("c.workspaceId = :workspaceId AND c.sourceId IN (:...sourceIds) AND c.ord < :perSource", {
+                workspaceId,
+                sourceIds: [...sourceIds],
+                perSource,
+            })
+            .orderBy("c.sourceId", "ASC")
+            .addOrderBy("c.ord", "ASC")
+            .limit(Math.min(sourceIds.length * perSource, SOURCES_PASSAGE_LIMIT))
+            .getMany()
+        return rows.map((row) => ({ id: row.id, sourceId: row.sourceId, order: row.ord, text: row.content }))
     }
 
     /** The stored passages of a source that have a vector, in order. */

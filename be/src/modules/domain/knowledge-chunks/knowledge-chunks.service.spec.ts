@@ -283,3 +283,41 @@ describe("KnowledgeChunksService", () => {
         })
     })
 })
+
+describe("KnowledgeChunksService passagesOfSources", () => {
+    it("reads the first passages of each source in one bounded query, by source then order", async () => {
+        const em = mockEntityManager()
+        const read = queueQueryBuilders(em, [{ getMany: [Object.assign(chunkOf(), { content: "Tea" })] }])[0]
+        const service = await build(em)
+
+        await expect(service.passagesOfSources(WS, ["s1", "s2"], 40)).resolves.toEqual([
+            { id: "c1", sourceId: "s1", order: 0, text: "Tea" },
+        ])
+
+        expect(read?.callsOf("select")).toEqual([[["c.id", "c.sourceId", "c.ord", "c.content"]]])
+        expect(read?.callsOf("where")).toEqual([
+            [
+                "c.workspaceId = :workspaceId AND c.sourceId IN (:...sourceIds) AND c.ord < :perSource",
+                { workspaceId: WS, sourceIds: ["s1", "s2"], perSource: 40 },
+            ],
+        ])
+        expect(read?.callsOf("orderBy")).toEqual([["c.sourceId", "ASC"]])
+        expect(read?.callsOf("addOrderBy")).toEqual([["c.ord", "ASC"]])
+        expect(read?.callsOf("limit")).toEqual([[80]])
+    })
+
+    it("caps the read and reads nothing without sources", async () => {
+        const em = mockEntityManager()
+        const read = queueQueryBuilders(em, [{ getMany: [] }])[0]
+        const service = await build(em)
+
+        await expect(service.passagesOfSources(WS, [], 40)).resolves.toEqual([])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        await service.passagesOfSources(
+            WS,
+            Array.from({ length: 300 }, (_, index) => `s${index}`),
+            40,
+        )
+        expect(read?.callsOf("limit")).toEqual([[10_000]])
+    })
+})

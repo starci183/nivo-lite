@@ -1,7 +1,7 @@
 import * as facts from "@tests/fixtures/builders/brain-facts.builder"
 
 import { Test } from "@nestjs/testing"
-import { FakeClock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, IsNull } from "typeorm"
 import { CLOCK } from "@modules/platform/clock"
@@ -108,7 +108,38 @@ const registerViews = () => {
     })
 }
 
+const registerSources = () => {
+    it("reads the facts whose evidence cites the documents in one bounded query", async () => {
+        const em = mockEntityManager()
+        const [read] = queueQueryBuilders(em, [{ getMany: [facts.rowOf()] }])
+        const service = await build(em)
+
+        await expect(service.ofSources(facts.WS, ["s1", "s2"], ["active", "proposed"], 3000)).resolves.toEqual([
+            facts.factOf(),
+        ])
+
+        expect(read?.callsOf("where")).toEqual([
+            [
+                "f.workspaceId = :workspaceId AND f.status IN (:...statuses) AND EXISTS (SELECT 1 FROM jsonb_array_elements(f.evidence) AS e WHERE e->>'kind' = 'document' AND e->>'ref' = ANY(:sourceIds))",
+                { workspaceId: facts.WS, statuses: ["active", "proposed"], sourceIds: ["s1", "s2"] },
+            ],
+        ])
+        expect(read?.callsOf("orderBy")).toEqual([["f.updatedAt", "DESC"]])
+        expect(read?.callsOf("limit")).toEqual([[2000]])
+    })
+
+    it("reads nothing without documents or statuses", async () => {
+        const em = mockEntityManager()
+        const service = await build(em)
+
+        await expect(service.ofSources(facts.WS, [], ["active"], 10)).resolves.toEqual([])
+        await expect(service.ofSources(facts.WS, ["s1"], [], 10)).resolves.toEqual([])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+}
+
 describe("BrainFactsReadService", () => {
     registerReads()
     registerViews()
+    registerSources()
 })

@@ -83,6 +83,26 @@ export class BrainFactsReadService {
         return searchFacts(await this.forView(workspaceId, audience, module, installationId, 500), query, limit)
     }
 
+    /** The facts in these statuses whose evidence cites any of these documents, newest change first, in one bounded read. */
+    async ofSources(
+        workspaceId: string,
+        sourceIds: ReadonlyArray<string>,
+        statuses: ReadonlyArray<FactStatus>,
+        limit: number,
+    ): Promise<ReadonlyArray<FactRecord>> {
+        if (sourceIds.length === 0 || statuses.length === 0) return []
+        const rows = await this.entityManager
+            .createQueryBuilder(BrainFactEntity, "f")
+            .where(
+                "f.workspaceId = :workspaceId AND f.status IN (:...statuses) AND EXISTS (SELECT 1 FROM jsonb_array_elements(f.evidence) AS e WHERE e->>'kind' = 'document' AND e->>'ref' = ANY(:sourceIds))",
+                { workspaceId, statuses: [...statuses], sourceIds: [...sourceIds] },
+            )
+            .orderBy("f.updatedAt", "DESC")
+            .limit(Math.min(limit, LIST_MAX))
+            .getMany()
+        return rows.map(toFactRecord)
+    }
+
     /** One fact through a manager. */
     async fetch(em: EntityManager, workspaceId: string, id: string): Promise<MaybeFact> {
         const row = await em.findOne(BrainFactEntity, { where: { workspaceId, id } })

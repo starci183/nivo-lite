@@ -8,6 +8,10 @@ export enum KnowledgeJob {
     Reembed = "knowledge.reembed",
     /** Carries out a command an owner or manager asked for on the Second Brain or Knowledge page (row in brain_commands). */
     BrainCommand = "brain.command",
+    /** Reviews the dossiers of a run row (dossier_review_runs): rules, then the model pass, then the findings and statuses. */
+    DossierReview = "dossier.review",
+    /** Writes the remedy draft of a row of dossier_remedy_drafts through the model. */
+    DossierRemedy = "dossier.remedy",
 }
 
 /** The payload of the index and facts jobs: the source to work on, ids only (the handler re-reads the current state). */
@@ -34,6 +38,22 @@ export interface KnowledgeCommandPayload {
     readonly workspaceId: string
 }
 
+/** The payload of the dossier review job: the run row to carry out, ids only. */
+export interface DossierReviewPayload {
+    /** The dossier_review_runs row. */
+    readonly runId: string
+    /** The workspace it reviews. */
+    readonly workspaceId: string
+}
+
+/** The payload of the dossier remedy job: the draft row to write, ids only. */
+export interface DossierRemedyPayload {
+    /** The dossier_remedy_drafts row. */
+    readonly draftId: string
+    /** The workspace it belongs to. */
+    readonly workspaceId: string
+}
+
 /** The failure reason recorded when a workspace has no credits left: the job fails WITHOUT retrying and the owner tops up, then retries. */
 export const KNOWLEDGE_BLOCKED_CREDITS = "blocked_credits"
 
@@ -46,6 +66,14 @@ export const isKnowledgeSourcePayload = (value: unknown): value is KnowledgeSour
 /** True when a job payload is the payload of a brain command job. */
 export const isKnowledgeCommandPayload = (value: unknown): value is KnowledgeCommandPayload =>
     isRecord(value) && typeof value.commandId === "string" && typeof value.workspaceId === "string"
+
+/** True when a job payload is the payload of a dossier review job. */
+export const isDossierReviewPayload = (value: unknown): value is DossierReviewPayload =>
+    isRecord(value) && typeof value.runId === "string" && typeof value.workspaceId === "string"
+
+/** True when a job payload is the payload of a dossier remedy job. */
+export const isDossierRemedyPayload = (value: unknown): value is DossierRemedyPayload =>
+    isRecord(value) && typeof value.draftId === "string" && typeof value.workspaceId === "string"
 
 /** True when a job payload is the payload of a reembed job. */
 export const isKnowledgeReembedPayload = (value: unknown): value is KnowledgeReembedPayload =>

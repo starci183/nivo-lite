@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { KnowledgeQueueModule } from "@modules/queues/knowledge"
 import { ApiKnowledgeSourcesService } from "./api-knowledge-sources.service"
 import { KNOWLEDGE_STORAGE } from "./knowledge-sources.decorators"
+import { DossierSourcesService } from "./dossier-sources.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./knowledge-sources.module-definition"
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
 import { SourceCategoriesService } from "./source-categories.service"
@@ -29,6 +30,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 KnowledgeSourcesService,
                 SourceQuotaService,
                 SourceCategoriesService,
+                DossierSourcesService,
                 ApiKnowledgeSourcesService,
             ],
             exports: [
@@ -39,6 +41,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 KnowledgeSourcesService,
                 SourceQuotaService,
                 SourceCategoriesService,
+                DossierSourcesService,
                 ApiKnowledgeSourcesService,
             ],
         }

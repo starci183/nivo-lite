@@ -66,6 +66,18 @@ export interface PassageView {
     readonly hasEmbedding: boolean
 }
 
+/** A passage of one of several sources, as the dossier review reads it. */
+export interface SourcePassage {
+    /** The passage id. */
+    readonly id: string
+    /** The source it belongs to. */
+    readonly sourceId: string
+    /** Its order in the source. */
+    readonly order: number
+    /** The text. */
+    readonly text: string
+}
+
 /** The dimensions of every stored vector (the pgvector column size); the embeddings provider is asked for exactly this many. */
 export const EMBEDDING_DIMENSIONS = 1536
 

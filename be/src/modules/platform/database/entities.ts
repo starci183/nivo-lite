@@ -56,6 +56,7 @@ import { creditsEntities } from "@modules/domain/credits"
 import { dataRecordsEntities } from "@modules/domain/data-records"
 import { dataSyncRunsEntities } from "@modules/domain/data-sync-runs"
 import { decisionsEntities } from "@modules/domain/decisions"
+import { dossierReviewEntities } from "@modules/domain/dossier-review"
 import { emailMessagesEntities } from "@modules/domain/email-messages"
 import { eventsEntities } from "@modules/domain/events"
 import { executionsEntities } from "@modules/domain/executions"
@@ -170,6 +171,7 @@ export const PRIMARY_ENTITIES = [
     ...brainEntities,
     ...brainCommandsEntities,
     ...brainDossiersEntities,
+    ...dossierReviewEntities,
     ...brainEvalCasesEntities,
     ...brainExtractionsEntities,
     ...brainFactsEntities,

@@ -3,7 +3,12 @@ import type { EntityManager } from "typeorm"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { KnowledgeJob, knowledgeDedupeKey } from "./knowledge.contracts"
-import type { KnowledgeReembedPayload, KnowledgeSourcePayload } from "./knowledge.contracts"
+import type {
+    DossierRemedyPayload,
+    DossierReviewPayload,
+    KnowledgeReembedPayload,
+    KnowledgeSourcePayload,
+} from "./knowledge.contracts"
 
 /** The queue name: the contract between these producers, the SQL functions that enqueue knowledge sources, and the processors (the durable queue name). */
 export const KNOWLEDGE_QUEUE = "knowledge"
@@ -46,6 +51,22 @@ export class KnowledgeQueue {
                 payload.workspaceId,
                 continuedAt === undefined ? payload.model : `${payload.model ?? ""}:next:${continuedAt}`,
             ),
+        })
+    }
+
+    /** Enqueues the review of a dossier run in the caller's transaction; one job per run row. */
+    enqueueDossierReview(payload: DossierReviewPayload, tx: EntityManager): Promise<void> {
+        return this.outbox.write(tx, KNOWLEDGE_QUEUE, payload, {
+            job: KnowledgeJob.DossierReview,
+            dedupeKey: knowledgeDedupeKey(KnowledgeJob.DossierReview, payload.runId),
+        })
+    }
+
+    /** Enqueues the writing of a remedy draft in the caller's transaction; one job per draft row. */
+    enqueueDossierRemedy(payload: DossierRemedyPayload, tx: EntityManager): Promise<void> {
+        return this.outbox.write(tx, KNOWLEDGE_QUEUE, payload, {
+            job: KnowledgeJob.DossierRemedy,
+            dedupeKey: knowledgeDedupeKey(KnowledgeJob.DossierRemedy, payload.draftId),
         })
     }
 }

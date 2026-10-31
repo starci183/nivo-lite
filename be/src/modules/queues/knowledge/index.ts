@@ -1,5 +1,8 @@
 export {
+    KNOWLEDGE_BLOCKED_CREDITS,
     KnowledgeJob,
+    isDossierRemedyPayload,
+    isDossierReviewPayload,
     isKnowledgeCommandPayload,
     isKnowledgeReembedPayload,
     isKnowledgeSourcePayload,
