@@ -11,7 +11,7 @@ import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ApiKeysService } from "./api-keys.service"
-import { hashKey } from "./api-keys.policy"
+import { hashKey, RATE_LIMIT_PER_MINUTE } from "./api-keys.policy"
 import {
     agentBoundKey,
     defaultKeyOfWorkspaceWs1,
@@ -450,7 +450,7 @@ describe("ApiKeysService agent keys", () => {
 
 describe("ApiKeysService agent keys", () => {
     it("verifies an agent key by its hash and answers the agent and its workspace", async () => {
-        const em = mockEntityManager()
+        const em = mockEntityManager({ query: [API_KEY_AUTH, verdictRows({ hits: 3 })] })
         const [fake] = queueQueryBuilders(em, [
             {
                 getRawOne: {
@@ -470,6 +470,34 @@ describe("ApiKeysService agent keys", () => {
             agentId: "agent-1",
         })
         expect(fake?.callsOf("where")).toEqual([["k.keyHash = :keyHash", { keyHash: hashKey("nvk_secret") }]])
+    })
+
+    it("counts every call of an agent key against its minute budget and refuses the call over it", async () => {
+        const answer = {
+            getRawOne: { id: "key-1", workspace_id: "ws-1", agent_id: "agent-1", scopes: ["tools:call"], revoked: false },
+        }
+        const em = mockEntityManager({
+            query: [API_KEY_AUTH, verdictRows({ hits: RATE_LIMIT_PER_MINUTE + 1 })],
+        })
+        queueQueryBuilders(em, [answer])
+        const keys = await build(em)
+
+        await expect(keys.verifyAgentKey("Bearer nvk_secret")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.RateLimited,
+            params: { limit: RATE_LIMIT_PER_MINUTE },
+        })
+        expect(em.query).toHaveBeenCalledWith(API_KEY_AUTH, [hashKey("nvk_secret")])
+    })
+
+    it("spends no budget on a key it refuses", async () => {
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
+        const keys = await build(em)
+
+        await expect(keys.verifyAgentKey("Bearer nvk_secret")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.Unauthorized,
+        })
+        expect(em.query).not.toHaveBeenCalled()
     })
 
     it("refuses a malformed header before the database and a revoked or unknown key after it", async () => {

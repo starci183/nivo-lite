@@ -21,6 +21,7 @@ import {
     ACTIVE_KEYS_MAX,
     admitAgentKey,
     admitKey,
+    withinMinuteBudget,
     bearerKey,
     buildKey,
     cleanName,
@@ -107,7 +108,8 @@ export class ApiKeysService {
 
     /**
      * Establishes the agent an MCP endpoint request acts as: the bearer key must work and be bound to an active agent of its
-     * workspace with the `tools:call` scope. A revoked key, a public API key and the key of a deleted or paused agent are refused.
+     * workspace with the `tools:call` scope, and stay inside its minute budget like any other key (the IP limit is not enough: a key
+     * can be used from many addresses). A revoked key, a public API key and the key of a deleted or paused agent are refused.
      */
     async verifyAgentKey(authorization: string): Promise<AgentKeyPrincipal> {
         const key = bearerKey(authorization)
@@ -125,6 +127,13 @@ export class ApiKeysService {
         const status = row?.agent_id == null ? null : await this.agents.statusOf(row.workspace_id, row.agent_id)
         const admitted = admitAgentKey(row === undefined ? undefined : { ...row, agent_status: status })
         if (admitted.kind === "refused") throw new ApiKeysError({ code: admitted.code, params: admitted.params })
+        const [hit] = await callDbFunction<{ api_key_auth: ApiKeyAuthAnswer | null }>(
+            this.entityManager,
+            "public.api_key_auth",
+            [hashKey(key)],
+        )
+        const budget = withinMinuteBudget(hit?.api_key_auth ?? null, this.clock.now())
+        if (budget.kind === "refused") throw new ApiKeysError({ code: budget.code, params: budget.params })
         return admitted.value
     }
 
