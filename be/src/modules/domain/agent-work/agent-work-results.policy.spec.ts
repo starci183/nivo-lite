@@ -30,13 +30,14 @@ const begun = (over: Record<string, unknown> = {}): Record<string, unknown> => (
 describe("parseBegin", () => {
     it.each(["killed", "busy", "idle"])("reads the quiet answer %s", async (result) => {
         const { parseBegin } = await buildSubject()
-        expect(parseBegin({ result }, "agent-1", "agent")).toEqual({ result })
+        expect(parseBegin({ result }, "agent-1", "agent")).toEqual({ result, ended: [] })
     })
 
     it("reads a begun turn for the agent and scope it was asked about", async () => {
         const { parseBegin } = await buildSubject()
         expect(parseBegin(begun(), "agent-1", "agent")).toEqual({
             result: "begun",
+            ended: [],
             turn: {
                 workspaceId: "ws-1",
                 agentId: "agent-1",
@@ -62,8 +63,27 @@ describe("parseBegin", () => {
         expect(answer).toMatchObject({ result: "begun", turn: { proposal: { reply: "hi" }, actorMemberId: null } })
     })
 
+    it("reads the wakes begin ended: held by a switch or dead, each with its own ids", async () => {
+        const { parseBegin } = await buildSubject()
+        const ended = (state: string) => ({ ...begun(), state, result: undefined, fence: undefined, turnId: undefined })
+
+        const answer = parseBegin({ result: "killed", ended: [ended("held"), ended("dead")] }, "agent-1", "agent")
+
+        expect(answer).toMatchObject({
+            result: "killed",
+            ended: [
+                { state: "held", wake: { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "agent", wakeId: "wake-1" } },
+                { state: "dead", wake: { source: "tag", attempts: 2, maxAttempts: 3 } },
+            ],
+        })
+    })
+
     it.each([
         ["a value that is not an object", "begun"],
+        ["an ended list that is not a list", { result: "idle", ended: "none" }],
+        ["an ended wake that is not an object", { result: "idle", ended: ["wake-1"] }],
+        ["an ended wake in a state that is none of the two", { result: "idle", ended: [{ ...begun(), state: "done" }] }],
+        ["an ended wake with a field missing", { result: "idle", ended: [{ state: "held", wakeId: "wake-1" }] }],
         ["a word that is none of the four", { result: "later" }],
         ["a begun answer without its turn", { result: "begun" }],
         ["an unknown source", begun({ source: "robot" })],

@@ -1,11 +1,9 @@
 import { builder } from "@starci/jest-preset"
 import type { EntityManager } from "typeorm"
-import type { RecordingQueueOutbox } from "@starci/jest-preset"
 import { agentWorkEntities } from "@modules/domain/agent-work"
 import { QUEUE_SCHEDULES } from "@modules/platform/queue"
 import type { QueueSchedules } from "@modules/platform/queue"
-import { AGENT_TURN_QUEUE_PRODUCER, AgentTurnQueue } from "@modules/queues/agent-turn"
-import type { AgentGoalWrite, AgentTriggerWrite, AgentTurnView, AgentWake } from "@modules/domain/agent-work"
+import type { AgentGoalWrite, AgentTriggerWrite, AgentTurnView, AgentWake, AgentWakeView } from "@modules/domain/agent-work"
 
 const [
     AgentWorkSettingsEntity,
@@ -193,6 +191,21 @@ export const agentTurnViewOf = builder<AgentTurnView>({
     proposal: null,
 })
 
+/** The customer wake of conversation conv-1 as a handler sees it when `begin` ended it with no turn. */
+export const agentWakeViewOf = builder<AgentWakeView>({
+    workspaceId: "ws-1",
+    agentId: "agent-1",
+    scopeKey: "conversation:conv-1",
+    wakeId: "wake-2",
+    source: "customer",
+    eventKey: "msg-2",
+    context: {},
+    actorMemberId: null,
+    attempts: 2,
+    maxAttempts: 2,
+    wakeCreatedAt: WHEN,
+})
+
 /** A tag of agent-1 in the sales room by member-1. */
 export const agentWakeOf = builder<AgentWake>({
     workspaceId: "ws-1",
@@ -291,12 +304,6 @@ export const heldScheduleWakeRowOf = (id: string): AgentWakeEntity =>
 /** A wake row a switch held: the internal wake of task task-1 that fell due. */
 export const heldTaskWakeRowOf = (id: string): AgentWakeEntity =>
     agentWakeRowOf({ id, eventKey: id, source: "internal", scopeKey: "agent", context: { taskId: "task-1" } })
-
-/** The provider of the agent-turn queue producer over a recording outbox, so a spec reads the drain jobs a service wrote. */
-export const agentTurnQueueProviderOf = (outbox: RecordingQueueOutbox) => ({
-    provide: AGENT_TURN_QUEUE_PRODUCER,
-    useValue: new AgentTurnQueue(outbox),
-})
 
 /** The provider of the keyed job schedulers over a double, so a spec reads the schedulers a service made. */
 export const queueSchedulesProviderOf = (schedules: QueueSchedules) => ({

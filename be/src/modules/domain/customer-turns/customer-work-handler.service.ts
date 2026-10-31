@@ -6,11 +6,12 @@ import type {
     AgentHandlerEnding,
     AgentTurnPrep,
     AgentTurnView,
+    AgentWakeView,
     AgentWakeSource,
     AgentWorkHandler,
 } from "@modules/domain/agent-work"
 import { ChatTurnService } from "@modules/domain/conversations"
-import type { CustomerTurn, TurnOrigin } from "@modules/domain/conversations"
+import type { CustomerTurn } from "@modules/domain/conversations"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { CustomerCorePlanService } from "./customer-core-plan.service"
@@ -30,7 +31,9 @@ const ended = (status: AgentHandlerEnding["status"], reason: string | null, outc
     outcome,
 })
 
-const originOf = (turn: AgentTurnView): TurnOrigin => ({ turnId: turn.turnId, wakeId: turn.wakeId })
+/** The customer turn with the turn and wake it runs under, so the work it opens carries them; a wake that ended with no turn carries none. */
+const underWake = (loaded: CustomerTurn, wake: AgentWakeView | AgentTurnView): CustomerTurn =>
+    "turnId" in wake ? { ...loaded, origin: { turnId: wake.turnId, wakeId: wake.wakeId } } : loaded
 
 @Injectable()
 /**
@@ -76,7 +79,7 @@ export class CustomerWorkHandlerService implements AgentWorkHandler, OnModuleIni
         const loaded = await this.load(turn)
         if (loaded === undefined) return ended("skipped", TARGET_GONE, null)
         await this.chat.respond(
-            { ...loaded, origin: originOf(turn) },
+            underWake(loaded, turn),
             this.runtime.proposalFrom(proposalTextOf(proposal)),
         )
         this.plans.end(loaded)
@@ -84,19 +87,19 @@ export class CustomerWorkHandlerService implements AgentWorkHandler, OnModuleIni
     }
 
     /** Answers a turn that cannot run (quota, breaker, a runtime that is down, a switch): the owner's holding line and a question for a person. */
-    async holdOver(turn: AgentTurnView, reason: string): Promise<AgentHandlerEnding> {
+    async holdOver(turn: AgentWakeView, reason: string): Promise<AgentHandlerEnding> {
         const loaded = await this.load(turn)
         if (loaded === undefined) return ended("skipped", TARGET_GONE, null)
         return this.hold(loaded, turn, reason)
     }
 
-    private async hold(loaded: CustomerTurn, turn: AgentTurnView, reason: string): Promise<AgentHandlerEnding> {
-        await this.chat.holdOver({ ...loaded, origin: originOf(turn) }, holdReasonOf(reason))
+    private async hold(loaded: CustomerTurn, turn: AgentWakeView, reason: string): Promise<AgentHandlerEnding> {
+        await this.chat.holdOver(underWake(loaded, turn), holdReasonOf(reason))
         this.plans.end(loaded)
         return ended("done", reason, { heldOver: true })
     }
 
-    private async load(turn: AgentTurnView): Promise<CustomerTurn | undefined> {
+    private async load(turn: AgentWakeView): Promise<CustomerTurn | undefined> {
         const ref = turnRefOf(turn.context)
         return ref === null ? undefined : this.chat.turnOf(ref)
     }

@@ -156,14 +156,14 @@ describe("AgentTurnExecutorService > a turn that runs", () => {
 })
 
 describe("AgentTurnExecutorService > a customer turn the runtime fails", () => {
-    it("is blocked as unavailable, logged, and neither metered nor retried", async () => {
+    it("is blocked as unavailable at once and logged, and metered by what was sent like any failed run", async () => {
         const { executor, runner, usage, logger } = await build()
         runner.run.mockRejectedValue(new Error("gateway down"))
 
         const run = await executor.run(agentTurnViewOf({ source: "customer" }), plan, signal)
 
         expect(run).toEqual({ kind: "blocked", reason: "openclaw_unavailable" })
-        expect(usage.record).not.toHaveBeenCalled()
+        expect(usage.record).toHaveBeenCalledWith(expect.objectContaining({ kind: "chat_reply", usage: null, completionChars: 0 }))
         expect(logger.error).toHaveBeenCalledWith(AgentTurnsLogEvent.TurnFailed, expect.any(Error), {
             agentId: "agent-1",
             wakeId: "wake-1",

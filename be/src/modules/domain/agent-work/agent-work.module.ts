@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentTurnQueueModule } from "@modules/queues/agent-turn"
 import { AgentDrainService } from "./agent-drain.service"
+import { AgentEndedWakesService } from "./agent-ended-wakes.service"
 import { AgentGoalsService } from "./agent-goals.service"
 import { AgentTurnsService } from "./agent-turns.service"
 import { AgentTasksService } from "./agent-tasks.service"
@@ -35,6 +36,7 @@ export class AgentWorkModule extends ConfigurableModuleClass {
                 AgentWorkHandlersService,
                 AgentWakeService,
                 AgentWakeRetentionService,
+                AgentEndedWakesService,
                 AgentDrainService,
                 AgentGoalsService,
                 AgentTasksService,

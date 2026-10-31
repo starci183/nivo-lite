@@ -30,6 +30,7 @@ export type {
     AgentWake,
     AgentWakeContext,
     AgentWakeSource,
+    AgentWakeView,
     AgentWorkDue,
     AgentWorkSettingsRecord,
     AgentWorkState,

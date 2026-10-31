@@ -13,6 +13,8 @@ import { AGENTS_INSTALLATIONS, AgentDirectoryService, AgentsService } from "@mod
 import type { InstallationDirectory } from "@modules/domain/agents"
 import { ModuleReadinessService } from "@modules/domain/modules"
 import { CLOCK } from "@modules/platform/clock"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentProbesService } from "./agent-probes.service"
@@ -28,7 +30,6 @@ interface Options {
     readonly decision?: ProbeDecision
     readonly status?: string
     readonly agentStatus?: string | null
-    readonly voice?: boolean
 }
 
 const SETTLED = {
@@ -43,7 +44,7 @@ const SETTLED = {
 const factsOf = (status: string | null) =>
     status === null ? null : { id: "agent-1", module: "accounting", status, greeting: "" }
 
-const build = async ({ decision = RUN, status = "live", agentStatus = "active", voice = true }: Options = {}) => {
+const build = async ({ decision = RUN, status = "live", agentStatus = "active" }: Options = {}) => {
     const probes = mock<AgentProbesService>({ decide: jest.fn().mockResolvedValue(decision) })
     const directory = mock<AgentDirectoryService>({ chatFactsOf: jest.fn().mockResolvedValue(factsOf(agentStatus)) })
     const agents = mock<AgentsService>({ profileOf: jest.fn().mockResolvedValue({ name: "Ke Toan" }) })
@@ -61,6 +62,7 @@ const build = async ({ decision = RUN, status = "live", agentStatus = "active", 
             BackgroundWorkHandlerService,
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
+            { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) }) },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: AgentWorkHandlersService, useValue: handlers },
             { provide: AgentProbesService, useValue: probes },
@@ -71,7 +73,7 @@ const build = async ({ decision = RUN, status = "live", agentStatus = "active", 
             { provide: RuntimeAgentService, useValue: runtime },
             { provide: InternalTurnContextService, useValue: context },
             { provide: InternalProposalSettlerService, useValue: settler },
-            ...(voice ? [{ provide: BACKGROUND_VOICE, useValue: mock<BackgroundVoice>({ say }) }] : []),
+            { provide: BACKGROUND_VOICE, useValue: mock<BackgroundVoice>({ say }) },
         ],
     }).compile()
     const handler = moduleRef.get(BackgroundWorkHandlerService)
@@ -238,6 +240,7 @@ describe("BackgroundWorkHandlerService.settle", () => {
             workspaceId: "ws-1",
             agentId: "agent-1",
             wakeId: "wake-1",
+            wakeCreatedAt: new Date("2026-11-10T03:00:00.000Z"),
             text: "Three invoices are late.",
         })
     })
@@ -255,16 +258,6 @@ describe("BackgroundWorkHandlerService.settle", () => {
 
         await expect(handler.settle(wake("schedule"), null)).resolves.toMatchObject({ outcome: { said: false } })
         expect(say).not.toHaveBeenCalled()
-    })
-
-    it("logs a reply it has no voice for instead of failing the wake", async () => {
-        const { handler, logger } = await build({ voice: false })
-
-        await expect(handler.settle(wake("schedule"), null)).resolves.toMatchObject({ status: "done" })
-        expect(logger.warn).toHaveBeenCalledWith(AgentSchedulesLogEvent.LineUnsaid, {
-            agentId: "agent-1",
-            wakeId: "wake-1",
-        })
     })
 
     it("does nothing on a stale fence, and skips the wake of an agent that is gone", async () => {
@@ -289,5 +282,19 @@ describe("BackgroundWorkHandlerService.holdOver", () => {
         })
         await expect(handler.holdOver(wake("schedule"), "killed")).resolves.toMatchObject({ status: "held" })
         expect(say).not.toHaveBeenCalled()
+    })
+
+    it("tells the owner once that a wake died past its attempts", async () => {
+        const { handler, say } = await build()
+
+        await expect(handler.holdOver(wake("schedule"), "error")).resolves.toMatchObject({ status: "skipped" })
+
+        expect(say).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            wakeId: "wake-1",
+            wakeCreatedAt: new Date("2026-11-10T03:00:00.000Z"),
+            text: "[agentSchedules.wakeDead]",
+        })
     })
 })

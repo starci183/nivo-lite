@@ -1,4 +1,4 @@
-import type { AgentTurnUsage, AgentTurnView, AgentWakeSource } from "./agent-work.contracts"
+import type { AgentTurnUsage, AgentTurnView, AgentWakeSource, AgentWakeView } from "./agent-work.contracts"
 
 /** What a handler built for the executor: everything the model needs to know where and how to run, never the words themselves. */
 export interface AgentTurnPlan {
@@ -23,6 +23,9 @@ export interface AgentHandlerEnding {
     /** What was done, stored on the turn. */
     readonly outcome: unknown
 }
+
+/** The executor of the turns, or undefined while none is bound. */
+export type OptionalAgentTurnExecutor = AgentTurnExecutor | undefined
 
 /** The handler of a source, or undefined while none registered. */
 export type OptionalAgentWorkHandler = AgentWorkHandler | undefined
@@ -51,6 +54,6 @@ export interface AgentWorkHandler {
     prepare(turn: AgentTurnView, signal: AbortSignal): Promise<AgentTurnPrep>
     /** Applies a proposal through the gates, idempotently per wake. */
     settle(turn: AgentTurnView, proposal: unknown, signal: AbortSignal): Promise<AgentHandlerEnding>
-    /** Answers when no turn can run (quota, breaker, a runtime that is down, a wake too old). */
-    holdOver(turn: AgentTurnView, reason: string): Promise<AgentHandlerEnding>
+    /** Answers when no turn can run (quota, breaker, a runtime that is down, a wake too old, a switch that is off, a wake dead past its attempts); the wake may have no turn. */
+    holdOver(wake: AgentWakeView, reason: string): Promise<AgentHandlerEnding>
 }

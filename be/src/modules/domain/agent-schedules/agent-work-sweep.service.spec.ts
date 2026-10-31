@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
-import { agentTurnQueueProviderOf } from "@tests/fixtures/builders/agent-work.builder"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import {
     AgentTasksService,
     AgentTriggersService,
@@ -13,6 +12,8 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { AGENT_TURN_QUEUE_PRODUCER } from "@modules/queues/agent-turn"
+import type { AgentTurnQueue } from "@modules/queues/agent-turn"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
 import { AgentTriggerSyncService } from "./agent-trigger-sync.service"
 import { AgentWorkSweepService } from "./agent-work-sweep.service"
@@ -49,7 +50,7 @@ const record = (over: Partial<AgentTriggerRecord> = {}): AgentTriggerRecord => (
 
 const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRecord | null = record()) => {
     const tx = fakeTransaction(mockEntityManager())
-    const outbox = recordingQueueOutbox()
+    const queue = mock<AgentTurnQueue>({ enqueueSweepDrain: jest.fn().mockResolvedValue(undefined) })
     const turns = mock<AgentTurnsService>({ due: jest.fn().mockResolvedValue(items) })
     const wakes = mock<AgentWakeService>({ wake: jest.fn().mockResolvedValue(true) })
     const tasks = mock<AgentTasksService>({ markWoken: jest.fn().mockResolvedValue(undefined) })
@@ -66,7 +67,7 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
-            agentTurnQueueProviderOf(outbox),
+            { provide: AGENT_TURN_QUEUE_PRODUCER, useValue: queue },
             { provide: AgentTurnsService, useValue: turns },
             { provide: AgentWakeService, useValue: wakes },
             { provide: AgentTasksService, useValue: tasks },
@@ -75,12 +76,12 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
             { provide: AgentTriggerSyncService, useValue: sync },
         ],
     }).compile()
-    return { service: container.get(AgentWorkSweepService), turns, wakes, tasks, triggers, retention, sync, outbox, logger, tx }
+    return { service: container.get(AgentWorkSweepService), turns, wakes, tasks, triggers, retention, sync, queue, logger, tx }
 }
 
 describe("AgentWorkSweepService.sweep, scopes to drain", () => {
     it("starts a drain for a due wake and for a lapsed lease, one per scope and minute", async () => {
-        const { service, outbox, turns } = await build([
+        const { service, queue, turns } = await build([
             due(),
             due({ kind: "lease", scopeKey: "conversation:conv-1", subjectId: "turn-1" }),
         ])
@@ -88,12 +89,9 @@ describe("AgentWorkSweepService.sweep, scopes to drain", () => {
         await expect(service.sweep()).resolves.toMatchObject({ drains: 2 })
 
         expect(turns.due).toHaveBeenCalledWith(200)
-        expect(outbox.jobs).toEqual([
-            { queue: "agent_turn", payload: { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "agent" } },
-            {
-                queue: "agent_turn",
-                payload: { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "conversation:conv-1" },
-            },
+        expect(queue.enqueueSweepDrain.mock.calls.map(([scope]) => scope)).toEqual([
+            { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "agent" },
+            { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "conversation:conv-1" },
         ])
     })
 })

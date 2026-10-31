@@ -6,6 +6,7 @@ import type {
     AgentTurnPrep,
     AgentTurnView,
     AgentWakeSource,
+    AgentWakeView,
     AgentWorkHandler,
 } from "@modules/domain/agent-work"
 import {
@@ -150,7 +151,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
     }
 
     /** Answers a tag no turn can take with a note, and ends the wake: held while work is off, skipped otherwise. */
-    async holdOver(turn: AgentTurnView, reason: string): Promise<AgentHandlerEnding> {
+    async holdOver(turn: AgentWakeView, reason: string): Promise<AgentHandlerEnding> {
         const agent = await this.agents.headOf(turn.workspaceId, turn.agentId)
         if (agent === null) return endOf("skipped", "agent_gone")
         await this.show(turn, agent, false)
@@ -182,7 +183,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
     }
 
     /** Says it in the room, as the agent or as NIVO, unless the same words were already said since the wake. */
-    async say(turn: AgentTurnView, speaker: TagSpeaker, text: string, voice: TagVoice): Promise<void> {
+    async say(turn: AgentWakeView, speaker: TagSpeaker, text: string, voice: TagVoice): Promise<void> {
         await this.lines.post(
             { workspaceId: turn.workspaceId },
             {
@@ -201,11 +202,11 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
         return text === undefined ? undefined : { id: messageId, author: "", body: text.body }
     }
 
-    private surfaceOf(turn: AgentTurnView): TagSurface {
+    private surfaceOf(turn: AgentWakeView): TagSurface {
         return turn.context.threadId === undefined ? this : this.threads
     }
 
-    private localeOf(turn: AgentTurnView): Locale {
+    private localeOf(turn: AgentWakeView): Locale {
         return turn.context.locale ?? DEFAULT_LOCALE
     }
 
@@ -224,7 +225,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
     }
 
     private async refuse(
-        turn: AgentTurnView,
+        turn: AgentWakeView,
         agent: AgentHeader,
         key: TagLineKey,
         reason: string,
@@ -233,7 +234,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
         return { kind: "end", ending: endOf("skipped", reason) }
     }
 
-    private note(turn: AgentTurnView, agent: AgentHeader, key: TagLineKey): Promise<void> {
+    private note(turn: AgentWakeView, agent: AgentHeader, key: TagLineKey): Promise<void> {
         const text = this.catalog.get(key, { handle: agent.handle }, this.localeOf(turn))
         return this.surfaceOf(turn).say(turn, agent, text, "nivo")
     }
@@ -245,7 +246,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
     }
 
     /** Shows the room that the agent is working, or clears it; a hint that fails never fails the turn. */
-    private async show(turn: AgentTurnView, agent: AgentHeader, working: boolean): Promise<void> {
+    private async show(turn: AgentWakeView, agent: AgentHeader, working: boolean): Promise<void> {
         if (turn.context.threadId !== undefined) return
         try {
             await this.typing.setAgent(

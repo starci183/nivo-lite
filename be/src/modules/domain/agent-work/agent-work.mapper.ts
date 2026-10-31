@@ -18,11 +18,11 @@ import type {
     AgentWorkStateEntity,
 } from "./persistence/entities"
 
-/** The settings of a workspace that has no row yet: work on, the legacy road, the default cap. */
+/** The settings of a workspace that has no row yet: work on, the core road, the default cap. */
 export const defaultSettings = (workspaceId: string): AgentWorkSettingsRecord => ({
     workspaceId,
     workEnabled: true,
-    road: "legacy",
+    road: "core",
     backgroundDailyCap: 200,
 })
 

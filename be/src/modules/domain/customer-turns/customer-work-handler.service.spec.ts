@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
+import { agentTurnViewOf, agentWakeViewOf } from "@tests/fixtures/builders/agent-work.builder"
 import { runtimeTurn } from "@tests/fixtures/builders/customer-turn-runtime.builder"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
 import type { AgentTurnPlan } from "@modules/domain/agent-work"
@@ -200,6 +200,14 @@ describe("CustomerWorkHandlerService.holdOver", () => {
             outcome: { heldOver: true },
         })
         expect(chat.holdOver).toHaveBeenCalledWith(expect.objectContaining({ messageId: "m1" }), legacy)
+    })
+
+    it("says the holding line of a wake that ended with no turn, and opens its work under no turn", async () => {
+        const { handler, chat } = await build()
+
+        await handler.holdOver(agentWakeViewOf({ context: { ...CONTEXT, lookupName: false } }), "killed")
+
+        expect(chat.holdOver).toHaveBeenCalledWith(runtimeTurn, "installation_not_running")
     })
 
     it("ends as skipped when the message is gone", async () => {

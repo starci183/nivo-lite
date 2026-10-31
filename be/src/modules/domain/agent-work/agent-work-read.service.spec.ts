@@ -35,7 +35,7 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
         stateOf: jest.fn().mockResolvedValue(STATE),
         settingsOf: jest
             .fn()
-            .mockResolvedValue({ workspaceId: "ws-1", workEnabled: true, road: "legacy", backgroundDailyCap: 200 }),
+            .mockResolvedValue({ workspaceId: "ws-1", workEnabled: true, road: "core", backgroundDailyCap: 200 }),
     })
     const goals = mock<AgentGoalsService>({ alive: jest.fn().mockResolvedValue([]) })
     const tasks = mock<AgentTasksService>({ alive: jest.fn().mockResolvedValue([]) })
@@ -146,7 +146,7 @@ describe("AgentWorkReadService.workspaceWork", () => {
         )
 
         await expect(service.workspaceWork("ws-1")).resolves.toEqual({
-            settings: { workspaceId: "ws-1", workEnabled: true, road: "legacy", backgroundDailyCap: 200 },
+            settings: { workspaceId: "ws-1", workEnabled: true, road: "core", backgroundDailyCap: 200 },
             agentsOff: 2,
             pendingWakes: 9,
             heldWakes: 9,

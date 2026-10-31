@@ -1,4 +1,4 @@
-import type { AgentTurnView } from "@modules/domain/agent-work"
+import type { AgentTurnView, AgentWakeView } from "@modules/domain/agent-work"
 import type { ProposedCommand } from "@modules/domain/ai-tasks"
 import type { OptionalMessageCursor } from "@modules/domain/messages"
 import type { Locale } from "@modules/platform/i18n"
@@ -360,5 +360,5 @@ export interface TagSurface {
     /** The tail of the runtime session key of the turn: one per room or thread. */
     sessionOf(turn: AgentTurnView): string
     /** Says it as the agent or as NIVO; saying the same words twice for one wake says them once. */
-    say(turn: AgentTurnView, speaker: TagSpeaker, text: string, voice: TagVoice): Promise<void>
+    say(turn: AgentWakeView, speaker: TagSpeaker, text: string, voice: TagVoice): Promise<void>
 }

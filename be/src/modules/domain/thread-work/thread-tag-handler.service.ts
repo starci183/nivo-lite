@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { AgentTurnView } from "@modules/domain/agent-work"
+import type { AgentTurnView, AgentWakeView } from "@modules/domain/agent-work"
 import { ThreadAgentPostsService, ThreadFeedService } from "@modules/domain/thread-messages"
 import type { ThreadMessage } from "@modules/domain/thread-messages"
 import type { OptionalThreadTagTalk, ThreadTagLine, ThreadTagSpeaker } from "./thread-work.contracts"
@@ -44,7 +44,7 @@ export class ThreadTagHandlerService {
     }
 
     /** The agent writes in the thread, unless it already said these words since the wake. */
-    async say(turn: AgentTurnView, speaker: ThreadTagSpeaker, text: string): Promise<void> {
+    async say(turn: AgentWakeView, speaker: ThreadTagSpeaker, text: string): Promise<void> {
         const { threadId } = turn.context
         if (threadId === undefined) return
         const said = (await this.messagesOf(turn)).some(
@@ -69,7 +69,7 @@ export class ThreadTagHandlerService {
     }
 
     /** The newest messages of the thread, oldest first, read as the member who tagged. */
-    private async messagesOf(turn: AgentTurnView): Promise<ReadonlyArray<ThreadMessage>> {
+    private async messagesOf(turn: AgentWakeView): Promise<ReadonlyArray<ThreadMessage>> {
         const { authorUserId, threadId } = turn.context
         if (authorUserId === undefined || threadId === undefined) return []
         return (await this.feed.read(authorUserId, turn.workspaceId, threadId)).messages

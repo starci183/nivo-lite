@@ -91,19 +91,15 @@ export interface AgentWake {
     readonly actorMemberId: string | null
 }
 
-/** The wake a worker picked for a turn, with the fence that guards every later write. */
-export interface AgentTurnView {
+/** A wake as a handler sees it: what woke the agent and for whom, with or without a turn behind it. */
+export interface AgentWakeView {
     /** The workspace of the agent. */
     readonly workspaceId: string
     /** The agent. */
     readonly agentId: string
-    /** The lock scope the turn runs under. */
+    /** The lock scope the wake runs under. */
     readonly scopeKey: string
-    /** The fence of this attempt: it rises on every begin. */
-    readonly fence: number
-    /** The turn row. */
-    readonly turnId: string
-    /** The wake it answers. */
+    /** The wake. */
     readonly wakeId: string
     /** What woke the agent. */
     readonly source: AgentWakeSource
@@ -119,6 +115,14 @@ export interface AgentTurnView {
     readonly maxAttempts: number
     /** When the wake was written. */
     readonly wakeCreatedAt: Date
+}
+
+/** The wake a worker picked for a turn, with the fence that guards every later write. */
+export interface AgentTurnView extends AgentWakeView {
+    /** The fence of this attempt: it rises on every begin. */
+    readonly fence: number
+    /** The turn row. */
+    readonly turnId: string
     /** The proposal an earlier attempt stored, or null: the model is not asked again when it is there. */
     readonly proposal: unknown
 }
@@ -139,21 +143,6 @@ export interface AgentRunningTurn {
     readonly threadKey: string
     /** Ids and flags of the fact. */
     readonly context: AgentWakeContext
-}
-
-/** What `begin` answered. */
-export type AgentBegin =
-    { readonly result: "killed" | "busy" | "idle" } | { readonly result: "begun"; readonly turn: AgentTurnView }
-
-/** What `propose` answered. */
-export type AgentProposeResult = "stored" | "fenced" | "killed"
-
-/** What `finish` answered. */
-export interface AgentFinish {
-    /** True when the lease had moved on, so nothing was written. */
-    readonly fenced: boolean
-    /** True when another wake of the scope is due now. */
-    readonly more: boolean
 }
 
 /** What a run cost. */

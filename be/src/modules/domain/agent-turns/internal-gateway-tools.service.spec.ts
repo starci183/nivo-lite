@@ -70,6 +70,14 @@ describe("InternalGatewayToolsService > search and describe", () => {
         expect(gateway.search).toHaveBeenCalledWith(caller, "debits", 3)
     })
 
+    it("hands the gateway the conversation of a turn that has one, so the tools only staff may run stay hidden from it", async () => {
+        const { tools, gateway } = await build()
+
+        await tools.run(turn({ source: "customer", conversationId: "conv-1" }), "tool.search", { query: "x" })
+
+        expect(gateway.search).toHaveBeenCalledWith({ ...caller, conversationId: "conv-1" }, "x", 5)
+    })
+
     it("asks for five tools when the agent names no limit", async () => {
         const { tools, gateway } = await build()
 

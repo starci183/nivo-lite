@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isDomainError } from "@modules/platform/errors"
@@ -9,8 +9,8 @@ import type { Logger } from "@modules/platform/logging"
 import { startLocalInterval } from "@modules/platform/queue"
 import { InjectAgentTurnQueue } from "@modules/queues/agent-turn"
 import type { AgentTurnDrainPayload, AgentTurnQueue } from "@modules/queues/agent-turn"
-import { InjectAgentTurnExecutor } from "./agent-work.decorators"
 import { AgentTurnsService } from "./agent-turns.service"
+import { AgentEndedWakesService } from "./agent-ended-wakes.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
 import { HEARTBEAT_MAX_BEATS, HEARTBEAT_MS, sessionKeyOf } from "./agent-work.policy"
@@ -70,7 +70,7 @@ export class AgentDrainService {
         @InjectAgentTurnQueue() private readonly queue: AgentTurnQueue,
         private readonly turns: AgentTurnsService,
         private readonly handlers: AgentWorkHandlersService,
-        @Optional() @InjectAgentTurnExecutor() private readonly executor?: AgentTurnExecutor,
+        private readonly endedWakes: AgentEndedWakesService,
     ) {
         this.owner = ids.next()
     }
@@ -78,6 +78,7 @@ export class AgentDrainService {
     /** Takes one turn of the scope and runs it; when more is due in the scope, starts the next drain after it. A busy or idle scope ends quietly. */
     async drain(payload: AgentTurnDrainPayload): Promise<void> {
         const begin = await this.turns.begin(payload.agentId, payload.scopeKey, this.owner)
+        await this.endedWakes.tell(begin.ended)
         if (begin.result === "busy") {
             this.logger.info(AgentWorkLogEvent.TurnBusy, { agentId: payload.agentId, scopeKey: payload.scopeKey })
             return
@@ -142,10 +143,11 @@ export class AgentDrainService {
     private async propose(handler: AgentWorkHandler, turn: AgentTurnView, signal: AbortSignal): Promise<Step> {
         const prep = await handler.prepare(turn, signal)
         if (prep.kind === "end") return { kind: "ending", ending: endingOf(prep.ending, null) }
-        if (this.executor === undefined) return { kind: "ending", ending: heldBy("no_executor") }
+        const executor = this.handlers.executorOf()
+        if (executor === undefined) return { kind: "ending", ending: heldBy("no_executor") }
         const plan: AgentTurnPlan = { ...prep.plan, threadKey: sessionKeyOf(prep.plan.threadKey, turn.agentId) }
         await this.turns.bind(turn, plan.runtimeAgentId, plan.threadKey)
-        const attempt = await this.attempt(this.executor, turn, plan, signal)
+        const attempt = await this.attempt(executor, turn, plan, signal)
         if (attempt.kind === "threw") {
             this.logger.error(AgentWorkLogEvent.TurnFailed, attempt.cause, {
                 agentId: turn.agentId,

@@ -63,6 +63,8 @@ export interface BackgroundLine {
     readonly agentId: string
     /** The wake the line answers: the key the line is posted under, so a retried settle says it once. */
     readonly wakeId: string
+    /** When the wake was written: a line the same words already said since then is not said again. */
+    readonly wakeCreatedAt: Date
     /** What it says. */
     readonly text: string
 }

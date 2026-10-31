@@ -14,7 +14,7 @@ export class AgentWorkSettingsEntity extends AbstractEntity {
     workEnabled!: boolean
 
     /** `legacy` answers customers through the chat-turn queue, `core` through a wake. */
-    @Column({ name: "road", type: "text", default: () => "'legacy'" })
+    @Column({ name: "road", type: "text", default: () => "'core'" })
     road!: AgentRoad
 
     /** The most background turns one agent may run per day. */

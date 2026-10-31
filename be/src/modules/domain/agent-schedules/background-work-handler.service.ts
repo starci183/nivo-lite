@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import {
     InternalProposalSettlerService,
@@ -13,6 +13,7 @@ import type {
     AgentTurnPrep,
     AgentTurnView,
     AgentWakeSource,
+    AgentWakeView,
     AgentWorkHandler,
 } from "@modules/domain/agent-work"
 import { AgentDirectoryService, AgentsService, InjectInstallations } from "@modules/domain/agents"
@@ -21,7 +22,8 @@ import { ModuleReadinessService } from "@modules/domain/modules"
 import { threadKeyFor } from "@modules/integrations/openclaw"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import type { Locale } from "@modules/platform/i18n"
+import { InjectMessageCatalog } from "@modules/platform/i18n"
+import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentProbesService } from "./agent-probes.service"
@@ -41,6 +43,8 @@ import type { BackgroundVoice } from "./agent-schedules.contracts"
 
 /** The language of the fixed lines of a background turn. */
 const LOCALE: Locale = "vi"
+/** The reason the drain gives a wake that died past its attempts. */
+const DEAD_REASON = "error"
 /** The session every background turn of an agent shares, so its schedule and events are one thread for the runtime. */
 const WORK_SESSION = "work"
 
@@ -70,6 +74,7 @@ export class BackgroundWorkHandlerService implements AgentWorkHandler, OnModuleI
     constructor(
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
+        @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectInstallations() private readonly installations: InstallationDirectory,
         private readonly handlers: AgentWorkHandlersService,
         private readonly probes: AgentProbesService,
@@ -80,7 +85,7 @@ export class BackgroundWorkHandlerService implements AgentWorkHandler, OnModuleI
         private readonly runtime: RuntimeAgentService,
         private readonly context: InternalTurnContextService,
         private readonly settler: InternalProposalSettlerService,
-        @Optional() @InjectBackgroundVoice() private readonly voice?: BackgroundVoice,
+        @InjectBackgroundVoice() private readonly voice: BackgroundVoice,
     ) {}
 
     /** Registers the handler with the drain once the app has started. */
@@ -141,9 +146,13 @@ export class BackgroundWorkHandlerService implements AgentWorkHandler, OnModuleI
         }
     }
 
-    /** Ends the wake without a line to anyone: nobody waits on a clock or an event. */
-    holdOver(_turn: AgentTurnView, reason: string): Promise<AgentHandlerEnding> {
-        return Promise.resolve(holdEndingOf(reason))
+    /**
+     * Ends the wake without a line to anyone, because nobody waits on a clock or an event; a wake that died past its attempts is the one
+     * exception, and its owner is told once that the work could not run.
+     */
+    async holdOver(wake: AgentWakeView, reason: string): Promise<AgentHandlerEnding> {
+        if (reason === DEAD_REASON) await this.say(wake, this.catalog.get("agentSchedules.wakeDead", {}, LOCALE))
+        return holdEndingOf(reason)
     }
 
     private ended(turn: AgentTurnView, reason: string): AgentTurnPrep {
@@ -151,12 +160,14 @@ export class BackgroundWorkHandlerService implements AgentWorkHandler, OnModuleI
         return { kind: "end", ending: skippedBy(reason) }
     }
 
-    private async say(turn: AgentTurnView, text: string): Promise<void> {
-        if (this.voice === undefined) {
-            this.logger.warn(AgentSchedulesLogEvent.LineUnsaid, { agentId: turn.agentId, wakeId: turn.wakeId })
-            return
-        }
-        await this.voice.say({ workspaceId: turn.workspaceId, agentId: turn.agentId, wakeId: turn.wakeId, text })
+    private async say(turn: AgentWakeView, text: string): Promise<void> {
+        await this.voice.say({
+            workspaceId: turn.workspaceId,
+            agentId: turn.agentId,
+            wakeId: turn.wakeId,
+            wakeCreatedAt: turn.wakeCreatedAt,
+            text,
+        })
     }
 
     /** True for a schedule wake whose slot is older than one period of its trigger. */

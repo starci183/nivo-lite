@@ -27,7 +27,7 @@ const argumentsOf = (value: string | undefined): GatewayJson | null => {
 /**
  * The connector tools of a turn that has no customer conversation (a tag, an event or a clock). They run through the MCP gateway as the
  * turn's own agent, so its grants, the approved schemas, the breaker and the audit apply, and the tools marked `internalOnly` appear
- * because the call has no conversation. A background turn reads only: a write is refused and the agent proposes an action instead, which
+ * because the call has no conversation. A turn that does have one (a customer turn that reaches this door) carries it, so the gateway hides them from it. A background turn reads only: a write is refused and the agent proposes an action instead, which
  * a person decides. A tag turn may write only when the colleague who wrote it is an owner or a manager. A call the grants hold for a
  * person is not opened as an approval from here: the agent hears `approval_required` and proposes an action for it.
  */
@@ -42,7 +42,7 @@ export class InternalGatewayToolsService implements InternalTools {
         const caller: GatewayCaller = {
             workspaceId: turn.workspaceId,
             agentId: turn.agentId,
-            conversationId: null,
+            conversationId: turn.conversationId,
             workItemId: null,
         }
         if (tool === "tool.search") return this.search(caller, args)

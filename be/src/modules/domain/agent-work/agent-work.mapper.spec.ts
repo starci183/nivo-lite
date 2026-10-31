@@ -15,13 +15,13 @@ const WHEN = new Date("2026-11-10T03:00:00.000Z")
 const WAKE = { source: "tag" as const, status: "done" as const, reason: null, createdAt: WHEN }
 
 describe("defaults", () => {
-    it("turns work on, on the legacy road, for a workspace and an agent with no row", async () => {
+    it("turns work on, on the core road, for a workspace and an agent with no row", async () => {
         const { defaultSettings, defaultState } = await buildSubject()
 
         expect(defaultSettings("ws-1")).toEqual({
             workspaceId: "ws-1",
             workEnabled: true,
-            road: "legacy",
+            road: "core",
             backgroundDailyCap: 200,
         })
         expect(defaultState("agent-1")).toMatchObject({ agentId: "agent-1", workEnabled: true, failures: 0 })
