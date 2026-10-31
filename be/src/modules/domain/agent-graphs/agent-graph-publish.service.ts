@@ -40,10 +40,11 @@ export class AgentGraphPublishService {
         by: Publisher,
         note: string,
         kind: GraphChangeKind = "edit",
+        contextVersionId: string | null = null,
     ): Promise<GraphVersionView> {
         const state = await this.requireState(workspaceId, agentId)
-        const version = await this.publishDocument(state, state.draft, by, note, kind)
-        if (by.role === "owner") await this.graphs.setMode(workspaceId, agentId, "enforced")
+        const version = await this.publishDocument(state, state.draft, by, note, kind, contextVersionId)
+        if (by.role === "owner" && kind === "edit") await this.graphs.setMode(workspaceId, agentId, "enforced")
         return version
     }
 
@@ -78,6 +79,7 @@ export class AgentGraphPublishService {
         by: Publisher,
         note: string,
         kind: GraphChangeKind,
+        contextVersionId: string | null = null,
     ): Promise<GraphVersionView> {
         const installation = await this.installations.findById(state.installationId)
         if (installation === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
@@ -95,7 +97,7 @@ export class AgentGraphPublishService {
             kind,
             note,
             memberId: by.memberId,
-            contextVersionId: null,
+            contextVersionId,
         })
     }
 }

@@ -1,7 +1,7 @@
 import type { Locale } from "@modules/platform/i18n"
 import { MAX_DOES_LENGTH, MAX_TITLE_LENGTH, kindOfStep } from "../agent-graphs.contracts"
 import type { GraphDocument, GraphNode, GraphSource, NodeAnswerKey, Say, ToolUse } from "../agent-graphs.contracts"
-import type { SeedAction, SeedModule, SeedRule, SeedTemplate } from "../agent-graphs.seed"
+import type { SeedAction, SeedModule, SeedRule, SeedTemplate } from "../agent-graphs-seed.contracts"
 import { approverOfRule, branchesFromRule } from "./seed-from-rules.policy"
 
 const PROVIDERS: ReadonlyArray<ToolUse["provider"]> = ["brain", "drive", "sepay", "zalo", "telegram", "office", "mcp"]

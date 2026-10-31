@@ -10,6 +10,7 @@ import type { SetupTurnPayload } from "@modules/queues/agents"
 import { ModulesService } from "./modules.service"
 import { mergeSetupTurn, readSetupTurn, setupPromptOf } from "./policies/setup-turn.policy"
 import { SetupCardsService } from "./setup-cards.service"
+import { SetupGraphService } from "./setup-graph.service"
 
 const HISTORY_TURNS = 16
 const TURN_TIMEOUT_MS = 90_000
@@ -29,6 +30,7 @@ export class SetupTurnService {
         private readonly messages: SetupMessagesService,
         private readonly modules: ModulesService,
         private readonly cards: SetupCardsService,
+        private readonly graph: SetupGraphService,
     ) {}
 
     /** Answers the owner message the payload names; a payload of another shape, a closed draft or a message answered already is left alone. */
@@ -55,6 +57,7 @@ export class SetupTurnService {
             history: chat.slice(0, at).map((line) => ({ role: line.role, body: line.body })),
             message: message.body,
             gaps: await this.cards.openGapsOf(job.workspaceId, module.key),
+            graphGap: await this.graph.gapOf(job.workspaceId, installation.id),
             words: {
                 notApplicable: this.catalog.get("setup.notApplicable", {}, job.locale),
                 applyButton: this.catalog.get("setup.applyButton", {}, job.locale),

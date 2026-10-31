@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { AMOUNT_FACT, amountIs } from "@tests/fixtures/builders/agent-graph.builder"
-import type { SeedRule } from "../agent-graphs.seed"
+import type { SeedRule } from "../agent-graphs-seed.contracts"
 import { approverOfRule, branchesFromRule } from "./seed-from-rules.policy"
 
 /** The members of the subject under test. */

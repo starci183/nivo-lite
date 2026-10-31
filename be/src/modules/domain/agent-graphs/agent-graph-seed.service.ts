@@ -8,7 +8,7 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { AgentGraphsService } from "./agent-graphs.service"
 import type { OptionalGraphState } from "./agent-graphs.service"
-import type { SeedAction, SeedRule } from "./agent-graphs.seed"
+import type { SeedAction, SeedRule } from "./agent-graphs-seed.contracts"
 import { baseGraphOf } from "./policies/base-graph.policy"
 
 /** The wait given to a rule the owner never set approvers on, minutes. */

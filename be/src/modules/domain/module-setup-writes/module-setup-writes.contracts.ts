@@ -32,6 +32,22 @@ export interface RuleCardPayload {
     readonly limitVnd: number | null
 }
 
+/** A branch of an action graph the owner is asked to confirm: where the band that runs alone ends, and who is asked above it. */
+export interface BranchCardPayload {
+    /** The authority action whose bands the card is about. */
+    readonly action: string
+    /** The amount in dong where the lower band ends and the higher one begins. */
+    readonly boundaryVnd: number
+    /** Which band the amount itself belongs to; null until the owner has said, and the card cannot be confirmed before. */
+    readonly belongsTo: "lower" | "higher" | null
+    /** The name of the person the owner said is asked above the line, as the owner said it. */
+    readonly approverName: string
+    /** The seat of that person; null until it is found or chosen, and the card cannot be confirmed before. */
+    readonly approverMemberId: string | null
+    /** The words of the owner the card came from. */
+    readonly quote: string
+}
+
 /** What a decided card did. */
 export interface CardResult {
     /** `applied`, `rejected`, `kept_current` or the outcome of the brain. */
@@ -75,6 +91,14 @@ export interface FactCardRecord extends CardBase {
     readonly payload: FactCardPayload
 }
 
+/** A card that proposes a branch of an action graph. */
+export interface BranchCardRecord extends CardBase {
+    /** Discriminator. */
+    readonly kind: "branch"
+    /** The branch. */
+    readonly payload: BranchCardPayload
+}
+
 /** A card that proposes an authority rule. */
 export interface RuleCardRecord extends CardBase {
     /** Discriminator. */
@@ -84,7 +108,7 @@ export interface RuleCardRecord extends CardBase {
 }
 
 /** One confirm card. */
-export type CardRecord = FactCardRecord | RuleCardRecord
+export type CardRecord = FactCardRecord | RuleCardRecord | BranchCardRecord
 
 /** A card, or null when none matches. */
 export type OptionalCardRecord = CardRecord | null
@@ -93,12 +117,12 @@ export type OptionalCardRecord = CardRecord | null
 export interface ProposedCardRecord {
     /** The gate it answers. */
     readonly gate_key: string
-    /** Fact or rule. */
-    readonly kind: "fact" | "rule"
+    /** Fact, rule or branch. */
+    readonly kind: "fact" | "rule" | "branch"
     /** The target key. */
     readonly target_key: string
     /** The payload. */
-    readonly payload: FactCardPayload | RuleCardPayload
+    readonly payload: FactCardPayload | RuleCardPayload | BranchCardPayload
 }
 
 /** How a waiting card was closed. */
@@ -106,7 +130,7 @@ export interface CardClosing {
     /** Applied or rejected. */
     readonly status: "applied" | "rejected"
     /** The payload as decided, with the edits of the owner. */
-    readonly payload: FactCardPayload | RuleCardPayload
+    readonly payload: FactCardPayload | RuleCardPayload | BranchCardPayload
     /** What was written. */
     readonly result: CardResult
     /** Who decided. */

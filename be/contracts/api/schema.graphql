@@ -1808,7 +1808,9 @@ input CancelTelegramLoginInput {
 }
 
 input CardDecisionInput {
+  approverMemberId: String @inputBounds(maxLength: 36)
   attributeLabel: String @inputBounds(maxLength: 120)
+  belongsTo: String
   decision: String!
   limitVnd: Int @inputBounds(min: 0, max: 1000000000000)
   mode: String

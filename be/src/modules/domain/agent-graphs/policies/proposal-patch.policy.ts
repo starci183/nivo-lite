@@ -44,24 +44,47 @@ const autoBelow = (branches: ReadonlyArray<GraphBranch>, asked: GraphBranch, fac
     })
 }
 
-/** Moves the boundary between the auto branch and the asked one to `to`, in both. */
-const boundaryMoved = (document: GraphDocument, branchKey: string, pick: (old: number, amounts: ReadonlyArray<number>) => number, amounts: ReadonlyArray<number>): GraphDocument | null => {
-    const node = document.nodes.find((entry) => entry.decide?.branches.some((branch) => branch.key === branchKey))
-    const asked = node?.decide?.branches.find((branch) => branch.key === branchKey)
+/** The line between the branch that runs alone and the asked one right above it. */
+export interface Boundary {
+    /** The decide node. */
+    readonly node: GraphNode
+    /** The branch that runs alone, below the line. */
+    readonly auto: GraphBranch
+    /** The branch that asks, above the line. */
+    readonly asked: GraphBranch
+    /** The amount where the auto branch ends. */
+    readonly from: number
+}
+
+/** The line between the auto branch and the asked branch of that key, or null when the graph has no such pair. */
+export const boundaryOf = (document: GraphDocument, askedKey: string): Boundary | null => {
+    const node = document.nodes.find((entry) => entry.decide?.branches.some((branch) => branch.key === askedKey))
+    const asked = node?.decide?.branches.find((branch) => branch.key === askedKey)
     const fact = asked === undefined ? null : amountFactOf(asked)
     const auto = asked === undefined || fact === null ? undefined : autoBelow(node?.decide?.branches ?? [], asked, fact)
-    const old = auto === undefined || auto.when === "else" || fact === null ? null : (intervalOf(auto.when, fact) ?? null)
-    const from = old === null ? null : topOf(old)
-    if (node === undefined || auto === undefined || asked === undefined || from === null) return null
-    const to = pick(from, amounts)
-    if (to === from) return null
+    const interval = auto === undefined || auto.when === "else" || fact === null ? null : intervalOf(auto.when, fact)
+    const from = interval === null ? null : topOf(interval)
+    return node === undefined || auto === undefined || asked === undefined || from === null ? null : { node, auto, asked, from }
+}
+
+/** Moves the boundary between the auto branch and the asked one to a number the evidence picks, in both. */
+const boundaryMoved = (
+    document: GraphDocument,
+    branchKey: string,
+    pick: (old: number, amounts: ReadonlyArray<number>) => number,
+    amounts: ReadonlyArray<number>,
+): GraphDocument | null => {
+    const line = boundaryOf(document, branchKey)
+    if (line === null) return null
+    const to = pick(line.from, amounts)
+    if (to === line.from) return null
     const replace = (branches: ReadonlyArray<GraphBranch>): ReadonlyArray<GraphBranch> =>
         branches.map((branch) =>
-            (branch.key === auto.key || branch.key === asked.key) && branch.when !== "else"
-                ? { ...branch, when: moved(branch.when, from, to), selfCorrected: true }
+            (branch.key === line.auto.key || branch.key === line.asked.key) && branch.when !== "else"
+                ? { ...branch, when: moved(branch.when, line.from, to), selfCorrected: true }
                 : branch,
         )
-    return { ...document, nodes: document.nodes.map((entry) => (entry.key === node.key ? swap(entry, replace) : entry)) }
+    return { ...document, nodes: document.nodes.map((entry) => (entry.key === line.node.key ? swap(entry, replace) : entry)) }
 }
 
 const raised = (old: number, amounts: ReadonlyArray<number>): number =>

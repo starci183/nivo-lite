@@ -36,6 +36,7 @@ import {
 } from "./policies/setup-gates.policy"
 import type { GateAction } from "./policies/setup-gates.policy"
 import { SetupCardsService } from "./setup-cards.service"
+import { SetupGraphService } from "./setup-graph.service"
 
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 const MESSAGE_MAX = 4000
@@ -64,6 +65,7 @@ export class SetupChatService {
         private readonly changes: InstallationChangesService,
         private readonly cards: SetupCardsService,
         private readonly readiness: ModuleReadinessService,
+        private readonly graph: SetupGraphService,
     ) {}
 
     /** Everything the Setup tab needs: the draft (opened on first visit), the revisions, the whole chat and the confirm cards. */
@@ -173,6 +175,7 @@ export class SetupChatService {
         if (!allGatesConfirmed(module, draft.gateEvidence)) {
             throw new ModulesError({ code: ModulesErrorCode.GatesUnconfirmed })
         }
+        await this.graph.requireWhole(workspaceId, installation.id)
         const snapshot = snapshotOf(draft.draft, draft.gateEvidence)
         const last = await this.versions.latest(installation.id)
         if (last !== null && installation.activeContextVersionId === last.id && sameSnapshot(last.snapshot, snapshot)) {
@@ -193,6 +196,7 @@ export class SetupChatService {
             created.id,
             keepsStatus ? installation.status : "ready",
         )
+        await this.graph.publish({ workspaceId, principalId, installationId: installation.id, contextVersionId: created.id })
         await this.readiness.settle(workspaceId, installation.id)
         if (installation.agentId !== null) {
             await this.writeAgentTexts(

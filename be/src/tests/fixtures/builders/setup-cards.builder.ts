@@ -2,6 +2,9 @@ import { builder } from "@starci/jest-preset"
 import type { AuthorityActionRecord } from "@modules/domain/authority-actions"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import type { GapRecord } from "@modules/domain/knowledge-gaps"
+import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
+import type { InstallationRecord } from "@modules/domain/module-installations"
+import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 
 const NOW = "2026-10-13T02:00:00.000Z"
 
@@ -68,3 +71,51 @@ export const REGISTRY = [
     actionOf({ action: "send_email" }),
     actionOf({ action: "pay_vendor", max_mode: "ask" }),
 ]
+
+/** An authority rule of the accounting module. */
+export const ruleOf = builder<AuthorityRuleRecord>({
+    id: "rule-1",
+    workspace_id: "ws-1",
+    department: "accounting",
+    action: "issue_invoice",
+    mode: "ask",
+    limit_vnd: 1000000,
+    required_fields: ["customer"],
+    note: "",
+    updated_at: "2026-10-01T00:00:00.000Z",
+    unit: "vnd",
+    auto_max: null,
+    ask_max: null,
+    agents: [],
+    approver_roles: ["owner", "manager"],
+    approver_rooms: [],
+    approver_members: [],
+    approval_policy: "any",
+    timeout_minutes: 30,
+})
+/** The open setup session of the installation. */
+export const SESSION: SetupSessionRecord = {
+    id: "s-1",
+    workspaceId: "ws-1",
+    installationId: "inst-1",
+    revision: 1,
+    status: "draft",
+    draft: { summary: "", facts: [] },
+    gateEvidence: {},
+    createdAt: NOW,
+}
+/** The accounting installation in setup. */
+export const installationOf = builder<InstallationRecord>({
+    id: "inst-1",
+    workspaceId: "ws-1",
+    moduleKey: "accounting",
+    name: "Accounting",
+    isMulti: true,
+    agentId: "agent-1",
+    status: "setup",
+    operatingMode: "assist",
+    liveEnabled: false,
+    activeContextVersionId: null,
+    settings: {},
+    createdAt: NOW,
+})

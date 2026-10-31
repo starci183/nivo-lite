@@ -518,6 +518,8 @@
   "errors.MODULES_CARD_FACT_INCOMPLETE": "Một thông tin cần chủ thể, thuộc tính và giá trị.",
   "errors.MODULES_CARD_NEEDS_RESOLUTION": "Hãy chọn cách xử lý giá trị đang có trong Bộ não thứ hai.",
   "errors.MODULES_CARD_NEEDS_SITUATION": "Hãy nêu tình huống áp dụng cho giá trị mới.",
+  "errors.MODULES_CARD_BRANCH_INCOMPLETE": "Hãy chọn đúng số tiền thuộc mức nào và người được hỏi ở mức trên.",
+  "errors.MODULES_GRAPH_GAPS_OPEN": "Sơ đồ của agent còn chỗ chưa rõ, hãy trả lời câu hỏi trong trò chuyện trước khi áp dụng.",
   "errors.MODULES_CARD_FACT_NOT_APPLIED": "Bộ não thứ hai giữ giá trị này để duyệt thay vì áp dụng ngay.",
   "errors.MODULES_CARD_RULE_UNKNOWN_ACTION": "Hành động {{action}} không có trong danh mục.",
   "errors.MODULES_CARD_RULE_MODE_CAPPED": "Hành động {{action}} không được tự chạy: hãy chọn hỏi trước hoặc không bao giờ.",

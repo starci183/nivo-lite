@@ -1,20 +1,17 @@
-import { REGISTRY, factOf, gapOf } from "../../../tests/fixtures/builders/setup-cards.builder"
+import { REGISTRY, SESSION, factOf, gapOf, installationOf, ruleOf } from "../../../tests/fixtures/builders/setup-cards.builder"
 import { Test } from "@nestjs/testing"
-import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { EventsService } from "@modules/domain/events"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
 import { SetupMessagesService } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
-import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 import { SetupWritesService } from "@modules/domain/module-setup-writes"
-import type { CardRecord, FactCardPayload, RuleCardPayload } from "@modules/domain/module-setup-writes"
+import type { BranchCardPayload, CardRecord, FactCardPayload, RuleCardPayload } from "@modules/domain/module-setup-writes"
 import { InstallationChangesService } from "./installation-changes.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -22,6 +19,7 @@ import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
 import type { CardDecision } from "./module-setup.contracts"
 import { ModulesService } from "./modules.service"
+import { SetupBranchCardsService } from "./setup-branch-cards.service"
 import { SetupCardsService } from "./setup-cards.service"
 const NOW = "2026-10-13T02:00:00.000Z"
 const FACT: FactCardPayload = {
@@ -56,50 +54,6 @@ const ruleCard = (payload: Partial<RuleCardPayload> = {}): CardRecord => ({
     kind: "rule",
     payload: { ...RULE, ...payload },
 })
-const ruleOf = builder<AuthorityRuleRecord>({
-    id: "rule-1",
-    workspace_id: "ws-1",
-    department: "accounting",
-    action: "issue_invoice",
-    mode: "ask",
-    limit_vnd: 1000000,
-    required_fields: ["customer"],
-    note: "",
-    updated_at: "2026-10-01T00:00:00.000Z",
-    unit: "vnd",
-    auto_max: null,
-    ask_max: null,
-    agents: [],
-    approver_roles: ["owner", "manager"],
-    approver_rooms: [],
-    approver_members: [],
-    approval_policy: "any",
-    timeout_minutes: 30,
-})
-const SESSION: SetupSessionRecord = {
-    id: "s-1",
-    workspaceId: "ws-1",
-    installationId: "inst-1",
-    revision: 1,
-    status: "draft",
-    draft: { summary: "", facts: [] },
-    gateEvidence: {},
-    createdAt: NOW,
-}
-const installationOf = builder<InstallationRecord>({
-    id: "inst-1",
-    workspaceId: "ws-1",
-    moduleKey: "accounting",
-    name: "Accounting",
-    isMulti: true,
-    agentId: "agent-1",
-    status: "setup",
-    operatingMode: "assist",
-    liveEnabled: false,
-    activeContextVersionId: null,
-    settings: {},
-    createdAt: NOW,
-})
 const build = async () => {
     const writes = mock<SetupWritesService>()
     const closed = factCard({}, "applied")
@@ -131,6 +85,7 @@ const build = async () => {
     const gaps = mock<KnowledgeGapsService>()
     const events = mock<EventsService>()
     const sync = mock<InstallationChangesService>()
+    const branches = mock<SetupBranchCardsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             SetupCardsService,
@@ -148,6 +103,7 @@ const build = async () => {
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: EventsService, useValue: events },
             { provide: InstallationChangesService, useValue: sync },
+            { provide: SetupBranchCardsService, useValue: branches },
         ],
     }).compile()
     return {
@@ -162,6 +118,7 @@ const build = async () => {
         gaps,
         events,
         sync,
+        branches,
     }
 }
 describe("SetupCardsService > openGapsOf", () => {
@@ -489,5 +446,51 @@ describe("SetupCardsService > decide", () => {
         await expect(service.decide("u1", "ws-1", "card-1", { decision: "confirm" }, "en")).rejects.toMatchObject({
             code: ModulesErrorCode.CardFactNotApplied,
         })
+    })
+})
+
+describe("SetupCardsService > branch cards", () => {
+    const PAYLOAD: BranchCardPayload = {
+        action: "issue_invoice",
+        boundaryVnd: 5000000,
+        belongsTo: null,
+        approverName: "Mr Nam",
+        approverMemberId: null,
+        quote: "above 5 million ask Nam",
+    }
+    const branchCard: CardRecord = { ...CARD_BASE, targetKey: "branch:issue_invoice", kind: "branch", payload: PAYLOAD }
+
+    it("stores the card the branch service made for a proposed branch", async () => {
+        const { service, writes, branches } = await build()
+        const card = { gate_key: "g1", target_key: "branch:issue_invoice", kind: "branch" as const, payload: PAYLOAD }
+        branches.cardOf.mockResolvedValue(card)
+
+        await service.propose("ws-1", "s-1", "m-1", [{ gateKey: "g1", kind: "branch", payload: PAYLOAD }])
+
+        expect(writes.propose).toHaveBeenCalledWith("ws-1", "s-1", "m-1", [card])
+    })
+
+    it("hands a confirmed branch to the branch service, and shows no current value for a waiting one", async () => {
+        const { service, writes, branches } = await build()
+        writes.find.mockResolvedValue(branchCard)
+        writes.ofSessions.mockResolvedValue([branchCard])
+        const change = { decision: "confirm" as const, belongsTo: "higher" as const, approverMemberId: "nam" }
+
+        await service.decide("u1", "ws-1", "card-1", change, "en")
+
+        expect(branches.confirm).toHaveBeenCalledWith(
+            expect.objectContaining({ installationId: "inst-1", messageId: "m-1", base: PAYLOAD, change }),
+        )
+        await expect(service.viewsOf("ws-1", ["s-1"])).resolves.toEqual([{ card: branchCard, current: null }])
+    })
+
+    it("closes a rejected branch without touching the graph", async () => {
+        const { service, writes, branches } = await build()
+        writes.find.mockResolvedValue(branchCard)
+
+        await service.decide("u1", "ws-1", "card-1", { decision: "reject" }, "en")
+
+        expect(branches.confirm).not.toHaveBeenCalled()
+        expect(writes.close.mock.calls[0]?.[2]).toMatchObject({ status: "rejected" })
     })
 })

@@ -3,6 +3,7 @@ import { In, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
+    BranchCardPayload,
     CardClosing,
     CardRecord,
     FactCardPayload,
@@ -19,9 +20,11 @@ const CARDS_LIMIT = 500
 /** The stored fields of a card that are the same for a fact and for a rule. */
 type CardBaseFields = Omit<FactCardRecord, "kind" | "payload">
 
-/** Joins the common fields to the payload; the shape of the payload says whether the card is a rule or a fact. */
-const cardOf = (base: CardBaseFields, payload: FactCardPayload | RuleCardPayload): CardRecord =>
-    "action" in payload ? { ...base, kind: "rule", payload } : { ...base, kind: "fact", payload }
+/** Joins the common fields to the payload; the shape of the payload says whether the card is a branch, a rule or a fact. */
+const cardOf = (base: CardBaseFields, payload: FactCardPayload | RuleCardPayload | BranchCardPayload): CardRecord => {
+    if ("boundaryVnd" in payload) return { ...base, kind: "branch", payload }
+    return "action" in payload ? { ...base, kind: "rule", payload } : { ...base, kind: "fact", payload }
+}
 
 /** Maps a stored card to its contract; the discriminated union follows the payload. */
 const toRecord = (row: ModuleSetupWriteEntity): CardRecord =>

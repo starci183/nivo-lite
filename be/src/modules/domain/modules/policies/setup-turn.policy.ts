@@ -1,3 +1,4 @@
+import { branchWritesOf, graphGapLine } from "./setup-branch.policy"
 import type { DraftSnapshot, GateEvidence, SetupFact } from "@modules/domain/module-context-versions"
 import type { Locale } from "@modules/platform/i18n"
 import type { ModuleDefinition } from "../modules.contracts"
@@ -33,6 +34,8 @@ export interface SetupTurnInput {
     readonly gaps: ReadonlyArray<OpenGap>
     /** The words of the chat in the language of the owner. */
     readonly words: SetupPromptWords
+    /** The code of the first vague place of the action graph, or null when the graph has none: the turn asks about that and nothing else. */
+    readonly graphGap?: string | null
 }
 
 /** What the model returned for one turn, validated. */
@@ -169,6 +172,7 @@ export const setupPromptOf = (input: SetupTurnInput): string => {
         "",
         writesRules,
         gapRules,
+        graphGapLine(input.graphGap ?? null),
         "",
         `Return ONLY a JSON object: {"reply": string, "summary": string, "facts": [{"key": string, "text": string}], "gates": {"<gateKey>": {"status": "proposed", "evidence": string}}${specs.length > 0 || gaps.length > 0 ? ', "writes": [ ... ]' : ""}}`,
         `Valid gate keys: ${module.gates.map((gate) => gate.key).join(", ")}`,
@@ -211,7 +215,10 @@ export const readSetupTurn = (
         ...(summary === "" ? {} : { summary }),
         facts: factsOf(parsed.facts),
         gates: gatesOf(input.module, parsed.gates),
-        writes: sanitizeWrites(input.module, parsed.writes, input.gaps, businessLabel),
+        writes: [
+            ...sanitizeWrites(input.module, parsed.writes, input.gaps, businessLabel),
+            ...branchWritesOf(input.module, parsed.writes),
+        ],
     }
 }
 

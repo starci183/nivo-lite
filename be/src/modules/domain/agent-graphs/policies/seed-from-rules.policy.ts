@@ -1,5 +1,5 @@
 import type { BranchApprover, Condition, GraphBranch, GraphSource } from "../agent-graphs.contracts"
-import type { SeedRule } from "../agent-graphs.seed"
+import type { SeedRule } from "../agent-graphs-seed.contracts"
 
 /** The keys of the nodes a seeded decide point leads to. */
 export interface SeedTargets {

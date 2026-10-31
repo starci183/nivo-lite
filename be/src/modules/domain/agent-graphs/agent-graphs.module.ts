@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AGENT_GRAPH_BRIEF } from "@modules/domain/agent-turns"
+import { SETUP_GRAPH } from "@modules/domain/modules"
 import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
 import { DATA_RIGHTS_GATE } from "@modules/domain/mcp-gateway"
 import { AgentDataRightsService } from "./agent-data-rights.service"
@@ -15,6 +16,7 @@ import { AgentGraphContextService } from "./agent-graph-context.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
 import { AgentGraphPublishService } from "./agent-graph-publish.service"
 import { AgentGraphRunService } from "./agent-graph-run.service"
+import { AgentGraphSetupService } from "./agent-graph-setup.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphWatchService } from "./agent-graph-watch.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
@@ -47,6 +49,7 @@ export class AgentGraphsModule extends ConfigurableModuleClass {
             AgentGraphApprovalsService,
             AgentGraphRunService,
             AgentGraphWatchService,
+            AgentGraphSetupService,
         ]
         return {
             ...base,
@@ -62,8 +65,9 @@ export class AgentGraphsModule extends ConfigurableModuleClass {
                 { provide: WORK_BRANCH_DECIDER, useExisting: AgentGraphDeciderService },
                 { provide: AGENT_GRAPH_BRIEF, useExisting: AgentGraphBriefService },
                 { provide: DATA_RIGHTS_GATE, useExisting: AgentDataRightsService },
+                { provide: SETUP_GRAPH, useExisting: AgentGraphSetupService },
             ],
-            exports: [...services, WORK_BRANCH_DECIDER, AGENT_GRAPH_BRIEF, DATA_RIGHTS_GATE],
+            exports: [...services, WORK_BRANCH_DECIDER, AGENT_GRAPH_BRIEF, DATA_RIGHTS_GATE, SETUP_GRAPH],
         }
     }
 }

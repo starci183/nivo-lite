@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { AMOUNT_FACT, FACTS, contextOf, say } from "@tests/fixtures/builders/agent-graph.builder"
-import type { SeedAction, SeedModule, SeedRule, SeedTemplate } from "../agent-graphs.seed"
+import type { SeedAction, SeedModule, SeedRule, SeedTemplate } from "../agent-graphs-seed.contracts"
 import { baseGraphOf } from "./base-graph.policy"
 import { graphProblems } from "./graph-problems.policy"
 
