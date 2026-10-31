@@ -57,6 +57,7 @@ export const connectionsModules = (options: ApiOptions): Array<DynamicModule> =>
     ConnectionsModule.register({
         isGlobal: true,
         ...options.connections,
+        readOnly: false,
         ports: { agents: AgentBindingsService },
     }),
     ConnectionGrantsModule.register({ isGlobal: true }),

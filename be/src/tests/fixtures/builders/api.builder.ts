@@ -169,6 +169,7 @@ const options = {
         ffmpegThreads: 1,
     },
     mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 4000 },
+    knowledge: { indexChunkDelayMs: 0 },
 }
 
 /** Explicit doubles for the private resource tokens of the real registered modules. */

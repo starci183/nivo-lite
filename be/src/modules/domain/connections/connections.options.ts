@@ -14,6 +14,8 @@ export interface ConnectionsOptions {
     readonly publicApiUrl?: string | undefined
     /** The classes behind the ports of the other lanes; absent in an app that composes no agents. */
     readonly ports?: ConnectionsPorts | undefined
+    /** Absent or false: the full capability. */
+    readonly readOnly?: false
 }
 
 /** The classes that implement the ports of the other lanes. */
@@ -23,7 +25,7 @@ export interface ConnectionsPorts {
 }
 
 /** What the environment alone decides; the app root adds the ports. */
-export type ConnectionsConfig = Omit<ConnectionsOptions, "ports">
+export type ConnectionsConfig = Omit<ConnectionsOptions, "ports" | "readOnly">
 
 /**
  * The options of the read-only mode (the mcp app): the status reads of the agent bindings, with no sealing key, no site address and

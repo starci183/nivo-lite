@@ -1,5 +1,10 @@
 import type { EnvSource } from "@modules/platform/config"
-import type { KnowledgeConfig } from "./knowledge.options"
+
+/** What the knowledge capability reads from the environment. */
+export interface KnowledgeConfig {
+    /** Milliseconds to wait between two passages while a source is embedded; see `KnowledgeFullOptions.indexChunkDelayMs`. */
+    readonly indexChunkDelayMs: number
+}
 
 /** The longest demo pause between two passages: a minute. */
 const MAX_CHUNK_DELAY_MS = 60_000

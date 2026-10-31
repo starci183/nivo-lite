@@ -1,4 +1,4 @@
-import { Drawer, Meter, SegmentedControl, Text } from "@starci/grammar/common"
+import { Drawer, SegmentedControl, Text } from "@starci/grammar/common"
 import {
     AddFilesPanel,
     type BatchBytesView,

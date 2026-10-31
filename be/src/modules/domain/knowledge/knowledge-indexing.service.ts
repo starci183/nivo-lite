@@ -13,8 +13,8 @@ import type { VectorsResult } from "./embedding.service"
 import { BULK_CHUNKS, EMBED_BATCH } from "./knowledge.contracts"
 import type { IndexOutcome, IndexRun } from "./knowledge.contracts"
 import { KnowledgeLogEvent } from "./knowledge.log-events"
-import { InjectKnowledgeOptions } from "./knowledge.decorators"
-import type { KnowledgeOptions } from "./knowledge.options"
+import { InjectKnowledgeFullOptions } from "./knowledge.decorators"
+import type { KnowledgeFullOptions } from "./knowledge.options"
 import { KnowledgeError, KnowledgeErrorCode } from "./errors/knowledge.error"
 import { failureOf } from "./source-failure.policy"
 import { SourceReaderService } from "./source-reader.service"
@@ -46,7 +46,7 @@ export class KnowledgeIndexingService {
         private readonly reader: SourceReaderService,
         private readonly embeddings: EmbeddingService,
         private readonly usage: UsageMeterService,
-        @InjectKnowledgeOptions() private readonly options: KnowledgeOptions,
+        @InjectKnowledgeFullOptions() private readonly options: KnowledgeFullOptions,
         @InjectTimer() private readonly timer: Timer,
     ) {}
 

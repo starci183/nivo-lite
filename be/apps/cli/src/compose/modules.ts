@@ -131,6 +131,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     ConnectionsModule.register({
         isGlobal: true,
         ...options.channelConnections,
+        readOnly: false,
         ports: { agents: AgentBindingsService },
     }),
     AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),

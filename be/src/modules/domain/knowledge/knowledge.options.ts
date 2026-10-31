@@ -10,12 +10,6 @@ export interface KnowledgeFullOptions {
     readonly searchOnly?: false
 }
 
-/** What the knowledge capability reads from the environment. */
-export interface KnowledgeConfig {
-    /** Milliseconds to wait between two passages while a source is embedded; see `KnowledgeFullOptions.indexChunkDelayMs`. */
-    readonly indexChunkDelayMs: number
-}
-
 /**
  * The search-only mode (the mcp app): the metered embedding of a question and the search over both layers, with no indexing, no
  * jobs and no Drive access.
