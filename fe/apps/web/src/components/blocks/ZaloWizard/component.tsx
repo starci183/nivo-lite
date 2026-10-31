@@ -1,4 +1,4 @@
-import { Alert, Button, Input, Text } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Grid, Input, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
@@ -15,7 +15,6 @@ import type {
     WizardNote,
     WizardResume,
 } from "@/modules/types"
-import { zaloWizardClassNames as classNames } from "./classNames"
 
 /** Copy, state and commands of the Zalo wizard. */
 export interface ZaloWizardBaseProps {
@@ -134,7 +133,7 @@ const appFieldsOf = (props: ZaloWizardBaseProps, isSkeleton: boolean) => {
     const { props: view, on } = props
     const locked = view.isLocked || view.isPending
     return (
-        <div className={classNames.fields}>
+        <Grid kind="form" columns={1}>
             <Input
                 id="zalo-name"
                 name="name"
@@ -165,7 +164,7 @@ const appFieldsOf = (props: ZaloWizardBaseProps, isSkeleton: boolean) => {
                 value={view.fields.appSecret}
                 onValueChange={on.appSecret}
             />
-        </div>
+        </Grid>
     )
 }
 
@@ -173,11 +172,11 @@ const appFieldsOf = (props: ZaloWizardBaseProps, isSkeleton: boolean) => {
 export const ZaloWizardBase = (props: ZaloWizardBaseProps) => {
     const { props: view, on } = props
     const providerLink = (
-        <div className={classNames.buttons}>
+        <Cluster gap="inline">
             <Button intent="neutral" href={view.providerHref} target="_blank" rel="noreferrer">
                 {view.text.openProvider}
             </Button>
-        </div>
+        </Cluster>
     )
     return (
         <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>

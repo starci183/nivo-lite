@@ -1,6 +1,5 @@
-import { Alert, Button, Text } from "@starci/grammar/common"
+import { Alert, Button, Stack, Text } from "@starci/grammar/common"
 import { WizardFrame } from "@/components/composites/WizardFrame"
-import { googleWizardClassNames as classNames } from "./classNames"
 
 /** Copy, state and commands of the Google wizard. */
 export interface GoogleWizardBaseProps {
@@ -64,7 +63,7 @@ export const GoogleWizardBase = (props: GoogleWizardBaseProps) => {
             footer={footer}
         >
             {view.index === 0 ? (
-                <div className={classNames.copy}>
+                <Stack gap="row">
                     <Text weight="semibold">{text.allowTitle}</Text>
                     <Text size="sm">{text.allowOnlyFiles}</Text>
                     <Text size="sm" tone="muted">
@@ -76,7 +75,7 @@ export const GoogleWizardBase = (props: GoogleWizardBaseProps) => {
                     {view.refusal === null ? null : (
                         <Alert tone="negative" title={`${text.failTitle}. ${view.refusal}`} />
                     )}
-                </div>
+                </Stack>
             ) : (
                 <Alert tone="affirmative" title={`${text.doneTitle}. ${text.doneBody}`} />
             )}

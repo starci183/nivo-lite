@@ -1,5 +1,4 @@
-import { Input, Text } from "@starci/grammar/common"
-import { telegramUserLoginClassNames as classNames } from "./classNames"
+import { Grid, Input, Text } from "@starci/grammar/common"
 
 /** A field of the personal Telegram login. */
 type TelegramLoginField = "phone" | "code" | "password"
@@ -21,7 +20,7 @@ type TelegramUserLoginProps = {
 export const TelegramUserLogin = (props: TelegramUserLoginProps) => {
     const { text, values, isDisabled, onField } = props
     return (
-        <div className={classNames.fields}>
+        <Grid kind="form">
             {props.stage === "phone" ? (
                 <Input
                     id="tgu-phone"
@@ -70,6 +69,6 @@ export const TelegramUserLogin = (props: TelegramUserLoginProps) => {
                     />
                 </>
             ) : null}
-        </div>
+        </Grid>
     )
 }
