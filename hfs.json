@@ -604,6 +604,14 @@
         {
           "name": "pgmq.create",
           "reason": "creates a pgmq queue in the cutover proofs"
+        },
+        {
+          "name": "public.http_rate_limit_consume",
+          "reason": "the rate-limit store and the world's rate-limit proof: the atomic counter in database time"
+        },
+        {
+          "name": "public.http_rate_limit_cleanup",
+          "reason": "the world's rate-limit proof: the expired-window sweep"
         }
       ]
     },
