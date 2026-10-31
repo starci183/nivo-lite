@@ -1,13 +1,13 @@
 "use client"
 
-import { useLayoutEffect } from "react"
+import { useLayoutEffect, useRef, type RefObject } from "react"
 
-const SCROLL_OWNER = "[data-grammar-chat-workspace-scroll-owner]"
-
-/** Whenever the key changes the scroll region of the chat opens at the newest message. */
-export const useThreadScroll = (key: string): void => {
+/** Whenever the key changes the scroll owner of the chat (the thread band the returned ref is given to) opens at the newest message. */
+export const useThreadScroll = (key: string): RefObject<HTMLDivElement | null> => {
+    const ref = useRef<HTMLDivElement>(null)
     useLayoutEffect(() => {
-        const owner = document.querySelector(SCROLL_OWNER)
-        if (owner) owner.scrollTop = owner.scrollHeight
+        const owner = ref.current
+        if (owner !== null) owner.scrollTop = owner.scrollHeight
     }, [key])
+    return ref
 }

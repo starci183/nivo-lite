@@ -1,5 +1,4 @@
 import { Badge, EmptyNotice, Heading, List, ListRow, Region } from "@starci/grammar/common"
-import { HEAD, ROW } from "./classNames"
 
 /** The applied versions of the setup in the reader language. */
 type SetupVersionsCardProps = {
@@ -18,31 +17,24 @@ type SetupVersionsCardProps = {
 /** The immutable versions applied so far, the one in use marked. */
 export const SetupVersionsCard = (props: SetupVersionsCardProps) => (
     <Region label={props.title}>
-        <div className={HEAD}>
-            <Heading level={2}>{props.title}</Heading>
-        </div>
+        <Heading level={2}>{props.title}</Heading>
         <List label={props.title}>
             {props.versions.map((version) => (
-                <div key={version.id} className={ROW}>
-                    <ListRow
-                        isSkeleton={props.isSkeleton}
-                        title={version.line}
-                        description={version.detail}
-                        badges={
-                            version.isActive ? (
-                                <Badge isDot tone="success">
-                                    {props.inUseLabel}
-                                </Badge>
-                            ) : undefined
-                        }
-                    />
-                </div>
+                <ListRow
+                    key={version.id}
+                    isSkeleton={props.isSkeleton}
+                    title={version.line}
+                    description={version.detail}
+                    badges={
+                        version.isActive ? (
+                            <Badge isDot tone="success">
+                                {props.inUseLabel}
+                            </Badge>
+                        ) : undefined
+                    }
+                />
             ))}
         </List>
-        {props.versions.length === 0 ? (
-            <div className={ROW}>
-                <EmptyNotice message={props.emptyText} />
-            </div>
-        ) : null}
+        {props.versions.length === 0 ? <EmptyNotice message={props.emptyText} /> : null}
     </Region>
 )

@@ -33,6 +33,8 @@ export {
 } from "./workspace-routes"
 export {
     AGENTS_ROUTE,
+    AGENT_ROLES_ANCHOR,
+    AGENT_ROLES_HREF,
     CONSOLE_ROUTES,
     agentChatConversationHref,
     agentChatHref,
@@ -43,7 +45,6 @@ export {
     responsibilitiesHref,
     teamInviteHref,
     workItemHref,
-    sepayConnectionHref,
     zaloConnectionHref,
 } from "./console-routes"
 export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automations-routes"

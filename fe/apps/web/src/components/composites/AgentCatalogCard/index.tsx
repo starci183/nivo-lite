@@ -1,29 +1,19 @@
-import { Badge, Button, Dialog, Heading, Image, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
-import { BADGES, BAND, CARD, CARD_HEAD, DETAIL, FOOT, POINTS } from "./classNames"
-
-/** The most capabilities a card lists before the details. */
-const CARD_POINTS = 3
+import { Badge, Button, IconTile, Image, ListRow, SurfaceListCard } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** What one role card of the catalogue shows, already in the reader language. */
 export type AgentCatalogCardProps = {
     readonly name: string
     readonly description: string
-    readonly points: ReadonlyArray<string>
     readonly mascot: string
     readonly isEarly: boolean
     readonly earlyLabel: string
-    readonly earlyHint: string
-    /** "Installed" or "Not installed". */
+    /** "Installed 1" or "Not installed". */
     readonly stateLabel: string
     readonly isInstalled: boolean
-    /** The data is not known yet: the state badge and the actions are skeletons. */
+    /** The data is not known yet: the row is a skeleton. */
     readonly isSkeleton: boolean
-    /** Where the installed agent of this role opens; null when none is installed. */
-    readonly openHref: string | null
-    readonly detailsLabel: string
-    readonly detailsPointsTitle: string
-    readonly closeLabel: string
-    /** The person may set the agent up. */
+    /** The person may set an agent up. */
     readonly canInstall: boolean
     readonly installLabel: string
     readonly isInstalling: boolean
@@ -32,114 +22,44 @@ export type AgentCatalogCardProps = {
     readonly onInstall: () => void
 }
 
-/** What the "view details" action reads. */
-type DetailsProps = Pick<
-    AgentCatalogCardProps,
-    | "name"
-    | "description"
-    | "points"
-    | "isEarly"
-    | "earlyHint"
-    | "isSkeleton"
-    | "openHref"
-    | "detailsLabel"
-    | "detailsPointsTitle"
-    | "closeLabel"
->
-
-/** The "view details" action: the installed agent when there is one, else a dialog with everything the role does. */
-const Details = (props: DetailsProps) => {
-    if (props.openHref !== null) {
-        return (
-            <Button intent="neutral" href={props.openHref} isSkeleton={props.isSkeleton}>
-                {props.detailsLabel}
-            </Button>
-        )
-    }
-    return (
-        <Dialog
-            size="sm"
+/**
+ * One role of the catalogue as a compact card: the small mascot, the name with its state, one line of what it does and the
+ * create action on the card itself (pane-free list card: the row owns its inset, the card its edge).
+ */
+export const AgentCatalogCard = (props: AgentCatalogCardProps) => (
+    <SurfaceListCard ariaLabel={props.name}>
+        <ListRow
+            isSkeleton={props.isSkeleton}
+            leading={
+                <IconTile
+                    source={nivoIconSource("apps", "leading")}
+                    artwork={<Image src={props.mascot} alt="" aspect="square" fit="contain" />}
+                    size="md"
+                />
+            }
             title={props.name}
             description={props.description}
-            closeLabel={props.closeLabel}
-            trigger={
-                <Button intent="neutral" isSkeleton={props.isSkeleton}>
-                    {props.detailsLabel}
-                </Button>
-            }
-        >
-            <div className={DETAIL}>
-                <Heading level={3}>{props.detailsPointsTitle}</Heading>
-                <List label={props.detailsPointsTitle} className={POINTS}>
-                    {props.points.map((point) => (
-                        <ListItem key={point}>
-                            <Text size="sm">{point}</Text>
-                        </ListItem>
-                    ))}
-                </List>
-                {props.isEarly ? (
-                    <Text size="xs" tone="muted">
-                        {props.earlyHint}
-                    </Text>
-                ) : null}
-            </div>
-        </Dialog>
-    )
-}
-
-/** One role of the catalogue: illustration band, name, state badges, one line of description, three capabilities and the two actions. */
-export const AgentCatalogCard = (props: AgentCatalogCardProps) => (
-    <SurfaceCard ariaLabel={props.name}>
-        <div className={CARD}>
-            <div className={BAND}>
-                <Image src={props.mascot} alt="" aspect="wide" fit="contain" plate="default" />
-            </div>
-            <div className={CARD_HEAD}>
-                <Heading level={3}>{props.name}</Heading>
-                <div className={BADGES}>
+            badges={
+                <>
                     {props.isEarly ? <Badge tone="accent">{props.earlyLabel}</Badge> : null}
-                    <Badge isDot isSkeleton={props.isSkeleton} tone={props.isInstalled ? "success" : "neutral"}>
+                    <Badge isDot tone={props.isInstalled ? "success" : "neutral"}>
                         {props.stateLabel}
                     </Badge>
-                </div>
-            </div>
-            <Text size="sm" tone="muted" overflow="truncate">
-                {props.description}
-            </Text>
-            <List label={props.name} className={POINTS}>
-                {props.points.slice(0, CARD_POINTS).map((point) => (
-                    <ListItem key={point}>
-                        <Text size="sm" tone="muted" overflow="truncate">
-                            {point}
-                        </Text>
-                    </ListItem>
-                ))}
-            </List>
-            <div className={FOOT}>
-                {props.canInstall ? (
+                </>
+            }
+            actions={
+                props.canInstall ? (
                     <Button
-                        intent="alternative"
-                        isSkeleton={props.isSkeleton}
+                        intent="neutral"
+                        size="sm"
                         isPending={props.isInstalling}
                         isDisabled={props.isBlocked}
                         onPress={props.onInstall}
                     >
                         {props.installLabel}
                     </Button>
-                ) : null}
-                <Details
-                    name={props.name}
-                    description={props.description}
-                    points={props.points}
-                    isEarly={props.isEarly}
-                    earlyHint={props.earlyHint}
-                    isSkeleton={props.isSkeleton}
-                    openHref={props.openHref}
-                    detailsLabel={props.detailsLabel}
-                    detailsPointsTitle={props.detailsPointsTitle}
-                    closeLabel={props.closeLabel}
-                />
-            </div>
-        </div>
-    </SurfaceCard>
+                ) : undefined
+            }
+        />
+    </SurfaceListCard>
 )

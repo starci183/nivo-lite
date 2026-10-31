@@ -1,4 +1,4 @@
-import { Page } from "@starci/grammar/common"
+import { Button, Page } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { AgentCatalog } from "@/components/blocks/AgentCatalog"
 
@@ -9,10 +9,13 @@ export interface AgentsCatalogPageBaseProps {
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
         readonly title: string
         readonly description: string
+        /** "+ Create agent": leads to the roles to add. */
+        readonly createLabel: string
+        readonly createHref: string
     }
 }
 
-/** Draws the catalogue page: one Page, the trail and heading in its header, the catalogue block as its body. */
+/** Draws the catalogue page: one Page, the trail, heading and the create action in its header, the catalogue block as its body. */
 export const AgentsCatalogPageBase = (props: AgentsCatalogPageBaseProps) => (
     <Page
         measure="product"
@@ -20,6 +23,11 @@ export const AgentsCatalogPageBase = (props: AgentsCatalogPageBaseProps) => (
             title: props.props.title,
             description: props.props.description,
             breadcrumbs: { label: props.props.crumbLabel, items: props.props.crumbs },
+            actions: (
+                <Button intent="commit" href={props.props.createHref}>
+                    {props.props.createLabel}
+                </Button>
+            ),
         }}
     >
         <AgentCatalog />

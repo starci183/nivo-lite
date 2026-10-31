@@ -2,9 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
-import { useConnectionNeedsCopy, useInstanceHeader, useInstanceTabs } from "@/hooks/installations"
+import { useConnectionNeedsCopy, useInstanceHeader, useInstanceRail, useInstanceTabs } from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
-import { AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
+import { AGENT_ROLES_HREF, AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
 import { AgentInstanceFrameBase } from "./component"
 import type { InstanceHeaderView } from "./component"
 
@@ -25,22 +25,25 @@ const PLACEHOLDER: InstanceHeaderView = {
 interface AgentInstanceFrameProps {
     readonly module: ModuleKey
     readonly installationId: string
-    /** The installed agents rail, drawn by the layout. */
-    readonly rail: ReactNode
     readonly children?: ReactNode
 }
 
-/** The connected frame of an agent instance: the page band (trail, person, facts, actions, instance link tabs), the installed agents rail and the routed tab. */
+/** The tab whose body is panes, attached flush under the tab line; the other tabs are card bodies. */
+const PANES_TAB = "setup"
+
+/** The connected frame of an agent instance: the page band (trail, person, facts, agent switcher, actions, instance link tabs) and the routed tab. */
 export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
     const t = useTranslations("modulesCore")
     const ts = useTranslations("shell")
-    const { tabs, hrefOf } = useInstanceTabs(props.module, props.installationId)
+    const { tabs, selected, hrefOf } = useInstanceTabs(props.module, props.installationId)
     const header = useInstanceHeader(props.module, props.installationId)
     const needs = useConnectionNeedsCopy()
+    const rail = useInstanceRail(props.installationId)
     return (
         <AgentInstanceFrameBase
-            shape={{ rail: props.rail, body: props.children }}
+            shape={{ body: props.children }}
             props={{
+                hasPanes: selected === PANES_TAB,
                 ariaLabel: props.installationId,
                 crumbLabel: ts("crumbLabel"),
                 crumbs: [
@@ -60,6 +63,20 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                 chatLabel: t("privateChat"),
                 profileLabel: t("profileShort"),
                 isSkeleton: header.isLoading,
+                switcher: {
+                    label: t("switchAgent"),
+                    currentId: props.installationId,
+                    addLabel: t("railAdd"),
+                    addHref: AGENT_ROLES_HREF,
+                    items: rail.items.map((item) => ({
+                        id: item.id,
+                        name: item.name,
+                        seed: item.seed,
+                        avatarUrl: item.avatarUrl,
+                        description: [item.roleName, t(`lifecycle_${item.lifecycle}`)].join(" · "),
+                        href: item.href,
+                    })),
+                },
                 view: header.isLoading
                     ? PLACEHOLDER
                     : {

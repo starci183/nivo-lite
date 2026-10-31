@@ -7,6 +7,7 @@ import { isManager, useMember } from "@/hooks/member"
 import { ALL_CATEGORIES, useCatalogView } from "@/hooks/modules"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
+import { AGENT_ROLES_ANCHOR } from "@/modules/routes"
 import { AgentCatalogBase } from "./component"
 import type { AgentCatalogData } from "./component"
 
@@ -24,19 +25,13 @@ const roleItemOf = (role: CatalogRole, t: CatalogCopy, state: RoleCardState) => 
     card: {
         name: role.name,
         description: role.description,
-        points: role.points,
         mascot: role.mascot,
         isEarly: role.isEarly,
         earlyLabel: t("earlyBadge"),
-        earlyHint: t("earlyHint"),
-        stateLabel: role.installed ? t("roleInstalled") : t("roleNotInstalled"),
+        stateLabel: role.installed ? t("roleInstalledCount", { count: role.installedCount }) : t("roleNotInstalled"),
         isInstalled: role.installed,
-        openHref: role.openHref,
-        detailsLabel: t("viewDetails"),
-        detailsPointsTitle: t("detailsPoints"),
-        closeLabel: t("detailsClose"),
         canInstall: state.canInstall,
-        installLabel: role.addHref === null ? t("install") : t("roleAddAnother"),
+        installLabel: role.addHref === null ? t("roleCreate") : t("roleAddAnother"),
     },
 })
 
@@ -46,17 +41,11 @@ const placeholderRoleOf = (key: string): AgentCatalogData["roles"][number] => ({
     card: {
         name: "-",
         description: "-",
-        points: ["-"],
         mascot: "",
         isEarly: false,
         earlyLabel: "-",
-        earlyHint: "-",
         stateLabel: "-",
         isInstalled: false,
-        openHref: null,
-        detailsLabel: "-",
-        detailsPointsTitle: "-",
-        closeLabel: "-",
         canInstall: true,
         installLabel: "-",
     },
@@ -65,7 +54,19 @@ const placeholderRoleOf = (key: string): AgentCatalogData["roles"][number] => ({
 /** One fake installed agent of the same shape as a real one. */
 const placeholderAgentOf = (key: string): AgentCatalogData["team"][number] => ({
     key,
-    card: { name: "-", seed: key, avatarUrl: null, roleName: "-", statusLabel: "-", statusTone: "neutral", href: "#" },
+    row: {
+        name: "-",
+        seed: key,
+        avatarUrl: null,
+        description: "-",
+        statusLabel: "-",
+        statusTone: "neutral",
+        progressLabel: "-",
+        confirmed: 0,
+        total: 8,
+        actionLabel: "-",
+        href: "#",
+    },
 })
 
 const PLACEHOLDER: AgentCatalogData = {
@@ -73,7 +74,11 @@ const PLACEHOLDER: AgentCatalogData = {
     roles: ["a", "b", "c"].map(placeholderRoleOf),
 }
 
-/** The connected agent catalogue: the installed agents, then the roles to add; search and group kept in the URL; install opens the new agent, and an installed role of several agents opens its list to add another. */
+/**
+ * The connected agent catalogue: the installed agents as rows (role and channel, setup progress, status, next step), then the
+ * roles to add; search and group kept in the URL; install opens the new agent, and an installed role of several agents opens
+ * its list to add another.
+ */
 export const AgentCatalog = () => {
     const t = useTranslations("modulesCore")
     const router = navigation.useRouter()
@@ -90,6 +95,7 @@ export const AgentCatalog = () => {
                 yoursEmptyTitle: t("yoursEmptyTitle"),
                 yoursEmptyHint: t("yoursEmptyHint"),
                 addTitle: t("addTitle"),
+                addId: AGENT_ROLES_ANCHOR,
                 searchLabel: t("filterSearch"),
                 searchPlaceholder: t("filterSearchPlaceholder"),
                 clearLabel: t("filterClear"),
@@ -104,18 +110,26 @@ export const AgentCatalog = () => {
                 emptyHint: t("emptyHint"),
                 emptyAction: view.filters.isFiltered ? t("emptyAction") : undefined,
                 slot: mapSlot(slot, (): AgentCatalogData => ({
-                    team: agents.map((agent) => ({
-                        key: agent.id,
-                        card: {
-                            name: agent.name,
-                            seed: agent.seed,
-                            avatarUrl: agent.avatarUrl,
-                            roleName: agent.roleName,
-                            statusLabel: t(`lifecycle_${agent.lifecycle}`),
-                            statusTone: agent.tone,
-                            href: agent.href,
-                        },
-                    })),
+                    team: agents.map((agent) => {
+                        const channels = agent.channels
+                        const { confirmed, total } = agent.setupProgress
+                        return {
+                            key: agent.id,
+                            row: {
+                                name: agent.name,
+                                seed: agent.seed,
+                                avatarUrl: agent.avatarUrl,
+                                description: `${agent.roleName} · ${channels.length === 0 ? t("headerNoChannels") : channels.join(", ")}`,
+                                statusLabel: t(`lifecycle_${agent.lifecycle}`),
+                                statusTone: agent.tone,
+                                progressLabel: t("setupProgress"),
+                                confirmed,
+                                total,
+                                actionLabel: confirmed < total ? t("continueSetup") : t("openModule"),
+                                href: agent.href,
+                            },
+                        }
+                    }),
                     roles: view.cards,
                 })),
                 placeholder: PLACEHOLDER,

@@ -66,7 +66,7 @@ export const useSetupSide = (module: string, installationId: string) => {
             evidencePlaceholder: t("evidencePlaceholder"),
             isGating: gatesState.isGating,
             ...gatesLabelsOf(t),
-            applyLabel: gatesState.isApplying ? t("applying") : t("apply"),
+            applyLabel: applyLabelOf(t, gatesState.isApplying, progress.isReady, progress.total),
             isApplying: gatesState.isApplying,
             canApply: progress.isReady && !progress.isUnchanged,
             applyHint: progress.isReady && progress.isUnchanged ? t("applyUnchanged") : t("applyHint"),
@@ -106,6 +106,17 @@ const sideSlotOf = (
     if (reads.some((read) => read.isForbidden === true)) return { isForbidden: true }
     if (reads.some((read) => read.isError === true)) return { isError: true }
     return isLoading ? { isLoading: true } : { items: view }
+}
+
+/** The run action: applying, ready to run, or what it still needs ("Let it run (needs 8/8)"). */
+const applyLabelOf = (
+    t: ReturnType<typeof useTranslations<"moduleSetup">>,
+    isApplying: boolean,
+    isReady: boolean,
+    total: number,
+): string => {
+    if (isApplying) return t("applying")
+    return isReady ? t("applyRun") : t("applyNeedsAll", { total })
 }
 
 /** Resolves the gates labels for the current locale. */
