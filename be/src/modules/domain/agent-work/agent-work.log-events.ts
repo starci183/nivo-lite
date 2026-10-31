@@ -18,6 +18,8 @@ export enum AgentWorkLogEvent {
     NoHandler = "agent_work.no_handler",
     /** A turn failed and will be retried or given up. */
     TurnFailed = "agent_work.turn_failed",
+    /** A turn ran past its heartbeat budget, so its lease is left to lapse and its signal aborted. */
+    TurnOverran = "agent_work.turn_overran",
     /** The heartbeat could not renew the lease. */
     HeartbeatFailed = "agent_work.heartbeat_failed",
 }

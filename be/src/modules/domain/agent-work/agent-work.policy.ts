@@ -1,9 +1,13 @@
 import type { AgentWakeContext, AgentWakeSource, BackgroundCount } from "./agent-work.contracts"
 
+/** The runtime session key of an agent's turn: the thread key and the agent, so agents that share a runtime agent never share a session. */
+export const sessionKeyOf = (threadKey: string, agentId: string): string => `${threadKey}:${agentId}`
+
 /** The scope of work that locks the whole agent: tags, internal events and schedules. */
 export const AGENT_SCOPE = "agent"
 
-const CONVERSATION_PREFIX = "conversation:"
+/** The start of the scope key of a customer conversation. */
+export const CONVERSATION_SCOPE_PREFIX = "conversation:"
 
 /** Lower runs first: a customer waits on a phone, a colleague in Office, an event or a clock can wait. */
 const PRIORITIES: Readonly<Record<AgentWakeSource, number>> = { customer: 10, tag: 20, internal: 30, schedule: 40 }
@@ -16,6 +20,9 @@ export const LEASE_SECONDS = 90
 
 /** How often the heartbeat renews the lease, in milliseconds. */
 export const HEARTBEAT_MS = 30_000
+
+/** The most beats of the heartbeat one turn gets (ten minutes): past it the lease is left to lapse, so a hung turn cannot hold its scope forever. */
+export const HEARTBEAT_MAX_BEATS = 20
 
 /** Failed turns in a row that open the breaker. */
 export const BREAKER_AFTER = 5
@@ -41,6 +48,9 @@ export const SKIPPED_WAKE_RETENTION_MS = 2 * 24 * 60 * 60_000
 /** How long any other ended wake is kept, in milliseconds. */
 export const WAKE_RETENTION_MS = 30 * 24 * 60 * 60_000
 
+/** How long the lease row of an idle customer conversation is kept, in milliseconds. */
+export const IDLE_LEASE_RETENTION_MS = 2 * 24 * 60 * 60_000
+
 /** The default time zone of a schedule. */
 export const DEFAULT_TIME_ZONE = "Asia/Ho_Chi_Minh"
 
@@ -59,7 +69,7 @@ export const retryWaitOf = (attempt: number): number => {
 /** The lock scope of a wake: a customer conversation locks by itself, everything else locks the agent. */
 export const scopeKeyOf = (source: AgentWakeSource, context: AgentWakeContext): string =>
     source === "customer" && context.conversationId !== undefined
-        ? `${CONVERSATION_PREFIX}${context.conversationId}`
+        ? `${CONVERSATION_SCOPE_PREFIX}${context.conversationId}`
         : AGENT_SCOPE
 
 /** The next action time of a task, kept between five minutes and seven days ahead of now. */

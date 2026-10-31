@@ -70,6 +70,7 @@ const build = async ({ executor = true, handler = true }: Options = {}) => {
         service: container.get(AgentDrainService),
         turns,
         handler: registered,
+        handlers,
         executor: runner,
         outbox,
         logger,
@@ -91,8 +92,12 @@ describe("AgentDrainService.drain, a turn that runs", () => {
             "00000000-0000-4000-8000-000000000001",
         )
         expect(handler.prepare).toHaveBeenCalledWith(turn(), expect.any(AbortSignal))
-        expect(turns.bind).toHaveBeenCalledWith(turn(), "runtime-1", "thread-1")
-        expect(executor.run).toHaveBeenCalledWith(turn(), PLAN, expect.any(AbortSignal))
+        expect(turns.bind).toHaveBeenCalledWith(turn(), "runtime-1", "thread-1:agent-1")
+        expect(executor.run).toHaveBeenCalledWith(
+            turn(),
+            { ...PLAN, threadKey: "thread-1:agent-1" },
+            expect.any(AbortSignal),
+        )
         expect(turns.propose).toHaveBeenCalledWith(turn(), { reply: "hi" })
         expect(handler.settle).toHaveBeenCalledWith(turn(), { reply: "hi" }, expect.any(AbortSignal))
         expect(turns.finish).toHaveBeenCalledWith(turn(), {
@@ -258,18 +263,91 @@ describe("AgentDrainService.drain, a turn that fails or leaves more to do", () =
         })
     })
 
-    it("fails the wake with a generic code for any other error", async () => {
-        const { service, turns, executor } = await build()
+    it("fails the wake with a generic code for any other error, and retries a tag silently while attempts remain", async () => {
+        const { service, turns, executor, handler } = await build()
+        const tag = turn({ source: "tag", attempts: 1, maxAttempts: 3 })
+        turns.begin.mockResolvedValue({ result: "begun", turn: tag })
         executor.run.mockRejectedValue(new Error("socket closed"))
 
         await service.drain(PAYLOAD)
 
+        expect(handler.holdOver).not.toHaveBeenCalled()
         expect(turns.finish).toHaveBeenCalledWith(
-            turn(),
+            tag,
             expect.objectContaining({ status: "failed", errorCode: "AGENT_WORK_UNEXPECTED" }),
         )
     })
+})
 
+describe("AgentDrainService.drain, a runtime that is down", () => {
+    it("gives a customer the holding line at once when the runtime is down, ends the wake and still counts the failure", async () => {
+        const { service, turns, executor, handler } = await build()
+        executor.run.mockRejectedValue(new Error("socket closed"))
+
+        await service.drain(PAYLOAD)
+
+        expect(handler.holdOver).toHaveBeenCalledWith(turn(), "error")
+        expect(turns.propose).not.toHaveBeenCalled()
+        expect(turns.finish).toHaveBeenCalledWith(turn(), {
+            status: "done",
+            reason: "holding_line",
+            outcome: null,
+            errorCode: "AGENT_WORK_UNEXPECTED",
+            usage: null,
+        })
+    })
+
+    it.each(["tag", "internal", "schedule"] as const)(
+        "gives up a %s wake on its last attempt: it is announced once through the handler and fails",
+        async (source) => {
+            const { service, turns, executor, handler, logger } = await build()
+            const last = turn({ source, attempts: 3, maxAttempts: 3 })
+            turns.begin.mockResolvedValue({ result: "begun", turn: last })
+            executor.run.mockRejectedValue(new Error("socket closed"))
+
+            await service.drain(PAYLOAD)
+
+            expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.WakeDead, {
+                agentId: "agent-1",
+                wakeId: "wake-1",
+            })
+            expect(handler.holdOver).toHaveBeenCalledWith(last, "error")
+            expect(turns.finish).toHaveBeenCalledWith(
+                last,
+                expect.objectContaining({ status: "failed", errorCode: "AGENT_WORK_UNEXPECTED" }),
+            )
+        },
+    )
+
+    it("fails the wake all the same when the hold-over line itself cannot be written, and logs why", async () => {
+        const { service, turns, executor, handler, logger } = await build()
+        const cause = new Error("channel down")
+        executor.run.mockRejectedValue(new Error("socket closed"))
+        handler.holdOver.mockRejectedValue(cause)
+
+        await service.drain(PAYLOAD)
+
+        expect(logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFailed, cause, {
+            agentId: "agent-1",
+            wakeId: "wake-1",
+        })
+        expect(turns.finish).toHaveBeenCalledWith(turn(), expect.objectContaining({ status: "failed" }))
+    })
+
+    it("fails the wake when it ran out of attempts and no handler is left to announce it", async () => {
+        const { service, turns, handler, handlers } = await build()
+        const last = turn({ attempts: 2, maxAttempts: 2 })
+        turns.begin.mockResolvedValue({ result: "begun", turn: last })
+        handler.prepare.mockRejectedValue(new Error("boom"))
+        handlers.of.mockReturnValueOnce(handler).mockReturnValue(undefined)
+
+        await service.drain(PAYLOAD)
+
+        expect(turns.finish).toHaveBeenCalledWith(last, expect.objectContaining({ status: "failed" }))
+    })
+})
+
+describe("AgentDrainService.drain, a turn that leaves more to do", () => {
     it("starts the next drain in a transaction when another wake of the scope is due", async () => {
         const { service, turns, outbox, tx } = await build()
         turns.finish.mockResolvedValue({ fenced: false, more: true })
@@ -366,6 +444,36 @@ describe("AgentDrainService.drain, the heartbeat", () => {
         })
         expect(fixture.turns.touch).toHaveBeenCalledTimes(2)
         expect(seen.signal?.aborted).toBe(false)
+        release()
+        await done
+    })
+})
+
+describe("AgentDrainService.drain, the heartbeat budget", () => {
+    beforeEach(() => {
+        jest.useFakeTimers()
+    })
+
+    afterEach(() => {
+        jest.useRealTimers()
+    })
+
+    it("leaves the lease to lapse and aborts the turn once it has used its beats", async () => {
+        const fixture = await build()
+        const { release, seen } = slowRun(fixture)
+
+        const done = fixture.service.drain(PAYLOAD)
+        await jest.advanceTimersByTimeAsync(20 * 30_000)
+        expect(fixture.turns.touch).toHaveBeenCalledTimes(20)
+        expect(seen.signal?.aborted).toBe(false)
+        await jest.advanceTimersByTimeAsync(30_000)
+
+        expect(fixture.turns.touch).toHaveBeenCalledTimes(20)
+        expect(seen.signal?.aborted).toBe(true)
+        expect(fixture.logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnOverran, {
+            agentId: "agent-1",
+            wakeId: "wake-1",
+        })
         release()
         await done
     })
