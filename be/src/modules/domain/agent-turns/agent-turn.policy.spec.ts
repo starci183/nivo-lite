@@ -1,9 +1,11 @@
 import { Test } from "@nestjs/testing"
+import type { Installation } from "@modules/domain/agents"
 import type { AgentWorkState } from "@modules/domain/agent-work"
 import {
     internalTimeoutMsOf,
     proposalTextOf,
     stateBlockOf,
+    stoppedBy,
     storedProposalOf,
     usageKindFor,
     vietnamDayOf,
@@ -20,6 +22,7 @@ const build = async () => {
                     internalTimeoutMsOf,
                     proposalTextOf,
                     stateBlockOf,
+                    stoppedBy,
                     storedProposalOf,
                     usageKindFor,
                     vietnamDayOf,
@@ -31,6 +34,7 @@ const build = async () => {
         internalTimeoutMsOf: typeof internalTimeoutMsOf
         proposalTextOf: typeof proposalTextOf
         stateBlockOf: typeof stateBlockOf
+        stoppedBy: typeof stoppedBy
         storedProposalOf: typeof storedProposalOf
         usageKindFor: typeof usageKindFor
         vietnamDayOf: typeof vietnamDayOf
@@ -151,5 +155,45 @@ describe("agent turn policy > the stored proposal", () => {
         expect(subject.proposalTextOf("text")).toBe("")
         expect(subject.proposalTextOf({})).toBe("")
         expect(subject.proposalTextOf({ text: 4 })).toBe("")
+    })
+})
+
+describe("agent turn policy > stoppedBy", () => {
+    const installation = (over: Partial<Installation> = {}): Installation => ({
+        id: "inst-1",
+        workspaceId: "ws-1",
+        module: "accounting",
+        name: "Accounting",
+        isMulti: false,
+        agentId: "agent-1",
+        operatingMode: "assist",
+        settings: {},
+        activeContextVersionId: "version-1",
+        liveEnabled: true,
+        removed: false,
+        ...over,
+    })
+
+    it("lets a live installation with an applied version, and an agent with none, run", async () => {
+        const { stoppedBy } = await build()
+
+        expect(stoppedBy("live", installation())).toBeNull()
+        expect(stoppedBy(null, null)).toBeNull()
+    })
+
+    it("says an installation waiting for a connection needs one, and any other status that it does not run", async () => {
+        const { stoppedBy } = await build()
+
+        expect(stoppedBy("needs_connection", installation())).toBe("needs_connection")
+        expect(stoppedBy("setup", installation())).toBe("installation_not_running")
+        expect(stoppedBy("ready", installation())).toBe("installation_not_running")
+        expect(stoppedBy("removed", installation())).toBe("installation_not_running")
+    })
+
+    it("does not run an installation without an applied version or one the owner has not switched on, whatever its status says", async () => {
+        const { stoppedBy } = await build()
+
+        expect(stoppedBy("live", installation({ activeContextVersionId: null }))).toBe("installation_not_running")
+        expect(stoppedBy("live", installation({ liveEnabled: false }))).toBe("installation_not_running")
     })
 })

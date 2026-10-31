@@ -1,6 +1,11 @@
 import type { AgentWakeSource, AgentWorkState } from "@modules/domain/agent-work"
 import { backgroundCapSpent, breakerOpen, isBackground } from "@modules/domain/agent-work"
-import type { AgentTurnBlock } from "./agent-turns.contracts"
+import type {
+    AgentTurnBlock,
+    OptionalReadiness,
+    OptionalRunningInstallation,
+    OptionalStopReason,
+} from "./agent-turns.contracts"
 
 /** The usage kind a customer turn on the core road is metered under, the same as on the legacy road. */
 const CUSTOMER_KIND = "chat_reply"
@@ -59,4 +64,21 @@ export const storedProposalOf = (text: string): StoredProposal => ({ text })
 export const proposalTextOf = (proposal: unknown): string => {
     if (typeof proposal !== "object" || proposal === null || !("text" in proposal)) return ""
     return typeof proposal.text === "string" ? proposal.text : ""
+}
+
+/** The installation status in which an agent runs. */
+const LIVE = "live"
+
+/**
+ * Why an agent's installation does not run, or null when it does: its required connections are missing, or it is not live (still
+ * installing, in setup, paused, or without an applied version the owner switched on). An agent with no installation has nothing to wait for.
+ * `status` is what the module readiness settled for the installation, or null when the agent has none.
+ */
+export const stoppedBy = (status: OptionalReadiness, installation: OptionalRunningInstallation): OptionalStopReason => {
+    if (status !== null && status !== LIVE)
+        return status === "needs_connection" ? "needs_connection" : "installation_not_running"
+    if (installation !== null && (installation.activeContextVersionId === null || !installation.liveEnabled)) {
+        return "installation_not_running"
+    }
+    return null
 }

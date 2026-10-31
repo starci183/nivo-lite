@@ -8,8 +8,14 @@ import { AgentTriggersService } from "./agent-triggers.service"
 import { AgentWorkAccessService } from "./agent-work-access.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
 import { toTurnRecord } from "./agent-work.mapper"
+import { wakeProgressOf } from "./agent-work.policy"
 import { AgentTurnEntity, AgentWakeEntity, AgentWorkStateEntity } from "./persistence/entities"
-import type { AgentTurnRecord, AgentWorkView, WorkspaceAgentWorkView } from "./agent-work.contracts"
+import type {
+    AgentTurnRecord,
+    AgentWorkView,
+    OptionalCustomerWakeProgress,
+    WorkspaceAgentWorkView,
+} from "./agent-work.contracts"
 
 /** The turns the work tab lists. */
 const RECENT_TURNS = 20
@@ -52,6 +58,14 @@ export class AgentWorkReadService {
             this.entityManager.count(AgentWakeEntity, { where: { workspaceId, status: "held" } }),
         ])
         return { settings, agentsOff, pendingWakes, heldWakes }
+    }
+
+    /** Where the customer wake of a stored message stands, or null when none was written for it (the message took the legacy road). */
+    async customerWake(workspaceId: string, messageId: string): Promise<OptionalCustomerWakeProgress> {
+        const wake = await this.entityManager.findOne(AgentWakeEntity, {
+            where: { workspaceId, source: "customer", eventKey: messageId },
+        })
+        return wake === null ? null : { id: wake.id, state: wakeProgressOf(wake.status) }
     }
 
     private async recentTurns(agentId: string): Promise<ReadonlyArray<AgentTurnRecord>> {

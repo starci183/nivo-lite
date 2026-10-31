@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { AgentTurnsService } from "@modules/domain/agent-work"
-import type { AgentRunningTurn } from "@modules/domain/agent-work"
+import { AgentTurnsService, AgentWorkSettingsService } from "@modules/domain/agent-work"
+import type { AgentRunningTurn, AgentWorkState } from "@modules/domain/agent-work"
 import { Secret } from "@modules/platform/config"
 import { CLOCK } from "@modules/platform/clock"
 import { AgentTurnAccessService } from "./agent-turn-access.service"
@@ -29,11 +29,38 @@ const running = (over: Partial<AgentRunningTurn> = {}): AgentRunningTurn => ({
 const credential = (over: Partial<{ agentId: string; sessionKey: string; exp: number }> = {}): string =>
     signBridgeToken(SECRET, { agentId: RUNTIME, sessionKey: SESSION, exp: NOW_SECONDS + 30, ...over })
 
+const state = (workEnabled: boolean): AgentWorkState => ({
+    agentId: "agent-1",
+    workEnabled,
+    failures: 0,
+    breakerUntil: null,
+    lastTurnAt: null,
+    backgroundDay: null,
+    backgroundTurns: 0,
+})
+
+interface Switches {
+    readonly agent?: boolean
+    readonly workspace?: boolean
+}
+
 const build = async (
     turns: ReadonlyArray<AgentRunningTurn> = [running()],
     bridgeSecret: Secret | null = new Secret(SECRET),
+    { agent = true, workspace = true }: Switches = {},
 ) => {
     const service = mock<AgentTurnsService>({ runningOn: jest.fn(() => Promise.resolve(turns)) })
+    const settings = mock<AgentWorkSettingsService>({
+        stateOf: jest.fn(() => Promise.resolve(state(agent))),
+        settingsOf: jest.fn(() =>
+            Promise.resolve({
+                workspaceId: "ws-1",
+                workEnabled: workspace,
+                road: "core" as const,
+                backgroundDailyCap: 50,
+            }),
+        ),
+    })
     const options: AgentTurnsOptions = { bridgeSecret }
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -41,9 +68,10 @@ const build = async (
             { provide: AGENT_TURNS_OPTIONS, useValue: options },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: AgentTurnsService, useValue: service },
+            { provide: AgentWorkSettingsService, useValue: settings },
         ],
     }).compile()
-    return { access: moduleRef.get(AgentTurnAccessService), service }
+    return { access: moduleRef.get(AgentTurnAccessService), service, settings }
 }
 
 describe("AgentTurnAccessService.admit", () => {
@@ -98,6 +126,38 @@ describe("AgentTurnAccessService.admit", () => {
         const { access } = await build([running({ threadKey: `agent:${RUNTIME}:another` })])
 
         await expect(access.admit(credential())).resolves.toBeNull()
+    })
+})
+
+describe("AgentTurnAccessService.admit, which turn a call is for", () => {
+    it("refuses a session that names more than one running turn, since it cannot tell whose call it is", async () => {
+        const { access } = await build([running(), running({ turnId: "turn-2", agentId: "agent-2", wakeId: "wake-2" })])
+
+        await expect(access.admit(credential())).resolves.toBeNull()
+    })
+
+    it("tells two agents of one runtime agent apart by the session each turn runs in", async () => {
+        const other = `${SESSION}:agent-2`
+        const { access } = await build([
+            running({ threadKey: `${SESSION}:agent-1` }),
+            running({ turnId: "turn-2", agentId: "agent-2", wakeId: "wake-2", threadKey: other }),
+        ])
+
+        await expect(access.admit(credential({ sessionKey: other }))).resolves.toMatchObject({
+            turnId: "turn-2",
+            agentId: "agent-2",
+        })
+    })
+
+    it.each([
+        ["the agent", { agent: false }],
+        ["the workspace", { workspace: false }],
+    ])("refuses a call once work is switched off for %s, though the turn still runs", async (_who, switches) => {
+        const { access, settings } = await build([running()], new Secret(SECRET), switches)
+
+        await expect(access.admit(credential())).resolves.toBeNull()
+        expect(settings.stateOf).toHaveBeenCalledWith("agent-1")
+        expect(settings.settingsOf).toHaveBeenCalledWith("ws-1")
     })
 
     it("refuses a credential signed with the wrong secret, before it looks at any turn", async () => {

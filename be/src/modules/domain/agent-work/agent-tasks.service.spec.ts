@@ -210,3 +210,18 @@ describe("AgentTasksService.drop", () => {
         expect(em.update).not.toHaveBeenCalled()
     })
 })
+
+describe("AgentTasksService.markWoken", () => {
+    it("clears the wake time only while it is still the one that was woken for", async () => {
+        const { service } = await build()
+        const tx = mockEntityManager({ update: [AgentTaskEntity, { affected: 1 }] })
+
+        await service.markWoken(tx, "task-1", AT(-3))
+
+        expect(tx.update).toHaveBeenCalledWith(
+            AgentTaskEntity,
+            { id: "task-1", nextActionAt: AT(-3) },
+            { nextActionAt: null },
+        )
+    })
+})

@@ -2,6 +2,7 @@ import { Page } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { AgentCatalog } from "@/components/blocks/AgentCatalog"
 import { AgentCreateAction } from "@/components/blocks/AgentCreateAction"
+import { AgentWorkWorkspaceSwitch } from "@/components/blocks/AgentWorkWorkspaceSwitch"
 
 /** Copy and slots of the agent catalogue page. */
 export interface AgentsCatalogPageBaseProps {
@@ -24,6 +25,7 @@ export const AgentsCatalogPageBase = (props: AgentsCatalogPageBaseProps) => (
             actions: <AgentCreateAction />,
         }}
     >
+        <AgentWorkWorkspaceSwitch />
         <AgentCatalog />
     </Page>
 )

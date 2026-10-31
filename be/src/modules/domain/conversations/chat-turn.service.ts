@@ -15,7 +15,14 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { isChatTurnPayload } from "@modules/queues/chat-turn"
 import type { ChatTurnPayload } from "@modules/queues/chat-turn"
 import { InjectChatTurnExtensions } from "./conversations.decorators"
-import type { CustomerTurn, ChatTurnExtensions, ChatTurnProposal, TurnVerdict } from "./conversations.contracts"
+import type {
+    CustomerTurn,
+    ChatTurnExtensions,
+    ChatTurnProposal,
+    OptionalCustomerTurn,
+    TurnRef,
+    TurnVerdict,
+} from "./conversations.contracts"
 import { ConversationsLogEvent } from "./conversations.log-events"
 
 const LOCALE = "vi"
@@ -59,32 +66,42 @@ export class ChatTurnService {
             await this.deliverStored(payload.conversationId, payload.messageId)
             return
         }
-        const turn = await this.load(payload)
-        if (turn === undefined) return
-        // A person who took the conversation over answers it themselves. (The engine own hand-off still delivers the turn it was made in.)
-        const holder = turn.conversation.handledBy
-        if (holder !== null && holder !== ENGINE_ACTOR) return
-        const named = payload.lookupName ? await this.named(turn) : turn
-        await this.delivery.showTyping(named.conversation)
+        const turn = await this.turnOf(payload)
+        if (turn === undefined || this.answeredByPerson(turn)) return
+        const named = await this.ready(turn, payload.lookupName)
         const answer = await this.propose(named)
         if (typeof answer === "string") await this.holdOver(named, answer)
         else await this.respond(named, answer)
     }
 
-    private async load(payload: ChatTurnPayload): Promise<CustomerTurn | undefined> {
-        const conversation = await this.conversations.turnOf(payload.conversationId)
-        const message = await this.messages.find(payload.messageId, payload.conversationId)
+    /** The customer turn a queued job or a wake names, or undefined when its conversation or message is gone. */
+    async turnOf(ref: TurnRef): Promise<OptionalCustomerTurn> {
+        const conversation = await this.conversations.turnOf(ref.conversationId)
+        const message = await this.messages.find(ref.messageId, ref.conversationId)
         if (conversation.kind !== "ok" || message.kind !== "ok") {
-            this.logger.warn(ConversationsLogEvent.TurnTargetGone, { conversationId: payload.conversationId })
+            this.logger.warn(ConversationsLogEvent.TurnTargetGone, { conversationId: ref.conversationId })
             return undefined
         }
         return {
             conversation: conversation.value,
             messageId: message.value.id,
             body: message.value.body,
-            channelEventId: payload.channelEventId,
-            transcript: await this.messages.transcript(payload.conversationId),
+            channelEventId: ref.channelEventId,
+            transcript: await this.messages.transcript(ref.conversationId),
         }
+    }
+
+    /** True when a person who took the conversation over answers it themselves. (The engine own hand-off still delivers the turn it was made in.) */
+    answeredByPerson(turn: CustomerTurn): boolean {
+        const holder = turn.conversation.handledBy
+        return holder !== null && holder !== ENGINE_ACTOR
+    }
+
+    /** Names a customer just met when asked to, and shows typing on the channel; the turn is then ready for its answer. */
+    async ready(turn: CustomerTurn, lookupName: boolean): Promise<CustomerTurn> {
+        const named = lookupName ? await this.named(turn) : turn
+        await this.delivery.showTyping(named.conversation)
+        return named
     }
 
     private async named(turn: CustomerTurn): Promise<CustomerTurn> {
@@ -103,7 +120,8 @@ export class ChatTurnService {
         })
     }
 
-    private async respond(turn: CustomerTurn, proposal: ChatTurnProposal): Promise<void> {
+    /** Puts the proposal through the outcome handler and sends what leaves, once per customer message. */
+    async respond(turn: CustomerTurn, proposal: ChatTurnProposal): Promise<void> {
         const outcomes = this.extensions.outcomes()
         const verdict = outcomes === undefined ? this.plainVerdict(proposal) : await outcomes.settle(turn, proposal)
         if (verdict.send) await this.sendReply(turn, verdict.reply)
@@ -118,7 +136,8 @@ export class ChatTurnService {
         }
     }
 
-    private async holdOver(turn: CustomerTurn, reason: string): Promise<void> {
+    /** The AI could not answer: the question goes to a person, and the customer hears the holding line at most once per hour. */
+    async holdOver(turn: CustomerTurn, reason: string): Promise<void> {
         const outcomes = this.extensions.outcomes()
         const lines = outcomes === undefined ? [] : await outcomes.holdOver(turn, reason)
         const since = new Date(this.clock.now().getTime() - HOLDING_WINDOW_MS)

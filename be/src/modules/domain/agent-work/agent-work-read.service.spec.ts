@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
-import { agentTurnRowOf, agentWakeRowOf } from "@tests/fixtures/builders/agent-work.builder"
+import { agentTurnRowOf, agentWakeRowOf, runningWakeRowOf } from "@tests/fixtures/builders/agent-work.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentGoalsService } from "./agent-goals.service"
 import { AgentTasksService } from "./agent-tasks.service"
@@ -35,7 +35,7 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
         stateOf: jest.fn().mockResolvedValue(STATE),
         settingsOf: jest
             .fn()
-            .mockResolvedValue({ workspaceId: "ws-1", workEnabled: true, road: "legacy", backgroundDailyCap: 200 }),
+            .mockResolvedValue({ workspaceId: "ws-1", workEnabled: true, road: "core", backgroundDailyCap: 200 }),
     })
     const goals = mock<AgentGoalsService>({ alive: jest.fn().mockResolvedValue([]) })
     const tasks = mock<AgentTasksService>({ alive: jest.fn().mockResolvedValue([]) })
@@ -83,6 +83,7 @@ describe("AgentWorkReadService.agentWork", () => {
                 cost: 0.01,
                 durationMs: 500,
                 wokeAt: new Date("2026-11-10T01:00:00.000Z"),
+                workItemId: null,
             },
         ])
         expect(JSON.stringify(view)).not.toContain("private words")
@@ -145,7 +146,7 @@ describe("AgentWorkReadService.workspaceWork", () => {
         )
 
         await expect(service.workspaceWork("ws-1")).resolves.toEqual({
-            settings: { workspaceId: "ws-1", workEnabled: true, road: "legacy", backgroundDailyCap: 200 },
+            settings: { workspaceId: "ws-1", workEnabled: true, road: "core", backgroundDailyCap: 200 },
             agentsOff: 2,
             pendingWakes: 9,
             heldWakes: 9,
@@ -154,5 +155,24 @@ describe("AgentWorkReadService.workspaceWork", () => {
             where: { workspaceId: "ws-1", workEnabled: false },
         })
         expect(em.count).toHaveBeenCalledWith(AgentWakeEntity, { where: { workspaceId: "ws-1", status: "held" } })
+    })
+})
+
+describe("AgentWorkReadService.customerWake", () => {
+    it("tells where the wake of a stored customer message stands in the words of a job", async () => {
+        const { service, em } = await build(
+            mockEntityManager({ findOne: [AgentWakeEntity, runningWakeRowOf("wake-7")] }),
+        )
+
+        await expect(service.customerWake("ws-1", "msg-1")).resolves.toEqual({ id: "wake-7", state: "running" })
+        expect(em.findOne).toHaveBeenCalledWith(AgentWakeEntity, {
+            where: { workspaceId: "ws-1", source: "customer", eventKey: "msg-1" },
+        })
+    })
+
+    it("answers null for a message no wake was written for", async () => {
+        const { service } = await build(mockEntityManager({ findOne: [AgentWakeEntity, null] }))
+
+        await expect(service.customerWake("ws-1", "msg-9")).resolves.toBeNull()
     })
 })

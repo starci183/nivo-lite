@@ -2,12 +2,15 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentTurnQueueModule } from "@modules/queues/agent-turn"
 import { AgentDrainService } from "./agent-drain.service"
+import { AgentEndedWakesService } from "./agent-ended-wakes.service"
 import { AgentGoalsService } from "./agent-goals.service"
 import { AgentTurnsService } from "./agent-turns.service"
 import { AgentTasksService } from "./agent-tasks.service"
 import { AgentTriggersService } from "./agent-triggers.service"
+import { AgentWakeRetentionService } from "./agent-wake-retention.service"
 import { AgentWakeService } from "./agent-wake.service"
 import { AgentWorkAccessService } from "./agent-work-access.service"
+import { AgentWorkDoorsService } from "./agent-work-doors.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkReadService } from "./agent-work-read.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
@@ -32,15 +35,20 @@ export class AgentWorkModule extends ConfigurableModuleClass {
                 AgentTurnsService,
                 AgentWorkHandlersService,
                 AgentWakeService,
+                AgentWakeRetentionService,
+                AgentEndedWakesService,
                 AgentDrainService,
                 AgentGoalsService,
                 AgentTasksService,
                 AgentTriggersService,
                 AgentWorkSettingsService,
                 AgentWorkReadService,
+                AgentWorkDoorsService,
             ],
             exports: [
+                AgentTurnQueueModule,
                 AgentWakeService,
+                AgentWakeRetentionService,
                 AgentDrainService,
                 AgentTurnsService,
                 AgentWorkHandlersService,
@@ -49,6 +57,7 @@ export class AgentWorkModule extends ConfigurableModuleClass {
                 AgentTriggersService,
                 AgentWorkSettingsService,
                 AgentWorkReadService,
+                AgentWorkDoorsService,
             ],
         }
     }

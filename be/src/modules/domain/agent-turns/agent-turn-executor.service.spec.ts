@@ -138,13 +138,38 @@ describe("AgentTurnExecutorService > a turn that runs", () => {
         expect(run).toMatchObject({ usage: { model: null, promptTokens: 0, completionTokens: 0, cost: 0 } })
     })
 
-    it("lets a failure of the runtime reach the drain, which retries the wake", async () => {
+    it("lets a failure of the runtime reach the drain, which retries the wake, and meters the call by what was sent", async () => {
         const { executor, runner, usage } = await build()
         const cause = new Error("gateway down")
         runner.run.mockRejectedValue(cause)
 
         await expect(executor.run(agentTurnViewOf({ source: "tag" }), plan, signal)).rejects.toBe(cause)
-        expect(usage.record).not.toHaveBeenCalled()
+        expect(usage.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "agent_work",
+            module: "accounting",
+            usage: null,
+            completionChars: 0,
+            promptChars: 9,
+        })
+    })
+})
+
+describe("AgentTurnExecutorService > a customer turn the runtime fails", () => {
+    it("is blocked as unavailable at once and logged, and metered by what was sent like any failed run", async () => {
+        const { executor, runner, usage, logger } = await build()
+        runner.run.mockRejectedValue(new Error("gateway down"))
+
+        const run = await executor.run(agentTurnViewOf({ source: "customer" }), plan, signal)
+
+        expect(run).toEqual({ kind: "blocked", reason: "openclaw_unavailable" })
+        expect(usage.record).toHaveBeenCalledWith(
+            expect.objectContaining({ kind: "chat_reply", usage: null, completionChars: 0 }),
+        )
+        expect(logger.error).toHaveBeenCalledWith(AgentTurnsLogEvent.TurnFailed, expect.any(Error), {
+            agentId: "agent-1",
+            wakeId: "wake-1",
+        })
     })
 })
 

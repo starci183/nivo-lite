@@ -7,6 +7,7 @@ import type { ActionEntry, WorkItem } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { AgentWriteRightService } from "./agent-write-right.service"
 import { AgentTurnsLogEvent } from "./agent-turns.log-events"
 import { InternalProposalSettlerService } from "./internal-proposal-settler.service"
 import type { StoredProposal } from "./agent-turn.policy"
@@ -52,9 +53,13 @@ const full = (over: Partial<InternalProposal>): InternalProposal => ({
 const item = (id: string): WorkItem => mock<WorkItem>({ id })
 
 const build = async (
-    options: { readonly live?: boolean; readonly actions?: Record<string, ActionEntry | null> } = {},
+    options: {
+        readonly live?: boolean
+        readonly mayWrite?: boolean
+        readonly actions?: Record<string, ActionEntry | null>
+    } = {},
 ) => {
-    const { live = true, actions = { send_invoice: entry("accounting") } } = options
+    const { live = true, mayWrite = true, actions = { send_invoice: entry("accounting") } } = options
     const turns = mock<AgentTurnsService>({ touch: jest.fn(() => Promise.resolve(live)) })
     const tasks = mock<AgentTasksService>({ apply: jest.fn(() => Promise.resolve()) })
     let issued = 0
@@ -68,6 +73,7 @@ const build = async (
         actionOf: jest.fn((key: string) => Promise.resolve(actions[key] ?? null)),
     })
     const events = mock<EventsService>({ record: jest.fn(() => Promise.resolve()) })
+    const right = mock<AgentWriteRightService>({ mayWrite: jest.fn(() => Promise.resolve(mayWrite)) })
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -78,9 +84,19 @@ const build = async (
             { provide: WorkEngineService, useValue: engine },
             { provide: ModuleCatalogService, useValue: catalog },
             { provide: EventsService, useValue: events },
+            { provide: AgentWriteRightService, useValue: right },
         ],
     }).compile()
-    return { settler: moduleRef.get(InternalProposalSettlerService), turns, tasks, engine, catalog, events, logger }
+    return {
+        settler: moduleRef.get(InternalProposalSettlerService),
+        turns,
+        tasks,
+        engine,
+        catalog,
+        events,
+        logger,
+        right,
+    }
 }
 
 describe("InternalProposalSettlerService > a stale fence", () => {
@@ -169,11 +185,31 @@ describe("InternalProposalSettlerService > actions", () => {
     })
 
     it.each(["internal", "schedule"] as const)("makes a %s turn always ask a person", async (source) => {
-        const { settler, engine } = await build()
+        const { settler, engine } = await build({ mayWrite: false })
 
         await settler.settle(agentTurnViewOf({ source }), proposal({ actions: [action()] }), input)
 
         expect(engine.runWork.mock.calls[0]?.[1].forceAsk).toBe("over_authority")
+    })
+})
+
+describe("InternalProposalSettlerService > actions of a turn whose person may not write", () => {
+    it("makes a tag whose author may not write ask a person, judged by the author of the wake", async () => {
+        const { settler, engine, right } = await build({ mayWrite: false })
+        const turn = agentTurnViewOf({ source: "tag", context: { authorUserId: "user-9" } })
+
+        await settler.settle(turn, proposal({ actions: [action()] }), input)
+
+        expect(right.mayWrite).toHaveBeenCalledWith("tag", "user-9", "ws-1")
+        expect(engine.runWork.mock.calls[0]?.[1].forceAsk).toBe("over_authority")
+    })
+
+    it("asks when the wake has no author on record", async () => {
+        const { settler, right } = await build({ mayWrite: false })
+
+        await settler.settle(agentTurnViewOf({ source: "tag", context: {} }), proposal({ actions: [action()] }), input)
+
+        expect(right.mayWrite).toHaveBeenCalledWith("tag", null, "ws-1")
     })
 
     it("keys each action by its place in the proposal", async () => {

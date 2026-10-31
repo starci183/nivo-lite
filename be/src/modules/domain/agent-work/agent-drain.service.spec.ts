@@ -1,14 +1,16 @@
 import { Test } from "@nestjs/testing"
-import { fakeIds, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
-import { agentTurnQueueProviderOf, agentTurnViewOf as turn } from "@tests/fixtures/builders/agent-work.builder"
+import { fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { agentTurnViewOf as turn, agentWakeViewOf as endedWake } from "@tests/fixtures/builders/agent-work.builder"
+import { AGENT_TURN_QUEUE_PRODUCER } from "@modules/queues/agent-turn"
+import type { AgentTurnQueue } from "@modules/queues/agent-turn"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentDrainService } from "./agent-drain.service"
 import { AgentTurnsService } from "./agent-turns.service"
+import { AgentEndedWakesService } from "./agent-ended-wakes.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
-import { AGENT_TURN_EXECUTOR } from "./agent-work.decorators"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentTurnUsage } from "./agent-work.contracts"
@@ -29,13 +31,12 @@ const USAGE: AgentTurnUsage = { model: "p/m", promptTokens: 4, completionTokens:
 const DONE = { status: "done" as const, reason: null, outcome: { sent: true } }
 
 interface Options {
-    readonly executor?: boolean
     readonly handler?: boolean
 }
 
-const build = async ({ executor = true, handler = true }: Options = {}) => {
+const build = async ({ handler = true }: Options = {}) => {
     const turns = mock<AgentTurnsService>({
-        begin: jest.fn().mockResolvedValue({ result: "begun", turn: turn() }),
+        begin: jest.fn().mockResolvedValue({ result: "begun", turn: turn(), ended: [] }),
         touch: jest.fn().mockResolvedValue(true),
         bind: jest.fn().mockResolvedValue(undefined),
         propose: jest.fn().mockResolvedValue("stored"),
@@ -50,8 +51,12 @@ const build = async ({ executor = true, handler = true }: Options = {}) => {
     const runner = mock<AgentTurnExecutor>({
         run: jest.fn().mockResolvedValue({ kind: "proposal", proposal: { reply: "hi" }, usage: USAGE }),
     })
-    const handlers = mock<AgentWorkHandlersService>({ of: jest.fn().mockReturnValue(handler ? registered : undefined) })
-    const outbox = recordingQueueOutbox()
+    const handlers = mock<AgentWorkHandlersService>({
+        of: jest.fn().mockReturnValue(handler ? registered : undefined),
+        executorOf: jest.fn().mockReturnValue(runner),
+    })
+    const queue = mock<AgentTurnQueue>({ enqueueNextDrain: jest.fn().mockResolvedValue(undefined) })
+    const endedWakes = mock<AgentEndedWakesService>({ tell: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>()
     const tx = fakeTransaction(mockEntityManager())
     const container = await Test.createTestingModule({
@@ -62,19 +67,12 @@ const build = async ({ executor = true, handler = true }: Options = {}) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: IDS, useValue: fakeIds() },
             { provide: LOGGER, useValue: logger },
-            agentTurnQueueProviderOf(outbox),
-            ...(executor ? [{ provide: AGENT_TURN_EXECUTOR, useValue: runner }] : []),
+            { provide: AGENT_TURN_QUEUE_PRODUCER, useValue: queue },
+            { provide: AgentEndedWakesService, useValue: endedWakes },
         ],
     }).compile()
-    return {
-        service: container.get(AgentDrainService),
-        turns,
-        handler: registered,
-        executor: runner,
-        outbox,
-        logger,
-        tx,
-    }
+    const service = container.get(AgentDrainService)
+    return { service, turns, handler: registered, handlers, executor: runner, queue, endedWakes, logger, tx }
 }
 
 type Fixture = Awaited<ReturnType<typeof build>>
@@ -91,8 +89,12 @@ describe("AgentDrainService.drain, a turn that runs", () => {
             "00000000-0000-4000-8000-000000000001",
         )
         expect(handler.prepare).toHaveBeenCalledWith(turn(), expect.any(AbortSignal))
-        expect(turns.bind).toHaveBeenCalledWith(turn(), "runtime-1", "thread-1")
-        expect(executor.run).toHaveBeenCalledWith(turn(), PLAN, expect.any(AbortSignal))
+        expect(turns.bind).toHaveBeenCalledWith(turn(), "runtime-1", "thread-1:agent-1")
+        expect(executor.run).toHaveBeenCalledWith(
+            turn(),
+            { ...PLAN, threadKey: "thread-1:agent-1" },
+            expect.any(AbortSignal),
+        )
         expect(turns.propose).toHaveBeenCalledWith(turn(), { reply: "hi" })
         expect(handler.settle).toHaveBeenCalledWith(turn(), { reply: "hi" }, expect.any(AbortSignal))
         expect(turns.finish).toHaveBeenCalledWith(turn(), {
@@ -111,7 +113,7 @@ describe("AgentDrainService.drain, a turn that runs", () => {
     it("settles the proposal an earlier attempt stored and never asks the model again", async () => {
         const { service, turns, handler, executor } = await build()
         const stored = turn({ proposal: { reply: "stored" }, attempts: 2 })
-        turns.begin.mockResolvedValue({ result: "begun", turn: stored })
+        turns.begin.mockResolvedValue({ result: "begun", turn: stored, ended: [] })
 
         await service.drain(PAYLOAD)
 
@@ -145,7 +147,7 @@ describe("AgentDrainService.drain, a turn that runs", () => {
 describe("AgentDrainService.drain, a scope that has nothing to run", () => {
     it("ends quietly when the scope is busy, because the holder serves the wake", async () => {
         const { service, turns, handler, logger } = await build()
-        turns.begin.mockResolvedValue({ result: "busy" })
+        turns.begin.mockResolvedValue({ result: "busy", ended: [] })
 
         await service.drain(PAYLOAD)
 
@@ -159,12 +161,30 @@ describe("AgentDrainService.drain, a scope that has nothing to run", () => {
 
     it.each(["idle", "killed"] as const)("ends quietly when the scope is %s", async (result) => {
         const { service, turns, handler } = await build()
-        turns.begin.mockResolvedValue({ result })
+        turns.begin.mockResolvedValue({ result, ended: [] })
 
         await service.drain(PAYLOAD)
 
         expect(handler.prepare).not.toHaveBeenCalled()
         expect(turns.finish).not.toHaveBeenCalled()
+    })
+
+    it("hands the wakes begin ended to the ended-wakes service, whatever begin answered", async () => {
+        const { service, turns, endedWakes } = await build()
+        const ended = [{ state: "held" as const, wake: endedWake() }]
+        turns.begin.mockResolvedValue({ result: "killed", ended })
+        await service.drain(PAYLOAD)
+        expect(turns.finish).not.toHaveBeenCalled()
+        expect(endedWakes.tell).toHaveBeenCalledWith(ended)
+    })
+
+    it("holds the wake for want of an executor, after the handler has prepared", async () => {
+        const { service, turns, handler, handlers } = await build()
+        handlers.executorOf.mockReturnValue(undefined)
+        await service.drain(PAYLOAD)
+        expect(turns.bind).not.toHaveBeenCalled()
+        expect(turns.finish).toHaveBeenCalledWith(turn(), expect.objectContaining({ reason: "no_executor" }))
+        expect(handler.prepare).toHaveBeenCalled()
     })
 
     it("holds the wake for want of a handler", async () => {
@@ -179,19 +199,6 @@ describe("AgentDrainService.drain, a scope that has nothing to run", () => {
         expect(turns.finish).toHaveBeenCalledWith(
             turn(),
             expect.objectContaining({ status: "held", reason: "no_handler" }),
-        )
-    })
-
-    it("holds the wake for want of an executor, after the handler has prepared", async () => {
-        const { service, turns, handler } = await build({ executor: false })
-
-        await service.drain(PAYLOAD)
-
-        expect(handler.prepare).toHaveBeenCalled()
-        expect(turns.bind).not.toHaveBeenCalled()
-        expect(turns.finish).toHaveBeenCalledWith(
-            turn(),
-            expect.objectContaining({ status: "held", reason: "no_executor" }),
         )
     })
 })
@@ -258,37 +265,109 @@ describe("AgentDrainService.drain, a turn that fails or leaves more to do", () =
         })
     })
 
-    it("fails the wake with a generic code for any other error", async () => {
-        const { service, turns, executor } = await build()
+    it("fails the wake with a generic code for any other error, and retries a tag silently while attempts remain", async () => {
+        const { service, turns, executor, handler } = await build()
+        const tag = turn({ source: "tag", attempts: 1, maxAttempts: 3 })
+        turns.begin.mockResolvedValue({ result: "begun", turn: tag, ended: [] })
         executor.run.mockRejectedValue(new Error("socket closed"))
 
         await service.drain(PAYLOAD)
 
+        expect(handler.holdOver).not.toHaveBeenCalled()
         expect(turns.finish).toHaveBeenCalledWith(
-            turn(),
+            tag,
             expect.objectContaining({ status: "failed", errorCode: "AGENT_WORK_UNEXPECTED" }),
         )
     })
+})
 
+describe("AgentDrainService.drain, a runtime that is down", () => {
+    it("gives a customer the holding line at once when the runtime is down, ends the wake and still counts the failure", async () => {
+        const { service, turns, executor, handler } = await build()
+        executor.run.mockRejectedValue(new Error("socket closed"))
+
+        await service.drain(PAYLOAD)
+
+        expect(handler.holdOver).toHaveBeenCalledWith(turn(), "error")
+        expect(turns.propose).not.toHaveBeenCalled()
+        expect(turns.finish).toHaveBeenCalledWith(turn(), {
+            status: "done",
+            reason: "holding_line",
+            outcome: null,
+            errorCode: "AGENT_WORK_UNEXPECTED",
+            usage: null,
+        })
+    })
+
+    it.each(["tag", "internal", "schedule"] as const)(
+        "gives up a %s wake on its last attempt: it is announced once through the handler and fails",
+        async (source) => {
+            const { service, turns, executor, handler, logger } = await build()
+            const last = turn({ source, attempts: 3, maxAttempts: 3 })
+            turns.begin.mockResolvedValue({ result: "begun", turn: last, ended: [] })
+            executor.run.mockRejectedValue(new Error("socket closed"))
+
+            await service.drain(PAYLOAD)
+
+            expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.WakeDead, {
+                agentId: "agent-1",
+                wakeId: "wake-1",
+            })
+            expect(handler.holdOver).toHaveBeenCalledWith(last, "error")
+            expect(turns.finish).toHaveBeenCalledWith(
+                last,
+                expect.objectContaining({ status: "failed", errorCode: "AGENT_WORK_UNEXPECTED" }),
+            )
+        },
+    )
+
+    it("fails the wake all the same when the hold-over line itself cannot be written, and logs why", async () => {
+        const { service, turns, executor, handler, logger } = await build()
+        const cause = new Error("channel down")
+        executor.run.mockRejectedValue(new Error("socket closed"))
+        handler.holdOver.mockRejectedValue(cause)
+
+        await service.drain(PAYLOAD)
+
+        expect(logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFailed, cause, {
+            agentId: "agent-1",
+            wakeId: "wake-1",
+        })
+        expect(turns.finish).toHaveBeenCalledWith(turn(), expect.objectContaining({ status: "failed" }))
+    })
+
+    it("fails the wake when it ran out of attempts and no handler is left to announce it", async () => {
+        const { service, turns, handler, handlers } = await build()
+        const last = turn({ attempts: 2, maxAttempts: 2 })
+        turns.begin.mockResolvedValue({ result: "begun", turn: last, ended: [] })
+        handler.prepare.mockRejectedValue(new Error("boom"))
+        handlers.of.mockReturnValueOnce(handler).mockReturnValue(undefined)
+
+        await service.drain(PAYLOAD)
+
+        expect(turns.finish).toHaveBeenCalledWith(last, expect.objectContaining({ status: "failed" }))
+    })
+})
+
+describe("AgentDrainService.drain, a turn that leaves more to do", () => {
     it("starts the next drain in a transaction when another wake of the scope is due", async () => {
-        const { service, turns, outbox, tx } = await build()
+        const { service, turns, queue, tx } = await build()
         turns.finish.mockResolvedValue({ fenced: false, more: true })
 
         await service.drain(PAYLOAD)
 
         expect(tx.commits).toBe(1)
-        expect(outbox.jobsOf("agent_turn")).toEqual([{ queue: "agent_turn", payload: PAYLOAD }])
-        expect(outbox.allInTransaction).toBe(true)
+        expect(queue.enqueueNextDrain).toHaveBeenCalledWith(PAYLOAD, "turn-1", expect.anything())
     })
 
     it("starts nothing when the lease was lost before the turn ended, even if wakes are due", async () => {
-        const { service, turns, outbox, logger } = await build()
+        const { service, turns, queue, logger } = await build()
         turns.finish.mockResolvedValue({ fenced: true, more: true })
 
         await service.drain(PAYLOAD)
 
         expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFenced, { agentId: "agent-1", wakeId: "wake-1" })
-        expect(outbox.jobs).toEqual([])
+        expect(queue.enqueueNextDrain).not.toHaveBeenCalled()
     })
 })
 
@@ -366,6 +445,36 @@ describe("AgentDrainService.drain, the heartbeat", () => {
         })
         expect(fixture.turns.touch).toHaveBeenCalledTimes(2)
         expect(seen.signal?.aborted).toBe(false)
+        release()
+        await done
+    })
+})
+
+describe("AgentDrainService.drain, the heartbeat budget", () => {
+    beforeEach(() => {
+        jest.useFakeTimers()
+    })
+
+    afterEach(() => {
+        jest.useRealTimers()
+    })
+
+    it("leaves the lease to lapse and aborts the turn once it has used its beats", async () => {
+        const fixture = await build()
+        const { release, seen } = slowRun(fixture)
+
+        const done = fixture.service.drain(PAYLOAD)
+        await jest.advanceTimersByTimeAsync(20 * 30_000)
+        expect(fixture.turns.touch).toHaveBeenCalledTimes(20)
+        expect(seen.signal?.aborted).toBe(false)
+        await jest.advanceTimersByTimeAsync(30_000)
+
+        expect(fixture.turns.touch).toHaveBeenCalledTimes(20)
+        expect(seen.signal?.aborted).toBe(true)
+        expect(fixture.logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnOverran, {
+            agentId: "agent-1",
+            wakeId: "wake-1",
+        })
         release()
         await done
     })

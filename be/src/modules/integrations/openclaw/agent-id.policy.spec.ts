@@ -14,7 +14,17 @@ describe("agent ids", () => {
     it("derives one agent per workspace and module", async () => {
         const subject = await build()
 
-        expect(subject.agentIdFor("0123abcd-0000-4000-8000-000000000000", "Chat_Bot!")).toBe("ws-0123abcd-chatbot")
+        expect(subject.agentIdFor("0123abcd-0000-4000-8000-000000000000", "Chat_Bot!")).toBe(
+            "ws-0123abcd00004000-chatbot",
+        )
+    })
+
+    it("tells two workspaces apart that share the first eight hex of their ids", async () => {
+        const subject = await build()
+
+        expect(subject.agentIdFor("0123abcd-1111-4000-8000-000000000000", "chatbot")).not.toBe(
+            subject.agentIdFor("0123abcd-2222-4000-8000-000000000000", "chatbot"),
+        )
     })
 
     it("derives the thread key inside an agent", async () => {

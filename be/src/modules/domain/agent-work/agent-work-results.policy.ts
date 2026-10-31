@@ -1,10 +1,9 @@
 import { isRecord } from "@modules/platform/primitives"
+import type { AgentBegin, AgentEndedWake, AgentFinish, AgentProposeResult } from "./agent-work-turns.contracts"
 import type {
-    AgentBegin,
-    AgentFinish,
     AgentLocale,
-    AgentProposeResult,
     AgentTurnView,
+    AgentWakeView,
     AgentWakeContext,
     AgentWakeSource,
     AgentWorkDue,
@@ -61,19 +60,17 @@ export const contextOf = (value: unknown): AgentWakeContext => {
     }
 }
 
-/** The turn a `begun` answer describes, or null when a field is missing or of the wrong kind. */
-const turnOf = (agentId: string, scopeKey: string, answer: Record<string, unknown>): AgentTurnView | null => {
+/** The wake an answer describes, or null when a field is missing or of the wrong kind. */
+const wakeOf = (agentId: string, scopeKey: string, answer: Record<string, unknown>): AgentWakeView | null => {
     const source = sourceOf(answer.source)
     const createdAt = dateOf(answer.wakeCreatedAt)
     const actor = idOrNull(answer.actorMemberId)
-    const { workspaceId, fence, turnId, wakeId, eventKey, context, attempts, maxAttempts } = answer
+    const { workspaceId, wakeId, eventKey, context, attempts, maxAttempts } = answer
     if (
         source === null ||
         createdAt === null ||
         actor === undefined ||
         typeof workspaceId !== "string" ||
-        typeof fence !== "number" ||
-        typeof turnId !== "string" ||
         typeof wakeId !== "string" ||
         typeof eventKey !== "string" ||
         typeof attempts !== "number" ||
@@ -85,8 +82,6 @@ const turnOf = (agentId: string, scopeKey: string, answer: Record<string, unknow
         workspaceId,
         agentId,
         scopeKey,
-        fence,
-        turnId,
         wakeId,
         source,
         eventKey,
@@ -95,18 +90,42 @@ const turnOf = (agentId: string, scopeKey: string, answer: Record<string, unknow
         attempts,
         maxAttempts,
         wakeCreatedAt: createdAt,
-        proposal: answer.proposal ?? null,
     }
+}
+
+/** The turn a `begun` answer describes, or null when a field is missing or of the wrong kind. */
+const turnOf = (agentId: string, scopeKey: string, answer: Record<string, unknown>): AgentTurnView | null => {
+    const wake = wakeOf(agentId, scopeKey, answer)
+    const { fence, turnId } = answer
+    if (wake === null || typeof fence !== "number" || typeof turnId !== "string") return null
+    return { ...wake, fence, turnId, proposal: answer.proposal ?? null }
+}
+
+/** The wakes `begin` ended itself, or null when one is of the wrong shape; a missing list is none. */
+const endedOf = (agentId: string, scopeKey: string, value: unknown): ReadonlyArray<AgentEndedWake> | null => {
+    if (value === undefined) return []
+    if (!Array.isArray(value)) return null
+    const entries: ReadonlyArray<unknown> = value
+    const ended: Array<AgentEndedWake> = []
+    for (const entry of entries) {
+        if (!isRecord(entry) || (entry.state !== "held" && entry.state !== "dead")) return null
+        const wake = wakeOf(agentId, scopeKey, entry)
+        if (wake === null) return null
+        ended.push({ state: entry.state, wake })
+    }
+    return ended
 }
 
 /** Reads the answer of `agent_turn_begin` for the agent and scope it was asked about; null when it is not one of the four shapes. */
 export const parseBegin = (value: unknown, agentId: string, scopeKey: string): AgentBegin | null => {
     if (!isRecord(value)) return null
+    const ended = endedOf(agentId, scopeKey, value.ended)
+    if (ended === null) return null
     const result = value.result
-    if (result === "killed" || result === "busy" || result === "idle") return { result }
+    if (result === "killed" || result === "busy" || result === "idle") return { result, ended }
     if (result !== "begun") return null
     const turn = turnOf(agentId, scopeKey, value)
-    return turn === null ? null : { result: "begun", turn }
+    return turn === null ? null : { result: "begun", turn, ended }
 }
 
 /** Reads the answer of `agent_turn_finish`; null when it is not `{fenced, more}`. */

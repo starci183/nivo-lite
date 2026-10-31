@@ -5,6 +5,7 @@ import { createRedisBackend, withBackend } from "bullmq"
 import {
     QUEUE_FACTORY,
     QUEUE_OUTBOX,
+    QUEUE_SCHEDULES,
     QUEUE_STATUS,
     QUEUE_TIMEOUT,
     QUEUE_TRANSPORT,
@@ -50,6 +51,7 @@ export class QueueModule extends ConfigurableModuleClass {
                 BullmqQueueDeliveryClient,
                 BullmqQueueTransportClient,
                 { provide: QUEUE_TRANSPORT, useExisting: BullmqQueueTransportClient },
+                { provide: QUEUE_SCHEDULES, useExisting: BullmqQueueTransportClient },
                 QueueOutboxService,
                 QueueRelayService,
                 QueueWorkerService,
@@ -58,7 +60,14 @@ export class QueueModule extends ConfigurableModuleClass {
                 { provide: QUEUE_OUTBOX, useExisting: QueueOutboxService },
                 { provide: QUEUE_WORKER_REGISTRY, useExisting: QueueWorkerService },
             ],
-            exports: [QUEUE_TIMEOUT, QUEUE_OUTBOX, QUEUE_WORKER_REGISTRY, QUEUE_TRANSPORT, QUEUE_STATUS],
+            exports: [
+                QUEUE_TIMEOUT,
+                QUEUE_OUTBOX,
+                QUEUE_WORKER_REGISTRY,
+                QUEUE_TRANSPORT,
+                QUEUE_SCHEDULES,
+                QUEUE_STATUS,
+            ],
         }
     }
 }

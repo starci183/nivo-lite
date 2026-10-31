@@ -43,7 +43,7 @@ describe("AgentTurnsService.begin", () => {
         })
         const service = await build(em)
 
-        await expect(service.begin("agent-1", "agent", "worker-1")).resolves.toEqual({ result: "idle" })
+        await expect(service.begin("agent-1", "agent", "worker-1")).resolves.toEqual({ result: "idle", ended: [] })
         expect(em.query).toHaveBeenCalledWith(call("agent_turn_begin", 4), ["agent-1", "agent", "worker-1", 90])
     })
 
@@ -70,6 +70,7 @@ describe("AgentTurnsService.begin", () => {
         await expect(service.begin("agent-1", "conversation:conv-1", "worker-1")).resolves.toEqual({
             result: "begun",
             turn,
+            ended: [],
         })
     })
 

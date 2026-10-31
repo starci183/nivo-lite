@@ -100,6 +100,9 @@ backing:
 # (db/migrations/20261105000000_queue-bullmq_contract_pgmq-drop.sql: each job is one job_enqueue to the outbox the relay publishes) and the schedule is the exact
 # cron expression of the job. `cli jobs tick <id>` enqueues one tick by hand (replay of a missed tick).
 jobs:
+  agent-work-sweep:
+    schedule: "*/1 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick agent-work-sweep
   accounting-desk-morning:
     schedule: "30 23 * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick accounting-desk-morning

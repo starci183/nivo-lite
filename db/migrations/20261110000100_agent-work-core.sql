@@ -8,7 +8,7 @@
 CREATE TABLE public.agent_work_settings (
     workspace_id uuid NOT NULL PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE CASCADE,
     work_enabled boolean NOT NULL DEFAULT true,
-    road text NOT NULL DEFAULT 'legacy',
+    road text NOT NULL DEFAULT 'core',
     background_daily_cap integer NOT NULL DEFAULT 200,
     paused_by uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL,
     paused_at timestamptz,
@@ -274,9 +274,31 @@ BEGIN
 END;
 $$;
 
+-- A wake that ended inside begin with no turn to hand a handler, as the JSON the back end reads: its state ('held' by a switch or 'dead'
+-- past its budget) and the ids and flags its handler needs to say the holding line or tell the owner.
+CREATE FUNCTION public.agent_wake_ended(w public.agent_wakes, p_state text) RETURNS jsonb
+    LANGUAGE sql IMMUTABLE
+    SET search_path TO 'public'
+    AS $$
+  SELECT jsonb_build_object(
+    'state', p_state,
+    'workspaceId', w.workspace_id,
+    'wakeId', w.id,
+    'source', w.source,
+    'eventKey', w.event_key,
+    'context', w.context,
+    'actorMemberId', w.actor_member_id,
+    'attempts', w.attempts,
+    'maxAttempts', w.max_attempts,
+    'wakeCreatedAt', w.created_at
+  );
+$$;
+
 -- Starts one turn of an agent in one scope. Answers {result: 'killed' | 'busy' | 'idle'} or, for 'begun', the fence, the turn, the wake and
 -- the proposal a previous attempt stored (null when none). The lease row of the scope is the lock: a held lease answers busy, a lapsed
--- one is taken over and its turn abandoned. A wake past its attempt budget is dead before any model call; attempts rise here.
+-- one is taken over and its turn abandoned. A wake past its attempt budget is dead before any model call; attempts rise here. Every
+-- answer carries 'ended': the wakes this call held (a switch is off) or dead (budget spent), each once, so the drain can say the
+-- holding line to the customer or the owner's line for a wake that has no turn.
 CREATE FUNCTION public.agent_turn_begin(p_agent uuid, p_scope text, p_owner text, p_lease_s integer) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
@@ -288,16 +310,32 @@ DECLARE
   v_turn_id uuid;
   v_proposal jsonb;
   v_fence bigint;
+  v_ended jsonb := '[]'::jsonb;
 BEGIN
   SELECT a.workspace_id INTO v_workspace FROM public.agents a WHERE a.id = p_agent;
   IF v_workspace IS NULL THEN
-    RETURN jsonb_build_object('result', 'idle');
+    RETURN jsonb_build_object('result', 'idle', 'ended', v_ended);
   END IF;
   INSERT INTO public.agent_work_state (agent_id, workspace_id) VALUES (p_agent, v_workspace) ON CONFLICT (agent_id) DO NOTHING;
   IF public.agent_work_is_off(p_agent, v_workspace) THEN
-    UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
-     WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending';
-    RETURN jsonb_build_object('result', 'killed');
+    WITH held AS (
+      UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
+       WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending' RETURNING w.*
+    )
+    SELECT COALESCE(jsonb_agg(public.agent_wake_ended(ROW(h.*)::public.agent_wakes, 'held')), '[]'::jsonb) INTO v_ended FROM held h;
+    -- A turn whose worker crashed before the switch is taken over here too, or its lease would lapse for the sweep to drain again every minute.
+    SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+    IF FOUND AND v_lease.running_turn_id IS NOT NULL AND v_lease.lease_until <= now() THEN
+      UPDATE public.agent_turns t SET status = 'abandoned' WHERE t.id = v_lease.running_turn_id AND t.status IN ('running', 'proposed');
+      WITH crashed AS (
+        UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
+         WHERE w.status = 'running' AND w.id = (SELECT t.wake_id FROM public.agent_turns t WHERE t.id = v_lease.running_turn_id) RETURNING w.*
+      )
+      SELECT v_ended || COALESCE(jsonb_agg(public.agent_wake_ended(ROW(c.*)::public.agent_wakes, 'held')), '[]'::jsonb) INTO v_ended FROM crashed c;
+      UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
+       WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+    END IF;
+    RETURN jsonb_build_object('result', 'killed', 'ended', v_ended);
   END IF;
   INSERT INTO public.agent_work_leases (agent_id, scope_key, workspace_id) VALUES (p_agent, p_scope, v_workspace)
     ON CONFLICT (agent_id, scope_key) DO NOTHING;
@@ -317,10 +355,11 @@ BEGIN
     IF NOT FOUND THEN
       UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
        WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
-      RETURN jsonb_build_object('result', 'idle');
+      RETURN jsonb_build_object('result', 'idle', 'ended', v_ended);
     END IF;
     EXIT WHEN v_wake.attempts < v_wake.max_attempts;
     UPDATE public.agent_wakes w SET status = 'dead', reason = 'attempts', finished_at = now() WHERE w.id = v_wake.id;
+    v_ended := v_ended || jsonb_build_array(public.agent_wake_ended(v_wake, 'dead'));
   END LOOP;
   UPDATE public.agent_wakes w SET status = 'running', attempts = w.attempts + 1, started_at = COALESCE(w.started_at, now())
    WHERE w.id = v_wake.id;
@@ -349,7 +388,8 @@ BEGIN
     'attempts', v_wake.attempts + 1,
     'maxAttempts', v_wake.max_attempts,
     'wakeCreatedAt', v_wake.created_at,
-    'proposal', v_proposal
+    'proposal', v_proposal,
+    'ended', v_ended
   );
 END;
 $$;
@@ -391,7 +431,7 @@ $$;
 
 -- Ends the turn under the fence. p_status is the end of the wake: 'done', 'skipped', 'held' or 'failed' (retried after p_retry_wait_s
 -- until its budget is spent, then dead). A failure counts toward the breaker: p_breaker_after failures in a row hold the agent's
--- background work for p_breaker_s. A done background turn counts toward the day's cap. Releases the lease and answers {fenced, more}:
+-- background work for p_breaker_s; a done turn closes the breaker only when the model answered. A done or failed background turn counts toward the day's cap. Releases the lease and answers {fenced, more}:
 -- more says a wake of the same scope is due now, so the caller enqueues the next drain.
 CREATE FUNCTION public.agent_turn_finish(
     p_agent uuid, p_scope text, p_fence bigint, p_turn uuid, p_status text, p_reason text, p_outcome jsonb, p_error_code text,
@@ -408,6 +448,9 @@ DECLARE
   v_turn_status text;
   v_today date := (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
   v_more boolean;
+  v_failed boolean;
+  v_answered boolean;
+  v_spends boolean;
 BEGIN
   SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
   IF NOT FOUND OR v_lease.fence <> p_fence OR v_lease.running_turn_id IS DISTINCT FROM p_turn THEN
@@ -441,25 +484,29 @@ BEGIN
       not_before = CASE WHEN v_wake_status = 'pending' THEN now() + make_interval(secs => p_retry_wait_s) ELSE w.not_before END,
       finished_at = CASE WHEN v_wake_status = 'pending' THEN NULL ELSE now() END
    WHERE w.id = v_wake.id;
-  IF p_status = 'failed' THEN
-    UPDATE public.agent_work_state s SET
-        failures = s.failures + 1,
-        breaker_until = CASE WHEN s.failures + 1 >= p_breaker_after THEN now() + make_interval(secs => p_breaker_s) ELSE s.breaker_until END,
-        last_turn_at = now()
-     WHERE s.agent_id = p_agent;
-  ELSIF p_status = 'done' THEN
-    UPDATE public.agent_work_state s SET
-        failures = 0,
-        breaker_until = NULL,
-        last_turn_at = now(),
-        background_turns = CASE
-          WHEN v_wake.source NOT IN ('internal', 'schedule') THEN s.background_turns
-          WHEN s.background_day = v_today THEN s.background_turns + 1
-          ELSE 1 END,
-        background_day = CASE WHEN v_wake.source IN ('internal', 'schedule') THEN v_today ELSE s.background_day END
-     WHERE s.agent_id = p_agent;
-  ELSE
-    UPDATE public.agent_work_state s SET last_turn_at = now() WHERE s.agent_id = p_agent;
+  -- A failure is a failed turn, or a customer's wake ended by the holding line after an error (p_error_code set). The breaker closes only on a
+  -- turn the model really answered (a stored proposal): a hold-over, a skip or a turn with no model run says nothing about the runtime. A
+  -- background turn spends the day's cap whether it was done or failed, since the model may have run either way.
+  v_failed := p_status = 'failed' OR p_error_code IS NOT NULL;
+  v_answered := p_status = 'done' AND p_error_code IS NULL AND v_turn.proposal IS NOT NULL;
+  v_spends := v_wake.source IN ('internal', 'schedule') AND (v_failed OR p_status = 'done');
+  UPDATE public.agent_work_state s SET
+      failures = CASE WHEN v_failed THEN s.failures + 1 WHEN v_answered THEN 0 ELSE s.failures END,
+      breaker_until = CASE
+        WHEN v_failed AND s.failures + 1 >= p_breaker_after THEN now() + make_interval(secs => p_breaker_s)
+        WHEN v_answered THEN NULL
+        ELSE s.breaker_until END,
+      last_turn_at = now(),
+      background_turns = CASE
+        WHEN NOT v_spends THEN s.background_turns
+        WHEN s.background_day = v_today THEN s.background_turns + 1
+        ELSE 1 END,
+      background_day = CASE WHEN v_spends THEN v_today ELSE s.background_day END
+   WHERE s.agent_id = p_agent;
+  -- A task wake that was skipped (quota, cap) must not end the task: the wake cleared the task's time, so it is armed again for an hour on.
+  IF p_status = 'skipped' AND v_wake.context ->> 'taskId' IS NOT NULL THEN
+    UPDATE public.agent_tasks t SET next_action_at = now() + interval '1 hour'
+     WHERE t.id = (v_wake.context ->> 'taskId')::uuid AND t.status = 'open' AND t.next_action_at IS NULL;
   END IF;
   UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
    WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
@@ -507,6 +554,7 @@ $$;
 REVOKE ALL ON FUNCTION public.agent_work_is_off(uuid, uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_work_has_agent(uuid, uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_work_switch(uuid, uuid, boolean, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_wake_ended(public.agent_wakes, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_turn_begin(uuid, text, text, integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_turn_touch(uuid, text, bigint, integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_turn_propose(uuid, uuid, text, bigint, jsonb) FROM PUBLIC, anon, authenticated;
@@ -515,6 +563,7 @@ REVOKE ALL ON FUNCTION public.agent_work_due(integer) FROM PUBLIC, anon, authent
 GRANT EXECUTE ON FUNCTION public.agent_work_is_off(uuid, uuid) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_work_has_agent(uuid, uuid) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_work_switch(uuid, uuid, boolean, uuid) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_wake_ended(public.agent_wakes, text) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_turn_touch(uuid, text, bigint, integer) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_turn_propose(uuid, uuid, text, bigint, jsonb) TO app_be;

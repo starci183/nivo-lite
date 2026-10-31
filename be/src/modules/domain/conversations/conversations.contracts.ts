@@ -43,6 +43,39 @@ export interface MetaInbound {
     readonly eventId: string
 }
 
+/** A customer turn, or none when its conversation or message is gone. */
+export type OptionalCustomerTurn = CustomerTurn | undefined
+
+/** Which customer message a turn answers: what a queued job or a wake carries. */
+export interface TurnRef {
+    /** The conversation. */
+    readonly conversationId: string
+    /** The stored customer message. */
+    readonly messageId: string
+    /** The channel's own id of that message. */
+    readonly channelEventId: string
+}
+
+/** A stored customer message that is waiting to be answered. */
+export interface MessageIntake {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The conversation. */
+    readonly conversationId: string
+    /** The stored customer message. */
+    readonly messageId: string
+    /** The channel's own id of the message: the idempotency key of everything the answer starts. */
+    readonly channelEventId: string
+    /** True when the customer was just met, so the answer should ask the channel for their name. */
+    readonly lookupName: boolean
+}
+
+/** A stored customer message with the agent that speaks in its conversation. */
+export interface CustomerIntake extends MessageIntake {
+    /** The agent that answers. */
+    readonly agentId: string
+}
+
 /** The front-door agent bound to a connection. */
 export interface FrontAgent {
     /** The agent id. */
@@ -63,6 +96,16 @@ export interface CustomerTurn {
     readonly channelEventId: string
     /** The conversation so far, oldest first, the customer's message last. */
     readonly transcript: ReadonlyArray<TranscriptLine>
+    /** The turn and wake that run it on the core road; absent on the legacy road. Work it opens carries it. */
+    readonly origin?: TurnOrigin
+}
+
+/** The turn and the wake a piece of work came from. */
+export interface TurnOrigin {
+    /** The turn row. */
+    readonly turnId: string
+    /** The wake that started it. */
+    readonly wakeId: string
 }
 
 /** What the runtime proposes for one turn. It only proposes: the reply passes through the outcome handler before it leaves. */

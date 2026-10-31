@@ -5,9 +5,7 @@ const SUBJECT = Symbol("knowledge-view.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [
-            { provide: SUBJECT, useValue: { audienceOfModule, viewOf, knowledgeFolderOf } },
-        ],
+        providers: [{ provide: SUBJECT, useValue: { audienceOfModule, viewOf, knowledgeFolderOf } }],
     }).compile()
     return moduleRef.get<typeof import("./knowledge-view.policy")>(SUBJECT)
 }
@@ -67,5 +65,14 @@ describe("knowledge view policy", () => {
         expect(subject.knowledgeFolderOf("chatbot")).toBe("chatbot")
         expect(subject.knowledgeFolderOf("accounting")).toBe("accounting")
         expect(subject.knowledgeFolderOf("unknown")).toBeNull()
+    })
+})
+
+describe("knowledge view policy for Sales", () => {
+    it("reads the team's knowledge in the Office and public knowledge only when it answers a customer on a channel", async () => {
+        const subject = await build()
+
+        expect(subject.viewOf({ workspaceId: "ws-1", module: "sales" }).audience).toBe("internal")
+        expect(subject.viewOf({ workspaceId: "ws-1", module: "sales", audience: "customer" }).audience).toBe("customer")
     })
 })

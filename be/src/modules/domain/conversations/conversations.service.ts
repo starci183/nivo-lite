@@ -14,6 +14,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
+import { CustomerIntakeService } from "./customer-intake.service"
 import type { FrontAgent, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
 
 const LOCALE = "vi"
@@ -36,14 +37,16 @@ interface Hearing extends Meeting {
 
 @Injectable()
 /**
- * Turns a verified delivery of a messaging channel into the stored conversation and the job that answers it. It runs inside the transaction of the
- * webhook inbox, so the message and its job exist together or not at all. A connection with nobody bound only stores the message in the inbox.
+ * Turns a verified delivery of a messaging channel into the stored conversation and the job or wake that answers it, on the road the
+ * workspace is on. It runs inside the transaction of the webhook inbox, so the message and its answer exist together or not at all. A
+ * connection with nobody bound only stores the message in the inbox.
  */
 export class ConversationsService {
     constructor(
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly chatTurns: ChatTurnQueue,
+        private readonly intake: CustomerIntakeService,
         private readonly connections: ConnectionsService,
         private readonly conversations: AgentConversationsService,
         private readonly messages: AgentMessagesService,
@@ -172,10 +175,10 @@ export class ConversationsService {
         const messageId = await this.messages.storeCustomer(hearing.workspaceId, conversation.id, hearing.text, manager)
         // A person who took the conversation over answers it themselves: the message is stored and the AI stays quiet.
         if (conversation.handledBy !== null) return
-        await this.chatTurns.enqueueChatTurn(
+        await this.intake.answer(
             {
-                kind: "turn",
                 workspaceId: hearing.workspaceId,
+                agentId: conversation.agentId,
                 conversationId: conversation.id,
                 messageId,
                 channelEventId: hearing.channelEventId,

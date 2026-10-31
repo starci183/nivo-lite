@@ -86,11 +86,12 @@ export const toCancelCommandRequest = (workspaceId: string, input: OfficeCandida
 /** Maps one page of the thread to the GraphQL type. */
 export const toOfficeMessagePageType = (page: MessagePage): OfficeMessagePageType => ({ ...page })
 
-/** Maps the line of the GraphQL input, with the workspace it names, to the command request. */
+/** Maps the line of the GraphQL input, with the workspace it names and the caller's language, to the command request. */
 export const toPostOfficeMessageRequest = (
     workspaceId: string,
     input: PostOfficeMessageInput,
-): PostOfficeMessageRequest => ({ workspaceId, ...input })
+    locale: Locale,
+): PostOfficeMessageRequest => ({ workspaceId, ...input, locale })
 
 /** The answer of a mutation that returns nothing else. */
 export const toOfficeAckType = (): OfficeAckType => ({ ok: true })

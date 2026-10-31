@@ -5,6 +5,7 @@ import { AgentIdentityCard } from "@/components/blocks/AgentIdentityCard"
 import { AgentLiveCard } from "@/components/blocks/AgentLiveCard"
 import { LoyaltyProgramSettings } from "@/components/blocks/LoyaltyProgramSettings"
 import { AgentModeCard } from "@/components/blocks/AgentModeCard"
+import { AgentWorkSwitchCard } from "@/components/blocks/AgentWorkSwitchCard"
 import { AgentRemoveCard } from "@/components/blocks/AgentRemoveCard"
 import { AgentReplyCard } from "@/components/blocks/AgentReplyCard"
 import { AgentSyncCard } from "@/components/blocks/AgentSyncCard"
@@ -34,6 +35,7 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
                 </div>
                 <div className={COLUMN}>
                     <AgentLiveCard installationId={installationId} module={module} />
+                    <AgentWorkSwitchCard installationId={installationId} />
                     <AgentConnectionAccess installationId={installationId} module={module} />
                     <AgentAutomations />
                     <AgentSyncCard installationId={installationId} />

@@ -88,3 +88,15 @@ export const KNOWLEDGE_SOURCE_INDEXED_TOPIC = "knowledge_source_indexed"
 
 /** The queue of the `brain` consumer of `knowledge_source_indexed`. */
 export const KNOWLEDGE_SOURCE_INDEXED_BRAIN_TOPIC_QUEUE = "knowledge_source_indexed__brain"
+
+/** The queue of the `agent_wakes` consumer of `bank_credit_booked`. */
+export const BANK_CREDIT_BOOKED_AGENT_WAKES_TOPIC_QUEUE = "bank_credit_booked__agent_wakes"
+
+/** The queue of the `agent_wakes` consumer of `payment_reconciled`. */
+export const PAYMENT_RECONCILED_AGENT_WAKES_TOPIC_QUEUE = "payment_reconciled__agent_wakes"
+
+/** The queue of the `agent_wakes` consumer of `knowledge_source_indexed`. */
+export const KNOWLEDGE_SOURCE_INDEXED_AGENT_WAKES_TOPIC_QUEUE = "knowledge_source_indexed__agent_wakes"
+
+/** The queue of the `agent_wakes` consumer of `installation_changed`. */
+export const INSTALLATION_CHANGED_AGENT_WAKES_TOPIC_QUEUE = "installation_changed__agent_wakes"

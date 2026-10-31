@@ -1,4 +1,21 @@
+import type { AgentTurnPlan } from "@modules/domain/agent-work"
+import type { Installation } from "@modules/domain/agents"
 import type { ChatBookingRequest } from "@modules/domain/work-performers"
+import type { KnowledgeSources } from "./gateway-turns.contracts"
+
+/** The authoritative context of a turn and the knowledge it quotes. */
+export interface TurnSystem {
+    /** The system text the agent answers under. */
+    readonly text: string
+    /** The knowledge the recall put into that text, as card sources. */
+    readonly sources: KnowledgeSources
+}
+
+/** The installation of an agent when it runs (none when the agent has none), or why it does not answer. */
+export type InstallationOrReason = Installation | string | null
+
+/** The plan of a customer turn on the core road, or why it cannot run. */
+export type TurnPlanAnswer = AgentTurnPlan | string
 /** A job application the chat captured: a job, a person, a contact and a clear consent; Hiring validates it again. */
 export interface ChatApplicationProposal {
     /** The code of the job in the open jobs block. */

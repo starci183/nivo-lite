@@ -1,3 +1,4 @@
+import type { AgentTurnView, AgentWakeView } from "@modules/domain/agent-work"
 import type { ProposedCommand } from "@modules/domain/ai-tasks"
 import type { OptionalMessageCursor } from "@modules/domain/messages"
 import type { Locale } from "@modules/platform/i18n"
@@ -301,4 +302,63 @@ export interface ApprovalView {
     readonly nextAction: string
     /** The staff member the work item is assigned to; null means only owner and manager decide. */
     readonly assignedStaffId: string | null
+}
+
+/** What posting a line that may tag agents asks for. */
+export interface OfficeTagRequest {
+    /** The text of the line. */
+    readonly body: string
+    /** The Hub room; null is the general Office room. */
+    readonly room: string | null
+    /** The language of the notes NIVO writes and of the answer. */
+    readonly locale: Locale
+}
+
+/** The catalog keys of the lines NIVO writes when a tag cannot be answered. */
+export type TagLineKey =
+    | "office.tagRefused"
+    | "office.tagWorkOff"
+    | "office.tagNotApplied"
+    | "office.tagPaused"
+    | "office.tagQuota"
+    | "office.tagBusy"
+    | "office.tagFailed"
+
+/** Whose voice a line has: the agent's own, or NIVO's note. */
+export type TagVoice = "agent" | "nivo"
+
+/** Who speaks the answer. */
+export interface TagSpeaker {
+    /** The agent id. */
+    readonly id: string
+    /** The agent's name. */
+    readonly name: string
+}
+
+/** One line of the talk a tagged agent reads: who said it and what. */
+export interface TranscriptLine {
+    /** The line's id. */
+    readonly id: string
+    /** The name of whoever said it. */
+    readonly author: string
+    /** What was said. */
+    readonly body: string
+}
+
+/** The talk a tag wake reads: what was said before, and the line that tagged the agent. */
+export interface TagTalk {
+    /** The lines said before, oldest first. */
+    readonly before: ReadonlyArray<TranscriptLine>
+    /** The line that tagged the agent. */
+    readonly tagged: TranscriptLine
+}
+
+/** Where a tag was written and where the answer goes: the Office thread or a work thread. */
+export interface TagSurface {
+    /** What the colleague wrote and what was said before; undefined when the line no longer exists. */
+    talkOf(turn: AgentTurnView): Promise<TagTalk | undefined>
+    /** The tail of the runtime session key of the turn: one per room or thread. */
+    sessionOf(turn: AgentTurnView): string
+    /** Says it as the agent or as NIVO; saying the same words twice for one wake says them once. */
+    say(turn: AgentWakeView, speaker: TagSpeaker, text: string, voice: TagVoice): Promise<void>
 }

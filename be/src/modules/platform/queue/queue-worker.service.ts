@@ -62,10 +62,10 @@ export class QueueWorkerService implements QueueWorkerRegistry, OnApplicationBoo
             handle: (delivery) => this.run(own, delivery),
             failed: (delivery, cause) => routeOf(own, delivery)?.failed?.(delivery, cause) ?? Promise.resolve(),
         }
-        return this.transport.work(
-            router,
-            Math.max(...own.map((handler) => handler.concurrency ?? this.options.concurrency)),
-        )
+        const concurrency = Math.max(...own.map((handler) => handler.concurrency ?? this.options.concurrency))
+        return own.some((handler) => handler.scheduled === true)
+            ? this.transport.workFires(router, concurrency)
+            : this.transport.work(router, concurrency)
     }
 
     /** Runs the delivery on the handler it goes to; a job nobody handles fails with the error that archives it. */

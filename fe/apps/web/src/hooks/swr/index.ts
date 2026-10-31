@@ -72,7 +72,11 @@ export { useMutateChatbotDismissKnowledgeGapSwr, useMutateCheckConnectionSwr } f
 export { useMutateCheckInBookingSwr, useMutateCheckInShiftsSwr, useMutateCheckMcpConnectorSwr } from "./api"
 export { useMutateRegisterMcpConnectorSwr, useMutateSetMcpConnectorCredentialSwr } from "./api"
 export { useMutateSetMcpToolGrantSwr } from "./api"
-export { useMutateCheckTelegramConnectionSwr, useMutateDriveLinkedFolderSwr, useMutateDrivePickedFolderSwr } from "./api"
+export {
+    useMutateCheckTelegramConnectionSwr,
+    useMutateDriveLinkedFolderSwr,
+    useMutateDrivePickedFolderSwr,
+} from "./api"
 export { useMutateSyncMcpConnectorSwr } from "./api"
 export { useMutateCheckMetaSwr } from "./api"
 export { useMutateChooseMetaPageSwr, useMutateCompleteBookingSwr, useMutateConfirmBookingSwr } from "./api"
@@ -97,7 +101,7 @@ export { useMutateLinkHiringStaffSwr, useMutateMaintainBrainSwr, useMutateMarkBo
 export { useMutateMarkContentPublishedSwr, useMutateMarkOrderShippedSwr, useMutateMarkVideoPublishedSwr } from "./api"
 export { useMutateMoveBookingSwr, useMutateMoveContentItemSwr, useMutateMoveHiringCandidateSwr } from "./api"
 export { useMutatePostOfficeMessageSwr, useMutatePostSetupMessageSwr, useMutateProposeAutomationBodySwr } from "./api"
-export { useMutateProposeOfficeCommandSwr, useMutateProposeShiftsWeekSwr } from "./api"
+export { useMutateProposeShiftsWeekSwr } from "./api"
 export { useMutateReassignShiftsShiftSwr, useMutateReceiveInventoryPoSwr } from "./api"
 export { useMutateRecordManualEvidenceSwr, useMutateRecordOutcomeSwr, useMutateRedeemLoyaltyRewardSwr } from "./api"
 export { useMutateRefreshLeadContextSwr, useMutateReindexKnowledgeSourceSwr } from "./api"
@@ -386,3 +390,6 @@ export { useQuerySepayConnectionEventsSwr, useQuerySepayConnectionSwr } from "./
 export { useMutateSetSepayEnvironmentSwr } from "./api"
 export { QUERY_SEPAY_CONNECTION_SWR_KEY } from "./api"
 export { useQueryTelegramConnectionEventsSwr, useQueryTelegramConnectionPageSwr } from "./api"
+export { useMutateCloseAgentTaskSwr, useMutateRemoveAgentTriggerSwr, useMutateSaveAgentGoalSwr } from "./api"
+export { useMutateSaveAgentTriggerSwr, useMutateSetAgentWorkSwr, useMutateSetWorkspaceAgentWorkSwr } from "./api"
+export { useQueryAgentWorkSwr, useQueryWorkspaceAgentWorkSwr } from "./api"

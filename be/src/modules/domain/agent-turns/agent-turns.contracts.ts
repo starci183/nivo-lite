@@ -1,3 +1,4 @@
+import type { Installation } from "@modules/domain/agents"
 import type { SubjectType } from "@modules/domain/work-items"
 import type { RunUsage } from "@modules/integrations/openclaw"
 import type { AgentWakeSource } from "@modules/domain/agent-work"
@@ -138,4 +139,16 @@ export interface InternalSettleInput {
 }
 
 /** Why a turn could not run. */
-export type AgentTurnBlock = "openclaw_not_configured" | "breaker" | "daily_cap" | "quota"
+export type AgentTurnBlock = "openclaw_not_configured" | "openclaw_unavailable" | "breaker" | "daily_cap" | "quota"
+
+/** Why an agent's installation does not run. */
+export type StopReason = "needs_connection" | "installation_not_running"
+
+/** Why an installation does not run, or none when it does. */
+export type OptionalStopReason = StopReason | null
+
+/** What the module readiness settled for an installation, or none when the agent has none. */
+export type OptionalReadiness = string | null
+
+/** The installation of an agent, or none. */
+export type OptionalRunningInstallation = Installation | null

@@ -33,6 +33,7 @@ import { ThreadWorkErrorCode } from "./errors/thread-work.error"
 import { ThreadWorkEntity } from "./persistence/entities"
 import { ThreadWorkLogEvent } from "./thread-work.log-events"
 import { ThreadWorkService } from "./thread-work.service"
+import { ThreadTagWakesService } from "./thread-tag-wakes.service"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
 import type {
     DeciderRecord,
@@ -108,6 +109,7 @@ const build = async (em: MockEntityManager, entry: ActionEntry | null = DISCOUNT
     const messages = mock<ThreadMessagesService>({ postAsUser: jest.fn().mockResolvedValue(MESSAGE) })
     const approvals = mock<ThreadApprovalsService>({ decide: jest.fn().mockResolvedValue(MESSAGE) })
     const drain = mock<WorkDrainService>({ drainAll: jest.fn().mockResolvedValue(3) })
+    const tagWakes = mock<ThreadTagWakesService>({ wake: jest.fn().mockResolvedValue(undefined) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ThreadWorkService,
@@ -124,6 +126,7 @@ const build = async (em: MockEntityManager, entry: ActionEntry | null = DISCOUNT
             { provide: LeadReadService, useValue: leads },
             { provide: WorkspaceMemberDirectoryService, useValue: members },
             { provide: ApprovalRequestsReadService, useValue: requests },
+            { provide: ThreadTagWakesService, useValue: tagWakes },
         ],
     }).compile()
     return {
@@ -138,6 +141,7 @@ const build = async (em: MockEntityManager, entry: ActionEntry | null = DISCOUNT
         leads,
         members,
         requests,
+        tagWakes,
     }
 }
 
@@ -265,6 +269,28 @@ const registerDoors = () => {
                 { name: "Van", kind: "staff", memberId: "m-van" },
             )
             expect(turns.react).toHaveBeenCalledWith(PLACE, itemOf({ status: "done" }))
+        })
+
+        it("wakes the agents the message tags unless it was the answer an agent waited for", async () => {
+            const post = {
+                workspaceId: "ws-1",
+                threadId: "thread-1",
+                userId: "u-van",
+                body: "x",
+                mentions: [],
+                quoted: [],
+                locale: "vi" as const,
+            }
+            const waited = await build(
+                managerOf({ deciders: [{ id: "m-van", display_name: "Van", role: "staff" }] }).em,
+            )
+            const free = await build(managerOf({ waiting: [] }).em)
+
+            await waited.service.post(post)
+            await free.service.post(post)
+
+            expect(waited.tagWakes.wake).not.toHaveBeenCalled()
+            expect(free.tagWakes.wake).toHaveBeenCalledWith(post, MESSAGE)
         })
 
         it("decides the card, then moves the work of a settled request on; a message without a card moves nothing", async () => {

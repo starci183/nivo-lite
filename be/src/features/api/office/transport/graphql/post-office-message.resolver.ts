@@ -4,6 +4,8 @@ import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import type { Principal } from "@modules/platform/cqrs"
+import { AcceptedLocale } from "@modules/platform/i18n"
+import type { Locale } from "@modules/platform/i18n"
 import { PostOfficeMessageCommand } from "../../application/post-office-message.command"
 import { OfficeMessageType } from "./dto/office-message.type"
 import { PostOfficeMessageInput } from "./dto/post-office-message.input"
@@ -14,15 +16,19 @@ import { toOfficeMessageType, toPostOfficeMessageRequest } from "./office.mapper
 export class PostOfficeMessageResolver {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
-    /** Posts a line as the caller (their name and staff row); an owner or manager line is then sent to `proposeOfficeCommand`. */
+    /** Posts a line as the caller (their name and staff row); every agent it tags that the caller may ask is woken with it. */
     @Mutation(() => OfficeMessageType, { name: "postOfficeMessage" })
     async postOfficeMessage(
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
         @Args("input") input: PostOfficeMessageInput,
+        @AcceptedLocale() locale: Locale,
     ): Promise<OfficeMessageType> {
         const result = await this.commandBus.execute(
-            new PostOfficeMessageCommand({ request: toPostOfficeMessageRequest(workspaceId, input), principal }),
+            new PostOfficeMessageCommand({
+                request: toPostOfficeMessageRequest(workspaceId, input, locale),
+                principal,
+            }),
         )
         return toOfficeMessageType(result)
     }

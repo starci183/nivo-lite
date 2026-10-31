@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
+import { In, IsNull } from "typeorm"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -11,7 +11,7 @@ import { AgentWorkAccessService } from "./agent-work-access.service"
 import { defaultSettings, defaultState, toSettingsRecord, toStateRecord } from "./agent-work.mapper"
 import { restoresHeldWake } from "./agent-work.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
-import { AgentWakeEntity, AgentWorkSettingsEntity, AgentWorkStateEntity } from "./persistence/entities"
+import { AgentTaskEntity, AgentWakeEntity, AgentWorkSettingsEntity, AgentWorkStateEntity } from "./persistence/entities"
 import type { AgentRoad, AgentWorkSettingsRecord, AgentWorkState } from "./agent-work.contracts"
 
 /** The most held wakes one restore pass moves. */
@@ -119,8 +119,20 @@ export class AgentWorkSettingsService {
         const stale = held.filter((wake) => !runnable.includes(wake))
         await this.move(tx, runnable, { status: "pending", reason: null })
         await this.move(tx, stale, { status: "skipped", reason: "stale", finishedAt: now })
+        await this.rearmTasks(tx, stale, now)
         await this.drainScopes(tx, runnable, now)
         await this.restorePage(tx, scope, now, passesLeft - 1)
+    }
+
+    /** A task whose wake went stale had its time cleared when the wake was written; it is due again now, or it would never be woken. */
+    private async rearmTasks(tx: EntityManager, wakes: ReadonlyArray<AgentWakeEntity>, now: Date): Promise<void> {
+        const taskIds = wakes.flatMap((wake) => (wake.context.taskId === undefined ? [] : [wake.context.taskId]))
+        if (taskIds.length === 0) return
+        await tx.update(
+            AgentTaskEntity,
+            { id: In(taskIds), status: "open", nextActionAt: IsNull() },
+            { nextActionAt: now },
+        )
     }
 
     private async move(

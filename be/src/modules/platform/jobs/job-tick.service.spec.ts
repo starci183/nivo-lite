@@ -133,9 +133,9 @@ describe("JobTickService", () => {
 })
 
 describe("JOB_TICKS", () => {
-    it("holds the 13 ticks, each with a unique name and a five-field UTC cron expression", () => {
-        expect(JOB_TICKS).toHaveLength(13)
-        expect(new Set(JOB_TICKS.map((tick) => tick.name)).size).toBe(13)
+    it("holds the 14 ticks, each with a unique name and a five-field UTC cron expression", () => {
+        expect(JOB_TICKS).toHaveLength(14)
+        expect(new Set(JOB_TICKS.map((tick) => tick.name)).size).toBe(14)
         for (const tick of JOB_TICKS) {
             expect(tick.timeZone).toBe("UTC")
             expect(tick.cron.split(" ")).toHaveLength(5)

@@ -188,3 +188,30 @@ export interface WorkLeadRecord {
     /** The name of the customer. */
     contact_name: string
 }
+
+/** One line of the talk of a thread: who said it and what. */
+export interface ThreadTagLine {
+    /** The message id. */
+    readonly id: string
+    /** The author's name. */
+    readonly author: string
+    /** What was said. */
+    readonly body: string
+}
+
+/** What a tagged agent reads in a thread: the messages before the tag, and the tagging message. */
+export interface ThreadTagTalk {
+    /** The messages said before, oldest first. */
+    readonly before: ReadonlyArray<ThreadTagLine>
+    /** The message that tagged the agent. */
+    readonly tagged: ThreadTagLine
+}
+
+/** What a tagged agent reads in a thread, or undefined when the thread or the message is gone. */
+export type OptionalThreadTagTalk = ThreadTagTalk | undefined
+
+/** The agent that answers in a thread. */
+export interface ThreadTagSpeaker {
+    /** The agent id. */
+    readonly id: string
+}

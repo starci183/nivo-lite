@@ -12,6 +12,9 @@ import { MessageEntity } from "./persistence/entities"
 /** Hands a literal to an expectation as a plain object, so it is not mistaken for a hand-built entity row. */
 const plain = (value: object): object => value
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const ctx: MessagesScope = { workspaceId: "ws-1" }
 
 const lineOf = builder<OfficeLineInput>({ body: "Followed up", lead_id: "lead-1", work_item_id: "item-1" })
@@ -89,6 +92,73 @@ describe("OfficeLinesService > speakers", () => {
         await expect(service.post(ctx, lineOf({ dept: "sales" }))).resolves.toBeUndefined()
 
         expect(directory.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", null)
+    })
+})
+
+describe("OfficeLinesService > a named agent in a room", () => {
+    it("speaks as the agent it names, in the room it names, and tells that room", async () => {
+        const em = mockEntityManager({ insert: [MessageEntity, {}] })
+        const { service, directory, activity } = await build(em, null)
+        directory.agentById.mockResolvedValue({ id: "agent-9", name: "Ke Toan" })
+
+        await service.post(ctx, lineOf({ agent_id: "agent-9", room: "accounting", lead_id: null, work_item_id: null }))
+
+        expect(directory.agentById).toHaveBeenCalledWith("ws-1", "agent-9")
+        expect(directory.agentOfDepartment).not.toHaveBeenCalled()
+        expect(activity.message.mock.calls).toEqual([["ws-1", "room:accounting", null, em]])
+        expect(em.insert.mock.calls).toEqual([
+            [
+                MessageEntity,
+                plain({
+                    workspaceId: "ws-1",
+                    authorKind: "agent",
+                    authorName: "Ke Toan",
+                    agentId: "agent-9",
+                    body: "Followed up",
+                    leadId: null,
+                    workItemId: null,
+                    room: "accounting",
+                }),
+            ],
+        ])
+    })
+
+    it("posts nothing when the same agent already said the same words since the wake", async () => {
+        const em = mockEntityManager({ exists: [MessageEntity, true] })
+        const { service, directory, activity } = await build(em, null)
+        directory.agentById.mockResolvedValue({ id: "agent-9", name: "Ke Toan" })
+
+        await service.post(ctx, lineOf({ agent_id: "agent-9", unlessSaidSince: new Date("2026-10-31T10:00:00Z") }))
+
+        expect(em.insert).not.toHaveBeenCalled()
+        expect(activity.message).not.toHaveBeenCalled()
+        expect(em.exists).toHaveBeenCalledWith(
+            MessageEntity,
+            objectLike({ where: objectLike({ body: "Followed up", authorKind: "agent" }) }),
+        )
+    })
+
+    it("posts the line when nobody said it since the wake", async () => {
+        const em = mockEntityManager({ exists: [MessageEntity, false], insert: [MessageEntity, {}] })
+        const { service, directory } = await build(em, null)
+        directory.agentById.mockResolvedValue({ id: "agent-9", name: "Ke Toan" })
+
+        await service.post(ctx, lineOf({ agent_id: "agent-9", unlessSaidSince: new Date("2026-10-31T10:00:00Z") }))
+
+        expect(em.insert).toHaveBeenCalledTimes(1)
+    })
+
+    it("tells a system line from an agent line when it checks a NIVO line was said", async () => {
+        const em = mockEntityManager({ exists: [MessageEntity, true] })
+        const { service } = await build(em, null)
+
+        await service.post(ctx, lineOf({ unlessSaidSince: new Date("2026-10-31T10:00:00Z") }))
+
+        expect(em.exists).toHaveBeenCalledWith(
+            MessageEntity,
+            objectLike({ where: objectLike({ authorKind: "system" }) }),
+        )
+        expect(em.insert).not.toHaveBeenCalled()
     })
 })
 

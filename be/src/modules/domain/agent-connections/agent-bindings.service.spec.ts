@@ -179,14 +179,14 @@ describe("AgentBindingsService > connectionsOfAgent", () => {
 })
 
 describe("AgentBindingsService > routing", () => {
-    it("makes the chatbot the front door and hands over to the booking agent", async () => {
+    it("makes the chatbot the front door and hands over to the booking and sales agents", async () => {
         const em = mockEntityManager({ find: [AgentConnectionEntity, INBOUND_LINKS] })
         const { service } = await build(em, { agents: INBOUND_AGENTS })
 
         const route = await service.routeInbound("c1")
 
         expect(route.front?.id).toBe("a1")
-        expect(route.handovers.map((agent) => agent.id)).toEqual(["a2"])
+        expect(route.handovers.map((agent) => agent.id)).toEqual(["a2", "a3"])
     })
 
     it("lists the bound agents of other modules a conversation can hand over to", async () => {
@@ -195,7 +195,7 @@ describe("AgentBindingsService > routing", () => {
 
         const handovers = await service.handoversOf("c1", { module: "chatbot" })
 
-        expect(handovers.map((agent) => agent.id)).toEqual(["a2"])
+        expect(handovers.map((agent) => agent.id)).toEqual(["a2", "a3"])
     })
 
     it("hands over to nobody for a conversation without a connection", async () => {

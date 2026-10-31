@@ -1,13 +1,18 @@
 import { builder } from "@starci/jest-preset"
-import type { RecordingQueueOutbox } from "@starci/jest-preset"
+import type { EntityManager } from "typeorm"
 import { agentWorkEntities } from "@modules/domain/agent-work"
-import { AGENT_TURN_QUEUE_PRODUCER, AgentTurnQueue } from "@modules/queues/agent-turn"
-import type { AgentGoalWrite, AgentTriggerWrite, AgentTurnView, AgentWake } from "@modules/domain/agent-work"
+import type {
+    AgentGoalWrite,
+    AgentTriggerWrite,
+    AgentTurnView,
+    AgentWake,
+    AgentWakeView,
+} from "@modules/domain/agent-work"
 
 const [
     AgentWorkSettingsEntity,
     AgentWorkStateEntity,
-    ,
+    AgentWorkLeaseEntity,
     AgentGoalEntity,
     AgentTaskEntity,
     AgentTriggerEntity,
@@ -16,6 +21,7 @@ const [
 ] = agentWorkEntities
 type AgentWorkSettingsEntity = InstanceType<typeof AgentWorkSettingsEntity>
 type AgentWorkStateEntity = InstanceType<typeof AgentWorkStateEntity>
+type AgentWorkLeaseEntity = InstanceType<typeof AgentWorkLeaseEntity>
 type AgentGoalEntity = InstanceType<typeof AgentGoalEntity>
 type AgentTaskEntity = InstanceType<typeof AgentTaskEntity>
 type AgentTriggerEntity = InstanceType<typeof AgentTriggerEntity>
@@ -99,6 +105,7 @@ export const agentTriggerRowOf = builder<AgentTriggerEntity>({
     eventName: null,
     probeKey: "invoices_due",
     enabled: true,
+    seedKey: null,
     nextRunAt: null,
     lastFiredAt: null,
     reconciledAt: null,
@@ -127,6 +134,25 @@ export const agentWakeRowOf = builder<AgentWakeEntity>({
     createdAt: new Date("2026-11-10T01:00:00.000Z"),
     updatedAt: WHEN,
 })
+
+/** The idle lease row of agent-1 in a customer conversation, last touched a long time ago. */
+export const agentWorkLeaseRowOf = builder<AgentWorkLeaseEntity>({
+    agentId: "agent-1",
+    scopeKey: "conversation:conv-1",
+    workspaceId: "ws-1",
+    fence: 4,
+    leaseOwner: null,
+    leaseUntil: null,
+    runningTurnId: null,
+    createdAt: WHEN,
+    updatedAt: WHEN,
+})
+
+/** The idle lease rows of agent-1 in conversations conv-1 and conv-2. */
+export const idleLeaseRowsOf = (): ReadonlyArray<AgentWorkLeaseEntity> => [
+    agentWorkLeaseRowOf({ scopeKey: "conversation:conv-1" }),
+    agentWorkLeaseRowOf({ scopeKey: "conversation:conv-2" }),
+]
 
 /** A settled turn row of agent-1 with its usage, whose proposal holds words the work tab must never show. */
 export const agentTurnRowOf = builder<AgentTurnEntity>({
@@ -167,6 +193,21 @@ export const agentTurnViewOf = builder<AgentTurnView>({
     maxAttempts: 2,
     wakeCreatedAt: WHEN,
     proposal: null,
+})
+
+/** The customer wake of conversation conv-1 as a handler sees it when `begin` ended it with no turn. */
+export const agentWakeViewOf = builder<AgentWakeView>({
+    workspaceId: "ws-1",
+    agentId: "agent-1",
+    scopeKey: "conversation:conv-1",
+    wakeId: "wake-2",
+    source: "customer",
+    eventKey: "msg-2",
+    context: {},
+    actorMemberId: null,
+    attempts: 2,
+    maxAttempts: 2,
+    wakeCreatedAt: WHEN,
 })
 
 /** A tag of agent-1 in the sales room by member-1. */
@@ -243,6 +284,12 @@ export const orphanTurnRowOf = (): AgentTurnEntity =>
         status: "running",
     })
 
+/** A trigger row a module seeded under the key `morning`. */
+export const seededTriggerRowOf = (): AgentTriggerEntity => agentTriggerRowOf({ seedKey: "morning" })
+
+/** A wake row of agent-1 whose turn is running. */
+export const runningWakeRowOf = (id: string): AgentWakeEntity => agentWakeRowOf({ id, status: "running" })
+
 /** A wake row a switch held: a customer's message of conversation conv-1. */
 export const heldCustomerWakeRowOf = (id: string): AgentWakeEntity => agentWakeRowOf({ id, eventKey: id })
 
@@ -258,8 +305,33 @@ export const heldOldWakeRowOf = (id: string): AgentWakeEntity =>
 export const heldScheduleWakeRowOf = (id: string): AgentWakeEntity =>
     agentWakeRowOf({ id, eventKey: id, source: "schedule", scopeKey: "agent" })
 
-/** The provider of the agent-turn queue producer over a recording outbox, so a spec reads the drain jobs a service wrote. */
-export const agentTurnQueueProviderOf = (outbox: RecordingQueueOutbox) => ({
-    provide: AGENT_TURN_QUEUE_PRODUCER,
-    useValue: new AgentTurnQueue(outbox),
-})
+/** A wake row a switch held: the internal wake of task task-1 that fell due. */
+export const heldTaskWakeRowOf = (id: string): AgentWakeEntity =>
+    agentWakeRowOf({ id, eventKey: id, source: "internal", scopeKey: "agent", context: { taskId: "task-1" } })
+
+/** Persists an open task of the agent whose wake time has come. */
+export const dueTaskOf = async (
+    manager: EntityManager,
+    workspaceId: string,
+    agentId: string,
+    dedupeKey: string,
+): Promise<void> => {
+    await manager.save(AgentTaskEntity, {
+        workspaceId,
+        agentId,
+        dedupeKey,
+        title: "Chase invoice 12",
+        detail: "",
+        status: "open",
+        nextActionAt: new Date("2026-01-01T00:00:00.000Z"),
+    })
+}
+
+/** Moves a workspace to a road: the data statement that moves one workspace is this upsert of its settings row. */
+export const persistRoad = async (
+    manager: EntityManager,
+    workspaceId: string,
+    road: AgentWorkSettingsEntity["road"],
+): Promise<void> => {
+    await manager.upsert(AgentWorkSettingsEntity, { workspaceId, road }, ["workspaceId"])
+}

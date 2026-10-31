@@ -31,6 +31,12 @@ export type AgentTriggerPreset = "every_15m" | "hourly" | "daily_at" | "weekdays
 /** A trigger wakes the agent on a clock or on an internal event. */
 export type AgentTriggerKind = "schedule" | "event"
 
+/** An id, or none. */
+export type OptionalId = string | null
+
+/** A moment, or none. */
+export type OptionalDate = Date | null
+
 /** The language of a reply. */
 export type AgentLocale = "vi" | "en"
 
@@ -85,19 +91,15 @@ export interface AgentWake {
     readonly actorMemberId: string | null
 }
 
-/** The wake a worker picked for a turn, with the fence that guards every later write. */
-export interface AgentTurnView {
+/** A wake as a handler sees it: what woke the agent and for whom, with or without a turn behind it. */
+export interface AgentWakeView {
     /** The workspace of the agent. */
     readonly workspaceId: string
     /** The agent. */
     readonly agentId: string
-    /** The lock scope the turn runs under. */
+    /** The lock scope the wake runs under. */
     readonly scopeKey: string
-    /** The fence of this attempt: it rises on every begin. */
-    readonly fence: number
-    /** The turn row. */
-    readonly turnId: string
-    /** The wake it answers. */
+    /** The wake. */
     readonly wakeId: string
     /** What woke the agent. */
     readonly source: AgentWakeSource
@@ -113,6 +115,14 @@ export interface AgentTurnView {
     readonly maxAttempts: number
     /** When the wake was written. */
     readonly wakeCreatedAt: Date
+}
+
+/** The wake a worker picked for a turn, with the fence that guards every later write. */
+export interface AgentTurnView extends AgentWakeView {
+    /** The fence of this attempt: it rises on every begin. */
+    readonly fence: number
+    /** The turn row. */
+    readonly turnId: string
     /** The proposal an earlier attempt stored, or null: the model is not asked again when it is there. */
     readonly proposal: unknown
 }
@@ -133,21 +143,6 @@ export interface AgentRunningTurn {
     readonly threadKey: string
     /** Ids and flags of the fact. */
     readonly context: AgentWakeContext
-}
-
-/** What `begin` answered. */
-export type AgentBegin =
-    { readonly result: "killed" | "busy" | "idle" } | { readonly result: "begun"; readonly turn: AgentTurnView }
-
-/** What `propose` answered. */
-export type AgentProposeResult = "stored" | "fenced" | "killed"
-
-/** What `finish` answered. */
-export interface AgentFinish {
-    /** True when the lease had moved on, so nothing was written. */
-    readonly fenced: boolean
-    /** True when another wake of the scope is due now. */
-    readonly more: boolean
 }
 
 /** What a run cost. */
@@ -338,11 +333,16 @@ export interface AgentTriggerRecord {
     readonly probeKey: string | null
     /** Off means the trigger stays and fires nothing. */
     readonly enabled: boolean
+    /** The stable key a module seeded it under, so a graph can name it; null for a trigger an owner wrote. */
+    readonly seedKey: string | null
     /** The next slot the scheduler holds. */
     readonly nextRunAt: Date | null
     /** The last slot that fired. */
     readonly lastFiredAt: Date | null
 }
+
+/** A trigger, or none. */
+export type OptionalAgentTriggerRecord = AgentTriggerRecord | null
 
 /** What an owner writes for a trigger. */
 export interface AgentTriggerWrite {
@@ -390,6 +390,8 @@ export interface AgentTurnRecord {
     readonly cost: number | null
     /** Wall time of the model call. */
     readonly durationMs: number | null
+    /** The work item the turn opened, or null: the Work tab links it to the run's trace. */
+    readonly workItemId: string | null
     /** When the wake was written. */
     readonly wokeAt: Date
 }
@@ -420,4 +422,57 @@ export interface WorkspaceAgentWorkView {
     readonly pendingWakes: number
     /** Wakes held by a switch. */
     readonly heldWakes: number
+}
+
+/** Where the customer wake of one stored message stands, or none. */
+export type OptionalCustomerWakeProgress = CustomerWakeProgress | null
+
+/** Where the customer wake of one stored message stands, in the words of a job's state. */
+export interface CustomerWakeProgress {
+    /** The wake. */
+    readonly id: string
+    /** Waiting, running, done or failed. */
+    readonly state: "queued" | "running" | "done" | "failed"
+}
+
+/** What an owner or manager writes for a goal of the agent of an instance. */
+export interface AgentGoalDraft {
+    /** The workspace the caller names. */
+    readonly workspaceId: string
+    /** The agent instance. */
+    readonly installationId: string
+    /** The goal to change, or null for a new one. */
+    readonly goalId: string | null
+    /** Short title. */
+    readonly title: string
+    /** Longer text. */
+    readonly detail: string
+    /** Where it stands. */
+    readonly status: AgentGoalStatus
+    /** When it is due, or null. */
+    readonly dueAt: Date | null
+}
+
+/** What an owner or manager writes for a trigger of the agent of an instance. */
+export interface AgentTriggerDraft {
+    /** The workspace the caller names. */
+    readonly workspaceId: string
+    /** The agent instance. */
+    readonly installationId: string
+    /** The trigger to change, or null for a new one. */
+    readonly triggerId: string | null
+    /** Clock or event. */
+    readonly kind: AgentTriggerKind
+    /** The schedule preset, for a clock. */
+    readonly preset: AgentTriggerPreset | null
+    /** The time of day (HH:MM), for the daily presets. */
+    readonly atTime: string | null
+    /** The zone of the time of day; the default when null. */
+    readonly timeZone: string | null
+    /** The internal event, for an event trigger. */
+    readonly eventName: string | null
+    /** The probe that decides whether there is work. */
+    readonly probeKey: string | null
+    /** Off keeps the trigger and fires nothing. */
+    readonly enabled: boolean
 }

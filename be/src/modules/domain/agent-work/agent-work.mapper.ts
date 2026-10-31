@@ -1,3 +1,4 @@
+import { isRecord } from "@modules/platform/primitives"
 import type {
     AgentGoalRecord,
     AgentTaskRecord,
@@ -17,11 +18,11 @@ import type {
     AgentWorkStateEntity,
 } from "./persistence/entities"
 
-/** The settings of a workspace that has no row yet: work on, the legacy road, the default cap. */
+/** The settings of a workspace that has no row yet: work on, the core road, the default cap. */
 export const defaultSettings = (workspaceId: string): AgentWorkSettingsRecord => ({
     workspaceId,
     workEnabled: true,
-    road: "legacy",
+    road: "core",
     backgroundDailyCap: 200,
 })
 
@@ -92,6 +93,7 @@ export const toTriggerRecord = (row: AgentTriggerEntity): AgentTriggerRecord => 
     eventName: row.eventName,
     probeKey: row.probeKey,
     enabled: row.enabled,
+    seedKey: row.seedKey,
     nextRunAt: row.nextRunAt,
     lastFiredAt: row.lastFiredAt,
 })
@@ -108,6 +110,12 @@ export interface TurnWake {
     readonly createdAt: Date
 }
 
+/** The work item a settled turn opened, which the handler recorded in the outcome; null when the turn opened none. */
+const workItemIdOf = (outcome: unknown): string | null => {
+    if (!isRecord(outcome)) return null
+    return typeof outcome.workItemId === "string" ? outcome.workItemId : null
+}
+
 /** The turn row with its wake as the work tab lists it: no prompt, no proposal, no customer words. */
 export const toTurnRecord = (row: AgentTurnEntity, wake: TurnWake): AgentTurnRecord => ({
     id: row.id,
@@ -120,5 +128,6 @@ export const toTurnRecord = (row: AgentTurnEntity, wake: TurnWake): AgentTurnRec
     completionTokens: row.completionTokens,
     cost: row.cost === null ? null : Number(row.cost),
     durationMs: row.durationMs,
+    workItemId: workItemIdOf(row.outcome),
     wokeAt: wake.createdAt,
 })

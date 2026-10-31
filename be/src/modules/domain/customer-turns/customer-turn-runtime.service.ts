@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { stoppedBy } from "@modules/domain/agent-turns"
 import { KnowledgeRecallService, ModuleProfilesService, viewOf } from "@modules/domain/agent-knowledge"
 import { InjectInstallations, replyTimeoutSec } from "@modules/domain/agents"
 import type { Installation, InstallationDirectory } from "@modules/domain/agents"
@@ -17,8 +18,8 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { CustomerTurnGatewayService } from "./customer-turn-gateway.service"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
+import type { InstallationOrReason, TurnSystem } from "./customer-turns.contracts"
 import { GatewayContextService } from "./gateway-context.service"
-import type { KnowledgeSources } from "./gateway-turns.contracts"
 import { recallSourcesOf } from "./knowledge-sources.policy"
 import { detailOf, readCustomerReply } from "./reply-reading.policy"
 import { TurnModulesService } from "./turn-modules.service"
@@ -35,24 +36,10 @@ const NOT_CONFIGURED = "openclaw_not_configured"
 const QUOTA = "quota_exceeded"
 /** Why a turn falls back when the gateway failed or was too slow. */
 const UNAVAILABLE = "openclaw_unavailable"
-/** Why a turn does not run while the agent's installation waits for a required connection. */
-const NEEDS_CONNECTION = "needs_connection"
-/** Why a turn does not run while the agent's installation is not running (installing, in setup, paused). */
-const NOT_RUNNING = "installation_not_running"
-/** The installation statuses a turn runs in. */
-const RUNNING = "live"
 /** Why a turn of an agent holding connector grants does not run: no tool token can be minted (no tool secret). */
 const TOOLS_NOT_CONFIGURED = "tools_not_configured"
 /** What separates the tool block from the rest of the system text. */
 const BLOCK_SEPARATOR = "\n\n"
-
-/** The authoritative context of a turn and the knowledge it quotes. */
-interface TurnSystem {
-    /** The system text the agent answers under. */
-    readonly text: string
-    /** The knowledge the recall put into that text, as card sources. */
-    readonly sources: KnowledgeSources
-}
 
 @Injectable()
 /**
@@ -64,6 +51,9 @@ interface TurnSystem {
  * customer gets the holding line. Each turn mints its own tool token (job = the inbound message) and gives it to the agent in the
  * [OPTIONAL TOOLS] block of the message it sends; the token is never stored or logged and is revoked when the turn ends, however it
  * ends. An agent holding connector grants does not run without one (`tools_not_configured`): it would answer without its tools.
+ *
+ * The core road shares three of its parts: the installation gate (`installationOf`), the authoritative context (`systemOf`) and the
+ * reading of the model's text as a proposal (`proposalFrom`); the plan of the turn there is made by `CustomerCorePlanService`.
  */
 export class CustomerTurnRuntimeService implements ChatTurnRuntime {
     private readonly turnGateway: CustomerTurnGatewayService
@@ -94,17 +84,21 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
         const workspaceId = conversation.workspaceId
         if (!this.turnGateway.configured()) return NOT_CONFIGURED
         if ((await this.usage.blockedBy(workspaceId, USAGE_KIND, LOCALE)) !== null) return QUOTA
-        const installation = await this.installations.ofAgent(workspaceId, conversation.agent.id)
-        const status = installation === null ? null : await this.readiness.settle(workspaceId, installation.id)
-        if (status !== null && status !== RUNNING) return status === NEEDS_CONNECTION ? NEEDS_CONNECTION : NOT_RUNNING
-        // Only a running agent answers: switched on by the owner and holding an applied version.
-        if (installation !== null && (installation.activeContextVersionId === null || !installation.liveEnabled))
-            return NOT_RUNNING
+        const installation = await this.installationOf(workspaceId, conversation.agent.id)
+        if (typeof installation === "string") return installation
         const timeoutMs = replyTimeoutSec(installation?.settings ?? null) * 1000
         const token = this.access.open(turn, timeoutMs)
         const answered = await this.guarded(turn, installation, timeoutMs, token)
         this.access.close(turn)
         return answered
+    }
+
+    /** The installation of the agent when it runs, or null when the agent has none; otherwise why it does not answer. */
+    async installationOf(workspaceId: string, agentId: string): Promise<InstallationOrReason> {
+        const installation = await this.installations.ofAgent(workspaceId, agentId)
+        const status = installation === null ? null : await this.readiness.settle(workspaceId, installation.id)
+        // Only a running agent answers: switched on by the owner and holding an applied version.
+        return stoppedBy(status, installation) ?? installation
     }
 
     /** The turn's answer, or the reason it has none; it never throws, so the token is revoked however the turn ends. */
@@ -145,10 +139,11 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
             usage: result.usage,
             completionChars: result.text.length,
         })
-        return this.proposalOf(result.text)
+        return this.proposalFrom(result.text)
     }
 
-    private proposalOf(text: string): ChatTurnProposal {
+    /** Reads the model's text as the proposal of a customer turn: a reply that ignored the contract becomes a question for a person. */
+    proposalFrom(text: string): ChatTurnProposal {
         const reply = readCustomerReply(text, this.catalog.get("conversations.holdingReply", {}, LOCALE))
         return {
             reply: reply.reply,
@@ -160,7 +155,7 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
     }
 
     /** The authoritative context of the turn; a block that cannot be read is left out, never the turn. */
-    private async systemOf(turn: CustomerTurn): Promise<TurnSystem> {
+    async systemOf(turn: CustomerTurn): Promise<TurnSystem> {
         const { conversation } = turn
         const workspaceId = conversation.workspaceId
         const view = viewOf({

@@ -13,6 +13,7 @@ import {
     restoresHeldWake,
     retryWaitOf,
     scopeKeyOf,
+    wakeProgressOf,
 } from "./agent-work.policy"
 
 const SUBJECT = Symbol("agent-work.policy")
@@ -32,6 +33,7 @@ const buildSubject = async () => {
                     restoresHeldWake,
                     retryWaitOf,
                     scopeKeyOf,
+                    wakeProgressOf,
                 },
             },
         ],
@@ -177,5 +179,19 @@ describe("breakerOpen", () => {
         const { breakerOpen } = await buildSubject()
 
         expect(breakerOpen(null, NOW)).toBe(false)
+    })
+})
+
+describe("wakeProgressOf", () => {
+    it("tells waiting, running, done and failed wakes in the words of a job", async () => {
+        const { wakeProgressOf } = await buildSubject()
+
+        expect(wakeProgressOf("pending")).toBe("queued")
+        expect(wakeProgressOf("held")).toBe("queued")
+        expect(wakeProgressOf("running")).toBe("running")
+        expect(wakeProgressOf("done")).toBe("done")
+        expect(wakeProgressOf("skipped")).toBe("done")
+        expect(wakeProgressOf("dead")).toBe("failed")
+        expect(wakeProgressOf("failed")).toBe("failed")
     })
 })

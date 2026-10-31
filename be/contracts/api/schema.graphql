@@ -904,6 +904,15 @@ type AgentGenerationUsageType {
   prompt_tokens: Int!
 }
 
+type AgentGoalType {
+  detail: String!
+  dueAt: DateTime
+  id: ID!
+  source: String!
+  status: String!
+  title: String!
+}
+
 input AgentIdInput {
   agentId: ID! @inputBounds(maxLength: 36)
 }
@@ -1018,9 +1027,75 @@ type AgentTagTargetType {
   status: String!
 }
 
+type AgentTaskType {
+  dedupeKey: String!
+  detail: String!
+  id: ID!
+  nextActionAt: DateTime
+  status: String!
+  title: String!
+  waitingOn: String
+  workItemId: ID
+}
+
 input AgentTextsInput {
   instructions: String! @inputBounds(maxLength: 20000)
   knowledge: String! @inputBounds(maxLength: 50000)
+}
+
+type AgentTriggerType {
+  atTime: String
+  enabled: Boolean!
+  eventName: String
+  id: ID!
+  kind: String!
+  lastFiredAt: DateTime
+  nextRunAt: DateTime
+  preset: String
+  probeKey: String
+  seedKey: String
+  timeZone: String!
+}
+
+type AgentTurnType {
+  completionTokens: Int
+  cost: Float
+  durationMs: Int
+  id: ID!
+  model: String
+  promptTokens: Int
+  reason: String
+  source: String!
+  status: String!
+  wakeStatus: String!
+  wokeAt: DateTime!
+  workItemId: ID
+}
+
+type AgentWorkAckType {
+  ok: Boolean!
+}
+
+input AgentWorkInstanceInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+}
+
+type AgentWorkStateType {
+  agentId: ID!
+  backgroundTurns: Int!
+  breakerUntil: DateTime
+  failures: Int!
+  lastTurnAt: DateTime
+  workEnabled: Boolean!
+}
+
+type AgentWorkType {
+  goals: [AgentGoalType!]!
+  pendingWakes: Int!
+  state: AgentWorkStateType!
+  tasks: [AgentTaskType!]!
+  triggers: [AgentTriggerType!]!
+  turns: [AgentTurnType!]!
 }
 
 type ApiKeyType {
@@ -2026,6 +2101,11 @@ input ChooseMetaPageInput {
   pageId: String! @inputBounds(maxLength: 64)
 }
 
+input CloseAgentTaskInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  taskId: ID! @inputBounds(maxLength: 36)
+}
+
 input CompleteBookingInput {
   id: ID! @inputBounds(maxLength: 36)
 }
@@ -2964,6 +3044,11 @@ input DatabaseTargetInput {
   ssl: Boolean!
   user: String! @inputBounds(maxLength: 128)
 }
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
 
 input DecideBrainFactInput {
   action: String! @inputBounds(maxLength: 40)
@@ -5257,6 +5342,7 @@ type Mutation {
   checkMcpConnector(input: CheckMcpConnectorInput!): String!
   checkMeta(input: CheckMetaInput!): MetaCheckType!
   chooseMetaPage(input: ChooseMetaPageInput!): MetaWizardConnectionType!
+  closeAgentTask(input: CloseAgentTaskInput!): AgentWorkAckType!
   completeBooking(input: CompleteBookingInput!): CompleteBookingType!
   confirmBooking(input: ConfirmBookingInput!): ConfirmBookingType!
   confirmDossierFinding(input: DossierFindingNoteInput!): DossierFindingType!
@@ -5349,6 +5435,7 @@ type Mutation {
   reindexKnowledgeSource(input: ReindexKnowledgeSourceInput!): SourceRefType!
   rejectDossierRemedyDraft(input: RejectDossierRemedyDraftInput!): DossierRemedyDraftType!
   removeAgent(input: ModuleInstallationIdInput!): ModuleInstallationType!
+  removeAgentTrigger(input: RemoveAgentTriggerInput!): AgentWorkAckType!
   removeBookingException(input: RemoveBookingExceptionInput!): RemoveBookingExceptionType!
   removeBookingResource(input: RemoveBookingResourceInput!): RemoveBookingResourceType!
   removeBookingService(input: RemoveBookingServiceInput!): RemoveBookingServiceType!
@@ -5407,6 +5494,8 @@ type Mutation {
   runCsvImport(input: RunCsvImportInput!): CsvImportResultType!
   runDocumentImport(input: RunDocumentImportInput!): CsvImportResultType!
   runFlow(input: RunFlowInput!): RunFlowType!
+  saveAgentGoal(input: SaveAgentGoalInput!): AgentGoalType!
+  saveAgentTrigger(input: SaveAgentTriggerInput!): AgentTriggerType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
   saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
   saveBookingHours(input: SaveBookingHoursInput!): SaveBookingHoursType!
@@ -5457,6 +5546,7 @@ type Mutation {
   setAgentOwnership(input: SetAgentOwnershipInput!): AgentAckType!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
+  setAgentWork(input: SetAgentWorkInput!): AgentWorkStateType!
   setChatHandling(input: SetChatHandlingInput!): ChatHandlingType!
   setChatMuted(input: ChatMuteInput!): ChatMarkerAckType!
   setChatTyping(input: SetChatTypingInput!): ChatTypingSignalType!
@@ -5477,6 +5567,7 @@ type Mutation {
   setSepayEnvironment(input: SetSepayEnvironmentInput!): SepayConnectionType!
   setSetupGate(input: SetSetupGateInput!): SetupSessionType!
   setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
+  setWorkspaceAgentWork(input: SetWorkspaceAgentWorkInput!): WorkspaceAgentWorkType!
   settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
   setupOfficeRooms: [OfficeRoomType!]!
   shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
@@ -6141,6 +6232,7 @@ type Query {
   agentKnowledgeLenses: [AgentKnowledgeLensType!]!
   agentPage(input: AgentIdInput!): AgentPageType!
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
+  agentWork(input: AgentWorkInstanceInput!): AgentWorkType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
   approverDirectory: [ApproverMemberType!]!
@@ -6304,6 +6396,7 @@ type Query {
   workItems(input: ListWorkItemsInput!): WorkItemPageType!
   workThread(input: WorkThreadIdInput!): WorkThreadViewType!
   workThreads(input: ListWorkThreadsInput! = {}): WorkThreadConnectionType!
+  workspaceAgentWork: WorkspaceAgentWorkType!
   workspaceInvites: [PendingInviteType!]!
   workspaceMembers: [MemberListingType!]!
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
@@ -6443,6 +6536,11 @@ input ReindexKnowledgeSourceInput {
 input RejectDossierRemedyDraftInput {
   draftId: ID! @inputBounds(maxLength: 36)
   reason: String = null @inputBounds(maxLength: 500)
+}
+
+input RemoveAgentTriggerInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  triggerId: ID! @inputBounds(maxLength: 36)
 }
 
 input RemoveBookingExceptionInput {
@@ -7086,6 +7184,27 @@ type SalesWorkbenchType {
   staff: [SalesChoiceType!]!
 }
 
+input SaveAgentGoalInput {
+  detail: String! @inputBounds(maxLength: 2000)
+  dueAt: DateTime = null
+  goalId: ID = null @inputBounds(maxLength: 36)
+  installationId: ID! @inputBounds(maxLength: 36)
+  status: String!
+  title: String! @inputBounds(maxLength: 200)
+}
+
+input SaveAgentTriggerInput {
+  atTime: String = null @inputBounds(maxLength: 5)
+  enabled: Boolean!
+  eventName: String = null @inputBounds(maxLength: 80)
+  installationId: ID! @inputBounds(maxLength: 36)
+  kind: String!
+  preset: String = null
+  probeKey: String = null @inputBounds(maxLength: 80)
+  timeZone: String = null @inputBounds(maxLength: 64)
+  triggerId: ID = null @inputBounds(maxLength: 36)
+}
+
 input SaveAuthorityRuleInput {
   change: AuthorityRuleChangeInput!
 }
@@ -7621,6 +7740,11 @@ input SetAgentTextsInput {
   texts: AgentTextsInput!
 }
 
+input SetAgentWorkInput {
+  enabled: Boolean!
+  installationId: ID! @inputBounds(maxLength: 36)
+}
+
 input SetChatHandlingInput {
   conversationId: ID! @inputBounds(maxLength: 36)
   locale: String! = "vi"
@@ -7719,6 +7843,10 @@ input SetSetupGateInput {
 input SetSyncScheduleInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   everyMinutes: Int @inputBounds(min: 5, max: 10080)
+}
+
+input SetWorkspaceAgentWorkInput {
+  enabled: Boolean!
 }
 
 input SettleWonDealInput {
@@ -8924,6 +9052,15 @@ type WorkThreadType {
 type WorkThreadViewType {
   messages: [ThreadMessageType!]!
   thread: WorkThreadType!
+}
+
+type WorkspaceAgentWorkType {
+  agentsOff: Int!
+  backgroundDailyCap: Int!
+  heldWakes: Int!
+  pendingWakes: Int!
+  road: String!
+  workEnabled: Boolean!
 }
 
 enum WorkspaceRole {

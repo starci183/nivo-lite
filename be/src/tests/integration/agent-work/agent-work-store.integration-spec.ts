@@ -199,8 +199,8 @@ describe("agent-work/fence: a lost lease and a poison wake", () => {
     })
 
     it("agent-work/poison: a wake that fails past its budget is dead and the next one runs", async () => {
-        const poison = customerWake("poison", "conv-poison")
-        const next = customerWake("poison-next", "conv-poison")
+        const poison = wakeOf("poison")
+        const next = wakeOf("poison-next")
         scripted().script = {
             run: (turn) =>
                 turn.eventKey === poison.eventKey
@@ -208,18 +208,22 @@ describe("agent-work/fence: a lost lease and a poison wake", () => {
                     : Promise.resolve({ kind: "proposal", proposal: { reply: "ok" }, usage: null }),
         }
         await post(poison)
-        await drain("conversation:conv-poison")
+        await drain()
         const retrying = await rowOf(poison)
         expect(retrying.status).toBe("pending")
         expect(retrying.attempts).toBe(1)
         expect(retrying.notBefore.getTime()).toBeGreaterThan(retrying.createdAt.getTime())
 
         await endRetryWait(em(), retrying.id)
-        await drain("conversation:conv-poison")
+        await drain()
+        expect((await rowOf(poison)).status).toBe("pending")
+
+        await endRetryWait(em(), retrying.id)
+        await drain()
         expect((await rowOf(poison)).status).toBe("dead")
 
         await post(next)
-        await drain("conversation:conv-poison")
+        await drain()
         expect((await rowOf(next)).status).toBe("done")
     })
 })

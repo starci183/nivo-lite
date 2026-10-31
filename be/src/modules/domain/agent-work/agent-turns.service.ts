@@ -6,15 +6,8 @@ import { LEASE_SECONDS, BREAKER_AFTER, BREAKER_SECONDS, retryWaitOf } from "./ag
 import { parseBegin, parseDue, parseFinish, parsePropose } from "./agent-work-results.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentTurnEntity, AgentWakeEntity } from "./persistence/entities"
-import type {
-    AgentBegin,
-    AgentFinish,
-    AgentProposeResult,
-    AgentRunningTurn,
-    AgentTurnEnding,
-    AgentTurnView,
-    AgentWorkDue,
-} from "./agent-work.contracts"
+import type { AgentRunningTurn, AgentTurnEnding, AgentTurnView, AgentWorkDue } from "./agent-work.contracts"
+import type { AgentBegin, AgentFinish, AgentProposeResult } from "./agent-work-turns.contracts"
 
 /** One row a database function answered: the value sits under the function's own name. */
 type FunctionRow = Readonly<Record<string, unknown>>

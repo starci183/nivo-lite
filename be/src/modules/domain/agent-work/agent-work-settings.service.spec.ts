@@ -1,22 +1,24 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, FakeClock, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import { fakeTransaction, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { In } from "typeorm"
+import { In, IsNull } from "typeorm"
 import {
     agentWorkSettingsRowOf,
     agentWorkStateRowOf,
     heldCustomerWakeRowOf,
     heldOldWakeRowOf,
     heldScheduleWakeRowOf,
+    heldTaskWakeRowOf,
     heldTagWakeRowOf,
-    agentTurnQueueProviderOf,
 } from "@tests/fixtures/builders/agent-work.builder"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { AGENT_TURN_QUEUE_PRODUCER } from "@modules/queues/agent-turn"
+import type { AgentTurnQueue } from "@modules/queues/agent-turn"
 import { AgentWorkAccessService } from "./agent-work-access.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
 import { AgentWorkErrorCode } from "./errors/agent-work.error"
-import { AgentWakeEntity, AgentWorkSettingsEntity, AgentWorkStateEntity } from "./persistence/entities"
+import { AgentTaskEntity, AgentWakeEntity, AgentWorkSettingsEntity, AgentWorkStateEntity } from "./persistence/entities"
 
 const NOW = "2026-11-10T03:00:00.000Z"
 const SWITCH = 'SELECT * FROM "public"."agent_work_switch"($1, $2, $3, $4)'
@@ -24,17 +26,17 @@ const SWITCH = 'SELECT * FROM "public"."agent_work_switch"($1, $2, $3, $4)'
 const build = async (base: MockEntityManager = mockEntityManager()) => {
     const tx = fakeTransaction(base)
     const access = mock<AgentWorkAccessService>({ owner: jest.fn().mockResolvedValue("seat-1") })
-    const outbox = recordingQueueOutbox()
+    const queue = mock<AgentTurnQueue>({ enqueueSweepDrain: jest.fn().mockResolvedValue(undefined) })
     const container = await Test.createTestingModule({
         providers: [
             AgentWorkSettingsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: base },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
-            agentTurnQueueProviderOf(outbox),
+            { provide: AGENT_TURN_QUEUE_PRODUCER, useValue: queue },
             { provide: AgentWorkAccessService, useValue: access },
         ],
     }).compile()
-    return { service: container.get(AgentWorkSettingsService), em: base, tx, access, outbox }
+    return { service: container.get(AgentWorkSettingsService), em: base, tx, access, queue }
 }
 
 describe("AgentWorkSettingsService reads", () => {
@@ -48,9 +50,9 @@ describe("AgentWorkSettingsService reads", () => {
             road: "core",
             backgroundDailyCap: 50,
         })
-        await expect(unknown.service.settingsOf("ws-1")).resolves.toMatchObject({ road: "legacy", workEnabled: true })
+        await expect(unknown.service.settingsOf("ws-1")).resolves.toMatchObject({ road: "core", workEnabled: true })
         await expect(known.service.roadOf("ws-1")).resolves.toBe("core")
-        await expect(unknown.service.roadOf("ws-1")).resolves.toBe("legacy")
+        await expect(unknown.service.roadOf("ws-1")).resolves.toBe("core")
     })
 
     it("answers the state of an agent, or the defaults while it has no row", async () => {
@@ -94,7 +96,7 @@ describe("AgentWorkSettingsService.setWorkspaceWork", () => {
         const tag = heldTagWakeRowOf("w-tag")
         const old = heldOldWakeRowOf("w-old")
         const background = heldScheduleWakeRowOf("w-sched")
-        const { service, em, outbox } = await build(
+        const { service, em, queue } = await build(
             mockEntityManager({
                 upsert: [AgentWorkSettingsEntity, {}],
                 update: [AgentWakeEntity, { affected: 1 }],
@@ -125,10 +127,34 @@ describe("AgentWorkSettingsService.setWorkspaceWork", () => {
             { id: In(["w-old", "w-sched"]) },
             { status: "skipped", reason: "stale", finishedAt: new Date(NOW) },
         )
-        expect(outbox.jobs.map((job) => job.payload)).toEqual([
+        expect(queue.enqueueSweepDrain.mock.calls.map(([scope]) => scope)).toEqual([
             { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "conversation:conv-1" },
             { workspaceId: "ws-1", agentId: "agent-2", scopeKey: "agent" },
         ])
+    })
+})
+
+describe("AgentWorkSettingsService.setWorkspaceWork, a task whose wake was held", () => {
+    it("makes the task due again when its wake goes stale, so a held wake is not the end of the task", async () => {
+        const { service, em } = await build(
+            mockEntityManager({
+                upsert: [AgentWorkSettingsEntity, {}],
+                update: [
+                    [AgentWakeEntity, { affected: 1 }],
+                    [AgentTaskEntity, { affected: 1 }],
+                ],
+                findOne: [AgentWorkSettingsEntity, agentWorkSettingsRowOf()],
+            }),
+        )
+        em.find.mockResolvedValueOnce([heldTaskWakeRowOf("w-task")]).mockResolvedValueOnce([])
+
+        await service.setWorkspaceWork("user-1", "ws-1", true)
+
+        expect(em.update).toHaveBeenCalledWith(
+            AgentTaskEntity,
+            { id: In(["task-1"]), status: "open", nextActionAt: IsNull() },
+            { nextActionAt: new Date(NOW) },
+        )
     })
 })
 
@@ -166,7 +192,7 @@ describe("AgentWorkSettingsService.setAgentWork", () => {
 
     it("switches one agent on and returns only its own held wakes to the queue", async () => {
         const wake = heldCustomerWakeRowOf("w-1")
-        const { service, em, outbox } = await build(
+        const { service, em, queue } = await build(
             mockEntityManager({
                 query: [SWITCH, [{ agent_work_switch: true }]],
                 update: [AgentWakeEntity, { affected: 1 }],
@@ -187,7 +213,7 @@ describe("AgentWorkSettingsService.setAgentWork", () => {
             { id: In(["w-1"]) },
             { status: "pending", reason: null },
         )
-        expect(outbox.jobsOf("agent_turn")).toHaveLength(1)
+        expect(queue.enqueueSweepDrain).toHaveBeenCalledTimes(1)
     })
 
     it("stops after twenty passes when a backlog never ends", async () => {

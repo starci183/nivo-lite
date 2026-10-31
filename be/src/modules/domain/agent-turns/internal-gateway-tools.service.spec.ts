@@ -3,7 +3,7 @@ import { mock } from "@starci/jest-preset"
 import type { BridgeTurn } from "@modules/domain/agent-tools"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import type { GatewayCallResult } from "@modules/domain/mcp-gateway"
-import { PresentedRole, WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { AgentWriteRightService } from "./agent-write-right.service"
 import { InternalGatewayToolsService } from "./internal-gateway-tools.service"
 
 const turn = (over: Partial<BridgeTurn> = {}): BridgeTurn => ({
@@ -36,28 +36,28 @@ const WRITE: Described = { ...READ, name: "sepay.pay", scope: "write" }
 interface Options {
     readonly described?: Described | null
     readonly result?: GatewayCallResult
-    readonly role?: PresentedRole
+    readonly mayWrite?: boolean
 }
 
 const build = async ({
     described = READ,
     result = { ok: true, value: { rows: 2 } },
-    role = PresentedRole.Owner,
+    mayWrite = true,
 }: Options = {}) => {
     const gateway = mock<McpGatewayService>({
         search: jest.fn(() => Promise.resolve([READ])),
         describe: jest.fn(() => Promise.resolve(described)),
         call: jest.fn(() => Promise.resolve(result)),
     })
-    const members = mock<WorkspaceMembersService>({ roleOf: jest.fn(() => Promise.resolve(role)) })
+    const right = mock<AgentWriteRightService>({ mayWrite: jest.fn(() => Promise.resolve(mayWrite)) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             InternalGatewayToolsService,
             { provide: McpGatewayService, useValue: gateway },
-            { provide: WorkspaceMembersService, useValue: members },
+            { provide: AgentWriteRightService, useValue: right },
         ],
     }).compile()
-    return { tools: moduleRef.get(InternalGatewayToolsService), gateway, members }
+    return { tools: moduleRef.get(InternalGatewayToolsService), gateway, right }
 }
 
 describe("InternalGatewayToolsService > search and describe", () => {
@@ -68,6 +68,14 @@ describe("InternalGatewayToolsService > search and describe", () => {
             tools: [READ],
         })
         expect(gateway.search).toHaveBeenCalledWith(caller, "debits", 3)
+    })
+
+    it("hands the gateway the conversation of a turn that has one, so the tools only staff may run stay hidden from it", async () => {
+        const { tools, gateway } = await build()
+
+        await tools.run(turn({ source: "customer", conversationId: "conv-1" }), "tool.search", { query: "x" })
+
+        expect(gateway.search).toHaveBeenCalledWith({ ...caller, conversationId: "conv-1" }, "x", 5)
     })
 
     it("asks for five tools when the agent names no limit", async () => {
@@ -160,46 +168,31 @@ describe("InternalGatewayToolsService > call", () => {
 })
 
 describe("InternalGatewayToolsService > who may write", () => {
-    it.each(["internal", "schedule"] as const)(
-        "never lets a %s turn write: it proposes an action instead",
-        async (source) => {
-            const { tools, gateway } = await build({ described: WRITE })
-
-            await expect(
-                tools.run(turn({ source, authorUserId: "user-1" }), "tool.call", { name: WRITE.name }),
-            ).resolves.toEqual({
-                error: "read_only_turn",
-            })
-            expect(gateway.call).not.toHaveBeenCalled()
-        },
-    )
-
-    it.each([PresentedRole.Owner, PresentedRole.Manager])("lets a tag written by a %s write", async (role) => {
-        const { tools, gateway, members } = await build({ described: WRITE, role })
+    it("asks the write right of the turn's source and author, and lets a call through that it grants", async () => {
+        const { tools, gateway, right } = await build({ described: WRITE })
 
         await expect(
             tools.run(turn({ source: "tag", authorUserId: "user-1" }), "tool.call", { name: WRITE.name }),
         ).resolves.toEqual({ result: { rows: 2 } })
-        expect(members.roleOf).toHaveBeenCalledWith("user-1", "ws-1")
+        expect(right.mayWrite).toHaveBeenCalledWith("tag", "user-1", "ws-1")
         expect(gateway.call).toHaveBeenCalledTimes(1)
     })
 
-    it("keeps a tag written by staff to the read tools", async () => {
-        const { tools, gateway } = await build({ described: WRITE, role: PresentedRole.Staff })
+    it("refuses a write the right does not grant, and calls nothing: the agent proposes an action instead", async () => {
+        const { tools, gateway } = await build({ described: WRITE, mayWrite: false })
 
-        await expect(
-            tools.run(turn({ source: "tag", authorUserId: "user-1" }), "tool.call", { name: WRITE.name }),
-        ).resolves.toEqual({ error: "read_only_turn" })
+        await expect(tools.run(turn({ source: "internal" }), "tool.call", { name: WRITE.name })).resolves.toEqual({
+            error: "read_only_turn",
+        })
         expect(gateway.call).not.toHaveBeenCalled()
     })
 
-    it("keeps a tag with no known author to the read tools", async () => {
-        const { tools, members } = await build({ described: WRITE })
+    it("does not ask the right for a read tool", async () => {
+        const { tools, right } = await build({ mayWrite: false })
 
-        await expect(tools.run(turn({ source: "tag" }), "tool.call", { name: WRITE.name })).resolves.toEqual({
-            error: "read_only_turn",
-        })
-        expect(members.roleOf).not.toHaveBeenCalled()
+        await tools.run(turn(), "tool.call", { name: READ.name })
+
+        expect(right.mayWrite).not.toHaveBeenCalled()
     })
 })
 
