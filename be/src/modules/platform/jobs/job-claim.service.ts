@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { LessThan } from "typeorm"
 import type { EntityManager } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { returnedRows, rowShape } from "@modules/platform/database"
@@ -48,13 +49,6 @@ const hasClaimShape = rowShape({
 /** The guard of the rows a claim returns. */
 const isClaimedRow = (value: unknown): value is ClaimedRow => hasClaimShape(value) && isRecord(value.payload)
 
-/**
- * A re-claim takes a job whose delivery failed or whose lease lapsed; a done job and a live claim match nothing. The store bumps
- * the token in the same statement, so two workers can never hold the same one.
- */
-const RECLAIMABLE =
-    "jobs.jobKey = :jobKey AND (jobs.status = :failed OR (jobs.status = :running AND jobs.leaseExpiresAt < :now))"
-
 /** The claim a returned row stands for. */
 const claimResultOf = (row: ClaimedRow): ClaimedJob => ({
     jobId: row.id,
@@ -76,7 +70,10 @@ export class JobClaimService implements JobClaims {
         @InjectClock() private readonly clock: Clock,
     ) {}
 
-    /** Claims the delivery; null when the job is done or another worker holds a claim that has not expired. */
+    /**
+     * Claims the delivery; null when the job is done or another worker holds a claim that has not expired. A re-claim takes a job whose
+     * delivery failed or whose lease lapsed; the store bumps the token in the same statement, so two workers can never hold the same one.
+     */
     async claim(params: ClaimParams): Promise<ClaimResult> {
         const now = this.clock.now()
         const leaseExpiresAt = new Date(now.getTime() + params.leaseMs)
@@ -107,12 +104,10 @@ export class JobClaimService implements JobClaims {
                 status: "running",
                 error: null,
             })
-            .where(RECLAIMABLE, {
-                jobKey: params.jobKey,
-                failed: "failed" satisfies JobState,
-                running: "running" satisfies JobState,
-                now,
-            })
+            .where([
+                { jobKey: params.jobKey, status: "failed" satisfies JobState },
+                { jobKey: params.jobKey, status: "running" satisfies JobState, leaseExpiresAt: LessThan(now) },
+            ])
             .returning(CLAIM_COLUMNS)
             .execute()
         const [row] = returnedRows(reclaimed.raw, isClaimedRow)

@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { LessThan } from "typeorm"
 import { FakeClock, fakeTransaction, mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { QueryBuilderAnswers } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -149,8 +150,10 @@ describe("JobClaimService", () => {
             expect(typeof bump === "function" ? Reflect.apply(bump, undefined, []) : bump).toBe("fencing_token + 1")
             expect(update?.callsOf("where")).toEqual([
                 [
-                    "jobs.jobKey = :jobKey AND (jobs.status = :failed OR (jobs.status = :running AND jobs.leaseExpiresAt < :now))",
-                    { jobKey: "k-1", failed: "failed", running: "running", now: new Date(AT) },
+                    [
+                        { jobKey: "k-1", status: "failed" },
+                        { jobKey: "k-1", status: "running", leaseExpiresAt: LessThan(new Date(AT)) },
+                    ],
                 ],
             ])
             expect(update?.callsOf("returning")).toEqual([["id, kind, fencing_token, current_step, payload"]])
