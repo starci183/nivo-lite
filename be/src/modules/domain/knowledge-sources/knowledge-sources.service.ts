@@ -31,6 +31,7 @@ import type {
     SourceBrief,
     SourceDetail,
     SourceRef,
+    SourceStatus,
     SourceSummary,
     StoredNote,
     UpdateSourceInput,
@@ -75,6 +76,9 @@ const SUMMARY_COLUMNS = {
 
 /** The stage columns of a source no worker is on. */
 const NO_STAGE = { stage: null, stageDone: null, stageTotal: null } as const
+
+/** The statuses of a source no worker is on: only such a source is read again, so two jobs never embed the same passages. */
+const IDLE_STATUSES: Array<SourceStatus> = ["pending", "ready", "failed", "blocked_credits"]
 
 /** Who may change the knowledge of a workspace. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
@@ -127,6 +131,8 @@ export class KnowledgeSourcesService {
         const sizeBytes = await this.quota.measure(source)
         try {
             const ref = await this.entityManager.transaction(async (tx) => {
+                const stored = await this.storedUpload(tx, workspaceId, source.storagePath)
+                if (stored !== null) return stored
                 await this.quota.admit(tx, workspaceId, sizeBytes)
                 const inserted = await tx.insert(KnowledgeSourceEntity, {
                     workspaceId,
@@ -181,10 +187,10 @@ export class KnowledgeSourcesService {
     async reindexSource(userId: string, workspaceId: string, input: ReindexInput): Promise<SourceRef> {
         await this.members.require(userId, workspaceId, MANAGERS)
         const content = unwrapOutcome(replacementContent(input.content), KnowledgeSourcesError)
-        await this.entityManager.transaction(async (tx) => {
+        const queued = await this.entityManager.transaction(async (tx) => {
             const requeued = await tx.update(
                 KnowledgeSourceEntity,
-                { id: input.sourceId, workspaceId },
+                { id: input.sourceId, workspaceId, status: In(IDLE_STATUSES) },
                 {
                     status: "queued",
                     progress: 0,
@@ -194,11 +200,18 @@ export class KnowledgeSourcesService {
                     updatedAt: NOW,
                 },
             )
-            if (requeued.affected === 0)
-                throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+            if (requeued.affected === 0) {
+                const busy = await tx.findOne(KnowledgeSourceEntity, {
+                    select: { id: true },
+                    where: { id: input.sourceId, workspaceId },
+                })
+                if (busy === null) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+                return false
+            }
             await this.queue.enqueueIndex({ sourceId: input.sourceId, workspaceId }, tx, this.clock.now().getTime())
+            return true
         })
-        await this.progress.announce(workspaceId, input.sourceId)
+        if (queued) await this.progress.announce(workspaceId, input.sourceId)
         return { id: input.sourceId }
     }
 
@@ -396,6 +409,16 @@ export class KnowledgeSourcesService {
             done: null,
             total: null,
         })
+    }
+
+    /** The source an uploaded object already became, so a repeated add (a lost response, a retry) never makes a second one; null for a new object or a source with no file. */
+    private async storedUpload(tx: EntityManager, workspaceId: string, path: string | null): Promise<SourceRef | null> {
+        if (path === null) return null
+        const found = await tx.findOne(KnowledgeSourceEntity, {
+            select: { id: true },
+            where: { workspaceId, storagePath: path },
+        })
+        return found === null ? null : { id: found.id }
     }
 
     /** The agent instance a document is kept for, which must belong to the workspace; null when the document is for every instance. */

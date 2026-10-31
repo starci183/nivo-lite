@@ -11,6 +11,7 @@ import { TIMER } from "@modules/platform/retry"
 import type { CancelTimer, Timer } from "@modules/platform/retry"
 import { EmbeddingService } from "./embedding.service"
 import { KnowledgeIndexingService } from "./knowledge-indexing.service"
+import { KnowledgeErrorCode } from "./errors/knowledge.error"
 import { EMBED_BATCH } from "./knowledge.contracts"
 import { KNOWLEDGE_OPTIONS } from "./knowledge.decorators"
 import { SourceReaderService } from "./source-reader.service"
@@ -185,16 +186,15 @@ describe("KnowledgeIndexingService", () => {
 
 describe("KnowledgeIndexingService", () => {
     describe("index", () => {
-        it("stores passages for keyword search only when there are no vectors", async () => {
+        it("fails the batch into the queue retry when the provider gives no vectors, storing nothing keyword-only", async () => {
             const { service, sources, chunks, embeddings } = await build()
             embeddings.embed.mockResolvedValue(null)
 
-            await expect(service.index(run)).resolves.toBe("indexed")
+            await expect(service.index(run)).rejects.toMatchObject({ code: KnowledgeErrorCode.EmbeddingUnavailable })
 
-            expect(chunks.keep).toHaveBeenCalledWith(
-                expect.objectContaining({ drafts: [{ text: "Open 8 to 21", vector: null, order: 0 }] }),
-            )
-            expect(sources.finishIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.KeywordOnly, 1)
+            expect(chunks.keep).not.toHaveBeenCalled()
+            expect(sources.finishIndexing).not.toHaveBeenCalled()
+            expect(sources.fail).not.toHaveBeenCalled()
         })
     })
 })
@@ -259,11 +259,34 @@ describe("KnowledgeIndexingService", () => {
 
             expect(usage.blockedBy).toHaveBeenCalledWith(WS, "embedding", true)
             expect(embeddings.embed).not.toHaveBeenCalled()
-            const drafts = chunks.replace.mock.calls[0]?.[0].drafts ?? []
-            expect(drafts.length).toBeGreaterThan(1)
+            expect(chunks.replace).not.toHaveBeenCalled()
+            const drafts = chunks.keep.mock.calls.flatMap(([write]) => write.drafts)
+            expect(drafts.length).toBe(chunkText(content).length)
             expect(drafts.every((draft) => draft.vector === null)).toBe(true)
             expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, drafts.length)
             expect(sources.finishIndexing).not.toHaveBeenCalled()
+        })
+
+    })
+})
+
+describe("KnowledgeIndexingService", () => {
+    describe("index", () => {
+        it("keeps the vectors already paid for when a retry meets no credits, and stores only the missing passages", async () => {
+            const { service, sources, usage, embeddings, chunks } = await build(sourceOf({ content: MANY }))
+            const pieces = chunkText(MANY)
+            chunks.embeddedOf.mockResolvedValue(
+                pieces.slice(0, 10).map((text, order) => ({ order, text, model: "m1" })),
+            )
+            usage.blockedBy.mockResolvedValue(true)
+
+            await expect(service.index(run)).resolves.toBe("blocked")
+
+            expect(chunks.replace).not.toHaveBeenCalled()
+            expect(embeddings.embed).not.toHaveBeenCalled()
+            const orders = chunks.keep.mock.calls.flatMap(([write]) => write.drafts.map((draft) => draft.order))
+            expect(orders).toEqual(pieces.map((_, order) => order).slice(10))
+            expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, pieces.length)
         })
     })
 })
