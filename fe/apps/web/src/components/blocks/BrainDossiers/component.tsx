@@ -11,7 +11,7 @@ import {
     PaneSection,
     SectionHeader,
 } from "@starci/grammar/common"
-import type { BadgeTone, PageHeaderContent } from "@starci/grammar/common"
+import type { BadgeTone, PageHeaderContent, PaneGridProps } from "@starci/grammar/common"
 import { DossierRowsCard } from "@/components/composites/DossierRowsCard"
 import type { DossierRowView } from "@/components/composites/DossierRowsCard"
 import { SlotView } from "@/components/composites/SlotView"
@@ -202,25 +202,17 @@ const InSlot = (props: InSlotProps) => (
     </SlotView>
 )
 
-/** The pane of the open dossier: the third column from the wide breakpoint, a drawer below it that closes the dossier. */
-const DetailPane = (props: BrainDossiersBaseProps) => (
-    <Pane
-        area="detail"
-        surface
-        scroll
-        label={props.props.detailLabel}
-        collapse="drawer"
-        collapseLabel={props.props.detailLabel}
-        openLabel={props.props.detailLabel}
-        closeLabel={props.props.detailCloseLabel}
-        isOpen
-        onOpenChange={(isOpen) => {
-            if (!isOpen) props.on.closeDetail()
-        }}
-    >
-        <PaneSection>{props.shape.detail}</PaneSection>
-    </Pane>
-)
+/** The arrangement of the panes: the categories beside the dossiers, and the open dossier as a third column from the wide breakpoint. */
+const LAYOUT: Record<"plain" | "withDetail", Required<Pick<PaneGridProps, "areas" | "columns">>> = {
+    plain: {
+        areas: { base: ["main"], medium: ["list main"] },
+        columns: { base: ["fill"], medium: ["standard", "fill"] },
+    },
+    withDetail: {
+        areas: { base: ["main"], medium: ["list main"], wide: ["list main detail"] },
+        columns: { base: ["fill"], medium: ["standard", "fill"], wide: ["standard", "fill", "wide"] },
+    },
+}
 
 /**
  * Draws the dossiers tab of the Second Brain as a panes page: the header with its tabs, then a PaneGrid attached flush
@@ -230,6 +222,7 @@ const DetailPane = (props: BrainDossiersBaseProps) => (
  */
 export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
     const view = props.props
+    const layout = view.hasDetail ? LAYOUT.withDetail : LAYOUT.plain
     return (
         <>
             <Page chrome="panes" header={view.header} measure="product">
@@ -237,16 +230,8 @@ export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
                     label={view.gridLabel}
                     role="tabpanel"
                     id={view.panelId}
-                    areas={
-                        view.hasDetail
-                            ? { base: ["main"], medium: ["list main"], wide: ["list main detail"] }
-                            : { base: ["main"], medium: ["list main"] }
-                    }
-                    columns={
-                        view.hasDetail
-                            ? { base: ["fill"], medium: ["standard", "fill"], wide: ["standard", "fill", "wide"] }
-                            : { base: ["fill"], medium: ["standard", "fill"] }
-                    }
+                    areas={layout.areas}
+                    columns={layout.columns}
                     rows={{ base: ["fill"], medium: ["fill"] }}
                 >
                     <Pane
@@ -288,7 +273,24 @@ export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
                             </InSlot>
                         </PaneSection>
                     </Pane>
-                    {view.hasDetail ? <DetailPane {...props} /> : null}
+                    {view.hasDetail ? (
+                        <Pane
+                            area="detail"
+                            surface
+                            scroll
+                            label={view.detailLabel}
+                            collapse="drawer"
+                            collapseLabel={view.detailLabel}
+                            openLabel={view.detailLabel}
+                            closeLabel={view.detailCloseLabel}
+                            isOpen
+                            onOpenChange={(isOpen) => {
+                                if (!isOpen) props.on.closeDetail()
+                            }}
+                        >
+                            <PaneSection>{props.shape.detail}</PaneSection>
+                        </Pane>
+                    ) : null}
                 </PaneGrid>
             </Page>
             {props.shape.draftDrawer}

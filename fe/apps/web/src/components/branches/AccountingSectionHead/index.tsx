@@ -28,7 +28,6 @@ export const AccountingSectionHead = (props: AccountingSectionHeadProps) => (
         <div className={HEAD_CLASS_NAME}>
             <SectionHeader level={2} title={props.title} description={props.intro} isSkeleton={props.isSkeleton} />
             <Tabs
-                variant="secondary"
                 label={props.choiceLabel}
                 selectedKey={props.selectedChoice}
                 inset="none"

@@ -159,7 +159,6 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
             <PaneSection>
                 <Tabs
                     label={text("filterLabel")}
-                    variant="secondary"
                     selectedKey={filter}
                     onSelect={(key) => {
                         if (isFilterId(key)) setFilter(key)

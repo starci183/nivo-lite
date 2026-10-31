@@ -97,7 +97,6 @@ export const DecisionsBoardBase = (props: DecisionsBoardBaseProps) => {
         >
             <div className={PAGE}>
                 <Tabs
-                    variant="secondary"
                     label={view.deptLabel}
                     selectedKey={view.deptKey}
                     inset="none"

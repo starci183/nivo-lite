@@ -40,6 +40,7 @@ export const SepaySetupSteps = (props: SepaySetupStepsProps) => {
         <SepaySetupStepsBase
             shape={props.shape}
             props={{
+                stepsLabel: t("stepsLabel"),
                 steps: drawn.map((step) => ({
                     ...step,
                     title: titleOf(step.id),

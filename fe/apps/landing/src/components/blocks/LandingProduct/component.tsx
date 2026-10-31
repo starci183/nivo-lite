@@ -79,7 +79,6 @@ export const LandingProductBase = (props: LandingProductBaseProps) => {
                         <div className={PRODUCT_DESKTOP}>
                             <SurfaceCard>
                                 <Tabs
-                                    variant="secondary"
                                     label={props.props.tabsLabel}
                                     selectedKey={current.id}
                                     inset="none"

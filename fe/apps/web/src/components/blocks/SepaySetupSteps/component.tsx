@@ -17,6 +17,8 @@ export interface SepaySetupStepsBaseProps {
     /** The body of each step, connected by the page. */
     readonly shape: Readonly<Record<SepayStepId, ReactNode>>
     readonly props: {
+        /** Names the stepper above the steps. */
+        readonly stepsLabel: string
         readonly steps: ReadonlyArray<SepaySetupStepView>
         /** Opens the webhook page of SePay for the chosen environment in a new tab. */
         readonly openSepay: { readonly label: string; readonly href: string }
@@ -30,6 +32,7 @@ export interface SepaySetupStepsBaseProps {
  */
 export const SepaySetupStepsBase = (props: SepaySetupStepsBaseProps) => (
     <ConnectionSteps
+        label={props.props.stepsLabel}
         steps={props.props.steps.map((step) => ({
             ...step,
             body: props.shape[step.id],

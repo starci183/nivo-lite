@@ -48,6 +48,8 @@ export const AgentChat = (props: AgentChatProps) => {
                 glyph,
                 module: moduleKey,
                 railTitle: t("railTitle"),
+                historyLabel: t("historyToggle"),
+                historyCloseLabel: t("historyClose"),
                 newLabel: t(chat.tab === "customer" ? "newVisitor" : "newTest"),
                 isStarting: chat.isStarting,
                 railSlot: { isLoading: agent === undefined || chat.isLoadingList, items: chat.rows },

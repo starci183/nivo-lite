@@ -55,6 +55,7 @@ export const WizardFrame = (props: WizardFrameProps) => (
                     label={props.stepLabel}
                     steps={{ total: props.steps.length, completed: props.index + 1 }}
                     valueText={props.stepLabel}
+                    tone={props.index + 1 === props.steps.length ? "success" : "accent"}
                 />
             </div>
             <div className={classNames.body}>{props.children}</div>

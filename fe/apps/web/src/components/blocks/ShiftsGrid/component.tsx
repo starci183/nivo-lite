@@ -109,7 +109,6 @@ export const ShiftsGridBase = (props: ShiftsGridBaseProps) => (
             </div>
             <div className={DAYLIST_CLASS_NAME}>
                 <Tabs
-                    variant="secondary"
                     label={props.props.title}
                     selectedKey={props.props.selectedDay}
                     inset="none"

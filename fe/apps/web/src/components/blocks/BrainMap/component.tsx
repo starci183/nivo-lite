@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import {
     Badge,
     Button,
+    Cluster,
     FlowGraph,
     ListRow,
     Page,
@@ -17,7 +18,6 @@ import {
 import type { BadgeTone, FlowGraphEdge, FlowGraphNode, PageHeaderContent } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { BADGES_CLASS_NAME, DETAIL_CLASS_NAME, MAP_CLASS_NAME } from "./classNames"
 
 /** The nodes and edges the map draws. */
 export interface MapContent {
@@ -88,13 +88,13 @@ interface GraphProps {
     readonly onSelect: (id: string | null) => void
 }
 
-/** The graph in the map pane: the radial layout, its centre the workspace, selection reported through the address. */
+/** The graph in the map pane: the orbit layout, its centre the workspace, selection reported through the address. */
 const Graph = (props: GraphProps) => (
     <FlowGraph
         label={props.label}
         nodes={props.content.nodes}
         edges={props.content.edges}
-        layout="radial"
+        layout="orbit"
         selectedId={props.selectedId}
         onSelect={props.onSelect}
         emptyLabel={props.emptyLabel}
@@ -128,16 +128,16 @@ interface DetailProps {
 const Detail = (props: DetailProps) => {
     const detail = props.detail
     return (
-        <div className={DETAIL_CLASS_NAME}>
+        <>
             <SectionHeader level={2} title={detail.title} />
             {detail.badges.length === 0 ? null : (
-                <div className={BADGES_CLASS_NAME}>
+                <Cluster gap="inline">
                     {detail.badges.map((badge) => (
                         <Badge key={badge.id} tone={badge.tone}>
                             {badge.label}
                         </Badge>
                     ))}
-                </div>
+                </Cluster>
             )}
             {detail.lines.map((line) => (
                 <Text key={line} tone="muted">
@@ -151,14 +151,15 @@ const Detail = (props: DetailProps) => {
             )}
             <Rows rows={detail.rows} rowsLabel={detail.rowsLabel} />
             {props.findings}
-        </div>
+        </>
     )
 }
 
 /**
  * Draws the map tab of the Second Brain as a panes page: the header with its tabs, then a PaneGrid attached under the tab
- * line. The map pane holds the status filter over a radial FlowGraph (the workspace in the centre, its categories on the
- * first ring, their dossiers toned by status on the second); the side pane shows the selected node and is a drawer on a phone.
+ * line. The map pane holds the status filter over an orbit FlowGraph (the workspace in the centre, its categories sized by
+ * their documents and ringed by status, their dossiers painted by status, a dossier's documents while it is open); the side
+ * pane shows the selected node and is a drawer on a phone.
  */
 export const BrainMapBase = (props: BrainMapBaseProps) => {
     const view = props.props
@@ -174,31 +175,29 @@ export const BrainMapBase = (props: BrainMapBaseProps) => {
             >
                 <Pane area="map" scroll label={view.mapLabel}>
                     <PaneSection gap="section">
-                        <div className={MAP_CLASS_NAME}>
-                            <Select
-                                label={view.filterLabel}
-                                options={view.filters}
-                                value={view.filter}
-                                onValueChange={props.on.setFilter}
-                            />
-                            <SlotView
-                                slot={view.slot}
-                                placeholder={view.placeholder}
-                                labels={view.slotLabels}
-                                onRetry={props.on.retry}
-                            >
-                                {(content, isSkeleton) => (
-                                    <Graph
-                                        label={view.mapLabel}
-                                        emptyLabel={view.emptyLabel}
-                                        content={content}
-                                        selectedId={view.selectedId}
-                                        isSkeleton={isSkeleton}
-                                        onSelect={props.on.select}
-                                    />
-                                )}
-                            </SlotView>
-                        </div>
+                        <Select
+                            label={view.filterLabel}
+                            options={view.filters}
+                            value={view.filter}
+                            onValueChange={props.on.setFilter}
+                        />
+                        <SlotView
+                            slot={view.slot}
+                            placeholder={view.placeholder}
+                            labels={view.slotLabels}
+                            onRetry={props.on.retry}
+                        >
+                            {(content, isSkeleton) => (
+                                <Graph
+                                    label={view.mapLabel}
+                                    emptyLabel={view.emptyLabel}
+                                    content={content}
+                                    selectedId={view.selectedId}
+                                    isSkeleton={isSkeleton}
+                                    onSelect={props.on.select}
+                                />
+                            )}
+                        </SlotView>
                     </PaneSection>
                 </Pane>
                 <Pane
@@ -213,7 +212,7 @@ export const BrainMapBase = (props: BrainMapBaseProps) => {
                     isOpen={view.isDetailOpen}
                     onOpenChange={props.on.detailOpenChange}
                 >
-                    <PaneSection>
+                    <PaneSection gap="section">
                         <Detail detail={view.detail} findings={props.shape.findings} />
                     </PaneSection>
                 </Pane>

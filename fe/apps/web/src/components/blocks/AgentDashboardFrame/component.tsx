@@ -128,7 +128,6 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
                 </SlotView>
                 {hasStrip ? (
                     <Tabs
-                        variant="secondary"
                         label={view.tabsLabel}
                         selectedKey={view.selectedTab}
                         inset="none"

@@ -242,6 +242,7 @@
     "backModules": "Agent",
     "setupLink": "Thiết lập",
     "historyToggle": "Lịch sử",
+    "historyClose": "Đóng lịch sử",
     "emptyGreeting": "Chào {name} nhé",
     "emptyGreetingHelp": "Hỏi bất cứ điều gì, hoặc bấm một gợi ý. Không có gì ở đây đến tay khách thật.",
     "customerEmptyHelp": "Đóng vai khách truy cập website. Nếu bạn để lại nhu cầu và thông tin liên hệ, một khách hàng sẽ được ghi nhận.",
@@ -4277,7 +4278,8 @@
     "removeBody1": "Agent dừng ngay và không thể khởi động lại.",
     "removeBody2": "Lịch sử, các cuộc trò chuyện và kiến thức được giữ lại.",
     "removeBody3": "Quyền đã giao cho agent được tắt. Cài lại vai trò này sẽ tạo một agent mới.",
-    "removed": "Đã gỡ agent."
+    "removed": "Đã gỡ agent.",
+    "tab_inbox": "Hộp thư hội thoại"
   },
   "office": {
     "quickLabel": "Câu hỏi nhanh",
@@ -7452,6 +7454,7 @@
     "stepAppHint": "App ID và App Secret của ứng dụng bạn tạo ở Zalo Developers. Muốn đổi thì ngắt kết nối rồi tạo kết nối mới.",
     "stepPaste": "Thiết lập ứng dụng Zalo",
     "stepPasteHint": "Dán 2 URL này vào ứng dụng trên Zalo Developers, rồi dán OA Secret Key về đây.",
+    "stepsLabel": "Tiến độ thiết lập",
     "stepAuthorize": "Kết nối OA",
     "stepAuthorizeHint": "Đăng nhập Zalo, chọn OA và cấp quyền. Liên kết đăng nhập hết hạn sau 15 phút.",
     "stepAuthorizeHintAsk": "Nhờ chủ workspace đăng nhập Zalo, chọn OA và cấp quyền.",
@@ -7567,6 +7570,7 @@
     "envTestShort": "Thử nghiệm",
     "environmentTestNote": "Thử nghiệm dùng chế độ thử của SePay: tiền không thật, NIVO không ghi sổ.",
     "environmentLiveNote": "Chính thức: mọi khoản tiền vào và tiền ra thật được ghi sổ và đối soát với hoá đơn.",
+    "stepsLabel": "Tiến độ thiết lập",
     "stepEnvironment": "Chọn môi trường",
     "stepEnvironmentHint": "Chỉ chủ workspace đổi được môi trường. Nên chạy thử nghiệm trước rồi mới chuyển sang chính thức.",
     "stepAccount": "Tài khoản ngân hàng",
