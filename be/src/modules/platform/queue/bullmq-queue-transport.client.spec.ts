@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { UnrecoverableError } from "bullmq"
 import { mock } from "@starci/jest-preset"
 import type { MockOf } from "@starci/jest-preset"
 import type { Secret } from "@modules/platform/config"
@@ -82,6 +83,8 @@ const build = async (answers: { options?: Partial<QueueOptions>; clientReady?: P
             return Promise.resolve(held.get(key))
         })
         queue.getJob.mockImplementation((id: string) => Promise.resolve(held.get(`${name}:${id}`)))
+        queue.upsertJobScheduler.mockResolvedValue({ timestamp: 1000, delay: 500 })
+        queue.getJobScheduler.mockResolvedValue({ next: 123_456 })
         queue.close.mockResolvedValue(undefined)
         queues.set(name, queue)
         return queue
@@ -326,6 +329,84 @@ describe("work", () => {
     })
 })
 
+describe("schedule, unschedule and nextOf", () => {
+    it("forwards the pattern, the zone and the retry template, and answers the next slot the broker holds", async () => {
+        const { client, queues } = await build()
+
+        const next = await client.schedule("fires", "agent-trigger:t-1", { pattern: "7 8 * * *", tz: "UTC" }, "fire", {})
+
+        expect(next).toEqual(new Date(1500))
+        expect(queues.get("fires")?.upsertJobScheduler).toHaveBeenCalledWith(
+            "agent-trigger:t-1",
+            { pattern: "7 8 * * *", tz: "UTC" },
+            {
+                name: "fire",
+                data: {},
+                opts: {
+                    attempts: 3,
+                    backoff: { type: "nivo", delay: 5000 },
+                    removeOnComplete: { age: 3600 },
+                    removeOnFail: { age: 604800 },
+                },
+            },
+        )
+    })
+
+    it("removes a scheduler by id and reads the next slot it holds, or null", async () => {
+        const { client, queues } = await build()
+
+        await client.unschedule("fires", "agent-trigger:t-1")
+        expect(queues.get("fires")?.removeJobScheduler).toHaveBeenCalledWith("agent-trigger:t-1")
+        expect(await client.nextOf("fires", "agent-trigger:t-1")).toEqual(new Date(123_456))
+        queues.get("fires")?.getJobScheduler.mockResolvedValueOnce(undefined)
+        expect(await client.nextOf("fires", "agent-trigger:t-1")).toBeNull()
+    })
+})
+
+describe("workFires", () => {
+    it("runs the handler without the durable admission and counts the start from the broker", async () => {
+        const { client, factory, delivery, worker, logger } = await build()
+        const handler = handlerOf()
+        handler.handle.mockResolvedValue(undefined)
+        await client.workFires(handler, 4)
+
+        await factory.worker.mock.calls[0]?.[1](brokerJob({ id: "repeat:agent-trigger:t-1:99", attemptsMade: 2 }))
+        worker.on.mock.calls[0]?.[1](new Error("redis"))
+
+        expect(factory.worker.mock.calls[0]?.[2].backoffStrategy(2)).toBe(10_000)
+        expect(delivery.deliver).not.toHaveBeenCalled()
+        expect(handler.handle).toHaveBeenCalledWith(
+            expect.objectContaining({ id: "repeat:agent-trigger:t-1:99", payload: { slot: "99" }, attempt: 3 }),
+        )
+        expect(logger.error).toHaveBeenCalledWith(QueueLogEvent.RedisFailed, expect.any(Error), { queue: "knowledge" })
+        await factory.worker.mock.calls[0]?.[1](brokerJob({ id: undefined, data: { a: 1 } }))
+        expect(handler.handle).toHaveBeenLastCalledWith(expect.objectContaining({ payload: { a: 1 } }))
+    })
+
+    it("rethrows a failure so the broker retries it, and says when the budget is spent", async () => {
+        const { client, factory, logger } = await build()
+        const handler = handlerOf()
+        const cause = new Error("db down")
+        handler.handle.mockRejectedValue(cause)
+        await client.workFires(handler, 1)
+
+        await expect(factory.worker.mock.calls[0]?.[1](brokerJob({ attemptsMade: 0 }))).rejects.toBe(cause)
+        await expect(factory.worker.mock.calls[0]?.[1](brokerJob({ attemptsMade: 2 }))).rejects.toBe(cause)
+
+        expect(logger.error).toHaveBeenNthCalledWith(1, QueueLogEvent.DeliveryFailed, cause, expect.any(Object))
+        expect(logger.error).toHaveBeenNthCalledWith(2, QueueLogEvent.DeadLettered, cause, expect.any(Object))
+    })
+
+    it("ends a job at once when the handler marks the failure unrecoverable", async () => {
+        const { client, factory } = await build()
+        const handler = handlerOf()
+        handler.handle.mockRejectedValue(new QueueError({ code: QueueErrorCode.Unrecoverable }))
+        await client.workFires(handler, 1)
+
+        await expect(factory.worker.mock.calls[0]?.[1](brokerJob())).rejects.toBeInstanceOf(UnrecoverableError)
+    })
+})
+
 describe("close", () => {
     it("stops fetching first, settles the deliveries and then closes the workers and the queues", async () => {
         const { client, delivery, worker, queues } = await build()
@@ -393,5 +474,26 @@ describe("close", () => {
         await rejected
 
         expect(worker.close).not.toHaveBeenCalled()
+    })
+})
+
+describe("close, with scheduled fires", () => {
+    it("aborts the fires still running when the grace passes", async () => {
+        jest.useFakeTimers()
+        const { client, delivery, factory } = await build()
+        const finish = gate()
+        delivery.settled.mockReturnValue(finish.promise)
+        delivery.abortAll.mockImplementation(() => finish.resolve())
+        const handler = handlerOf()
+        handler.handle.mockResolvedValue(undefined)
+        await client.workFires(handler, 1)
+        await factory.worker.mock.calls[0]?.[1](brokerJob())
+        const signal = handler.handle.mock.calls[0]?.[0].signal
+
+        const closing = client.close()
+        await jest.advanceTimersByTimeAsync(11)
+        await closing
+
+        expect(signal?.aborted).toBe(true)
     })
 })

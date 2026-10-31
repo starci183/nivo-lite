@@ -1,6 +1,9 @@
 import { builder } from "@starci/jest-preset"
+import type { EntityManager } from "typeorm"
 import type { RecordingQueueOutbox } from "@starci/jest-preset"
 import { agentWorkEntities } from "@modules/domain/agent-work"
+import { QUEUE_SCHEDULES } from "@modules/platform/queue"
+import type { QueueSchedules } from "@modules/platform/queue"
 import { AGENT_TURN_QUEUE_PRODUCER, AgentTurnQueue } from "@modules/queues/agent-turn"
 import type { AgentGoalWrite, AgentTriggerWrite, AgentTurnView, AgentWake } from "@modules/domain/agent-work"
 
@@ -99,6 +102,7 @@ export const agentTriggerRowOf = builder<AgentTriggerEntity>({
     eventName: null,
     probeKey: "invoices_due",
     enabled: true,
+    seedKey: null,
     nextRunAt: null,
     lastFiredAt: null,
     reconciledAt: null,
@@ -243,6 +247,9 @@ export const orphanTurnRowOf = (): AgentTurnEntity =>
         status: "running",
     })
 
+/** A trigger row a module seeded under the key `morning`. */
+export const seededTriggerRowOf = (): AgentTriggerEntity => agentTriggerRowOf({ seedKey: "morning" })
+
 /** A wake row a switch held: a customer's message of conversation conv-1. */
 export const heldCustomerWakeRowOf = (id: string): AgentWakeEntity => agentWakeRowOf({ id, eventKey: id })
 
@@ -263,3 +270,27 @@ export const agentTurnQueueProviderOf = (outbox: RecordingQueueOutbox) => ({
     provide: AGENT_TURN_QUEUE_PRODUCER,
     useValue: new AgentTurnQueue(outbox),
 })
+
+/** The provider of the keyed job schedulers over a double, so a spec reads the schedulers a service made. */
+export const queueSchedulesProviderOf = (schedules: QueueSchedules) => ({
+    provide: QUEUE_SCHEDULES,
+    useValue: schedules,
+})
+
+/** Persists an open task of the agent whose wake time has come. */
+export const dueTaskOf = async (
+    manager: EntityManager,
+    workspaceId: string,
+    agentId: string,
+    dedupeKey: string,
+): Promise<void> => {
+    await manager.save(AgentTaskEntity, {
+        workspaceId,
+        agentId,
+        dedupeKey,
+        title: "Chase invoice 12",
+        detail: "",
+        status: "open",
+        nextActionAt: new Date("2026-01-01T00:00:00.000Z"),
+    })
+}

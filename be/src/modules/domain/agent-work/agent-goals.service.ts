@@ -8,7 +8,7 @@ import { AgentWorkAccessService } from "./agent-work-access.service"
 import { toGoalRecord } from "./agent-work.mapper"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentGoalEntity } from "./persistence/entities"
-import type { AgentGoalRecord, AgentGoalWrite } from "./agent-work.contracts"
+import type { AgentGoalRecord, AgentGoalWrite, OptionalId } from "./agent-work.contracts"
 
 /** The most goals a list shows. */
 const GOALS_MAX = 50
@@ -36,7 +36,7 @@ export class AgentGoalsService {
      * Writes a goal. A member (`actorUserId`) must be an owner or manager of the workspace; a module or the runtime passes null and
      * acts as the system. The agent must belong to the workspace.
      */
-    async save(actorUserId: string | null, write: AgentGoalWrite): Promise<AgentGoalRecord> {
+    async save(actorUserId: OptionalId, write: AgentGoalWrite): Promise<AgentGoalRecord> {
         const memberId =
             actorUserId === null ? write.memberId : await this.access.manager(actorUserId, write.workspaceId)
         await this.access.agent(write.workspaceId, write.agentId)

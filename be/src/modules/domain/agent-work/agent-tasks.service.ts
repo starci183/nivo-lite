@@ -45,6 +45,14 @@ export class AgentTasksService {
         await eachInOrder(ops, (op) => this.applyOne(workspaceId, agentId, op))
     }
 
+    /**
+     * Clears the wake time of a task once the wake it asked for was written, in the transaction that wrote it, so the sweep does not find it
+     * due again; a task the agent moved to another time meanwhile is left alone.
+     */
+    async markWoken(tx: EntityManager, taskId: string, at: Date): Promise<void> {
+        await tx.update(AgentTaskEntity, { id: taskId, nextActionAt: at }, { nextActionAt: null })
+    }
+
     /** Drops a task. Owner or manager; the task must be the agent's. */
     async drop(userId: string, workspaceId: string, agentId: string, taskId: string): Promise<void> {
         await this.access.manager(userId, workspaceId)

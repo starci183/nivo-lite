@@ -5,6 +5,9 @@ import type { QueueDelivery, QueueDeliverySource, QueueHandler, QueueJob, QueueW
 /** How many starts a job gets before it is dead-lettered as failed. */
 export const ATTEMPTS = 4
 
+/** How many starts a fire of a job scheduler gets: it has no durable row, so the broker alone retries it. */
+export const SCHEDULE_ATTEMPTS = 3
+
 /** The pause after the first failed start; it doubles with every further failure (5 s, 10 s, 20 s). */
 export const BACKOFF_MS = 5000
 
@@ -45,7 +48,7 @@ export const deferMsOf = (id: string): number => 3000 + spreadOf(id)
 export const backoffSecondsOf = (attempt: number): number => secondsOf(BACKOFF_MS * 2 ** Math.max(0, attempt - 1))
 
 /** True when the start that just failed was the last one the job gets. */
-export const isExhausted = (attempt: number): boolean => attempt >= ATTEMPTS
+export const isExhausted = (attempt: number, attempts: number = ATTEMPTS): boolean => attempt >= attempts
 
 /** Ends a job on an existing queue refusal or an owning domain error that explicitly marks its server-created failure unrecoverable. */
 export const isUnrecoverable = (cause: unknown): boolean =>
@@ -109,6 +112,9 @@ export const deliveryOf = (
     attempt,
     signal,
 })
+
+/** The slot (epoch ms, as text) a job of a job scheduler stands for, read from its broker id `repeat:<scheduler id>:<ms>`; null for any other id. */
+export const slotOf = (jobId: string): string | null => /^repeat:.+:(\d+)$/u.exec(jobId)?.[1] ?? null
 
 /** The handler a delivery goes to: the one of its job, else the one of the whole queue, else none. */
 export const routeOf = (handlers: ReadonlyArray<QueueHandler>, delivery: QueueDelivery): QueueHandler | undefined =>

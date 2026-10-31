@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common"
+import { UnrecoverableError } from "bullmq"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { BullmqQueueDeliveryClient } from "./bullmq-queue-delivery.client"
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
-import type { QueueHandler } from "./queue.contracts"
+import type { OptionalSlot, QueueHandler, QueueSchedule } from "./queue.contracts"
 import { InjectQueueFactory, InjectQueueOptions } from "./queue.decorators"
 import { QueueLogEvent } from "./queue.log-events"
 import type { QueueOptions } from "./queue.options"
@@ -13,11 +14,18 @@ import {
     KEEP_COMPLETED_SECONDS,
     KEEP_FAILED_SECONDS,
     REDIS_DEADLINE_MS,
+    SCHEDULE_ATTEMPTS,
     backoffMsOf,
+    deliveryOf,
+    isExhausted,
     isQueueMemoryBounded,
+    isUnrecoverable,
+    reasonOf,
+    slotOf,
 } from "./queue.policy"
 import type {
     BullmqConnection,
+    BullmqJob,
     BullmqQueue,
     BullmqWorker,
     QueueFactory,
@@ -49,6 +57,7 @@ export class BullmqQueueTransportClient implements QueueTransport {
     private readonly queues = new Map<string, BullmqQueue>()
     private readonly workers: Array<BullmqWorker> = []
     private readonly verified = new Map<string, Promise<void>>()
+    private readonly fires = new AbortController()
     private readonly guard: QueueRedisGuard = {
         ready: (queue) => this.verify(queue),
         command: (promise) => this.command(promise),
@@ -110,6 +119,53 @@ export class BullmqQueueTransportClient implements QueueTransport {
         this.workers.push(worker)
     }
 
+    /** Starts a worker of the queue whose jobs a scheduler fires; the handler runs without the durable admission and the broker retries a failure. */
+    async workFires(handler: QueueHandler, concurrency: number): Promise<void> {
+        await this.command(this.verify(handler.queue))
+        const worker = this.factory.worker(handler.queue, (job) => this.fire(handler, job), {
+            ...this.connection(false),
+            concurrency,
+            lockDuration: this.options.visibilityTimeoutMs,
+            backoffStrategy: (attemptsMade, error) => backoffMsOf(attemptsMade, error),
+        })
+        worker.on("error", (cause) => this.logger.error(QueueLogEvent.RedisFailed, cause, { queue: handler.queue }))
+        this.workers.push(worker)
+    }
+
+    /** Creates or replaces the scheduler `id`, so the row that owns it fires once per slot for the whole deployment. */
+    async schedule(queue: string, id: string, when: QueueSchedule, job: string, payload: object): Promise<Date> {
+        await this.command(this.verify(queue))
+        const next = await this.command(
+            this.queueOf(queue).upsertJobScheduler(
+                id,
+                { pattern: when.pattern, tz: when.tz },
+                {
+                    name: job,
+                    data: payload,
+                    opts: {
+                        attempts: SCHEDULE_ATTEMPTS,
+                        backoff: { type: "nivo", delay: BACKOFF_MS },
+                        removeOnComplete: { age: KEEP_COMPLETED_SECONDS },
+                        removeOnFail: { age: KEEP_FAILED_SECONDS },
+                    },
+                },
+            ),
+        )
+        return new Date(next.timestamp + next.delay)
+    }
+
+    /** Removes the scheduler `id` with the next job it holds. */
+    async unschedule(queue: string, id: string): Promise<void> {
+        await this.command(this.verify(queue))
+        await this.command(this.queueOf(queue).removeJobScheduler(id))
+    }
+
+    /** The next slot of the scheduler `id`, or null when the broker holds none. */
+    async nextOf(queue: string, id: string): Promise<OptionalSlot> {
+        const state = await this.command(this.queueOf(queue).getJobScheduler(id))
+        return state?.next === undefined ? null : new Date(state.next)
+    }
+
     /** Resolves after `ms` milliseconds. */
     wait(ms: number): Promise<void> {
         return new Promise((resolve) => setTimeout(resolve, ms))
@@ -124,10 +180,36 @@ export class BullmqQueueTransportClient implements QueueTransport {
     /** Pauses before draining, settles every delivery, and then closes the idle driver objects. */
     private async shutdown(): Promise<void> {
         await Promise.all(this.workers.map((worker) => worker.pause(true)))
-        if (!(await this.within(this.delivery.settled(), this.options.shutdownGraceMs))) this.delivery.abortAll()
+        if (!(await this.within(this.delivery.settled(), this.options.shutdownGraceMs))) this.abortAll()
         await this.delivery.settled()
         await Promise.all(this.workers.map((worker) => worker.close()))
         await Promise.all([...this.queues.values()].map((queue) => queue.close()))
+    }
+
+    /** Signals every delivery in flight, outbox jobs and fires alike. */
+    private abortAll(): void {
+        this.delivery.abortAll()
+        this.fires.abort(new Error("worker shutting down"))
+    }
+
+    /** Runs one fired job: no admission, the broker retries a failure and an unrecoverable one ends the job. */
+    private fire(handler: QueueHandler, job: BullmqJob): Promise<void> {
+        const slot = slotOf(job.id ?? "")
+        const source = { id: job.id, name: job.name, data: slot === null ? job.data : { ...job.data, slot } }
+        const delivery = deliveryOf(handler.queue, source, job.attemptsMade + 1, this.fires.signal)
+        return Promise.resolve()
+            .then(() => handler.handle(delivery))
+            .catch((cause: unknown) => {
+                const dead = isUnrecoverable(cause)
+                this.logger.error(
+                    dead || isExhausted(delivery.attempt, SCHEDULE_ATTEMPTS)
+                        ? QueueLogEvent.DeadLettered
+                        : QueueLogEvent.DeliveryFailed,
+                    cause,
+                    { queue: handler.queue, jobId: delivery.id, job: delivery.job, attempt: delivery.attempt },
+                )
+                return Promise.reject(dead ? new UnrecoverableError(reasonOf(cause)) : cause)
+            })
     }
 
     /** Waits at most the supplied duration without leaving a native timer behind. */
@@ -148,7 +230,7 @@ export class BullmqQueueTransportClient implements QueueTransport {
     /** A deadline refuses unsafe shutdown; it never force-closes unsettled deliveries. */
     private async deadline(promise: Promise<unknown>, ms: number): Promise<void> {
         if (await this.within(promise, ms)) return
-        this.delivery.abortAll()
+        this.abortAll()
         const cause = new QueueError({ code: QueueErrorCode.ShutdownDeadline })
         this.logger.error(QueueLogEvent.ShutdownDeadline, cause)
         return Promise.reject(cause)

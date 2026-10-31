@@ -66,14 +66,19 @@ describe("JobRunnerService", () => {
 
         it("subscribes with the job and concurrency and hands failures to the processor", async () => {
             const { runner, queues } = await build()
-            const processor = mock<FencedProcessor>({ queue: "mail", job: "mail.send", concurrency: 2 })
+            const processor = mock<FencedProcessor>({
+                queue: "mail",
+                job: "mail.send",
+                concurrency: 2,
+                scheduled: true,
+            })
             const cause = new Error("gave up")
             runner.add(processor)
             const handler = queues.add.mock.calls[0]?.[0]
 
             await handler?.failed?.(delivery, cause)
 
-            expect(handler).toMatchObject({ queue: "mail", job: "mail.send", concurrency: 2 })
+            expect(handler).toMatchObject({ queue: "mail", job: "mail.send", concurrency: 2, scheduled: true })
             expect(processor.onFailed).toHaveBeenCalledWith(delivery, cause)
         })
     })
