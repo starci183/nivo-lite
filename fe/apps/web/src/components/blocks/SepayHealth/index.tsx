@@ -16,7 +16,6 @@ export const SepayHealth = (props: SepayHealthProps) => {
     return (
         <SepayHealthBase
             props={{
-                title: t("healthTitle"),
                 slot: tiles.slot,
                 placeholder: tiles.placeholder,
                 labels: slotLabels(t("loadFailed")),

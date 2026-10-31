@@ -10,7 +10,7 @@ interface ZaloConnectionEventsProps {
     readonly connectionId: string
 }
 
-/** The connected live panel of a Zalo OA connection, read from the real inbound and outbound messages and asked again every few seconds. */
+/** The connected live rail of a Zalo OA connection, read from the real inbound and outbound messages and asked again every few seconds. */
 export const ZaloConnectionEvents = (props: ZaloConnectionEventsProps) => {
     const t = useTranslations("zaloConnection")
     const slotLabels = useSlotLabels()
@@ -20,6 +20,7 @@ export const ZaloConnectionEvents = (props: ZaloConnectionEventsProps) => {
             props={{
                 title: t("eventsTitle"),
                 liveLabel: t("eventsLive"),
+                footnote: t("eventsFootnote"),
                 events: lines,
                 slotLabels: slotLabels(t("eventsEmpty")),
             }}

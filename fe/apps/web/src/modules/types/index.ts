@@ -69,7 +69,6 @@ export type {
     MetaCheckSummary,
     Provider,
     ProviderGroup,
-    ProviderGroupId,
     ProviderKind,
     Purpose,
     SepayKeys,
@@ -407,7 +406,6 @@ export type { ContractImportDialogEvents, ContractImportDialogView, ContractImpo
 export type { ReadGateBaseProps } from "./read-gate"
 export type { MethodView, SessionRowView } from "./account"
 export type { FlowEntryView, FlowView } from "./leads"
-export { ZALO_TABS } from "./zalo-connection"
 export type {
     ZaloAgentRowView,
     ZaloCheckLineView,
@@ -416,7 +414,7 @@ export type {
     ZaloHeadView,
     ZaloPasteView,
     ZaloSendView,
-    ZaloTab,
+    ZaloStepId,
     ZaloTone,
     ZnsRenewalForm,
 } from "./zalo-connection"
@@ -425,6 +423,7 @@ export type {
     SepayAgentView,
     SepayConnectionView,
     SepayEnvironment,
+    SepayStepId,
     SepayEventKind,
     SepayEventOutcome,
     SepayEventView,

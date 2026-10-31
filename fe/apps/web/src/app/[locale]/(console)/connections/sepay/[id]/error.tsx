@@ -1,10 +1,10 @@
 "use client"
 
-import { ConnectionsErrorPage } from "@/features/pages/ConnectionsErrorPage"
+import { SepayConnectionErrorPage } from "@/features/pages/SepayConnectionErrorPage"
 
 type ErrorProps = { readonly reset: () => void }
 
-/** The SePay connection route error boundary slot: the Connections trail and a retry. */
-const ErrorBoundary = (props: ErrorProps) => <ConnectionsErrorPage onRetry={props.reset} />
+/** The SePay connection route's error boundary slot. */
+const ErrorBoundary = (props: ErrorProps) => <SepayConnectionErrorPage onRetry={props.reset} />
 
 export default ErrorBoundary

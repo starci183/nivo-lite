@@ -10,6 +10,7 @@ import {
     QUERY_SEPAY_CONNECTION_SWR_KEY,
     useMutateDisconnectConnectionSwr,
     useMutateRevealSepayKeySwr,
+    useMutateRotateSepayKeySwr,
     useMutateSetSepayEnvironmentSwr,
     useMutateUpdateMoneyConnectionSwr,
 } from "@/hooks/swr"
@@ -23,6 +24,8 @@ export interface SepayCommands {
     readonly disconnect: () => Promise<Settled<true>>
     /** Asks the owner-only reveal for the key and hands it back for the clipboard only. */
     readonly revealKey: () => Promise<Settled<string>>
+    /** Issues a new key (owner only): the old one stops verifying calls at once. */
+    readonly rotateKey: () => Promise<Settled<true>>
 }
 
 /** The commands of one SePay connection page, each toasting its outcome and refreshing what it changed. */
@@ -34,6 +37,7 @@ export const useSepayCommands = (connectionId: string): SepayCommands => {
     const { trigger: triggerUpdate } = useMutateUpdateMoneyConnectionSwr()
     const { trigger: triggerDisconnect } = useMutateDisconnectConnectionSwr()
     const { trigger: triggerReveal } = useMutateRevealSepayKeySwr()
+    const { trigger: triggerRotate } = useMutateRotateSepayKeySwr()
     const refreshPage = useCallback(() => mutate(matchesSwrKey(QUERY_SEPAY_CONNECTION_SWR_KEY)), [])
     return useMemo(
         () => ({
@@ -73,6 +77,12 @@ export const useSepayCommands = (connectionId: string): SepayCommands => {
                 const settled = await settle(() => triggerReveal({ connectionId }))
                 return settled.kind === "ok" ? { kind: "ok", value: settled.value.apiKey } : settled
             },
+            rotateKey: async () => {
+                const settled = await settle(() => triggerRotate({ connectionId }), t("toastRotated"))
+                if (settled.kind !== "ok") return settled
+                await Promise.all([refreshPage(), refreshHub()])
+                return { kind: "ok", value: true }
+            },
         }),
         [
             settle,
@@ -82,6 +92,7 @@ export const useSepayCommands = (connectionId: string): SepayCommands => {
             triggerUpdate,
             triggerDisconnect,
             triggerReveal,
+            triggerRotate,
             refreshPage,
             refreshHub,
         ],

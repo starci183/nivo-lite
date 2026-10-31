@@ -1,9 +1,8 @@
-import { Spinner, Stepper, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Stepper, Text } from "@starci/grammar/common"
 import type { StepperStep, StepperStepState } from "@starci/grammar/common"
 import { Icon } from "@/components/leaves/Icon"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { sepayChecklistClassNames as classNames } from "./classNames"
 
 /** One step of the checklist as it is worded. */
 export interface SepayChecklistStep {
@@ -19,7 +18,6 @@ export interface SepayChecklistStep {
 /** Props for {@link SepayChecklistBase}. */
 export interface SepayChecklistBaseProps {
     readonly props: {
-        readonly title: string
         readonly stepsLabel: string
         readonly waitingText: string
         readonly waitingLabel: string
@@ -39,14 +37,7 @@ interface Waiting {
 
 const descriptionOf = (note: string, isWaiting: boolean, waiting: Waiting) => {
     if (isWaiting) {
-        return (
-            <SurfaceCard ariaLabel={waiting.label}>
-                <div className={classNames.well}>
-                    <Spinner label={waiting.label} size="sm" />
-                    <Text size="sm">{waiting.text}</Text>
-                </div>
-            </SurfaceCard>
-        )
+        return <Alert tone="pending" appearance="soft" title={waiting.text} />
     }
     if (note === "") return undefined
     return (
@@ -59,37 +50,28 @@ const descriptionOf = (note: string, isWaiting: boolean, waiting: Waiting) => {
 const stepsOf = (steps: ReadonlyArray<SepayChecklistStep>, waiting: Waiting): ReadonlyArray<StepperStep> =>
     steps.map(({ note, isWaiting, ...step }) => ({ ...step, description: descriptionOf(note, isWaiting, waiting) }))
 
-/** Draws the test checklist: a vertical stepper, each step true only when the webhook door really saw it. */
-export const SepayChecklistBase = (props: SepayChecklistBaseProps) => {
-    return (
-        <SurfaceCard label={props.props.title} headingLevel={2}>
-            <SlotView {...props.props} onRetry={props.on.retry}>
-                {(steps, isSkeleton) => {
-                    const current = steps.find((step) => step.state === "current") ?? steps[steps.length - 1]
-                    return (
-                        <div className={classNames.stack}>
-                            <Stepper
-                                label={props.props.stepsLabel}
-                                orientation="vertical"
-                                steps={stepsOf(steps, {
-                                    text: props.props.waitingText,
-                                    label: props.props.waitingLabel,
-                                })}
-                                currentStepId={current?.id ?? ""}
-                                isLoading={isSkeleton}
-                                stateLabel={(state) => (state === "complete" ? props.props.doneLabel : undefined)}
-                                renderMarker={(_step, index, state) =>
-                                    state === "complete" ? (
-                                        <Icon props={{ name: "complete", ariaLabel: props.props.doneLabel }} />
-                                    ) : (
-                                        index + 1
-                                    )
-                                }
-                            />
-                        </div>
-                    )
-                }}
-            </SlotView>
-        </SurfaceCard>
-    )
-}
+/** Draws the test steps inside the fourth setup step: a vertical stepper, each step true only when the webhook door really saw it. */
+export const SepayChecklistBase = (props: SepayChecklistBaseProps) => (
+    <SlotView {...props.props} onRetry={props.on.retry}>
+        {(steps, isSkeleton) => {
+            const current = steps.find((step) => step.state === "current") ?? steps[steps.length - 1]
+            return (
+                <Stepper
+                    label={props.props.stepsLabel}
+                    orientation="vertical"
+                    steps={stepsOf(steps, { text: props.props.waitingText, label: props.props.waitingLabel })}
+                    currentStepId={current?.id ?? ""}
+                    isLoading={isSkeleton}
+                    stateLabel={(state) => (state === "complete" ? props.props.doneLabel : undefined)}
+                    renderMarker={(_step, index, state) =>
+                        state === "complete" ? (
+                            <Icon props={{ name: "complete", ariaLabel: props.props.doneLabel }} />
+                        ) : (
+                            index + 1
+                        )
+                    }
+                />
+            )
+        }}
+    </SlotView>
+)

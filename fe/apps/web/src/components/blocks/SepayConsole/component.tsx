@@ -1,22 +1,16 @@
-import { Badge, Button, Page } from "@starci/grammar/common"
+import { Alert, Badge, Button, Page, Pane, PaneGrid, PaneSection, SectionHeader } from "@starci/grammar/common"
 import type { BadgeTone, PageHeaderContent } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
+import { SepayConfirm } from "@/components/composites/SepayConfirm"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { sepayConsoleClassNames as classNames } from "./classNames"
 
-/** The connected regions the page places. */
+/** The bands the page places: the main pane's (health, setup steps) and the live rail's. */
 export interface SepayConsoleShape {
-    readonly overview: ReactNode
-    readonly setup: ReactNode
-    readonly test: ReactNode
-    readonly agents: ReactNode
-    readonly events: ReactNode
+    readonly main: ReactNode
+    readonly rail: ReactNode
 }
-
-/** The tabs of the page, in order. */
-export type SepayTabId = "overview" | "setup" | "test" | "agents"
 
 /** What the header shows once the connection is read. */
 export interface SepayHeaderView {
@@ -26,12 +20,23 @@ export interface SepayHeaderView {
     readonly environmentLabel: string
     readonly environmentTone: BadgeTone
     readonly facts: string
-    readonly switchLabel: string
+    /** Why the last delivery failed, worded by the back end; empty when nothing failed. */
+    readonly lastError: string
     readonly isDisconnected: boolean
 }
 
-/** The words, data and commands of the header band. */
-export interface SepayHeaderInput {
+/** The confirmation of a disconnect. */
+export interface SepayDisconnectConfirm {
+    readonly isOpen: boolean
+    readonly title: string
+    readonly description: string
+    readonly confirmLabel: string
+    readonly cancelLabel: string
+}
+
+/** Props for {@link SepayConsoleBase}. */
+export interface SepayConsoleBaseProps {
+    readonly shape: SepayConsoleShape
     readonly props: {
         readonly slot: DataSlot<SepayHeaderView>
         readonly placeholder: SepayHeaderView
@@ -39,39 +44,40 @@ export interface SepayHeaderInput {
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href?: string }>
         readonly markSrc: string
-        readonly tabs: {
+        readonly gridLabel: string
+        readonly mainLabel: string
+        readonly rail: {
             readonly label: string
-            readonly items: ReadonlyArray<{ readonly id: string; readonly label: string }>
+            readonly openLabel: string
+            readonly closeLabel: string
+            readonly isOpen: boolean
         }
-        readonly disconnectLabel: string
+        readonly errorTitle: string
+        /** Disconnect belongs to the workspace owner; absent for everyone else, whom the back end refuses. */
+        readonly disconnect?: { readonly title: string; readonly description: string; readonly label: string }
         readonly isPending: boolean
-        readonly isOwner: boolean
+        readonly confirm: SepayDisconnectConfirm
     }
     readonly on: {
         readonly retry: () => void
-        readonly switchEnvironment: () => void
-        readonly disconnect: () => void
-        readonly selectTab: (id: string) => void
+        /** Opens the confirmation; nothing is disconnected until `confirmDisconnect`. */
+        readonly askDisconnect: () => void
+        readonly confirmDisconnect: () => void
+        readonly dismiss: () => void
+        readonly openRail: (isOpen: boolean) => void
     }
 }
 
-/** Props for {@link SepayConsoleBase}. */
-export interface SepayConsoleBaseProps {
-    readonly shape: SepayConsoleShape
-    readonly props: SepayHeaderInput["props"] & { readonly selected: SepayTabId }
-    readonly on: SepayHeaderInput["on"]
-}
+/** What a band of the main pane reads: the copy and the commands, never the bands the page places. */
+type SepayBandProps = Pick<SepayConsoleBaseProps, "props" | "on">
 
-/** The header content of a SePay connection: trail, mark, name, status and environment, the provider facts, the two actions and the page tabs. */
-const sepayHeaderOf = (input: SepayHeaderInput, selected: SepayTabId): PageHeaderContent => {
-    const { slot } = input.props
-    const view = slot.items ?? input.props.placeholder
-    const isSkeleton = slot.items === undefined
-    const canAct = !view.isDisconnected && input.props.isOwner
+/** The header content of a SePay connection: trail, mark, name, status and environment, and the provider facts. */
+const headerOf = (props: SepayConsoleBaseProps["props"]): PageHeaderContent => {
+    const view = props.slot.items ?? props.placeholder
     return {
         title: view.name,
-        breadcrumbs: { label: input.props.crumbLabel, items: [...input.props.crumbs] },
-        mark: <ProviderLogo glyph="wallet" src={input.props.markSrc} />,
+        breadcrumbs: { label: props.crumbLabel, items: [...props.crumbs] },
+        mark: <ProviderLogo glyph="wallet" src={props.markSrc} />,
         status: (
             <>
                 <Badge isDot tone={view.statusTone}>
@@ -81,57 +87,106 @@ const sepayHeaderOf = (input: SepayHeaderInput, selected: SepayTabId): PageHeade
             </>
         ),
         meta: view.facts,
-        description: (
-            <SlotView
-                slot={slot}
-                placeholder={input.props.placeholder}
-                labels={input.props.labels}
-                onRetry={input.on.retry}
-            >
-                {() => null}
-            </SlotView>
-        ),
-        actions: canAct ? (
-            <>
-                <Button
-                    intent="neutral"
-                    isDisabled={isSkeleton || input.props.isPending}
-                    onPress={input.on.switchEnvironment}
-                >
-                    {view.switchLabel}
-                </Button>
-                <Button
-                    intent="destructive"
-                    isDisabled={isSkeleton || input.props.isPending}
-                    onPress={input.on.disconnect}
-                >
-                    {input.props.disconnectLabel}
-                </Button>
-            </>
-        ) : undefined,
-        tabs: {
-            label: input.props.tabs.label,
-            items: [...input.props.tabs.items],
-            selectedKey: selected,
-            labelVisibility: "always",
-            panelId: (id) => `sepay-panel-${id}`,
-            onSelect: input.on.selectTab,
-        },
     }
 }
 
-/** Draws the page of a connection: one `Page` whose header is the connection band, and whose body is the open tab region with the live event panel docked beside it. */
-export const SepayConsoleBase = (props: SepayConsoleBaseProps) => (
-    <Page
-        header={sepayHeaderOf({ props: props.props, on: props.on }, props.props.selected)}
-        isSkeleton={props.props.slot.items === undefined}
-        measure="product"
-    >
-        <div className={classNames.frame}>
-            <div className={classNames.main} role="tabpanel" id={`sepay-panel-${props.props.selected}`}>
-                {props.shape[props.props.selected]}
-            </div>
-            <aside className={classNames.aside}>{props.shape.events}</aside>
-        </div>
-    </Page>
-)
+const isFailed = (slot: DataSlot<SepayHeaderView>): boolean => slot.isError === true || slot.isForbidden === true
+
+/** The first band of the main pane: the read failed in place, or the last delivery failed; absent when neither. */
+const NoticeBand = (props: SepayBandProps) => {
+    const { slot } = props.props
+    const lastError = slot.items?.lastError ?? ""
+    if (!isFailed(slot) && lastError === "") return null
+    return (
+        <PaneSection>
+            {isFailed(slot) ? (
+                <SlotView
+                    slot={slot}
+                    placeholder={props.props.placeholder}
+                    labels={props.props.labels}
+                    forbidden="notice"
+                    onRetry={props.on.retry}
+                >
+                    {() => null}
+                </SlotView>
+            ) : (
+                <Alert tone="negative" title={props.props.errorTitle} description={lastError} />
+            )}
+        </PaneSection>
+    )
+}
+
+const DisconnectBand = (props: SepayBandProps) => {
+    const { disconnect } = props.props
+    if (disconnect === undefined) return null
+    return (
+        <PaneSection>
+            <SectionHeader
+                level={2}
+                title={disconnect.title}
+                description={disconnect.description}
+                action={
+                    <Button
+                        intent="destructive"
+                        step="entry"
+                        isDisabled={props.props.isPending}
+                        onPress={props.on.askDisconnect}
+                    >
+                        {disconnect.label}
+                    </Button>
+                }
+            />
+        </PaneSection>
+    )
+}
+
+/**
+ * Draws the page of a SePay connection as one page with no tabs (`Page chrome="panes"`): the header band (status and environment),
+ * then a main pane of bands (notice, health, the numbered setup steps, disconnect) beside the live webhook rail, which becomes a
+ * drawer on a narrow screen. Disconnect asks first.
+ */
+export const SepayConsoleBase = (props: SepayConsoleBaseProps) => {
+    const { rail } = props.props
+    return (
+        <>
+            <Page
+                chrome="panes"
+                header={headerOf(props.props)}
+                isSkeleton={props.props.slot.isLoading === true}
+                measure="product"
+            >
+                <PaneGrid
+                    label={props.props.gridLabel}
+                    areas={{ base: ["main"], medium: ["main rail"] }}
+                    columns={{ base: ["fill"], medium: ["fill", "standard"] }}
+                >
+                    <Pane area="main" surface scroll label={props.props.mainLabel}>
+                        <NoticeBand props={props.props} on={props.on} />
+                        {isFailed(props.props.slot) ? null : props.shape.main}
+                        <DisconnectBand props={props.props} on={props.on} />
+                    </Pane>
+                    <Pane
+                        area="rail"
+                        surface
+                        scroll
+                        label={rail.label}
+                        collapse="drawer"
+                        collapseLabel={rail.label}
+                        openLabel={rail.openLabel}
+                        closeLabel={rail.closeLabel}
+                        isOpen={rail.isOpen}
+                        onOpenChange={props.on.openRail}
+                    >
+                        {props.shape.rail}
+                    </Pane>
+                </PaneGrid>
+            </Page>
+            <SepayConfirm
+                {...props.props.confirm}
+                isPending={props.props.isPending}
+                onConfirm={props.on.confirmDisconnect}
+                onDismiss={props.on.dismiss}
+            />
+        </>
+    )
+}

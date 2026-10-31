@@ -1,6 +1,6 @@
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { ConnectionsService } from "@modules/domain/connections"
+import { ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -67,6 +67,27 @@ const build = async (connection: ConnectionRecord = feed()) => {
     }).compile()
     return { service: moduleRef.get(SepayConnectionService), connections, manager, logger, rows, seen }
 }
+
+describe("SepayConnectionService rotateKey", () => {
+    it("seals a new key with its hash and answers it with the webhook address", async () => {
+        const { service, connections } = await build()
+        const result = await service.rotateKey(actor, "c1")
+        expect(result.apiKey).toMatch(/^nivo_[0-9a-f]{64}$/u)
+        expect(result.webhookUrl).toBe("https://app.example/api/connections/sepay/c1")
+        expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner"])
+        expect(connections.writeSecret).toHaveBeenCalledWith(
+            "c1",
+            result.apiKey,
+            expect.stringMatching(/^[0-9a-f]{64}$/u),
+        )
+    })
+
+    it("refuses a connection that is not a SePay feed and writes nothing", async () => {
+        const { service, connections } = await build(feed({ provider: "casso" }))
+        await expect(service.rotateKey(actor, "c1")).rejects.toMatchObject({ code: ConnectionsErrorCode.NotFound })
+        expect(connections.writeSecret).not.toHaveBeenCalled()
+    })
+})
 
 describe("SepayConnectionService read", () => {
     it("answers the page model with the key and the account masked and the health counters", async () => {

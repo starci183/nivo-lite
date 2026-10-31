@@ -14,7 +14,7 @@ interface ZaloConnectionAgentsProps {
 export const ZaloConnectionAgents = (props: ZaloConnectionAgentsProps) => {
     const t = useTranslations("zaloConnection")
     const slotLabels = useSlotLabels()
-    const { slot, toggle, reload } = useZaloAgents(props.connectionId)
+    const { slot, toggle, reload, isOwner } = useZaloAgents(props.connectionId)
     return (
         <ZaloConnectionAgentsBase
             props={{
@@ -22,6 +22,8 @@ export const ZaloConnectionAgents = (props: ZaloConnectionAgentsProps) => {
                 agents: slot,
                 slotLabels: slotLabels(t("agentsEmpty")),
                 switchLabel: t("agentsSwitch"),
+                onLabel: t("agentsOn"),
+                canToggle: isOwner,
             }}
             on={{ toggle: (agentId, isOn) => void toggle(agentId, isOn), retry: reload }}
         />

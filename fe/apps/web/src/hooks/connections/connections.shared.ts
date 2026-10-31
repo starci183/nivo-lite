@@ -1,16 +1,7 @@
-import type { useTranslations } from "next-intl"
-import { PROVIDER_GROUPS, isProvider, providerKey } from "@/hooks/connection-providers"
-import type { Connection, ConnectionStatus, DataSlot, Provider, ProviderGroupId } from "@/modules/types"
+import { isProvider } from "@/hooks/connection-providers"
+import type { Connection, ConnectionStatus, DataSlot, Provider } from "@/modules/types"
 
-/** The catalog key of a provider group heading. */
-export const GROUP_TITLE_KEY: Readonly<Record<ProviderGroupId, string>> = {
-    money: "groupMoney",
-    chat: "groupChat",
-    data: "groupData",
-    tools: "groupTools",
-}
-
-/** Rows of one provider: what needs attention first, then what runs, then what was disconnected. */
+/** Connection rows: what needs attention first, then what runs, then what was disconnected. */
 const STATUS_RANK: Readonly<Record<ConnectionStatus, number>> = { error: 0, pending: 0, connected: 1, disconnected: 2 }
 
 /** Sorts connection rows by attention, keeping the creation order inside each rank. */
@@ -57,10 +48,14 @@ export const CONNECTION_ROUTES = {
 /** The URL segment of the providers that have a page of their own: `/connections/<segment>/<connection id>`. */
 const PAGE_SEGMENT: Readonly<Partial<Record<Provider, string>>> = { sepay: "sepay", zalo_oa: "zalo" }
 
-/** The page of one connection when its provider has one (SePay, Zalo OA), else null: the row then opens the detail drawer. */
-export const connectionPageHref = (connection: Pick<Connection, "id" | "provider">): string | null => {
+/**
+ * The page of one connection when its provider has one (SePay, Zalo OA) and the page has something to show, else null. A connection
+ * that is still pending is finished in its wizard and a disconnected one has no page, so only a connected or failing one links.
+ */
+export const connectionPageHref = (connection: Pick<Connection, "id" | "provider" | "status">): string | null => {
     const segment = PAGE_SEGMENT[connection.provider]
-    return segment === undefined ? null : `${CONNECTION_ROUTES.connections}/${segment}/${connection.id}`
+    if (segment === undefined || (connection.status !== "connected" && connection.status !== "error")) return null
+    return `${CONNECTION_ROUTES.connections}/${segment}/${connection.id}`
 }
 
 /** The search params the console uses to remember which overlay is open. */
@@ -140,32 +135,6 @@ export const isLocalOnly = (siteUrl: string | undefined): boolean => {
         url.hostname === "127.0.0.1" ||
         url.hostname === "[::1]"
     return url.protocol !== "https:" || local
-}
-
-/** Build the provider groups and their connection rows for the overview. */
-export const connectionGroups = (
-    items: ReadonlyArray<Connection>,
-    agentNames: Readonly<Record<string, string>>,
-    t: ReturnType<typeof useTranslations<"connections">>,
-) => {
-    const namesOf = (agentIds: ReadonlyArray<string>) =>
-        agentIds.map((id) => agentNames[id]).filter((name): name is string => name !== undefined)
-    return PROVIDER_GROUPS.map((group) => ({
-        id: group.id,
-        title: t(GROUP_TITLE_KEY[group.id]),
-        count: items.filter((item) => group.providers.includes(item.provider)).length,
-        cards: group.providers
-            .filter((provider) => items.some((item) => item.provider === provider))
-            .map((provider) => {
-                const rows = sortRows(items.filter((item) => item.provider === provider))
-                return {
-                    provider,
-                    title: t(providerKey(provider, "title")),
-                    fact: t("connectionCount", { count: rows.length }),
-                    rows: rows.map((connection) => ({ connection, agentNames: namesOf(connection.agentIds) })),
-                }
-            }),
-    })).filter((group) => group.cards.length > 0)
 }
 
 /** What decides the status of a board: the workspace reads and, when the board is for managers, the viewer's role. */

@@ -1,7 +1,6 @@
 export {
     attentionConnections,
     boardSlotOf,
-    connectionGroups,
     connectionPageHref,
     CONNECTION_ROUTES,
     isLocalOnly,
@@ -23,7 +22,7 @@ export { useWantConnector } from "./useWantConnector"
 export { useAuthorizeGoogle } from "./useAuthorizeGoogle"
 export { useFirstEvent } from "./useFirstEvent"
 export { useQueryZaloReturnSwr } from "@/hooks/swr"
-export type { ZaloReturnInput } from "./useReturnZaloAuthorization"
+export type { ZaloReturnInput } from "@/hooks/swr"
 export { useConnectionsData } from "./useConnectionsData"
 export { useConnectionsRole } from "./useConnectionsRole"
 

@@ -72,7 +72,7 @@ export interface AgentOption {
 }
 
 /** The Connections page groups providers by what they bring in. */
-export type ProviderGroupId = "money" | "chat" | "data" | "tools"
+type ProviderGroupId = "money" | "chat" | "data" | "tools"
 
 /** One group of the page: its id and the providers inside, in display order. */
 export interface ProviderGroup {

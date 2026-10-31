@@ -1,5 +1,4 @@
 import type { ReactNode } from "react"
-import { connectionsPageClassNames as classNames } from "./classNames"
 import { ConnectionsBoardRegion } from "./component"
 import type { ConnectionsOverviewProps } from "./component"
 
@@ -11,10 +10,10 @@ export type { ConnectionsBoard } from "./component"
  * registers the blocks the board draws (a block never imports a block), so this unit draws what it is handed.
  */
 export const ConnectionsOverview = (props: ConnectionsOverviewProps) => (
-    <div className={classNames.page}>
+    <>
         <ConnectionsBoardRegion overview={props} />
         {props.props.gateway}
-    </div>
+    </>
 )
 
 /** The feature host supplies the registered drawers and their readiness. */

@@ -6,59 +6,46 @@ import { ZaloConnectionHead } from "@/components/blocks/ZaloConnectionHead"
 import { ZaloConnectionPaste } from "@/components/blocks/ZaloConnectionPaste"
 import { ZaloConnectionTestSend } from "@/components/blocks/ZaloConnectionTestSend"
 import { ZaloConnectionZns } from "@/components/blocks/ZaloConnectionZns"
-import type { ZaloTab } from "@/modules/types"
-import { ASIDE, BODY, FRAME, MAIN } from "./classNames"
+import { ZaloSetupSteps } from "@/components/blocks/ZaloSetupSteps"
 
-/** The arrangements of the page: one per tab. */
-export const ZALO_CONNECTION_SHAPES = ["overview", "setup", "check", "agents"] as const satisfies ReadonlyArray<ZaloTab>
-
-/** One drawing per tab the owner approved. */
-export type ZaloConnectionShape = (typeof ZALO_CONNECTION_SHAPES)[number]
-
-/** What the page owner supplies: the connection of the url and the tab it asked for. */
+/** What the page owner supplies: the connection of the url. */
 export interface ZaloConnectionPageBaseProps {
-    readonly shape: ZaloConnectionShape
     readonly props: { readonly connectionId: string }
 }
 
-const Body = (props: ZaloConnectionPageBaseProps) => {
+/**
+ * Draws the page of one Zalo OA connection as one page (no tabs): the frame owns the `Page`; its main pane holds the health tiles, the
+ * five setup steps in back end order (app keys, the Zalo app, the OA authorized, checks and test send, agents) and the ZNS template;
+ * the live Zalo events stand in the rail beside it.
+ */
+export const ZaloConnectionPageBase = (props: ZaloConnectionPageBaseProps) => {
     const { connectionId } = props.props
-    switch (props.shape) {
-        case "overview":
-            return <ZaloConnectionFacts connectionId={connectionId} kind="overview" />
-        case "setup":
-            return (
-                <>
-                    <ZaloConnectionFacts connectionId={connectionId} kind="setup" />
-                    <ZaloConnectionPaste connectionId={connectionId} />
-                    <ZaloConnectionZns connectionId={connectionId} />
-                </>
-            )
-        case "check":
-            return (
-                <>
-                    <ZaloConnectionChecks connectionId={connectionId} />
-                    <ZaloConnectionTestSend connectionId={connectionId} />
-                    <ZaloConnectionPaste connectionId={connectionId} />
-                </>
-            )
-        case "agents":
-            return <ZaloConnectionAgents connectionId={connectionId} />
-    }
+    return (
+        <ZaloConnectionHead
+            connectionId={connectionId}
+            shape={{
+                main: (
+                    <>
+                        <ZaloConnectionFacts connectionId={connectionId} kind="tiles" />
+                        <ZaloSetupSteps
+                            connectionId={connectionId}
+                            shape={{
+                                app: <ZaloConnectionFacts connectionId={connectionId} kind="saved" />,
+                                paste: <ZaloConnectionPaste connectionId={connectionId} />,
+                                check: (
+                                    <>
+                                        <ZaloConnectionChecks connectionId={connectionId} />
+                                        <ZaloConnectionTestSend connectionId={connectionId} />
+                                    </>
+                                ),
+                                agents: <ZaloConnectionAgents connectionId={connectionId} />,
+                            }}
+                        />
+                        <ZaloConnectionZns connectionId={connectionId} />
+                    </>
+                ),
+                rail: <ZaloConnectionEvents connectionId={connectionId} />,
+            }}
+        />
+    )
 }
-
-/** Draws the page of one Zalo OA connection: the head owns the `Page`; the tab body sits on the left of its body, the live Zalo events docked on the right. */
-export const ZaloConnectionPageBase = (props: ZaloConnectionPageBaseProps) => (
-    <ZaloConnectionHead connectionId={props.props.connectionId} tab={props.shape}>
-        <div className={FRAME}>
-            <div className={MAIN}>
-                <div className={BODY}>
-                    <Body {...props} />
-                </div>
-            </div>
-            <aside className={ASIDE}>
-                <ZaloConnectionEvents connectionId={props.props.connectionId} />
-            </aside>
-        </div>
-    </ZaloConnectionHead>
-)

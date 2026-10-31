@@ -1,9 +1,9 @@
 import type {
     SepayConnectionView,
-    SepayEnvironment,
     SepayEventKind,
     SepayEventOutcome,
     SepayEventView,
+    SepayStepId,
     SepayStepView,
 } from "@/modules/types"
 
@@ -77,16 +77,15 @@ export const sepayEventOf = (wire: SepayEventWire): SepayEventView => ({
 })
 
 /**
- * The test checklist from what the door really saw: the ping makes step 1 and 2 true (SePay test mode is on), a landed transaction makes
- * step 3 and 4 true; the first step not true yet is the active one.
+ * The three test steps from what the door really saw: a ping makes the first true, a landed transaction the second and the third (the
+ * back end matched or held it); the first step not true yet is the active one.
  */
 export const sepayStepsOf = (view: SepayConnectionView): ReadonlyArray<SepayStepView> => {
     const received = view.transactionSeenAt !== null
     const pinged = view.pingSeenAt !== null || received
     const flags: ReadonlyArray<readonly [SepayStepView["id"], boolean]> = [
         ["ping", pinged],
-        ["simulate", pinged],
-        ["wait", received],
+        ["simulate", received],
         ["receive", received],
     ]
     const firstOpen = flags.findIndex(([, done]) => !done)
@@ -96,16 +95,21 @@ export const sepayStepsOf = (view: SepayConnectionView): ReadonlyArray<SepayStep
     })
 }
 
+/** The setup steps of the SePay page, in the order the back end needs them. */
+export const SEPAY_STEP_IDS: ReadonlyArray<SepayStepId> = ["environment", "account", "paste", "test", "agents"]
+
+/** Each setup step and whether the connection shows it done: the environment is always chosen. */
+export const sepaySetupDone = (view: SepayConnectionView): ReadonlyArray<readonly [SepayStepId, boolean]> => [
+    ["environment", true],
+    ["account", view.hasFullAccount],
+    ["paste", view.pingSeenAt !== null || view.transactionSeenAt !== null || view.health.lastWebhookAt !== null],
+    ["test", view.transactionSeenAt !== null],
+    ["agents", view.agentIds.length > 0],
+]
+
 /** The tone of a connection status. */
 export const sepayStatusTone = (status: string): "success" | "danger" | "warning" | "neutral" => {
     if (status === "connected") return "success"
     if (status === "error") return "danger"
     return status === "pending" ? "warning" : "neutral"
 }
-
-/** The environment the other button switches to. */
-export const otherEnvironment = (environment: SepayEnvironment): SepayEnvironment =>
-    environment === "test" ? "live" : "test"
-
-/** The tabs of the SePay connection page, in order. */
-export const SEPAY_TAB_IDS = ["overview", "setup", "test", "agents"] as const

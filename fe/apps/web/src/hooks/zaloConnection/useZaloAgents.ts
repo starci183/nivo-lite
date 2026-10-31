@@ -1,17 +1,25 @@
 "use client"
 
 import { useCallback } from "react"
-import { useSetConnectionAgents } from "@/hooks/connections"
+import { purposeFor } from "@/hooks/connection-access"
+import { useConnectionsRole, useSetConnectionAgents } from "@/hooks/connections"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryConnectionAgentsSwr } from "@/hooks/swr"
 import type { DataSlot, ZaloAgentRowView } from "@/modules/types"
 import { useZaloPage } from "./useZaloPage"
 
-/** The agents of the workspace, each marked when it works through the Zalo connection, and the toggle that saves the set. */
+/** True for an agent of a module that can speak through a Zalo OA (a grant of that pair has a purpose). */
+const canUseZalo = (module: string): boolean => purposeFor(module, "zalo_oa") !== null
+
+/**
+ * The agents that can work through a Zalo OA (Chatbot, Sales, Booking, Loyalty, Shifts), each marked when it does, and the toggle that
+ * saves the set; only the owner may toggle, since the back end refuses everyone else.
+ */
 export const useZaloAgents = (connectionId: string) => {
     const page = useZaloPage(connectionId)
     const agentsRead = useQueryConnectionAgentsSwr()
     const setAgents = useSetConnectionAgents()
+    const { role } = useConnectionsRole()
     const agents = slotOfSwr(agentsRead)
     const on = new Set(page.slot.items?.agentIds ?? [])
     const slot: DataSlot<ReadonlyArray<ZaloAgentRowView>> = {
@@ -21,7 +29,9 @@ export const useZaloAgents = (connectionId: string) => {
         items:
             agents.items === undefined || page.slot.items === undefined
                 ? undefined
-                : agents.items.map((agent) => ({ id: agent.id, name: agent.name, isOn: on.has(agent.id) })),
+                : agents.items
+                      .filter((agent) => on.has(agent.id) || (agent.status === "active" && canUseZalo(agent.module)))
+                      .map((agent) => ({ id: agent.id, name: agent.name, isOn: on.has(agent.id) })),
     }
     const toggle = useCallback(
         async (agentId: string, isOn: boolean): Promise<void> => {
@@ -33,5 +43,5 @@ export const useZaloAgents = (connectionId: string) => {
         },
         [page, setAgents, connectionId],
     )
-    return { slot, toggle, reload: page.reload }
+    return { slot, toggle, reload: page.reload, isOwner: role === "owner" }
 }

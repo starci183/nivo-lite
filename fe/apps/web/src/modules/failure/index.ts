@@ -1,6 +1,7 @@
 export {
     graphQLErrorCode,
     isForbiddenFailure,
+    isInvalidFailure,
     isNotFoundFailure,
     isRefusedByBackend,
     isUnauthenticatedFailure,

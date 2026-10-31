@@ -37,13 +37,11 @@ export const SepayChecklist = (props: SepayChecklistProps) => {
             label: titleOf(step, connection),
             note: noteOf(step, connection),
             state: STEPPER_STATES[step.state],
-            isWaiting: step.id === "wait" && step.state === "active",
+            isWaiting: step.id === "simulate" && step.state === "active",
         }))
-    const connection = slot.items
     return (
         <SepayChecklistBase
             props={{
-                title: t(connection?.environment === "live" ? "checklistTitleLive" : "checklistTitle"),
                 stepsLabel: t("checklistTitle"),
                 waitingText: t("waitingText"),
                 waitingLabel: t("waitingLabel"),

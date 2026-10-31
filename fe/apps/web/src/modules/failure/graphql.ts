@@ -45,6 +45,10 @@ export const isForbiddenFailure = (error: unknown): boolean =>
 export const isNotFoundFailure = (error: unknown): boolean =>
     isCombinedGraphQLFailure(error) && error.errors.some((failure) => failure.extensions?.kind === "not-found")
 
+/** True when the back end refused an input it does not accept (`extensions.kind` is `invalid`): an id that is no id at all. */
+export const isInvalidFailure = (error: unknown): boolean =>
+    isCombinedGraphQLFailure(error) && error.errors.some((failure) => failure.extensions?.kind === "invalid")
+
 /** Whether the back end refused the operation itself (not allowed, or an input it does not accept) rather than failing to answer. */
 export const isRefusedByBackend = (error: unknown): boolean =>
     isCombinedGraphQLFailure(error) &&

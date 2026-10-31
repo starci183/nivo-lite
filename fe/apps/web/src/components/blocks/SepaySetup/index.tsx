@@ -1,21 +1,31 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
 import { useBankName } from "@/hooks/banks"
 import { useCopyLabels } from "@/hooks/connection-wizard"
 import { useConnectionsRole } from "@/hooks/connections"
 import { bankOptions } from "@/hooks/money-wizard"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { useSepayCommands, useSepayConnection, useSepayPlaceholder } from "@/hooks/sepayConnection"
-import type { SepayAccountForm, SepayConnectionView } from "@/modules/types"
+import {
+    useSepayAccountForm,
+    useSepayCommands,
+    useSepayConnection,
+    useSepayPlaceholder,
+    useSepayRotate,
+    useSepaySettings,
+} from "@/hooks/sepayConnection"
+import type { SepayConnectionView } from "@/modules/types"
 import { SepaySetupBase } from "./component"
 import type { SepaySetupView } from "./component"
 
-/** What the page hands the Setup tab: the connection of the url. */
-type SepaySetupProps = { readonly connectionId: string }
+/** What the page hands a setup step: the connection of the url and which part of the setup it draws. */
+type SepaySetupProps = {
+    readonly connectionId: string
+    /** `paste`: the webhook to create on SePay; `account`: the bank account form. */
+    readonly part: "paste" | "account"
+}
 
-/** The connected Setup tab: the webhook address and masked key to paste into SePay, and the bank account form. */
+/** The connected SePay setup parts: the webhook address, masked key and settings to set on SePay, or the bank account form. */
 export const SepaySetup = (props: SepaySetupProps) => {
     const t = useTranslations("sepayConnection")
     const slotLabels = useSlotLabels()
@@ -25,14 +35,10 @@ export const SepaySetup = (props: SepaySetupProps) => {
     const commands = useSepayCommands(props.connectionId)
     const placeholder = useSepayPlaceholder()
     const { role } = useConnectionsRole()
-    const [draft, setDraft] = useState<Partial<SepayAccountForm>>({})
-    const [isPending, setPending] = useState(false)
+    const rotate = useSepayRotate(commands.rotateKey)
     const connection = slot.items
-    const form: SepayAccountForm = {
-        bank: draft.bank ?? connection?.bankCode ?? "",
-        account: draft.account ?? "",
-        holder: draft.holder ?? connection?.holder ?? "",
-    }
+    const account = useSepayAccountForm(connection, commands.saveAccount)
+    const settings = useSepaySettings(connection)
     const viewOf = (items: SepayConnectionView): SepaySetupView => ({
         webhookUrl: items.webhookUrl,
         apiKeyMasked: items.apiKeyMasked,
@@ -42,6 +48,7 @@ export const SepaySetup = (props: SepaySetupProps) => {
     })
     return (
         <SepaySetupBase
+            shape={props.part}
             props={{
                 slot: mapSlot(slot, viewOf),
                 placeholder: viewOf(placeholder),
@@ -49,10 +56,11 @@ export const SepaySetup = (props: SepaySetupProps) => {
                 copyLabel: copy.copy,
                 copiedLabel: copy.copied,
                 copyErrorLabel: t("copyFailed"),
-                pasteTitle: t("pasteTitle"),
                 webhookLabel: t("webhookLabel"),
                 keyLabel: t("keyLabel"),
-                factsLine: t("pasteFacts"),
+                keyNote: t("keyNote"),
+                settingsLabel: t("settingsLabel"),
+                settings,
                 accountTitle: t("accountTitle"),
                 bankLabel: t("bankLabel"),
                 bankPlaceholder: t("bankPlaceholder"),
@@ -60,9 +68,18 @@ export const SepaySetup = (props: SepaySetupProps) => {
                 accountLabel: t("accountLabel"),
                 holderLabel: t("holderLabel"),
                 saveLabel: t("saveAccount"),
-                form,
+                form: account.form,
                 canEdit: role === "owner",
-                isPending,
+                isPending: account.isPending,
+                rotate: {
+                    label: t("rotateKey"),
+                    isOpen: rotate.isAsking,
+                    title: t("rotateTitle"),
+                    description: t("rotateBody"),
+                    confirmLabel: t("rotateConfirm"),
+                    cancelLabel: t("cancel"),
+                    isPending: rotate.isRotating,
+                },
             }}
             on={{
                 retry,
@@ -71,17 +88,10 @@ export const SepaySetup = (props: SepaySetupProps) => {
                     if (settled.kind !== "ok") throw new Error(settled.message)
                     return settled.value
                 },
-                bank: (bank) => setDraft((current) => ({ ...current, bank })),
-                account: (account) => setDraft((current) => ({ ...current, account })),
-                holder: (holder) => setDraft((current) => ({ ...current, holder })),
-                save: () => {
-                    if (connection === undefined) return
-                    setPending(true)
-                    void commands.saveAccount(connection, form).then((settled) => {
-                        setPending(false)
-                        if (settled.kind === "ok") setDraft({})
-                    })
-                },
+                askRotate: rotate.ask,
+                dismissRotate: rotate.dismiss,
+                confirmRotate: rotate.confirm,
+                ...account.on,
             }}
         />
     )

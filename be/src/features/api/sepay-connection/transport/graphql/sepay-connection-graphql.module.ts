@@ -4,6 +4,7 @@ import { ConfigurableModuleClass } from "./sepay-connection-graphql.module-defin
 import { GetSepayConnectionResolver } from "./get-sepay-connection.resolver"
 import { ListSepayEventsResolver } from "./list-sepay-events.resolver"
 import { RevealSepayKeyResolver } from "./reveal-sepay-key.resolver"
+import { RotateSepayKeyResolver } from "./rotate-sepay-key.resolver"
 import { SetSepayEnvironmentResolver } from "./set-sepay-environment.resolver"
 
 @Module({
@@ -12,6 +13,7 @@ import { SetSepayEnvironmentResolver } from "./set-sepay-environment.resolver"
         GetSepayConnectionResolver,
         ListSepayEventsResolver,
         RevealSepayKeyResolver,
+        RotateSepayKeyResolver,
         SetSepayEnvironmentResolver,
     ],
 })

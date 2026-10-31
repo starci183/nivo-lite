@@ -15,6 +15,8 @@ const ZALO_CODES: ReadonlySet<string> = new Set([
     "CHANNELS_ZALO_REFRESH_BUSY",
     "CHANNELS_ZALO_STATE_REJECTED",
     "CHANNELS_ZALO_STATE_EXPIRED",
+    "CHANNELS_CONNECTION_NOT_FOUND",
+    "CHANNELS_SECRET_UNREADABLE",
 ])
 
 /** The stable failure terms of a Zalo send (what a delivery answers with when Zalo did not take the message). */
@@ -29,6 +31,7 @@ const ZALO_FAILURES: ReadonlySet<string> = new Set([
     "zalo_quota",
     "zalo_not_permitted",
     "zalo_error",
+    "token_expired",
 ])
 
 /**

@@ -1,6 +1,5 @@
 import { Page, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import { ConnectionsHeadContent } from "@/components/composites/ConnectionsHead"
-import { connectionsLoadingClassNames as classNames } from "./classNames"
 
 /** The words of the loading page: everything real except the figures. */
 export interface ConnectionsLoadingPageBaseProps {
@@ -11,6 +10,8 @@ export interface ConnectionsLoadingPageBaseProps {
         readonly crumbHome: string
         readonly homeHref: string
         readonly connectedLabel: string
+        /** The heading of the one list of what is connected. */
+        readonly inUseLabel: string
         readonly libraryLabel: string
         readonly automationsLink: string
         readonly automationsHref: string
@@ -44,11 +45,9 @@ export const ConnectionsLoadingPageBase = (props: ConnectionsLoadingPageBaseProp
         })}
         measure="product"
     >
-        <div className={classNames.page}>
-            <SurfaceListCard label={props.props.connectedLabel} headingLevel={2} isLoading />
-            <TextAction href={props.props.automationsHref} isSkeleton>
-                {props.props.automationsLink}
-            </TextAction>
-        </div>
+        <SurfaceListCard label={props.props.inUseLabel} headingLevel={2} isLoading />
+        <TextAction href={props.props.automationsHref} isSkeleton>
+            {props.props.automationsLink}
+        </TextAction>
     </Page>
 )

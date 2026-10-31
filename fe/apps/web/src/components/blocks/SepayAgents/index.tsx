@@ -7,10 +7,10 @@ import { useSlotLabels } from "@/hooks/slot"
 import type { SepayAgentView } from "@/modules/types"
 import { SepayAgentsBase } from "./component"
 
-/** What the page hands the tab: the connection of the url. */
+/** What the page hands the step body: the connection of the url. */
 type SepayAgentsProps = { readonly connectionId: string }
 
-/** The connected Agents tab: the accounting agents that may book the credits of this connection. */
+/** The connected last setup step: how matching works and the accounting agents that may book the credits of this connection. */
 export const SepayAgents = (props: SepayAgentsProps) => {
     const t = useTranslations("sepayConnection")
     const slotLabels = useSlotLabels()
@@ -26,8 +26,7 @@ export const SepayAgents = (props: SepayAgentsProps) => {
     return (
         <SepayAgentsBase
             props={{
-                title: t("agentsTitle"),
-                hint: t("agentsHint"),
+                matching: t("matchingRule"),
                 slot: connection.slot.isError === true ? { isError: true } : agents.slot,
                 placeholder,
                 labels: slotLabels(t("agentsEmpty")),

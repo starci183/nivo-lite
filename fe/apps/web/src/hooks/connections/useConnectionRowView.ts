@@ -89,12 +89,12 @@ export const useConnectionRowView = (
         state: rowState(c.status),
         primary: primaryOf(c, input.canManage, actions.busy, t),
         access: usesAgents(c.provider) && live ? access.view : null,
-        page: live ? pageOf(c, t("openPage")) : null,
+        page: pageOf(c, t("openPage")),
         menuLabel: t("more", { name: c.name }),
         menuIsDisabled: actions.busy === "keys",
         menu: menuOf(c, input.canManage, t),
         alerts: alertsOf(c, input.agentNames, t),
-        notes: notesOf(c, input.localOnly, t),
+        notes: notesOf(c, input.localOnly, input.agentNames, t),
         smtp: c.provider === "smtp" && live ? smtp.view : null,
         keys:
             actions.keys === null

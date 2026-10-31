@@ -1,6 +1,6 @@
-import { Badge, ListRow } from "@starci/grammar/common"
+import { Badge, PaneSection, SectionHeader, Text } from "@starci/grammar/common"
+import { ConnectionLines } from "@/components/composites/ConnectionLines"
 import { SlotView } from "@/components/composites/SlotView"
-import { ZaloSection } from "@/components/composites/ZaloSection"
 import type { DataSlot, SlotLabels, ZaloEventLineView } from "@/modules/types"
 
 /** Fake rows of the same shape: the skeleton reuses the ready tree. */
@@ -10,49 +10,58 @@ export const ZALO_EVENTS_PLACEHOLDER: ReadonlyArray<ZaloEventLineView> = [
     { id: "three", title: "-", outcomeLabel: "-", outcomeTone: "neutral", detail: "-" },
 ]
 
-/** Copy and slot of the live panel. */
+/** Copy and slot of the live rail. */
 export interface ZaloConnectionEventsBaseProps {
     readonly props: {
         readonly title: string
         readonly liveLabel: string
+        /** How the rail keeps itself current, under the list. */
+        readonly footnote: string
         readonly events: DataSlot<ReadonlyArray<ZaloEventLineView>>
         readonly slotLabels: SlotLabels
     }
     readonly on: { readonly retry: () => void }
 }
 
-/** Draws the live Zalo events panel: the recent events of the OA, newest first, under a live mark. */
+/** Draws the live Zalo events rail as the bands of its pane: the heading with the live mark, the events newest first, the footnote. */
 export const ZaloConnectionEventsBase = (props: ZaloConnectionEventsBaseProps) => (
-    <SlotView
-        slot={props.props.events}
-        placeholder={ZALO_EVENTS_PLACEHOLDER}
-        labels={props.props.slotLabels}
-        onRetry={props.on.retry}
-    >
-        {(events, isSkeleton) => (
-            <ZaloSection
+    <>
+        <PaneSection as="header">
+            <SectionHeader
+                level={2}
                 title={props.props.title}
-                isSkeleton={isSkeleton}
-                end={
-                    <Badge isDot tone="success" isSkeleton={isSkeleton}>
+                meta={
+                    <Badge isDot tone="success">
                         {props.props.liveLabel}
                     </Badge>
                 }
+            />
+        </PaneSection>
+        <PaneSection>
+            <SlotView
+                slot={props.props.events}
+                placeholder={ZALO_EVENTS_PLACEHOLDER}
+                labels={props.props.slotLabels}
+                onRetry={props.on.retry}
             >
-                {events.map((event) => (
-                    <ListRow
-                        key={event.id}
-                        title={event.title}
-                        description={event.detail}
+                {(events, isSkeleton) => (
+                    <ConnectionLines
+                        label={props.props.title}
                         isSkeleton={isSkeleton}
-                        badges={
-                            <Badge tone={event.outcomeTone} isSkeleton={isSkeleton}>
-                                {event.outcomeLabel}
-                            </Badge>
-                        }
+                        lines={events.map((event) => ({
+                            id: event.id,
+                            title: event.title,
+                            description: event.detail,
+                            badge: { label: event.outcomeLabel, tone: event.outcomeTone },
+                        }))}
                     />
-                ))}
-            </ZaloSection>
-        )}
-    </SlotView>
+                )}
+            </SlotView>
+        </PaneSection>
+        <PaneSection as="footer">
+            <Text size="xs" tone="muted">
+                {props.props.footnote}
+            </Text>
+        </PaneSection>
+    </>
 )

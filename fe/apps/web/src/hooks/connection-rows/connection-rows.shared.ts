@@ -148,12 +148,20 @@ export const alertsOf = (
     ]
 }
 
-/** The muted notes of a row: Telegram on a local site, Zalo's reply window. */
-export const notesOf = (c: Connection, localOnly: boolean, t: RowTranslate): ReadonlyArray<string> => {
+/**
+ * The muted notes of a row: Telegram on a local site, and Zalo's reply window once the OA has agents answering through it (the 48-hour
+ * limit only matters then; the page of the connection carries it for the owner who looks).
+ */
+export const notesOf = (
+    c: Connection,
+    localOnly: boolean,
+    agentNames: ReadonlyArray<string>,
+    t: RowTranslate,
+): ReadonlyArray<string> => {
     const live = c.status !== "disconnected"
     return [
         ...(c.provider === "telegram" && live && localOnly ? [t("localNote")] : []),
-        ...(c.provider === "zalo_oa" && live ? [t("zaloSoon")] : []),
+        ...(c.provider === "zalo_oa" && c.status === "connected" && agentNames.length > 0 ? [t("zaloSoon")] : []),
     ]
 }
 

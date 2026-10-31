@@ -1,8 +1,5 @@
-/** The tabs of the page of one Zalo OA connection, in the order the owner approved. */
-export const ZALO_TABS = ["overview", "setup", "check", "agents"] as const
-
-/** One tab of the page. */
-export type ZaloTab = (typeof ZALO_TABS)[number]
+/** The setup steps of the page of one Zalo OA connection, in the order the back end needs them. */
+export type ZaloStepId = "app" | "paste" | "authorize" | "check" | "agents"
 
 /** The tone of a status mark. */
 export type ZaloTone = "success" | "danger" | "warning" | "neutral"
@@ -23,8 +20,6 @@ export interface ZaloCheckLineView {
     readonly mark: "ok" | "fail" | "warn"
     readonly title: string
     readonly detail: string
-    /** The row offers the check again. */
-    readonly canRecheck: boolean
 }
 
 /** A follower the test message can go to. */
@@ -40,11 +35,13 @@ export interface ZaloSendView {
     readonly blocked: string
 }
 
-/** One labelled fact of the overview or the setup tab. */
+/** One labelled fact: a health tile of the page or a saved value of the first setup step. */
 export interface ZaloFactView {
     readonly id: string
     readonly label: string
     readonly value: string
+    /** The line under a health tile's figure; absent on a saved value. */
+    readonly meta?: string
 }
 
 /** The two addresses the owner pastes into Zalo. */

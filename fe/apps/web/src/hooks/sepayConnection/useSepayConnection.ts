@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { useQuerySepayConnectionSwr } from "@/hooks/swr"
 import { slotOfSwr } from "@/hooks/slot"
+import { isInvalidFailure, isNotFoundFailure } from "@/modules/failure"
 import { SEPAY_POLL_MS, sepayConnectionOf } from "./sepayConnection.shared"
 
 /** The page read model of one SePay connection, looked at again while the page is open so the checklist and the tiles are live. */
@@ -11,6 +12,7 @@ export const useSepayConnection = (connectionId: string) => {
     const data = useMemo(() => (query.data === undefined ? undefined : sepayConnectionOf(query.data)), [query.data])
     return {
         slot: slotOfSwr({ data, error: query.error, isLoading: query.isLoading }),
+        isMissing: query.error !== undefined && (isNotFoundFailure(query.error) || isInvalidFailure(query.error)),
         retry: () => {
             void query.mutate()
         },

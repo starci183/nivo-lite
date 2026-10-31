@@ -3,26 +3,20 @@ import {
     Badge,
     Button,
     EmptyNotice,
-    ListBox,
-    Region,
+    Fieldset,
     SearchField,
-    SectionHeader,
-    Select,
     SurfaceCard,
+    TagGroup,
     Text,
 } from "@starci/grammar/common"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import type { ConnectorGlyph } from "@/modules/types"
 import { connectionLibraryClassNames as classNames } from "./classNames"
 
-/** One option of a filter or of the sort. */
-export interface LibraryOption {
+/** One category chip: the group and how many connectors it holds. */
+export interface LibraryCategory {
     readonly id: string
     readonly label: string
-}
-
-/** One row of the category rail: the group and how many connectors it holds. */
-export interface LibraryCategory extends LibraryOption {
     readonly count: number
 }
 
@@ -55,31 +49,19 @@ export interface LibraryCard {
     readonly openLabel: string
 }
 
-/** One category heading with its tiles. */
-export interface LibraryGroup {
-    readonly id: string
-    readonly title: string
-    readonly cards: ReadonlyArray<LibraryCard>
-}
-
-/** The library: category rail, search, agent filter, sort and the grouped tiles. */
+/** The library: the search, the category chips and the connector tiles that pass both. */
 export interface ConnectionLibraryBaseProps {
     readonly props: {
         readonly text: string
         readonly searchLabel: string
         readonly clearLabel: string
-        readonly sort: string
-        readonly sortLabel: string
-        readonly sortOptions: ReadonlyArray<LibraryOption>
+        readonly filterLabel: string
         readonly categoryLabel: string
         readonly category: string
         readonly categories: ReadonlyArray<LibraryCategory>
-        readonly audienceLabel: string
-        readonly audience: string
-        readonly audiences: ReadonlyArray<LibraryOption>
         readonly emptyMessage: string
         readonly emptyHint: string
-        readonly groups: ReadonlyArray<LibraryGroup>
+        readonly cards: ReadonlyArray<LibraryCard>
         readonly wantLabel: string
         readonly wantedLabel: string
         /** The chips are drawn blank while the workspace reads are on their way. */
@@ -87,9 +69,7 @@ export interface ConnectionLibraryBaseProps {
     }
     readonly on: {
         readonly text: (value: string) => void
-        readonly sort: (value: string) => void
         readonly category: (id: string) => void
-        readonly audience: (id: string) => void
         readonly open: (id: string) => void
         readonly want: (id: string) => void
     }
@@ -122,7 +102,8 @@ const tileOf = (props: ConnectionLibraryBaseProps, card: LibraryCard) => {
         <div key={card.id} {...(card.guide === undefined ? {} : { "data-guide": `connections.${card.guide}` })}>
             <SurfaceCard
                 label={card.name}
-                headingLevel={3}
+                headingLevel={2}
+                height="fill"
                 {...(wholeAction === undefined ? {} : { wholeAction })}
                 {...(card.isSoon ? { state: "unavailable" as const } : {})}
             >
@@ -156,70 +137,39 @@ const tileOf = (props: ConnectionLibraryBaseProps, card: LibraryCard) => {
     )
 }
 
-const groupsOf = (props: ConnectionLibraryBaseProps) =>
-    props.props.groups.map((group) => (
-        <Region key={group.id} labelledBy={`lib-${group.id}`} className={classNames.group}>
-            <SectionHeader id={`lib-${group.id}`} level={2} title={group.title} count={group.cards.length} />
-            <div className={classNames.grid}>{group.cards.map((card) => tileOf(props, card))}</div>
-        </Region>
-    ))
-
 /**
- * The Connections library: a rail of categories with counts beside the connectors grouped by category, searchable (accents ignored),
- * filtered by the agent each serves, sorted by popularity or name. A tile shows its status, what it is for and who it serves.
+ * The Connections library: the search (accents ignored) and the category chips with their counts, which wrap onto the next line on a
+ * narrow screen (chip.choose.role:filter), then one grid of tiles of equal height. A tile shows its status, what it is for and whom it
+ * serves.
  */
 export const ConnectionLibraryBase = (props: ConnectionLibraryBaseProps) => (
-    <div className={classNames.layout}>
-        <div className={classNames.rail}>
-            <ListBox
+    <>
+        <Fieldset legend={props.props.filterLabel} isLegendHidden>
+            <SearchField
+                id="connector-search"
+                label={props.props.searchLabel}
+                isLabelHidden
+                placeholder={props.props.searchLabel}
+                value={props.props.text}
+                onValueChange={props.on.text}
+                onClear={() => props.on.text("")}
+                clearLabel={props.props.clearLabel}
+            />
+            <TagGroup
                 label={props.props.categoryLabel}
                 selectionMode="single"
                 selectedIds={[props.props.category]}
                 onSelectionChange={(ids) => props.on.category(ids[0] ?? "all")}
                 items={props.props.categories.map((category) => ({
                     id: category.id,
-                    label: category.label,
-                    trailing: category.count,
+                    label: `${category.label} ${category.count}`,
                 }))}
             />
-        </div>
-        <div className={classNames.content}>
-            <div className={classNames.toolbar}>
-                <div className={classNames.search}>
-                    <SearchField
-                        id="connector-search"
-                        label={props.props.searchLabel}
-                        isLabelHidden
-                        placeholder={props.props.searchLabel}
-                        value={props.props.text}
-                        onValueChange={props.on.text}
-                        onClear={() => props.on.text("")}
-                        clearLabel={props.props.clearLabel}
-                    />
-                </div>
-                <div className={classNames.select}>
-                    <Select
-                        label={props.props.audienceLabel}
-                        options={[...props.props.audiences]}
-                        value={props.props.audience}
-                        onValueChange={(value) => props.on.audience(value ?? "all")}
-                    />
-                </div>
-                <div className={classNames.select}>
-                    <Select
-                        label={props.props.sortLabel}
-                        isLabelHidden
-                        options={[...props.props.sortOptions]}
-                        value={props.props.sort}
-                        onValueChange={(value) => props.on.sort(value ?? "popular")}
-                    />
-                </div>
-            </div>
-            {props.props.groups.length === 0 ? (
-                <EmptyNotice message={props.props.emptyMessage} description={props.props.emptyHint} />
-            ) : (
-                groupsOf(props)
-            )}
-        </div>
-    </div>
+        </Fieldset>
+        {props.props.cards.length === 0 ? (
+            <EmptyNotice message={props.props.emptyMessage} description={props.props.emptyHint} />
+        ) : (
+            <div className={classNames.grid}>{props.props.cards.map((card) => tileOf(props, card))}</div>
+        )}
+    </>
 )

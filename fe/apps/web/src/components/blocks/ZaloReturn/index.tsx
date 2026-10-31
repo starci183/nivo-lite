@@ -9,7 +9,7 @@ import { ZaloReturnBase } from "./component"
 /** What Zalo sends the browser back with. */
 type ZaloReturnProps = ZaloReturnInput
 
-/** Hands the Zalo return to the back end once, then lands the browser back on Connections with the verdict. */
+/** Hands the Zalo return to the back end once, then lands the browser on the page it reconnected from, or on Connections with the verdict. */
 export const ZaloReturn = (props: ZaloReturnProps) => {
     const t = useTranslations("connections")
     const slotLabelsOf = useSlotLabels()

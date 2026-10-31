@@ -7,7 +7,7 @@ import type { SepayEventView } from "@/modules/types"
 import { SepayEventsBase } from "./component"
 import type { SepayEventRow } from "./component"
 
-/** What the page hands the panel: the connection of the url. */
+/** What the page hands the rail: the connection of the url. */
 type SepayEventsProps = { readonly connectionId: string }
 
 type Translate = ReturnType<typeof useTranslations<"sepayConnection">>
@@ -21,7 +21,7 @@ const detailOf = (t: Translate, event: SepayEventView, time: string): string => 
 
 const TONES = { accepted: "success", duplicate: "neutral", unauthorized: "danger" } as const
 
-/** The connected live panel of the webhook deliveries of a SePay connection. */
+/** The connected live rail of the webhook deliveries of a SePay connection. */
 export const SepayEvents = (props: SepayEventsProps) => {
     const t = useTranslations("sepayConnection")
     const format = useFormatter()
@@ -53,6 +53,7 @@ export const SepayEvents = (props: SepayEventsProps) => {
             props={{
                 title: t("eventsTitle"),
                 liveLabel: t("live"),
+                footnote: t("eventsFootnote"),
                 slot: mapSlot(slot, (events) => events.map(rowOf)),
                 placeholder: SEPAY_EVENTS_PLACEHOLDER.map(rowOf),
                 labels: slotLabels(t("eventsEmpty")),

@@ -5,10 +5,9 @@ export { zaloConnectionMetadata as generateMetadata } from "@/features/pages/Zal
 
 type PageProps = {
     readonly params: Promise<{ readonly id: string }>
-    readonly searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 /** Adapts the Zalo OA connection route to its page owner. */
-const Page = (props: PageProps) => <ZaloConnectionPage params={props.params} searchParams={props.searchParams} />
+const Page = (props: PageProps) => <ZaloConnectionPage params={props.params} />
 
 export default Page

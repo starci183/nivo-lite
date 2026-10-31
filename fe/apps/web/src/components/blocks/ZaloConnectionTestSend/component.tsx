@@ -1,7 +1,6 @@
-import { Alert, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Fieldset, Input, Select, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZaloSendView } from "@/modules/types"
-import { FIELDS } from "./classNames"
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */
 export const ZALO_SEND_PLACEHOLDER: ZaloSendView = { options: [], blocked: "" }
@@ -31,38 +30,24 @@ export interface ZaloConnectionTestSendBaseProps {
     }
 }
 
-/** Draws the test send: the followers inside the 48 hours, the text, and a send that stays closed with its reason. */
+/**
+ * Draws the test send inside the fourth setup step: the followers inside the 48 hours, the text, and a send that stays closed with its
+ * reason (a field group of its own, under the check list).
+ */
 export const ZaloConnectionTestSendBase = (props: ZaloConnectionTestSendBaseProps) => (
-    <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotView
-            slot={props.props.send}
-            placeholder={ZALO_SEND_PLACEHOLDER}
-            labels={props.props.slotLabels}
-            onRetry={props.on.retry}
-        >
-            {(view, isSkeleton) => (
-                <div className={FIELDS}>
-                    <Text size="sm" tone="muted">
-                        {props.props.hint}
-                    </Text>
-                    <Select
-                        label={props.props.recipientLabel}
-                        options={view.options.map((option) => ({ id: option.id, label: option.label }))}
-                        value={props.props.recipientId}
-                        isDisabled={view.options.length === 0}
-                        isSkeleton={isSkeleton}
-                        onValueChange={(value) => props.on.pickRecipient(value ?? "")}
-                    />
-                    <Input
-                        id="zalo-test-text"
-                        name="text"
-                        label={props.props.textLabel}
-                        value={props.props.text}
-                        isSkeleton={isSkeleton}
-                        onValueChange={props.on.changeText}
-                    />
+    <SlotView
+        slot={props.props.send}
+        placeholder={ZALO_SEND_PLACEHOLDER}
+        labels={props.props.slotLabels}
+        onRetry={props.on.retry}
+    >
+        {(view, isSkeleton) => (
+            <Fieldset
+                legend={props.props.title}
+                description={props.props.hint}
+                actions={
                     <Button
-                        intent="commit"
+                        intent="neutral"
                         isSkeleton={isSkeleton}
                         isPending={props.props.isSending}
                         isDisabled={
@@ -72,14 +57,33 @@ export const ZaloConnectionTestSendBase = (props: ZaloConnectionTestSendBaseProp
                     >
                         {props.props.sendLabel}
                     </Button>
-                    {view.blocked === "" ? null : (
-                        <Text size="sm" tone="muted">
-                            {view.blocked}
-                        </Text>
-                    )}
-                    {props.props.note === "" ? null : <Alert tone={props.props.noteTone} title={props.props.note} />}
-                </div>
-            )}
-        </SlotView>
-    </SurfaceCard>
+                }
+            >
+                <Select
+                    label={props.props.recipientLabel}
+                    options={view.options.map((option) => ({ id: option.id, label: option.label }))}
+                    value={props.props.recipientId}
+                    isDisabled={view.options.length === 0}
+                    isSkeleton={isSkeleton}
+                    onValueChange={(value) => props.on.pickRecipient(value ?? "")}
+                />
+                <Input
+                    id="zalo-test-text"
+                    name="text"
+                    label={props.props.textLabel}
+                    value={props.props.text}
+                    isSkeleton={isSkeleton}
+                    onValueChange={props.on.changeText}
+                />
+                {view.blocked === "" ? null : (
+                    <Text size="sm" tone="muted">
+                        {view.blocked}
+                    </Text>
+                )}
+                {props.props.note === "" ? null : (
+                    <Alert tone={props.props.noteTone} appearance="soft" title={props.props.note} />
+                )}
+            </Fieldset>
+        )}
+    </SlotView>
 )

@@ -1,29 +1,12 @@
-import { Alert, EmptyNotice, Region, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
+import { Alert, EmptyNotice, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import type { ComponentType, ReactNode } from "react"
 import { SlotView } from "@/components/composites/SlotView"
-import type { AgentOption, Connection, DataSlot, Provider, SlotLabels } from "@/modules/types"
-import { connectionsPageClassNames as classNames } from "./classNames"
+import type { AgentOption, Connection, DataSlot, SlotLabels } from "@/modules/types"
 
 /** One connection of a provider list with the names of the agents bound to it. */
 export interface PageRow {
     readonly connection: Connection
     readonly agentNames: ReadonlyArray<string>
-}
-
-/** One provider's list card. */
-export interface PageCard {
-    readonly provider: Provider
-    readonly title: string
-    readonly fact: string
-    readonly rows: ReadonlyArray<PageRow>
-}
-
-/** One group of providers on the page. */
-export interface PageGroup {
-    readonly id: string
-    readonly title: string
-    readonly count: number
-    readonly cards: ReadonlyArray<PageCard>
 }
 
 /** The words of the page, resolved by the connected feature host. */
@@ -36,6 +19,9 @@ export interface PageWords {
     /** The way out of the forbidden notice staff see in place of the board. */
     readonly backLabel: string
     readonly backHref: string
+    /** The heading of the one list of what is connected, and the order it is sorted in. */
+    readonly inUseTitle: string
+    readonly inUseOrder: string
 }
 
 /** What the board draws once the workspace reads are in. */
@@ -50,7 +36,8 @@ export interface ConnectionsBoard {
     readonly liveCount: number
     /** Every connection that needs a check, with the agents that use it. */
     readonly attentions: ReadonlyArray<PageRow>
-    readonly groups: ReadonlyArray<PageGroup>
+    /** Every live connection of every provider, what needs attention first. */
+    readonly rows: ReadonlyArray<PageRow>
 }
 
 /** What the overview draws: its words, and the board the workspace reads fill. */
@@ -68,7 +55,6 @@ export interface ConnectionsOverviewProps {
     readonly on: {
         readonly retry: () => void
     }
-    readonly renderAddButton: ComponentType<{ readonly provider: Provider; readonly kind: "add" | "connect" }>
     readonly renderAttention: ComponentType<{
         readonly connection: Connection
         readonly agentNames: ReadonlyArray<string>
@@ -85,48 +71,37 @@ export interface ConnectionsOverviewProps {
     }>
 }
 
-/** The provider lists receive the client blocks registered by the feature host. */
+/** The list of what is connected receives the row block registered by the feature host. */
 interface ConnectionsListsProps {
     readonly props: ConnectionsBoard
-    readonly renderAddButton: ConnectionsOverviewProps["renderAddButton"]
+    readonly words: PageWords
     readonly renderRow: ConnectionsOverviewProps["renderRow"]
-    /** The cards are drawn as placeholders while the workspace reads are on their way. */
+    /** The list is drawn as placeholder rows while the workspace reads are on their way. */
     readonly isSkeleton: boolean
 }
 
-/** Provider cards and their connection rows, using the blocks supplied by the feature host. */
-export const ConnectionsLists = (props: ConnectionsListsProps) =>
-    props.props.groups.map((group) => (
-        <Region key={group.id} labelledBy={`group-${group.id}`} className={classNames.group}>
-            <SectionHeader id={`group-${group.id}`} level={2} title={group.title} count={group.count} />
-            {group.cards.map((card) => (
-                <div key={card.provider} data-guide={`connections.${card.provider}`}>
-                    <SurfaceListCard
-                        isLoading={props.isSkeleton}
-                        loadingRows={2}
-                        label={card.title}
-                        headingLevel={3}
-                        fact={card.fact}
-                        {...(props.props.canManage
-                            ? { labelEnd: <props.renderAddButton provider={card.provider} kind="add" /> }
-                            : {})}
-                    >
-                        {card.rows.map((row) => (
-                            <props.renderRow
-                                key={row.connection.id}
-                                connection={row.connection}
-                                agentNames={row.agentNames}
-                                localOnly={props.props.localOnly}
-                                ownerEmail={props.props.ownerEmail}
-                                agents={props.props.agents}
-                                canManage={props.props.canManage}
-                            />
-                        ))}
-                    </SurfaceListCard>
-                </div>
-            ))}
-        </Region>
-    ))
+/** One joined list of every live connection, sorted by attention, using the row block supplied by the feature host (COLLECTION-1). */
+export const ConnectionsLists = (props: ConnectionsListsProps) => (
+    <SurfaceListCard
+        isLoading={props.isSkeleton}
+        loadingRows={2}
+        label={props.words.inUseTitle}
+        headingLevel={2}
+        fact={props.words.inUseOrder}
+    >
+        {props.props.rows.map((row) => (
+            <props.renderRow
+                key={row.connection.id}
+                connection={row.connection}
+                agentNames={row.agentNames}
+                localOnly={props.props.localOnly}
+                ownerEmail={props.props.ownerEmail}
+                agents={props.props.agents}
+                canManage={props.props.canManage}
+            />
+        ))}
+    </SurfaceListCard>
+)
 
 /** The board drawn while the workspace reads are on their way: the same list with no connection in it yet. */
 export const BOARD_PLACEHOLDER: ConnectionsBoard = {
@@ -139,14 +114,7 @@ export const BOARD_PLACEHOLDER: ConnectionsBoard = {
     agentNames: {},
     liveCount: 1,
     attentions: [],
-    groups: [
-        {
-            id: "placeholder",
-            title: "",
-            count: 0,
-            cards: [{ provider: "sepay", title: "", fact: "", rows: [] }],
-        },
-    ],
+    rows: [],
 }
 
 /** The overview, the board it draws and whether that board is a placeholder. */
@@ -175,10 +143,10 @@ export const BoardBody = (props: BoardBodyProps) => {
             {board.view === "connected" && board.liveCount === 0 ? (
                 <EmptyNotice message={props.props.words.emptyTitle} description={props.props.words.emptyHint} />
             ) : null}
-            {board.view === "connected" ? (
+            {board.view === "connected" && board.liveCount > 0 ? (
                 <ConnectionsLists
                     props={board}
-                    renderAddButton={props.renderAddButton}
+                    words={props.props.words}
                     renderRow={props.renderRow}
                     isSkeleton={props.isSkeleton}
                 />

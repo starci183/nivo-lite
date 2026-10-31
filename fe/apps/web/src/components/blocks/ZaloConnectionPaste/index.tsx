@@ -3,25 +3,27 @@
 import { useTranslations } from "next-intl"
 import { useCopyLabels } from "@/hooks/connection-wizard"
 import { useSlotLabels } from "@/hooks/slot"
-import { useZaloPage, useZaloPaste } from "@/hooks/zaloConnection"
+import { useZaloHead, useZaloOaSecret, useZaloPage, useZaloPaste } from "@/hooks/zaloConnection"
 import { ZaloConnectionPasteBase } from "./component"
 
-/** What the page hands the card: the connection of the url. */
+/** What the page hands the step body: the connection of the url. */
 interface ZaloConnectionPasteProps {
     readonly connectionId: string
 }
 
-/** The connected card of the addresses to paste into the Zalo app, built from the app's public url configuration. */
+/** The connected body of the second setup step: the addresses built from the app's public url configuration, and the OA Secret Key. */
 export const ZaloConnectionPaste = (props: ZaloConnectionPasteProps) => {
     const t = useTranslations("zaloConnection")
     const slotLabels = useSlotLabels()
     const copyLabels = useCopyLabels()
     const paste = useZaloPaste(props.connectionId)
-    const { reload } = useZaloPage(props.connectionId)
+    const { slot, reload } = useZaloPage(props.connectionId)
+    const { isOwner } = useZaloHead(props.connectionId)
+    const secret = useZaloOaSecret(props.connectionId)
+    const mask = slot.items?.oaSecretMask ?? null
     return (
         <ZaloConnectionPasteBase
             props={{
-                title: t("pasteTitle"),
                 callbackLabel: t("pasteCallback"),
                 webhookLabel: t("pasteWebhook"),
                 paste,
@@ -29,8 +31,17 @@ export const ZaloConnectionPaste = (props: ZaloConnectionPasteProps) => {
                 copyLabel: copyLabels.copy,
                 copiedLabel: copyLabels.copied,
                 copyErrorLabel: t("copyFailed"),
+                secret: {
+                    label: t("factOaSecret"),
+                    description: mask === null ? t("oaSecretMissing") : t("oaSecretStored", { mask }),
+                    value: secret.value,
+                    error: secret.error,
+                    saveLabel: t("oaSecretSave"),
+                    isSaving: secret.isSaving,
+                    canEdit: isOwner,
+                },
             }}
-            on={{ retry: reload }}
+            on={{ retry: reload, changeSecret: secret.change, saveSecret: () => void secret.save() }}
         />
     )
 }

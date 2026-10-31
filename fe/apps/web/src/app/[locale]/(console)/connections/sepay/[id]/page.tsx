@@ -5,14 +5,12 @@ export { sepayConnectionMetadata as generateMetadata } from "@/features/pages/Se
 
 type PageProps = {
     readonly params: Promise<{ id: string }>
-    readonly searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-/** One SePay connection: how to paste it into SePay, how to test it, which agents use it, and its live webhook events. */
+/** One SePay connection: its setup steps in back end order, its health and its live webhook events, on one page. */
 const Page = async (props: PageProps) => {
     const { id } = await props.params
-    const { tab } = await props.searchParams
-    return <SepayConnectionPage connectionId={id} tab={tab} />
+    return <SepayConnectionPage connectionId={id} />
 }
 
 export default Page

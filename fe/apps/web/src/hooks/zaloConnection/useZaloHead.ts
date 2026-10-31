@@ -9,11 +9,14 @@ import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { LocalStorage, StorageId } from "@/modules/storage"
 import type { DataSlot, ZaloHeadView } from "@/modules/types"
-import { chipToneOf } from "./zaloConnection.shared"
+import { chipToneOf, zaloStatusKindOf } from "./zaloConnection.shared"
+import { useConnectionsRole } from "@/hooks/connections"
 import { useZaloPage } from "./useZaloPage"
 import type { ZaloPageData } from "./useZaloPage"
 
-/** The header of the page of a Zalo OA connection and its two actions: reconnect through the existing authorization, and disconnect. */
+const CHIP_KEYS = { ok: "chipOk", waiting: "chipWaiting", check: "chipCheck" } as const
+
+/** The header of the page of a Zalo OA connection, its status kind, and its two commands: reconnect through the existing authorization, and disconnect. */
 export const useZaloHead = (connectionId: string) => {
     const t = useTranslations("zaloConnection")
     const format = useFormatter()
@@ -22,17 +25,21 @@ export const useZaloHead = (connectionId: string) => {
     const labelOf = useZaloFailureLabel()
     const { trigger: triggerAuthorize } = useMutateAuthorizeZaloSwr()
     const { trigger: triggerDisconnect, isMutating } = useMutateDisconnectConnectionSwr()
-    const { slot } = useZaloPage(connectionId)
+    const { slot, isMissing } = useZaloPage(connectionId)
+    const { role } = useConnectionsRole()
     const [notice, setNotice] = useState("")
 
+    const isOwner = role === "owner"
     const bannerOf = (page: ZaloPageData): string => {
-        if (page.access.state === "none") return t("bannerNone")
+        if (page.access.state === "none") return t(isOwner ? "bannerNone" : "bannerNoneAsk")
         if (page.access.state !== "expired" || page.access.expiresAt === null) return ""
-        return t("bannerExpired", { ago: format.relativeTime(new Date(page.access.expiresAt), new Date()) })
+        return t(isOwner ? "bannerExpired" : "bannerExpiredAsk", {
+            ago: format.relativeTime(new Date(page.access.expiresAt), new Date()),
+        })
     }
     const head: DataSlot<ZaloHeadView> = mapSlot(slot, (page) => ({
         name: page.name,
-        chipLabel: page.healthy ? t("chipOk") : t("chipCheck"),
+        chipLabel: t(CHIP_KEYS[zaloStatusKindOf(page.healthy, page.status, page.access.state)]),
         chipTone: chipToneOf(page.healthy, page.access.state, page.status),
         facts: t("facts", { oaId: page.oaId === "" ? "-" : page.oaId, appId: page.appId === "" ? "-" : page.appId }),
         banner: bannerOf(page),
@@ -53,5 +60,8 @@ export const useZaloHead = (connectionId: string) => {
         router.replace(CONSOLE_ROUTES.connections)
     }, [settle, labelOf, triggerDisconnect, connectionId, t, router])
 
-    return { head, notice, reconnect, disconnect, isDisconnecting: isMutating }
+    const page = slot.items
+    const statusKind = page === undefined ? null : zaloStatusKindOf(page.healthy, page.status, page.access.state)
+
+    return { head, notice, reconnect, disconnect, isDisconnecting: isMutating, isMissing, isOwner, statusKind }
 }

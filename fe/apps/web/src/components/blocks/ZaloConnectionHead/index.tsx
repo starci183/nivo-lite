@@ -1,39 +1,49 @@
 "use client"
 
+import { notFound } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useState, type ReactNode } from "react"
 import { useSlotLabels } from "@/hooks/slot"
-import { useZaloHead } from "@/hooks/zaloConnection"
+import { useZaloChecks, useZaloHead, useZaloPage } from "@/hooks/zaloConnection"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES, zaloConnectionHref } from "@/modules/routes"
-import { ZALO_TABS } from "@/modules/types"
-import type { ZaloTab } from "@/modules/types"
+import { CONSOLE_ROUTES } from "@/modules/routes"
 import { ZaloConnectionHeadBase } from "./component"
+import type { ZaloPageNotice } from "./component"
 
-/** What the page hands the header: the connection of the url and the tab it asked for. */
+/** What the page hands the frame: the connection of the url and the connected bands of its two panes. */
 interface ZaloConnectionHeadProps {
     readonly connectionId: string
-    readonly tab: ZaloTab
-    /** The page body: the tab body and the docked events panel. */
-    readonly children: ReactNode
+    readonly shape: { readonly main: ReactNode; readonly rail: ReactNode }
 }
 
-/** The connected header of a Zalo OA connection: reconnect goes through the existing authorization, disconnect asks first. */
+/**
+ * The connected frame of a Zalo OA connection page: the header with "Check again", the notices (why the OA cannot send, a refused
+ * command, the first message it still waits for), the main pane, the live rail and the owner's disconnect, which asks first.
+ */
 export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
     const t = useTranslations("zaloConnection")
     const slotLabels = useSlotLabels()
     const router = navigation.useRouter()
-    const { head, notice, reconnect, disconnect, isDisconnecting } = useZaloHead(props.connectionId)
+    const { head, notice, disconnect, isDisconnecting, isMissing, isOwner, statusKind } = useZaloHead(
+        props.connectionId,
+    )
+    const { recheck, isRechecking } = useZaloChecks(props.connectionId)
+    const { slot } = useZaloPage(props.connectionId)
     const [isAsking, setIsAsking] = useState(false)
-    const tabLabels: Readonly<Record<ZaloTab, string>> = {
-        overview: t("tabOverview"),
-        setup: t("tabSetup"),
-        check: t("tabCheck"),
-        agents: t("tabAgents"),
-    }
+    const [isRailOpen, setRailOpen] = useState(false)
+    if (isMissing) notFound()
+    const banner = head.items?.banner ?? ""
+    const notices: ReadonlyArray<ZaloPageNotice> = [
+        ...(banner === "" ? [] : [{ id: "banner", tone: "negative" as const, title: banner }]),
+        ...(notice === "" ? [] : [{ id: "notice", tone: "negative" as const, title: notice }]),
+        ...(statusKind === "waiting"
+            ? [{ id: "waiting", tone: "informative" as const, title: t("waitingTitle"), description: t("waitingBody") }]
+            : []),
+    ]
+    const isLive = slot.items !== undefined && slot.items.status !== "disconnected"
     return (
         <ZaloConnectionHeadBase
-            shape={{ body: props.children }}
+            shape={props.shape}
             props={{
                 head,
                 slotLabels: slotLabels(t("headEmpty")),
@@ -42,26 +52,41 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
                     { id: "connections", label: t("crumbConnections"), href: CONSOLE_ROUTES.connections },
                     { id: "zalo", label: head.items?.name ?? t("crumbZalo") },
                 ],
-                reconnectLabel: t("reconnect"),
-                disconnectLabel: t("disconnect"),
-                tabsLabel: t("tabsLabel"),
-                tabs: ZALO_TABS.map((id) => ({ id, label: tabLabels[id] })),
-                selectedTab: props.tab,
-                notice,
+                gridLabel: t("title"),
+                mainLabel: t("mainLabel"),
+                rail: {
+                    label: t("eventsTitle"),
+                    openLabel: t("eventsOpen"),
+                    closeLabel: t("eventsClose"),
+                    isOpen: isRailOpen,
+                },
+                recheckLabel: t("recheck"),
+                isRechecking,
+                notices,
+                ...(isOwner && isLive
+                    ? {
+                          disconnect: {
+                              title: t("disconnectTitle"),
+                              description: t("disconnectBody"),
+                              label: t("disconnectEntry"),
+                          },
+                      }
+                    : {}),
                 confirm: {
                     isOpen: isAsking,
                     title: t("disconnectQuestion"),
+                    description: t("disconnectBody"),
                     confirmLabel: t("disconnectConfirm"),
                     cancelLabel: t("cancel"),
                     isPending: isDisconnecting,
                 },
             }}
             on={{
-                reconnect: () => void reconnect(),
+                recheck: () => void recheck(),
                 askDisconnect: () => setIsAsking(true),
                 confirmDisconnect: () => void disconnect(),
                 dismiss: () => setIsAsking(false),
-                selectTab: (id) => router.replace(zaloConnectionHref(props.connectionId, id)),
+                openRail: setRailOpen,
                 retry: () => router.refresh(),
             }}
         />

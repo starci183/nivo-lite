@@ -1,11 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
+import { randomSecret } from "@modules/domain/connection-secrets"
+import { ConnectionsError, ConnectionsErrorCode, ConnectionsService, sha256 } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord, Environment } from "@modules/domain/connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { bankNameOf } from "./bank-name.policy"
+import type { SepayKeyReveal } from "./channel-connections.contracts"
 import { ChannelConnectionsLogEvent } from "./channel-connections.log-events"
 import type {
     SepayConnectionView,
@@ -153,6 +155,18 @@ export class SepayConnectionService {
         const connection = await this.sepayOf(actor, connectionId)
         await this.connections.patch(actor.workspaceId, connection.id, { environment })
         return this.view(await this.sepayOf(actor, connectionId))
+    }
+
+    /**
+     * Issues a new SePay API key (owner): the old one stops verifying calls at once, so the owner pastes the new one into the SePay
+     * webhook settings. The key is sealed for re-display and its hash verifies the calls; the answer carries it for the clipboard.
+     */
+    async rotateKey(actor: ConnectionActor, connectionId: string): Promise<SepayKeyReveal> {
+        await this.connections.authorize(actor, OWNER)
+        const connection = await this.sepayOf(actor, connectionId)
+        const apiKey = `nivo_${randomSecret()}`
+        await this.connections.writeSecret(connection.id, apiKey, sha256(apiKey))
+        return { apiKey, webhookUrl: this.connections.webhookUrl("sepay", connection.id) }
     }
 
     /**

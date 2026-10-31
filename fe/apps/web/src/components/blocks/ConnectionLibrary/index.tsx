@@ -1,17 +1,14 @@
 "use client"
 
-import { useLocale, useTranslations } from "next-intl"
+import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
 import {
-    AUDIENCES,
     CATALOG,
     CATEGORIES,
     catalogKey,
     matchesWords,
-    passesFilters,
     searchWords,
     asCategory,
-    asAudience,
     audienceLineOf,
     catalogBadgeOf,
     checkProvidersOf,
@@ -19,9 +16,9 @@ import {
 } from "@/hooks/connection-catalog"
 import type { CatalogEntry } from "@/hooks/connection-catalog"
 import { connectionPageHref, sortRows, useConnectionOverlays, useWantConnector } from "@/hooks/connections"
-import type { Connection, ConnectorAudience, ConnectorCategory } from "@/modules/types"
+import type { Connection, ConnectorCategory } from "@/modules/types"
 import { ConnectionLibraryBase } from "./component"
-import type { LibraryCard, LibraryCategory, LibraryGroup } from "./component"
+import type { LibraryCard, LibraryCategory } from "./component"
 
 /** What the page hands the library. */
 type ConnectionLibraryProps = {
@@ -30,7 +27,6 @@ type ConnectionLibraryProps = {
     readonly isSkeleton?: boolean
 }
 
-type Audience = Exclude<ConnectorAudience, "any">
 type Translate = ReturnType<typeof useTranslations<"connections">>
 
 /** A catalog entry with its words resolved in the current locale. */
@@ -45,12 +41,9 @@ interface KnownEntry {
 /** Everything the library derives from the workspace connections and the controls. */
 interface LibraryInput {
     readonly t: Translate
-    readonly locale: string
     readonly items: ReadonlyArray<Connection>
     readonly text: string
     readonly category: ConnectorCategory | "all"
-    readonly audience: Audience | "all"
-    readonly sort: "popular" | "name"
     /** The "I need this" commands pressed so far: pending, done, or refused with a note. */
     readonly wants: Readonly<Record<string, LibraryCard["want"]>>
 }
@@ -80,21 +73,19 @@ const cardOf = (known: KnownEntry, input: LibraryInput): LibraryCard => {
     }
 }
 
-/** The connectors that pass the search and the agent filter, in the chosen order, and the categories they fall in. */
+/** The connectors that pass the search, most used first and planned ones last, and the categories the search leaves with their counts. */
 const libraryOf = (input: LibraryInput) => {
-    const { t, locale, text, audience, category, sort } = input
+    const { t, text, category } = input
     const words = searchWords(text)
     const searched: ReadonlyArray<KnownEntry> = CATALOG.map((entry) => ({
         entry,
         name: t(catalogKey(entry, "name")),
         blurb: t(catalogKey(entry, "blurb")),
         haystack: `${t(catalogKey(entry, "name"))} ${t(catalogKey(entry, "blurb"))} ${t(catalogKey(entry, "keywords"))}`,
-    })).filter((item) => passesFilters(item.entry, "all", audience) && matchesWords(item.haystack, words))
-    const byName = (a: KnownEntry, b: KnownEntry) => a.name.localeCompare(b.name, locale)
+    })).filter((item) => matchesWords(item.haystack, words))
     const byPopularity = (a: KnownEntry, b: KnownEntry) =>
         (b.entry.status === "soon" ? 0 : 1) - (a.entry.status === "soon" ? 0 : 1) ||
         b.entry.popularity - a.entry.popularity
-    const ordered = [...searched].sort(sort === "name" ? byName : byPopularity)
     const perCategory = (id: ConnectorCategory) => searched.filter((item) => item.entry.category === id).length
     const categories: ReadonlyArray<LibraryCategory> = [
         { id: "all", label: t("libAllCategories"), count: searched.length },
@@ -104,29 +95,23 @@ const libraryOf = (input: LibraryInput) => {
             count: perCategory(id),
         })),
     ]
-    const groups: ReadonlyArray<LibraryGroup> = CATEGORIES.filter((id) => category === "all" || category === id)
-        .map((id) => ({
-            id,
-            title: t(`cat_${id}`),
-            cards: ordered.filter((item) => item.entry.category === id).map((item) => cardOf(item, input)),
-        }))
-        .filter((group) => group.cards.length > 0)
-    return { categories, groups }
+    const cards = [...searched]
+        .filter((item) => category === "all" || item.entry.category === category)
+        .sort(byPopularity)
+        .map((item) => cardOf(item, input))
+    return { categories, cards }
 }
 
 /**
- * The connector library tab: a category rail with counts, search (accents ignored), the agent filter and the sort, then the connectors
- * grouped by category. A tile opens the provider page of the connection when there is one, else the connector drawer through the
+ * The connector library tab: the search (accents ignored) and the category chips with counts, then one grid of the connectors that
+ * pass both. A tile opens the provider page of the connection when there is one, else the connector drawer through the
  * URL; a planned connector carries the "I need this" command.
  */
 export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
     const t = useTranslations("connections")
-    const locale = useLocale()
     const overlays = useConnectionOverlays()
     const [text, setText] = useState("")
     const [category, setCategory] = useState<ConnectorCategory | "all">("all")
-    const [audience, setAudience] = useState<Audience | "all">("all")
-    const [sort, setSort] = useState<"popular" | "name">("popular")
     const [wants, setWants] = useState<Readonly<Record<string, LibraryCard["want"]>>>({})
     const want = useWantConnector()
     const askFor = (id: string) => {
@@ -141,9 +126,9 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
             })),
         )
     }
-    const { categories, groups } = useMemo(
-        () => libraryOf({ t, locale, items: props.items, text, category, audience, sort, wants }),
-        [t, locale, props.items, text, category, audience, sort, wants],
+    const { categories, cards } = useMemo(
+        () => libraryOf({ t, items: props.items, text, category, wants }),
+        [t, props.items, text, category, wants],
     )
     return (
         <ConnectionLibraryBase
@@ -151,33 +136,20 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
                 text,
                 searchLabel: t("libSearch"),
                 clearLabel: t("libClear"),
-                sort,
-                sortLabel: t("libSort"),
-                sortOptions: [
-                    { id: "popular", label: t("libSortPopular") },
-                    { id: "name", label: t("libSortName") },
-                ],
+                filterLabel: t("libFilter"),
                 categoryLabel: t("libCategory"),
                 category,
                 categories,
-                audienceLabel: t("libAudience"),
-                audience,
-                audiences: [
-                    { id: "all", label: t("libAnyAgent") },
-                    ...AUDIENCES.map((id) => ({ id, label: t(`aud_${id}`) })),
-                ],
                 emptyMessage: t("libEmpty"),
                 emptyHint: t("libEmptyHint"),
                 wantLabel: t("libWant"),
                 wantedLabel: t("libWanted"),
-                groups,
+                cards,
                 isSkeleton: props.isSkeleton ?? false,
             }}
             on={{
                 text: setText,
-                sort: (value) => setSort(value === "name" ? "name" : "popular"),
                 category: (id) => setCategory(asCategory(id)),
-                audience: (id) => setAudience(asAudience(id)),
                 open: overlays.openDetail,
                 want: askFor,
             }}

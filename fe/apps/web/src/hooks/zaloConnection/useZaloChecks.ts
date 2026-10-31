@@ -73,7 +73,6 @@ export const useZaloChecks = (connectionId: string) => {
             mark: markOf(row.state),
             title: titleOf(row.key),
             detail: detailOf(row, page),
-            canRecheck: row.key === "token",
         })),
     )
 

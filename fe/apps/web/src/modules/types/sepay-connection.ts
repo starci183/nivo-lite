@@ -1,6 +1,9 @@
 /** Test or live: the SePay test mode books nothing. */
 export type SepayEnvironment = "test" | "live"
 
+/** One setup step of the SePay connection page, in the order the back end needs them. */
+export type SepayStepId = "environment" | "account" | "paste" | "test" | "agents"
+
 /** How the webhook door answered one delivery. */
 export type SepayEventOutcome = "accepted" | "duplicate" | "unauthorized"
 
@@ -55,7 +58,7 @@ export type SepayStepState = "done" | "active" | "pending"
 
 /** One step of the test checklist. */
 export interface SepayStepView {
-    readonly id: "ping" | "simulate" | "wait" | "receive"
+    readonly id: "ping" | "simulate" | "receive"
     readonly state: SepayStepState
 }
 
