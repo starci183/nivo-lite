@@ -1,18 +1,15 @@
 import type { EntityManager } from "typeorm"
-import { callDbFunction, sql } from "@modules/platform/database"
+import { jobsEntities } from "@modules/platform/jobs"
+import { callDbFunction } from "@modules/platform/database"
 import { seedDueJobs } from "../fixtures/builders/queue-reconciliation.builder"
 import type { SeededJob } from "../fixtures/builders/queue-reconciliation.builder"
 import type { AdmittedQueueRun, ClaimedReconcileJob } from "../fixtures/persistence/queue-reconciliation.rows"
 import type { LiteWorld } from "./lite-world.service"
 
-/** Removes the exact rows seeded by a reconciliation proof. */
-const CLEAN_RECONCILE_JOBS = sql`DELETE FROM public.job_outbox WHERE payload->>'proofId' = $1`
+const [, JobOutboxEntity] = jobsEntities
 
-/** Holds one row to prove a second replica skips its lock rather than waiting behind it. */
-const LOCK_RECONCILE_JOB = sql`SELECT id FROM public.job_outbox WHERE id = $1::uuid FOR UPDATE`
-
-/** Expires one current run lease, modeling a lost process without waiting for wall-clock time. */
-const EXPIRE_QUEUE_RUN = sql`UPDATE public.job_outbox SET run_lease_until = now() - interval '1 second' WHERE id = $1::uuid`
+/** How long ago the modeled lost process's lease ended. */
+const LAPSED_MS = 1000
 
 /** The single column a settlement function answers, named after the function. */
 type SettlementRow = Readonly<Record<string, boolean>>
@@ -65,7 +62,7 @@ export const returnQueueRun = (manager: EntityManager, id: string, runToken: str
 
 /** Expires one current run lease, modeling a lost process without waiting for wall-clock time. */
 export const expireQueueRun = async (manager: EntityManager, id: string): Promise<void> => {
-    await manager.query(EXPIRE_QUEUE_RUN, [id])
+    await manager.update(JobOutboxEntity, { id }, { runLeaseUntil: new Date(Date.now() - LAPSED_MS) })
 }
 
 /** Requests an operator retry of a failed durable job. */
@@ -75,7 +72,7 @@ export const requeueProofJob = async (manager: EntityManager, id: string): Promi
 
 /** Holds one row until the manager's transaction ends, to prove a second replica skips its lock. */
 export const lockReconcileJob = async (manager: EntityManager, id: string): Promise<void> => {
-    await manager.query(LOCK_RECONCILE_JOB, [id])
+    await manager.findOne(JobOutboxEntity, { where: { id }, select: { id: true }, lock: { mode: "pessimistic_write" } })
 }
 
 /** Seeds due outbox rows of one isolated proof and claims them through the public reconciliation function. */
@@ -83,7 +80,11 @@ export const reconciliationProof = (world: LiteWorld) => ({
     seed: (scenario: string, queue: string, count: number): Promise<Array<SeededJob>> => {
         const key = world.key(scenario)
         world.cleanup(async () => {
-            await world.db.primary.query(CLEAN_RECONCILE_JOBS, [key])
+            await world.db.primary
+                .createQueryBuilder(JobOutboxEntity, "o")
+                .delete()
+                .where("payload->>'proofId' = :key", { key })
+                .execute()
         })
         return seedDueJobs(world.db.primary, key, queue, count)
     },

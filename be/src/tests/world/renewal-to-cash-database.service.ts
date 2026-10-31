@@ -8,7 +8,6 @@ import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { invoicesEntities } from "@modules/domain/invoices"
 import { transactionsEntities } from "@modules/domain/transactions"
 import { workItemsEntities } from "@modules/domain/work-items"
-import { sql } from "@modules/platform/database"
 import { inboxEntities } from "@modules/platform/inbox"
 import { jobsEntities } from "@modules/platform/jobs"
 
@@ -19,7 +18,7 @@ const [AutomationRunEntity] = automationRunsEntities
 const [WorkItemEntity] = workItemsEntities
 
 const [InboxEntity] = inboxEntities
-const [JobEntity] = jobsEntities
+const [JobEntity, JobOutboxEntity] = jobsEntities
 const [TransactionEntity] = transactionsEntities
 
 const [ContractEntity] = contractsEntities
@@ -30,16 +29,15 @@ const [InvoiceEntity] = invoicesEntities
 /** The most rows one proof read takes; the proofs seed far fewer. */
 const PROOF_ROWS_MAX = 1000
 
-/** The queued bank-feed receipts of one connection, oldest first ($1 connection id). */
-const FEED_DELIVERIES = sql`
-    SELECT id::text AS id, queue, name, payload FROM public.job_outbox
-    WHERE queue = 'bank-feed-delivery' AND starts_with(payload->>'deliveryId', $1)
-    ORDER BY created_at, id`
+/** The bank-feed receipts of one connection are the queue rows whose delivery id starts with the connection id. */
+const FEED_OUTBOX_FILTER = "o.queue = 'bank-feed-delivery' AND starts_with(o.payload->>'deliveryId', :connectionId)"
 
-/** Removes the queue rows of the bank-feed receipts of one connection ($1 connection id). */
-const CLEAN_FEED_OUTBOX = sql`
-    DELETE FROM public.job_outbox
-    WHERE queue = 'bank-feed-delivery' AND starts_with(payload->>'deliveryId', $1)`
+/** The same filter for a delete, which carries no alias. */
+const FEED_OUTBOX_DELETE_FILTER = "queue = 'bank-feed-delivery' AND starts_with(payload->>'deliveryId', :connectionId)"
+
+/** The queued bank-feed receipts of one connection ($connectionId). */
+const feedOutboxOf = (manager: EntityManager, connectionId: string) =>
+    manager.createQueryBuilder(JobOutboxEntity, "o").where(FEED_OUTBOX_FILTER, { connectionId })
 
 /** One invoice as the database holds it. */
 export interface InvoiceState {
@@ -237,8 +235,14 @@ export const evidenceOfKind = async (
 }
 
 /** The queued bank-feed receipts of one connection, oldest first. */
-export const feedDeliveries = (manager: EntityManager, connectionId: string): Promise<Array<OutboxJob>> =>
-    manager.query<Array<OutboxJob>>(FEED_DELIVERIES, [connectionId])
+export const feedDeliveries = async (manager: EntityManager, connectionId: string): Promise<Array<OutboxJob>> => {
+    const rows = await feedOutboxOf(manager, connectionId)
+        .select(["o.id", "o.queue", "o.name", "o.payload"])
+        .orderBy("o.createdAt")
+        .addOrderBy("o.id")
+        .getMany()
+    return rows.map(({ id, queue, name, payload }) => ({ id, queue, name, payload }))
+}
 
 /** The inbox claims of the accounting reactor of `bank_credit_booked` for the credits of a workspace. */
 export const bankCreditClaims = (manager: EntityManager, workspaceId: string): Promise<Array<EventClaim>> => {
@@ -281,7 +285,11 @@ export const cleanEventClaims = async (manager: EntityManager, workspaceId: stri
 
 /** Removes the bank-feed receipts of one connection and their queue rows, which no workspace owns. */
 export const cleanFeedReceipts = async (manager: EntityManager, connectionId: string): Promise<void> => {
-    await manager.query(CLEAN_FEED_OUTBOX, [connectionId])
+    await manager
+        .createQueryBuilder(JobOutboxEntity, "o")
+        .delete()
+        .where(FEED_OUTBOX_DELETE_FILTER, { connectionId })
+        .execute()
     await manager
         .createQueryBuilder(BankFeedInboxEntity, "t")
         .delete()

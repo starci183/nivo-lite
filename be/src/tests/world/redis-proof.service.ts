@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { callDbFunction, sql } from "@modules/platform/database"
+import { callDbFunction } from "@modules/platform/database"
 import { jobsEntities } from "@modules/platform/jobs"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
@@ -9,27 +9,10 @@ import type { QueueTransport } from "../../modules/platform/queue/queue-transpor
 import type { EntityManager } from "typeorm"
 import type { LiteWorld } from "./lite-world.service"
 
-const [JobEntity] = jobsEntities
+const [JobEntity, JobOutboxEntity] = jobsEntities
 
-/** A real broker proof's durable admission and settlement. */
-const REDIS_JOB = sql`SELECT id, queue, name, payload, state, attempts FROM public.job_outbox
-WHERE dedupe_key = $1`
-
-/** The accepted public API request's durable broker identity. */
-const API_REDIS_JOB = sql`SELECT id, state FROM public.job_outbox
-WHERE queue = 'public_api' AND payload->>'requestId' = $1`
-
-/** Only the proof's isolated admission is removed. */
-const CLEAN_REDIS_JOB = sql`DELETE FROM public.job_outbox WHERE dedupe_key = $1`
-
-/** Models the persisted lease left by a crashed holder, without changing its admitted identity. */
-const LAPSE_REDIS_JOB = sql`UPDATE public.job_outbox SET run_lease_until = now() - interval '1 second' WHERE id = $1::uuid`
-
-/** The one durable identity admitted by the foreign-lease broker proof. */
-const FENCING_OUTBOX = sql`SELECT id, state, attempts FROM public.job_outbox WHERE dedupe_key = $1 LIMIT 1`
-
-/** The proof leaves no durable queue admission after its relay has stopped. */
-const CLEAN_FENCING_OUTBOX = sql`DELETE FROM public.job_outbox WHERE id = $1`
+/** How long ago a crashed holder's lease ended. */
+const LAPSED_MS = 1000
 
 /** The persisted admission observed independently of the broker state. */
 export interface FencingOutboxRow {
@@ -39,13 +22,15 @@ export interface FencingOutboxRow {
 }
 
 /** The durable admission of the foreign-lease proof, found by its dedupe key. */
-export const fencingOutbox = (manager: EntityManager, dedupeKey: string): Promise<Array<FencingOutboxRow>> =>
-    manager.query<Array<FencingOutboxRow>>(FENCING_OUTBOX, [dedupeKey])
+export const fencingOutbox = async (manager: EntityManager, dedupeKey: string): Promise<Array<FencingOutboxRow>> => {
+    const rows = await manager.find(JobOutboxEntity, { where: { dedupeKey }, take: 1 })
+    return rows.map(({ id, state, attempts }) => ({ id, state, attempts }))
+}
 
 /** Removes the claim and the queue admission of the isolated outbox identity, so cleanup cannot affect another proof. */
 export const cleanFencingRows = async (manager: EntityManager, outboxId: string): Promise<void> => {
     await manager.delete(JobEntity, { jobKey: outboxId })
-    await manager.query(CLEAN_FENCING_OUTBOX, [outboxId])
+    await manager.delete(JobOutboxEntity, { id: outboxId })
 }
 
 /** The durable broker identity of an accepted public API request. */
@@ -55,12 +40,18 @@ export interface PublicApiRedisJob {
 }
 
 /** The durable broker identity of the job an accepted public API request produced. */
-export const apiRedisJob = (manager: EntityManager, requestId: string): Promise<Array<PublicApiRedisJob>> =>
-    manager.query<Array<PublicApiRedisJob>>(API_REDIS_JOB, [requestId])
+export const apiRedisJob = async (manager: EntityManager, requestId: string): Promise<Array<PublicApiRedisJob>> => {
+    const rows = await manager
+        .createQueryBuilder(JobOutboxEntity, "o")
+        .select(["o.id", "o.state"])
+        .where("o.queue = 'public_api' AND o.payload->>'requestId' = :requestId", { requestId })
+        .getMany()
+    return rows.map(({ id, state }) => ({ id, state }))
+}
 
 /** Models the persisted lease left by a crashed holder, without changing its admitted identity. */
 export const lapseRedisJob = async (manager: EntityManager, id: string): Promise<void> => {
-    await manager.query(LAPSE_REDIS_JOB, [id])
+    await manager.update(JobOutboxEntity, { id }, { runLeaseUntil: new Date(Date.now() - LAPSED_MS) })
 }
 
 /** An operator's actual retry door, under the same outbox id. */
@@ -108,12 +99,14 @@ export const startQueueRelay = (world: LiteWorld): QueueRelayService => {
 /** Writes proof jobs through the real outbox and reads back their durable admission. */
 export const redisJobProof = (world: LiteWorld) => {
     const rowOf = async (key: string): Promise<PersistedRedisJob> => {
-        const [row] = await world.db.primary.query<Array<PersistedRedisJob>>(REDIS_JOB, [key])
-        assert(row !== undefined)
-        return row
+        const row = await world.db.primary.findOne(JobOutboxEntity, { where: { dedupeKey: key } })
+        assert(row !== null)
+        return { id: row.id, state: row.state, attempts: row.attempts }
     }
     const enqueue = async (queue: string, key: string): Promise<PersistedRedisJob> => {
-        world.cleanup(() => world.db.primary.query(CLEAN_REDIS_JOB, [key]))
+        world.cleanup(async () => {
+            await world.db.primary.delete(JobOutboxEntity, { dedupeKey: key })
+        })
         await world.db.primary.transaction((tx) =>
             world.resolve<QueueOutbox>(QUEUE_OUTBOX).write(tx, queue, { proofId: key }, { dedupeKey: key }),
         )

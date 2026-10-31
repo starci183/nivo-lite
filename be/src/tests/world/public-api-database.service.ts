@@ -1,12 +1,13 @@
 import type { EntityManager } from "typeorm"
 import { eventsEntities } from "@modules/domain/events"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
+import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
 import { leadsEntities } from "@modules/domain/leads"
 import { publicApiEntities } from "@modules/domain/public-api"
 import { workItemsEntities } from "@modules/domain/work-items"
 import type { Proposal } from "@modules/domain/work-items"
-import { sql } from "@modules/platform/database"
 import { inboxEntities } from "@modules/platform/inbox"
+import { jobsEntities } from "@modules/platform/jobs"
 
 const [PublicApiEntity] = publicApiEntities
 
@@ -17,17 +18,8 @@ const [InboxEntity] = inboxEntities
 const [EventEntity] = eventsEntities
 const [InboundEventEntity] = inboundEventsEntities
 const [LeadEntity] = leadsEntities
-
-/** The promised stable source identity and its normalized metadata. */
-const API_SOURCE = sql`SELECT id, title, content, topic, tags, visibility, origin FROM public.knowledge_sources
-WHERE workspace_id = $1::uuid AND id = $2::uuid`
-
-/** Queue handoffs are successful fulfillment; external indexing and delivery remain separate work. */
-const API_OUTBOX = sql`SELECT id, queue, name, dedupe_key, payload FROM public.job_outbox
-WHERE payload->>'workspaceId' = $1 ORDER BY created_at, id`
-
-/** Removes only the messages and publications created by one isolated workspace. */
-const CLEAN_API_PUBLICATIONS = sql`DELETE FROM public.job_outbox WHERE payload->>'workspaceId' = $1`
+const [KnowledgeSourceEntity] = knowledgeSourcesEntities
+const [, JobOutboxEntity] = jobsEntities
 
 /** The ledger state the proof observes through a separate transaction. */
 export interface PublicApiRequestState {
@@ -219,11 +211,32 @@ export const apiSource = (
     manager: EntityManager,
     workspaceId: string,
     id: string,
-): Promise<Array<PublicApiSourceState>> => manager.query<Array<PublicApiSourceState>>(API_SOURCE, [workspaceId, id])
+): Promise<Array<PublicApiSourceState>> =>
+    manager
+        .createQueryBuilder(KnowledgeSourceEntity, "k")
+        .select("k.id", "id")
+        .addSelect("k.title", "title")
+        .addSelect("k.content", "content")
+        .addSelect("k.topic", "topic")
+        .addSelect("k.tags", "tags")
+        .addSelect("k.visibility", "visibility")
+        .addSelect("k.origin", "origin")
+        .where("k.workspace_id = :workspaceId AND k.id = :id", { workspaceId, id })
+        .getRawMany<PublicApiSourceState>()
 
 /** Queue handoffs are successful fulfillment; external indexing and delivery remain separate work. */
 export const apiOutbox = (manager: EntityManager, workspaceId: string): Promise<Array<PublicApiOutboxState>> =>
-    manager.query<Array<PublicApiOutboxState>>(API_OUTBOX, [workspaceId])
+    manager
+        .createQueryBuilder(JobOutboxEntity, "o")
+        .select("o.id", "id")
+        .addSelect("o.queue", "queue")
+        .addSelect("o.name", "name")
+        .addSelect("o.dedupe_key", "dedupe_key")
+        .addSelect("o.payload", "payload")
+        .where("o.payload->>'workspaceId' = :workspaceId", { workspaceId })
+        .orderBy("o.created_at")
+        .addOrderBy("o.id")
+        .getRawMany<PublicApiOutboxState>()
 
 /** The `deal_won` envelopes published on the event bus for one workspace (the automations consumer reacts to them). */
 export const apiDealWon = async (
@@ -275,7 +288,11 @@ export const apiEvents = (manager: EntityManager, workspaceId: string): Promise<
 
 /** Removes only the messages and publications created by one isolated workspace. */
 export const cleanApiPublications = async (manager: EntityManager, workspaceId: string): Promise<void> => {
-    await manager.query(CLEAN_API_PUBLICATIONS, [workspaceId])
+    await manager
+        .createQueryBuilder(JobOutboxEntity, "o")
+        .delete()
+        .where("payload->>'workspaceId' = :workspaceId", { workspaceId })
+        .execute()
 }
 
 /** Removes only the terminal receipt of this proof's original delivery identity. */

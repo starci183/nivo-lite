@@ -1,5 +1,6 @@
 import type { EntityManager } from "typeorm"
-import { sql } from "@modules/platform/database"
+import { callDbFunction, databaseEntities, sql } from "@modules/platform/database"
+import { insertRateLimitWindow } from "../fixtures/builders/rate-limit.builder"
 import type {
     RateLimitAccessRow,
     RateLimitBucketRow,
@@ -7,42 +8,13 @@ import type {
     RateLimitProofHitsRow,
 } from "../fixtures/persistence/rate-limit.rows"
 
-/** Observes the count, deadline and current validity of one isolated proof window. */
-const RATE_LIMIT_BUCKET = sql`
-    SELECT bucket_key, hits::text AS hits, reset_at, reset_at > statement_timestamp() AS active
-    FROM public.http_security WHERE bucket_key = $1
-`
+const [HttpSecurityEntity] = databaseEntities
 
-/** Moves a proof window to its exact database-clock deadline without waiting for wall time. */
-const EXPIRE_RATE_LIMIT_BUCKET = sql`
-    UPDATE public.http_security SET reset_at = statement_timestamp() WHERE bucket_key = $1
-`
+/** How far in the past an expired proof window ends, so the database clock reads it as over whatever its skew. */
+const EXPIRED_MS = 1000
 
-/** Removes only the caller's isolated proof window. */
-const CLEAN_RATE_LIMIT_BUCKET = sql`DELETE FROM public.http_security WHERE bucket_key = $1`
-
-/** Exercises the bounded expiry function under the caller's database role. */
-const RUN_RATE_LIMIT_CLEANUP = sql`SELECT public.http_rate_limit_cleanup() AS removed`
-
-/** Creates one isolated live window through the backend role's INSERT policy. */
-const INSERT_RATE_LIMIT_PROOF_BUCKET = sql`
-    INSERT INTO public.http_security (bucket_key, hits, reset_at)
-    VALUES ($1, 1, statement_timestamp() + interval '1 minute')
-`
-
-/** Exercises the backend role's UPDATE and SELECT policies before expiry. */
-const UPDATE_RATE_LIMIT_PROOF_BUCKET = sql`
-    WITH changed AS (
-        UPDATE public.http_security SET hits = hits + 1 WHERE bucket_key = $1
-        RETURNING hits
-    )
-    SELECT hits::text AS hits FROM changed
-`
-
-/** Calls the actual invoker function using the backend role's table policies and cleanup grant. */
-const CONSUME_RATE_LIMIT_PROOF_BUCKET = sql`
-    SELECT public.http_rate_limit_consume($1::text, $2::double precision, $3::bigint) AS allowed
-`
+/** How long the seeded proof window stays live. */
+const LIVE_MS = 60_000
 
 /** Includes inherited PUBLIC grants when checking that browser roles cannot reach counters or rate-limit functions. */
 const RATE_LIMIT_ACCESS = sql`
@@ -65,43 +37,69 @@ const RATE_LIMIT_ACCESS = sql`
 
 /** Observes the count, deadline and current validity of one isolated proof window. */
 export const rateLimitBucket = (manager: EntityManager, key: string): Promise<Array<RateLimitBucketRow>> =>
-    manager.query<Array<RateLimitBucketRow>>(RATE_LIMIT_BUCKET, [key])
+    manager
+        .createQueryBuilder(HttpSecurityEntity, "h")
+        .select("h.bucket_key", "bucket_key")
+        .addSelect("h.hits", "hits")
+        .addSelect("h.reset_at", "reset_at")
+        .addSelect("h.reset_at > statement_timestamp()", "active")
+        .where("h.bucket_key = :key", { key })
+        .getRawMany<RateLimitBucketRow>()
 
-/** Moves a proof window to its exact database-clock deadline without waiting for wall time. */
+/** Moves a proof window to a deadline already past, without waiting for wall time. */
 export const expireRateLimitBucket = async (manager: EntityManager, key: string): Promise<void> => {
-    await manager.query(EXPIRE_RATE_LIMIT_BUCKET, [key])
+    await manager.update(HttpSecurityEntity, { bucketKey: key }, { resetAt: new Date(Date.now() - EXPIRED_MS) })
 }
 
 /** Removes only the caller's isolated proof window. */
 export const cleanRateLimitBucket = async (manager: EntityManager, key: string): Promise<void> => {
-    await manager.query(CLEAN_RATE_LIMIT_BUCKET, [key])
+    await manager.delete(HttpSecurityEntity, { bucketKey: key })
 }
 
 /** Exercises the bounded expiry function under the manager's database role. */
 export const runRateLimitCleanup = async (manager: EntityManager): Promise<void> => {
-    await manager.query(RUN_RATE_LIMIT_CLEANUP)
+    await callDbFunction(manager, "public.http_rate_limit_cleanup", [])
 }
 
 /** Creates one isolated live window through the backend role's INSERT policy. */
-export const insertRateLimitProofBucket = async (manager: EntityManager, key: string): Promise<void> => {
-    await manager.query(INSERT_RATE_LIMIT_PROOF_BUCKET, [key])
+export const insertRateLimitProofBucket = (manager: EntityManager, key: string): Promise<void> =>
+    insertRateLimitWindow(manager, key, new Date(Date.now() + LIVE_MS))
+
+const hitsRowOf = (row: unknown): RateLimitProofHitsRow => {
+    const hits: unknown = typeof row === "object" && row !== null ? Reflect.get(row, "hits") : null
+    return { hits: String(hits) }
 }
 
 /** Exercises the backend role's UPDATE and SELECT policies before expiry. */
-export const updateRateLimitProofBucket = (
+export const updateRateLimitProofBucket = async (
     manager: EntityManager,
     key: string,
-): Promise<Array<RateLimitProofHitsRow>> =>
-    manager.query<Array<RateLimitProofHitsRow>>(UPDATE_RATE_LIMIT_PROOF_BUCKET, [key])
+): Promise<Array<RateLimitProofHitsRow>> => {
+    const result = await manager
+        .createQueryBuilder(HttpSecurityEntity, "h")
+        .update()
+        .set({ hits: () => "hits + 1" })
+        .where("bucket_key = :key", { key })
+        .returning("hits")
+        .execute()
+    const raw: unknown = result.raw
+    return Array.isArray(raw) ? raw.map(hitsRowOf) : []
+}
 
 /** Calls the actual invoker function using the backend role's table policies and cleanup grant. */
-export const consumeRateLimitProofBucket = (
+export const consumeRateLimitProofBucket = async (
     manager: EntityManager,
     key: string,
     windowMs: number,
     limit: number,
-): Promise<Array<RateLimitProofAllowedRow>> =>
-    manager.query<Array<RateLimitProofAllowedRow>>(CONSUME_RATE_LIMIT_PROOF_BUCKET, [key, windowMs, limit])
+): Promise<Array<RateLimitProofAllowedRow>> => {
+    const rows = await callDbFunction<Readonly<Record<string, boolean>>>(manager, "public.http_rate_limit_consume", [
+        key,
+        windowMs,
+        limit,
+    ])
+    return rows.map((row) => ({ allowed: row["http_rate_limit_consume"] === true }))
+}
 
 /** Reads effective backend and browser access, including privileges inherited from PUBLIC. */
 export const rateLimitAccess = (manager: EntityManager): Promise<Array<RateLimitAccessRow>> =>

@@ -1,4 +1,5 @@
 import type { EntityManager } from "typeorm"
+import { jobsEntities } from "@modules/platform/jobs"
 import { sql } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import {
@@ -22,6 +23,8 @@ import type {
     CutoverQueues,
     CutoverRow,
 } from "../fixtures/persistence/queue-cutover.rows"
+
+const [JobEntity, JobOutboxEntity] = jobsEntities
 
 /** The cutover proofs inspect pgmq queues, catalog entries and migration side effects, which entities cannot express. */
 /** Makes a message look claimed once, with a one second visibility window. */
@@ -56,19 +59,6 @@ const readEnvelopes = async (
     return rows.map(({ msgId, proof }) => ({ msgId: Number(msgId), proof }))
 }
 
-const CUTOVER_ROWS = sql`
-    SELECT id::text, payload->>'proof' AS proof, state, attempts, sent_at, run_lease_until
-    FROM public.job_outbox WHERE dedupe_key LIKE 'cutover:%' OR dedupe_key LIKE 'pgmq-cutover:content_tick:%'
-    ORDER BY payload->>'proof'
-`
-const ORIGINAL_CUTOVER_ROWS = sql`
-    SELECT id::text, payload->>'proof' AS proof, state, attempts, sent_at, null::timestamptz AS run_lease_until
-    FROM public.job_outbox WHERE dedupe_key LIKE 'cutover:%' ORDER BY payload->>'proof'
-`
-const CUTOVER_CLAIMS = sql`
-    SELECT id::text, job_key, status, fencing_token::text, current_step
-    FROM public.jobs WHERE payload->>'proof' IN ('raw-inflight', 'raw-done') ORDER BY payload->>'proof'
-`
 const CUTOVER_PGMQ = sql`
     SELECT (SELECT count(*)::int FROM pgmq.q_content_tick) AS pending,
            (SELECT count(*)::int FROM pgmq.a_content_tick) AS archived,
@@ -125,17 +115,54 @@ export const seedCutoverRaw = async (manager: EntityManager): Promise<void> => {
     await sendCutoverBusEvent(manager)
 }
 
+/** The outbox deliveries the cutover proofs seeded, ordered by their proof tag. */
+const cutoverOutboxOf = (manager: EntityManager, dedupeKeys: ReadonlyArray<string>) =>
+    manager
+        .createQueryBuilder(JobOutboxEntity, "o")
+        .select("o.id::text", "id")
+        .addSelect("o.payload->>'proof'", "proof")
+        .addSelect("o.state", "state")
+        .addSelect("o.attempts", "attempts")
+        .addSelect("o.sent_at", "sent_at")
+        .where(
+            dedupeKeys.map((_, index) => `o.dedupe_key LIKE :key${String(index)}`).join(" OR "),
+            Object.fromEntries(dedupeKeys.map((key, index) => [`key${String(index)}`, key])),
+        )
+        .orderBy("proof")
+
 /** The outbox identities and states observed across the migration boundary. */
 export const cutoverRows = (manager: EntityManager): Promise<Array<CutoverRow>> =>
-    manager.query<Array<CutoverRow>>(CUTOVER_ROWS)
+    cutoverOutboxOf(manager, ["cutover:%", "pgmq-cutover:content_tick:%"])
+        .addSelect("o.run_lease_until", "run_lease_until")
+        .getRawMany<CutoverRow>()
 
-/** The outbox rows that existed before the migration. */
-export const originalCutoverRows = (manager: EntityManager): Promise<Array<CutoverRow>> =>
-    manager.query<Array<CutoverRow>>(ORIGINAL_CUTOVER_ROWS)
+/** The outbox rows that existed before the migration; they carry no lease. */
+export const originalCutoverRows = async (manager: EntityManager): Promise<Array<CutoverRow>> => {
+    const rows = await cutoverOutboxOf(manager, ["cutover:%"]).getRawMany<Omit<CutoverRow, "run_lease_until">>()
+    return rows.map((row) => ({ ...row, run_lease_until: null }))
+}
 
 /** The fenced claims that must survive raw-message adoption. */
-export const cutoverClaims = (manager: EntityManager): Promise<Array<CutoverClaim>> =>
-    manager.query<Array<CutoverClaim>>(CUTOVER_CLAIMS)
+export const cutoverClaims = async (manager: EntityManager): Promise<Array<CutoverClaim>> => {
+    const rows = await manager
+        .createQueryBuilder(JobEntity, "j")
+        .select("j.id::text", "id")
+        .addSelect("j.payload->>'proof'", "proof")
+        .addSelect("j.job_key", "job_key")
+        .addSelect("j.status", "status")
+        .addSelect("j.fencing_token::text", "fencing_token")
+        .addSelect("j.current_step", "current_step")
+        .where("j.payload->>'proof' IN (:...proofs)", { proofs: ["raw-inflight", "raw-done"] })
+        .orderBy("proof")
+        .getRawMany<CutoverClaim & { readonly proof: string }>()
+    return rows.map(({ id, job_key, status, fencing_token, current_step }) => ({
+        id,
+        job_key,
+        status,
+        fencing_token,
+        current_step,
+    }))
+}
 
 /** How many messages each pgmq table holds. */
 export const cutoverQueues = (manager: EntityManager): Promise<Array<CutoverQueues>> =>
