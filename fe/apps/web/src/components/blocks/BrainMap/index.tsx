@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { useFormatter, useTranslations } from "next-intl"
 import type { PageHeaderContent } from "@starci/grammar/common"
@@ -9,6 +9,8 @@ import {
     DOSSIER_STATUS_TONE,
     MAP_ROOT_ID,
     MAP_STATUS_FILTERS,
+    dossierOfFile,
+    mapFilesOf,
     mapGraphOf,
     reviewedStatusOf,
     selectionOf,
@@ -27,6 +29,7 @@ import type {
     NumberFormatter,
 } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
 import { brainDossierHref, brainTabHref } from "@/modules/routes"
 import { BrainMapBase } from "./component"
@@ -45,8 +48,15 @@ interface BrainMapProps {
 /** A map of the same shape as a ready one, drawn as geometry while the categories and dossiers are read. */
 const PLACEHOLDER: MapContent = {
     nodes: [
-        { id: MAP_ROOT_ID, label: "-", isRoot: true },
-        ...[1, 2, 3, 4].map((n) => ({ id: `placeholder-${n}`, label: "-" })),
+        { id: MAP_ROOT_ID, label: "-", isRoot: true, form: "bubble", mark: "-", diameter: 120 },
+        ...[1, 2, 3, 4].map((n) => ({
+            id: `placeholder-${n}`,
+            label: "-",
+            form: "bubble" as const,
+            mark: "-",
+            diameter: 66,
+            isPlaceholder: true,
+        })),
     ],
     edges: [1, 2, 3, 4].map((n) => ({ id: `placeholder-edge-${n}`, source: MAP_ROOT_ID, target: `placeholder-${n}` })),
 }
@@ -119,8 +129,9 @@ const detailOf = (
 }
 
 /**
- * The connected map tab of the Second Brain: every category and dossier as a radial graph, the dossiers toned by status, a
- * filter over the statuses, and a side pane for the node the address selects.
+ * The connected map tab of the Second Brain: every category and dossier as an orbit graph (bubbles sized by their documents,
+ * categories ringed and dossiers painted by status, a dossier's documents on the outer ring while it is open), a filter that
+ * dims the other statuses, and a side pane for the node the address selects.
  */
 export const BrainMap = (props: BrainMapProps) => {
     const t = useTranslations("secondBrain")
@@ -129,6 +140,8 @@ export const BrainMap = (props: BrainMapProps) => {
     const router = navigation.useRouter()
     const slotLabels = useSlotLabels()
     const { categories, slot, reload } = useBrainDossiers()
+    const { data: sources } = useQueryKnowledgeSourcesSwr({})
+    const filesOf = useMemo(() => mapFilesOf(sources ?? []), [sources])
     const header = useBrainPageHeader("map", props.header)
     const summary = useDossierReviewSummary()
     const statusOf: MapStatusOf = (dossier) => reviewedStatusOf(dossier.status, summary.reviewOf(dossier.id)).status
@@ -138,7 +151,8 @@ export const BrainMap = (props: BrainMapProps) => {
     const selection = selectionOf(all, props.node ?? null)
     const total = all.reduce((sum, category) => sum + category.dossiers.length, 0)
     const words = { root: t("mapRoot"), rootMeta: t("mapRootMeta", { count: total }) }
-    const select = (id: string | null) => {
+    const select = (picked: string | null) => {
+        const id = picked === null ? null : (dossierOfFile(all, filesOf, picked)?.id ?? picked)
         router.replace(brainTabHref("map", { node: id ?? undefined }))
         setDetailOpen(id !== null && id !== MAP_ROOT_ID)
     }
@@ -161,7 +175,7 @@ export const BrainMap = (props: BrainMapProps) => {
                 })),
                 filter,
                 selectedId: selection.kind === "none" ? null : (props.node ?? null),
-                slot: mapSlot(slot, (rows) => mapGraphOf(rows, words, filter, statusOf)),
+                slot: mapSlot(slot, (rows) => mapGraphOf(rows, words, filter, statusOf, filesOf)),
                 placeholder: PLACEHOLDER,
                 slotLabels: slotLabels(t("dossiersEmpty")),
                 detail: detailOf(t, format, all, selection, statusOf),

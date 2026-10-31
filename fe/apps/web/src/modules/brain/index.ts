@@ -53,5 +53,5 @@ export {
     queryOfTodo,
 } from "./findings"
 export type { FindingFilter, FindingsQuery, TodoFilter, TodoSeverityFilter } from "./findings"
-export { MAP_ROOT_ID, MAP_STATUS_FILTERS, mapGraphOf, selectionOf } from "./map"
+export { MAP_ROOT_ID, MAP_STATUS_FILTERS, dossierOfFile, mapFilesOf, mapGraphOf, selectionOf } from "./map"
 export type { MapSelection, MapStatusFilter, MapStatusOf } from "./map"
