@@ -1,11 +1,10 @@
 import { AccountingEvidenceFields } from "@/components/leaves/AccountingEvidenceFields"
 import type { AccountingEvidenceFieldName } from "@/components/leaves/AccountingEvidenceFields"
 
-import { Alert, Button, Form, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Form, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { AccountingFormActions } from "@/components/branches/AccountingFormActions"
 import { AccountingRecordSection } from "@/components/branches/AccountingRecordSection"
 import type { AccountingRecordView } from "@/hooks/accountingRecords"
-import { FORM_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** The words and entered values of the manual evidence form. */
 interface EvidenceForm {
@@ -78,7 +77,7 @@ const ManualEvidenceForm = (props: ManualEvidenceFormProps) => {
     return (
         <SurfaceCard label={form.title}>
             <Form label={form.title} isPending={form.isSaving} onSubmit={props.on.submitForm}>
-                <div className={FORM_CLASS_NAME}>
+                <Stack gap="section">
                     <Text size="sm" tone="muted">
                         {form.intro}
                     </Text>
@@ -94,7 +93,7 @@ const ManualEvidenceForm = (props: ManualEvidenceFormProps) => {
                     <Text size="xs" tone="muted">
                         {form.foot}
                     </Text>
-                </div>
+                </Stack>
             </Form>
         </SurfaceCard>
     )
@@ -105,7 +104,7 @@ export const AccountingEvidence = (props: AccountingEvidenceProps) => {
     const { props: data, on } = props
     const isSkeleton = props.isSkeleton
     return (
-        <div className={PANEL_CLASS_NAME}>
+        <Stack gap="region">
             <AccountingRecordSection
                 title={data.creditsTitle}
                 intro={data.creditsIntro}
@@ -140,7 +139,7 @@ export const AccountingEvidence = (props: AccountingEvidenceProps) => {
                 records={data.orders}
                 isSkeleton={isSkeleton}
             />
-        </div>
+        </Stack>
     )
 }
 

@@ -1,5 +1,4 @@
-import { Heading, List, ListItem, Region, Text, TextAction } from "@starci/grammar/common"
-import { COUNTS, ROW, STACK } from "./classNames"
+import { Cluster, Heading, List, ListItem, Region, Stack, Text, TextAction } from "@starci/grammar/common"
 
 /** The knowledge this module runs on, in the reader language. */
 type SetupKnowledgeCardProps = {
@@ -18,9 +17,9 @@ type SetupKnowledgeCardProps = {
 /** Draws the knowledge this module runs on: the sources of the business, and where to add more. */
 export const SetupKnowledgeCard = (props: SetupKnowledgeCardProps) => (
     <Region label={props.title}>
-        <div className={STACK}>
+        <Stack gap="row">
             <Heading level={2}>{props.title}</Heading>
-            <List label={props.title} className={COUNTS}>
+            <List label={props.title}>
                 <ListItem>
                     <Text size="sm" isSkeleton={props.isSkeleton}>
                         {props.businessLine}
@@ -38,14 +37,14 @@ export const SetupKnowledgeCard = (props: SetupKnowledgeCardProps) => (
                     {props.emptyHint}
                 </Text>
             )}
-            <div className={ROW}>
+            <Cluster gap="row">
                 <TextAction href={props.knowledgeHref} size="sm" appearance="inline">
                     {props.knowledgeLabel}
                 </TextAction>
                 <TextAction href={props.nivoHref} size="sm" appearance="muted">
                     {props.nivoLabel}
                 </TextAction>
-            </div>
-        </div>
+            </Cluster>
+        </Stack>
     </Region>
 )

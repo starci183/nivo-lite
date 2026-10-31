@@ -1,13 +1,7 @@
-import { Badge, Divider, List, ListItem, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Fragment } from "react"
+import { Badge, Cluster, Divider, SectionHeader, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovHistoryRow } from "@/hooks/overviewGov"
-import {
-    STACK_CLASS_NAME,
-    HISTORY_LIST_CLASS_NAME,
-    HISTORY_ROW_CLASS_NAME,
-    HISTORY_BODY_CLASS_NAME,
-    CHIP_ROW_CLASS_NAME,
-} from "./classNames"
 
 /** The figures of the history block. */
 export interface OverviewGovHistoryProps {
@@ -34,16 +28,16 @@ export const OverviewGovHistory = (props: OverviewGovHistoryProps) => (
             }
         />
         <SurfaceCard ariaLabel={props.figures.title}>
-            <div className={STACK_CLASS_NAME}>
+            <Stack gap="row">
                 {props.figures.rows.length === 0 ? (
                     <Text tone="muted">{props.figures.empty}</Text>
                 ) : (
-                    <List label={props.figures.title} className={HISTORY_LIST_CLASS_NAME}>
+                    <Stack gap="row">
                         {props.figures.rows.map((row, index) => (
-                            <ListItem key={row.id} className={HISTORY_ROW_CLASS_NAME}>
+                            <Fragment key={row.id}>
                                 {index > 0 ? <Divider semantics="presentation" /> : null}
-                                <div className={HISTORY_BODY_CLASS_NAME}>
-                                    <div className={CHIP_ROW_CLASS_NAME}>
+                                <Stack gap="identity">
+                                    <Cluster gap="inline">
                                         <Text size="sm" weight="semibold">
                                             {row.action}
                                         </Text>
@@ -51,19 +45,19 @@ export const OverviewGovHistory = (props: OverviewGovHistoryProps) => (
                                         <Text size="xs" tone="muted">
                                             {row.when}
                                         </Text>
-                                    </div>
+                                    </Cluster>
                                     <Text size="sm" tone="muted">
                                         {row.detail}
                                     </Text>
-                                </div>
-                            </ListItem>
+                                </Stack>
+                            </Fragment>
                         ))}
-                    </List>
+                    </Stack>
                 )}
                 <Text size="xs" tone="muted">
                     {props.figures.source}
                 </Text>
-            </div>
+            </Stack>
         </SurfaceCard>
     </AccountingBlock>
 )

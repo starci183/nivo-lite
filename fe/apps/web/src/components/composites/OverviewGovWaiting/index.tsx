@@ -1,7 +1,6 @@
-import { Badge, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, Cluster, SectionHeader, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovWaitingItem } from "@/hooks/overviewGov"
-import { STACK_CLASS_NAME, TILE_COPY_CLASS_NAME, WAIT_LIST_CLASS_NAME, CHIP_ROW_CLASS_NAME } from "./classNames"
 
 /** The figures of the waiting block. */
 export interface OverviewGovWaitingProps {
@@ -37,22 +36,22 @@ export const OverviewGovWaiting = (props: OverviewGovWaitingProps) => {
                 }
             />
             <SurfaceCard ariaLabel={props.figures.title}>
-                <div className={STACK_CLASS_NAME}>
+                <Stack gap="row">
                     {props.figures.items.length === 0 ? (
                         <Text tone="muted">{props.figures.none}</Text>
                     ) : (
                         <>
                             <Text weight="semibold">{props.figures.count}</Text>
-                            <div className={WAIT_LIST_CLASS_NAME}>
+                            <Stack gap="row">
                                 {cards.map(({ item, action }) => (
                                     <SurfaceCard key={item.id} wholeAction={action}>
-                                        <div className={TILE_COPY_CLASS_NAME}>
-                                            <div className={CHIP_ROW_CLASS_NAME}>
+                                        <Stack gap="identity">
+                                            <Cluster gap="inline">
                                                 <Badge tone="neutral">{item.department}</Badge>
                                                 {item.reason === null ? null : (
                                                     <Badge tone="warning">{item.reason}</Badge>
                                                 )}
-                                            </div>
+                                            </Cluster>
                                             <Text size="sm" weight="medium">
                                                 {item.title}
                                             </Text>
@@ -61,10 +60,10 @@ export const OverviewGovWaiting = (props: OverviewGovWaitingProps) => {
                                                     {item.summary}
                                                 </Text>
                                             )}
-                                        </div>
+                                        </Stack>
                                     </SurfaceCard>
                                 ))}
-                            </div>
+                            </Stack>
                             {props.figures.more === null ? null : (
                                 <Text size="sm" tone="muted">
                                     {props.figures.more}
@@ -75,7 +74,7 @@ export const OverviewGovWaiting = (props: OverviewGovWaitingProps) => {
                     <Text size="xs" tone="muted">
                         {props.figures.source}
                     </Text>
-                </div>
+                </Stack>
             </SurfaceCard>
         </AccountingBlock>
     )
