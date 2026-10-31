@@ -25,6 +25,7 @@ interface InstallationWire {
     readonly activeVersion?: number | null
     readonly settings: unknown
     readonly createdAt: string
+    readonly setupProgress: { readonly confirmed: number; readonly total: number }
 }
 
 const STATUSES: ReadonlyArray<InstallationStatus> = [
@@ -71,6 +72,7 @@ const toInstallation = (row: InstallationWire): Installation | null =>
               activeVersion: row.activeVersion ?? null,
               settings: settingsOf(row.settings),
               createdAt: row.createdAt,
+              setupProgress: { confirmed: row.setupProgress.confirmed, total: row.setupProgress.total },
           }
         : null
 

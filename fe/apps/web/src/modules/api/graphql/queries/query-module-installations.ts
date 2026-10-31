@@ -29,6 +29,10 @@ const query1: TypedDocumentNode<QueryModuleInstallationsResponse> = gql`
             name
             operatingMode
             settings
+            setupProgress {
+                confirmed
+                total
+            }
             status
             workspaceId
         }

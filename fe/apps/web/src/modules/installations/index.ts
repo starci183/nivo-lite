@@ -24,6 +24,7 @@ export type {
     OperatingMode,
     SetupFact,
     SetupMessage,
+    SetupProgress,
     SetupRevision,
     SetupSession,
 } from "./installations.types"

@@ -4,7 +4,7 @@ import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
-import type { AgentLifecycle } from "@/modules/installations"
+import type { AgentLifecycle, SetupProgress } from "@/modules/installations"
 import {
     installationPersonName,
     agentHref,
@@ -16,6 +16,7 @@ import {
 } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
 import { useInstallations } from "./useInstallations"
+import { useInstanceChannels } from "./useInstanceChannels"
 
 /** One role of the catalogue in the reader language, with whether an agent of it is installed. */
 export interface CatalogRole {
@@ -25,6 +26,8 @@ export interface CatalogRole {
     readonly searchText: string
     /** At least one agent of this role is installed. */
     readonly installed: boolean
+    /** How many agents of this role are installed. */
+    readonly installedCount: number
     /** Where another agent of an installed role that runs several is added by name; null when the card installs instead. */
     readonly addHref: string | null
     readonly isEarly: boolean
@@ -47,7 +50,28 @@ interface InstalledAgent {
     readonly lifecycle: AgentLifecycle
     readonly tone: ReturnType<typeof agentLifecycleTone>
     readonly href: string
+    /** The names of the channels its agent is bound to; empty when none. */
+    readonly channels: ReadonlyArray<string>
+    /** The required setup gates confirmed, of all of them. */
+    readonly setupProgress: SetupProgress
 }
+
+type ModuleCatalog = ReturnType<typeof useModuleCatalog>
+
+/** The category filter entries in the reader language; blank labels while the catalogue loads so the filter keeps its shape. */
+const categoriesOf = (
+    catalog: ModuleCatalog,
+    locale: "vi" | "en",
+): ReadonlyArray<{ readonly key: string; readonly label: string }> =>
+    catalog.slot.isLoading === true
+        ? Array.from(new Set(MODULE_KEYS.map((key) => MODULE_REGISTRY[key].category))).map((key) => ({
+              key,
+              label: "",
+          }))
+        : catalog.categories.map((category) => ({
+              key: category.key,
+              label: pickCopy(category.label, locale),
+          }))
 
 /** The installed agents, the roles still to add (a single-instance role that is installed does not repeat), and the categories. */
 export const useCatalogEntries = (): {
@@ -60,10 +84,12 @@ export const useCatalogEntries = (): {
     const locale = useLocale() === "en" ? "en" : "vi"
     const { slot: installationsSlot, installations, reload: reloadInstallations } = useInstallations()
     const catalog = useModuleCatalog()
+    const channelsOf = useInstanceChannels()
     const roles = MODULE_KEYS.flatMap((key): ReadonlyArray<CatalogRole> => {
         const def = MODULE_REGISTRY[key]
         const copy = catalog.modules[key]
-        const installation = installations === undefined ? undefined : instancesOf(installations, key)[0]
+        const instances = installations === undefined ? [] : instancesOf(installations, key)
+        const installation = instances[0]
         if (installation !== undefined && !def.multiInstance) return []
         const category = catalog.categories.find((entry) => entry.key === def.category)
         return [
@@ -71,6 +97,7 @@ export const useCatalogEntries = (): {
                 key,
                 categoryKey: def.category,
                 installed: installation !== undefined,
+                installedCount: instances.length,
                 addHref: installation !== undefined && def.multiInstance ? agentListHref(key) : null,
                 isEarly: def.status === "early",
                 searchText: foldText(
@@ -107,18 +134,11 @@ export const useCatalogEntries = (): {
             lifecycle,
             tone: agentLifecycleTone(lifecycle),
             href: agentHref(installation.moduleKey, installation.id),
+            channels: channelsOf(installation.agentId),
+            setupProgress: installation.setupProgress,
         }
     })
-    const categories =
-        catalog.slot.isLoading === true
-            ? Array.from(new Set(MODULE_KEYS.map((key) => MODULE_REGISTRY[key].category))).map((key) => ({
-                  key,
-                  label: "",
-              }))
-            : catalog.categories.map((category) => ({
-                  key: category.key,
-                  label: pickCopy(category.label, locale),
-              }))
+    const categories = categoriesOf(catalog, locale)
     const slot: DataSlot<boolean> = {
         isLoading: installationsSlot.isLoading === true || catalog.slot.isLoading === true,
         isError: installationsSlot.isError === true || catalog.slot.isError === true,

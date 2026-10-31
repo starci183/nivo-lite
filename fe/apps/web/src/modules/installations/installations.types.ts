@@ -48,6 +48,14 @@ export type Installation = {
     readonly activeVersion: number | null
     readonly settings: Readonly<Record<string, unknown>>
     readonly createdAt: string
+    /** The required setup gates confirmed on the newest draft, of all of them (3 of 8). */
+    readonly setupProgress: SetupProgress
+}
+
+/** How far the setup of an agent got: the required gates confirmed, of all of them. */
+export interface SetupProgress {
+    readonly confirmed: number
+    readonly total: number
 }
 
 /** One short fact the setup chat noted. */
