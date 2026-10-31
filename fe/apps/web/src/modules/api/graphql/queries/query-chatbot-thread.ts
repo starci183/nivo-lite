@@ -27,6 +27,13 @@ const query1: Document = gql`
                 handledBy
                 waiting
                 unanswered
+                lead {
+                    stage
+                    need
+                    company
+                }
+                respondentKind
+                respondentName
             }
             escalation {
                 workItemId

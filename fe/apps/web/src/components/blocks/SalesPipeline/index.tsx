@@ -8,6 +8,7 @@ import { DEAL_STAGES, OPEN_LANES, useSalesActions } from "@/hooks/sales"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { useSalesPipelineForm } from "@/hooks/rhf"
 import { leadPath } from "@/modules/routes"
+import { leadStageLabel } from "@/modules/utils"
 import type { LeadStageId, SalesDeal } from "@/modules/types"
 
 /** State values and commands consumed by the connected surface. */
@@ -82,7 +83,7 @@ const createSalesPipelineState = (input: SalesPipelineControllerInput) => {
         const count = stageDeals.length + hidden
         return {
             stage,
-            title: t(`stage_${stage}`),
+            title: leadStageLabel(t, stage),
             fact: total > 0 ? `${count} · ${compact(total)}` : String(count),
             hiddenText: hidden > 0 ? t("laneMore", { n: hidden }) : null,
             deals: stageDeals.map(dealOf),
@@ -116,10 +117,10 @@ const createSalesPipelineActions = (input: SalesPipelineControllerInput) => {
             ? null
             : {
                   title: t("moveTitle", { name: moving.customer }),
-                  description: t("moveCurrent", { stage: t(`stage_${moving.stage}`) }),
+                  description: t("moveCurrent", { stage: leadStageLabel(t, moving.stage) }),
                   options: DEAL_STAGES.filter((stage) => stage !== moving.stage).map((stage) => ({
                       value: stage,
-                      label: t(`stage_${stage}`),
+                      label: leadStageLabel(t, stage),
                   })),
                   target: target ?? "",
                   isDanger: target === "lost",

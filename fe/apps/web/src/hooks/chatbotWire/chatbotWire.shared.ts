@@ -1,5 +1,13 @@
 import type { useQueryChatbotOverviewSwr, useQueryChatbotThreadSwr } from "@/hooks/swr"
-import type { ChatbotChannel, ChatbotConversation, ChatbotOverview, ChatbotRole, ChatbotThread } from "@/modules/types"
+import type {
+    ChatbotChannel,
+    ChatbotConversation,
+    ChatbotOverview,
+    ChatbotRespondent,
+    ChatbotRole,
+    ChatbotThread,
+} from "@/modules/types"
+import { leadStageOf } from "@/modules/utils"
 
 /** The overview exactly as the back end answers it. */
 export type ChatbotOverviewWire = NonNullable<ReturnType<typeof useQueryChatbotOverviewSwr>["data"]>
@@ -17,9 +25,20 @@ const channelOf = (channel: string): ChatbotChannel => {
 
 const roleOf = (role: string): ChatbotRole => (role === "agent" || role === "system" ? role : "user")
 
+const respondentOf = (kind: string, name: string | null | undefined): ChatbotRespondent => {
+    if (kind === "person") return { kind, name: name ?? "" }
+    if (kind === "agent") return { kind, name: name ?? "" }
+    return { kind: "ai" }
+}
+
 const conversationOf = (conversation: ChatbotConversationWire): ChatbotConversation => ({
     ...conversation,
     channel: channelOf(conversation.channel),
+    lead:
+        conversation.lead == null
+            ? null
+            : { stage: leadStageOf(conversation.lead.stage), need: conversation.lead.need, company: conversation.lead.company },
+    respondent: respondentOf(conversation.respondentKind, conversation.respondentName),
     handledBy: conversation.handledBy ?? null,
     leadId: conversation.leadId ?? null,
     lastRole: conversation.lastRole == null ? null : roleOf(conversation.lastRole),
@@ -29,6 +48,11 @@ const conversationOf = (conversation: ChatbotConversationWire): ChatbotConversat
 export const overviewOf = (overview: ChatbotOverviewWire): ChatbotOverview => ({
     ...overview,
     conversations: overview.conversations.map(conversationOf),
+    waiting: overview.waiting.map((item) => ({
+        ...item,
+        channel: channelOf(item.channel),
+        staffName: item.staffName ?? null,
+    })),
     metrics: { ...overview.metrics, p50FirstResponseMin: overview.metrics.p50FirstResponseMin ?? null },
 })
 

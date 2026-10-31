@@ -31,6 +31,7 @@ export const salesWorkbenchViewOf = (data: SalesWorkbenchType): SalesWorkbenchDa
         owner: row.owner ?? null,
         workItemId: row.workItemId ?? null,
         decisionId: row.decisionId ?? null,
+        conversationId: row.conversationId ?? null,
         action: row.action ? actionOf(row.action) : null,
     })),
     deals: data.deals.map((row) => ({
@@ -55,6 +56,7 @@ export const salesWorkbenchViewOf = (data: SalesWorkbenchType): SalesWorkbenchDa
         amountVnd: row.amountVnd ?? null,
         assignedStaffId: row.assignedStaffId ?? null,
         assignedStaffName: row.assignedStaffName ?? null,
+        conversationId: row.conversationId ?? null,
     })),
     decided: data.decided.map(decidedRowOf),
     handoffs: data.handoffs.map(handoffRowOf),

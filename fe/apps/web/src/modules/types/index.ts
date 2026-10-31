@@ -39,6 +39,7 @@ export type {
     ChatbotMessage,
     ChatbotMetrics,
     ChatbotOverview,
+    ChatbotRespondent,
     ChatbotRole,
     ChatbotThread,
 } from "./chatbot"

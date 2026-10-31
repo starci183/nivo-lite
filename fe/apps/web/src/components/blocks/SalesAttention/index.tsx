@@ -14,6 +14,7 @@ import {
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { leadPath } from "@/modules/routes"
 import type { AttentionRow } from "@/modules/types"
+import { leadStageLabel } from "@/modules/utils"
 import { SalesAttentionBase } from "./component"
 import type { AttentionItemView } from "./component"
 
@@ -76,7 +77,7 @@ export const SalesAttention = () => {
         kind: row.kind,
         kindLabel: t(`kind_${row.kind}`),
         kindTone: ATTENTION_TONES[row.kind],
-        stage: row.stage === null ? null : { label: t(`stage_${row.stage}`), tone: stageToneOf(row.stage) },
+        stage: row.stage === null ? null : { label: leadStageLabel(t, row.stage), tone: stageToneOf(row.stage) },
         age: ageText(row.since),
         isStale: isStale(row.since, nowIso),
         customer: customerOf(row),

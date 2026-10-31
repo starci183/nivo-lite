@@ -1,5 +1,6 @@
 import type { useFormatter, useTranslations } from "next-intl"
 import type { ChatbotChannel, ChatbotConversation, ChatbotLead } from "@/modules/types"
+import { isLeadStage, leadStageLabel } from "@/modules/utils"
 
 /** The translator of the Chatbot catalog namespace. */
 export type ChatbotTranslator = ReturnType<typeof useTranslations>
@@ -141,8 +142,6 @@ export const listTimeOf = (t: ChatbotTranslator, format: ChatbotFormat, iso: str
     return key === dayKeyOf(nowIso) ? clockOf(format, iso) : dayWordOf(t, format, key, nowIso)
 }
 
-const STAGES: ReadonlySet<string> = new Set(["new", "qualified", "proposal", "won", "lost"])
-
 /** The lead's facts as term and value pairs; a fact without a value is left out. */
 export const leadFactsOf = (
     t: ChatbotTranslator,
@@ -152,7 +151,7 @@ export const leadFactsOf = (
         {
             id: "stage",
             term: t("leadStage"),
-            description: STAGES.has(lead.stage) ? t(`stage_${lead.stage}`) : lead.stage,
+            description: isLeadStage(lead.stage) ? leadStageLabel(t, lead.stage) : lead.stage,
         },
         { id: "need", term: t("leadNeed"), description: lead.need },
         { id: "phone", term: t("leadPhone"), description: lead.phone ?? "" },
