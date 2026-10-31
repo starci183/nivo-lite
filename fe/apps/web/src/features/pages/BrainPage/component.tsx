@@ -1,5 +1,6 @@
 import { Text, TextAction } from "@starci/grammar/common"
 import type { PageHeaderContent } from "@starci/grammar/common"
+import { BrainDossiers } from "@/components/blocks/BrainDossiers"
 import { BrainAgentView } from "@/components/blocks/BrainAgentView"
 import { BrainFactForm } from "@/components/blocks/BrainFactForm"
 import { BrainFacts } from "@/components/blocks/BrainFacts"
@@ -16,6 +17,7 @@ import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 import type { ModuleKey } from "@/modules/catalog"
 import type { BrainTab } from "@/modules/routes"
 import {
+    BLEED_PANEL_CLASS_NAME,
     PAGE_CLASS_NAME,
     PANEL_CLASS_NAME,
     SOURCES_CLASS_NAME,
@@ -55,6 +57,7 @@ export interface BrainPageBaseProps {
 /** Draws the open tab of the Second Brain. */
 const Panel = (props: BrainPageBaseProps) => {
     const page = props.props
+    if (page.tab === "dossiers") return <BrainDossiers />
     if (page.tab === "review") return <BrainReview />
     if (page.tab === "facts") {
         return (
@@ -106,11 +109,17 @@ const Panel = (props: BrainPageBaseProps) => {
 /** Draws the Second Brain: its tabs on the header band, then its pipeline and the tab the address asks for (sources, review, facts, lessons, questions, what each agent sees). */
 export const BrainPageBase = (props: BrainPageBaseProps) => (
     <BrainPageFrame selected={props.props.tab} header={props.props.header}>
-        <div className={PAGE_CLASS_NAME}>
-            <BrainPipeline />
-            <div className={PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${props.props.tab}`}>
+        {props.props.tab === "dossiers" ? (
+            <div className={BLEED_PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${props.props.tab}`}>
                 <Panel {...props} />
             </div>
-        </div>
+        ) : (
+            <div className={PAGE_CLASS_NAME}>
+                <BrainPipeline />
+                <div className={PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${props.props.tab}`}>
+                    <Panel {...props} />
+                </div>
+            </div>
+        )}
     </BrainPageFrame>
 )

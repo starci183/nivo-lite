@@ -4,6 +4,8 @@ import { useState } from "react"
 import { mutate } from "swr"
 import {
     QUERY_KNOWLEDGE_SOURCE_SWR_KEY,
+    QUERY_BRAIN_DOSSIERS_SWR_KEY,
+    QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY,
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
     QUERY_KNOWLEDGE_USAGE_SWR_KEY,
     useMutateDeleteKnowledgeSourceSwr,
@@ -32,6 +34,8 @@ const revalidateDocuments = () =>
             Array.isArray(key) &&
             (key[0] === QUERY_KNOWLEDGE_SOURCE_SWR_KEY ||
                 key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY ||
+                key[0] === QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY ||
+                key[0] === QUERY_BRAIN_DOSSIERS_SWR_KEY ||
                 key[0] === QUERY_KNOWLEDGE_USAGE_SWR_KEY),
     )
 

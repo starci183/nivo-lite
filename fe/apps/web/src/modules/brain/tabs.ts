@@ -11,7 +11,7 @@ interface BrainTabAddress {
 
 /**
  * The tab the address asks for. A named tab wins; an address that only carries a form (an old link to write a fact, to give a
- * fact a new value or to answer a customer question) opens the tab that form belongs to; anything else opens the sources.
+ * fact a new value or to answer a customer question) opens the tab that form belongs to; anything else opens the dossiers.
  */
 export const brainTabOf = (address: BrainTabAddress): BrainTab => {
     const named = BRAIN_TABS.find((tab) => tab === address.tab)

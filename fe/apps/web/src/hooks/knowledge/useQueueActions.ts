@@ -2,6 +2,8 @@
 
 import { mutate } from "swr"
 import {
+    QUERY_BRAIN_DOSSIERS_SWR_KEY,
+    QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY,
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
     QUERY_KNOWLEDGE_USAGE_SWR_KEY,
     useMutateCreateKnowledgeUploadSwr,
@@ -56,7 +58,10 @@ export const useQueueActions = (): QueueActions => {
             await mutate(
                 (key) =>
                     Array.isArray(key) &&
-                    (key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY || key[0] === QUERY_KNOWLEDGE_USAGE_SWR_KEY),
+                    (key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY ||
+                        key[0] === QUERY_KNOWLEDGE_USAGE_SWR_KEY ||
+                        key[0] === QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY ||
+                        key[0] === QUERY_BRAIN_DOSSIERS_SWR_KEY),
             )
             return true
         },

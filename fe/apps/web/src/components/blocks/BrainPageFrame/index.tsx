@@ -40,5 +40,10 @@ export const BrainPageFrame = (props: BrainPageFrameProps) => {
             },
         },
     }
-    return <BrainPageFrameBase shape={{ body: props.children }} props={{ header }} />
+    return (
+        <BrainPageFrameBase
+            shape={{ body: props.children }}
+            props={{ header, isBleed: props.selected === "dossiers" }}
+        />
+    )
 }

@@ -7,6 +7,8 @@ export { QUERY_CONNECTIONS_SWR_KEY, QUERY_DASHBOARD_SWR_KEY, QUERY_HIRING_CANDID
 export { QUERY_HIRING_WORKBENCH_SWR_KEY } from "./api"
 export { QUERY_INVENTORY_WORKBENCH_SWR_KEY, QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "./api"
 export { QUERY_KNOWLEDGE_USAGE_SWR_KEY, useQueryKnowledgeUsageSwr } from "./api"
+export { QUERY_BRAIN_DOSSIERS_SWR_KEY, QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY } from "./api"
+export { useQueryBrainDossiersSwr, useQueryKnowledgeCategoriesSwr } from "./api"
 export {
     QUERY_KNOWLEDGE_SOURCE_SWR_KEY,
     QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY,
