@@ -18,7 +18,7 @@ import { IdentityAttemptsService } from "./attempts.service"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
 import { IdentityAuthLogEvent } from "./identity-auth.log-events"
 import { isPresentablePassword, normalizeEmail } from "./password.policy"
-import { authDoors } from "./persistence/auth-doors"
+import { authDoors } from "./persistence/auth-doors.port"
 
 /** A Google profile whose email Google verified, so it has one. */
 type VerifiedProfile = GoogleProfile & { readonly email: string }

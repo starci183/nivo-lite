@@ -34,7 +34,7 @@ import {
     toWorkItem,
     toWorkItemRecord,
 } from "./work-items.mapper"
-import { ACCOUNTING_COLUMNS, FREE_TO_TAKE, FREE_TO_TAKE_UNALIASED, LEAD_ITEMS_MAX } from "./work-items.columns"
+import { ACCOUNTING_COLUMNS, FREE_TO_TAKE, FREE_TO_TAKE_UNALIASED, LEAD_ITEMS_MAX } from "./work-items.rows"
 
 /** The staff member an item is given to, or null when the assignment is cleared. */
 type AssignedStaff = string | null

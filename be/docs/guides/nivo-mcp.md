@@ -179,7 +179,7 @@ today, gets the switch (W5). OpenClaw keeps `knowledge.search` as it is.
 
 ## 6. Drive and Telegram
 
-Drawn in `D:/starci-tmp/tino/mockups/providers-drive-telegram-mockup.html`; its "Việc cần làm" list is the checklist. Its open
+Drawn in `D:/starci-tmp/tino/mockups/providers-drive-telegram-mockup.html`; its to-do list is the checklist. Its open
 questions are answered here.
 
 ### 6.1 Google Drive
@@ -192,7 +192,7 @@ Back-end gaps:
   `google_drive` from `soon` to `early`, because `drive.readonly` is a restricted scope (below).
 - `DriveFile.url`: `be/src/modules/integrations/documents/drive-link.policy.ts` builds the address from `id` and `mimeType` (Docs, Sheets and Slides to their
   `docs.google.com` addresses, others to `drive.google.com/file/d/<id>/view`), and `DriveFileType.url` carries it.
-- `KnowledgeSourcesInput.origin`, so "Tiến độ nạp" polls only `google_drive` sources.
+- `KnowledgeSourcesInput.origin`, so the ingest progress pane polls only `google_drive` sources.
 
 Setup page: `/connections/drive`, one page per workspace, three steps as drawn (grant, choose, Second Brain) plus the progress
 pane. The hub wizard opens with `?connect=google_drive`, and the copy of `googleWizard` is not reused.
@@ -230,8 +230,8 @@ The bot wizard stays. Back-end gaps:
   refusal from `findLiveByMeta`.
 
 On the front end the hub maps `last_error` codes to copy in `fe/apps/web/src/modules/i18n/messages/vi.json`. The database keeps the code, so the text follows the reader's
-language. Details page: `/connections/telegram/[id]`, the provider page-segment map of `fe/apps/web/src/hooks/connections/connections.shared.ts` gains `telegram`, one `notFound()`. Managers keep Kiểm tra
-lại and lose disconnect and agent switches. No token change and no test send, as drawn.
+language. Details page: `/connections/telegram/[id]`, the provider page-segment map of `fe/apps/web/src/hooks/connections/connections.shared.ts` gains `telegram`, one `notFound()`. Managers keep the check
+button and lose disconnect and agent switches. No token change and no test send, as drawn.
 
 ## 7. Setup chat reads the facts
 
@@ -255,7 +255,7 @@ Conflicts surface in order: in the chat turn the owner says it, then on the card
 and still demands a resolution through `CardNeedsResolution`. `SetupTurnPayload` and the job do not change. A module with no write
 spec has only the model's reply, since its draft facts carry no subject.
 
-## 8. Grammar for the Bản đồ tab
+## 8. Grammar for the map tab
 
 `FlowGraph` of `@starci/grammar` 0.17.1 draws a radial map of labelled pills. The demo
 `D:/starci-tmp/tino/mockups/brain-map-demo.html` needs, all as props with no colour or CSS from the app:
@@ -410,7 +410,7 @@ Done: section 9.0, with `be/contracts/api/schema.graphql` emitted and committed.
 
 ### W5: provider pages
 
-Id `w5-providers-web`. Sections 6 and 5.4 (grants). Needs W4 and the mockup above. Follow the mockup's table "Khối vẽ ứng với grammar nào".
+Id `w5-providers-web`. Sections 6 and 5.4 (grants). Needs W4 and the mockup above. Follow the mockup's table of which grammar draws which block.
 Read `D:/.claude/contexts/ui/README.md`, `D:/.claude/contexts/ui/components/pane-grid.md`, `D:/.claude/contexts/code/fe/README.md` first, and DNA-COMMON-PAGE-PANES-FLUSH.
 
 Paths: `fe/apps/web/src/app/[locale]/(console)/connections/drive/**` (new), `fe/apps/web/src/app/[locale]/(console)/connections/telegram/**` (new),
@@ -418,7 +418,7 @@ Paths: `fe/apps/web/src/app/[locale]/(console)/connections/drive/**` (new), `fe/
 `fe/apps/web/src/components/blocks/McpGatewaySection/**`, `fe/apps/web/src/components/blocks/ConnectionLibrary/**`,
 `fe/apps/web/src/hooks/connections/**`, `fe/apps/web/src/hooks/drive/**` (new), `fe/apps/web/src/hooks/telegramConnection/**` (new),
 `fe/apps/web/src/hooks/mcpGateway/**`, `fe/apps/web/src/hooks/knowledge/**`, `fe/apps/web/src/hooks/swr/api/graphql/**`,
-`fe/apps/web/src/modules/api/graphql/**`, `fe/apps/web/src/modules/types/connections.ts`, and the keys of the mockup's "Chuỗi mới" list
+`fe/apps/web/src/modules/api/graphql/**`, `fe/apps/web/src/modules/types/connections.ts`, and the keys of the mockup's list of new strings
 in `fe/apps/web/src/modules/i18n/messages/vi.json` and `fe/apps/web/src/modules/i18n/messages/en.json`.
 
 Build: hub rows and library card; `DriveWizard` (`?connect=google_drive`, the six failure reasons); `/connections/drive` with its states;
@@ -452,7 +452,7 @@ plays locally, no other package bumped. Bump the next free minor on harness main
 the handoff note. All paint comes from tokens; existing `FlowGraph` uses render unchanged. Lay `orbit` out in `D:/.claude/packages/grammar/src/core/branch/FlowGraph/layout.ts` as pure functions.
 
 Done: `npx --no-install starci pkg test grammar` green (typecheck and build); a story for bubble, ring, dimmed, open fan and `+n`, light and
-dark; `starci pkg handoff --note "FlowGraph orbit for nivo Bản đồ"`; report the branch and head. Debug alone merges (`D:/.claude/contexts/authority/packages.md`).
+dark; `starci pkg handoff --note "FlowGraph orbit for the nivo map"`; report the branch and head. Debug alone merges (`D:/.claude/contexts/authority/packages.md`).
 
 ## 10. Noticed, outside these briefs
 

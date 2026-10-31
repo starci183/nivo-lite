@@ -85,8 +85,8 @@ export const DOSSIER_REVIEW_PROMPT_VERSION = "dossier-review@1"
 /** What a job's one effect did: carried out, or skipped because there was nothing to do. */
 export type JobOutcome = "done" | "skipped"
 
-/** An id, or null for none (a workspace-wide request). */
-export type OptionalId = string | null
+/** The dossier a review run is about, or null for the whole workspace. */
+export type ReviewDossierId = string | null
 
 /** A text people may leave out. */
 export type OptionalText = string | null

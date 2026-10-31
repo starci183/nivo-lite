@@ -110,7 +110,7 @@ export class KnowledgeGapsService {
         await this.entityManager.update(
             KnowledgeGapEntity,
             { workspaceId, id, status: Not("answered") },
-            { status: "dismissed", dismissedAt: () => "now()", dismissedBy: by, updatedAt: () => "now()" },
+            { status: "dismissed", dismissedAt: () => "now()", dismissedBy: by },
         )
     }
 
@@ -119,7 +119,7 @@ export class KnowledgeGapsService {
         await this.entityManager.update(
             KnowledgeGapEntity,
             { workspaceId, id, status: "open" },
-            { status: "answered", answeredAt: () => "now()", answeredBy: by, updatedAt: () => "now()" },
+            { status: "answered", answeredAt: () => "now()", answeredBy: by },
         )
     }
 
@@ -172,7 +172,6 @@ export class KnowledgeGapsService {
             .set({
                 count: () => "count + 1",
                 lastSeenAt: () => "now()",
-                updatedAt: () => "now()",
                 topic: () => "coalesce(topic, :subject)",
                 attributeGuess: () => "coalesce(attribute_guess, :attribute)",
                 exampleConversationId: () => "coalesce(example_conversation_id, CAST(:conversationId AS uuid))",

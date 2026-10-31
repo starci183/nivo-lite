@@ -17,7 +17,7 @@ import { InjectIdentityAuthOptions } from "./identity-auth.decorators"
 import { IdentityAuthLogEvent } from "./identity-auth.log-events"
 import type { IdentityAuthOptions } from "./identity-auth.options"
 import { digestOf } from "./password.policy"
-import { authDoors } from "./persistence/auth-doors"
+import { authDoors } from "./persistence/auth-doors.port"
 import { IdentityRefreshTokenEntity } from "./persistence/entities"
 
 /** A rotated token presented again this soon after its rotation is a racing tab, not a theft: refused without ending the session. */

@@ -10,7 +10,7 @@ import type { Ids } from "@modules/platform/ids"
 import { eachInOrder } from "@modules/platform/primitives"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { refOfSource } from "./document-state.policy"
-import type { OptionalId, OptionalText, ReviewRunRecord } from "./dossier-review.contracts"
+import type { OptionalText, ReviewDossierId, ReviewRunRecord } from "./dossier-review.contracts"
 import { DossierReviewError, DossierReviewErrorCode } from "./errors/dossier-review.error"
 import { toRunRecord } from "./finding-record.mapper"
 import { DossierFindingEntity, DossierReviewRunEntity } from "./persistence/entities"
@@ -97,7 +97,7 @@ export class DossierReviewRunsService {
     }
 
     /** An owner or manager asks for a review of one dossier, or of the whole set (null); answers the run that is queued. */
-    async request(userId: string, workspaceId: string, dossierId: OptionalId): Promise<ReviewRunRecord> {
+    async request(userId: string, workspaceId: string, dossierId: ReviewDossierId): Promise<ReviewRunRecord> {
         await this.members.require(userId, workspaceId, MANAGERS)
         const dossiers = await this.inputs.all(workspaceId)
         const known = dossierId === null ? dossiers.length > 0 : dossiers.some((dossier) => dossier.id === dossierId)

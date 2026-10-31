@@ -21,7 +21,7 @@ import { IdentityAuthLogEvent } from "./identity-auth.log-events"
 import type { IdentityAuthOptions } from "./identity-auth.options"
 import { passwordLinkMail } from "./password-mail.policy"
 import { digestOf, isAcceptablePassword, isPresentablePassword, normalizeEmail } from "./password.policy"
-import { authDoors } from "./persistence/auth-doors"
+import { authDoors } from "./persistence/auth-doors.port"
 import { IdentityPasswordTokenEntity } from "./persistence/entities"
 
 @Injectable()

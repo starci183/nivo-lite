@@ -12,7 +12,7 @@ import { dateOfSource, refOfSource, stateOfSource } from "./document-state.polic
 import { packEntryOf } from "./dossier-pack.policy"
 import { SIGNING_ATTRIBUTES } from "./pack-vocabulary.policy"
 import type { DocumentInput, DossierInputs, PackEntry, ReviewContext, ReviewFact } from "./dossier-inputs.contracts"
-import type { OptionalId } from "./dossier-review.contracts"
+import type { ReviewDossierId } from "./dossier-review.contracts"
 import { dateOfFact, isAttribute } from "./rule-kit.policy"
 
 /** The fact statuses the rules read: document facts are proposals until the owner applies them. */
@@ -121,7 +121,7 @@ export class ReviewInputsService {
      * The pass of a run: every dossier for a workspace run; for a dossier run the dossier, the dossiers the pack relates to it and those
      * whose documents its facts also cite. The model reads the dossier of a dossier run, or every dossier of a workspace run.
      */
-    async collect(workspaceId: string, dossierId: OptionalId, today: string): Promise<CollectedInputs> {
+    async collect(workspaceId: string, dossierId: ReviewDossierId, today: string): Promise<CollectedInputs> {
         const all = await this.dossiers.all(workspaceId)
         const sources = await this.sources.sourcesOfTopics(
             workspaceId,

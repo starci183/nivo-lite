@@ -39,7 +39,7 @@ describe("rawBytesOf", () => {
     it("counts the file, the bytes of pasted text, and nothing for a link", async () => {
         const subject = await buildSubject()
         expect(subject.rawBytesOf(sourceOf("file", ""), 1234)).toBe(1234)
-        expect(subject.rawBytesOf(sourceOf("text", "é"), 0)).toBe(2)
+        expect(subject.rawBytesOf(sourceOf("text", "\u00e9"), 0)).toBe(2)
         expect(subject.rawBytesOf(sourceOf("faq", "ab"), 0)).toBe(2)
         expect(subject.rawBytesOf(sourceOf("url", "https://a.b"), 0)).toBe(0)
     })
