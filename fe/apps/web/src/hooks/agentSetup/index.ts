@@ -1,4 +1,4 @@
-export { LOADING_SESSION } from "./agentSetup.shared"
+export { LOADING_SESSION, startOf } from "./agentSetup.shared"
 export { useSetupChat } from "./useSetupChat"
 export { useSetupGates } from "./useSetupGates"
 export { useSetupKnowledge } from "./useSetupKnowledge"

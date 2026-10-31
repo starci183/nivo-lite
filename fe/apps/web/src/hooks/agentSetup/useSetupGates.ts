@@ -10,6 +10,7 @@ import {
     QUERY_SETUP_VERSIONS_SWR_KEY,
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { useEditFocus } from "./useEditFocus"
 
 /** What a gate change asks. */
 type GateChange = { readonly action: "confirm" | "reopen" | "edit"; readonly evidence?: string | undefined }
@@ -28,6 +29,7 @@ export const useSetupGates = (setupSessionId: string, installationId: string) =>
     const refreshInstallation = useRefreshInstallation()
     const [editing, setEditing] = useState("")
     const [editText, setEditText] = useState("")
+    useEditFocus(editing)
     const [applyNote, setApplyNote] = useState<ApplyNote>({ tone: "idle", version: 0 })
     const gate = useCallback(
         async (gateKey: string, change: GateChange): Promise<void> => {

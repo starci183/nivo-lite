@@ -9,6 +9,7 @@ import {
     useSetupVersions,
     useThreadScroll,
     setupThreadOf,
+    startOf,
 } from "@/hooks/agentSetup"
 import { useModuleName, type ModuleKey } from "@/hooks/installations"
 import { useSetupSide } from "@/hooks/setupSide"
@@ -184,7 +185,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
                 send: () => void chat.send(),
                 suggest: (id) => {
                     const gate = gates.find((entry) => entry.key === id)
-                    if (gate !== undefined) chat.setText(`${gate.label}: `)
+                    if (gate !== undefined) chat.setText(startOf(chat.text, gate.label))
                 },
                 decide: (id, change) => void chat.decide(id, change),
                 ...brand.on,

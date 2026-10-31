@@ -8,12 +8,17 @@ import { agentLifecycleOf, agentLifecycleTone, agentSubtitleOf, installationPers
 import { agentChatHref, agentProfileHref } from "@/modules/routes"
 import { useInstanceChannels } from "./useInstanceChannels"
 import { useInstanceGuard } from "./useInstanceGuard"
+import { useInstallations } from "./useInstallations"
 
-/** The header of one agent instance: the person (name, handle, avatar seed), the role, the lifecycle and the channels; skeleton data until the instance is known. */
+/**
+ * The header of one agent instance: the person (name, handle, avatar seed), the role, the lifecycle and the channels; skeleton
+ * data until the instance is known. If the installed agents cannot be read the header stops waiting and names the role.
+ */
 export const useInstanceHeader = (module: ModuleKey, installationId: string) => {
     const t = useTranslations("modulesCore")
     const locale = useLocale() === "en" ? "en" : "vi"
     const guard = useInstanceGuard(module, installationId)
+    const isFailed = useInstallations().slot.isError === true
     const installation = guard.installation
     const def = MODULE_REGISTRY[module]
     const catalog = useModuleCatalog()
@@ -23,9 +28,10 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string) => 
     const lifecycle = agentLifecycleOf(installation)
     const channels = channelsOf(installation?.agentId ?? null)
     const typeName = copy === undefined ? fallbackName : pickCopy(copy.name, locale)
+    const unknownName = isFailed ? typeName : ""
     return {
-        isLoading: installation === undefined || catalog.slot.isLoading === true,
-        name: installation === undefined ? "" : installationPersonName(installation),
+        isLoading: (installation === undefined && !isFailed) || catalog.slot.isLoading === true,
+        name: installation === undefined ? unknownName : installationPersonName(installation),
         handle: installation?.agentHandle ?? "",
         seed: installation?.agentId ?? installation?.id ?? "",
         avatarUrl: installation?.agentAvatarUrl ?? null,

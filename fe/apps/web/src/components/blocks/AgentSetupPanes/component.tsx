@@ -68,10 +68,10 @@ export interface AgentSetupPanesBaseProps {
 /**
  * The arrangement (pane-grid.choose.frame grid; the bands of one row share their edges): on a laptop the checklist on the
  * surface at the left (progress, the items, the run action) beside the chat (head, thread, composer), the progress band level
- * with the chat head and the run action level with the composer. On a phone the checklist stacks above the chat.
+ * with the chat head and the run action level with the composer. On a phone the checklist stacks above the chat, each with an equal share of the height the head and the composer leave.
  */
 const AREAS: PaneGridProps["areas"] = {
-    base: ["progress", "gates", "apply", "thread", "composer"],
+    base: ["progress", "gates", "apply", "head", "thread", "composer"],
     medium: ["progress head", "gates thread", "apply composer"],
 }
 const COLUMNS: PaneGridProps["columns"] = {
@@ -80,7 +80,7 @@ const COLUMNS: PaneGridProps["columns"] = {
     wide: ["wide", "fill"],
 }
 const ROWS: PaneGridProps["rows"] = {
-    base: ["auto", "fill", "auto", "fill-2", "auto"],
+    base: ["auto", "fill", "auto", "auto", "fill", "auto"],
     medium: ["auto", "fill", "auto"],
 }
 
@@ -135,12 +135,25 @@ interface ViewSource<T> {
     readonly onRetry: () => void
 }
 
-/** Draws a read through the one recipe of a slot's status. */
-const viewOf = <T,>(labels: SlotLabels, source: ViewSource<T>, render: (data: T, isSkeleton: boolean) => ReactNode) => (
-    <SlotView slot={source.slot} placeholder={source.placeholder} labels={labels} onRetry={source.onRetry}>
-        {render}
-    </SlotView>
-)
+/** Whether the read can be drawn: loading (as its skeleton) or in (as its content), not failed, forbidden or empty. */
+const isDrawable = <T,>(slot: DataSlot<T>): boolean =>
+    slot.isLoading === true || (slot.isError !== true && slot.isForbidden !== true && slot.items !== undefined)
+
+/**
+ * Draws a read through the one recipe of a slot's status. A read feeds several bands: the band that `says` the status carries
+ * its notice and retry, the others draw nothing for a read that failed, so one failure reads as one notice.
+ */
+const viewOf = <T,>(
+    labels: SlotLabels,
+    source: ViewSource<T>,
+    says: boolean,
+    render: (data: T, isSkeleton: boolean) => ReactNode,
+) =>
+    says || isDrawable(source.slot) ? (
+        <SlotView slot={source.slot} placeholder={source.placeholder} labels={labels} onRetry={source.onRetry}>
+            {render}
+        </SlotView>
+    ) : null
 
 /** The checklist read: the gates, the draft, the knowledge and the versions. */
 const sideOf = (base: AgentSetupPanesBaseProps): ViewSource<SetupSideView> => ({
@@ -196,14 +209,14 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
         <PaneGrid label={copy.paneLabel} areas={AREAS} columns={COLUMNS} rows={ROWS}>
             <Pane area="progress" surface>
                 <PaneSection align="center">
-                    {viewOf(labels, sideOf(props), (view, isSkeleton) => (
+                    {viewOf(labels, sideOf(props), false, (view, isSkeleton) => (
                         <Progress gates={view.gates} isSkeleton={isSkeleton} />
                     ))}
                 </PaneSection>
             </Pane>
             <Pane area="gates" surface>
                 <PaneSection scroll={{ label: copy.checklistLabel }}>
-                    {viewOf(labels, sideOf(props), (view, isSkeleton) => (
+                    {viewOf(labels, sideOf(props), true, (view, isSkeleton) => (
                         <>
                             <AgentSetupChecklist view={view} isSkeleton={isSkeleton} copy={copy} on={on} />
                             <Records view={view} isSkeleton={isSkeleton} />
@@ -213,7 +226,7 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
             </Pane>
             <Pane area="apply" surface>
                 <PaneSection>
-                    {viewOf(labels, sideOf(props), (view, isSkeleton) => (
+                    {viewOf(labels, sideOf(props), false, (view, isSkeleton) => (
                         <Apply gates={view.gates} isSkeleton={isSkeleton} apply={on.apply} />
                     ))}
                 </PaneSection>
@@ -235,14 +248,14 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                         scrollRef: props.props.threadRef,
                     }}
                 >
-                    {viewOf(labels, chatOf(props), (content, isSkeleton) => (
+                    {viewOf(labels, chatOf(props), true, (content, isSkeleton) => (
                         <AgentSetupThread content={content} isSkeleton={isSkeleton} copy={copy} on={on} />
                     ))}
                 </PaneSection>
             </Pane>
             <Pane area="composer" surface>
                 <PaneSection>
-                    {viewOf(labels, chatOf(props), (content, isSkeleton) => (
+                    {viewOf(labels, chatOf(props), false, (content, isSkeleton) => (
                         <AgentSetupComposer
                             content={content}
                             isSkeleton={isSkeleton}

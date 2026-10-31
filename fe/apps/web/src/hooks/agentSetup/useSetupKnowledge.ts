@@ -12,8 +12,10 @@ export interface SetupKnowledgeCounts {
     readonly publicSources: number
 }
 
-/** The ready sources of the workspace that the module reads (its own and the ones for every module), counted; a failed or forbidden read shows as such, one in flight as loading. */
-export const useSetupKnowledge = (moduleKey: ModuleKey): DataSlot<SetupKnowledgeCounts> => {
+/** The ready sources of the workspace that the module reads (its own and the ones for every module), counted; a failed or forbidden read shows as such, one in flight as loading; `reload` reads it again. */
+export const useSetupKnowledge = (
+    moduleKey: ModuleKey,
+): DataSlot<SetupKnowledgeCounts> & { readonly reload: () => void } => {
     const read = useQueryKnowledgeSourcesSwr({ module: moduleKey })
     const { data } = read
     const counts = useMemo((): SetupKnowledgeCounts | undefined => {
@@ -26,5 +28,8 @@ export const useSetupKnowledge = (moduleKey: ModuleKey): DataSlot<SetupKnowledge
             publicSources: ready.filter((source) => source.visibility === "public").length,
         }
     }, [data, moduleKey])
-    return slotOfSwr({ data: counts, error: read.error, isLoading: read.isLoading })
+    return {
+        ...slotOfSwr({ data: counts, error: read.error, isLoading: read.isLoading }),
+        reload: () => void read.mutate(),
+    }
 }

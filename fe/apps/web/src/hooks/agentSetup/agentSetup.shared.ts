@@ -168,3 +168,10 @@ export const LOADING_SESSION: SetupSession = {
     gateEvidence: {},
     createdAt: "",
 }
+
+/** The text with the start of a message for an item: after what the owner already typed, never over it. */
+export const startOf = (typed: string, label: string): string =>
+    typed.trim() === ""
+        ? `${label}: `
+        : `${typed.trimEnd()}
+${label}: `

@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { AGENT_ROLES_HREF, APP_ROUTES } from "@/modules/routes"
+import { APP_ROUTES } from "@/modules/routes"
 import { AgentsCatalogPageBase } from "./component"
 
 /** The document title of the catalogue page. */
@@ -22,8 +22,6 @@ export const AgentsCatalogPage = async () => {
                 ],
                 title: t("catalogTitle"),
                 description: t("catalogDescription"),
-                createLabel: t("createAgent"),
-                createHref: AGENT_ROLES_HREF,
             }}
         />
     )

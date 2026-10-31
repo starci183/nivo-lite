@@ -16,12 +16,12 @@ export const SetupDraftCard = (props: SetupDraftCardProps) => (
     <Region label={props.title}>
         <div className={STACK}>
             <Heading level={2}>{props.title}</Heading>
-            {props.summary !== "" ? (
+            {props.summary !== "" || props.isSkeleton ? (
                 <Text size="sm" isSkeleton={props.isSkeleton}>
-                    {props.summary}
+                    {props.summary === "" ? "-" : props.summary}
                 </Text>
             ) : null}
-            {props.summary === "" ? (
+            {props.summary === "" && !props.isSkeleton ? (
                 <Text size="sm" tone="muted">
                     {props.emptyText}
                 </Text>

@@ -11,7 +11,7 @@ import type { ContextVersion, SetupSession } from "@/modules/installations"
 import { KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
 import type { DataSlot, SetupSideKnowledge, SetupSideVersions, SetupSideView } from "@/modules/types"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import { setupRequirementsNoticeOf } from "./setupSide.shared"
+import { PLACEHOLDER_GATES, commandsOf, setupRequirementsNoticeOf, versionsViewOf } from "./setupSide.shared"
 
 const GATE_TONE = { missing: "neutral", proposed: "warning", confirmed: "success" } as const
 const NO_VERSIONS: ReadonlyArray<ContextVersion> = []
@@ -46,6 +46,11 @@ export const useSetupSide = (module: string, installationId: string) => {
         versions.find((version) => version.id === activeVersionId) ?? null,
     )
     const business = counts?.business ?? 0
+    const catalogGates = catalog.modules[moduleKey]?.gates ?? []
+    const gateRows =
+        isLoading && catalogGates.length === 0
+            ? PLACEHOLDER_GATES
+            : catalogGates.map(gateViewMapper(session, locale, t))
     const view: SetupSideView = {
         unmet: setupRequirementsNoticeOf(t, unmet),
         draft: {
@@ -60,7 +65,7 @@ export const useSetupSide = (module: string, installationId: string) => {
             progressLabel: t("gatesProgress", { done: progress.confirmed, total: progress.total }),
             confirmed: progress.confirmed,
             total: progress.total,
-            gates: (catalog.modules[moduleKey]?.gates ?? []).map(gateViewMapper(session, locale, t)),
+            gates: gateRows,
             editing: gatesState.editing,
             editText: gatesState.editText,
             evidencePlaceholder: t("evidencePlaceholder"),
@@ -76,24 +81,19 @@ export const useSetupSide = (module: string, installationId: string) => {
                 gatesState.applyNote.tone === "applied" ? t("applied", { version: gatesState.applyNote.version }) : "",
         },
         knowledge: knowledgeOf(t, business, counts, moduleKey),
-        versions: versionsOf(t, versions, format, activeVersionId),
+        versions: versionsViewOf(versionsOf(t, versions, format, activeVersionId), isLoading),
     }
-    const sideSlot = sideSlotOf(view, [slot, catalog.slot, knowledgeSlot], isLoading)
+    const sideSlot = sideSlotOf(view, [slot, catalog.slot, knowledgeSlot, versionsSlot], isLoading)
     return {
         slot: sideSlot,
         placeholder: view,
         reload: () => {
             reload()
             catalog.reload()
+            knowledgeSlot.reload()
+            versionsSlot.reload()
         },
-        on: {
-            editText: gatesState.setEditText,
-            gate: (gateKey: string, action: "confirm" | "reopen" | "edit", evidence?: string) =>
-                void gatesState.gate(gateKey, { action, evidence }),
-            startEdit: gatesState.startEdit,
-            stopEdit: gatesState.stopEdit,
-            apply: () => void gatesState.apply(),
-        },
+        on: commandsOf(gatesState),
     }
 }
 

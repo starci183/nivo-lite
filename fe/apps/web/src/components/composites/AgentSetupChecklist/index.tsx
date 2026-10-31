@@ -42,13 +42,20 @@ const rowStateOf = (gate: SetupSideGate, isCurrent: boolean): "pending" | "affir
     return gate.status === "confirmed" ? "affirmative" : "neutral"
 }
 
-/** The line under the title: the confirmed or proposed value, else the notice on the current item, else none. */
+/** An item with a value to act on (a proposal to confirm, a confirmed one to reopen) opens its body without the Edit command. */
+const hasBodyOf = (gate: SetupSideGate): boolean => gate.status !== "missing"
+
+/**
+ * The line under the title: the notice on the current item, else the value while the row has no body of its own (the body
+ * shows the value with its confirm or reopen command), else none.
+ */
 const descriptionOf = (gate: SetupSideGate, isCurrent: boolean, askingLabel: string): string | undefined => {
+    if (hasBodyOf(gate)) return isCurrent && gate.evidence === "" ? askingLabel : undefined
     if (gate.evidence !== "") return gate.evidence
     return isCurrent ? askingLabel : undefined
 }
 
-/** One item of the checklist: its number, title and state, the value with "Edit", and the editor while it is edited. */
+/** One item of the checklist: its number, title and state, "Edit", and the body: the editor while edited, else the value with confirm or reopen. */
 const GateRow = (props: GateRowProps) => {
     const { gate } = props
     const gates = props.view.gates
@@ -79,12 +86,12 @@ const GateRow = (props: GateRowProps) => {
                 )
             }
         >
-            {isEditing ? (
+            {isEditing || (hasBodyOf(gate) && !props.isSkeleton) ? (
                 <SetupGateBody
                     {...gates}
                     isSkeleton={props.isSkeleton}
                     gate={gate}
-                    isEditing
+                    isEditing={isEditing}
                     onEditText={props.on.editText}
                     onGate={props.on.gate}
                     onStopEdit={props.on.stopEdit}

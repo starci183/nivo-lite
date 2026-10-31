@@ -35,6 +35,6 @@ export const SetupVersionsCard = (props: SetupVersionsCardProps) => (
                 />
             ))}
         </List>
-        {props.versions.length === 0 ? <EmptyNotice message={props.emptyText} /> : null}
+        {props.versions.length === 0 && !props.isSkeleton ? <EmptyNotice message={props.emptyText} /> : null}
     </Region>
 )

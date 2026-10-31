@@ -50,8 +50,8 @@ export interface InstanceSwitch {
     readonly label: string
     readonly items: ReadonlyArray<InstanceSwitchItem>
     readonly currentId: string
-    readonly addLabel: string
-    readonly addHref: string
+    /** The way to add another agent; null for a person who may not install agents. */
+    readonly add: { readonly label: string; readonly href: string } | null
 }
 
 /** Copy, header view and tabs of the frame of an agent instance. */
@@ -83,7 +83,7 @@ interface HeaderPartProps {
     readonly copy: FrameCopy
 }
 
-/** The installed agents in a menu: the open one checked, a row opens another, the last entry adds one. */
+/** The installed agents in a menu: the open one checked, a row opens another, the last entry adds one (for a person who may). */
 interface SwitcherProps {
     readonly switcher: InstanceSwitch
 }
@@ -110,12 +110,16 @@ const Switcher = (props: SwitcherProps) => (
                     mark: <AgentMark label={item.name} seed={item.seed} src={item.avatarUrl} size="sm" />,
                 })),
             },
-            {
-                id: "add",
-                label: props.switcher.addLabel,
-                href: props.switcher.addHref,
-                iconSource: nivoIconSource("add", "leading"),
-            },
+            ...(props.switcher.add === null
+                ? []
+                : [
+                      {
+                          id: "add",
+                          label: props.switcher.add.label,
+                          href: props.switcher.add.href,
+                          iconSource: nivoIconSource("add", "leading"),
+                      },
+                  ]),
         ]}
     />
 )
@@ -125,7 +129,9 @@ const HeaderActions = (props: HeaderPartProps) => {
     const { copy } = props
     return (
         <div className={HEADER_ACTIONS}>
-            {copy.switcher.items.length > 1 ? <Switcher switcher={copy.switcher} /> : null}
+            {copy.switcher.items.length > 1 || (copy.switcher.items.length > 0 && copy.switcher.add !== null) ? (
+                <Switcher switcher={copy.switcher} />
+            ) : null}
             {copy.view.chatHref === null ? null : (
                 <Button intent="neutral" href={copy.view.chatHref}>
                     {copy.chatLabel}

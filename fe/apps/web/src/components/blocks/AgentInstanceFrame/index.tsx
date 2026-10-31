@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
 import { useConnectionNeedsCopy, useInstanceHeader, useInstanceRail, useInstanceTabs } from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
+import { isManager, useMember } from "@/hooks/member"
 import { AGENT_ROLES_HREF, AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
 import { AgentInstanceFrameBase } from "./component"
 import type { InstanceHeaderView } from "./component"
@@ -39,12 +40,13 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
     const header = useInstanceHeader(props.module, props.installationId)
     const needs = useConnectionNeedsCopy()
     const rail = useInstanceRail(props.installationId)
+    const member = useMember()
     return (
         <AgentInstanceFrameBase
             shape={{ body: props.children }}
             props={{
                 hasPanes: selected === PANES_TAB,
-                ariaLabel: props.installationId,
+                ariaLabel: header.name === "" ? header.typeName : header.name,
                 crumbLabel: ts("crumbLabel"),
                 crumbs: [
                     { id: "home", label: ts("crumbHome"), href: APP_ROUTES.dashboard },
@@ -66,8 +68,7 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                 switcher: {
                     label: t("switchAgent"),
                     currentId: props.installationId,
-                    addLabel: t("railAdd"),
-                    addHref: AGENT_ROLES_HREF,
+                    add: isManager(member) ? { label: t("railAdd"), href: AGENT_ROLES_HREF } : null,
                     items: rail.items.map((item) => ({
                         id: item.id,
                         name: item.name,
