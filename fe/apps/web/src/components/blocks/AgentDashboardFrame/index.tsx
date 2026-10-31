@@ -4,6 +4,7 @@ import { useState } from "react"
 import type { ReactNode } from "react"
 import { useAgentDashboardFrame } from "@/hooks/agentDashboard"
 import type { ModuleKey } from "@/hooks/installations"
+import type { WorkbenchSurface } from "@/modules/types"
 import { AgentDashboardFrameBase } from "./component"
 
 /** One area of the module under the strip. */
@@ -25,8 +26,10 @@ interface AgentDashboardFrameProps {
     readonly command?: ReactNode | null
     /** The module's own connected figures block (its four stat items), drawn under the heading. */
     readonly ribbon?: ReactNode
-    /** The module's own waiting card in place of the dashboard's "waiting for you" region. */
-    readonly waiting?: ReactNode
+    /** The module's own waiting card in place of the dashboard's "waiting for you" region; a function draws it for the surface it stands on (a card, or a list in the pane the why pane opens). */
+    readonly waiting?: ReactNode | ((surface: WorkbenchSurface) => ReactNode)
+    /** The decision of one work item, drawn in the footer of the why pane: the same mutation as its row, with `intent="commit"`. */
+    readonly whyDecision?: (workItemId: string) => ReactNode
     /** A module's own gaps card in place of the built-in one; null shows none. */
     readonly gaps?: ReactNode
     readonly tabs: ReadonlyArray<AgentDashboardTab>
@@ -49,7 +52,6 @@ export const AgentDashboardFrame = (props: AgentDashboardFrameProps) => {
     const frame = useAgentDashboardFrame({
         module: props.module,
         installationId: props.installationId ?? null,
-        hasOwnCommand: props.command !== undefined,
         hasOwnGaps: props.gaps !== undefined,
     })
     const [own, setOwn] = useState<string>(() => resolveTab(props.tabs, props.initialTab))
@@ -74,21 +76,21 @@ export const AgentDashboardFrame = (props: AgentDashboardFrameProps) => {
                 command: props.command ?? null,
                 ribbon: props.ribbon ?? null,
                 waiting: props.waiting ?? null,
+                whyDecision: props.whyDecision ?? null,
                 gaps: props.gaps ?? null,
                 overlay: props.children ?? null,
                 panel: props.tabs.find((tab) => tab.id === selected)?.content ?? null,
             }}
             props={{
-                head: frame.head,
-                headPlaceholder: frame.headPlaceholder,
-                headLabels: frame.headLabels,
+                band: frame.band,
+                why: frame.why,
                 ...frame.regions,
                 hasPlaceholder: props.hasPlaceholder === true,
                 tabsLabel: frame.tabsLabel,
                 tabs: props.tabs.map((tab) => ({ id: tab.id, label: frame.tabLabel(tab, props.waitingTab) })),
                 selectedTab: selected,
             }}
-            on={{ selectTab: select, retry: frame.reload }}
+            on={{ selectTab: select, retry: frame.reload, closeWhy: frame.closeWhy }}
         />
     )
 }

@@ -442,3 +442,22 @@ export type {
     AgentWorkView,
     WorkspaceAgentWorkView,
 } from "./agentWork"
+export type {
+    WorkbenchApproverView,
+    WorkbenchBadgeView,
+    WorkbenchBandView,
+    WorkbenchChannelView,
+    WorkbenchCommandView,
+    WorkbenchFactView,
+    WorkbenchNeed,
+    WorkbenchNeedKey,
+    WorkbenchNeedMatch,
+    WorkbenchNeedView,
+    WorkbenchPathStepView,
+    WorkbenchRowView,
+    WorkbenchSourceView,
+    WorkbenchStateTone,
+    WorkbenchSurface,
+    WorkbenchTraceView,
+    WorkbenchWhyView,
+} from "./workbench"
