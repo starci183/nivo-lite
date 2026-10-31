@@ -1,9 +1,13 @@
+import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import type { ExecutionContext } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { AuthGuard, Credential, CredentialGuard } from "@modules/domain/identity"
 import type { CredentialPrincipal } from "@modules/domain/identity"
 import { GatewaySurfaceService } from "@modules/domain/mcp-gateway"
+import { parseJsonText, isRecord } from "@modules/platform/primitives"
 import { ERRORS_SERVICE } from "@modules/platform/errors"
 import type { ErrorsService } from "@modules/platform/errors"
 import type { OperationRequest } from "@modules/platform/http-security"
@@ -55,6 +59,26 @@ const callBankTool = (workspaceId: string, principal: CredentialPrincipal) =>
         },
     })
 
+/** The committed `tools/list` catalog of the endpoint (R302). */
+const SNAPSHOT_PATH = join(__dirname, "..", "..", "..", "..", "contracts", "mcp", "nivo-mcp@1.tools.json")
+
+/** The `result` of one `tools/list` answer for an agent. */
+const listTools = async (workspaceId: string, principal: CredentialPrincipal): Promise<unknown> => {
+    const reply = await world.resolve(GatewaySurfaceService).answer({
+        workspaceId,
+        principal: { agentId: principal.subject, workspaceId: principal.workspaceId },
+        message: { jsonrpc: "2.0", id: 2, method: "tools/list" },
+    })
+    return reply.body?.result
+}
+
+/** The `tools` of the committed catalog. */
+const committedTools = (): unknown => {
+    const read = parseJsonText(readFileSync(SNAPSHOT_PATH, "utf8"))
+    assert(read.ok && isRecord(read.value), "the committed catalog is not a JSON object")
+    return read.value["tools"]
+}
+
 describe("MCP endpoint per-agent credential", () => {
     const identity = { userId: world.id(), workspaceId: world.id(), agentId: world.id() }
     let agentKey = ""
@@ -82,6 +106,17 @@ describe("MCP endpoint per-agent credential", () => {
         await expect(mcpCallsOfAgent(world.db.primary, identity.agentId)).resolves.toEqual([
             { tool: "sepay.transactions.list", outcome: "ok" },
         ])
+    })
+
+    it("answers tools/list with exactly the three meta-tools, equal to the committed catalog", async () => {
+        const { principal } = await admit(`Bearer ${agentKey}`)
+        assert(principal !== undefined, "the guards did not admit the agent key")
+
+        const result = await listTools(identity.workspaceId, principal)
+
+        const tools = committedTools()
+        expect(tools).toMatchObject([{ name: "tool.search" }, { name: "tool.describe" }, { name: "tool.call" }])
+        expect(result).toEqual({ tools })
     })
 
     it("answers 401 to a request without a key and to a key no workspace issued", async () => {

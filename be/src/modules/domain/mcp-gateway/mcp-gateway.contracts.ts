@@ -45,6 +45,11 @@ export interface GatewayToolSpec {
     readonly idempotencyArg?: string | undefined
     /** The NIVO capability this tool plays, when it declares one (see `CapabilityRole`). */
     readonly role?: CapabilityRole
+    /**
+     * True for a tool no customer conversation may run: with a conversation on the caller it is hidden from search and describe,
+     * and a call is refused `internal_only`, audited, before any adapter runs.
+     */
+    readonly internalOnly?: boolean
 }
 
 /**
@@ -317,12 +322,23 @@ export interface NativeConnectorManifest extends GatewayConnectorManifest {
     readonly tools: ReadonlyArray<NativeToolSpec>
 }
 
-/** A native connector: its manifest and how it runs a tool. */
+/** Who a native tool runs for: the agent, and the customer conversation when the call serves one. */
+export interface NativeCaller {
+    /** The agent. */
+    readonly agentId: string
+    /** The customer conversation the call serves, or null. */
+    readonly conversationId: string | null
+}
+
+/**
+ * A native connector: its manifest and how it runs a tool. An adapter that needs no caller declares the three-parameter form; one
+ * that answers for the agent's view (module, instance, audience) takes the caller.
+ */
 export interface NativeAdapter {
     /** The manifest. */
     readonly manifest: NativeConnectorManifest
-    /** Runs one tool for a workspace. */
-    invoke(workspaceId: string, tool: string, args: GatewayJson): Promise<GatewayJson>
+    /** Runs one tool for a workspace, for the caller. An expected refusal is a `NativeRefused` error, which is an answer. */
+    invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson>
 }
 
 /** The caller a request to the gateway's own endpoint proved: the agent its credential names, in the workspace it names. */

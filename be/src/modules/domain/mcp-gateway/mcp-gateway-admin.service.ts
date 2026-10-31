@@ -21,7 +21,7 @@ import {
 import { isBearerCredential } from "./bearer-credential.policy"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
-import { InjectMcpGatewayOptions } from "./mcp-gateway.decorators"
+import { InjectMcpGatewayOptions, InjectNativeAdapters } from "./mcp-gateway.decorators"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import type {
     CallLogQuery,
@@ -30,6 +30,7 @@ import type {
     McpCredentialInput,
     GrantInput,
     GrantView,
+    NativeAdapter,
     RemoteConnectorInput,
     WorkspaceConnector,
 } from "./mcp-gateway.contracts"
@@ -82,6 +83,7 @@ const isUrl = (value: string): boolean => URL.canParse(value) && /^https?:$/u.te
 export class McpGatewayAdminService {
     constructor(
         @InjectMcpGatewayOptions() private readonly options: McpGatewayOptions,
+        @InjectNativeAdapters() private readonly natives: ReadonlyArray<NativeAdapter>,
         @InjectMcpRemote() private readonly remote: McpRemote,
         @InjectLogger() private readonly logger: Logger,
         private readonly gateway: McpGatewayService,
@@ -139,7 +141,7 @@ export class McpGatewayAdminService {
     async registerRemote(actor: ConnectionActor, input: RemoteConnectorInput): Promise<void> {
         await this.connections.authorize(actor, MANAGER)
         const credential = input.credential ?? null
-        if (!KEY.test(input.key)) throw invalid("key")
+        if (!KEY.test(input.key) || this.natives.some((adapter) => adapter.manifest.key === input.key)) throw invalid("key")
         if (input.name.trim() === "") throw invalid("name")
         if (!isUrl(input.url)) throw invalid("url")
         if (credential !== null && !isBearerCredential(credential)) throw invalid("credential")
