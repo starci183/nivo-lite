@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull } from "typeorm"
+import { IsNull, MoreThan, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { MODEL_AMOUNT_FACT } from "./agent-graphs.contracts"
@@ -128,6 +128,16 @@ export class AgentGraphDecisionsService {
     /** The decision of a work item, or null. */
     async byItem(workItemId: string): Promise<DecisionView | null> {
         return this.viewOf(await this.entityManager.findOneBy(AgentGraphDecisionEntity, { workItemId }))
+    }
+
+    /** The agents with a decision that ended since this moment, at most `limit` decisions read. */
+    async agentsClosedSince(since: Date, limit: number): Promise<ReadonlyArray<string>> {
+        const rows = await this.entityManager.find(AgentGraphDecisionEntity, {
+            select: { agentId: true },
+            where: { closedAs: Not(IsNull()), updatedAt: MoreThan(since) },
+            take: limit,
+        })
+        return [...new Set(rows.map((row) => row.agentId))]
     }
 
     /** The run of a work item: what the graph decided for it, or null when it never reached a graph. */

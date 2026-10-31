@@ -105,6 +105,9 @@ jobs:
   accounting-desk-morning:
     schedule: "30 23 * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick accounting-desk-morning
+  agent-graph-watch:
+    schedule: "*/15 * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick agent-graph-watch
   agents-sync-all:
     schedule: "*/5 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick agents-sync-all

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -9,6 +10,25 @@ import type { GraphDocument, GraphProposalView, LearnedProposal } from "./agent-
 import { AgentGraphProposalEntity } from "./persistence/entities"
 import { learnSignals } from "./policies/learn-signals.policy"
 import type { LearnedPatch } from "./policies/proposal-patch.policy"
+
+/** The most proposals read to know which evidence is spent. */
+const SPENT_LIMIT = 1000
+
+/** A replaced Brain rule, as the proposal that says so. */
+export interface ConflictRaised {
+    /** The node that cites the rule. */
+    readonly nodeKey: string
+    /** The branch that cites it, or an empty text for the node itself. */
+    readonly branchKey: string
+    /** The rule that was replaced. */
+    readonly oldFactId: string
+    /** The rule in force now. */
+    readonly newFactId: string
+    /** The hash of its value. */
+    readonly newValueHash: string
+    /** What makes the proposal the same one however often the tick runs. */
+    readonly dedupeKey: string
+}
 
 /** The most proposals one listing answers. */
 const PROPOSAL_LIMIT = 100
@@ -44,8 +64,33 @@ export class AgentGraphProposalsService {
     /** Raises the proposals the closed decisions of the agent teach; answers how many new ones were written. */
     async learn(workspaceId: string, agentId: string, versionId: string | null, graph: GraphDocument): Promise<number> {
         const learned = learnSignals(await this.decisions.closedOf(workspaceId, agentId))
-        const written = await Promise.all(learned.map((proposal) => this.raise(workspaceId, agentId, versionId, graph, proposal)))
+        const spent = await this.spentEvidence(workspaceId, agentId)
+        const fresh = learned.filter((proposal) => !proposal.evidence.some((id) => spent.has(`${proposal.branchKey}:${proposal.signal}:${id}`)))
+        const written = await Promise.all(fresh.map((proposal) => this.raise(workspaceId, agentId, versionId, graph, proposal)))
         return written.filter(Boolean).length
+    }
+
+    /** Raises the proposal that a newer rule of the Brain replaced the one a node cites; the same replacement is raised once. */
+    async raiseConflict(workspaceId: string, agentId: string, versionId: string, conflict: ConflictRaised): Promise<boolean> {
+        const inserted = await this.entityManager
+            .createQueryBuilder(AgentGraphProposalEntity, "proposal")
+            .insert()
+            .into(AgentGraphProposalEntity)
+            .values({
+                workspaceId,
+                agentId,
+                dedupeKey: conflict.dedupeKey,
+                kind: "conflict",
+                baseVersionId: versionId,
+                nodeKey: conflict.nodeKey,
+                branchKey: conflict.branchKey === "" ? null : conflict.branchKey,
+                patch: { oldFactId: conflict.oldFactId, newFactId: conflict.newFactId, newValueHash: conflict.newValueHash },
+                widens: false,
+                evidence: [conflict.oldFactId, conflict.newFactId],
+            })
+            .orIgnore()
+            .execute()
+        return inserted.identifiers.length > 0
     }
 
     /** The proposals still open for the agent, newest first. */
@@ -90,6 +135,19 @@ export class AgentGraphProposalsService {
     /** A proposal whose branch is gone, or whose change already stands, is overtaken. */
     async supersede(workspaceId: string, agentId: string, proposalId: string): Promise<void> {
         await this.entityManager.update(AgentGraphProposalEntity, { id: proposalId, workspaceId, agentId, status: "open" }, { status: "superseded" })
+    }
+
+    /**
+     * The evidence that proposals already spent, by branch and signal: an open, confirmed or declined proposal is not raised again for
+     * decisions it already named, however far the window of the latest decisions has slid since.
+     */
+    private async spentEvidence(workspaceId: string, agentId: string): Promise<ReadonlySet<string>> {
+        const rows = await this.entityManager.find(AgentGraphProposalEntity, {
+            select: { branchKey: true, patch: true, evidence: true },
+            where: { workspaceId, agentId, kind: "learned", status: In(["open", "confirmed", "declined"]) },
+            take: SPENT_LIMIT,
+        })
+        return new Set(rows.flatMap((row) => row.evidence.map((id) => `${row.branchKey ?? ""}:${String(row.patch.signal)}:${id}`)))
     }
 
     private async raise(

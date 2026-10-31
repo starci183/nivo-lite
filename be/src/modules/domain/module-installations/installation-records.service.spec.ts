@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { IsNull, Not } from "typeorm"
+import { IsNull, MoreThan, Not } from "typeorm"
 import {
     ANY_FUNCTION,
     answerQueryBuilders,
@@ -379,5 +379,20 @@ describe("InstallationRecordsService > markRemoved", () => {
         await expect(service.markRemoved("ws-1", "inst-1", "Lan", none)).resolves.toBe("missing")
         const unknown = mockEntityManager({ update: [ModuleInstallationEntity, {}] })
         await expect(service.markRemoved("ws-1", "inst-1", "Lan", unknown)).resolves.toBe("missing")
+    })
+})
+
+describe("InstallationRecordsService.page", () => {
+    it("reads a page of installations after an id, by id, leaving out removed ones", async () => {
+        const em = mockEntityManager({ find: [ModuleInstallationEntity, []] })
+        const service = await build(em)
+
+        await expect(service.page("inst-5", 200)).resolves.toEqual([])
+        await service.page("", 50)
+
+        expect(em.find.mock.calls.map((call) => call[1])).toEqual([
+            { where: { status: Not("removed"), id: MoreThan("inst-5") }, order: { id: "ASC" }, take: 200 },
+            { where: { status: Not("removed"), id: MoreThan("") }, order: { id: "ASC" }, take: 50 },
+        ])
     })
 })

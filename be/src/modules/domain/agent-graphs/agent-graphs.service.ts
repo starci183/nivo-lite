@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { graphDocumentSchema } from "./agent-graphs.schema"
@@ -34,6 +35,24 @@ export interface GraphState {
     readonly activeVersionId: string | null
     /** The graph that decides; null before the first version. */
     readonly active: GraphDocument | null
+}
+
+/** A Brain rule behind the version that decides. */
+export interface BrainSourceInForce {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The version that cites it. */
+    readonly versionId: string
+    /** The node that cites it. */
+    readonly nodeKey: string
+    /** The branch that cites it, or an empty text for the node itself. */
+    readonly branchKey: string
+    /** The Brain fact. */
+    readonly factId: string
+    /** The hash of its value when the owner confirmed it. */
+    readonly valueHash: string
 }
 
 /** A version with its number. */
@@ -89,6 +108,12 @@ export class AgentGraphsService {
     /** The graph of the installation, or null when it has none or it cannot be read. */
     async stateOfInstallation(installationId: string): Promise<OptionalGraphState> {
         const row = await this.entityManager.findOne(AgentGraphEntity, { where: { installationId } })
+        return row === null ? null : this.stateOf(row)
+    }
+
+    /** The graph of the agent by its id alone, for a job that walks agents of every workspace; null when it has none or it cannot be read. */
+    async statesOfAgent(agentId: string): Promise<OptionalGraphState> {
+        const row = await this.entityManager.findOne(AgentGraphEntity, { where: { agentId } })
         return row === null ? null : this.stateOf(row)
     }
 
@@ -179,6 +204,33 @@ export class AgentGraphsService {
         const parsed = graphDocumentSchema.safeParse(row.document)
         if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
         return parsed.data
+    }
+
+    /** Of these agents, the ones that have no graph yet. */
+    async missingGraph(agentIds: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
+        if (agentIds.length === 0) return []
+        const have = await this.entityManager.find(AgentGraphEntity, { select: { agentId: true }, where: { agentId: In([...agentIds]) }, take: agentIds.length })
+        const held = new Set(have.map((row) => row.agentId))
+        return agentIds.filter((id) => !held.has(id))
+    }
+
+    /** The Brain rules behind the versions that decide, with the hash they held when the owner confirmed them; at most `limit`. */
+    async brainSourcesInForce(limit: number): Promise<ReadonlyArray<BrainSourceInForce>> {
+        const rows = await this.entityManager
+            .createQueryBuilder(AgentGraphSourceEntity, "source")
+            .innerJoin(AgentGraphEntity, "graph", "graph.active_version_id = source.version_id")
+            .where("source.kind = :kind", { kind: "brain" })
+            .take(limit)
+            .getMany()
+        return rows.map((row) => ({
+            workspaceId: row.workspaceId,
+            agentId: row.agentId,
+            versionId: row.versionId,
+            nodeKey: row.nodeKey,
+            branchKey: row.branchKey,
+            factId: row.ref,
+            valueHash: row.valueHash,
+        }))
     }
 
     /** One version with its number and its graph, for the trace of a run; refused when it is not the agent's or cannot be read. */

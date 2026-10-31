@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
-import { IsNull } from "typeorm"
+import { IsNull, MoreThan, Not } from "typeorm"
 import { decisionRow } from "@tests/fixtures/builders/agent-graph.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -89,6 +89,23 @@ describe("AgentGraphDecisionsService lookups", () => {
         await service.attachRequest("decision-1", "request-2")
 
         expect(em.update).toHaveBeenCalledWith(AgentGraphDecisionEntity, { id: "decision-1" }, { approvalRequestId: "request-2" })
+    })
+})
+
+describe("AgentGraphDecisionsService.agentsClosedSince", () => {
+    it("names each agent once that has a decision that ended since the moment", async () => {
+        const rows = [decisionRow("d1", "approved"), decisionRow("d2", "rejected")]
+        const em = mockEntityManager({ find: [AgentGraphDecisionEntity, rows] })
+        const service = await build(em)
+        const since = new Date("2026-10-30T00:00:00.000Z")
+
+        await expect(service.agentsClosedSince(since, 500)).resolves.toEqual(["agent-1"])
+
+        expect(em.find).toHaveBeenCalledWith(AgentGraphDecisionEntity, {
+            select: { agentId: true },
+            where: { closedAs: Not(IsNull()), updatedAt: MoreThan(since) },
+            take: 500,
+        })
     })
 })
 

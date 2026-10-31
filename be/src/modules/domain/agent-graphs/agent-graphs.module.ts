@@ -16,6 +16,7 @@ import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
 import { AgentGraphPublishService } from "./agent-graph-publish.service"
 import { AgentGraphRunService } from "./agent-graph-run.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
+import { AgentGraphWatchService } from "./agent-graph-watch.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { GraphFactsService } from "./graph-facts.service"
@@ -45,6 +46,7 @@ export class AgentGraphsModule extends ConfigurableModuleClass {
             AgentGraphAdminService,
             AgentGraphApprovalsService,
             AgentGraphRunService,
+            AgentGraphWatchService,
         ]
         return {
             ...base,

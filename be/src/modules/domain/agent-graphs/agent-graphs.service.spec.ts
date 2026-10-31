@@ -102,6 +102,46 @@ describe("AgentGraphsService reads", () => {
     })
 })
 
+describe("AgentGraphsService for a job that walks every agent", () => {
+    it("reads the graph of an agent by its id alone, and answers nothing for an agent with none", async () => {
+        const found = await build(mockEntityManager({ findOne: [[AgentGraphEntity, graphRow("shadow", null)]] }))
+        const none = await build(mockEntityManager({ findOne: [AgentGraphEntity, null] }))
+
+        await expect(found.statesOfAgent("agent-1")).resolves.toMatchObject({ agentId: "agent-1", active: null })
+        await expect(none.statesOfAgent("agent-1")).resolves.toBeNull()
+    })
+
+    it("names, of some agents, the ones with no graph, and reads nothing for an empty list", async () => {
+        const em = mockEntityManager({ find: [AgentGraphEntity, [graphRow()]] })
+        const service = await build(em)
+
+        await expect(service.missingGraph(["agent-1", "agent-2"])).resolves.toEqual(["agent-2"])
+        await expect(service.missingGraph([])).resolves.toEqual([])
+        expect(em.find).toHaveBeenCalledTimes(1)
+    })
+
+    it("reads the Brain rules behind the versions that decide", async () => {
+        const row = Object.assign(new AgentGraphSourceEntity(), {
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            versionId: "version-1",
+            nodeKey: "decide",
+            branchKey: "middle",
+            kind: "brain",
+            ref: "fact-1",
+            valueHash: "hash-1",
+        })
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ getMany: [row] }])
+        const service = await build(em)
+
+        await expect(service.brainSourcesInForce(500)).resolves.toEqual([
+            { workspaceId: "ws-1", agentId: "agent-1", versionId: "version-1", nodeKey: "decide", branchKey: "middle", factId: "fact-1", valueHash: "hash-1" },
+        ])
+        expect(fake?.callsOf("take")).toEqual([[500]])
+    })
+})
+
 describe("AgentGraphsService.versionAt", () => {
     it("opens one version with its number and its graph", async () => {
         const service = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow(4)] }))

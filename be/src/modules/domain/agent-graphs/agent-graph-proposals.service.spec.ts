@@ -33,7 +33,7 @@ const inserted = (written: boolean): QueryBuilderAnswers => ({ execute: { identi
 
 describe("AgentGraphProposalsService.learn", () => {
     it("raises a proposal for the signal the decisions teach, with the decisions as evidence, and changes no version", async () => {
-        const em = mockEntityManager()
+        const em = mockEntityManager({ find: [AgentGraphProposalEntity, []] })
         const [fake] = queueQueryBuilders(em, [inserted(true)])
         const { service, decisions } = await build(approvals(20), em)
 
@@ -56,23 +56,100 @@ describe("AgentGraphProposalsService.learn", () => {
     })
 
     it("counts only the proposals that were new, and none for an agent that taught nothing", async () => {
-        const em = mockEntityManager()
+        const em = mockEntityManager({ find: [AgentGraphProposalEntity, []] })
         queueQueryBuilders(em, [inserted(false)])
         const known = await build(approvals(20), em)
-        const quiet = await build(approvals(3))
+        const quiet = await build(approvals(3), mockEntityManager({ find: [AgentGraphProposalEntity, []] }))
 
         await expect(known.service.learn("ws-1", "agent-1", null, GRAPH)).resolves.toBe(0)
         await expect(quiet.service.learn("ws-1", "agent-1", null, GRAPH)).resolves.toBe(0)
     })
 
     it("names no node for a branch the graph no longer has", async () => {
-        const em = mockEntityManager()
+        const em = mockEntityManager({ find: [AgentGraphProposalEntity, []] })
         const [fake] = queueQueryBuilders(em, [inserted(true)])
         const { service } = await build(approvals(20, "gone"), em)
 
         await service.learn("ws-1", "agent-1", null, GRAPH)
 
         expect(fake?.callsOf("values")[0]?.[0]).toMatchObject({ nodeKey: null, branchKey: "gone", baseVersionId: null })
+    })
+})
+
+describe("AgentGraphProposalsService.learn a window already spent", () => {
+    const spentBy = (status: "declined" | "confirmed" | "open", signal: string, branchKey: string) =>
+        Object.assign(proposalRow(), { status, branchKey, patch: { signal }, evidence: approvals(20).map((entry) => entry.id) })
+
+    it.each([["declined" as const], ["confirmed" as const], ["open" as const]])(
+        "does not raise again what a %s proposal already named for the same branch and signal",
+        async (status) => {
+            const em = mockEntityManager({ find: [AgentGraphProposalEntity, [spentBy(status, "trust", "middle")]] })
+            queueQueryBuilders(em, [inserted(true)])
+            const { service } = await build(approvals(20), em)
+
+            await expect(service.learn("ws-1", "agent-1", "version-1", GRAPH)).resolves.toBe(0)
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        },
+    )
+
+    it("raises it for another branch or another signal, and for decisions the proposal did not name", async () => {
+        const em = mockEntityManager({ find: [AgentGraphProposalEntity, [spentBy("declined", "reject", "middle"), spentBy("declined", "trust", "small")]] })
+        queueQueryBuilders(em, [inserted(true)])
+        const { service } = await build(approvals(20), em)
+
+        await expect(service.learn("ws-1", "agent-1", "version-1", GRAPH)).resolves.toBe(1)
+    })
+
+    it("reads a branch with no key as an empty one, so a proposal about nothing blocks nothing", async () => {
+        const loose = Object.assign(spentBy("declined", "trust", "middle"), { branchKey: null })
+        const em = mockEntityManager({ find: [AgentGraphProposalEntity, [loose]] })
+        queueQueryBuilders(em, [inserted(true)])
+        const { service } = await build(approvals(20), em)
+
+        await expect(service.learn("ws-1", "agent-1", "version-1", GRAPH)).resolves.toBe(1)
+    })
+})
+
+describe("AgentGraphProposalsService.raiseConflict", () => {
+    const conflict = {
+        nodeKey: "decide",
+        branchKey: "middle",
+        oldFactId: "fact-1",
+        newFactId: "fact-2",
+        newValueHash: "hash-2",
+        dedupeKey: "conflict:decide:fact-2",
+    }
+
+    it("raises one conflict for a replaced rule, holding both facts and the new hash, and never a widening", async () => {
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [inserted(true)])
+        const { service } = await build([], em)
+
+        await expect(service.raiseConflict("ws-1", "agent-1", "version-1", conflict)).resolves.toBe(true)
+
+        expect(fake?.callsOf("values")[0]?.[0]).toEqual({
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            dedupeKey: "conflict:decide:fact-2",
+            kind: "conflict",
+            baseVersionId: "version-1",
+            nodeKey: "decide",
+            branchKey: "middle",
+            patch: { oldFactId: "fact-1", newFactId: "fact-2", newValueHash: "hash-2" },
+            widens: false,
+            evidence: ["fact-1", "fact-2"],
+        })
+        expect(fake?.callsOf("orIgnore")).toEqual([[]])
+    })
+
+    it("keeps no branch for a rule behind a whole node, and raises nothing a second time", async () => {
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [inserted(false)])
+        const { service } = await build([], em)
+
+        await expect(service.raiseConflict("ws-1", "agent-1", "version-1", { ...conflict, branchKey: "" })).resolves.toBe(false)
+
+        expect(fake?.callsOf("values")[0]?.[0]).toMatchObject({ branchKey: null })
     })
 })
 
