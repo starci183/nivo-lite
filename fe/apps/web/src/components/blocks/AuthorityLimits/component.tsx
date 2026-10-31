@@ -1,10 +1,9 @@
 import { Fragment } from "react"
-import { CheckboxGroup, Divider, Heading, Text, Textarea } from "@starci/grammar/common"
+import { CheckboxGroup, Divider, Heading, Stack, Text, Textarea } from "@starci/grammar/common"
 import { AuthoritySection } from "@/components/composites/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/composites/AuthoritySection"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { REQUIRED_LIST_CLASS, REQUIRED_ROW_CLASS } from "./classNames"
 
 /** One detail an action can require. */
 export interface FieldOptionView {
@@ -67,23 +66,21 @@ export const AuthorityLimitsBase = (props: AuthorityLimitsBaseProps) => {
                             {view.requiredHint}
                         </Text>
                     </div>
-                    <div className={REQUIRED_LIST_CLASS}>
+                    <Stack gap="row">
                         {limits.rows.map((row, index) => (
                             <Fragment key={row.key}>
                                 {index > 0 && <Divider semantics="presentation" />}
-                                <div className={REQUIRED_ROW_CLASS}>
-                                    <CheckboxGroup
-                                        label={row.label}
-                                        orientation="horizontal"
-                                        isSkeleton={isSkeleton}
-                                        options={view.fields}
-                                        value={row.value}
-                                        onValueChange={(value) => props.on.required(row.key, value)}
-                                    />
-                                </div>
+                                <CheckboxGroup
+                                    label={row.label}
+                                    orientation="horizontal"
+                                    isSkeleton={isSkeleton}
+                                    options={view.fields}
+                                    value={row.value}
+                                    onValueChange={(value) => props.on.required(row.key, value)}
+                                />
                             </Fragment>
                         ))}
-                    </div>
+                    </Stack>
                 </AuthoritySection>
             )}
         </SlotView>

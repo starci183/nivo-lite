@@ -1,7 +1,6 @@
-import { Alert, Page, Text } from "@starci/grammar/common"
+import { Alert, Page, Stack, Text } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { HEAD_CLASS } from "./classNames"
 
 /** Copy and state of the authority page frame, and the sections it frames. */
 export interface AuthorityHeadBaseProps {
@@ -32,13 +31,13 @@ export const AuthorityHeadBase = (props: AuthorityHeadBaseProps) => {
                 description: view.description,
             }}
         >
-            <div className={HEAD_CLASS}>
+            <Stack gap="region">
                 <Text weight="medium">{view.motto}</Text>
                 {view.isReadOnly ? (
                     <Alert tone="cautionary" title={view.readOnlyTitle} description={view.readOnlyBody} />
                 ) : null}
                 {props.shape.body}
-            </div>
+            </Stack>
         </Page>
     )
 }
