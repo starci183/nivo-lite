@@ -153,6 +153,40 @@ describe("DossierFindingsService list of nothing", () => {
     })
 })
 
+describe("DossierFindingsService for an agent", () => {
+    it("lists a page without asking who the member is, and the member's list asks first", async () => {
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getMany: [] }, { getMany: [] }])
+        const { service, members } = await build(em)
+
+        await expect(service.listForAgent(WS, {}, "vi")).resolves.toEqual({
+            nodes: [],
+            pageInfo: { endCursor: null, hasNextPage: false },
+        })
+        expect(members.require).not.toHaveBeenCalled()
+
+        await service.list("u1", WS, {}, "vi")
+        expect(members.require).toHaveBeenCalledWith("u1", WS)
+    })
+
+    it("sums up the review without asking who the member is, and the member's summary asks first", async () => {
+        const em = mockEntityManager({
+            count: [DossierRemedyDraftEntity, 0],
+            findOne: [DossierReviewRunEntity, null],
+            exists: [DossierReviewRunEntity, false],
+            find: [DossierReviewEntity, []],
+        })
+        queueQueryBuilders(em, [{ getRawMany: [] }, { getRawMany: [] }])
+        const { service, members } = await build(em)
+
+        await expect(service.summaryForAgent(WS)).resolves.toMatchObject({ open: 0, latestRun: null })
+        expect(members.require).not.toHaveBeenCalled()
+
+        await service.summary("u1", WS)
+        expect(members.require).toHaveBeenCalledWith("u1", WS)
+    })
+})
+
 describe("DossierFindingsService summary", () => {
     it("sums the active findings and lists the reviewed dossiers the checklist still names", async () => {
         const em = mockEntityManager({

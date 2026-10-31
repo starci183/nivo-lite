@@ -25,3 +25,19 @@ export interface ChangedPublicSource extends PublicSourceExcerpt {
     /** When it changed, as an ISO instant in UTC with microseconds. */
     readonly changedAt: string
 }
+
+/** One source of an origin as a status read lists it: where it stands and how big it is, never its text. */
+export interface OriginSource {
+    /** Source identity. */
+    readonly id: string
+    /** Title. */
+    readonly title: string
+    /** Where it stands. */
+    readonly status: string
+    /** public or internal. */
+    readonly visibility: string
+    /** The raw bytes it holds. */
+    readonly sizeBytes: number
+    /** Last change, ISO 8601. */
+    readonly updatedAt: string
+}

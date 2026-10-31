@@ -13,6 +13,11 @@ registers. NIVO core never names a connector or one of its tools; flows find too
   (`mcp_connectors`), `be/src/modules/domain/mcp-tool-grants` (`mcp_tool_grants`, also the seed's batch `upsert`) and
   `be/src/modules/domain/mcp-call-log` (`mcp_call_log`). The SePay connector reads bank credits and debits through
   `TransactionsService.listBankCredits` and `listBankDebits` of `be/src/modules/domain/transactions`.
+- Native adapters. `sepay` and `einvoice` are built in; an app adds more with `McpGatewayModule.register({ natives: [AdapterClass] })`
+  (the api and the mcp app do, the cli passes none). Each class is a provider of a global module of the app, and the gateway injects
+  it from the global container beside the two built-in ones. `NativeAdapter.invoke(workspaceId, tool, args, caller)` gets the caller,
+  `{ agentId, conversationId }`, so an adapter can answer for the agent's view; the existing adapters keep their three parameters.
+  `NativeRunnerService` runs it: the deadline, the caller, and the expected refusal below.
 - `be/src/modules/integrations/mcp`: the official `@modelcontextprotocol/sdk` on both sides: the remote client (it holds the
   credential secrets and reads them by NAME) and the server side of the gateway endpoint.
 - Console GraphQL: `mcpConnectors`, `mcpToolGrants`, `mcpCallLog`, `setMcpToolGrant`, `registerMcpConnector`,
@@ -73,6 +78,18 @@ wrong.
   60 s open it. Open: calls answer `unavailable` / `circuit_open` (an audited refusal, never a throw) for 120 s. Then it is
   half-open: one probe call runs and the others are refused; a good probe closes it, a failed one opens it again.
 
+## Internal-only tools and native refusals
+
+- `GatewayToolSpec.internalOnly` marks a tool no customer conversation may run. When the caller carries a `conversationId` the tool
+  is hidden from `tool.search` and `tool.describe`, and `tool.call` answers `internal_only` (an audited, `refused` line) before the
+  grant is read and before any adapter runs. A caller without a conversation (a key held outside a chat) sees and runs it, subject
+  to its grant like any tool.
+- A native adapter that meets an expected case (not connected, internal only) throws `McpGatewayError` with
+  `McpGatewayErrorCode.NativeRefused` and `params: { reason }`. The gateway answers it as `tool_error` with `{ error: <reason> }`:
+  an answer, audited as an error line, never counted on the breaker and never logged as a connector failure.
+- `registerMcpConnector` refuses a key a native connector uses (`MCP_GATEWAY_INVALID`, field `key`), so a remote row cannot sit
+  shadowed under a native connector of the same key.
+
 ## Tool listing for agents
 
 Tool names are always `<connector>.<tool>`. `tool.search {query, limit}` answers at most ten matches, by name and description,
@@ -111,8 +128,11 @@ connector-specific argument shapes.
   public API key and the key of a paused agent answer `401`; deleting the agent deletes its keys, so its key answers `401` too.
   A key without `tools:call` answers `403`. A credential of another workspace is refused with the gateway's workspace-mismatch error.
   Nothing in the request can choose the agent; the former shared bearer and self-declared agent header are removed.
+- The committed catalog is `be/contracts/mcp/nivo-mcp@1.tools.json` (R302): the `tools/list` result, the three meta-tools. It stops
+  at the door; native tools are found with `tool.search` and their schemas come from their validators. Change a meta-tool and the
+  snapshot changes with it.
 - The proof is `be/src/tests/integration/mcp-endpoint/mcp-agent-credential.integration-spec.ts`: an agent key reaches its
-  granted tool (audited in `mcp_call_log`), and no key, a foreign key, a revoked key and a deleted agent's key answer `401`.
+  granted tool (audited in `mcp_call_log`), `tools/list` answers exactly the three meta-tools, equal to the snapshot, and no key, a foreign key, a revoked key and a deleted agent's key answer `401`.
 - NIVO's own calls use `McpGatewayService` in process, with a caller the server builds.
 
 ## Replay keys

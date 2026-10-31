@@ -1,5 +1,6 @@
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
 import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
+import { parseAiConfig } from "@modules/integrations/ai"
 import { parseMcpConfig } from "@modules/integrations/mcp"
 import { parseServerConfig } from "@modules/platform/config"
 import type { EnvSource } from "@modules/platform/config"
@@ -21,6 +22,8 @@ export interface McpAppOptions {
     readonly connectionSecrets: ReturnType<typeof parseConnectionSecretsConfig>
     /** The gateway settings (the per-call time limit). */
     readonly mcpGateway: ReturnType<typeof parseMcpGatewayConfig>
+    /** The AI endpoint that embeds a Brain question; every key is optional, and without them the search reads words. */
+    readonly ai: ReturnType<typeof parseAiConfig>
 }
 
 /** Reads the mcp app environment once. */
@@ -31,4 +34,5 @@ export const readMcpEnv = (env: EnvSource): McpAppOptions => ({
     queue: parseQueueConfig(env),
     connectionSecrets: parseConnectionSecretsConfig(env),
     mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),
+    ai: parseAiConfig(env),
 })

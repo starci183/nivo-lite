@@ -4,6 +4,7 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ConnectionBindingFacts,
+    ConnectionStatusFacts,
     OptionalConnectionState,
     OptionalConnectionWorkspace,
 } from "./connection-bindings-read.contracts"
@@ -16,6 +17,16 @@ const reportedText = (meta: Readonly<Record<string, unknown>>, key: string): str
     const trimmed = value.trim()
     return trimmed === "" ? null : trimmed
 }
+
+const bindingFactsOf = (row: ConnectionEntity): ConnectionBindingFacts => ({
+    id: row.id,
+    provider: row.provider,
+    name: row.name,
+    status: row.status,
+    createdAt: row.createdAt,
+    botUsername: reportedText(row.publicMeta, "bot_username"),
+    accountMasked: reportedText(row.publicMeta, "account_masked"),
+})
 
 @Injectable()
 /** The connection reads the agent bindings need: the facts of the connections an agent is bound to, and whether a workspace holds one. */
@@ -30,14 +41,30 @@ export class ConnectionBindingsReadService {
             where: { id: In([...new Set(connectionIds)]) },
             take: limit,
         })
+        return rows.map(bindingFactsOf)
+    }
+
+    /** The connections of a workspace under one provider, oldest first, at most `limit`, with the status facts a status read shows. */
+    async ofProvider(workspaceId: string, provider: string, limit: number): Promise<Array<ConnectionStatusFacts>> {
+        const rows = await this.entityManager.find(ConnectionEntity, {
+            select: {
+                id: true,
+                provider: true,
+                name: true,
+                status: true,
+                createdAt: true,
+                publicMeta: true,
+                lastError: true,
+            },
+            where: { workspaceId, provider },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: limit,
+        })
         return rows.map((row) => ({
-            id: row.id,
-            provider: row.provider,
-            name: row.name,
-            status: row.status,
-            createdAt: row.createdAt,
-            botUsername: reportedText(row.publicMeta, "bot_username"),
-            accountMasked: reportedText(row.publicMeta, "account_masked"),
+            ...bindingFactsOf(row),
+            lastError: row.lastError,
+            oaId: reportedText(row.publicMeta, "oa_id"),
+            email: reportedText(row.publicMeta, "email"),
         }))
     }
 

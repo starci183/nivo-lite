@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
 import type { ChunkHit } from "@modules/domain/knowledge-chunks"
-import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import { NivoKnowledgeSearchService } from "@modules/domain/nivo-knowledge"
 import type { NivoHit } from "@modules/domain/nivo-knowledge"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -38,7 +38,7 @@ const build = async (folded: ReadonlyArray<{ knowledge_fold: string }> = FOLDED)
     embeddings.embed.mockResolvedValue([[1, 2]])
     const chunks = mock<KnowledgeChunksService>()
     chunks.search.mockResolvedValue([chunk])
-    const sources = mock<KnowledgeSourcesService>()
+    const sources = mock<KnowledgeSourcesReadService>()
     sources.briefsOf.mockResolvedValue([{ id: "s1", kind: "faq", title: "Hours", topic: null }])
     const nivo = mock<NivoKnowledgeSearchService>()
     nivo.search.mockResolvedValue([])
@@ -49,7 +49,7 @@ const build = async (folded: ReadonlyArray<{ knowledge_fold: string }> = FOLDED)
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EmbeddingService, useValue: embeddings },
             { provide: KnowledgeChunksService, useValue: chunks },
-            { provide: KnowledgeSourcesService, useValue: sources },
+            { provide: KnowledgeSourcesReadService, useValue: sources },
             { provide: NivoKnowledgeSearchService, useValue: nivo },
         ],
     }).compile()
@@ -260,6 +260,17 @@ describe("KnowledgeSearchService", () => {
                 tsquery: "opening | hours",
                 limit: 4,
             })
+        })
+
+        it("gives the embedding of the question the budget the caller asks for, else the default", async () => {
+            const budgeted = await build()
+            const unbudgeted = await build()
+
+            await budgeted.service.forAgent({ ...request, embedTimeoutMs: 2500 })
+            await unbudgeted.service.forAgent(request)
+
+            expect(budgeted.embeddings.embed).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: 2500 }))
+            expect(unbudgeted.embeddings.embed).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: 8000 }))
         })
 
         it("narrows the lane to public passages for a customer audience or a customer-facing module, and joins the instance", async () => {

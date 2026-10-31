@@ -21,6 +21,8 @@ export enum McpGatewayErrorCode {
     WorkspaceMismatch = "MCP_GATEWAY_WORKSPACE_MISMATCH",
     /** The connector's catalog was not read, or changed since it was shown, so it cannot be approved as it is. */
     CatalogChanged = "MCP_GATEWAY_CATALOG_CHANGED",
+    /** A native adapter refused an expected case (`not_connected`, `internal_only`): an answer to the caller, never a failure of the connector. */
+    NativeRefused = "MCP_GATEWAY_NATIVE_REFUSED",
 }
 
 /** How each code travels. */
@@ -34,6 +36,7 @@ export const MCP_GATEWAY_ERROR_KINDS: Record<McpGatewayErrorCode, ErrorKind> = {
     [McpGatewayErrorCode.Timeout]: "unavailable",
     [McpGatewayErrorCode.WorkspaceMismatch]: "forbidden",
     [McpGatewayErrorCode.CatalogChanged]: "conflict",
+    [McpGatewayErrorCode.NativeRefused]: "forbidden",
 }
 
 /** The one error class of the gateway. */

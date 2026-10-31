@@ -9,9 +9,16 @@ import { NivoSeedService } from "./nivo-seed.service"
 @Module({})
 /** The base knowledge of NIVO: the playbooks every workspace's agents read next to the business documents, and their publishing. */
 export class NivoKnowledgeModule extends ConfigurableModuleClass {
-    /** Registers the capability once per app. */
+    /** Registers the capability once per app; the search-only mode registers the search of the base knowledge alone. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.searchOnly === true) {
+            return {
+                ...base,
+                providers: [...(base.providers ?? []), NivoKnowledgeSearchService],
+                exports: [NivoKnowledgeSearchService],
+            }
+        }
         return {
             ...base,
             providers: [
