@@ -5,9 +5,16 @@ import { AgentWorkAccessService } from "./agent-work-access.service"
 import { toTriggerRecord } from "./agent-work.mapper"
 import { MAX_TRIGGERS } from "./agent-work.policy"
 import { triggerFields } from "./agent-trigger.policy"
+import type { TriggerFields } from "./agent-trigger.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentTriggerEntity } from "./persistence/entities"
-import type { AgentTriggerRecord, AgentTriggerWrite } from "./agent-work.contracts"
+import type {
+    AgentTriggerRecord,
+    AgentTriggerWrite,
+    OptionalAgentTriggerRecord,
+    OptionalDate,
+    OptionalId,
+} from "./agent-work.contracts"
 
 @Injectable()
 /**
@@ -42,7 +49,7 @@ export class AgentTriggersService {
     }
 
     /** One trigger by id, or null. */
-    async byId(triggerId: string): Promise<AgentTriggerRecord | null> {
+    async byId(triggerId: string): Promise<OptionalAgentTriggerRecord> {
         const row = await this.entityManager.findOne(AgentTriggerEntity, { where: { id: triggerId } })
         return row === null ? null : toTriggerRecord(row)
     }
@@ -52,22 +59,11 @@ export class AgentTriggersService {
      * (`actorUserId`) must be an owner or manager; a module seeding its triggers passes null. The row is marked unreconciled so the
      * scheduler is made to agree with it.
      */
-    async save(actorUserId: string | null, write: AgentTriggerWrite): Promise<AgentTriggerRecord> {
+    async save(actorUserId: OptionalId, write: AgentTriggerWrite): Promise<AgentTriggerRecord> {
         if (actorUserId !== null) await this.access.manager(actorUserId, write.workspaceId)
         await this.access.agent(write.workspaceId, write.agentId)
         const fields = triggerFields(write)
-        if (write.triggerId === null) {
-            const count = await this.entityManager.count(AgentTriggerEntity, { where: { agentId: write.agentId } })
-            if (count >= MAX_TRIGGERS) {
-                throw new AgentWorkError({ code: AgentWorkErrorCode.TooManyTriggers, params: { max: MAX_TRIGGERS } })
-            }
-            const created = await this.entityManager.save(AgentTriggerEntity, {
-                workspaceId: write.workspaceId,
-                agentId: write.agentId,
-                ...fields,
-            })
-            return toTriggerRecord(created)
-        }
+        if (write.triggerId === null) return this.create(write, fields, null)
         const updated = await this.entityManager.update(
             AgentTriggerEntity,
             { id: write.triggerId, agentId: write.agentId, workspaceId: write.workspaceId },
@@ -79,6 +75,17 @@ export class AgentTriggersService {
         return toTriggerRecord(row)
     }
 
+    /**
+     * Writes the trigger a module seeds under its stable key, as the system. Seeding the same key again finds the row it wrote and changes
+     * nothing, so an owner's edit to it survives a new install or apply; the cap of eight counts it like any other.
+     */
+    async seed(write: AgentTriggerWrite, seedKey: string): Promise<AgentTriggerRecord> {
+        await this.access.agent(write.workspaceId, write.agentId)
+        const known = await this.entityManager.findOne(AgentTriggerEntity, { where: { agentId: write.agentId, seedKey } })
+        if (known !== null) return toTriggerRecord(known)
+        return this.create(write, triggerFields(write), seedKey)
+    }
+
     /** Removes a trigger. The scheduler entry it leaves is dropped by the next reconcile. Owner or manager. */
     async remove(userId: string, workspaceId: string, agentId: string, triggerId: string): Promise<void> {
         await this.access.manager(userId, workspaceId)
@@ -86,13 +93,31 @@ export class AgentTriggersService {
         if (removed.affected === 0) throw new AgentWorkError({ code: AgentWorkErrorCode.TriggerNotFound })
     }
 
+    private async create(
+        write: AgentTriggerWrite,
+        fields: TriggerFields,
+        seedKey: string | null,
+    ): Promise<AgentTriggerRecord> {
+        const count = await this.entityManager.count(AgentTriggerEntity, { where: { agentId: write.agentId } })
+        if (count >= MAX_TRIGGERS) {
+            throw new AgentWorkError({ code: AgentWorkErrorCode.TooManyTriggers, params: { max: MAX_TRIGGERS } })
+        }
+        const created = await this.entityManager.save(AgentTriggerEntity, {
+            workspaceId: write.workspaceId,
+            agentId: write.agentId,
+            seedKey,
+            ...fields,
+        })
+        return toTriggerRecord(created)
+    }
+
     /** Records that a slot fired, in the transaction that wrote its wake, with the slot the scheduler holds next. */
-    async recordFire(tx: EntityManager, triggerId: string, firedAt: Date, nextRunAt: Date | null): Promise<void> {
+    async recordFire(tx: EntityManager, triggerId: string, firedAt: Date, nextRunAt: OptionalDate): Promise<void> {
         await tx.update(AgentTriggerEntity, { id: triggerId }, { lastFiredAt: firedAt, nextRunAt })
     }
 
     /** Records that the scheduler was made to agree with the row, and the next slot it holds. */
-    async recordReconciled(triggerId: string, reconciledAt: Date, nextRunAt: Date | null): Promise<void> {
+    async recordReconciled(triggerId: string, reconciledAt: Date, nextRunAt: OptionalDate): Promise<void> {
         await this.entityManager.update(AgentTriggerEntity, { id: triggerId }, { reconciledAt, nextRunAt })
     }
 }

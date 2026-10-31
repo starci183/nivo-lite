@@ -49,6 +49,10 @@ export class AgentTriggerEntity extends UuidAbstractEntity {
     @Column({ name: "last_fired_at", type: "timestamptz", nullable: true })
     lastFiredAt!: Date | null
 
+    /** The stable key a module seeded the trigger under, or null for a trigger an owner wrote. */
+    @Column({ name: "seed_key", type: "text", nullable: true })
+    seedKey!: string | null
+
     /** When the scheduler was last made to agree with this row, or null. */
     @Column({ name: "reconciled_at", type: "timestamptz", nullable: true })
     reconciledAt!: Date | null
