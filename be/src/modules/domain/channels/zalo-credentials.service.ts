@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { parseZaloSecret } from "@modules/domain/channel-connections"
 import { ConnectionSecretsService, randomSecret, safeEqual } from "@modules/domain/connection-secrets"
 import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import { InjectZalo, isZaloRefusal, newVerifier } from "@modules/integrations/zalo"
@@ -37,25 +38,6 @@ const AUTHORIZATION_TTL_MS = 15 * 60_000
 const CALLBACK_PATH = "/connections/zalo/callback"
 /** Seven hours: a token that ends within this time is renewed when the tick carries no horizon of its own. */
 const DEFAULT_WITHIN_MS = 7 * 3_600_000
-
-const isZaloSecret = (value: unknown): value is ZaloSecret =>
-    typeof value === "object" &&
-    value !== null &&
-    typeof Reflect.get(value, "appId") === "string" &&
-    typeof Reflect.get(value, "appSecret") === "string" &&
-    typeof Reflect.get(value, "oaSecret") === "string"
-
-/** Secrets stored before the rename keep the single-use Zalo token under this key. */
-const LEGACY_RENEWAL_KEY = "refreshToken"
-
-/** Stored secrets written before the rename keep the single-use token under the legacy key; read it as `renewalToken`. */
-const withLegacyRenewal = (value: ZaloSecret): ZaloSecret => {
-    const legacy: unknown = Reflect.get(value, LEGACY_RENEWAL_KEY)
-    if (typeof legacy !== "string" || typeof Reflect.get(value, "renewalToken") === "string") return value
-    const migrated: ZaloSecret = { ...value, renewalToken: legacy }
-    Reflect.deleteProperty(migrated, LEGACY_RENEWAL_KEY)
-    return migrated
-}
 
 @Injectable()
 /**
@@ -271,12 +253,9 @@ export class ZaloCredentialsService {
     }
 
     private parse(credential: string): Outcome<ZaloSecret, ChannelsErrorCode> {
-        try {
-            const parsed: unknown = JSON.parse(credential)
-            if (!isZaloSecret(parsed)) return refused(ChannelsErrorCode.SecretUnreadable)
-            return ok(withLegacyRenewal(parsed))
-        } catch (cause) {
-            return refused(ChannelsErrorCode.SecretUnreadable, { reason: String(cause) })
-        }
+        const secret = parseZaloSecret(credential)
+        // A wizard secret that has no OA secret key yet cannot sign or verify anything: it is not a usable credential.
+        if (secret === null || secret.oaSecret === "") return refused(ChannelsErrorCode.SecretUnreadable)
+        return ok(secret)
     }
 }
