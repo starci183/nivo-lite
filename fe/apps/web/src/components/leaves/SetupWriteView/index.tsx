@@ -2,17 +2,18 @@ import {
     Alert,
     Badge,
     Button,
+    Cluster,
     DescriptionList,
     Input,
     NumberField,
     RadioGroup,
     SegmentedControl,
+    Stack,
     SurfaceCard,
     Text,
     Textarea,
 } from "@starci/grammar/common"
 import type { SetupWriteDecided, SetupWriteProposal } from "@/modules/types"
-import { ACTIONS, WRITE, WRITE_FIELDS, WRITE_HEAD } from "./classNames"
 
 /** The commands of a card. */
 interface SetupWriteViewCommands {
@@ -89,28 +90,28 @@ export const SetupWriteView = (props: SetupWriteViewProps) => {
     if (decided !== null) {
         return (
             <SurfaceCard ariaLabel={decided.line}>
-                <div className={WRITE}>
-                    <div className={WRITE_HEAD}>
+                <Stack gap="inline">
+                    <Cluster gap="inline" justify="between">
                         <Text size="sm" tone="muted">
                             {decided.line}
                         </Text>
                         <Badge isDot tone={decided.tone}>
                             {decided.label}
                         </Badge>
-                    </div>
-                </div>
+                    </Cluster>
+                </Stack>
             </SurfaceCard>
         )
     }
     return (
         <SurfaceCard ariaLabel={proposal.head}>
-            <div className={WRITE}>
-                <div className={WRITE_HEAD}>
+            <Stack gap="inline">
+                <Cluster gap="inline" justify="between">
                     <Text weight="semibold" size="sm">
                         {proposal.head}
                     </Text>
                     {proposal.hasGap ? <Badge tone="warning">{proposal.gapLabel}</Badge> : null}
-                </div>
+                </Cluster>
                 <DescriptionList layout="stacked" items={proposal.items} />
                 {proposal.sharedNote === "" ? null : (
                     <Text size="xs" tone="muted">
@@ -118,12 +119,10 @@ export const SetupWriteView = (props: SetupWriteViewProps) => {
                     </Text>
                 )}
                 {proposal.isEditing ? (
-                    <div className={WRITE_FIELDS}>
-                        {proposal.isFact ? <FactFields {...props} /> : <RuleFields {...props} />}
-                    </div>
+                    <Stack gap="row">{proposal.isFact ? <FactFields {...props} /> : <RuleFields {...props} />}</Stack>
                 ) : null}
                 {proposal.isConflict ? (
-                    <div className={WRITE_FIELDS}>
+                    <Stack gap="row">
                         <Alert tone="cautionary" title={proposal.conflictTitle} description={proposal.conflictBody} />
                         <RadioGroup
                             label={proposal.conflictTitle}
@@ -141,9 +140,9 @@ export const SetupWriteView = (props: SetupWriteViewProps) => {
                                 onValueChange={props.on.situation}
                             />
                         ) : null}
-                    </div>
+                    </Stack>
                 ) : null}
-                <div className={ACTIONS}>
+                <Cluster gap="inline">
                     <Button
                         intent="commit"
                         size="sm"
@@ -159,8 +158,8 @@ export const SetupWriteView = (props: SetupWriteViewProps) => {
                     <Button intent="alternative" size="sm" isDisabled={proposal.isPending} onPress={props.on.reject}>
                         {proposal.rejectLabel}
                     </Button>
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
         </SurfaceCard>
     )
 }

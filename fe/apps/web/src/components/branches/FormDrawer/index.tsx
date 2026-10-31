@@ -1,6 +1,5 @@
-import { Alert, Button, Drawer, Form } from "@starci/grammar/common"
+import { Alert, Button, Drawer, Form, Stack } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { FORM_CLASS_NAME } from "./classNames"
 
 /** The words, the state and the handlers of a drawer that holds one form, with its fields as children. */
 interface FormDrawerProps {
@@ -30,10 +29,10 @@ export const FormDrawer = (props: FormDrawerProps) => (
         footer={<FormDrawerFooter {...props} />}
     >
         <Form label={props.title} onSubmit={props.onSubmit} isPending={props.isPending}>
-            <div className={FORM_CLASS_NAME}>
+            <Stack gap="row">
                 {props.error === null ? null : <Alert tone="negative" title={props.error} />}
                 {props.children}
-            </div>
+            </Stack>
         </Form>
     </Drawer>
 )

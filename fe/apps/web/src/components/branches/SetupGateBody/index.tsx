@@ -1,6 +1,6 @@
-import { Button, Text, Textarea } from "@starci/grammar/common"
+import { Button, Cluster, Stack, Text, Textarea } from "@starci/grammar/common"
 import type { SetupGatesCardProps, SetupSideGate } from "@/modules/types"
-import { ACTIONS, BODY, EVIDENCE } from "./classNames"
+import { EVIDENCE } from "./classNames"
 
 /** One gate of the checklist, whether it is being edited, and the words and commands of its body. */
 type SetupGateBodyProps = Pick<
@@ -23,7 +23,7 @@ type SetupGateBodyProps = Pick<
 
 /** The body of one gate: the evidence editor while it is edited, else its evidence with confirm or reopen. */
 export const SetupGateBody = (props: SetupGateBodyProps) => (
-    <div className={BODY}>{props.isEditing ? renderEdit(props) : renderEvidence(props)}</div>
+    <Stack gap="inline">{props.isEditing ? renderEdit(props) : renderEvidence(props)}</Stack>
 )
 
 /** The evidence of the gate (its hint while waiting or before evidence is supplied) and confirm or reopen. */
@@ -36,7 +36,7 @@ const renderEvidence = ({ gate, ...props }: SetupGateBodyProps) => {
                     {isHint ? gate.hint : gate.evidence}
                 </Text>
             </div>
-            <div className={ACTIONS}>
+            <Cluster gap="inline">
                 {gate.status === "proposed" ? (
                     <Button
                         intent="neutral"
@@ -59,7 +59,7 @@ const renderEvidence = ({ gate, ...props }: SetupGateBodyProps) => {
                         {props.unconfirmLabel}
                     </Button>
                 ) : null}
-            </div>
+            </Cluster>
         </>
     )
 }
@@ -78,7 +78,7 @@ const renderEdit = ({ gate, ...props }: SetupGateBodyProps) => (
             value={props.editText}
             onValueChange={props.onEditText}
         />
-        <div className={ACTIONS}>
+        <Cluster gap="inline">
             <Button
                 intent="commit"
                 size="sm"
@@ -91,6 +91,6 @@ const renderEdit = ({ gate, ...props }: SetupGateBodyProps) => (
             <Button intent="neutral" size="sm" onPress={props.onStopEdit}>
                 {props.editCancelLabel}
             </Button>
-        </div>
+        </Cluster>
     </>
 )

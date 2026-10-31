@@ -1,5 +1,4 @@
-import { Badge } from "@starci/grammar/common"
-import { CHIPS_CLASS_NAME } from "./classNames"
+import { Badge, Cluster } from "@starci/grammar/common"
 
 /** One state mark of a conversation. */
 interface ChatbotChip {
@@ -17,12 +16,12 @@ interface ChatbotChipsProps {
 
 /** The channel mark followed by who is replying and whether somebody is needed, on one wrapping line. */
 export const ChatbotChips = (props: ChatbotChipsProps) => (
-    <div className={CHIPS_CLASS_NAME}>
+    <Cluster gap="identity">
         <Badge tone="neutral">{props.channel}</Badge>
         {props.chips.map((chip) => (
             <Badge key={chip.id} tone={chip.tone} isDot={chip.isDot}>
                 {chip.label}
             </Badge>
         ))}
-    </div>
+    </Cluster>
 )

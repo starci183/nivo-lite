@@ -1,4 +1,4 @@
-import { Button, Text } from "@starci/grammar/common"
+import { Button, Stack, Text } from "@starci/grammar/common"
 import type { PostView } from "@/modules/types"
 import { chipClassName } from "./classNames"
 
@@ -31,11 +31,13 @@ export const ContentPostChip = (props: ContentPostChipProps) => (
         onDragEnd={props.onDragEnd}
         className={chipClassName(props.post.isSkipped)}
     >
-        <Text size="xs" tone="muted">
-            {props.post.time} · {props.post.statusLabel}
-        </Text>
-        <Button intent="dismiss" size="sm" width="fill" onPress={() => props.onOpen(props.post.id)}>
-            {props.post.title}
-        </Button>
+        <Stack gap="identity">
+            <Text size="xs" tone="muted">
+                {props.post.time} · {props.post.statusLabel}
+            </Text>
+            <Button intent="dismiss" size="sm" width="fill" onPress={() => props.onOpen(props.post.id)}>
+                {props.post.title}
+            </Button>
+        </Stack>
     </div>
 )

@@ -1,6 +1,18 @@
-import { Alert, Badge, Button, Form, Input, RadioGroup, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import {
+    Alert,
+    Badge,
+    Button,
+    Cluster,
+    Form,
+    Input,
+    RadioGroup,
+    Stack,
+    SurfaceCard,
+    Text,
+    Textarea,
+} from "@starci/grammar/common"
+import { AccountingMissingFields } from "@/components/leaves/AccountingMissingFields"
 import type { AccountingQuestionCardView } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, BODY_CLASS_NAME, FIELDS_CLASS_NAME } from "./classNames"
 /** A proposal's settled display data and bound decision actions; `isSkeleton` draws its leaves as skeleton while it is a placeholder. */
 interface AccountingQuestionCardProps extends AccountingQuestionCardView {
     readonly isSkeleton: boolean
@@ -11,12 +23,12 @@ export const AccountingQuestionCard = (props: AccountingQuestionCardProps) => {
     return (
         <SurfaceCard label={props.props.title}>
             <Form label={props.props.title} isPending={props.props.isBusy} onSubmit={props.on.approve}>
-                <div className={BODY_CLASS_NAME}>
-                    <div className={ACTIONS_CLASS_NAME}>
+                <Stack gap="section">
+                    <Cluster gap="inline">
                         <Badge tone={props.props.statusTone} isDot isSkeleton={props.isSkeleton}>
                             {props.props.status}
                         </Badge>
-                    </div>
+                    </Cluster>
                     {props.props.explanation ? (
                         <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
                             {props.props.explanation}
@@ -44,7 +56,7 @@ export const AccountingQuestionCard = (props: AccountingQuestionCardProps) => {
                             </Button>
                         </div>
                     ) : null}
-                </div>
+                </Stack>
             </Form>
         </SurfaceCard>
     )
@@ -52,7 +64,7 @@ export const AccountingQuestionCard = (props: AccountingQuestionCardProps) => {
 
 /** Renders the AccountingQuestionCard actions section. */
 const renderAccountingQuestionCardActions = (props: NonNullable<AccountingQuestionCardProps>) => (
-    <div className={ACTIONS_CLASS_NAME}>
+    <Cluster gap="inline">
         {!props.props.isFailed ? (
             <Button intent="commit" type="submit" isPending={props.props.isBusy} isSkeleton={props.isSkeleton}>
                 {props.props.approveLabel}
@@ -80,28 +92,7 @@ const renderAccountingQuestionCardActions = (props: NonNullable<AccountingQuesti
         >
             {props.props.rejectLabel}
         </Button>
-    </div>
-)
-
-/** Renders the AccountingQuestionCard missing fields section. */
-const renderAccountingQuestionCardMissingFields = (props: NonNullable<AccountingQuestionCardProps>) => (
-    <div className={FIELDS_CLASS_NAME}>
-        <Text size="sm" weight="medium">
-            {props.props.missingLabel}
-        </Text>
-        {props.props.fields.map((field) => (
-            <Input
-                key={field.name}
-                id={`${props.props.id}-${field.name}`}
-                name={field.name}
-                label={field.label}
-                value={field.value}
-                isRequired
-                isDisabled={props.props.isBusy}
-                onValueChange={(value) => props.on.changeField(field.name, value)}
-            />
-        ))}
-    </div>
+    </Cluster>
 )
 
 /** Renders the AccountingQuestionCard basis section. */
@@ -172,9 +163,15 @@ const renderAccountingQuestionEditing = (props: AccountingQuestionCardProps) => 
 /** Pending reconciliation, missing fields and candidate choices. */
 const renderAccountingQuestionDetails = (props: AccountingQuestionCardProps) => (
     <>
-        {props.props.isOpen && !props.props.isFailed && props.props.fields.length
-            ? renderAccountingQuestionCardMissingFields(props)
-            : null}
+        {props.props.isOpen && !props.props.isFailed && props.props.fields.length ? (
+            <AccountingMissingFields
+                id={props.props.id}
+                label={props.props.missingLabel}
+                fields={props.props.fields}
+                isBusy={props.props.isBusy}
+                onChange={props.on.changeField}
+            />
+        ) : null}
         {props.props.isOpen && !props.props.isFailed && props.props.reconcileCredit !== null ? (
             <div>
                 <Text size="sm">{props.props.reconcileCredit}</Text>

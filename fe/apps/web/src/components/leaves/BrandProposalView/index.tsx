@@ -2,15 +2,16 @@ import {
     Alert,
     Badge,
     Button,
+    Cluster,
     DescriptionList,
     DragItem,
     Input,
+    Stack,
     SurfaceCard,
     Text,
     Textarea,
 } from "@starci/grammar/common"
 import type { BrandKitText, BrandProposalCardView } from "@/hooks/content"
-import { ACTIONS, CARD, FIELDS, HEAD, SWATCHES } from "./classNames"
 
 /** The commands of one brand proposal card. */
 export interface BrandProposalCommands {
@@ -32,7 +33,7 @@ const EditFields = (props: BrandProposalViewProps) => {
     const card = props.props
     const { on } = props
     return (
-        <div className={FIELDS}>
+        <Stack gap="row">
             <Input
                 id={`brand-${card.id}-name`}
                 name="brandName"
@@ -67,7 +68,7 @@ const EditFields = (props: BrandProposalViewProps) => {
                     onValueChange={(value) => on.field(name, value)}
                 />
             ))}
-        </div>
+        </Stack>
     )
 }
 
@@ -76,27 +77,27 @@ const Waiting = (props: BrandProposalViewProps) => {
     const { on } = props
     return (
         <SurfaceCard ariaLabel={card.head}>
-            <div className={CARD}>
-                <div className={HEAD}>
+            <Stack gap="row">
+                <Cluster gap="inline" justify="between">
                     <Text weight="semibold" size="sm">
                         {card.head}
                     </Text>
                     <Badge tone="warning">{card.waitingLabel}</Badge>
-                </div>
+                </Cluster>
                 <Text size="xs" tone="muted">
                     {card.colorsLabel}
                 </Text>
-                <div className={SWATCHES}>
+                <Cluster gap="inline">
                     {card.colors.map((color) => (
                         <DragItem key={`${color.name}-${color.hex}`} isDisabled leadingColor={color.hex}>
                             <Text size="sm">{`${color.name} · ${color.hex}`}</Text>
                         </DragItem>
                     ))}
-                </div>
+                </Cluster>
                 <DescriptionList layout="stacked" items={card.items} />
                 {card.isEditing ? <EditFields {...props} /> : null}
                 {card.error === "" ? null : <Alert tone="negative" title={card.error} />}
-                <div className={ACTIONS}>
+                <Cluster gap="inline">
                     <Button intent="commit" size="sm" isPending={card.isPending} onPress={() => on.confirm(card.id)}>
                         {card.confirmLabel}
                     </Button>
@@ -116,8 +117,8 @@ const Waiting = (props: BrandProposalViewProps) => {
                     >
                         {card.rejectLabel}
                     </Button>
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
         </SurfaceCard>
     )
 }
@@ -129,16 +130,16 @@ export const BrandProposalView = (props: BrandProposalViewProps) => {
     if (card.decidedLine === "") return <Waiting {...props} />
     return (
         <SurfaceCard ariaLabel={card.decidedLine}>
-            <div className={CARD}>
-                <div className={HEAD}>
+            <Stack gap="row">
+                <Cluster gap="inline" justify="between">
                     <Text size="sm" tone="muted">
                         {card.decidedLine}
                     </Text>
                     <Badge isDot tone={card.decidedTone}>
                         {card.decidedLabel}
                     </Badge>
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
         </SurfaceCard>
     )
 }
