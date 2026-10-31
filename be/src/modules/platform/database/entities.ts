@@ -101,6 +101,7 @@ import { openclawAgentSyncEntities } from "@modules/domain/openclaw-agent-sync"
 import { ordersEntities } from "@modules/domain/orders"
 import { paymentOrderRequestsEntities } from "@modules/domain/payment-order-requests"
 import { paymentOrdersEntities } from "@modules/domain/payment-orders"
+import { platformAdminEntities } from "@modules/domain/platform-admin"
 import { platformAuditEntities } from "@modules/domain/platform-audit"
 import { publicApiEntities } from "@modules/domain/public-api"
 import { responsibilitiesEntities } from "@modules/domain/responsibilities"
@@ -124,6 +125,7 @@ import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
 import { zaloInboxEntities } from "@modules/domain/zalo-inbox"
 import { zaloWizardDraftsEntities } from "@modules/domain/zalo-wizard-drafts"
+import { databaseEntities } from "./persistence/entities"
 import { inboxEntities } from "@modules/platform/inbox"
 import { jobsEntities } from "@modules/platform/jobs"
 import { queueEntities } from "@modules/platform/queue"
@@ -238,6 +240,7 @@ export const PRIMARY_ENTITIES = [
     ...ordersEntities,
     ...paymentOrderRequestsEntities,
     ...paymentOrdersEntities,
+    ...platformAdminEntities,
     ...platformAuditEntities,
     ...publicApiEntities,
     ...responsibilitiesEntities,
@@ -261,6 +264,7 @@ export const PRIMARY_ENTITIES = [
     ...workspacesEntities,
     ...zaloInboxEntities,
     ...zaloWizardDraftsEntities,
+    ...databaseEntities,
     ...inboxEntities,
     ...jobsEntities,
     ...queueEntities,

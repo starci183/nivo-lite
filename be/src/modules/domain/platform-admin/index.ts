@@ -15,3 +15,4 @@ export type {
     WorkspaceFilter,
 } from "./platform-admin.contracts"
 export { PlatformAdminModule } from "./platform-admin.module"
+export { platformAdminEntities } from "./persistence/entities"

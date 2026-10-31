@@ -7,6 +7,7 @@ import { InventoryRecipeEntity } from "./inventory-recipe.entity"
 import { InventoryRecipeLineEntity } from "./inventory-recipe-line.entity"
 import { InventoryPurchaseOrderEntity } from "./inventory-purchase-order.entity"
 import { InventoryPoLineEntity } from "./inventory-po-line.entity"
+import { InventoryReceiptEntity } from "./inventory-receipt.entity"
 
 export {
     InventoryLocationEntity,
@@ -18,6 +19,7 @@ export {
     InventoryRecipeLineEntity,
     InventoryPurchaseOrderEntity,
     InventoryPoLineEntity,
+    InventoryReceiptEntity,
 }
 export type { InventoryItemUnit } from "./inventory-item.entity"
 export type { SupplierChannel } from "./inventory-supplier.entity"
@@ -33,4 +35,5 @@ export const inventoryEntities = [
     InventoryRecipeLineEntity,
     InventoryPurchaseOrderEntity,
     InventoryPoLineEntity,
+    InventoryReceiptEntity,
 ] as const
