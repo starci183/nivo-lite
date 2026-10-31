@@ -48,6 +48,7 @@ import {
     replacementContent,
     safeFileName,
 } from "./source-input.policy"
+import { contentHashOf } from "./source-hash.policy"
 import { SourceQuotaService } from "./source-quota.service"
 import { toSourceDetail, toSourceRecord, toSourceSummary } from "./source-record.mapper"
 
@@ -308,7 +309,7 @@ export class KnowledgeSourcesService {
         })
     }
 
-    /** The text of the source is known: it is stored with its title and the source moves to indexing, at the stage of cutting it into passages. */
+    /** The text of the source is known: it is stored with its title and the source moves to indexing, at the stage of cutting it into passages. The hash is cleared, so a text that stops half way is never taken for complete. */
     async startIndexing(workspaceId: string, sourceId: string, content: string, title: string): Promise<void> {
         await this.entityManager.update(
             KnowledgeSourceEntity,
@@ -316,6 +317,7 @@ export class KnowledgeSourcesService {
             {
                 status: "indexing",
                 content,
+                contentHash: null,
                 title,
                 progress: 20,
                 stage: "chunk",
@@ -400,6 +402,30 @@ export class KnowledgeSourcesService {
             done: null,
             total: null,
             ...(note === null ? {} : { error: note }),
+        })
+    }
+
+    /** The passages and the facts of this text are complete: the source is ready and records the hash, so the same text is not worked on again. */
+    settle(workspaceId: string, sourceId: string, content: string): Promise<void> {
+        return this.progress.write(workspaceId, sourceId, {
+            status: "ready",
+            progress: 100,
+            stage: null,
+            done: null,
+            total: null,
+            contentHash: contentHashOf(content),
+        })
+    }
+
+    /** The source already holds this text whole: it is ready again with no work done, with the note that stands, since a re-read cleared it. */
+    keepIndexed(workspaceId: string, sourceId: string, note: MaybeNote): Promise<void> {
+        return this.progress.write(workspaceId, sourceId, {
+            status: "ready",
+            progress: 100,
+            stage: null,
+            done: null,
+            total: null,
+            error: note,
         })
     }
 

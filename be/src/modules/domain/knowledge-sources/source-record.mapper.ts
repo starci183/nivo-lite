@@ -19,6 +19,7 @@ export const toSourceRecord = (row: KnowledgeSourceEntity): SourceRecord => ({
     storagePath: row.storagePath,
     sourceUrl: row.sourceUrl,
     createdBy: row.createdBy,
+    contentHash: row.contentHash,
     updatedAt: row.updatedAt.toISOString(),
 })
 

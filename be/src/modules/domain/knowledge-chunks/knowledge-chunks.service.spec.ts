@@ -284,6 +284,35 @@ describe("KnowledgeChunksService", () => {
     })
 })
 
+describe("KnowledgeChunksService holds", () => {
+    it("is false for a source with no passages", async () => {
+        const em = mockEntityManager()
+        em.exists.mockResolvedValueOnce(false)
+
+        await expect((await build(em)).holds(WS, "s1", "m1")).resolves.toBe(false)
+
+        expect(em.exists).toHaveBeenCalledTimes(1)
+    })
+
+    it("is true for any passage when no model is in use", async () => {
+        const em = mockEntityManager()
+        em.exists.mockResolvedValueOnce(true)
+
+        await expect((await build(em)).holds(WS, "s1", null)).resolves.toBe(true)
+
+        expect(em.exists).toHaveBeenCalledTimes(1)
+    })
+
+    it("is false when a passage has no vector of the model, and true when none lacks it", async () => {
+        const em = mockEntityManager()
+        em.exists.mockResolvedValueOnce(true).mockResolvedValueOnce(true)
+        await expect((await build(em)).holds(WS, "s1", "m1")).resolves.toBe(false)
+
+        em.exists.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+        await expect((await build(em)).holds(WS, "s1", "m1")).resolves.toBe(true)
+    })
+})
+
 describe("KnowledgeChunksService passagesOfSources", () => {
     it("reads the first passages of each source in one bounded query, by source then order", async () => {
         const em = mockEntityManager()

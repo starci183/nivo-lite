@@ -18,6 +18,7 @@ import type { KnowledgeOptions } from "./knowledge.options"
 import { KnowledgeError, KnowledgeErrorCode } from "./errors/knowledge.error"
 import { failureOf } from "./source-failure.policy"
 import { SourceReaderService } from "./source-reader.service"
+import { UnchangedSourceService } from "./unchanged-source.service"
 import { UsageMeterService } from "./usage-meter.service"
 
 /** The statuses from which a source is not indexed again: it is done, past this stage, or closed. */
@@ -44,6 +45,7 @@ export class KnowledgeIndexingService {
         private readonly sources: KnowledgeSourcesService,
         private readonly chunks: KnowledgeChunksService,
         private readonly reader: SourceReaderService,
+        private readonly unchanged: UnchangedSourceService,
         private readonly embeddings: EmbeddingService,
         private readonly usage: UsageMeterService,
         @InjectKnowledgeOptions() private readonly options: KnowledgeOptions,
@@ -53,18 +55,23 @@ export class KnowledgeIndexingService {
     /**
      * Indexes one source: read, chunk, embed, store; then queue the reading of its facts. A source that can never be read is closed
      * as failed with its stored code and the job ends; a failure worth retrying is thrown, for the queue to retry; `failSource` closes
-     * the source when the retries run out.
+     * the source when the retries run out. A text the source already holds whole does no work at all: a note or a file (its stored object
+     * never changes) is known unchanged before it is read, a link only after, since the page can change.
      */
     async index(run: IndexRun): Promise<IndexOutcome> {
         const source = await this.sources.sourceOf(run.workspaceId, run.sourceId)
         if (source === null || CLOSED.has(source.status)) return "skipped"
         try {
+            if (source.kind !== "url" && (await this.unchanged.holdsWhole(source, source.content.trim()))) {
+                return await this.unchanged.keep(source)
+            }
             await this.sources.begin(source.workspaceId, source.id)
             const read = await this.reader.read(source)
             if (read.kind === "refused") return await this.close(source, read.code)
             const content = read.value.text.trim()
             if (content === "") return await this.close(source, StoredNote.Empty)
             if (content.length > MAX_SOURCE_CHARS) return await this.close(source, StoredNote.TooLong)
+            if (await this.unchanged.holdsWhole(source, content)) return await this.unchanged.keep(source)
             const title = read.value.title ?? source.title
             await this.sources.startIndexing(source.workspaceId, source.id, content, title)
             return await this.store({ ...source, content, title })

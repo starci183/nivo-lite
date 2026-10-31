@@ -30,6 +30,7 @@ import { StoredNote } from "./knowledge-sources.contracts"
 import type { AddSourceInput, ReindexInput, UpdateSourceInput } from "./knowledge-sources.contracts"
 import { KNOWLEDGE_STORAGE } from "./knowledge-sources.decorators"
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
+import { contentHashOf } from "./source-hash.policy"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import { NOW } from "./source-input.policy"
 import { SourceQuotaService } from "./source-quota.service"
@@ -310,7 +311,7 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
         const em = mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] })
         const { service, progress } = await build(em)
         await service.startIndexing(WS, "s1", "text", "Title")
-        const row = matching({ status: "indexing", content: "text", title: "Title", stage: "chunk" })
+        const row = matching({ status: "indexing", contentHash: null, title: "Title", stage: "chunk" })
         expect(em.update).toHaveBeenCalledWith(KnowledgeSourceEntity, KEY, row)
         expect(progress.announce).toHaveBeenCalledWith(WS, "s1")
     })
@@ -351,22 +352,20 @@ describe("KnowledgeSourcesService the stages a worker ends a source with", () =>
         await run(service)
         expect(progress.write).toHaveBeenCalledWith(WS, "s1", { ...change, stage: null, done: null, total: null })
     }
+    const ready = { status: "ready", progress: 100 }
     const blocked = { status: "blocked_credits" }
-    it("fails", () => ends((s) => s.fail(WS, "s1", "CODE"), { status: "failed", error: "CODE" }))
-    it("is ready", () => ends((s) => s.ready(WS, "s1", null), { status: "ready", progress: 100 }))
-    it("blocks indexing for credits", () => {
-        const note = StoredNote.NoCreditsForIndex
-        return ends((s) => s.blockIndexing(WS, "s1", note, 60), {
-            ...blocked,
-            error: note,
-            chunkCount: 60,
-            progress: 80,
-        })
-    })
-    it("blocks the facts for credits", () => {
-        const note = StoredNote.NoCreditsForFacts
-        return ends((s) => s.blockFacts(WS, "s1", note), { ...blocked, error: note })
-    })
+    const forIndex = StoredNote.NoCreditsForIndex
+    const forFacts = StoredNote.NoCreditsForFacts
+    const note = StoredNote.KeywordOnly
+    const contentHash = contentHashOf("text")
+    it.each<[string, (s: KnowledgeSourcesService) => Promise<void>, object]>([
+        ["fails", (s) => s.fail(WS, "s1", "CODE"), { status: "failed", error: "CODE" }],
+        ["is ready", (s) => s.ready(WS, "s1", null), ready],
+        ["settles with the hash of the text", (s) => s.settle(WS, "s1", "text"), { ...ready, contentHash }],
+        ["keeps an unchanged source and its note", (s) => s.keepIndexed(WS, "s1", note), { ...ready, error: note }],
+        ["blocks indexing", (s) => s.blockIndexing(WS, "s1", forIndex, 60), { ...blocked, error: forIndex, chunkCount: 60, progress: 80 }],
+        ["blocks the facts", (s) => s.blockFacts(WS, "s1", forFacts), { ...blocked, error: forFacts }],
+    ])("%s", (_name, run, change) => ends(run, change))
 })
 
 describe("KnowledgeSourcesService one job per source", () => {

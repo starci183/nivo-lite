@@ -113,11 +113,12 @@ describe("columnsOf", () => {
             stageDone: null,
             stageTotal: null,
         })
-        expect(columnsOf({ stage: "embed", done: 3, total: 9, chunkCount: 9 })).toEqual({
+        expect(columnsOf({ stage: "embed", done: 3, total: 9, chunkCount: 9, contentHash: "hash" })).toEqual({
             stage: "embed",
             stageDone: 3,
             stageTotal: 9,
             chunkCount: 9,
+            contentHash: "hash",
         })
     })
 

@@ -26,6 +26,7 @@ export const row: KnowledgeSourceEntity = {
     stage: null,
     stageDone: null,
     stageTotal: null,
+    contentHash: null,
     storagePath: null,
     sourceUrl: null,
     origin: null,

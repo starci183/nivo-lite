@@ -36,6 +36,9 @@ export interface ChunkBatchWrite extends Omit<ChunkWrite, "drafts"> {
     readonly drafts: ReadonlyArray<PlacedChunkDraft>
 }
 
+/** The embedding model in use, or null when the deployment has none. */
+export type ModelInUse = string | null
+
 /** One stored passage that has a vector. */
 export interface EmbeddedChunk {
     /** The order of the passage in its source. */

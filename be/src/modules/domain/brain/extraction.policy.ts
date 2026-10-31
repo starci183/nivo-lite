@@ -2,7 +2,7 @@ import { SUBJECT_TYPES, factSlugOf } from "@modules/domain/brain-facts"
 import type { BrainSubjectType } from "@modules/domain/brain-facts"
 import { chunkText } from "@modules/domain/knowledge-chunks"
 
-/** Bump when the prompt or the rules below change meaningfully: every document is then read again once. */
+/** Bump when the prompt or the rules below change meaningfully, with a migration clearing `knowledge_sources.content_hash`, which otherwise skips an unchanged document before its facts: every document is then read again once. */
 export const PROMPT_VERSION = 1
 
 /** A window is what one model call reads: about 3,500 characters, with no overlap, so a fact is not read twice. */

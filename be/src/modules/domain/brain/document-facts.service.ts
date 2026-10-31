@@ -96,7 +96,7 @@ export class DocumentFactsService {
         const known = await this.extractions.get(workspaceId, source.id)
         const same = known !== null && known.contentHash === hash && known.promptVersion === PROMPT_VERSION
         if (same && known.status === "done") {
-            await this.sources.ready(workspaceId, source.id, null)
+            await this.sources.settle(workspaceId, source.id, source.content)
             return "skipped"
         }
         if (!same) {
@@ -245,7 +245,7 @@ export class DocumentFactsService {
                 this.logger.error(BrainLogEvent.GapsFailed, cause, { sourceId: source.id })
             }
         }
-        await this.sources.ready(workspaceId, source.id, null)
+        await this.sources.settle(workspaceId, source.id, source.content)
         await this.reviews.requestForSource(workspaceId, source.id)
         return "done"
     }

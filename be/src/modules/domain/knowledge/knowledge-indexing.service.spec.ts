@@ -15,11 +15,11 @@ import { KnowledgeErrorCode } from "./errors/knowledge.error"
 import { EMBED_BATCH } from "./knowledge.contracts"
 import { KNOWLEDGE_OPTIONS } from "./knowledge.decorators"
 import { SourceReaderService } from "./source-reader.service"
+import { UnchangedSourceService } from "./unchanged-source.service"
 import { UsageMeterService } from "./usage-meter.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const run = { sourceId: "s1", workspaceId: WS }
-/** A document of many passages, so the embedding goes in more than one batch. */
 /** Lets the pending promise chain of the service run. */
 const flush = async (): Promise<void> => {
     for (let turn = 0; turn < 20; turn += 1) await Promise.resolve()
@@ -42,6 +42,7 @@ const sourceOf = builder<SourceRecord>({
     storagePath: null,
     sourceUrl: null,
     createdBy: "u1",
+    contentHash: null,
     updatedAt: "2026-10-12T10:00:00.000Z",
 })
 
@@ -51,6 +52,7 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
     const reader = mock<SourceReaderService>()
     const embeddings = mock<EmbeddingService>()
     const usage = mock<UsageMeterService>()
+    const unchanged = mock<UnchangedSourceService>()
     const logger = mock<Logger>()
     const timer = mock<Timer>()
     const waiting: Array<{ readonly callback: () => void; readonly delayMs: number }> = []
@@ -64,6 +66,8 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
     embeddings.model.mockReturnValue("m1")
     embeddings.embed.mockResolvedValue([[0.5, 1]])
     chunks.embeddedOf.mockResolvedValue([])
+    unchanged.holdsWhole.mockResolvedValue(false)
+    unchanged.keep.mockResolvedValue("skipped")
     usage.blockedBy.mockResolvedValue(false)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -71,6 +75,7 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
             { provide: KnowledgeSourcesService, useValue: sources },
             { provide: KnowledgeChunksService, useValue: chunks },
             { provide: SourceReaderService, useValue: reader },
+            { provide: UnchangedSourceService, useValue: unchanged },
             { provide: EmbeddingService, useValue: embeddings },
             { provide: UsageMeterService, useValue: usage },
             { provide: LOGGER, useValue: logger },
@@ -83,6 +88,7 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
         sources,
         chunks,
         reader,
+        unchanged,
         embeddings,
         usage,
         logger,
@@ -378,6 +384,17 @@ describe("KnowledgeIndexingService", () => {
             await expect(service.index(run)).resolves.toBe("failed")
 
             expect(sources.fail).toHaveBeenCalledWith(WS, "s1", StoredNote.Unreadable)
+        })
+    })
+
+    describe("a text the source holds whole", () => {
+        it.each([["file", 0], ["url", 1]])("skips a %s, reading only what can change", async (kind, reads) => {
+            const { service, reader, unchanged } = await build(sourceOf({ kind }))
+            unchanged.holdsWhole.mockResolvedValue(true)
+
+            await expect(service.index(run)).resolves.toBe("skipped")
+
+            expect(reader.read).toHaveBeenCalledTimes(reads)
         })
     })
 

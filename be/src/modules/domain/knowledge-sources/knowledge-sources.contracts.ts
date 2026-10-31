@@ -158,6 +158,8 @@ export interface SourceRecord {
     readonly sourceUrl: string | null
     /** Who added it; null for an API key. */
     readonly createdBy: string | null
+    /** The SHA-256 of the text whose passages and facts are complete, or null while the work is unfinished. */
+    readonly contentHash: string | null
     /** Last change. */
     readonly updatedAt: string
 }

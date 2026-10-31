@@ -19,6 +19,7 @@ export type {
 export { KnowledgeSourcesModule } from "./knowledge-sources.module"
 export { embedPercent, knowledgeProgressTopic } from "./knowledge-progress.policy"
 export { KnowledgeSourcesService } from "./knowledge-sources.service"
+export { contentHashOf } from "./source-hash.policy"
 export { SourceQuotaService } from "./source-quota.service"
 export { SourceCategoriesService } from "./source-categories.service"
 export { DossierSourcesService } from "./dossier-sources.service"

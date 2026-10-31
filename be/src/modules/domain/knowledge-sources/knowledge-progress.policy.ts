@@ -74,4 +74,5 @@ export const columnsOf = (change: ProgressChange): Partial<KnowledgeSourceEntity
     ...(change.total === undefined ? {} : { stageTotal: change.total }),
     ...(change.error === undefined ? {} : { error: change.error }),
     ...(change.chunkCount === undefined ? {} : { chunkCount: change.chunkCount }),
+    ...(change.contentHash === undefined ? {} : { contentHash: change.contentHash }),
 })

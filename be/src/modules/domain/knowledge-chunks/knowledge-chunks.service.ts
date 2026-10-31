@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Brackets, In, MoreThanOrEqual } from "typeorm"
+import { Brackets, In, IsNull, MoreThanOrEqual, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -11,6 +11,7 @@ import type {
     ChunkQuery,
     ChunkWrite,
     EmbeddedChunk,
+    ModelInUse,
     PassageView,
     SourcePassage,
     StaleChunk,
@@ -204,6 +205,20 @@ export class KnowledgeChunksService {
             .limit(EMBEDDED_LIMIT)
             .getMany()
         return rows.map((row) => ({ order: row.ord, text: row.content, model: row.embeddingModel }))
+    }
+
+    /** Whether a source has passages and every one has a vector of `model`; with a null `model` (no embeddings here) passages are enough. */
+    async holds(workspaceId: string, sourceId: string, model: ModelInUse): Promise<boolean> {
+        const own = { workspaceId, sourceId }
+        if (!(await this.entityManager.exists(KnowledgeChunkEntity, { where: own }))) return false
+        if (model === null) return true
+        const stale = await this.entityManager.exists(KnowledgeChunkEntity, {
+            where: [
+                { ...own, embeddingModel: IsNull() },
+                { ...own, embeddingModel: Not(model) },
+            ],
+        })
+        return !stale
     }
 
     /** Up to `limit` passages of a workspace that have no vector, or one made by another model than `model`. */

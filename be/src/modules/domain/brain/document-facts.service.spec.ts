@@ -41,6 +41,7 @@ const sourceOf = builder<SourceRecord>({
     storagePath: null,
     sourceUrl: null,
     createdBy: "u1",
+    contentHash: null,
     updatedAt: AT,
 })
 type ExtractionRecord = NonNullable<Awaited<ReturnType<BrainExtractionsService["get"]>>>
@@ -163,7 +164,7 @@ describe("DocumentFactsService", () => {
         await expect(service.run(PAYLOAD)).resolves.toBe("skipped")
 
         expect(reviews.requestForSource).not.toHaveBeenCalled()
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
+        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
         expect(extractions.start).not.toHaveBeenCalled()
         expect(ai.chat).not.toHaveBeenCalled()
     })
@@ -252,7 +253,7 @@ describe("DocumentFactsService", () => {
 
         expect(gaps.resolve).not.toHaveBeenCalled()
         expect(usage.blockedBy).not.toHaveBeenCalled()
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
+        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
     })
 
     it("retries a busy model without charging usage", async () => {
@@ -383,7 +384,7 @@ describe("DocumentFactsService", () => {
             module: "chatbot",
             by: `document:${SOURCE}`,
         })
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
+        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
     })
 })
 describe("DocumentFactsService", () => {
@@ -473,7 +474,7 @@ describe("DocumentFactsService", () => {
             by: `document:${SOURCE}`,
         })
         expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.GapsFailed, cause, { sourceId: SOURCE })
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
+        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
         extractions.get.mockResolvedValue(extractionOf({ windowsDone: -1 }))
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
     })
