@@ -85,7 +85,6 @@ const registerReinforce = () => {
                             status: "rejected",
                             decidedAt: "now()",
                             decisionNote: "A source confirmed this value again",
-                            updatedAt: "now()",
                         },
                     ],
                 ])
@@ -228,7 +227,6 @@ const registerApply = () => {
             decidedAt: "now()",
             decisionNote: current ? "approved" : null,
             validFrom: "coalesce(valid_from, now())",
-            updatedAt: "now()",
         })
         expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual(
             current
@@ -236,7 +234,7 @@ const registerApply = () => {
                       [
                           "BrainFactEntity",
                           { workspaceId: facts.WS, id: "old", status: "active" },
-                          { status: "superseded", validTo: "coalesce(valid_to, now())", updatedAt: "now()" },
+                          { status: "superseded", validTo: "coalesce(valid_to, now())" },
                       ],
                   ]
                 : [],
@@ -269,13 +267,13 @@ const registerApply = () => {
             [
                 "BrainFactEntity",
                 keyed("scheduled"),
-                { status: "rejected", decisionNote: "Replaced by a newer schedule", updatedAt: "now()" },
+                { status: "rejected", decisionNote: "Replaced by a newer schedule" },
             ],
         ])
         if (current) {
             expect(writes[0]?.callsOf("where")).toEqual([[{ workspaceId: facts.WS, id: "old", status: "active" }]])
             expect(writes[0]?.callsOf("setParameter")).toEqual([["validTo", facts.LATER]])
-            expect(setOf(writes[0])).toEqual({ validTo: ":validTo::timestamptz", updatedAt: "now()" })
+            expect(setOf(writes[0])).toEqual({ validTo: ":validTo::timestamptz" })
         } else expect(writes).toHaveLength(1)
     })
 }

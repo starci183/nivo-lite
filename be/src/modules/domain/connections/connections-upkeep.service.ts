@@ -83,7 +83,6 @@ export class ConnectionsUpkeepService {
             .set({
                 syncEveryMinutes: () => ":minutes::int",
                 nextSyncAt: () => "CASE WHEN :minutes::int IS NULL THEN NULL ELSE now() END",
-                updatedAt: () => "now()",
             })
             .where({ workspaceId, id })
             .setParameter("minutes", everyMinutes)
@@ -109,7 +108,6 @@ export class ConnectionsUpkeepService {
                 nextSyncAt: () =>
                     "CASE WHEN sync_every_minutes IS NULL THEN NULL ELSE now() + make_interval(mins => sync_every_minutes) END",
                 publicMeta: () => "jsonb_concat(public_meta, CAST(:facts AS jsonb))",
-                updatedAt: () => "now()",
             })
             .where({ id: connectionId })
             .setParameter("facts", JSON.stringify(facts))
@@ -126,7 +124,6 @@ export class ConnectionsUpkeepService {
                 lastError: reason,
                 nextSyncAt: () =>
                     "CASE WHEN sync_every_minutes IS NULL THEN NULL ELSE now() + make_interval(mins => GREATEST(sync_every_minutes, 15)) END",
-                updatedAt: () => "now()",
             },
         )
     }
@@ -166,7 +163,7 @@ export class ConnectionsUpkeepService {
         await this.entityManager
             .createQueryBuilder(ConnectionEntity, "co")
             .update()
-            .set({ isDefault: () => "(id = :id)", updatedAt: () => "now()" })
+            .set({ isDefault: () => "(id = :id)" })
             .where("workspace_id = :workspaceId AND provider = 'smtp' AND (is_default OR id = :id)", {
                 workspaceId,
                 id,

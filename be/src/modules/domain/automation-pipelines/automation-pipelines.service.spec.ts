@@ -10,9 +10,6 @@ import type { PipelineRow, PipelineWrite } from "./automation-pipelines.contract
 import { AutomationPipelinesErrorCode } from "./errors/automation-pipelines.error"
 import { AutomationPipelineEntity } from "./persistence/entities"
 
-/** Stands for the `() => "now()"` expression a write hands the database. */
-const SQL_EXPRESSION: unknown = expect.any(Function)
-
 const ROW: PipelineRow = {
     id: "p-1",
     workspace_id: "ws-1",
@@ -212,7 +209,6 @@ describe("AutomationPipelinesService", () => {
                         approvalStreak: 4,
                         trustOfferedAt: null,
                         autoSend: false,
-                        updatedAt: SQL_EXPRESSION,
                     },
                 ],
             ])
@@ -245,7 +241,6 @@ describe("AutomationPipelinesService", () => {
                 {
                     approvalStreak: 3,
                     trustOfferedAt: new Date("2026-10-12T00:00:00.000Z"),
-                    updatedAt: SQL_EXPRESSION,
                 },
             )
         })
@@ -276,7 +271,6 @@ describe("AutomationPipelinesService trust offer and clock", () => {
 
         const values = fake.callsOf("values")[0]?.[0]
         expect(evaluatedValues(values).trustOfferedAt).toEqual(new Date(OFFERED))
-        expect(evaluatedValues(values).updatedAt).toBe("now()")
     })
 
     it("clears the offer of the ladder and stamps it with the database time", async () => {
@@ -286,6 +280,5 @@ describe("AutomationPipelinesService trust offer and clock", () => {
 
         const values = em.update.mock.calls[0]?.[2]
         expect(evaluatedValues(values).trustOfferedAt).toBeNull()
-        expect(evaluatedValues(values).updatedAt).toBe("now()")
     })
 })

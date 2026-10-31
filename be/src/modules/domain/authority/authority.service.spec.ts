@@ -10,9 +10,6 @@ import { AuthorityErrorCode } from "./errors/authority.error"
 import { AuthorityService } from "./authority.service"
 import { AuthorityEntity } from "./persistence/entities"
 
-/** Stands for the `() => "now()"` expression a write hands the database. */
-const SQL_EXPRESSION: unknown = expect.any(Function)
-
 const authorityOf = builder<Authority>({
     policies: "Refunds in 7 days",
     reply_style: "short",
@@ -112,7 +109,7 @@ describe("AuthorityService", () => {
                 profileOf({ policies: "P2", updated_by: "Binh", goal_revenue_vnd: 5000000 }),
             )
 
-            const stamp = { policies: "P2", updatedBy: "Binh", updatedAt: SQL_EXPRESSION }
+            const stamp = { policies: "P2", updatedBy: "Binh" }
             expect(em.upsert).toHaveBeenCalledWith(
                 AuthorityEntity,
                 expect.objectContaining({ workspaceId: "ws-1", replyStyle: "short", goalRevenueVnd: null, ...stamp }),
@@ -161,7 +158,6 @@ describe("AuthorityService", () => {
 
             const values = em.upsert.mock.calls[0]?.[1]
             expect(evaluatedValues(values).goalRevenueVnd).toBe("5000000")
-            expect(evaluatedValues(values).updatedAt).toBe("now()")
         })
 
         it("fails when the saved sheet cannot be read back", async () => {

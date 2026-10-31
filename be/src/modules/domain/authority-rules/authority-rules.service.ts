@@ -177,7 +177,6 @@ export class AuthorityRulesService {
                     limitVnd: judged.value.limit_vnd,
                     requiredFields: [...change.required_fields],
                     note: change.note ?? "",
-                    updatedAt: () => "now()",
                     ...namedSettings(settings),
                 })
                 .orUpdate(overwritten, ["workspace_id", "department", "action"])
@@ -200,7 +199,6 @@ export class AuthorityRulesService {
                 mode: () => "CASE WHEN agents = ARRAY[:agentId::uuid] THEN 'never' ELSE mode END",
                 agents: () =>
                     "CASE WHEN agents = ARRAY[:agentId::uuid] THEN agents ELSE array_remove(agents, :agentId::uuid) END",
-                updatedAt: () => "now()",
             })
             .where("workspace_id = :workspaceId AND :agentId::uuid = ANY(agents)", { workspaceId, agentId })
             .execute()

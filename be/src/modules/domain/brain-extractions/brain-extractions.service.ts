@@ -62,7 +62,6 @@ export class BrainExtractionsService {
                 windowsDone: 0,
                 attempts: 0,
                 orphanFactIds: [...start.orphanFactIds],
-                updatedAt: () => "now()",
             },
             ["sourceId"],
         )
@@ -80,7 +79,6 @@ export class BrainExtractionsService {
                 windowsTotal: progress.windowsTotal,
                 error: progress.error,
                 attempts: progress.attempts,
-                updatedAt: () => "now()",
             },
         )
     }
@@ -90,7 +88,7 @@ export class BrainExtractionsService {
         await this.entityManager.update(
             BrainExtractionEntity,
             { workspaceId, sourceId },
-            { status: "done", error: null, model, orphanFactIds: [], updatedAt: () => "now()" },
+            { status: "done", error: null, model, orphanFactIds: [] },
         )
     }
 
@@ -99,7 +97,7 @@ export class BrainExtractionsService {
         await this.entityManager.update(
             BrainExtractionEntity,
             { workspaceId, sourceId, status: Not("done") },
-            { status: "failed", error: note, updatedAt: () => "now()" },
+            { status: "failed", error: note },
         )
     }
 }

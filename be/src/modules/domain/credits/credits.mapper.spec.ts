@@ -15,7 +15,15 @@ describe("credits mapper", () => {
     it("maps every stored pack column to the catalogue pack", async () => {
         const subject = await buildSubject()
 
-        const row: CreditPackEntity = { code: "credits_1000", credits: 1000, priceVnd: 299000, sort: 2, active: true }
+        const row: CreditPackEntity = {
+            code: "credits_1000",
+            credits: 1000,
+            priceVnd: 299000,
+            sort: 2,
+            active: true,
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        }
 
         expect(subject.toCreditPack(row)).toEqual({ code: "credits_1000", credits: 1000, priceVnd: 299000, sort: 2 })
     })

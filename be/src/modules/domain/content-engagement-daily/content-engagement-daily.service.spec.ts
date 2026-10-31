@@ -80,6 +80,8 @@ describe("ContentEngagementDailyService", () => {
                 engagements: 2,
                 messages: 0,
                 syncedAt: new Date("2026-10-13T00:00:00.000Z"),
+                createdAt: new Date("2026-01-01T00:00:00.000Z"),
+                updatedAt: new Date("2026-01-01T00:00:00.000Z"),
             },
         ]
         const em = mockEntityManager({ find: [ContentEngagementDailyEntity, rows] })

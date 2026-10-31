@@ -68,7 +68,6 @@ export class AutomationTemplatesService {
                         executor: template.executor,
                         position: template.position,
                         definition: template,
-                        updatedAt: () => "now()",
                     },
                     ["key"],
                 )

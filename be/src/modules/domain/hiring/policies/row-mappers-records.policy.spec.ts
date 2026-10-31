@@ -55,6 +55,7 @@ const candidateEntity = (overrides: CandidateOverrides = {}): HiringCandidateEnt
         notes: "",
         createdAt: CREATED,
         staffId: "staff-1",
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     }
     return Object.assign(base, overrides)
 }
@@ -80,6 +81,7 @@ const interviewEntity = (overrides: InterviewOverrides = {}): HiringInterviewEnt
         reminderSentAt: null,
         note: "Bring examples",
         createdAt: CREATED,
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     }
     return Object.assign(base, overrides)
 }
@@ -108,6 +110,7 @@ const offerEntity = (overrides: OfferOverrides = {}): HiringOfferEntity => {
         respondedAt: null,
         createdBy: null,
         createdAt: CREATED,
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     }
     return Object.assign(base, overrides)
 }

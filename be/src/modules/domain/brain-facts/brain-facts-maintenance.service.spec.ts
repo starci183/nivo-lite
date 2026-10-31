@@ -52,7 +52,7 @@ const registerWithdraw = () => {
         expect(supported?.callsOf("setParameter")).toEqual([
             ["evidence", JSON.stringify([facts.OTHER, { ...facts.PROOF, ref: "doc-2" }])],
         ])
-        expect(setOf(supported)).toEqual({ evidence: ":evidence::jsonb", updatedAt: "now()" })
+        expect(setOf(supported)).toEqual({ evidence: ":evidence::jsonb" })
         expect(em.createQueryBuilder).toHaveBeenCalledTimes(6)
     })
 
@@ -100,8 +100,8 @@ const registerMaintenance = () => {
         ])
         expect(promoted?.callsOf("where")).toEqual([[{ workspaceId: facts.WS, id: "f1", status: "scheduled" }]])
         expect(expire?.callsOf("returning")).toEqual([["id"]])
-        expect(setOf(promoted)).toEqual({ status: "active", updatedAt: "now()" })
-        expect(setOf(expire)).toEqual({ status: "expired", updatedAt: "now()" })
+        expect(setOf(promoted)).toEqual({ status: "active" })
+        expect(setOf(expire)).toEqual({ status: "expired" })
     })
 
     it("counts no expirations when the statement answers no rows", async () => {

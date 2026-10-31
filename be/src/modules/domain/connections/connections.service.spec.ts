@@ -299,7 +299,6 @@ describe("ConnectionsService > patch", () => {
             environment: "test",
             publicMeta: ":meta::jsonb",
             lastError: null,
-            updatedAt: "now()",
         })
         expect(whereOf(fakes[0])).toEqual([[{ workspaceId: "ws-1", id: "c1" }]])
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["meta", '{"a":"b"}']])
@@ -308,7 +307,7 @@ describe("ConnectionsService > patch", () => {
     it("leaves every absent field alone", async () => {
         const { em, fakes } = withBuilders([{ execute: { raw: [{ id: "c1" }] } }])
         await (await build(em)).patch("ws-1", "c1", {})
-        expect(setOf(fakes[0])).toEqual({ updatedAt: "now()" })
+        expect(setOf(fakes[0])).toEqual({ workspaceId: "workspace_id" })
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["meta", null]])
     })
 
@@ -489,12 +488,11 @@ describe("ConnectionsService > intake", () => {
         await service.applyZaloAuthorization("c-1", "oa-9")
         await service.applyZaloAuthorization("c-1")
         expect(evaluatedCalls(em.update.mock.calls, 2)).toEqual([
-            ["ConnectionEntity", { id: "c-1" }, { status: "error", lastError: "Reconnect", updatedAt: "now()" }],
+            ["ConnectionEntity", { id: "c-1" }, { status: "error", lastError: "Reconnect" }],
         ])
         expect(received[0]?.callsOf("setParameter")).toEqual([["first", JSON.stringify(first)]])
         expect(setOf(received[0])).toEqual({
             lastEventAt: "now()",
-            updatedAt: "now()",
             status: "CASE WHEN status IN ('pending', 'error') THEN 'connected' ELSE status END",
             lastError: "CASE WHEN status IN ('pending', 'error') THEN NULL ELSE last_error END",
             firstEvent: "COALESCE(first_event, :first::jsonb)",
@@ -503,7 +501,6 @@ describe("ConnectionsService > intake", () => {
             publicMeta: "jsonb_concat(public_meta, CAST(:meta AS jsonb))",
             status: "CASE WHEN status = 'error' THEN 'connected' ELSE status END",
             lastError: null,
-            updatedAt: "now()",
         })
         expect(zalo.map((fake) => fake.callsOf("setParameter")[0])).toEqual([
             ["meta", '{"authorized":true,"oa_id":"oa-9"}'],
@@ -557,7 +554,6 @@ describe("ConnectionsService > settleWizard", () => {
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["facts", facts]])
         expect(setOf(fakes[0])).toEqual({
             publicMeta: "jsonb_concat(public_meta, CAST(:facts AS jsonb))",
-            updatedAt: "now()",
         })
         expect(whereOf(fakes[0])).toEqual([[{ id: "c-1" }]])
     })

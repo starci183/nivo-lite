@@ -80,7 +80,6 @@ export class IdentityPasswordResetService {
             userId,
             tokenHash: digestOf(token),
             purpose,
-            createdAt: now,
             expiresAt: new Date(now.getTime() + ttlSeconds * 1000),
         })
         return token

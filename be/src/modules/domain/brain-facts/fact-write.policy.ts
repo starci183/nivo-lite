@@ -6,7 +6,6 @@ export const decisionOf = (status: "rejected" | "expired", note: string | null, 
     ...(decidedBy === undefined ? {} : { decidedBy }),
     decidedAt: () => "now()",
     decisionNote: note,
-    updatedAt: () => "now()",
 })
 
 /** The changes that approve a proposal as scheduled for later, replacing the value it will follow. */
@@ -17,7 +16,6 @@ export const scheduleChanges = (currentId: string | null, decidedBy: string, rea
     decidedBy,
     decidedAt: () => "now()",
     decisionNote: reason,
-    updatedAt: () => "now()",
 })
 
 /** The changes that approve a proposal as the value in force from now (or from its own start). */
@@ -29,12 +27,10 @@ export const activateChanges = (currentId: string | null, decidedBy: string, rea
     decidedAt: () => "now()",
     decisionNote: reason,
     validFrom: () => "coalesce(valid_from, now())",
-    updatedAt: () => "now()",
 })
 
 /** The changes that close the value in force as history. */
 export const SUPERSEDE: FactChanges = {
     status: "superseded",
     validTo: () => "coalesce(valid_to, now())",
-    updatedAt: () => "now()",
 }

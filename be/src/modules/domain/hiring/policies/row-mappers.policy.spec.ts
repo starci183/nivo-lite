@@ -117,6 +117,7 @@ describe("row mappers policy", () => {
             applyConsentText: "Consent example",
             adTone: "Friendly",
             updatedAt: new Date("2026-10-01T00:00:00.000Z"),
+            createdAt: new Date("2026-10-01T00:00:00.000Z"),
         }
         expect(subject.toSettings(row)).toEqual({
             workspaceId: "ws-1",

@@ -48,7 +48,7 @@ export class BrainFactsMaintenanceService {
             await this.entityManager
                 .createQueryBuilder(BrainFactEntity, "bf")
                 .update()
-                .set({ evidence: () => ":evidence::jsonb", updatedAt: () => "now()" })
+                .set({ evidence: () => ":evidence::jsonb" })
                 .where({ workspaceId, id: fact.id })
                 .setParameter("evidence", JSON.stringify(rest))
                 .execute()
@@ -81,7 +81,7 @@ export class BrainFactsMaintenanceService {
             const promoted = await this.entityManager
                 .createQueryBuilder(BrainFactEntity, "bf")
                 .update()
-                .set({ status: "active", updatedAt: () => "now()" })
+                .set({ status: "active" })
                 .where({ workspaceId, id: fact.id, status: "scheduled" })
                 .returning(RETURNED)
                 .execute()
@@ -91,7 +91,7 @@ export class BrainFactsMaintenanceService {
         const expired = await this.entityManager
             .createQueryBuilder(BrainFactEntity, "bf")
             .update()
-            .set({ status: "expired", updatedAt: () => "now()" })
+            .set({ status: "expired" })
             .where({ workspaceId, status: "active", validTo: Raw((column) => `${column} < now()`) })
             .returning("id")
             .execute()

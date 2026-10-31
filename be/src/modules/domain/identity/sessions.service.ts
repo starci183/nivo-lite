@@ -58,7 +58,6 @@ export class IdentitySessionsService {
                 sessionId,
                 userId: subject.userId,
                 tokenHash: digestOf(refreshToken),
-                createdAt: now,
                 expiresAt: this.refreshExpiry(now),
             })
         })
@@ -87,7 +86,6 @@ export class IdentitySessionsService {
                 sessionId: row.sessionId,
                 userId: row.userId,
                 tokenHash: digestOf(nextToken),
-                createdAt: now,
                 expiresAt: this.refreshExpiry(now),
             })
             await scoped.delete(IdentityRefreshTokenEntity, { userId: row.userId, expiresAt: LessThan(now) })

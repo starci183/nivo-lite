@@ -138,7 +138,6 @@ export class AutomationPipelinesService {
                 approvalStreak: write.approvalStreak,
                 trustOfferedAt: write.trustOfferedAt === null ? null : new Date(write.trustOfferedAt),
                 autoSend: write.autoSend,
-                updatedAt: () => "now()",
             })
             .orUpdate(UPSERT_COLUMNS, ["workspace_id", "template_key"])
             .execute()
@@ -155,7 +154,6 @@ export class AutomationPipelinesService {
             {
                 approvalStreak: streak,
                 trustOfferedAt: offeredAt === null ? null : new Date(offeredAt),
-                updatedAt: () => "now()",
             },
         )
     }

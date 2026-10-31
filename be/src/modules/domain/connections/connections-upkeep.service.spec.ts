@@ -89,7 +89,6 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
         expect(setOf(fakes[0])).toEqual({
             syncEveryMinutes: ":minutes::int",
             nextSyncAt: "CASE WHEN :minutes::int IS NULL THEN NULL ELSE now() END",
-            updatedAt: "now()",
         })
     })
 
@@ -119,11 +118,10 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
                     lastError: "Expired token",
                     nextSyncAt:
                         "CASE WHEN sync_every_minutes IS NULL THEN NULL ELSE now() + make_interval(mins => GREATEST(sync_every_minutes, 15)) END",
-                    updatedAt: "now()",
                 },
             ],
         ])
-        expect(setOf(fakes[1])).toEqual({ isDefault: "(id = :id)", updatedAt: "now()" })
+        expect(setOf(fakes[1])).toEqual({ isDefault: "(id = :id)" })
         expect(fakes[1]?.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND provider = 'smtp' AND (is_default OR id = :id)",

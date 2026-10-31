@@ -44,9 +44,6 @@ const buildWith = async (entityManager: MockEntityManager, registered = true, mo
 const build = async (entityManager: MockEntityManager, registered = true, mode: string | null = null) =>
     (await buildWith(entityManager, registered, mode)).service
 
-/** The SQL expression the upsert stamps the save moment with. */
-const NOW_EXPRESSION: unknown = expect.any(Function)
-
 /** The answer of an upsert that stored these rows. */
 const upserted = (...rows: Array<AuthorityRuleEntity>): QueryBuilderAnswers => ({ execute: { raw: rows } })
 
@@ -203,7 +200,6 @@ describe("AuthorityRulesService > save", () => {
                     limitVnd: 1000,
                     requiredFields: ["contact"],
                     note: "",
-                    updatedAt: NOW_EXPRESSION,
                 },
             ],
         ])
@@ -248,7 +244,6 @@ describe("AuthorityRulesService > save, approval settings", () => {
                     limitVnd: null,
                     requiredFields: ["contact"],
                     note: "Be careful",
-                    updatedAt: NOW_EXPRESSION,
                     unit: "percent",
                     autoMax: 3,
                     askMax: 15,
@@ -307,6 +302,16 @@ describe("AuthorityRulesService > save, refusals", () => {
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
+    it("refuses an action when the upsert answers no row list", async () => {
+        const { em } = saving({ execute: { raw: undefined } })
+        const service = await build(em)
+
+        await expect(service.save("ws-1", changeOf())).rejects.toMatchObject({
+            code: AuthorityRulesErrorCode.UnknownAction,
+            params: { action: "send_follow_up" },
+        })
+    })
+
     it("refuses an action when the upsert stores no row", async () => {
         const { em } = saving(upserted())
         const service = await build(em)
@@ -321,26 +326,6 @@ describe("AuthorityRulesService > save, refusals", () => {
 /** The SQL text of the expression a statement set or inserted for `key`. */
 const expressionOf = (calls: ReadonlyArray<ReadonlyArray<unknown>> | undefined, key: string): unknown =>
     evaluatedValues(calls?.[0]?.[0])[key]
-
-describe("AuthorityRulesService > save, database clock", () => {
-    it("stamps the saved rule with the database time", async () => {
-        const { em, fakes } = saving(upserted(askRuleEntity()))
-        const service = await build(em)
-
-        await service.save("ws-1", changeOf())
-
-        expect(expressionOf(fakes[0]?.callsOf("values"), "updatedAt")).toBe("now()")
-    })
-
-    it("refuses an action when the upsert answers no row list", async () => {
-        const { em } = saving({ execute: { raw: undefined } })
-        const service = await build(em)
-
-        await expect(service.save("ws-1", changeOf())).rejects.toMatchObject({
-            code: AuthorityRulesErrorCode.UnknownAction,
-        })
-    })
-})
 
 describe("AuthorityRulesService > seedDefaults", () => {
     it("inserts the module defaults without changing their fields and keeps the rules the owner set", async () => {
@@ -403,7 +388,6 @@ describe("AuthorityRulesService > disableForAgent", () => {
         expect(expressionOf(fake?.callsOf("set"), "agents")).toBe(
             "CASE WHEN agents = ARRAY[:agentId::uuid] THEN agents ELSE array_remove(agents, :agentId::uuid) END",
         )
-        expect(expressionOf(fake?.callsOf("set"), "updatedAt")).toBe("now()")
         expect(fake?.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND :agentId::uuid = ANY(agents)",

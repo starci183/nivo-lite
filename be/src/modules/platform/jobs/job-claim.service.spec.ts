@@ -120,8 +120,6 @@ describe("JobClaimService", () => {
                         claimedBy: "w-1",
                         leaseExpiresAt: new Date("2026-02-03T04:06:06.000Z"),
                         payload: { id: "m-1" },
-                        createdAt: new Date(AT),
-                        updatedAt: new Date(AT),
                     },
                 ],
             ])
@@ -146,7 +144,6 @@ describe("JobClaimService", () => {
                 leaseExpiresAt: new Date("2026-02-03T04:06:06.000Z"),
                 status: "running",
                 error: null,
-                updatedAt: new Date(AT),
             })
             const bump: unknown = Reflect.get(set ?? {}, "fencingToken")
             expect(typeof bump === "function" ? Reflect.apply(bump, undefined, []) : bump).toBe("fencing_token + 1")
@@ -190,18 +187,15 @@ describe("JobClaimService", () => {
 
             expect(manager.update).toHaveBeenNthCalledWith(1, JobEntity, held, {
                 currentStep: "send",
-                updatedAt: new Date(AT),
             })
             expect(manager.update).toHaveBeenNthCalledWith(2, JobEntity, held, {
                 status: "done",
                 leaseExpiresAt: null,
-                updatedAt: new Date(AT),
             })
             expect(manager.update).toHaveBeenNthCalledWith(3, JobEntity, held, {
                 status: "failed",
                 error: "boom",
                 leaseExpiresAt: null,
-                updatedAt: new Date(AT),
             })
         })
 

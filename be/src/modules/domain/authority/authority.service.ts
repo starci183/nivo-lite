@@ -79,7 +79,6 @@ export class AuthorityService {
                 goalFirstReplyMinutes: next.goal_first_reply_minutes,
                 goalNote: next.goal_note,
                 updatedBy,
-                updatedAt: () => "now()",
             },
             ["workspaceId"],
         )

@@ -242,17 +242,18 @@ export class ConnectionsService {
         if (patch.name !== undefined && name === null) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.NameInvalid })
         }
+        const fields = {
+            ...(name === null ? {} : { name }),
+            ...(patch.status === undefined ? {} : { status: patch.status }),
+            ...(patch.environment === undefined ? {} : { environment: patch.environment }),
+            ...(patch.meta === undefined ? {} : { publicMeta: () => ":meta::jsonb" }),
+            ...(patch.lastError === undefined ? {} : { lastError: patch.lastError }),
+        }
         const updated = await this.entityManager
             .createQueryBuilder(ConnectionEntity, "co")
             .update()
-            .set({
-                ...(name === null ? {} : { name }),
-                ...(patch.status === undefined ? {} : { status: patch.status }),
-                ...(patch.environment === undefined ? {} : { environment: patch.environment }),
-                ...(patch.meta === undefined ? {} : { publicMeta: () => ":meta::jsonb" }),
-                ...(patch.lastError === undefined ? {} : { lastError: patch.lastError }),
-                updatedAt: () => "now()",
-            })
+            // An empty patch still needs one assignment: the self-assignment lets the update trigger stamp updated_at and the row check run.
+            .set(Object.keys(fields).length === 0 ? { workspaceId: () => "workspace_id" } : fields)
             .where({ workspaceId, id })
             .setParameter("meta", patch.meta === undefined ? null : JSON.stringify(patch.meta))
             .returning("id")
@@ -318,7 +319,6 @@ export class ConnectionsService {
             .set({
                 lastEventAt: () => ":at::timestamptz",
                 lastError: null,
-                updatedAt: () => ":at::timestamptz",
                 status: () => RECOVERED_STATUS,
                 firstEvent: () => "COALESCE(first_event, :first::jsonb)",
             })
@@ -363,11 +363,7 @@ export class ConnectionsService {
 
     /** Marks the connection as failing with the reason the owner reads on Connections. */
     async markFailing(connectionId: string, reason: string): Promise<void> {
-        await this.entityManager.update(
-            ConnectionEntity,
-            { id: connectionId },
-            { status: "error", lastError: reason, updatedAt: () => "now()" },
-        )
+        await this.entityManager.update(ConnectionEntity, { id: connectionId }, { status: "error", lastError: reason })
     }
 
     /**
@@ -379,7 +375,6 @@ export class ConnectionsService {
             .update()
             .set({
                 lastEventAt: () => "now()",
-                updatedAt: () => "now()",
                 status: () => RECOVERED_STATUS,
                 lastError: () => "CASE WHEN status IN ('pending', 'error') THEN NULL ELSE last_error END",
                 firstEvent: () => "COALESCE(first_event, :first::jsonb)",
@@ -398,7 +393,6 @@ export class ConnectionsService {
                 publicMeta: () => "jsonb_concat(public_meta, CAST(:meta AS jsonb))",
                 status: () => "CASE WHEN status = 'error' THEN 'connected' ELSE status END",
                 lastError: null,
-                updatedAt: () => "now()",
             })
             .where({ id: connectionId })
             .setParameter(
@@ -424,7 +418,7 @@ export class ConnectionsService {
         await this.entityManager
             .createQueryBuilder(ConnectionEntity, "co")
             .update()
-            .set({ publicMeta: () => "jsonb_concat(public_meta, CAST(:facts AS jsonb))", updatedAt: () => "now()" })
+            .set({ publicMeta: () => "jsonb_concat(public_meta, CAST(:facts AS jsonb))" })
             .where({ id: connectionId })
             .andWhere("public_meta -> 'wizard' ->> 'ticket' = :ticket", { ticket })
             .setParameter("facts", JSON.stringify(facts))

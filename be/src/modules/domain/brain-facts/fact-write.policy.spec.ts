@@ -44,7 +44,6 @@ describe("fact-write.policy decisionOf", () => {
             decidedBy: "user-1",
             decidedAt: "now()",
             decisionNote: "wrong price",
-            updatedAt: "now()",
         })
     })
 
@@ -57,7 +56,6 @@ describe("fact-write.policy decisionOf", () => {
             status: "expired",
             decidedAt: "now()",
             decisionNote: null,
-            updatedAt: "now()",
         })
         expect("decidedBy" in changes).toBe(false)
     })
@@ -74,7 +72,6 @@ describe("fact-write.policy scheduleChanges", () => {
             decidedBy: "user-1",
             decidedAt: "now()",
             decisionNote: "next season",
-            updatedAt: "now()",
         })
     })
 
@@ -100,7 +97,6 @@ describe("fact-write.policy activateChanges", () => {
             decidedAt: "now()",
             decisionNote: "confirmed",
             validFrom: "coalesce(valid_from, now())",
-            updatedAt: "now()",
         })
     })
 
@@ -119,7 +115,6 @@ describe("fact-write.policy SUPERSEDE", () => {
         expect(resolved(SUPERSEDE)).toEqual({
             status: "superseded",
             validTo: "coalesce(valid_to, now())",
-            updatedAt: "now()",
         })
     })
 })

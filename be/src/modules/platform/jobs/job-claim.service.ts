@@ -91,8 +91,6 @@ export class JobClaimService implements JobClaims {
                 claimedBy: params.workerId,
                 leaseExpiresAt,
                 payload: params.payload,
-                createdAt: now,
-                updatedAt: now,
             })
             .orIgnore()
             .returning(CLAIM_COLUMNS)
@@ -108,7 +106,6 @@ export class JobClaimService implements JobClaims {
                 leaseExpiresAt,
                 status: "running",
                 error: null,
-                updatedAt: now,
             })
             .where(RECLAIMABLE, {
                 jobKey: params.jobKey,
@@ -135,20 +132,17 @@ export class JobClaimService implements JobClaims {
 
     /** Records a finished step under the token the caller holds. */
     advance(write: AdvanceWrite): Promise<void> {
-        return this.guarded({ currentStep: write.step, updatedAt: this.clock.now() }, write)
+        return this.guarded({ currentStep: write.step }, write)
     }
 
     /** Completes the job under the token the caller holds. */
     complete(write: GuardedWrite): Promise<void> {
-        return this.guarded({ status: "done", leaseExpiresAt: null, updatedAt: this.clock.now() }, write)
+        return this.guarded({ status: "done", leaseExpiresAt: null }, write)
     }
 
     /** Marks the job failed under the token the caller holds, so the queue can retry it. */
     fail(write: FailWrite): Promise<void> {
-        return this.guarded(
-            { status: "failed", error: write.reason, leaseExpiresAt: null, updatedAt: this.clock.now() },
-            write,
-        )
+        return this.guarded({ status: "failed", error: write.reason, leaseExpiresAt: null }, write)
     }
 
     /** Holds the live fence across domain effects; no job-row writes may be attempted inside the callback. */

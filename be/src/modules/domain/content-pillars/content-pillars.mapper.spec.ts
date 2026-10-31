@@ -12,6 +12,7 @@ const row: ContentPillarEntity = {
     weight: 3,
     sort: 1,
     active: true,
+    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 }
 
 const build = async (rows: ReadonlyArray<ContentPillarDraft>) => {

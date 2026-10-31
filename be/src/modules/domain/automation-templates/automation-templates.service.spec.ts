@@ -1,5 +1,4 @@
 import { Test } from "@nestjs/testing"
-import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -16,9 +15,6 @@ import { AutomationTemplatesLogEvent } from "./automation-templates.log-events"
 import { AutomationTemplatesService } from "./automation-templates.service"
 import { AutomationTemplatesErrorCode } from "./errors/automation-templates.error"
 import { AutomationTemplateEntity } from "./persistence/entities"
-
-/** Stands for the `() => "now()"` expression a write hands the database. */
-const SQL_EXPRESSION: unknown = expect.any(Function)
 
 /** Stands for the stored definition a sync writes: it contains the catalogue entry. */
 const EXPECTED_DEFINITION: unknown = expect.objectContaining(definitionOf("a_two", 2))
@@ -121,11 +117,9 @@ describe("AutomationTemplatesService", () => {
                     executor: "implemented",
                     position: 2,
                     definition: EXPECTED_DEFINITION,
-                    updatedAt: SQL_EXPRESSION,
                 },
                 ["key"],
             )
-            expect(evaluatedValues(tx.em.upsert.mock.calls[0]?.[1]).updatedAt).toBe("now()")
             expect(tx.em.find).toHaveBeenCalledTimes(2)
             expect(tx.em.upsert).toHaveBeenCalledTimes(2)
         })
