@@ -27,7 +27,8 @@ export const SepayEnvironmentPicker = (props: SepayEnvironmentPickerProps) => {
                     { value: "test", label: t("envTestShort") },
                     { value: "live", label: t("envLive") },
                 ],
-                isDisabled: role !== "owner" || slot.items === undefined || isPending,
+                isDisabled:
+                    role !== "owner" || slot.items === undefined || slot.items.status === "disconnected" || isPending,
                 isSkeleton: slot.items === undefined,
             }}
             on={{

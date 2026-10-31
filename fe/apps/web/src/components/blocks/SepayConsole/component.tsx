@@ -22,7 +22,6 @@ export interface SepayHeaderView {
     readonly facts: string
     /** Why the last delivery failed, worded by the back end; empty when nothing failed. */
     readonly lastError: string
-    readonly isDisconnected: boolean
 }
 
 /** The confirmation of a disconnect. */
@@ -55,6 +54,13 @@ export interface SepayConsoleBaseProps {
         readonly errorTitle: string
         /** Disconnect belongs to the workspace owner; absent for everyone else, whom the back end refuses. */
         readonly disconnect?: { readonly title: string; readonly description: string; readonly label: string }
+        /** A disconnected connection is read-only: the way to connect it again, absent while it is connected. */
+        readonly reconnect?: {
+            readonly title: string
+            readonly description: string
+            readonly label: string
+            readonly href: string
+        }
         readonly isPending: boolean
         readonly confirm: SepayDisconnectConfirm
     }
@@ -116,6 +122,26 @@ const NoticeBand = (props: SepayBandProps) => {
     )
 }
 
+/** The band of a disconnected connection: the page is read-only and this leads to connecting it again. */
+const ReconnectBand = (props: SepayBandProps) => {
+    const { reconnect } = props.props
+    if (reconnect === undefined) return null
+    return (
+        <PaneSection>
+            <SectionHeader
+                level={2}
+                title={reconnect.title}
+                description={reconnect.description}
+                action={
+                    <Button intent="alternative" href={reconnect.href}>
+                        {reconnect.label}
+                    </Button>
+                }
+            />
+        </PaneSection>
+    )
+}
+
 const DisconnectBand = (props: SepayBandProps) => {
     const { disconnect } = props.props
     if (disconnect === undefined) return null
@@ -161,6 +187,7 @@ export const SepayConsoleBase = (props: SepayConsoleBaseProps) => {
                     columns={{ base: ["fill"], medium: ["fill", "standard"] }}
                 >
                     <Pane area="main" surface scroll label={props.props.mainLabel}>
+                        <ReconnectBand props={props.props} on={props.on} />
                         <NoticeBand props={props.props} on={props.on} />
                         {isFailed(props.props.slot) ? null : props.shape.main}
                         <DisconnectBand props={props.props} on={props.on} />

@@ -10,13 +10,22 @@ import {
     MAP_ROOT_ID,
     MAP_STATUS_FILTERS,
     mapGraphOf,
+    reviewedStatusOf,
     selectionOf,
     sizeLabelOf,
     statusCountsOf,
     useBrainDossiers,
     useBrainPageHeader,
+    useDossierReviewSummary,
 } from "@/hooks/brain"
-import type { CategoryView, DossierView, MapSelection, MapStatusFilter, NumberFormatter } from "@/hooks/brain"
+import type {
+    CategoryView,
+    DossierView,
+    MapSelection,
+    MapStatusFilter,
+    MapStatusOf,
+    NumberFormatter,
+} from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { brainDossierHref, brainTabHref } from "@/modules/routes"
@@ -43,12 +52,12 @@ const PLACEHOLDER: MapContent = {
 }
 
 /** A dossier row of the selected category: its name and what is missing, leading to the map with it selected. */
-const dossierRowOf = (t: Translate, dossier: DossierView) => ({
+const dossierRowOf = (t: Translate, dossier: DossierView, statusOf: MapStatusOf) => ({
     id: dossier.id,
     label: dossier.name,
     description: dossier.note === null ? null : dossier.note.text,
     href: brainTabHref("map", { node: dossier.id }),
-    badge: { label: t(`status_${dossier.status}`), tone: DOSSIER_STATUS_TONE[dossier.status] },
+    badge: { label: t(`status_${statusOf(dossier)}`), tone: DOSSIER_STATUS_TONE[statusOf(dossier)] },
 })
 
 const categoryTitleOf = (category: CategoryView): string =>
@@ -60,6 +69,7 @@ const detailOf = (
     format: NumberFormatter,
     categories: ReadonlyArray<CategoryView>,
     selection: MapSelection,
+    statusOf: MapStatusOf,
 ): MapDetailView => {
     if (selection.kind === "category") {
         const { category } = selection
@@ -70,7 +80,7 @@ const detailOf = (
                 t("categoryMeta", { count: category.documentCount, size: sizeLabelOf(category.sizeBytes, format) }),
             ],
             rowsLabel: t("mapCategoryRows"),
-            rows: category.dossiers.map((dossier) => dossierRowOf(t, dossier)),
+            rows: category.dossiers.map((dossier) => dossierRowOf(t, dossier, statusOf)),
             action: null,
         }
     }
@@ -81,8 +91,8 @@ const detailOf = (
             badges: [
                 {
                     id: "status",
-                    label: t(`status_${dossier.status}`),
-                    tone: DOSSIER_STATUS_TONE[dossier.status],
+                    label: t(`status_${statusOf(dossier)}`),
+                    tone: DOSSIER_STATUS_TONE[statusOf(dossier)],
                 },
                 { id: "documents", label: t("dossierDocuments", { count: dossier.documentCount }), tone: "muted" },
             ],
@@ -97,7 +107,7 @@ const detailOf = (
         badges: [],
         lines: [t("mapDetailHint")],
         rowsLabel: t("mapStatusRows"),
-        rows: statusCountsOf(categories).map((one) => ({
+        rows: statusCountsOf(categories, statusOf).map((one) => ({
             id: one.status,
             label: t(`status_${one.status}`),
             description: null,
@@ -120,6 +130,8 @@ export const BrainMap = (props: BrainMapProps) => {
     const slotLabels = useSlotLabels()
     const { categories, slot, reload } = useBrainDossiers()
     const header = useBrainPageHeader("map", props.header)
+    const summary = useDossierReviewSummary()
+    const statusOf: MapStatusOf = (dossier) => reviewedStatusOf(dossier.status, summary.reviewOf(dossier.id)).status
     const [filter, setFilter] = useState<MapStatusFilter>("all")
     const [isDetailOpen, setDetailOpen] = useState(false)
     const all = categories ?? []
@@ -149,10 +161,10 @@ export const BrainMap = (props: BrainMapProps) => {
                 })),
                 filter,
                 selectedId: selection.kind === "none" ? null : (props.node ?? null),
-                slot: mapSlot(slot, (rows) => mapGraphOf(rows, words, filter)),
+                slot: mapSlot(slot, (rows) => mapGraphOf(rows, words, filter, statusOf)),
                 placeholder: PLACEHOLDER,
                 slotLabels: slotLabels(t("dossiersEmpty")),
-                detail: detailOf(t, format, all, selection),
+                detail: detailOf(t, format, all, selection, statusOf),
             }}
             on={{
                 select,

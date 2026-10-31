@@ -16,6 +16,8 @@ export interface StoredSecret {
     readonly plain: string
     /** The random secret of the connection's own webhook. */
     readonly webhookSecret: string
+    /** When the credential was last written (ISO time): a rotated key starts again from here. Absent on a value built by hand. */
+    readonly sealedAt?: string
 }
 
 /** The stored secret of a connection, or null when it has none. */

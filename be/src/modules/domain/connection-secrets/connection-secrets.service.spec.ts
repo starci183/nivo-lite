@@ -300,18 +300,25 @@ const registerCreate = () => {
         await expect((await build(found)).read("c-1")).resolves.toEqual({
             plain: "stored-token",
             webhookSecret: "hook",
+            sealedAt: "2026-01-01T00:00:00.000Z",
         })
         await expect((await build(missing)).read("c-9")).resolves.toBeNull()
         expect(evaluatedCalls(found.findOne.mock.calls)).toEqual([
             [
                 "ConnectionSecretEntity",
-                { select: { ciphertext: true, webhookSecret: true }, where: { connectionId: "c-1" } },
+                {
+                    select: { ciphertext: true, webhookSecret: true, updatedAt: true },
+                    where: { connectionId: "c-1" },
+                },
             ],
         ])
         expect(evaluatedCalls(missing.findOne.mock.calls)).toEqual([
             [
                 "ConnectionSecretEntity",
-                { select: { ciphertext: true, webhookSecret: true }, where: { connectionId: "c-9" } },
+                {
+                    select: { ciphertext: true, webhookSecret: true, updatedAt: true },
+                    where: { connectionId: "c-9" },
+                },
             ],
         ])
     })

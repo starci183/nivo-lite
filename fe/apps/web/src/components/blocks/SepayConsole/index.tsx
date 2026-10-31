@@ -6,7 +6,7 @@ import { useState } from "react"
 import { sepayStatusTone, useSepayCommands, useSepayConnection, useSepayPlaceholder } from "@/hooks/sepayConnection"
 import type { SepayConnectionView } from "@/modules/types"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
-import { useConnectionsRole } from "@/hooks/connections"
+import { useConnectionsRole, wizardQuery } from "@/hooks/connections"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { SepayConsoleBase } from "./component"
@@ -31,7 +31,16 @@ const viewOf = (
     environmentTone: connection.environment === "test" ? "warning" : "success",
     facts: t("facts", { bank: connection.bank, account: `${connection.accountMasked} · ${connection.holder}` }),
     lastError: connection.lastError ?? "",
-    isDisconnected: connection.status === "disconnected",
+})
+
+type SepayTranslate = ReturnType<typeof useTranslations<"sepayConnection">>
+
+/** The way back from a disconnected connection: the Connections page with the SePay wizard open. */
+const reconnectOf = (t: SepayTranslate, hubHref: string) => ({
+    title: t("disconnectedTitle"),
+    description: t("disconnectedBody"),
+    label: t("reconnect"),
+    href: `${hubHref}?${wizardQuery("sepay")}`,
 })
 
 /**
@@ -75,6 +84,7 @@ export const SepayConsole = (props: SepayConsoleProps) => {
                     isOpen: isRailOpen,
                 },
                 errorTitle: t("lastErrorTitle"),
+                ...(connection?.status === "disconnected" ? { reconnect: reconnectOf(t, props.hubHref) } : {}),
                 ...(canDisconnect
                     ? {
                           disconnect: {

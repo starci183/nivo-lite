@@ -130,10 +130,16 @@ export class ConnectionSecretsService {
     /** The opened credential of a connection, or null when it has none; throws when it cannot be opened with the current key. */
     async read(connectionId: string): Promise<OptionalStoredSecret> {
         const row = await this.entityManager.findOne(ConnectionSecretEntity, {
-            select: { ciphertext: true, webhookSecret: true },
+            select: { ciphertext: true, webhookSecret: true, updatedAt: true },
             where: { connectionId },
         })
-        return row === null ? null : { plain: openSecret(this.key, row.ciphertext), webhookSecret: row.webhookSecret }
+        return row === null
+            ? null
+            : {
+                  plain: openSecret(this.key, row.ciphertext),
+                  webhookSecret: row.webhookSecret,
+                  sealedAt: row.updatedAt.toISOString(),
+              }
     }
 
     /** Seals and stores the credential; the webhook secret changes only when one is given (a new row gets a random one). */

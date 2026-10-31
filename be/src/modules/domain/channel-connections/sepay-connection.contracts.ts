@@ -56,7 +56,7 @@ export interface SepayWebhookEvent {
 
 /** The health of the webhook door of one connection. */
 export interface SepayHealth {
-    /** When the last delivery arrived, or null when none ever did. */
+    /** When the last authorized delivery arrived after the current key was written, or null when none did. */
     readonly lastWebhookAt: string | null
     /** Deliveries in the last 24 hours whose API key was valid. */
     readonly validCount: number

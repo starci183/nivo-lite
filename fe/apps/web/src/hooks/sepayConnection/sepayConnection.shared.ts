@@ -102,7 +102,7 @@ export const SEPAY_STEP_IDS: ReadonlyArray<SepayStepId> = ["environment", "accou
 export const sepaySetupDone = (view: SepayConnectionView): ReadonlyArray<readonly [SepayStepId, boolean]> => [
     ["environment", true],
     ["account", view.hasFullAccount],
-    ["paste", view.pingSeenAt !== null || view.transactionSeenAt !== null || view.health.lastWebhookAt !== null],
+    ["paste", view.health.lastWebhookAt !== null],
     ["test", view.transactionSeenAt !== null],
     ["agents", view.agentIds.length > 0],
 ]
