@@ -34,7 +34,7 @@ import { inviteLinkMail, passwordLinkMail } from "./password-mail.policy"
 import { normalizeEmail } from "./password.policy"
 import { IdentityPasswordResetService } from "./password-reset.service"
 import { IdentitySessionsService } from "./sessions.service"
-import { authDoors } from "./persistence/identity-auth.sql"
+import { authDoors } from "./persistence/auth-doors"
 
 /** The metadata key of the picture a person uploaded; the Google sign-in never rewrites it. */
 const UPLOADED_AVATAR_KEY = "nivo_avatar_url"

@@ -20,7 +20,7 @@ import type { IdentityAuthOptions } from "./identity-auth.options"
 import { passwordLinkMail } from "./password-mail.policy"
 import { digestOf, isAcceptablePassword, normalizeEmail } from "./password.policy"
 import { IdentityPasswordResetService } from "./password-reset.service"
-import { authDoors } from "./persistence/identity-auth.sql"
+import { authDoors } from "./persistence/auth-doors"
 import { IdentityPasswordTokenEntity } from "./persistence/entities"
 
 const MAX_NAME_CHARACTERS = 120
