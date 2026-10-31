@@ -40,6 +40,16 @@ describe("aiGatewayOf", () => {
             ])
         })
 
+        it("pools the numbered siblings of the upstream key, in order, and skips a gap", async () => {
+            const options = await parse({ OPENROUTER_API_KEY: "a", OPENROUTER_API_KEY_2: "b", OPENROUTER_API_KEY_4: "d" })
+
+            expect(options.providers[0]?.keys.map((key) => [key.alias, key.secret.reveal()])).toEqual([
+                ["OPENROUTER_API_KEY", "a"],
+                ["OPENROUTER_API_KEY_2", "b"],
+                ["OPENROUTER_API_KEY_4", "d"],
+            ])
+        })
+
         it("lets LLM_* move the endpoint, the key and the work model", async () => {
             const options = await parse({
                 LLM_API_KEY: "sk-x",
@@ -72,29 +82,23 @@ describe("aiGatewayOf", () => {
 })
 
 describe("aiGatewayOf, the gateway", () => {
-    it("keeps the default key file and no admin API, and reads no port (it is the app port plus one)", async () => {
+    it("keeps the default key file and reads no port (it is the app port plus one)", async () => {
         const options = await parse({ OPENROUTER_API_KEY: "k" })
 
-        expect(options.gateway).toEqual({ keysPath: "ai-router-keys.sqlite", adminToken: null, mountedKeys: [] })
+        expect(options.gateway).toEqual({ keysPath: "ai-router-keys.sqlite", mountedKeys: [] })
     })
 
-    it("mounts the api and openclaw virtual keys that are declared, each with its label and profiles", async () => {
-        const options = await parse({ OPENROUTER_API_KEY: "k", AI_API_KEY: "api", OPENCLAW_AI_KEY: "claw" })
+    it("mounts the one StarCi virtual key when it is declared, with its label and profiles", async () => {
+        const options = await parse({ OPENROUTER_API_KEY: "k", STARCI_AI_KEY: "starci" })
 
         expect(options.gateway?.mountedKeys.map((key) => ({ ...key, secret: key.secret.reveal() }))).toEqual([
-            { label: "nivo_api", secret: "api", profiles: ["work", "embed"] },
-            { label: "nivo_openclaw", secret: "claw", profiles: ["work"] },
+            { label: "nivo", secret: "starci", profiles: ["work", "embed"] },
         ])
     })
 
-    it("takes the key file and the admin token from the environment", async () => {
-        const options = await parse({
-            OPENROUTER_API_KEY: "k",
-            AI_ROUTER_KEYS_PATH: "/data/keys.sqlite",
-            AI_ROUTER_ADMIN_TOKEN: "admin",
-        })
+    it("takes the key file from the environment", async () => {
+        const options = await parse({ OPENROUTER_API_KEY: "k", AI_ROUTER_KEYS_PATH: "/data/keys.sqlite" })
 
         expect(options.gateway?.keysPath).toBe("/data/keys.sqlite")
-        expect(options.gateway?.adminToken?.reveal()).toBe("admin")
     })
 })

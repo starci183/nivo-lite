@@ -57,9 +57,9 @@ The key roster with semantics is `.starcistacks/production/runtime/env/KEYS.md`.
 | `auth` | api task | `AUTH_JWT_PRIVATE_KEY`, `AUTH_JWT_PUBLIC_KEY` (the own Passport signing pair) |
 | `google` | api task | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` (own Google sign-in) |
 | `storage` | api task | `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` (the MinIO service account; `STORAGE_ENDPOINT`, `STORAGE_PUBLIC_URL` and `STORAGE_BUCKET_PREFIX` are public configuration in `api-public.conf`) |
-| `ai` | api task | `AI_ROUTER_ADMIN_TOKEN`, `AI_API_KEY`, `OPENROUTER_API_KEY` (the upstream key) |
+| `ai` | api task, openclaw | `OPENROUTER_API_KEY` (the upstream key), `STARCI_AI_KEY` (the one gateway virtual key, also granted to openclaw) |
 | `n8n` | n8n, api | `N8N_ENCRYPTION_KEY` (n8n), `N8N_SIGNING_SECRET` (also granted to the api); configuration read at render time (not a Swarm secret): `N8N_ALLOWED_HOSTS`, `N8N_PROTOCOL`, `N8N_SECURE_COOKIE` |
-| `openclaw` | openclaw, api | secrets: `OPENCLAW_GATEWAY_TOKEN` (also granted to the api), `OPENCLAW_AI_KEY` (the gateway virtual key of openclaw); `OPENCLAW_MANAGE_AGENTS` (`true` or `false`, granted to the api), `OPENCLAW_TURN_TIMEOUT`; configuration read at render time: `OPENCLAW_MODEL` |
+| `openclaw` | openclaw, api | secrets: `OPENCLAW_GATEWAY_TOKEN` (also granted to the api); `OPENCLAW_MANAGE_AGENTS` (`true` or `false`, granted to the api), `OPENCLAW_TURN_TIMEOUT`; configuration read at render time: `OPENCLAW_MODEL` |
 | `redis` | `nivo-redis`, api task | `QUEUE_REDIS_PASSWORD` |
 | `postgres` | `db` (`POSTGRES_PASSWORD_FILE`), `nivo-postgres-backup`; api task; operator | `POSTGRES_PASSWORD` (superuser), `APP_BE_DB_PASSWORD` (the `app_be` login role), `PRIMARY_DB_URL` |
 | `vps` | operator verbs | `VPS_HOST`, `VPS_USER`, `privateKey` (operator SSH key), `knownHosts` (pinned host keys), `ciPrivateKey` (the CI deploy key, GitHub `VPS_SSH_KEY`); never granted |
@@ -103,16 +103,15 @@ host `nivo-mcp`, port 8790). Its container healthcheck probes `/healthz` (livene
 
 ## The AI gateway and its virtual keys
 
-The api process hosts `@starci/ai-router` 0.3.0 through `AiRouterGatewayModule`: no extra container or image. It listens on **8788** (`AI_ROUTER_PORT`, api 8787 + offset 1, declared on the `nivo-api` component) on the private `agents` network only: no route, no published port. The api calls it at `http://127.0.0.1:8788/v1`, openclaw at `http://nivo-api:8788/v1`. The pool holds one OpenRouter provider with the profiles `work` (`deepseek/deepseek-v4.1-flash`) and `embed` (`qwen/qwen3-embedding-8b`). Virtual keys are in SQLite (`AI_ROUTER_KEYS_PATH`) on the volume `nivo-engine_ai-router-data`, which `starci app stack backup` includes; losing it loses the keys (re-issue them). Sealed `ai` member: `OPENROUTER_API_KEY`, `AI_ROUTER_ADMIN_TOKEN`, `AI_API_KEY`; sealed `stack` member: `OPENCLAW_AI_KEY` for openclaw.
+The api process hosts `@starci/ai-router` 0.3.0 through `AiRouterGatewayModule`: no extra container or image. It listens on **8788** (`AI_ROUTER_PORT`, api 8787 + offset 1, declared on the `nivo-api` component) on the private `agents` network only: no route, no published port. The api calls it at `http://127.0.0.1:8788/v1`, openclaw at `http://nivo-api:8788/v1`. The pool holds one OpenRouter provider with the profiles `work` (`deepseek/deepseek-v4.1-flash`) and `embed` (`qwen/qwen3-embedding-8b`). The key store (usage and quota counters of the mounted key) is SQLite (`AI_ROUTER_KEYS_PATH`) on the volume `nivo-engine_ai-router-data`, which `starci app stack backup` includes; losing it resets the counters only, the key itself comes from the secret. Sealed `ai` member: `OPENROUTER_API_KEY`, `STARCI_AI_KEY` (granted to the api and openclaw).
 
-**Virtual keys are mounted from secrets, no bootstrap step.** The two keys are generated secrets sealed like any other: `AI_API_KEY` (label `nivo_api`, profiles `work,embed`) in the `ai` member and `OPENCLAW_AI_KEY` (label `nivo_openclaw`, profile `work`) in the `openclaw` member, both of the form `sk-starci-<label>-<48 hex>`. The api reads both (file pointers) and passes them to the in-process gateway as mounted keys (`@starci/ai-router` 0.4.0): held in memory, never written to the key store, each under a fixed id per label for quota and usage. openclaw sends its own key. A mounted key is revoked only by changing its secret and deploying; the admin API cannot revoke it. Make or rotate one without ever printing it:
+**One virtual key, mounted from secrets, no bootstrap step.** `STARCI_AI_KEY` (label `nivo`, profiles `work,embed`) is a generated secret in the `ai` member, of the form `sk-starci-nivo-<48 hex>`. The api reads it (file pointer) and passes it to the in-process gateway as a mounted key (`@starci/ai-router` 0.4.0): held in memory, never written to the key store, under a fixed id for quota and usage. The api's AI client and openclaw both send it; only the gateway holds `OPENROUTER_API_KEY`. A mounted key is revoked only by changing its secret and deploying; the admin API cannot revoke it. Make or rotate it without ever printing it:
 
 ```sh
-node -e "process.stdout.write('sk-starci-nivo_api-'+require('crypto').randomBytes(24).toString('hex'))" | npx starci app secret set production ai AI_API_KEY
-node -e "process.stdout.write('sk-starci-nivo_openclaw-'+require('crypto').randomBytes(24).toString('hex'))" | npx starci app secret set production openclaw OPENCLAW_AI_KEY
+node -e "process.stdout.write('sk-starci-nivo-'+require('crypto').randomBytes(24).toString('hex'))" | npx starci app secret set production ai STARCI_AI_KEY
 ```
 
-then commit and deploy. Usage stays visible in the admin API (`keys list|usage --url http://nivo-api:8788` inside the api container, with `AI_ROUTER_ADMIN_TOKEN` read from its file).
+then commit and deploy. There is no admin API (no admin token is sealed): usage is read from the app's `ai_usage_events`, and a key changes only by resealing it and deploying.
 
 ## Shared ingress and the compose tenants
 

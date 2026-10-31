@@ -33,9 +33,9 @@ config.gateway = {
         token: fs.readFileSync(process.env.OPENCLAW_GATEWAY_TOKEN_FILE, "utf8"),
     },
 }
-// Language models come only from the AI gateway (hosted in the api process): one OpenAI-compatible custom provider, "nivo-ai", with this
-// service's own virtual key. The key stays a reference: openclaw resolves ${OPENCLAW_AI_KEY} from the gateway process environment.
-if (process.env.AI_BASE_URL && process.env.OPENCLAW_AI_KEY) {
+// Language models come only from the AI gateway (hosted in the api process): one OpenAI-compatible custom provider, "nivo-ai", with the
+// StarCi virtual key it shares with the api. The key stays a reference: openclaw resolves ${STARCI_AI_KEY} from the gateway process environment.
+if (process.env.AI_BASE_URL && process.env.STARCI_AI_KEY) {
     const chat = process.env.AI_CHAT_MODEL || "work"
     config.models = {
         ...(config.models || {}),
@@ -44,7 +44,7 @@ if (process.env.AI_BASE_URL && process.env.OPENCLAW_AI_KEY) {
             ...((config.models || {}).providers || {}),
             "nivo-ai": {
                 baseUrl: process.env.AI_BASE_URL,
-                apiKey: "${OPENCLAW_AI_KEY}",
+                apiKey: "${STARCI_AI_KEY}",
                 api: "openai-completions",
                 models: [{ id: chat, name: chat }],
             },

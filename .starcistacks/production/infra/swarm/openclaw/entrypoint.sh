@@ -1,7 +1,7 @@
 #!/bin/sh
 # Entrypoint wrapper of the OpenClaw gateway on Swarm (a config object mounted at /opt/nivo/entrypoint.sh).
 #
-# 1. The OpenClaw image has no `<NAME>_FILE` support, so the gateway token and its AI gateway virtual key (OPENCLAW_AI_KEY) are exported from the Swarm secrets
+# 1. The OpenClaw image has no `<NAME>_FILE` support, so the gateway token and the StarCi AI gateway virtual key (STARCI_AI_KEY) are exported from the Swarm secrets
 #    under /run/secrets into THIS process tree only: no env file on the host, no value in the service specification.
 # 2. openclaw-init.mjs merges the gateway settings into openclaw.json (idempotent; other keys, agents and plugins are kept).
 # 3. openclaw-relay.mjs listens on the overlay address and forwards to the loopback-only gateway. The gateway honours the scopes a client
@@ -9,7 +9,7 @@
 #    network) and the gateway sees the relay, a loopback peer. The token is still required; only the api and an operator tunnel are on that network.
 set -eu
 
-for name in OPENCLAW_GATEWAY_TOKEN OPENCLAW_AI_KEY; do
+for name in OPENCLAW_GATEWAY_TOKEN STARCI_AI_KEY; do
   file="/run/secrets/$name"
   if [ -r "$file" ]; then
     value="$(cat "$file")"

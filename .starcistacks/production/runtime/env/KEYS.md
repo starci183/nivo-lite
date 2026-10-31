@@ -55,7 +55,6 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `OPENCLAW_GATEWAY_URL` | Gateway URL (`ws://nivo-openclaw:18790`), set by the deploy block; absent or without credentials = the gateway is off. |
 | `OPENCLAW_GATEWAY_TOKEN` | Gateway token, granted to the api and to openclaw from the sealed `openclaw`/`n8n` member. |
 | `OPENCLAW_GATEWAY_PASSWORD` | Alternative gateway credential when no token exists; not used in production. |
-| `OPENCLAW_AI_KEY` | The virtual key of the AI gateway that openclaw uses, sealed in the `openclaw` member and granted to the openclaw service only. |
 | `BACKUP_RUN_ONCE` | Stack environment of `nivo-postgres-backup`: `1` takes one backup now and exits (tests and the manual run); unset keeps the daily schedule. |
 | `OPENCLAW_TOOL_SECRET` | Sealed `api`, read only through `OPENCLAW_TOOL_SECRET_FILE`: signs the per-turn tool token OpenClaw calls the api back with. Without it no token is minted, so a turn of an agent holding connector grants fails closed (`tools_not_configured`); other agents answer without tools. |
 | `OPENCLAW_MANAGE_AGENTS` | `true` or `false`; granted from the sealed `openclaw`/`n8n` member. |
@@ -70,7 +69,7 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `VPS_SSH_KEY` | SSH key the n8n host helper uses to reach the VPS; optional, the helper is off while absent. |
 | `HTTP_SECURITY_TRUSTED_PROXY_HOPS` | `0`, `1` or `2`: trusted proxy hops before the api; optional. |
 | `AI_BASE_URL` | The AI gateway base URL (`http://ai-router:8788/v1`), a stack value of the api and openclaw; the port is the declared `port` of the `ai-router` component. |
-| `AI_API_KEY` | The caller's virtual key of the AI gateway (`sk-starci-nivo_api-...`), sealed in `api`, read through `AI_API_KEY_FILE`. openclaw has its own (`nivo_openclaw`) sealed in `stack`. |
+| `STARCI_AI_KEY` | The one virtual key of the AI gateway (`sk-starci-nivo-...`), sealed in `ai`, read through `STARCI_AI_KEY_FILE` by the api and exported by the entrypoint wrapper for openclaw. |
 | `AI_CHAT_MODEL` | Profile the chat calls use (default `work`; stack value). |
 | `AI_EMBEDDING_MODEL` | Profile the embedding calls use (default `embed`; stack value). |
 
@@ -150,9 +149,8 @@ The api hosts the gateway through `AiRouterGatewayModule`; it listens on `AI_ROU
 | --- | --- | --- |
 | `AI_ROUTER_PORT` | api stack value | The gateway listener (`8788`); declared on the `nivo-api` component. |
 | `AI_ROUTER_KEYS_PATH` | api stack value | SQLite key store (`/var/lib/ai-router/keys.sqlite`) on the volume `nivo-engine_ai-router-data`. |
-| `AI_ROUTER_ADMIN_TOKEN` | its sealed member (granted in `application-stacks.yaml`) | Bearer token of the gateway admin API; the `keys ...` CLI reads it from the same variable. |
 | `OPENROUTER_API_KEY` | `ai` (granted in `application-stacks.yaml`) | The single upstream key (OpenRouter). |
-| `AI_API_KEY` | its sealed member (granted in `application-stacks.yaml`) | The api's virtual key (`nivo_api`). openclaw has its own, `OPENCLAW_AI_KEY` (virtual key `nivo_openclaw`), sealed in `stack`, exported by the entrypoint wrapper; openclaw holds no OpenRouter key. Mounted by the gateway from this secret at boot (no key is issued by hand); it must start with `sk-starci-nivo_api-`. |
+| `STARCI_AI_KEY` | its sealed member (granted in `application-stacks.yaml`) | The one gateway virtual key (`nivo`), shared by the api and openclaw; openclaw holds no OpenRouter key. Mounted by the gateway from this secret at boot (no key is issued by hand); it must start with `sk-starci-nivo-`. |
 
 ## Self-hosted cutover (sh-cutover)
 

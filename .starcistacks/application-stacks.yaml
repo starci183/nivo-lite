@@ -217,7 +217,7 @@ environments:
         runtimeName: nivo-dev-ai-v1
         version: 1
         where: secrets/ai
-        recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the owner key per .sops.yaml; keys AI_ROUTER_ADMIN_TOKEN.
+        recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the owner key per .sops.yaml; keys STARCI_AI_KEY (dev's own virtual key) and OPENROUTER_API_KEY.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed.
   production:
     status: supported
@@ -349,7 +349,7 @@ environments:
         runtimeName: nivo-custody-openclaw-v1
         version: 1
         where: secrets/openclaw
-        recipientPolicy: SOPS/age, one member per provider (openclaw.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys OPENCLAW_* keys and OPENCLAW_AI_KEY.
+        recipientPolicy: SOPS/age, one member per provider (openclaw.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys OPENCLAW_* keys (the AI gateway key is STARCI_AI_KEY of the ai member).
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: postgres
         runtimeName: nivo-custody-postgres-v1
@@ -385,8 +385,8 @@ environments:
         runtimeName: nivo-custody-ai-v1
         version: 1
         where: secrets/ai
-        keys: [AI_API_KEY, AI_ROUTER_ADMIN_TOKEN, OPENROUTER_API_KEY]
-        recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys AI_ROUTER_ADMIN_TOKEN, AI_API_KEY and the upstream OPENROUTER_API_KEY (the whole AI domain in one member).
+        keys: [STARCI_AI_KEY, OPENROUTER_API_KEY]
+        recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys STARCI_AI_KEY (the one gateway virtual key of the api and openclaw) and the upstream OPENROUTER_API_KEY (the whole AI domain in one member).
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: vps
         runtimeName: nivo-custody-vps-v1
@@ -551,8 +551,7 @@ environments:
               - {member: storage}
               - {member: ai}
               - {member: n8n, keys: [N8N_SIGNING_SECRET]}
-              # OPENCLAW_AI_KEY reaches the api too: the in-process gateway seeds the openclaw virtual key from it at boot.
-              - {member: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS, OPENCLAW_TURN_TIMEOUT, OPENCLAW_AI_KEY], fill: true}
+              - {member: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS, OPENCLAW_TURN_TIMEOUT], fill: true}
           # Redis starts with --requirepass from /run/secrets/QUEUE_REDIS_PASSWORD, so a boot without it fails instead of serving an open broker.
           - service: nivo-redis
             from:
@@ -573,7 +572,9 @@ environments:
               - {member: postgres, keys: [POSTGRES_PASSWORD], required: true}
           - service: nivo-openclaw
             from:
-              - {member: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_AI_KEY], required: true}
+              - {member: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN], required: true}
+              # openclaw calls the in-process AI gateway with the same StarCi virtual key as the api.
+              - {member: ai, keys: [STARCI_AI_KEY], required: true}
           - service: nivo-n8n
             filePointers: true
             from:
@@ -590,7 +591,7 @@ environments:
             QUEUE_REDIS_PREFIX: nivo
             REALTIME_HUB: redis
             REALTIME_REDIS_PREFIX: nivo-realtime
-            # the in-process AI gateway (declared port above); AI_ROUTER_ADMIN_TOKEN, OPENROUTER_API_KEY and AI_API_KEY come from the sealed api member
+            # the in-process AI gateway (declared port above); OPENROUTER_API_KEY and STARCI_AI_KEY come from the sealed ai member
             AI_ROUTER_PORT: "8788"
             AI_ROUTER_KEYS_PATH: /var/lib/ai-router/keys.sqlite
             AI_BASE_URL: "http://127.0.0.1:8788/v1"

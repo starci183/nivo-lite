@@ -1,6 +1,6 @@
 /** Log events of the LangChain integration. Fields name the model, status and error class; never a key or a prompt. */
 export enum AiLogEvent {
-    /** A base URL is known but no virtual key is set: AI stays unavailable until `AI_API_KEY` is sealed. */
+    /** A base URL is known but no virtual key is set: AI stays unavailable until `STARCI_AI_KEY` is sealed. */
     VirtualKeyMissing = "ai.virtual_key.missing",
     /** The retrieval step failed; the prompt goes out without business notes. */
     RetrievalFailed = "ai.retrieval.failed",
