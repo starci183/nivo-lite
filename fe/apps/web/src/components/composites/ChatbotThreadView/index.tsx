@@ -3,9 +3,12 @@ import {
     Badge,
     ChatBubble,
     ChatBubbleSkeletons,
+    Cluster,
     Divider,
     Heading,
     IconButton,
+    PaneSection,
+    Stack,
     Text,
 } from "@starci/grammar/common"
 import { useEffect, useRef } from "react"
@@ -13,14 +16,7 @@ import type { RefObject } from "react"
 import { ChatbotChips } from "@/components/branches/ChatbotChips"
 import { ChatbotComposer } from "@/components/branches/ChatbotComposer"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import {
-    CENTER_CLASS_NAME,
-    HEAD_CLASS_NAME,
-    HEAD_TEXT_CLASS_NAME,
-    PHONE_ONLY_CLASS_NAME,
-    THREAD_BAND_CLASS_NAME,
-    THREAD_SCROLL_CLASS_NAME,
-} from "./classNames"
+import { HEAD_TEXT_CLASS_NAME, PHONE_ONLY_CLASS_NAME } from "./classNames"
 
 /** One state mark of the conversation. */
 interface ChatbotThreadChip {
@@ -82,7 +78,7 @@ export const ChatbotThreadView = (props: ChatbotThreadViewProps) => {
     }, [lastId, props.name])
     if (!props.hasThread) {
         return (
-            <div className={CENTER_CLASS_NAME}>
+            <PaneSection align="center" grow>
                 {props.isResolving ? (
                     <ChatBubbleSkeletons count={3} hasAvatar />
                 ) : (
@@ -90,49 +86,56 @@ export const ChatbotThreadView = (props: ChatbotThreadViewProps) => {
                         {props.pickBody}
                     </Text>
                 )}
-            </div>
+            </PaneSection>
         )
     }
     return (
         <>
-            <div className={HEAD_CLASS_NAME}>
-                <div className={PHONE_ONLY_CLASS_NAME}>
+            <PaneSection align="center">
+                <Cluster gap="row" wrap={false}>
+                    <div className={PHONE_ONLY_CLASS_NAME}>
+                        <IconButton
+                            intent="dismiss"
+                            source={nivoIconSource("back", "leading")}
+                            label={props.backLabel}
+                            onPress={props.onBack}
+                        />
+                    </div>
+                    <Avatar name={props.name} size="md" isDecorative />
+                    <div className={HEAD_TEXT_CLASS_NAME}>
+                        <Stack gap="identity">
+                            <Heading level={2}>{props.name}</Heading>
+                            <ChatbotChips channel={props.channel} chips={props.chips} />
+                        </Stack>
+                    </div>
                     <IconButton
-                        intent="dismiss"
-                        source={nivoIconSource("back", "leading")}
-                        label={props.backLabel}
-                        onPress={props.onBack}
+                        intent="neutral"
+                        source={nivoIconSource("sidebar", "leading")}
+                        label={props.infoLabel}
+                        isActive={props.isInfoOpen}
+                        onPress={props.onToggleInfo}
                     />
-                </div>
-                <Avatar name={props.name} size="md" isDecorative />
-                <div className={HEAD_TEXT_CLASS_NAME}>
-                    <Heading level={2}>{props.name}</Heading>
-                    <ChatbotChips channel={props.channel} chips={props.chips} />
-                </div>
-                <IconButton
-                    intent="neutral"
-                    source={nivoIconSource("sidebar", "leading")}
-                    label={props.infoLabel}
-                    isActive={props.isInfoOpen}
-                    onPress={props.onToggleInfo}
+                </Cluster>
+            </PaneSection>
+            <PaneSection scroll={{ label: props.name, role: "log", tone: "background" }}>
+                {renderChatbotThreadViewEntries(props, endRef)}
+            </PaneSection>
+            <PaneSection>
+                <ChatbotComposer
+                    canReply={props.canReply}
+                    lockedText={props.lockedText}
+                    label={props.composerLabel}
+                    placeholder={props.composerPlaceholder}
+                    hint={props.composerHint}
+                    sendLabel={props.sendLabel}
+                    draft={props.draft}
+                    notSentTitle={props.notSentTitle}
+                    error={props.error}
+                    isSending={props.isSending}
+                    onDraft={props.onDraft}
+                    onSend={props.onSend}
                 />
-            </div>
-            <Divider semantics="presentation" />
-            {renderChatbotThreadViewEntries(props, endRef)}
-            <ChatbotComposer
-                canReply={props.canReply}
-                lockedText={props.lockedText}
-                label={props.composerLabel}
-                placeholder={props.composerPlaceholder}
-                hint={props.composerHint}
-                sendLabel={props.sendLabel}
-                draft={props.draft}
-                notSentTitle={props.notSentTitle}
-                error={props.error}
-                isSending={props.isSending}
-                onDraft={props.onDraft}
-                onSend={props.onSend}
-            />
+            </PaneSection>
         </>
     )
 }
@@ -142,12 +145,12 @@ const renderChatbotThreadViewEntries = (
     props: Pick<ChatbotThreadViewProps, "entries">,
     endRef: RefObject<HTMLDivElement | null>,
 ) => (
-    <div className={THREAD_SCROLL_CLASS_NAME}>
+    <Stack gap="row">
         {props.entries.map((entry) => {
             if (entry.kind !== "bubble") return <Divider key={entry.id} label={entry.text} />
             return (
-                <div key={entry.id} className={THREAD_BAND_CLASS_NAME}>
-                    <ChatBubble
+                <ChatBubble
+                    key={entry.id}
                         side={entry.side}
                         author={entry.author}
                         meta={entry.meta}
@@ -171,10 +174,9 @@ const renderChatbotThreadViewEntries = (
                         }
                     >
                         {entry.text}
-                    </ChatBubble>
-                </div>
+                </ChatBubble>
             )
         })}
         <div ref={endRef} />
-    </div>
+    </Stack>
 )

@@ -1,24 +1,19 @@
 import {
     Avatar,
     Button,
+    Cluster,
     DescriptionList,
-    Divider,
     Heading,
     IconButton,
+    PaneSection,
     Region,
     SectionHeader,
+    Stack,
     Text,
 } from "@starci/grammar/common"
 import { ChatbotEscalationForm } from "@/components/branches/ChatbotEscalationForm"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import {
-    ACTIONS_CLASS_NAME,
-    CUSTOMER_HEAD_CLASS_NAME,
-    HEAD_CLASS_NAME,
-    HEAD_TEXT_CLASS_NAME,
-    SIDE_SECTION_CLASS_NAME,
-    UNTIL_DOCKED_CLASS_NAME,
-} from "./classNames"
+import { HEAD_TEXT_CLASS_NAME, UNTIL_DOCKED_CLASS_NAME } from "./classNames"
 
 /** The waiting question the AI handed to a person, with the draft answer. */
 interface ChatbotSideEscalation {
@@ -85,28 +80,27 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
     )
     if (!props.hasThread) {
         return (
-            <>
-                <div className={HEAD_CLASS_NAME}>
-                    <div className={HEAD_TEXT_CLASS_NAME} />
+            <PaneSection align="center">
+                <Cluster gap="row" wrap={false} justify="end">
                     <div className={UNTIL_DOCKED_CLASS_NAME}>{closeButton}</div>
-                </div>
-                <Divider semantics="presentation" />
-            </>
+                </Cluster>
+            </PaneSection>
         )
     }
     const escalation = props.escalation
     const handling = props.handling
     return (
         <>
-            <div className={HEAD_CLASS_NAME}>
-                <div className={HEAD_TEXT_CLASS_NAME}>
-                    <Heading level={2}>{props.title}</Heading>
-                </div>
-                <div className={UNTIL_DOCKED_CLASS_NAME}>{closeButton}</div>
-            </div>
-            <Divider semantics="presentation" />
-            <div className={SIDE_SECTION_CLASS_NAME}>
-                <div className={CUSTOMER_HEAD_CLASS_NAME}>
+            <PaneSection align="center">
+                <Cluster gap="row" wrap={false}>
+                    <div className={HEAD_TEXT_CLASS_NAME}>
+                        <Heading level={2}>{props.title}</Heading>
+                    </div>
+                    <div className={UNTIL_DOCKED_CLASS_NAME}>{closeButton}</div>
+                </Cluster>
+            </PaneSection>
+            <PaneSection>
+                <Cluster gap="row" wrap={false}>
                     <Avatar name={props.customerName} size="lg" isDecorative />
                     <div className={HEAD_TEXT_CLASS_NAME}>
                         <Text weight="semibold" overflow="truncate">
@@ -116,39 +110,41 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
                             {props.channelLine}
                         </Text>
                     </div>
-                </div>
-            </div>
-            <Divider semantics="presentation" />
+                </Cluster>
+            </PaneSection>
             {escalation === null ? null : (
-                <ChatbotEscalationForm
-                    {...escalation}
-                    onDraft={props.onEscalationDraft}
-                    onSendAnswer={props.onSendAnswer}
-                    onDeclineAnswer={props.onDeclineAnswer}
-                />
+                <PaneSection>
+                    <ChatbotEscalationForm
+                        {...escalation}
+                        onDraft={props.onEscalationDraft}
+                        onSendAnswer={props.onSendAnswer}
+                        onDeclineAnswer={props.onDeclineAnswer}
+                    />
+                </PaneSection>
             )}
             {renderChatbotSidePanelHandling(handling, props)}
-            <Region label={props.leadTitle}>
-                <div className={SIDE_SECTION_CLASS_NAME}>
-                    <SectionHeader level={3} title={props.leadTitle} />
-                    {props.lead === null ? (
-                        <Text size="sm" tone="muted">
-                            {props.leadNone}
-                        </Text>
-                    ) : (
-                        <>
-                            <Text weight="semibold">{props.lead.name}</Text>
-                            <DescriptionList layout="columns" items={props.lead.facts} />
-                            <div className={ACTIONS_CLASS_NAME}>
-                                <Button intent="neutral" size="sm" href={props.lead.openHref}>
-                                    {props.lead.openLabel}
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </div>
-                <Divider semantics="presentation" />
-            </Region>
+            <PaneSection>
+                <Region label={props.leadTitle}>
+                    <Stack gap="row">
+                        <SectionHeader level={3} title={props.leadTitle} />
+                        {props.lead === null ? (
+                            <Text size="sm" tone="muted">
+                                {props.leadNone}
+                            </Text>
+                        ) : (
+                            <>
+                                <Text weight="semibold">{props.lead.name}</Text>
+                                <DescriptionList layout="columns" items={props.lead.facts} />
+                                <Cluster gap="inline">
+                                    <Button intent="neutral" size="sm" href={props.lead.openHref}>
+                                        {props.lead.openLabel}
+                                    </Button>
+                                </Cluster>
+                            </>
+                        )}
+                    </Stack>
+                </Region>
+            </PaneSection>
         </>
     )
 }
@@ -158,26 +154,27 @@ const renderChatbotSidePanelHandling = (
     handling: NonNullable<ChatbotSidePanelProps["handling"]>,
     props: ChatbotSidePanelProps,
 ) => (
-    <Region label={handling.title}>
-        <div className={SIDE_SECTION_CLASS_NAME}>
-            <SectionHeader level={3} title={handling.title} />
-            <Text size="sm">{handling.text}</Text>
-            <div className={ACTIONS_CLASS_NAME}>
-                <Button
-                    intent="neutral"
-                    isPending={handling.isBusy}
-                    isDisabled={handling.isBusy}
-                    onPress={props.onToggleHandling}
-                >
-                    {handling.buttonLabel}
-                </Button>
-            </div>
-            {handling.hint === null ? null : (
-                <Text size="xs" tone="muted">
-                    {handling.hint}
-                </Text>
-            )}
-        </div>
-        <Divider semantics="presentation" />
-    </Region>
+    <PaneSection>
+        <Region label={handling.title}>
+            <Stack gap="row">
+                <SectionHeader level={3} title={handling.title} />
+                <Text size="sm">{handling.text}</Text>
+                <Cluster gap="inline">
+                    <Button
+                        intent="neutral"
+                        isPending={handling.isBusy}
+                        isDisabled={handling.isBusy}
+                        onPress={props.onToggleHandling}
+                    >
+                        {handling.buttonLabel}
+                    </Button>
+                </Cluster>
+                {handling.hint === null ? null : (
+                    <Text size="xs" tone="muted">
+                        {handling.hint}
+                    </Text>
+                )}
+            </Stack>
+        </Region>
+    </PaneSection>
 )

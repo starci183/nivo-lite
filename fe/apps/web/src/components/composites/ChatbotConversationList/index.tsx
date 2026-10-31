@@ -1,22 +1,15 @@
 import {
     Avatar,
-    Divider,
     EmptyNotice,
     Heading,
     HorizontalScrollRegion,
     ListBox,
+    PaneSection,
     SearchField,
     SegmentedControl,
     Text,
 } from "@starci/grammar/common"
 import { ChatbotChips } from "@/components/branches/ChatbotChips"
-import {
-    CENTER_CLASS_NAME,
-    FILTERS_CLASS_NAME,
-    HEAD_CLASS_NAME,
-    LIST_BODY_CLASS_NAME,
-    SEARCH_CLASS_NAME,
-} from "./classNames"
 
 /** One state mark of a conversation. */
 interface ChatbotListChip {
@@ -72,11 +65,10 @@ const SKELETON_ITEMS: ReadonlyArray<ChatbotListItem> = ["a", "b", "c"].map((id) 
 /** The left pane of the inbox: search, filters and the conversation rows. */
 export const ChatbotConversationList = (props: ChatbotConversationListProps) => (
     <>
-        <div className={HEAD_CLASS_NAME}>
+        <PaneSection align="center">
             <Heading level={2}>{props.title}</Heading>
-        </div>
-        <Divider semantics="presentation" />
-        <div className={SEARCH_CLASS_NAME}>
+        </PaneSection>
+        <PaneSection>
             <SearchField
                 label={props.searchLabel}
                 isLabelHidden
@@ -86,8 +78,8 @@ export const ChatbotConversationList = (props: ChatbotConversationListProps) => 
                 onValueChange={props.onQuery}
                 onClear={() => props.onQuery("")}
             />
-        </div>
-        <div className={FILTERS_CLASS_NAME}>
+        </PaneSection>
+        <PaneSection bleed="inline">
             <HorizontalScrollRegion overflow="needed" isFocusable={false}>
                 <SegmentedControl
                     label={props.listLabel}
@@ -97,17 +89,17 @@ export const ChatbotConversationList = (props: ChatbotConversationListProps) => 
                     onValueChange={props.onFilter}
                 />
             </HorizontalScrollRegion>
-        </div>
+        </PaneSection>
         {props.items.length === 0 && props.isSkeleton !== true ? (
-            <div className={CENTER_CLASS_NAME}>
+            <PaneSection align="center" grow>
                 {props.hasConversations ? (
                     <EmptyNotice message={props.emptyFilter} />
                 ) : (
                     <EmptyNotice message={props.emptyListTitle} description={props.emptyListBody} />
                 )}
-            </div>
+            </PaneSection>
         ) : (
-            <div className={LIST_BODY_CLASS_NAME}>
+            <PaneSection scroll={{ label: props.title }}>
                 <ListBox
                     label={props.listLabel}
                     selectionMode="single"
@@ -140,7 +132,7 @@ export const ChatbotConversationList = (props: ChatbotConversationListProps) => 
                         ),
                     }))}
                 />
-            </div>
+            </PaneSection>
         )}
     </>
 )
