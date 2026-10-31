@@ -1,5 +1,11 @@
 /** Why the gate decided what it decided. */
-export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclear_outcome" | "not_allowed"
+export type ReasonCode =
+    | "routine"
+    | "missing_data"
+    | "over_authority"
+    | "unclear_outcome"
+    | "not_allowed"
+    | "branch_ask"
 
 /** Where a work item stands. */
 export type WorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed"

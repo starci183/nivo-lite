@@ -102,7 +102,7 @@ export interface WorkSpec {
     readonly installationId?: string | null
     /** Called once, only when this call really inserted the row, before the gate runs. */
     readonly onInserted?: (row: WorkItem) => Promise<void>
-    /** The agent turn that asked for it; nothing in the engine reads it yet. */
+    /** The agent turn that asked for it; the action graph records it with its decision. */
     readonly origin?: WorkOrigin | undefined
 }
 

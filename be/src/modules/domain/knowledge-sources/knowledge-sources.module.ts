@@ -15,9 +15,21 @@ import { KnowledgeSourcesReadService } from "./knowledge-sources-read.service"
 @Module({})
 /** The documents of a workspace: their rows, their stages and the jobs that index them. */
 export class KnowledgeSourcesModule extends ConfigurableModuleClass {
-    /** Registers the capability once per app. */
+    /** Registers the capability once per app; the read-only mode registers the reads only, with no storage and no queue. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.readOnly === true) {
+            return {
+                ...base,
+                providers: [
+                    ...(base.providers ?? []),
+                    KnowledgeSourcesReadService,
+                    KnowledgeSourcesReadableService,
+                    DossierSourcesService,
+                ],
+                exports: [KnowledgeSourcesReadService, KnowledgeSourcesReadableService, DossierSourcesService],
+            }
+        }
         return {
             ...base,
             imports: [...(base.imports ?? []), KnowledgeQueueModule.register({})],

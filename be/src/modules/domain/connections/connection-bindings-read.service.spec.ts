@@ -56,6 +56,52 @@ describe("ConnectionBindingsReadService > factsOf", () => {
     })
 })
 
+describe("ConnectionBindingsReadService > ofProvider", () => {
+    it("lists the connections of a workspace under one provider, oldest first, with the status facts", async () => {
+        const stored = {
+            ...botConnectionOf(),
+            lastError: "invalid_grant",
+            publicMeta: { bot_username: "shop_bot", oa_id: " 123 ", email: "lan@shop.vn" },
+        }
+        const em = mockEntityManager({ find: [ConnectionEntity, [stored]] })
+
+        await expect((await build(em)).ofProvider("ws-1", "telegram", 20)).resolves.toEqual([
+            {
+                id: "c1",
+                provider: "telegram",
+                name: "Shop bot",
+                status: "connected",
+                createdAt: new Date("2026-10-01T00:00:00.000Z"),
+                botUsername: "shop_bot",
+                accountMasked: null,
+                lastError: "invalid_grant",
+                oaId: "123",
+                email: "lan@shop.vn",
+            },
+        ])
+        expect(em.find).toHaveBeenCalledWith(ConnectionEntity, {
+            select: {
+                id: true,
+                provider: true,
+                name: true,
+                status: true,
+                createdAt: true,
+                publicMeta: true,
+                lastError: true,
+            },
+            where: { workspaceId: "ws-1", provider: "telegram" },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 20,
+        })
+    })
+
+    it("answers no connection when the workspace has none under the provider", async () => {
+        const em = mockEntityManager({ find: [ConnectionEntity, []] })
+
+        await expect((await build(em)).ofProvider("ws-1", "zalo_oa", 20)).resolves.toEqual([])
+    })
+})
+
 describe("ConnectionBindingsReadService > holds", () => {
     it("is true when the workspace holds the connection, read under a shared lock", async () => {
         const handed = mockEntityManager({ findOne: [ConnectionEntity, botConnectionOf()] })

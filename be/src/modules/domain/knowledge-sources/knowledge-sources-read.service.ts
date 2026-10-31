@@ -1,7 +1,14 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ChangedPublicSource, PublicSourceExcerpt, PublicSourceText } from "./knowledge-sources-read.contracts"
+import type { SourceBrief } from "./knowledge-sources.contracts"
+import type {
+    ChangedPublicSource,
+    OriginSource,
+    PublicSourceExcerpt,
+    PublicSourceText,
+} from "./knowledge-sources-read.contracts"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 
 const isChangedPublicSource = (value: unknown): value is ChangedPublicSource =>
@@ -91,6 +98,35 @@ export class KnowledgeSourcesReadService {
             .orderBy("s.created_at", "DESC")
             .limit(limit)
             .getRawMany<PublicSourceExcerpt>()
+    }
+
+    /** The kind, title and topic of these sources of a workspace, for the passages a search found; an unknown id is left out. */
+    async briefsOf(workspaceId: string, sourceIds: ReadonlyArray<string>): Promise<ReadonlyArray<SourceBrief>> {
+        if (sourceIds.length === 0) return []
+        const rows = await this.entityManager.find(KnowledgeSourceEntity, {
+            select: { id: true, kind: true, title: true, topic: true },
+            where: { workspaceId, id: In([...sourceIds]) },
+            take: sourceIds.length,
+        })
+        return rows.map((row) => ({ id: row.id, kind: row.kind, title: row.title, topic: row.topic }))
+    }
+
+    /** The sources a workspace added from one origin (for example `google_drive`), newest change first, at most `limit`. */
+    async ofOrigin(workspaceId: string, origin: string, limit: number): Promise<ReadonlyArray<OriginSource>> {
+        const rows = await this.entityManager.find(KnowledgeSourceEntity, {
+            select: { id: true, title: true, status: true, visibility: true, sizeBytes: true, updatedAt: true },
+            where: { workspaceId, origin },
+            order: { updatedAt: "DESC", id: "ASC" },
+            take: limit,
+        })
+        return rows.map((row) => ({
+            id: row.id,
+            title: row.title,
+            status: row.status,
+            visibility: row.visibility,
+            sizeBytes: row.sizeBytes,
+            updatedAt: row.updatedAt.toISOString(),
+        }))
     }
 
     /** The public, indexed documents of the workspace that every instance of the module may read. */

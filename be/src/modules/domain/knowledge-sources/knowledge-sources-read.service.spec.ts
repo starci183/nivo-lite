@@ -3,6 +3,8 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { fakeQueryBuilder, queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { In } from "typeorm"
+import { row } from "@tests/fixtures/builders/knowledge-sources.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { KnowledgeSourcesReadService } from "./knowledge-sources-read.service"
 import { KnowledgeSourceEntity } from "./persistence/entities"
@@ -115,6 +117,53 @@ describe("KnowledgeSourcesReadService excerpts", () => {
             expect(fake.callsOf("setParameter")).toEqual([["excerptChars", 220]])
             expect(fake.callsOf("orderBy")).toEqual([["s.created_at", "DESC"]])
             expect(fake.callsOf("limit")).toEqual([[40]])
+        })
+    })
+})
+
+describe("KnowledgeSourcesReadService briefsOf", () => {
+    it("answers the kind, title and topic of the sources of the workspace", async () => {
+        const em = mockEntityManager({ find: [KnowledgeSourceEntity, [row]] })
+
+        await expect((await build(em)).briefsOf("ws-1", ["s1"])).resolves.toEqual([
+            { id: row.id, kind: row.kind, title: row.title, topic: row.topic },
+        ])
+        expect(em.find).toHaveBeenCalledWith(KnowledgeSourceEntity, {
+            select: { id: true, kind: true, title: true, topic: true },
+            where: { workspaceId: "ws-1", id: In(["s1"]) },
+            take: 1,
+        })
+    })
+
+    it("reads nothing for no ids", async () => {
+        const em = mockEntityManager()
+
+        await expect((await build(em)).briefsOf("ws-1", [])).resolves.toEqual([])
+        expect(em.find).not.toHaveBeenCalled()
+    })
+})
+
+describe("KnowledgeSourcesReadService ofOrigin", () => {
+    const stored = { ...row, updatedAt: new Date("2026-10-11T10:00:00.000Z") }
+
+    it("lists the sources of an origin, newest change first, bounded, without their text", async () => {
+        const em = mockEntityManager({ find: [KnowledgeSourceEntity, [stored]] })
+
+        await expect((await build(em)).ofOrigin("ws-1", "google_drive", 50)).resolves.toEqual([
+            {
+                id: row.id,
+                title: row.title,
+                status: row.status,
+                visibility: row.visibility,
+                sizeBytes: row.sizeBytes,
+                updatedAt: "2026-10-11T10:00:00.000Z",
+            },
+        ])
+        expect(em.find).toHaveBeenCalledWith(KnowledgeSourceEntity, {
+            select: { id: true, title: true, status: true, visibility: true, sizeBytes: true, updatedAt: true },
+            where: { workspaceId: "ws-1", origin: "google_drive" },
+            order: { updatedAt: "DESC", id: "ASC" },
+            take: 50,
         })
     })
 })

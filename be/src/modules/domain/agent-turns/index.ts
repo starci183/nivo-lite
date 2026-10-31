@@ -11,3 +11,7 @@ export { InternalProposalSettlerService } from "./internal-proposal-settler.serv
 export { InternalTurnContextService } from "./internal-turn-context.service"
 export { RuntimeAgentService } from "./runtime-agent.service"
 export type { InternalActionResult } from "./agent-turns.contracts"
+
+export { AGENT_GRAPH_BRIEF } from "./agent-turns.decorators"
+export type { AgentGraphBrief } from "./agent-turns.port"
+export type { GraphIntent } from "./agent-turns.contracts"

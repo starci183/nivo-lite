@@ -1,0 +1,125 @@
+{
+  "contract": "nivo-mcp@1",
+  "server": {
+    "name": "nivo-mcp",
+    "version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "tool.search",
+      "description": "Find, by name and description, the connector tools you may use (installed, approved and granted to you), for example 'spa slots' or 'bank transactions'. Answers at most 10.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "tool.describe",
+      "description": "The JSON schema, mode and limits of one tool, by its full name (for example shop.order.place).",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 113
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "tool.call",
+      "description": "Call one tool by its full name with its arguments. Writes require an opKey, reused on retries of the same intended operation. A call over your limits waits for a person's approval.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 113
+          },
+          "arguments": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "opKey": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "additionalProperties": {
+              "$ref": "#/$defs/__schema2"
+            },
+            "maxProperties": 100
+          },
+          "__schema1": {
+            "type": "string",
+            "maxLength": 100,
+            "pattern": "^(?!__proto__$)"
+          },
+          "__schema2": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 8192
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              {
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema2"
+                }
+              },
+              {
+                "$ref": "#/$defs/__schema0"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
