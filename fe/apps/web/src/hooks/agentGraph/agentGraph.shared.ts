@@ -17,6 +17,8 @@ export const performAgentGraphAction = (commands: AgentGraphCommands, action: Ag
             return commands.phoneView(action.value)
         case "openNode":
             return commands.openNode(action.value)
+        case "mode":
+            return commands.mode(action.value)
         case "restore":
             return commands.restore(action.value)
         case "field":

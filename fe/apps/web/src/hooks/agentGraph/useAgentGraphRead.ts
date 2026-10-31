@@ -1,10 +1,17 @@
 "use client"
 
 import { useFormatter, useLocale, useTranslations } from "next-intl"
+import { useSearchParams } from "next/navigation"
 import { useMemo } from "react"
 import { useInstallations } from "@/hooks/installations"
-import { useQueryAgentGraphSwr, useQueryAgentGraphVersionsSwr, useQueryApproverDirectorySwr } from "@/hooks/swr"
-import { agentGraphOfWire, parseAgentGraphWire } from "@/modules/agent-graph"
+import {
+    useQueryAgentGraphCoverageSwr,
+    useQueryAgentGraphRunSwr,
+    useQueryAgentGraphSwr,
+    useQueryAgentGraphVersionsSwr,
+    useQueryApproverDirectorySwr,
+} from "@/hooks/swr"
+import { agentGraphOfWire, parseAgentGraphTrace, parseAgentGraphWire } from "@/modules/agent-graph"
 import type { AgentGraphWire } from "@/modules/agent-graph"
 import type { AgentGraphData, AgentGraphMemberData, DataSlot } from "@/modules/types"
 import { useAgentGraphWords } from "./useAgentGraphWords"
@@ -38,6 +45,19 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
     const graph = useQueryAgentGraphSwr(agentId === null ? null : { agentId, locale })
     const versions = useQueryAgentGraphVersionsSwr(agentId === null ? null : { agentId })
     const directory = useQueryApproverDirectorySwr()
+    const coverage = useQueryAgentGraphCoverageSwr(agentId === null ? null : { agentId })
+    const workItemId = useSearchParams().get("run") ?? ""
+    const runRead = useQueryAgentGraphRunSwr(workItemId === "" ? null : { workItemId })
+    const run =
+        runRead.data === undefined
+            ? null
+            : {
+                  id: runRead.data.decisionId,
+                  version: runRead.data.version,
+                  outcome: runRead.data.outcome,
+                  closedAs: runRead.data.closedAs,
+                  steps: parseAgentGraphTrace(runRead.data.traceJson) ?? [],
+              }
     const wire = useMemo(() => (graph.data === undefined ? undefined : parseAgentGraphWire(graph.data)), [graph.data])
     const members = useMemo(
         (): ReadonlyArray<AgentGraphMemberData> =>
@@ -64,6 +84,8 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
                           activeVersionId: graph.data.activeVersionId ?? null,
                           versions: versions.data,
                           members,
+                          coverage: coverage.data ?? [],
+                          run,
                           changes,
                       },
                       {
@@ -77,5 +99,5 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
     const isFailed = graph.error !== undefined || versions.error !== undefined || wire === null
     const isWaiting = graph.isLoading || versions.isLoading || installations === undefined
     const slot: DataSlot<AgentGraphData> = slotOf(isFailed, isWaiting, read?.data)
-    return { slot, read, reload: () => void Promise.all([graph.mutate(), versions.mutate()]) }
+    return { slot, runId: run?.id ?? "", read, reload: () => void Promise.all([graph.mutate(), versions.mutate()]) }
 }

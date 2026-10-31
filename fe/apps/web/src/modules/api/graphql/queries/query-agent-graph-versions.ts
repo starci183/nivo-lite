@@ -11,7 +11,7 @@ type QueryAgentGraphVersionsResponse = AgentGraphVersionsQuery
 
 const query1: TypedDocumentNode<QueryAgentGraphVersionsResponse, InputVariables<QueryAgentGraphVersionsRequest>> = gql`
     query AgentGraphVersions($input: ListAgentGraphVersionsInput!) {
-        agentGraphVersions(input: $input) {
+        listAgentGraphVersions(input: $input) {
             changeKind
             id
             note

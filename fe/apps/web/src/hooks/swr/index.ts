@@ -376,6 +376,10 @@ export { QUERY_SEPAY_CONNECTION_SWR_KEY } from "./api"
 export {
     QUERY_AGENT_GRAPH_SWR_KEY,
     QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY,
+    useMutateConfirmAgentGraphProposalSwr,
+    useMutateSetAgentGraphModeSwr,
+    useQueryAgentGraphCoverageSwr,
+    useQueryAgentGraphRunSwr,
     useMutateDeclineAgentGraphProposalSwr,
     useMutatePublishAgentGraphSwr,
     useMutateRestoreAgentGraphVersionSwr,

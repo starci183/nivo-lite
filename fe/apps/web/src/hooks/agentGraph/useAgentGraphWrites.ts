@@ -4,9 +4,11 @@ import { mutate } from "swr"
 import {
     QUERY_AGENT_GRAPH_SWR_KEY,
     QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY,
+    useMutateConfirmAgentGraphProposalSwr,
     useMutateDeclineAgentGraphProposalSwr,
     useMutatePublishAgentGraphSwr,
     useMutateRestoreAgentGraphVersionSwr,
+    useMutateSetAgentGraphModeSwr,
     useMutateSaveAgentGraphDraftSwr,
 } from "@/hooks/swr"
 import { documentWithBranch } from "@/modules/agent-graph"
@@ -41,6 +43,8 @@ export const useAgentGraphWrites = (onSaved: (isDraftEmpty: boolean) => void) =>
     const publish = useMutatePublishAgentGraphSwr()
     const restore = useMutateRestoreAgentGraphVersionSwr()
     const decline = useMutateDeclineAgentGraphProposalSwr()
+    const confirm = useMutateConfirmAgentGraphProposalSwr()
+    const setMode = useMutateSetAgentGraphModeSwr()
     const done = async (result: unknown, isDraftEmpty: boolean): Promise<void> => {
         if (result === undefined) return
         onSaved(isDraftEmpty)
@@ -61,6 +65,12 @@ export const useAgentGraphWrites = (onSaved: (isDraftEmpty: boolean) => void) =>
             done(await runGraphQL(() => publish.trigger({ agentId, note }), { showSuccessToast: false }), true),
         restore: async (agentId: string, versionId: string): Promise<void> =>
             done(await runGraphQL(() => restore.trigger({ agentId, versionId }), { showSuccessToast: false }), true),
+        confirm: async (agentId: string, proposalId: string): Promise<void> =>
+            done(await runGraphQL(() => confirm.trigger({ agentId, proposalId }), { showSuccessToast: false }), true),
+        mode: async (agentId: string, mode: string): Promise<void> => {
+            const result = await runGraphQL(() => setMode.trigger({ agentId, mode }), { showSuccessToast: false })
+            if (result !== undefined) await mutate(isGraphKey)
+        },
         decline: async (agentId: string, proposalId: string): Promise<void> => {
             const result = await runGraphQL(() => decline.trigger({ agentId, proposalId }), { showSuccessToast: false })
             if (result !== undefined) await mutate(isGraphKey)

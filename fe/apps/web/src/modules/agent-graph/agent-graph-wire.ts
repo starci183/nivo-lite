@@ -99,6 +99,29 @@ const proposalSchema = z.object({
     createdAt: z.string(),
 })
 
+const traceSchema = z.array(
+    z.object({
+        key: z.string(),
+        title: z.string(),
+        kind: kindSchema,
+        step: z.string(),
+        branchKey: z.string().nullable(),
+    }),
+)
+
+/** One node a traced run went through. */
+export type AgentGraphWireStep = z.infer<typeof traceSchema>[number]
+
+/** Parses the trace of a run; null when the text is not what the contract says. */
+export const parseAgentGraphTrace = (text: string): ReadonlyArray<AgentGraphWireStep> | null => {
+    try {
+        const parsed = traceSchema.safeParse(JSON.parse(text))
+        return parsed.success ? parsed.data : null
+    } catch {
+        return null
+    }
+}
+
 /** The document of a graph as the back end writes it, with every key it adds kept on the way back. */
 export type AgentGraphWireDocument = z.infer<typeof documentSchema>
 /** One node of the document. */

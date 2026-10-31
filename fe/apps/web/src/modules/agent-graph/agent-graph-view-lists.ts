@@ -25,7 +25,6 @@ const kindWordOf = (t: AgentGraphT, kind: AgentGraphProposalKind): string => {
 /** Why this person may not add a proposal to the draft; empty when they may. */
 const blockedOf = (proposal: AgentGraphProposalData, ctx: AgentGraphContext): string => {
     if (!ctx.canEdit) return ctx.t("cannotEdit")
-    if (proposal.boundaryVnd === null) return ctx.t("proposalConfirmSoon")
     return proposal.widens && !ctx.isOwner ? ctx.t("ownerOnly") : ""
 }
 
@@ -96,7 +95,14 @@ export const versionsViewOf = (data: AgentGraphData, ctx: AgentGraphContext): Ag
             canRestore: ctx.canEdit && !version.isActive,
         }
     })
-    return { title: t("versionsTitle"), hint: t("versionsHint"), items: [...draft, ...saved] }
+    const mode = {
+        title: t("modeTitle"),
+        label: t("modeEnforce"),
+        hint: data.mode === "enforced" ? t("modeHintEnforced") : t("modeHintShadow"),
+        isEnforced: data.mode === "enforced",
+        isDisabled: !ctx.isOwner,
+    }
+    return { mode, title: t("versionsTitle"), hint: t("versionsHint"), items: [...draft, ...saved] }
 }
 
 /** Every branch as a sentence for the phone: when, what happens, with what and on whose rule. */

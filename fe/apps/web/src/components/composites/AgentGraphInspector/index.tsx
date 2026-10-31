@@ -34,6 +34,7 @@ export const AgentGraphInspector = (props: AgentGraphInspectorProps) => {
                 view={view.versions}
                 isSkeleton={props.isSkeleton}
                 onRestore={(value) => onAction({ kind: "restore", value })}
+                onMode={(value) => onAction({ kind: "mode", value })}
             />
         )
     }

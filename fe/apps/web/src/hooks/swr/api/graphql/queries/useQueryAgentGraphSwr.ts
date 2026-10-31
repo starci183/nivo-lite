@@ -11,11 +11,11 @@ import type { QueryAgentGraphRequest } from "@/modules/api/graphql/queries/query
 /** The SWR key of {@link useQueryAgentGraphSwr}. */
 export const QUERY_AGENT_GRAPH_SWR_KEY = "QUERY_AGENT_GRAPH_SWR"
 
-/** The back end `agentGraph` query. Pass `null` to wait for the arguments. */
+/** The back end `getAgentGraph` query. Pass `null` to wait for the arguments. */
 export const useQueryAgentGraphSwr = (request: QueryAgentGraphRequest | null, config?: SWRConfiguration) =>
     useSWR(
         useWorkspaceRequestKey(QUERY_AGENT_GRAPH_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QueryAgentGraphRequest>) =>
-            answeredData(await queryAgentGraph({ request: input }), QUERY_AGENT_GRAPH_SWR_KEY).agentGraph,
+            answeredData(await queryAgentGraph({ request: input }), QUERY_AGENT_GRAPH_SWR_KEY).getAgentGraph,
         config,
     )

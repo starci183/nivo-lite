@@ -33,7 +33,7 @@ export const useAgentGraphPanel = (installationId: string) => {
     const [changes, setChanges] = useState(0)
     const graph = useAgentGraphRead(installationId, changes)
     const writes = useAgentGraphWrites((isDraftEmpty) => setChanges((count) => (isDraftEmpty ? 0 : count + 1)))
-    const state = useAgentGraphUi()
+    const state = useAgentGraphUi(graph.runId)
     const ctx = { t, canEdit, isOwner: canGrant, number: (value: number) => format.number(value) }
     const data = graph.read?.data ?? AGENT_GRAPH_PLACEHOLDER
     const hit = branchHitOf(data.nodes, state.ui.selectedKey)
@@ -60,7 +60,12 @@ export const useAgentGraphPanel = (installationId: string) => {
             if (read !== undefined) void writes.publish(read.agentId, t("publishNote", { count: changes }))
         },
         decide: (proposalId, isConfirmed) => {
-            if (read !== undefined && !isConfirmed) void writes.decline(read.agentId, proposalId)
+            if (read === undefined) return
+            if (isConfirmed) void writes.confirm(read.agentId, proposalId)
+            else void writes.decline(read.agentId, proposalId)
+        },
+        mode: (value) => {
+            if (read !== undefined && canGrant) void writes.mode(read.agentId, value)
         },
         restore: (versionId) => {
             if (read !== undefined) void writes.restore(read.agentId, versionId)

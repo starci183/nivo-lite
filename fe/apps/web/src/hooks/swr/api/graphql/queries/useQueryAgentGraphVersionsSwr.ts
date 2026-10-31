@@ -20,6 +20,6 @@ export const useQueryAgentGraphVersionsSwr = (
         useWorkspaceRequestKey(QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QueryAgentGraphVersionsRequest>) =>
             answeredData(await queryAgentGraphVersions({ request: input }), QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY)
-                .agentGraphVersions,
+                .listAgentGraphVersions,
         config,
     )

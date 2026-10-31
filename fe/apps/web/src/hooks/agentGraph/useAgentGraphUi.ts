@@ -6,13 +6,13 @@ import type { AgentGraphBranchForm, AgentGraphPhoneView, AgentGraphSideTab } fro
 import { PHONE_VIEWS, SIDE_TABS } from "./agentGraph.shared"
 
 /** The choices a person makes on the graph panes that are not data: what is selected, which tab shows, what is edited or traced. */
-export const useAgentGraphUi = () => {
+export const useAgentGraphUi = (initialRunId: string) => {
     const [selectedKey, setSelectedKey] = useState("")
     const [sideTab, setSideTab] = useState<AgentGraphSideTab>("chat")
     const [phoneView, setPhoneView] = useState<AgentGraphPhoneView>("branches")
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
     const [form, setForm] = useState<AgentGraphBranchForm | null>(null)
-    const [runId, setRunId] = useState("")
+    const [runId, setRunId] = useState(initialRunId)
     const ui: AgentGraphUi = { selectedKey, sideTab, phoneView, isDrawerOpen, form, runId, isPublishing: false }
     const select = (key: string) => {
         setSelectedKey(key)

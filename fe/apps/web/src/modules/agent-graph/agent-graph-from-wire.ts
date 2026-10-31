@@ -8,6 +8,7 @@ import type {
     AgentGraphMemberData,
     AgentGraphNodeData,
     AgentGraphProposalData,
+    AgentGraphRunData,
     AgentGraphSourceData,
     AgentGraphVersionData,
     AgentGraphWords,
@@ -18,6 +19,7 @@ import type {
     AgentGraphWireBranch,
     AgentGraphWireNode,
     AgentGraphWireSource,
+    AgentGraphWireStep,
 } from "./agent-graph-wire"
 import type { AgentGraphT } from "./agent-graph-words"
 
@@ -43,6 +45,25 @@ export interface AgentGraphWireVersion {
     readonly publishedAt: string
 }
 
+/** Who a request would go to at one branch or step, and who was left out. */
+export interface AgentGraphCoverageRow {
+    readonly nodeKey: string
+    readonly branchKey?: string | null | undefined
+    readonly covered: boolean
+    readonly top?: number | null | undefined
+    readonly approvers: ReadonlyArray<string>
+    readonly excluded: ReadonlyArray<{ readonly name: string; readonly reason: string }>
+}
+
+/** A run read by its work item, with the nodes it went through. */
+export interface AgentGraphRunRead {
+    readonly id: string
+    readonly version: number
+    readonly outcome: string
+    readonly closedAs?: string | null | undefined
+    readonly steps: ReadonlyArray<AgentGraphWireStep>
+}
+
 /** Everything the graph is made of once it was read. */
 export interface AgentGraphWireInput {
     readonly wire: AgentGraphWire
@@ -50,6 +71,8 @@ export interface AgentGraphWireInput {
     readonly activeVersionId: string | null
     readonly versions: ReadonlyArray<AgentGraphWireVersion>
     readonly members: ReadonlyArray<AgentGraphMemberData>
+    readonly coverage: ReadonlyArray<AgentGraphCoverageRow>
+    readonly run: AgentGraphRunRead | null
     /** The changes saved to the draft on this screen since it was read. */
     readonly changes: number
 }
@@ -63,9 +86,25 @@ export interface AgentGraphWireWords extends AgentGraphWords {
 const nameOf = (members: ReadonlyArray<AgentGraphMemberData>, id: string): string =>
     members.find((member) => member.id === id)?.name ?? id
 
+/** Why a person is left out of a group, in words. */
+const reasonOf = (reason: string, t: AgentGraphT): string => {
+    if (reason === "inactive") return t("reasonInactive")
+    return reason === "no_grant" ? t("reasonNoGrant") : t("reasonOverLimit")
+}
+
+/** What the coverage of a step says: who a request would go to, and who is left out and why. */
+const coverageWordsOf = (row: AgentGraphCoverageRow | undefined, t: AgentGraphT): string => {
+    if (row === undefined) return ""
+    const left = row.excluded.map((entry) => `${entry.name} (${reasonOf(entry.reason, t)})`).join(", ")
+    const names = row.approvers.join(", ")
+    if (!row.covered) return t("coverageNobody", { left })
+    return left === "" ? t("coverageOk", { names }) : t("coverageSome", { names, left })
+}
+
 const approverOf = (
     wire: AgentGraphWireApprover | null,
     members: ReadonlyArray<AgentGraphMemberData>,
+    coverage = "",
 ): AgentGraphApproverData | null => {
     if (wire === null) return null
     const backupId = wire.onTimeout.group?.members[0] ?? ""
@@ -75,7 +114,7 @@ const approverOf = (
             wire.group.members.map((id) => nameOf(members, id)).join(", ") ||
             wire.group.rooms.join(", ") ||
             wire.group.roles.join(", "),
-        coverage: "",
+        coverage,
         timeoutMinutes: wire.timeoutMinutes,
         onTimeout: wire.onTimeout.kind,
         backupId,
@@ -106,11 +145,19 @@ const sourceOf = (
     }
 }
 
+/** The condition node a branch belongs to, with the graph it was read in. */
+interface BranchContext {
+    readonly nodeKey: string
+    readonly input: AgentGraphWireInput
+}
+
 const branchOf = (
     branch: AgentGraphWireBranch,
+    ctx: BranchContext,
     words: AgentGraphWireWords,
-    members: ReadonlyArray<AgentGraphMemberData>,
 ): AgentGraphBranchData => {
+    const members = ctx.input.members
+    const row = ctx.input.coverage.find((entry) => entry.nodeKey === ctx.nodeKey && entry.branchKey === branch.key)
     const bounds = branch.when === "else" ? { fromVnd: null, toVnd: null } : boundsOf(branch.when)
     const isOther = branch.when !== "else" && bounds === null
     return {
@@ -120,7 +167,7 @@ const branchOf = (
         toVnd: bounds?.toVnd ?? null,
         then: branch.then,
         next: branch.next,
-        approver: approverOf(branch.approver, members),
+        approver: approverOf(branch.approver, members, coverageWordsOf(row, words.t)),
         sources: branch.sources.map((source) => sourceOf(source, words, members)),
         selfCorrected: branch.selfCorrected === true,
     }
@@ -158,11 +205,18 @@ const nodeOf = (
     ),
     reads: linesOf(node.reads.map((item) => ({ label: item.label, note: item.place }))),
     writes: linesOf(node.writes.map((item) => ({ label: item.label, note: item.place }))),
-    approver: approverOf(node.approver, input.members),
+    approver: approverOf(
+        node.approver,
+        input.members,
+        coverageWordsOf(
+            input.coverage.find((entry) => entry.nodeKey === node.key && (entry.branchKey ?? null) === null),
+            words.t,
+        ),
+    ),
     sources: node.sources.map((source) => sourceOf(source, words, input.members)),
     next: node.next,
     intent: node.decide?.intent ?? "",
-    branches: (node.decide?.branches ?? []).map((branch) => branchOf(branch, words, input.members)),
+    branches: (node.decide?.branches ?? []).map((branch) => branchOf(branch, { nodeKey: node.key, input }, words)),
 })
 
 const proposalOf = (
@@ -201,6 +255,29 @@ const versionOf = (
     isActive: version.id === input.activeVersionId,
 })
 
+/** A traced run: the nodes it went through in order, and the branch it took at each condition. */
+const runOf = (run: AgentGraphRunRead, input: AgentGraphWireInput, words: AgentGraphWireWords): AgentGraphRunData => {
+    const { t } = words
+    const branchWords = (step: AgentGraphWireStep): string => {
+        const taken = input.wire.document.nodes
+            .find((node) => node.key === step.key)
+            ?.decide?.branches.find((branch) => branch.key === step.branchKey)
+        return taken === undefined
+            ? ""
+            : t("runTookBranch", { branch: branchOf(taken, { nodeKey: step.key, input }, words).when })
+    }
+    return {
+        id: run.id,
+        title: t("runTitleWire", { version: run.version }),
+        summary: t("runSummaryWire", { version: run.version }),
+        outcome: run.closedAs ?? run.outcome,
+        mismatch: "",
+        steps: run.steps.map((step) => ({ id: step.key, time: "", text: step.title, note: branchWords(step) })),
+        path: run.steps.map((step) => step.key),
+        skipped: "",
+    }
+}
+
 /** The graph the panes draw, made of what the contract carries and the people of the workspace. */
 export const agentGraphOfWire = (input: AgentGraphWireInput, words: AgentGraphWireWords): AgentGraphData => ({
     mode: input.mode === "enforced" ? "enforced" : "shadow",
@@ -217,6 +294,6 @@ export const agentGraphOfWire = (input: AgentGraphWireInput, words: AgentGraphWi
     proposals: input.wire.proposals
         .filter((proposal) => proposal.status === "open")
         .map((proposal) => proposalOf(proposal, words)),
-    runs: [],
+    runs: input.run === null ? [] : [runOf(input.run, input, words)],
     members: input.members,
 })
