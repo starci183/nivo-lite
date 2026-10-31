@@ -1,10 +1,10 @@
-# Dossier review ("Rà soát hồ sơ")
+# Dossier review ("Review dossiers")
 
 Design approved by the owner on 2026-10-31 for build by three agents without a further question. The owner's intent, in
-their words: "rules phần này khi up lên là agent phản biện tìm điểm vô lý cùng người dùng hoàn thiện tài liệu". When
+their words: "the rules for this part: when documents are uploaded, a critic agent finds what makes no sense and works with the user to complete the documents". When
 documents are uploaded, an agent reads them critically, finds what contradicts, is missing, has expired, is unsigned, is
 out of date after an event or is unreasonable, and works with the owner until the dossiers are complete. NIVO drafts,
-the owner approves ("AI soạn, bạn duyệt").
+the owner approves ("AI drafts, you approve").
 
 It builds on the Second Brain ([second-brain.md](second-brain.md)): documents (`knowledge_sources`, the 50 MB raw-data
 allowance), their passages (`knowledge_chunks`), the facts read out of them (`brain_facts`, proposals with evidence and
@@ -12,8 +12,8 @@ conflicts) and the dossiers imported from the checklist workbook (`brain_dossier
 drafted / missing / template).
 
 The reference data set is a Vietnamese two-member LLC (64 dossiers in 12 categories plus `BKS`) with its checklist
-workbook "00. BẢNG ĐỐI CHIẾU VÀ HỒ SƠ CÒN THIẾU.xlsx" and the final legal review "00. RÀ SOÁT PHÁP LÝ CUỐI - 27-10-2026.xlsx"
-(sheets Kết luận từng hồ sơ, Vấn đề pháp lý, Đối soát chéo, Căn cứ pháp luật). Those sheets are what a human reviewer
+workbook `00. B*.xlsx` ("checklist and missing dossiers") and the final legal review `00. R*.xlsx` ("final legal review, 27-10-2026")
+(sheets: conclusion per dossier, legal issues, cross-check, legal basis). Those sheets are what a human reviewer
 produced by hand; this feature produces the same kind of finding automatically. Four findings it must produce on that
 data, used as the acceptance set:
 
@@ -22,11 +22,11 @@ data, used as the acceptance set:
 | A1  | The charter (dossier 02) is dated at founding and was not updated after the capital transfer of 17/08/2026                                                                                  | outdated                                                                                  | high                                      |
 | A2  | Charter capital 300,000,000 in the registration certificate and charter, but a different contributed total in the bank statements (285 M in the owner's example; 182 M in the final review) | contradiction (+ unreasonable "contribution overdue" once the 90-day deadline has passed) | high (critical for the overdue shortfall) |
 | A3  | The legal representative's file (dossier 06) has no CCCD of the legal representative                                                                                                        | missing                                                                                   | medium                                    |
-| A4  | Two people hold "người phụ trách kế toán" at the same time: one bank still names the person who left, another bank and the appointment decision name the new one                            | contradiction                                                                             | high                                      |
+| A4  | Two people hold "person in charge of accounting" at the same time: one bank still names the person who left, another bank and the appointment decision name the new one                     | contradiction                                                                             | high                                      |
 
 Company-specific values (names, tax code, amounts, dates) never appear in code: they come from the workspace's facts and
-documents. The rule pack is generic for a Vietnamese multi-member LLC. Specs use synthetic data ("Công ty TNHH Mẫu",
-"Nguyễn Văn A").
+documents. The rule pack is generic for a Vietnamese multi-member LLC. Specs use synthetic data ("Sample Co. Ltd",
+"Nguyen Van A").
 
 ## 1. How it flows
 
@@ -34,7 +34,7 @@ documents. The rule pack is generic for a Vietnamese multi-member LLC. Specs use
 upload ─► index (chunks) ─► facts job (DocumentFactsService) ─finish/giveUp─► DossierReviewRunsService.requestForSource
                                                                               │  (coalesced run row + queue outbox, one tx)
 remove source ─► DocumentFactsService.withdraw ─► requestForGoneSource ───────┤
-"Rà soát lại cả bộ" / "Rà soát hồ sơ này" ─► requestDossierReview ────────────┤
+"Review all dossiers" / "Review this dossier" ─► requestDossierReview ────────────┤
 approved remedy draft ─► new knowledge source ─► (indexed, facts) ────────────┘
                                                                               ▼
                        queue "knowledge", job dossier.review ─► DossierReviewRunnerService.run
@@ -98,10 +98,10 @@ plus the sorted ids of the sources and facts they cite; two AI findings with the
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `document`      | the facts job of a source ends (`DocumentFactsService.finish`, and `giveUp` when facts could not be read: presence rules still run) | the dossier the source files under (its topic is the dossier category and its ref, from tag `dossier:<ref>` or a title starting `<n>. `); a source matching no dossier queues nothing |
 | `document_gone` | a source is deleted (`DocumentFactsService.withdraw`)                                                                               | every dossier with a finding citing that source (`source_ids` GIN index), and the dossier its topic and title named                                                                   |
-| `request`       | an owner or manager presses "Rà soát hồ sơ này" or "Rà soát lại cả bộ"                                                              | one dossier, or the workspace                                                                                                                                                         |
+| `request`       | an owner or manager presses "Review this dossier" or "Review all dossiers"                                                          | one dossier, or the workspace                                                                                                                                                         |
 | `draft`         | an approved draft became a source                                                                                                   | rides on `document` when that source is read                                                                                                                                          |
 
-The checklist import triggers nothing: after an import the page offers "Rà soát lại cả bộ".
+The checklist import triggers nothing: after an import the page offers "Review all dossiers".
 
 A dossier run evaluates its dossier and the dossiers related to it by the rule pack and by shared fact subjects, so a
 new bank statement re-checks capital consistency across 01, 02, 08 to 12 and 45 while the AI pass reads only the
@@ -155,31 +155,31 @@ sources classified as `actual`, `draft` or `template`, their passages, and the f
 `not_detected`.
 
 Document state of a source: `draft` when its tags hold `nivo:draft` or `draft`, or its title or origin matches
-`dự thảo|du thao|chờ ký|cho ky|draft`; `template` when its tags hold `template`, or its origin matches
-`_Mẫu cũ|bộ mẫu|template|biểu mẫu`, or its title equals the pack's template title; otherwise `actual`. Document date:
-the earliest of its facts whose attribute is a signing / issue / effective date (`ngày ký`, `ngày ban hành`,
-`ngày hiệu lực`, `ngày lập`), else a date in its title (`2026.01.09_…`, `09.01.2026`, `06.01.2026 …`); never the upload
+`du thao|du thao|cho ky|cho ky|draft`; `template` when its tags hold `template`, or its origin matches
+`_Mau cu|bo mau|template|bieu mau`, or its title equals the pack's template title; otherwise `actual`. Document date:
+the earliest of its facts whose attribute is a signing / issue / effective date (`ngay ky`, `ngay ban hanh`,
+`ngay hieu luc`, `ngay lap`), else a date in its title (`2026.01.09_…`, `09.01.2026`, `06.01.2026 …`); never the upload
 time. Attribute matching uses `factSlugOf` of the pack's Vietnamese and English aliases.
 
-| rule key                  | kind                   | what it checks                                                                                                                                                                                                                                                                                               | example                                                                 |
-| ------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| `presence.expected`       | missing                | each expectation of the dossier's pack entry is met by an `actual` (or, when `signed` is false, any) source whose title, or passages, match `titleAny` / `textAny`; an expectation `about` a role must also name the holder of that role (from facts)                                                        | A3: 06 expects "CCCD / căn cước / CMND" naming the legal representative |
-| `presence.dossier`        | missing                | a `required` dossier with no `actual` and no `draft` source                                                                                                                                                                                                                                                  |                                                                         |
-| `signatures.unsigned`     | unsigned               | a `signed` expectation met only by `draft` sources                                                                                                                                                                                                                                                           | the charter amendment exists only as "Dự thảo … chờ ký"                 |
-| `signatures.placeholders` | missing (low)          | passages of `actual` or `draft` sources still holding `……`, `[...]`, `[ ]`, `[__]` or a bracketed number left to choose (`[65]%`); params count and first quote                                                                                                                                              | "Còn chỗ trống cần điền"                                                |
-| `expiry.dates`            | expired                | facts with an expiry attribute (`ngày hết hạn`, `hết hạn`, `hiệu lực đến`, `có hiệu lực đến`, `expiry`, `expires`) or a `valid_to`: passed ⇒ high, within 60 days ⇒ medium                                                                                                                                   | a digital signature certificate, a domain                               |
-| `expiry.untracked`        | missing (low)          | a pack entry with `tracksExpiry` and no expiry fact in its sources                                                                                                                                                                                                                                           | the domain register has no expiry date                                  |
-| `amounts.invariant`       | contradiction          | every fact whose attribute is an alias of an invariant (`charter_capital`: `vốn điều lệ`, `charter capital`; `tax_code`: `mã số thuế`, `MST`) agrees across all documents, the authority dossiers first; differing values ⇒ one finding with every value as evidence                                         | A2                                                                      |
-| `amounts.contribution`    | unreasonable           | a contributed total (`vốn đã góp`, `vốn thực góp`, `tổng vốn góp`) below charter capital once registration date + 90 days (LDN Đ.47) has passed ⇒ critical; before ⇒ low "contribution still open"                                                                                                           | A2's overdue shortfall                                                  |
-| `amounts.shares`          | unreasonable           | member ownership percentages sum to 100 % and each member's capital equals share × charter capital (tolerance 1,000 VND)                                                                                                                                                                                     | 64 % / 36 % of 300 M = 192 M / 108 M                                    |
-| `outdated.after_event`    | outdated               | for each event the pack entry `mustReflect` (`capital_transfer`, `member_change`, `registration_change`, `legal_rep_change`, `role_change`), the latest event date from facts; if every `actual` source of the dossier is dated before it ⇒ outdated, evidence the event fact and the newest document's date | A1: the charter dated at founding, the transfer on 17/08/2026           |
-| `roles.holders`           | contradiction          | facts of the same role (`người phụ trách kế toán`, `kế toán trưởng`, `người đại diện theo pháp luật`, `giám đốc` / `tổng giám đốc`, `chủ tịch hội đồng thành viên`, `kiểm soát viên`) naming different people with overlapping validity (valid_from/valid_to, else document dates) across subjects           | A4: the bank still names the accountant who left                        |
-| `roles.left`              | outdated               | a person with a leaving date (`ngày nghỉ việc`, `ngày thôi việc`, `chấm dứt hợp đồng`) before today who still holds a role in a fact without `valid_to`                                                                                                                                                      |                                                                         |
-| `facts.conflict`          | contradiction (medium) | a fact with `conflict_with` where both sides are document facts of the workspace's dossiers; the owner's decision in Brain > Review makes it go away                                                                                                                                                         |                                                                         |
-| `identifiers.canonical`   | contradiction (medium) | numbers next to `MST`, `mã số thuế`, `tax code` (10 or 13 digits) and next to `CCCD`, `căn cước` (12 digits) in passages that differ from the workspace's active value for that subject                                                                                                                      | "MST lạ", "Số 12 chữ số lạ"                                             |
-| `citations.repealed`      | outdated (medium)      | passages of `actual` or `draft` sources dated on or after a citation's end date citing a repealed text of the pack's list (`NĐ 123/2020`, `NĐ 70/2025` → `NĐ 254/2026` from 01/07/2026; `TT 132/2018` → `TT 58/2026`; the Luật TNCN before `109/2025` from 01/07/2026)                                       | "Căn cứ pháp luật đã hết hiệu lực"                                      |
-| `values.minimum_wage`     | unreasonable (medium)  | a salary fact (`mức lương`, `lương cơ bản`, `lương`) below the pack's regional minimum for its date (region III 4,140,000 VND from 01/01/2026)                                                                                                                                                               |                                                                         |
-| `values.dates`            | unreasonable (low)     | an end before its start, or a document dated more than one day after today                                                                                                                                                                                                                                   |                                                                         |
+| rule key                  | kind                   | what it checks                                                                                                                                                                                                                                                                                               | example                                                                               |
+| ------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `presence.expected`       | missing                | each expectation of the dossier's pack entry is met by an `actual` (or, when `signed` is false, any) source whose title, or passages, match `titleAny` / `textAny`; an expectation `about` a role must also name the holder of that role (from facts)                                                        | A3: 06 expects "citizen ID / ID card / identity card" naming the legal representative |
+| `presence.dossier`        | missing                | a `required` dossier with no `actual` and no `draft` source                                                                                                                                                                                                                                                  |                                                                                       |
+| `signatures.unsigned`     | unsigned               | a `signed` expectation met only by `draft` sources                                                                                                                                                                                                                                                           | the charter amendment exists only as "Draft … awaiting signature"                     |
+| `signatures.placeholders` | missing (low)          | passages of `actual` or `draft` sources still holding `……`, `[...]`, `[ ]`, `[__]` or a bracketed number left to choose (`[65]%`); params count and first quote                                                                                                                                              | "Blanks still to fill in"                                                             |
+| `expiry.dates`            | expired                | facts with an expiry attribute (`ngay het han`, `het han`, `hieu luc den`, `co hieu luc den`, `expiry`, `expires`) or a `valid_to`: passed ⇒ high, within 60 days ⇒ medium                                                                                                                                   | a digital signature certificate, a domain                                             |
+| `expiry.untracked`        | missing (low)          | a pack entry with `tracksExpiry` and no expiry fact in its sources                                                                                                                                                                                                                                           | the domain register has no expiry date                                                |
+| `amounts.invariant`       | contradiction          | every fact whose attribute is an alias of an invariant (`charter_capital`: `von dieu le`, `charter capital`; `tax_code`: `ma so thue`, `MST`) agrees across all documents, the authority dossiers first; differing values ⇒ one finding with every value as evidence                                         | A2                                                                                    |
+| `amounts.contribution`    | unreasonable           | a contributed total (`von da gop`, `von thuc gop`, `tong von gop`) below charter capital once registration date + 90 days (LDN Art.47) has passed ⇒ critical; before ⇒ low "contribution still open"                                                                                                         | A2's overdue shortfall                                                                |
+| `amounts.shares`          | unreasonable           | member ownership percentages sum to 100 % and each member's capital equals share × charter capital (tolerance 1,000 VND)                                                                                                                                                                                     | 64 % / 36 % of 300 M = 192 M / 108 M                                                  |
+| `outdated.after_event`    | outdated               | for each event the pack entry `mustReflect` (`capital_transfer`, `member_change`, `registration_change`, `legal_rep_change`, `role_change`), the latest event date from facts; if every `actual` source of the dossier is dated before it ⇒ outdated, evidence the event fact and the newest document's date | A1: the charter dated at founding, the transfer on 17/08/2026                         |
+| `roles.holders`           | contradiction          | facts of the same role (`nguoi phu trach ke toan`, `ke toan truong`, `nguoi dai dien theo phap luat`, `giam doc` / `tong giam doc`, `chu tich hoi dong thanh vien`, `kiem soat vien`) naming different people with overlapping validity (valid_from/valid_to, else document dates) across subjects           | A4: the bank still names the accountant who left                                      |
+| `roles.left`              | outdated               | a person with a leaving date (`ngay nghi viec`, `ngay thoi viec`, `cham dut hop dong`) before today who still holds a role in a fact without `valid_to`                                                                                                                                                      |                                                                                       |
+| `facts.conflict`          | contradiction (medium) | a fact with `conflict_with` where both sides are document facts of the workspace's dossiers; the owner's decision in Brain > Review makes it go away                                                                                                                                                         |                                                                                       |
+| `identifiers.canonical`   | contradiction (medium) | numbers next to `MST`, `ma so thue`, `tax code` (10 or 13 digits) and next to `CCCD`, `can cuoc` (12 digits) in passages that differ from the workspace's active value for that subject                                                                                                                      | "unknown tax code", "unknown 12-digit number"                                         |
+| `citations.repealed`      | outdated (medium)      | passages of `actual` or `draft` sources dated on or after a citation's end date citing a repealed text of the pack's list (`ND 123/2020`, `ND 70/2025` → `ND 254/2026` from 01/07/2026; `TT 132/2018` → `TT 58/2026`; the Personal Income Tax Law before `109/2025` from 01/07/2026)                         | "Legal basis no longer in force"                                                      |
+| `values.minimum_wage`     | unreasonable (medium)  | a salary fact (`muc luong`, `luong co ban`, `luong`) below the pack's regional minimum for its date (region III 4,140,000 VND from 01/01/2026)                                                                                                                                                               |                                                                                       |
+| `values.dates`            | unreasonable (low)     | an end before its start, or a document dated more than one day after today                                                                                                                                                                                                                                   |                                                                                       |
 
 The **rule pack** `vn-llc-64@1` is data in `dossier-pack.policy.ts`, keyed by the template ref of the standard 64-dossier
 set (`1` … `64`, `BKS`), each entry:
@@ -189,7 +189,7 @@ interface PackEntry {
   readonly ref: string // "2"
   readonly nameHint: ReadonlyArray<string> // slugs the workspace dossier's name must contain ("dieu-le"); guards a renumbered checklist
   readonly requirement: "required" | "conditional" | "optional" | "template"
-  readonly basis: ReadonlyArray<string> // "LDN 59/2020 (sđ 76/2025) Đ.24, 25"
+  readonly basis: ReadonlyArray<string> // "LDN 59/2020 (amended 76/2025) Art.24, 25"
   readonly expects: ReadonlyArray<Expectation>
   readonly mustReflect: ReadonlyArray<EventKey>
   readonly tracksExpiry: boolean
@@ -208,30 +208,30 @@ interface Expectation {
 ```
 
 A workspace dossier takes the entry of its ref only when its name contains the entry's `nameHint`; otherwise only the
-generic rules apply to it. Requirement comes from the final review's "Bắt buộc?" column: `Bắt buộc` → required;
-`Bắt buộc khi họp`, `… khi lấy ý kiến`, `(hồ sơ ĐKDN)`, `thông tin đúng` → conditional; `Không bắt buộc`,
-`Thực hành tốt`, `Lưu trữ` → optional; category 12 → template. Entries with explicit expectations, events and remedies
+generic rules apply to it. Requirement comes from the final review's "Required?" column: `Required` → required;
+`Required when meeting`, `… when consulting`, `(registration dossier)`, `correct information` → conditional; `Not required`,
+`Good practice`, `Archive` → optional; category 12 → template. Entries with explicit expectations, events and remedies
 (the rest carry requirement, basis, related and remedy only):
 
-| ref    | expects                                                                                                                              | mustReflect                        | remedy                                                        |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- | ------------------------------------------------------------- |
-| 1      | registration certificate (`giấy chứng nhận đăng ký doanh nghiệp`, `GCN ĐKDN`, `GPKD`); the filed change dossier of the latest change | —                                  | — (external)                                                  |
-| 2      | signed charter (`điều lệ`), signed                                                                                                   | capital_transfer, member_change    | "Nghị quyết HĐTV thông qua Điều lệ sửa đổi" + amended charter |
-| 3      | seal decision (`quyết định … con dấu`), signed                                                                                       | —                                  | "Quyết định quản lý và sử dụng con dấu"                       |
-| 4      | certificate register; tracksExpiry                                                                                                   | —                                  | —                                                             |
-| 5      | bank account records per account (`tài khoản`, `ngân hàng`)                                                                          | role_change                        | "Giấy đề nghị thay đổi người phụ trách kế toán" (external)    |
-| 6      | CCCD of the legal representative (`CCCD`, `căn cước`, `CMND`; about legal_representative)                                            | legal_rep_change                   | — (upload)                                                    |
-| 8      | members register (`sổ đăng ký thành viên`), signed                                                                                   | capital_transfer, member_change    | "Sổ đăng ký thành viên"                                       |
-| 10     | contribution minutes (`biên bản góp vốn`), signed                                                                                    | capital_transfer                   | "Biên bản góp vốn"                                            |
-| 11     | contribution vouchers (`chứng từ góp vốn`, `sao kê`, `biên nhận`)                                                                    | capital_transfer                   | — (upload)                                                    |
-| 12     | capital certificates (`giấy chứng nhận phần vốn góp`), signed                                                                        | capital_transfer                   | "Giấy chứng nhận phần vốn góp"                                |
-| 19, 20 | members' council minutes and resolutions (`biên bản họp`, `nghị quyết`), signed                                                      | capital_transfer, legal_rep_change | "Biên bản và Nghị quyết HĐTV"                                 |
-| 21     | election of the council chair (`bầu chủ tịch`), signed                                                                               | —                                  | "Nghị quyết bầu Chủ tịch HĐTV"                                |
-| 23     | appointment decisions (`quyết định bổ nhiệm`), signed                                                                                | role_change                        | "Quyết định bổ nhiệm"                                         |
-| 28     | labour contracts (`hợp đồng lao động`, `HĐLĐ`)                                                                                       | —                                  | —                                                             |
-| 29     | staff files with CCCD of each current employee (about each person with a labour contract)                                            | role_change                        | —                                                             |
-| 37     | NDA per current employee (`thỏa thuận bảo mật`, `NDA`), signed                                                                       | —                                  | "Thỏa thuận bảo mật"                                          |
-| 53     | domain register; tracksExpiry                                                                                                        | —                                  | —                                                             |
+| ref    | expects                                                                                                                              | mustReflect                        | remedy                                                                       |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- | ---------------------------------------------------------------------------- |
+| 1      | registration certificate (`giay chung nhan dang ky doanh nghiep`, `GCN DKDN`, `GPKD`); the filed change dossier of the latest change | —                                  | — (external)                                                                 |
+| 2      | signed charter (`dieu le`), signed                                                                                                   | capital_transfer, member_change    | "Members' council resolution adopting the amended charter" + amended charter |
+| 3      | seal decision (`quyet dinh … con dau`), signed                                                                                       | —                                  | "Decision on managing and using the seal"                                    |
+| 4      | certificate register; tracksExpiry                                                                                                   | —                                  | —                                                                            |
+| 5      | bank account records per account (`tai khoan`, `ngan hang`)                                                                          | role_change                        | "Request to change the person in charge of accounting" (external)            |
+| 6      | CCCD of the legal representative (`CCCD`, `can cuoc`, `CMND`; about legal_representative)                                            | legal_rep_change                   | — (upload)                                                                   |
+| 8      | members register (`so dang ky thanh vien`), signed                                                                                   | capital_transfer, member_change    | "Members register"                                                           |
+| 10     | contribution minutes (`bien ban gop von`), signed                                                                                    | capital_transfer                   | "Contribution minutes"                                                       |
+| 11     | contribution vouchers (`chung tu gop von`, `sao ke`, `bien nhan`)                                                                    | capital_transfer                   | — (upload)                                                                   |
+| 12     | capital certificates (`giay chung nhan phan von gop`), signed                                                                        | capital_transfer                   | "Capital contribution certificate"                                           |
+| 19, 20 | members' council minutes and resolutions (`bien ban hop`, `nghi quyet`), signed                                                      | capital_transfer, legal_rep_change | "Members' council minutes and resolutions"                                   |
+| 21     | election of the council chair (`bau chu tich`), signed                                                                               | —                                  | "Resolution electing the council chair"                                      |
+| 23     | appointment decisions (`quyet dinh bo nhiem`), signed                                                                                | role_change                        | "Appointment decision"                                                       |
+| 28     | labour contracts (`hop dong lao dong`, `HDLD`)                                                                                       | —                                  | —                                                                            |
+| 29     | staff files with CCCD of each current employee (about each person with a labour contract)                                            | role_change                        | —                                                                            |
+| 37     | NDA per current employee (`thoa thuan bao mat`, `NDA`), signed                                                                       | —                                  | "Confidentiality agreement"                                                  |
+| 53     | domain register; tracksExpiry                                                                                                        | —                                  | —                                                                            |
 
 The pack also holds the invariants, event and role aliases, the repealed-citations list and the wage table above. Its
 version string enters every `inputs_fingerprint`, so a pack change re-runs the AI pass once.
@@ -326,38 +326,38 @@ z.object({
 
 ## 6. Completing the dossiers with the owner
 
-| action (owner or manager; members read)            | effect                                                                                                                                                                                                |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Xác nhận (confirm)                                 | `open` → `confirmed`, optional note                                                                                                                                                                   |
-| Bỏ qua (dismiss)                                   | reason 3 to 500 characters required; `dismissed`; keeps `dismissed_evidence_hash`                                                                                                                     |
-| Mở lại (reopen)                                    | `dismissed` or `resolved` → `open`                                                                                                                                                                    |
-| Giao việc (assign)                                 | assignee (a workspace member) and an optional due date                                                                                                                                                |
-| Đánh dấu đã xử lý (mark done)                      | `resolved`, `resolution = manual`, note required (for `external` remedies done outside: "BIDV đã cập nhật")                                                                                           |
-| Tải tài liệu lên (upload)                          | opens the existing add-documents drawer preset with the dossier's category as topic and tag `dossier:<ref>`; when the next run no longer detects the finding it resolves with `resolution = document` |
-| Nhờ NIVO soạn (draft), for `remedy_action = draft` | `generating` draft + job `dossier.remedy`; optional instructions ≤ 1,000 characters                                                                                                                   |
+| action (owner or manager; members read)        | effect                                                                                                                                                                                                |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Confirm                                        | `open` → `confirmed`, optional note                                                                                                                                                                   |
+| Dismiss                                        | reason 3 to 500 characters required; `dismissed`; keeps `dismissed_evidence_hash`                                                                                                                     |
+| Reopen                                         | `dismissed` or `resolved` → `open`                                                                                                                                                                    |
+| Assign                                         | assignee (a workspace member) and an optional due date                                                                                                                                                |
+| Mark done                                      | `resolved`, `resolution = manual`, note required (for `external` remedies done outside: "BIDV has updated it")                                                                                        |
+| Upload                                         | opens the existing add-documents drawer preset with the dossier's category as topic and tag `dossier:<ref>`; when the next run no longer detects the finding it resolves with `resolution = document` |
+| Ask NIVO to draft, for `remedy_action = draft` | `generating` draft + job `dossier.remedy`; optional instructions ≤ 1,000 characters                                                                                                                   |
 
 Drafting (`RemedyWriter` port, implemented in `dossier-review-ai`): input is the finding with its verified evidence
 quotes, the dossier, the pack's remedy document type and guidance, the workspace's identity facts (company name, tax
 code, address, members and shares, legal representative, council chair; active and proposed facts only) and the
 instructions. The model writes the document in Markdown; every value it does not have is a placeholder `[…: <what>]`
-and listed in `placeholders`, never invented. Code appends the fixed tail (BE-AI-4): "Dự thảo do NIVO soạn ngày
-<dd/mm/yyyy> theo phát hiện "<title>". Cần rà soát, điền chỗ trống và ký trước khi sử dụng." Output schema:
+and listed in `placeholders`, never invented. Code appends the fixed tail (BE-AI-4): "Draft written by NIVO on
+<dd/mm/yyyy> for the finding "<title>". Review it, fill in the blanks and sign it before use." Output schema:
 `{ title ≤ 160, documentType ≤ 80, body ≤ 40,000, placeholders: [{ label ≤ 120, reason ≤ 200 }] ≤ 30 }`.
 
 Review: the owner reads the draft in a drawer, edits title and body (saved as the same `proposed` row), then:
 
-- **Duyệt** (approve): the draft becomes a knowledge source (`kind text`, title prefixed with the dossier ref
+- **Approve**: the draft becomes a knowledge source (`kind text`, title prefixed with the dossier ref
   "02. …" so the existing dossier document count sees it, topic = the dossier's category, tags `dossier:<ref>`,
   `nivo:draft`, `remedy:<draftId>`, visibility internal, origin `dossier-review`); the finding resolves with
   `resolution = draft`. When the source is read, a `signatures.unsigned` finding opens for the dossier if its
-  expectation is `signed`: "chờ ký" stays visible until the signed scan is uploaded, and the dossier shows `drafted`.
-- **Từ chối** (reject), optional reason: the draft is `rejected`; the finding stays as it was.
+  expectation is `signed`: "awaiting signature" stays visible until the signed scan is uploaded, and the dossier shows `drafted`.
+- **Reject**, optional reason: the draft is `rejected`; the finding stays as it was.
 
 ### Dossier status, recomputed
 
 Each run writes `dossier_reviews` per evaluated dossier. Its status replaces the imported checklist status on the page
 once a dossier has been reviewed; the imported value stays in `brain_dossiers.status` and is shown beside it when they
-differ ("Bảng đối chiếu: Có một phần"). `dossier-status.policy.ts`:
+differ ("Checklist: Partial"). `dossier-status.policy.ts`:
 
 1. pack requirement `template` (or no pack entry and checklist `template`) → `template`;
 2. no `actual` and no `draft` source: requirement `optional` → the checklist status, else `missing`;
@@ -376,57 +376,57 @@ DataTable when it fits the list). No new visual primitives.
 `wide: ["list main detail"]`; columns `wide: ["standard", "fill", "wide"]`. The `detail` pane is `collapse="drawer"`
 (below 70rem it opens as the grid's drawer when a dossier is selected) and `scroll`, labelled with the dossier name.
 Dossier rows become selectable (`?dossier=<id>` in the address); each row shows the recomputed status badge and, when
-there are active findings, a count badge in the tone of the worst severity. The section header gets "Rà soát lại cả bộ"
+there are active findings, a count badge in the tone of the worst severity. The section header gets "Review all dossiers"
 (owner and manager), disabled with a progress line while a run is queued or running.
 
 **Findings pane** (`DossierFindings` block in `detail`): header with the dossier, status, last reviewed time and
-"Rà soát hồ sơ này"; an Alert when the last run skipped AI (no credits, daily budget); a SegmentedControl Đang mở /
-Đã xác nhận / Đã đóng; rows (ListRow): severity badge, kind badge, "AI" badge for AI findings, title, detail as the one
+"Review this dossier"; an Alert when the last run skipped AI (no credits, daily budget); a SegmentedControl Open /
+Confirmed / Closed; rows (ListRow): severity badge, kind badge, "AI" badge for AI findings, title, detail as the one
 description line, evidence quotes as StaticStateRows under the row when expanded (document title linking to the
-document page), assignee and due date; row actions (neutral, `sm`): Xác nhận, Bỏ qua…, Giao…, Tải tài liệu lên, Nhờ NIVO
-soạn / Xem dự thảo, Đánh dấu đã xử lý…, Mở lại. Dismiss, assign and mark-done open a Dialog (short focused task); the
+document page), assignee and due date; row actions (neutral, `sm`): Confirm, Dismiss…, Assign…, Upload the document, Ask NIVO
+to draft / View draft, Mark as done…, Reopen. Dismiss, assign and mark-done open a Dialog (short focused task); the
 draft opens the draft drawer.
 
-**Cần xử lý tab** (`todo`, new in `BRAIN_TABS`, label with the open count): `DossierTodo` block, a workspace list of
-active findings across dossiers, severity then age, with filters (SegmentedControl Tất cả / Của tôi / Chưa giao /
-Chờ duyệt dự thảo; Select severity), Load more (connection paging). A row opens the dossier tab at
+**To do tab** (`todo`, new in `BRAIN_TABS`, label with the open count): `DossierTodo` block, a workspace list of
+active findings across dossiers, severity then age, with filters (SegmentedControl All / Mine / Unassigned /
+Drafts to approve; Select severity), Load more (connection paging). A row opens the dossier tab at
 `?dossier=<id>&finding=<id>`.
 
 **Draft drawer** (`DossierRemedyDraft` block, Drawer from the trailing edge): status line; while `generating` a
 progress line (SWR refresh every 4 s, 0 once settled); title field, body Textarea, the placeholders as StaticStateRows,
-the evidence it answers; footer decision group: Từ chối (neutral), Lưu (neutral), Duyệt và lưu vào hồ sơ (commit,
-`type="submit"` on the form). The note "NIVO soạn, bạn duyệt. Văn bản chỉ vào hồ sơ khi bạn duyệt." Members see it
+the evidence it answers; footer decision group: Reject (neutral), Save (neutral), Approve and file it (commit,
+`type="submit"` on the form). The note "NIVO drafts, you approve. It joins the dossier only once you approve it." Members see it
 read-only.
 
-Copy (namespace `dossierReview` in `vi.json` / `en.json`):
+Copy (namespace `dossierReview` in `vi.json` / `en.json`; the table gives the English copy, the Vietnamese strings live in `vi.json`):
 
-| key                                                                                  | vi                                                                                                                                                  | en                                                                                                                                                        |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| tabTodo / tabTodoCount                                                               | Cần xử lý / Cần xử lý ({n})                                                                                                                         | To do / To do ({n})                                                                                                                                       |
-| reviewAll / reviewOne                                                                | Rà soát lại cả bộ / Rà soát hồ sơ này                                                                                                               | Review all dossiers / Review this dossier                                                                                                                 |
-| reviewRunning                                                                        | NIVO đang rà soát…                                                                                                                                  | NIVO is reviewing…                                                                                                                                        |
-| reviewedAt                                                                           | Rà soát lúc {time}                                                                                                                                  | Reviewed {time}                                                                                                                                           |
-| neverReviewed                                                                        | Chưa rà soát                                                                                                                                        | Not reviewed yet                                                                                                                                          |
-| aiSkippedCredits / aiSkippedBudget                                                   | Hết credit nên chỉ chạy kiểm tra quy tắc; nạp thêm để NIVO đọc chéo tài liệu. / Đã chạm hạn mức rà soát AI trong ngày; phần còn lại chạy ở lần sau. | Out of credits, so only the rule checks ran; top up for NIVO to cross-read the documents. / Today's AI review allowance is used; the rest runs next time. |
-| filterOpen / filterConfirmed / filterClosed                                          | Đang mở / Đã xác nhận / Đã đóng                                                                                                                     | Open / Confirmed / Closed                                                                                                                                 |
-| filterAll / filterMine / filterUnassigned / filterDrafts                             | Tất cả / Của tôi / Chưa giao / Chờ duyệt dự thảo                                                                                                    | All / Mine / Unassigned / Drafts to approve                                                                                                               |
-| severity_critical … _low                                                             | Nghiêm trọng / Cao / Trung bình / Thấp                                                                                                              | Critical / High / Medium / Low                                                                                                                            |
-| kind_contradiction …                                                                 | Mâu thuẫn / Thiếu / Hết hạn / Chưa ký / Chưa cập nhật / Bất hợp lý                                                                                  | Contradiction / Missing / Expired / Unsigned / Out of date / Unreasonable                                                                                 |
-| aiBadge                                                                              | AI phát hiện                                                                                                                                        | Found by AI                                                                                                                                               |
-| confirm / dismiss / reopen / assign / markDone                                       | Xác nhận / Bỏ qua / Mở lại / Giao việc / Đánh dấu đã xử lý                                                                                          | Confirm / Dismiss / Reopen / Assign / Mark as done                                                                                                        |
-| upload / askDraft / viewDraft                                                        | Tải tài liệu lên / Nhờ NIVO soạn / Xem dự thảo                                                                                                      | Upload the document / Ask NIVO to draft / View draft                                                                                                      |
-| dismissTitle / dismissReason / dismissHint                                           | Bỏ qua phát hiện này? / Lý do / Lý do giúp NIVO không nhắc lại khi tài liệu không đổi.                                                              | Dismiss this finding? / Reason / The reason keeps NIVO from raising it again while the documents stay the same.                                           |
-| assignTitle / assignee / dueDate / unassigned                                        | Giao việc / Người phụ trách / Hạn xử lý / Chưa giao                                                                                                 | Assign / Owner / Due date / Unassigned                                                                                                                    |
-| markDoneTitle / markDoneNote                                                         | Đánh dấu đã xử lý / Đã làm gì (ví dụ: ngân hàng đã cập nhật)                                                                                        | Mark as done / What was done (for example: the bank updated it)                                                                                           |
-| draftTitle / draftNote / draftGenerating / draftFailed                               | Dự thảo của NIVO / NIVO soạn, bạn duyệt. Văn bản chỉ vào hồ sơ khi bạn duyệt. / NIVO đang soạn dự thảo… / NIVO chưa soạn được dự thảo. Thử lại sau. | NIVO's draft / NIVO drafts, you approve. It joins the dossier only once you approve it. / NIVO is drafting… / NIVO could not draft it. Try again later.   |
-| draftInstructions                                                                    | Dặn NIVO thêm (không bắt buộc)                                                                                                                      | Notes for NIVO (optional)                                                                                                                                 |
-| draftPlaceholders                                                                    | Chỗ cần điền trước khi ký                                                                                                                           | To fill in before signing                                                                                                                                 |
-| approveDraft / rejectDraft / saveDraft                                               | Duyệt và lưu vào hồ sơ / Từ chối / Lưu                                                                                                              | Approve and file it / Reject / Save                                                                                                                       |
-| approved / rejected / saved / confirmed / dismissed / assigned / done / reviewQueued | Đã lưu dự thảo vào hồ sơ / Đã từ chối dự thảo / Đã lưu / Đã xác nhận / Đã bỏ qua / Đã giao việc / Đã đánh dấu xử lý / Đã yêu cầu rà soát            | Draft filed / Draft rejected / Saved / Confirmed / Dismissed / Assigned / Marked as done / Review requested                                               |
-| emptyDossier / emptyTodo                                                             | Chưa thấy điểm nào cần xử lý ở hồ sơ này. / Không còn việc cần xử lý.                                                                               | Nothing to fix in this dossier. / Nothing left to do.                                                                                                     |
-| checklistStatus                                                                      | Bảng đối chiếu: {status}                                                                                                                            | Checklist: {status}                                                                                                                                       |
-| evidenceFrom                                                                         | Trích từ "{title}"                                                                                                                                  | From "{title}"                                                                                                                                            |
-| resolution_document / _draft / _not_detected / _manual                               | Đã có tài liệu mới / Đã có dự thảo được duyệt / Lần rà soát sau không còn thấy / Đã xử lý bên ngoài                                                 | A new document covers it / An approved draft covers it / No longer found / Done outside                                                                   |
+| key                                                                                  | en                                                                                                                                                        |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| tabTodo / tabTodoCount                                                               | To do / To do ({n})                                                                                                                                       |
+| reviewAll / reviewOne                                                                | Review all dossiers / Review this dossier                                                                                                                 |
+| reviewRunning                                                                        | NIVO is reviewing…                                                                                                                                        |
+| reviewedAt                                                                           | Reviewed {time}                                                                                                                                           |
+| neverReviewed                                                                        | Not reviewed yet                                                                                                                                          |
+| aiSkippedCredits / aiSkippedBudget                                                   | Out of credits, so only the rule checks ran; top up for NIVO to cross-read the documents. / Today's AI review allowance is used; the rest runs next time. |
+| filterOpen / filterConfirmed / filterClosed                                          | Open / Confirmed / Closed                                                                                                                                 |
+| filterAll / filterMine / filterUnassigned / filterDrafts                             | All / Mine / Unassigned / Drafts to approve                                                                                                               |
+| severity_critical … _low                                                             | Critical / High / Medium / Low                                                                                                                            |
+| kind_contradiction …                                                                 | Contradiction / Missing / Expired / Unsigned / Out of date / Unreasonable                                                                                 |
+| aiBadge                                                                              | Found by AI                                                                                                                                               |
+| confirm / dismiss / reopen / assign / markDone                                       | Confirm / Dismiss / Reopen / Assign / Mark as done                                                                                                        |
+| upload / askDraft / viewDraft                                                        | Upload the document / Ask NIVO to draft / View draft                                                                                                      |
+| dismissTitle / dismissReason / dismissHint                                           | Dismiss this finding? / Reason / The reason keeps NIVO from raising it again while the documents stay the same.                                           |
+| assignTitle / assignee / dueDate / unassigned                                        | Assign / Owner / Due date / Unassigned                                                                                                                    |
+| markDoneTitle / markDoneNote                                                         | Mark as done / What was done (for example: the bank updated it)                                                                                           |
+| draftTitle / draftNote / draftGenerating / draftFailed                               | NIVO's draft / NIVO drafts, you approve. It joins the dossier only once you approve it. / NIVO is drafting… / NIVO could not draft it. Try again later.   |
+| draftInstructions                                                                    | Notes for NIVO (optional)                                                                                                                                 |
+| draftPlaceholders                                                                    | To fill in before signing                                                                                                                                 |
+| approveDraft / rejectDraft / saveDraft                                               | Approve and file it / Reject / Save                                                                                                                       |
+| approved / rejected / saved / confirmed / dismissed / assigned / done / reviewQueued | Draft filed / Draft rejected / Saved / Confirmed / Dismissed / Assigned / Marked as done / Review requested                                               |
+| emptyDossier / emptyTodo                                                             | Nothing to fix in this dossier. / Nothing left to do.                                                                                                     |
+| checklistStatus                                                                      | Checklist: {status}                                                                                                                                       |
+| evidenceFrom                                                                         | From "{title}"                                                                                                                                            |
+| resolution_document / _draft / _not_detected / _manual                               | A new document covers it / An approved draft covers it / No longer found / Done outside                                                                   |
 
 ## 8. Data model, migration, API, jobs
 
@@ -756,9 +756,9 @@ code/shared/{test,typing,naming,comment}.md. Read as templates: be/src/modules/d
 options, errors, messages, entity, specs), be/src/modules/domain/brain/document-facts.service.ts (credits, usage,
 eachInOrder), be/src/modules/queues/knowledge/**, be/src/modules/domain/knowledge-sources/source-categories.service.ts
 (REF_EXPRESSION: the dossier ref of a source), db/migrations/20261109100218_brain-dossiers.sql. Read the data set's
-workbooks to transcribe the rule pack: D:/starci-tmp/nivo-data/raw-1793388658/NIVO_Dữ liệu đã chuẩn hóa/"00. BẢNG ĐỐI
-CHIẾU VÀ HỒ SƠ CÒN THIẾU.xlsx" (sheet "Tình trạng 64 hồ sơ") and "00. RÀ SOÁT PHÁP LÝ CUỐI - 27-10-2026.xlsx" (sheets
-"Kết luận từng hồ sơ", "Đối soát chéo", "Căn cứ pháp luật"); read them with python -I and openpyxl (read_only,
+workbooks to transcribe the rule pack: the normalized-data folder under D:/starci-tmp/nivo-data/raw-1793388658/ (`NIVO_*`),
+workbook `00. B*.xlsx` (sheet "status of the 64 dossiers") and `00. R*.xlsx` (sheets
+"conclusion per dossier", "cross-check", "legal basis"); read them with python -I and openpyxl (read_only,
 data_only) from a script in your scratchpad, never from inside that folder. No company-specific value (names, tax
 code, amounts, dates, account numbers) goes into code or specs: specs use synthetic data.
 
@@ -1028,12 +1028,12 @@ Files you create:
   draft and, after an approval, the dossiers and knowledge reads), useDossierRemedyDraft.ts.
 - modules/brain/findings.ts: severity, kind and status tones and order, filter values, view mappers (pure functions).
 - components/blocks/DossierFindings/{index.tsx,component.tsx,classNames.ts} (the detail pane of one dossier),
-  components/blocks/DossierTodo/** (the "Cần xử lý" tab), components/blocks/DossierRemedyDraft/** (the draft drawer),
+  components/blocks/DossierTodo/** (the "To do" tab), components/blocks/DossierRemedyDraft/** (the draft drawer),
   components/composites/DossierFindingRows/** (rows shared by both lists), components/composites/DossierFindingDialogs/**
   (dismiss, assign, mark done: Dialog with a form, footer commit type="submit" form=<id>).
 - Edits: components/blocks/BrainDossiers/{component.tsx,index.tsx,classNames.ts} (selectable dossier rows, the
   recomputed status badge with the checklist status beside it when they differ, the worst-severity count badge, the
-  "Rà soát lại cả bộ" header action for owners and managers, the third `detail` pane collapse="drawer" of section 7);
+  "Review all dossiers" header action for owners and managers, the third `detail` pane collapse="drawer" of section 7);
   features/pages/BrainPage/component.tsx (the todo panel); modules/routes/knowledge-routes.ts (BRAIN_TABS gains "todo"
   after "dossiers"; the dossier, finding and draft parameters); modules/brain/tabs.ts and index.ts; the brain page
   route if it must pass the new parameters; components/blocks/BrainPageFrame (the tab label with its count);

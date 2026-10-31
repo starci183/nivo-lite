@@ -5,7 +5,7 @@ four Sonnet lanes (H harness, P platform/database, W1 and W2 test world).
 
 ## 0. The owner's question, answered
 
-> "Chốt 1 kiểu thôi, trc tưởng trò ko viết sql thô!!! Hay có viết vậy?"
+> "Pick one style, I thought we were not writing raw SQL!!! Or do we?"
 
 Honest answer, read on 2026-10-31 at nivo HEAD 0a4a40ddf:
 
@@ -24,14 +24,14 @@ and app function calls move to `callDbFunction`.
 
 ## 1. Owner rulings (verbatim)
 
-- "ý là không dc có bảng không có sql, phải có entity cả chứ": every table has an entity.
-- "À là code sẵn function chứ ko gọi qua sql query thôi vậy giữ db function đi": database functions stay, called as
+- "I mean there must be no table without SQL, there has to be an entity for each": every table has an entity.
+- "Ah, so the code ships the function and just does not call it through an SQL query, then keep the db functions": database functions stay, called as
   functions.
-- "Ý là bỏ sql thô chứ viết thuần function đi và call = call db function" / "Chốt 1 kiểu thôi": one style. No raw SQL in
+- "I mean drop raw SQL, write plain functions and call them by calling the db function" / "Pick one style": one style. No raw SQL in
   TS: entities, or a function called through `callDbFunction`.
-- "à thôi testwword cho viết query cũng dc thêm vào db chính cũng k tốt lắm": the test world may keep raw queries for
+- "Well, the test world may write queries, adding them to the main db is not great": the test world may keep raw queries for
   what entities and functions cannot express. Test-only functions do **not** go into the main database.
-- "K code nào dùng thì xóa chứ trò": unused things are deleted. That is the separate drop lane. All 141
+- "Delete any code nobody uses": unused things are deleted. That is the separate drop lane. All 141
   `sides.be.dbFunctions` entries are named in code today, so there is nothing to hand over.
 
 No migration ships in this change (no new function, no drop).
