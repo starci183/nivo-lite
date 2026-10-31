@@ -59,6 +59,7 @@ const entryOf = builder<LoyaltyLedgerEntity>({
     expiresAt: new Date("2027-10-12T00:00:00.000Z"),
     occurredAt: new Date("2026-10-12T00:00:00.000Z"),
     createdAt: new Date("2026-10-12T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-12T00:00:00.000Z"),
 })
 const postOf = (manager: MockEntityManager) =>
     builder<PostParams>({

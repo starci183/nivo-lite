@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 /** How a recorded send attempt ended or waits. */
 export type EmailMessageStatus = "sent" | "failed" | "no_smtp" | "blocked" | "rate_limited" | "waiting_decision"
@@ -14,11 +15,7 @@ export interface EmailMessageRefs {
 
 @Entity({ schema: "public", name: "email_messages" })
 /** One send attempt of a workspace's email. */
-export class EmailMessageEntity {
-    /** The attempt. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class EmailMessageEntity extends UuidAbstractEntity {
     /** The workspace that sent it. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -58,8 +55,4 @@ export class EmailMessageEntity {
     /** The records the email points at. */
     @Column({ name: "refs", type: "jsonb", default: () => "'{}'::jsonb" })
     refs!: EmailMessageRefs
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

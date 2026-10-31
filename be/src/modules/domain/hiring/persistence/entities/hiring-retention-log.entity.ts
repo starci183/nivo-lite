@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "hiring_retention_log" })
 /** One run of the retention sweep of a workspace. */
-export class HiringRetentionLogEntity {
-    /** The run. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class HiringRetentionLogEntity extends UuidAbstractEntity {
     /** The workspace the run belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

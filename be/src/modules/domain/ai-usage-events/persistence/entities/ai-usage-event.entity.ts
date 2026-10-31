@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "ai_usage_events" })
 /** One model call a workspace paid for, booked when the call finished. */
-export class AiUsageEventEntity {
-    /** The event id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AiUsageEventEntity extends UuidAbstractEntity {
     /** The workspace that paid. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -38,8 +35,4 @@ export class AiUsageEventEntity {
     /** True when the figures were estimated from the text length. */
     @Column({ name: "estimated", type: "boolean", default: () => "false" })
     estimated!: boolean
-
-    /** When the call was booked. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

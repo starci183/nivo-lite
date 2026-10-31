@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "events" })
 /** One line of a workspace's append-only evidence log. */
-export class EventEntity {
-    /** The evidence line. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class EventEntity extends UuidAbstractEntity {
     /** The workspace the line belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -30,10 +27,6 @@ export class EventEntity {
     /** The evidence behind the action, when present. */
     @Column({ name: "evidence", type: "text", nullable: true })
     evidence!: string | null
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 
     /** The work item the action belongs to, when there is one. */
     @Column({ name: "work_item_id", type: "uuid", nullable: true })

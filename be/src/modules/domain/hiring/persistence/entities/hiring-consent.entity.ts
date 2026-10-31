@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { ApplicationSource } from "../../hiring.contracts"
 
 @Entity({ schema: "public", name: "hiring_consents" })
 /** The consent an applicant gave for keeping their application. */
-export class HiringConsentEntity {
-    /** The consent. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class HiringConsentEntity extends UuidAbstractEntity {
     /** The workspace the consent belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "video_project_versions" })
 /** One snapshot of a video project's script and spec, taken next to the render it started. */
-export class VideoProjectVersionEntity {
-    /** The snapshot id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class VideoProjectVersionEntity extends UuidAbstractEntity {
     /** The project the snapshot belongs to. */
     @Column({ name: "project_id", type: "uuid" })
     projectId!: string
@@ -38,8 +35,4 @@ export class VideoProjectVersionEntity {
     /** The person who asked for it, or null when an agent did. */
     @Column({ name: "created_by", type: "uuid", nullable: true })
     createdBy!: string | null
-
-    /** When the snapshot was written. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

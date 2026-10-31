@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "brain_eval_cases" })
 /** One row of public.brain_eval_cases. */
-export class BrainEvalCaseEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class BrainEvalCaseEntity extends UuidAbstractEntity {
     /** The workspace id. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -30,8 +27,4 @@ export class BrainEvalCaseEntity {
     /** The origin ref. */
     @Column({ name: "origin_ref", type: "text", nullable: true })
     originRef!: string | null
-
-    /** The created at. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

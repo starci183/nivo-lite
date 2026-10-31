@@ -1,14 +1,8 @@
 import { Column, Entity } from "typeorm"
-import type { ValueTransformer } from "typeorm"
 
 import { UuidAbstractEntity } from "@modules/platform/database"
+import { bigintNumberTransformer } from "@modules/platform/primitives"
 import type { RewardKind } from "../../loyalty-rewards.contracts"
-
-/** Reads the bigint value (text from the driver) as a number; rewards are priced in whole VND. */
-const valueTransformer: ValueTransformer = {
-    to: (value: number | null | undefined) => value,
-    from: (value: string | null): number | null => (value === null ? null : Number(value)),
-}
 
 @Entity({ schema: "public", name: "loyalty_rewards" })
 /** One entry of a workspace's reward catalogue. */
@@ -30,7 +24,7 @@ export class LoyaltyRewardEntity extends UuidAbstractEntity {
     kind!: RewardKind
 
     /** The cash value in VND. */
-    @Column({ name: "value_vnd", type: "bigint", default: () => "0", transformer: valueTransformer })
+    @Column({ name: "value_vnd", type: "bigint", default: () => "0", transformer: bigintNumberTransformer })
     valueVnd!: number
 
     /** The discount percentage, when the reward is one. */

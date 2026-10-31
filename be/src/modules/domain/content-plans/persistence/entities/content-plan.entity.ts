@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "content_plans" })
 /** One row of public.content_plans. */
-export class ContentPlanEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ContentPlanEntity extends UuidAbstractEntity {
     /** The workspace id. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -38,8 +35,4 @@ export class ContentPlanEntity {
     /** The created by. */
     @Column({ name: "created_by", type: "text", default: () => "''::text" })
     createdBy!: string
-
-    /** The created at. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

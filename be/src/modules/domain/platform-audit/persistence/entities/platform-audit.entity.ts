@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "platform_audit" })
 /** One row of the audit trail of the platform team's console: one row of `public.platform_audit`. */
-export class PlatformAuditEntity {
-    /** The row id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class PlatformAuditEntity extends UuidAbstractEntity {
     /** The admin email. */
     @Column({ name: "actor_email", type: "text" })
     actorEmail!: string
@@ -26,8 +23,4 @@ export class PlatformAuditEntity {
     /** What the action carried. */
     @Column({ name: "data", type: "jsonb", default: () => "'{}'::jsonb" })
     data!: object
-
-    /** When it happened. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

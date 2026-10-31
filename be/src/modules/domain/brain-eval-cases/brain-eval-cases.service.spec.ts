@@ -18,6 +18,7 @@ const rowOf = entityRowBuilder<BrainEvalCaseEntity>({
     expected: {},
     originRef: "decision:0",
     createdAt: new Date("2026-10-13T02:00:00.000Z"),
+    updatedAt: new Date("2026-10-13T02:00:00.000Z"),
 })
 
 const build = async (em: MockEntityManager) => {

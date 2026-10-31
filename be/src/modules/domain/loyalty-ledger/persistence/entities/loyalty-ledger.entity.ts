@@ -1,22 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
-import type { ValueTransformer } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { bigintNumberTransformer } from "@modules/platform/primitives"
+import { Column, Entity } from "typeorm"
 
 /** Why the points of an entry moved. */
 export type LoyaltyLedgerKind = "earn" | "redeem" | "expire" | "adjust"
 
-/** Reads the bigint amount (text from the driver) as a number; the ledger counts whole VND. */
-const amountTransformer: ValueTransformer = {
-    to: (value: number | null | undefined) => value,
-    from: (value: string | null): number | null => (value === null ? null : Number(value)),
-}
-
 @Entity({ schema: "public", name: "loyalty_ledger" })
 /** One line of the append-only points ledger. */
-export class LoyaltyLedgerEntity {
-    /** The entry. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class LoyaltyLedgerEntity extends UuidAbstractEntity {
     /** The workspace that owns the entry. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -34,7 +25,7 @@ export class LoyaltyLedgerEntity {
     points!: number
 
     /** The amount behind the entry, whole VND. */
-    @Column({ name: "amount_vnd", type: "bigint", nullable: true, transformer: amountTransformer })
+    @Column({ name: "amount_vnd", type: "bigint", nullable: true, transformer: bigintNumberTransformer })
     amountVnd!: number | null
 
     /** The order behind an earn. */
@@ -72,8 +63,4 @@ export class LoyaltyLedgerEntity {
     /** When the points moved. */
     @Column({ name: "occurred_at", type: "timestamptz", default: () => "now()" })
     occurredAt!: Date
-
-    /** The creation time. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { SetupMessageRole } from "../../module-setup-messages.contracts"
 
 @Entity({ schema: "public", name: "module_setup_messages" })
 /** One line of the setup chat of an installation: one row of `public.module_setup_messages`. */
-export class ModuleSetupMessageEntity {
-    /** The message. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ModuleSetupMessageEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -27,8 +24,4 @@ export class ModuleSetupMessageEntity {
     /** The text. */
     @Column({ name: "body", type: "text" })
     body!: string
-
-    /** When it was written. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 /** The masked arguments of a gateway call, as stored JSON. */
 export interface McpMaskedArguments {
@@ -8,11 +9,7 @@ export interface McpMaskedArguments {
 
 @Entity({ schema: "public", name: "mcp_call_log" })
 /** One append-only audit line of an MCP gateway call. */
-export class McpCallLogEntity {
-    /** The line. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class McpCallLogEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -64,8 +61,4 @@ export class McpCallLogEntity {
     /** Who approved it, or null. */
     @Column({ name: "approved_by", type: "text", nullable: true })
     approvedBy!: string | null
-
-    /** When it was written. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

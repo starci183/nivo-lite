@@ -12,6 +12,7 @@ export const linkOf = builder<AgentConnectionEntity>({
     purpose: "inbound_chat",
     access: "auto",
     createdAt: new Date("2026-10-13T02:00:00.000Z"),
+    updatedAt: new Date("2026-10-13T02:00:00.000Z"),
 })
 
 /** The inbound chat grants of connection c1 to the agents a1, a2 and a3. */

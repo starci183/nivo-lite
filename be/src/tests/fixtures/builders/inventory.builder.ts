@@ -100,6 +100,7 @@ const inventoryMovementBase = builder<InventoryMovementEntity>({
     evidence: null,
     dedupeKey: null,
     createdAt: AT,
+    updatedAt: AT,
 })
 
 /** One recipe entity. */

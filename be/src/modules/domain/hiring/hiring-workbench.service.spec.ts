@@ -135,6 +135,7 @@ const eventOf = entityRowBuilder<HiringEventEntity>({
     actor: "Minh",
     summary: "Applied for Barista",
     createdAt: new Date("2026-10-13T01:00:00.000Z"),
+    updatedAt: new Date("2026-10-13T01:00:00.000Z"),
 })
 
 const bounds = {

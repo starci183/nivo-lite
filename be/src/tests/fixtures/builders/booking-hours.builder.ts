@@ -11,6 +11,8 @@ export const bookingHourRowOf = builder<InstanceType<typeof BookingHourEntity>>(
     weekday: 0,
     startTime: "08:00",
     endTime: "17:00",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
 /** The filter that picks every opening window of resource `r-1` in workspace `ws-1`. */

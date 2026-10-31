@@ -1,8 +1,9 @@
+import { AbstractEntity } from "@modules/platform/database"
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "hiring_apply_hits" })
 /** One public application attempt, kept for the per-address rate limit. */
-export class HiringApplyHitEntity {
+export class HiringApplyHitEntity extends AbstractEntity {
     /** The hit; the database numbers it. */
     @PrimaryGeneratedColumn("identity", { name: "id", type: "bigint", generatedIdentity: "ALWAYS" })
     id!: string
@@ -18,8 +19,4 @@ export class HiringApplyHitEntity {
     /** What the visitor did. */
     @Column({ name: "kind", type: "text", default: () => "'apply'::text" })
     kind!: string
-
-    /** When it happened. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

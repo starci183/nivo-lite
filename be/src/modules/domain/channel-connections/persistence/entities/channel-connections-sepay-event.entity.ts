@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "channel_connections_sepay_events" })
 /** One row of public.channel_connections_sepay_events: a delivery the SePay webhook door answered. */
-export class ChannelConnectionsSepayEventEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ChannelConnectionsSepayEventEntity extends UuidAbstractEntity {
     /** The workspace id. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string

@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "inventory_movements" })
 /** One signed stock movement, written by the movement function only. */
-export class InventoryMovementEntity {
-    /** The movement. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class InventoryMovementEntity extends UuidAbstractEntity {
     /** The workspace that owns the movement. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -62,8 +59,4 @@ export class InventoryMovementEntity {
     /** The key that makes a retry a no-op. */
     @Column({ name: "dedupe_key", type: "text", nullable: true })
     dedupeKey!: string | null
-
-    /** When it moved. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

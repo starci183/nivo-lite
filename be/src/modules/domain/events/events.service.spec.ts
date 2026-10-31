@@ -102,6 +102,7 @@ const entityOf = builder<EventEntity>({
     summary: "ask",
     evidence: null,
     createdAt: new Date("2026-10-12T10:00:00.000Z"),
+    updatedAt: new Date("2026-10-12T10:00:00.000Z"),
     workItemId: "work-1",
 })
 

@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "hiring_events" })
 /** One line of the timeline of a candidate. */
-export class HiringEventEntity {
-    /** The event. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class HiringEventEntity extends UuidAbstractEntity {
     /** The workspace the event belongs to. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -26,8 +23,4 @@ export class HiringEventEntity {
     /** The one-line summary. */
     @Column({ name: "summary", type: "text" })
     summary!: string
-
-    /** When it happened. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

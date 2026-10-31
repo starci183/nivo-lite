@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "app_errors" })
 /** One unexpected failure captured for the team console. */
-export class AppErrorEntity {
-    /** The error row. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AppErrorEntity extends UuidAbstractEntity {
     /** Where it happened (a scope such as `api.leads`). */
     @Column({ name: "scope", type: "text" })
     scope!: string
@@ -26,8 +23,4 @@ export class AppErrorEntity {
     /** The context the failure was captured with. */
     @Column({ name: "ctx", type: "jsonb", default: () => "'{}'::jsonb" })
     ctx!: Readonly<Record<string, unknown>>
-
-    /** When it was captured. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

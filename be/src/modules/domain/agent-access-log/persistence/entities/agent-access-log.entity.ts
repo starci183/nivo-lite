@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "agent_access_log" })
 /** One recorded change of the access an agent holds on a connection. */
-export class AgentAccessLogEntity {
-    /** The log row id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class AgentAccessLogEntity extends UuidAbstractEntity {
     /** The workspace of the change. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -42,8 +39,4 @@ export class AgentAccessLogEntity {
     /** The member name when it changed. */
     @Column({ name: "changed_by_name", type: "text", default: () => "''::text" })
     changedByName!: string
-
-    /** The time of the change. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

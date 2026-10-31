@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "conversation_ownership_events" })
 /** One row of public.conversation_ownership_events. */
-export class ConversationOwnershipEventEntity {
-    /** The id. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ConversationOwnershipEventEntity extends UuidAbstractEntity {
     /** The workspace id. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
@@ -26,8 +23,4 @@ export class ConversationOwnershipEventEntity {
     /** The reason. */
     @Column({ name: "reason", type: "text" })
     reason!: string
-
-    /** The created at. */
-    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
-    createdAt!: Date
 }

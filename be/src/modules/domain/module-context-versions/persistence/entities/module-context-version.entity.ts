@@ -1,13 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { UuidAbstractEntity } from "@modules/platform/database"
+import { Column, Entity } from "typeorm"
 import type { VersionSnapshot } from "../../module-context-versions.contracts"
 
 @Entity({ schema: "public", name: "module_context_versions" })
 /** One applied, immutable context version of an installation: one row of `public.module_context_versions`. */
-export class ModuleContextVersionEntity {
-    /** The version row. */
-    @PrimaryGeneratedColumn("uuid", { name: "id" })
-    id!: string
-
+export class ModuleContextVersionEntity extends UuidAbstractEntity {
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
