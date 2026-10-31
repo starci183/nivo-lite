@@ -879,7 +879,7 @@ Repo rules (hard, no exception):
 - Commit path-limited through a temporary index, in Git Bash:
     export GIT_INDEX_FILE="$(mktemp -u)"; git read-tree HEAD
     git add -- <only your files>
-    git commit -F <message file>        # hooks run; never --no-verify
+    git commit -F "$MSG"    # MSG="$(mktemp -u)" holds the message: a short path, the scratchpad path is too long for git on Windows; hooks run, never --no-verify
     rm -f "$GIT_INDEX_FILE"; unset GIT_INDEX_FILE
     git reset -q -- <the same files>     # re-syncs the real index for exactly those paths
   A shared file that already holds someone else's uncommitted change (git diff shows hunks you did not write): save
@@ -979,7 +979,7 @@ Repo rules (hard, no exception):
 - Commit path-limited through a temporary index, in Git Bash:
     export GIT_INDEX_FILE="$(mktemp -u)"; git read-tree HEAD
     git add -- <only your files>
-    git commit -F <message file>        # hooks run; never --no-verify
+    git commit -F "$MSG"    # MSG="$(mktemp -u)" holds the message: a short path, the scratchpad path is too long for git on Windows; hooks run, never --no-verify
     rm -f "$GIT_INDEX_FILE"; unset GIT_INDEX_FILE
     git reset -q -- <the same files>     # re-syncs the real index for exactly those paths
   A shared file that already holds someone else's uncommitted change: save your own change as a patch against the file
@@ -1072,7 +1072,7 @@ Repo rules (hard, no exception):
 - Commit path-limited through a temporary index, in Git Bash:
     export GIT_INDEX_FILE="$(mktemp -u)"; git read-tree HEAD
     git add -- <only your files>
-    git commit -F <message file>        # hooks run; never --no-verify
+    git commit -F "$MSG"    # MSG="$(mktemp -u)" holds the message: a short path, the scratchpad path is too long for git on Windows; hooks run, never --no-verify
     rm -f "$GIT_INDEX_FILE"; unset GIT_INDEX_FILE
     git reset -q -- <the same files>     # re-syncs the real index for exactly those paths
   A shared file that already holds someone else's uncommitted change (vi.json, en.json, the index files): save your
