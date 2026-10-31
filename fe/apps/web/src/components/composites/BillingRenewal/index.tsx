@@ -1,5 +1,4 @@
-import { Button } from "@starci/grammar/common"
-import { RENEW_CLASS_NAME } from "./classNames"
+import { Button, Stack } from "@starci/grammar/common"
 
 interface BillingRenewalProps {
     readonly props: { readonly label: string; readonly isPending: boolean }
@@ -8,7 +7,7 @@ interface BillingRenewalProps {
 
 /** Draws the renewal action while its backend job is pending. */
 export const BillingRenewal = (props: BillingRenewalProps) => (
-    <div className={RENEW_CLASS_NAME}>
+    <Stack gap="row" align="start">
         <Button
             intent="commit"
             isPending={props.props.isPending}
@@ -17,5 +16,5 @@ export const BillingRenewal = (props: BillingRenewalProps) => (
         >
             {props.props.label}
         </Button>
-    </div>
+    </Stack>
 )

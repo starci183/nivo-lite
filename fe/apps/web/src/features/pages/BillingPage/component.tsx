@@ -1,4 +1,4 @@
-import { Button, Page } from "@starci/grammar/common"
+import { Button, Page, Stack } from "@starci/grammar/common"
 import { BillingOverview } from "@/components/blocks/BillingOverview"
 import { BillingCreditPacks } from "@/components/blocks/BillingCreditPacks"
 import { BillingPlans } from "@/components/blocks/BillingPlans"
@@ -6,7 +6,6 @@ import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/components/blocks/LocaleSwitch"
 import { WorkspacesAccount } from "@/components/blocks/WorkspacesAccount"
 import { WorkspacesFrame } from "@/components/composites/WorkspacesFrame"
-import { PAGE_CLASS_NAME } from "./classNames"
 
 /** What the billing page is told: the workspace it bills, its words and the two links. */
 export interface BillingPageBaseProps {
@@ -42,11 +41,11 @@ export const BillingPageBase = (props: BillingPageBaseProps) => (
                 ),
             }}
         >
-            <div className={PAGE_CLASS_NAME}>
+            <Stack gap="region">
                 <BillingOverview workspaceId={props.props.workspaceId} />
                 <BillingPlans workspaceId={props.props.workspaceId} contactHref={props.props.contactHref} />
                 <BillingCreditPacks workspaceId={props.props.workspaceId} />
-            </div>
+            </Stack>
         </Page>
     </WorkspacesFrame>
 )

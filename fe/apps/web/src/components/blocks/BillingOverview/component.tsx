@@ -1,12 +1,19 @@
 import type { ComponentProps } from "react"
-import { Badge, DescriptionList, Region, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import {
+    Badge,
+    Cluster,
+    DescriptionList,
+    Region,
+    SectionHeader,
+    Stack,
+    SurfaceCard,
+    Text,
+} from "@starci/grammar/common"
 import { BillingHistoryList, type BillingHistoryRow } from "@/components/composites/BillingHistoryList"
 import { BillingRenewal } from "@/components/composites/BillingRenewal"
 import { SlotView } from "@/components/composites/SlotView"
 import { UsageCard } from "@/components/composites/UsageCard"
 import type { BillingPlanView, DataSlot, SlotLabels } from "@/modules/types"
-
-import { ACTIONS_CLASS_NAME, PAGE_CLASS_NAME, SECTION_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** What the usage card takes, read from the card itself. */
 type UsageCardProps = ComponentProps<typeof UsageCard>
@@ -66,7 +73,7 @@ const ROWS_PLACEHOLDER: ReadonlyArray<BillingHistoryRow> = [
 
 /** Draws the billing regions (plan, usage, history, review) from settled display values, region slots and interactions. */
 export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
-    <div className={PAGE_CLASS_NAME}>
+    <Stack gap="region">
         <SlotView
             slot={props.props.plan}
             placeholder={PLAN_PLACEHOLDER}
@@ -110,34 +117,36 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
                 />
             )}
         </SlotView>
-        <Region labelledBy="billing-review-title" className={SECTION_CLASS_NAME}>
-            <SectionHeader
-                id="billing-review-title"
-                level={2}
-                title={props.props.reviewTitle}
-                description={props.props.reviewDescription}
-            />
-            <SlotView
-                slot={props.props.review}
-                placeholder={ROWS_PLACEHOLDER}
-                labels={props.props.reviewSlotLabels}
-                forbidden="hide"
-                onRetry={props.on.retryReview}
-            >
-                {(review) => (
-                    <BillingHistoryList
-                        props={{ ariaLabel: props.props.reviewTitle, empty: props.props.reviewEmpty, rows: review }}
-                    />
-                )}
-            </SlotView>
+        <Region labelledBy="billing-review-title">
+            <Stack gap="section">
+                <SectionHeader
+                    id="billing-review-title"
+                    level={2}
+                    title={props.props.reviewTitle}
+                    description={props.props.reviewDescription}
+                />
+                <SlotView
+                    slot={props.props.review}
+                    placeholder={ROWS_PLACEHOLDER}
+                    labels={props.props.reviewSlotLabels}
+                    forbidden="hide"
+                    onRetry={props.on.retryReview}
+                >
+                    {(review) => (
+                        <BillingHistoryList
+                            props={{ ariaLabel: props.props.reviewTitle, empty: props.props.reviewEmpty, rows: review }}
+                        />
+                    )}
+                </SlotView>
+            </Stack>
         </Region>
-    </div>
+    </Stack>
 )
 
 /** Draws the SurfaceCard section of the BillingOverview view. */
 const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: BillingPlanView) => (
     <SurfaceCard label={props.props.planLabel} headingLevel={2}>
-        <div className={STACK_CLASS_NAME}>
+        <Stack gap="section">
             <DescriptionList
                 layout="columns"
                 isDivided
@@ -164,7 +173,7 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: Billing
                 ]}
             />
             {plan.canRenew ? (
-                <div className={ACTIONS_CLASS_NAME}>
+                <Cluster gap="row">
                     <BillingRenewal
                         props={{ label: props.props.renewalLabel, isPending: props.props.isRenewing }}
                         on={{ renew: props.on.renew }}
@@ -172,8 +181,8 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: Billing
                     <Text size="sm" tone="muted">
                         {props.props.renewalHint}
                     </Text>
-                </div>
+                </Cluster>
             ) : null}
-        </div>
+        </Stack>
     </SurfaceCard>
 )
