@@ -9,6 +9,12 @@ import {
     BrainDossiersModule,
 } from "@modules/domain/brain-dossiers"
 import { BrainEvalCasesModule } from "@modules/domain/brain-eval-cases"
+import {
+    DOSSIER_REVIEW_ERROR_KINDS,
+    DOSSIER_REVIEW_MESSAGES,
+    DossierReviewModule,
+} from "@modules/domain/dossier-review"
+import { DossierReasonerService, DossierReviewAiModule, RemedyWriterService } from "@modules/domain/dossier-review-ai"
 import { BrainExtractionsModule } from "@modules/domain/brain-extractions"
 import { BRAIN_FACTS_ERROR_KINDS, BRAIN_FACTS_MESSAGES, BrainFactsModule } from "@modules/domain/brain-facts"
 import { BRAIN_LESSONS_ERROR_KINDS, BRAIN_LESSONS_MESSAGES, BrainLessonsModule } from "@modules/domain/brain-lessons"
@@ -50,6 +56,12 @@ export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
     KnowledgeModule.register({ isGlobal: true, driveAccess: DriveGrantService }),
     BrainFactsModule.register({ isGlobal: true }),
     BrainDossiersModule.register({ isGlobal: true }),
+    DossierReviewAiModule.register({ isGlobal: true }),
+    DossierReviewModule.register({
+        isGlobal: true,
+        reasoner: DossierReasonerService,
+        writer: RemedyWriterService,
+    }),
     KnowledgeGapsModule.register({ isGlobal: true }),
     BrainLessonsModule.register({ isGlobal: true }),
     BrainExtractionsModule.register({ isGlobal: true }),
@@ -62,6 +74,7 @@ export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
 export const knowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     BRAIN_ERROR_KINDS,
     BRAIN_DOSSIERS_ERROR_KINDS,
+    DOSSIER_REVIEW_ERROR_KINDS,
     BRAIN_FACTS_ERROR_KINDS,
     BRAIN_LESSONS_ERROR_KINDS,
     KNOWLEDGE_ERROR_KINDS,
@@ -72,6 +85,7 @@ export const knowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
 /** The message bundles of the capabilities this group registers, in registration order. */
 export const knowledgeMessages: ReadonlyArray<MessageBundle> = [
     BRAIN_DOSSIERS_MESSAGES,
+    DOSSIER_REVIEW_MESSAGES,
     BRAIN_FACTS_MESSAGES,
     BRAIN_LESSONS_MESSAGES,
     BRAIN_MESSAGES,

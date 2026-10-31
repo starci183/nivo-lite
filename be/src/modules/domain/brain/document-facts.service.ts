@@ -12,6 +12,7 @@ import type { AiService } from "@modules/integrations/ai"
 import { InjectLogger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { Logger } from "@modules/platform/logging"
+import { DocumentReviewService } from "./document-review.service"
 import { ModelJsonService } from "./model-json.service"
 import { sourcePayloadOf } from "./brain-payload.policy"
 import { BrainError, BrainErrorCode } from "./errors/brain.error"
@@ -53,6 +54,7 @@ export class DocumentFactsService {
         private readonly sources: KnowledgeSourcesService,
         private readonly usage: UsageMeterService,
         private readonly json: ModelJsonService,
+        private readonly reviews: DocumentReviewService,
     ) {}
 
     /** Reads the facts of the source a facts job names; a payload of another shape is logged and dropped. */
@@ -72,6 +74,7 @@ export class DocumentFactsService {
         if (run === null) return
         await this.extractions.fail(run.workspaceId, run.sourceId, ExtractionNote.Aborted)
         await this.sources.ready(run.workspaceId, run.sourceId, StoredNote.FactsUnread)
+        await this.reviews.requestForSource(run.workspaceId, run.sourceId)
     }
 
     /** Takes back what a deleted document contributed and proposes to retire the facts that lost their last evidence. */
@@ -82,6 +85,7 @@ export class DocumentFactsService {
         } catch (cause) {
             this.logger.error(BrainLogEvent.WithdrawFailed, cause, { sourceId })
         }
+        await this.reviews.requestForGoneSource(workspaceId, sourceId, title)
     }
 
     /** Reads one document window by window, filing every valid fact as a proposal (document trust is below auto-apply, so the owner reviews them). */
@@ -166,6 +170,7 @@ export class DocumentFactsService {
             if (attempts >= MAX_ATTEMPTS) {
                 await progress("failed", note, attempts)
                 await this.sources.ready(workspaceId, source.id, StoredNote.FactsUnread)
+                await this.reviews.requestForSource(workspaceId, source.id)
                 return "failed"
             }
             await progress("running", note, attempts)
@@ -241,6 +246,7 @@ export class DocumentFactsService {
             }
         }
         await this.sources.ready(workspaceId, source.id, null)
+        await this.reviews.requestForSource(workspaceId, source.id)
         return "done"
     }
 

@@ -8,6 +8,7 @@ import { BrainService } from "./brain.service"
 import { BRAIN_CORRECTIONS } from "./brain.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./brain.module-definition"
 import { DocumentFactsService } from "./document-facts.service"
+import { DocumentReviewService } from "./document-review.service"
 import { IndexedSourcesService } from "./indexed-sources.service"
 import { ModelJsonService } from "./model-json.service"
 
@@ -28,6 +29,7 @@ export class BrainModule extends ConfigurableModuleClass {
                 BrainLearningService,
                 BrainCommandRunnerService,
                 DocumentFactsService,
+                DocumentReviewService,
                 IndexedSourcesService,
                 ModelJsonService,
             ],

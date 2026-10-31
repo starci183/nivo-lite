@@ -14,6 +14,7 @@ import { BrainLogEvent } from "./brain.log-events"
 import { DocumentFactsService } from "./document-facts.service"
 import { BrainErrorCode } from "./errors/brain.error"
 import { MAX_FACTS_PER_DOC, PROMPT_VERSION, SYSTEM_PROMPT } from "./extraction.policy"
+import { DocumentReviewService } from "./document-review.service"
 import { ModelJsonService } from "./model-json.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -56,6 +57,17 @@ const extractionOf = builder<ExtractionRecord>({
     orphanFactIds: [],
 })
 
+type Progress = Parameters<BrainExtractionsService["save"]>[2]
+
+const progressOf = builder<Progress>({
+    status: "running",
+    windowsDone: 0,
+    factsProposed: 0,
+    windowsTotal: 1,
+    error: null,
+    attempts: 0,
+})
+
 const build = async (source = sourceOf()) => {
     const ai = mock<AiService>()
     const logger = mock<Logger>()
@@ -66,6 +78,7 @@ const build = async (source = sourceOf()) => {
     const sources = mock<KnowledgeSourcesService>()
     const usage = mock<UsageMeterService>()
     const json = mock<ModelJsonService>()
+    const reviews = mock<DocumentReviewService>()
     indexing.sourceForFacts.mockResolvedValue(source)
     extractions.get.mockResolvedValue(extractionOf())
     usage.blockedBy.mockResolvedValue(false)
@@ -83,10 +96,11 @@ const build = async (source = sourceOf()) => {
             { provide: KnowledgeSourcesService, useValue: sources },
             { provide: UsageMeterService, useValue: usage },
             { provide: ModelJsonService, useValue: json },
+            { provide: DocumentReviewService, useValue: reviews },
         ],
     }).compile()
     const service = moduleRef.get(DocumentFactsService)
-    return { service, ai, logger, facts, gaps, extractions, indexing, sources, usage, json }
+    return { service, ai, logger, facts, gaps, extractions, indexing, sources, usage, json, reviews }
 }
 
 describe("DocumentFactsService", () => {
@@ -104,22 +118,25 @@ describe("DocumentFactsService", () => {
     })
 
     it("marks an exhausted valid job ready with an unread-facts note", async () => {
-        const { service, sources, extractions } = await build()
+        const { service, sources, extractions, reviews } = await build()
 
         await service.giveUp({})
         expect(sources.ready).not.toHaveBeenCalled()
         expect(extractions.fail).not.toHaveBeenCalled()
+        expect(reviews.requestForSource).not.toHaveBeenCalled()
         await service.giveUp(PAYLOAD)
+        expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE)
         expect(extractions.fail).toHaveBeenCalledWith(WS, SOURCE, ExtractionNote.Aborted)
         expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, StoredNote.FactsUnread)
     })
 
     it("withdraws a deleted source and finalizes its unsupported facts with the deletion evidence", async () => {
-        const { service, facts } = await build()
+        const { service, facts, reviews } = await build()
         facts.withdrawSource.mockResolvedValue(["f1"])
 
         await service.withdraw(WS, SOURCE, "Menu")
 
+        expect(reviews.requestForGoneSource).toHaveBeenCalledWith(WS, SOURCE, "Menu")
         expect(facts.withdrawSource).toHaveBeenCalledWith(WS, SOURCE, "source changed")
         expect(facts.finalizeOrphans).toHaveBeenCalledWith(WS, ["f1"], {
             kind: "note",
@@ -140,11 +157,12 @@ describe("DocumentFactsService", () => {
     })
 
     it("does not read a document already completed with this text and prompt", async () => {
-        const { service, extractions, sources, ai } = await build()
+        const { service, extractions, sources, ai, reviews } = await build()
         extractions.get.mockResolvedValue(extractionOf({ status: "done" }))
 
         await expect(service.run(PAYLOAD)).resolves.toBe("skipped")
 
+        expect(reviews.requestForSource).not.toHaveBeenCalled()
         expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
         expect(extractions.start).not.toHaveBeenCalled()
         expect(ai.chat).not.toHaveBeenCalled()
@@ -167,14 +185,7 @@ describe("DocumentFactsService", () => {
             orphanFactIds: [],
         })
         expect(facts.withdrawSource).not.toHaveBeenCalled()
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
-            status: "blocked_credits",
-            windowsDone: 0,
-            factsProposed: 0,
-            windowsTotal: 1,
-            error: null,
-            attempts: 0,
-        })
+        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ status: "blocked_credits" }))
         expect(usage.blockedBy).toHaveBeenCalledWith(WS, "brain", false)
         expect(sources.blockFacts).toHaveBeenCalledWith(WS, SOURCE, StoredNote.NoCreditsForFacts)
         expect(ai.chat).not.toHaveBeenCalled()
@@ -200,19 +211,16 @@ describe("DocumentFactsService", () => {
             windowsTotal: 1,
             orphanFactIds: ["f1", "f2", "f3"],
         })
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
-            status: "blocked_credits",
-            windowsDone: 0,
-            factsProposed: 3,
-            windowsTotal: 1,
-            error: null,
-            attempts: 2,
-        })
+        expect(extractions.save).toHaveBeenCalledWith(
+            WS,
+            SOURCE,
+            progressOf({ status: "blocked_credits", factsProposed: 3, attempts: 2 }),
+        )
     })
 })
 describe("DocumentFactsService", () => {
     it("restarts the same text when the prompt version changed", async () => {
-        const { service, extractions, facts } = await build()
+        const { service, extractions, facts, reviews } = await build()
         extractions.get.mockResolvedValueOnce(extractionOf({ promptVersion: 0 }))
         extractions.get.mockResolvedValueOnce(extractionOf({ windowsDone: 1, orphanFactIds: ["f1"] }))
         facts.withdrawSource.mockResolvedValue([])
@@ -233,6 +241,7 @@ describe("DocumentFactsService", () => {
             label: 'The document "Hours" changed: no source supports this value any more',
         })
         expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "")
+        expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE)
     })
 
     it("finishes an internal document already at its fact limit without resolving customer gaps", async () => {
@@ -259,14 +268,11 @@ describe("DocumentFactsService", () => {
         ])
         expect(request).toMatchObject({ json: false, timeoutMs: 40_000 })
         expect(usage.record).not.toHaveBeenCalled()
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
-            status: "running",
-            windowsDone: 0,
-            factsProposed: 0,
-            windowsTotal: 1,
-            error: ExtractionNote.ModelBusy,
-            attempts: 1,
-        })
+        expect(extractions.save).toHaveBeenCalledWith(
+            WS,
+            SOURCE,
+            progressOf({ error: ExtractionNote.ModelBusy, attempts: 1 }),
+        )
         expect(sources.ready).not.toHaveBeenCalled()
     })
 })
@@ -274,22 +280,20 @@ describe("DocumentFactsService", () => {
     it.each([ExtractionNote.ModelBusy, ExtractionNote.AnswerUnreadable])(
         "closes the third %s attempt",
         async (note) => {
-            const { service, ai, json, extractions, sources } = await build()
+            const { service, ai, json, extractions, sources, reviews } = await build()
             if (note === ExtractionNote.ModelBusy) ai.chat.mockResolvedValue(null)
             else json.jsonOf.mockReturnValue({ other: [] })
             extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
 
             await expect(service.run(PAYLOAD)).resolves.toBe("failed")
 
-            expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
-                status: "failed",
-                windowsDone: 0,
-                factsProposed: 0,
-                windowsTotal: 1,
-                error: note,
-                attempts: 3,
-            })
+            expect(extractions.save).toHaveBeenCalledWith(
+                WS,
+                SOURCE,
+                progressOf({ status: "failed", error: note, attempts: 3 }),
+            )
             expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, StoredNote.FactsUnread)
+            expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE)
         },
     )
 
@@ -309,14 +313,11 @@ describe("DocumentFactsService", () => {
             promptChars: SYSTEM_PROMPT.length + PROMPT.length,
             completionChars: 6,
         })
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
-            status: "running",
-            windowsDone: 0,
-            factsProposed: 0,
-            windowsTotal: 1,
-            error: ExtractionNote.AnswerUnreadable,
-            attempts: 1,
-        })
+        expect(extractions.save).toHaveBeenCalledWith(
+            WS,
+            SOURCE,
+            progressOf({ error: ExtractionNote.AnswerUnreadable, attempts: 1 }),
+        )
     })
 
     it.each([null, undefined, ""])("keeps the original result for a provider model %s", async (model) => {
@@ -374,14 +375,7 @@ describe("DocumentFactsService", () => {
                 },
             ],
         })
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
-            status: "running",
-            windowsDone: 1,
-            factsProposed: 1,
-            windowsTotal: 1,
-            error: null,
-            attempts: 0,
-        })
+        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ windowsDone: 1, factsProposed: 1 }))
         expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "m1")
         expect(gaps.resolve).toHaveBeenCalledWith(WS, {
             text: `Hours Open ${CONTENT}`,
@@ -445,14 +439,7 @@ describe("DocumentFactsService", () => {
 
         expect(facts.propose).toHaveBeenCalledTimes(2)
         expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.FilingFailed, cause, { sourceId: SOURCE })
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
-            status: "running",
-            windowsDone: 1,
-            factsProposed: 1,
-            windowsTotal: 1,
-            error: null,
-            attempts: 0,
-        })
+        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ windowsDone: 1, factsProposed: 1 }))
     })
 })
 describe("DocumentFactsService", () => {
@@ -469,14 +456,7 @@ describe("DocumentFactsService", () => {
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
 
         expect(facts.propose).toHaveBeenCalledTimes(1)
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
-            status: "running",
-            windowsDone: 1,
-            factsProposed: 200,
-            windowsTotal: 1,
-            error: null,
-            attempts: 0,
-        })
+        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ windowsDone: 1, factsProposed: 200 }))
     })
 
     it("finishes public text without a topic even when answering its gaps fails", async () => {

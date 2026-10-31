@@ -18,6 +18,7 @@ import { AGENT_CHAT_ERROR_KINDS, AGENT_CHAT_MESSAGES, AgentChatModule } from "@m
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
+import { DossierReviewGraphqlModule } from "@features/api/dossier-review"
 import { EvidenceGraphqlModule } from "@features/api/evidence"
 import { McpGatewayGraphqlModule } from "@features/api/mcp-gateway"
 import { AuthGraphqlModule, AuthHttpModule } from "@features/api/auth"
@@ -49,6 +50,7 @@ export const apiModules = (): Array<DynamicModule> => [
     ChattypingGraphqlModule.register({}),
     AgentChatModule.register({ isGlobal: true }),
     KnowledgeGraphqlModule.register({}),
+    DossierReviewGraphqlModule.register({}),
     EvidenceGraphqlModule.register({}),
     McpGatewayGraphqlModule.register({}),
     AuthGraphqlModule.register({}),

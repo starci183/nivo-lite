@@ -6,6 +6,8 @@ import { MetaDeliveryQueueModule } from "@features/jobs/meta-delivery"
 import type { DynamicModule } from "@nestjs/common"
 import { RunDataSyncQueueModule } from "@features/jobs/run-data-sync"
 import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
+import { ReviewDossiersQueueModule } from "@features/jobs/review-dossiers"
+import { DraftDossierRemedyQueueModule } from "@features/jobs/draft-dossier-remedy"
 import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
 import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
 import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
@@ -52,6 +54,8 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     BankFeedDeliveryQueueModule.register({}),
     RunDataSyncQueueModule.register({}),
     ExtractKnowledgeFactsQueueModule.register({}),
+    ReviewDossiersQueueModule.register({}),
+    DraftDossierRemedyQueueModule.register({}),
     RunBrainCommandQueueModule.register({}),
     IndexKnowledgeSourceQueueModule.register({}),
     ReembedKnowledgeQueueModule.register({}),
