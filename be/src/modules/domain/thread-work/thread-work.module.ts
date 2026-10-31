@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./thread-work.module-definition"
+import { ThreadTagWakesService } from "./thread-tag-wakes.service"
+import { ThreadTagHandlerService } from "./thread-tag-handler.service"
 import { ThreadWorkService } from "./thread-work.service"
 import { ThreadWorkLinksReadService } from "./thread-work-links-read.service"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
@@ -21,8 +23,10 @@ export class ThreadWorkModule extends ConfigurableModuleClass {
                 ThreadWorkTurnsService,
                 ThreadWorkService,
                 ThreadWorkLinksReadService,
+                ThreadTagHandlerService,
+                ThreadTagWakesService,
             ],
-            exports: [ThreadWorkService, ThreadWorkLinksReadService],
+            exports: [ThreadWorkService, ThreadWorkLinksReadService, ThreadTagHandlerService],
         }
     }
 }

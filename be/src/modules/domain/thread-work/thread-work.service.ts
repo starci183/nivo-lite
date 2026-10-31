@@ -15,6 +15,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { ThreadWorkError, ThreadWorkErrorCode } from "./errors/thread-work.error"
+import { ThreadTagWakesService } from "./thread-tag-wakes.service"
 import { ThreadWorkEntity } from "./persistence/entities"
 import { ThreadWorkLogEvent } from "./thread-work.log-events"
 import { toThreadWorkRecord } from "./thread-work.mapper"
@@ -61,6 +62,7 @@ export class ThreadWorkService {
         private readonly agents: AgentDirectoryService,
         private readonly members: WorkspaceMemberDirectoryService,
         private readonly requests: ApprovalRequestsReadService,
+        private readonly tagWakes: ThreadTagWakesService,
     ) {}
 
     /**
@@ -73,15 +75,20 @@ export class ThreadWorkService {
         return { steps, settled }
     }
 
-    /** A member writes in a thread; when an agent waited for their data, its work goes on with the answer. */
+    /**
+     * A member writes in a thread. When an agent waited for their data, that work goes on with the answer and nobody else is woken.
+     * Otherwise every agent the message tags is woken, once: the tags are the list the author chose, and the right to ask was proved
+     * when the message was written.
+     */
     async post(post: UserPost): Promise<ThreadMessage> {
         const message = await this.messages.postAsUser(post)
-        await this.memberReplied({
+        const answered = await this.memberReplied({
             workspaceId: post.workspaceId,
             threadId: post.threadId,
             memberId: message.authorId,
             body: post.body,
         })
+        if (!answered) await this.tagWakes.wake(post, message)
         return message
     }
 

@@ -24,6 +24,14 @@ export const OFFICE_COMMAND_CANDIDATES_MESSAGES: MessageBundle = {
         "office.cmdFieldCustomer": "Khách hàng",
         "office.cmdFieldOrder": "Đơn hàng",
         "office.cmdFor": "{{what}} cho {{subject}}",
+        "office.tagRefused": "Bạn chưa có quyền giao việc cho @{{handle}}, nên mình chưa chuyển tin này.",
+        "office.tagWorkOff": "Công việc của @{{handle}} đang tắt. Bật lại ở trang agent để @{{handle}} trả lời.",
+        "office.tagNotApplied":
+            "@{{handle}} chưa được áp dụng cấu hình nên chưa trả lời được. Hãy áp dụng ở trang agent trước.",
+        "office.tagPaused": "@{{handle}} đang tạm dừng nên chưa trả lời được.",
+        "office.tagQuota": "Gói của bạn đã hết lượt dùng AI, nên @{{handle}} chưa trả lời được.",
+        "office.tagBusy": "@{{handle}} đang bận hoặc chưa sẵn sàng. Bạn thử lại sau nhé.",
+        "office.tagFailed": "@{{handle}} chưa trả lời được lần này. Bạn thử lại sau nhé.",
     },
     en: {
         "errors.OFFICE_COMMAND_CANDIDATES_MESSAGE_NOT_FOUND": "That message was not found.",
@@ -47,5 +55,12 @@ export const OFFICE_COMMAND_CANDIDATES_MESSAGES: MessageBundle = {
         "office.cmdFieldCustomer": "Customer",
         "office.cmdFieldOrder": "Order",
         "office.cmdFor": "{{what}} for {{subject}}",
+        "office.tagRefused": "You may not hand work to @{{handle}}, so I did not pass this on.",
+        "office.tagWorkOff": "Work is switched off for @{{handle}}. Switch it on in the agent page for @{{handle}} to answer.",
+        "office.tagNotApplied": "@{{handle}} has no applied setup yet, so it cannot answer. Apply it in the agent page first.",
+        "office.tagPaused": "@{{handle}} is paused, so it cannot answer.",
+        "office.tagQuota": "Your plan has no AI allowance left, so @{{handle}} cannot answer.",
+        "office.tagBusy": "@{{handle}} is busy or not ready. Please try again later.",
+        "office.tagFailed": "@{{handle}} could not answer this time. Please try again later.",
     },
 }

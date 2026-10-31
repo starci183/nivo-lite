@@ -83,6 +83,7 @@ describe("AgentWorkReadService.agentWork", () => {
                 cost: 0.01,
                 durationMs: 500,
                 wokeAt: new Date("2026-11-10T01:00:00.000Z"),
+                workItemId: null,
             },
         ])
         expect(JSON.stringify(view)).not.toContain("private words")

@@ -5,6 +5,7 @@ export { AgentWorkModule } from "./agent-work.module"
 export { AgentDrainService } from "./agent-drain.service"
 export { AgentGoalsService } from "./agent-goals.service"
 export { AgentTasksService } from "./agent-tasks.service"
+export { AgentWorkDoorsService } from "./agent-work-doors.service"
 export { AgentTriggersService } from "./agent-triggers.service"
 export { AgentTurnsService } from "./agent-turns.service"
 export { AgentWakeRetentionService } from "./agent-wake-retention.service"
@@ -16,10 +17,12 @@ export { AGENT_TURN_EXECUTOR } from "./agent-work.decorators"
 export { backgroundCapSpent, breakerOpen, isBackground } from "./agent-work.policy"
 export type {
     AgentGoalRecord,
+    AgentGoalStatus,
     AgentGoalWrite,
     AgentRunningTurn,
     AgentTaskOp,
     AgentTaskRecord,
+    AgentTriggerKind,
     AgentTriggerPreset,
     AgentTriggerRecord,
     AgentTriggerWrite,
@@ -28,7 +31,10 @@ export type {
     AgentWakeContext,
     AgentWakeSource,
     AgentWorkDue,
+    AgentWorkSettingsRecord,
     AgentWorkState,
+    AgentWorkView,
+    WorkspaceAgentWorkView,
 } from "./agent-work.contracts"
 export type {
     AgentHandlerEnding,

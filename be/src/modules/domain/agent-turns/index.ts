@@ -10,3 +10,4 @@ export { internalTimeoutMsOf, proposalTextOf, stoppedBy } from "./agent-turn.pol
 export { InternalProposalSettlerService } from "./internal-proposal-settler.service"
 export { InternalTurnContextService } from "./internal-turn-context.service"
 export { RuntimeAgentService } from "./runtime-agent.service"
+export type { InternalActionResult } from "./agent-turns.contracts"

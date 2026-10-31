@@ -9,6 +9,7 @@ import { AgentTriggersService } from "./agent-triggers.service"
 import { AgentWakeRetentionService } from "./agent-wake-retention.service"
 import { AgentWakeService } from "./agent-wake.service"
 import { AgentWorkAccessService } from "./agent-work-access.service"
+import { AgentWorkDoorsService } from "./agent-work-doors.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkReadService } from "./agent-work-read.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
@@ -40,6 +41,7 @@ export class AgentWorkModule extends ConfigurableModuleClass {
                 AgentTriggersService,
                 AgentWorkSettingsService,
                 AgentWorkReadService,
+                AgentWorkDoorsService,
             ],
             exports: [
                 AgentTurnQueueModule,
@@ -53,6 +55,7 @@ export class AgentWorkModule extends ConfigurableModuleClass {
                 AgentTriggersService,
                 AgentWorkSettingsService,
                 AgentWorkReadService,
+                AgentWorkDoorsService,
             ],
         }
     }
