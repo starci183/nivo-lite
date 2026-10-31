@@ -12,8 +12,7 @@ import { ZaloDeliveryQueueModule } from "../../features/jobs/zalo-delivery/trans
 import type { LiteWorld } from "./lite-world.service"
 import { QUEUE_MODULES } from "./test-capabilities.options"
 import { RECEIPT_DOMAIN_MODULES } from "./receipt-domain-proof.module"
-import type { WebhookJobRow, WebhookMessageRow } from "../fixtures/persistence/proof.rows"
-import * as statements from "./zalo-delivery.sql"
+import { deliveryEnvelopes, deliveryPublications, removeDeliveryOutbox } from "./proof-database.service"
 import { receiptsOf, removeReceipts } from "./receipts-database.service"
 
 /** Real database, queue, claims and receipt owners shared by the delivery proofs. */
@@ -32,16 +31,15 @@ export const RECEIPT_DELIVERY_MODULES = [
 /** Observes the committed receipt and its durable outbox handoff. */
 export const zaloDeliveryState = async (world: LiteWorld, deliveryId: string) => ({
     receipts: await receiptsOf(world.db.primary, "zalo", deliveryId),
-    jobs: await world.db.primary.query<Array<WebhookJobRow>>(statements.JOBS, [deliveryId]),
-    messages: await world.db.primary.query<Array<WebhookMessageRow>>(statements.MESSAGES, [deliveryId]),
+    jobs: await deliveryPublications(world.db.primary, ZALO_DELIVERY_QUEUE, deliveryId),
+    messages: await deliveryEnvelopes(world.db.primary, ZALO_DELIVERY_QUEUE, deliveryId),
 })
 
 /** Isolates a real producer and registers cleanup before publication can occur. */
 export const zaloPublicationBuilder = (world: LiteWorld) => {
     const message = { deliveryId: `${world.id()}:m-1` }
     world.cleanup(async () => {
-        await world.db.primary.query(statements.CLEAN_MESSAGES, [message.deliveryId])
-        await world.db.primary.query(statements.CLEAN_JOBS, [message.deliveryId])
+        await removeDeliveryOutbox(world.db.primary, ZALO_DELIVERY_QUEUE, message.deliveryId)
         await removeReceipts(world.db.primary, "zalo", message.deliveryId)
     })
     const actual = world.resolve<QueueOutbox>(QUEUE_OUTBOX)

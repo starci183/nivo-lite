@@ -1,20 +1,21 @@
 import { buildTelegramDelivery } from "../fixtures/builders/telegram-delivery.builder"
 import type { LiteWorld } from "./lite-world.service"
-import type { WebhookJobRow, WebhookMessageRow } from "../fixtures/persistence/proof.rows"
-import * as statements from "./telegram-delivery.sql"
+import { deliveryEnvelopes, deliveryPublications, removeDeliveryOutbox } from "./proof-database.service"
 import { receiptsOf, removeReceipts } from "./receipts-database.service"
+
+/** The queue a Telegram delivery publishes to. */
+const TELEGRAM_QUEUE = "telegram-delivery"
 
 /** Observes committed inbox and outbox state using a separate transaction from intake. */
 export const telegramDeliveryState = async (world: LiteWorld, deliveryId: string) => ({
     receipts: await receiptsOf(world.db.primary, "telegram", deliveryId),
-    jobs: await world.db.primary.query<Array<WebhookJobRow>>(statements.JOBS, [deliveryId]),
-    messages: await world.db.primary.query<Array<WebhookMessageRow>>(statements.MESSAGES, [deliveryId]),
+    jobs: await deliveryPublications(world.db.primary, TELEGRAM_QUEUE, deliveryId),
+    messages: await deliveryEnvelopes(world.db.primary, TELEGRAM_QUEUE, deliveryId),
 })
 /** Registers isolated proof cleanup in dependency order. */
 export const cleanupTelegramDelivery = (world: LiteWorld, deliveryId: string): void => {
     world.cleanup(async () => {
-        await world.db.primary.query(statements.CLEAN_MESSAGES, [deliveryId])
-        await world.db.primary.query(statements.CLEAN_JOBS, [deliveryId])
+        await removeDeliveryOutbox(world.db.primary, TELEGRAM_QUEUE, deliveryId)
         await removeReceipts(world.db.primary, "telegram", deliveryId)
     })
 }

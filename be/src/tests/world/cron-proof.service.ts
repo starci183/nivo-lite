@@ -1,7 +1,8 @@
-import type { CronRow, TickRow } from "../fixtures/persistence/proof.rows"
+import type { CronRow } from "../fixtures/persistence/proof.rows"
 import assert from "node:assert/strict"
 import type { LiteWorld } from "./lite-world.service"
-import { CRON, LOCK_TICKS, HIDE_TICKS, TICK_IDS, FIRE_TICK } from "./proof.sql"
+import { hideOpenTicks, openTicks } from "./proof-database.service"
+import { CRON, LOCK_TICKS, FIRE_TICK } from "./proof.sql"
 
 /** Executes the installed command, isolates existing ticks, and rolls the entire proof back. */
 export const cronProof = async (world: LiteWorld) => {
@@ -11,11 +12,11 @@ export const cronProof = async (world: LiteWorld) => {
     const manager = runner.manager
     try {
         await manager.query(LOCK_TICKS)
-        await manager.query(HIDE_TICKS)
+        await hideOpenTicks(manager)
         const jobs = await manager.query<Array<CronRow>>(CRON)
-        const before = await manager.query<Array<TickRow>>(TICK_IDS)
+        const before = await openTicks(manager)
         await manager.query(FIRE_TICK)
-        const after = await manager.query<Array<TickRow>>(TICK_IDS)
+        const after = await openTicks(manager)
         const added = after.filter((row) => !before.some((old) => old.id === row.id))
         assert(added.length === 1, "One cron execution must enqueue exactly one outbox row")
         return { jobs, added }

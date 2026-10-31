@@ -4,22 +4,27 @@ import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
 import { JOB_CLAIMS } from "@modules/platform/jobs"
 import type { JobClaims, FencedProcessor } from "@modules/platform/jobs"
 import type { LiteWorld } from "./lite-world.service"
-import { cleanupJobs, cleanupWorkspace } from "./proof-database.service"
+import {
+    cleanupJobs,
+    cleanupWorkspace,
+    deliveryEnvelopes,
+    deliveryPublications,
+    removeCreditOutbox,
+    removeDeliveryOutbox,
+} from "./proof-database.service"
 import {
     persistDeliveryWorkspaceRows,
     deliveryIntakeBuilder,
     deliveryClaimBuilder,
 } from "../fixtures/builders/delivery-jobs.builder"
 import type { DeliveryKind } from "../fixtures/builders/delivery-jobs.builder"
-import type { WebhookJobRow, WebhookMessageRow } from "../fixtures/persistence/proof.rows"
-import * as statements from "./delivery-jobs.sql"
 import { receiptsOf, removeReceipts } from "./receipts-database.service"
 
 /** Owns cleanup while a persisting builder creates the scenario's parent rows. */
 export const persistDeliveryWorkspace = async (world: LiteWorld, workspaceId: string): Promise<void> => {
     const userId = world.id()
     cleanupWorkspace(world, userId, workspaceId)
-    world.cleanup(() => world.db.primary.query(statements.CLEAN_CREDITS, [workspaceId]))
+    world.cleanup(() => removeCreditOutbox(world.db.primary, workspaceId))
     world.cleanup(() => cleanupJobs(world.db.primary, world.prefix))
     await persistDeliveryWorkspaceRows(world.db.primary, userId, workspaceId)
 }
@@ -39,14 +44,13 @@ export const deliveryIntakeFixture = async (world: LiteWorld, kind: DeliveryKind
     )
     const deliveryId = fixture.message.deliveryId
     world.cleanup(async () => {
-        await world.db.primary.query(statements.CLEAN_MESSAGES, [kind, deliveryId])
-        await world.db.primary.query(statements.CLEAN_PUBLICATIONS, [fixture.queue, deliveryId])
+        await removeDeliveryOutbox(world.db.primary, fixture.queue, deliveryId)
         await removeReceipts(world.db.primary, kind, deliveryId)
     })
     const state = async () => ({
         receipts: await receiptsOf(world.db.primary, kind, deliveryId),
-        jobs: await world.db.primary.query<Array<WebhookJobRow>>(statements.PUBLICATIONS, [fixture.queue, deliveryId]),
-        messages: await world.db.primary.query<Array<WebhookMessageRow>>(statements.MESSAGES, [kind, deliveryId]),
+        jobs: await deliveryPublications(world.db.primary, fixture.queue, deliveryId),
+        messages: await deliveryEnvelopes(world.db.primary, fixture.queue, deliveryId),
     })
     return { ...fixture, state }
 }
