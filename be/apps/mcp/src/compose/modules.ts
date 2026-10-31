@@ -16,6 +16,7 @@ import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions
 import { LivenessModule } from "@modules/domain/liveness"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
+import { NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
@@ -33,13 +34,15 @@ import { LoggingModule } from "@modules/platform/logging"
 import { QueueModule } from "@modules/platform/queue"
 import { RetryModule } from "@modules/platform/retry"
 import type { McpAppOptions } from "../mcp.options"
+import { mcpKnowledgeErrorKinds, mcpKnowledgeMessages, mcpKnowledgeModules } from "./knowledge"
 
 /**
  * Registers the mcp app capabilities in their boot order: the platform (its timer port is the queue capability's, which the
  * readiness probe and the native connectors' deadlines use) with the error and message tables of what it composes, the
  * default-deny identity (it serves no user session: every access token is refused; its one door takes an agent key, verified by
- * the api-keys capability), the gateway over the primary database with the bank moves it reads and the connection key that opens
- * each remote connector's sealed credential, health and the endpoint.
+ * the api-keys capability), the read-only readers behind the native tools (the Brain, the dossiers, the providers), the gateway over
+ * the primary database with the bank moves it reads and the connection key that opens each remote connector's sealed credential,
+ * health and the endpoint.
  */
 export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> => [
     ClockModule.register({ isGlobal: true }),
@@ -52,6 +55,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
             ERRORS_MESSAGES,
             HTTP_SECURITY_MESSAGES,
             IDENTITY_MESSAGES,
+            ...mcpKnowledgeMessages,
             MCP_GATEWAY_MESSAGES,
             MCP_GATEWAY_RECEIPTS_MESSAGES,
             MCP_MESSAGES,
@@ -66,6 +70,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
             CONNECTION_SECRETS_ERROR_KINDS,
             HTTP_SECURITY_ERROR_KINDS,
             IDENTITY_ERROR_KINDS,
+            ...mcpKnowledgeErrorKinds,
             MCP_GATEWAY_ERROR_KINDS,
             MCP_GATEWAY_RECEIPTS_ERROR_KINDS,
             MCP_ERROR_KINDS,
@@ -97,7 +102,8 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     TransactionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
     DataRecordsModule.register({ isGlobal: true }),
-    McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, keyCheck: true }),
+    ...mcpKnowledgeModules(options),
+    McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, keyCheck: true, natives: NATIVE_TOOL_ADAPTERS }),
     SystemHealthHttpModule.register({}),
     McpEndpointHttpModule.register({}),
 ]

@@ -5,7 +5,7 @@ export interface GatewayJson {
 }
 
 /** Why a gateway operation needs a person's approval. */
-export type GatewayApprovalReason = "ask_mode" | "over_constraint" | "over_limit_vnd" | "no_rule"
+export type GatewayApprovalReason = "ask_mode" | "over_constraint" | "over_limit_vnd" | "no_rule" | "tainted_input"
 
 /** Why a gateway operation did not produce a result. */
 export type GatewayFailure =
@@ -16,6 +16,7 @@ export type GatewayFailure =
     | "schema_unapproved"
     | "not_granted"
     | "idempotency_key_required"
+    | "internal_only"
     | "unavailable"
     | "tool_error"
     | "unknown_outcome"

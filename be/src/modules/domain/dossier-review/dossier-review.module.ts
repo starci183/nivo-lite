@@ -11,9 +11,16 @@ import { ReviewInputsService } from "./review-inputs.service"
 @Module({})
 /** The dossier review of the Second Brain: findings, runs, the status of each dossier and the remedy drafts NIVO writes. */
 export class DossierReviewModule extends ConfigurableModuleClass {
-    /** Registers the capability once per app with the two services that call the model. */
+    /** Registers the capability once per app with the two services that call the model; the read-only mode registers the findings reads alone. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.readOnly === true) {
+            return {
+                ...base,
+                providers: [...(base.providers ?? []), ReviewInputsService, DossierFindingsService],
+                exports: [DossierFindingsService],
+            }
+        }
         return {
             ...base,
             providers: [

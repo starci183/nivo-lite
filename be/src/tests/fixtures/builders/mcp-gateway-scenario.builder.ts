@@ -377,7 +377,7 @@ export const GATEWAY_SCENARIO_EXPECTED = {
 /** A native read connector treated as a write to exercise the operation identity guard. */
 export const WRITE_NATIVE_MANIFEST: NativeConnectorManifest = {
     ...SEPAY_MANIFEST,
-    tools: SEPAY_MANIFEST.tools.map((tool) => ({ ...tool, scope: "write" as const })),
+    tools: SEPAY_MANIFEST.tools.map((tool) => ({ ...tool, scope: "write" as const, internalOnly: false })),
 }
 
 /** Five failed reads open the shared remote connector breaker. */

@@ -8,6 +8,7 @@ import {
     cleanName,
     secondsToRenewal,
     admitKey,
+    withinMinuteBudget,
     admitAgentKey,
     mayManageKeys,
 } from "./api-keys.policy"
@@ -20,6 +21,7 @@ type Subject = {
     cleanName: typeof cleanName
     secondsToRenewal: typeof secondsToRenewal
     admitKey: typeof admitKey
+    withinMinuteBudget: typeof withinMinuteBudget
     admitAgentKey: typeof admitAgentKey
     mayManageKeys: typeof mayManageKeys
 }
@@ -36,6 +38,7 @@ const buildSubject = async () => {
                     cleanName,
                     secondsToRenewal,
                     admitKey,
+                    withinMinuteBudget,
                     admitAgentKey,
                     mayManageKeys,
                 },
@@ -113,6 +116,20 @@ describe("api-keys policy secondsToRenewal", () => {
     it("counts the seconds left in the minute", async () => {
         const subject = await buildSubject()
         expect(subject.secondsToRenewal(NOW)).toBe(40)
+    })
+})
+
+describe("api-keys policy withinMinuteBudget", () => {
+    it("lets a key through up to its budget and refuses the next request with the time to renewal", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.withinMinuteBudget({ hits: RATE_LIMIT_PER_MINUTE }, NOW)).toEqual({ kind: "ok", value: null })
+        expect(subject.withinMinuteBudget(null, NOW)).toEqual({ kind: "ok", value: null })
+        expect(subject.withinMinuteBudget({ hits: RATE_LIMIT_PER_MINUTE + 1 }, NOW)).toEqual({
+            kind: "refused",
+            code: ApiKeysErrorCode.RateLimited,
+            params: { limit: RATE_LIMIT_PER_MINUTE, retryAfter: 40 },
+        })
     })
 })
 

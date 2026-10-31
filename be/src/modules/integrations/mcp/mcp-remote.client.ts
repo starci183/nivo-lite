@@ -15,6 +15,8 @@ import type {
 } from "./mcp.contracts"
 import { InjectMcpOptions } from "./mcp.decorators"
 import { McpLogEvent } from "./mcp.log-events"
+import { McpPublicFetchClient } from "./mcp-public-fetch.client"
+import { isPublicEndpoint } from "./public-endpoint.policy"
 import type { McpOptions } from "./mcp.options"
 import type { McpRemote } from "./mcp.port"
 
@@ -62,6 +64,7 @@ export class McpRemoteClient implements McpRemote {
     constructor(
         @InjectLogger() private readonly logger: Logger,
         @InjectMcpOptions() private readonly options: McpOptions,
+        private readonly publicFetch: McpPublicFetchClient,
     ) {}
 
     /** The tools the server lists. */
@@ -83,6 +86,11 @@ export class McpRemoteClient implements McpRemote {
         await this.within(endpoint, timeoutMs, (client, signal) => client.ping({ signal }))
     }
 
+    /** Whether the address may be connected to: http(s) and public only. */
+    isReachable(url: string): Promise<boolean> {
+        return isPublicEndpoint(url)
+    }
+
     /** Calls one tool by its remote name. */
     async call(request: McpCallRequest): Promise<McpRemoteResult> {
         const raw: McpRawResult = await this.within(request.endpoint, request.timeoutMs, (client, signal) =>
@@ -96,6 +104,9 @@ export class McpRemoteClient implements McpRemote {
         timeoutMs: number,
         work: (client: Client, signal: AbortSignal) => Promise<T>,
     ): Promise<T> {
+        if (!(await isPublicEndpoint(endpoint.url))) {
+            throw new McpError({ code: McpErrorCode.Unavailable, params: { url: endpoint.url, reason: "private" } })
+        }
         const headers: Record<string, string> =
             endpoint.bearer === null ? {} : { Authorization: `Bearer ${endpoint.bearer.reveal()}` }
         const signal = AbortSignal.timeout(timeoutMs)
@@ -122,7 +133,7 @@ export class McpRemoteClient implements McpRemote {
             // The SDK class types sessionId as `string | undefined`, which an exact-optional `Transport` refuses; the session id is not read here.
             const transport: Omit<StreamableHTTPClientTransport, "sessionId"> = new StreamableHTTPClientTransport(
                 new URL(endpoint.url),
-                { requestInit: request },
+                { requestInit: request, fetch: this.publicFetch.fetch },
             )
             await client.connect(transport, { signal: request.signal })
             return { ok: true, value: await work(client, request.signal) }

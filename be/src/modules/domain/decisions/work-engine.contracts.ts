@@ -158,6 +158,10 @@ export interface Judgement {
     readonly verdict: GateVerdict
     /** The owner's rule for the action, with the operating mode applied. */
     readonly rule: OptionalAuthorityRule
+    /** The proposal when the action graph replaced its amount with the one the records hold; absent when it did not. */
+    readonly proposal?: Proposal
+    /** The decision the action graph recorded for a branch ask; absent when the gate decided alone or the branch did not ask. */
+    readonly branchDecisionId?: string
 }
 
 /** A person's decision on a waiting item. */

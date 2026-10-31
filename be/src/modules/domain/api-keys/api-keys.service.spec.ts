@@ -11,7 +11,7 @@ import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ApiKeysService } from "./api-keys.service"
-import { hashKey } from "./api-keys.policy"
+import { hashKey, RATE_LIMIT_PER_MINUTE } from "./api-keys.policy"
 import {
     agentBoundKey,
     defaultKeyOfWorkspaceWs1,
@@ -448,52 +448,49 @@ describe("ApiKeysService agent keys", () => {
     })
 })
 
+/** The row the agent key lookup answers. */
+const agentRow = (changes: object = {}) => ({
+    getRawOne: {
+        id: "key-1",
+        workspace_id: "ws-1",
+        agent_id: "agent-1",
+        scopes: ["tools:call"],
+        revoked: false,
+        ...changes,
+    },
+})
+
 describe("ApiKeysService agent keys", () => {
-    it("verifies an agent key by its hash and answers the agent and its workspace", async () => {
-        const em = mockEntityManager()
-        const [fake] = queueQueryBuilders(em, [
-            {
-                getRawOne: {
-                    id: "key-1",
-                    workspace_id: "ws-1",
-                    agent_id: "agent-1",
-                    scopes: ["tools:call"],
-                    revoked: false,
-                },
-            },
-        ])
+    it.each([
+        ["over", [{ api_key_auth: { hits: RATE_LIMIT_PER_MINUTE + 1 } }], ApiKeysErrorCode.RateLimited],
+        ["at", [{ api_key_auth: { hits: RATE_LIMIT_PER_MINUTE } }], undefined],
+        ["unanswered by", [], undefined],
+    ])("verifies an agent key by its hash and counts the call against its minute budget: a key %s it", async (_label, rows, code) => {
+        const em = mockEntityManager({ query: [API_KEY_AUTH, rows] })
+        const [fake] = queueQueryBuilders(em, [agentRow()])
         const keys = await build(em)
 
-        await expect(keys.verifyAgentKey("Bearer nvk_secret")).resolves.toEqual({
-            keyId: "key-1",
-            workspaceId: "ws-1",
-            agentId: "agent-1",
-        })
+        const verified = keys.verifyAgentKey("Bearer nvk_secret")
+
+        if (code === undefined) {
+            await expect(verified).resolves.toEqual({ keyId: "key-1", workspaceId: "ws-1", agentId: "agent-1" })
+        } else await expect(verified).rejects.toMatchObject({ code, params: { limit: RATE_LIMIT_PER_MINUTE } })
         expect(fake?.callsOf("where")).toEqual([["k.keyHash = :keyHash", { keyHash: hashKey("nvk_secret") }]])
+        expect(em.query).toHaveBeenCalledWith(API_KEY_AUTH, [hashKey("nvk_secret")])
     })
 
-    it("refuses a malformed header before the database and a revoked or unknown key after it", async () => {
+    it("refuses a malformed header before the database, and a revoked or unknown key without spending its budget", async () => {
         const em = mockEntityManager()
         const keys = await build(em)
 
         await expect(keys.verifyAgentKey("Bearer other")).rejects.toMatchObject({ code: ApiKeysErrorCode.Unauthorized })
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
 
-        queueQueryBuilders(em, [
-            { getRawOne: undefined },
-            {
-                getRawOne: {
-                    id: "key-1",
-                    workspace_id: "ws-1",
-                    agent_id: "agent-1",
-                    scopes: [],
-                    revoked: true,
-                },
-            },
-        ])
+        queueQueryBuilders(em, [{ getRawOne: undefined }, agentRow({ scopes: [], revoked: true })])
         await expect(keys.verifyAgentKey("Bearer nvk_secret")).rejects.toMatchObject({
             code: ApiKeysErrorCode.Unauthorized,
         })
         await expect(keys.verifyAgentKey("Bearer nvk_secret")).rejects.toMatchObject({ code: ApiKeysErrorCode.Revoked })
+        expect(em.query).not.toHaveBeenCalled()
     })
 })

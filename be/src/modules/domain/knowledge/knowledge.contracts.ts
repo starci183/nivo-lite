@@ -48,6 +48,8 @@ export interface AgentSearch {
     readonly question: string
     /** The most passages wanted. */
     readonly limit: number
+    /** How long the embedding of the question may take before the search falls back to words, milliseconds; absent = 8000. */
+    readonly embedTimeoutMs?: number
 }
 
 /** One retrieved passage, labelled by layer: nivo = base knowledge of NIVO, business = the owner's documents. */
