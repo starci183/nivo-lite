@@ -375,21 +375,6 @@ describe("KnowledgeIndexingService", () => {
         })
     })
 
-    describe("a passage that moved", () => {
-        it("keeps its vector at the new order, is not embedded, and counts as done", async () => {
-            const content = `${"n".repeat(500)}\n\n${"o".repeat(500)}`
-            const { service, sources, chunks, embeddings } = await build(sourceOf({ content }))
-            const [first, second] = chunkText(content)
-            chunks.embeddedOf.mockResolvedValue([stored(second ?? "", 0)])
-
-            await expect(service.index(run)).resolves.toBe("indexed")
-
-            expect(chunks.arrange).toHaveBeenCalledWith(expect.objectContaining({ moves: [{ id: "c0", order: 1 }], count: 2 }))
-            expect(embeddings.embed.mock.calls.flatMap(([request]) => request.texts)).toEqual([first])
-            expect(sources.enterStage).toHaveBeenCalledWith(WS, "s1", expect.objectContaining({ stage: "embed", done: 1 }))
-        })
-    })
-
     describe("a text the source holds whole", () => {
         it.each([["file", 0], ["url", 1]])("skips a %s, reading only what can change", async (kind, reads) => {
             const { service, reader, unchanged } = await build(sourceOf({ kind }))
@@ -425,6 +410,21 @@ describe("KnowledgeIndexingService", () => {
             const gone = await build(null)
             await expect(gone.service.sourceForFacts(WS, "s1")).resolves.toBeNull()
         })
+    })
+})
+
+describe("KnowledgeIndexingService a passage that moved", () => {
+    it("keeps its vector at the new order, is not embedded, and counts as done", async () => {
+        const content = `${"n".repeat(500)}\n\n${"o".repeat(500)}`
+        const { service, sources, chunks, embeddings } = await build(sourceOf({ content }))
+        const [first, second] = chunkText(content)
+        chunks.embeddedOf.mockResolvedValue([stored(second ?? "", 0)])
+
+        await expect(service.index(run)).resolves.toBe("indexed")
+
+        expect(chunks.arrange).toHaveBeenCalledWith(expect.objectContaining({ moves: [{ id: "c0", order: 1 }], count: 2 }))
+        expect(embeddings.embed.mock.calls.flatMap(([request]) => request.texts)).toEqual([first])
+        expect(sources.enterStage).toHaveBeenCalledWith(WS, "s1", expect.objectContaining({ stage: "embed", done: 1 }))
     })
 })
 

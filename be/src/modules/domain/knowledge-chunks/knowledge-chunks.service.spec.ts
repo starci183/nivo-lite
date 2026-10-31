@@ -166,7 +166,7 @@ describe("KnowledgeChunksService", () => {
     describe("embeddedOf", () => {
         it("names the columns of the stored passages", async () => {
             const em = mockEntityManager()
-            queueQueryBuilders(em, [{ getMany: [chunkOf({ embeddingModel: "m1", contentHash: "h" })] }])
+            queueQueryBuilders(em, [{ getMany: [Object.assign(chunkOf(), { embeddingModel: "m1", contentHash: "h" })] }])
             const service = await build(em)
 
             await expect(service.embeddedOf(WS, "s1")).resolves.toEqual([
@@ -360,7 +360,7 @@ describe("KnowledgeChunksService passagesOfSources", () => {
     })
 })
 
-describe("KnowledgeChunksService keep and arrange", () => {
+describe("KnowledgeChunksService keep", () => {
     const anyOrder: unknown = expect.anything()
 
     const placed = (orders: ReadonlyArray<number>, vector: string | null) =>
@@ -422,6 +422,9 @@ describe("KnowledgeChunksService keep and arrange", () => {
         ])
     })
 
+})
+
+describe("KnowledgeChunksService arrange", () => {
     it("only removes the passages past the end when nothing moves", async () => {
         const tx = fakeTransaction(mockEntityManager({ delete: [KnowledgeChunkEntity, { affected: 2 }] }))
         const service = await build(tx.em)

@@ -84,6 +84,9 @@ describe("reusePlanOf", () => {
         })
     })
 
+})
+
+describe("reusePlanOf duplicates, models and passages from before hashes", () => {
     it("lets one stored passage serve one duplicate piece; the other is embedded", async () => {
         const subject = await build()
 
