@@ -24,7 +24,7 @@ const SOURCE_LIMIT = 200
 
 @Injectable()
 /**
- * The OpenClaw copy of one agent, built only from Supabase (the source of truth) and written one way by the sync. AGENTS.md holds the
+ * The OpenClaw copy of one agent, built only from the NIVO database (the source of truth) and written one way by the sync. AGENTS.md holds the
  * NIVO base rules, the active context version, the persona, the knowledge and the reply contract; SOUL.md the tone. No knowledge file
  * is written: an agent reads the business documents through NIVO MCP, where its rights are checked and audited.
  */

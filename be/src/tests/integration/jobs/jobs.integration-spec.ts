@@ -30,7 +30,7 @@ const latch = (): Latch => {
     }
 }
 
-/** Collaboration proofs use the real claim and runner services and the migrated local Supabase job table. */
+/** Collaboration proofs use the real claim and runner services and the migrated local PostgreSQL job table. */
 const registerClaimProof = (database: LiteWorld) => {
     it("fenced-job/claim-bumps-token: expiration lets a successor advance the same row's token", async () => {
         const { clock, claims, successorClaims, claim, delivery } = jobsBuilder(

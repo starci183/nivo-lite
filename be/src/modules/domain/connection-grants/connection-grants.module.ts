@@ -5,7 +5,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connection-grants.modul
 import { ConnectionGrantsService } from "./connection-grants.service"
 
 @Module({})
-/** The agent access to connections, over the primary Supabase PostgreSQL connection. */
+/** The agent access to connections, over the primary PostgreSQL connection. */
 export class ConnectionGrantsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

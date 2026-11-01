@@ -150,7 +150,7 @@ const registerHandoffProof = (world: LiteWorld, fixture: () => WebhookFixture) =
     })
 }
 
-describe("NIVO Meta webhook (local Supabase integration)", () => {
+describe("NIVO Meta webhook (local PostgreSQL integration)", () => {
     const world = useTestWorld({ modules: [...WEBHOOK_MODULES] })
     let fixture: WebhookFixture
     beforeAll(async () => {

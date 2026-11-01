@@ -10,7 +10,7 @@ import {
 } from "../../world/redis-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 
-describe("Queue crash recovery over private Redis and Supabase", () => {
+describe("Queue crash recovery over private Redis and PostgreSQL", () => {
     const world = useTestWorld({ modules: redisQueueModules(`queue-recovery-${worldIds.next()}`) })
     const { rowOf, enqueue } = redisJobProof(world)
     beforeAll(() => {

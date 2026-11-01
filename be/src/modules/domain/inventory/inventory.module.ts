@@ -19,7 +19,7 @@ import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./inventory.module-definition"
 
 @Module({})
-/** The inventory capability over the primary Supabase PostgreSQL connection: catalogue, stock, purchasing and the routine inventory jobs. */
+/** The inventory capability over the primary PostgreSQL connection: catalogue, stock, purchasing and the routine inventory jobs. */
 export class InventoryModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

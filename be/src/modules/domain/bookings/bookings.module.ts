@@ -21,7 +21,7 @@ import { BOOKINGS_NOTIFIER } from "./bookings.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./bookings.module-definition"
 
 @Module({})
-/** The bookings capability over the primary Supabase PostgreSQL connection: calendar rules, the public page and the owner desk. */
+/** The bookings capability over the primary PostgreSQL connection: calendar rules, the public page and the owner desk. */
 export class BookingsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app, with the delivery of booking notices. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

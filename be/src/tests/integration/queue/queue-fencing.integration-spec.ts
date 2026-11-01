@@ -15,7 +15,7 @@ import {
 } from "../../world/redis-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 
-describe("Queue fenced claim recovery (private Redis and local Supabase)", () => {
+describe("Queue fenced claim recovery (private Redis and local PostgreSQL)", () => {
     const world = useTestWorld({ modules: redisJobsModules(`fencing-${worldIds.next()}`, 1000) })
 
     it("defers a foreign live claim without completing or spending an attempt, then runs after its lease lapses", async () => {

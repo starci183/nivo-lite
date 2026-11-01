@@ -5,7 +5,7 @@ import { PaymentOrderHistoryService } from "./payment-order-history.service"
 import { PaymentOrdersService } from "./payment-orders.service"
 
 @Module({})
-/** The payment-orders capability over the primary Supabase connection. */
+/** The payment-orders capability over the primary PostgreSQL connection. */
 export class PaymentOrdersModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

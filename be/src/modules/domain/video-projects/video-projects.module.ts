@@ -6,7 +6,7 @@ import { VideoProjectScriptingService } from "./video-project-scripting.service"
 import { VideoProjectsService } from "./video-projects.service"
 
 @Module({})
-/** The video-projects capability over the primary Supabase PostgreSQL connection: the projects a render is started for and settles. */
+/** The video-projects capability over the primary PostgreSQL connection: the projects a render is started for and settles. */
 export class VideoProjectsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

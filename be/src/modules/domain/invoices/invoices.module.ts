@@ -8,7 +8,7 @@ import { InvoicesLedgerService } from "./invoices-ledger.service"
 import { InvoicesAutomationReadService } from "./invoices-automation-read.service"
 
 @Module({})
-/** The invoices of a workspace over the primary Supabase PostgreSQL connection: the only writer of public.invoices. */
+/** The invoices of a workspace over the primary PostgreSQL connection: the only writer of public.invoices. */
 export class InvoicesModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

@@ -4,7 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./module-setup-messages.m
 import { SetupMessagesService } from "./setup-messages.service"
 
 @Module({})
-/** The messages of the setup chat of an installation, over the primary Supabase PostgreSQL connection. */
+/** The messages of the setup chat of an installation, over the primary PostgreSQL connection. */
 export class ModuleSetupMessagesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

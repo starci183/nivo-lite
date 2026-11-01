@@ -7,7 +7,7 @@ import { SepayTransactionsService } from "./sepay-transactions.service"
 import { SepayTransactionsAdminReadService } from "./sepay-transactions-admin-read.service"
 
 @Module({})
-/** The sepay-transactions capability over the primary Supabase connection. */
+/** The sepay-transactions capability over the primary PostgreSQL connection. */
 export class SepayTransactionsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

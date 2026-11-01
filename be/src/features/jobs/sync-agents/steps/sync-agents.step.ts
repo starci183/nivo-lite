@@ -12,7 +12,7 @@ export class SyncAgentsStep implements JobStep {
     ) {}
 
     /**
-     * Records the step with the token this worker holds FIRST, so a stale token stops here before any effect; then the installation, workspace or everything on OpenClaw the payload names is synced from Supabase into the OpenClaw workspaces.
+     * Records the step with the token this worker holds FIRST, so a stale token stops here before any effect; then the installation, workspace or everything on OpenClaw the payload names is synced from the NIVO database into the OpenClaw workspaces.
      * The service ignores a payload of another shape.
      */
     async run(job: ClaimedJob): Promise<void> {

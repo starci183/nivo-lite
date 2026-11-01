@@ -10,7 +10,7 @@ import { AgentConversationsAutomationReadService } from "./agent-conversations-a
 import { AgentConversationsService } from "./agent-conversations.service"
 
 @Module({})
-/** The conversations customers have with the workspace's agents, over the primary Supabase PostgreSQL connection. */
+/** The conversations customers have with the workspace's agents, over the primary PostgreSQL connection. */
 export class AgentConversationsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app; the read-only mode registers the conversation lookups alone. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

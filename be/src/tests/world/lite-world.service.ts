@@ -59,14 +59,14 @@ const letProofsStampRows = (source: DataSource): void => {
         })
 }
 
-/** Attaches only to migrated local Supabase; the closure owns resources rather than injecting a DataSource into services. */
+/** Attaches only to migrated local PostgreSQL; the closure owns resources rather than injecting a DataSource into services. */
 export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?: WorldSandbox) => {
     let source: DataSource | undefined
     let container: TestingModule | undefined
     const cleanups: Array<() => Promise<void>> = []
     const prefix = `lite-proof-${worldIds.next()}`
     const database = (): WorldDatabase => {
-        assert(source?.isInitialized, "Local Supabase world must be open")
+        assert(source?.isInitialized, "Local PostgreSQL world must be open")
         return { primary: source.manager }
     }
     return {
@@ -77,7 +77,7 @@ export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?:
         async open(): Promise<void> {
             const config = parsePrimaryDatabaseConfig(EnvSource.fromProcess())
             const url = sandbox === undefined ? config.url.reveal() : await sandbox.create()
-            assert(["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname), "Proofs require local Supabase")
+            assert(["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname), "Proofs need local PostgreSQL")
             const schema: Partial<Record<"schema", string>> =
                 config.schema === undefined ? {} : { schema: config.schema }
             source = new DataSource({

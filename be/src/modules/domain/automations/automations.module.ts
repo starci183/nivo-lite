@@ -17,7 +17,7 @@ import { AutomationTickService } from "./automation-tick.service"
 
 @Module({})
 /**
- * The automations capability over the primary Supabase PostgreSQL connection: the gallery and its pipelines, the run history and the
+ * The automations capability over the primary PostgreSQL connection: the gallery and its pipelines, the run history and the
  * engine that runs them. Other capabilities plug executors, scans and ticks in through `AutomationExtensions`.
  */
 export class AutomationsModule extends ConfigurableModuleClass {

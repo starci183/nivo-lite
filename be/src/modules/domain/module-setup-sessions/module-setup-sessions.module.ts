@@ -4,7 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./module-setup-sessions.m
 import { SetupSessionsService } from "./setup-sessions.service"
 
 @Module({})
-/** The draft sessions of the setup chat of an installation, over the primary Supabase PostgreSQL connection. */
+/** The draft sessions of the setup chat of an installation, over the primary PostgreSQL connection. */
 export class ModuleSetupSessionsModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

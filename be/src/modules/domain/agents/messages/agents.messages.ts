@@ -31,7 +31,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "errors.AGENTS_AVATAR_INVALID": "Ảnh đại diện phải là địa chỉ HTTPS.",
         "bundle.title": "# {{name}} (module {{module}})",
         "bundle.syncNote":
-            "Bản này do NIVO OS đồng bộ một chiều từ Supabase. KHÔNG sửa tay: lần đồng bộ sau sẽ ghi đè.",
+            "Bản này do NIVO OS đồng bộ một chiều từ cơ sở dữ liệu NIVO. KHÔNG sửa tay: lần đồng bộ sau sẽ ghi đè.",
         "bundle.defaultAgentName": "{{module}} agent",
         "bundle.personaName": "Tên: {{name}} (@{{handle}})",
         "bundle.personaRole": "Vai trò: {{role}}",
@@ -84,7 +84,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "errors.AGENTS_AVATAR_INVALID": "The picture must be an HTTPS address.",
         "bundle.title": "# {{name}} (module {{module}})",
         "bundle.syncNote":
-            "This copy is synced one way from Supabase by NIVO OS. Do NOT edit by hand: the next sync overwrites it.",
+            "This copy is synced one way from the NIVO database by NIVO OS. Do NOT edit by hand: the next sync overwrites it.",
         "bundle.defaultAgentName": "{{module}} agent",
         "bundle.personaName": "Name: {{name}} (@{{handle}})",
         "bundle.personaRole": "Role: {{role}}",

@@ -12,7 +12,7 @@ import { WorkItemsViewsReadService } from "./work-items-views-read.service"
 import { WorkItemsDecisionsReadService } from "./work-items-decisions-read.service"
 
 @Module({})
-/** The work items of a workspace over the primary Supabase PostgreSQL connection. */
+/** The work items of a workspace over the primary PostgreSQL connection. */
 export class WorkItemsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

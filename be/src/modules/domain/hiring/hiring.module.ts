@@ -20,10 +20,10 @@ import { HiringTextService } from "./hiring-text.service"
 import { HiringTickService } from "./hiring-tick.service"
 import { HiringWorkbenchService } from "./hiring-workbench.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./hiring.module-definition"
-import { SupabaseCvStorageService } from "./supabase-cv-storage.service"
+import { ObjectCvStorageService } from "./object-cv-storage.service"
 
 @Module({})
-/** The hiring capability over the primary Supabase PostgreSQL connection: jobs, applications, screening, interviews, offers and the tick. */
+/** The hiring capability over the primary PostgreSQL connection: jobs, applications, screening, interviews, offers and the tick. */
 export class HiringModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
@@ -33,7 +33,7 @@ export class HiringModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: CandidateChat, useClass: ChannelCandidateChatService },
-                { provide: CvStorage, useClass: SupabaseCvStorageService },
+                { provide: CvStorage, useClass: ObjectCvStorageService },
                 HiringDataService,
                 HiringTextService,
                 HiringLinksService,
