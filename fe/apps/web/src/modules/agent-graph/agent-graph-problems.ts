@@ -39,7 +39,11 @@ const conditionWhyOf = (t: AgentGraphT, detail: string): string => {
 }
 
 /** The sentence about one problem, in plain words, naming the step and the branch it is about. */
-export const problemWordsOf = (t: AgentGraphT, problem: AgentGraphData["problems"][number], subject: ProblemSubject): string => {
+export const problemWordsOf = (
+    t: AgentGraphT,
+    problem: AgentGraphData["problems"][number],
+    subject: ProblemSubject,
+): string => {
     const { node, branch, detail } = subject
     const words: Readonly<Record<string, string>> = {
         cycle: t("problem_cycle", { node }),
@@ -54,8 +58,8 @@ export const problemWordsOf = (t: AgentGraphT, problem: AgentGraphData["problems
         gap: t("problem_gap", { branch }),
         overlap: t("problem_overlap", { branch }),
         ceiling: t("problem_ceiling", { branch }),
-        no_right: t("problem_no_right", { node, tool: detail }),
-        placeholder_live: t("problem_placeholder_live", { node, tool: detail }),
+        no_right: t("problem_no_right", { node }),
+        placeholder_live: t("problem_placeholder_live", { node }),
         approver_no_grant: t("problem_approver_no_grant", { branch }),
         blank_answer: t("problem_blank_answer", { node, answer: blankWordOf(t, detail) }),
         on_timeout_unset: t("problem_on_timeout_unset", { branch }),
@@ -95,6 +99,7 @@ export const problemLinesOf = (data: AgentGraphData, t: AgentGraphT): ReadonlyAr
                 branch: branch === undefined ? "" : branch.whenFull,
                 detail: problem.detail,
             }),
-            isGrant: problem.code === "approver_no_grant" || problem.code === "no_right" || problem.code === "no_data_right",
+            isGrant:
+                problem.code === "approver_no_grant" || problem.code === "no_right" || problem.code === "no_data_right",
         }
     })

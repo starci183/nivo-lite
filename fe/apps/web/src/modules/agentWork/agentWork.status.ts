@@ -21,8 +21,8 @@ export const toStatusView = (wire: AgentWorkWire, context: AgentWorkContext): Ag
     const isRunning = wire.turns.some((turn) => turn.status === "running")
     const next = relative(context, nextRunOf(wire.triggers))
     const base = {
-        nextRunLabel: next === "" ? t("nextRunNone") : t("nextRun", { when: next }),
-        queueLabel: t("queue", { n: wire.pendingWakes }),
+        nextRunLabel: next === "" ? "" : t("nextRun", { when: next }),
+        queueLabel: wire.pendingWakes === 0 ? "" : t("queue", { n: wire.pendingWakes }),
     }
     if (context.isWorkspaceOff) {
         return {

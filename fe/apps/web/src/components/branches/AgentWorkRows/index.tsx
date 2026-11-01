@@ -1,4 +1,4 @@
-import { EmptyNotice, List, ListRow } from "@starci/grammar/common"
+import { List, ListRow, Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
 /** One row of a list of the Work tab: a title, one supporting line, a badge and the commands at its end. */
@@ -11,16 +11,22 @@ interface AgentWorkRow {
     readonly actions?: ReactNode
 }
 
-/** The rows of one list of the Work tab and the notice for when it is empty. */
+/** The rows of one list of the Work tab and the one muted line for when it is empty. */
 interface AgentWorkRowsProps {
     readonly words: { readonly label: string; readonly emptyMessage: string }
     readonly rows: ReadonlyArray<AgentWorkRow>
     readonly isSkeleton: boolean
 }
 
-/** Draws one list of the Work tab (goals, tasks, triggers, turns): its rows, or the notice that it is empty. */
+/** Draws one list of the Work tab (goals, tasks, triggers, turns): its rows, or one line saying it is empty. */
 export const AgentWorkRows = (props: AgentWorkRowsProps) => {
-    if (props.rows.length === 0) return <EmptyNotice message={props.words.emptyMessage} />
+    if (props.rows.length === 0) {
+        return (
+            <Text size="sm" tone="muted">
+                {props.words.emptyMessage}
+            </Text>
+        )
+    }
     return (
         <List label={props.words.label}>
             {props.rows.map((row) => (

@@ -28,7 +28,7 @@ export interface AgentWorkCopy {
     readonly scheduleEmpty: string
     readonly scheduleSwitch: string
     readonly scheduleRemove: string
-    readonly scheduleMore: string
+    readonly taskMenu: string
     readonly presetLabel: string
     readonly timeLabel: string
     readonly timePlaceholder: string
@@ -77,17 +77,18 @@ export interface AgentWorkPanesBaseProps {
 }
 
 /**
- * The arrangement (pane-grid.choose.frame grid): on a laptop the status band across the top, goals beside open tasks, the schedule
- * beside the recent turns; on a phone the same panes stacked in that order.
+ * The arrangement (pane-grid.choose.frame grid): on a laptop the status band across the top, the two short panes (goals, schedule)
+ * side by side under it, then the two lists (open tasks, recent turns) taking the rest of the height; on a phone the same panes stacked
+ * in that order. A short pane is sized to its content, so an empty one is a heading, one line and its form.
  */
 const AREAS: PaneGridProps["areas"] = {
-    base: ["status", "goals", "tasks", "schedule", "turns"],
-    medium: ["status status", "goals tasks", "schedule turns"],
+    base: ["status", "goals", "schedule", "tasks", "turns"],
+    medium: ["status status", "goals schedule", "tasks turns"],
 }
 const COLUMNS: PaneGridProps["columns"] = { base: ["fill"], medium: ["fill", "fill"] }
 const ROWS: PaneGridProps["rows"] = {
-    base: ["auto", "fill", "fill", "fill", "fill-2"],
-    medium: ["auto", "fill", "fill-2"],
+    base: ["auto", "auto", "auto", "auto", "auto"],
+    medium: ["auto", "auto", "fill"],
 }
 
 /** The goal field under the goals, or the line saying who may add one. */
@@ -162,6 +163,14 @@ const partOf = (base: AgentWorkPanesBaseProps, render: PartRender) => (
     </SlotView>
 )
 
+/** The field under the goals, through the one recipe of a slot's status. */
+const goalFooterOf = (base: AgentWorkPanesBaseProps) =>
+    partOf(base, (view, isSkeleton) => <GoalFooter base={base} canEdit={view.canEdit} isSkeleton={isSkeleton} />)
+
+/** The form under the schedule, through the one recipe of a slot's status. */
+const scheduleFooterOf = (base: AgentWorkPanesBaseProps) =>
+    partOf(base, (view, isSkeleton) => <ScheduleFooter base={base} canEdit={view.canEdit} isSkeleton={isSkeleton} />)
+
 /** The title of a pane with how many rows it holds. */
 const titleOf = (base: AgentWorkPanesBaseProps, title: string, count: (view: AgentWorkView) => number) =>
     partOf(base, (view, isSkeleton) => (
@@ -190,7 +199,7 @@ const tasksOf = (base: AgentWorkPanesBaseProps) =>
             words={{
                 label: base.props.copy.tasksTitle,
                 emptyMessage: base.props.copy.tasksEmpty,
-                moreLabel: base.props.copy.scheduleMore,
+                moreLabel: base.props.copy.taskMenu,
                 openLabel: base.props.copy.taskOpenItem,
                 closeLabel: base.props.copy.taskClose,
             }}
@@ -208,7 +217,6 @@ const scheduleOf = (base: AgentWorkPanesBaseProps) =>
             words={{
                 label: base.props.copy.scheduleTitle,
                 emptyMessage: base.props.copy.scheduleEmpty,
-                moreLabel: base.props.copy.scheduleMore,
                 switchLabel: base.props.copy.scheduleSwitch,
                 removeLabel: base.props.copy.scheduleRemove,
             }}
@@ -235,7 +243,7 @@ const turnsOf = (base: AgentWorkPanesBaseProps) =>
 
 /**
  * Draws the Work tab of an agent as one PaneGrid flush under the tab line: the status band, the goals with the field that adds one,
- * the open tasks, the schedule with the form that adds a clock, and the recent turns. Every band is a PaneSection.
+ * the schedule with the form that adds a time, the open tasks, and the recent turns. Every band is a PaneSection.
  */
 export const AgentWorkPanesBase = (props: AgentWorkPanesBaseProps) => {
     const { copy } = props.props
@@ -250,25 +258,17 @@ export const AgentWorkPanesBase = (props: AgentWorkPanesBaseProps) => {
             </Pane>
             <Pane area="goals" surface>
                 <PaneSection>{titleOf(props, copy.goalsTitle, (view) => view.goals.length)}</PaneSection>
-                <PaneSection scroll={{ label: copy.goalsTitle }}>{goalsOf(props)}</PaneSection>
-                <PaneSection>
-                    {partOf(props, (view, isSkeleton) => (
-                        <GoalFooter base={props} canEdit={view.canEdit} isSkeleton={isSkeleton} />
-                    ))}
-                </PaneSection>
+                <PaneSection>{goalsOf(props)}</PaneSection>
+                <PaneSection>{goalFooterOf(props)}</PaneSection>
+            </Pane>
+            <Pane area="schedule" surface>
+                <PaneSection>{titleOf(props, copy.scheduleTitle, (view) => view.triggers.length)}</PaneSection>
+                <PaneSection>{scheduleOf(props)}</PaneSection>
+                <PaneSection>{scheduleFooterOf(props)}</PaneSection>
             </Pane>
             <Pane area="tasks" surface>
                 <PaneSection>{titleOf(props, copy.tasksTitle, (view) => view.tasks.length)}</PaneSection>
                 <PaneSection scroll={{ label: copy.tasksTitle }}>{tasksOf(props)}</PaneSection>
-            </Pane>
-            <Pane area="schedule" surface>
-                <PaneSection>{titleOf(props, copy.scheduleTitle, (view) => view.triggers.length)}</PaneSection>
-                <PaneSection scroll={{ label: copy.scheduleTitle }}>{scheduleOf(props)}</PaneSection>
-                <PaneSection>
-                    {partOf(props, (view, isSkeleton) => (
-                        <ScheduleFooter base={props} canEdit={view.canEdit} isSkeleton={isSkeleton} />
-                    ))}
-                </PaneSection>
             </Pane>
             <Pane area="turns" surface>
                 <PaneSection>{titleOf(props, copy.turnsTitle, (view) => view.turns.rows.length)}</PaneSection>
