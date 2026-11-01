@@ -29,6 +29,11 @@ export class SetupGraphService {
         await this.graph?.publish(applier)
     }
 
+    /** Asks the graph for the contracts and gaps the applied setup calls for; none without a graph. */
+    async proposeContracts(applier: SetupApplier): Promise<number> {
+        return (await this.graph?.proposeContracts(applier)) ?? 0
+    }
+
     /** The seat of the person the owner named, or null when nobody is found or there is no graph. */
     async seatNamed(workspaceId: string, name: string): Promise<string | null> {
         const seat = (await this.graph?.seatNamed(workspaceId, name)) ?? ""

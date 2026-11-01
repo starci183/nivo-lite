@@ -46,4 +46,6 @@ export interface SetupGraphPort {
     seatNamed(workspaceId: string, name: string): Promise<string>
     /** Publishes the draft of the graph with the context version the setup became. */
     publish(applier: SetupApplier): Promise<void>
+    /** Proposes the contracts and gaps the Second Brain and the setup text call for, for the owner to approve; answers how many were new. */
+    proposeContracts(applier: SetupApplier): Promise<number>
 }

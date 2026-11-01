@@ -8,6 +8,7 @@ import { AgentDataRightsService } from "./agent-data-rights.service"
 import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
 import { AgentGraphAsksService } from "./agent-graph-asks.service"
 import { AgentGraphBriefService } from "./agent-graph-brief.service"
+import { AgentGraphContractSetupService } from "./agent-graph-contract-setup.service"
 import { AgentGraphContractsService } from "./agent-graph-contracts.service"
 import { AgentGraphDeciderService } from "./agent-graph-decider.service"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
@@ -80,6 +81,7 @@ const WHOLE: Part = {
         AgentGraphRunService,
         AgentGraphWatchService,
         AgentGraphSetupService,
+        AgentGraphContractSetupService,
     ],
     ports: [
         { provide: WORK_BRANCH_DECIDER, useExisting: AgentGraphDeciderService },

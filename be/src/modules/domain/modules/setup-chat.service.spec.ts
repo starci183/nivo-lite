@@ -103,6 +103,7 @@ const build = async () => {
     const graph = mock<SetupGraphService>({
         requireWhole: jest.fn().mockResolvedValue(undefined),
         publish: jest.fn().mockResolvedValue(undefined),
+        proposeContracts: jest.fn().mockResolvedValue(0),
     })
     const readiness = mock<ModuleReadinessService>()
     readiness.settle.mockResolvedValue("ready")
@@ -458,6 +459,12 @@ describe("SetupChatService", () => {
         await expect(service.apply("u1", "ws-1", "inst-1", "en")).resolves.toBe(2)
         expect(installations.activateVersion).toHaveBeenCalledWith("ws-1", "inst-1", "v-2", "ready")
         expect(graph.publish).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            principalId: "u1",
+            installationId: "inst-1",
+            contextVersionId: "v-2",
+        })
+        expect(graph.proposeContracts).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             principalId: "u1",
             installationId: "inst-1",
