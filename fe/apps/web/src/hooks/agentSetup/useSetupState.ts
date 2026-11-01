@@ -43,10 +43,6 @@ type PollShape = {
     }>
 }
 
-/** Reads again while NIVO answers; a lost turn stops the poll. */
-const pollOf = (latest: PollShape | undefined): number =>
-    latest !== undefined && setupTurnStateAt(staleAtOf(latest), Date.now()) === "answering" ? SETUP_POLL_MS : 0
-
 /** When the turn the read reports counts as lost; null when none waits. */
 const staleAtOf = (data: PollShape): number | null => setupTurnStaleAt(data.turnPending, data.messages, data.session.id)
 
@@ -54,10 +50,11 @@ const staleAtOf = (data: PollShape): number | null => setupTurnStaleAt(data.turn
 export const useSetupState = (
     installationId: string,
 ): { readonly slot: DataSlot<SetupStateView>; readonly reload: () => void } => {
-    const read = useQuerySetupStateSwr({ installationId }, { refreshInterval: pollOf })
+    const read = useQuerySetupStateSwr({ installationId })
     const { data, mutate } = read
     const staleAt = data === undefined ? null : staleAtOf(data)
     const nowMs = useStaleClock(staleAt)
+    useTurnPoll(setupTurnStateAt(staleAt, nowMs) === "answering", mutate)
     const view = useMemo(
         (): SetupStateView | undefined =>
             data === undefined
@@ -80,6 +77,15 @@ export const useSetupState = (
         slot: slotOfSwr({ data: view, error: read.error, isLoading: read.isLoading }),
         reload: () => void mutate(),
     }
+}
+
+/** Reads again every couple of seconds while NIVO answers. A timer of its own: an SWR refresh interval that starts at zero never wakes. */
+const useTurnPoll = (isAnswering: boolean, reread: () => unknown): void => {
+    useEffect(() => {
+        if (!isAnswering) return undefined
+        const timer = setInterval(() => void reread(), SETUP_POLL_MS)
+        return () => clearInterval(timer)
+    }, [isAnswering, reread])
 }
 
 /** Whether NIVO is answering, and where the turn stands, at the moment given. */
