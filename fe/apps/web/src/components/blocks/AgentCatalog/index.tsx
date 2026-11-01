@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useCatalogEntries, useInstallAgent } from "@/hooks/installations"
+import { useCatalogEntries, useInstallAgent, isSetupPending, setupLabelKey } from "@/hooks/installations"
 import type { CatalogRole } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { ALL_CATEGORIES, useCatalogView } from "@/hooks/modules"
@@ -125,7 +125,9 @@ export const AgentCatalog = () => {
                                 progressLabel: t("setupProgress"),
                                 confirmed,
                                 total,
-                                actionLabel: confirmed < total ? t("continueSetup") : t("openModule"),
+                                actionLabel: isSetupPending(agent.lifecycle)
+                                    ? t(setupLabelKey(agent.lifecycle))
+                                    : t("openModule"),
                                 href: agent.href,
                             },
                         }

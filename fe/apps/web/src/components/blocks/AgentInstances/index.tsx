@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useAddInstance, useConnectionNeedsCopy, useInstanceList } from "@/hooks/installations"
+import { useAddInstance, useConnectionNeedsCopy, useInstanceList, isSetupPending } from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { useAddInstanceForm } from "@/hooks/rhf"
@@ -35,9 +35,11 @@ const toRowView = (
     title: row.name,
     description: [
         row.channels.length > 0 ? t("instanceChannels", { list: row.channels.join(", ") }) : t("instanceNoChannels"),
-        row.activeVersion === null ? t("noVersion") : t("versionInUse", { version: row.activeVersion }),
+        row.activeVersion === null || isSetupPending(row.lifecycle)
+            ? t("noVersion")
+            : t("versionInUse", { version: row.activeVersion }),
     ].join(" · "),
-    statusLabel: t(`status_${row.status}`),
+    statusLabel: t(`lifecycle_${row.lifecycle}`),
     statusTone: row.statusTone,
     needs: {
         lines: needs.linesOf(row.connectionNeeds),

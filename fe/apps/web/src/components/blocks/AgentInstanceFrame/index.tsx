@@ -2,7 +2,14 @@
 
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
-import { useConnectionNeedsCopy, useInstanceHeader, useInstanceRail, useInstanceTabs } from "@/hooks/installations"
+import {
+    useConnectionNeedsCopy,
+    useInstanceHeader,
+    useInstanceRail,
+    useInstanceTabs,
+    isSetupPending,
+    setupLabelKey,
+} from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { useWorkbenchWhyKey } from "@/hooks/workbench"
@@ -19,6 +26,7 @@ const PLACEHOLDER: InstanceHeaderView = {
     statusTone: "neutral",
     subtitle: "-",
     needs: { lines: [], linkLabel: "-", href: "#" },
+    setup: null,
     chatHref: null,
     profileHref: null,
 }
@@ -96,6 +104,10 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                               linkLabel: needs.linkLabel,
                               href: needs.href,
                           },
+                          setup:
+                              isSetupPending(header.lifecycle) && selected !== "setup" && tabs.includes("setup")
+                                  ? { label: t(setupLabelKey(header.lifecycle)), href: hrefOf("setup") }
+                                  : null,
                           chatHref: header.chatHref,
                           profileHref: header.profileHref,
                       },

@@ -44,6 +44,7 @@ export class ModuleReadinessService {
             this.catalog.find(record.moduleKey),
             this.sessions.latest(record.id),
         ])
+        const setupProgress = setupProgressOf(module, session?.gateEvidence ?? {})
         return {
             ...record,
             agentName: identity?.name ?? "",
@@ -51,8 +52,8 @@ export class ModuleReadinessService {
             agentAvatarUrl: identity?.avatarUrl ?? null,
             activeVersion: version?.version ?? null,
             connectionNeeds,
-            lifecycle: lifecycleOf(record, connectionNeeds.length),
-            setupProgress: setupProgressOf(module, session?.gateEvidence ?? {}),
+            lifecycle: lifecycleOf(record, connectionNeeds.length, setupProgress.confirmed),
+            setupProgress,
         }
     }
 

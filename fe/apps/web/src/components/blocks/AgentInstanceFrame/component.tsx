@@ -1,13 +1,5 @@
 import type { ReactNode } from "react"
-import {
-    Badge,
-    Button,
-    DropdownMenu,
-    Icon,
-    Page,
-    Pane,
-    PaneGrid,
-} from "@starci/grammar/common"
+import { Badge, Button, DropdownMenu, Icon, Page, Pane, PaneGrid } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
@@ -26,6 +18,8 @@ export interface InstanceHeaderView {
     readonly subtitle: string
     /** What a `needs_connection` agent waits for and where to connect it; no lines otherwise. */
     readonly needs: ConnectionNeedsProps
+    /** The next step of an agent that is not set up: the button to Setup; null when it is set up, when the owner is already there or may not set up. */
+    readonly setup: { readonly label: string; readonly href: string } | null
     /** The 1:1 chat with the agent; null while the instance has no agent. */
     readonly chatHref: string | null
     /** The profile of the agent that drives this instance; null while the instance has no agent. */
@@ -132,6 +126,11 @@ const HeaderActions = (props: HeaderPartProps) => {
             {copy.switcher.items.length > 1 || (copy.switcher.items.length > 0 && copy.switcher.add !== null) ? (
                 <Switcher switcher={copy.switcher} />
             ) : null}
+            {copy.view.setup === null ? null : (
+                <Button intent="commit" href={copy.view.setup.href}>
+                    {copy.view.setup.label}
+                </Button>
+            )}
             {copy.view.chatHref === null ? null : (
                 <Button intent="neutral" href={copy.view.chatHref}>
                     {copy.chatLabel}
@@ -180,7 +179,12 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
         meta: view.subtitle,
         ...(view.needs.lines.length === 0 ? {} : { description: <ConnectionNeeds {...view.needs} /> }),
         actions: <HeaderActions copy={copy} />,
-        tabs: { label: copy.tabsLabel, labelVisibility: "always", items: [...copy.tabs], selectedKey: copy.selectedTab },
+        tabs: {
+            label: copy.tabsLabel,
+            labelVisibility: "always",
+            items: [...copy.tabs],
+            selectedKey: copy.selectedTab,
+        },
     }
     if (copy.hasPanes) {
         return (

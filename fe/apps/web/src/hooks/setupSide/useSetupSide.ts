@@ -29,7 +29,7 @@ export const useSetupSide = (module: string, installationId: string) => {
     const { slot, reload } = useSetupState(installationId)
     const versionsSlot = useSetupVersions(installationId)
     const unmet = useSetupRequirements(moduleKey)
-    const knowledgeSlot = useSetupKnowledge(moduleKey)
+    const knowledgeSlot = useSetupKnowledge(moduleKey, installationId)
     const counts = knowledgeSlot.items ?? null
     const isLoading =
         slot.items === undefined ||
@@ -45,7 +45,6 @@ export const useSetupSide = (module: string, installationId: string) => {
         session,
         versions.find((version) => version.id === activeVersionId) ?? null,
     )
-    const business = counts?.business ?? 0
     const catalogGates = catalog.modules[moduleKey]?.gates ?? []
     const gateRows =
         isLoading && catalogGates.length === 0
@@ -78,7 +77,7 @@ export const useSetupSide = (module: string, installationId: string) => {
             applyText:
                 gatesState.applyNote.tone === "applied" ? t("applied", { version: gatesState.applyNote.version }) : "",
         },
-        knowledge: knowledgeOf(t, business, counts, moduleKey),
+        knowledge: knowledgeOf(t, counts, moduleKey),
         versions: versionsViewOf(versionsOf(t, versions, format, activeVersionId), isLoading),
     }
     const sideSlot = sideSlotOf(view, [slot, catalog.slot, knowledgeSlot, versionsSlot], isLoading)
@@ -131,15 +130,14 @@ const gatesLabelsOf = (t: ReturnType<typeof useTranslations<"moduleSetup">>) => 
 
 const knowledgeOf = (
     t: ReturnType<typeof useTranslations<"moduleSetup">>,
-    business: number,
     counts: SetupKnowledgeCounts | null,
     moduleKey: string,
 ): SetupSideKnowledge => {
     return {
         title: t("k_cardTitle"),
-        businessLine: t("k_cardBusiness", { count: business }),
-        publicLine: business > 0 ? t("k_cardPublic", { count: counts?.publicSources ?? 0 }) : "",
-        emptyHint: counts !== null && business === 0 ? t("k_cardEmpty") : "",
+        businessLine: t("k_cardBusiness", { docs: counts?.documents ?? 0, facts: counts?.facts ?? 0 }),
+        publicLine: "",
+        emptyHint: counts !== null && counts.documents === 0 && counts.facts === 0 ? t("k_cardEmpty") : "",
         knowledgeHref: brainTabHref("sources", { module: moduleKey }),
         knowledgeLabel: t("k_cardLink"),
         nivoHref: KNOWLEDGE_ROUTES.nivo,

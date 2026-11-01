@@ -5,7 +5,7 @@ import { useEffect } from "react"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
-import { AGENT_STATUS_TONE, agentHref, agentStatusOf, nextInstanceName } from "@/modules/installations"
+import { agentHref, agentLifecycleOf, agentLifecycleTone, nextInstanceName } from "@/modules/installations"
 import { useInstanceChannels } from "./useInstanceChannels"
 import { useTypeRoute } from "./useTypeRoute"
 import type { TypeRouteMode } from "./installations.shared"
@@ -45,14 +45,14 @@ export const useInstanceList = (module: ModuleKey, query: string, mode: TypeRout
         names,
         defaultName: copy === undefined ? "" : nextInstanceName(typeShort, names),
         rows: instances.map((instance) => {
-            const status = agentStatusOf(instance)
+            const lifecycle = agentLifecycleOf(instance)
             return {
                 id: instance.id,
                 name: instance.name,
                 channels: channelsOf(instance.agentId),
                 activeVersion: instance.activeVersion,
-                status,
-                statusTone: AGENT_STATUS_TONE[status],
+                lifecycle,
+                statusTone: agentLifecycleTone(lifecycle),
                 connectionNeeds: instance.connectionNeeds,
                 openHref: agentHref(module, instance.id),
             }

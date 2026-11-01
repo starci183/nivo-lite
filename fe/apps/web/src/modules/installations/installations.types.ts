@@ -12,8 +12,12 @@ export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "pa
  */
 export type InstallationConnectionNeed = { readonly role: string; readonly providers: ReadonlyArray<string> }
 
-/** The lifecycle the back end names: set up, waiting for a connection, paused, applied but not switched on, running, or removed. */
-export type InstallationLifecycle = "needs_setup" | "needs_connection" | "paused" | "ready" | "running" | "removed"
+/**
+ * The one state of an agent, named by the back end and read by every screen: not set up yet, being set up (a gate confirmed, no version
+ * applied), waiting for a connection, paused, applied but not switched on, running, or removed.
+ */
+export type InstallationLifecycle =
+    "needs_setup" | "setting_up" | "needs_connection" | "paused" | "ready" | "running" | "removed"
 
 /** How an installed agent runs: it proposes everything (assist) or follows the authority rules alone (autopilot). */
 export type OperatingMode = "assist" | "autopilot"
