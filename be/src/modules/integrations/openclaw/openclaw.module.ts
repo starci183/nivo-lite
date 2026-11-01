@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentRegistryService } from "./agent-registry.service"
+import { GatewayAdminClient } from "./gateway-admin.client"
 import { GatewayClient } from "./gateway.client"
 import { createGatewaySocket } from "./gateway-socket.client"
 import { NodeFilesClient } from "./node-files.client"
@@ -8,6 +9,7 @@ import {
     OPENCLAW_AGENT_REGISTRY,
     OPENCLAW_FILES,
     OPENCLAW_GATEWAY,
+    OPENCLAW_GATEWAY_ADMIN,
     OPENCLAW_OPTIONS,
     OPENCLAW_SOCKET_FACTORY,
     OPENCLAW_WORKSPACE_WRITER,
@@ -31,10 +33,12 @@ export class OpenclawModule extends ConfigurableModuleClass {
                 { provide: OPENCLAW_SOCKET_FACTORY, useValue: createGatewaySocket },
                 { provide: OPENCLAW_FILES, useClass: NodeFilesClient },
                 GatewayClient,
+                GatewayAdminClient,
                 AgentRegistryService,
                 WorkspaceWriterService,
                 ToolTokenService,
                 { provide: OPENCLAW_GATEWAY, useExisting: GatewayClient },
+                { provide: OPENCLAW_GATEWAY_ADMIN, useExisting: GatewayAdminClient },
                 { provide: OPENCLAW_AGENT_REGISTRY, useExisting: AgentRegistryService },
                 { provide: OPENCLAW_WORKSPACE_WRITER, useExisting: WorkspaceWriterService },
             ],
@@ -44,6 +48,7 @@ export class OpenclawModule extends ConfigurableModuleClass {
                 WorkspaceWriterService,
                 ToolTokenService,
                 OPENCLAW_GATEWAY,
+                OPENCLAW_GATEWAY_ADMIN,
                 OPENCLAW_AGENT_REGISTRY,
                 OPENCLAW_WORKSPACE_WRITER,
             ],

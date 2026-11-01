@@ -33,7 +33,8 @@ const RETRY_WAIT_MAX_MS = 10_000
 const RETRY_WAIT_DEFAULT_MS = 1000
 const FINAL_STATUS: ReadonlySet<string> = new Set(["ok", "done", "completed", "final", "finished"])
 
-type Responder = (ok: boolean, payload: unknown, error: GatewayErrorBody | null) => void
+/** Answers one outbound request. */
+export type Responder = (ok: boolean, payload: unknown, error: GatewayErrorBody | null) => void
 
 /**
  * The failure a request answer turns into: a deferred connect while the gateway starts, otherwise a refusal naming the
@@ -57,7 +58,8 @@ const deferredFor = (cause: unknown): number | null => {
     return Number(cause.params.retryAfterMs)
 }
 
-const failureOf = (cause: unknown): OpenclawError =>
+/** The OpenClaw failure of any cause. */
+export const failureOf = (cause: unknown): OpenclawError =>
     cause instanceof OpenclawError ? cause : new OpenclawError({ code: OpenclawErrorCode.GatewaySocketFailed, cause })
 
 /** Accumulates provider usage across the streamed messages of one turn. */
@@ -147,7 +149,7 @@ const receiverFor = ({
 }
 
 /** Correlates outbound requests with the response frames on one socket. */
-const requesterFor = (socket: GatewaySocket, pending: Map<string, Responder>) => {
+export const requesterFor = (socket: GatewaySocket, pending: Map<string, Responder>) => {
     let sequence = 0
     return (method: string, params: Record<string, unknown>): Promise<unknown> =>
         new Promise((ok, fail) => {

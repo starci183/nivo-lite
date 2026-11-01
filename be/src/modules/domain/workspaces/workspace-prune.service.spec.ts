@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { OPENCLAW_GATEWAY_ADMIN } from "@modules/integrations/openclaw"
+import type { GatewayAdminClient } from "@modules/integrations/openclaw"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
 import { WorkspacesErrorCode } from "./errors/workspaces.error"
@@ -25,12 +27,17 @@ const storedOf = (...briefs: ReadonlyArray<typeof NIVO | typeof SPA | typeof BUN
 
 const DELETED = { affected: 1, raw: [] }
 
-const build = async (em: MockEntityManager, answer = "DELETE") => {
+const build = async (em: MockEntityManager, answer = "DELETE", enabled = false) => {
     const terminal = { print: jest.fn(), ask: jest.fn().mockResolvedValue(answer) }
+    const openclaw = mock<GatewayAdminClient>({ enabled })
     const moduleRef = await Test.createTestingModule({
-        providers: [WorkspacePruneService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            WorkspacePruneService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: OPENCLAW_GATEWAY_ADMIN, useValue: openclaw },
+        ],
     }).compile()
-    return { prune: moduleRef.get(WorkspacePruneService), terminal }
+    return { prune: moduleRef.get(WorkspacePruneService), terminal, openclaw }
 }
 
 /** The terminal double a spec reads the printed lines from. */
@@ -66,7 +73,9 @@ describe("WorkspacePruneService", () => {
             "DELETE (2):",
             "  Spa  (no plan, pending_payment)  ws-spa",
             "  Bun  (starter, past_due)  ws-bun",
+            "  no OpenClaw gateway here: agents of Spa not checked",
             "  deleted Spa",
+            "  no OpenClaw gateway here: agents of Bun not checked",
             "  deleted Bun",
             "Done. 2 deleted, 0 failed, 1 workspace(s) left.",
         ])
@@ -157,5 +166,53 @@ describe("WorkspacePruneService", () => {
                 "Done. 1 deleted, 1 failed, 2 workspace(s) left.",
             ]),
         )
+    })
+})
+
+describe("WorkspacePruneService OpenClaw agents", () => {
+    it("removes the OpenClaw agents of a workspace before its rows", async () => {
+        const em = mockEntityManager({
+            find: [WorkspaceEntity, storedOf(NIVO, SPA)],
+            delete: [WorkspaceEntity, DELETED],
+            count: [WorkspaceEntity, 1],
+        })
+        const { prune, terminal, openclaw } = await build(em, "DELETE", true)
+        openclaw.removeWorkspaceAgents.mockResolvedValue(["ws-spa-sales", "ws-spa-nivo"])
+
+        await prune.prune({ yes: true }, terminal)
+
+        expect(openclaw.removeWorkspaceAgents).toHaveBeenCalledWith(SPA.id)
+        expect(openclaw.removeWorkspaceAgents.mock.invocationCallOrder[0]).toBeLessThan(
+            em.delete.mock.invocationCallOrder[0] ?? 0,
+        )
+        expect(printed(terminal)).toContain("  removed 2 OpenClaw agent(s) of Spa")
+    })
+
+    it("keeps a workspace whose agents could not be removed, so a rerun retries it", async () => {
+        const em = mockEntityManager({ find: [WorkspaceEntity, storedOf(NIVO, SPA)], count: [WorkspaceEntity, 2] })
+        const { prune, terminal, openclaw } = await build(em, "DELETE", true)
+        openclaw.removeWorkspaceAgents.mockRejectedValue(new Error("gateway down"))
+
+        await expect(prune.prune({ yes: true }, terminal)).rejects.toMatchObject({
+            code: WorkspacesErrorCode.DeleteFailed,
+        })
+
+        expect(em.delete).not.toHaveBeenCalled()
+        expect(printed(terminal)).toContain("  FAILED Spa: gateway down")
+    })
+
+    it("says so and still deletes where no gateway is configured", async () => {
+        const em = mockEntityManager({
+            find: [WorkspaceEntity, storedOf(NIVO, SPA)],
+            delete: [WorkspaceEntity, DELETED],
+            count: [WorkspaceEntity, 1],
+        })
+        const { prune, terminal, openclaw } = await build(em)
+
+        await prune.prune({ yes: true }, terminal)
+
+        expect(openclaw.removeWorkspaceAgents).not.toHaveBeenCalled()
+        expect(printed(terminal)).toContain("  no OpenClaw gateway here: agents of Spa not checked")
+        expect(em.delete).toHaveBeenCalledWith(WorkspaceEntity, { id: SPA.id })
     })
 })

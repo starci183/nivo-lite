@@ -295,7 +295,7 @@ export interface AgentBundle {
     readonly contextVersion: number | null
     /** Who the agent talks to. */
     readonly audience: AgentAudience
-    /** AGENTS.md, SOUL.md and knowledge/*.md. */
+    /** AGENTS.md and SOUL.md. */
     readonly files: ReadonlyArray<SyncFile>
 }
 

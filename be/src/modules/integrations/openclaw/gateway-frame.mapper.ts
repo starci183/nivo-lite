@@ -12,6 +12,8 @@ export const CLIENT_ID = "cli"
 export const CLIENT_MODE = "cli"
 /** The scopes declared at connect; the gateway honours them only on a loopback connection with a shared secret. */
 export const SCOPES: ReadonlyArray<string> = ["operator.read", "operator.write"]
+/** The scopes of operator maintenance: deleting an agent needs operator.admin, which a turn never holds. */
+export const ADMIN_SCOPES: ReadonlyArray<string> = [...SCOPES, "operator.admin"]
 
 /** The error body of a refused request. */
 export interface GatewayErrorBody {
@@ -106,13 +108,17 @@ export const frameOf = (value: unknown): OptionalGatewayFrame => {
 }
 
 /** The v4 connect params: exactly these fields, the credential in the first frame only. */
-export const connectParams = (auth: OpenclawAuth, platform: string): Record<string, unknown> => ({
+export const connectParams = (
+    auth: OpenclawAuth,
+    platform: string,
+    scopes: ReadonlyArray<string> = SCOPES,
+): Record<string, unknown> => ({
     minProtocol: PROTOCOL_VERSION,
     maxProtocol: PROTOCOL_VERSION,
     client: { id: CLIENT_ID, version: "1.0.0", platform, mode: CLIENT_MODE },
     auth: auth.kind === "token" ? { token: auth.token.reveal() } : { password: auth.password.reveal() },
     role: "operator",
-    scopes: [...SCOPES],
+    scopes: [...scopes],
 })
 
 const qualifiedModel = (provider: string | null, model: string | null): string | null => {
