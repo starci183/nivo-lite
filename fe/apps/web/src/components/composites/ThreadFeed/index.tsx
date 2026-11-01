@@ -33,7 +33,13 @@ const Messages = (props: Omit<ThreadFeedProps, "label">) => {
                     side="incoming"
                     author={message.authorName}
                     meta={message.time}
-                    avatar={<ThreadAuthorMark name={message.authorName} glyph={message.glyph} />}
+                    avatar={
+                        <ThreadAuthorMark
+                            name={message.authorName}
+                            glyph={message.glyph}
+                            avatarUrl={message.avatarUrl}
+                        />
+                    }
                     status={message.isAgent ? <Badge tone="neutral">{props.aiLabel}</Badge> : undefined}
                     footer={
                         message.approval === null ? undefined : (

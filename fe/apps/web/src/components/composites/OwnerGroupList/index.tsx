@@ -47,6 +47,7 @@ export const OwnerGroupList = (props: OwnerGroupListProps) => {
                             name={group.name}
                             handle={group.handle}
                             glyph={group.glyph}
+                            avatarUrl={group.avatarUrl}
                             role={roleOf(group, labels)}
                             isSkeleton={props.isSkeleton}
                         />

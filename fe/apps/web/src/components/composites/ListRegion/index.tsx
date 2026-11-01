@@ -10,7 +10,12 @@ interface ListRegionRow {
     readonly title: string
     readonly description: string
     /** The agent mark at the start of the line; null for a line that is not an agent. */
-    readonly mark: { readonly glyph: ModuleIconName; readonly module: string } | null
+    readonly mark: {
+        readonly glyph: ModuleIconName
+        readonly module: string
+        /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+        readonly avatarUrl: string | null
+    } | null
     /** At most two status marks after the title. */
     readonly badges: ReadonlyArray<{ readonly label: string; readonly tone: BadgeTone }>
 }
@@ -52,6 +57,7 @@ export const ListRegion = (props: ListRegionProps) => (
                                   glyph={nivoIconSource(row.mark.glyph, "leading")}
                                   module={row.mark.module}
                                   label={row.title}
+                                  src={row.mark.avatarUrl}
                               />
                           )
                       }

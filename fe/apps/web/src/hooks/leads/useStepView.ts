@@ -3,6 +3,7 @@
 import type { ModuleIconName, AgentRecord, ResponsibilityRecord } from "@/modules/types"
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
+import { useAgentPictures } from "@/hooks/installations"
 import { MODULE_REGISTRY } from "@/modules/catalog"
 
 import { daysUntil, STATUS_KEYS, STATUS_TONES } from "./leads.shared"
@@ -20,12 +21,15 @@ export interface CurrentStepView {
     readonly isAgent: boolean
     /** The semantic Icon name used when the owner is an agent. */
     readonly agentGlyph: ModuleIconName
+    /** The picture the owner gave the agent owner; null draws the NIVO unicorn mascot. */
+    readonly agentAvatarUrl: string | null
 }
 
 /** Words one step of a lead: its status, its owner and how far its due date is, in the reader language. */
 export const useStepView = (agents: ReadonlyArray<AgentRecord>): ((step: ResponsibilityRecord) => CurrentStepView) => {
     const t = useTranslations("lead")
     const format = useFormatter()
+    const pictureOf = useAgentPictures()
     const dueOf = (dueAt: string | null): CurrentStepView["due"] => {
         const days = daysUntil(dueAt, new Date())
         if (dueAt === null || days === null) return null
@@ -53,6 +57,12 @@ export const useStepView = (agents: ReadonlyArray<AgentRecord>): ((step: Respons
             isDone: step.status === "done",
             isAgent,
             agentGlyph: MODULE_REGISTRY.chatbot.glyph,
+            agentAvatarUrl: isAgent
+                ? pictureOf({
+                      handle: agents.find((agent) => agent.id === step.owner_agent_id)?.handle,
+                      name: step.owner_name,
+                  })
+                : null,
         }
     }
 }

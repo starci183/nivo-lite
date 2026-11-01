@@ -48,6 +48,8 @@ export interface OverviewOwnersGroup {
     readonly ariaLabel: string
     readonly cardsLabel: string
     readonly glyph: ModuleIconName | null
+    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    readonly avatarUrl: string | null
     readonly module: string
     readonly rows: ReadonlyArray<OverviewOwnersRow>
 }
@@ -138,6 +140,7 @@ const OwnersBody = ({ groups, ...props }: OwnersBodyProps) => {
                                         <AgentMark
                                             glyph={nivoIconSource(group.glyph, "leading")}
                                             label={group.name}
+                                            src={group.avatarUrl}
                                             module={group.module}
                                             size="md"
                                         />

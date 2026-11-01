@@ -57,6 +57,8 @@ export interface StepView {
     readonly isAgent: boolean
     /** The semantic Icon name used when the owner is an agent. */
     readonly agentGlyph: ModuleIconName
+    /** The picture the owner gave the agent owner; null draws the NIVO unicorn mascot. */
+    readonly agentAvatarUrl: string | null
 }
 
 /** What the panel shows about one lead: its current step, or none yet. */
@@ -95,6 +97,7 @@ const PLACEHOLDER: ResponsibilityView = {
         isDone: false,
         isAgent: false,
         agentGlyph: "moduleChatbot",
+        agentAvatarUrl: null,
     },
 }
 
@@ -161,6 +164,7 @@ const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => 
                     <AgentMark
                         glyph={nivoIconSource(current.agentGlyph, "leading")}
                         label={current.ownerName}
+                        src={current.agentAvatarUrl}
                         module="chatbot"
                         size="md"
                     />

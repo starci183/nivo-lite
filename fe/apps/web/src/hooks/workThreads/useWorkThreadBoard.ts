@@ -3,7 +3,7 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
 import { slotOfSwr } from "@/hooks/slot"
-import { moduleGlyphOf } from "@/hooks/installations"
+import { moduleGlyphOf, useAgentPictures } from "@/hooks/installations"
 import {
     useQueryMentionDirectorySwr,
     useQueryWorkChainSwr,
@@ -42,6 +42,7 @@ const statusWordOf = (status: string): (typeof STATUS_WORDS)[keyof typeof STATUS
 /** The work threads of the workspace, the open one with its chain, read and worded for the board. */
 export const useWorkThreadBoard = (selectedId: string | null): WorkThreadBoardData => {
     const t = useTranslations("workThreads")
+    const pictureOf = useAgentPictures()
     const locale = useLocale()
     const format = useFormatter()
     const list = useQueryWorkThreadsSwr({ refreshInterval: THREAD_POLL_MS })
@@ -76,6 +77,7 @@ export const useWorkThreadBoard = (selectedId: string | null): WorkThreadBoardDa
                       authorName: message.authorName,
                       isAgent: message.authorKind === "agent",
                       glyph: message.authorKind === "agent" ? moduleGlyphOf(message.authorRole) : null,
+                      avatarUrl: message.authorKind === "agent" ? pictureOf({ name: message.authorName }) : null,
                       time: time(message.createdAt),
                       segments: bodySegmentsOf(message.body, message.mentions),
                       quoted: message.quoted,

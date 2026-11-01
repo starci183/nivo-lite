@@ -2,6 +2,7 @@ export { carriedQuery, moduleGlyphOf, operatingModeOf } from "./installations.sh
 export type { ModuleKey } from "@/modules/catalog"
 export type { AgentTab } from "@/modules/installations"
 export { useAddInstance } from "./useAddInstance"
+export { useAgentPictures } from "./useAgentPictures"
 export { useAgentRecordRoute } from "./useAgentRecordRoute"
 export { useCatalogEntries } from "./useCatalogEntries"
 export type { CatalogRole } from "./useCatalogEntries"
