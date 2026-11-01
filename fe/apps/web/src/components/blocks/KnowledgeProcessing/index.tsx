@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { INGEST_STAGES, ingestStageOf, isDocumentActive, useKnowledgeSources } from "@/hooks/knowledge"
+import { INGEST_STAGES, ingestStageOf, useKnowledgeSources } from "@/hooks/knowledge"
 import { KnowledgeProcessingBase } from "./component"
 import type { ProcessingRowView } from "./component"
 
@@ -10,8 +10,8 @@ export const KnowledgeProcessing = () => {
     const t = useTranslations("knowledge")
     const { sources, live } = useKnowledgeSources()
     const rows = (sources ?? []).flatMap((source): ReadonlyArray<ProcessingRowView> => {
-        const stage = ingestStageOf(source.status)
-        if (stage === null || !isDocumentActive(source.status)) return []
+        const stage = ingestStageOf(source.status, source.stage)
+        if (stage === null) return []
         return [
             {
                 id: source.id,

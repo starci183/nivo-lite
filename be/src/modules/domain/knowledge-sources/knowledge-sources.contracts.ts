@@ -214,8 +214,8 @@ export interface SourceSummary {
     readonly sizeBytes: number
     /** 0-100 while a worker is on it. */
     readonly progress: number
-    /** The stage a worker is on (read, chunk, embed, store or facts), or null when none is. */
-    readonly stage: "read" | "chunk" | "embed" | "store" | "facts" | null
+    /** The stage the document is at (read, chunk, embed, store, facts, or critic while the critic checks its dossier), or null when none is. */
+    readonly stage: "read" | "chunk" | "embed" | "store" | "facts" | "critic" | null
     /** Passages of the stage that are done, or null. */
     readonly stageDone: number | null
     /** Passages of the stage in all, or null. */

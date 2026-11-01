@@ -7,7 +7,7 @@ import type {
 } from "./knowledge-progress.contracts"
 import type { KnowledgeSourceEntity } from "./persistence/entities"
 
-const STAGES: ReadonlySet<string> = new Set(["read", "chunk", "embed", "store", "facts"])
+const STAGES: ReadonlySet<string> = new Set(["read", "chunk", "embed", "store", "facts", "critic"])
 
 const isNullableCount = (value: unknown): boolean => value === null || typeof value === "number"
 

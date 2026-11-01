@@ -3165,6 +3165,7 @@
     "stageCount": "{done}/{total} passages",
     "vis_public": "Customers may know this",
     "vis_internal": "Internal only",
+    "stage_critic": "Challenging the facts",
     "visPublicLong": "Customers may know this: the chatbot answers customers from it",
     "visInternalLong": "Internal only: the customer chatbot cannot see this document",
     "noVectors": "Keyword search only",
