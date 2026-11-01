@@ -35,7 +35,7 @@ export const SALES_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: false,
     agent: {
-        name: catalogCopy("modulesCatalog.sales.agent.name", "en"),
+        label: catalogText("modulesCatalog.sales.agent.label"),
         handle: "sales",
         summary: catalogText("modulesCatalog.sales.agent.summary"),
         capabilities: catalogList([

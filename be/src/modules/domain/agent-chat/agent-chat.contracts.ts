@@ -65,6 +65,8 @@ export interface AgentChatPageData {
     readonly handle: string
     /** Its role line. */
     readonly role: string
+    /** The HTTPS address of the agent's picture, or null for the default mascot. */
+    readonly avatarUrl: string | null
     /** Whether the agent is active. */
     readonly isActive: boolean
     /** Whether the page offers the test customer chat. */
@@ -124,6 +126,8 @@ export interface ChatAgentFacts {
     readonly status: string
     /** The opening greeting. */
     readonly greeting: string
+    /** The HTTPS address of the agent's picture, or null for the default mascot. */
+    readonly avatarUrl: string | null
 }
 
 /** The submitted chat message and its stored reply's delivery verdict. */

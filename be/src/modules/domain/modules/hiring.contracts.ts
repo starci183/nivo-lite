@@ -34,7 +34,7 @@ export const HIRING_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: false,
     agent: {
-        name: catalogCopy("modulesCatalog.hiring.agent.name", "en"),
+        label: catalogText("modulesCatalog.hiring.agent.label"),
         handle: "hiring",
         summary: catalogText("modulesCatalog.hiring.agent.summary"),
         capabilities: catalogList([

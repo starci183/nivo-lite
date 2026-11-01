@@ -76,4 +76,8 @@ export class AgentEntity extends UuidAbstractEntity {
     /** The HTTPS address of the picture the owner gave the agent, or null for the generated avatar. */
     @Column({ name: "avatar_url", type: "text", nullable: true })
     avatarUrl!: string | null
+
+    /** The generated id its default name carries ("Agent Chatbot #23233"), unique in the workspace; null for an agent named before it existed. */
+    @Column({ name: "serial", type: "integer", nullable: true })
+    serial!: number | null
 }

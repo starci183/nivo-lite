@@ -15,7 +15,15 @@ export const useOverviewRail = () => {
         return {
             agents: dashboard.agents.flatMap((agent) =>
                 isModuleKey(agent.module)
-                    ? [{ id: agent.id, module: agent.module, name: agent.name, isActive: agent.status !== "paused" }]
+                    ? [
+                          {
+                              id: agent.id,
+                              module: agent.module,
+                              handle: agent.handle,
+                              name: agent.name,
+                              isActive: agent.status !== "paused",
+                          },
+                      ]
                     : [],
             ),
             activity: toActivityModels(dashboard.events, new Date(), t),

@@ -1,4 +1,5 @@
-import { Avatar, Form, SegmentedControl, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import { Form, SegmentedControl, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import { AgentMark } from "@/components/leaves/AgentMark"
 import { FormActions } from "@/components/composites/FormActions"
 import { KNOWLEDGE_ROWS_PLACEHOLDER, KnowledgeRowList } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
@@ -94,12 +95,7 @@ const Results = (props: ResultsProps) => (
 /** The agent the question is asked as, and for whom. */
 const Identity = (props: IdentityProps) => (
     <div className={IDENTITY_CLASS_NAME}>
-        <Avatar
-            name={props.agent.name}
-            seed={props.agent.id}
-            kind="agent"
-            {...(props.agent.avatarUrl === undefined ? {} : { src: props.agent.avatarUrl })}
-        />
+        <AgentMark label={props.agent.name} seed={props.agent.id} src={props.agent.avatarUrl} size="md" />
         <div className={IDENTITY_COPY_CLASS_NAME}>
             <Text weight="semibold">{props.agent.name}</Text>
             <Text size="xs" tone="muted">

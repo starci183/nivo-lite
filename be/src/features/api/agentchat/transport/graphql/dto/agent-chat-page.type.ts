@@ -23,6 +23,10 @@ export class AgentChatPageType {
     @Field()
     role!: string
 
+    /** The HTTPS address of the agent's picture; null for the default mascot. */
+    @Field(() => String, { nullable: true })
+    avatarUrl!: string | null
+
     /** The isActive value. */
     @Field(() => Boolean)
     isActive!: boolean

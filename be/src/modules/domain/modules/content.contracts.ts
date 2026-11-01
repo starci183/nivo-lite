@@ -34,7 +34,7 @@ export const CONTENT_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: false,
     agent: {
-        name: catalogCopy("modulesCatalog.content.agent.name", "en"),
+        label: catalogText("modulesCatalog.content.agent.label"),
         handle: "content",
         summary: catalogText("modulesCatalog.content.agent.summary"),
         capabilities: catalogList([

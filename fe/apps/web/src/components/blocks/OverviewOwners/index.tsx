@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl"
 import type { BadgeTone } from "@starci/grammar/common"
 import type { IconName } from "@/components/leaves/Icon"
 import { useDraftFollowUp, useOverviewData, useOverviewOwners } from "@/hooks/overview"
-import { moduleGlyphOf } from "@/hooks/installations"
+import { moduleGlyphOf, useAgentPictures } from "@/hooks/installations"
 import { navigation } from "@/modules/i18n"
 import { leadHref } from "@/modules/routes"
 import { OverviewOwnersBase } from "./component"
@@ -31,6 +31,7 @@ export const OverviewOwners = () => {
     const t = useTranslations("responsibilities")
     const router = navigation.useRouter()
     const data = useOverviewOwners()
+    const pictureOf = useAgentPictures()
     const { draft, isDrafting } = useDraftFollowUp()
     const { failed } = useOverviewData()
     if (data === undefined) {
@@ -77,6 +78,7 @@ export const OverviewOwners = () => {
                     ariaLabel: t("groupOwnedBy", { name: group.name }),
                     cardsLabel: t("groupCards", { name: group.name }),
                     glyph: group.kind === "agent" ? moduleGlyphOf(group.handle) : null,
+                    avatarUrl: group.kind === "agent" ? pictureOf({ handle: group.handle, name: group.name }) : null,
                     module: group.handle ?? "chatbot",
                     rows: group.rows.map((row) => ({
                         id: row.id,

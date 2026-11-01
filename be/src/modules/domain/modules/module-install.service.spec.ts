@@ -379,7 +379,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
         expect(agents.create).toHaveBeenCalledWith("u1", {
             workspaceId: "ws-1",
             module: "chatbot",
-            name: CHATBOT_MODULE.agent.name,
+            name: { label: CHATBOT_MODULE.agent.label.vi },
             handle: "chatbot-2",
             role: CHATBOT_MODULE.agent.role.vi,
             instructions: CHATBOT_MODULE.agent.instructions.vi,

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { storedAvatarAddress } from "@modules/integrations/object-storage"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AgentCard,
@@ -169,12 +170,18 @@ export class AgentDirectoryService {
     /** The facts the chat page needs of the agent in the workspace; null when the workspace has no such agent. */
     async chatFactsOf(workspaceId: string, agentId: string): Promise<OptionalAgentChatFacts> {
         const agent = await this.entityManager.findOne(AgentEntity, {
-            select: { id: true, module: true, status: true, greeting: true },
+            select: { id: true, module: true, status: true, greeting: true, avatarUrl: true },
             where: { workspaceId, id: agentId },
         })
         return agent === null
             ? null
-            : { id: agent.id, module: agent.module, status: agent.status, greeting: agent.greeting }
+            : {
+                  id: agent.id,
+                  module: agent.module,
+                  status: agent.status,
+                  greeting: agent.greeting,
+                  avatarUrl: storedAvatarAddress(agent.avatarUrl),
+              }
     }
 
     /** The agent that speaks in a conversation turn, with the texts that steer it; null when there is no such agent. */

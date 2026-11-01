@@ -5,9 +5,9 @@ import { ModuleBilingualType } from "./module-bilingual.type"
 @ObjectType()
 /** The agent a module installs with. */
 export class ModuleAgentType {
-    /** The display name of the agent. */
-    @Field()
-    name!: string
+    /** The role the default name of the agent carries ("Agent Chatbot #23233"), in both languages. */
+    @Field(() => ModuleBilingualType)
+    label!: ModuleBilingualType
 
     /** The mention handle of the agent. */
     @Field()

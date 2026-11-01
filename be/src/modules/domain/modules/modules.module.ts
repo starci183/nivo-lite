@@ -9,6 +9,7 @@ import { ModuleSetupWritesModule } from "@modules/domain/module-setup-writes"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./modules.module-definition"
 import { AgentActivationService } from "./agent-activation.service"
 import { AgentRemovalService } from "./agent-removal.service"
+import { AgentRenameService } from "./agent-rename.service"
 import { InstallationChangesService } from "./installation-changes.service"
 import { InstallationDirectoryService } from "./installation-directory.service"
 import { InstallationFactsService } from "./installation-facts.service"
@@ -56,6 +57,7 @@ export class ModulesModule extends ConfigurableModuleClass {
                 : [
                       ...setup,
                       AgentActivationService,
+                      AgentRenameService,
                       AgentRemovalService,
                       ModuleInstallService,
                       InstallationFactsService,

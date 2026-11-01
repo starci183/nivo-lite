@@ -36,7 +36,7 @@ export const LEAD_GEN_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: true,
     agent: {
-        name: catalogCopy("modulesCatalog.lead_gen.agent.name", "en"),
+        label: catalogText("modulesCatalog.lead_gen.agent.label"),
         handle: "leadgen",
         summary: catalogText("modulesCatalog.lead_gen.agent.summary"),
         capabilities: catalogList([
