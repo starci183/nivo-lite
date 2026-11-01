@@ -1,5 +1,6 @@
 import type { ApprovalPolicy, ApproverGroup } from "@modules/domain/authority-rules"
-import type { FrameAction, IntentBusiness } from "@modules/domain/intent-contracts"
+import type { IntentBusiness } from "@modules/domain/intent-contracts"
+import type { TriggerMatch } from "./agent-graphs-contract.contracts"
 import type { DataRight } from "@modules/domain/mcp-gateway"
 
 /** The most nodes one graph may hold. */
@@ -205,6 +206,8 @@ export interface GraphNode {
     readonly action?: string | undefined
     /** On `act`: a template key the engine runs. */
     readonly pipeline?: string | undefined
+    /** On a trigger: the events it matches; absent, the step says (a customer message, a tag). */
+    readonly trigger?: TriggerMatch | undefined
 }
 
 /** The whole graph of one agent. */
@@ -341,8 +344,8 @@ export interface GraphContext {
     readonly groupHasPeople: (group: ApproverGroup) => boolean
     /** Whether the agent faces customers. */
     readonly facesCustomers: boolean
-    /** The catalogue actions of the module, which the frames of the contracts are made from; absent leaves the contract checks out. */
-    readonly actions?: ReadonlyArray<FrameAction> | undefined
+    /** Whether an intent has a frame in the catalogue of the module; absent leaves the contract checks out. */
+    readonly hasFrame?: ((intent: string) => boolean) | undefined
 }
 
 /** One decision the learning reads, newest last. */

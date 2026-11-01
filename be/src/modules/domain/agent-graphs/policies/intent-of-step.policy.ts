@@ -17,9 +17,6 @@ const none: IntentOfNode = () => null
 
 const actionOf: IntentOfNode = (node) => node.action ?? null
 
-/** The intent that answers a customer when the owner drew a reply and named no action. */
-const REPLY_INTENT = "reply_customer"
-
 /**
  * How each step yields an intent. A node type that is added to the graph is one more entry here, because the table is typed over every
  * step; the pipeline only ever sees the intents, never the step.
@@ -32,10 +29,16 @@ export const INTENT_OF_STEP: Readonly<Record<GraphNodeStep, IntentOfNode>> = {
     read_context: none,
     evaluate: none,
     call: actionOf,
-    reply: (node) => node.action ?? REPLY_INTENT,
+    reply: actionOf,
     approval: none,
     write: actionOf,
     stop: none,
+}
+
+/** The event types each trigger step stands for when its node names none, so a graph shipped before triggers could match keeps its meaning. */
+export const EVENT_TYPES_OF_STEP: Readonly<Partial<Record<GraphNodeStep, ReadonlyArray<string>>>> = {
+    customer_message: ["customer_message"],
+    tag: ["tag"],
 }
 
 /** The intent a node yields, or null. */
@@ -45,15 +48,21 @@ export const intentOfNode = (node: GraphNode): string | null => INTENT_OF_STEP[n
 export const heldIntents = (document: GraphDocument): ReadonlyArray<string> =>
     document.nodes.flatMap((node) => intentOfNode(node) ?? [])
 
-/**
- * The intents a trigger reaches: walk forward from the trigger nodes of that step through every edge and every branch, and collect what
- * the nodes yield, once each, in the order they are met.
- */
-export const reachableIntents = (document: GraphDocument, trigger: IntentTrigger): ReadonlyArray<ReachedIntent> => {
+/** The event types a trigger node matches: those it names, else those its step stands for. */
+export const eventTypesOf = (node: GraphNode): ReadonlyArray<string> =>
+    node.kind === "trigger" ? (node.trigger?.eventTypes ?? EVENT_TYPES_OF_STEP[node.step] ?? []) : []
+
+/** True when the trigger node matches an event of that type from that source (null: the source is not known). */
+const matches = (node: GraphNode, eventType: IntentTrigger, source: string | null): boolean => {
+    const sources = node.trigger?.sources ?? []
+    const heard = sources.length === 0 || (source !== null && sources.includes(source))
+    return eventTypesOf(node).includes(eventType) && heard
+}
+
+/** The intents reached by walking forward from the nodes, through every edge and every branch, once each, in the order they are met. */
+export const intentsFrom = (document: GraphDocument, starts: ReadonlyArray<string>): ReadonlyArray<ReachedIntent> => {
     const byKey = new Map(document.nodes.map((node) => [node.key, node]))
-    const queue = document.nodes
-        .filter((node) => node.kind === "trigger" && node.step === trigger)
-        .map((node) => node.key)
+    const queue = [...starts]
     const seen = new Set<string>()
     const found = new Map<string, string>()
     for (let key = queue.shift(); key !== undefined; key = queue.shift()) {
@@ -67,3 +76,14 @@ export const reachableIntents = (document: GraphDocument, trigger: IntentTrigger
     }
     return [...found].map(([intent, label]) => ({ intent, label }))
 }
+
+/** The intents an event reaches: walk forward from the trigger nodes that match its type and its source. */
+export const reachableIntents = (
+    document: GraphDocument,
+    eventType: IntentTrigger,
+    source: string | null = null,
+): ReadonlyArray<ReachedIntent> =>
+    intentsFrom(
+        document,
+        document.nodes.filter((node) => matches(node, eventType, source)).map((node) => node.key),
+    )

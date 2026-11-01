@@ -7,7 +7,12 @@ import {
 import { AGENT_RUNS_ERROR_KINDS, AGENT_RUNS_MESSAGES, AgentRunsModule } from "@modules/domain/agent-runs"
 import { AGENT_WORK_ERROR_KINDS, AGENT_WORK_MESSAGES, AgentWorkModule } from "@modules/domain/agent-work"
 import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES } from "@modules/domain/agent-graphs"
-import { INTENT_CONTRACTS_MESSAGES } from "@modules/domain/intent-contracts"
+import { CUSTOMER_INTENTS_MESSAGES } from "@modules/domain/customer-turns"
+import {
+    INTENT_CONTRACTS_ERROR_KINDS,
+    INTENT_CONTRACTS_MESSAGES,
+    IntentContractsModule,
+} from "@modules/domain/intent-contracts"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 
@@ -15,6 +20,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const agentWorkModules = (): Array<DynamicModule> => [
     AgentWorkModule.register({ isGlobal: true }),
     AgentRunsModule.register({ isGlobal: true }),
+    IntentContractsModule.register({ isGlobal: true }),
     AgentSchedulesModule.register({ isGlobal: true, reactive: true }),
 ]
 
@@ -22,6 +28,7 @@ export const agentWorkModules = (): Array<DynamicModule> => [
 export const agentWorkErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     AGENT_WORK_ERROR_KINDS,
     AGENT_RUNS_ERROR_KINDS,
+    INTENT_CONTRACTS_ERROR_KINDS,
     AGENT_SCHEDULES_ERROR_KINDS,
     AGENT_GRAPHS_ERROR_KINDS,
 ]
@@ -33,4 +40,5 @@ export const agentWorkMessages: ReadonlyArray<MessageBundle> = [
     AGENT_SCHEDULES_MESSAGES,
     AGENT_GRAPHS_MESSAGES,
     INTENT_CONTRACTS_MESSAGES,
+    CUSTOMER_INTENTS_MESSAGES,
 ]

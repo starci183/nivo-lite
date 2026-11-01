@@ -66,7 +66,7 @@ describe("agent-graphs.schema the contracts of a graph", () => {
             {
                 text: "Deposit is 30%.",
                 triggers: ["customer_message"],
-                audiences: ["customer"],
+                trusts: ["outsider"],
                 sources: [
                     { kind: "brain", factId: "f1", passage: "Deposit 30%", valueHash: "h" },
                     { kind: "chat", messageId: "m1", quote: "30% deposit" },
@@ -88,7 +88,7 @@ describe("agent-graphs.schema the contracts of a graph", () => {
         const limit = (patch: object) => ({ ...contract.limits[0], ...patch })
 
         expect(refused({ extra: 1 })).toBe(false)
-        expect(refused({ limits: [limit({ triggers: ["event"] })] })).toBe(false)
+        expect(refused({ limits: [limit({ triggers: [""] })] })).toBe(false)
         expect(refused({ limits: [limit({ text: "" })] })).toBe(false)
         expect(refused({ sources: [{ kind: "template", key: "k", version: 1 }] })).toBe(false)
         expect(refused({ task: "x".repeat(601) })).toBe(false)

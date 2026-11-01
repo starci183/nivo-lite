@@ -1,35 +1,38 @@
 import { Test } from "@nestjs/testing"
 import type { IntentContract } from "./intent-contracts.contracts"
+import { testRegistry } from "@tests/fixtures/builders/intent-domain.builder"
 import { readIntentResult } from "./intent-reading.policy"
 
 const SUBJECT = Symbol("intent-reading.policy")
+
+const LOOKUP = testRegistry()
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [{ provide: SUBJECT, useValue: { readIntentResult } }],
     }).compile()
-    return moduleRef.get<{ readIntentResult: typeof readIntentResult }>(SUBJECT)
+    const subject = moduleRef.get<{ readIntentResult: typeof readIntentResult }>(SUBJECT)
+    return {
+        readIntentResult: (text: string, contracts: ReadonlyArray<IntentContract>, pinned: string | null = null) =>
+            subject.readIntentResult(text, contracts, pinned, LOOKUP),
+    }
 }
 
-const customer = (
-    intent: string,
-    owns: ReadonlyArray<string> = [],
-    risk: IntentContract["risk"] = "none",
-): IntentContract => ({
+const customer = (intent: string, owns: ReadonlyArray<string> = [], ownTurn = false): IntentContract => ({
     intent,
     label: intent,
-    risk,
+    ownTurn,
     task: "",
     limits: [],
-    result: "customer_reply",
+    result: "test_answer",
     owns,
-    checks: ["reply_present", "lead_complete", "order_price_known"],
+    checks: ["reply_present", "lead_complete"],
 })
 
 const request: IntentContract = {
     intent: "send_quote",
     label: "Quote",
-    risk: "none",
+    ownTurn: false,
     task: "",
     limits: [],
     result: "agent_request",
@@ -205,7 +208,7 @@ describe("readIntentResult > the owns rule", () => {
 })
 
 describe("readIntentResult > an intent that runs in a turn of its own", () => {
-    const gateway = customer("gateway_call", [], "write")
+    const gateway = customer("gateway_call", [], true)
 
     it("splits when it is picked without a pin", async () => {
         const subject = await build()

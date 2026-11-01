@@ -144,6 +144,13 @@ const nodeSchema = z
             .optional(),
         action: z.string().max(100).optional(),
         pipeline: z.string().max(100).optional(),
+        trigger: z
+            .object({
+                eventTypes: z.array(z.string().min(1).max(100)).max(20),
+                sources: z.array(z.string().min(1).max(100)).max(20),
+            })
+            .strict()
+            .optional(),
     })
     .strict()
 
@@ -172,8 +179,8 @@ const intentSourceSchema = z.discriminatedUnion("kind", [
 const businessLimitSchema = z
     .object({
         text: z.string().min(1).max(MAX_LIMIT_LENGTH),
-        triggers: z.array(z.enum(["customer_message", "tag"])).max(2),
-        audiences: z.array(z.enum(["customer", "manager", "staff"])).max(3),
+        triggers: z.array(z.string().min(1).max(100)).max(20),
+        trusts: z.array(z.enum(["outsider", "member", "manager", "system"])).max(4),
         sources: z.array(intentSourceSchema).max(10),
     })
     .strict()

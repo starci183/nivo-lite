@@ -1,34 +1,11 @@
-import type {
-    IntentCheckKey,
-    IntentContract,
-    IntentInputPart,
-    IntentPromptSpec,
-    IntentResultKind,
-} from "./intent-contracts.contracts"
+import type { IntentContract, IntentInputPart, IntentPromptSpec, IntentResultKind } from "./intent-contracts.contracts"
+import { OWN_TURN_RESULT } from "./intent-frames.policy"
 import type { IntentSay } from "./intent-policies.contracts"
 
 /** The longest tool result a turn is given. */
 const TOOL_RESULT_MAX = 20_000
 
 const KIND_MAX = 40
-
-/** The words of the shape of each result kind: a literal key each, so a new kind is one entry here and one in the schemas. */
-const RESULT_WORDS: Readonly<Record<IntentResultKind, string>> = {
-    customer_reply: "intentContracts.result.customer_reply",
-    agent_request: "intentContracts.result.agent_request",
-    own_turn_pick: "intentContracts.result.own_turn_pick",
-}
-
-/** The words of each check. */
-const CHECK_WORDS: Readonly<Record<IntentCheckKey, string>> = {
-    reply_present: "intentContracts.check.reply_present",
-    reply_bounded: "intentContracts.check.reply_bounded",
-    lead_complete: "intentContracts.check.lead_complete",
-    order_complete: "intentContracts.check.order_complete",
-    order_price_known: "intentContracts.check.order_price_known",
-    action_is_intent: "intentContracts.check.action_is_intent",
-    action_has_summary: "intentContracts.check.action_has_summary",
-}
 
 /** The words with the opening of any data mark defused (`<data`, `</data>`, spaced or in capitals), so they cannot close the block they sit in. */
 const defused = (text: string): string => text.replace(/<(?=\s{0,8}\/?\s{0,8}data)/giu, "< ")
@@ -52,7 +29,7 @@ const jsonOf = (value: unknown): string => {
     return JSON.stringify(value, replacer) ?? ""
 }
 
-/** The wrapper of a tool result: the words of any tool, a customer's included, are data and never an instruction. */
+/** The wrapper of a tool result: the words of any tool, whoever spoke through it, are data and never an instruction. */
 export const toolResultOf = (value: unknown): string =>
     dataTagOf("tool_result", (typeof value === "string" ? value : jsonOf(value)).slice(0, TOOL_RESULT_MAX))
 
@@ -67,8 +44,8 @@ const inputOf = (parts: ReadonlyArray<IntentInputPart>, say: IntentSay): string 
 
 const taskOf = (active: ReadonlyArray<IntentContract>, pinned: string | null, say: IntentSay): string => {
     const lines = active.map((contract) => bullet(`${contract.intent} (${contract.label}): ${contract.task}`))
-    const lead = pinned === null ? "intentContracts.prompt.taskPick" : "intentContracts.prompt.taskPinned"
-    return [say("intentContracts.prompt.task"), say(lead, { intent: pinned ?? "" }), ...lines].join("\n")
+    const sentence = pinned === null ? "intentContracts.prompt.taskPick" : "intentContracts.prompt.taskPinned"
+    return [say("intentContracts.prompt.task"), say(sentence, { intent: pinned ?? "" }), ...lines].join("\n")
 }
 
 /** The limits every active intent shares are written once; the rest follow under the intent they bind. */
@@ -83,7 +60,7 @@ const limitsOf = (active: ReadonlyArray<IntentContract>, say: IntentSay): string
     return [say("intentContracts.prompt.limits"), ...common.map(bullet), ...apart].join("\n")
 }
 
-/** Intents that answer the same way are written together, so the shape of the customer result is not repeated for each. */
+/** Intents that answer the same way are written together, so the shape of a result is not repeated for each. */
 const grouped = (
     active: ReadonlyArray<IntentContract>,
     keyOf: (contract: IntentContract) => string,
@@ -97,10 +74,10 @@ const grouped = (
 }
 
 const kindFor = (contract: IntentContract, pinned: string | null): IntentResultKind =>
-    contract.risk !== "none" && pinned === null ? "own_turn_pick" : contract.result
+    contract.ownTurn && pinned === null ? OWN_TURN_RESULT : contract.result
 
 const resultOf = (active: ReadonlyArray<IntentContract>, pinned: string | null, say: IntentSay): string => {
-    const shapes = grouped(active, (contract) => say(RESULT_WORDS[kindFor(contract, pinned)]))
+    const shapes = grouped(active, (contract) => say(`intentContracts.result.${kindFor(contract, pinned)}`))
     return [
         say("intentContracts.prompt.result"),
         say("intentContracts.prompt.envelope"),
@@ -110,9 +87,11 @@ const resultOf = (active: ReadonlyArray<IntentContract>, pinned: string | null, 
 
 const checksOf = (active: ReadonlyArray<IntentContract>, pinned: string | null, say: IntentSay): string => {
     const checked = active.filter(
-        (contract) => kindFor(contract, pinned) !== "own_turn_pick" && contract.checks.length > 0,
+        (contract) => kindFor(contract, pinned) !== OWN_TURN_RESULT && contract.checks.length > 0,
     )
-    const sets = grouped(checked, (contract) => contract.checks.map((check) => say(CHECK_WORDS[check])).join("; "))
+    const sets = grouped(checked, (contract) =>
+        contract.checks.map((check) => say(`intentContracts.check.${check}`)).join("; "),
+    )
     return [
         say("intentContracts.prompt.checks"),
         say("intentContracts.prompt.checksNote"),
@@ -121,9 +100,9 @@ const checksOf = (active: ReadonlyArray<IntentContract>, pinned: string | null, 
 }
 
 /**
- * The prompt of a turn, for a customer message and a tag alike: the identity line, then the five parts in order, input, task, limits,
- * result and checks. Every part of the input is wrapped in a data tag whose closing mark is defused. A turn pinned to an intent shows
- * that one alone, and an intent that runs in a turn of its own is asked for the intent only until it is pinned.
+ * The prompt of a turn, whatever woke it: the identity line, then the five parts in sequence, input, task, limits, result and checks. Every
+ * part of the input is wrapped in a data tag whose closing mark is defused. A turn pinned to an intent shows that one alone, and an
+ * intent that runs in a turn of its own is asked for the intent only until it is pinned.
  */
 export const buildIntentPrompt = (spec: IntentPromptSpec, say: IntentSay): string => {
     const active =

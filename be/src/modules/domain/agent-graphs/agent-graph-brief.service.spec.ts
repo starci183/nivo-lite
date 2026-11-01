@@ -67,6 +67,6 @@ describe("AgentGraphBriefService.contractsOf", () => {
             versionId: "version-1",
             contracts: [],
         })
-        expect(contracts.turnContractsOf).toHaveBeenCalledWith("ws-1", "agent-1", "tag", "manager")
+        expect(contracts.turnContractsOf).toHaveBeenCalledWith("ws-1", "agent-1", "tag", "manager", null)
     })
 })

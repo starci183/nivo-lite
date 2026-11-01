@@ -3,6 +3,9 @@ import { mock } from "@starci/jest-preset"
 import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
 import type { InstallationDirectory } from "@modules/domain/agents"
 import { DirectGenerationService } from "@modules/domain/ai-generations"
+import { IntentRegistryService } from "@modules/domain/intent-contracts"
+import type { FrameAction } from "@modules/domain/intent-contracts"
+import { testRegistry } from "@tests/fixtures/builders/intent-domain.builder"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModulesService } from "@modules/domain/modules"
@@ -49,7 +52,7 @@ const HOLDING: GraphDocument = {
         {
             intent: "reply_customer",
             task: "A booking means a deposit.",
-            limits: [{ text: "Deposit is 30%.", triggers: [], audiences: [], sources: [SOURCE] }],
+            limits: [{ text: "Deposit is 30%.", triggers: [], trusts: [], sources: [SOURCE] }],
             sources: [SOURCE],
         },
     ],
@@ -66,7 +69,7 @@ const MODEL = answer([
         intent: "reply_customer",
         task: "A booking means a deposit.",
         task_fact_ids: ["f1"],
-        limits: [{ text: "Deposit is 30%.", triggers: [], audiences: [], fact_ids: ["f1"] }],
+        limits: [{ text: "Deposit is 30%.", triggers: [], trusts: [], fact_ids: ["f1"] }],
     },
 ])
 
@@ -86,6 +89,14 @@ const READ_VERSION = {
     facts: [],
     toneEvidence: "",
 }
+
+const real = testRegistry()
+const registry = mock<IntentRegistryService>({
+    frameOf: jest.fn((intent: string, actions: ReadonlyArray<FrameAction>, trigger: string) =>
+        real.frameOf(intent, actions, trigger),
+    ),
+    needsAnswer: jest.fn((trigger: string) => real.needsAnswer(trigger)),
+})
 
 const build = async (options: Options = {}) => {
     const state =
@@ -117,6 +128,7 @@ const build = async (options: Options = {}) => {
             { provide: AGENTS_INSTALLATIONS, useValue: directory },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
+            { provide: IntentRegistryService, useValue: registry },
         ],
     }).compile()
     return { service: moduleRef.get(AgentGraphContractSetupService), generations, facts, proposals, logger }

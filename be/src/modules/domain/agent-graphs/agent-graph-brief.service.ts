@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { AgentGraphBrief, GraphIntent } from "@modules/domain/agent-turns"
-import type { IntentAudience, IntentTrigger } from "@modules/domain/intent-contracts"
+import type { InboundTrust } from "@modules/domain/agent-inbound"
+import type { IntentTrigger } from "@modules/domain/intent-contracts"
 import { AgentGraphContractsService } from "./agent-graph-contracts.service"
 import type { OptionalTurnContracts } from "./agent-graph-contracts.service"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -22,9 +23,10 @@ export class AgentGraphBriefService implements AgentGraphBrief {
         workspaceId: string,
         agentId: string,
         trigger: IntentTrigger,
-        audience: IntentAudience,
+        trust: InboundTrust,
+        source: string | null = null,
     ): Promise<OptionalTurnContracts> {
-        return this.contracts.turnContractsOf(workspaceId, agentId, trigger, audience)
+        return this.contracts.turnContractsOf(workspaceId, agentId, trigger, trust, source)
     }
 
     /** The intents the active version allows; none for an agent with no graph or one still in shadow. */

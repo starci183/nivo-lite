@@ -252,10 +252,10 @@ describe("AgentGraphPublishService.publishContract", () => {
 })
 
 describe("AgentGraphPublishService the contracts of a graph", () => {
-    const ACTIONS = [{ action: "pay_supplier", amountLimit: true }]
+    const FRAMED = (intent: string): boolean => intent === "pay_supplier"
 
     it("refuses a graph whose intent has no frame in the catalogue of the module", async () => {
-        const context = { ...contextOf(), actions: [{ action: "send_quote", amountLimit: true }] }
+        const context = { ...contextOf(), hasFrame: (intent: string) => intent === "send_quote" }
         const { service, graphs } = await build(stateOf(), { context })
 
         expect(await codeOf(service.publishDraft("ws-1", "agent-1", OWNER, "Edit"))).toBe(
@@ -269,7 +269,7 @@ describe("AgentGraphPublishService the contracts of a graph", () => {
             ...stateOf().draft,
             contracts: [{ intent: "give_discount", task: "", limits: [], sources: [] }],
         }
-        const context = { ...contextOf(), actions: ACTIONS }
+        const context = { ...contextOf(), hasFrame: FRAMED }
         const shipped = await build(stateOf(), { context })
         const warning = await build(stateOf({ draft: warned }), { context })
 

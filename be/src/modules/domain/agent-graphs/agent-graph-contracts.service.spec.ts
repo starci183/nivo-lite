@@ -1,6 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { IntentRegistryService } from "@modules/domain/intent-contracts"
+import type { FrameAction } from "@modules/domain/intent-contracts"
 import type { IntentBusiness } from "@modules/domain/intent-contracts"
+import { testRegistry } from "@tests/fixtures/builders/intent-domain.builder"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModulesService } from "@modules/domain/modules"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -30,6 +33,14 @@ const documentOf = (customerActions: ReadonlyArray<string>, tagActions: Readonly
     rights: [],
 })
 
+const real = testRegistry()
+const registry = mock<IntentRegistryService>({
+    frameOf: jest.fn((intent: string, actions: ReadonlyArray<FrameAction>, trigger: string) =>
+        real.frameOf(intent, actions, trigger),
+    ),
+    needsAnswer: jest.fn((trigger: string) => real.needsAnswer(trigger)),
+})
+
 const build = async (state: OptionalGraphState, installed = true) => {
     const graphs = mock<AgentGraphsService>({ stateOfAgent: jest.fn().mockResolvedValue(state) })
     const installations = mock<InstallationRecordsService>({
@@ -46,6 +57,7 @@ const build = async (state: OptionalGraphState, installed = true) => {
             { provide: InstallationRecordsService, useValue: installations },
             { provide: ModulesService, useValue: modules },
             { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: IntentRegistryService, useValue: registry },
         ],
     }).compile()
     return { service: moduleRef.get(AgentGraphContractsService), graphs, modules, catalog }
@@ -59,35 +71,35 @@ describe("AgentGraphContractsService.turnContractsOf > a customer message", () =
         const shop: IntentBusiness = {
             intent: "reply_customer",
             task: "A deposit comes first.",
-            limits: [{ text: "Never discount.", triggers: [], audiences: [], sources: [] }],
+            limits: [{ text: "Never discount.", triggers: [], trusts: [], sources: [] }],
             sources: [],
         }
         const active = { ...documentOf(["reply_customer", "handoff_lead"], []), contracts: [shop] }
         const { service, graphs } = await build(enforced(active))
 
-        const turn = await service.turnContractsOf("ws-1", "agent-1", "customer_message", "customer")
+        const turn = await service.turnContractsOf("ws-1", "agent-1", "customer_message", "outsider")
 
         expect(graphs.stateOfAgent).toHaveBeenCalledWith("ws-1", "agent-1")
         expect(turn?.versionId).toBe("version-1")
         expect(turn?.contracts.map((contract) => contract.intent)).toEqual(["reply_customer", "handoff_lead"])
         expect(turn?.contracts[0]).toMatchObject({
             label: "Title reply_customer",
-            task: "[intentContracts.task.reply_customer] A deposit comes first.",
-            result: "customer_reply",
+            task: "[task.reply_customer] A deposit comes first.",
+            result: "test_answer",
         })
         expect(turn?.contracts[0]?.limits.at(-1)).toBe("Never discount.")
-        expect(turn?.contracts[1]?.task).toBe("[intentContracts.task.handoff_lead]")
+        expect(turn?.contracts[1]?.task).toBe("[task.handoff_lead]")
     })
 
     it("offers only the intents that have a customer frame, but needs a way to answer", async () => {
         const answers = await build(enforced(documentOf(["reply_customer", "send_quote"], [])))
         const mute = await build(enforced(documentOf(["handoff_lead"], [])))
 
-        const turn = await answers.service.turnContractsOf("ws-1", "agent-1", "customer_message", "customer")
+        const turn = await answers.service.turnContractsOf("ws-1", "agent-1", "customer_message", "outsider")
 
         expect(turn?.contracts.map((contract) => contract.intent)).toEqual(["reply_customer"])
         await expect(
-            mute.service.turnContractsOf("ws-1", "agent-1", "customer_message", "customer"),
+            mute.service.turnContractsOf("ws-1", "agent-1", "customer_message", "outsider"),
         ).resolves.toBeNull()
     })
 })
@@ -97,11 +109,11 @@ describe("AgentGraphContractsService.turnContractsOf > a tag", () => {
         const { service } = await build(enforced(documentOf([], ["send_quote", "reply_customer"])))
 
         const manager = await service.turnContractsOf("ws-1", "agent-1", "tag", "manager")
-        const staff = await service.turnContractsOf("ws-1", "agent-1", "tag", "staff")
+        const staff = await service.turnContractsOf("ws-1", "agent-1", "tag", "member")
 
-        expect(manager?.contracts.map((contract) => [contract.intent, contract.risk, contract.result])).toEqual([
-            ["send_quote", "money", "agent_request"],
-            ["reply_customer", "none", "agent_request"],
+        expect(manager?.contracts.map((contract) => [contract.intent, contract.ownTurn, contract.result])).toEqual([
+            ["send_quote", true, "agent_request"],
+            ["reply_customer", false, "agent_request"],
         ])
         expect(manager?.contracts[0]?.limits).toContain("[intentContracts.limit.request_only]")
         expect(staff?.contracts[0]?.limits).toEqual(["[intentContracts.limit.staff]"])
@@ -115,10 +127,10 @@ describe("AgentGraphContractsService.turnContractsOf > the turn stays as it was"
         const noVersion = await build(enforced(null))
         const noId = await build(enforced(documentOf(["reply_customer"], []), null))
 
-        await expect(none.service.turnContractsOf("ws-1", "a", "customer_message", "customer")).resolves.toBeNull()
-        await expect(shadow.service.turnContractsOf("ws-1", "a", "customer_message", "customer")).resolves.toBeNull()
-        await expect(noVersion.service.turnContractsOf("ws-1", "a", "customer_message", "customer")).resolves.toBeNull()
-        await expect(noId.service.turnContractsOf("ws-1", "a", "customer_message", "customer")).resolves.toBeNull()
+        await expect(none.service.turnContractsOf("ws-1", "a", "customer_message", "outsider")).resolves.toBeNull()
+        await expect(shadow.service.turnContractsOf("ws-1", "a", "customer_message", "outsider")).resolves.toBeNull()
+        await expect(noVersion.service.turnContractsOf("ws-1", "a", "customer_message", "outsider")).resolves.toBeNull()
+        await expect(noId.service.turnContractsOf("ws-1", "a", "customer_message", "outsider")).resolves.toBeNull()
     })
 
     it("has no contracts when the installation is gone, the trigger reaches nothing or an intent has no frame", async () => {
@@ -126,8 +138,8 @@ describe("AgentGraphContractsService.turnContractsOf > the turn stays as it was"
         const idle = await build(enforced(documentOf(["reply_customer"], [])))
         const unframed = await build(enforced(documentOf(["reply_customer", "invent_work"], [])))
 
-        await expect(gone.service.turnContractsOf("ws-1", "a", "customer_message", "customer")).resolves.toBeNull()
+        await expect(gone.service.turnContractsOf("ws-1", "a", "customer_message", "outsider")).resolves.toBeNull()
         await expect(idle.service.turnContractsOf("ws-1", "a", "tag", "manager")).resolves.toBeNull()
-        await expect(unframed.service.turnContractsOf("ws-1", "a", "customer_message", "customer")).resolves.toBeNull()
+        await expect(unframed.service.turnContractsOf("ws-1", "a", "customer_message", "outsider")).resolves.toBeNull()
     })
 })

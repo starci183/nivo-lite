@@ -25,7 +25,7 @@ const entry = (patch: Partial<SetupProposal["contracts"][number]> = {}): SetupPr
     intent: "reply_customer",
     task: "A booking means a deposit.",
     task_fact_ids: ["f1"],
-    limits: [{ text: "Deposit is 30%.", triggers: ["customer_message"], audiences: [], fact_ids: ["f1"] }],
+    limits: [{ text: "Deposit is 30%.", triggers: ["customer_message"], trusts: [], fact_ids: ["f1"] }],
     ...patch,
 })
 
@@ -53,7 +53,7 @@ describe("contractsFromSetup", () => {
         expect(built?.business).toEqual({
             intent: "reply_customer",
             task: "A booking means a deposit.",
-            limits: [{ text: "Deposit is 30%.", triggers: ["customer_message"], audiences: [], sources: [source] }],
+            limits: [{ text: "Deposit is 30%.", triggers: ["customer_message"], trusts: [], sources: [source] }],
             sources: [source],
         })
         expect(built?.factIds).toEqual(["f1"])
@@ -74,12 +74,12 @@ describe("contractsFromSetup", () => {
     it("drops a limit that cites no fact the Brain holds, and cites a fact once", async () => {
         const subject = await build()
         const limits = [
-            { text: "Invented.", triggers: [], audiences: [], fact_ids: ["nope"] },
-            { text: "No source.", triggers: [], audiences: [], fact_ids: [] },
+            { text: "Invented.", triggers: [], trusts: [], fact_ids: ["nope"] },
+            { text: "No source.", triggers: [], trusts: [], fact_ids: [] },
             {
                 text: "Inside the city.",
                 triggers: [],
-                audiences: ["customer" as const],
+                trusts: ["outsider" as const],
                 fact_ids: ["f2", "f2", "nope"],
             },
         ]
@@ -101,7 +101,7 @@ describe("contractsFromSetup", () => {
             proposal([
                 entry({
                     task_fact_ids: [],
-                    limits: [{ text: "Invented.", triggers: [], audiences: [], fact_ids: [] }],
+                    limits: [{ text: "Invented.", triggers: [], trusts: [], fact_ids: [] }],
                 }),
             ]),
             FACTS,

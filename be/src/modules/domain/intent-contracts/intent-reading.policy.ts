@@ -1,8 +1,7 @@
 import { parseJsonText } from "@modules/platform/primitives"
 import { failedCheckOf } from "./intent-check.policy"
 import type { IntentContract, IntentGapText, IntentReading, SafeRoadCause } from "./intent-contracts.contracts"
-import type { OwnedSplit, PinnedIntent } from "./intent-policies.contracts"
-import { resultSchemaOf } from "./intent-result.policy"
+import type { IntentLookup, OwnedSplit, PinnedIntent } from "./intent-policies.contracts"
 import { intentEnvelopeSchema } from "./intent-result.schema"
 
 /** The answer of a model that picked no intent. */
@@ -55,14 +54,15 @@ const gapOf = (gap: IntentGapText | null | undefined): IntentGapText | null =>
     gap === null || gap === undefined || gap.question === "" ? null : { question: gap.question, topic: gap.topic }
 
 /**
- * Reads what a turn answered, in this order: the envelope, the intent (an unknown one and a text that is not JSON are invalid output;
+ * Reads what a turn answered, in this sequence: the envelope, the intent (an unknown one and a text that is not JSON are invalid output;
  * `none` is no intent), the split of an intent that runs in a turn of its own, the owns rule, the schema of the result and the checks.
  * Nothing here acts: the caller settles what comes back.
  */
 export const readIntentResult = (
     text: string,
     contracts: ReadonlyArray<IntentContract>,
-    pinned: PinnedIntent = null,
+    pinned: PinnedIntent,
+    lookup: IntentLookup,
 ): IntentReading => {
     const object = objectIn(text)
     if (object === null) return safe("invalid_output", "not_json", { draft: draftOf(text) })
@@ -73,11 +73,11 @@ export const readIntentResult = (
     const contract = contracts.find((entry) => entry.intent === intent)
     if (contract === undefined) return safe("invalid_output", "unknown_intent", { intent, draft: draftOf(text) })
     if (pinned !== null && pinned !== intent) return safe("invalid_output", "not_pinned", { intent })
-    if (contract.risk !== "none" && pinned === null) return { kind: "split", contract }
+    if (contract.ownTurn && pinned === null) return { kind: "split", contract }
     const { kept, dropped } = withoutOwned(result ?? {}, ownedElsewhere(contract, contracts))
-    const parsed = resultSchemaOf(contract.result).safeParse(kept)
-    if (!parsed.success) return safe("invalid_output", "schema", { intent, draft: draftOf(replyOf(kept)) })
-    const failed = failedCheckOf(contract.checks, { intent, result: parsed.data })
+    const parsed = lookup.resultSchemaOf(contract.result)?.safeParse(kept)
+    if (parsed?.success !== true) return safe("invalid_output", "schema", { intent, draft: draftOf(replyOf(kept)) })
+    const failed = failedCheckOf(contract.checks, { intent, result: parsed.data }, lookup)
     if (failed !== null) return safe("check_failed", failed, { intent, draft: draftOf(replyOf(parsed.data)) })
     return { kind: "picked", contract, result: parsed.data, dropped }
 }

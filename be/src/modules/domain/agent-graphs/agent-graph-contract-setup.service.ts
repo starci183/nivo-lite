@@ -3,7 +3,7 @@ import { InjectInstallations } from "@modules/domain/agents"
 import type { InstallationDirectory } from "@modules/domain/agents"
 import { DirectGenerationService } from "@modules/domain/ai-generations"
 import { BrainFactsService } from "@modules/domain/brain-facts"
-import { dataTagOf, frameOfIntent } from "@modules/domain/intent-contracts"
+import { IntentRegistryService, dataTagOf } from "@modules/domain/intent-contracts"
 import type { IntentTrigger } from "@modules/domain/intent-contracts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModulesService } from "@modules/domain/modules"
@@ -50,6 +50,7 @@ export class AgentGraphContractSetupService {
         private readonly facts: BrainFactsService,
         private readonly generations: DirectGenerationService,
         private readonly proposals: AgentGraphProposalsService,
+        private readonly intents: IntentRegistryService,
     ) {}
 
     /** Proposes the contracts and the gaps of an installation whose setup was just applied; answers how many proposals were new. */
@@ -80,7 +81,9 @@ export class AgentGraphContractSetupService {
             amountLimit: entry.amountLimit,
         }))
         const offered = TRIGGERS.flatMap((trigger) =>
-            reachableIntents(active, trigger).filter((entry) => frameOfIntent(entry.intent, actions, trigger) !== null),
+            reachableIntents(active, trigger).filter(
+                (entry) => this.intents.frameOf(entry.intent, actions, trigger) !== null,
+            ),
         )
         const intents = [...new Set(offered.map((entry) => entry.intent))]
         const scope = installation.isMulti ? installation.id : null

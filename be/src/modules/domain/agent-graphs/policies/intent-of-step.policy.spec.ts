@@ -2,15 +2,16 @@ import { Test } from "@nestjs/testing"
 import { END, TRIGGER, nodeOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { STEPS_OF_KIND, kindOfStep } from "../agent-graphs.contracts"
 import type { GraphDocument, GraphNode, GraphNodeStep } from "../agent-graphs.contracts"
-import { INTENT_OF_STEP, heldIntents, intentOfNode, reachableIntents } from "./intent-of-step.policy"
+import { INTENT_OF_STEP, eventTypesOf, heldIntents, intentOfNode, reachableIntents } from "./intent-of-step.policy"
 
 const SUBJECT = Symbol("intent-of-step.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { intentOfNode, heldIntents, reachableIntents } }],
+        providers: [{ provide: SUBJECT, useValue: { eventTypesOf, intentOfNode, heldIntents, reachableIntents } }],
     }).compile()
     return moduleRef.get<{
+        eventTypesOf: typeof eventTypesOf
         intentOfNode: typeof intentOfNode
         heldIntents: typeof heldIntents
         reachableIntents: typeof reachableIntents
@@ -61,7 +62,7 @@ describe("INTENT_OF_STEP", () => {
         expect(subject.intentOfNode(stepNode("write", { action: undefined }))).toBeNull()
         expect(subject.intentOfNode(stepNode("call", { action: "gateway_call" }))).toBe("gateway_call")
         expect(subject.intentOfNode(stepNode("call"))).toBeNull()
-        expect(subject.intentOfNode(stepNode("reply"))).toBe("reply_customer")
+        expect(subject.intentOfNode(stepNode("reply"))).toBeNull()
         expect(subject.intentOfNode(stepNode("reply", { action: "handoff_lead" }))).toBe("handoff_lead")
         expect(subject.intentOfNode(TRIGGER)).toBeNull()
         expect(subject.intentOfNode(stepNode("approval"))).toBeNull()
@@ -106,5 +107,49 @@ describe("heldIntents and reachableIntents", () => {
         const subject = await build()
 
         expect(subject.reachableIntents({ nodes: [END], rights: [] }, "tag")).toEqual([])
+    })
+})
+
+describe("the events a trigger matches", () => {
+    const listening: GraphDocument = {
+        nodes: [
+            {
+                ...nodeOf({ ...TRIGGER, key: "chat", step: "event", next: ["a"] }),
+                trigger: { eventTypes: ["chat_message"], sources: ["web"] },
+            },
+            {
+                ...nodeOf({ ...TRIGGER, key: "any", step: "event", next: ["b"] }),
+                trigger: { eventTypes: ["chat_message"], sources: [] },
+            },
+            nodeOf({ ...TRIGGER, key: "clock", step: "schedule", next: ["c"] }),
+            nodeOf({ key: "a", step: "write", action: "first", title: "First", next: [] }),
+            nodeOf({ key: "b", step: "write", action: "second", title: "Second", next: [] }),
+            nodeOf({ key: "c", step: "write", action: "third", title: "Third", next: [] }),
+        ],
+        rights: [],
+    }
+
+    it("reads the event types of a node from what it names, else from its step", async () => {
+        const subject = await build()
+
+        expect(subject.eventTypesOf(listening.nodes[0] ?? TRIGGER)).toEqual(["chat_message"])
+        expect(subject.eventTypesOf(TRIGGER)).toEqual(["customer_message"])
+        expect(subject.eventTypesOf(nodeOf({ ...TRIGGER, step: "tag" }))).toEqual(["tag"])
+        expect(subject.eventTypesOf(nodeOf({ ...TRIGGER, step: "schedule" }))).toEqual([])
+        expect(subject.eventTypesOf(END)).toEqual([])
+    })
+
+    it("walks from the nodes that match the type and the source, and from any source for a node that names none", async () => {
+        const subject = await build()
+
+        expect(subject.reachableIntents(listening, "chat_message", "web").map((entry) => entry.intent)).toEqual([
+            "first",
+            "second",
+        ])
+        expect(subject.reachableIntents(listening, "chat_message", "telegram").map((entry) => entry.intent)).toEqual([
+            "second",
+        ])
+        expect(subject.reachableIntents(listening, "chat_message").map((entry) => entry.intent)).toEqual(["second"])
+        expect(subject.reachableIntents(listening, "other", "web")).toEqual([])
     })
 })

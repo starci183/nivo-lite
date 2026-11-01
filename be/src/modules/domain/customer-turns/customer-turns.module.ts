@@ -6,6 +6,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./customer-turns.module-d
 import { CustomerCorePlanService } from "./customer-core-plan.service"
 import { CustomerDoorStepService } from "./customer-door-step.service"
 import { CustomerIntentContextService } from "./customer-intent-context.service"
+import { CustomerIntentsService } from "./customer-intents.service"
 import { CustomerIntentSettleService } from "./customer-intent-settle.service"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { CustomerWorkHandlerService } from "./customer-work-handler.service"
@@ -48,6 +49,7 @@ export class CustomerTurnsModule extends ConfigurableModuleClass {
             TurnModulesService,
             CustomerTurnRuntimeService,
             CustomerIntentContextService,
+            CustomerIntentsService,
             CustomerIntentSettleService,
             CustomerDoorStepService,
             CustomerCorePlanService,
