@@ -7,7 +7,7 @@
 # It follows the image canon (knowledge/hfs/docker.md) and diverges from it nowhere. No secret is built in: credentials are
 # mounted at run time and .dockerignore keeps them out of the build context.
 
-FROM node:22.14.0-alpine3.21 AS manifests
+FROM node:25.2.1-alpine3.21 AS manifests
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY fe fe
@@ -16,7 +16,7 @@ COPY fe fe
 RUN find fe -type f ! -name package.json -delete \
  && find fe -name package.json -exec node -e "const fs=require('fs');const f=process.argv[1];const p=JSON.parse(fs.readFileSync(f,'utf8'));if(p.scripts&&p.scripts.prepare){delete p.scripts.prepare;fs.writeFileSync(f,JSON.stringify(p,null,2))}" {} \;
 
-FROM node:22.14.0-alpine3.21 AS build
+FROM node:25.2.1-alpine3.21 AS build
 WORKDIR /app
 COPY --from=manifests /app ./
 RUN npm ci --ignore-scripts
@@ -26,7 +26,7 @@ COPY be/src be/src
 COPY be/apps/cli be/apps/cli
 RUN npm run build:be
 
-FROM node:22.14.0-alpine3.21 AS runtime
+FROM node:25.2.1-alpine3.21 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
