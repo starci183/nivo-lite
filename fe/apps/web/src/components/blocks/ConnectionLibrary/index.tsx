@@ -11,13 +11,14 @@ import {
     searchWords,
     asCategory,
     audienceLineOf,
-    catalogBadgeOf,
+    catalogStatusOf,
+    catalogTagOf,
     checkProvidersOf,
     connectionCountsOf,
 } from "@/hooks/connection-catalog"
 import type { CatalogEntry } from "@/hooks/connection-catalog"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
-import { connectionPageHref, sortRows, useConnectionOverlays, useWantConnector } from "@/hooks/connections"
+import { useConnectionOverlays, useWantConnector } from "@/hooks/connections"
 import type { Connection, ConnectorCategory } from "@/modules/types"
 import { ConnectionLibraryBase } from "./component"
 import type { LibraryCard, LibraryCategory } from "./component"
@@ -58,8 +59,6 @@ const cardOf = (known: KnownEntry, input: LibraryInput): LibraryCard => {
     const mine = entry.provider === undefined ? [] : input.items.filter((item) => item.provider === entry.provider)
     const count = connectionCountsOf(mine).get(entry.provider ?? "") ?? 0
     const needsCheck = entry.provider !== undefined && checkProvidersOf(mine).has(entry.provider)
-    const first = sortRows(mine.filter((item) => item.status !== "disconnected"))[0]
-    const href = first === undefined ? null : connectionPageHref(first)
     return {
         id: entry.id,
         name,
@@ -68,12 +67,12 @@ const cardOf = (known: KnownEntry, input: LibraryInput): LibraryCard => {
         glyph: entry.glyph,
         ...(logo === undefined ? {} : { logo }),
         ...(entry.provider === undefined ? {} : { guide: entry.provider }),
-        badge: catalogBadgeOf(entry, count, input.t, needsCheck),
+        tag: catalogTagOf(entry, input.t),
+        status: catalogStatusOf(count, input.t, needsCheck),
+        connected: count,
         isCurrent: CURRENT_CONNECTORS.includes(entry.id),
         isSoon: entry.status === "soon",
         want: input.wants[entry.id] ?? IDLE_WANT,
-        ...(href === null ? {} : { href }),
-        openLabel: name,
     }
 }
 
@@ -146,13 +145,14 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
                 searchLabel: t("libSearch"),
                 clearLabel: t("libClear"),
                 filterLabel: t("libFilter"),
-                categoryLabel: t("libCategory"),
                 category,
                 categories,
                 emptyMessage: t("libEmpty"),
                 emptyHint: t("libEmptyHint"),
                 wantLabel: t("libWant"),
                 wantedLabel: t("libWanted"),
+                connectLabel: t("libConnect"),
+                addLabel: t("libAddAnother"),
                 currentLabel: t("libCurrent"),
                 othersLabel: t("libOthers"),
                 cards,

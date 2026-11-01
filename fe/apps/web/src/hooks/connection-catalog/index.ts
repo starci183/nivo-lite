@@ -12,7 +12,8 @@ export {
 export {
     asCategory,
     audienceLineOf,
-    catalogBadgeOf,
+    catalogStatusOf,
+    catalogTagOf,
     checkProvidersOf,
     connectionCountsOf,
 } from "./connection-catalog.shared"
