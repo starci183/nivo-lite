@@ -53,6 +53,7 @@ export class IdentityAuthenticatorService implements PassportAuthenticator {
             row?.encrypted_password ?? "",
         )
         if (row === undefined || !matches) throw new IdentityError({ code: IdentityErrorCode.InvalidCredentials })
+        await this.attempts.clear("login", address)
         if (row.disabled) throw new IdentityError({ code: IdentityErrorCode.AccountDisabled })
         if (row.email_confirmed_at === null) throw new IdentityError({ code: IdentityErrorCode.EmailNotConfirmed })
         await authDoors.touchUser(this.entityManager, row.id, this.clock.now(), false, "{}")
