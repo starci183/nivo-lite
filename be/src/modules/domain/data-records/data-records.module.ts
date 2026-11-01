@@ -5,7 +5,7 @@ import { DataRecordsReadService } from "./data-records-read.service"
 import { DataRecordsService } from "./data-records.service"
 
 @Module({})
-/** The rows the owner's own systems put in the hub, over the primary Supabase PostgreSQL connection: the only writer of public.data_records. */
+/** The rows the owner's own systems put in the hub, over the primary PostgreSQL connection: the only writer of public.data_records. */
 export class DataRecordsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

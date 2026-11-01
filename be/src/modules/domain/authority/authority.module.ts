@@ -4,7 +4,7 @@ import { AuthorityService } from "./authority.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./authority.module-definition"
 
 @Module({})
-/** The owner's goals and house rules of a workspace, over the primary Supabase PostgreSQL connection. */
+/** The owner's goals and house rules of a workspace, over the primary PostgreSQL connection. */
 export class AuthorityModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

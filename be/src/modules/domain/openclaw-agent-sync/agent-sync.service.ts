@@ -67,7 +67,7 @@ const SYNCED_COLUMNS = [
 
 @Injectable()
 /**
- * One-way sync of an agent's OpenClaw workspace from Supabase: the bundle is built from the database, written file by file (changed
+ * One-way sync of an agent's OpenClaw workspace from the NIVO database: the bundle is built from the database, written file by file (changed
  * files only), the agent is registered in openclaw.json after its files are complete, and what was written is recorded on
  * `openclaw_agent_sync`. When the hash, the files on disk and the registration are all current only the check time moves. The job
  * `agents.sync` calls `process`. It is the `agent_sync` reactor of `installation_changed`: a change of an installation, its context

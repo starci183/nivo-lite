@@ -7,7 +7,7 @@
 # the console every sign-in and try-it action leads to; also the target of the 308 redirects of paths the landing does not own).
 #
 # NEXT_PUBLIC_* values are published to every browser by design, so they are the one kind of build argument; the landing has no server-only
-# variable, no Supabase value and no API address. It follows the image canon (knowledge/hfs/docker.md) and diverges from it nowhere.
+# variable and no API address. It follows the image canon (knowledge/hfs/docker.md) and diverges from it nowhere.
 # No secret is built in and .dockerignore keeps credentials out of the build context.
 
 FROM node:22.14.0-alpine3.21 AS manifests

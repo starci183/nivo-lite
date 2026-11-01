@@ -1,6 +1,6 @@
 # Cleaning production down to the kept workspaces
 
-`cli cleanup-workspaces run` removes every workspace that is not kept, and every Supabase Auth account that no kept workspace holds.
+`cli cleanup-workspaces run` removes every workspace that is not kept, and every account that no kept workspace holds.
 At the v0.3.0 production deploy the owner uses it to keep the HAKUEN workspace only. The command is permanent and has no undo, so
 take the native backup (`starci app db dump`) and verify its receipt first.
 
@@ -34,8 +34,8 @@ take the native backup (`starci app db dump`) and verify its receipt first.
   exists and the fresh digest equals the reviewed one. A workspace, a row count or an account that changed since the review
   changes the digest, and then nothing is deleted. It deletes the workspaces first, through the prune of the workspaces owner
   (`WorkspacePruneService`), one by one, through the schema cascade. `platform_audit` and `app_errors` keep their rows with the
-  workspace link cleared. Then it deletes the orphan accounts one at a time through Supabase Auth
-  (`SupabaseAccountsService.deleteUser`). It never runs raw DELETE SQL and never resets the database.
+  workspace link cleared. Then it deletes the orphan accounts one at a time through the own-auth account doors
+  (`IdentityAccountsService.deleteUser`). It never runs raw DELETE SQL and never resets the database.
 - The first failed account delete stops the run. The command prints `FAILED account <id>: <reason>` and the receipt line with
   `deletedUsers` and `remainingUsers`, then exits with the `UserDeleteFailed` error. A re-run is safe: take a new dry
   run, which finds only what is left, and execute with its digest.

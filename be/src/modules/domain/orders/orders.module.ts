@@ -8,7 +8,7 @@ import { OrdersReadService } from "./orders-read.service"
 import { OrdersAutomationReadService } from "./orders-automation-read.service"
 
 @Module({})
-/** The orders of a workspace over the primary Supabase PostgreSQL connection: the only writer of public.orders. */
+/** The orders of a workspace over the primary PostgreSQL connection: the only writer of public.orders. */
 export class OrdersModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

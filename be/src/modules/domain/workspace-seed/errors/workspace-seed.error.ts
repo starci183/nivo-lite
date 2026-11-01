@@ -3,7 +3,7 @@ import type { ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the workspace-seed capability. */
 export enum WorkspaceSeedErrorCode {
-    /** Supabase Auth refused an account call. */
+    /** The own-auth account door refused an account call. */
     AuthFailed = "WORKSPACE_SEED_AUTH_FAILED",
     /** A write answered no row where it must answer one. */
     RowMissing = "WORKSPACE_SEED_ROW_MISSING",

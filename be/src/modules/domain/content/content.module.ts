@@ -4,7 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./content.module-definiti
 import { ContentService } from "./content.service"
 
 @Module({})
-/** The content capability over the primary Supabase PostgreSQL connection: the scheduled content automations of the workspaces. */
+/** The content capability over the primary PostgreSQL connection: the scheduled content automations of the workspaces. */
 export class ContentModule extends ConfigurableModuleClass {
     /** Registers the capability once in the app that runs the content tick. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

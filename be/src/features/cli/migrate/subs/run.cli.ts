@@ -1,8 +1,8 @@
 import { CommandRunner, SubCommand } from "nest-commander"
 import { MigrationRunnerService } from "@modules/platform/database"
 
-@SubCommand({ name: "run", description: "Push the pending Supabase migrations" })
-/** `cli migrate run`: delegates schema authority to the managed Supabase db:push script. */
+@SubCommand({ name: "run", description: "Push the pending migrations" })
+/** `cli migrate run`: delegates schema authority to the managed db:push script. */
 export class RunCli extends CommandRunner {
     constructor(private readonly migrations: MigrationRunnerService) {
         super()

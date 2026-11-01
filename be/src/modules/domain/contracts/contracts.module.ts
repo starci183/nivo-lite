@@ -8,7 +8,7 @@ import { ContractRenewalService } from "./contract-renewal.service"
 import { ContractsService } from "./contracts.service"
 
 @Module({})
-/** The recurring sales contracts of a workspace over the primary Supabase PostgreSQL connection. */
+/** The recurring sales contracts of a workspace over the primary PostgreSQL connection. */
 export class ContractsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

@@ -7,7 +7,7 @@ import { ContentAiStoreService } from "./content-ai-store.service"
 import { ContentEditorService } from "./content-editor.service"
 
 @Module({})
-/** The content-items capability over the primary Supabase PostgreSQL connection: the posts the content automations read and the ideas they write. */
+/** The content-items capability over the primary PostgreSQL connection: the posts the content automations read and the ideas they write. */
 export class ContentItemsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

@@ -79,7 +79,7 @@ beforeAll(async () => {
     await persistChatMarkers(world.db.primary, identity)
 })
 
-describe("chat typing SSE delivery over private Supabase and shared Redis", () => {
+describe("chat typing SSE delivery over private PostgreSQL and shared Redis", () => {
     it("realtime/subscriber-receives-push: a member receives another member's start and stop as default SSE messages", async () => {
         await withTypingReplicas(world, identity, async (a) => {
             const stream = await a.open({

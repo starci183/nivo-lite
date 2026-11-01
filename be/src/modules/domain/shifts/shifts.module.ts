@@ -16,7 +16,7 @@ import { ShiftsWorkbenchService } from "./shifts-workbench.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./shifts.module-definition"
 
 @Module({})
-/** The shifts capability over the primary Supabase PostgreSQL connection: the weekly schedule, swaps and leave, and the quick import. */
+/** The shifts capability over the primary PostgreSQL connection: the weekly schedule, swaps and leave, and the quick import. */
 export class ShiftsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

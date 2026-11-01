@@ -5,7 +5,7 @@ import { AgentBindingsService } from "./agent-bindings.service"
 import { BINDING_AGENTS } from "./agent-connections.decorators"
 
 @Module({})
-/** Which agent listens and speaks on which connection, over the primary Supabase PostgreSQL connection. */
+/** Which agent listens and speaks on which connection, over the primary PostgreSQL connection. */
 export class AgentConnectionsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

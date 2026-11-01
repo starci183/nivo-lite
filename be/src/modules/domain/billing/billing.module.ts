@@ -12,7 +12,7 @@ import { CassoProofService } from "./casso-proof.service"
 import { PayosProofService } from "./payos-proof.service"
 import { BillingEventsReadService } from "./billing-events-read.service"
 @Module({})
-/** The billing capability over the primary Supabase connection: plans, payment orders, SePay settlement and the payment feeds. */
+/** The billing capability over the primary PostgreSQL connection: plans, payment orders, SePay settlement and the payment feeds. */
 export class BillingModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

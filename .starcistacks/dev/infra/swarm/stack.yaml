@@ -1,4 +1,4 @@
-# NIVO local development: Supabase stays under the Supabase CLI; this Swarm runs the api, console and landing.
+# NIVO local development: the database is the local db container (npm run db:create); this Swarm runs the api, console and landing.
 # Build the three images from the repository root before deploying (Swarm never builds images):
 #   docker build -f be/apps/api/Dockerfile -t <registry>/nivo-lite-api:dev .
 #   docker build -f be/apps/mcp/Dockerfile -t <registry>/nivo-lite-mcp:dev .
@@ -10,11 +10,11 @@
 #     --build-arg NEXT_PUBLIC_SITE_URL=http://landing.localhost --build-arg NEXT_PUBLIC_APP_URL=http://localhost .
 # Push all three images, then write their digest references into a Compose override (services: nivo-api: {image: <ref>@sha256:...}, nivo-mcp: {image: ...}, nivo-web-app: {image: ...}, nivo-landing: {image: ...});
 # the digests in this file are placeholders that the override replaces.
-# With Supabase running, supply the same local api.dev.env as before, then deploy from the root:
+# With the db container running, supply the same local api.dev.env as before, then deploy from the root:
 #   docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml -c dev.images.override.yaml | docker stack deploy -c - nivo-dev
 # The sole ingress publishes port 80 (ingress mode) and routes by host: http://api.localhost (api), http://landing.localhost (landing) and every other host,
 # such as http://localhost (web console). The *.localhost names resolve to the loopback address without any DNS record.
-# Use a local single-manager Swarm; the Supabase URLs must be reachable from its containers.
+# Use a local single-manager Swarm; the database address must be reachable from its containers.
 version: "3.8"
 
 services:

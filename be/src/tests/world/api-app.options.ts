@@ -91,7 +91,7 @@ const storageProof = {
 }
 
 /**
- * The api as it runs, over the local Supabase database the world points at (the global setup names it), with every provider set to
+ * The api as it runs, over the local PostgreSQL database the world points at (the global setup names it), with every provider set to
  * an address nothing answers: a proof of the api goes through its real composition and never reaches a provider.
  */
 const localApiOptions = (): ApiOptions => ({
