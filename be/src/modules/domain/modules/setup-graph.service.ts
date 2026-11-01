@@ -1,6 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { InjectSetupGraph } from "./modules.decorators"
-import type { SetupApplier, SetupGraphPort } from "./modules.port"
+import type { SetupApplicant, SetupApplier, SetupGraphPort } from "./modules.port"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 
 @Injectable()
@@ -24,7 +24,12 @@ export class SetupGraphService {
             throw new ModulesError({ code: ModulesErrorCode.GraphGapsOpen })
     }
 
-    /** Publishes the draft of the graph with the version the setup became; nothing without a graph. */
+    /** Refuses before anything is written when the graph would refuse the publish; answers the newest graph version number, 0 without a graph. */
+    async checkPublish(applicant: SetupApplicant): Promise<number> {
+        return (await this.graph?.checkPublish(applicant)) ?? 0
+    }
+
+    /** Publishes the draft of the graph as the version the setup became; nothing without a graph. */
     async publish(applier: SetupApplier): Promise<void> {
         await this.graph?.publish(applier)
     }

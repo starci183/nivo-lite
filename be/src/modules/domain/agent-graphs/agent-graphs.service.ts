@@ -83,6 +83,8 @@ export interface PublishInput {
     readonly memberId: string | null
     /** The context version id. */
     readonly contextVersionId: string | null
+    /** The number the version takes (the setup gives it the number of its context version); the next one when absent. It must be above the newest. */
+    readonly version?: number | undefined
 }
 
 /** A graph, or null when the agent has none or it cannot be read. */
@@ -196,6 +198,16 @@ export class AgentGraphsService {
         })
     }
 
+    /** The number of the newest version of the agent; 0 before the first. */
+    async latestVersionOf(workspaceId: string, agentId: string): Promise<number> {
+        const last = await this.entityManager.findOne(AgentGraphVersionEntity, {
+            select: { version: true },
+            where: { workspaceId, agentId },
+            order: { version: "DESC" },
+        })
+        return last?.version ?? 0
+    }
+
     /** The versions of the agent, newest first. */
     async versionsOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphVersionView>> {
         const rows = await this.entityManager.find(AgentGraphVersionEntity, {
@@ -305,12 +317,14 @@ export class AgentGraphsService {
             where: { agentId: input.agentId },
             order: { version: "DESC" },
         })
+        const next = input.version ?? (last?.version ?? 0) + 1
+        if (next <= (last?.version ?? 0)) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DraftConflict })
         const version = await manager.save(
             AgentGraphVersionEntity,
             manager.create(AgentGraphVersionEntity, {
                 workspaceId: input.workspaceId,
                 agentId: input.agentId,
-                version: (last?.version ?? 0) + 1,
+                version: next,
                 document: input.document,
                 documentHash: hashOf(input.document),
                 contextVersionId: input.contextVersionId,

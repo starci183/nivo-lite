@@ -181,7 +181,12 @@ export class SetupChatService {
         if (last !== null && installation.activeContextVersionId === last.id && sameSnapshot(last.snapshot, snapshot)) {
             throw new ModulesError({ code: ModulesErrorCode.SetupUnchanged })
         }
-        const version = (last?.version ?? 0) + 1
+        const graphVersion = await this.graph.checkPublish({
+            workspaceId,
+            principalId,
+            installationId: installation.id,
+        })
+        const version = Math.max(last?.version ?? 0, graphVersion) + 1
         const created = await this.versions.insert({
             workspaceId,
             installationId: installation.id,
@@ -200,6 +205,7 @@ export class SetupChatService {
             workspaceId,
             principalId,
             installationId: installation.id,
+            version,
             contextVersionId: created.id,
         })
         await this.readiness.settle(workspaceId, installation.id)

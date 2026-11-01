@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { SetupApplier, SetupBranchChange, SetupGraphPort } from "@modules/domain/modules"
+import type { SetupApplicant, SetupApplier, SetupBranchChange, SetupGraphPort } from "@modules/domain/modules"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
@@ -28,7 +28,7 @@ const nameKey = (name: string): string =>
 /**
  * The action graph of an installation as the setup chat sees it: a confirmed branch is written into the draft with the words of the owner
  * as its source, the first vague place of the draft is what the next turn asks about, and applying the setup publishes the draft with the
- * context version it became (under the right of the seat that applies; a widening stays the owner's).
+ * context version and the number it became (under the right of the seat that applies; a widening stays the owner's).
  */
 export class AgentGraphSetupService implements SetupGraphPort {
     constructor(
@@ -72,10 +72,29 @@ export class AgentGraphSetupService implements SetupGraphPort {
         return only !== undefined && others.length === 0 ? only.memberId : ""
     }
 
-    /** Publishes the draft of the graph with the context version the setup became; a draft that did not change publishes nothing. */
+    /**
+     * Refuses, before the setup writes anything, when publishing the draft would be refused (a problem in the graph, or a widening applied
+     * by a manager), and answers the number of the newest graph version, 0 when the installation has no graph.
+     */
+    async checkPublish(applicant: SetupApplicant): Promise<number> {
+        const state = await this.graphs.stateOfInstallation(applicant.installationId)
+        if (state === null) return 0
+        const seat = await this.seats.activeSeatOfUser(applicant.workspaceId, applicant.principalId)
+        if (seat !== null)
+            await this.publishing.requirePublishable(applicant.workspaceId, state.agentId, {
+                memberId: seat.memberId,
+                role: seat.role,
+            })
+        return this.graphs.latestVersionOf(applicant.workspaceId, state.agentId)
+    }
+
+    /**
+     * Publishes the draft of the graph as the version the setup became, with its context version and its number, even when the map did
+     * not change; an owner applying makes the graph decide, a manager leaves the mode as it was.
+     */
     async publish(applier: SetupApplier): Promise<void> {
         const state = await this.graphs.stateOfInstallation(applier.installationId)
-        if (state === null || JSON.stringify(state.draft) === JSON.stringify(state.active)) return
+        if (state === null) return
         const seat = await this.seats.activeSeatOfUser(applier.workspaceId, applier.principalId)
         if (seat === null) return
         await this.publishing.publishDraft(
@@ -85,6 +104,7 @@ export class AgentGraphSetupService implements SetupGraphPort {
             "",
             "chat",
             applier.contextVersionId,
+            applier.version,
         )
     }
 

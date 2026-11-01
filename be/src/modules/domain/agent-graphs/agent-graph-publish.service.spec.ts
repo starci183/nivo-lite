@@ -168,6 +168,62 @@ describe("AgentGraphPublishService.publishDraft", () => {
     })
 })
 
+describe("AgentGraphPublishService.publishDraft from the setup chat", () => {
+    it("makes the graph decide when the owner publishes from the setup chat, as from the map, and numbers the version as asked", async () => {
+        const state = stateOf()
+        const { service, graphs } = await build(state)
+
+        await service.publishDraft("ws-1", "agent-1", OWNER, "", "chat", "cv-7", 7)
+
+        expect(graphs.publish).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            document: state.draft,
+            kind: "chat",
+            note: "",
+            memberId: "boss",
+            contextVersionId: "cv-7",
+            version: 7,
+        })
+        expect(graphs.setMode).toHaveBeenCalledWith("ws-1", "agent-1", "enforced")
+    })
+
+    it("leaves the mode as it was when a manager publishes from the setup chat, and when the owner restores", async () => {
+        const { service, graphs } = await build(stateOf())
+
+        await service.publishDraft("ws-1", "agent-1", MANAGER, "", "chat", "cv-7", 7)
+        await service.restore("ws-1", "agent-1", "version-1", OWNER)
+
+        expect(graphs.setMode).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphPublishService.requirePublishable", () => {
+    it("passes a draft that is whole and does not widen, writing nothing", async () => {
+        const { service, graphs } = await build(stateOf())
+
+        await expect(service.requirePublishable("ws-1", "agent-1", MANAGER)).resolves.toBeUndefined()
+
+        expect(graphs.publish).not.toHaveBeenCalled()
+        expect(graphs.setMode).not.toHaveBeenCalled()
+    })
+
+    it("refuses a manager a widening with its own code, lets the owner through, and refuses an agent with no graph", async () => {
+        const state = stateOf({ draft: raised(stateOf()) })
+        const manager = await build(state)
+        const owner = await build(state)
+        const none = await build(null)
+
+        expect(await codeOf(manager.service.requirePublishable("ws-1", "agent-1", MANAGER))).toBe(
+            AgentGraphsErrorCode.WidensNeedsOwner,
+        )
+        await expect(owner.service.requirePublishable("ws-1", "agent-1", OWNER)).resolves.toBeUndefined()
+        expect(await codeOf(none.service.requirePublishable("ws-1", "agent-1", OWNER))).toBe(
+            AgentGraphsErrorCode.GraphNotFound,
+        )
+    })
+})
+
 describe("AgentGraphPublishService.publishDraft without a fact counted in dong", () => {
     it("compares a graph with no amount in it when the module has no fact counted in dong", async () => {
         const draft: GraphDocument = { nodes: [], rights: [] }
