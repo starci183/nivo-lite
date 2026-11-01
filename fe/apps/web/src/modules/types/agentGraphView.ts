@@ -207,6 +207,8 @@ export interface AgentGraphBranchRowView {
 export interface AgentGraphBranchesView {
     readonly title: string
     readonly hint: string
+    /** What the list says when no branch is drawn. */
+    readonly emptyLabel: string
     readonly rows: ReadonlyArray<AgentGraphBranchRowView>
 }
 

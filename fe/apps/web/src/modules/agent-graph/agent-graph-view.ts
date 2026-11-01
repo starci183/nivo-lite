@@ -116,6 +116,7 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
                 value: "proposals",
                 label: proposals === 0 ? t("tabProposals") : t("tabProposalsN", { count: proposals }),
             },
+            { value: "versions", label: t("tabVersions") },
         ],
         inspector,
         detail: detailViewOf(data, ui.selectedKey, ctx),

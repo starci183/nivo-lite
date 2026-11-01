@@ -14,18 +14,20 @@ export const useDriveFacts = (enabled = true): DataSlot<ReadonlyArray<Connection
     const usage = useQueryKnowledgeUsageSwr(enabled)
     const usageView = useUsageView(usage.data)
     return mapSlot(slot, (page) => [
-        { id: "scope", label: t("tileScope"), value: t("tileScopeValue"), meta: t("tileScopeMeta") },
+        { id: "scope", label: t("tileScope"), value: t("tileScopeValue"), meta: t("tileScopeMeta"), isText: true },
         {
             id: "account",
             label: t("tileAccount"),
             value: page.email === "" ? t("factsNone") : page.email,
             meta: t("tileAccountMeta"),
+            isText: true,
         },
         {
             id: "usage",
             label: t("tileUsage"),
             value: usageView?.valueLabel ?? "-",
             meta: t("tileUsageMeta"),
+            isText: true,
         },
     ])
 }

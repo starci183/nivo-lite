@@ -119,7 +119,8 @@ const waitsForOf = (agent: OfficeAgent, words: OfficeWords): string | null =>
 /** The status line of an agent that is not on duty: waiting for a connection, or paused. */
 const offDutyOf = (agent: OfficeAgent, words: OfficeWords): string => {
     if (agent.waitsFor !== null) return words.t("waitingConnection")
-    if (agent.lifecycle === "needs_setup") return words.t("offNeedsSetup")
+    if (agent.lifecycle === "needs_setup" || agent.lifecycle === "notInstalled") return words.t("offNeedsSetup")
+    if (agent.lifecycle === "needs_connection") return words.t("waitingConnection")
     if (agent.lifecycle === "ready") return words.t("offReady")
     return words.t("paused")
 }

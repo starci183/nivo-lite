@@ -146,6 +146,8 @@ export interface ConnectionFactView {
     readonly label: string
     readonly value: string
     readonly meta?: string
+    /** The value is words, not a figure: it draws in a text style, never the large face of a key figure. */
+    readonly isText?: boolean
 }
 
 /** One line of a provider page list (a check, an event, a file being read): a title, the line under it and a verdict badge. */

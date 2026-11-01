@@ -1,4 +1,4 @@
-import { DescriptionList, PaneSection } from "@starci/grammar/common"
+import { DescriptionList, PaneSection, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { ConnectionFactView, DataSlot, SlotLabels } from "@/modules/types"
 
@@ -35,7 +35,7 @@ export const ConnectionHealthTilesBase = (props: ConnectionHealthTilesBaseProps)
                     items={facts.map((fact) => ({
                         id: fact.id,
                         term: fact.label,
-                        description: fact.value,
+                        description: fact.isText === true ? <Text weight="semibold">{fact.value}</Text> : fact.value,
                         ...(fact.meta === undefined ? {} : { meta: fact.meta }),
                     }))}
                 />

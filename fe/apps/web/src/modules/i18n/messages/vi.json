@@ -433,6 +433,7 @@
     "publishNote": "Xuất bản {count} thay đổi trong nháp",
     "branchesTitle": "Các nhánh",
     "branchesHint": "NIVO đọc số thật trong sổ, rồi đi theo nhánh phù hợp:",
+    "branchesEmpty": "Agent này chưa có nhánh nào.",
     "openDetail": "Xem",
     "runSteps": "Các bước của lượt chạy",
     "runBack": "Quay lại bản đồ",
@@ -4380,6 +4381,7 @@
     "syncNone": "Chưa đồng bộ lần nào",
     "syncError": "Lỗi đồng bộ: {reason}",
     "syncReasonUnknown": "chưa đồng bộ được, hãy thử lại sau",
+    "syncReasonWorkspaceUnavailable": "không gian làm việc của agent chưa sẵn sàng, hãy thử lại sau",
     "syncDrift": "Đang lệch: Supabase v{active}, OpenClaw v{synced}",
     "syncNever": "chưa có",
     "syncOkNone": "Bản trên OpenClaw: chưa có phiên bản ngữ cảnh · {ago}",
@@ -7437,7 +7439,11 @@
     "tool_sepay-transactions-list": "Các khoản tiền vào tài khoản ngân hàng gần nhất của workspace: số tiền, mã tham chiếu, người chuyển, trạng thái; lọc theo trạng thái và thời điểm.",
     "tool_sepay-transactions-debits": "Các khoản tiền ra gần nhất của workspace, ví dụ trả nhà cung cấp, cùng các trường và bộ lọc như tiền vào.",
     "tool_einvoice-list": "Hóa đơn điện tử (XML TT78) nhận được trong hộp thư hóa đơn: người bán, số hóa đơn, ngày, tổng tiền.",
-    "tool_einvoice-get": "Một hóa đơn điện tử kèm các dòng hàng, theo mã mà einvoice.list trả về."
+    "tool_einvoice-get": "Một hóa đơn điện tử kèm các dòng hàng, theo mã mà einvoice.list trả về.",
+    "toolName_sepay-transactions-list": "Tiền vào tài khoản ngân hàng",
+    "toolName_sepay-transactions-debits": "Tiền ra khỏi tài khoản ngân hàng",
+    "toolName_einvoice-list": "Danh sách hóa đơn điện tử",
+    "toolName_einvoice-get": "Một hóa đơn điện tử"
   },
   "workThreads": {
     "loadMore": "Tải thêm luồng việc",
