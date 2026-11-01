@@ -33,8 +33,8 @@ export interface ToolPrincipal {
     readonly workspaceId: string
 }
 
-/** What woke the turn a bridge call serves. */
-export type BridgeSource = "customer" | "tag" | "internal" | "schedule"
+/** What woke the turn a bridge call serves: the key of the adapter that normalized the wake. */
+export type BridgeSource = "customer" | "tag" | "internal" | "schedule" | (string & Record<never, never>)
 
 /** The running turn a bridge call belongs to: read from the turn row and never from what the model sent. */
 export interface BridgeTurn extends ToolPrincipal {

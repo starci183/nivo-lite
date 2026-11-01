@@ -10,6 +10,7 @@ import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentTriggerEntity } from "./persistence/entities"
 import type {
     AgentTriggerRecord,
+    AgentWakeSource,
     AgentTriggerWrite,
     OptionalAgentTriggerRecord,
     OptionalDate,
@@ -38,18 +39,18 @@ export class AgentTriggersService {
         return rows.map(toTriggerRecord)
     }
 
-    /** The enabled event triggers of the workspace that name this event, at most `limit`, so an internal event wakes only the agents that asked for it. */
-    async enabledForEvent(
+    /**
+     * The enabled event triggers of the workspace that name this event and answer to this source, at most `limit`: a trigger that names
+     * sources answers only to those, and a trigger that names none answers to every source.
+     */
+    async enabledForSource(
         workspaceId: string,
         eventName: string,
         limit: number,
+        source: AgentWakeSource,
     ): Promise<ReadonlyArray<AgentTriggerRecord>> {
-        const rows = await this.entityManager.find(AgentTriggerEntity, {
-            where: { workspaceId, kind: "event", eventName, enabled: true },
-            order: { createdAt: "ASC" },
-            take: limit,
-        })
-        return rows.map(toTriggerRecord)
+        const rows = await this.eventRows(workspaceId, eventName, limit)
+        return rows.filter((row) => row.sources.length === 0 || row.sources.includes(source)).map(toTriggerRecord)
     }
 
     /** One trigger by id, or null. */
@@ -97,6 +98,14 @@ export class AgentTriggersService {
         await this.access.manager(userId, workspaceId)
         const removed = await this.entityManager.delete(AgentTriggerEntity, { id: triggerId, agentId, workspaceId })
         if (removed.affected === 0) throw new AgentWorkError({ code: AgentWorkErrorCode.TriggerNotFound })
+    }
+
+    private eventRows(workspaceId: string, eventName: string, limit: number): Promise<Array<AgentTriggerEntity>> {
+        return this.entityManager.find(AgentTriggerEntity, {
+            where: { workspaceId, kind: "event", eventName, enabled: true },
+            order: { createdAt: "ASC" },
+            take: limit,
+        })
     }
 
     private async create(

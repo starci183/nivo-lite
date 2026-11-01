@@ -5,6 +5,7 @@ import {
     TASK_WAKE_MAX_MS,
     TASK_WAKE_MIN_MS,
     attemptBudgetOf,
+    awaitsAnswer,
     backgroundCapSpent,
     boundedWakeAt,
     breakerOpen,
@@ -25,6 +26,7 @@ const buildSubject = async () => {
                 provide: SUBJECT,
                 useValue: {
                     attemptBudgetOf,
+                    awaitsAnswer,
                     backgroundCapSpent,
                     boundedWakeAt,
                     breakerOpen,
@@ -193,5 +195,25 @@ describe("wakeProgressOf", () => {
         expect(wakeProgressOf("skipped")).toBe("done")
         expect(wakeProgressOf("dead")).toBe("failed")
         expect(wakeProgressOf("failed")).toBe("failed")
+    })
+})
+
+describe("a source the table does not know", () => {
+    it("has no priority or budget, is not background, does not restore and does not await an answer", async () => {
+        const { priorityOf, attemptBudgetOf, isBackground, restoresHeldWake, awaitsAnswer } = await buildSubject()
+
+        expect(() => priorityOf("unrecorded")).toThrow()
+        expect(() => attemptBudgetOf("unrecorded")).toThrow()
+        expect(isBackground("unrecorded")).toBe(false)
+        expect(restoresHeldWake("unrecorded", NOW, NOW)).toBe(false)
+        expect(awaitsAnswer("unrecorded")).toBe(false)
+    })
+})
+
+describe("awaitsAnswer", () => {
+    it("is true for a customer only among the four built-in sources", async () => {
+        const { awaitsAnswer } = await buildSubject()
+
+        expect(["customer", "tag", "internal", "schedule"].map(awaitsAnswer)).toEqual([true, false, false, false])
     })
 })

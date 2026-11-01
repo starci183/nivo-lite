@@ -47,6 +47,7 @@ export class AgentWorkModule extends ConfigurableModuleClass {
             ],
             exports: [
                 AgentTurnQueueModule,
+                AgentWorkAccessService,
                 AgentWakeService,
                 AgentWakeRetentionService,
                 AgentDrainService,

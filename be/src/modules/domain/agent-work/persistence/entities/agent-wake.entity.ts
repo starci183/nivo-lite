@@ -33,6 +33,10 @@ export class AgentWakeEntity extends UuidAbstractEntity {
     @Column({ name: "max_attempts", type: "smallint", default: 3 })
     maxAttempts!: number
 
+    /** True for work nobody waits for, from the traits of the source when the wake was written; it spends the day's cap. */
+    @Column({ name: "background", type: "boolean", default: false })
+    background!: boolean
+
     /** Ids and flags only. */
     @Column({ name: "context", type: "jsonb", default: () => "'{}'::jsonb" })
     context!: AgentWakeContext

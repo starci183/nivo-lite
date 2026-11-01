@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { wakeSources } from "./agent-wake-source.policy"
 import { contextOf, parseBegin, parseDue, parseFinish, parsePropose } from "./agent-work-results.policy"
 
 const SUBJECT = Symbol("agent-work-results.policy")
@@ -116,6 +117,36 @@ describe("contextOf", () => {
         const { contextOf } = await buildSubject()
         expect(contextOf(null)).toEqual({})
         expect(contextOf("text")).toEqual({})
+    })
+})
+
+describe("contextOf for an inbound wake", () => {
+    it("keeps the event text and the pinned intent, which are text like any other key", async () => {
+        const { contextOf } = await buildSubject()
+        expect(contextOf({ inbound: '{"eventType":"x"}', intent: "confirm_order", inbound2: "dropped" })).toEqual({
+            inbound: '{"eventType":"x"}',
+            intent: "confirm_order",
+        })
+    })
+})
+
+describe("parseBegin for a source an adapter added", () => {
+    it("reads a wake of a registered source and refuses one nobody registered", async () => {
+        const { parseBegin } = await buildSubject()
+        wakeSources.add("results_spec_adapter", {
+            priority: 25,
+            maxAttempts: 3,
+            scopedToConversation: false,
+            background: false,
+            restoresHeld: true,
+            awaitsAnswer: false,
+        })
+
+        expect(parseBegin(begun({ source: "results_spec_adapter" }), "agent-1", "agent")).toMatchObject({
+            result: "begun",
+            turn: { source: "results_spec_adapter" },
+        })
+        expect(parseBegin(begun({ source: "never_registered" }), "agent-1", "agent")).toBeNull()
     })
 })
 

@@ -33,6 +33,10 @@ export class AgentTriggerEntity extends UuidAbstractEntity {
     @Column({ name: "event_name", type: "text", nullable: true })
     eventName!: string | null
 
+    /** The sources an event trigger answers to (adapter keys); empty answers to every source. */
+    @Column({ name: "sources", type: "text", array: true, default: () => "'{}'" })
+    sources!: Array<string>
+
     /** The probe that decides whether a wake has work, or null for always. */
     @Column({ name: "probe_key", type: "text", nullable: true })
     probeKey!: string | null

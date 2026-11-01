@@ -46,7 +46,9 @@ const build = async ({ triggers = [], installation = runtimeInstallationOf() }: 
     const tx = fakeTransaction(mockEntityManager())
     const inbox = fakeInbox()
     const installations = mock<InstallationDirectory>({ byId: jest.fn().mockResolvedValue(installation) })
-    const triggerService = mock<AgentTriggersService>({ enabledForEvent: jest.fn().mockResolvedValue(triggers) })
+    const triggerService = mock<AgentTriggersService>({
+        enabledForSource: jest.fn().mockResolvedValue(triggers),
+    })
     const wakes = mock<AgentWakeService>({ wake: jest.fn().mockResolvedValue(true) })
     const sync = mock<AgentTriggerSyncService>({ seed: jest.fn().mockResolvedValue(undefined) })
     const moduleRef = await Test.createTestingModule({
@@ -73,7 +75,7 @@ describe("AgentEventWakesService.eventHappened", () => {
         await expect(service.eventHappened(FACT, CLAIM)).resolves.toBeUndefined()
 
         expect(inbox.claimed).toEqual([{ source: CLAIM.consumer, eventId: CLAIM.dedupeKey }])
-        expect(triggerService.enabledForEvent).toHaveBeenCalledWith("ws-1", "bank_credit_booked", 100)
+        expect(triggerService.enabledForSource).toHaveBeenCalledWith("ws-1", "bank_credit_booked", 100, "internal")
         expect(wakes.wake.mock.calls.map(([, wake]) => [wake.agentId, wake.eventKey, wake.context])).toEqual([
             [
                 "agent-1",
@@ -100,6 +102,26 @@ describe("AgentEventWakesService.eventHappened", () => {
 
         expect(inbox.claims).toHaveLength(2)
         expect(wakes.wake.mock.calls).toHaveLength(1)
+    })
+})
+
+describe("AgentEventWakesService.agentsFor", () => {
+    it("answers each agent that asked for the event type and answers to the source, once, with the probe of its first trigger", async () => {
+        const { service, triggerService } = await build({
+            triggers: [triggerOf("agent-1", "money_in"), triggerOf("agent-2", null), triggerOf("agent-1", "other")],
+        })
+
+        await expect(service.agentsFor("ws-1", "invoice.paid", "generic_webhook")).resolves.toEqual([
+            { agentId: "agent-1", probeKey: "money_in" },
+            { agentId: "agent-2", probeKey: null },
+        ])
+        expect(triggerService.enabledForSource).toHaveBeenCalledWith("ws-1", "invoice.paid", 100, "generic_webhook")
+    })
+
+    it("answers nobody when no trigger matched", async () => {
+        const { service } = await build()
+
+        await expect(service.agentsFor("ws-1", "invoice.paid", "generic_webhook")).resolves.toEqual([])
     })
 })
 

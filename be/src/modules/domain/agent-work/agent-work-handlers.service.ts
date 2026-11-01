@@ -4,6 +4,7 @@ import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentWakeSource } from "./agent-work.contracts"
 import type {
     AgentTurnExecutor,
+    AgentWorkFallback,
     AgentWorkHandler,
     OptionalAgentTurnExecutor,
     OptionalAgentWorkHandler,
@@ -17,6 +18,7 @@ import type {
  */
 export class AgentWorkHandlersService {
     private readonly handlers = new Map<AgentWakeSource, AgentWorkHandler>()
+    private readonly fallbacks: Array<AgentWorkFallback> = []
 
     constructor(@Optional() @InjectAgentTurnExecutor() private readonly executor?: AgentTurnExecutor) {}
 
@@ -30,13 +32,18 @@ export class AgentWorkHandlersService {
         }
     }
 
+    /** Registers a fallback: it answers the sources it names that have no handler of their own, in the order fallbacks were added. */
+    addFallback(fallback: AgentWorkFallback): void {
+        this.fallbacks.push(fallback)
+    }
+
     /** The executor that runs the turns, or undefined while no capability bound one. */
     executorOf(): OptionalAgentTurnExecutor {
         return this.executor
     }
 
-    /** The handler of a source, or undefined when none registered. */
+    /** The handler of a source: the one registered for it, else the first fallback that takes it, else undefined. */
     of(source: AgentWakeSource): OptionalAgentWorkHandler {
-        return this.handlers.get(source)
+        return this.handlers.get(source) ?? this.fallbacks.find((fallback) => fallback.answers(source))
     }
 }

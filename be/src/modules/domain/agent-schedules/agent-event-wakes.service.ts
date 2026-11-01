@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentTriggersService, AgentWakeService } from "@modules/domain/agent-work"
+import type { AgentWakeSource } from "@modules/domain/agent-work"
 import { InjectInstallations } from "@modules/domain/agents"
 import type { InstallationDirectory } from "@modules/domain/agents"
 import { MODULE_CATALOG } from "@modules/domain/modules"
@@ -12,8 +13,10 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
 import { AgentTriggerSyncService } from "./agent-trigger-sync.service"
-import { EVENT_WAKE_AGENTS_MAX, triggersOfModule, wakeKeyOf } from "./agent-schedules.policy"
-import type { EventClaim, InstallationChange, InternalEventFact } from "./agent-schedules.contracts"
+import { EVENT_WAKE_AGENTS_MAX, firstPerAgent, triggersOfModule, wakeKeyOf } from "./agent-schedules.policy"
+import type { EventClaim, EventTarget, InstallationChange, InternalEventFact } from "./agent-schedules.contracts"
+
+const INTERNAL_SOURCE: AgentWakeSource = "internal"
 
 @Injectable()
 /**
@@ -38,11 +41,13 @@ export class AgentEventWakesService {
     eventHappened(fact: InternalEventFact, claim: EventClaim): Promise<void> {
         return this.entityManager.transaction(async (tx) => {
             if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, tx))) return
-            const rows = await this.triggers.enabledForEvent(fact.workspaceId, fact.eventName, EVENT_WAKE_AGENTS_MAX)
-            const firstPerAgent = rows.filter(
-                (row, at) => rows.findIndex((other) => other.agentId === row.agentId) === at,
+            const rows = await this.triggers.enabledForSource(
+                fact.workspaceId,
+                fact.eventName,
+                EVENT_WAKE_AGENTS_MAX,
+                INTERNAL_SOURCE,
             )
-            await eachInOrder(firstPerAgent, (trigger) =>
+            await eachInOrder(firstPerAgent(rows), (trigger) =>
                 this.wakes.wake(tx, {
                     workspaceId: fact.workspaceId,
                     agentId: trigger.agentId,
@@ -57,6 +62,19 @@ export class AgentEventWakesService {
                 }),
             )
         })
+    }
+
+    /**
+     * The agents of the workspace that hold an enabled event trigger for this event type and answer to this source, each once, with the probe of
+     * the first trigger that matched. The one matcher of events: an internal fact and an inbound adapter's event both ask here.
+     */
+    async agentsFor(
+        workspaceId: string,
+        eventType: string,
+        source: AgentWakeSource,
+    ): Promise<ReadonlyArray<EventTarget>> {
+        const rows = await this.triggers.enabledForSource(workspaceId, eventType, EVENT_WAKE_AGENTS_MAX, source)
+        return firstPerAgent(rows).map((row) => ({ agentId: row.agentId, probeKey: row.probeKey }))
     }
 
     /** Seeds the triggers the module of a changed installation declares for its agent; a change of the whole workspace seeds nothing. */
