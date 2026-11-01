@@ -1,20 +1,24 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
+import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
 import { AgentRunsService } from "./agent-runs.service"
 import { AgentRunsLogEvent } from "./agent-runs.log-events"
-import { InjectAgentRunWaitTimeout } from "./agent-runs.decorators"
+import { InjectAgentRunItemVerdicts, InjectAgentRunWaitTimeout } from "./agent-runs.decorators"
+import type { StepDecision } from "./agent-runs.contracts"
 import { SWEEP_LIMIT, WAIT_TIMEOUT } from "./policies/agent-runs.policy"
-import type { AgentRunWaitTimeout, RunDue, RunStepView, RunSweepReport, WaitExpiry } from "./agent-runs-engine.contracts"
+import type { AgentRunItemVerdicts, AgentRunWaitTimeout, RunDue, RunStepView, RunSweepReport } from "./agent-runs-engine.contracts"
 
-/** What the graph answers when nothing is wired to apply its timeout: the wait is over and nobody answered. */
-const ENDED: WaitExpiry = { kind: "ended" }
+/** The verdict of a wait that ran out: refused, by the clock. */
+const TIMED_OUT: StepDecision = { approved: false, by: "timeout" }
 
 /** What handling one due item did, for the report. */
 type Done = keyof RunSweepReport | null
@@ -28,18 +32,22 @@ type Done = keyof RunSweepReport | null
  */
 export class AgentRunSweepService {
     constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectLogger() private readonly logger: Logger,
         private readonly store: AgentRunStoreService,
+        private readonly handlers: AgentRunHandlersService,
         private readonly runs: AgentRunsService,
         private readonly steps: AgentRunStepsService,
         private readonly ledger: AgentStepLedgerService,
         private readonly compensation: AgentRunCompensationService,
         private readonly deadLetter: AgentRunDeadLetterService,
-        @Optional() @InjectAgentRunWaitTimeout() private readonly timeouts?: AgentRunWaitTimeout,
+        @InjectAgentRunWaitTimeout() private readonly timeouts: AgentRunWaitTimeout,
+        @InjectAgentRunItemVerdicts() private readonly verdicts: AgentRunItemVerdicts,
     ) {}
 
     /** Runs one pass and answers what it did. */
     async sweep(): Promise<RunSweepReport> {
+        const recovered = await this.recover()
         const due = await this.store.due(SWEEP_LIMIT)
         const done: Array<Done> = []
         await eachInOrder(due, async (item) => {
@@ -51,7 +59,26 @@ export class AgentRunSweepService {
             ready: count("ready"),
             compensating: count("compensating"),
             unspoken: count("unspoken"),
+            recovered,
         }
+    }
+
+    /**
+     * Reads the work item of every open wait first: an item that closed by a decision finishes its wait with that decision, whatever the
+     * deadline says, so a crash between the close and the resume never turns an approval into a timeout. Bounded to one batch.
+     */
+    private async recover(): Promise<number> {
+        const waits = await this.store.openWaits(SWEEP_LIMIT)
+        const known = await this.verdicts.verdictsOf(waits.flatMap((wait) => (wait.waitItemId === null ? [] : [wait.waitItemId])))
+        const resumed: Array<boolean> = []
+        await eachInOrder([...known], async ([itemId, decision]) => {
+            try {
+                resumed.push(await this.entityManager.transaction((tx) => this.runs.resumeWaiting(tx, itemId, decision)))
+            } catch (cause) {
+                this.logger.error(AgentRunsLogEvent.SweepItemFailed, cause, { kind: "recover", itemId })
+            }
+        })
+        return resumed.filter(Boolean).length
     }
 
     private async guarded(item: RunDue): Promise<Done> {
@@ -88,7 +115,7 @@ export class AgentRunSweepService {
     /** Applies the graph's timeout to a wait past its deadline; a wait the graph did not renew or answer stops visibly. */
     private async expireWait(item: RunDue, step: RunStepView, workItemId: string, signal: AbortSignal): Promise<void> {
         this.logger.warn(AgentRunsLogEvent.WaitExpired, { runId: item.runId, stepKey: step.stepKey })
-        const expiry = (await this.timeouts?.expire(workItemId)) ?? ENDED
+        const expiry = await this.timeouts.expire(workItemId)
         const view = (await this.store.viewsOf(item.runId)).find((candidate) => candidate.stepKey === step.stepKey)
         const fresh = await this.store.stepOf(item.runId, step.stepKey)
         const stillWaiting = fresh?.status === "running" && fresh.fence === step.fence && fresh.waitItemId !== null
@@ -97,6 +124,10 @@ export class AgentRunSweepService {
             await this.ledger.commit(view, { kind: "wait", workItemId, deadlineAt: expiry.deadlineAt })
             return
         }
-        await this.steps.fail(view, WAIT_TIMEOUT, false, signal)
+        if (this.handlers.of(view.kind)?.onDecided === undefined) {
+            await this.steps.fail(view, WAIT_TIMEOUT, false, signal)
+            return
+        }
+        await this.entityManager.transaction((tx) => this.runs.resumeWaiting(tx, workItemId, TIMED_OUT))
     }
 }

@@ -13,7 +13,7 @@ export { AgentWakeService } from "./agent-wake.service"
 export { AgentWorkHandlersService } from "./agent-work-handlers.service"
 export { AgentWorkReadService } from "./agent-work-read.service"
 export { AgentWorkSettingsService } from "./agent-work-settings.service"
-export { AGENT_TURN_EXECUTOR } from "./agent-work.decorators"
+export { AGENT_TURN_EXECUTOR, AGENT_WAKE_INTERRUPTIONS } from "./agent-work.decorators"
 export { backgroundCapSpent, breakerOpen, isBackground } from "./agent-work.policy"
 export type {
     AgentGoalRecord,

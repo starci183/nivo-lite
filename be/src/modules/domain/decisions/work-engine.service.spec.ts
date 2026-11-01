@@ -16,6 +16,7 @@ import { WorkChainService } from "./work-chain.service"
 import { OUTBOUND_ACCESS_GATE } from "./work-engine.decorators"
 import { WorkEngineService } from "./work-engine.service"
 import { WorkIntakeService } from "./work-intake.service"
+import { WorkItemClosedService } from "./work-item-closed.service"
 import { WORK_PERFORMER_REGISTRY } from "./work-performer.port"
 import { WorkRecorderService } from "./work-recorder.service"
 import { DecisionsErrorCode } from "./errors/decisions.error"
@@ -49,7 +50,6 @@ import {
 } from "@tests/fixtures/builders/work-engine.builder"
 
 import type { WorkEngineFixtureOptions } from "@tests/fixtures/builders/work-engine.builder"
-
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const autoResult = { path: "auto", result: { summary: "Sent the quote" }, evidence: "captured", leadId: null }
 const blankPatch = { proposal: quote, subjectType: null, subjectId: null, leadId: null }
@@ -63,7 +63,6 @@ const authorityAsk = objectLike({
 })
 const anyValue: unknown = expect.anything()
 const editedDraft = objectLike({ draft: "x" })
-
 const resolved = <T>(value: T) => jest.fn().mockResolvedValue(value)
 const performerOf = (overrides: Partial<Work.WorkPerformer> = {}): Work.WorkPerformer => {
     const performer = mock<Work.WorkPerformer>({
@@ -129,6 +128,7 @@ const build = async (options: WorkEngineFixtureOptions = {}) => {
             { provide: WorkApprovalService, useValue: approval },
             { provide: WorkRecorderService, useValue: recorder },
             { provide: WorkBranchService, useValue: branching },
+            { provide: WorkItemClosedService, useValue: mock<WorkItemClosedService>() },
         ],
     }).compile()
     return {

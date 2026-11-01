@@ -1,18 +1,26 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { runViewOf, stepSpecOf, stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
+import { runStepViewOf, runViewOf, stepSpecOf, stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
+import { AgentRunHandlersService } from "./agent-run-handlers.service"
+import { AgentRunInflightService } from "./agent-run-inflight.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
 import { AgentRunsService } from "./agent-runs.service"
 import { AgentRunsErrorCode } from "./errors/agent-runs.error"
+import type { AgentStepHandler } from "./agent-runs.contracts"
 import type { ClaimResult, StepEnd } from "./agent-runs-engine.contracts"
 
 const SIGNAL = new AbortController().signal
 
-const build = async (claims: ReadonlyArray<ClaimResult>, ends: ReadonlyArray<StepEnd> = []) => {
+const build = async (
+    claims: ReadonlyArray<ClaimResult>,
+    ends: ReadonlyArray<StepEnd> = [],
+    handler: AgentStepHandler | undefined = undefined,
+    closed = false,
+) => {
     const em = mockEntityManager()
     fakeTransaction(em)
     const ledger = mock<AgentStepLedgerService>()
@@ -29,6 +37,9 @@ const build = async (claims: ReadonlyArray<ClaimResult>, ends: ReadonlyArray<Ste
         append: jest.fn().mockResolvedValue(1),
         open: jest.fn().mockResolvedValue(runViewOf()),
         resume: jest.fn().mockResolvedValue(true),
+        stepsOf: jest.fn().mockResolvedValue([]),
+        viewsOf: jest.fn().mockResolvedValue([]),
+        waitingOn: jest.fn().mockResolvedValue(stepViewOf({ kind: "ask" })),
     })
     const compensation = mock<AgentRunCompensationService>({ run: jest.fn().mockResolvedValue(undefined) })
     const container = await Test.createTestingModule({
@@ -36,6 +47,14 @@ const build = async (claims: ReadonlyArray<ClaimResult>, ends: ReadonlyArray<Ste
             AgentRunsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: AgentRunStoreService, useValue: store },
+            {
+                provide: AgentRunInflightService,
+                useValue: mock<AgentRunInflightService>({
+                    closed,
+                    track: jest.fn((_step: unknown, work: () => Promise<never>) => work()),
+                }),
+            },
+            { provide: AgentRunHandlersService, useValue: mock<AgentRunHandlersService>({ of: jest.fn(() => handler) }) },
             { provide: AgentStepLedgerService, useValue: ledger },
             { provide: AgentRunStepsService, useValue: steps },
             { provide: AgentRunCompensationService, useValue: compensation },
@@ -222,12 +241,72 @@ describe("AgentRunsService.runInline", () => {
     })
 })
 
-describe("AgentRunsService.resumeWaiting", () => {
-    it("hands a person's answer to the store in the transaction of the decision", async () => {
-        const { service, store, em } = await build([])
-        const answer = { result: { outcome: "approved" }, next: [stepSpecOf()] }
+describe("AgentRunsService when the process is shutting down", () => {
+    it("claims no new step and refuses an inline call, so the sweep or the next boot takes them", async () => {
+        const { service, ledger } = await build([claimed("a")], [], undefined, true)
 
-        await expect(service.resumeWaiting(em, "item-1", answer)).resolves.toBe(true)
-        expect(store.resume).toHaveBeenCalledWith(em, "item-1", answer)
+        await service.advance("run-1", SIGNAL)
+
+        expect(ledger.claim).not.toHaveBeenCalled()
+        await expect(service.runInline("wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(refusal("shutting_down"))
+    })
+})
+
+describe("AgentRunsService.interrupted", () => {
+    it("fails the step the runtime held so it retries, and leaves a wait alone", async () => {
+        const held = stepViewOf({ stepKey: "turn" })
+        const { service, steps, store } = await build([])
+        store.stepsOf.mockResolvedValue([
+            runStepViewOf({ stepKey: "ask", status: "running", waitItemId: "item-1" }),
+            runStepViewOf({ stepKey: "turn", status: "running" }),
+        ])
+        store.viewsOf.mockResolvedValue([stepViewOf({ stepKey: "ask" }), held])
+
+        await service.interrupted("wake-1", "runtime_down", SIGNAL)
+
+        expect(steps.fail).toHaveBeenCalledWith(held, "runtime_down", true, SIGNAL)
+    })
+
+    it("does nothing for a wake with no run or no step in flight", async () => {
+        const { service, steps, store } = await build([])
+        store.stepsOf.mockResolvedValue([])
+        await service.interrupted("wake-1", "runtime_down", SIGNAL)
+        store.runOfWake.mockResolvedValue(null)
+        await service.interrupted("wake-2", "runtime_down", SIGNAL)
+
+        expect(steps.fail).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentRunsService.resumeWaiting", () => {
+    it("lets the wait step's handler turn the verdict into the result and the steps that follow, in the decision's transaction", async () => {
+        const next = [stepSpecOf()]
+        const handler: AgentStepHandler = {
+            kind: "ask",
+            run: () => Promise.resolve({ kind: "failed", code: "x" }),
+            onDecided: (_step, decision) => ({ kind: "done", result: { approved: decision.approved }, next }),
+        }
+        const { service, store, em } = await build([], [], handler)
+
+        await expect(service.resumeWaiting(em, "item-1", { approved: true, by: "member-1" })).resolves.toBe(true)
+
+        expect(store.resume).toHaveBeenCalledWith(em, "item-1", { result: { approved: true }, next })
+    })
+
+    it("stores the verdict itself when the handler has no onDecided", async () => {
+        const handler: AgentStepHandler = { kind: "ask", run: () => Promise.resolve({ kind: "failed", code: "x" }) }
+        const { service, store, em } = await build([], [], handler)
+
+        await service.resumeWaiting(em, "item-1", { approved: false, by: "timeout" })
+
+        expect(store.resume).toHaveBeenCalledWith(em, "item-1", { result: { approved: false, by: "timeout" }, next: [] })
+    })
+
+    it("answers false and writes nothing when no step waits on the item, so a second approval is a no-op", async () => {
+        const { service, store, em } = await build([])
+        store.waitingOn.mockResolvedValue(null)
+
+        await expect(service.resumeWaiting(em, "item-1", { approved: true, by: "member-1" })).resolves.toBe(false)
+        expect(store.resume).not.toHaveBeenCalled()
     })
 })

@@ -22,6 +22,8 @@ export enum AgentRunsLogEvent {
     DeadLetterFailed = "agent_runs.dead_letter_failed",
     /** One thing the sweep looked at failed; the rest of the pass went on. */
     SweepItemFailed = "agent_runs.sweep_item_failed",
+    /** A claim could not be given back at shutdown; the sweep takes the step when the claim runs out. */
+    ReleaseFailed = "agent_runs.release_failed",
     /** A wait past its deadline was handed to the graph's timeout. */
     WaitExpired = "agent_runs.wait_expired",
 }

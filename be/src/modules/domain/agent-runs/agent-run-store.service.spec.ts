@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { runRowOf, stepRowOf, stepSpecOf } from "@tests/fixtures/builders/agent-runs.builder"
+import { runRowOf, runningWaitRowOf, stepRowOf, stepSpecOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentStepQueue } from "@modules/queues/agent-step"
 import { AgentRunStoreService } from "./agent-run-store.service"
@@ -209,6 +209,30 @@ describe("AgentRunStoreService reads", () => {
 
         await expect(service.stepOf("run-1", "step-1")).resolves.toMatchObject({ stepKey: "step-1" })
         await expect(service.stepOf("run-1", "nope")).resolves.toBeNull()
+    })
+})
+
+describe("AgentRunStoreService waits", () => {
+    it("lists the open waits and finds the step that waits on an item as its handler reads it", async () => {
+        const waiting = runningWaitRowOf()
+        const em = mockEntityManager({
+            find: [
+                [AgentRunStepEntity, [waiting]],
+                [AgentRunStepEntity, [stepRow(1), waiting]],
+                [AgentRunStepEntity, []],
+            ],
+            findOneBy: [
+                [AgentRunStepEntity, waiting],
+                [AgentRunStepEntity, waiting],
+                [AgentRunStepEntity, null],
+            ],
+        })
+        const { service } = await build(em)
+
+        await expect(service.openWaits(50)).resolves.toMatchObject([{ stepKey: "step-2", waitItemId: "item-1" }])
+        await expect(service.waitingOn(em, "item-1")).resolves.toMatchObject({ stepKey: "step-2", earlier: {} })
+        await expect(service.waitingOn(em, "item-1")).resolves.toBeNull()
+        await expect(service.waitingOn(em, "item-9")).resolves.toBeNull()
     })
 })
 

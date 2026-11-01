@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AgentStepQueue } from "@modules/queues/agent-step"
@@ -113,6 +114,24 @@ export class AgentRunStoreService {
     async stepOf(runId: string, stepKey: string): Promise<RunStepView | null> {
         const step = await this.entityManager.findOneBy(AgentRunStepEntity, { runId, stepKey })
         return step === null ? null : stepViewOf(step)
+    }
+
+    /** The wait steps that are open, the oldest deadline first, at most `limit`. */
+    async openWaits(limit: number): Promise<ReadonlyArray<RunStepView>> {
+        const steps = await this.entityManager.find(AgentRunStepEntity, {
+            where: { status: "running", waitItemId: Not(IsNull()) },
+            order: { claimUntil: "ASC" },
+            take: limit,
+        })
+        return steps.map(stepViewOf)
+    }
+
+    /** The step that waits on the work item, as its handler reads it, or null when none does. */
+    async waitingOn(tx: EntityManager, workItemId: string): Promise<StepView | null> {
+        const row = await tx.findOneBy(AgentRunStepEntity, { waitItemId: workItemId, status: "running" })
+        if (row === null) return null
+        const steps = await tx.find(AgentRunStepEntity, { where: { runId: row.runId }, order: { seq: "ASC" }, take: STEPS_MAX })
+        return handlerViewsOf(steps).find((view) => view.stepKey === row.stepKey) ?? null
     }
 
     /** A person's answer, in the transaction of the decision: finishes the step that waits on the work item and writes the steps that follow. False when none waits on it. */

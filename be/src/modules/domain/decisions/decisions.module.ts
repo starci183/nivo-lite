@@ -24,6 +24,7 @@ import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import { WorkItemViewsService } from "./work-item-views.service"
 import { WorkBranchService } from "./work-branch.service"
+import { WorkItemClosedService } from "./work-item-closed.service"
 import { WorkChainService } from "./work-chain.service"
 import { WorkDecisionService } from "./work-decision.service"
 import { WorkDrainService } from "./work-drain.service"
@@ -95,6 +96,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 ModuleCatalogService,
                 WorkApprovalService,
                 WorkBranchService,
+                WorkItemClosedService,
                 WorkChainService,
                 WorkDecisionService,
                 WorkDrainService,

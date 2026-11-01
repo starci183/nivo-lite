@@ -6,6 +6,8 @@ import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
 import { DATA_RIGHTS_GATE } from "@modules/domain/mcp-gateway"
 import { AgentDataRightsService } from "./agent-data-rights.service"
 import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
+import { AGENT_RUN_WAIT_TIMEOUT } from "@modules/domain/agent-runs"
+import { AgentGraphWaitTimeoutService } from "./agent-graph-wait-timeout.service"
 import { AgentGraphAsksService } from "./agent-graph-asks.service"
 import { AgentGraphBriefService } from "./agent-graph-brief.service"
 import { AgentGraphContractSetupService } from "./agent-graph-contract-setup.service"
@@ -82,6 +84,7 @@ const WHOLE: Part = {
         AgentGraphWatchService,
         AgentGraphSetupService,
         AgentGraphContractSetupService,
+        AgentGraphWaitTimeoutService,
     ],
     ports: [
         { provide: WORK_BRANCH_DECIDER, useExisting: AgentGraphDeciderService },
@@ -89,6 +92,7 @@ const WHOLE: Part = {
         { provide: AGENT_GRAPH_BRIEF, useExisting: AgentGraphBriefService },
         RIGHTS_PORT,
         { provide: SETUP_GRAPH, useExisting: AgentGraphSetupService },
+        { provide: AGENT_RUN_WAIT_TIMEOUT, useExisting: AgentGraphWaitTimeoutService },
     ],
 }
 

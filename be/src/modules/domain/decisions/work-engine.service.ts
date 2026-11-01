@@ -38,6 +38,7 @@ import type {
 } from "./work-engine.contracts"
 import { InjectOutboundAccessGate } from "./work-engine.decorators"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
+import { WorkItemClosedService } from "./work-item-closed.service"
 import {
     accessLetsRunAlone,
     askBecause,
@@ -78,6 +79,7 @@ export class WorkEngineService {
         private readonly approval: WorkApprovalService,
         private readonly recorder: WorkRecorderService,
         private readonly branching: WorkBranchService,
+        private readonly closed: WorkItemClosedService,
     ) {}
 
     /**
@@ -134,8 +136,12 @@ export class WorkEngineService {
         const item = await this.items.reopen(ctx.workspaceId, workItemId)
         if (item === null) throw new DecisionsError({ code: DecisionsErrorCode.NotWaiting })
         const merged = mergeEdits(item.proposal, edits)
-        if (decision === "rejected") return this.reject(ctx, item, merged.proposal, by, note)
-        return this.approve(ctx, item, merged.proposal, merged.changed, by, note)
+        const closed =
+            decision === "rejected"
+                ? await this.reject(ctx, item, merged.proposal, by, note)
+                : await this.approve(ctx, item, merged.proposal, merged.changed, by, note)
+        await this.closed.tell(ctx, closed, by)
+        return closed
     }
 
     /** Starts the department's work for one recorded input, under the policy gate like every other work. */

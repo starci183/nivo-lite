@@ -67,3 +67,12 @@ export interface WorkThreadsHistory {
     /** The customer of each given thread. */
     leadsOf(workspaceId: string, threadIds: ReadonlyArray<string>): Promise<Array<HistoryThreadLead>>
 }
+
+/** How a work item closed by a person's decision. */
+export type ClosedOutcome = "approved" | "rejected"
+
+/** Told when a work item closes by a person's decision, so whatever waits on it can go on; the app root binds it, and with none bound nothing waits. */
+export interface WorkItemClosedHook {
+    /** The item closed approved or rejected. A throw is logged and the decision stands: whoever waits recovers from the item itself. */
+    closed(workspaceId: string, workItemId: string, outcome: ClosedOutcome, by: string): Promise<void>
+}

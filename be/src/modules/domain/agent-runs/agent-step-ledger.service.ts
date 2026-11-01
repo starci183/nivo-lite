@@ -76,6 +76,16 @@ export class AgentStepLedgerService {
         return result
     }
 
+    /** Gives the claim of a step back at once; false when the claim already moved on. */
+    async release(step: StepView): Promise<boolean> {
+        const [row] = await callDbFunction<FunctionRow>(this.entityManager, "public.agent_step_release", [
+            step.runId,
+            step.stepKey,
+            step.fence,
+        ])
+        return row?.agent_step_release === true
+    }
+
     /** Claims the last step still to be undone, in the reverse order of the work. */
     async claimCompensation(runId: string): Promise<CompensationClaim> {
         const [row] = await callDbFunction<FunctionRow>(this.entityManager, "public.agent_comp_claim", [
