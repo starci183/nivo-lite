@@ -22,6 +22,7 @@ const NAME_MAX = 120
 const COUNT_MAX = 100
 const TIME_MAX = 40
 const REPLY_MAX = 2000
+const MONEY_MAX = 4000
 
 const idSchema = z.string().min(1).max(ID_MAX)
 const triggerSchema = z.enum(["customer_message", "tag"])
@@ -128,6 +129,7 @@ export const doorInputSchema = z.strictObject({
     wake: wakeRowSchema,
     reading: readingRowSchema,
     trace: traceRowSchema,
+    moneyText: z.string().max(MONEY_MAX).optional(),
 })
 
 const settleInputSchema = z.strictObject({

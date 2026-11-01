@@ -5,6 +5,7 @@ import type { StepJson, StepSpec } from "@modules/domain/agent-runs"
 import type { AgentTurnView } from "@modules/domain/agent-work"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IntentPipelineService } from "./intent-pipeline.service"
+import { IntentTurnService } from "./intent-turn.service"
 import type { IntentPlan, IntentRead, IntentReadingRow } from "./agent-turns.contracts"
 
 const contract = {
@@ -67,6 +68,12 @@ const build = async (answers: Readonly<Record<string, StepJson>>) => {
             IntentPipelineService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: AgentRunsService, useValue: runs },
+            {
+                provide: IntentTurnService,
+                useValue: mock<IntentTurnService>({
+                    nodeKeysOf: jest.fn().mockResolvedValue({ turn: "understand", acts: { reply_customer: "answer" } }),
+                }),
+            },
         ],
     }).compile()
     return { service: moduleRef.get(IntentPipelineService), runs }
@@ -105,14 +112,14 @@ describe("IntentPipelineService > read", () => {
         expect(first?.[0]).toBe("wake-1")
         expect(first?.[1]).toEqual({
             stepKey: "turn",
-            nodeKey: "intent_turn",
+            nodeKey: "understand",
             kind: "turn",
             effect: { kind: "read" },
             input: { text: "model text" },
         })
         expect(second?.[1]).toEqual({
             stepKey: "read_result",
-            nodeKey: "intent_read_result",
+            nodeKey: "understand",
             kind: "read_result",
             effect: { kind: "read" },
             input: { plan, text: "model text" },
@@ -166,7 +173,7 @@ describe("IntentPipelineService > door", () => {
         expect(wakeId).toBe("wake-1")
         expect(spec).toMatchObject({
             stepKey: "door",
-            nodeKey: "intent_door",
+            nodeKey: "answer",
             kind: "door",
             effect: { kind: "pivot" },
             input: { reading: picked, trace, wake: { wakeId: "wake-1", turnId: "turn-1" } },
@@ -177,7 +184,7 @@ describe("IntentPipelineService > door", () => {
         const { service, runs } = await build({ door: { split: false } })
         const settle = { module: "accounting", actorName: "Lan", locale: "vi", installationId: null } as const
 
-        await service.door(turn, "tag_door", { reading: picked, trace }, signal, settle)
+        await service.door(turn, "tag_door", { reading: picked, trace }, signal, { settle })
 
         expect(jest.mocked(runs.runInline).mock.calls[0]?.[1]).toMatchObject({
             kind: "tag_door",

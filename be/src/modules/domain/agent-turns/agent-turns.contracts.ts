@@ -3,6 +3,7 @@ import type {
     IntentAudience,
     IntentContract,
     IntentGapText,
+    IntentInputPart,
     IntentTrace,
     IntentTrigger,
     SafeRoadCause,
@@ -303,6 +304,8 @@ export interface WakeRow {
 
 /** The input of a door step. */
 export interface DoorInput {
+    /** The money evidence of the turn's files, as JSON text. */
+    readonly moneyText?: string | undefined
     /** The wake. */
     readonly wake: WakeRow
     /** The reading. */
@@ -331,3 +334,65 @@ export type OptionalTurnContracts = TurnContracts | null
 
 /** The plan of a turn on the pipeline, or none. */
 export type OptionalIntentPlan = IntentPlan | null
+
+/** The node keys of the published graph a pipeline turn's steps stand for. */
+export interface IntentNodeKeys {
+    /** The node of the trigger path where the turn picks what to do. */
+    readonly turn: string
+    /** The act node of each intent the graph holds, by intent. */
+    readonly acts: Readonly<Record<string, string>>
+}
+
+/** Where the files of a turn are: the message a customer or a colleague wrote. */
+export interface IntentFileRef {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** Whether a customer's message or a colleague's tag holds them. */
+    readonly kind: "customer" | "tag"
+    /** The customer conversation, or null for a tag. */
+    readonly conversationId: string | null
+    /** The message that holds them, or null when the wake names none. */
+    readonly messageId: string | null
+    /** The work thread of a tag, or null. */
+    readonly threadId: string | null
+}
+
+/** A picture or file sent to the model with the turn. */
+export interface IntentAttachment {
+    /** The name of the file. */
+    readonly fileName: string
+    /** The type of the file. */
+    readonly mimeType: string
+    /** The bytes, in base64. */
+    readonly content: string
+}
+
+/** The money a file turned up, as the graph's own shape holds it: passed through, never read here. */
+export interface IntentMoney {
+    /** Any member. */
+    readonly [key: string]: unknown
+}
+
+/** What the files of a message add to a turn. */
+export interface IntentFileBundle {
+    /** The read of each file, as data parts of the input. */
+    readonly parts: ReadonlyArray<IntentInputPart>
+    /** The files themselves, for the model to see. */
+    readonly attachments: ReadonlyArray<IntentAttachment>
+    /** The money evidence of the files, or null. */
+    readonly money: IntentMoney | null
+}
+
+/** The attachments a plan carries, or none: spread into the plan of the turn. */
+export interface IntentPlanFiles {
+    /** The files, when the message holds any. */
+    readonly attachments?: ReadonlyArray<IntentAttachment>
+}
+
+/** What a door row holds besides the wake, the reading and the trace. */
+export interface IntentDoorExtra {
+    /** The agent, the actor and the language a tag's proposal is applied under. */
+    readonly settle?: InternalSettleInput
+    /** The money evidence of the turn's files, as JSON text. */
+    readonly moneyText?: string
+}

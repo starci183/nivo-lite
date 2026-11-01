@@ -1,5 +1,4 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { buildIntentPrompt, readIntentResult } from "@modules/domain/intent-contracts"
 import type {
     IntentAudience,
@@ -10,11 +9,19 @@ import type {
 } from "@modules/domain/intent-contracts"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { InjectAgentGraphBrief } from "./agent-turns.decorators"
+import { InjectAgentGraphBrief, InjectIntentFiles } from "./agent-turns.decorators"
 import { AgentWriteRightService } from "./agent-write-right.service"
 import { offeredOf, tagAudienceOf, traceOf, triggerOf } from "./intent-turn.policy"
-import type { IntentPlan, IntentScope, IntentTurnPlan, OptionalIntentPlan } from "./agent-turns.contracts"
-import type { AgentGraphBrief } from "./agent-turns.port"
+import type {
+    IntentFileBundle,
+    IntentFileRef,
+    IntentNodeKeys,
+    IntentPlan,
+    IntentScope,
+    IntentTurnPlan,
+    OptionalIntentPlan,
+} from "./agent-turns.contracts"
+import type { AgentGraphBrief, IntentFiles } from "./agent-turns.port"
 
 @Injectable()
 /**
@@ -28,8 +35,8 @@ export class IntentTurnService {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly right: AgentWriteRightService,
-        private readonly gaps: KnowledgeGapsService,
         @Optional() @InjectAgentGraphBrief() private readonly graph: AgentGraphBrief | null = null,
+        @Optional() @InjectIntentFiles() private readonly files: IntentFiles | null = null,
     ) {}
 
     /** The plan of the turn a wake starts: which contracts it is offered, or null when the turn stays on today's prompt. */
@@ -79,14 +86,21 @@ export class IntentTurnService {
         return (await this.planFor(scope)) !== null
     }
 
-    /** Raises the gap of a turn no intent fits as an open question of the module; the same question counts again on the same gap. */
-    async raiseGap(gap: IntentGap, module: string): Promise<void> {
-        await this.gaps.record(gap.workspaceId, {
-            module,
-            question: gap.question,
-            topic: gap.topic,
-            source: "model",
-        })
+    /** Raises the gap of a turn no intent fits as a proposal to the owner, deduped per agent on the question; false when it was already raised. */
+    async raiseGap(gap: IntentGap): Promise<boolean> {
+        return this.graph !== null && (await this.graph.raiseGap(gap))
+    }
+
+    /** The node keys of the active version the steps of a turn stand for; the trigger path's node alone when no graph is bound. */
+    nodeKeysOf(workspaceId: string, agentId: string): Promise<IntentNodeKeys> {
+        return this.graph === null
+            ? Promise.resolve({ turn: "understand", acts: {} })
+            : this.graph.nodeKeysOf(workspaceId, agentId)
+    }
+
+    /** The files of a message, read for the turn; none when no chat files are bound. */
+    filesOf(ref: IntentFileRef): Promise<IntentFileBundle> {
+        return this.files === null ? Promise.resolve({ parts: [], attachments: [], money: null }) : this.files.of(ref)
     }
 
     private async audienceOf(scope: IntentScope): Promise<IntentAudience> {

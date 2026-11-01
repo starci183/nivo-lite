@@ -13,7 +13,7 @@ import { IntentPipelineService } from "./intent-pipeline.service"
 import { IntentTurnService } from "./intent-turn.service"
 import { InternalTurnContextService } from "./internal-turn-context.service"
 import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
-import type { IntentPlan, IntentTurnPlan, InternalTurnInput } from "./agent-turns.contracts"
+import type { IntentFileBundle, IntentPlan, IntentTurnPlan, InternalTurnInput } from "./agent-turns.contracts"
 
 const catalog = mock<MessageCatalog>({
     get: (key: string, params?: Readonly<Record<string, string | number>>) =>
@@ -59,18 +59,23 @@ const TASK: AgentTaskRecord = {
     workItemId: null,
 }
 
+const NO_FILES: IntentFileBundle = { parts: [], attachments: [], money: null }
+
 interface Parts {
     readonly authority?: () => Promise<typeof authority | null>
     readonly goals?: () => Promise<ReadonlyArray<AgentGoalRecord>>
     readonly tasks?: () => Promise<ReadonlyArray<AgentTaskRecord>>
     readonly intents?: () => Promise<string>
     readonly plan?: IntentPlan | null
+    readonly files?: IntentFileBundle
 }
 
 const build = async (parts: Parts = {}) => {
     const logger = mock<Logger>()
     const turnIntents = mock<IntentTurnService>({
         planFor: jest.fn().mockResolvedValue(parts.plan ?? null),
+        pipelineOf: jest.fn().mockResolvedValue(parts.plan !== undefined && parts.plan !== null),
+        filesOf: jest.fn().mockResolvedValue(parts.files ?? NO_FILES),
         planOf: jest.fn((plan: IntentPlan): IntentTurnPlan => ({ ...plan, prompt: "CONTRACT PROMPT" })),
     })
     const pipeline = mock<IntentPipelineService>({ open: jest.fn().mockResolvedValue(undefined) })
@@ -240,5 +245,52 @@ describe("InternalTurnContextService.messageOf > the contract pipeline", () => {
 
         await expect(service.messageOf(input)).resolves.toContain("[bundle.internalContract]")
         expect(turnIntents.planFor).not.toHaveBeenCalled()
+    })
+})
+
+describe("InternalTurnContextService > a tag with an amount or a file, on the contract pipeline", () => {
+    const plan: IntentPlan = { versionId: "v-1", trigger: "tag", audience: "manager", pinned: null, contracts: [] }
+    const wake = agentTurnViewOf({ source: "tag", context: { authorUserId: "user-1", messageId: "msg-1" } })
+    const tagged: InternalTurnInput = { ...input, text: "pay supplier 12tr5", wake, agentName: "Ke toan" }
+    const image: IntentFileBundle = {
+        parts: [{ kind: "file", text: "transfer, 17tr5, to Lan" }],
+        attachments: [{ fileName: "bill.png", mimeType: "image/png", content: "AAAA" }],
+        money: { amount: 17_500_000 },
+    }
+
+    it("hands the words of a founder tag with an amount to the model as they were written, and reads no amount itself", async () => {
+        const { service, turnIntents } = await build({ plan })
+
+        await service.messageOf(tagged)
+
+        const given = jest.mocked(turnIntents.planOf).mock.calls[0]?.[2] ?? []
+        expect(given.find((part) => part.kind === "tag_message")?.text).toBe("pay supplier 12tr5")
+        expect(given.some((part) => part.kind === "file")).toBe(false)
+    })
+
+    it("adds the read of the files of a founder tag with an image as a part of data, and the image to the plan", async () => {
+        const { service, turnIntents } = await build({ plan, files: image })
+
+        await service.messageOf(tagged)
+
+        const given = jest.mocked(turnIntents.planOf).mock.calls[0]?.[2] ?? []
+        expect(given.at(-1)).toEqual({ kind: "file", text: "transfer, 17tr5, to Lan" })
+        expect(turnIntents.filesOf).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "tag",
+            conversationId: null,
+            messageId: "msg-1",
+            threadId: null,
+        })
+        await expect(service.attachmentsOf(tagged)).resolves.toEqual({ attachments: image.attachments })
+    })
+
+    it("carries no attachment for a line with no file, a turn off the pipeline or a turn that names no wake", async () => {
+        const none = await build({ plan })
+        const off = await build({ plan: null, files: image })
+
+        await expect(none.service.attachmentsOf(tagged)).resolves.toEqual({})
+        await expect(off.service.attachmentsOf(tagged)).resolves.toEqual({})
+        await expect(off.service.attachmentsOf(input)).resolves.toEqual({})
     })
 })

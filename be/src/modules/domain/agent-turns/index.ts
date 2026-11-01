@@ -15,7 +15,21 @@ export { INTENT_STEP_KIND, pinnedOf } from "./intent-turn.policy"
 export { InternalProposalSettlerService } from "./internal-proposal-settler.service"
 export { InternalTurnContextService } from "./internal-turn-context.service"
 export { RuntimeAgentService } from "./runtime-agent.service"
-export type { DoorInput, InternalActionResult, IntentPlan, IntentScope, IntentTurnPlan } from "./agent-turns.contracts"
+export type {
+    DoorInput,
+    IntentAttachment,
+    IntentDoorExtra,
+    IntentFileBundle,
+    IntentNodeKeys,
+    IntentFileRef,
+    IntentMoney,
+    IntentPlan,
+    IntentPlanFiles,
+    IntentScope,
+    IntentTurnPlan,
+    InternalActionResult,
+    InternalTurnInput,
+} from "./agent-turns.contracts"
 export { AGENT_GRAPH_BRIEF } from "./agent-turns.decorators"
 export type { AgentGraphBrief } from "./agent-turns.port"
 export type { GraphIntent } from "./agent-turns.contracts"

@@ -1,6 +1,6 @@
 import type { AgentTurnView, AgentWake } from "@modules/domain/agent-work"
 import { pinnedOf, splitEventKeyOf } from "./intent-turn.policy"
-import type { IntentScope, InternalWakeRef, WakeRow } from "./agent-turns.contracts"
+import type { IntentFileRef, IntentScope, InternalWakeRef, WakeRow } from "./agent-turns.contracts"
 
 /** The wake and turn a door acts for, as a step row keeps it: ids, flags and a moment, so a door can settle from the row alone. */
 export const wakeRowOf = (turn: AgentTurnView): WakeRow => ({
@@ -55,4 +55,13 @@ export const wakeScopeOf = (turn: AgentTurnView): IntentScope => ({
     source: turn.source,
     authorUserId: turn.context.authorUserId ?? null,
     pinned: pinnedOf(turn.context),
+})
+
+/** Where the files of a tag are: the line that tagged the agent, in the Office or in a work thread. */
+export const tagFileRefOf = (turn: AgentTurnView): IntentFileRef => ({
+    workspaceId: turn.workspaceId,
+    kind: "tag",
+    conversationId: null,
+    messageId: turn.context.messageId ?? null,
+    threadId: turn.context.threadId ?? null,
 })

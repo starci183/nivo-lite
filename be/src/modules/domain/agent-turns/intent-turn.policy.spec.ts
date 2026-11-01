@@ -1,8 +1,9 @@
 import { Test } from "@nestjs/testing"
 import type { BridgeTurn } from "@modules/domain/agent-tools"
 import type { IntentContract, IntentReading } from "@modules/domain/intent-contracts"
-import type { IntentPlan } from "./agent-turns.contracts"
+import type { IntentPlan, IntentReadingRow } from "./agent-turns.contracts"
 import {
+    doorNodeOf,
     intentScopeOf,
     offeredOf,
     pinnedOf,
@@ -22,6 +23,7 @@ const build = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
+                    doorNodeOf,
                     intentScopeOf,
                     offeredOf,
                     pinnedOf,
@@ -36,6 +38,7 @@ const build = async () => {
         ],
     }).compile()
     return moduleRef.get<{
+        doorNodeOf: typeof doorNodeOf
         intentScopeOf: typeof intentScopeOf
         offeredOf: typeof offeredOf
         pinnedOf: typeof pinnedOf
@@ -234,5 +237,38 @@ describe("intent turn policy > the scope of a bridge turn", () => {
         const policy = await build()
 
         expect(policy.intentScopeOf({ ...base, pinnedIntent: "confirm_order" }).pinned).toBe("confirm_order")
+    })
+})
+
+describe("intent turn policy > the node of the door", () => {
+    const keys = { turn: "understand", acts: { confirm_order: "confirm" } }
+    const picked: IntentReadingRow = {
+        kind: "picked",
+        contract: contract("confirm_order"),
+        resultText: "{}",
+        dropped: [],
+    }
+
+    it("is the act node of the intent the reading picked", async () => {
+        const policy = await build()
+
+        expect(policy.doorNodeOf(keys, picked)).toBe("confirm")
+        expect(policy.doorNodeOf(keys, { kind: "split", contract: contract("confirm_order") })).toBe("confirm")
+    })
+
+    it("is the node where the turn picks for an intent the graph has no act node for, and for the safe road with none", async () => {
+        const policy = await build()
+        const safe: IntentReadingRow = {
+            kind: "safe",
+            cause: "no_intent",
+            detail: "none",
+            intent: null,
+            gap: null,
+            draft: "",
+        }
+
+        expect(policy.doorNodeOf(keys, { ...picked, contract: contract("reply_customer") })).toBe("understand")
+        expect(policy.doorNodeOf(keys, safe)).toBe("understand")
+        expect(policy.doorNodeOf(keys, { ...safe, intent: "confirm_order" })).toBe("confirm")
     })
 })

@@ -10,10 +10,10 @@ import { AgentTurnBriefService } from "./agent-turn-brief.service"
 import { AgentTurnsLogEvent } from "./agent-turns.log-events"
 import { IntentPipelineService } from "./intent-pipeline.service"
 import { IntentTurnService } from "./intent-turn.service"
-import { wakeScopeOf } from "./intent-wake.policy"
+import { tagFileRefOf, wakeScopeOf } from "./intent-wake.policy"
 import { blockOf, dataOf, goalLineOf, joinParts, taskLineOf } from "./internal-turn-prompt.policy"
 import type { IntentInputPart } from "@modules/domain/intent-contracts"
-import type { InternalTurnInput } from "./agent-turns.contracts"
+import type { IntentPlanFiles, InternalTurnInput } from "./agent-turns.contracts"
 
 /** The three blocks both roads of a tag or background turn share. */
 interface InternalBlocks {
@@ -93,9 +93,23 @@ export class InternalTurnContextService {
         const plan = await this.intents.planFor(wakeScopeOf(wake))
         if (plan === null) return null
         const identity = this.catalog.get("agentTurns.identity", { name: agentName }, locale)
-        const planned = this.intents.planOf(plan, identity, await this.partsOf(input), locale)
+        const files = await this.intents.filesOf(tagFileRefOf(wake))
+        const parts = [...(await this.partsOf(input)), ...files.parts]
+        const planned = this.intents.planOf(plan, identity, parts, locale)
         await this.pipeline.open(wake, planned)
         return planned.prompt
+    }
+
+    /**
+     * The files of the line that tagged the agent, for the model to see: only on a turn that runs on the pipeline, and nothing for a line
+     * with no file. Spread into the plan of the turn.
+     */
+    async attachmentsOf(input: InternalTurnInput): Promise<IntentPlanFiles> {
+        const { wake } = input
+        if (wake === undefined) return {}
+        const { attachments } = await this.intents.filesOf(tagFileRefOf(wake))
+        if (attachments.length === 0 || !(await this.intents.pipelineOf(wakeScopeOf(wake)))) return {}
+        return { attachments }
     }
 
     private async blocksOf(input: InternalTurnInput): Promise<InternalBlocks> {

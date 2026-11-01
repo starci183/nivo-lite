@@ -154,17 +154,14 @@ describe("IntentTagDoorStepService", () => {
         await run(stepOf(noIntent))
 
         expect(settler.apply).toHaveBeenCalledWith(expect.anything(), "agentTurns.safeRoad:en", settle)
-        expect(intents.raiseGap).toHaveBeenCalledWith(
-            {
-                question: "Do you ship abroad?",
-                topic: "shipping | abroad",
-                workspaceId: "ws-1",
-                agentId: "agent-kt",
-                versionId: "v-1",
-                trigger: "tag",
-            },
-            "accounting",
-        )
+        expect(intents.raiseGap).toHaveBeenCalledWith({
+            question: "Do you ship abroad?",
+            topic: "shipping | abroad",
+            workspaceId: "ws-1",
+            agentId: "agent-kt",
+            versionId: "v-1",
+            trigger: "tag",
+        })
     })
 
     it.each([

@@ -1,7 +1,7 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentTurnsOptions } from "./agent-turns.options"
-import type { AgentGraphBrief, AgentTurnRunner } from "./agent-turns.port"
+import type { AgentGraphBrief, AgentTurnRunner, IntentFiles } from "./agent-turns.port"
 
 /** Token of the agent-turns options, exported so a spec can provide it. */
 export const AGENT_TURNS_OPTIONS: unique symbol = Symbol("domain.agent-turns.options")
@@ -23,3 +23,9 @@ export const InjectAgentTurnRunner = (): TypedParameterDecorator<AgentTurnRunner
 /** Injects the action graph brief port. Parameter type: AgentGraphBrief. */
 export const InjectAgentGraphBrief = (): TypedParameterDecorator<AgentGraphBrief> =>
     injector<AgentGraphBrief>(AGENT_GRAPH_BRIEF)
+
+/** Token of the chat files port: absent until the chat files bind one, and then a turn carries no file. */
+export const INTENT_FILES: unique symbol = Symbol("domain.agent-turns.intent-files")
+
+/** Injects the chat files port. Parameter type: IntentFiles. */
+export const InjectIntentFiles = (): TypedParameterDecorator<IntentFiles> => injector<IntentFiles>(INTENT_FILES)

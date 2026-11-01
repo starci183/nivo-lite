@@ -4,14 +4,15 @@ import { AgentRunsService } from "@modules/domain/agent-runs"
 import type { AgentTurnView } from "@modules/domain/agent-work"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { readResultSchema, turnRowSchema } from "./intent-step.schema"
-import { INTENT_NODE_KEY, INTENT_STEP_KIND, TURN_TEXT_MAX } from "./intent-turn.policy"
+import { INTENT_STEP_KIND, TURN_TEXT_MAX, doorNodeOf } from "./intent-turn.policy"
+import { IntentTurnService } from "./intent-turn.service"
 import { wakeRowOf } from "./intent-wake.policy"
 import type {
+    IntentDoorExtra,
     IntentDoorResult,
     IntentPlan,
     IntentRead,
     IntentReadingRow,
-    InternalSettleInput,
 } from "./agent-turns.contracts"
 
 /** The step key of each stage: one per run, since a wake has one turn. */
@@ -27,6 +28,7 @@ export class IntentPipelineService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly runs: AgentRunsService,
+        private readonly intents: IntentTurnService,
     ) {}
 
     /** Opens the one run of this wake; opening it again is a no-op. */
@@ -46,12 +48,13 @@ export class IntentPipelineService {
     /** Keeps the model's text on the run and reads it. A row that cannot be read back is the safe road, never a thrown turn. */
     async read(turn: AgentTurnView, plan: IntentPlan, text: string, signal: AbortSignal): Promise<IntentRead> {
         await this.open(turn, plan)
+        const keys = await this.intents.nodeKeysOf(turn.workspaceId, turn.agentId)
         const kept = turnRowSchema.safeParse(
             await this.runs.runInline(
                 turn.wakeId,
                 {
                     stepKey: STEP_KEY.turn,
-                    nodeKey: INTENT_NODE_KEY.turn,
+                    nodeKey: keys.turn,
                     kind: INTENT_STEP_KIND.turn,
                     effect: { kind: "read" },
                     input: { text: text.slice(0, TURN_TEXT_MAX) },
@@ -64,7 +67,7 @@ export class IntentPipelineService {
                 turn.wakeId,
                 {
                     stepKey: STEP_KEY.read,
-                    nodeKey: INTENT_NODE_KEY.readResult,
+                    nodeKey: keys.turn,
                     kind: INTENT_STEP_KIND.readResult,
                     effect: { kind: "read" },
                     input: { plan, text: kept.success ? kept.data.text : "" },
@@ -97,25 +100,26 @@ export class IntentPipelineService {
     }
 
     /** Runs the door of the trigger for the reading and answers what it did. The door acts in the world, so it is a pivot. */
-    door(
+    async door(
         turn: AgentTurnView,
         kind: string,
         read: IntentRead,
         signal: AbortSignal,
-        settle?: InternalSettleInput,
+        extra: IntentDoorExtra = {},
     ): Promise<IntentDoorResult> {
+        const keys = await this.intents.nodeKeysOf(turn.workspaceId, turn.agentId)
         return this.runs.runInline(
             turn.wakeId,
             {
                 stepKey: STEP_KEY.door,
-                nodeKey: INTENT_NODE_KEY.door,
+                nodeKey: doorNodeOf(keys, read.reading),
                 kind,
                 effect: { kind: "pivot" },
                 input: {
                     wake: wakeRowOf(turn),
                     reading: read.reading,
                     trace: read.trace,
-                    ...(settle === undefined ? {} : { settle }),
+                    ...extra,
                 },
             },
             signal,

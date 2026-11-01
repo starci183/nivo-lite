@@ -432,7 +432,7 @@ describe("InternalProposalSettlerService > a turn on the contract pipeline", () 
             pinned: "pay",
         })
         expect(pipeline.read).toHaveBeenCalledWith(turn, PLAN, "envelope", SIGNAL)
-        expect(pipeline.door).toHaveBeenCalledWith(turn, "tag_door", READ, SIGNAL, input)
+        expect(pipeline.door).toHaveBeenCalledWith(turn, "tag_door", READ, SIGNAL, { settle: input })
         expect(tasks.apply).not.toHaveBeenCalled()
     })
 
