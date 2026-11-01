@@ -3,18 +3,16 @@ import {
     Badge,
     Button,
     DropdownMenu,
-    FillViewport,
     Icon,
     Page,
     Pane,
     PaneGrid,
-    SurfaceCard,
 } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import { BODY, HEADER_ACTIONS } from "./classNames"
+import { HEADER_ACTIONS } from "./classNames"
 
 /** What the header shows once the instance is known, every word resolved. */
 export interface InstanceHeaderView {
@@ -59,7 +57,7 @@ export interface AgentInstanceFrameBaseProps {
     /** The routed tab. */
     readonly shape: { readonly body: ReactNode }
     readonly props: {
-        /** The routed tab's body is panes (the Setup tab): attached flush under the tab line instead of in a card. */
+        /** The routed tab's body is panes: attached flush under the tab line instead of cards on the page ground. */
         readonly hasPanes: boolean
         readonly ariaLabel: string
         readonly earlyLabel: string
@@ -161,7 +159,7 @@ const HeaderStatus = (props: HeaderPartProps) => (
 /**
  * Draws the frame of an agent instance under one page band (trail, person, facts, switcher, actions, tabs). A tab whose body is
  * panes (Setup) is `Page chrome="panes"`: one grid attached flush under the tab line, its flush pane hosting the tab's own grid,
- * full width and to the viewport bottom (pane-grid.choose.page). The other tabs keep their bleed body in a joined surface.
+ * full width and to the viewport bottom (pane-grid.choose.page). The other tabs are cards on the page ground, never in a surface of their own.
  */
 export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
     const copy = props.props
@@ -196,12 +194,8 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
         )
     }
     return (
-        <Page chrome="bleed" measure="product" isSkeleton={copy.isSkeleton} header={header}>
-            <FillViewport minHeight="md" bottomInset="page">
-                <SurfaceCard ariaLabel={copy.ariaLabel} composition="joined" height="fill">
-                    <div className={BODY}>{props.shape.body}</div>
-                </SurfaceCard>
-            </FillViewport>
+        <Page measure="product" isSkeleton={copy.isSkeleton} header={header}>
+            {props.shape.body}
         </Page>
     )
 }
