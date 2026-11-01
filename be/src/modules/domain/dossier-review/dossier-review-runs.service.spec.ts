@@ -10,7 +10,7 @@ import {
 import { fakeIds, fakeTransaction, mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { ArrayContains, IsNull } from "typeorm"
-import { DossierSourcesService } from "@modules/domain/knowledge-sources"
+import { DossierSourcesService, SourceCriticStageService } from "@modules/domain/knowledge-sources"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
@@ -50,6 +50,7 @@ const build = async (em: MockEntityManager) => {
     const inputs = mock<ReviewInputsService>()
     const sources = mock<DossierSourcesService>()
     const queue = mock<KnowledgeQueue>()
+    const critic = mock<SourceCriticStageService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             DossierReviewRunsService,
@@ -59,9 +60,10 @@ const build = async (em: MockEntityManager) => {
             { provide: ReviewInputsService, useValue: inputs },
             { provide: DossierSourcesService, useValue: sources },
             { provide: KnowledgeQueue, useValue: queue },
+            { provide: SourceCriticStageService, useValue: critic },
         ],
     }).compile()
-    return { service: moduleRef.get(DossierReviewRunsService), members, inputs, sources, queue }
+    return { service: moduleRef.get(DossierReviewRunsService), members, inputs, sources, queue, critic }
 }
 
 /** A transaction in which no workspace run is queued and the insert stores the run with the first id. */
@@ -92,11 +94,10 @@ describe("DossierReviewRunsService requestForSource", () => {
 describe("DossierReviewRunsService requestForSource filing", () => {
     it("reviews a document no dossier claims on its own, with a run of the whole set", async () => {
         const { tx, inserts } = freshRun(runOf({ scope: "workspace", dossierId: null }))
-        const { service, sources, inputs, queue } = await build(tx.em)
+        const { service, sources, inputs, queue, critic } = await build(tx.em)
         inputs.all.mockResolvedValue([dossierOf()])
         inputs.dossierOf.mockResolvedValue(undefined)
         sources.sourceOf.mockResolvedValue(sourceOf({ topic: "OTHER", title: "Loose notes" }))
-
         await service.requestForSource(WS, "s1")
 
         expect(sources.fileUnder).not.toHaveBeenCalled()
@@ -104,6 +105,7 @@ describe("DossierReviewRunsService requestForSource filing", () => {
             [expect.objectContaining({ scope: "workspace", dossierId: null, trigger: "document", triggerRef: "s1" })],
         ])
         expect(queue.enqueueDossierReview).toHaveBeenCalledTimes(1)
+        expect(critic.enter).toHaveBeenCalledWith(WS, "s1")
     })
 
     it("files a document under the dossier its content points to, marks it, and reviews that dossier", async () => {

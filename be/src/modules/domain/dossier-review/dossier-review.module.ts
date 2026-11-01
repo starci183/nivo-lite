@@ -6,6 +6,7 @@ import { DOSSIER_REASONER, REMEDY_WRITER } from "./dossier-review.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./dossier-review.module-definition"
 import { DossierReviewRunnerService } from "./dossier-review-runner.service"
 import { DossierReviewRunsService } from "./dossier-review-runs.service"
+import { ReviewCriticService } from "./review-critic.service"
 import { ReviewInputsService } from "./review-inputs.service"
 
 @Module({})
@@ -28,6 +29,7 @@ export class DossierReviewModule extends ConfigurableModuleClass {
                 { provide: DOSSIER_REASONER, useClass: options.reasoner },
                 { provide: REMEDY_WRITER, useClass: options.writer },
                 ReviewInputsService,
+                ReviewCriticService,
                 DossierReviewRunsService,
                 DossierReviewRunnerService,
                 DossierFindingsService,

@@ -5,6 +5,7 @@ import type {
     DriveFileText,
     DriveFolderListing,
     GoogleAccessToken,
+    PlacedDocument,
 } from "./documents.contracts"
 
 /** The documents port: turns links, files and Drive items into text. Every failure is a `DocumentsError`. */
@@ -20,6 +21,8 @@ export interface DocumentsPort {
     canReadFileName(name: string): boolean
     /** The text of uploaded file bytes: the name decides the kind, else the magic bytes and the content type do. */
     readFile(name: string, bytes: Uint8Array, contentType: string): Promise<string>
+    /** The text of uploaded file bytes with the place of each stretch: the page of a PDF, the slide of a presentation, the sheet of a workbook. */
+    readPlacedFile(name: string, bytes: Uint8Array, contentType: string): Promise<PlacedDocument>
     /** The text of one Drive file the token can open (the type and size are checked before any download). */
     readDriveFile(token: string, fileId: string): Promise<DriveFileText>
     /** The files of a Drive folder, and the folders nested below it, read with a token. */

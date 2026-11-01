@@ -20,8 +20,8 @@ export interface EnqueueKnowledgeSourceRequest {
     readonly module?: string | undefined
     /** The agent instance that alone reads it; omitted = every instance. */
     readonly installationId?: string | undefined
-    /** `public` or `internal`; internal when omitted. */
-    readonly visibility?: string | undefined
+    /** `public` or `internal`, as the owner chose; there is no default. */
+    readonly visibility: string
     /** Where it came from: a folder, a ZIP or the Google Picker. */
     readonly origin?: string | undefined
 }

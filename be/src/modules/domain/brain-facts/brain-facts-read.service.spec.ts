@@ -138,7 +138,32 @@ const registerSources = () => {
     })
 }
 
+const registerWaiting = () => {
+    it("counts the cards of the waiting proposals from four columns of each, never the evidence", async () => {
+        const em = mockEntityManager({
+            find: [
+                BrainFactEntity,
+                [
+                    facts.rowOf({ subjectKey: "shop", attribute: "hours", value: "8-21" }),
+                    facts.rowOf({ subjectKey: "shop", attribute: "hours", value: "9-18" }),
+                    facts.rowOf({ subjectKey: "shop", attribute: "phone", value: "0901" }),
+                ],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.waitingCards(facts.WS)).resolves.toBe(2)
+
+        expect(em.find).toHaveBeenCalledWith(BrainFactEntity, {
+            select: { subjectKey: true, attribute: true, value: true, proposalKind: true },
+            where: { workspaceId: facts.WS, status: "proposed" },
+            take: 5000,
+        })
+    })
+}
+
 describe("BrainFactsReadService", () => {
+    registerWaiting()
     registerReads()
     registerViews()
     registerSources()

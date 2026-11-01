@@ -7,30 +7,25 @@ import { BrainFacts } from "@/components/blocks/BrainFacts"
 import { BrainGaps } from "@/components/blocks/BrainGaps"
 import { BrainLessons } from "@/components/blocks/BrainLessons"
 import { BrainMap } from "@/components/blocks/BrainMap"
+import { BrainReview } from "@/components/blocks/BrainReview"
+import { BrainTodo } from "@/components/blocks/BrainTodo"
 import { DossierFindings } from "@/components/blocks/DossierFindings"
 import { DossierRemedyDraft } from "@/components/blocks/DossierRemedyDraft"
-import { DossierTodo } from "@/components/blocks/DossierTodo"
-import { BrainPipeline } from "@/components/blocks/BrainPipeline"
-import { BrainReview } from "@/components/blocks/BrainReview"
 import { BrainPageFrame } from "@/components/blocks/BrainPageFrame"
 import { KnowledgeAdd } from "@/components/blocks/KnowledgeAdd"
 import { KnowledgeAsk } from "@/components/blocks/KnowledgeAsk"
 import { KnowledgeLibrary } from "@/components/blocks/KnowledgeLibrary"
+import { KnowledgeProcessing } from "@/components/blocks/KnowledgeProcessing"
 import { KnowledgeSuggestions } from "@/components/blocks/KnowledgeSuggestions"
 import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 import type { ModuleKey } from "@/modules/catalog"
 import type { BrainTab } from "@/modules/routes"
-import {
-    PAGE_CLASS_NAME,
-    PANEL_CLASS_NAME,
-    SOURCES_CLASS_NAME,
-    SOURCES_MAIN_CLASS_NAME,
-    SOURCES_SIDE_CLASS_NAME,
-} from "./classNames"
+import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
-/** What the add drawer was opened from: the topic to write about, the tags it files under and the mode it opens on; who may read is always chosen by the person. */
+/** What the add form was opened from: the topic to write about, who NIVO suggests may read it, the tags it files under and the mode it opens on. */
 export interface AddPresetView {
     readonly topic: string
+    readonly visibility?: "public" | "internal"
     readonly tags?: string
     readonly mode?: "files" | "write"
 }
@@ -57,8 +52,7 @@ export interface BrainPageBaseProps {
         readonly node: string | undefined
         /** The agent the documents are filtered to. */
         readonly module: ModuleKey | "all"
-        /** Whether the address asks for the add drawer to be open, and what it was opened from. */
-        readonly isAddOpen: boolean
+        /** What the add form was opened from. */
         readonly addKey: string
         readonly addPreset: AddPresetView | null
     }
@@ -67,66 +61,17 @@ export interface BrainPageBaseProps {
 /** Draws the open tab of the Second Brain. */
 const Panel = (props: BrainPageBaseProps) => {
     const page = props.props
-    if (page.tab === "todo") return <DossierTodo />
-    if (page.tab === "review") return <BrainReview />
-    if (page.tab === "facts") {
+    if (page.tab === "todo") {
         return (
             <>
-                <BrainFacts />
-                <BrainFactForm tab="facts" fact={page.fact} edit={page.edit} answer={page.answer} />
+                <BrainTodo facts={<BrainReview />} questions={<BrainGaps />} />
+                <BrainFactForm tab="todo" fact={page.fact} edit={page.edit} answer={page.answer} />
             </>
         )
     }
-    if (page.tab === "lessons") return <BrainLessons />
-    if (page.tab === "gaps") {
-        return (
-            <>
-                <BrainGaps />
-                <BrainFactForm tab="gaps" fact={page.fact} edit={page.edit} answer={page.answer} />
-            </>
-        )
-    }
-    if (page.tab === "agents") {
-        return (
-            <>
-                <BrainAgentView />
-                <KnowledgeAsk />
-            </>
-        )
-    }
-    return (
-        <div className={SOURCES_CLASS_NAME}>
-            <div className={SOURCES_MAIN_CLASS_NAME}>
-                <KnowledgeAdd
-                    key={page.addKey}
-                    readOnlyNote={page.readOnlyNote}
-                    module={page.module}
-                    isOpen={page.isAddOpen}
-                    preset={page.addPreset}
-                />
-                <KnowledgeLibrary module={page.module} />
-            </div>
-            <div className={SOURCES_SIDE_CLASS_NAME}>
-                <KnowledgeSuggestions />
-                <Text>
-                    <TextAction href={page.nivoHref}>{page.nivoLabel}</TextAction>
-                </Text>
-            </div>
-        </div>
-    )
-}
-
-/**
- * Draws the Second Brain: its tabs on the header band, then the tab the address asks for. The dossiers tab is a panes page
- * (its grid attaches flush under the tab line); every other tab sits in the page measure under the pipeline (sources,
- * review, facts, lessons, questions, what each agent sees).
- */
-export const BrainPageBase = (props: BrainPageBaseProps) => {
-    const page = props.props
     if (page.tab === "dossiers") {
         return (
             <BrainDossiers
-                header={page.header}
                 dossier={page.dossier}
                 detail={
                     page.dossier === undefined ? null : (
@@ -139,6 +84,47 @@ export const BrainPageBase = (props: BrainPageBaseProps) => {
             />
         )
     }
+    if (page.tab === "facts") {
+        return (
+            <>
+                <BrainFacts />
+                <BrainFactForm tab="facts" fact={page.fact} edit={page.edit} answer={page.answer} />
+            </>
+        )
+    }
+    if (page.tab === "lessons") return <BrainLessons />
+    if (page.tab === "agents") {
+        return (
+            <>
+                <BrainAgentView />
+                <KnowledgeAsk />
+            </>
+        )
+    }
+    return (
+        <>
+            <KnowledgeAdd
+                key={page.addKey}
+                readOnlyNote={page.readOnlyNote}
+                module={page.module}
+                preset={page.addPreset}
+            />
+            <KnowledgeProcessing />
+            <KnowledgeLibrary module={page.module} />
+            <KnowledgeSuggestions />
+            <Text>
+                <TextAction href={page.nivoHref}>{page.nivoLabel}</TextAction>
+            </Text>
+        </>
+    )
+}
+
+/**
+ * Draws the Second Brain: its tabs on the header band, then the tab the address asks for. The map is a panes page (its grid
+ * attaches flush under the tab line); every other tab sits in the page measure.
+ */
+export const BrainPageBase = (props: BrainPageBaseProps) => {
+    const page = props.props
     if (page.tab === "map") {
         return (
             <BrainMap
@@ -153,7 +139,6 @@ export const BrainPageBase = (props: BrainPageBaseProps) => {
     return (
         <BrainPageFrame selected={page.tab} header={page.header}>
             <div className={PAGE_CLASS_NAME}>
-                <BrainPipeline />
                 <div className={PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${page.tab}`}>
                     <Panel {...props} />
                 </div>

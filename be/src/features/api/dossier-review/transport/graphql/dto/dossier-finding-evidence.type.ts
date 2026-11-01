@@ -34,4 +34,12 @@ export class DossierFindingEvidenceType {
     /** The words quoted. */
     @Field(() => String, { nullable: true })
     quote?: string | null
+
+    /** What the place counts: page, slide or sheet; null when the file names no place or the passage was stored before places. */
+    @Field(() => String, { nullable: true })
+    placeKind?: string | null
+
+    /** The page or slide number, or the sheet name, beside the quote; null with the kind. */
+    @Field(() => String, { nullable: true })
+    placeLabel?: string | null
 }

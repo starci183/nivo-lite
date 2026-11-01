@@ -63,7 +63,7 @@ export class KnowledgeSourceType {
     @Field(() => Int)
     progress!: number
 
-    /** The stage a worker is on (`read`, `chunk`, `embed`, `store` or `facts`), or null when none is. */
+    /** The stage a document is at (`read`, `chunk`, `embed`, `store`, `facts`, or `critic` while the critic checks its dossier), or null when none is. */
     @Field(() => String, { nullable: true })
     stage?: string | null
 

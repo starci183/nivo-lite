@@ -1859,6 +1859,13 @@ type BrainLessonType {
   title: String!
 }
 
+type BrainTodoType {
+  facts: Int!
+  findings: Int!
+  questions: Int!
+  total: Int!
+}
+
 type BrainType {
   extractions: [BrainExtractionType!]!
   facts: [BrainFactType!]!
@@ -3324,6 +3331,8 @@ type DossierFindingEvidenceType {
   factLine: String
   label: String!
   passageId: ID
+  placeKind: String
+  placeLabel: String
   quote: String
   role: String!
   sourceId: ID
@@ -3529,7 +3538,7 @@ input EnqueueKnowledgeSourceInput {
   title: String! @inputBounds(maxLength: 300)
   topic: String @inputBounds(maxLength: 200)
   url: String @inputBounds(maxLength: 2048)
-  visibility: String @inputBounds(maxLength: 40)
+  visibility: String! @inputBounds(maxLength: 40)
 }
 
 type ExplainScheduleType {
@@ -6445,6 +6454,7 @@ type Query {
   bookingBoard(input: BookingBoardInput): BookingBoardType!
   brain: BrainType!
   brainDossiers: [BrainDossierType!]!
+  brainTodo: BrainTodoType!
   brandProposals(input: BrandProposalsInput!): [BrandProposalType!]!
   chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
   chatMarkerState(input: ChatTargetInput!): ChatMarkerStateType!

@@ -57,7 +57,7 @@ export const useChatbotGaps = (workspaceId: string | undefined, isManager: boole
             line: gap.count > 1 ? t("gapAsked", { n: gap.count, when }) : t("gapAskedOnce", { when }),
             badges: gap.reopenedCount > 0 ? [{ label: t("gapReopened"), tone: "warning" }] : [],
             answerLabel: t("gapAnswer"),
-            answerHref: brainTabHref("gaps", { answer: gap.id }),
+            answerHref: brainTabHref("todo", { answer: gap.id }),
             dismissLabel: t("gapDismiss"),
         }
     })

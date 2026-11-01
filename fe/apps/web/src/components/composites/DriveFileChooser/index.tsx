@@ -37,7 +37,13 @@ interface DriveListingView {
         readonly value: string | null
         readonly options: ReadonlyArray<{ readonly value: string; readonly label: string }>
     }
-    readonly add: { readonly label: string; readonly isPending: boolean; readonly isDisabled: boolean }
+    readonly add: {
+        readonly label: string
+        readonly isPending: boolean
+        readonly isDisabled: boolean
+        /** Why adding waits, said on the disabled button; absent when it does not wait on the owner. */
+        readonly disabledReason?: string
+    }
 }
 
 /** Props for {@link DriveFileChooser}. */
@@ -115,6 +121,9 @@ const ListingBand = (props: ListingBandProps) => {
                         intent="commit"
                         isPending={listing.add.isPending}
                         isDisabled={listing.add.isDisabled}
+                        {...(listing.add.disabledReason === undefined
+                            ? {}
+                            : { disabledReason: listing.add.disabledReason })}
                         onPress={props.on.add}
                     >
                         {listing.add.label}

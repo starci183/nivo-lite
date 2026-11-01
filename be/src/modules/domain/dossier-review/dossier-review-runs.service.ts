@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { ArrayContains, IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import type { DossierEntry } from "@modules/domain/brain-dossiers"
-import { DossierSourcesService } from "@modules/domain/knowledge-sources"
+import { DossierSourcesService, SourceCriticStageService } from "@modules/domain/knowledge-sources"
 import type { DossierSource } from "@modules/domain/knowledge-sources"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
@@ -47,6 +47,7 @@ export class DossierReviewRunsService {
         private readonly inputs: ReviewInputsService,
         private readonly sources: DossierSourcesService,
         private readonly queue: KnowledgeQueue,
+        private readonly critic: SourceCriticStageService,
     ) {}
 
     /** The facts of a document were read (or given up): its dossier is reviewed; a document no dossier claims is reviewed on its own with the rest of the workspace. */
@@ -61,6 +62,7 @@ export class DossierReviewRunsService {
             triggerRef: sourceId,
             requestedBy: null,
         })
+        await this.critic.enter(workspaceId, sourceId)
     }
 
     /**

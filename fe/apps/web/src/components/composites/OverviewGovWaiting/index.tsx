@@ -1,4 +1,4 @@
-import { Badge, Button, EmptyNotice, ListRow, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
+import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovWaitingItem } from "@/hooks/overviewGov"
 
@@ -21,19 +21,15 @@ export const OverviewGovWaiting = (props: OverviewGovWaitingProps) => {
     const { figures } = props
     return (
         <AccountingBlock label={figures.title}>
-            <SectionHeader
-                level={2}
-                title={figures.title}
-                action={
+            <SurfaceListCard
+                label={figures.title}
+                labelEnd={
                     figures.openLabel === null ? undefined : (
                         <TextAction href={figures.chatHref} appearance="section">
                             {figures.openLabel}
                         </TextAction>
                     )
                 }
-            />
-            <SurfaceListCard
-                ariaLabel={figures.title}
                 {...(figures.items.length === 0 ? {} : { fact: figures.count })}
                 empty={<EmptyNotice message={figures.none} />}
                 footer={[figures.more ?? "", figures.source].filter((line) => line !== "").join(" · ")}

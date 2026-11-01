@@ -1,5 +1,5 @@
 export { parseDocumentsConfig } from "./documents.config"
-export type { DriveAccess, DriveFolderListing, MaybeDriveAccess } from "./documents.contracts"
+export type { DriveAccess, DriveFolderListing, MaybeDriveAccess, PlacedText } from "./documents.contracts"
 export { DOCUMENTS, InjectDocuments } from "./documents.decorators"
 export { DocumentsModule } from "./documents.module"
 export type { DocumentsPort } from "./documents.port"

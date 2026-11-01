@@ -1,4 +1,4 @@
-import { Badge, EmptyNotice, ListRow, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
+import { Badge, EmptyNotice, ListRow, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovHistoryRow } from "@/hooks/overviewGov"
 
@@ -17,17 +17,13 @@ export interface OverviewGovHistoryProps {
 /** The latest decisions of the log: one row each in one list, the source under it. */
 export const OverviewGovHistory = (props: OverviewGovHistoryProps) => (
     <AccountingBlock label={props.figures.title}>
-        <SectionHeader
-            level={2}
-            title={props.figures.title}
-            action={
+        <SurfaceListCard
+            label={props.figures.title}
+            labelEnd={
                 <TextAction href={props.figures.allHref} appearance="section">
                     {props.figures.allLabel}
                 </TextAction>
             }
-        />
-        <SurfaceListCard
-            ariaLabel={props.figures.title}
             empty={<EmptyNotice message={props.figures.empty} />}
             footer={props.figures.source}
         >

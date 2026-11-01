@@ -89,12 +89,49 @@ export interface GoogleAccessToken {
     readonly expiresInSeconds: number
 }
 
+/** The kinds of place a stretch of a file can sit at. */
+export type TextPlaceKind = "page" | "slide" | "sheet"
+
+/** Where in its file a stretch of text sits: a page of a PDF, a slide of a presentation, a sheet of a workbook. */
+export interface TextPlace {
+    /** What the label counts. */
+    readonly kind: TextPlaceKind
+    /** The page or slide number, or the sheet name. */
+    readonly label: string
+}
+
+/** A stretch of a file and the place it sits at, or null when the file names no places. */
+export interface PlacedText {
+    /** The place, or null. */
+    readonly place: TextPlace | null
+    /** The text. */
+    readonly text: string
+}
+
+/** The text of a file together with the stretches it is made of; the merged text is the one the file gave before places existed. */
+export interface PlacedDocument {
+    /** The whole text. */
+    readonly text: string
+    /** The stretches in order, each with its place; a file with no places is one stretch with none. */
+    readonly parts: ReadonlyArray<PlacedText>
+}
+
+/** The text of a PDF merged, and page by page. */
+export interface PdfPagesResult {
+    /** The merged text, as `pdf` gives it. */
+    readonly text: string
+    /** The text of each page, in order. */
+    readonly pages: ReadonlyArray<string>
+}
+
 /** The two readers that need a library the unit specs cannot load; the composition root provides the real ones. */
 export interface DocumentReaders {
     /** The text of a Word file. */
     docx(bytes: Uint8Array): Promise<string>
     /** The text of a PDF, pages merged. */
     pdf(bytes: Uint8Array): Promise<string>
+    /** The text of a PDF merged and page by page, from one reading of the file. */
+    pdfPages(bytes: Uint8Array): Promise<PdfPagesResult>
 }
 
 /** The merged PDF text and the original document page count. */

@@ -54,6 +54,25 @@ describe("libraryReadersOf", () => {
         expect(unpdf.extractText).toHaveBeenCalledWith(pdf, { mergePages: true })
     })
 
+    it("reads the pages of a PDF in one pass with the merged text the pdf reader gives", async () => {
+        const { sdks, unpdf } = sdksOf()
+        const readers = await build(sdks)
+
+        const pdf = mock<Awaited<ReturnType<Unpdf["getDocumentProxy"]>>>()
+        unpdf.getDocumentProxy.mockResolvedValue(pdf)
+        unpdf.extractText
+            .mockResolvedValueOnce({ text: "one\ntwo", totalPages: 2 })
+            .mockResolvedValueOnce({ text: ["one", "two"], totalPages: 2 })
+
+        await expect(readers.pdfPages(new Uint8Array([37]))).resolves.toEqual({
+            text: "one\ntwo",
+            pages: ["one", "two"],
+        })
+        expect(unpdf.getDocumentProxy).toHaveBeenCalledTimes(1)
+        expect(unpdf.extractText).toHaveBeenNthCalledWith(1, pdf, { mergePages: true })
+        expect(unpdf.extractText).toHaveBeenNthCalledWith(2, pdf, { mergePages: false })
+    })
+
     it("propagates SDK errors for each consumer to map", async () => {
         const { sdks, mammoth, unpdf } = sdksOf()
         const readers = await build(sdks)

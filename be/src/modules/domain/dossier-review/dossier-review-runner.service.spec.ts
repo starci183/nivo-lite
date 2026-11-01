@@ -26,6 +26,7 @@ import { DossierReviewLogEvent } from "./dossier-review.log-events"
 import type { DossierBundle, DossierReasoner, ReasonedFinding, ReasonedReview } from "./dossier-review.port"
 import { DossierReviewRunnerService, stateOf } from "./dossier-review-runner.service"
 import { DossierFindingEntity, DossierReviewEntity, DossierReviewRunEntity } from "./persistence/entities"
+import { ReviewCriticService } from "./review-critic.service"
 import { ReviewInputsService } from "./review-inputs.service"
 
 const PAYLOAD = { runId: "r1", workspaceId: WS }
@@ -151,6 +152,7 @@ const build = async (setup: Setup) => {
             { provide: DOSSIER_REASONER, useValue: reasoner },
             { provide: ReviewInputsService, useValue: inputs },
             { provide: UsageMeterService, useValue: usage },
+            { provide: ReviewCriticService, useValue: mock<ReviewCriticService>() },
         ],
     }).compile()
     return { service: moduleRef.get(DossierReviewRunnerService), em, daily, inputs, usage, reasoner, logger }

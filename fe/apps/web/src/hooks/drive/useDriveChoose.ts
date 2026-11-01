@@ -18,8 +18,8 @@ interface DriveAddInput {
 }
 
 /**
- * Adding the ticked files: ordinary link sources marked `google_drive`, stored under their own file names, who may use them as chosen,
- * through the same queue as every other document (one `enqueueKnowledgeSource` each, with its per-item errors).
+ * Adding the ticked files: ordinary link sources marked `google_drive`, stored under their own file names,
+ * who may use them chosen by the owner and never assumed, through the same queue as every other document (one `enqueueKnowledgeSource` each, with its per-item errors).
  */
 const useDriveAdd = (input: DriveAddInput) => {
     const queue = useAddQueue(useQueueActions())

@@ -12,6 +12,7 @@ import type {
     InstallationScope,
     MaybeFact,
 } from "./brain-facts.contracts"
+import { waitingCardCount } from "./fact-cards.policy"
 import { factKeyOf } from "./fact-columns.policy"
 import { toFactRecord } from "./fact-record.mapper"
 import { inForce, searchFacts, visibleTo } from "./fact-view.policy"
@@ -19,6 +20,9 @@ import { BrainFactEntity } from "./persistence/entities"
 
 /** The most facts a list returns. */
 const LIST_MAX = 2000
+
+/** The most waiting proposals one count reads. */
+const WAITING_MAX = 5000
 
 @Injectable()
 /** The read side of the facts: one fact, a list, the facts of a key, and what one agent may use or find right now. */
@@ -45,6 +49,16 @@ export class BrainFactsReadService {
             take: Math.min(filter.limit ?? 500, LIST_MAX),
         })
         return rows.map(toFactRecord)
+    }
+
+    /** How many cards of the owner's review the proposals waiting in the workspace make, read as four columns of each and never the evidence. */
+    async waitingCards(workspaceId: string): Promise<number> {
+        const rows = await this.entityManager.find(BrainFactEntity, {
+            select: { subjectKey: true, attribute: true, value: true, proposalKind: true },
+            where: { workspaceId, status: "proposed" },
+            take: WAITING_MAX,
+        })
+        return waitingCardCount(rows)
     }
 
     /** The facts of a key in one status and scope. */

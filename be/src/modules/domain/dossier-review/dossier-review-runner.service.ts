@@ -27,6 +27,7 @@ import { DossierFindingEntity, DossierReviewEntity, DossierReviewRunEntity } fro
 import { reconcile } from "./reconcile.policy"
 import type { Reconciliation } from "./reconcile.policy"
 import { buildBundle, corpusOf, inputsFingerprintOf, reasonedCandidates, resolvedByModel } from "./review-bundle.policy"
+import { ReviewCriticService } from "./review-critic.service"
 import { ReviewInputsService } from "./review-inputs.service"
 import { RULE_KEYS, runRules } from "./rule-engine.policy"
 
@@ -116,6 +117,7 @@ export class DossierReviewRunnerService {
         @InjectDossierReasoner() private readonly reasoner: DossierReasoner,
         private readonly inputs: ReviewInputsService,
         private readonly usage: UsageMeterService,
+        private readonly critic: ReviewCriticService,
     ) {}
 
     /** Runs the review a job names; a payload of another shape, or a run another worker holds or finished, changes nothing. */
@@ -126,7 +128,10 @@ export class DossierReviewRunnerService {
         }
         const now = this.clock.now()
         const run = await this.claim(payload.workspaceId, payload.runId, now)
-        if (run === null) return "skipped"
+        if (run === null) {
+            await this.critic.settle(payload.workspaceId, payload.runId)
+            return "skipped"
+        }
         const pass = await this.passOf(run, now)
         const ai = await this.modelPass(pass)
         const outcome = reconcile({
@@ -143,6 +148,7 @@ export class DossierReviewRunnerService {
             aiResolved: ai.resolved,
         })
         await this.persist(pass, ai, outcome)
+        await this.critic.settle(run.workspaceId, run.id)
         return "done"
     }
 
@@ -154,6 +160,7 @@ export class DossierReviewRunnerService {
             { id: payload.runId, workspaceId: payload.workspaceId, status: In(["queued", "running"]) },
             { status: "failed", finishedAt: this.clock.now(), error: JOB_FAILED },
         )
+        await this.critic.settle(payload.workspaceId, payload.runId)
     }
 
     /** Takes a queued run, or one whose worker has been silent for 15 minutes; null when another worker holds it or it ended. */

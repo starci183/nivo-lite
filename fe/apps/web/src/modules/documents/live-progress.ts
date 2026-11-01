@@ -38,6 +38,7 @@ export const KNOWLEDGE_STAGE_KEYS: Readonly<Record<KnowledgeProgressStage, strin
     embed: "stage_embed",
     store: "stage_store",
     facts: "stage_facts",
+    critic: "stage_critic",
 }
 
 /** The document with the pushed state laid over it when that state is the newer one; the stored list wins when it is. */
@@ -50,12 +51,20 @@ export const overlayPush = (document: KnowledgeDocument, push: KnowledgeProgress
               progress: push.progress,
               error: push.error,
               chunkCount: push.chunkCount,
+              stage: push.stage,
               updatedAt: push.at,
           }
 
 /** The stage a stored text names, or null for none or one this page does not know. */
 const stageOf = (value: string | null): KnowledgeProgressStage | null =>
-    value === "read" || value === "chunk" || value === "embed" || value === "store" || value === "facts" ? value : null
+    value === "read" ||
+    value === "chunk" ||
+    value === "embed" ||
+    value === "store" ||
+    value === "facts" ||
+    value === "critic"
+        ? value
+        : null
 
 /** What a worker is doing on a document, or null when no worker is on it. */
 export const liveOf = (document: KnowledgeDocument, push: KnowledgeProgressPush | undefined): LiveProgress | null => {

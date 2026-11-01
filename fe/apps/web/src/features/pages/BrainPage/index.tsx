@@ -1,9 +1,12 @@
 import type { Metadata } from "next"
-import { getTranslations } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { pageHeadingOf } from "@/modules/page-header"
-import { brainTabOf } from "@/modules/brain"
+import { brainTabOf, legacyBrainHrefOf } from "@/modules/brain"
 import { DOCUMENT_IDEAS, moduleFilterOf } from "@/modules/documents"
+import { BrainPageActions } from "@/components/blocks/BrainPageActions"
+import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
+import type { BrainTab } from "@/modules/routes"
 import { BrainPageBase } from "./component"
 import type { AddPresetView, BrainPageBaseProps } from "./component"
 
@@ -37,7 +40,7 @@ type SecondBrainTranslate = Awaited<ReturnType<typeof getTranslations<"secondBra
 type Copy = Pick<BrainPageBaseProps["props"], "header" | "nivoLabel" | "nivoHref" | "readOnlyNote">
 
 /** The words of the page that do not depend on its data. */
-const copyOf = (t: Translate, brain: SecondBrainTranslate, knowledge: KnowledgeTranslate): Copy => ({
+const copyOf = (t: Translate, brain: SecondBrainTranslate, knowledge: KnowledgeTranslate, tab: BrainTab): Copy => ({
     header: pageHeadingOf({
         crumbLabel: t("crumbLabel"),
         crumbs: [
@@ -46,35 +49,43 @@ const copyOf = (t: Translate, brain: SecondBrainTranslate, knowledge: KnowledgeT
         ],
         title: t("title"),
         description: brain("intro"),
+        actions: <BrainPageActions tab={tab} />,
     }),
     nivoLabel: knowledge("nivoLink"),
     nivoHref: KNOWLEDGE_ROUTES.nivo,
     readOnlyNote: knowledge("readOnlyNote"),
 })
 
-/** The drawer, as the address asks for it: closed, open on files, or open on a note about an idea. */
+/** The add form, as the address asks for it: with nothing chosen, with the files of a dossier, or with a note about an idea. */
 const addOf = (
     knowledge: KnowledgeTranslate,
     props: Pick<BrainPageProps, "add" | "topic" | "tag">,
-): Pick<BrainPageBaseProps["props"], "isAddOpen" | "addKey" | "addPreset"> => {
+): Pick<BrainPageBaseProps["props"], "addKey" | "addPreset"> => {
     const add = props.add
-    if (add === undefined) return { isAddOpen: false, addKey: "base", addPreset: null }
+    if (add === undefined) return { addKey: "base", addPreset: null }
     if (add === "upload" && props.topic !== undefined) {
         const preset: AddPresetView = {
             topic: props.topic,
             mode: "files",
             ...(props.tag === undefined ? {} : { tags: props.tag }),
         }
-        return { isAddOpen: true, addKey: `upload:${props.topic}:${props.tag ?? ""}`, addPreset: preset }
+        return { addKey: `upload:${props.topic}:${props.tag ?? ""}`, addPreset: preset }
     }
     const idea = DOCUMENT_IDEAS.find((one) => one.key === add)
-    if (idea === undefined) return { isAddOpen: true, addKey: "base", addPreset: null }
-    const preset: AddPresetView = { topic: knowledge(`suggest_${idea.key}_topic`) }
-    return { isAddOpen: true, addKey: add, addPreset: preset }
+    if (idea === undefined) return { addKey: "base", addPreset: null }
+    const preset: AddPresetView = {
+        topic: knowledge(`suggest_${idea.key}_topic`),
+        visibility: idea.visibility,
+    }
+    return { addKey: add, addPreset: preset }
 }
 
 /** The Second Brain page shell: translates and lays out the page; the connected blocks read their data through GraphQL. */
 export const BrainPage = async (props: BrainPageProps) => {
+    const legacy = legacyBrainHrefOf(props)
+    if (legacy !== null)
+        return navigation.redirect({ href: legacy, locale: (await getLocale()) === "en" ? "en" : "vi" })
+    const tab = brainTabOf(props)
     const [t, brain, knowledge] = await Promise.all([
         getTranslations("brain"),
         getTranslations("secondBrain"),
@@ -83,9 +94,9 @@ export const BrainPage = async (props: BrainPageProps) => {
     return (
         <BrainPageBase
             props={{
-                ...copyOf(t, brain, knowledge),
+                ...copyOf(t, brain, knowledge, tab),
                 ...addOf(knowledge, props),
-                tab: brainTabOf(props),
+                tab,
                 fact: props.fact,
                 edit: props.edit,
                 answer: props.answer,
@@ -109,11 +120,10 @@ export const BrainLoadingPage = async () => {
     return (
         <BrainPageBase
             props={{
-                ...copyOf(t, brain, knowledge),
-                isAddOpen: false,
+                ...copyOf(t, brain, knowledge, "todo"),
                 addKey: "base",
                 addPreset: null,
-                tab: "dossiers",
+                tab: "todo",
                 fact: undefined,
                 edit: undefined,
                 answer: undefined,

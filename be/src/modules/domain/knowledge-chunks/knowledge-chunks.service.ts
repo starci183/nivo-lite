@@ -13,12 +13,15 @@ import type {
     ChunkWrite,
     EmbeddedChunk,
     ModelInUse,
+    PassagePlace,
     PassageView,
+    PlaceWrite,
     SourcePassage,
     StaleChunk,
     VectorWrite,
 } from "./knowledge-chunks.contracts"
 import { passageHashOf } from "./passage-hash.policy"
+import { placeOfRow } from "./passage-place.policy"
 import { KnowledgeChunkEntity } from "./persistence/entities"
 
 /** The most passages one source lists or reports as embedded. */
@@ -39,6 +42,14 @@ const HASH_OF_ID =
 /** The new order of each id, picked from the two arrays the write carries. */
 const ORDER_OF_ID =
     '(SELECT t.ord FROM unnest(CAST(:ids AS uuid[]), CAST(:orders AS integer[])) AS t(id, ord) WHERE t.id = "knowledge_chunks"."id")'
+
+/** The place kind of each order, picked from the arrays the write carries. */
+const KIND_OF_ORD =
+    '(SELECT t.kind FROM unnest(CAST(:orders AS integer[]), CAST(:kinds AS text[]), CAST(:labels AS text[])) AS t(ord, kind, label) WHERE t.ord = "knowledge_chunks"."ord")'
+
+/** The place label of each order, picked from the arrays the write carries. */
+const LABEL_OF_ORD =
+    '(SELECT t.label FROM unnest(CAST(:orders AS integer[]), CAST(:kinds AS text[]), CAST(:labels AS text[])) AS t(ord, kind, label) WHERE t.ord = "knowledge_chunks"."ord")'
 
 /** The most passages one search answers. */
 const SEARCH_MAX = 40
@@ -66,6 +77,8 @@ const rowOf = (write: Omit<ChunkWrite, "drafts">, draft: ChunkDraft, order: numb
     embedding: draft.vector,
     embeddingModel: draft.vector === null ? null : write.model,
     contentHash: draft.vector === null ? null : passageHashOf(draft.text, write.model),
+    placeKind: draft.place?.kind ?? null,
+    placeLabel: draft.place?.label ?? null,
 })
 
 /** How many passages one insert statement stores. */
@@ -135,6 +148,43 @@ export class KnowledgeChunksService {
             }
             await tx.delete(KnowledgeChunkEntity, { sourceId, workspaceId, ord: MoreThanOrEqual(count) })
         })
+    }
+
+    /**
+     * Writes where each passage of a source sits in its document, by order, on the stored passages: a passage kept where it was or moved
+     * keeps its vector and only learns its place, so nothing is embedded again. An order the write does not name is left as it is.
+     */
+    async place(write: PlaceWrite): Promise<void> {
+        if (write.places.length === 0) return
+        await this.entityManager
+            .createQueryBuilder(KnowledgeChunkEntity, "kc")
+            .update()
+            .set({ placeKind: () => KIND_OF_ORD, placeLabel: () => LABEL_OF_ORD })
+            .where("workspace_id = :workspaceId AND source_id = :sourceId AND ord = ANY(CAST(:orders AS integer[]))")
+            .setParameters({
+                workspaceId: write.workspaceId,
+                sourceId: write.sourceId,
+                orders: write.places.map((one) => one.order),
+                kinds: write.places.map((one) => one.place?.kind ?? null),
+                labels: write.places.map((one) => one.place?.label ?? null),
+            })
+            .execute()
+    }
+
+    /** The place of each of these passages that has one, by passage id; the caller has proven the workspace. */
+    async placesOf(workspaceId: string, passageIds: ReadonlyArray<string>): Promise<ReadonlyMap<string, PassagePlace>> {
+        if (passageIds.length === 0) return new Map()
+        const rows = await this.entityManager.find(KnowledgeChunkEntity, {
+            select: { id: true, placeKind: true, placeLabel: true },
+            where: { workspaceId, id: In(passageIds.slice(0, PASSAGE_LIMIT)) },
+            take: PASSAGE_LIMIT,
+        })
+        const places = new Map<string, PassagePlace>()
+        for (const row of rows) {
+            const place = placeOfRow(row.placeKind, row.placeLabel)
+            if (place !== null) places.set(row.id, place)
+        }
+        return places
     }
 
     /**

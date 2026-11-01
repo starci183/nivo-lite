@@ -1,9 +1,54 @@
+/** The kinds of place a passage can sit at in its document. */
+export type PassagePlaceKind = "page" | "slide" | "sheet"
+
+/** Where in its document a passage sits: the page of a PDF, the slide of a presentation, the sheet of a workbook. */
+export interface PassagePlace {
+    /** What the label counts. */
+    readonly kind: PassagePlaceKind
+    /** The page or slide number, or the sheet name. */
+    readonly label: string
+}
+
+/** A stored place column: a text, or null when the passage has none. */
+export type MaybePlaceText = string | null
+
+/** The place of a passage, or null when it has none. */
+export type MaybePassagePlace = PassagePlace | null
+
+/** A stretch of a document, or a passage cut from it, with the place it sits at, or null when the file names no places. */
+export interface LocatedText {
+    /** The place, or null. */
+    readonly place: PassagePlace | null
+    /** The text. */
+    readonly text: string
+}
+
+/** The place of the passage at one order of a source. */
+export interface PlacedOrder {
+    /** The order of the passage in its source. */
+    readonly order: number
+    /** Its place, or null. */
+    readonly place: PassagePlace | null
+}
+
+/** The places to write on the stored passages of a source, by order. */
+export interface PlaceWrite {
+    /** The workspace that owns the source. */
+    readonly workspaceId: string
+    /** The source. */
+    readonly sourceId: string
+    /** The place of each order. */
+    readonly places: ReadonlyArray<PlacedOrder>
+}
+
 /** One passage to store: its text and its vector in the pgvector text form, or null when it has none. */
 export interface ChunkDraft {
     /** The text. */
     readonly text: string
     /** The vector as `[a,b,...]`, or null for a passage found by keyword only. */
     readonly vector: string | null
+    /** Where it sits in its document, or absent when the file names no places. */
+    readonly place?: PassagePlace | null
 }
 
 /** The passages of one source, to replace what is stored. */

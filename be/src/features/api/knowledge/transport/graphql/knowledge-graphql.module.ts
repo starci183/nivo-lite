@@ -22,6 +22,7 @@ import { SetKnowledgeSuggestionStateResolver } from "./set-knowledge-suggestion-
 import { CreateKnowledgeUploadResolver } from "./create-knowledge-upload.resolver"
 import { ReembedKnowledgeResolver } from "./reembed-knowledge.resolver"
 import { GetBrainResolver } from "./get-brain.resolver"
+import { BrainTodoResolver } from "./brain-todo.resolver"
 import { SaveBrainFactResolver } from "./save-brain-fact.resolver"
 import { DecideBrainFactResolver } from "./decide-brain-fact.resolver"
 import { KeepCurrentBrainFactResolver } from "./keep-current-brain-fact.resolver"
@@ -62,6 +63,7 @@ import { AgentKnowledgeLensesResolver } from "./agent-knowledge-lenses.resolver"
         CreateKnowledgeUploadResolver,
         ReembedKnowledgeResolver,
         GetBrainResolver,
+        BrainTodoResolver,
         SaveBrainFactResolver,
         DecideBrainFactResolver,
         KeepCurrentBrainFactResolver,

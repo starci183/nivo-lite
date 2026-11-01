@@ -9,13 +9,7 @@ import { AgentGraphMode } from "@/components/composites/AgentGraphMode"
 import { AgentGraphInspector } from "@/components/composites/AgentGraphInspector"
 import { AgentGraphTabs } from "@/components/composites/AgentGraphTabs"
 import { SlotView } from "@/components/composites/SlotView"
-import type {
-    AgentGraphAction,
-    AgentGraphPanelView,
-    AgentGraphSideTab,
-    DataSlot,
-    SlotLabels,
-} from "@/modules/types"
+import type { AgentGraphAction, AgentGraphPanelView, AgentGraphSideTab, DataSlot, SlotLabels } from "@/modules/types"
 
 /** What the bands of the work map need of the panes: the graph read, its words, and the commands on it. */
 export interface GraphBandProps {

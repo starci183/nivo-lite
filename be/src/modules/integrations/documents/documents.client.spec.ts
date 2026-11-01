@@ -212,6 +212,19 @@ describe("DocumentsClient", () => {
                 params: { type: named },
             })
         })
+
+        it("reads bytes with their places by the same kind rule, and refuses what it cannot read", async () => {
+            const { client } = await build()
+
+            await expect(client.readPlacedFile("notes.txt", new TextEncoder().encode("plain"), "")).resolves.toEqual({
+                text: "plain",
+                parts: [{ place: null, text: "plain" }],
+            })
+            await expect(client.readPlacedFile("blob", new Uint8Array(), "image/png")).rejects.toMatchObject({
+                code: DocumentsErrorCode.TypeUnsupported,
+                params: { type: "image/png" },
+            })
+        })
     })
 })
 

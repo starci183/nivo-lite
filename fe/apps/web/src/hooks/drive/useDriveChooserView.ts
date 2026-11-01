@@ -5,11 +5,17 @@ import { driveFileNoteOf, isReadableDriveFile } from "./drive.shared"
 import { useDriveChoose } from "./useDriveChoose"
 import type { DriveVisibility } from "./useDriveChoose"
 
-/** The visibility a radio value stands for; a value that is not one keeps the safer, internal one. */
-const visibilityOf = (value: string): DriveVisibility => (value === "public" ? "public" : "internal")
+/** The visibility a radio value stands for; a value that is neither is no choice at all, never a default. */
+const visibilityOf = (value: string): DriveVisibility | null => {
+    if (value === "public" || value === "internal") return value
+    return null
+}
 
 /** What the chosen audience means, or, before a choice, what the chatbot reads: nothing is preselected. */
-const visibilityHelpOf = (t: ReturnType<typeof useTranslations<"driveConnection">>, value: DriveVisibility | null): string => {
+const visibilityHelpOf = (
+    t: ReturnType<typeof useTranslations<"driveConnection">>,
+    value: DriveVisibility | null,
+): string => {
     if (value === null) return t("visNoneHelp")
     return value === "internal" ? t("visInternalHelp") : t("visPublicHelp")
 }
@@ -62,16 +68,17 @@ export const useDriveChooserView = () => {
                           visibility: {
                               label: t("visibilityLabel"),
                               description: visibilityHelpOf(t, choose.visibility),
-                              value: choose.visibility,
+                              value: choose.visibility ?? "",
                               options: [
-                                  { value: "internal", label: t("visInternal") },
                                   { value: "public", label: t("visPublic") },
+                                  { value: "internal", label: t("visInternal") },
                               ],
                           },
                           add: {
                               label: t("add", { count: ticked }),
                               isPending: choose.isAdding,
                               isDisabled: ticked === 0 || choose.visibility === null,
+                              ...(ticked > 0 && choose.visibility === null ? { disabledReason: t("visRequired") } : {}),
                           },
                       },
                   }),
@@ -81,7 +88,10 @@ export const useDriveChooserView = () => {
             read: () => void choose.readFolder(),
             pick: choose.pick,
             select: choose.setSelected,
-            changeVisibility: (value: string) => choose.setVisibility(visibilityOf(value)),
+            changeVisibility: (value: string) => {
+                const visibility = visibilityOf(value)
+                if (visibility !== null) choose.setVisibility(visibility)
+            },
             add: choose.add,
         },
     }

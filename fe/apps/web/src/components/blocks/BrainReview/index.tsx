@@ -1,15 +1,14 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { FACT_SOURCE_KEY, adviceFor, proposerOf, reviewBoardOf, useBrainBoard, useBrainCommand, useLessonDesk } from "@/hooks/brain"
+import { FACT_SOURCE_KEY, adviceFor, proposerOf, reviewBoardOf, useBrainBoard, useBrainCommand } from "@/hooks/brain"
 import type { ReviewConflict, ReviewSingle } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { KnowledgeRowView, RowActionView, RowPartView } from "@/components/composites/KnowledgeRows"
-import type { BrainFact, BrainLesson } from "@/modules/types"
+import type { BrainFact } from "@/modules/types"
 import { applyAllOf } from "./applyAll"
 import { BrainReviewBase } from "./component"
 
-/** The connected review list: words each proposal, suggests what to do with it and sends the decision to the back end. */
 /** Connects the state and commands used by BrainReview. */
 const buildBrainReviewState = (
     board: ReturnType<typeof useBrainBoard>,
@@ -81,49 +80,34 @@ const buildBrainReviewState = (
             },
         ],
     })
-    return { t, plan, groupRow, singleRow, retireRow, board, command, ...applyAllOf(t, plan.singles, board.nowMs, command) }
+    return {
+        t,
+        plan,
+        groupRow,
+        singleRow,
+        retireRow,
+        board,
+        command,
+        ...applyAllOf(t, plan.singles, board.nowMs, command),
+    }
 }
 
-/** Draws the connected view from its current state. */
+/** The connected list of facts waiting for a decision: words each proposal, suggests what to do with it and sends the decision to the back end. */
 export const BrainReview = () => {
     const t = useTranslations("brain")
     const command = useBrainCommand()
     const board = useBrainBoard()
     const slotLabels = useSlotLabels()
 
-    const desk = useLessonDesk("")
     const connected = buildBrainReviewState(board, t, command)
     const { plan, groupRow, singleRow, retireRow, applyAll, readyCount } = connected
-    const lessonRow = (lesson: BrainLesson): KnowledgeRowView => ({
-        id: lesson.id,
-        title: lesson.title,
-        lines: [lesson.body, ...(lesson.appliesWhen === "" ? [] : [lesson.appliesWhen])],
-        badges: [{ label: t("statusProposed"), tone: "warning" }],
-        actions: board.canWrite
-            ? [
-                  {
-                      id: "approve",
-                      label: t("apply"),
-                      intent: "commit",
-                      onPress: () => desk.decide(lesson.id, "active"),
-                  },
-                  {
-                      id: "reject",
-                      label: t("reject"),
-                      intent: "neutral",
-                      onPress: () => desk.decide(lesson.id, "rejected"),
-                  },
-              ]
-            : [],
-    })
     return (
         <BrainReviewBase
             props={{
                 list: {
                     section: {
                         id: "brain-review-title",
-                        title: t("tabReview"),
-                        description: t("reviewIntro"),
+                        title: t("waitingFactsTitle"),
                         failTitle: t("loadFailed"),
                         action:
                             board.canWrite && readyCount > 1
@@ -135,18 +119,17 @@ export const BrainReview = () => {
                                   }
                                 : undefined,
                     },
-                    label: t("tabReview"),
-                    isPending: command.isPending || desk.isPending,
+                    label: t("waitingFactsTitle"),
+                    footer: t("waitingFactsFooter"),
+                    isPending: command.isPending,
                     slot: mapSlot(board.slot, () => [
                         ...plan.groups.map(groupRow),
                         ...plan.singles.map(singleRow),
                         ...plan.retires.map(retireRow),
-                        ...board.lessons.filter((lesson) => lesson.status === "proposed").map(lessonRow),
                     ]),
-                    slotLabels: slotLabels(t("reviewEmptyTitle")),
+                    slotLabels: slotLabels(t("waitingFactsEmpty")),
                 },
             }}
-            on={{ retry: board.reload }}
         />
     )
 }

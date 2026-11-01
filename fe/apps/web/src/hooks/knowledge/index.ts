@@ -9,6 +9,8 @@ export {
     isReadyNote,
     moduleFilterOf,
     noteKeyOf,
+    INGEST_STAGES,
+    ingestStageOf,
 } from "@/modules/documents"
 export type { AgentModule } from "@/modules/documents"
 export type { ModuleKey } from "@/modules/catalog"
@@ -22,10 +24,8 @@ export { useKnowledgeProgressViewOf } from "./useKnowledgeProgressViewOf"
 export { useLibraryCommands } from "./useLibraryCommands"
 export { useNivoKnowledge } from "./useNivoKnowledge"
 export { useSourceCommands } from "./useSourceCommands"
-export { useUsageView } from "./useUsageView"
 export { useWorkspaceMember } from "./useWorkspaceMember"
 export { useAddDocumentsView } from "./useAddDocumentsView"
-export type { QueuedDoc } from "./useQueuedDocs"
 export { useAddQueue } from "./useAddQueue"
 export { useDriveGrant } from "./useDriveGrant"
 export { useQueueActions } from "./useQueueActions"

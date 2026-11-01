@@ -3,7 +3,7 @@ import { builder, mock } from "@starci/jest-preset"
 import { KnowledgeSourcesService, MAX_UPLOAD_BYTES, StoredNote } from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { DOCUMENTS, DocumentsErrorCode } from "@modules/integrations/documents"
-import type { DocumentsPort, DriveAccess } from "@modules/integrations/documents"
+import type { DocumentsPort, DriveAccess, PlacedText } from "@modules/integrations/documents"
 import { DRIVE_ACCESS_SOURCE } from "./knowledge.decorators"
 import type { DriveAccessSource } from "./knowledge.contracts"
 import { SourceReaderService } from "./source-reader.service"
@@ -67,16 +67,17 @@ describe("SourceReaderService", () => {
             const { reader, sources, documents } = await build()
             documents.canReadFileName.mockReturnValue(true)
             sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1, 2]), contentType: "application/pdf" })
-            documents.readFile.mockResolvedValue("Menu text")
+            const parts: ReadonlyArray<PlacedText> = [{ place: { kind: "page", label: "1" }, text: "Menu text" }]
+            documents.readPlacedFile.mockResolvedValue({ text: "Menu text", parts })
 
             await expect(reader.read(file())).resolves.toEqual({
                 kind: "ok",
-                value: { text: "Menu text", title: null },
+                value: { text: "Menu text", title: null, parts },
             })
 
             expect(documents.canReadFileName).toHaveBeenCalledWith("menu.pdf")
             expect(sources.readUpload).toHaveBeenCalledWith(`${WS}/a/menu.pdf`)
-            expect(documents.readFile).toHaveBeenCalledWith("menu.pdf", new Uint8Array([1, 2]), "application/pdf")
+            expect(documents.readPlacedFile).toHaveBeenCalledWith("menu.pdf", new Uint8Array([1, 2]), "application/pdf")
         })
 
         it("takes the text of a file source that has no object", async () => {
@@ -113,7 +114,7 @@ describe("SourceReaderService", () => {
             const { reader, sources, documents } = await build()
             documents.canReadFileName.mockReturnValue(true)
             sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1, 2]), contentType: "application/pdf" })
-            documents.readFile.mockResolvedValue("  ")
+            documents.readPlacedFile.mockResolvedValue({ text: "  ", parts: [{ place: null, text: "  " }] })
 
             await expect(reader.read(file())).resolves.toEqual({ kind: "refused", code: StoredNote.NeedsOcr })
         })

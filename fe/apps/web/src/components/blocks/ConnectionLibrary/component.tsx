@@ -5,6 +5,7 @@ import {
     Cluster,
     EmptyNotice,
     Fieldset,
+    FilterButtonGroup,
     Grid,
     SearchField,
     SectionHeader,
@@ -182,39 +183,6 @@ const tileOf = (props: ConnectionLibraryBaseProps, card: LibraryCard) => (
     </div>
 )
 
-/** One category button of the filter row. */
-interface FilterOption {
-    readonly id: string
-    readonly label: string
-    readonly count: number
-}
-
-/**
- * The filter row: one `sm` button per option, the chosen one pressed, on one row. A thin local stand-in for the Grammar
- * `FilterButtonGroup` (not pinned yet): swapping it in is this one component, which will also show the "+n" overflow.
- */
-interface FilterButtonGroupProps {
-    readonly options: ReadonlyArray<FilterOption>
-    readonly value: string
-    readonly onChange: (id: string) => void
-}
-
-const FilterButtonGroup = (props: FilterButtonGroupProps) => (
-    <Cluster gap="inline">
-        {props.options.map((option) => (
-            <Button
-                key={option.id}
-                size="sm"
-                intent={option.id === props.value ? "alternative" : "neutral"}
-                aria-pressed={option.id === props.value}
-                onPress={() => props.onChange(option.id)}
-            >
-                {`${option.label} ${option.count}`}
-            </Button>
-        ))}
-    </Cluster>
-)
-
 /** One section of tiles under its own heading; nothing when it holds none. */
 interface TileSectionProps {
     readonly title: string
@@ -251,9 +219,14 @@ export const ConnectionLibraryBase = (props: ConnectionLibraryBaseProps) => (
                 clearLabel={props.props.clearLabel}
             />
             <FilterButtonGroup
-                options={props.props.categories}
+                label={props.props.filterLabel}
+                options={props.props.categories.map((category) => ({
+                    value: category.id,
+                    label: category.label,
+                    count: category.count,
+                }))}
                 value={props.props.category}
-                onChange={props.on.category}
+                onValueChange={props.on.category}
             />
         </Fieldset>
         {props.props.cards.length === 0 ? (

@@ -24,10 +24,3 @@ export interface DocumentRowView {
     /** The live stage with its count and bar while a worker is on the document; undefined otherwise. */
     readonly progress: KnowledgeProgressRowView | undefined
 }
-
-/** The documents an add drawer queued, each with where its reading stands. */
-export interface AddProgressView {
-    readonly title: string
-    readonly rows: ReadonlyArray<DocumentRowView>
-    readonly isPending: boolean
-}

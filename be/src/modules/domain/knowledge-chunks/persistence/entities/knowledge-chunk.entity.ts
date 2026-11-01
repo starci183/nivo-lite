@@ -47,4 +47,12 @@ export class KnowledgeChunkEntity extends UuidAbstractEntity {
     /** The SHA-256 of the normalised text and the model of the vector; null for a passage with no vector, or one stored before the column. */
     @Column({ name: "content_hash", type: "text", nullable: true })
     contentHash!: string | null
+
+    /** What kind of place in its document the passage sits at: page, slide or sheet; null when the file names none or the passage was stored before the column. */
+    @Column({ name: "place_kind", type: "text", nullable: true })
+    placeKind!: string | null
+
+    /** The page or slide number, or the sheet name, as the file gives it; null with the kind. */
+    @Column({ name: "place_label", type: "text", nullable: true })
+    placeLabel!: string | null
 }

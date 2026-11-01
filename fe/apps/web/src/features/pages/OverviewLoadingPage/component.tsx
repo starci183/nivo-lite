@@ -74,8 +74,7 @@ export const OverviewLoadingPageBase = (props: OverviewLoadingPageBaseProps) => 
                     ))}
                 </Grid>
             </AccountingBlock>
-            <SectionHeader level={2} title={props.props.byOwnerTitle} />
-            <SurfaceListCard ariaLabel={props.props.listLabel} isLoading />
+            <SurfaceListCard label={props.props.byOwnerTitle} isLoading />
         </Stack>
     </Page>
 )

@@ -77,7 +77,7 @@ const options = {
         driveBase: "https://drive.invalid",
         oauthBase: null,
         google: null,
-        readers: { docx: refuseWiringOperation, pdf: refuseWiringOperation },
+        readers: { docx: refuseWiringOperation, pdf: refuseWiringOperation, pdfPages: refuseWiringOperation },
     },
     workspaces: { allowFreeWorkspace: true },
     workspaceInvites: { siteUrl: "https://site.invalid", inviteDays: 7 },

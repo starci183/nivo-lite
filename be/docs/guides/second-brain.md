@@ -22,7 +22,7 @@ One shared memory per workspace; every agent reads it through its own view. Owne
 
 ## Self-learning (reviewed)
 
-The model never changes itself; the brain does. `mineLessons` reads the owner's corrections of one agent (decisions `edited` / `rejected`, proposal before and after), keeps each as an eval case, and asks the model for patterns seen in at least two corrections. Each pattern becomes a **proposed** lesson citing its decisions. Owners approve in Brain > Review.
+The model never changes itself; the brain does. `mineLessons` reads the owner's corrections of one agent (decisions `edited` / `rejected`, proposal before and after), keeps each as an eval case, and asks the model for patterns seen in at least two corrections. Each pattern becomes a **proposed** lesson citing its decisions. Owners apply or skip them in Brain > Bài học.
 
 ## Conflicts
 
@@ -39,12 +39,17 @@ public, whatever the model judged; from a Nội bộ document it keeps the audie
 
 ## UI (`/brain`)
 
-| Tab     | Purpose                                                                                                                                                                                                                                           |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Map     | Health at a glance. Clusters = subject kinds, size = facts, colour = conflict / waiting / fine / not visible through the lens. Lens = "see it as" one agent. Not an embedding projection. Big kinds collapse into one bubble ("Customers (240)"). |
-| Review  | The daily work: proposals (conflicts first) with the current value, evidence, NIVO's suggestion and one-press action; proposed lessons.                                                                                                           |
-| Facts   | Search, add, new value, stop using; scheduled values show "From dd/mm".                                                                                                                                                                           |
-| Lessons | Per agent; "Find lessons from my corrections"; add by hand; retire.                                                                                                                                                                               |
+| Tab           | Purpose                                                                                                                                                                                                                                                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cần xử lý     | The daily work, one queue worst first: dossier findings (cards with the evidence of both documents and the actions that answer them), facts waiting for review (conflicts first, with the current value, evidence and NIVO's suggestion) and customer questions nobody answered. Its count is the one number the rail shows. |
+| Hồ sơ         | How complete the dossiers are: a stat strip, then the dossiers of each category with the next step.                                                                                                                                                                                                                          |
+| Nạp tài liệu  | Add documents (the owner chooses Công khai or Nội bộ first), watch the four stages live, see what was taken in.                                                                                                                                                                                                              |
+| Bản đồ        | Health at a glance. Clusters = dossier categories, colour = status. Not an embedding projection.                                                                                                                                                                                                                             |
+| Sự thật       | Facts in force and scheduled; add, new value, stop using; scheduled values show "From dd/mm".                                                                                                                                                                                                                                |
+| Bài học       | Lessons NIVO proposes from the owner's corrections (apply or skip) and the ones in force; add by hand; retire.                                                                                                                                                                                                               |
+| Agent thấy gì | A table of what the customer and each agent may read of the shared knowledge.                                                                                                                                                                                                                                                |
+
+The old Review and Unanswered tabs redirect to Cần xử lý. Details of the queue and the finding card: `dossier-review.md` section 7.
 
 ## Next
 

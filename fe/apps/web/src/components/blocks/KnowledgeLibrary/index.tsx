@@ -35,10 +35,10 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
                     section: {
                         id: "knowledge-library-title",
                         title: t("listTitle"),
-                        description: t("listCount", { count: shown.length }),
                         failTitle: t("detailFailed"),
                     },
                     label: t("listTitle"),
+                    footer: t("listCount", { count: shown.length }),
                     isPending: commands.retrying.size > 0,
                     slot:
                         member.isLoading || board.slot.isLoading

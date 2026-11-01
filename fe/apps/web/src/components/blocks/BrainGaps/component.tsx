@@ -2,6 +2,7 @@ import {
     KNOWLEDGE_ROWS_PLACEHOLDER,
     KnowledgeRowList,
     KnowledgeRowsSection,
+    rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeListView } from "@/components/composites/KnowledgeRows"
 import { SlotView } from "@/components/composites/SlotView"
@@ -16,7 +17,7 @@ export interface BrainGapsBaseProps {
 export const BrainGapsBase = (props: BrainGapsBaseProps) => {
     const list = props.props.list
     return (
-        <KnowledgeRowsSection section={list.section} isPending={list.isPending}>
+        <KnowledgeRowsSection isHeadingInCard section={list.section} isPending={list.isPending}>
             <SlotView
                 slot={list.slot}
                 placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
@@ -24,12 +25,7 @@ export const BrainGapsBase = (props: BrainGapsBaseProps) => {
                 onRetry={props.on.retry}
             >
                 {(rows, isSkeleton) => (
-                    <KnowledgeRowList
-                        label={list.label}
-                        rows={rows}
-                        isPending={list.isPending}
-                        isSkeleton={isSkeleton}
-                    />
+                    <KnowledgeRowList {...rowListPropsOf(list)} rows={rows} isSkeleton={isSkeleton} />
                 )}
             </SlotView>
         </KnowledgeRowsSection>

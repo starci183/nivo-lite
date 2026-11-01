@@ -29,6 +29,8 @@ export enum KnowledgeSourcesErrorCode {
     QuotaExceeded = "KNOWLEDGE_SOURCES_QUOTA_EXCEEDED",
     /** The file source names a storage object that was never uploaded. */
     UploadMissing = "KNOWLEDGE_SOURCES_UPLOAD_MISSING",
+    /** A new source names neither public nor internal: the owner chooses who may read, nothing is assumed. */
+    VisibilityRequired = "KNOWLEDGE_SOURCES_VISIBILITY_REQUIRED",
 }
 
 /** How each knowledge-sources code travels. */
@@ -46,6 +48,7 @@ export const KNOWLEDGE_SOURCES_ERROR_KINDS: Record<KnowledgeSourcesErrorCode, Er
     [KnowledgeSourcesErrorCode.FileTooLarge]: "invalid",
     [KnowledgeSourcesErrorCode.QuotaExceeded]: "invalid",
     [KnowledgeSourcesErrorCode.UploadMissing]: "invalid",
+    [KnowledgeSourcesErrorCode.VisibilityRequired]: "invalid",
 }
 
 /** The one error class of the knowledge-sources capability. */

@@ -8,6 +8,7 @@ import { DossierSourcesService } from "./dossier-sources.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./knowledge-sources.module-definition"
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
 import { SourceCategoriesService } from "./source-categories.service"
+import { SourceCriticStageService } from "./source-critic-stage.service"
 import { SourcePartsService } from "./source-parts.service"
 import { SourceQuotaService } from "./source-quota.service"
 import { SourceTwinsService } from "./source-twins.service"
@@ -44,6 +45,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 { provide: KNOWLEDGE_STORAGE, useExisting: options.storage },
                 KnowledgeSourcesService,
                 KnowledgeProgressService,
+                SourceCriticStageService,
                 SourceQuotaService,
                 SourcePartsService,
                 SourceTwinsService,
@@ -58,6 +60,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 KnowledgeSourcesReadableService,
                 KnowledgeSourcesService,
                 KnowledgeProgressService,
+                SourceCriticStageService,
                 SourceQuotaService,
                 SourcePartsService,
                 SourceTwinsService,

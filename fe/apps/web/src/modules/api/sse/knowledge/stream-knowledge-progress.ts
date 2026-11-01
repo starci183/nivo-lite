@@ -5,7 +5,7 @@ import { eventStream } from "../clients/event-stream"
 import type { StreamReporter } from "../clients/event-stream"
 
 /** The stages a worker moves a source through while it indexes it, in order. */
-export type KnowledgeProgressStage = "read" | "chunk" | "embed" | "store" | "facts"
+export type KnowledgeProgressStage = "read" | "chunk" | "embed" | "store" | "facts" | "critic"
 
 /** The state of one source the knowledge-progress stream pushes (be/src/features/realtime/knowledge-progress): the whole state of one source, never its text. */
 export interface KnowledgeProgressPush {
@@ -44,7 +44,7 @@ interface StreamKnowledgeProgressParams {
     readonly report?: StreamReporter
 }
 
-const STAGES: ReadonlySet<string> = new Set(["read", "chunk", "embed", "store", "facts"])
+const STAGES: ReadonlySet<string> = new Set(["read", "chunk", "embed", "store", "facts", "critic"])
 
 const isCount = (value: unknown): value is number | null => value === null || typeof value === "number"
 

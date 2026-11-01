@@ -88,7 +88,9 @@ export const versionsViewOf = (data: AgentGraphData, ctx: AgentGraphContext): Ag
                   },
               ]
     const saved = data.versions.map((version) => {
-        const badge: AgentGraphVersionsView["items"][number]["badge"] = version.isActive ? { text: t("badgeRunning"), tone: "success" } : null
+        const badge: AgentGraphVersionsView["items"][number]["badge"] = version.isActive
+            ? { text: t("badgeRunning"), tone: "success" }
+            : null
         return {
             id: version.id,
             title: t("versionN", { version: version.version }),

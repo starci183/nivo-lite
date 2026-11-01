@@ -9,12 +9,12 @@ the target of the visual pass.
 
 ## 1. What each page is for
 
-| page                             | the reader's question                                                        | what it holds                                                                                                                                 |
-| -------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/agents`                        | "who works for me, which of them still needs me, and what else could I add?" | my agents (name, role, channel, setup progress, state, next step); the role templates to add (search, group filter, card per role)            |
+| page                             | the reader's question                                                        | what it holds                                                                                                                                   |
+| -------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/agents`                        | "who works for me, which of them still needs me, and what else could I add?" | my agents (name, role, channel, setup progress, state, next step); the role templates to add (search, group filter, card per role)              |
 | `/agents/<type>/<id>`, tab Setup | "what must I still tell this agent before it may answer customers?"          | the 8 required items (gates) with their confirmed values; the private chat with NIVO that proposes those values; "Publish and run" (one action) |
-| tab Workbench                    | "what is it doing today?"                                                    | the module's workbench                                                                                                                        |
-| tab Settings                     | "how does it run?"                                                           | name, operating mode, live switch, channel grants, sync, removal                                                                              |
+| tab Workbench                    | "what is it doing today?"                                                    | the module's workbench                                                                                                                          |
+| tab Settings                     | "how does it run?"                                                           | name, operating mode, live switch, channel grants, sync, removal                                                                                |
 
 ## 2. Flows
 

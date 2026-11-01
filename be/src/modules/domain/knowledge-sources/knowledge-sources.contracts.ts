@@ -82,7 +82,7 @@ export interface AddSourceInput {
     readonly module?: string | undefined
     /** The agent instance that alone reads the document; omitted = every instance. */
     readonly installationId?: string | undefined
-    /** public or internal; internal when omitted. */
+    /** public or internal, as the owner chose; a source without one is refused. */
     readonly visibility?: string | undefined
     /** Where it came from: a folder, a ZIP, the Google Picker. */
     readonly origin?: string | undefined
@@ -220,8 +220,8 @@ export interface SourceSummary {
     readonly sizeBytes: number
     /** 0-100 while a worker is on it. */
     readonly progress: number
-    /** The stage a worker is on (read, chunk, embed, store or facts), or null when none is. */
-    readonly stage: "read" | "chunk" | "embed" | "store" | "facts" | null
+    /** The stage the document is at (read, chunk, embed, store, facts, or critic while the critic checks its dossier), or null when none is. */
+    readonly stage: "read" | "chunk" | "embed" | "store" | "facts" | "critic" | null
     /** Passages of the stage that are done, or null. */
     readonly stageDone: number | null
     /** Passages of the stage in all, or null. */

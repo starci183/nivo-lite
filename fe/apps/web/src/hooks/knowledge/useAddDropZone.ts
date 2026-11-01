@@ -23,10 +23,8 @@ interface ZoneContext {
     readonly t: Translate
     readonly drive: ReturnType<typeof useDriveGrant>
     readonly params: ReturnType<typeof useSearchParams>
-    /** Opens the drawer on files and links, or on a written note. */
-    readonly open: (mode: "files" | "write") => void
-    /** The address of the sources tab, with the drawer closed. */
-    readonly sourcesHref: (addKey?: string) => string
+    /** The address of the sources tab. */
+    readonly sourcesHref: () => string
 }
 
 /** The way in that depends on where the Google Drive grant stands: grant it, grant it again, or let it go. */
@@ -54,27 +52,17 @@ const driveFailureOf = (context: ZoneContext): string | undefined => {
     return t(DRIVE_FAILURE_KEYS[params.get("reason") ?? ""] ?? "driveErrGeneric")
 }
 
-/** The drop zone: its words, its ways in (a link, a written note, Google Drive) and where the Drive grant stands. */
+/** The Google Drive way in beside the files and where the grant stands. */
 const zoneViewOf = (context: ZoneContext): ZoneView => ({
-    label: context.t("addTitle"),
-    prompt: context.t("filesDrop"),
-    hint: context.t("filesHint"),
-    ways: [
-        { id: "link", label: context.t("zoneLink"), onPress: () => context.open("files") },
-        { id: "write", label: context.t("zoneWrite"), onPress: () => context.open("write") },
-        ...driveWaysOf(context),
-    ],
+    ways: driveWaysOf(context),
     driveNote: driveNoteOf(context),
     driveFailure: driveFailureOf(context),
 })
 
-/** The drop zone of the sources tab: its words, its ways in (a link, a written note, Google Drive) and where the Drive grant stands. */
-export const useAddDropZone = (
-    open: (mode: "files" | "write") => void,
-    sourcesHref: (addKey?: string) => string,
-): ZoneView => {
+/** The Google Drive way in of the sources tab and where the grant stands. */
+export const useAddDropZone = (sourcesHref: () => string): ZoneView => {
     const t = useTranslations("knowledge")
     const params = useSearchParams()
     const drive = useDriveGrant()
-    return zoneViewOf({ t, drive, params, open, sourcesHref })
+    return zoneViewOf({ t, drive, params, sourcesHref })
 }

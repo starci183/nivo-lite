@@ -1,9 +1,10 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { SEVERITY_TONE, findingActionsOf, isActive } from "@/modules/brain"
+import { SEVERITY_TONE, findingActionsOf } from "@/modules/brain"
 import type { FindingActionView, FindingRowView, FindingView, MemberOption } from "@/modules/brain"
 import { brainDossierHref, brainUploadHref, knowledgeSourceHref } from "@/modules/routes"
+import { ownerPartOf, placeWordsOf, statusPartOf } from "./brain.shared"
 
 /** The dossier a pane's findings are filed under: what the upload action needs to file a document under it. */
 export interface UploadTarget {
@@ -21,22 +22,6 @@ export interface FindingRowContext {
     readonly showDossier: boolean
     /** Where the upload action files a document; without it the row offers no upload. */
     readonly upload: UploadTarget | null
-}
-
-type Translate = ReturnType<typeof useTranslations<"dossierReview">>
-
-/** Where a finding stands, when that is worth saying: confirmed, dismissed, or how it was resolved; nothing for an open one. */
-const statusPartOf = (t: Translate, finding: FindingView): string | null => {
-    if (finding.status === "open") return null
-    if (finding.status === "resolved") return t(`resolution_${finding.resolution ?? "manual"}`)
-    return t(finding.status === "confirmed" ? "confirmed" : "dismissed")
-}
-
-/** Who the finding is with; "unassigned" only while it still needs somebody. */
-const ownerPartOf = (t: Translate, finding: FindingView, members: ReadonlyArray<MemberOption>): string | null => {
-    if (finding.assigneeId === null) return isActive(finding) ? t("unassigned") : null
-    const person = members.find((one) => one.id === finding.assigneeId)
-    return [t("assignee"), person?.label ?? "-"].join(": ")
 }
 
 /** Puts a finding into the words of a row: its badges, the one muted line, its evidence and its actions. */
@@ -76,7 +61,13 @@ export const useFindingRows = () => {
             evidence: finding.evidence.map((one, index) => ({
                 id: `${finding.id}-${index}`,
                 label: one.quote ?? one.factLine ?? one.label,
-                ...(one.quote === null ? {} : { description: one.label }),
+                ...(one.quote === null
+                    ? {}
+                    : {
+                          description: [one.label, one.place === null ? null : placeWordsOf(t)(one.place)]
+                              .filter((part) => part !== null)
+                              .join(" · "),
+                      }),
             })),
             sources: [...sources].map(([id, title]) => ({
                 id,

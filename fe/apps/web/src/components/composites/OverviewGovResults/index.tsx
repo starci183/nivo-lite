@@ -1,4 +1,4 @@
-import { Cluster, ListRow, SectionHeader, Stack, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import { Cluster, ListRow, Stack, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovStatusRow } from "@/hooks/overviewResults"
 
@@ -19,8 +19,10 @@ export interface OverviewGovResultsProps {
 /** The results by status, each figure naming what it rests on: one row per status in one list, the notes under it. */
 export const OverviewGovResults = (props: OverviewGovResultsProps) => (
     <AccountingBlock label={props.figures.title}>
-        <SectionHeader level={2} title={props.figures.title} description={props.figures.intro} />
-        <SurfaceListCard ariaLabel={props.figures.title} footer={props.figures.testNote}>
+        <SurfaceListCard
+            label={props.figures.title}
+            footer={[props.figures.intro, props.figures.testNote].filter((line) => line !== "").join(" · ")}
+        >
             {props.figures.rows.map((row) => (
                 <ListRow
                     key={row.id}

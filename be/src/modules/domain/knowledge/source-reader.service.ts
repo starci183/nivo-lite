@@ -49,8 +49,10 @@ export class SourceReaderService {
         const stored = await this.sources.readUpload(path)
         if (stored === null) return refused(StoredNote.FileMissing)
         if (stored.bytes.length > MAX_UPLOAD_BYTES) return refused(StoredNote.FileTooLarge)
-        const text = await this.documents.readFile(name, stored.bytes, stored.contentType)
-        return needsOcr(name, stored.contentType, text) ? refused(StoredNote.NeedsOcr) : ok({ text, title: null })
+        const placed = await this.documents.readPlacedFile(name, stored.bytes, stored.contentType)
+        if (needsOcr(name, stored.contentType, placed.text)) return refused(StoredNote.NeedsOcr)
+        const hasPlaces = placed.parts.some((part) => part.place !== null)
+        return ok({ text: placed.text, title: null, ...(hasPlaces ? { parts: placed.parts } : {}) })
     }
 
     /** The text of a link; a page's own title replaces the title that was made from the address. */
