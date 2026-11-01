@@ -146,17 +146,24 @@ type Translate = (key: string, values?: Record<string, string | number>) => stri
 export const asCategory = (id: string): ConnectorCategory | "all" =>
     CATEGORIES.find((category) => category === id) ?? "all"
 
-/** Summarizes what the workspace runs of a connector, or the connector's own availability. */
-export const catalogBadgeOf = (
+/** The connector's own availability beside its name: planned or early access; nothing for an official one. */
+export const catalogTagOf = (
     entry: CatalogEntry,
+    t: Translate,
+): { readonly tone: "accent" | "neutral"; readonly label: string } | null => {
+    if (entry.status === "soon") return { tone: "neutral", label: t("statusSoon") }
+    return entry.status === "early" ? { tone: "accent", label: t("statusEarly") } : null
+}
+
+/** What the workspace runs of a connector, at the foot of its tile: the count in use, a check it needs, or not connected yet. */
+export const catalogStatusOf = (
     count: number,
     t: Translate,
     needsCheck = false,
-): { readonly tone: "success" | "danger" | "neutral"; readonly label: string; readonly isDot: boolean } | null => {
+): { readonly tone: "success" | "danger" | "muted"; readonly label: string; readonly isDot: boolean } => {
     if (needsCheck) return { tone: "danger", label: t("libNeedsCheck"), isDot: true }
     if (count > 0) return { tone: "success", label: t("libInUse", { count }), isDot: true }
-    if (entry.status === "soon") return { tone: "neutral", label: t("statusSoon"), isDot: false }
-    return entry.status === "early" ? { tone: "neutral", label: t("statusEarly"), isDot: false } : null
+    return { tone: "muted", label: t("libNotConnected"), isDot: false }
 }
 
 /** The "Cho: ..." line of a connector: the agents it serves, or every agent. */
