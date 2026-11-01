@@ -38,10 +38,18 @@ const EVENT_KEYS: Readonly<Record<string, string>> = {
     "outcome.recorded": "kindOutcome",
     "agent.installed": "kindAgentInstalled",
     "agent.updated": "kindAgentUpdated",
+    "work.asked": "kindWorkAsked",
+    "work.resumed": "kindWorkResumed",
+    "work.auto_done": "kindWorkDone",
+    "command.sent": "kindCommandSent",
 }
 
-/** The catalog key of the label of an event kind; null for a kind the page has no word for. */
-export const eventKindKeyOf = (kind: string): string | null => EVENT_KEYS[kind] ?? null
+/** The kinds that name the tool an agent read with, one kind per tool. */
+const TOOL_READ_PREFIX = "engine.tool."
+
+/** The catalog key of the label of an event kind; a kind the page has no word for says the general word, never itself. */
+export const eventKindKeyOf = (kind: string): string =>
+    EVENT_KEYS[kind] ?? (kind.startsWith(TOOL_READ_PREFIX) ? "kindToolRead" : "kindOther")
 
 /** The event kinds whose evidence counts as recorded evidence. */
 export const isEvidenceEvent = (event: EventRecord): boolean =>

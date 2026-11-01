@@ -2,12 +2,16 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
+import { actionWordOf } from "@/hooks/actionWord"
 import { ageOf, useLeadJourney } from "@/hooks/leads"
 import { eventIconOf, eventKindKeyOf } from "@/hooks/leadJourney"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { EventRecord, LeadJourney, DataSlot } from "@/modules/types"
 import { LeadHistoryBase } from "./component"
 import type { HistoryEntryView, HistoryView } from "./component"
+
+/** The event whose summary is the action key of the command it sent. */
+const COMMAND_SENT = "command.sent"
 
 /** The lead whose history is drawn; a null detail draws the loading section. */
 interface LeadHistoryProps {
@@ -18,6 +22,7 @@ interface LeadHistoryProps {
 export const LeadHistory = (props: LeadHistoryProps) => {
     const query = useLeadJourney(props.leadId)
     const t = useTranslations("lead")
+    const g = useTranslations("governance")
     const slotLabels = useSlotLabels()
     const format = useFormatter()
     const [open, setOpen] = useState<Readonly<Record<string, boolean>>>({})
@@ -38,8 +43,8 @@ export const LeadHistory = (props: LeadHistoryProps) => {
             dateTime: event.created_at,
             timeLabel: agoText(event.created_at),
             icon: eventIconOf(event.kind),
-            kindLabel: kindKey === null ? event.kind : t(kindKey),
-            summary: event.summary,
+            kindLabel: t(kindKey),
+            summary: event.kind === COMMAND_SENT ? actionWordOf(g, event.summary) : event.summary,
             evidence: event.evidence,
             isOpen: open[event.id] ?? false,
         }
