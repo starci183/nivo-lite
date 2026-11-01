@@ -17,6 +17,7 @@ export { JobFenceService } from "./job-fence.service"
 export { JOBS_MESSAGES } from "./messages/jobs.messages"
 
 export { JobClaimService } from "./job-claim.service"
+export { JobRenewalService } from "./job-renewal.service"
 export { JobRunnerService } from "./job-runner.service"
 export { JobsLogEvent } from "./jobs.log-events"
 export { jobsEntities } from "./persistence/entities"

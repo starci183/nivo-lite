@@ -7,6 +7,7 @@ import type {
     ClaimResult,
     ClaimRetryDelay,
     FailWrite,
+    RenewWrite,
     FailedJobEffect,
     JobEffect,
     GuardedWrite,
@@ -25,6 +26,8 @@ export interface JobClaims {
     retryAfterSeconds(jobKey: string): Promise<ClaimRetryDelay>
     /** Records a finished step; throws `JobFencedOut` when the token is stale. */
     advance(write: AdvanceWrite): Promise<void>
+    /** Extends the lease of the claim so a job that runs longer than one lease is not claimed again; throws `JobFencedOut` when the token is stale. */
+    renew(write: RenewWrite): Promise<void>
     /** Completes the job; throws `JobFencedOut` when the token is stale. */
     complete(write: GuardedWrite): Promise<void>
     /** Fails the job so the queue can retry it; throws `JobFencedOut` when the token is stale. */

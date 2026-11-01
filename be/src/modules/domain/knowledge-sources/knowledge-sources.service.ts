@@ -38,7 +38,6 @@ import type {
 } from "./knowledge-sources.contracts"
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourceEntity } from "./persistence/entities"
-import { removedTitle } from "./persistence/knowledge-source.projection"
 import {
     NOW,
     metaChanges,
@@ -48,6 +47,8 @@ import {
     safeFileName,
 } from "./source-input.policy"
 import { contentHashOf } from "./source-hash.policy"
+import { SourcePartsService } from "./source-parts.service"
+import { withPartsRolledUp } from "./source-rollup.policy"
 import { SourceQuotaService } from "./source-quota.service"
 import { toSourceDetail, toSourceRecord, toSourceSummary } from "./source-record.mapper"
 
@@ -69,6 +70,7 @@ const SUMMARY_COLUMNS = {
     error: true,
     chunkCount: true,
     sizeBytes: true,
+    origin: true,
     progress: true,
     stage: true,
     stageDone: true,
@@ -100,10 +102,14 @@ export class KnowledgeSourcesService {
         private readonly installations: InstallationRecordsService,
         private readonly quota: SourceQuotaService,
         private readonly progress: KnowledgeProgressService,
+        private readonly parts: SourcePartsService,
         @InjectIds() private readonly ids: Ids,
     ) {}
 
-    /** The documents of a workspace, newest first and without their text, optionally of one module or one origin; any member may read them. */
+    /**
+     * The documents of a workspace, newest first and without their text, optionally of one module or one origin; any member may read them. A
+     * document cut into parts is one row (the first part, with the totals of all), unless one origin is asked for.
+     */
     async list(
         userId: string,
         workspaceId: string,
@@ -121,7 +127,8 @@ export class KnowledgeSourcesService {
             order: { createdAt: "DESC" },
             take: LIST_MAX,
         })
-        return rows.map(toSourceSummary)
+        const listed = rows.map((row) => ({ summary: toSourceSummary(row), origin: row.origin }))
+        return origin === undefined ? withPartsRolledUp(listed) : listed.map((one) => one.summary)
     }
 
     /** One document of a workspace with its text; any member may read it. */
@@ -237,20 +244,13 @@ export class KnowledgeSourcesService {
             metaChanges(change),
         )
         if (changed.affected === 0) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+        await this.parts.follow(workspaceId, input.sourceId, metaChanges({ ...change, title: null }))
     }
 
-    /** Deletes a source with its passages; answers its title so the brain can note what it withdraws. */
+    /** Deletes a source with its passages, and with it the later parts of a long document; answers its title and theirs so the brain can note what it withdraws. */
     async removeSource(userId: string, workspaceId: string, sourceId: string): Promise<DeletedSource> {
         await this.members.require(userId, workspaceId, MANAGERS)
-        const removed = await this.entityManager
-            .createQueryBuilder(KnowledgeSourceEntity, "ks")
-            .delete()
-            .where({ id: sourceId, workspaceId })
-            .returning("title")
-            .execute()
-        const title = removedTitle(removed.raw)
-        if (title === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
-        return { title }
+        return this.parts.removeWhole(workspaceId, sourceId)
     }
 
     /** An address a browser uploads one document to: `<workspaceId>/<uuid>/<filename>` in the private bucket. */

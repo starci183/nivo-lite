@@ -44,6 +44,7 @@ export const toSourceSummary = (row: SourceListEntity): SourceSummary => ({
     stageTotal: row.stageTotal,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    partCount: 1,
 })
 
 /** A source with its text, from the row the database answers. */

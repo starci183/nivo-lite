@@ -1181,6 +1181,10 @@ type ApplyImportType {
   staff: Int!
 }
 
+input ApplyBrainFactGroupInput {
+  sourceId: ID!
+}
+
 input ApplyInventoryStarterInput {
   key: String! @inputBounds(maxLength: 40)
 }
@@ -1741,6 +1745,17 @@ type BookingStatusCountType {
   status: String!
 }
 
+type BrainBulkAppliedType {
+  applied: Int!
+  batchId: String!
+  skipped: Int!
+}
+
+type BrainBulkUndoneType {
+  kept: Int!
+  restored: Int!
+}
+
 type BrainCommandRefType {
   id: ID!
 }
@@ -1783,6 +1798,7 @@ type BrainFactType {
   attributeLabel: String!
   decidedAt: String
   decidedBy: String
+  decisionNote: String
   evidence: [BrainEvidenceType!]!
   id: ID!
   installationId: ID
@@ -4211,6 +4227,7 @@ type KnowledgeSourceTextType {
   installationId: ID
   kind: String!
   module: String
+  partCount: Int!
   progress: Int!
   sizeBytes: Int!
   stage: String
@@ -4233,6 +4250,7 @@ type KnowledgeSourceType {
   installationId: ID
   kind: String!
   module: String
+  partCount: Int!
   progress: Int!
   sizeBytes: Int!
   stage: String
@@ -5425,6 +5443,7 @@ type Mutation {
   adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
   adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
   adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
+  applyBrainFactGroup(input: ApplyBrainFactGroupInput!): BrainBulkAppliedType!
   applyContentCadencePresets: SavedContentRowsType!
   applyContentPillarPresets: SavedContentRowsType!
   applyInventoryStarter(input: ApplyInventoryStarterInput!): ApplyStarterType!
@@ -5716,6 +5735,7 @@ type Mutation {
   toggleHiringOnboarding(input: ToggleHiringOnboardingInput!): Boolean!
   transferInventoryStock(input: TransferInventoryStockInput!): TransferStockType!
   transitionContentItem(input: TransitionContentItemInput!): ContentItemIdType!
+  undoBrainFactBatch(input: UndoBrainFactBatchInput!): BrainBulkUndoneType!
   updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
   updateInventoryPoDraft(input: UpdateInventoryPoDraftInput!): Boolean!
@@ -8792,6 +8812,10 @@ type UnmatchedContractType {
   contractId: ID!
   customerName: String!
   reason: String!
+}
+
+input UndoBrainFactBatchInput {
+  batchId: String!
 }
 
 input UpdateAuthorityInput {

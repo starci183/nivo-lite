@@ -5,6 +5,7 @@ import { DocumentsErrorCode, InjectDocuments } from "@modules/integrations/docum
 import type { DocumentsPort } from "@modules/integrations/documents"
 import { ok, refused } from "@modules/platform/primitives"
 import { InjectDriveAccessSource } from "./knowledge.decorators"
+import { needsOcr } from "./scanned-pdf.policy"
 import type { DriveAccessSource, ReadOutcome } from "./knowledge.contracts"
 
 /** The part of the text of a link without its scheme, lower case, for comparing a title with its address. */
@@ -48,7 +49,8 @@ export class SourceReaderService {
         const stored = await this.sources.readUpload(path)
         if (stored === null) return refused(StoredNote.FileMissing)
         if (stored.bytes.length > MAX_UPLOAD_BYTES) return refused(StoredNote.FileTooLarge)
-        return ok({ text: await this.documents.readFile(name, stored.bytes, stored.contentType), title: null })
+        const text = await this.documents.readFile(name, stored.bytes, stored.contentType)
+        return needsOcr(name, stored.contentType, text) ? refused(StoredNote.NeedsOcr) : ok({ text, title: null })
     }
 
     /** The text of a link; a page's own title replaces the title that was made from the address. */

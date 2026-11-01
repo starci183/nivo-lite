@@ -234,9 +234,10 @@ describe("DocumentFactsService", () => {
         expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
     })
 
-    it("retries a busy model without charging usage", async () => {
+    it("retries a busy model without charging usage, a reading given up before it with all its tries again", async () => {
         const { service, ai, usage, extractions, sources } = await build()
         ai.chat.mockResolvedValue(null)
+        extractions.get.mockResolvedValue(extractionOf({ status: "failed", attempts: 3 }))
 
         await expect(service.run(PAYLOAD)).rejects.toMatchObject({ code: BrainErrorCode.ModelUnavailable })
 
@@ -245,7 +246,7 @@ describe("DocumentFactsService", () => {
             `system:${SYSTEM_PROMPT}`,
             `user:${PROMPT}`,
         ])
-        expect(request).toMatchObject({ json: false, timeoutMs: 40_000 })
+        expect(request).toMatchObject({ json: false, timeoutMs: 40_000, budget: { effort: "off", maxTokens: 8000 } })
         expect(usage.record).not.toHaveBeenCalled()
         expect(extractions.save).toHaveBeenCalledWith(
             WS,

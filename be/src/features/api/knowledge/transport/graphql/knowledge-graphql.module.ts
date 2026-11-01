@@ -25,6 +25,8 @@ import { GetBrainResolver } from "./get-brain.resolver"
 import { SaveBrainFactResolver } from "./save-brain-fact.resolver"
 import { DecideBrainFactResolver } from "./decide-brain-fact.resolver"
 import { KeepCurrentBrainFactResolver } from "./keep-current-brain-fact.resolver"
+import { ApplyBrainFactGroupResolver } from "./apply-brain-fact-group.resolver"
+import { UndoBrainFactBatchResolver } from "./undo-brain-fact-batch.resolver"
 import { SaveBrainLessonResolver } from "./save-brain-lesson.resolver"
 import { DecideBrainLessonResolver } from "./decide-brain-lesson.resolver"
 import { DismissKnowledgeGapResolver } from "./dismiss-knowledge-gap.resolver"
@@ -63,6 +65,8 @@ import { AgentKnowledgeLensesResolver } from "./agent-knowledge-lenses.resolver"
         SaveBrainFactResolver,
         DecideBrainFactResolver,
         KeepCurrentBrainFactResolver,
+        ApplyBrainFactGroupResolver,
+        UndoBrainFactBatchResolver,
         SaveBrainLessonResolver,
         DecideBrainLessonResolver,
         DismissKnowledgeGapResolver,

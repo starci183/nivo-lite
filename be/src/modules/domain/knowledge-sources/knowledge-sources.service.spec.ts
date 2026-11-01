@@ -1,8 +1,6 @@
 import { row, summary } from "@tests/fixtures/builders/knowledge-sources.builder"
 import { Test } from "@nestjs/testing"
 import { In } from "typeorm"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import {
     FakeClock,
     builder,
@@ -33,6 +31,7 @@ import { KnowledgeSourcesService } from "./knowledge-sources.service"
 import { contentHashOf } from "./source-hash.policy"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import { NOW } from "./source-input.policy"
+import { SourcePartsService } from "./source-parts.service"
 import { SourceQuotaService } from "./source-quota.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -55,11 +54,6 @@ const insertedTx = () =>
     fakeTransaction(mockEntityManager({ insert: [KnowledgeSourceEntity, { identifiers: [{ id: "s1" }] }] }))
 const instance = { id: "i1", workspaceId: WS, moduleKey: "chatbot" }
 const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content: "Open 8 to 21" })
-/** A manager that hands out one fake statement per createQueryBuilder call, in order. */
-const withStatements = (em: MockEntityManager, ...answers: Array<QueryBuilderAnswers>) => ({
-    em,
-    fakes: queueQueryBuilders(em, answers),
-})
 const build = async (em: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>()
     const queue = mock<KnowledgeQueue>()
@@ -69,6 +63,7 @@ const build = async (em: MockEntityManager) => {
     const installations = mock<InstallationRecordsService>()
     const quota = mock<SourceQuotaService>()
     const progress = mock<KnowledgeProgressService>()
+    const parts = mock<SourcePartsService>()
     quota.measure.mockResolvedValue(12)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -83,11 +78,12 @@ const build = async (em: MockEntityManager) => {
             { provide: InstallationRecordsService, useValue: installations },
             { provide: SourceQuotaService, useValue: quota },
             { provide: KnowledgeProgressService, useValue: progress },
+            { provide: SourcePartsService, useValue: parts },
             { provide: IDS, useValue: fakeIds() },
         ],
     }).compile()
     const service = moduleRef.get(KnowledgeSourcesService)
-    return { service, members, queue, bus, storage, installations, quota, progress }
+    return { service, members, queue, bus, storage, installations, quota, progress, parts }
 }
 describe("KnowledgeSourcesService addSource", () => {
     it("authorizes the manager and atomically writes the source with its indexing job", async () => {
@@ -196,9 +192,11 @@ describe("KnowledgeSourcesService retrySource", () => {
         ["keeps the tags when none are given", { sourceId: "s1" }, {}],
     ])("%s", async (_name, input, changes) => {
         const em = mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] })
-        const { service } = await build(em)
+        const { service, parts } = await build(em)
         await service.updateSource("u1", WS, input)
         updated(em, changes)
+        const kept = Object.fromEntries(Object.entries(changes).filter(([key]) => key !== "title"))
+        expect(parts.follow).toHaveBeenCalledWith(WS, "s1", ...touched(kept))
     })
 
     it("refuses an unknown source", async () => {
@@ -206,18 +204,13 @@ describe("KnowledgeSourcesService retrySource", () => {
         await expect(service.updateSource("u1", WS, { sourceId: "s1" })).rejects.toMatchObject(missing)
     })
 
-    it("deletes the source and answers its title", async () => {
-        const { em, fakes } = withStatements(mockEntityManager(), { execute: { raw: [{ title: "Menu" }] } })
-        const { service } = await build(em)
-        await expect(service.removeSource("u1", WS, "s1")).resolves.toEqual({ title: "Menu" })
-        expect(fakes[0]?.callsOf("where")).toEqual([[KEY]])
-        expect(fakes[0]?.callsOf("returning")).toEqual([["title"]])
-    })
-
-    it("refuses an unknown source", async () => {
-        const { em } = withStatements(mockEntityManager(), { execute: { raw: [] } })
-        const { service } = await build(em)
-        await expect(service.removeSource("u1", WS, "s1")).rejects.toMatchObject(missing)
+    it("deletes the source with the later parts of a long document and answers their titles", async () => {
+        const { service, parts, members } = await build(mockEntityManager())
+        const deleted = { title: "Plan (1/2)", parts: [{ id: "p2", title: "Plan (2/2)" }] }
+        parts.removeWhole.mockResolvedValue(deleted)
+        await expect(service.removeSource("u1", WS, "s1")).resolves.toBe(deleted)
+        expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner", "manager"])
+        expect(parts.removeWhole).toHaveBeenCalledWith(WS, "s1")
     })
 })
 

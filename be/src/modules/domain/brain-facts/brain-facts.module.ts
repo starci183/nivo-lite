@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { BrainFactBatchService } from "./brain-fact-batch.service"
 import { BrainFactsMaintenanceService } from "./brain-facts-maintenance.service"
 import { BrainFactsReadService } from "./brain-facts-read.service"
 import { BrainFactsService } from "./brain-facts.service"
@@ -18,8 +19,9 @@ export class BrainFactsModule extends ConfigurableModuleClass {
                 BrainFactsService,
                 BrainFactsReadService,
                 BrainFactsMaintenanceService,
+                BrainFactBatchService,
             ],
-            exports: [BrainFactsService, BrainFactsReadService],
+            exports: [BrainFactsService, BrainFactsReadService, BrainFactBatchService],
         }
     }
 }

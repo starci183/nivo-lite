@@ -40,6 +40,12 @@ export interface AdvanceWrite extends GuardedWrite {
     readonly step: string
 }
 
+/** A guarded write that extends the lease of the claim. */
+export interface RenewWrite extends GuardedWrite {
+    /** How long the lease lasts from now. */
+    readonly leaseMs: number
+}
+
 /** A guarded write that fails the job. */
 export interface FailWrite extends GuardedWrite {
     /** Why the job failed. */
@@ -69,3 +75,17 @@ export type JobEffect<T> = () => Promise<T>
 
 /** The terminal failure effect executed while the platform holds the failed worker's fence. */
 export type FailedJobEffect = (write: GuardedWrite) => Promise<void>
+
+/** A lease being kept alive for a job that is running. */
+export interface LeaseHold {
+    /** Stops renewing; the end of the job (complete or fail) settles the lease from there. */
+    stop(): void
+}
+
+/** What the renewals of one lease share: the cancel of the beat that is waiting, and whether the job has ended. */
+export interface LeaseState {
+    /** Cancels the renewal that is scheduled. */
+    cancel: () => void
+    /** True once the job ended; no renewal is scheduled after it. */
+    stopped: boolean
+}

@@ -10,6 +10,7 @@ import { KnowledgeSourcesService } from "./knowledge-sources.service"
 import { SourceCategoriesService } from "./source-categories.service"
 import { SourcePartsService } from "./source-parts.service"
 import { SourceQuotaService } from "./source-quota.service"
+import { SourceTwinsService } from "./source-twins.service"
 import { KnowledgeSourcesReadableService } from "./knowledge-sources-readable.service"
 import { KnowledgeSourcesAdminReadService } from "./knowledge-sources-admin-read.service"
 import { KnowledgeSourcesReadService } from "./knowledge-sources-read.service"
@@ -45,6 +46,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 KnowledgeProgressService,
                 SourceQuotaService,
                 SourcePartsService,
+                SourceTwinsService,
                 SourceCategoriesService,
                 DossierSourcesService,
                 ApiKnowledgeSourcesService,
@@ -58,6 +60,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 KnowledgeProgressService,
                 SourceQuotaService,
                 SourcePartsService,
+                SourceTwinsService,
                 SourceCategoriesService,
                 DossierSourcesService,
                 ApiKnowledgeSourcesService,
