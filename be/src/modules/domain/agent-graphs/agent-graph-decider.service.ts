@@ -89,7 +89,7 @@ export class AgentGraphDeciderService implements WorkBranchDecider {
         const registry = this.facts.registry()
         const read = await this.facts.read(
             item.workspace_id,
-            { type: item.subject_type, id: item.subject_id ?? "", workItemId: item.id },
+            { type: item.subject_type, id: item.subject_id ?? "", workItemId: item.id, amountVnd: proposal.amount_vnd },
             decide.facts,
         )
         const branch = pickBranch(decide, read, registry)

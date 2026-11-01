@@ -1,9 +1,7 @@
 import type {
-    AgentGraphBadgeView,
     AgentGraphBranchesView,
     AgentGraphData,
     AgentGraphProposalData,
-    AgentGraphProposalKind,
     AgentGraphProposalView,
     AgentGraphProposalsView,
     AgentGraphRunData,
@@ -17,7 +15,7 @@ import type { AgentGraphContext, AgentGraphT } from "./agent-graph-words"
 /** How many rows of evidence show before "See all". */
 export const EVIDENCE_PREVIEW = 3
 
-const kindWordOf = (t: AgentGraphT, kind: AgentGraphProposalKind): string => {
+const kindWordOf = (t: AgentGraphT, kind: AgentGraphProposalData["kind"]): string => {
     if (kind === "conflict") return t("proposal_conflict")
     return kind === "learned" ? t("proposal_learned") : t("proposal_template")
 }
@@ -54,6 +52,11 @@ const proposalViewOf = (proposal: AgentGraphProposalData, ctx: AgentGraphContext
             proposal.evidence.length > EVIDENCE_PREVIEW ? t("evidenceAll", { count: proposal.evidence.length }) : "",
         confirmLabel: proposal.confirmLabel,
         keepLabel: proposal.keepLabel,
+        confirmTitle: proposal.kind === "conflict" ? t("conflictConfirmTitle") : t("proposalConfirmTitle"),
+        confirmBody: proposal.kind === "conflict" ? t("conflictConfirmBody") : t("proposalConfirmBody"),
+        keepTitle: t("proposalKeepTitle"),
+        keepBody: proposal.kind === "conflict" ? t("conflictKeepBody") : t("proposalKeepBody"),
+        cancelLabel: t("cancel"),
         confirmBlocked: blockedOf(proposal, ctx),
     }
 }
@@ -84,7 +87,7 @@ export const versionsViewOf = (data: AgentGraphData, ctx: AgentGraphContext): Ag
                   },
               ]
     const saved = data.versions.map((version) => {
-        const badge: AgentGraphBadgeView | null = version.isActive ? { text: t("badgeRunning"), tone: "success" } : null
+        const badge: AgentGraphVersionsView["items"][number]["badge"] = version.isActive ? { text: t("badgeRunning"), tone: "success" } : null
         return {
             id: version.id,
             title: t("versionN", { version: version.version }),

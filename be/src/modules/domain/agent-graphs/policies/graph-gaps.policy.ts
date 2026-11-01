@@ -1,5 +1,5 @@
 import type { GraphContext, GraphDocument, GraphGap, GraphNode } from "../agent-graphs.contracts"
-import { boundaryFindings, intervalOf, numericFactsOf, topOf } from "./interval.policy"
+import { amountFactOf, boundaryFindings, intervalOf, numericFactsOf, topOf } from "./interval.policy"
 
 /** The order the setup chat asks in: one gap per turn, always the first of this list. */
 export const GAP_ORDER: ReadonlyArray<GraphGap["code"]> = [
@@ -17,13 +17,10 @@ const gap = (code: GraphGap["code"], nodeKey: string, branchKey: string | null):
     branchKey,
 })
 
-const amountFactOf = (context: GraphContext): string | null =>
-    Object.values(context.facts).find((spec) => spec.unit === "vnd")?.key ?? null
-
 const gapsOfNode = (node: GraphNode, context: GraphContext): ReadonlyArray<GraphGap> => {
     const { decide } = node
     if (decide === undefined) return []
-    const amount = amountFactOf(context)
+    const amount = amountFactOf(decide, context.facts)
     const boundaries = numericFactsOf(decide, context.facts).flatMap((fact) =>
         boundaryFindings(decide, fact).map((finding) => gap("boundary", node.key, finding.after.key)),
     )

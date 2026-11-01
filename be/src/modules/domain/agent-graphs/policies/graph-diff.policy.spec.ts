@@ -9,7 +9,7 @@ import {
     nodeOf,
 } from "@tests/fixtures/builders/agent-graph.builder"
 import type { DataRight } from "@modules/domain/mcp-gateway"
-import type { GraphBranch, GraphDocument } from "../agent-graphs.contracts"
+import type { FactRegistry, GraphBranch, GraphDocument } from "../agent-graphs.contracts"
 import { graphDiff } from "./graph-diff.policy"
 
 /** The members of the subject under test. */
@@ -27,7 +27,8 @@ const build = async (): Promise<Subject> => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const BY = { actorMemberId: "boss", amountFact: AMOUNT_FACT }
+const FACTS: FactRegistry = { [AMOUNT_FACT]: { key: AMOUNT_FACT, type: "number", unit: "vnd", labelKey: "fact" } }
+const BY = { actorMemberId: "boss", facts: FACTS }
 const BASE = graphOf(OWNER_EXAMPLE)
 
 const withBranches = (branches: ReadonlyArray<GraphBranch>): GraphDocument => graphOf(branches)

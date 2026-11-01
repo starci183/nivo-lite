@@ -11,7 +11,7 @@ import type {
     NodeAnswerKey,
 } from "../agent-graphs.contracts"
 import { conditionProblems } from "./condition.policy"
-import { boundaryFindings, intervalOf, numericFactsOf, topOf } from "./interval.policy"
+import { amountFactOf, boundaryFindings, intervalOf, numericFactsOf, topOf } from "./interval.policy"
 import type { Interval } from "./interval.policy"
 
 const problem = (
@@ -123,13 +123,13 @@ const elseProblems = (nodeKey: string, decide: DecidePoint): ReadonlyArray<Graph
 
 const approverProblems = (
     nodeKey: string,
-    action: string,
+    decide: DecidePoint,
     branch: GraphBranch,
     context: GraphContext,
 ): ReadonlyArray<GraphProblem> => {
     if (branch.then !== "ask") return []
     if (branch.approver === null) return [problem("approver_missing", nodeKey, branch.key)]
-    const covered = context.approverCovers(action, branch.approver.group, topOfBranch(branch, context))
+    const covered = context.approverCovers(decide.intent, branch.approver.group, topOfBranch(decide, branch, context))
     return [
         ...(branch.approver.onTimeout.kind === "unset" ? [problem("on_timeout_unset", nodeKey, branch.key)] : []),
         ...(covered ? [] : [problem("approver_no_grant", nodeKey, branch.key)]),
@@ -137,9 +137,9 @@ const approverProblems = (
 }
 
 /** The top of the amounts a branch covers, null when it has none. */
-const topOfBranch = (branch: GraphBranch, context: GraphContext): number | null => {
-    const fact = Object.values(context.facts).find((spec) => spec.unit === "vnd")
-    const interval = fact === undefined ? null : intervalOf(branch.when, fact.key)
+const topOfBranch = (decide: DecidePoint, branch: GraphBranch, context: GraphContext): number | null => {
+    const fact = amountFactOf(decide, context.facts)
+    const interval = fact === null ? null : intervalOf(branch.when, fact)
     return interval === null ? null : topOf(interval)
 }
 
@@ -164,7 +164,7 @@ const decideProblems = (node: GraphNode, context: GraphContext): ReadonlyArray<G
         ...elseProblems(node.key, decide),
         ...conditionIssues(node.key, decide, context),
         ...boundaryProblems(node.key, decide, context),
-        ...decide.branches.flatMap((branch) => approverProblems(node.key, decide.intent, branch, context)),
+        ...decide.branches.flatMap((branch) => approverProblems(node.key, decide, branch, context)),
     ]
 }
 
@@ -187,10 +187,10 @@ export const ceilingProblems = (graph: GraphDocument, context: GraphContext): Re
     graph.nodes.flatMap((node) => {
         const decide = node.decide
         const rule = context.ceilings.find((entry) => entry.action === decide?.intent)
-        const fact = Object.values(context.facts).find((spec) => spec.unit === "vnd")
         if (decide === undefined || rule === undefined) return []
+        const fact = amountFactOf(decide, context.facts)
         return decide.branches.flatMap((branch) => {
-            const interval = fact === undefined || branch.when === "else" ? null : intervalOf(branch.when, fact.key)
+            const interval = fact === null || branch.when === "else" ? null : intervalOf(branch.when, fact)
             return exceedsRule(branch, interval, rule) ? [problem("ceiling", node.key, branch.key, rule.action)] : []
         })
     })

@@ -1,13 +1,20 @@
 import type { DataRight } from "@modules/domain/mcp-gateway"
-import type { DiffChange, GraphBranch, GraphDiff, GraphDocument, GraphNode } from "../agent-graphs.contracts"
-import { intervalOf, topOf } from "./interval.policy"
+import type {
+    DiffChange,
+    FactRegistry,
+    GraphBranch,
+    GraphDiff,
+    GraphDocument,
+    GraphNode,
+} from "../agent-graphs.contracts"
+import { amountFactOf, intervalOf, topOf } from "./interval.policy"
 
-/** Who makes the change and which numeric fact the boundaries are read on. */
+/** Who makes the change and the facts the boundaries of each decide point are read on. */
 export interface DiffContext {
     /** The member publishing; naming yourself as approver counts as widening. */
     readonly actorMemberId: string | null
-    /** The amount fact whose bounds are compared. */
-    readonly amountFact: string
+    /** The registry of facts: each decide point compares the bounds of its own amount fact. */
+    readonly facts: FactRegistry
 }
 
 const change = (kind: DiffChange["kind"], nodeKey: string | null, branchKey: string | null): DiffChange => ({
@@ -26,6 +33,7 @@ const topWord = (branch: GraphBranch, fact: string): number => {
 
 const branchChanges = (
     nodeKey: string,
+    amountFact: string,
     before: GraphBranch | undefined,
     after: GraphBranch,
     context: DiffContext,
@@ -37,7 +45,7 @@ const branchChanges = (
     const selfChange = selfApprover ? [change("self_approver", nodeKey, after.key)] : []
     if (after.then !== "auto") return selfChange
     if (before?.then !== "auto") return [...selfChange, change("branch_more_auto", nodeKey, after.key)]
-    const raised = topWord(after, context.amountFact) > topWord(before, context.amountFact)
+    const raised = topWord(after, amountFact) > topWord(before, amountFact)
     return raised ? [...selfChange, change("boundary_raised", nodeKey, after.key)] : selfChange
 }
 
@@ -50,9 +58,11 @@ const nodeChanges = (
     const tools = after.uses
         .filter((use) => use.tool !== null && !known.has(use.tool))
         .map(() => change("tool_added", after.key, null))
+    const amountFact = after.decide === undefined ? "" : (amountFactOf(after.decide, context.facts) ?? "")
     const branches = branchesOf(after).flatMap((branch) =>
         branchChanges(
             after.key,
+            amountFact,
             branchesOf(before).find((entry) => entry.key === branch.key),
             branch,
             context,

@@ -19,6 +19,10 @@ export class AgentGraphType {
     @Field(() => Int)
     draftRev!: number
 
+    /** True when the draft differs from the version that decides, so there is something to publish. */
+    @Field(() => Boolean)
+    isDraftChanged!: boolean
+
     /** The version that decides, or null before the first. */
     @Field(() => String, { nullable: true })
     activeVersionId!: string | null
@@ -42,4 +46,8 @@ export class AgentGraphType {
     /** The proposals waiting for a person, as JSON text. */
     @Field(() => String)
     proposalsJson!: string
+
+    /** The facts a condition may be written on (key, label, type, unit, allowed), as JSON text. */
+    @Field(() => String)
+    factsJson!: string
 }

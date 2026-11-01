@@ -263,7 +263,12 @@ export { useMutateCloseAgentTaskSwr, useMutateRemoveAgentTriggerSwr, useMutateSa
 export { useMutateSaveAgentTriggerSwr, useMutateSetAgentWorkSwr, useMutateSetWorkspaceAgentWorkSwr } from "./api"
 export { useQueryAgentWorkSwr, useQueryWorkspaceAgentWorkSwr, QUERY_AGENT_GRAPH_SWR_KEY } from "./api"
 export { QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY, useMutateConfirmAgentGraphProposalSwr } from "./api"
-export { useMutateSetAgentGraphModeSwr, useQueryAgentGraphCoverageSwr, useQueryAgentGraphRunSwr } from "./api"
+export {
+    QUERY_AGENT_GRAPH_COVERAGE_SWR_KEY,
+    useMutateSetAgentGraphModeSwr,
+    useQueryAgentGraphCoverageSwr,
+    useQueryAgentGraphRunSwr,
+} from "./api"
 export { useMutateDeclineAgentGraphProposalSwr, useMutatePublishAgentGraphSwr } from "./api"
 export { useMutateRestoreAgentGraphVersionSwr, useMutateSaveAgentGraphDraftSwr, useQueryAgentGraphSwr } from "./api"
 export { useQueryAgentGraphVersionsSwr } from "./api"

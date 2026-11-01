@@ -11,6 +11,8 @@ export interface AgentGraphWire {
     readonly mode: string
     /** The revision of the draft; a save names the revision it read. */
     readonly draftRev: number
+    /** True when the draft differs from the version that decides, so there is something to publish. */
+    readonly isDraftChanged: boolean
     /** The version that decides, or null before the first. */
     readonly activeVersionId: string | null
     /** The draft graph as JSON text: nodes and rights. */
@@ -23,6 +25,8 @@ export interface AgentGraphWire {
     readonly cardsJson: string
     /** The proposals waiting for a person, as JSON text. */
     readonly proposalsJson: string
+    /** The facts a condition may be written on, with their type, unit and words, as JSON text. */
+    readonly factsJson: string
 }
 
 /** One run of the graph over a work item: which trigger, which branch, the version and the nodes, the structured parts as JSON text. */
@@ -65,10 +69,12 @@ export const wireOfView = (view: AgentGraphView): AgentGraphWire => ({
     installationId: view.installationId,
     mode: view.mode,
     draftRev: view.draftRev,
+    isDraftChanged: view.isDraftChanged,
     activeVersionId: view.activeVersionId,
     draftJson: JSON.stringify(view.draft),
     gapsJson: JSON.stringify(view.gaps),
     problemsJson: JSON.stringify(view.problems),
     cardsJson: JSON.stringify(view.cards),
     proposalsJson: JSON.stringify(view.proposals),
+    factsJson: JSON.stringify(view.facts),
 })

@@ -58,6 +58,16 @@ export class AgentGraphPublishService {
         return this.publishDocument(await this.requireState(workspaceId, agentId), document, by, "", "learned")
     }
 
+    /** Publishes the graph a confirmed Brain conflict made as the next version, under the same checks as any change. */
+    async publishConflict(
+        workspaceId: string,
+        agentId: string,
+        document: GraphDocument,
+        by: Publisher,
+    ): Promise<GraphVersionView> {
+        return this.publishDocument(await this.requireState(workspaceId, agentId), document, by, "", "conflict")
+    }
+
     /** Goes back to an older version by publishing it again as a new one, so nothing in the history changes. */
     async restore(workspaceId: string, agentId: string, versionId: string, by: Publisher): Promise<GraphVersionView> {
         const state = await this.requireState(workspaceId, agentId)
@@ -95,8 +105,7 @@ export class AgentGraphPublishService {
                 code: AgentGraphsErrorCode.PublishRefused,
                 params: { count: problems.length },
             })
-        const amountFact = Object.values(context.facts).find((spec) => spec.unit === "vnd")?.key ?? ""
-        const diff = graphDiff(state.active ?? EMPTY, document, { actorMemberId: by.memberId, amountFact })
+        const diff = graphDiff(state.active ?? EMPTY, document, { actorMemberId: by.memberId, facts: context.facts })
         if (diff.widens && by.role !== "owner")
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.WidensNeedsOwner })
         return this.graphs.publish({

@@ -17,8 +17,10 @@ const query1: TypedDocumentNode<QueryAgentGraphResponse, InputVariables<QueryAge
             cardsJson
             draftJson
             draftRev
+            factsJson
             gapsJson
             installationId
+            isDraftChanged
             mode
             problemsJson
             proposalsJson

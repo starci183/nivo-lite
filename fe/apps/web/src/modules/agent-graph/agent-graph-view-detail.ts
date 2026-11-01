@@ -8,6 +8,7 @@ import type {
     AgentGraphSourceData,
 } from "@/modules/types"
 import { branchHitOf } from "./agent-graph-flow"
+import { problemLinesOf } from "./agent-graph-problems"
 import { kindWordOf, sourceWordOf, thenWordOf, timeoutLineOf } from "./agent-graph-words"
 import type { AgentGraphContext, AgentGraphT } from "./agent-graph-words"
 
@@ -104,16 +105,25 @@ export const detailViewOf = (data: AgentGraphData, nodeKey: string, ctx: AgentGr
             badge: "",
             subtitle: "",
             problemTitle: "",
-            problem: "",
+            problems: [],
             answers: [],
             editLabel: "",
+            editNodeKey: "",
             runsLabel: "",
         }
     }
     const hit = branchHitOf(data.nodes, node.key)
-    const problem = data.problems.find((entry) => entry.nodeKey === node.key)
+    const problems = problemLinesOf(data, t).filter(
+        (line) =>
+            line.nodeKey === node.key ||
+            (hit !== null && line.nodeKey === hit.parent.key && line.branchKey === hit.branch.key),
+    )
     const when: AgentGraphAnswerView | null =
-        hit === null ? null : { id: "when", term: t("q_when"), kind: "text", text: hit.branch.when }
+        hit === null ? null : { id: "when", term: t("q_when"), kind: "text", text: hit.branch.whenFull }
+    const editNodeKey = (() => {
+        if (node.branches.length > 0) return node.key
+        return hit === null ? "" : hit.parent.key
+    })()
     const answers = answersOf(
         t,
         node,
@@ -128,10 +138,11 @@ export const detailViewOf = (data: AgentGraphData, nodeKey: string, ctx: AgentGr
             hit === null
                 ? doneByWordOf(t, node)
                 : t("branchOf", { position: hit.position + 1, intent: hit.parent.intent }),
-        problemTitle: problem === undefined ? "" : t("problemTitle"),
-        problem: problem?.text ?? "",
+        problemTitle: problems.length === 0 ? "" : t("problemTitle"),
+        problems: problems.map((line) => line.text),
         answers: when === null ? answers : [when, ...answers],
-        editLabel: hit !== null && ctx.canEdit ? t("editBranch") : "",
+        editLabel: editNodeKey !== "" && ctx.canEdit ? t("editBranches") : "",
+        editNodeKey,
         runsLabel: hit !== null && data.runs.length > 0 ? t("viewRuns") : "",
     }
 }

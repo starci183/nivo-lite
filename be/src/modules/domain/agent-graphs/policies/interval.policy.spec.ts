@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { AMOUNT_FACT, FACTS, OWNER_EXAMPLE, amountIs, branchOf } from "@tests/fixtures/builders/agent-graph.builder"
-import { boundaryFindings, intervalOf, isEmpty, numericFactsOf, topOf } from "./interval.policy"
+import { amountFactOf, boundaryFindings, intervalOf, isEmpty, numericFactsOf, topOf } from "./interval.policy"
 
 /** The members of the subject under test. */
 interface Subject {
@@ -9,6 +9,7 @@ interface Subject {
     readonly isEmpty: typeof isEmpty
     readonly numericFactsOf: typeof numericFactsOf
     readonly boundaryFindings: typeof boundaryFindings
+    readonly amountFactOf: typeof amountFactOf
 }
 
 const SUBJECT = Symbol("interval.policy")
@@ -16,7 +17,7 @@ const SUBJECT = Symbol("interval.policy")
 /** The policy functions, read through the Nest testing module. */
 const build = async (): Promise<Subject> => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { intervalOf, topOf, isEmpty, numericFactsOf, boundaryFindings } }],
+        providers: [{ provide: SUBJECT, useValue: { intervalOf, topOf, isEmpty, numericFactsOf, boundaryFindings, amountFactOf } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -186,5 +187,23 @@ describe("interval.policy boundaryFindings", () => {
         const closed = branchOf({ key: "closed", when: { all: [amountIs("gte", 1), amountIs("lte", 5)] } })
 
         expect(subject.boundaryFindings(decideOf(open, closed), AMOUNT_FACT)).toMatchObject([{ kind: "overlap" }])
+    })
+})
+
+describe("interval.policy amountFactOf", () => {
+    it("is the first fact of the decide point counted in dong, whatever other amount facts the registry holds first", async () => {
+        const subject = await build()
+        const other = { key: "order.amount_vnd", type: "number", unit: "vnd", labelKey: "fact.order" } as const
+        const registry = { [other.key]: other, ...FACTS }
+
+        expect(subject.amountFactOf(decideOf(), registry)).toBe(AMOUNT_FACT)
+        expect(subject.amountFactOf({ ...decideOf(), facts: [other.key, AMOUNT_FACT] }, registry)).toBe(other.key)
+    })
+
+    it("is none for a decide point that reads no amount", async () => {
+        const subject = await build()
+
+        expect(subject.amountFactOf({ ...decideOf(), facts: ["supplier_payment.kind"] }, FACTS)).toBeNull()
+        expect(subject.amountFactOf({ ...decideOf(), facts: [] }, FACTS)).toBeNull()
     })
 })

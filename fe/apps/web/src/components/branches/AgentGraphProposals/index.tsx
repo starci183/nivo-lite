@@ -1,5 +1,7 @@
 import {
+    AlertDialog,
     Badge,
+    Cluster,
     Button,
     DescriptionList,
     Disclosure,
@@ -7,10 +9,11 @@ import {
     List,
     ListRow,
     SectionHeader,
+    Stack,
+    SurfaceCard,
     Text,
 } from "@starci/grammar/common"
 import type {
-    AgentGraphEvidenceData,
     AgentGraphProposalView,
     AgentGraphProposalsView,
     AgentGraphSourceData,
@@ -27,18 +30,21 @@ type AgentGraphProposalsProps = {
 const PREVIEW = 3
 
 /** The decisions that prove a proposal, one line each: what happened and what the approver did. */
-const evidenceItemsOf = (rows: ReadonlyArray<AgentGraphEvidenceData>) =>
+const evidenceItemsOf = (rows: AgentGraphProposalView["evidence"]) =>
     rows.map((row) => ({ id: row.id, term: row.line, description: row.outcome }))
 
 /** A rule with the word that says whose it is. */
-interface SourceRowProps {
+interface PassageProps {
     readonly title: string
     readonly source: AgentGraphSourceData
+    readonly isSkeleton: boolean
 }
 
-/** Where the map stands against the Brain: the rule it follows, and the rule that replaced it. */
-const SourceRow = (props: SourceRowProps) => (
-    <ListRow title={props.source.quote} description={props.source.place} badges={<Badge>{props.title}</Badge>} />
+/** One passage of a conflict in a card of its own, so the old and the new read side by side and nothing is mistaken for the other. */
+const Passage = (props: PassageProps) => (
+    <SurfaceCard label={props.title} headingLevel={4}>
+        <Text isSkeleton={props.isSkeleton}>{props.source.quote}</Text>
+    </SurfaceCard>
 )
 
 /** One proposal and whether it waits for its data. */
@@ -47,26 +53,26 @@ interface ProposalBodyProps {
     readonly isSkeleton: boolean
 }
 
-/** The body of one proposal: the two rules of a conflict with what switching changes, or the evidence of a learned change. */
+/** The body of one proposal: the two passages of a conflict with what switching changes, or the evidence of a learned change. */
 const ProposalBody = (props: ProposalBodyProps) => {
     const { item } = props
     const preview = item.evidence.slice(0, PREVIEW)
     const rest = item.evidence.slice(PREVIEW)
     return (
-        <>
+        <Stack gap="section">
             {item.before === null || item.after === null ? null : (
-                <List label={item.title}>
-                    <SourceRow title={item.beforeTitle} source={item.before} />
-                    <SourceRow title={item.afterTitle} source={item.after} />
+                <Stack gap="row">
+                    <Passage title={item.beforeTitle} source={item.before} isSkeleton={props.isSkeleton} />
+                    <Passage title={item.afterTitle} source={item.after} isSkeleton={props.isSkeleton} />
+                </Stack>
+            )}
+            {item.effects.length === 0 ? null : (
+                <List label={item.effectsTitle}>
+                    {item.effects.map((effect) => (
+                        <ListRow key={effect} isSkeleton={props.isSkeleton} title={effect} />
+                    ))}
                 </List>
             )}
-            {item.effects.length === 0
-                ? null
-                : item.effects.map((effect) => (
-                      <Text key={effect} as="p" size="sm" isSkeleton={props.isSkeleton}>
-                          {effect}
-                      </Text>
-                  ))}
             {preview.length === 0 ? null : (
                 <DescriptionList layout="columns" isDivided items={evidenceItemsOf(preview)} />
             )}
@@ -75,7 +81,7 @@ const ProposalBody = (props: ProposalBodyProps) => {
                     <DescriptionList layout="columns" isDivided items={evidenceItemsOf(rest)} />
                 </Disclosure>
             )}
-        </>
+        </Stack>
     )
 }
 
@@ -84,7 +90,51 @@ interface ProposalRowProps extends ProposalBodyProps {
     readonly onDecide: AgentGraphProposalsProps["onDecide"]
 }
 
-/** One proposal as a row: its kind and reach, why NIVO proposes it, what proves it, and add-to-draft or dismiss. */
+/**
+ * The two choices on a proposal. Each opens a question first and settles the proposal only on the owner's yes, because a choice
+ * made by a stray click on a rule of the business would be hard to take back.
+ */
+const ProposalChoices = (props: ProposalRowProps) => {
+    const { item } = props
+    return (
+        <Cluster gap="inline">
+            <AlertDialog
+                title={item.confirmTitle}
+                description={item.confirmBody}
+                tone="informative"
+                cancelLabel={item.cancelLabel}
+                confirmLabel={item.confirmLabel}
+                onConfirm={() => props.onDecide(item.id, true)}
+                trigger={
+                    <Button
+                        intent="commit"
+                        size="sm"
+                        isSkeleton={props.isSkeleton}
+                        isDisabled={item.confirmBlocked !== ""}
+                        {...(item.confirmBlocked === "" ? {} : { disabledReason: item.confirmBlocked })}
+                    >
+                        {item.confirmLabel}
+                    </Button>
+                }
+            />
+            <AlertDialog
+                title={item.keepTitle}
+                description={item.keepBody}
+                tone="informative"
+                cancelLabel={item.cancelLabel}
+                confirmLabel={item.keepLabel}
+                onConfirm={() => props.onDecide(item.id, false)}
+                trigger={
+                    <Button intent="neutral" size="sm" isSkeleton={props.isSkeleton}>
+                        {item.keepLabel}
+                    </Button>
+                }
+            />
+        </Cluster>
+    )
+}
+
+/** One proposal as a row: its kind and reach, why NIVO proposes it, what proves it, and the two choices. */
 const ProposalRow = (props: ProposalRowProps) => {
     const { item } = props
     return (
@@ -99,25 +149,10 @@ const ProposalRow = (props: ProposalRowProps) => {
                 </>
             }
         >
-            <ProposalBody item={item} isSkeleton={props.isSkeleton} />
-            <Button
-                intent="alternative"
-                size="sm"
-                isSkeleton={props.isSkeleton}
-                isDisabled={item.confirmBlocked !== ""}
-                {...(item.confirmBlocked === "" ? {} : { disabledReason: item.confirmBlocked })}
-                onPress={() => props.onDecide(item.id, true)}
-            >
-                {item.confirmLabel}
-            </Button>
-            <Button
-                intent="neutral"
-                size="sm"
-                isSkeleton={props.isSkeleton}
-                onPress={() => props.onDecide(item.id, false)}
-            >
-                {item.keepLabel}
-            </Button>
+            <Stack gap="section">
+                <ProposalBody item={item} isSkeleton={props.isSkeleton} />
+                <ProposalChoices {...props} />
+            </Stack>
         </ListRow>
     )
 }

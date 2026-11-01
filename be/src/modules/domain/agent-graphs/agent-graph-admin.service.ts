@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { BrainFactsService } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { AgentGraphContextService } from "./agent-graph-context.service"
@@ -11,7 +12,10 @@ import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { AgentGraphsService } from "./agent-graphs.service"
-import type { GraphMode, GraphVersionView } from "./agent-graphs.contracts"
+import type { GraphDocument, GraphMode, GraphVersionView } from "./agent-graphs.contracts"
+import type { GraphState } from "./agent-graphs.service"
+import { applyConflict } from "./policies/conflict-patch.policy"
+import type { ConflictPatch } from "./policies/conflict-patch.policy"
 import { localeOf, wireOfView } from "./policies/graph-wire.policy"
 import { applyLearned } from "./policies/proposal-patch.policy"
 import type { AgentGraphRunWire, AgentGraphWire, OptionalLanguage } from "./policies/graph-wire.policy"
@@ -22,6 +26,12 @@ export interface GraphActor {
     readonly workspaceId: string
     /** The account making the request. */
     readonly principalId: string
+}
+
+/** The graph a conflict is confirmed on: its state, and the version that decides. */
+interface ConflictGraph {
+    readonly state: GraphState
+    readonly active: GraphDocument
 }
 
 /** The text of a graph the editor sent, read as data; a text that is not JSON is a graph that cannot be read. */
@@ -49,6 +59,7 @@ export class AgentGraphAdminService {
         private readonly installations: InstallationRecordsService,
         private readonly running: AgentGraphRunService,
         private readonly context: AgentGraphContextService,
+        private readonly brain: BrainFactsService,
     ) {}
 
     /** The graph of the agent for the editor, seeded on the first open. */
@@ -96,10 +107,12 @@ export class AgentGraphAdminService {
      */
     async confirm(actor: GraphActor, agentId: string, proposalId: string): Promise<GraphVersionView> {
         const by = await this.publisherOf(actor)
-        const [patch, state] = await Promise.all([
+        const [patch, conflict, state] = await Promise.all([
             this.proposals.learnedOf(actor.workspaceId, agentId, proposalId),
+            this.proposals.conflictOf(actor.workspaceId, agentId, proposalId),
             this.graphs.stateOfAgent(actor.workspaceId, agentId),
         ])
+        if (state?.active != null && conflict !== null) return this.confirmConflict(actor, by, proposalId, conflict, { state, active: state.active })
         if (patch === null || state?.active == null)
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
         const document = applyLearned(state.active, patch)
@@ -109,6 +122,36 @@ export class AgentGraphAdminService {
         }
         const version = await this.publishing.publishLearned(actor.workspaceId, agentId, document, by)
         await this.proposals.confirm(actor.workspaceId, agentId, proposalId, by.memberId, version.id)
+        return version
+    }
+
+    /**
+     * Confirms a Brain conflict: every place the running graph cited the replaced rule cites the rule in force, and that is published as
+     * the next version. The owner's unpublished edits stay in the draft, with the same swap, so confirming costs them nothing.
+     */
+    private async confirmConflict(
+        actor: GraphActor,
+        by: Publisher,
+        proposalId: string,
+        conflict: ConflictPatch,
+        graph: ConflictGraph,
+    ): Promise<GraphVersionView> {
+        const { workspaceId } = actor
+        const { state, active } = graph
+        const agentId = state.agentId
+        const fact = await this.brain.get(workspaceId, conflict.newFactId)
+        const swapped = fact === null ? null : applyConflict(active, conflict, fact.value)
+        if (fact === null || swapped === null) {
+            await this.proposals.supersede(workspaceId, agentId, proposalId)
+            throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
+        }
+        const version = await this.publishing.publishConflict(workspaceId, agentId, swapped, by)
+        await this.proposals.confirm(workspaceId, agentId, proposalId, by.memberId, version.id)
+        if (JSON.stringify(state.draft) !== JSON.stringify(active)) {
+            const now = await this.graphs.stateOfAgent(workspaceId, agentId)
+            const kept = applyConflict(state.draft, conflict, fact.value) ?? state.draft
+            if (now !== null) await this.graphs.saveDraft(workspaceId, agentId, now.draftRev, kept)
+        }
         return version
     }
 

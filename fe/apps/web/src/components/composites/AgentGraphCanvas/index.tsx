@@ -9,17 +9,17 @@ type AgentGraphCanvasProps = {
 }
 
 /**
- * The work map left to right in three bands (trigger, execute, output) that is read and selected, never wired: a decision is a diamond whose edges read the
- * condition, a step a person answers is round, the rest are rectangles. The installed grammar has no dimming and no outline on a
- * selected card, so selection and a traced run paint by tone.
+ * The work map top to bottom, each step below the ones that lead to it (the trigger, what the agent works out, the condition that
+ * picks a branch, what comes out), read and selected, never wired: a decision is a diamond whose edges read the condition, a step
+ * a person answers is round, the rest are rectangles. A selected card and the cards of a traced run paint by tone; the others dim.
  */
 export const AgentGraphCanvas = (props: AgentGraphCanvasProps) => (
     <FlowGraph
         label={props.view.label}
         nodes={props.view.nodes}
         edges={props.view.edges}
-        direction="LR"
-        layout="manual"
+        direction="TB"
+        layout="layered"
         headers={props.view.headers}
         fit="readable"
         height="lg"

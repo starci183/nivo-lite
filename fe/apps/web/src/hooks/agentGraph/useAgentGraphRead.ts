@@ -17,7 +17,7 @@ import type { AgentGraphData, AgentGraphMemberData, DataSlot } from "@/modules/t
 import { useAgentGraphWords } from "./useAgentGraphWords"
 
 /** The graph, as the back end carries it and as the panes draw it. */
-interface AgentGraphRead {
+export interface AgentGraphRead {
     readonly agentId: string
     readonly draftRev: number
     readonly wire: AgentGraphWire
@@ -87,6 +87,7 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
                           coverage: coverage.data ?? [],
                           run,
                           changes,
+                          isDraftChanged: graph.data.isDraftChanged,
                       },
                       {
                           ...words,
