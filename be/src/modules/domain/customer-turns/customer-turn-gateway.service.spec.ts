@@ -158,6 +158,7 @@ describe("CustomerTurnGatewayService", () => {
                 threadKey: threadKeyFor("module-agent", "c1"),
                 message: "Prepared context and message",
                 idempotencyKey: "chat-m1",
+                attachments: [],
                 timeoutMs: 25_000,
             },
             signal,

@@ -1,5 +1,10 @@
 import type { InstallationConnectionNeed } from "@/modules/installations"
-import type { OfficeConversationState, OfficePreviewKind, OfficeRoomMembersView } from "@/modules/types"
+import type {
+    OfficeConversationState,
+    OfficeMessageView,
+    OfficePreviewKind,
+    OfficeRoomMembersView,
+} from "@/modules/types"
 
 /** Who wrote a line. */
 export type OfficeAuthorKind = "human" | "agent" | "system"
@@ -34,6 +39,8 @@ export interface OfficeMessage {
     /** The account that wrote the line; null on a legacy line. */
     readonly authorUserId: string | null
     readonly body: string
+    /** The files that came with the line. */
+    readonly files: OfficeMessageView["files"]
     readonly createdAt: string
     readonly agentId: string | null
     readonly leadId: string | null

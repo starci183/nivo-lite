@@ -1,3 +1,5 @@
+import { ChatFilesService } from "@modules/domain/chat-files"
+import { NO_CHAT_FILES } from "@tests/fixtures/builders/chat-files.builder"
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
@@ -110,6 +112,7 @@ const build = async (answers: Answers = {}) => {
             { provide: ExecutionsService, useValue: executions },
             { provide: ResponsibilityReadService, useValue: steps },
             { provide: AgentDirectoryService, useValue: agents },
+            { provide: ChatFilesService, useValue: mock<ChatFilesService>(NO_CHAT_FILES) },
         ],
     }).compile()
     return { service: moduleRef.get(OfficeThreadService), members, lines, leads, workItems, executions, steps, agents }

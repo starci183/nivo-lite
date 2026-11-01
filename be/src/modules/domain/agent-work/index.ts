@@ -40,6 +40,7 @@ export type {
 export type {
     AgentHandlerEnding,
     AgentTurnExecutor,
+    AgentTurnAttachment,
     AgentTurnPlan,
     AgentTurnPrep,
     AgentTurnRun,

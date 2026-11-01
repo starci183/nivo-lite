@@ -10,4 +10,4 @@ export const toListAgentChatMessagesRequest = (
 
 /** Maps the application result to the GraphQL contract. */
 export const toListAgentChatMessagesType = (result: AgentChatMessages): Array<AgentChatMessageType> =>
-    result.map((item) => ({ ...item }))
+    result.map((item) => ({ ...item, files: [...item.files] }))

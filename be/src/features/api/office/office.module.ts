@@ -10,6 +10,7 @@ import { ListThreadMessagesHandler } from "./application/list-thread-messages.ha
 import { MarkConversationReadHandler } from "./application/mark-conversation-read.handler"
 import { MarkRoomReadHandler } from "./application/mark-room-read.handler"
 import { PostOfficeMessageHandler } from "./application/post-office-message.handler"
+import { RequestOfficeFileUploadHandler } from "./application/request-office-file-upload.handler"
 import { ProposeCommandHandler } from "./application/propose-command.handler"
 import { SetupOfficeRoomsHandler } from "./application/setup-office-rooms.handler"
 import { ConfigurableModuleClass } from "./office.module-definition"
@@ -23,6 +24,7 @@ import { ConfigurableModuleClass } from "./office.module-definition"
         ListPendingApprovalsHandler,
         ListThreadMessagesHandler,
         PostOfficeMessageHandler,
+        RequestOfficeFileUploadHandler,
         ProposeCommandHandler,
         ListOfficeRoomsHandler,
         ListConversationUnreadHandler,

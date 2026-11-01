@@ -19,6 +19,12 @@ const query1: Document = gql`
             role
             body
             createdAt
+            files {
+                id
+                name
+                contentType
+                url
+            }
         }
     }
 `

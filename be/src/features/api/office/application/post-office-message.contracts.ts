@@ -1,3 +1,4 @@
+import type { OfficeTagFile } from "@modules/domain/office-command-candidates"
 import type { Locale } from "@modules/platform/i18n"
 
 /** What posting a line in the Office thread takes. */
@@ -10,4 +11,6 @@ export interface PostOfficeMessageRequest {
     readonly room: string | null
     /** The language of the notes NIVO writes and of the agents' answers. */
     readonly locale: Locale
+    /** The file sent with the line, or null. */
+    readonly file: OfficeTagFile | null
 }

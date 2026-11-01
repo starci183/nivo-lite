@@ -1,5 +1,15 @@
 import type { AgentTurnUsage, AgentTurnView, AgentWakeSource, AgentWakeView } from "./agent-work.contracts"
 
+/** A picture sent with a turn. */
+export interface AgentTurnAttachment {
+    /** The name of the file. */
+    readonly fileName: string
+    /** The type of the picture. */
+    readonly mimeType: string
+    /** The bytes, in base64. */
+    readonly content: string
+}
+
 /** What a handler built for the executor: everything the model needs to know where and how to run, never the words themselves. */
 export interface AgentTurnPlan {
     /** The module of the agent, for the usage meter and the gates. */
@@ -10,6 +20,8 @@ export interface AgentTurnPlan {
     readonly threadKey: string
     /** The whole authoritative context and the wake's text. */
     readonly message: string
+    /** The pictures sent with it; absent sends none. */
+    readonly attachments?: ReadonlyArray<AgentTurnAttachment>
     /** How long the model may take. */
     readonly timeoutMs: number
 }

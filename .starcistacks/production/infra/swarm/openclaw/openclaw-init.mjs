@@ -62,7 +62,7 @@ if (process.env.AI_BASE_URL && process.env.STARCI_AI_KEY) {
                 baseUrl: process.env.AI_BASE_URL,
                 apiKey: "${STARCI_AI_KEY}",
                 api: "openai-completions",
-                models: [{ id: chat, name: chat }],
+                models: [{ id: chat, name: chat, input: ["text", "image"] }],
             },
         },
     }

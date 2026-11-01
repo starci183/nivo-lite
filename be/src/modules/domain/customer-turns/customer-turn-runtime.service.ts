@@ -5,6 +5,7 @@ import { InjectInstallations, replyTimeoutSec } from "@modules/domain/agents"
 import type { Installation, InstallationDirectory } from "@modules/domain/agents"
 import { UsageGateService } from "@modules/domain/ai-usage-events"
 import { AuthorityService } from "@modules/domain/authority"
+import { ChatFileReadsService, fileReadBlockOf } from "@modules/domain/chat-files"
 import type { CustomerTurn, ChatTurnProposal, ChatTurnRuntime, RuntimeAnswer } from "@modules/domain/conversations"
 import { HiringPublicService } from "@modules/domain/hiring"
 import { ModuleReadinessService } from "@modules/domain/modules"
@@ -21,6 +22,7 @@ import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import type { InstallationOrReason, TurnSystem } from "./customer-turns.contracts"
 import { GatewayContextService } from "./gateway-context.service"
 import { recallSourcesOf } from "./knowledge-sources.policy"
+import { fileTurnOf } from "./customer-turn.policy"
 import { detailOf, readCustomerReply } from "./reply-reading.policy"
 import { TurnModulesService } from "./turn-modules.service"
 import { TurnToolAccessService } from "./turn-tool-access.service"
@@ -74,6 +76,7 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
         private readonly readiness: ModuleReadinessService,
         private readonly connectors: GatewayContextService,
         private readonly access: TurnToolAccessService,
+        private readonly fileReads: ChatFileReadsService,
     ) {
         this.turnGateway = new CustomerTurnGatewayService(gateway, registry, sync, this.logger)
     }
@@ -131,7 +134,8 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
         this.access.keep(turn, system.sources)
         const text = [system.text, this.access.blockOf(token)].filter((part) => part !== "").join(BLOCK_SEPARATOR)
         const message = turnMessageOf(text, turn.transcript, turn.body)
-        const result = await this.turnGateway.run(turn, conversation, agentId, message, timeoutMs)
+        const attachments = await this.fileReads.attachmentsOf(fileTurnOf(turn))
+        const result = await this.turnGateway.run(turn, conversation, agentId, message, timeoutMs, attachments)
         await this.usage.record({
             workspaceId,
             kind: USAGE_KIND,
@@ -164,7 +168,7 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
             audience: "customer",
             installationId: conversation.installationId,
         })
-        const [authority, recalled, jobs, modules] = await Promise.all([
+        const [authority, recalled, jobs, modules, read] = await Promise.all([
             this.authority
                 .load({ workspaceId })
                 .then(authorityBrief)
@@ -174,11 +178,12 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
             this.modules
                 .briefs(conversation)
                 .catch((cause: unknown): ReadonlyArray<string> => [this.skip(cause, workspaceId, "modules")]),
+            this.fileReads.readOf(fileTurnOf(turn)),
         ])
         const text = turnSystemOf({
             persona: personaOf(conversation.agent, conversation.speaksAs),
             authority,
-            extras: [jobs, ...modules],
+            extras: [jobs, ...modules, read === null ? "" : fileReadBlockOf(read)],
             contract: this.contractOf(conversation.agent.module),
         })
         return { text, sources: recallSourcesOf(recalled.facts, recalled.passages) }

@@ -1,3 +1,5 @@
+import { ChatFileReadsService, fileReadBlockOf } from "@modules/domain/chat-files"
+import type { ChatFileTurn } from "@modules/domain/chat-files"
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
@@ -82,6 +84,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
         private readonly lines: OfficeLinesService,
         private readonly typing: ChatTypingService,
         private readonly threads: ThreadTagHandlerService,
+        private readonly fileReads: ChatFileReadsService,
     ) {}
 
     /** Takes the tag source of the drain. */
@@ -109,8 +112,9 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
             agentId: turn.agentId,
             source: "tag",
             locale: this.localeOf(turn),
-            text: transcriptOf(talk.before, talk.tagged),
+            text: await this.textOf(turn, agent.module, transcriptOf(talk.before, talk.tagged)),
         })
+        const attachments = await this.fileReads.attachmentsOf(this.fileTurnOf(turn, agent.module))
         await this.show(turn, agent, true)
         return {
             kind: "run",
@@ -119,9 +123,20 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
                 runtimeAgentId,
                 threadKey: threadKeyFor(runtimeAgentId, surface.sessionOf(turn)),
                 message,
+                ...(attachments.length === 0 ? {} : { attachments }),
                 timeoutMs: internalTimeoutMsOf("tag"),
             },
         }
+    }
+
+    /** The file of the tagging line, in the same words a customer's reaches a customer turn. */
+    private async textOf(turn: AgentTurnView, module: string, transcript: string): Promise<string> {
+        const read = await this.fileReads.readOf(this.fileTurnOf(turn, module))
+        return read === null ? transcript : `${transcript}\n\n${fileReadBlockOf(read)}`
+    }
+
+    private fileTurnOf(turn: AgentTurnView, module: string): ChatFileTurn {
+        return { workspaceId: turn.workspaceId, messageId: turn.context.messageId ?? null, module }
     }
 
     /** Applies what the model proposed and says its reply where the tag was written, once per wake. */

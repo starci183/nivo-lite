@@ -9,6 +9,7 @@ import { OfficeMessagesResolver } from "./office-messages.resolver"
 import { OfficeRoomsResolver } from "./office-rooms.resolver"
 import { OfficePendingApprovalsResolver } from "./office-pending-approvals.resolver"
 import { PostOfficeMessageResolver } from "./post-office-message.resolver"
+import { RequestOfficeFileUploadResolver } from "./request-office-file-upload.resolver"
 import { ProposeOfficeCommandResolver } from "./propose-office-command.resolver"
 
 @Module({
@@ -19,6 +20,7 @@ import { ProposeOfficeCommandResolver } from "./propose-office-command.resolver"
         OfficeDecidedApprovalsResolver,
         OfficeCommandCandidatesResolver,
         PostOfficeMessageResolver,
+        RequestOfficeFileUploadResolver,
         ProposeOfficeCommandResolver,
         ConfirmOfficeCommandResolver,
         CancelOfficeCommandResolver,

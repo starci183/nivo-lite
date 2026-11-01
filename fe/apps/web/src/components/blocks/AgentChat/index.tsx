@@ -86,6 +86,8 @@ export const AgentChat = (props: AgentChatProps) => {
                 back: () => router.push(CONSOLE_ROUTES.modules),
                 tab: chat.changeTab,
                 draft: chat.setDraft,
+                file: chat.chooseFile,
+                fileClear: chat.clearFile,
                 visitorName: chat.setVisitorName,
                 send: (prompt) => void chat.send(prompt),
                 start: () => void chat.start(),

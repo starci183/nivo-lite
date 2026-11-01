@@ -85,11 +85,16 @@ export { useMutateRemoveBookingServiceSwr, useMutateRemoveBookingWaitlistEntrySw
 export { useMutateRemoveLoyaltyRewardSwr, useMutateRemoveMemberSwr } from "./api"
 export { useMutateRemoveShiftsAvailabilitySwr, useMutateRemoveShiftsCoverageSwr } from "./api"
 export { useMutateRemoveShiftsPositionSwr, useMutateRenameInstallationAgentSwr } from "./api"
-export { useMutateRenameModuleInstallationSwr, useMutateRequestAgentSyncSwr, useMutateRenameAgentSwr } from "./api"
+export { useMutateRequestAgentSyncSwr, useMutateRenameAgentSwr } from "./api"
 export { useMutateRequestAgentAvatarUploadSwr, useMutateSetAgentAvatarSwr } from "./api"
 export { useMutateRequestMyAvatarUploadSwr, useMutateSetMyAvatarSwr, useMutateRequestChatAnswerSwr } from "./api"
 export { useMutateRequestChatReplySwr, useMutateRequestContentDraftSwr } from "./api"
-export { useMutateRequestContentMediaUploadSwr, useMutateRequestContentMonthPlanSwr } from "./api"
+export {
+    useMutateRequestAgentChatFileUploadSwr,
+    useMutateRequestContentMediaUploadSwr,
+    useMutateRequestContentMonthPlanSwr,
+    useMutateRequestOfficeFileUploadSwr,
+} from "./api"
 export { useMutateRequestContentQuickDraftSwr, useMutateRequestDataSyncSwr } from "./api"
 export { useMutateRequestHiringInterviewSwr, useMutateRequestHiringOfferSwr } from "./api"
 export { useMutateRequestInventorySendSwr, useMutateRequestLessonMiningSwr } from "./api"

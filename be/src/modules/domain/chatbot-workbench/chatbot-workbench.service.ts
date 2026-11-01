@@ -1,3 +1,4 @@
+import { ChatFilesService } from "@modules/domain/chat-files"
 import { Injectable } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { LeadAutomationReadService, LeadReadService } from "@modules/domain/leads"
@@ -39,6 +40,7 @@ export class ChatbotWorkbenchService {
         private readonly agentDirectory: AgentDirectoryService,
         private readonly conversationReads: AgentConversationsReadService,
         private readonly messageReads: AgentMessagesReadService,
+        private readonly files: ChatFilesService,
     ) {}
 
     /** The selected installation's customer conversations with activity and capture figures. */
@@ -84,6 +86,10 @@ export class ChatbotWorkbenchService {
             this.waiting(workspaceId),
             conversation.lead_id === null ? undefined : this.leadFacts.lead(workspaceId, conversation.lead_id),
         ])
+        const files = await this.files.viewsOf(
+            workspaceId,
+            messages.map((message) => message.id),
+        )
         const item = waiting.find((row) => waitingConversationId(row) === conversationId)
         const staffNames = await this.staffNamesOf(workspaceId, item === undefined ? [] : [item])
         const agentNames = await this.agentNamesOf(workspaceId, [conversation.agent_id])
@@ -91,6 +97,7 @@ export class ChatbotWorkbenchService {
         return buildChatbotThread({
             conversation,
             messages,
+            files,
             waiting,
             lead: lead ?? null,
             staffName: staffId === null ? null : (staffNames.get(staffId) ?? null),

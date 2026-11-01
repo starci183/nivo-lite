@@ -275,7 +275,7 @@ export class GatewayClient {
             agentId: req.agentId,
             message: req.message,
             thinking: "off",
-            attachments: [],
+            attachments: (req.attachments ?? []).map((file) => ({ type: "image", ...file })),
             timeoutMs: req.timeoutMs,
             idempotencyKey: req.idempotencyKey,
         })

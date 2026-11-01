@@ -9,6 +9,7 @@ export type {
     CandidateView,
     ConfirmResult,
     MessagePage,
+    OfficeTagFile,
     ProposeOutcome,
 } from "./office-command-candidates.contracts"
 export { DecisionsQueueService } from "./decisions-queue.service"

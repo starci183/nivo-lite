@@ -27,7 +27,7 @@ const poolOf = (options: AiGatewayOptions): AiRouterModuleOptions => {
     const ownEmbeddings = options.providers.some((provider) => provider.id === "embeddings")
     const chat: ModelConfig = {
         id: options.models.work,
-        capabilities: ["chat", "streaming", "tools", "json"],
+        capabilities: ["chat", "streaming", "tools", "json", "vision"],
         cost: WORK_COST,
     }
     const embed: ModelConfig = { id: options.models.embed, capabilities: ["embeddings"], cost: EMBED_COST }

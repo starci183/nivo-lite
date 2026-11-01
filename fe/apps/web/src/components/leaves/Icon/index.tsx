@@ -78,6 +78,7 @@ const ICON_SOURCES = {
     add: cuts(Outline.PlusIcon, Solid.PlusIcon),
     retry: cuts(Outline.ArrowPathIcon, Solid.ArrowPathIcon),
     send: cuts(Outline.PaperAirplaneIcon, Solid.PaperAirplaneIcon),
+    attach: cuts(Outline.PaperClipIcon, Solid.PaperClipIcon),
     home: cuts(Outline.HomeIcon, Solid.HomeIcon),
     explore: cuts(Outline.GlobeAltIcon, Solid.GlobeAltIcon),
     community: cuts(Outline.UserGroupIcon, Solid.UserGroupIcon),

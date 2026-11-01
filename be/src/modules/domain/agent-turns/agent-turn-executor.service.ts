@@ -49,6 +49,7 @@ export class AgentTurnExecutorService implements AgentTurnExecutor {
                 runtimeAgentId: plan.runtimeAgentId,
                 threadKey: plan.threadKey,
                 message: plan.message,
+                ...(plan.attachments === undefined ? {} : { attachments: plan.attachments }),
                 runKey: `wake-${turn.wakeId}:${String(turn.fence)}`,
                 timeoutMs: plan.timeoutMs,
             },

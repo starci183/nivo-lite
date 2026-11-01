@@ -694,6 +694,18 @@ input AgentChatConversationsInput {
   agentId: ID! @inputBounds(maxLength: 36)
 }
 
+type AgentChatFileType {
+  contentType: String!
+  id: ID!
+  name: String!
+  url: String!
+}
+
+type AgentChatFileUploadType {
+  path: String!
+  signedUrl: String!
+}
+
 type AgentChatHolderType {
   conversationId: ID!
   handledBy: String
@@ -702,6 +714,7 @@ type AgentChatHolderType {
 type AgentChatMessageType {
   body: String!
   createdAt: String!
+  files: [AgentChatFileType!]!
   id: ID!
   role: String!
 }
@@ -2105,6 +2118,13 @@ type ChatbotLensType {
   name: String!
 }
 
+type ChatbotMessageFileType {
+  contentType: String!
+  id: ID!
+  name: String!
+  url: String!
+}
+
 type ChatbotMessageType {
   authorKind: String!
   authorName: String
@@ -2112,6 +2132,7 @@ type ChatbotMessageType {
   createdAt: String!
   delivery: String
   deliveryError: String
+  files: [ChatbotMessageFileType!]!
   id: ID!
   role: String!
 }
@@ -5571,6 +5592,7 @@ type Mutation {
   renameModuleInstallation(input: RenameModuleInstallationInput!): ModuleInstallationType!
   reopenDossierFinding(input: DossierFindingRefInput!): DossierFindingType!
   requestAgentAvatarUpload(input: RequestAgentAvatarUploadInput!): AgentAvatarUploadType!
+  requestAgentChatFileUpload(input: RequestAgentChatFileUploadInput!): AgentChatFileUploadType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
   requestChatAnswer(input: RequestChatAnswerInput!): ChatReplyProgressType!
@@ -5588,6 +5610,7 @@ type Mutation {
   requestLessonMining(input: RequestLessonMiningInput!): BrainCommandRefType!
   requestLoyaltyCode(input: RequestLoyaltyCodeInput!): RequestLoyaltyCodeType!
   requestMyAvatarUpload(input: RequestMyAvatarUploadInput!): MyAvatarUploadType!
+  requestOfficeFileUpload(input: RequestOfficeFileUploadInput!): OfficeFileUploadType!
   requestPaymentOrder(input: RequestPaymentOrderInput!): RequestPaymentOrderType!
   requestPublicBooking(input: RequestPublicBookingInput!): RequestPublicBookingType!
   requestShiftsLeave(input: RequestShiftsLeaveInput!): RequestStatusType!
@@ -5844,6 +5867,18 @@ type OfficeConversationUnreadType {
   leads: [OfficeConversationUnreadEntryType!]!
 }
 
+type OfficeFileUploadType {
+  path: String!
+  signedUrl: String!
+}
+
+type OfficeMessageFileType {
+  contentType: String!
+  id: ID!
+  name: String!
+  url: String!
+}
+
 type OfficeMessagePageType {
   messages: [OfficeMessageType!]!
   next: OfficeThreadCursorType
@@ -5859,6 +5894,7 @@ type OfficeMessageType {
   card_state: String
   created_at: String!
   department: String
+  files: [OfficeMessageFileType!]!
   id: ID!
   lead_id: ID
   lead_name: String
@@ -6019,6 +6055,7 @@ type PickedFolderType {
 
 input PostOfficeMessageInput {
   body: String! @inputBounds(maxLength: 4000)
+  file: PostedOfficeFileInput = null
   room: String = null @inputBounds(maxLength: 20)
 }
 
@@ -6032,6 +6069,11 @@ input PostThreadMessageInput {
   mentions: [ThreadMentionRefInput!]! = [] @inputBounds(maxItems: 20)
   quoted: [String!]! = [] @inputBounds(maxItems: 10, itemMaxLength: 2500)
   threadId: ID! @inputBounds(maxLength: 36)
+}
+
+input PostedOfficeFileInput {
+  name: String! @inputBounds(maxLength: 255)
+  path: String! @inputBounds(maxLength: 255)
 }
 
 input PreviewContractImportInput {
@@ -6768,6 +6810,12 @@ input RequestAgentAvatarUploadInput {
   sizeBytes: Int! @inputBounds(min: 1, max: 2097152)
 }
 
+input RequestAgentChatFileUploadInput {
+  contentType: String! @inputBounds(maxLength: 32)
+  conversationId: ID! @inputBounds(maxLength: 36)
+  sizeBytes: Int! @inputBounds(min: 1, max: 10485760)
+}
+
 input RequestAgentGenerationInput {
   kind: String! @inputBounds(maxLength: 40)
   messages: [AgentGenMessageInput!]! @inputBounds(maxItems: 60)
@@ -6866,6 +6914,11 @@ type RequestLoyaltyCodeType {
 input RequestMyAvatarUploadInput {
   contentType: String! @inputBounds(maxLength: 100)
   sizeBytes: Int! @inputBounds(min: 1, max: 2097152)
+}
+
+input RequestOfficeFileUploadInput {
+  contentType: String! @inputBounds(maxLength: 32)
+  sizeBytes: Int! @inputBounds(min: 1, max: 10485760)
 }
 
 input RequestPaymentOrderInput {
@@ -7791,6 +7844,7 @@ type SavedFactType {
 input SendAgentChatMessageInput {
   body: String! @inputBounds(maxLength: 4000)
   conversationId: ID! @inputBounds(maxLength: 36)
+  file: SentAgentChatFileInput = null
 }
 
 input SendAgentCommandInput {
@@ -7813,6 +7867,11 @@ input SendZaloTestInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   recipientId: String! @inputBounds(maxLength: 64)
   text: String! @inputBounds(maxLength: 500)
+}
+
+input SentAgentChatFileInput {
+  name: String! @inputBounds(maxLength: 255)
+  path: String! @inputBounds(maxLength: 255)
 }
 
 type SepayConnectionType {

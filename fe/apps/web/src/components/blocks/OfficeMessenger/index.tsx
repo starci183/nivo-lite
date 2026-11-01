@@ -34,10 +34,8 @@ export const OfficeMessenger = () => {
     const onChip = chipOpener(office, jump)
     const thread = officeThreadProps(office, drafts)
     const composer: OfficeMessengerComposer = {
+        ...composerWordsOf(office),
         draft,
-        mentions: office.panels.mentions,
-        chatbotHandle: office.chatbotHandle,
-        isSending: office.sender.isSending,
         focusKey,
         text,
     }
@@ -139,6 +137,14 @@ const directOpener =
         router.push(kind === "agent" ? agentChatHref(id) : leadHref(id))
     }
 
+/** What the composer takes from the Office as it stands. */
+const composerWordsOf = (office: ReturnType<typeof useOfficeMessenger>) => ({
+    mentions: office.panels.mentions,
+    chatbotHandle: office.chatbotHandle,
+    isSending: office.sender.isSending,
+    file: office.sender.fileControl,
+})
+
 /** Owns the composer draft and restores a message when sending fails. */
 const composerCommands = (
     draft: string,
@@ -155,7 +161,7 @@ const composerCommands = (
 
     const onSend = () => {
         const body = draft.trim()
-        if (body === "" || office.sender.isSending) return
+        if ((body === "" && office.sender.fileControl.file === null) || office.sender.isSending) return
         office.sender.dismissFailed()
         setDraft("")
         office.onDraft("")

@@ -1,3 +1,4 @@
+import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import type { MockOf } from "@starci/jest-preset"
 import type {
     AgentConversationsReadService,
@@ -71,4 +72,14 @@ export const arrangeTurnOwners = (
         turn === null || replyId === null ? null : { id: replyId, deliveryStatus: turn.replyDeliveryStatus },
     )
     conversationReads.channelOf.mockResolvedValue(turn?.channel ?? null)
+}
+
+/** The member who sends in the chat specs. */
+export const MEMBER_LAN: WorkspaceMember = {
+    userId: "u1",
+    workspaceId: "w1",
+    role: "manager",
+    staffId: null,
+    displayName: "Lan",
+    status: "active",
 }

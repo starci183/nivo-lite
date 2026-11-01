@@ -6,6 +6,8 @@ export interface AiMessage {
     readonly role: "system" | "user" | "assistant"
     /** What is said. */
     readonly content: string
+    /** The pictures said with it, as data addresses. */
+    readonly images?: ReadonlyArray<string>
 }
 
 /** What the endpoint reports about one call; a field is null when it did not say. */

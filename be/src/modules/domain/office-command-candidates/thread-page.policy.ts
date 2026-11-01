@@ -1,5 +1,5 @@
 import type { MessageCursor, OptionalMessageCursor } from "@modules/domain/messages"
-import type { MessagePage, MessageView } from "./office-command-candidates.contracts"
+import type { MessagePage, OfficePageLine } from "./office-command-candidates.contracts"
 
 /** The biggest page of the thread one call returns. */
 export const THREAD_PAGE_MAX = 100
@@ -15,7 +15,7 @@ export const isValidCursor = (cursor: MessageCursor): boolean =>
     !Number.isNaN(Date.parse(cursor.createdAt)) && UUID_PATTERN.test(cursor.id)
 
 /** Splits the `size + 1` rows a keyset query returned into the page and the cursor of the next, older one. */
-export const splitPage = (fetched: ReadonlyArray<MessageView>, size: number): MessagePage => {
+export const splitPage = (fetched: ReadonlyArray<OfficePageLine>, size: number): MessagePage => {
     const messages = fetched.slice(0, size)
     const last = messages.at(-1)
     const next: OptionalMessageCursor =

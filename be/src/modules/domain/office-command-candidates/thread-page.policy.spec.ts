@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 
-import type { MessageView } from "./office-command-candidates.contracts"
+import type { OfficePageLine } from "./office-command-candidates.contracts"
 
 import {
     clampPageSize as realClampPageSize,
@@ -13,7 +13,8 @@ const SUBJECT = Symbol("thread-page.policy")
 
 const functions = { clampPageSize: realClampPageSize, isValidCursor: realIsValidCursor, splitPage: realSplitPage }
 
-const line = (id: string, createdAt: string): MessageView => ({
+const line = (id: string, createdAt: string): OfficePageLine => ({
+    files: [],
     id,
     author_kind: "human",
     author_name: "An",

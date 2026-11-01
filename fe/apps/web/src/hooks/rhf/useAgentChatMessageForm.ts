@@ -9,9 +9,6 @@ import { z } from "zod"
 /** Validates the message before its queued mutation runs. */
 export const useAgentChatMessageForm = () => {
     const t = useTranslations("agentChat")
-    const schema = useMemo(
-        () => z.object({ body: z.string().trim().min(1, t("emptyMessage")).max(4000, t("messageTooLong")) }),
-        [t],
-    )
+    const schema = useMemo(() => z.object({ body: z.string().trim().max(4000, t("messageTooLong")) }), [t])
     return useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema), defaultValues: { body: "" } })
 }

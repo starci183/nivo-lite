@@ -6,7 +6,12 @@ import type { QueuedAgentChatTurnType } from "./dto/queued-agent-chat-turn.type"
 export const toSendAgentChatMessageRequest = (
     workspaceId: string,
     input: SendAgentChatMessageInput,
-): SendAgentChatRequest => ({ workspaceId, conversationId: input.conversationId, body: input.body })
+): SendAgentChatRequest => ({
+    workspaceId,
+    conversationId: input.conversationId,
+    body: input.body,
+    file: input.file,
+})
 
 /** Maps the application result to the GraphQL contract. */
 export const toSendAgentChatMessageType = (result: QueuedAgentChatTurn): QueuedAgentChatTurnType => ({ ...result })

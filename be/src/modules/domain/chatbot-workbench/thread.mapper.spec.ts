@@ -85,6 +85,7 @@ const EXPECTED_THREAD = {
             createdAt: "2026-10-13T01:01:00.000Z",
             delivery: null,
             deliveryError: null,
+            files: [],
         },
         {
             id: "m-2",
@@ -95,6 +96,7 @@ const EXPECTED_THREAD = {
             createdAt: "2026-10-13T01:01:00.000Z",
             delivery: "sent",
             deliveryError: null,
+            files: [],
         },
         {
             id: "m-3",
@@ -105,6 +107,7 @@ const EXPECTED_THREAD = {
             createdAt: "2026-10-13T01:01:00.000Z",
             delivery: "failed",
             deliveryError: "zalo_window_expired",
+            files: [],
         },
         {
             id: "m-4",
@@ -115,6 +118,7 @@ const EXPECTED_THREAD = {
             createdAt: "2026-10-13T01:01:00.000Z",
             delivery: null,
             deliveryError: null,
+            files: [],
         },
     ],
     lead: {
@@ -163,6 +167,7 @@ describe("chatbot thread mapper", () => {
                 }),
                 messageOf({ id: "m-4", role: "visitor", delivery_status: "pending" }),
             ],
+            files: [],
             waiting: [
                 waitingOf({ id: "unrelated", subject_id: "c-2" }),
                 waitingOf({
@@ -192,6 +197,7 @@ describe("chatbot thread mapper", () => {
             subject.buildChatbotThread({
                 conversation: conversationOf({ lead_id: null, external_id: null }),
                 messages: [],
+                files: [],
                 waiting: [],
                 lead: null,
                 staffName: null,
@@ -237,6 +243,7 @@ describe("chatbot thread mapper", () => {
         const result = subject.buildChatbotThread({
             conversation: conversationOf(),
             messages: [],
+            files: [],
             waiting: [waitingOf({ proposal })],
             lead: null,
             staffName: null,
@@ -260,6 +267,7 @@ describe("chatbot thread mapper respondent", () => {
         const handed = conversationOf({ agent_id: "agent-2", front_agent_id: "agent-1" })
         const base = {
             messages: [],
+            files: [],
             waiting: [],
             lead: null,
             staffName: null,

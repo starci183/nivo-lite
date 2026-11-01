@@ -63,7 +63,7 @@ export interface AgentChatViewProps {
     readonly welcome: Omit<PromoWelcomeBandProps, "onClose"> | null
     readonly messages: Omit<AgentChatMessagesProps, "glyph" | "module" | "seed" | "isSkeleton">
     readonly empty: Omit<AgentChatEmptyProps, "glyph" | "module" | "seed" | "onVisitorName" | "onPrompt" | "onStart">
-    readonly composer: Omit<AgentChatComposerProps, "onDraft" | "onPrompt" | "onSend">
+    readonly composer: Omit<AgentChatComposerProps, "onDraft" | "onFile" | "onFileClear" | "onPrompt" | "onSend">
 }
 
 /** What the surface asks of its owner. */
@@ -72,6 +72,8 @@ export interface AgentChatHandlers {
     readonly back: () => void
     readonly tab: (tab: AgentChatTab) => void
     readonly draft: (value: string) => void
+    readonly file: (file: File) => void
+    readonly fileClear: () => void
     readonly visitorName: (value: string) => void
     readonly send: (prompt?: string) => void
     readonly start: () => void
@@ -240,6 +242,8 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
                         <AgentChatComposer
                             {...view.composer}
                             onDraft={props.on.draft}
+                            onFile={props.on.file}
+                            onFileClear={props.on.fileClear}
                             onPrompt={props.on.send}
                             onSend={props.on.send}
                         />

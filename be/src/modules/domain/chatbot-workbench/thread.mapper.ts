@@ -11,6 +11,8 @@ import {
 } from "./conversation.policy"
 import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
 import type { ChatThreadLine } from "@modules/domain/agent-messages"
+import { filesOfMessage } from "@modules/domain/chat-files"
+import type { ChatFileView } from "@modules/domain/chat-files"
 import type { LeadRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 /** The authorized records of one customer thread. */
@@ -19,6 +21,8 @@ export interface ThreadRecords {
     readonly conversation: CustomerConversationRow
     /** The conversation lines in creation order. */
     readonly messages: ReadonlyArray<ChatThreadLine>
+    /** The files of those lines. */
+    readonly files: ReadonlyArray<ChatFileView>
     /** The open customer-reply escalations. */
     readonly waiting: ReadonlyArray<WaitingRow>
     /** The linked lead, when present in the workspace. */
@@ -29,7 +33,7 @@ export interface ThreadRecords {
     readonly agentNames: ReadonlyMap<string, string>
 }
 
-const toMessage = (row: ChatThreadLine): ChatbotMessage => ({
+const toMessage = (row: ChatThreadLine, files: ReadonlyArray<ChatFileView>): ChatbotMessage => ({
     id: row.id,
     role: roleOf(row.role),
     authorKind: row.author_kind === "human" ? "human" : "ai",
@@ -38,6 +42,7 @@ const toMessage = (row: ChatThreadLine): ChatbotMessage => ({
     createdAt: isoOf(row.created_at),
     delivery: row.delivery_status === "sent" || row.delivery_status === "failed" ? row.delivery_status : null,
     deliveryError: row.delivery_error,
+    files: filesOfMessage(files, row.id),
 })
 
 const toLead = (row: LeadRow): ChatbotLead => ({
@@ -59,7 +64,7 @@ export const buildChatbotThread = (records: ThreadRecords): ChatbotThread => {
             lead: leadOf(records.lead ?? undefined),
             respondent: respondentOf(conversation, new Set(), records.agentNames),
         }),
-        messages: records.messages.map(toMessage),
+        messages: records.messages.map((row) => toMessage(row, records.files)),
         lead: records.lead === null ? null : toLead(records.lead),
         escalation:
             item === null

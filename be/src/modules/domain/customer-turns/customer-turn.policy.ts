@@ -1,12 +1,20 @@
 import type { AgentWakeContext } from "@modules/domain/agent-work"
 import type { TranscriptLine } from "@modules/domain/agent-messages"
-import type { TurnRef } from "@modules/domain/conversations"
+import type { ChatFileTurn } from "@modules/domain/chat-files"
+import type { CustomerTurn, TurnRef } from "@modules/domain/conversations"
 
 /** A paid invoice counts as "just confirmed" for a customer's late "I have paid" within this window. */
 export const RECENTLY_PAID_MS = 14 * 86_400_000
 
 /** The order statuses that mean the order is still open (not paid, not cancelled). */
 export const OPEN_ORDER_STATUSES: ReadonlySet<string> = new Set(["draft", "confirmed", "invoiced"])
+
+/** The turn as the file read knows it. */
+export const fileTurnOf = (turn: CustomerTurn): ChatFileTurn => ({
+    workspaceId: turn.conversation.workspaceId,
+    messageId: turn.messageId,
+    module: turn.conversation.agent.module,
+})
 
 /** Shortens a text to `max` characters with an ellipsis. */
 export const clipText = (text: string, max: number): string =>
