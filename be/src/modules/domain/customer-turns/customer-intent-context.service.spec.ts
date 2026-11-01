@@ -2,6 +2,8 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { runtimeTurn } from "@tests/fixtures/builders/customer-turn-runtime.builder"
 import { KnowledgeRecallService } from "@modules/domain/agent-knowledge"
+import { IntentTurnService } from "@modules/domain/agent-turns"
+import type { IntentFileBundle } from "@modules/domain/agent-turns"
 import { AuthorityService } from "@modules/domain/authority"
 import { HiringPublicService } from "@modules/domain/hiring"
 import { LOGGER } from "@modules/platform/logging"
@@ -14,6 +16,7 @@ interface Options {
     readonly authority?: () => Promise<never>
     readonly hiring?: () => Promise<string>
     readonly modules?: () => Promise<ReadonlyArray<string>>
+    readonly files?: IntentFileBundle
 }
 
 const build = async (options: Options = {}) => {
@@ -41,6 +44,12 @@ const build = async (options: Options = {}) => {
                 }),
             },
             { provide: KnowledgeRecallService, useValue: recall },
+            {
+                provide: IntentTurnService,
+                useValue: mock<IntentTurnService>({
+                    filesOf: jest.fn().mockResolvedValue(options.files ?? { parts: [], attachments: [], money: null }),
+                }),
+            },
             {
                 provide: HiringPublicService,
                 useValue: mock<HiringPublicService>({
@@ -92,5 +101,39 @@ describe("CustomerIntentContextService.contextOf", () => {
             workspaceId: runtimeTurn.conversation.workspaceId,
             part: "authority",
         })
+    })
+})
+
+describe("CustomerIntentContextService.contextOf > a customer image", () => {
+    const transfer = (amount: number, text: string): IntentFileBundle => ({
+        parts: [{ kind: "file", text }],
+        attachments: [{ fileName: "bill.png", mimeType: "image/png", content: "AAAA" }],
+        money: { evidence: [{ amountVnd: amount }], asked: true },
+    })
+
+    it.each([
+        [3_500_000, "transfer, 3tr5"],
+        [17_500_000, "transfer, 17tr5"],
+    ])(
+        "hands a transfer image of %i to the model as data, with the image and the money evidence as the read gave them",
+        async (amount, text) => {
+            const bundle = transfer(amount, text)
+            const { service } = await build({ files: bundle })
+
+            const context = await service.contextOf(runtimeTurn)
+
+            expect(context.input.at(-1)).toEqual({ kind: "file", text })
+            expect(context.attachments).toBe(bundle.attachments)
+            expect(context.money).toBe(bundle.money)
+        },
+    )
+
+    it("asks for the files of the message of the turn", async () => {
+        const { service } = await build()
+
+        const context = await service.contextOf(runtimeTurn)
+
+        expect(context.attachments).toEqual([])
+        expect(context.money).toBeNull()
     })
 })

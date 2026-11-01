@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { IntentPipelineService, IntentTurnService, INTENT_STEP_KIND, pinnedOf } from "@modules/domain/agent-turns"
+import type { IntentDoorExtra } from "@modules/domain/agent-turns"
 import type { AgentHandlerEnding, AgentTurnView } from "@modules/domain/agent-work"
+import { wakeFileRefOf } from "./customer-intent.policy"
 
 @Injectable()
 /**
@@ -26,7 +28,15 @@ export class CustomerIntentSettleService {
         })
         if (plan === null) return null
         const read = await this.pipeline.read(turn, plan, text, signal)
-        const done = await this.pipeline.door(turn, INTENT_STEP_KIND.customerDoor, read, signal)
+        const money = await this.moneyOf(turn)
+        const done = await this.pipeline.door(turn, INTENT_STEP_KIND.customerDoor, read, signal, money)
         return { status: "done", reason: null, outcome: { ...done, intent: read.trace } }
+    }
+
+    /** The money evidence of the message's files, kept on the door's row as the graph's own shape holds it; nothing is read from it here. */
+    private async moneyOf(turn: AgentTurnView): Promise<IntentDoorExtra> {
+        const ref = wakeFileRefOf(turn)
+        const { money } = ref === null ? { money: null } : await this.intents.filesOf(ref)
+        return money === null ? {} : { moneyText: JSON.stringify(money) }
     }
 }

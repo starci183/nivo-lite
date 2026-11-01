@@ -8,7 +8,7 @@ import {
     IntentTurnService,
     RuntimeAgentService,
 } from "@modules/domain/agent-turns"
-import type { IntentPlan, IntentTurnPlan } from "@modules/domain/agent-turns"
+import type { IntentAttachment, IntentPlan, IntentTurnPlan } from "@modules/domain/agent-turns"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { CustomerCorePlanService } from "./customer-core-plan.service"
@@ -33,9 +33,15 @@ interface Options {
     readonly installation?: InstallationOrReason
     readonly intents?: string
     readonly contracts?: IntentPlan | null
+    readonly files?: ReadonlyArray<IntentAttachment>
 }
 
-const build = async ({ installation = runtimeInstallationOf(), intents = "", contracts = null }: Options = {}) => {
+const build = async ({
+    installation = runtimeInstallationOf(),
+    intents = "",
+    contracts = null,
+    files = [],
+}: Options = {}) => {
     const runtime = mock<CustomerTurnRuntimeService>({
         installationOf: jest.fn().mockResolvedValue(installation),
         systemOf: jest.fn().mockResolvedValue({ text: "SYSTEM KNOW", sources: [] }),
@@ -50,7 +56,9 @@ const build = async ({ installation = runtimeInstallationOf(), intents = "", con
     })
     const pipeline = mock<IntentPipelineService>({ open: jest.fn().mockResolvedValue(undefined) })
     const context = mock<CustomerIntentContextService>({
-        contextOf: jest.fn().mockResolvedValue({ identity: "You are Mai.", input: [], sources: [] }),
+        contextOf: jest
+            .fn()
+            .mockResolvedValue({ identity: "You are Mai.", input: [], sources: [], attachments: files, money: null }),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -177,6 +185,13 @@ describe("CustomerCorePlanService.planOf > the contract pipeline", () => {
         expect(turnIntents.planOf).toHaveBeenCalledWith(contractPlan, "You are Mai.", [], "vi")
         expect(access.keep).toHaveBeenCalledWith(runtimeTurn, [])
         expect(pipeline.open).toHaveBeenCalledWith(wake, expect.objectContaining({ prompt: "CONTRACT PROMPT" }))
+    })
+
+    it("sends the image of a customer message with the plan, as the attachments of the turn", async () => {
+        const files = [{ fileName: "bill.png", mimeType: "image/png", content: "AAAA" }]
+        const { plans } = await build({ contracts: contractPlan, files })
+
+        await expect(plans.planOf(runtimeTurn, wake)).resolves.toMatchObject({ attachments: files })
     })
 
     it("pins the scope to the intent of a follow-up wake", async () => {

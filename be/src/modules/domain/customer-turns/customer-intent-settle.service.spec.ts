@@ -29,8 +29,11 @@ const read: Awaited<ReturnType<IntentPipelineService["read"]>> = {
     },
 }
 
-const build = async (found: IntentPlan | null) => {
-    const intents = mock<IntentTurnService>({ planFor: jest.fn().mockResolvedValue(found) })
+const build = async (found: IntentPlan | null, money: Readonly<Record<string, unknown>> | null = null) => {
+    const intents = mock<IntentTurnService>({
+        planFor: jest.fn().mockResolvedValue(found),
+        filesOf: jest.fn().mockResolvedValue({ parts: [], attachments: [], money }),
+    })
     const pipeline = mock<IntentPipelineService>({
         read: jest.fn().mockResolvedValue(read),
         door: jest.fn().mockResolvedValue({ replied: true, split: false }),
@@ -48,7 +51,10 @@ const build = async (found: IntentPlan | null) => {
 describe("CustomerIntentSettleService", () => {
     it("keeps the text on the run, reads it and runs the customer door, ending the wake with the trace", async () => {
         const { service, pipeline, intents } = await build(plan)
-        const turn = agentTurnViewOf({ source: "customer", context: { intent: "confirm_order" } })
+        const turn = agentTurnViewOf({
+            source: "customer",
+            context: { intent: "confirm_order", conversationId: "c1", messageId: "m1" },
+        })
 
         await expect(service.settle(turn, "envelope", SIGNAL)).resolves.toEqual({
             status: "done",
@@ -64,7 +70,17 @@ describe("CustomerIntentSettleService", () => {
             pinned: "confirm_order",
         })
         expect(pipeline.read).toHaveBeenCalledWith(turn, plan, "envelope", SIGNAL)
-        expect(pipeline.door).toHaveBeenCalledWith(turn, "door", read, SIGNAL)
+        expect(pipeline.door).toHaveBeenCalledWith(turn, "door", read, SIGNAL, {})
+    })
+
+    it("keeps the money evidence of the files of the message on the row of the door exactly as it was read", async () => {
+        const money = { evidence: [{ amountVnd: 3_500_000 }], asked: true }
+        const { service, pipeline } = await build(plan, money)
+        const turn = agentTurnViewOf({ source: "customer", context: { conversationId: "c1", messageId: "m1" } })
+
+        await service.settle(turn, "envelope", SIGNAL)
+
+        expect(pipeline.door).toHaveBeenCalledWith(turn, "door", read, SIGNAL, { moneyText: JSON.stringify(money) })
     })
 
     it("answers null for a turn that is not on the pipeline, and writes no run", async () => {

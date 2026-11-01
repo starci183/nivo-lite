@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { KnowledgeRecallService, viewOf } from "@modules/domain/agent-knowledge"
 import { authorityBrief } from "@modules/domain/ai-tasks"
+import { IntentTurnService } from "@modules/domain/agent-turns"
 import { AuthorityService } from "@modules/domain/authority"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { HiringPublicService } from "@modules/domain/hiring"
@@ -8,7 +9,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import type { IntentContext } from "./customer-intent.contracts"
-import { intentContextOf } from "./customer-intent.policy"
+import { customerFileRefOf, intentContextOf } from "./customer-intent.policy"
 import { recallSourcesOf } from "./knowledge-sources.policy"
 import { TurnModulesService } from "./turn-modules.service"
 
@@ -26,6 +27,7 @@ export class CustomerIntentContextService {
         private readonly recall: KnowledgeRecallService,
         private readonly hiring: HiringPublicService,
         private readonly modules: TurnModulesService,
+        private readonly intents: IntentTurnService,
     ) {}
 
     /** The identity, the input in reading order and the knowledge sources of the turn. */
@@ -49,8 +51,15 @@ export class CustomerIntentContextService {
             .briefs(conversation)
             .catch((cause: unknown): ReadonlyArray<string> => [this.skip(cause, workspaceId, "modules")])
         const recalled = await this.recall.recall(view, turn.body)
+        const files = await this.intents.filesOf(customerFileRefOf(workspaceId, conversation.id, turn.messageId))
         const { identity, input } = intentContextOf(turn, await authority, [await jobs, ...(await modules)])
-        return { identity, input, sources: recallSourcesOf(recalled.facts, recalled.passages) }
+        return {
+            identity,
+            input: [...input, ...files.parts],
+            sources: recallSourcesOf(recalled.facts, recalled.passages),
+            attachments: files.attachments,
+            money: files.money,
+        }
     }
 
     private skip(cause: unknown, workspaceId: string, part: string): string {

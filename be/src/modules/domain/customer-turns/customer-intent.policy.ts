@@ -1,5 +1,7 @@
 import type { CustomerTurn } from "@modules/domain/conversations"
 import type { IntentInputPart } from "@modules/domain/intent-contracts"
+import type { AgentTurnView } from "@modules/domain/agent-work"
+import type { IntentAttachment, IntentFileRef, IntentPlanFiles } from "@modules/domain/agent-turns"
 import type { IntentInput, PersonaParts } from "./customer-intent.contracts"
 import { personaOf } from "./turn-prompt.policy"
 
@@ -35,3 +37,22 @@ export const intentContextOf = (turn: CustomerTurn, authority: string, extras: R
     ]
     return { identity, input: input.filter((part) => part.text.trim() !== "") }
 }
+
+/** Where the files of a customer's message are. */
+export const customerFileRefOf = (workspaceId: string, conversationId: string, messageId: string): IntentFileRef => ({
+    workspaceId,
+    kind: "customer",
+    conversationId,
+    messageId,
+    threadId: null,
+})
+
+/** The files of the wake of a customer turn, from the ids its wake carries; none names no message. */
+export const wakeFileRefOf = (turn: AgentTurnView): IntentFileRef | null =>
+    turn.context.conversationId === undefined || turn.context.messageId === undefined
+        ? null
+        : customerFileRefOf(turn.workspaceId, turn.context.conversationId, turn.context.messageId)
+
+/** The attachments of a plan: spread into it, nothing for a message with no file. */
+export const planFilesOf = (attachments: ReadonlyArray<IntentAttachment>): IntentPlanFiles =>
+    attachments.length === 0 ? {} : { attachments }

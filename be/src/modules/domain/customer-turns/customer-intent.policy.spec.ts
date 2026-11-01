@@ -1,15 +1,21 @@
 import { Test } from "@nestjs/testing"
 import { runtimeTurn } from "@tests/fixtures/builders/customer-turn-runtime.builder"
 import type { CustomerTurn } from "@modules/domain/conversations"
-import { intentContextOf } from "./customer-intent.policy"
+import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
+import { customerFileRefOf, intentContextOf, planFilesOf, wakeFileRefOf } from "./customer-intent.policy"
 
 const SUBJECT = Symbol("customer-intent.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { intentContextOf } }],
+        providers: [{ provide: SUBJECT, useValue: { customerFileRefOf, intentContextOf, planFilesOf, wakeFileRefOf } }],
     }).compile()
-    return moduleRef.get<{ intentContextOf: typeof intentContextOf }>(SUBJECT)
+    return moduleRef.get<{
+        customerFileRefOf: typeof customerFileRefOf
+        intentContextOf: typeof intentContextOf
+        planFilesOf: typeof planFilesOf
+        wakeFileRefOf: typeof wakeFileRefOf
+    }>(SUBJECT)
 }
 
 const turnOf = (
@@ -78,5 +84,31 @@ describe("intentContextOf", () => {
         const earlier = input.find((part) => part.kind === "transcript")?.text.split("\n") ?? []
         expect(earlier).toHaveLength(19)
         expect(earlier[0]).toBe("Customer: m10")
+    })
+})
+
+describe("the files of a customer turn", () => {
+    it("finds them in the message the wake names, and in none when it names none", async () => {
+        const policy = await build()
+        const wake = agentTurnViewOf({ context: { conversationId: "c1", messageId: "m1" } })
+
+        expect(policy.wakeFileRefOf(wake)).toEqual(policy.customerFileRefOf("ws-1", "c1", "m1"))
+        expect(policy.customerFileRefOf("ws-1", "c1", "m1")).toEqual({
+            workspaceId: "ws-1",
+            kind: "customer",
+            conversationId: "c1",
+            messageId: "m1",
+            threadId: null,
+        })
+        expect(policy.wakeFileRefOf(agentTurnViewOf({ context: { conversationId: "c1" } }))).toBeNull()
+        expect(policy.wakeFileRefOf(agentTurnViewOf({ context: { messageId: "m1" } }))).toBeNull()
+    })
+
+    it("puts the attachments on a plan, and nothing for a message with no file", async () => {
+        const policy = await build()
+        const attachments = [{ fileName: "bill.png", mimeType: "image/png", content: "AAAA" }]
+
+        expect(policy.planFilesOf(attachments)).toEqual({ attachments })
+        expect(policy.planFilesOf([])).toEqual({})
     })
 })

@@ -6,6 +6,8 @@ import { AgentRunHandlersService } from "@modules/domain/agent-runs"
 import type { StepAnswer, StepView } from "@modules/domain/agent-runs"
 import { ChatTurnService } from "@modules/domain/conversations"
 import type { ChatTurnProposal, CustomerTurn } from "@modules/domain/conversations"
+import { parseJsonText } from "@modules/platform/primitives"
+import { CustomerFinalReplyService } from "./customer-final-reply.service"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { turnRefOf } from "./customer-turn.policy"
 import type { ProposingReading } from "./customer-intent.contracts"
@@ -28,6 +30,7 @@ export class CustomerDoorStepService implements OnModuleInit {
         private readonly chat: ChatTurnService,
         private readonly runtime: CustomerTurnRuntimeService,
         private readonly split: IntentSplitService,
+        private readonly final: CustomerFinalReplyService,
     ) {}
 
     /** Registers the door with the run engine once the app has started. */
@@ -47,29 +50,38 @@ export class CustomerDoorStepService implements OnModuleInit {
             const fired = await this.split.fire(wake, reading.contract.intent)
             return { kind: "done", result: { replied: false, split: true, fired }, next: [] }
         }
-        const turn = await this.turnOf(input.data)
+        const owed = this.final.owedOf(step.earlier)
+        const turn = await this.turnOf(input.data, owed !== null)
         if (turn === undefined) return { kind: "done", result: { replied: false, skipped: "target_gone" }, next: [] }
-        await this.chat.respond(turn, this.proposalOf(reading))
-        return { kind: "done", result: { replied: true, split: false }, next: [] }
+        await this.chat.respond(turn, this.proposalOf(reading, input.data.moneyText))
+        return { kind: "done", result: { replied: true, split: false }, next: owed === null ? [] : [owed] }
     }
 
     private async deadLetter(step: StepView): Promise<void> {
         const input = doorInputSchema.safeParse(step.input)
         if (!input.success) return
-        const turn = await this.turnOf(input.data)
+        const turn = await this.turnOf(input.data, false)
         if (turn !== undefined) await this.chat.holdOver(turn, "error")
     }
 
     /** The customer turn the wake of the row names, carrying the turn and wake its work is opened under. */
-    private async turnOf(input: DoorInput): Promise<CustomerTurn | undefined> {
+    private async turnOf(input: DoorInput, finalOwed: boolean): Promise<CustomerTurn | undefined> {
         const { wake } = input
         const ref = turnRefOf(wake.context)
         const loaded = ref === null ? undefined : await this.chat.turnOf(ref)
-        return loaded === undefined ? undefined : { ...loaded, origin: { turnId: wake.turnId, wakeId: wake.wakeId } }
+        return loaded === undefined
+            ? undefined
+            : { ...loaded, ...(finalOwed ? { finalOwed } : {}), origin: { turnId: wake.turnId, wakeId: wake.wakeId } }
     }
 
     /** The proposal the outcome gate decides on: the reply contract's result as the model gave it, or the safe road. */
-    private proposalOf(reading: ProposingReading): ChatTurnProposal {
+    private proposalOf(reading: ProposingReading, moneyText: string | undefined): ChatTurnProposal {
+        const proposal = this.proposalOfReading(reading)
+        const money = moneyText === undefined ? null : parseJsonText(moneyText)
+        return money?.ok === true ? { ...proposal, detail: { ...proposal.detail, money: money.value } } : proposal
+    }
+
+    private proposalOfReading(reading: ProposingReading): ChatTurnProposal {
         if (reading.kind === "picked") return this.runtime.proposalFrom(reading.resultText)
         const holding = this.runtime.proposalFrom("")
         return {

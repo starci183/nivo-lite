@@ -14,6 +14,7 @@ import { threadKeyFor } from "@modules/integrations/openclaw"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { CustomerIntentContextService } from "./customer-intent-context.service"
+import { planFilesOf } from "./customer-intent.policy"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { turnMessageOf } from "./turn-prompt.policy"
@@ -114,6 +115,7 @@ export class CustomerCorePlanService {
             runtimeAgentId,
             threadKey: threadKeyFor(runtimeAgentId, conversation.id),
             message: planned.prompt,
+            ...planFilesOf(context.attachments),
             timeoutMs,
         }
     }

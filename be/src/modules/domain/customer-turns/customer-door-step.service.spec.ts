@@ -2,11 +2,12 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { runtimeTurn } from "@tests/fixtures/builders/customer-turn-runtime.builder"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
-import type { AgentStepHandler, StepAnswer, StepView } from "@modules/domain/agent-runs"
+import type { AgentStepHandler, StepAnswer, StepSpec, StepView } from "@modules/domain/agent-runs"
 import { IntentSplitService } from "@modules/domain/agent-turns"
 import { ChatTurnService } from "@modules/domain/conversations"
 import type { ChatTurnProposal, CustomerTurn } from "@modules/domain/conversations"
 import { CustomerDoorStepService } from "./customer-door-step.service"
+import { CustomerFinalReplyService } from "./customer-final-reply.service"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 
 const contract = {
@@ -73,7 +74,15 @@ const stepOf = (
     earlier: {},
 })
 
-const build = async (loaded: CustomerTurn | null = runtimeTurn) => {
+const OWED: StepSpec = {
+    stepKey: "final_reply",
+    nodeKey: "reply",
+    kind: "final_reply",
+    effect: { kind: "pivot" },
+    input: {},
+}
+
+const build = async (loaded: CustomerTurn | null = runtimeTurn, owed: StepSpec | null = null) => {
     const added: Array<AgentStepHandler> = []
     const handlers = mock<AgentRunHandlersService>({
         add: jest.fn((handler: AgentStepHandler) => void added.push(handler)),
@@ -89,6 +98,7 @@ const build = async (loaded: CustomerTurn | null = runtimeTurn) => {
         ),
     })
     const split = mock<IntentSplitService>({ fire: jest.fn().mockResolvedValue(true) })
+    const final = mock<CustomerFinalReplyService>({ owedOf: jest.fn().mockReturnValue(owed) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             CustomerDoorStepService,
@@ -96,6 +106,7 @@ const build = async (loaded: CustomerTurn | null = runtimeTurn) => {
             { provide: ChatTurnService, useValue: chat },
             { provide: CustomerTurnRuntimeService, useValue: runtime },
             { provide: IntentSplitService, useValue: split },
+            { provide: CustomerFinalReplyService, useValue: final },
         ],
     }).compile()
     moduleRef.get(CustomerDoorStepService).onModuleInit()
@@ -191,6 +202,41 @@ describe("CustomerDoorStepService", () => {
             result: { skipped: "target_gone" },
         })
         expect(chat.turnOf).not.toHaveBeenCalled()
+    })
+})
+
+describe("CustomerDoorStepService > the output steps and the money", () => {
+    const reading = { kind: "picked", contract, resultText: '{"reply":"50k"}', dropped: [] }
+
+    it("answers as it always did when the run owes no final reply", async () => {
+        const { run, chat } = await build()
+
+        await expect(run(stepOf(reading))).resolves.toMatchObject({ next: [] })
+        expect(chat.respond).toHaveBeenCalledWith(WITH_ORIGIN, expect.anything())
+    })
+
+    it("loads the turn as owing the final reply and adds that step to what follows when the run owes one", async () => {
+        const { run, chat } = await build(runtimeTurn, OWED)
+
+        await expect(run(stepOf(reading))).resolves.toMatchObject({ next: [OWED] })
+        expect(chat.respond).toHaveBeenCalledWith({ ...WITH_ORIGIN, finalOwed: true }, expect.anything())
+    })
+
+    it("carries the money evidence of the files of the turn on the proposal exactly as it was read", async () => {
+        const { run, chat } = await build()
+        const money = { evidence: [{ amountVnd: 17_500_000 }], asked: true }
+
+        await run(stepOf(reading, { moneyText: JSON.stringify(money) }))
+
+        expect(chat.respond).toHaveBeenCalledWith(WITH_ORIGIN, expect.objectContaining({ detail: { money } }))
+    })
+
+    it("carries no money when the text cannot be read back", async () => {
+        const { run, chat } = await build()
+
+        await run(stepOf(reading, { moneyText: "not json" }))
+
+        expect(chat.respond).toHaveBeenCalledWith(WITH_ORIGIN, expect.objectContaining({ detail: {} }))
     })
 })
 

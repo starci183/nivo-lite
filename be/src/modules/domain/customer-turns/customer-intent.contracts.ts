@@ -1,4 +1,4 @@
-import type { DoorInput } from "@modules/domain/agent-turns"
+import type { DoorInput, IntentAttachment, IntentMoney } from "@modules/domain/agent-turns"
 import type { IntentInputPart } from "@modules/domain/intent-contracts"
 import type { KnowledgeSources } from "./gateway-turns.contracts"
 
@@ -10,6 +10,10 @@ export interface IntentContext {
     readonly input: ReadonlyArray<IntentInputPart>
     /** The knowledge the recall found for the question, as card sources. */
     readonly sources: KnowledgeSources
+    /** The files the message holds, for the model to see. */
+    readonly attachments: ReadonlyArray<IntentAttachment>
+    /** The money evidence of the files, or null. */
+    readonly money: IntentMoney | null
 }
 
 /** A reading a door answers with a reply: every reading but a split. */
