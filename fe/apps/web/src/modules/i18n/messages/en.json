@@ -4569,6 +4569,7 @@
     "tab_inbox": "Inbox"
   },
   "office": {
+    "cmdPending": "Pending",
     "quickLabel": "Quick questions",
     "quickPrevious": "Previous questions",
     "quickNext": "More questions",
