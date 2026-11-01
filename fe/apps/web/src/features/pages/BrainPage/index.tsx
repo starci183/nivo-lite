@@ -75,7 +75,7 @@ const addOf = (
     if (idea === undefined) return { addKey: "base", addPreset: null }
     const preset: AddPresetView = {
         topic: knowledge(`suggest_${idea.key}_topic`),
-        suggestedVisibility: idea.visibility,
+        visibility: idea.visibility,
     }
     return { addKey: add, addPreset: preset }
 }

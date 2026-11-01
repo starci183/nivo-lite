@@ -3,7 +3,6 @@ import {
     Badge,
     Button,
     DropdownMenu,
-    EmptyNotice,
     IconButton,
     ListRow,
     Stack,
@@ -28,6 +27,8 @@ interface AccountingWaitingRow {
     readonly id: string
     readonly title: string
     readonly summary: string
+    /** Why the agent stopped and needs a person, in plain words. */
+    readonly reason: string
     readonly status: string
     readonly tone: "danger" | "success" | "warning"
     readonly amount: string | null
@@ -122,6 +123,9 @@ const WaitingRow = (props: WaitingRowProps) => {
             }
         >
             <Stack gap="inline">
+                <Text size="sm" tone="muted">
+                    {row.reason}
+                </Text>
                 {row.amount === null ? null : (
                     <Text size="sm" weight="medium">
                         {row.amount}
@@ -150,31 +154,25 @@ const WaitingRow = (props: WaitingRowProps) => {
 
 /** Draws the oldest questions the Accounting agent waits on a person for, each decided in place. */
 export const AccountingWaitingBase = (props: AccountingWaitingBaseProps) => (
-    <SlotView {...props.props} onRetry={props.on.retry}>
-        {(view, isSkeleton) => (
-            <SurfaceListCard
-                label={view.title}
-                isLoading={isSkeleton}
-                labelEnd={
-                    view.count === null ? undefined : (
-                        <Badge tone="warning" isDot>
-                            {view.count}
-                        </Badge>
-                    )
-                }
-                empty={<EmptyNotice message={view.emptyMessage} description={view.emptyBody} />}
-                footer={
-                    view.more === null ? undefined : (
-                        <TextAction size="sm" href={view.moreHref}>
-                            {`${view.more} · ${view.moreLabel}`}
-                        </TextAction>
-                    )
-                }
-            >
-                {view.rows.map((row) => (
-                    <WaitingRow key={row.id} row={row} moreMenuLabel={view.moreMenuLabel} on={props.on} />
-                ))}
-            </SurfaceListCard>
-        )}
+    <SlotView {...props.props} empty="collapse" onRetry={props.on.retry}>
+        {(view, isSkeleton) =>
+            view.rows.length === 0 && !isSkeleton ? null : (
+                <SurfaceListCard
+                    label={view.count === null ? view.title : `${view.title} · ${view.count}`}
+                    isLoading={isSkeleton}
+                    footer={
+                        view.more === null ? undefined : (
+                            <TextAction size="sm" href={view.moreHref}>
+                                {`${view.more} · ${view.moreLabel}`}
+                            </TextAction>
+                        )
+                    }
+                >
+                    {view.rows.map((row) => (
+                        <WaitingRow key={row.id} row={row} moreMenuLabel={view.moreMenuLabel} on={props.on} />
+                    ))}
+                </SurfaceListCard>
+            )
+        }
     </SlotView>
 )

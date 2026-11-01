@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Badge, EmptyNotice, Heading, List, SurfaceListCard, TextAction } from "@starci/grammar/common"
+import { EmptyNotice, Heading, List, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import { WorkbenchDecisionRow } from "@/components/branches/WorkbenchDecisionRow"
 import type { WorkbenchRowView, WorkbenchSurface } from "@/modules/types"
 
@@ -44,17 +44,11 @@ export const WorkbenchWaitingList = (props: WorkbenchWaitingListProps) => {
             </TextAction>
         )
     if (props.surface === "card") {
+        // Nothing waits: the box is not drawn, so the desk never stacks an empty card.
+        if (props.items.length === 0 && !props.isSkeleton) return null
         return (
             <SurfaceListCard
-                label={props.label}
-                labelEnd={
-                    props.count === null ? undefined : (
-                        <Badge tone="warning" isDot isSkeleton={props.isSkeleton}>
-                            {props.count}
-                        </Badge>
-                    )
-                }
-                empty={<EmptyNotice message={props.emptyMessage} description={props.emptyDescription} />}
+                label={props.count === null ? props.label : `${props.label} · ${props.count}`}
                 footer={more ?? undefined}
             >
                 {rows}

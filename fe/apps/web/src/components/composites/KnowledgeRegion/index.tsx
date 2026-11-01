@@ -1,4 +1,4 @@
-import { Badge, EmptyNotice, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 import { LABEL_END_CLASS_NAME } from "./classNames"
 
 /** The open knowledge gaps of the agent. */
@@ -59,7 +59,7 @@ export const KnowledgeRegion = (props: KnowledgeRegionProps) => {
                 <ListRow isSkeleton={isSkeleton} title={view.publicTitle} description={view.publicDescription} />
                 <ListRow isSkeleton={isSkeleton} title={view.internalTitle} description={view.internalDescription} />
             </SurfaceListCard>
-            {view.gaps === null ? null : (
+            {view.gaps === null || (view.gaps.rows.length === 0 && !isSkeleton) ? null : (
                 <SurfaceListCard
                     label={view.gaps.label}
                     labelEnd={
@@ -74,7 +74,6 @@ export const KnowledgeRegion = (props: KnowledgeRegionProps) => {
                             </div>
                         )
                     }
-                    empty={<EmptyNotice message={view.gaps.emptyMessage} description={view.gaps.emptyDescription} />}
                 >
                     {view.gaps.rows.map((row) => (
                         <ListRow

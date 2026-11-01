@@ -343,7 +343,7 @@ describe("DocumentFactsService", () => {
             validFrom: "2026-10-11T17:00:00.000Z",
             autoApply: false,
             installationId: "i1",
-            proposedBy: "Document: Hours",
+            proposedBy: "Hours",
             evidence: [
                 {
                     kind: "document",
@@ -369,9 +369,10 @@ describe("DocumentFactsService", () => {
 })
 describe("DocumentFactsService", () => {
     it.each([
-        { visibility: "public", scope: "internal" },
-        { visibility: "internal", scope: "public" },
-    ])("keeps the existing audience for $scope facts from a $visibility document", async ({ visibility, scope }) => {
+        { visibility: "public", scope: "internal", filed: "public" },
+        { visibility: "public", scope: "public", filed: "public" },
+        { visibility: "internal", scope: "public", filed: undefined },
+    ])("files a $scope fact from a $visibility document as $filed", async ({ visibility, scope, filed }) => {
         const { service, json, facts } = await build(sourceOf({ visibility, installationId: null }))
         json.jsonOf.mockReturnValue({
             facts: [{ subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", scope }],
@@ -385,12 +386,12 @@ describe("DocumentFactsService", () => {
             attributeLabel: "Price",
             value: "20 USD",
             unit: null,
-            scope: undefined,
+            scope: filed,
             sourceKind: "document",
             validFrom: null,
             autoApply: false,
             installationId: null,
-            proposedBy: "Document: Hours",
+            proposedBy: "Hours",
             evidence: [
                 {
                     kind: "document",

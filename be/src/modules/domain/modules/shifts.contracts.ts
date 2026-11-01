@@ -34,7 +34,7 @@ export const SHIFTS_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: false,
     agent: {
-        name: catalogCopy("modulesCatalog.shifts.agent.name", "en"),
+        label: catalogText("modulesCatalog.shifts.agent.label"),
         handle: "shifts",
         summary: catalogText("modulesCatalog.shifts.agent.summary"),
         capabilities: catalogList([

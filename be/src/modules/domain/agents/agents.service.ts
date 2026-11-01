@@ -14,18 +14,18 @@ import type {
     DashboardQuery,
     DoneData,
     KnowledgeData,
-    NewAgent,
     OptionalAgentProfile,
     OptionalAgentRef,
     OptionalId,
     Region,
     WaitingData,
 } from "./agents.contracts"
+import { AgentCreationService } from "./agent-creation.service"
+import type { NewNamedAgent } from "./agent-name.contracts"
 import { AgentOwnershipService } from "./agent-ownership.service"
 import { InjectAgentConnections, InjectInstallations, InjectKnowledge, InjectWorkDashboard } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
 import { firstProfileOf, refOf, summaryOf } from "./agents.mapper"
-import type { AgentRecord } from "./agents.mapper"
 import type {
     AgentConnectionsDirectory,
     BoundConnectionView,
@@ -52,21 +52,13 @@ import { AgentEntity } from "./persistence/entities"
 const DAY_MS = 86_400_000
 const DONE_WINDOW_DAYS = 7
 const DASHBOARD_PURPOSES = ["inbound_chat", "outbound_chat", "bank_feed", "data_source", "tool"] as const
-const UNIQUE_VIOLATION = "23505"
 const GOVERNORS = ["owner", "manager"] as const
 
 /** The most agents a workspace lists. */
 const AGENT_LIMIT = 200
 
 /** The agents newest columns the lists and finders order by: oldest first, the id as tie-break. */
-/** Whether a RETURNING row carries the id of a stored agent, the shape of the returned columns. */
-const isAgentRecord = (value: unknown): value is AgentRecord =>
-    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
-
 const OLDEST_FIRST = { createdAt: "ASC", id: "ASC" } as const
-
-const isUniqueViolation = (cause: unknown): boolean =>
-    typeof cause === "object" && cause !== null && "code" in cause && cause.code === UNIQUE_VIOLATION
 
 @Injectable()
 /** The agents of a workspace as the Agents pages use them: the instance list, the dashboard regions, and the owner's edits of one agent. */
@@ -79,6 +71,7 @@ export class AgentsService {
         private readonly members: WorkspaceMembersService,
         @InjectAgentConnections() private readonly bindings: AgentConnectionsDirectory,
         private readonly ownership: AgentOwnershipService,
+        private readonly creation: AgentCreationService,
         @InjectWorkDashboard() private readonly work: WorkDashboardDirectory,
         @Optional() @InjectKnowledge() private readonly knowledge: KnowledgeLens | null = null,
     ) {}
@@ -162,31 +155,9 @@ export class AgentsService {
         }
     }
 
-    /** Adds an agent to the workspace; a manager only. The handle must be free. */
-    async create(userId: string, agent: NewAgent): Promise<AgentSummary> {
-        await this.members.require(userId, agent.workspaceId, GOVERNORS)
-        const inserted = await this.entityManager
-            .createQueryBuilder(AgentEntity, "ag")
-            .insert()
-            .values({
-                workspaceId: agent.workspaceId,
-                module: agent.module,
-                name: agent.name,
-                handle: agent.handle,
-                role: agent.role,
-                instructions: agent.instructions,
-            })
-            .returning(
-                'id, module, name, handle, role, instructions, knowledge, approval_rule AS "approvalRule", status, avatar_url AS "avatarUrl", created_at AS "createdAt"',
-            )
-            .execute()
-            .catch((cause: unknown) => {
-                if (!isUniqueViolation(cause)) throw cause
-                throw new AgentsError({ code: AgentsErrorCode.HandleTaken, params: { handle: agent.handle }, cause })
-            })
-        const [row] = Array.isArray(inserted.raw) ? inserted.raw.filter(isAgentRecord) : []
-        if (row === undefined) throw new AgentsError({ code: AgentsErrorCode.NotCreated })
-        return summaryOf(row)
+    /** Adds an agent to the workspace (see AgentCreationService): named by the owner, or by its role and a generated id. */
+    create(userId: string, agent: NewNamedAgent): Promise<AgentSummary> {
+        return this.creation.create(userId, agent)
     }
 
     /** Pauses or resumes an agent; a manager only. A caller that writes more rows with it passes its transaction's manager. */

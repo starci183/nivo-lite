@@ -20,6 +20,7 @@ const query1: Document = gql`
             name
             handle
             role
+            avatarUrl
             isActive
             hasCustomerChannel
             workspaceId

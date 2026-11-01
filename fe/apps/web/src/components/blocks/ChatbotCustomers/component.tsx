@@ -1,24 +1,26 @@
 import {
     Badge,
-    DataTable,
     EmptyNotice,
+    ListRow,
+    FilterButtonGroup,
     SearchField,
+    SurfaceListCard,
     Text,
-    TagGroup,
-    type DataTableColumn,
-    type DataTableRow,
+    TextAction,
 } from "@starci/grammar/common"
+import type { BadgeTone } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
-/** One customer as a row of the table, already worded. */
-interface CustomerRowView extends DataTableRow {
+/** One customer as a row of the list, already worded. */
+interface CustomerRowView {
+    readonly id: string
+    /** The conversation the row opens in the inbox. */
+    readonly href: string
     readonly name: string
-    readonly company: string
-    readonly channel: string
-    readonly stage: string
-    readonly need: string
-    readonly replying: string
+    readonly summary: string
+    readonly stage: string | null
+    readonly status: { readonly label: string; readonly tone: BadgeTone }
 }
 
 /** The words of the tab. */
@@ -28,11 +30,6 @@ interface ChatbotCustomersWords {
     readonly searchPlaceholder: string
     readonly clearLabel: string
     readonly filtersLabel: string
-    readonly customer: string
-    readonly channel: string
-    readonly stage: string
-    readonly need: string
-    readonly replying: string
     readonly emptyMessage: string
     readonly emptyDescription: string
     readonly full: string
@@ -58,41 +55,12 @@ export interface ChatbotCustomersBaseProps {
 }
 
 const PLACEHOLDER: ReadonlyArray<CustomerRowView> = [
-    { id: "loading", href: "", name: "", company: "", channel: "", stage: "", need: "", replying: "" },
+    { id: "loading", href: "", name: "", summary: "", stage: null, status: { label: "", tone: "neutral" } },
 ]
 
-/** The content of one cell of the table. */
-const customerCell = (row: CustomerRowView, columnId: string, isSkeleton: boolean) => {
-    if (columnId === "customer") {
-        return (
-            <>
-                <Text weight="medium" isSkeleton={isSkeleton}>
-                    {row.name}
-                </Text>
-                {row.company === "" ? null : (
-                    <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
-                        {row.company}
-                    </Text>
-                )}
-            </>
-        )
-    }
-    if (columnId === "stage") return <Badge isSkeleton={isSkeleton}>{row.stage}</Badge>
-    if (columnId === "channel") return <Text isSkeleton={isSkeleton}>{row.channel}</Text>
-    if (columnId === "need") return <Text isSkeleton={isSkeleton}>{row.need}</Text>
-    return <Text isSkeleton={isSkeleton}>{row.replying}</Text>
-}
-
-/** Draws the Customers tab: a search, the chips and one table row per customer; a row opens its conversation in the inbox. */
+/** Draws the customers being handled: a search, the chips and one row per customer with where the conversation stands; a row opens its conversation. */
 export const ChatbotCustomersBase = (props: ChatbotCustomersBaseProps) => {
     const words = props.props.words
-    const columns: ReadonlyArray<DataTableColumn> = [
-        { id: "customer", label: words.customer, isRowHeader: true },
-        { id: "channel", label: words.channel },
-        { id: "stage", label: words.stage },
-        { id: "need", label: words.need, priority: "low" },
-        { id: "replying", label: words.replying },
-    ]
     return (
         <SlotView
             slot={props.props.slot}
@@ -111,35 +79,46 @@ export const ChatbotCustomersBase = (props: ChatbotCustomersBaseProps) => {
                         onValueChange={props.on.query}
                         isSkeleton={isSkeleton}
                     />
-                    <TagGroup
+                    <FilterButtonGroup
                         label={words.filtersLabel}
-                        selectionMode="single"
-                        size="sm"
                         isSkeleton={isSkeleton}
-                        items={props.props.chips}
-                        selectedIds={[props.props.filter]}
-                        onSelectionChange={(ids) => {
-                            const picked = ids[0]
-                            if (picked !== undefined) props.on.filter(picked)
-                        }}
+                        options={props.props.chips.map((chip) => ({ value: chip.id, label: chip.label }))}
+                        value={props.props.filter}
+                        onValueChange={props.on.filter}
                     />
-                    <>
-                        <DataTable
-                            label={words.label}
-                            columns={columns}
-                            rows={rows}
-                            isLoading={isSkeleton}
-                            renderCell={(row, columnId) => customerCell(row, columnId, isSkeleton)}
-                            emptyContent={
-                                <EmptyNotice message={words.emptyMessage} description={words.emptyDescription} />
-                            }
-                        />
-                        {props.props.isFull ? (
-                            <Text size="sm" tone="muted">
-                                {words.full}
-                            </Text>
-                        ) : null}
-                    </>
+                    <SurfaceListCard
+                        label={words.label}
+                        labelHidden
+                        empty={<EmptyNotice message={words.emptyMessage} description={words.emptyDescription} />}
+                        footer={
+                            props.props.isFull ? (
+                                <Text size="sm" tone="muted">
+                                    {words.full}
+                                </Text>
+                            ) : undefined
+                        }
+                    >
+                        {rows.map((row) => (
+                            <ListRow
+                                key={row.id}
+                                isSkeleton={isSkeleton}
+                                title={
+                                    <TextAction appearance="plain" href={row.href}>
+                                        {row.name}
+                                    </TextAction>
+                                }
+                                description={row.summary}
+                                badges={
+                                    <>
+                                        <Badge tone={row.status.tone} isDot>
+                                            {row.status.label}
+                                        </Badge>
+                                        {row.stage === null ? null : <Badge tone="neutral">{row.stage}</Badge>}
+                                    </>
+                                }
+                            />
+                        ))}
+                    </SurfaceListCard>
                 </>
             )}
         </SlotView>

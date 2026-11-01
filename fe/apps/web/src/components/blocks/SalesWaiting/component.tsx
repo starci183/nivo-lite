@@ -21,6 +21,7 @@ export const SalesWaitingBase = (props: SalesWaitingBaseProps) => (
         slot={props.props.slot}
         placeholder={props.props.placeholder}
         labels={props.props.slotLabels}
+        empty="collapse"
         onRetry={props.on.retry}
     >
         {(rows, isSkeleton) => (

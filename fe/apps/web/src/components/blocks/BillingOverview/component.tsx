@@ -1,14 +1,5 @@
 import type { ComponentProps } from "react"
-import {
-    Badge,
-    Cluster,
-    DescriptionList,
-    Region,
-    SectionHeader,
-    Stack,
-    SurfaceCard,
-    Text,
-} from "@starci/grammar/common"
+import { Badge, Cluster, DescriptionList, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { BillingHistoryList, type BillingHistoryRow } from "@/components/composites/BillingHistoryList"
 import { BillingRenewal } from "@/components/composites/BillingRenewal"
 import { SlotView } from "@/components/composites/SlotView"
@@ -117,29 +108,24 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
                 />
             )}
         </SlotView>
-        <Region labelledBy="billing-review-title">
-            <Stack gap="section">
-                <SectionHeader
-                    id="billing-review-title"
-                    level={2}
-                    title={props.props.reviewTitle}
-                    description={props.props.reviewDescription}
+        <SlotView
+            slot={props.props.review}
+            placeholder={ROWS_PLACEHOLDER}
+            labels={props.props.reviewSlotLabels}
+            forbidden="hide"
+            onRetry={props.on.retryReview}
+        >
+            {(review) => (
+                <BillingHistoryList
+                    props={{
+                        title: props.props.reviewTitle,
+                        description: props.props.reviewDescription,
+                        empty: props.props.reviewEmpty,
+                        rows: review,
+                    }}
                 />
-                <SlotView
-                    slot={props.props.review}
-                    placeholder={ROWS_PLACEHOLDER}
-                    labels={props.props.reviewSlotLabels}
-                    forbidden="hide"
-                    onRetry={props.on.retryReview}
-                >
-                    {(review) => (
-                        <BillingHistoryList
-                            props={{ ariaLabel: props.props.reviewTitle, empty: props.props.reviewEmpty, rows: review }}
-                        />
-                    )}
-                </SlotView>
-            </Stack>
-        </Region>
+            )}
+        </SlotView>
     </Stack>
 )
 

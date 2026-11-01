@@ -243,7 +243,7 @@
     "setupLink": "Setup",
     "historyToggle": "History",
     "historyClose": "Close the history",
-    "emptyGreeting": "Say hello to {name}",
+    "emptyGreeting": "{name} says hello",
     "emptyGreetingHelp": "Ask anything, or tap a suggestion. Nothing here reaches a real customer.",
     "customerEmptyHelp": "Play a website visitor. If you share a need and contact details, a lead is captured.",
     "asVisitor": "Real AI answers. You play the visitor",
@@ -334,8 +334,12 @@
     "statusConflicts": "{count, plural, one {# conflict} other {# conflicts}} with the Brain",
     "statusLearned": "{count, plural, one {# proposal} other {# proposals}} from feedback",
     "statusClear": "No new changes",
+    "channelNone": "No channel connected",
+    "statusSetupChanged": "The checklist has changes not published yet",
+    "statusSetupMissing": "{count, plural, one {# item} other {# items}} not confirmed yet",
     "publish": "Publish and run",
     "nothingToPublish": "The draft has no changes yet.",
+    "setupMissingBlock": "{count, plural, one {# setup item is} other {# setup items are}} not confirmed yet, confirm them first.",
     "gapsBlock": "Some things are still unclear, answer NIVO in the chat first.",
     "cannotEdit": "Only the owner or a manager can change the map.",
     "ownerOnly": "This change gives the agent more reach, so only the owner can add it to the draft.",
@@ -407,7 +411,7 @@
     "badgeRunning": "Running",
     "draftChanges": "{count, plural, one {# change} other {# changes}} not published",
     "draftByYou": "Edited by you, today",
-    "versionBy": "{by}, {runs, plural, one {# run} other {# runs}}",
+    "versionBy": "{by}",
     "restore": "Go back to this version",
     "publishNote": "Published {count, plural, one {# change} other {# changes}} of the draft",
     "branchesTitle": "Branches",
@@ -429,7 +433,7 @@
     "proposalWhyWire": "NIVO proposes it, with {count, plural, one {# decision} other {# decisions}} as evidence. Until you choose, the map stays as it is.",
     "proposalConfirmWire": "Apply as a new version",
     "proposalDecline": "Dismiss",
-    "versionByWire": "{kind}, {date}",
+    "versionByWire": "{kind, select, seed {Starting version} chat {From the setup chat} edit {Edited on the map} conflict {Following the Brain} learned {NIVO learned it} template {From a template} rollback {Went back to an older version} other {Change}} · {date}",
     "reasonInactive": "inactive",
     "reasonNoGrant": "has no right",
     "reasonOverLimit": "over their limit",
@@ -441,8 +445,9 @@
     "runSummaryWire": "Decided on version {version}, the nodes NIVO went through:",
     "modeTitle": "Mode",
     "modeEnforce": "Let the map decide",
-    "modeHintShadow": "Trial run: the map records, but today's authority still decides. Only the owner can change it.",
-    "modeHintEnforced": "The map decides each job of the agent. Turn it off to go back to a trial run, nothing is lost.",
+    "modeHintShadow": "Before: the agent works by the rights it has and the map only records, for you to look at. After you turn it on: the agent works exactly by this map.",
+    "modeHintEnforced": "The agent works exactly by this map. Turn it off to go back to the rights it has, nothing is lost.",
+    "modeOwnerOnly": "Only the owner can change this.",
     "statusDraft": "Changes not published yet",
     "statusProblems": "{count} to fix",
     "op_lt": "under",
@@ -972,10 +977,13 @@
     "conflict": "Conflicts with the current value",
     "currentValue": "Now: {value}",
     "newValue": "Proposed: {value}",
-    "by": "{who} · {source} · trust {trust}",
+    "by": "{who} · {source} · trust {trust}/100",
+    "byDocument": "From the document: {who} · trust {trust}/100",
     "apply": "Apply",
     "reject": "Reject",
     "applied": "Applied. The old value moved to history and agents are being updated.",
+    "appliedMany": "Applied {count} facts. The agents are being updated.",
+    "applyAll": "Apply all ({count})",
     "rejected": "Rejected.",
     "addFact": "Add fact",
     "editValue": "New value",
@@ -1061,7 +1069,7 @@
     "retireKept": "Kept.",
     "reasonSchedule": "The new value starts on {date}. Schedule it: “{current}” stays in force until then.",
     "reasonScheduleNew": "The new value starts on {date}. Schedule it: agents start using it on that day.",
-    "reasonFirstTrusted": "Nothing is recorded for this yet; {who} is a trusted enough source ({trust}).",
+    "reasonFirstTrusted": "Nothing is recorded for this yet; {who} is a trusted enough source ({trust}/100).",
     "reasonFirstUntrusted": "New information from a less trusted source ({trust}). Confirm it before agents use it.",
     "reasonSplit": "“{value}” looks tied to one situation ({situation}). Both may be true: keep “{current}” and add a separate fact for that situation.",
     "reasonSystem": "Fresh figures from a connected system ({who}), backed by a reconciled record; “{current}” is older. Apply it; the old figure goes to history.",
@@ -1242,7 +1250,9 @@
     "ownerOnly": "Only the workspace owner can add, change or remove connections.",
     "tabLibrary": "Library",
     "tabConnected": "Connected",
-    "libSearch": "Search connectors",
+    "libCurrent": "Ready to use",
+    "libOthers": "Other connections",
+    "libSearch": "Search connections",
     "libClear": "Clear search",
     "libCategory": "Category",
     "libAllCategories": "All",
@@ -1270,6 +1280,7 @@
     "aud_sales": "Sales",
     "aud_accounting": "Accounting",
     "aud_any": "Any agent",
+    "detailNeeds": "Have ready",
     "detailBrings": "Brings in",
     "detailFor": "For",
     "detailYours": "Your connections",
@@ -1420,32 +1431,46 @@
     "provider_smtp_title": "Outgoing email",
     "provider_smtp_blurb": "Send reports, receipts and payment reminders from your own shop email.",
     "catalog_sepay_brings": "Incoming bank transfers",
+    "catalog_sepay_needs": "A SePay account linked to your bank, and permission to edit its webhook.",
     "catalog_sepay_keywords": "sepay, ngân hàng, chuyển khoản, bank",
     "catalog_payos_brings": "Orders paid through payOS",
+    "catalog_payos_needs": "An active payOS account, and the connection code from the payOS dashboard.",
     "catalog_payos_keywords": "payos, thanh toán, qr",
     "catalog_casso_brings": "Incoming transfers through Casso",
+    "catalog_casso_needs": "A Casso account linked to your bank, and the Casso webhook secret.",
     "catalog_casso_keywords": "casso, ngân hàng, bank",
     "catalog_telegram_brings": "Messages customers send your bot",
+    "catalog_telegram_needs": "Your own Telegram bot, made through BotFather, and the bot token BotFather gives you.",
     "catalog_telegram_keywords": "telegram, bot, tele",
     "catalog_zalo_oa_brings": "Zalo Official Account messages",
+    "catalog_zalo_oa_needs": "Admin rights on the shop's Zalo Official Account and an app on Zalo Developers.",
     "catalog_zalo_oa_keywords": "zalo, oa, official account",
     "catalog_meta_brings": "Facebook Page and Instagram messages, comments; lead-ad leads",
+    "catalog_meta_needs": "Admin rights on the shop's Facebook Page, and the Instagram account if you use one.",
     "catalog_meta_keywords": "facebook, messenger, fanpage, fb, instagram, ig, direct, meta, lead ads, quảng cáo",
     "catalog_telegram_user_brings": "Messages of the chats you pick (read only)",
+    "catalog_telegram_user_needs": "Your personal Telegram account, and the phone that receives the login code.",
     "catalog_telegram_user_keywords": "telegram, cá nhân, personal",
     "catalog_database_brings": "Customers, orders and products from your database",
+    "catalog_database_needs": "The server address, the database name and a read-only account you create.",
     "catalog_database_keywords": "database, postgres, mysql, sql server, csdl",
     "catalog_openapi_brings": "Data from your API; agents call the endpoints you allow",
+    "catalog_openapi_needs": "The Swagger or OpenAPI link of your system, and an access key if it needs one.",
     "catalog_openapi_keywords": "api, swagger, openapi, rest, backend",
     "catalog_csv_import_brings": "Excel, CSV, Google Sheets links, documents",
+    "catalog_csv_import_needs": "An Excel or CSV file of customers, orders or products.",
     "catalog_csv_import_keywords": "excel, csv, sheet, xlsx, docx, pdf, google docs, nhập",
     "catalog_imap_brings": "Incoming mail of the mailbox you choose (read only)",
+    "catalog_imap_needs": "The mailbox address and an app password for that mailbox.",
     "catalog_imap_keywords": "email, gmail, outlook, imap, hộp thư",
     "catalog_smtp_brings": "Send email from your own shop mailbox",
+    "catalog_smtp_needs": "The sending email address and an app password or the mail server details.",
     "catalog_smtp_keywords": "email, smtp, gửi mail",
     "catalog_google_brings": "Write orders into Google Sheets",
+    "catalog_google_needs": "Your Google account and permission to write to the spreadsheet you choose.",
     "catalog_google_keywords": "google, sheets, trang tính",
     "catalog_webhook_brings": "Send events to n8n, Make, Zapier",
+    "catalog_webhook_needs": "An n8n, Make or Zapier flow with an address that receives data.",
     "catalog_webhook_keywords": "webhook, n8n, make, zapier",
     "catalog_tiktok_chat_name": "TikTok",
     "catalog_tiktok_chat_blurb": "TikTok messages for the Chatbot.",
@@ -1518,6 +1543,7 @@
     "catalog_google_drive_name": "Google Drive",
     "catalog_google_drive_blurb": "Documents in the folder you pick.",
     "catalog_google_drive_brings": "Documents",
+    "catalog_google_drive_needs": "The Google account that holds the documents. NIVO only reads, never edits or deletes.",
     "catalog_google_drive_keywords": "drive, tài liệu",
     "catalog_notion_name": "Notion",
     "catalog_notion_blurb": "Notion pages and databases as knowledge.",
@@ -2671,7 +2697,11 @@
     "office": {
       "title": "Office",
       "what": "The shared office: talk to your team and AI agents, approve what the AI proposes.",
-      "steps": ["Open Office", "Type @agent-name to call an agent", "Approve or edit the cards waiting for you"],
+      "steps": [
+        "Open Office",
+        "Type @agent-name to call an agent",
+        "Approve or edit the cards waiting for you"
+      ],
       "keywords": [
         "office",
         "van phong",
@@ -2692,13 +2722,30 @@
     "overview": {
       "title": "Overview",
       "what": "The big picture: results, waiting work, exceptions to look at.",
-      "steps": ["Open Overview", "Read the result and waiting-work cards"],
-      "keywords": ["tong quan", "dashboard", "bao cao", "ket qua", "doanh thu", "tinh hinh", "overview", "report"]
+      "steps": [
+        "Open Overview",
+        "Read the result and waiting-work cards"
+      ],
+      "keywords": [
+        "tong quan",
+        "dashboard",
+        "bao cao",
+        "ket qua",
+        "doanh thu",
+        "tinh hinh",
+        "overview",
+        "report"
+      ]
     },
     "authority": {
       "title": "Authority",
       "what": "Set goals, policies, tone, and which actions the AI may do alone or must ask about.",
-      "steps": ["Open Authority", "Set each action to Auto, Ask me or Never", "Set an amount limit if needed", "Save"],
+      "steps": [
+        "Open Authority",
+        "Set each action to Auto, Ask me or Never",
+        "Set an amount limit if needed",
+        "Save"
+      ],
       "keywords": [
         "giao quyen",
         "quyen han",
@@ -2715,13 +2762,28 @@
     "inbox": {
       "title": "Inbox",
       "what": "Everything coming in: customer messages, orders, bank transactions, from every channel.",
-      "steps": ["Open Inbox", "Filter by channel or kind"],
-      "keywords": ["dau vao", "inbox", "tin nhan den", "tin nhan khach", "giao dich den", "don moi", "hop thu"]
+      "steps": [
+        "Open Inbox",
+        "Filter by channel or kind"
+      ],
+      "keywords": [
+        "dau vao",
+        "inbox",
+        "tin nhan den",
+        "tin nhan khach",
+        "giao dich den",
+        "don moi",
+        "hop thu"
+      ]
     },
     "leads": {
       "title": "Customers",
       "what": "Customers and sales leads, who owns each, and the next step.",
-      "steps": ["Open Customers", "Press New lead to add one", "Open a customer to see history and assign work"],
+      "steps": [
+        "Open Customers",
+        "Press New lead to add one",
+        "Open a customer to see history and assign work"
+      ],
       "keywords": [
         "khach hang",
         "lead",
@@ -2738,19 +2800,44 @@
     "responsibilities": {
       "title": "Responsibilities",
       "what": "Who owns which piece of work, due dates and next steps.",
-      "steps": ["Open Responsibilities", "Filter by owner or status"],
-      "keywords": ["trach nhiem", "ai lam gi", "viec cua ai", "han chot", "phu trach", "responsibility", "task"]
+      "steps": [
+        "Open Responsibilities",
+        "Filter by owner or status"
+      ],
+      "keywords": [
+        "trach nhiem",
+        "ai lam gi",
+        "viec cua ai",
+        "han chot",
+        "phu trach",
+        "responsibility",
+        "task"
+      ]
     },
     "decisions": {
       "title": "Decisions",
       "what": "A log of every decision: done by the AI, approved or edited by a person, with reasons.",
-      "steps": ["Open Decisions", "Filter by department or decider"],
-      "keywords": ["lich su quyet dinh", "quyet dinh", "nhat ky", "ai da duyet", "decision", "audit"]
+      "steps": [
+        "Open Decisions",
+        "Filter by department or decider"
+      ],
+      "keywords": [
+        "lich su quyet dinh",
+        "quyet dinh",
+        "nhat ky",
+        "ai da duyet",
+        "decision",
+        "audit"
+      ]
     },
     "automations": {
       "title": "Automations",
       "what": "Workflows that run on a schedule or event: payment reminders, reports, customer care.",
-      "steps": ["Open Automations", "Pick a template or create one", "Turn it on"],
+      "steps": [
+        "Open Automations",
+        "Pick a template or create one",
+        "Turn it on"
+      ],
       "keywords": [
         "tu dong hoa",
         "tu dong",
@@ -2766,7 +2853,12 @@
     "knowledge": {
       "title": "Knowledge",
       "what": "Teach the AI about your business: prices, policies, FAQs, documents, links.",
-      "steps": ["Open Knowledge", "Press Add source", "Paste text, upload a file or a link", "Save so the AI uses it"],
+      "steps": [
+        "Open Knowledge",
+        "Press Add source",
+        "Paste text, upload a file or a link",
+        "Save so the AI uses it"
+      ],
       "keywords": [
         "tri thuc",
         "kien thuc",
@@ -2783,7 +2875,11 @@
     "brain": {
       "title": "Brain",
       "what": "What the business knows (prices, hours, policies, customers...) in one place; each agent reads its own view. Review proposals and conflicts here.",
-      "steps": ["Open Brain", "Check To review: apply or reject as NIVO suggests", "Facts tab: Add fact or New value"],
+      "steps": [
+        "Open Brain",
+        "Check To review: apply or reject as NIVO suggests",
+        "Facts tab: Add fact or New value"
+      ],
       "keywords": [
         "bo nao",
         "second brain",
@@ -2802,7 +2898,11 @@
     "modules": {
       "title": "Agents",
       "what": "Install and set up agents: Chatbot, Sales, Accounting, Booking, Inventory, Hiring…",
-      "steps": ["Open Agents", "Pick an agent and install it", "Follow the setup steps"],
+      "steps": [
+        "Open Agents",
+        "Pick an agent and install it",
+        "Follow the setup steps"
+      ],
       "keywords": [
         "module",
         "modules",
@@ -2821,7 +2921,12 @@
     "team": {
       "title": "Team",
       "what": "Invite people to the workspace and choose their role: Owner, Manager, Staff.",
-      "steps": ["Open Team", "Press Invite member", "Enter the email and role", "Send the invite or copy the link"],
+      "steps": [
+        "Open Team",
+        "Press Invite member",
+        "Enter the email and role",
+        "Send the invite or copy the link"
+      ],
       "keywords": [
         "doi ngu",
         "moi nhan vien",
@@ -2839,8 +2944,17 @@
     "connections": {
       "title": "Connections",
       "what": "Connect NIVO to your bank, Telegram, Zalo OA, email, Google Sheets, n8n.",
-      "steps": ["Open Connections", "Pick a service and press Add connection", "Follow the steps"],
-      "keywords": ["ket noi", "tich hop", "connection", "integration"]
+      "steps": [
+        "Open Connections",
+        "Pick a service and press Add connection",
+        "Follow the steps"
+      ],
+      "keywords": [
+        "ket noi",
+        "tich hop",
+        "connection",
+        "integration"
+      ]
     },
     "connections-sepay": {
       "title": "SePay bank feed",
@@ -2896,7 +3010,12 @@
         "Paste the callback and webhook URLs into Zalo, enable message events",
         "Press Connect Zalo OA so the OA owner consents"
       ],
-      "keywords": ["zalo", "zalo oa", "official account", "oa"]
+      "keywords": [
+        "zalo",
+        "zalo oa",
+        "official account",
+        "oa"
+      ]
     },
     "connections-smtp": {
       "title": "Outgoing email",
@@ -2906,7 +3025,13 @@
         "Enter the SMTP server or pick a provider",
         "Send a test email"
       ],
-      "keywords": ["email", "smtp", "gui email", "gmail", "thu dien tu"]
+      "keywords": [
+        "email",
+        "smtp",
+        "gui email",
+        "gmail",
+        "thu dien tu"
+      ]
     },
     "connections-google": {
       "title": "Google Sheets",
@@ -2916,7 +3041,13 @@
         "Sign in to Google and allow access",
         "Pick the spreadsheet"
       ],
-      "keywords": ["google sheet", "google sheets", "bang tinh", "excel", "spreadsheet"]
+      "keywords": [
+        "google sheet",
+        "google sheets",
+        "bang tinh",
+        "excel",
+        "spreadsheet"
+      ]
     },
     "connections-webhook": {
       "title": "n8n / Webhook",
@@ -2926,13 +3057,29 @@
         "Paste the n8n webhook URL",
         "Pick events and send a test"
       ],
-      "keywords": ["n8n", "webhook", "zapier", "make.com", "make"]
+      "keywords": [
+        "n8n",
+        "webhook",
+        "zapier",
+        "make.com",
+        "make"
+      ]
     },
     "developers": {
       "title": "Developers (API)",
       "what": "Create API keys so other software can read and write NIVO data.",
-      "steps": ["Open Developers", "Name the key and create it", "Copy it now; it is shown once"],
-      "keywords": ["api", "khoa api", "api key", "developer", "lap trinh"]
+      "steps": [
+        "Open Developers",
+        "Name the key and create it",
+        "Copy it now; it is shown once"
+      ],
+      "keywords": [
+        "api",
+        "khoa api",
+        "api key",
+        "developer",
+        "lap trinh"
+      ]
     },
     "billing": {
       "title": "Credits and plan",
@@ -2962,7 +3109,10 @@
     "account": {
       "title": "Your account",
       "what": "Change your name, email, password and sign out other devices.",
-      "steps": ["Open the avatar menu › Account", "Edit and save"],
+      "steps": [
+        "Open the avatar menu › Account",
+        "Edit and save"
+      ],
       "keywords": [
         "tai khoan cua toi",
         "thong tin tai khoan",
@@ -3054,7 +3204,7 @@
     "tabFiles": "Files & links",
     "tabWrite": "Write",
     "filesDrop": "Drop files here or choose them",
-    "filesHint": "PDF, Word, Excel, PowerPoint, CSV, TXT, MD, ZIP · up to 50 MB each, 50 MB of raw data in total per workspace, ZIP up to 200 MB",
+    "filesHint": "PDF, Word, Excel, PowerPoint, CSV, TXT, MD, ZIP · up to 50 MB per file, 50 MB of files in total for the workspace. A ZIP (up to 200 MB) is opened on your computer and each file inside counts as its own file.",
     "linksField": "Links",
     "linksHint": "Web pages, Google Docs, Sheets, Slides and Drive files. Paste several at once.",
     "linkRowN": "Link {n}",
@@ -3094,7 +3244,7 @@
     "retry": "Retry",
     "errBadType": "Only .txt, .md, .csv, .pdf, .docx, .xlsx, .pptx and .zip files can be added.",
     "errTooBig": "This file is larger than 50 MB.",
-    "usageLabel": "Raw data used",
+    "usageLabel": "Uploaded files (written text and links do not count)",
     "usageValue": "{used} / {limit} MB used",
     "errBadLink": "This is not a valid link.",
     "driveAlertBody": "NIVO only reads. It never edits or deletes anything in your Drive, and you can disconnect at any time.",
@@ -3129,10 +3279,14 @@
     "fieldModule": "Used by",
     "moduleAll": "Every agent",
     "fieldVisibility": "Who can use it",
-    "visPublic": "Public: the chatbot answers customers",
-    "visInternal": "Internal: team and internal agents only",
-    "visPublicNote": "The customer chatbot will answer from this document. Pick this when you want customers to ask and get an answer.",
-    "visInternalNote": "Only staff and internal agents can read it. The customer chatbot will not see this document and will say it has no information.",
+    "visPublic": "Public",
+    "visInternal": "Internal",
+    "visPublicNote": "Public: the customer chatbot will answer customers from this document.",
+    "visInternalNote": "Internal: only staff and internal agents can read it. The customer chatbot will not see this document.",
+    "visNoneNote": "The chatbot only answers customers from Public documents. Choose Public or Internal for this document.",
+    "visSuggestPublic": "NIVO suggests Public: customers need to know this, like a shop introduction.",
+    "visSuggestInternal": "NIVO suggests Internal for this document.",
+    "visNeeded": "Choose Public or Internal to add.",
     "faqQuestion": "Question",
     "faqAnswer": "Answer",
     "faqAddRow": "Add another pair",
@@ -3167,10 +3321,10 @@
     "stage_facts": "Reading facts",
     "stage_critic": "Challenging the facts",
     "stageCount": "{done}/{total} passages",
-    "vis_public": "Customers may know this",
-    "vis_internal": "Internal only",
-    "visPublicLong": "Customers may know this: the chatbot answers customers from it",
-    "visInternalLong": "Internal only: the customer chatbot cannot see this document",
+    "vis_public": "Public",
+    "vis_internal": "Internal",
+    "visPublicLong": "Public: the chatbot answers customers from this document",
+    "visInternalLong": "Internal: the customer chatbot cannot see this document",
     "noVectors": "Keyword search only",
     "open": "Open",
     "detailMeta": "Added {when}",
@@ -3376,12 +3530,7 @@
     "ingest_facts": "Extract facts",
     "ingest_critic": "Challenge",
     "summaryAsk": "NIVO has {count} things to ask you",
-    "summarySee": "See now",
-    "visChooseNote": "The chatbot only answers customers from Public documents. Choose who may read before adding.",
-    "visSuggest": "NIVO suggests {choice} for this document; you decide.",
-    "visPublicName": "Public",
-    "visInternalName": "Internal",
-    "visRequired": "Choose who may read this document before adding it."
+    "summarySee": "See now"
   },
   "lead": {
     "contextTitle": "Customer context",
@@ -4083,11 +4232,7 @@
     "unconfirm": "Reopen",
     "evidencePlaceholder": "Write what is true for your business",
     "apply": "Apply",
-    "applying": "Applying...",
-    "applyHint": "Confirm every item to apply. The agent then works from this version.",
-    "applyUnchanged": "This draft is already the version in use.",
-    "applyRun": "Let it run",
-    "applyNeedsAll": "Let it run (needs {total}/{total})",
+    "feedNote": "Confirmed items become the instructions of the agent when you press Publish and run. What customers ask (opening hours, prices) is answered from Public documents in the Brain, so add them there.",
     "gateAsking": "NIVO is asking in the chat",
     "proposalTitle": "Item {position} · {label}",
     "proposalsLabel": "NIVO's proposals",
@@ -4263,15 +4408,13 @@
     "reasonStale": "too old to answer",
     "reasonOverLimit": "over the spending limit",
     "reasonOther": "see the audit log",
-    "usageTokens": "{n} tokens",
-    "usageCost": "cost {n}",
     "usageSeconds": "{n} s",
-    "switchTitle": "Agent work",
-    "switchLabel": "Let this agent work",
+    "switchTitle": "Work",
+    "switchLabel": "Let the agent work",
     "switchHelp": "Off stops every turn of this agent at its next turn: customers get the holding line, tags get a line, and wakes are held until you switch it back on.",
     "switchOwnerOnly": "Only the owner can change this switch.",
-    "switchStatusOn": "Work is on",
-    "switchStatusOff": "Work is off",
+    "switchStatusOn": "Running",
+    "switchStatusOff": "Paused",
     "workspaceTitle": "Agent work for the workspace",
     "workspaceLabel": "Let agents work",
     "workspaceHelp": "One switch for every agent of this workspace. Each agent also has its own switch in its Settings.",
@@ -4325,12 +4468,12 @@
     "modeAssistHelp": "The agent prepares work and always asks you before it acts.",
     "modeAutopilotHelp": "The agent works by the permissions you set on the Authority page; your rules and limits stay as they are.",
     "modeNote": "Switching mode never edits the rules on the Authority page; Assist only makes the AI ask first until you switch back.",
-    "liveTitle": "Live",
+    "liveTitle": "Answering customers",
     "liveHelp": "When on, the agent answers customers on your channels. When off, it is ready but answers no one.",
     "shiftsBindChannel": "Attach a Telegram/Zalo channel to notify staff of their shifts",
     "liveNeedsVersion": "Apply a setup version first: the agent needs your confirmed context before it can go live.",
-    "liveSwitch": "Go live: the agent answers customers",
-    "agentTitle": "Its AI assistant",
+    "liveSwitch": "Let the agent answer customers",
+    "agentTitle": "Agent name",
     "agentLine": "@{handle} in Office",
     "instancesDescription": "Each {type} has its own name, channels, knowledge and setup. Authority rules are shared by every {type}.",
     "instancesListLabel": "Your {type} agents",
@@ -4373,13 +4516,13 @@
     "syncError": "Sync failed: {reason}",
     "syncReasonUnknown": "could not sync, try again later",
     "syncReasonWorkspaceUnavailable": "the agent workspace is not ready yet, try again later",
-    "syncDrift": "Out of step: Supabase v{active}, OpenClaw v{synced}",
+    "syncDrift": "Out of step: in use v{active}, agent runs v{synced}",
     "syncNever": "none",
-    "syncOkNone": "OpenClaw copy: no context version yet · {ago}",
-    "syncOk": "OpenClaw copy: v{version} · {ago}",
+    "syncOkNone": "Agent copy: no context version yet · {ago}",
+    "syncOk": "Agent copy: v{version} · {ago}",
     "resync": "Sync again",
-    "syncHelp": "The agent runs on OpenClaw from a copy of your setup, rules and knowledge. It follows what you approved here, and updates itself every 5 minutes.",
-    "replyTitle": "Customer replies",
+    "syncHelp": "The agent runs from a copy of your setup, rules and knowledge. It follows what you approved here, and updates itself every 5 minutes.",
+    "replyTitle": "When the agent is slow",
     "timeoutLabel": "Longest wait (seconds)",
     "timeoutHint": "If the agent has not answered by then, the customer gets a direct answer instead (5 to 120, default 25).",
     "timeoutSave": "Save",
@@ -4485,7 +4628,10 @@
     "exceptionErrorLabel": "What went wrong",
     "exceptionDraft": "Text to send",
     "exceptionAmount": "Amount (VND)",
-    "exceptionApprove": "Approve so NIVO continues",
+    "exceptionApprove": "Approve, NIVO goes on",
+    "exceptionSendDraft": "Send this answer",
+    "exceptionAsked": "Customer asked",
+    "exceptionWillReply": "NIVO plans to answer",
     "exceptionEditContinue": "Edit and continue",
     "exceptionSaveContinue": "Save edits and continue",
     "exceptionCancelEdit": "Cancel edit",
@@ -5037,6 +5183,10 @@
     "dossierDocuments": "{count, plural, =0 {No documents} one {# document} other {# documents}}",
     "dossierMissing": "Missing: {text}",
     "status_present": "Complete",
+    "folder_legal": "Legal",
+    "folder_hr": "HR",
+    "folder_finance": "Finance",
+    "statusPresentNoFile": "Held, not uploaded yet",
     "status_partial": "Partly held",
     "status_drafted": "Draft written",
     "status_missing": "Missing",
@@ -5046,8 +5196,7 @@
     "figureAsk": "Waiting for you",
     "dossiersFooter": "NIVO reviews again whenever a new document arrives.",
     "dossierSee": "View",
-    "dossierUpload": "Upload the paper",
-    "viewFooter": "Change who may read a document on the document itself."
+    "dossierUpload": "Upload the paper"
   },
   "shell": {
     "navOverview": "Overview",
@@ -5331,7 +5480,6 @@
   "permissions": {
     "crumbLabel": "Breadcrumb",
     "crumbHome": "Overview",
-    "eyebrow": "PERMISSIONS",
     "title": "Permissions",
     "description": "Hand work over like you would to a new hire: what an agent does alone, whom it asks, and how they decide.",
     "tabsLabel": "Team and permissions",
@@ -5340,21 +5488,13 @@
     "loadFailTitle": "The permissions table did not load",
     "loadFailBody": "The permissions table is not ready. Try again in a few minutes.",
     "tableTitle": "Work rules",
-    "tableDesc": "Set the limits and the approvers of each kind of work.",
-    "columnAction": "Work",
-    "columnAgents": "Agents it applies to",
-    "columnMode": "Mode",
-    "columnGroup": "Approver group",
-    "columnPolicy": "Approval rule",
-    "columnEdit": "Edit",
-    "none": "—",
     "edit": "Edit",
-    "footnote": "Permissions apply when an agent does the work.",
+    "footnote": "Applies every time an agent works.",
     "allAgents": "Every agent",
     "roleOwner": "Owner",
     "roleManager": "Manager",
     "roleStaff": "Staff",
-    "groupRole": "Role: {name}",
+    "groupRole": "{name}",
     "groupRoom": "Room: {name}",
     "policyAny": "Any one",
     "policyAll": "Everyone",
@@ -5888,6 +6028,7 @@
     "ageingD30": "31 to 60 days · {n} invoices",
     "ageingD60": "Over 60 days · {n} invoices",
     "waitingTitle": "Waiting for you",
+    "waitingReason": "Accounting is not sure, so it stopped and waits for your decision.",
     "waitingMore": "{n} more waiting",
     "waitingMenu": "More actions",
     "kind_expense": "Expense",
@@ -6125,13 +6266,13 @@
     "title": "Customer conversations",
     "metricToday": "Conversations today",
     "metricTodaySub": "opened since midnight",
-    "metricWaiting": "Waiting for a person",
-    "metricWaitingSub": "questions the AI could not answer",
-    "metricResponse": "First reply, p50",
-    "metricResponseSub": "median, last 30 days · {n} conversations",
+    "metricAuto": "Handled by AI",
+    "metricAutoSub": "conversations the AI answers alone",
+    "metricHandover": "Handed over",
+    "metricHandoverSub": "conversations waiting for or held by a person",
+    "metricResponse": "First reply",
+    "metricResponseSub": "30-day median · {n} conversations",
     "metricResponseNone": "needs a conversation with a reply",
-    "metricLeads": "Leads captured",
-    "metricLeadsSub": "new leads from conversations, last 7 days",
     "minutes": "{n} min",
     "seconds": "{n} sec",
     "filterAll": "All",
@@ -6251,26 +6392,27 @@
     "handlingReleased": "The conversation was handed back to the AI.",
     "replyTooLong": "Keep the reply within 4,000 characters.",
     "answerTooLong": "Keep the answer within 4,000 characters.",
-    "tabCustomers": "Customers",
+    "tabCustomers": "Customers in progress",
     "tabGaps": "Unanswered",
     "customersSearchPlaceholder": "Search by name, company or need",
     "customersFilters": "Customers shown",
     "filterInProgress": "In progress",
-    "colCustomer": "Customer",
-    "colChannel": "Channel",
-    "colStage": "Stage",
-    "colNeed": "Need",
-    "colReplying": "Who is replying",
-    "replyingAi": "AI",
-    "replyingPerson": "{name}",
     "replyingAgent": "{name} (AI)",
     "customersEmpty": "No customers match",
     "customersEmptyBody": "Clear the search or pick All to see every customer.",
     "customersFull": "Showing the newest {n} conversations. Older customers are not in this list.",
-    "waitingSend": "Send reply",
+    "waitingSend": "Approve and send",
     "waitingNoDraft": "The AI wrote no draft. Open the conversation to answer.",
     "waitingDismiss": "Do not reply",
     "waitingMore": "{n} more in the inbox",
+    "waitingEdit": "Edit",
+    "waitingTitleFor": "Reply to {name}",
+    "waitingAsked": "Customer asked: {question}",
+    "waitingReason": "The AI wrote a reply and needs you to read it before it goes to the customer.",
+    "waitingReasonNoDraft": "The AI could not write a reply, so it needs you to write one.",
+    "waitingEditLabel": "Reply to the customer",
+    "waitingEditSend": "Send my version",
+    "waitingEditCancel": "Cancel",
     "waitingSeeWhy": "See why",
     "waitingMoreMenu": "More actions",
     "stageTitle": "Deal stage",
@@ -6854,11 +6996,12 @@
     "salesDecisionInvalid": "Fill in the required decision fields.",
     "salesAmountInvalid": "Enter a valid amount.",
     "tab_conversation": "Conversation",
-    "waitingApprove": "Approve",
+    "waitingApprove": "Approve proposal",
     "waitingReject": "Reject",
     "waitingEdit": "Edit",
     "waitingUnknownCustomer": "Unknown customer",
     "waitingMore": "{n} more in Decisions",
+    "waitingReason": "Sales has prepared this and needs your approval before it goes ahead.",
     "waitingSeeWhy": "See why",
     "waitingMoreMenu": "More actions"
   },
@@ -7848,10 +7991,14 @@
     "lostBody": "The Drive access was revoked in your Google account. Grant it again to read private files and folders.",
     "tileScope": "Access",
     "tileScopeValue": "Read only",
-    "tileScopeMeta": "drive.readonly",
+    "tileScopeMeta": "NIVO never edits or deletes anything in your Drive",
     "tileAccount": "Google account",
-    "tileAccountMeta": "One grant for the whole workspace",
-    "tileUsage": "Raw data used",
+    "tileAccountNone": "Not granted",
+    "tileAccountOk": "Granted",
+    "tileAccountNoneMeta": "No Google account yet",
+    "tileUsageValue": "{used} MB",
+    "tileUsageLimit": "of {limit} MB, counted across the workspace",
+    "tileUsage": "Space used",
     "tileUsageMeta": "Counted across the workspace",
     "factsEmpty": "No information yet.",
     "stepGrant": "Grant access",
@@ -7885,8 +8032,8 @@
     "visInternal": "Internal",
     "visPublic": "Public",
     "visInternalHelp": "Internal: the customer chatbot will not see these documents",
-    "visPublicHelp": "Public: the customer chatbot answers from these documents",
-    "visChooseNote": "The chatbot only answers customers from Public documents. Choose who may read before adding; NIVO does not choose for you.",
+    "visPublicHelp": "Public: the customer chatbot answers customers from these documents",
+    "visNoneHelp": "The chatbot only answers customers from Public documents. Choose Public or Internal to add.",
     "visRequired": "Choose Public or Internal before adding.",
     "add": "Add {count} documents",
     "addedBody": "{count} documents were queued. NIVO reads them in the background; you can close this window.",
@@ -8021,15 +8168,6 @@
     "eventWho": "Customer {who}"
   },
   "workbench": {
-    "bandLabel": "Agent status",
-    "stateWorking": "Working now",
-    "stateRunning": "Running",
-    "statePaused": "Paused",
-    "stateStopped": "Stopped after errors",
-    "lastActivity": "Last activity {when}",
-    "noActivity": "No activity yet",
-    "channelMissing": "{name}: Not connected",
-    "channelMeta": "Facebook and Instagram",
     "whyPane": "Why this decision",
     "whyList": "Work",
     "whyOpen": "Why",

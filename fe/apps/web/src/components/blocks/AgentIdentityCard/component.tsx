@@ -8,6 +8,8 @@ import { GROW } from "./classNames"
 /** What the name card shows once the installation arrived, every word resolved. */
 export interface IdentityView {
     readonly markLabel: string
+    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    readonly avatarUrl: string | null
     readonly nameLabel: string
     readonly nameHint: string
     readonly name: string
@@ -46,6 +48,7 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                             glyph={nivoIconSource(props.props.glyph, "leading")}
                             module={props.props.module}
                             label={view.markLabel}
+                            src={view.avatarUrl}
                             size="lg"
                         />
                         <div className={GROW}>
@@ -53,6 +56,7 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                                 id="module-name"
                                 name="name"
                                 label={view.nameLabel}
+                                isLabelHidden
                                 description={view.nameHint}
                                 value={view.name}
                                 isSkeleton={isSkeleton}

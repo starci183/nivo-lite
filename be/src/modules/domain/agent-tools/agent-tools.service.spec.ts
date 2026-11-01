@@ -197,7 +197,10 @@ describe("AgentToolsService > runTool", () => {
         })
 
         expect(result).toEqual({ passages: "Opening hours 8-17", citations: [{ title: "Hours", topic: "faq" }] })
-        expect(knowledge.search).toHaveBeenCalledWith(ctx, "hours")
+        expect(knowledge.search).toHaveBeenCalledWith(
+            { workspaceId: ctx.workspaceId, conversationId: ctx.conversationId, agentId: null },
+            "hours",
+        )
         expect(events.record).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             kind: "engine.tool.knowledge.search",
@@ -458,7 +461,7 @@ describe("AgentToolsService > the bridge credential", () => {
         })
 
         expect(knowledge.search).toHaveBeenCalledWith(
-            { jobId: "msg-1", workspaceId: "ws-1", conversationId: "conv-7" },
+            expect.objectContaining({ workspaceId: "ws-1", conversationId: "conv-7" }),
             "hours",
         )
     })
@@ -469,6 +472,18 @@ describe("AgentToolsService > the bridge credential", () => {
         const error = await rejectionOf(service.runBearerTool("Bearer bridge.body.mac", "shell.exec", {}))
 
         expect(error?.code).toBe(AgentToolsErrorCode.UnknownTool)
+    })
+
+    it("lets a turn with no conversation read as its own agent, audited by the read path", async () => {
+        const { service, bridge, knowledge } = await build(claims, tagTurn)
+
+        await service.runBearerTool("Bearer bridge.body.mac", "knowledge.search", { query: "hours" })
+
+        expect(knowledge.search).toHaveBeenCalledWith(
+            { workspaceId: tagTurn.workspaceId, conversationId: null, agentId: tagTurn.agentId },
+            "hours",
+        )
+        expect(bridge.runInternal).not.toHaveBeenCalled()
     })
 
     it("hands a turn with no conversation to the bridge calls, which keep it to the connector tools", async () => {

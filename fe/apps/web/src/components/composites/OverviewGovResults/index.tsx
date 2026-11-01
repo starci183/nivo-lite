@@ -1,8 +1,6 @@
-import { Fragment } from "react"
-import { Cluster, Divider, SectionHeader, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Cluster, ListRow, Stack, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovStatusRow } from "@/hooks/overviewResults"
-import { STATUS_CELL_CLASS_NAME, STATUS_LABEL_CLASS_NAME } from "./classNames"
 
 /** The figures of the results block. */
 export interface OverviewGovResultsProps {
@@ -18,66 +16,45 @@ export interface OverviewGovResultsProps {
     }
 }
 
-/** The status row to draw. */
-interface StatusRowProps {
-    readonly row: GovStatusRow
-}
-
-/** One status: what it is and what it rests on, then its figure. */
-const StatusRow = (props: StatusRowProps) => (
-    <Cluster gap="section" align="start" justify="between">
-        <div className={STATUS_LABEL_CLASS_NAME}>
-            <Stack gap="identity">
-                <Text size="sm" weight="semibold">
-                    {props.row.label}
-                </Text>
-                <Text size="xs" tone="muted">
-                    {props.row.context}
-                </Text>
-            </Stack>
-        </div>
-        <div className={STATUS_CELL_CLASS_NAME}>
-            <Stack gap="identity">
-                <Text weight="semibold">{props.row.value}</Text>
-                {props.row.count === null ? null : (
-                    <Text size="xs" tone="muted">
-                        {props.row.count}
-                    </Text>
-                )}
-            </Stack>
-        </div>
-    </Cluster>
-)
-
-/** The results by status, each figure naming what it rests on. */
+/** The results by status, each figure naming what it rests on: one row per status in one list, the notes under it. */
 export const OverviewGovResults = (props: OverviewGovResultsProps) => (
     <AccountingBlock label={props.figures.title}>
-        <SectionHeader level={2} title={props.figures.title} description={props.figures.intro} />
-        <SurfaceCard ariaLabel={props.figures.title}>
-            <Stack gap="row">
-                {props.figures.rows.map((row, index) => (
-                    <Fragment key={row.id}>
-                        {index > 0 ? <Divider semantics="presentation" /> : null}
-                        <StatusRow row={row} />
-                    </Fragment>
-                ))}
-                <Text size="sm" tone="muted">
-                    {props.figures.service}
-                </Text>
-                {props.figures.goals.map((goal) => (
-                    <Cluster key={goal.id} gap="row">
-                        <Text size="sm" {...(goal.isSet ? {} : { tone: "muted" as const })}>
-                            {goal.text}
-                        </Text>
-                        {goal.isSet ? null : (
-                            <TextAction href={props.figures.goalHref}>{props.figures.goalSetLabel}</TextAction>
-                        )}
-                    </Cluster>
-                ))}
-                <Text size="xs" tone="muted">
-                    {props.figures.testNote}
-                </Text>
-            </Stack>
-        </SurfaceCard>
+        <SurfaceListCard
+            label={props.figures.title}
+            footer={[props.figures.intro, props.figures.testNote].filter((line) => line !== "").join(" · ")}
+        >
+            {props.figures.rows.map((row) => (
+                <ListRow
+                    key={row.id}
+                    title={row.label}
+                    description={row.context}
+                    actions={
+                        <Stack gap="identity" align="end">
+                            <Text weight="semibold">{row.value}</Text>
+                            {row.count === null ? null : (
+                                <Text size="xs" tone="muted">
+                                    {row.count}
+                                </Text>
+                            )}
+                        </Stack>
+                    }
+                />
+            ))}
+        </SurfaceListCard>
+        <Stack gap="row">
+            <Text size="sm" tone="muted">
+                {props.figures.service}
+            </Text>
+            {props.figures.goals.map((goal) => (
+                <Cluster key={goal.id} gap="row">
+                    <Text size="sm" {...(goal.isSet ? {} : { tone: "muted" as const })}>
+                        {goal.text}
+                    </Text>
+                    {goal.isSet ? null : (
+                        <TextAction href={props.figures.goalHref}>{props.figures.goalSetLabel}</TextAction>
+                    )}
+                </Cluster>
+            ))}
+        </Stack>
     </AccountingBlock>
 )

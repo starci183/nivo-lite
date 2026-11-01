@@ -34,7 +34,7 @@ export const BOOKING_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: true,
     agent: {
-        name: catalogCopy("modulesCatalog.booking.agent.name", "en"),
+        label: catalogText("modulesCatalog.booking.agent.label"),
         handle: "booking",
         summary: catalogText("modulesCatalog.booking.agent.summary"),
         capabilities: catalogList([

@@ -25,7 +25,7 @@ import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 /** What the add form was opened from: the topic to write about, who NIVO suggests may read it, the tags it files under and the mode it opens on. */
 export interface AddPresetView {
     readonly topic: string
-    readonly suggestedVisibility?: "public" | "internal"
+    readonly visibility?: "public" | "internal"
     readonly tags?: string
     readonly mode?: "files" | "write"
 }

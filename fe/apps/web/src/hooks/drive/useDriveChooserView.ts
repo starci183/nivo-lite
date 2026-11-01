@@ -11,10 +11,13 @@ const visibilityOf = (value: string): DriveVisibility | null => {
     return null
 }
 
-/** What the choice of who may use the files says: what the chosen audience means, or before a choice, that the owner decides. */
-const consequenceOf = (t: ReturnType<typeof useTranslations>, visibility: DriveVisibility | null): string => {
-    if (visibility === null) return t("visChooseNote")
-    return visibility === "internal" ? t("visInternalHelp") : t("visPublicHelp")
+/** What the chosen audience means, or, before a choice, what the chatbot reads: nothing is preselected. */
+const visibilityHelpOf = (
+    t: ReturnType<typeof useTranslations<"driveConnection">>,
+    value: DriveVisibility | null,
+): string => {
+    if (value === null) return t("visNoneHelp")
+    return value === "internal" ? t("visInternalHelp") : t("visPublicHelp")
 }
 
 /**
@@ -64,7 +67,7 @@ export const useDriveChooserView = () => {
                               : {}),
                           visibility: {
                               label: t("visibilityLabel"),
-                              description: consequenceOf(t, choose.visibility),
+                              description: visibilityHelpOf(t, choose.visibility),
                               value: choose.visibility ?? "",
                               options: [
                                   { value: "public", label: t("visPublic") },

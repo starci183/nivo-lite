@@ -170,20 +170,6 @@ describe("AgentKnowledgeLensService", () => {
 })
 
 describe("AgentKnowledgeLensService", () => {
-    it("returns the standing memory for the exact customer view", async () => {
-        const { lens, recall } = await build()
-        recall.standingMemory.mockResolvedValueOnce("### Delivery\n- Days: Sunday")
-        await expect(lens.memoryFor(WS, "chatbot", null)).resolves.toBe("### Delivery\n- Days: Sunday")
-        expect(recall.standingMemory).toHaveBeenCalledWith({
-            workspaceId: WS,
-            module: "chatbot",
-            audience: "customer",
-            installationId: null,
-        })
-    })
-})
-
-describe("AgentKnowledgeLensService", () => {
     it("sorts rules by folder order and then slug, including tone and rejecting unrelated folders", async () => {
         const { lens, nivo } = await build()
         nivo.list.mockResolvedValueOnce([

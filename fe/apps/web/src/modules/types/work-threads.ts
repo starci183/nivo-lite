@@ -69,6 +69,8 @@ export interface ThreadMessageView {
     readonly isAgent: boolean
     /** The module glyph of an agent author; null for a person. */
     readonly glyph: ModuleIconName | null
+    /** The picture the owner gave an agent author; null draws the NIVO unicorn mascot. */
+    readonly avatarUrl: string | null
     readonly time: string
     readonly segments: ReadonlyArray<BodySegment>
     readonly quoted: ReadonlyArray<string>

@@ -1,4 +1,4 @@
-import { Badge, EmptyNotice, ListRow, SurfaceListCard, TextAction } from "@starci/grammar/common"
+import { Badge, ListRow, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 
 /** What the connections region shows once read. */
@@ -25,31 +25,31 @@ export interface ConnectionsRegionProps {
 }
 
 /** The connections bound to an agent, their status and what the agent may do through each. */
-export const ConnectionsRegion = (props: ConnectionsRegionProps) => (
-    <SurfaceListCard
-        label={props.label}
-        labelEnd={
-            <TextAction size="sm" href={props.view.manageHref} isSkeleton={props.isSkeleton}>
-                {props.view.manageLabel}
-            </TextAction>
-        }
-        empty={<EmptyNotice message={props.view.emptyMessage} description={props.view.emptyDescription} />}
-    >
-        {props.view.rows.map((row) => (
-            <ListRow
-                key={row.id}
-                isSkeleton={props.isSkeleton}
-                title={row.name}
-                description={row.description}
-                badges={
-                    <>
-                        <Badge tone={row.statusTone} isDot>
-                            {row.statusLabel}
-                        </Badge>
-                        <Badge tone="neutral">{row.accessLabel}</Badge>
-                    </>
-                }
-            />
-        ))}
-    </SurfaceListCard>
-)
+export const ConnectionsRegion = (props: ConnectionsRegionProps) =>
+    props.view.rows.length === 0 && !props.isSkeleton ? null : (
+        <SurfaceListCard
+            label={props.label}
+            labelEnd={
+                <TextAction size="sm" href={props.view.manageHref} isSkeleton={props.isSkeleton}>
+                    {props.view.manageLabel}
+                </TextAction>
+            }
+        >
+            {props.view.rows.map((row) => (
+                <ListRow
+                    key={row.id}
+                    isSkeleton={props.isSkeleton}
+                    title={row.name}
+                    description={row.description}
+                    badges={
+                        <>
+                            <Badge tone={row.statusTone} isDot>
+                                {row.statusLabel}
+                            </Badge>
+                            <Badge tone="neutral">{row.accessLabel}</Badge>
+                        </>
+                    }
+                />
+            ))}
+        </SurfaceListCard>
+    )

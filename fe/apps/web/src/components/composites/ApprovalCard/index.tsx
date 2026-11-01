@@ -19,6 +19,8 @@ import {
 interface ApprovalAgentView {
     readonly name: string
     readonly glyph: ModuleIconName
+    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    readonly avatarUrl: string | null
 }
 
 /** One drafted message with every word resolved and the state of its controls. */
@@ -82,6 +84,7 @@ export const ApprovalCard = (props: ApprovalCardProps) => {
                             <AgentMark
                                 glyph={nivoIconSource(view.agent.glyph, "leading")}
                                 label={view.agent.name}
+                                src={view.agent.avatarUrl}
                                 module="chatbot"
                                 size="sm"
                             />

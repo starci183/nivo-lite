@@ -19,16 +19,6 @@ export const PermissionRules = () => {
         <PermissionRulesBase
             props={{
                 title: t("tableTitle"),
-                description: t("tableDesc"),
-                columns: [
-                    { id: "action", label: t("columnAction"), isRowHeader: true },
-                    { id: "agents", label: t("columnAgents") },
-                    { id: "mode", label: t("columnMode") },
-                    { id: "group", label: t("columnGroup") },
-                    { id: "policy", label: t("columnPolicy") },
-                    { id: "edit", label: t("columnEdit") },
-                ],
-                noneLabel: t("none"),
                 editLabel: t("edit"),
                 footnote: t("footnote"),
                 isLocked: board.isLocked,

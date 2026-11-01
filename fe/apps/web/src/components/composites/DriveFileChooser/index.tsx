@@ -33,7 +33,8 @@ interface DriveListingView {
     readonly visibility: {
         readonly label: string
         readonly description: string
-        readonly value: string
+        /** The audience chosen; null until the owner chooses. */
+        readonly value: string | null
         readonly options: ReadonlyArray<{ readonly value: string; readonly label: string }>
     }
     readonly add: {

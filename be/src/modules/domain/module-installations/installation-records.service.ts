@@ -76,7 +76,7 @@ export class InstallationRecordsService {
     /** A page of installations of every workspace after this id (an empty text for the first page), by id, for a job that walks them all; removed ones are left out. */
     async page(afterId: string, limit: number): Promise<ReadonlyArray<InstallationRecord>> {
         const rows = await this.entityManager.find(ModuleInstallationEntity, {
-            where: { status: Not("removed"), id: MoreThan(afterId) },
+            where: afterId === "" ? { status: Not("removed") } : { status: Not("removed"), id: MoreThan(afterId) },
             order: { id: "ASC" },
             take: limit,
         })

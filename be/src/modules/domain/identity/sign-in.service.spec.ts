@@ -95,6 +95,16 @@ describe("IdentitySignInService / refresh, session and logout", () => {
         expect(cookies.issue).toHaveBeenCalledWith(exchange.res, TOKENS)
     })
 
+    it("leaves the cookie as the sibling wrote it when the token was just rotated by a racing request", async () => {
+        const { service, sessions, cookies, exchange } = await build()
+        sessions.refresh.mockResolvedValue({ ...TOKENS, cookieKept: true })
+
+        await expect(service.refresh(exchange)).resolves.toEqual(GRANT)
+
+        expect(cookies.issue).not.toHaveBeenCalled()
+        expect(cookies.clear).not.toHaveBeenCalled()
+    })
+
     it("clears the cookie and rethrows when the token cannot be used", async () => {
         const { service, sessions, cookies, exchange } = await build()
         const refusal = new IdentityError({ code: IdentityErrorCode.RefreshReused })

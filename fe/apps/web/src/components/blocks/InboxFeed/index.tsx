@@ -13,7 +13,6 @@ export const InboxFeed = () => {
     return (
         <InboxFeedBase
             props={{
-                ariaLabel: t("feedAria"),
                 title: t("feedTitle"),
                 description: t("feedDesc"),
                 refreshLabel: t("feedRefresh"),

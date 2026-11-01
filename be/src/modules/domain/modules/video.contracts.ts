@@ -34,7 +34,7 @@ export const VIDEO_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: false,
     agent: {
-        name: catalogCopy("modulesCatalog.video.agent.name", "en"),
+        label: catalogText("modulesCatalog.video.agent.label"),
         handle: "video",
         summary: catalogText("modulesCatalog.video.agent.summary"),
         capabilities: catalogList([

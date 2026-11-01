@@ -12,6 +12,7 @@ import {
     useDecisionHistory,
 } from "@/hooks/decisions"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { useQueryAgentsSwr } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 import type { DecisionKind, DecisionRecord } from "@/modules/types"
@@ -21,7 +22,7 @@ const ALL = "all"
 
 /** The modules the history can be filtered by and the filters it was opened with; the history itself is read here. */
 interface DecisionsBoardProps {
-    /** The module keys the department tabs offer, from the catalog. */
+    /** The module keys the department filter may offer, from the catalog; only the ones of an installed agent are listed. */
     readonly departments: ReadonlyArray<string>
     readonly kind: DecisionKind | null
     readonly department: string | null
@@ -37,6 +38,8 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
     const format = useFormatter()
     const { slot: history, reload } = useDecisionHistory(props.kind, props.department)
     const router = navigation.useRouter()
+    const installed = new Set((useQueryAgentsSwr({}).data ?? []).map((agent) => agent.module))
+    const departments = props.departments.filter((key) => installed.has(key) || key === props.department)
     const isFiltered = props.kind !== null || props.department !== null
     const rowOf = (row: DecisionRecord): DecisionsBoardRowView => {
         const parts = splitBasis(row.note)
@@ -84,7 +87,7 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
                 deptKey: props.department ?? ALL,
                 depts: [
                     { id: ALL, label: t("deptAll") },
-                    ...props.departments.map((key) => ({ id: key, label: g(`dept_${key}`) })),
+                    ...departments.map((key) => ({ id: key, label: g(`dept_${key}`) })),
                 ],
                 listAria: t("listAria"),
                 slot: mapSlot(history, listOf),
@@ -99,7 +102,7 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
             on={{
                 kind: (key) => router.push(decisionsHref(decisionKindOf(key), props.department)),
                 dept: (key) =>
-                    router.push(decisionsHref(props.kind, props.departments.find((module) => module === key) ?? null)),
+                    router.push(decisionsHref(props.kind, departments.find((module) => module === key) ?? null)),
                 clear: () => router.push(CONSOLE_ROUTES.decisions),
                 retry: reload,
             }}

@@ -19,7 +19,7 @@ const copyProblems = (module: ModuleDefinition): ReadonlyArray<string> => {
         [blank(module.purpose), "purpose is required"],
         [blank(module.icon) || blank(module.glyph) || blank(module.mascot), "icon, glyph and mascot are required"],
         [blank(module.knowledgeFolder), "knowledgeFolder is required"],
-        [blank(module.agent.name) || blank(module.agent.handle), "agent name and handle are required"],
+        [blankBilingual(module.agent.label) || blank(module.agent.handle), "agent label and handle are required"],
         [
             blankBilingual(module.agent.summary) ||
                 blankBilingual(module.agent.role) ||

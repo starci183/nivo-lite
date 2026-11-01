@@ -38,7 +38,7 @@ export const ACCOUNTING_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: false,
     agent: {
-        name: catalogCopy("modulesCatalog.accounting.agent.name", "en"),
+        label: catalogText("modulesCatalog.accounting.agent.label"),
         handle: "accounting",
         summary: catalogText("modulesCatalog.accounting.agent.summary"),
         capabilities: catalogList([

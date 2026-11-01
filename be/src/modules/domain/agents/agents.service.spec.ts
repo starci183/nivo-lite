@@ -13,7 +13,6 @@ import {
     WAITING_EXPECTED,
 } from "@tests/fixtures/builders/agents-dashboard.builder"
 import type { Lists } from "@tests/fixtures/builders/agents-dashboard.builder"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -22,9 +21,11 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { AgentCreationService } from "./agent-creation.service"
 import { AgentOwnershipService } from "./agent-ownership.service"
 import { AGENTS_CONNECTIONS, AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_WORK } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
+import { summaryOf } from "./agents.mapper"
 import type {
     AgentConnectionsDirectory,
     InstallationDirectory,
@@ -56,6 +57,7 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
     })
     const logger = mock<Logger>()
     const ownership = mock<AgentOwnershipService>()
+    const creation = mock<AgentCreationService>({ create: jest.fn(() => Promise.resolve(summaryOf(AGENT))) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentsService,
@@ -66,6 +68,7 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AGENTS_CONNECTIONS, useValue: bindings },
             { provide: AgentOwnershipService, useValue: ownership },
+            { provide: AgentCreationService, useValue: creation },
             { provide: AGENTS_WORK, useValue: work },
             { provide: AGENTS_KNOWLEDGE, useValue: knowledge },
         ],
@@ -78,6 +81,7 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
         bindings,
         logger,
         ownership,
+        creation,
         work,
     }
 }
@@ -104,6 +108,7 @@ const buildSetupMode = async () => {
             },
             { provide: AGENTS_CONNECTIONS, useValue: mock<AgentConnectionsDirectory>() },
             { provide: AgentOwnershipService, useValue: mock<AgentOwnershipService>() },
+            { provide: AgentCreationService, useValue: mock<AgentCreationService>() },
             { provide: AGENTS_WORK, useValue: work },
             { provide: AGENTS_KNOWLEDGE, useValue: null },
         ],
@@ -371,71 +376,19 @@ describe("AgentsService", () => {
 
 describe("AgentsService", () => {
     describe("create", () => {
-        const agent = {
-            workspaceId: "w1",
-            module: "chatbot",
-            name: "Bot",
-            handle: "bot",
-            role: "Front desk",
-            instructions: "Be kind",
-        }
-
-        it("adds the agent for a manager", async () => {
-            const em = mockEntityManager()
-            const insert = fakeQueryBuilder({ execute: { raw: [AGENT] } })
-            em.createQueryBuilder.mockReturnValue(insert.builder)
-            const { service, members } = await build(em)
+        it("hands the agent to the creation service and answers what it stored", async () => {
+            const { service, creation } = await build(mockEntityManager())
+            const agent = {
+                workspaceId: "w1",
+                module: "chatbot",
+                name: { label: "Chatbot" },
+                handle: "bot",
+                role: "Front desk",
+                instructions: "Be kind",
+            }
 
             await expect(service.create("u1", agent)).resolves.toMatchObject({ id: "a1", handle: "bot" })
-            expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
-            expect(em.createQueryBuilder).toHaveBeenCalledWith(AgentEntity, "ag")
-            expect(insert.callsOf("values")).toEqual([
-                [
-                    {
-                        workspaceId: "w1",
-                        module: "chatbot",
-                        name: "Bot",
-                        handle: "bot",
-                        role: "Front desk",
-                        instructions: "Be kind",
-                    },
-                ],
-            ])
-        })
-
-        it("refuses a handle another agent uses", async () => {
-            const em = mockEntityManager()
-            const duplicate = Object.assign(new Error("duplicate"), { code: "23505" })
-            em.createQueryBuilder.mockReturnValue(
-                fakeQueryBuilder({ execute: () => Promise.reject(duplicate) }).builder,
-            )
-            const { service } = await build(em)
-
-            await expect(service.create("u1", agent)).rejects.toMatchObject({
-                code: AgentsErrorCode.HandleTaken,
-                params: { handle: "bot" },
-            })
-        })
-
-        it.each([new Error("connection lost"), null, "connection lost", { code: "23503" }])(
-            "rethrows any other database failure as it came: %p",
-            async (failure) => {
-                const em = mockEntityManager()
-                em.createQueryBuilder.mockReturnValue(
-                    fakeQueryBuilder({ execute: () => Promise.reject(failure) }).builder,
-                )
-                const { service } = await build(em)
-
-                await expect(service.create("u1", agent)).rejects.toBe(failure)
-            },
-        )
-
-        it.each([[], undefined])("refuses when the insert answers no row (raw %p)", async (raw) => {
-            const em = mockEntityManager()
-            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: { raw } }).builder)
-            const { service } = await build(em)
-
-            await expect(service.create("u1", agent)).rejects.toMatchObject({ code: AgentsErrorCode.NotCreated })
+            expect(creation.create).toHaveBeenCalledWith("u1", agent)
         })
     })
 })

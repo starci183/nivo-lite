@@ -43,6 +43,8 @@ export interface AgentChatViewProps {
     readonly isStartDisabled: boolean
     readonly glyph: ModuleIconName
     readonly module: string
+    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    readonly avatarUrl: string | null
     readonly railTitle: string
     /** The trigger that opens the conversation rail where it is a drawer, and the control that closes it. */
     readonly historyLabel: string
@@ -102,6 +104,7 @@ const Thread = (props: AgentChatBaseProps) => (
                         {...props.props.messages}
                         glyph={props.props.glyph}
                         module={props.props.module}
+                        avatarUrl={props.props.avatarUrl}
                         isSkeleton={isSkeleton}
                     />
                 ) : (
@@ -109,6 +112,7 @@ const Thread = (props: AgentChatBaseProps) => (
                         {...props.props.empty}
                         glyph={props.props.glyph}
                         module={props.props.module}
+                        avatarUrl={props.props.avatarUrl}
                         onVisitorName={props.on.visitorName}
                         onPrompt={props.on.send}
                         onStart={props.on.start}
@@ -125,6 +129,7 @@ const Head = (props: AgentChatBaseProps) => (
         {...props.props.header}
         glyph={props.props.glyph}
         module={props.props.module}
+        avatarUrl={props.props.avatarUrl}
         onBack={props.on.back}
         onTakeover={props.on.toggleTakeover}
         onOpenLead={props.on.openLead}
@@ -164,6 +169,7 @@ const RailList = (props: RailListProps) => (
                 rows={rows}
                 glyph={props.view.glyph}
                 module={props.view.module}
+                avatarUrl={props.view.avatarUrl}
                 isSkeleton={isSkeleton}
                 onPick={props.onPick}
             />

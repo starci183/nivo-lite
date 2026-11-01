@@ -46,19 +46,11 @@ const outcomeOf = (wire: TurnWire, t: AgentWorkTranslator): Outcome => {
     return { label: t("outcomeDone"), tone: "success" }
 }
 
-/** The tokens, the cost and the time of a turn, only what is known. */
-const usageOf = (wire: TurnWire, context: AgentWorkContext): string => {
-    const parts: Array<string> = []
-    const tokens = (wire.promptTokens ?? 0) + (wire.completionTokens ?? 0)
-    if (tokens > 0) parts.push(context.t("usageTokens", { n: context.format.number(tokens) }))
-    if (wire.cost !== null && wire.cost !== undefined && wire.cost > 0) {
-        parts.push(context.t("usageCost", { n: context.format.number(wire.cost, { maximumFractionDigits: 4 }) }))
-    }
-    if (wire.durationMs !== null && wire.durationMs !== undefined) {
-        const seconds = Math.max(1, Math.round(wire.durationMs / 1000))
-        parts.push(context.t("usageSeconds", { n: context.format.number(seconds) }))
-    }
-    return parts.join(" · ")
+/** How long a turn took, when it is known. Tokens and raw cost are not shown to the owner. */
+const durationOf = (wire: TurnWire, context: AgentWorkContext): string => {
+    if (wire.durationMs === null || wire.durationMs === undefined) return ""
+    const seconds = Math.max(1, Math.round(wire.durationMs / 1000))
+    return context.t("usageSeconds", { n: context.format.number(seconds) })
 }
 
 const isQuiet = (wire: TurnWire): boolean => wire.wakeStatus === "skipped" && wire.reason === "no_work"
@@ -71,7 +63,7 @@ const toTurnView = (wire: TurnWire, context: AgentWorkContext): AgentWorkTurnVie
         outcomeLabel: outcome.label,
         outcomeTone: outcome.tone,
         wokeLabel: relative(context, wire.wokeAt),
-        usageLabel: usageOf(wire, context),
+        durationLabel: durationOf(wire, context),
         workItemHref: workItemHrefOf(context, wire.workItemId),
     }
 }

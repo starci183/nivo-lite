@@ -43,7 +43,12 @@ export const AgentConnectionAccessBase = (props: AgentConnectionAccessBaseProps)
             <Text size="sm" tone="muted">
                 {props.props.hint}
             </Text>
-            <SlotView slot={props.props.slot} placeholder={props.props.placeholder} labels={props.props.slotLabels}>
+            <SlotView
+                slot={props.props.slot}
+                placeholder={props.props.placeholder}
+                labels={props.props.slotLabels}
+                empty="collapse"
+            >
                 {(rows, isSkeleton) => (
                     <>
                         {rows.map((row) => (
@@ -75,6 +80,7 @@ export const AgentConnectionAccessBase = (props: AgentConnectionAccessBaseProps)
                     </>
                 )}
             </SlotView>
+            {props.props.slot.items?.length === 0 ? <Text size="sm">{props.props.slotLabels.empty}</Text> : null}
             {props.props.notice === "" ? null : <Alert tone="informative" title={props.props.notice} />}
             <Cluster gap="row">
                 <TextAction href={props.props.manageHref} size="sm" appearance="inline">

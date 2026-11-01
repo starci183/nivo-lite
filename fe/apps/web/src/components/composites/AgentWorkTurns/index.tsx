@@ -2,7 +2,7 @@ import { Badge, Button, Text } from "@starci/grammar/common"
 import { AgentWorkRows } from "@/components/branches/AgentWorkRows"
 import type { AgentWorkTurnsView } from "@/modules/types"
 
-/** The recent turns of the agent: why it woke, what it did, what it cost. */
+/** The recent turns of the agent: why it woke, what it did, how long it took. */
 interface AgentWorkTurnsProps {
     readonly label: string
     readonly emptyMessage: string
@@ -20,7 +20,7 @@ export const AgentWorkTurns = (props: AgentWorkTurnsProps) => (
             rows={props.turns.rows.map((turn) => ({
                 id: turn.id,
                 title: turn.sourceLabel,
-                facts: [turn.wokeLabel, turn.usageLabel],
+                facts: [turn.wokeLabel, turn.durationLabel],
                 badges: <Badge tone={turn.outcomeTone}>{turn.outcomeLabel}</Badge>,
                 actions:
                     turn.workItemHref === null ? undefined : (

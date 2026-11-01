@@ -129,8 +129,6 @@ export interface KnowledgeLens {
         installationId: OptionalId,
         limit: number,
     ): Promise<ReadonlyArray<KnowledgeDocument>>
-    /** The standing memory of the shared brain seen through the lens, as markdown ("" when the brain has none). */
-    memoryFor(workspaceId: string, module: string, installationId: OptionalId): Promise<string>
     /** The authority, escalation and tone rules of the module folders, module before core. */
     baseRulesOf(folders: ReadonlyArray<string>): Promise<ReadonlyArray<BaseRule>>
     /** Document and fact counts by visibility. */

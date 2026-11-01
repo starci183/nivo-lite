@@ -222,14 +222,15 @@ export class DocumentFactsService {
                     attributeLabel: fact.attributeLabel,
                     value: fact.value,
                     unit: fact.unit,
-                    // Public only when the model says so AND the owner marked the document public; otherwise the audience of the fact it may replace.
-                    scope: fact.scope === "public" && source.visibility === "public" ? "public" : undefined,
+                    // A fact takes the level the owner gave the document: public from a public document whatever the model judged, and from an
+                    // internal document the audience of the fact it may replace (never wider than internal).
+                    scope: source.visibility === "public" ? "public" : undefined,
                     sourceKind: "document",
                     validFrom: fact.validFrom,
                     autoApply: false,
                     // A document kept for one agent instance proposes facts for that instance only.
                     installationId: source.installationId,
-                    proposedBy: `Document: ${source.title.slice(0, 80)}`,
+                    proposedBy: source.title.slice(0, 80),
                     evidence: [this.documentEvidence(source, fact.quote)],
                 })
                 filed += 1

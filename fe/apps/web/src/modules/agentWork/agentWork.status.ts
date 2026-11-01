@@ -91,7 +91,7 @@ export const WORK_PLACEHOLDER: AgentWorkView = {
                 outcomeLabel: "-",
                 outcomeTone: "neutral",
                 wokeLabel: "-",
-                usageLabel: "-",
+                durationLabel: "",
                 workItemHref: null,
             },
         ],

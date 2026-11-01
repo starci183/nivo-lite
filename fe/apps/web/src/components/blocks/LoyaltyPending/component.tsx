@@ -146,11 +146,8 @@ const renderPendingDraft = ({ row, props, isPending }: RenderPendingDraftContext
             </Text>
         )}
         {row.draft !== "" && !row.isEditing ? (
-            <SurfaceCard ariaLabel={props.props.draftLabel}>
+            <SurfaceCard label={props.props.draftLabel} headingLevel={4}>
                 <div className={QUOTE_CLASS_NAME}>
-                    <Text size="xs" tone="muted" weight="medium">
-                        {props.props.draftLabel}
-                    </Text>
                     <Text as="p" size="sm">
                         {row.draft}
                     </Text>

@@ -43,12 +43,15 @@ const conditionsOf = (value: string): ReadonlyArray<string> => {
     return CONDITIONS.filter((condition) => key.includes(`-${condition}-`))
 }
 
+/** Who proposed a fact, as a person reads it: the title of the document without the English tag older rows carry. */
+export const proposerOf = (fact: BrainFact): string => fact.proposedBy.replace(/^Document:s*/u, "")
+
 const dayOf = (iso: string): string => iso.slice(0, 10).split("-").reverse().join("/")
 
 /** The first suggestion that fits a proposal that has no value in force to replace. */
 const firstValue = (p: BrainFact): ReviewAdvice =>
     p.trust >= TRUST.staff
-        ? { action: "apply", reasonKey: "reasonFirstTrusted", params: { who: p.proposedBy, trust: p.trust } }
+        ? { action: "apply", reasonKey: "reasonFirstTrusted", params: { who: proposerOf(p), trust: p.trust } }
         : { action: "ask", reasonKey: "reasonFirstUntrusted", params: { trust: p.trust } }
 
 /**
@@ -79,7 +82,7 @@ export const adviceFor = (p: BrainFact, current: BrainFact | null, now: number):
         }
     }
     if (p.sourceKind === "system" && p.evidence.some((item) => item.kind === "data_record")) {
-        return { action: "apply", reasonKey: "reasonSystem", params: { who: p.proposedBy, current: current.value } }
+        return { action: "apply", reasonKey: "reasonSystem", params: { who: proposerOf(p), current: current.value } }
     }
     if (p.trust + 20 <= current.trust && (p.sourceKind === "customer" || p.sourceKind === "ai")) {
         return {
@@ -99,7 +102,7 @@ export const adviceFor = (p: BrainFact, current: BrainFact | null, now: number):
         return {
             action: "apply",
             reasonKey: "reasonNewer",
-            params: { who: p.proposedBy, trust: p.trust, currentTrust: current.trust, current: current.value },
+            params: { who: proposerOf(p), trust: p.trust, currentTrust: current.trust, current: current.value },
         }
     }
     if (staleDays >= STALE_DAYS) {
@@ -108,6 +111,6 @@ export const adviceFor = (p: BrainFact, current: BrainFact | null, now: number):
     return {
         action: "ask",
         reasonKey: "reasonAsk",
-        params: { who: p.proposedBy, trust: p.trust, currentTrust: current.trust },
+        params: { who: proposerOf(p), trust: p.trust, currentTrust: current.trust },
     }
 }

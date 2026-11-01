@@ -89,9 +89,8 @@ export interface KnowledgeAddBaseProps {
         readonly drive: DriveView
         readonly title: string
         readonly submitLabel: string
-        /** The owner has not chosen who may read: the add button waits, and says why. */
-        readonly isSubmitBlocked: boolean
-        readonly submitBlockedReason: string
+        /** Why the add is off (nobody chose who reads it yet); empty when it is on. */
+        readonly submitBlocked: string
         readonly failTitle: string
         readonly isBusy: boolean
         readonly modeLabel: string
@@ -150,7 +149,19 @@ export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) =>
                     isDisabled={props.props.isBusy}
                     onValueChange={props.on.setMode}
                 />
-                {props.props.mode === "files" ? <FilesPart {...props} /> : <NotePart {...props} />}
+                {props.props.mode === "files" ? (
+                    <FilesPart {...props} />
+                ) : (
+                    <AddNotePanel
+                        {...props.props.note}
+                        isBusy={props.props.isBusy}
+                        onTitle={props.on.setTitle}
+                        onContent={props.on.setContent}
+                        onPair={props.on.setPair}
+                        onAddPair={props.on.addPair}
+                        onRemovePair={props.on.removePair}
+                    />
+                )}
                 <AddVisibilityPanel
                     {...props.props.visibility}
                     isBusy={props.props.isBusy}
@@ -167,8 +178,8 @@ export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) =>
                     <Button
                         intent="commit"
                         isPending={props.props.isBusy}
-                        isDisabled={props.props.isSubmitBlocked}
-                        {...(props.props.isSubmitBlocked ? { disabledReason: props.props.submitBlockedReason } : {})}
+                        isDisabled={props.props.submitBlocked !== ""}
+                        {...(props.props.submitBlocked === "" ? {} : { disabledReason: props.props.submitBlocked })}
                         onPress={props.on.submit}
                     >
                         {props.props.submitLabel}
@@ -226,17 +237,4 @@ const FilesPart = (props: KnowledgeAddBaseProps) => (
             )}
         </div>
     </>
-)
-
-/** The written note, or the questions with their answers. */
-const NotePart = (props: KnowledgeAddBaseProps) => (
-    <AddNotePanel
-        {...props.props.note}
-        isBusy={props.props.isBusy}
-        onTitle={props.on.setTitle}
-        onContent={props.on.setContent}
-        onPair={props.on.setPair}
-        onAddPair={props.on.addPair}
-        onRemovePair={props.on.removePair}
-    />
 )

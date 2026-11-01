@@ -37,6 +37,7 @@ export const useSalesWaiting = () => {
         needsAnswer: t("kind_clarify"),
         needsDecision: t("kind_decision"),
         incomplete: t("salesDecisionInvalid"),
+        reasonReady: t("waitingReason"),
         unknownCustomer: t("waitingUnknownCustomer"),
     }
     const rows = pending?.slice(0, SALES_WAITING_SHOWN).map((decision) =>

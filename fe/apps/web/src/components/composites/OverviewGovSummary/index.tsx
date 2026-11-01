@@ -23,30 +23,30 @@ export const OverviewGovSummary = (props: OverviewGovSummaryProps) => {
     return (
         <AccountingBlock label={props.figures.title}>
             <SectionHeader level={2} title={props.figures.title} description={props.figures.motto} />
-            <SurfaceCard ariaLabel={props.figures.title}>
-                <Stack gap="row">
+            <Stack gap="row">
+                <Stack gap="identity">
                     <Text weight="semibold">{props.figures.sentence}</Text>
                     <Text size="sm" tone="muted">
                         {props.figures.median}
                     </Text>
-                    <Grid kind="cards" columns={3}>
-                        {tiles.map(({ department, action }) => (
-                            <SurfaceCard key={department.id} wholeAction={action}>
-                                <Stack gap="identity">
-                                    <Text weight="semibold">{department.name}</Text>
-                                    <Text size="sm">{department.done}</Text>
-                                    <Text size="sm" tone={department.hasWaiting ? "accent" : "muted"}>
-                                        {department.waiting}
-                                    </Text>
-                                    <Text size="xs" tone="muted">
-                                        {department.last}
-                                    </Text>
-                                </Stack>
-                            </SurfaceCard>
-                        ))}
-                    </Grid>
                 </Stack>
-            </SurfaceCard>
+                <Grid kind="cards" columns={3}>
+                    {tiles.map(({ department, action }) => (
+                        <SurfaceCard key={department.id} wholeAction={action}>
+                            <Stack gap="identity">
+                                <Text weight="semibold">{department.name}</Text>
+                                <Text size="sm">{department.done}</Text>
+                                <Text size="sm" tone={department.hasWaiting ? "accent" : "muted"}>
+                                    {department.waiting}
+                                </Text>
+                                <Text size="xs" tone="muted">
+                                    {department.last}
+                                </Text>
+                            </Stack>
+                        </SurfaceCard>
+                    ))}
+                </Grid>
+            </Stack>
         </AccountingBlock>
     )
 }

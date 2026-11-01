@@ -1,5 +1,4 @@
-import { Fragment } from "react"
-import { Badge, Cluster, Divider, SectionHeader, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, EmptyNotice, ListRow, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovHistoryRow } from "@/hooks/overviewGov"
 
@@ -15,49 +14,27 @@ export interface OverviewGovHistoryProps {
     }
 }
 
-/** The latest decisions of the log. */
+/** The latest decisions of the log: one row each in one list, the source under it. */
 export const OverviewGovHistory = (props: OverviewGovHistoryProps) => (
     <AccountingBlock label={props.figures.title}>
-        <SectionHeader
-            level={2}
-            title={props.figures.title}
-            action={
+        <SurfaceListCard
+            label={props.figures.title}
+            labelEnd={
                 <TextAction href={props.figures.allHref} appearance="section">
                     {props.figures.allLabel}
                 </TextAction>
             }
-        />
-        <SurfaceCard ariaLabel={props.figures.title}>
-            <Stack gap="row">
-                {props.figures.rows.length === 0 ? (
-                    <Text tone="muted">{props.figures.empty}</Text>
-                ) : (
-                    <Stack gap="row">
-                        {props.figures.rows.map((row, index) => (
-                            <Fragment key={row.id}>
-                                {index > 0 ? <Divider semantics="presentation" /> : null}
-                                <Stack gap="identity">
-                                    <Cluster gap="inline">
-                                        <Text size="sm" weight="semibold">
-                                            {row.action}
-                                        </Text>
-                                        <Badge tone={row.outcomeTone}>{row.outcome}</Badge>
-                                        <Text size="xs" tone="muted">
-                                            {row.when}
-                                        </Text>
-                                    </Cluster>
-                                    <Text size="sm" tone="muted">
-                                        {row.detail}
-                                    </Text>
-                                </Stack>
-                            </Fragment>
-                        ))}
-                    </Stack>
-                )}
-                <Text size="xs" tone="muted">
-                    {props.figures.source}
-                </Text>
-            </Stack>
-        </SurfaceCard>
+            empty={<EmptyNotice message={props.figures.empty} />}
+            footer={props.figures.source}
+        >
+            {props.figures.rows.map((row) => (
+                <ListRow
+                    key={row.id}
+                    title={row.action}
+                    description={`${row.when} · ${row.detail}`}
+                    badges={<Badge tone={row.outcomeTone}>{row.outcome}</Badge>}
+                />
+            ))}
+        </SurfaceListCard>
     </AccountingBlock>
 )

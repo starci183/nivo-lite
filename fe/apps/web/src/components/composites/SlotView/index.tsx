@@ -12,6 +12,8 @@ type SlotViewProps<T> = {
     readonly forbidden?: "hide" | "notice"
     /** Drawn under the forbidden notice of a primary slot: the way out (a link back). */
     readonly forbiddenAction?: ReactNode
+    /** A slot with nothing in it: its notice (default), or nothing at all for a box that collapses when empty. */
+    readonly empty?: "notice" | "collapse"
     readonly onRetry?: () => void
     readonly children: (data: T, isSkeleton: boolean) => ReactNode
 }
@@ -44,7 +46,7 @@ export const SlotView = <T,>(props: SlotViewProps<T>) => {
     }
     const items = slot.items
     if (items === undefined || (Array.isArray(items) && items.length === 0)) {
-        return <EmptyNotice message={labels.empty} />
+        return props.empty === "collapse" ? null : <EmptyNotice message={labels.empty} />
     }
     return <>{props.children(items, false)}</>
 }

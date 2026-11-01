@@ -45,14 +45,20 @@ export const OverviewLoadingPageBase = (props: OverviewLoadingPageBaseProps) => 
         }}
     >
         <Stack gap="section">
-            {props.props.blocks.map((block) => (
-                <AccountingBlock key={block.id} label={block.title}>
-                    <SectionHeader level={2} title={block.title} description={block.description ?? undefined} />
-                    <SurfaceCard ariaLabel={block.title}>
-                        <Skeleton shape="text" lines={block.lines} />
+            <Stack gap="row">
+                {props.props.blocks.map((block) => (
+                    <SurfaceCard key={block.id} label={block.title} headingLevel={2}>
+                        <Stack gap="row">
+                            {block.description === null ? null : (
+                                <Text size="sm" tone="muted">
+                                    {block.description}
+                                </Text>
+                            )}
+                            <Skeleton shape="text" lines={block.lines} />
+                        </Stack>
                     </SurfaceCard>
-                </AccountingBlock>
-            ))}
+                ))}
+            </Stack>
             <SectionHeader level={2} title={props.props.ownerBelowTitle} />
             <AccountingBlock label={props.props.kpiLabel}>
                 <Grid kind="cards">
@@ -68,8 +74,7 @@ export const OverviewLoadingPageBase = (props: OverviewLoadingPageBaseProps) => 
                     ))}
                 </Grid>
             </AccountingBlock>
-            <SectionHeader level={2} title={props.props.byOwnerTitle} />
-            <SurfaceListCard ariaLabel={props.props.listLabel} isLoading />
+            <SurfaceListCard label={props.props.byOwnerTitle} isLoading />
         </Stack>
     </Page>
 )

@@ -1,6 +1,6 @@
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import { Button, ListRow, SectionHeader, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
-import { QUOTE_CLASS_NAME, ACTIONS_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
+import { Button, ListRow, Stack, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
+import { QUOTE_CLASS_NAME, ACTIONS_CLASS_NAME } from "./classNames"
 
 /** One decision that waits for the owner, every word already resolved. */
 export interface PendingRowView {
@@ -32,10 +32,18 @@ export const InventoryPendingBase = (props: InventoryPendingBaseProps) => {
     const { props: p, on } = props
     if (p.rows.length === 0) return null
     return (
-        <div className={STACK_CLASS_NAME}>
-            <SectionHeader level={2} title={p.title} count={p.count} description={p.description} />
+        <Stack gap="row">
             <InventoryNotices error={p.error} />
-            <SurfaceListCard ariaLabel={p.title}>
+            <SurfaceListCard
+                label={p.title}
+                headingLevel={2}
+                fact={`(${p.count})`}
+                footer={
+                    <Text size="sm" tone="muted">
+                        {p.description}
+                    </Text>
+                }
+            >
                 {p.rows.map((row) => (
                     <ListRow
                         key={row.id}
@@ -71,6 +79,6 @@ export const InventoryPendingBase = (props: InventoryPendingBaseProps) => {
                     </ListRow>
                 ))}
             </SurfaceListCard>
-        </div>
+        </Stack>
     )
 }

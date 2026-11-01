@@ -1,7 +1,7 @@
 import { RadioGroup } from "@starci/grammar/common"
 
 /** One choice of who may read a document. */
-export interface VisibilityChoiceView {
+interface VisibilityChoiceView {
     readonly id: string
     readonly label: string
 }
@@ -11,7 +11,8 @@ export interface AddVisibilityView {
     readonly label: string
     /** What the chosen audience means for the answers of the agents, in plain words. */
     readonly consequence: string
-    readonly value: string
+    /** The audience chosen; null until the owner chooses, nothing is preselected. */
+    readonly value: string | null
     readonly options: ReadonlyArray<VisibilityChoiceView>
 }
 

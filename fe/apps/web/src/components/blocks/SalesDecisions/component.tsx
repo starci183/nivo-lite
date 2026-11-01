@@ -1,4 +1,4 @@
-import { Badge, EmptyNotice, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Badge, EmptyNotice, SurfaceListCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { SalesDecisionRow } from "@/components/composites/SalesDecisionRow"
 import type { DecisionRowActions, DecisionRowLabels, DecisionRowView } from "@/components/composites/SalesDecisionRow"
@@ -47,9 +47,14 @@ export const SalesDecisionsBase = (props: SalesDecisionsBaseProps) => {
                     <SalesDecisionRow key={row.id} row={row} labels={p.rowLabels} on={on} />
                 ))}
             </SurfaceListCard>
-            <SectionHeader level={2} title={p.decidedTitle} description={p.decidedBody} />
             <SurfaceListCard
-                ariaLabel={p.decidedTitle}
+                label={p.decidedTitle}
+                headingLevel={2}
+                footer={
+                    <Text size="sm" tone="muted">
+                        {p.decidedBody}
+                    </Text>
+                }
                 empty={<EmptyNotice message={p.decidedEmptyTitle} description={p.decidedEmptyBody} />}
             >
                 {p.decided.map((row) => (

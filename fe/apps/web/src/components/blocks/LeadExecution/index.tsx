@@ -3,11 +3,13 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { approvalAgentGlyph, useApprovalDecision } from "@/hooks/approval"
 import { executionsOf } from "@/hooks/leadJourney"
+import { useAgentPictures } from "@/hooks/installations"
 import { useLeadActions, useLeadJourney } from "@/hooks/leads"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { DataSlot, ExecutionRecord, LeadJourney } from "@/modules/types"
 import { LeadExecutionBase } from "./component"
 import type { DraftItem, ExecutionView } from "./component"
+import { buildExecutionDraftView } from "./draftView"
 
 /** The lead the panel acts on; null while it loads. */
 interface LeadExecutionProps {
@@ -23,6 +25,7 @@ export const LeadExecution = (props: LeadExecutionProps) => {
     const slotLabels = useSlotLabels()
     const query = useLeadJourney(props.leadId)
     const actions = useLeadActions()
+    const pictureOf = useAgentPictures()
     const detail = query.detail
     const { pending, earlier, currentStep } =
         detail === null ? { pending: null, earlier: [], currentStep: null } : executionsOf(detail)
@@ -34,22 +37,22 @@ export const LeadExecution = (props: LeadExecutionProps) => {
     const actorName = owner?.name ?? "AI"
 
     const itemOf = (loaded: LeadJourney, draft: ExecutionRecord, isWaiting: boolean): DraftItem => {
-        const agentName = agents.find((agent) => agent.id === draft.agent_id)?.name ?? null
-        const statusWord = draft.status === "approved" ? a("approved") : a("rejected")
+        const drafter = agents.find((agent) => agent.id === draft.agent_id)
+        const agent =
+            drafter === undefined
+                ? null
+                : { name: drafter.name, glyph: approvalAgentGlyph(), avatarUrl: pictureOf(drafter) }
         const decidedAt =
             draft.decided_at === null
                 ? ""
                 : ` · ${format.dateTime(new Date(draft.decided_at), { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Ho_Chi_Minh" })}`
-        const isEditing = isWaiting && approval.isEditing
         return buildExecutionDraftView({
             draft,
             loaded,
             t,
             a,
-            agentName,
+            agent,
             isWaiting,
-            statusWord,
-            isEditing,
             approval,
             decidedAt,
         })
@@ -144,54 +147,5 @@ const buildExecutionPanelView = ({
                 discardEdits: a("discardEdits"),
                 reject: a("reject"),
             },
-        },
-    }) as const
-
-/** Inputs needed to build the LeadExecutionContent section. */
-interface BuildExecutionDraftViewContext {
-    readonly draft: ExecutionRecord
-    readonly loaded: LeadJourney
-    readonly t: ReturnType<typeof useTranslations<"lead">>
-    readonly a: ReturnType<typeof useTranslations<"approval">>
-    readonly agentName: string | null
-    readonly isWaiting: boolean
-    readonly statusWord: string
-    readonly isEditing: boolean
-    readonly approval: ReturnType<typeof useApprovalDecision>
-    readonly decidedAt: string
-}
-/** Builds the LeadExecutionContent section from the current view. */
-const buildExecutionDraftView = ({
-    draft,
-    loaded,
-    t,
-    a,
-    agentName,
-    isWaiting,
-    statusWord,
-    isEditing,
-    approval,
-    decidedAt,
-}: BuildExecutionDraftViewContext): DraftItem =>
-    ({
-        id: draft.id,
-        view: {
-            nextAction:
-                loaded.responsibilities.find((step) => step.id === draft.responsibility_id)?.next_action ??
-                t("defaultNextAction"),
-            willSend: a("willSend", { lead: loaded.lead.contact_name, channel: loaded.lead.channel }),
-            agent: agentName === null ? null : { name: agentName, glyph: approvalAgentGlyph() },
-            status: isWaiting
-                ? { label: a("needsApproval"), tone: "warning" }
-                : { label: statusWord, tone: draft.status === "approved" ? "success" : "danger" },
-            draft: draft.draft,
-            characters: a("characters", { count: (isEditing ? approval.editText : draft.draft).length }),
-            settledLabel: `${a("decidedBy", { status: statusWord, who: draft.decided_by ?? a("teammate") })}${decidedAt}`,
-            isWaiting,
-            canDecide: approval.canDecide,
-            isEditing,
-            editText: approval.editText,
-            pendingDecision: isWaiting ? approval.pendingDecision : null,
-            error: isWaiting ? approval.error : null,
         },
     }) as const

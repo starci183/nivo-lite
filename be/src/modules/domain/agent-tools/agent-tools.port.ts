@@ -5,6 +5,7 @@ import type {
     BookingToolName,
     GatewayToolName,
     JsonResult,
+    KnowledgeCaller,
     KnowledgePassages,
     LeadDraft,
     LeadWriteResult,
@@ -19,7 +20,9 @@ import type {
 /** Reads the PUBLIC customer knowledge of the conversation's own installation (owner: the knowledge lane). */
 export interface KnowledgeSearch {
     /** The passages and citations for a query; customer audience only. */
-    search(ctx: ToolContext, query: string): Promise<KnowledgePassages>
+    search(caller: KnowledgeCaller, query: string): Promise<KnowledgePassages>
+    /** The standing memory of the shared brain through the caller's view. */
+    memory(caller: KnowledgeCaller): Promise<string>
 }
 
 /**

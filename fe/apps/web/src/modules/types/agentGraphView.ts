@@ -283,7 +283,6 @@ export interface AgentGraphModeView {
 
 /** The history of the graph. */
 export interface AgentGraphVersionsView {
-    readonly mode: AgentGraphModeView
     readonly title: string
     readonly hint: string
     readonly items: ReadonlyArray<AgentGraphVersionView>
@@ -312,6 +311,8 @@ export interface AgentGraphBranchesView {
 /** Everything the graph panes draw once the graph is in, every word resolved. */
 export interface AgentGraphPanelView {
     readonly head: AgentGraphHeadView
+    /** The switch beside the map: does the agent work by the map or only record it. */
+    readonly mode: AgentGraphModeView
     readonly canvas: AgentGraphCanvasView
     readonly sideTab: AgentGraphSideTab
     readonly tabsLabel: string

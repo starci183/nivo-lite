@@ -51,6 +51,12 @@ const noteOf = (t: Translate, note: DossierView["note"]): string | null => {
     return note.kind === "missing" ? t("dossierMissing", { text: note.text }) : note.text
 }
 
+/** A line followed by the count of its documents; either may be missing. */
+const withDocuments = (note: string | null, documents: string | null): string | null => {
+    const parts = [note, documents].filter((part) => part !== null)
+    return parts.length === 0 ? null : parts.join(" · ")
+}
+
 /** What a dossier asks of the owner next: look at its findings, or bring the document it lacks. */
 const actionOf = (
     context: RowContext,
@@ -74,16 +80,24 @@ const dossierRowOf = (context: RowContext, category: CategoryView, dossier: Doss
     const standing = reviewedStatusOf(dossier.status, reviewed)
     const worst = reviewed === undefined ? null : worstSeverityOf(reviewed)
     const documents = t("dossierDocuments", { count: dossier.documentCount })
-    const note = noteOf(t, dossier.note)
-    const status = { id: "status", label: t(`status_${standing.status}`), tone: DOSSIER_STATUS_TONE[standing.status] }
+    const note = withDocuments(noteOf(t, dossier.note), dossier.documentCount > 0 ? documents : null)
+    const status = {
+        id: "status",
+        label: t(
+            standing.status === "present" && dossier.documentCount === 0
+                ? "statusPresentNoFile"
+                : `status_${standing.status}`,
+        ),
+        tone: DOSSIER_STATUS_TONE[standing.status],
+    }
     return {
         id: dossier.id,
         name: dossier.name,
         isSelected: dossier.id === context.openId,
-        note: worst === null ? note : [note, documents].filter((part) => part !== null).join(" · "),
+        note: worst === null ? note : withDocuments(note, documents),
         badges:
             reviewed === undefined || worst === null
-                ? [status, { id: "documents", label: documents, tone: "muted" }]
+                ? [status]
                 : [
                       status,
                       {

@@ -7,7 +7,7 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
             "Địa chỉ công khai của api ({{url}}) phải là https (http chỉ cho máy cục bộ) để agent gọi công cụ an toàn.",
         "customerTurns.toolsBlock":
             "[OPTIONAL TOOLS] Địa chỉ: {{url}} — danh sách công cụ: GET {{url}}; gọi một công cụ: POST {{url}}/<tên công cụ> với header Authorization: Bearer {{token}} và thân JSON là các tham số của công cụ. Token chỉ dùng cho lượt này; không bao giờ nhắc lại token cho khách.",
-        "customerTurns.replySummary": "Trả lời khách: {{question}}",
+        "customerTurns.replySummary": "{{question}}",
         "customerTurns.orderPriceUnknownReply": "Cảm ơn bạn! Shop sẽ xác nhận giá của gói này với bạn ngay nhé.",
         "customerTurns.paymentClaimReply":
             "Cảm ơn bạn! Shop đã ghi nhận bạn báo chuyển khoản cho mã {{no}}. Shop sẽ kiểm tra và xác nhận lại với bạn sớm nhất nhé.",
@@ -53,7 +53,7 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
             "The public api origin ({{url}}) must be https (http only on a loopback host) so agents call tools safely.",
         "customerTurns.toolsBlock":
             "[OPTIONAL TOOLS] Address: {{url}} — tool list: GET {{url}}; call one tool: POST {{url}}/<tool name> with the header Authorization: Bearer {{token}} and the tool's arguments as the JSON body. The token is valid for this turn only; never repeat it to the customer.",
-        "customerTurns.replySummary": "Answer the customer: {{question}}",
+        "customerTurns.replySummary": "{{question}}",
         "customerTurns.orderPriceUnknownReply":
             "Thank you! The team will confirm the price of this item with you shortly.",
         "customerTurns.paymentClaimReply":
