@@ -1,5 +1,6 @@
 export { toBrainExtraction, toBrainFact, toBrainGap, toBrainLens, toBrainLesson } from "./brain.mapper"
 export { adviceFor, proposerOf } from "./advice"
+export { appliedBatchOf, waitingFactCountOf } from "./bulk"
 export { reviewBoardOf } from "./board"
 export type { ReviewConflict, ReviewSingle } from "./board"
 export { figuresOf } from "./figures"

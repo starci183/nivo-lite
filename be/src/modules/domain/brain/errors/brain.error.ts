@@ -7,12 +7,15 @@ export enum BrainErrorCode {
     ModelUnavailable = "BRAIN_MODEL_UNAVAILABLE",
     /** The caller asked for a command they never made. */
     CommandNotFound = "BRAIN_COMMAND_NOT_FOUND",
+    /** Facts are applied together only from a document kept internal: a bulk path never makes anything public. */
+    BulkNeedsInternal = "BRAIN_BULK_NEEDS_INTERNAL",
 }
 
 /** How each brain code travels. */
 export const BRAIN_ERROR_KINDS: Record<BrainErrorCode, ErrorKind> = {
     [BrainErrorCode.ModelUnavailable]: "unavailable",
     [BrainErrorCode.CommandNotFound]: "not-found",
+    [BrainErrorCode.BulkNeedsInternal]: "conflict",
 }
 
 /** The one error class of the brain capability. */

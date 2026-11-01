@@ -68,13 +68,10 @@ const dossierRowOf = (context: RowContext, dossier: DossierView): DossierRowView
     const worst = reviewed === undefined ? null : worstSeverityOf(reviewed)
     const documents = t("dossierDocuments", { count: dossier.documentCount })
     const note = withDocuments(noteOf(t, dossier.note), dossier.documentCount > 0 ? documents : null)
+    const bare = standing.status === "present" && dossier.documentCount === 0
     const status = {
         id: "status",
-        label: t(
-            standing.status === "present" && dossier.documentCount === 0
-                ? "statusPresentNoFile"
-                : `status_${standing.status}`,
-        ),
+        label: t(bare ? "statusPresentNoFile" : `status_${standing.status}`),
         tone: DOSSIER_STATUS_TONE[standing.status],
     }
     return {
@@ -129,36 +126,31 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
     const member = useWorkspaceMember()
     const slotLabels = useSlotLabels()
     const { categories, slot, reload, usage } = useBrainDossiers()
-    const usageView = useUsageView(usage)
-    const header = useBrainPageHeader("dossiers", props.header)
     const summary = useDossierReviewSummary()
     const commands = useDossierReviewCommands()
     const checklist = useChecklistImport(reload, member.canWrite)
     const [picked, setPicked] = useState<string | undefined>(undefined)
     const [isCategoriesOpen, setCategoriesOpen] = useState(false)
     const context: RowContext = { t, review, reviewOf: summary.reviewOf, openId: props.dossier }
-    const counts = statusCountsOf(
-        categories ?? [],
-        (dossier) => reviewedStatusOf(dossier.status, summary.reviewOf(dossier.id)).status,
-    )
-    const total = counts.reduce((sum, one) => sum + one.count, 0)
+    const statusOf = (dossier: DossierView) => reviewedStatusOf(dossier.status, summary.reviewOf(dossier.id)).status
+    const counts = statusCountsOf(categories ?? [], statusOf)
     return (
         <BrainDossiersBase
             shape={{ detail: props.dossier === undefined ? null : props.detail, draftDrawer: props.draftDrawer }}
             props={{
-                header,
+                header: useBrainPageHeader("dossiers", props.header),
                 panelId: `${BRAIN_PANEL_PREFIX}dossiers`,
                 gridLabel: t("dossiersGridLabel"),
                 categoriesLabel: t("dossiersCategories"),
                 categoriesCloseLabel: t("dossiersCategoriesClose"),
                 isCategoriesOpen,
                 listLabel: t("dossiersList"),
-                title: t("dossiersTitle", { count: total }),
+                title: t("dossiersTitle", { count: counts.reduce((sum, one) => sum + one.count, 0) }),
                 addLabel: t("dossiersAdd"),
                 addHref: member.canWrite ? brainTabHref("sources", { add: "base" }) : null,
                 emptyCategory: t("dossiersEmptyCategory"),
                 emptyAll: t("dossiersEmpty"),
-                usage: usageView,
+                usage: useUsageView(usage),
                 selectedId: picked ?? categoryIdOf(categories ?? [], props.dossier),
                 reviewAll: member.canWrite
                     ? {

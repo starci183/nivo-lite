@@ -23,6 +23,8 @@ import { GetBrainHandler } from "./application/get-brain.handler"
 import { SaveBrainFactHandler } from "./application/save-brain-fact.handler"
 import { DecideBrainFactHandler } from "./application/decide-brain-fact.handler"
 import { KeepCurrentBrainFactHandler } from "./application/keep-current-brain-fact.handler"
+import { ApplyBrainFactGroupHandler } from "./application/apply-brain-fact-group.handler"
+import { UndoBrainFactBatchHandler } from "./application/undo-brain-fact-batch.handler"
 import { SaveBrainLessonHandler } from "./application/save-brain-lesson.handler"
 import { DecideBrainLessonHandler } from "./application/decide-brain-lesson.handler"
 import { DismissKnowledgeGapHandler } from "./application/dismiss-knowledge-gap.handler"
@@ -61,6 +63,8 @@ import { ConfigurableModuleClass } from "./knowledge.module-definition"
         SaveBrainFactHandler,
         DecideBrainFactHandler,
         KeepCurrentBrainFactHandler,
+        ApplyBrainFactGroupHandler,
+        UndoBrainFactBatchHandler,
         SaveBrainLessonHandler,
         DecideBrainLessonHandler,
         DismissKnowledgeGapHandler,

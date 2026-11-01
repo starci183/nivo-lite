@@ -187,6 +187,7 @@ describe("JobClaimService", () => {
             await claims.advance({ jobId: "j-1", expectedFencingToken: 3, step: "send" })
             await claims.complete({ jobId: "j-1", expectedFencingToken: 3 })
             await claims.fail({ jobId: "j-1", expectedFencingToken: 3, reason: "boom" })
+            await claims.renew({ jobId: "j-1", expectedFencingToken: 3, leaseMs: 60_000 })
 
             expect(manager.update).toHaveBeenNthCalledWith(1, JobEntity, held, {
                 currentStep: "send",
@@ -200,6 +201,9 @@ describe("JobClaimService", () => {
                 error: "boom",
                 leaseExpiresAt: null,
             })
+            expect(manager.update).toHaveBeenNthCalledWith(4, JobEntity, held, {
+                leaseExpiresAt: new Date("2026-02-03T04:06:06.000Z"),
+            })
         })
 
         it("throws JobFencedOut when a write finds no row at its token: a newer worker owns the job", async () => {
@@ -210,6 +214,7 @@ describe("JobClaimService", () => {
                 claims.advance({ jobId: "j-1", expectedFencingToken: 2, step: "send" }),
                 claims.complete({ jobId: "j-1", expectedFencingToken: 2 }),
                 claims.fail({ jobId: "j-1", expectedFencingToken: 2, reason: "boom" }),
+                claims.renew({ jobId: "j-1", expectedFencingToken: 2, leaseMs: 60_000 }),
             ]
 
             for (const attempt of attempts) {

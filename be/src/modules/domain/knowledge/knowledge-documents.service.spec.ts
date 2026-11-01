@@ -24,6 +24,7 @@ const sourceOf = builder<SourceDetail>({
     stage: null,
     stageDone: null,
     stageTotal: null,
+    partCount: 1,
     createdAt: "2026-10-12T10:00:00.000Z",
     updatedAt: "2026-10-12T10:00:00.000Z",
     content: "Open 8 to 21",

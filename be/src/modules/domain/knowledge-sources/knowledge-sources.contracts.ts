@@ -56,6 +56,10 @@ export enum StoredNote {
     TooLong = "KNOWLEDGE_NOTE_TOO_LONG",
     /** The source has no passage to store. */
     NoPassages = "KNOWLEDGE_NOTE_NO_PASSAGES",
+    /** The PDF has no text layer (a scan or photographs of pages): nothing was read, and it needs OCR before it can teach the agents. */
+    NeedsOcr = "KNOWLEDGE_NOTE_NEEDS_OCR",
+    /** The text is the same as a document the workspace already holds for the same readers: it was not read, embedded or filed again. */
+    Duplicate = "KNOWLEDGE_NOTE_DUPLICATE",
 }
 
 /** What a person adds: a note, a Q&A list, an uploaded file or a link. */
@@ -118,6 +122,8 @@ export interface SourceRef {
 export interface DeletedSource {
     /** Its title, for the note the brain files about the withdrawal. */
     readonly title: string
+    /** The later parts of a long document that went with it, each with the title the brain files its note under. */
+    readonly parts: ReadonlyArray<{ readonly id: string; readonly title: string }>
 }
 
 /** An address a browser uploads one document to. */
@@ -224,6 +230,8 @@ export interface SourceSummary {
     readonly createdAt: string
     /** Last change, ISO 8601. */
     readonly updatedAt: string
+    /** How many parts the document is cut into: 1 for a document that fits one source. */
+    readonly partCount: number
 }
 
 /** A source with its text. */

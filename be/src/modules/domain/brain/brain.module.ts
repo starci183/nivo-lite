@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { INBOX, InboxService } from "@modules/platform/inbox"
+import { BrainBulkService } from "./brain-bulk.service"
 import { BrainCommandRunnerService } from "./brain-command-runner.service"
 import { BrainLearningService } from "./brain-learning.service"
 import { BrainPageService } from "./brain-page.service"
@@ -26,6 +27,7 @@ export class BrainModule extends ConfigurableModuleClass {
                 { provide: INBOX, useClass: InboxService },
                 BrainPageService,
                 BrainService,
+                BrainBulkService,
                 BrainLearningService,
                 BrainCommandRunnerService,
                 DocumentFactsService,
@@ -38,6 +40,7 @@ export class BrainModule extends ConfigurableModuleClass {
                 BrainCommandRunnerService,
                 BrainPageService,
                 BrainService,
+                BrainBulkService,
                 BrainLearningService,
                 DocumentFactsService,
             ],

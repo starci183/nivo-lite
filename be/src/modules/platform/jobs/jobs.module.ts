@@ -8,6 +8,7 @@ import { JOB_CLAIMS, JOB_FENCE, JOB_PROCESSOR_REGISTRY, JOB_TICK_SCHEDULER, JOBS
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./jobs.module-definition"
 import { JobClaimService } from "./job-claim.service"
 import { JobFenceService } from "./job-fence.service"
+import { JobRenewalService } from "./job-renewal.service"
 import { JobRunnerService } from "./job-runner.service"
 import type { JobTickScheduler } from "./jobs.port"
 
@@ -39,6 +40,7 @@ export class JobsModule extends ConfigurableModuleClass {
                 },
                 JobClaimService,
                 JobFenceService,
+                JobRenewalService,
                 JobRunnerService,
                 ...(options.scheduler.enabled
                     ? [

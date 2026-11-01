@@ -76,6 +76,7 @@ export const toKnowledgeDocument = (row: KnowledgeSourceType): KnowledgeDocument
     stage: row.stage ?? null,
     stageDone: row.stageDone ?? null,
     stageTotal: row.stageTotal ?? null,
+    partCount: row.partCount,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
 })

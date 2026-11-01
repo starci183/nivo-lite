@@ -37,6 +37,8 @@ export interface KnowledgeDocument {
     readonly stage: string | null
     readonly stageDone: number | null
     readonly stageTotal: number | null
+    /** How many parts the document is cut into when it is longer than a source may be; 1 otherwise. */
+    readonly partCount: number
     readonly createdAt: string
     readonly updatedAt: string
 }

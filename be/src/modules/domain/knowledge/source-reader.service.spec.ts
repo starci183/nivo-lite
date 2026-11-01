@@ -109,6 +109,15 @@ describe("SourceReaderService", () => {
             })
         })
 
+        it("closes a PDF with no text layer as needing OCR instead of reading it as empty", async () => {
+            const { reader, sources, documents } = await build()
+            documents.canReadFileName.mockReturnValue(true)
+            sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1, 2]), contentType: "application/pdf" })
+            documents.readFile.mockResolvedValue("  ")
+
+            await expect(reader.read(file())).resolves.toEqual({ kind: "refused", code: StoredNote.NeedsOcr })
+        })
+
         it("refuses a file that is not in storage", async () => {
             const { reader, sources, documents } = await build()
             documents.canReadFileName.mockReturnValue(true)

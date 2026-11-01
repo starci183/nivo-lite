@@ -56,6 +56,7 @@ export const summary = {
     stageTotal: null,
     createdAt: "2026-10-11T10:00:00.000Z",
     updatedAt: AT,
+    partCount: 1,
 }
 /** The independent expected readable view. */
 export const readable = {
