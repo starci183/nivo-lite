@@ -3132,7 +3132,6 @@
     "eyebrow": "INBOX",
     "title": "Inbound",
     "description": "Every message, order and payment NIVO receives, with its source and where it stands.",
-    "eventLine": "Event ID {id}",
     "feedTitle": "Received inputs",
     "feedDesc": "Latest first. An event received again (same event ID) is counted as a duplicate, not processed twice.",
     "feedRefresh": "Refresh",

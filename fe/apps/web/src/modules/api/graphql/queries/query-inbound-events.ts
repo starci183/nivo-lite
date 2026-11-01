@@ -23,7 +23,6 @@ const query1: Document = gql`
             body
             amountVnd
             externalRef
-            eventId
             duplicateCount
             leadId
             status

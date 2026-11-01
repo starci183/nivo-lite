@@ -3132,7 +3132,6 @@
     "eyebrow": "ĐẦU VÀO",
     "title": "Đầu vào",
     "description": "Mọi tin nhắn, đơn hàng và thanh toán NIVO nhận được, kèm nguồn và trạng thái xử lý.",
-    "eventLine": "Mã sự kiện {id}",
     "feedTitle": "Đầu vào đã nhận",
     "feedDesc": "Mới nhất trước. Sự kiện nhận lại (cùng mã sự kiện) được đếm là trùng lặp, không xử lý hai lần.",
     "feedRefresh": "Làm mới",

@@ -19,6 +19,12 @@ const toneOf = (status: string): "neutral" | "success" | "warning" | "danger" =>
     return "neutral"
 }
 
+/**
+ * The kinds whose reference is one a person reads out or looks up (a bank transfer's memo, an order or invoice number). For the
+ * others the reference is the system's own id of the conversation or the provider's, which says nothing to the owner.
+ */
+const READABLE_REFERENCE_KINDS: ReadonlySet<string> = new Set(["payment", "order", "invoice"])
+
 /** The inbox feed of the active workspace, every row already in the words of the reader. */
 export const useInboxFeed = () => {
     const t = useTranslations("inbox")
@@ -54,12 +60,9 @@ export const useInboxFeed = () => {
                           strong: true,
                       },
                   ]),
-            ...(event.externalRef == null
+            ...(event.externalRef == null || !READABLE_REFERENCE_KINDS.has(event.kind)
                 ? []
                 : [{ key: "ref", text: t("refLine", { ref: event.externalRef }), strong: false }]),
-            ...(event.eventId == null
-                ? []
-                : [{ key: "event", text: t("eventLine", { id: event.eventId }), strong: false }]),
         ]
         return {
             id: event.id,
