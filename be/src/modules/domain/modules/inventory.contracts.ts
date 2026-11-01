@@ -34,7 +34,7 @@ export const INVENTORY_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: false,
     agent: {
-        name: catalogCopy("modulesCatalog.inventory.agent.name", "en"),
+        label: catalogText("modulesCatalog.inventory.agent.label"),
         handle: "inventory",
         summary: catalogText("modulesCatalog.inventory.agent.summary"),
         capabilities: catalogList([

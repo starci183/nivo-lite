@@ -125,6 +125,8 @@ export interface AgentInstallationView {
     readonly agentId: string | null
     readonly agentName: string
     readonly agentHandle: string
+    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    readonly agentAvatarUrl: string | null
     /** The instance label. */
     readonly name: string
     /** The type allows several instances. */
@@ -143,6 +145,7 @@ export const toAgentInstallationView = (installation: Installation): AgentInstal
     agentId: installation.agentId,
     agentName: installation.agentName,
     agentHandle: installation.agentHandle,
+    agentAvatarUrl: installation.agentAvatarUrl,
     name: installation.name,
     isMulti: installation.isMulti,
     mode: installation.operatingMode,

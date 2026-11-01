@@ -47,6 +47,7 @@ export const AgentChat = (props: AgentChatProps) => {
                 isStartDisabled: agent === undefined,
                 glyph,
                 module: moduleKey,
+                avatarUrl: agent?.avatarUrl ?? null,
                 railTitle: t("railTitle"),
                 historyLabel: t("historyToggle"),
                 historyCloseLabel: t("historyClose"),

@@ -23,6 +23,7 @@ type AgentIdentityCardProps = {
 
 const PLACEHOLDER: IdentityView = {
     markLabel: "-",
+    avatarUrl: null,
     nameLabel: "-",
     nameHint: "-",
     name: "-",
@@ -59,6 +60,7 @@ export const AgentIdentityCard = (props: AgentIdentityCardProps) => {
                 read: {
                     slot: mapSlot(slot, (installation): IdentityView => ({
                         markLabel: installation.agentName,
+                        avatarUrl: installation.agentAvatarUrl,
                         nameLabel: t(isInstance ? "instanceNameTitle" : "displayName"),
                         nameHint: t(isInstance ? "instanceNameSettingsHint" : "displayNameHint"),
                         name,

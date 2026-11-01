@@ -52,6 +52,7 @@ interface AgentChatViewInput {
               name: string
               handle: string
               role: string
+              avatarUrl: string | null
               isActive: boolean
               hasCustomerChannel: boolean
               workspaceId: string
