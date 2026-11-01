@@ -62,6 +62,12 @@ describe("CustomerCorePlanService.planOf", () => {
         await expect(plans.planOf(runtimeTurn)).resolves.toMatchObject({ timeoutMs: 10_000 })
     })
 
+    it("waits the default time for an agent that has no installation", async () => {
+        const { plans } = await build({ installation: null })
+
+        await expect(plans.planOf(runtimeTurn)).resolves.toMatchObject({ timeoutMs: 25_000 })
+    })
+
     it("leaves the intents out when the graph cannot be read, and logs it", async () => {
         const { plans, brief, logger } = await build()
         const cause = new Error("graph down")

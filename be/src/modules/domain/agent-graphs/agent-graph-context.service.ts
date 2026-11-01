@@ -86,7 +86,7 @@ export class AgentGraphContextService {
         return {
             facts: this.facts.registry(),
             ceilings,
-            isGranted: (tool) => granted.has(tool) || granted.has(`${tool.split(".")[0] ?? ""}.*`),
+            isGranted: (tool) => granted.has(tool) || granted.has(`${tool.split(".", 1).join("")}.*`),
             approverCovers: (action, group, top) =>
                 this.approversOf(action, group, top, directory, grantsByAction).approvers.length > 0,
             groupHasPeople: (group) => {
@@ -99,32 +99,38 @@ export class AgentGraphContextService {
 
     /** Who can answer each ask of the graph: the people, those left out and why, and whether the amounts at the top of the branch are covered. */
     async coverageOf(scope: ContextScope, graph: GraphDocument): Promise<ReadonlyArray<AskCoverage>> {
-        const asks = graph.nodes.flatMap((node) => [
-            ...(node.approver === null
-                ? []
-                : [
-                      {
-                          nodeKey: node.key,
-                          branchKey: null,
-                          action: node.action ?? "",
-                          approver: node.approver,
-                          when: null,
-                      },
-                  ]),
-            ...(node.decide?.branches ?? []).flatMap((branch) =>
-                branch.approver === null || branch.then !== "ask"
+        const asks = graph.nodes.flatMap((node) => {
+            const { decide } = node
+            const own =
+                node.approver === null
                     ? []
                     : [
                           {
                               nodeKey: node.key,
-                              branchKey: branch.key,
-                              action: node.decide?.intent ?? "",
-                              approver: branch.approver,
-                              when: branch.when,
+                              branchKey: null,
+                              action: node.action ?? "",
+                              approver: node.approver,
+                              when: null,
                           },
-                      ],
-            ),
-        ])
+                      ]
+            const branches =
+                decide === undefined
+                    ? []
+                    : decide.branches.flatMap((branch) =>
+                          branch.approver === null || branch.then !== "ask"
+                              ? []
+                              : [
+                                    {
+                                        nodeKey: node.key,
+                                        branchKey: branch.key,
+                                        action: decide.intent,
+                                        approver: branch.approver,
+                                        when: branch.when,
+                                    },
+                                ],
+                      )
+            return [...own, ...branches]
+        })
         const facts = this.facts.registry()
         const amountFact = Object.values(facts).find((spec) => spec.unit === "vnd")?.key
         const directory = await this.members.directory(scope.workspaceId)
@@ -147,10 +153,11 @@ export class AgentGraphContextService {
                     branchKey: ask.branchKey,
                     top,
                     approvers: set.approvers.map((person) => person.name),
-                    excluded: set.excluded.map((entry) => ({
-                        name: directory.find((person) => person.memberId === entry.memberId)?.name ?? entry.memberId,
-                        reason: entry.reason,
-                    })),
+                    excluded: set.excluded.flatMap((entry) =>
+                        directory
+                            .filter((person) => person.memberId === entry.memberId)
+                            .map((person) => ({ name: person.name, reason: entry.reason })),
+                    ),
                     covered: set.approvers.length > 0,
                 }
             }),

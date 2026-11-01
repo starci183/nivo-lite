@@ -201,7 +201,7 @@ export const ACCOUNTING_MODULE: ModuleDefinition = {
             label: catalogText("modulesCatalog.accounting.authorityActions.confirm_supplier_payment.label"),
             mode: "auto",
             limitVnd: 5000000,
-            requiredFields: [],
+            requiredFields: ["amount_vnd"],
             amountLimit: true,
             graphFacts: ["supplier_payment.amount_vnd"],
             maxMode: null,

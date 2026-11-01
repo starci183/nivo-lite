@@ -8,5 +8,5 @@ export type { AgentGraphRunWire, AgentGraphWire } from "./policies/graph-wire.po
 export type { AskCoverage } from "./agent-graph-context.service"
 export { AgentGraphAsksService } from "./agent-graph-asks.service"
 export { AgentGraphWatchService } from "./agent-graph-watch.service"
-export type { FactSpec, FactValues, GraphDocument } from "./agent-graphs.contracts"
+export type { FactSpec, FactValues, GraphContext, GraphDocument } from "./agent-graphs.contracts"
 export type { FactSubject, GraphFactReader } from "./agent-graphs.port"

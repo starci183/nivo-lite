@@ -91,6 +91,14 @@ describe("AgentGraphSetupService.applyBranch", () => {
         expect(JSON.stringify(jest.mocked(graphs.saveDraft).mock.calls[0]?.[3])).toContain("8000000")
     })
 
+    it("sources the line to the chat itself when the message has no id", async () => {
+        const { service, graphs } = await build()
+
+        await service.applyBranch({ ...CHANGE, messageId: null })
+
+        expect(JSON.stringify(jest.mocked(graphs.saveDraft).mock.calls[0]?.[3])).toContain('"messageId":"setup"')
+    })
+
     it("opens the graph first when the installation has none yet", async () => {
         const { service, seed, graphs } = await build({ state: null, seeded: stateOf() })
 

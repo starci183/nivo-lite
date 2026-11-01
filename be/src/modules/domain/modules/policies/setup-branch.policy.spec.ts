@@ -67,6 +67,14 @@ describe("setup-branch.policy branchWritesOf", () => {
         expect(kept.map((write) => [write.payload.action, write.payload.belongsTo])).toEqual([["issue_invoice", null]])
     })
 
+    it("keeps a card whose quote is not text, with an empty quote", async () => {
+        const subject = await build()
+
+        const kept = subject.branchWritesOf(MODULE, [{ ...RAW, quote: 42 }])
+
+        expect(kept.map((write) => write.payload.quote)).toEqual([""])
+    })
+
     it("keeps one branch for an action, the last said, and reads nothing from what is not a list", async () => {
         const subject = await build()
 

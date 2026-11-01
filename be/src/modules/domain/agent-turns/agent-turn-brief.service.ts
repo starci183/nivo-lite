@@ -14,12 +14,12 @@ import type { AgentGraphBrief } from "./agent-turns.port"
 export class AgentTurnBriefService {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        @Optional() @InjectAgentGraphBrief() private readonly graph?: AgentGraphBrief,
+        @Optional() @InjectAgentGraphBrief() private readonly graph: AgentGraphBrief | null = null,
     ) {}
 
     /** The block of intents of the agent; an empty text when there is none. */
     async intentsBlock(workspaceId: string, agentId: string, locale: Locale): Promise<string> {
-        if (this.graph === undefined) return ""
+        if (this.graph === null) return ""
         const intents = await this.graph.intentsOf(workspaceId, agentId)
         return blockOf(this.catalog.get("agentTurns.intentsTitle", {}, locale), intents.map(intentLineOf))
     }

@@ -99,6 +99,28 @@ describe("SetupWritesService", () => {
         })
     })
 
+    it("reads a stored branch card as a branch of the line", async () => {
+        const branch = {
+            action: "pay_supplier",
+            boundaryVnd: 8_000_000,
+            belongsTo: "higher",
+            approverName: "Nam",
+            approverMemberId: "nam",
+            quote: "above 8 million Nam",
+        } as const
+        const em = mockEntityManager({
+            findOne: [
+                ModuleSetupWriteEntity,
+                Object.assign(new ModuleSetupWriteEntity(), { ...row, kind: "branch", payload: branch }),
+            ],
+        })
+
+        await expect((await build(em)).find("ws-1", "card-1")).resolves.toMatchObject({
+            kind: "branch",
+            payload: branch,
+        })
+    })
+
     it("answers nothing when the card is not in the workspace", async () => {
         const em = mockEntityManager({ findOne: [ModuleSetupWriteEntity, null] })
 

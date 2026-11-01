@@ -47,11 +47,15 @@ const contextOf = (moduleKey: string | null): ExecutorContext => ({
 
 describe("WakeAgentExecutorService", () => {
     it("plugs the wake_agent executor into the engine when the app starts", async () => {
-        const { executor, extensions } = await build()
+        const { executor, extensions, wakes } = await build()
 
         executor.onModuleInit()
+        const registered = extensions.add.mock.calls[0]?.[0].executors?.["wake_agent"]
+        const result = await registered?.(contextOf("accounting"), { runId: "run-9", step: "judge" })
 
-        expect(typeof extensions.add.mock.calls[0]?.[0].executors?.["wake_agent"]).toBe("function")
+        expect(typeof registered).toBe("function")
+        expect(wakes.wake).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ eventKey: "run-9:judge" }))
+        expect(result).toMatchObject({ status: "done" })
     })
 
     it("hands the case to the running agent of the department, keyed by the run and the step", async () => {

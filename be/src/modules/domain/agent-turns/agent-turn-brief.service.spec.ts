@@ -11,7 +11,11 @@ const catalog = mock<MessageCatalog>({ get: (key: string) => `[${key}]` })
 
 const buildWithoutGraph = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [AgentTurnBriefService, { provide: MESSAGE_CATALOG, useValue: catalog }],
+        providers: [
+            AgentTurnBriefService,
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: AGENT_GRAPH_BRIEF, useValue: null },
+        ],
     }).compile()
     return moduleRef.get(AgentTurnBriefService)
 }

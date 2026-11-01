@@ -180,7 +180,7 @@ export const baseGraphOf = (
     )
     const understand = nodeOf("understand", "call", w("understand"), w("understandDoes"), {
         uses: toolsOf(module),
-        next: actions.flatMap((nodes) => (nodes[0] === undefined ? [] : [nodes[0].key])),
+        next: actions.flatMap((nodes) => nodes.slice(0, 1).map((node) => node.key)),
     })
     const chains = templates.map((template) =>
         chainOf(

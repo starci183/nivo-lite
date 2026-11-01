@@ -18,7 +18,6 @@ export interface BranchSetup {
 /** The same condition with every number equal to `from` set to `to` and compared with `op`. */
 const reset = (term: Condition, from: number, to: number, op: "lt" | "lte" | "gt" | "gte"): Condition => {
     if ("all" in term) return { all: term.all.map((member) => reset(member, from, to, op)) }
-    if ("any" in term) return { any: term.any.map((member) => reset(member, from, to, op)) }
     return "value" in term && term.value === from && term.op !== "in" ? { ...term, op, value: to } : term
 }
 

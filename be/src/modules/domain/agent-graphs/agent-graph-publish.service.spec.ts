@@ -168,6 +168,17 @@ describe("AgentGraphPublishService.publishDraft", () => {
     })
 })
 
+describe("AgentGraphPublishService.publishDraft without a fact counted in dong", () => {
+    it("compares a graph with no amount in it when the module has no fact counted in dong", async () => {
+        const draft: GraphDocument = { nodes: [], rights: [] }
+        const { service, graphs } = await build(stateOf({ draft }), { context: { ...contextOf(), facts: {} } })
+
+        await expect(service.publishDraft("ws-1", "agent-1", OWNER, "Bare")).resolves.toBe(VERSION)
+
+        expect(graphs.publish).toHaveBeenCalledWith(expect.objectContaining({ document: draft }))
+    })
+})
+
 describe("AgentGraphPublishService.publishLearned", () => {
     it("publishes the graph a confirmed proposal made as a learned version, under the same checks", async () => {
         const { service, graphs } = await build(stateOf())

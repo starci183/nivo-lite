@@ -1,18 +1,25 @@
 import { Test } from "@nestjs/testing"
 import { providerTools } from "./provider-tools.policy"
 
+/** The members of the subject under test. */
+interface Subject {
+    readonly providerTools: typeof providerTools
+}
+
 const SUBJECT = Symbol("provider-tools.policy")
 
-const build = async () => {
+/** The policy function, read through the Nest testing module. */
+const build = async (): Promise<Subject> => {
     const moduleRef = await Test.createTestingModule({
         providers: [{ provide: SUBJECT, useValue: { providerTools } }],
     }).compile()
-    return moduleRef.get<typeof import("./provider-tools.policy")>(SUBJECT)
+    return moduleRef.get<Subject>(SUBJECT)
 }
 
-describe("providerTools", () => {
+describe("provider-tools.policy", () => {
     it("gives a channel a status and an events tool, both read, auto and for internal use only", async () => {
         const subject = await build()
+
         const tools = subject.providerTools("Telegram", true)
 
         expect(tools.map((tool) => [tool.name, tool.scope, tool.defaultMode, tool.internalOnly])).toEqual([

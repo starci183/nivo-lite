@@ -23,6 +23,7 @@ import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import { WorkItemViewsService } from "./work-item-views.service"
+import { WorkBranchService } from "./work-branch.service"
 import { WorkChainService } from "./work-chain.service"
 import { WorkDecisionService } from "./work-decision.service"
 import { WorkDrainService } from "./work-drain.service"
@@ -93,6 +94,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 DurableWorkService,
                 ModuleCatalogService,
                 WorkApprovalService,
+                WorkBranchService,
                 WorkChainService,
                 WorkDecisionService,
                 WorkDrainService,

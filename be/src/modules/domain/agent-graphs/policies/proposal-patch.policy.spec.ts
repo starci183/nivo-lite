@@ -72,13 +72,55 @@ describe("proposal-patch.policy a raised boundary", () => {
             }),
         ])
 
+        const eitherOr = graphOf([
+            branchOf({ key: "small", when: amountIs("lt", 5_000_000) }),
+            branchOf({
+                key: "middle",
+                when: { any: [amountIs("gte", 5_000_000), amountIs("lt", 0)] },
+                then: "ask",
+                next: "ask",
+                approver: approverOf(),
+            }),
+        ])
+        const nothingSaid = graphOf([
+            branchOf({ key: "small", when: amountIs("lt", 5_000_000) }),
+            branchOf({ key: "middle", when: { all: [] }, then: "ask", next: "ask", approver: approverOf() }),
+        ])
+
         expect(subject.applyLearned(apart, { signal: "trust", branchKey: "middle", amounts: [9_000_000] })).toBeNull()
+        expect(
+            subject.applyLearned(eitherOr, { signal: "trust", branchKey: "middle", amounts: [9_000_000] }),
+        ).toBeNull()
+        expect(
+            subject.applyLearned(nothingSaid, { signal: "trust", branchKey: "middle", amounts: [9_000_000] }),
+        ).toBeNull()
         expect(subject.applyLearned(asKnown, { signal: "trust", branchKey: "middle", amounts: [9_000_000] })).toBeNull()
         expect(subject.applyLearned(BASE, { signal: "trust", branchKey: "else", amounts: [9_000_000] })).toBeNull()
     })
 })
 
 describe("proposal-patch.policy a lowered boundary", () => {
+    it("passes over an auto branch that cannot be placed on the line when it looks for the one below the ask", async () => {
+        const subject = await build()
+        const mixed = graphOf([
+            branchOf({ key: "odd", when: { fact: "supplier_payment.kind", op: "eq", value: "rent" } }),
+            branchOf({ key: "small", when: amountIs("lt", 5_000_000) }),
+            branchOf({
+                key: "middle",
+                when: amountIs("gte", 5_000_000),
+                then: "ask",
+                next: "ask",
+                approver: approverOf(),
+            }),
+        ])
+
+        const raised = subject.applyLearned(mixed, { signal: "trust", branchKey: "middle", amounts: [6_000_000] })
+
+        expect(raised?.nodes.find((node) => node.decide !== undefined)?.decide?.branches[1]?.when).toEqual(
+            amountIs("lt", 6_000_000),
+        )
+    })
+
     it("moves the boundary down to the whole million under the lowest amount of the evidence", async () => {
         const subject = await build()
 

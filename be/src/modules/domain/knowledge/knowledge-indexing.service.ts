@@ -9,7 +9,6 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { InjectTimer } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
 import { EmbeddingService } from "./embedding.service"
-import type { VectorsResult } from "./embedding.service"
 import { BULK_CHUNKS, EMBED_BATCH } from "./knowledge.contracts"
 import type { IndexOutcome, IndexRun } from "./knowledge.contracts"
 import { KnowledgeLogEvent } from "./knowledge.log-events"
@@ -33,9 +32,9 @@ const draftOf = (text: string, vector: ReadonlyArray<number> | undefined): Chunk
     vector: vector === undefined ? null : toVector(vector),
 })
 
-/** The passages to store: each piece with its vector, or without one when there are no vectors. */
-const draftsOf = (pieces: ReadonlyArray<string>, vectors: VectorsResult): Array<ChunkDraft> =>
-    pieces.map((text, index) => draftOf(text, vectors?.[index]))
+/** The passages to store without vectors: each piece as keyword-only text. */
+const keywordDraftsOf = (pieces: ReadonlyArray<string>): Array<ChunkDraft> =>
+    pieces.map((text) => draftOf(text, undefined))
 
 @Injectable()
 /** Reads a document, cuts it into passages, embeds them and stores them, then hands the source on to the reading of its facts. */
@@ -114,7 +113,7 @@ export class KnowledgeIndexingService {
         const { workspaceId, id } = source
         await this.sources.enterStage(workspaceId, id, { stage: "chunk", done: pieces.length, total: pieces.length })
         if (!this.embeddings.configured()) {
-            await this.chunks.replace({ ...this.writeOf(source), drafts: draftsOf(pieces, null) })
+            await this.chunks.replace({ ...this.writeOf(source), drafts: keywordDraftsOf(pieces) })
             return this.finish(source, StoredNote.KeywordOnly, pieces.length)
         }
         const stored = await this.chunks.embeddedOf(workspaceId, id)

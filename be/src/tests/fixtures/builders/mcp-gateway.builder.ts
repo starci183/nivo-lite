@@ -3,7 +3,13 @@ import { builder } from "@starci/jest-preset"
 import type { CallLogLine } from "@modules/domain/mcp-call-log"
 import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
 import type { McpToolGrantView } from "@modules/domain/mcp-tool-grants"
-import type { GatewayCaller, GatewayJson, RemoteTarget, RoleReadiness } from "@modules/domain/mcp-gateway"
+import type {
+    GatewayCaller,
+    GatewayJson,
+    OptionalDataRights,
+    RemoteTarget,
+    RoleReadiness,
+} from "@modules/domain/mcp-gateway"
 import type { McpEndpoint } from "@modules/integrations/mcp"
 import { Secret } from "@modules/platform/config"
 
@@ -120,9 +126,10 @@ export const roleProvidersOf = builder<RoleReadiness["providers"]>({
     "invoice.list": [],
 })
 
-/** What a gateway spec sets up: the connector and grant rows and the default time limit. */
+/** What a gateway spec sets up: the connector and grant rows, the data rights of the agent (none when no graph governs it) and the default time limit. */
 export interface GatewaySpecSetup {
     readonly rows?: ReadonlyArray<McpConnectorRow>
     readonly grants?: ReadonlyArray<McpToolGrantView>
+    readonly rights?: OptionalDataRights
     readonly timeoutMs?: number
 }

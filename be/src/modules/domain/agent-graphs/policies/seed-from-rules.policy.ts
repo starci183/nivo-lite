@@ -37,12 +37,10 @@ const branch = (
     }
 }
 
-/** The condition "above a and up to b", both inclusive on the top and open at the bottom, as the gate's bands read. */
-const between = (fact: string, above: number | null, upTo: number | null): Condition => {
-    const low: ReadonlyArray<Condition> = above === null ? [] : [{ fact, op: "gt", value: above }]
-    const high: ReadonlyArray<Condition> = upTo === null ? [] : [{ fact, op: "lte", value: upTo }]
-    const parts = [...low, ...high]
-    return parts.length === 1 && parts[0] !== undefined ? parts[0] : { all: parts }
+/** The condition "above a and up to b", inclusive on the top and open at the bottom, as the gate's bands read; with no `a` only the top counts. */
+const between = (fact: string, above: number | null, upTo: number): Condition => {
+    const high: Condition = { fact, op: "lte", value: upTo }
+    return above === null ? high : { all: [{ fact, op: "gt", value: above }, high] }
 }
 
 const bandBranches = (rule: SeedRule, fact: string, targets: SeedTargets): ReadonlyArray<GraphBranch> => {

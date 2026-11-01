@@ -361,6 +361,7 @@ describe("KnowledgeSourcesService the stages a worker ends a source with", () =>
     it.each<[string, (s: KnowledgeSourcesService) => Promise<void>, object]>([
         ["fails", (s) => s.fail(WS, "s1", "CODE"), { status: "failed", error: "CODE" }],
         ["is ready", (s) => s.ready(WS, "s1", null), ready],
+        ["is ready with the note of a failed reading", (s) => s.ready(WS, "s1", note), { ...ready, error: note }],
         ["settles with the hash of the text", (s) => s.settle(WS, "s1", "text"), { ...ready, contentHash }],
         ["keeps an unchanged source and its note", (s) => s.keepIndexed(WS, "s1", note), { ...ready, error: note }],
         [
@@ -415,17 +416,20 @@ describe("KnowledgeSourcesService one job per source", () => {
         expect(progress.announce).not.toHaveBeenCalled()
     })
 
-    it("answers the source an uploaded object already became instead of adding a second one", async () => {
+    it.each<readonly [string, typeof row | null, string, boolean]>([
+        ["answers the source an uploaded object already became instead of adding a second one", row, "s1", false],
+        ["adds a new source for an uploaded object that no source holds yet", null, "s2", true],
+    ])("%s", async (_name, found, id, adds) => {
         const tx = fakeTransaction(
-            mockEntityManager({ findOne: [KnowledgeSourceEntity, row], insert: [KnowledgeSourceEntity, {}] }),
+            mockEntityManager({
+                findOne: [KnowledgeSourceEntity, found],
+                insert: [KnowledgeSourceEntity, { identifiers: [{ id }] }],
+            }),
         )
-        const { service, queue, quota } = await build(tx.em)
-        const path = `${WS}/${UPLOAD_ID}/a.pdf`
-        const input = inputOf({ kind: "file", storagePath: path, content: undefined })
-        await expect(service.addSource("u1", WS, input)).resolves.toEqual({ id: "s1" })
-        expect(tx.em.insert).not.toHaveBeenCalled()
-        expect(queue.enqueueIndex).not.toHaveBeenCalled()
-        expect(quota.admit).not.toHaveBeenCalled()
+        const { service, queue } = await build(tx.em)
+        const input = inputOf({ kind: "file", storagePath: `${WS}/${UPLOAD_ID}/a.pdf`, content: undefined })
+        await expect(service.addSource("u1", WS, input)).resolves.toEqual({ id })
+        expect([tx.em.insert, queue.enqueueIndex].map((spy) => spy.mock.calls.length)).toEqual(adds ? [1, 1] : [0, 0])
     })
 })
 

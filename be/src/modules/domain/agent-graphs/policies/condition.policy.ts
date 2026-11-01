@@ -2,18 +2,12 @@ import { MAX_CONDITION_DEPTH, MAX_CONDITION_TERMS } from "../agent-graphs.contra
 import type { Condition, FactRegistry, FactSpec, FactValue, FactValues, Say } from "../agent-graphs.contracts"
 
 type Comparison = Extract<Condition, { readonly fact: string }>
+type Group = Exclude<Condition, Comparison>
 
 /** True for a branch of the tree that groups other conditions. */
-const isGroup = (
-    condition: Condition,
-): condition is Extract<Condition, { readonly all: unknown } | { readonly any: unknown }> =>
-    "all" in condition || "any" in condition
+const isGroup = (condition: Condition): condition is Group => !("fact" in condition)
 
-const membersOf = (condition: Condition): ReadonlyArray<Condition> => {
-    if ("all" in condition) return condition.all
-    if ("any" in condition) return condition.any
-    return []
-}
+const membersOf = (condition: Group): ReadonlyArray<Condition> => ("all" in condition ? condition.all : condition.any)
 
 /** How many comparisons the tree holds. */
 export const termCount = (condition: Condition): number =>

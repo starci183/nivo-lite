@@ -83,9 +83,9 @@ export class AgentGraphDeciderService implements WorkBranchDecider {
         if (item.installation_id === null) return null
         const state = await this.graphs.stateOfInstallation(item.installation_id)
         const node = state?.active?.nodes.find((entry) => entry.decide?.intent === item.action)
-        const decide = node?.decide
         const versionId = state?.activeVersionId ?? null
-        if (state === null || versionId === null || decide === undefined) return null
+        if (state === null || versionId === null || node?.decide === undefined) return null
+        const { decide } = node
         const registry = this.facts.registry()
         const read = await this.facts.read(
             item.workspace_id,
@@ -107,7 +107,7 @@ export class AgentGraphDeciderService implements WorkBranchDecider {
             turnId,
             wakeId,
             action: item.action,
-            path: [node?.key ?? "", branch.next],
+            path: [node.key, branch.next],
             facts: factsRecorded(
                 read,
                 amount !== null && amount !== proposal.amount_vnd ? proposal.amount_vnd : undefined,

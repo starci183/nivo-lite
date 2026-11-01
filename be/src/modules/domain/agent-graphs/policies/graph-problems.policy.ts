@@ -39,7 +39,10 @@ export const blankAnswers = (node: GraphNode): ReadonlyArray<string> => [
 
 const structure = (graph: GraphDocument): ReadonlyArray<GraphProblem> => {
     const byKey = new Map(graph.nodes.map((node) => [node.key, node]))
-    const limit = graph.nodes.length > MAX_GRAPH_NODES ? [problem("node_limit", graph.nodes[0]?.key ?? "")] : []
+    const limit =
+        graph.nodes.length > MAX_GRAPH_NODES
+            ? graph.nodes.slice(0, 1).map((node) => problem("node_limit", node.key))
+            : []
     const deadEnds = graph.nodes.flatMap((node) => {
         const next = successorsOf(node)
         const open = node.kind !== "output" && (next.length === 0 || next.some((key) => !byKey.has(key)))
@@ -202,8 +205,9 @@ export const rightsProblems = (graph: GraphDocument, context: GraphContext): Rea
         }),
         ...node.uses.flatMap((use) => {
             const kind = use.tool === null ? null : dataKindOfTool(use.tool)
-            const held = kind === null || graph.rights.some((right) => right.kind === kind)
-            return held ? [] : [problem("no_data_right", node.key, null, kind ?? "")]
+            return kind === null || graph.rights.some((right) => right.kind === kind)
+                ? []
+                : [problem("no_data_right", node.key, null, kind)]
         }),
     ])
 

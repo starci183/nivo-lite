@@ -1,5 +1,6 @@
-import type { Condition, GraphBranch, GraphDocument, GraphNode } from "../agent-graphs.contracts"
+import type { Condition, DecidePoint, GraphBranch, GraphDocument, GraphNode } from "../agent-graphs.contracts"
 import { intervalOf, topOf } from "./interval.policy"
+import type { Interval } from "./interval.policy"
 
 /** What a learned proposal moves: the signal, the branch it is about and the amounts of its evidence. */
 export interface LearnedPatch {
@@ -28,29 +29,48 @@ const amountFactOf = (branch: GraphBranch): string | null => {
 /** The same condition with every number equal to `from` replaced by `to`. */
 const moved = (term: Condition, from: number, to: number): Condition => {
     if ("all" in term) return { all: term.all.map((member) => moved(member, from, to)) }
-    if ("any" in term) return { any: term.any.map((member) => moved(member, from, to)) }
     return "value" in term && term.value === from && term.op !== "in" ? { ...term, value: to } : term
 }
 
+/** The node with the branches of its decide point replaced. */
 const swap = (
     node: GraphNode,
+    decide: DecidePoint,
     replace: (branches: ReadonlyArray<GraphBranch>) => ReadonlyArray<GraphBranch>,
-): GraphNode =>
-    node.decide === undefined ? node : { ...node, decide: { ...node.decide, branches: replace(node.decide.branches) } }
+): GraphNode => ({ ...node, decide: { ...decide, branches: replace(decide.branches) } })
 
-/** The auto branch right below the asked one: the branch that runs alone and ends where the asked one begins. */
-const autoBelow = (branches: ReadonlyArray<GraphBranch>, asked: GraphBranch, fact: string): GraphBranch | undefined => {
-    const lower = asked.when === "else" ? null : intervalOf(asked.when, fact)
-    return branches.find((branch) => {
-        const interval = branch.then === "auto" && branch.when !== "else" ? intervalOf(branch.when, fact) : null
-        return interval !== null && lower !== null && topOf(interval) === lower.lo
-    })
+/** The node whose decide point holds the branch of that key, with the decide point and the branch. */
+const holderOf = (
+    document: GraphDocument,
+    branchKey: string,
+): { readonly node: GraphNode; readonly decide: DecidePoint; readonly branch: GraphBranch } | null => {
+    for (const node of document.nodes) {
+        const { decide } = node
+        const branch = decide?.branches.find((entry) => entry.key === branchKey)
+        if (decide !== undefined && branch !== undefined) return { node, decide, branch }
+    }
+    return null
 }
+
+/** The auto branch right below the line where the asked one begins: the branch that runs alone and ends there, with the amount it ends at. */
+const autoBelow = (
+    branches: ReadonlyArray<GraphBranch>,
+    lower: Interval,
+    fact: string,
+): { readonly auto: GraphBranch; readonly from: number } | undefined =>
+    branches.flatMap((branch) => {
+        if (branch.then !== "auto" || branch.when === "else") return []
+        const interval = intervalOf(branch.when, fact)
+        const top = interval === null ? null : topOf(interval)
+        return top !== null && top === lower.lo ? [{ auto: branch, from: top }] : []
+    })[0]
 
 /** The line between the branch that runs alone and the asked one right above it. */
 export interface Boundary {
     /** The decide node. */
     readonly node: GraphNode
+    /** Its decide point. */
+    readonly decide: DecidePoint
     /** The branch that runs alone, below the line. */
     readonly auto: GraphBranch
     /** The branch that asks, above the line. */
@@ -61,15 +81,14 @@ export interface Boundary {
 
 /** The line between the auto branch and the asked branch of that key, or null when the graph has no such pair. */
 export const boundaryOf = (document: GraphDocument, askedKey: string): Boundary | null => {
-    const node = document.nodes.find((entry) => entry.decide?.branches.some((branch) => branch.key === askedKey))
-    const asked = node?.decide?.branches.find((branch) => branch.key === askedKey)
-    const fact = asked === undefined ? null : amountFactOf(asked)
-    const auto = asked === undefined || fact === null ? undefined : autoBelow(node?.decide?.branches ?? [], asked, fact)
-    const interval = auto === undefined || auto.when === "else" || fact === null ? null : intervalOf(auto.when, fact)
-    const from = interval === null ? null : topOf(interval)
-    return node === undefined || auto === undefined || asked === undefined || from === null
-        ? null
-        : { node, auto, asked, from }
+    const held = holderOf(document, askedKey)
+    if (held === null) return null
+    const { node, decide, branch: asked } = held
+    const fact = amountFactOf(asked)
+    if (fact === null || asked.when === "else") return null
+    const lower = intervalOf(asked.when, fact)
+    const found = lower === null ? undefined : autoBelow(decide.branches, lower, fact)
+    return found === undefined ? null : { node, decide, auto: found.auto, asked, from: found.from }
 }
 
 /** Moves the boundary between the auto branch and the asked one to a number the evidence picks, in both. */
@@ -91,7 +110,7 @@ const boundaryMoved = (
         )
     return {
         ...document,
-        nodes: document.nodes.map((entry) => (entry.key === line.node.key ? swap(entry, replace) : entry)),
+        nodes: document.nodes.map((entry) => (entry.key === line.node.key ? swap(entry, line.decide, replace) : entry)),
     }
 }
 
@@ -105,18 +124,20 @@ const lowered = (old: number, amounts: ReadonlyArray<number>): number => {
 
 /** A backup for an asked branch whose request ran out of time: the owners of the workspace. */
 const withBackup = (document: GraphDocument, branchKey: string): GraphDocument | null => {
-    const node = document.nodes.find((entry) => entry.decide?.branches.some((branch) => branch.key === branchKey))
-    const asked = node?.decide?.branches.find((branch) => branch.key === branchKey)
-    if (node === undefined || asked?.approver == null || asked.approver.onTimeout.kind === "backup") return null
+    const held = holderOf(document, branchKey)
+    if (held === null) return null
+    const { node, decide, branch } = held
+    const asking = branch.approver
+    if (asking == null || asking.onTimeout.kind === "backup") return null
     const approver = {
-        ...asked.approver,
+        ...asking,
         onTimeout: { kind: "backup" as const, group: { roles: ["owner" as const], rooms: [], members: [] } },
     }
     const replace = (branches: ReadonlyArray<GraphBranch>): ReadonlyArray<GraphBranch> =>
         branches.map((branch) => (branch.key === branchKey ? { ...branch, approver, selfCorrected: true } : branch))
     return {
         ...document,
-        nodes: document.nodes.map((entry) => (entry.key === node.key ? swap(entry, replace) : entry)),
+        nodes: document.nodes.map((entry) => (entry.key === node.key ? swap(entry, decide, replace) : entry)),
     }
 }
 

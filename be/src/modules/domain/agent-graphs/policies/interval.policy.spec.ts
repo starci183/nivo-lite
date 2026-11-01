@@ -77,6 +77,25 @@ describe("interval.policy intervalOf", () => {
             hiOpen: true,
         })
     })
+})
+
+describe("interval.policy intervalOf (ties)", () => {
+    it("opens a tied end when only the later term opens it, and takes the later bound when it is the tighter", async () => {
+        const subject = await build()
+
+        expect(
+            subject.intervalOf(
+                { all: [amountIs("gte", 1), amountIs("gt", 1), amountIs("lte", 9), amountIs("lt", 9)] },
+                AMOUNT_FACT,
+            ),
+        ).toEqual({ lo: 1, loOpen: true, hi: 9, hiOpen: true })
+        expect(
+            subject.intervalOf(
+                { all: [amountIs("gt", 1), amountIs("gte", 5), amountIs("lt", 20), amountIs("lt", 9)] },
+                AMOUNT_FACT,
+            ),
+        ).toEqual({ lo: 5, loOpen: false, hi: 9, hiOpen: true })
+    })
 
     it("cannot place an else, an any, a set, another fact, a text or a mix", async () => {
         const subject = await build()
