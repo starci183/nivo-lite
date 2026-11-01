@@ -9,9 +9,8 @@ type ConnectionsHeadContentProps = {
     readonly homeHref: string
     readonly title: string
     readonly description: string
-    /** The primary command: opens the library, where a connector is chosen and its wizard opens. */
-    readonly addLabel: string
-    readonly addHref: string
+    /** The primary command: opens the library, where a connector is chosen and its wizard opens; absent for who cannot add one. */
+    readonly add?: { readonly label: string; readonly href: string }
     /** The summary line; while it is absent the line draws as a placeholder (STATE-8: heading and trail are real, figures are not). */
     readonly meta?: string
     /** The Connected / Library tabs, drawn on the band's separator. */
@@ -30,10 +29,14 @@ export const ConnectionsHeadContent = (props: ConnectionsHeadContentProps): Page
             { id: "connections", label: props.title },
         ],
     },
-    actions: (
-        <Button intent="commit" href={props.addHref}>
-            {props.addLabel}
-        </Button>
-    ),
+    ...(props.add === undefined
+        ? {}
+        : {
+              actions: (
+                  <Button intent="commit" href={props.add.href}>
+                      {props.add.label}
+                  </Button>
+              ),
+          }),
     tabs: props.tabs,
 })

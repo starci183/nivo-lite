@@ -1,7 +1,8 @@
 import { Alert, Badge, Button, Page, Pane, PaneGrid, PaneSection, SectionHeader } from "@starci/grammar/common"
 import type { BadgeTone, PageHeaderContent } from "@starci/grammar/common"
-import type { ReactNode } from "react"
+import type { ComponentProps, ReactNode } from "react"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
+import { ConnectionRefusedPage } from "@/components/composites/ConnectionRefusedPage"
 import { SepayConfirm } from "@/components/composites/SepayConfirm"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
@@ -43,6 +44,8 @@ export interface SepayConsoleBaseProps {
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href?: string }>
         readonly markSrc: string
+        /** The notice drawn in place of the page for a member who may not read it. */
+        readonly refusal?: ComponentProps<typeof ConnectionRefusedPage>["props"]
         readonly gridLabel: string
         readonly mainLabel: string
         readonly rail: {
@@ -172,6 +175,7 @@ const DisconnectBand = (props: SepayBandProps) => {
  * drawer on a narrow screen. Disconnect asks first.
  */
 export const SepayConsoleBase = (props: SepayConsoleBaseProps) => {
+    if (props.props.refusal !== undefined) return <ConnectionRefusedPage props={props.props.refusal} />
     const { rail } = props.props
     return (
         <>

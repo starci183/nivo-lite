@@ -18,8 +18,14 @@ import {
 } from "@/hooks/connection-catalog"
 import type { CatalogEntry } from "@/hooks/connection-catalog"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
-import { useConnectionOverlays, useWantConnector } from "@/hooks/connections"
-import type { Connection, ConnectorCategory } from "@/modules/types"
+import {
+    connectionPageHref,
+    mayConnect,
+    useConnectionOverlays,
+    useConnectionsRole,
+    useWantConnector,
+} from "@/hooks/connections"
+import type { Connection, ConnectorCategory, Provider } from "@/modules/types"
 import { ConnectionLibraryBase } from "./component"
 import type { LibraryCard, LibraryCategory } from "./component"
 
@@ -49,7 +55,12 @@ interface LibraryInput {
     readonly category: ConnectorCategory | "all"
     /** The "I need this" commands pressed so far: pending, done, or refused with a note. */
     readonly wants: Readonly<Record<string, LibraryCard["want"]>>
+    /** The viewer's role in the workspace. */
+    readonly role: string | undefined
 }
+
+/** The providers a workspace holds one connection of: a tile then leads to that connection's page, not to another one. */
+const SINGLE_GRANT: ReadonlySet<Provider> = new Set<Provider>(["google_drive"])
 
 const IDLE_WANT: LibraryCard["want"] = { isPending: false, isDone: false }
 
@@ -59,6 +70,8 @@ const cardOf = (known: KnownEntry, input: LibraryInput): LibraryCard => {
     const mine = entry.provider === undefined ? [] : input.items.filter((item) => item.provider === entry.provider)
     const count = connectionCountsOf(mine).get(entry.provider ?? "") ?? 0
     const needsCheck = entry.provider !== undefined && checkProvidersOf(mine).has(entry.provider)
+    const [only] = entry.provider !== undefined && SINGLE_GRANT.has(entry.provider) ? mine : []
+    const pageHref = only === undefined ? null : connectionPageHref(only)
     return {
         id: entry.id,
         name,
@@ -72,6 +85,8 @@ const cardOf = (known: KnownEntry, input: LibraryInput): LibraryCard => {
         connected: count,
         isCurrent: CURRENT_CONNECTORS.includes(entry.id),
         isSoon: entry.status === "soon",
+        canConnect: entry.provider !== undefined && mayConnect(input.role, entry.provider),
+        ...(pageHref === null ? {} : { pageHref }),
         want: input.wants[entry.id] ?? IDLE_WANT,
     }
 }
@@ -118,6 +133,7 @@ const libraryOf = (input: LibraryInput) => {
 export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
     const t = useTranslations("connections")
     const overlays = useConnectionOverlays()
+    const { role } = useConnectionsRole()
     const [text, setText] = useState("")
     const [category, setCategory] = useState<ConnectorCategory | "all">("all")
     const [wants, setWants] = useState<Readonly<Record<string, LibraryCard["want"]>>>({})
@@ -135,8 +151,8 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
         )
     }
     const { categories, cards } = useMemo(
-        () => libraryOf({ t, items: props.items, text, category, wants }),
-        [t, props.items, text, category, wants],
+        () => libraryOf({ t, items: props.items, text, category, wants, role }),
+        [t, props.items, text, category, wants, role],
     )
     return (
         <ConnectionLibraryBase
@@ -153,6 +169,8 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
                 wantedLabel: t("libWanted"),
                 connectLabel: t("libConnect"),
                 addLabel: t("libAddAnother"),
+                viewLabel: t("libView"),
+                openPageLabel: t("openPage"),
                 currentLabel: t("libCurrent"),
                 othersLabel: t("libOthers"),
                 cards,

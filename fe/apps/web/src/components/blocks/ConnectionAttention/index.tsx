@@ -39,7 +39,7 @@ export const ConnectionAttention = (props: ConnectionAttentionProps) => {
                     provider: t(providerKey(connection.provider, "title")),
                 }),
                 description,
-                ...(canAct ? { actionLabel: t("reconnect") } : {}),
+                ...(canAct ? { actionLabel: pageHref === null ? t("continue") : t("openPage") } : {}),
             }}
             on={{
                 action: () =>

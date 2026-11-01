@@ -71,6 +71,13 @@ export const connectionPageHref = (connection: Pick<Connection, "id" | "provider
 /** The search params the console uses to remember which overlay is open. */
 export const URL_PARAMS = { connect: "connect", connection: "conn", detail: "detail", tab: "tab" } as const
 
+/**
+ * Whether a role may start a connection of a provider: the owner may start every one, and a manager only the workspace's Google Drive
+ * read grant, which is what the back end allows.
+ */
+export const mayConnect = (role: string | undefined, provider: Provider): boolean =>
+    role === "owner" || (role === "manager" && provider === "google_drive")
+
 /** The query string (without the question mark) a wizard open produces. */
 export const wizardQuery = (provider: Provider, connectionId?: string): string => {
     const params = new URLSearchParams({ [URL_PARAMS.connect]: provider })
@@ -103,9 +110,9 @@ const returnedOf = (read: ParamReader, name: string): { readonly returned?: stri
 }
 
 /**
- * Which wizard the URL asks for. An OAuth return names its connection with `id` (Zalo or Meta), a Google return has
- * `google`, and the console opens its own with `connect` and an optional `conn`. A resume id counts only when the
- * workspace owns it.
+ * Which wizard the URL asks for. An OAuth return names its connection with `id` (Zalo or Meta), a Zalo return that lost its
+ * connection still opens the Zalo wizard so the owner reads why, a Google return has `google`, and the console opens its own with
+ * `connect` and an optional `conn`. A resume id counts only when the workspace owns it.
  */
 export const wizardTargetOf = (
     read: ParamReader,
@@ -116,6 +123,7 @@ export const wizardTargetOf = (
     if (zalo !== undefined) return { provider: "zalo_oa", resumeId: zalo, ...returnedOf(read, "zalo") }
     const meta = ownedBy(items, id, "meta")
     if (meta !== undefined) return { provider: "meta", resumeId: meta, ...returnedOf(read, "meta") }
+    if ((read("zalo") ?? "") !== "") return { provider: "zalo_oa", ...returnedOf(read, "zalo") }
     if ((read("google") ?? "") !== "") return { provider: "google" }
     if ((read("drive") ?? "") !== "") return { provider: "google_drive", ...returnedOf(read, "drive") }
     const connect = read(URL_PARAMS.connect)

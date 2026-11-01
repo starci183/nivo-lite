@@ -162,7 +162,8 @@ export const resumeSlotOf = (resumeId: string | undefined, read: ResumeRead): Da
 
 /**
  * What a stored `last_error` says to the reader. The database keeps the code, so the words follow the reader's language: a code NIVO
- * knows reads as its sentence, anything else (a message Telegram sent) reads as it was stored.
+ * knows reads as its sentence, a sentence (a message Telegram sent) reads as it was stored, and a bare code nobody worded (a refusal
+ * Google named) reads as the plain failure, never as itself.
  */
 export const connectionErrorOf = (lastError: string, t: CatalogReader): string => {
     switch (lastError) {
@@ -178,7 +179,9 @@ export const connectionErrorOf = (lastError: string, t: CatalogReader): string =
             return t("errBotInUse")
         case "CHANNEL_CONNECTIONS_NETWORK":
             return t("errNetwork")
+        case "invalid_grant":
+            return t("errGoogleRevoked")
         default:
-            return lastError
+            return /\s/u.test(lastError.trim()) ? lastError : t("errStopped")
     }
 }

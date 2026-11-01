@@ -46,8 +46,14 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
                     homeLabel: t("crumbHome"),
                     homeHref: CONNECTION_ROUTES.dashboard,
                     title: t("title"),
-                    addLabel: t("add"),
-                    addHref: `${CONNECTION_ROUTES.connections}?${URL_PARAMS.tab}=library`,
+                    ...(role === "owner"
+                        ? {
+                              add: {
+                                  label: t("add"),
+                                  href: `${CONNECTION_ROUTES.connections}?${URL_PARAMS.tab}=library`,
+                              },
+                          }
+                        : {}),
                     description: t("description"),
                     ...(isReady ? { meta: summary } : {}),
                     tabs: {

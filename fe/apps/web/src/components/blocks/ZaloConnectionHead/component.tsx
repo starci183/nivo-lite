@@ -1,9 +1,10 @@
-import { Alert, Badge, Button, IconTile, Page, Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
+import { Alert, Badge, Button, Page, Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
 import type { BreadcrumbItem, PresentationState } from "@starci/grammar/common"
-import type { ReactNode } from "react"
-import { nivoIconSource } from "@/components/leaves/Icon"
+import type { ComponentProps, ReactNode } from "react"
+import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { ConnectionDisconnectBand } from "@/components/composites/ConnectionDisconnectBand"
 import { ConnectionDisconnectDialog } from "@/components/composites/ConnectionDisconnectDialog"
+import { ConnectionRefusedPage } from "@/components/composites/ConnectionRefusedPage"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZaloHeadView } from "@/modules/types"
 
@@ -40,6 +41,10 @@ export interface ZaloConnectionHeadBaseProps {
     readonly shape: { readonly main: ReactNode; readonly rail: ReactNode }
     readonly props: {
         readonly head: DataSlot<ZaloHeadView>
+        /** The provider's own mark. */
+        readonly markSrc: string
+        /** The notice drawn in place of the page for a member who may not read it. */
+        readonly refusal?: ComponentProps<typeof ConnectionRefusedPage>["props"]
         readonly slotLabels: SlotLabels
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
@@ -113,6 +118,7 @@ const NoticesBand = (props: ZaloBandProps) => {
  * becomes a drawer on a narrow screen. Disconnect asks first.
  */
 export const ZaloConnectionHeadBase = (props: ZaloConnectionHeadBaseProps) => {
+    if (props.props.refusal !== undefined) return <ConnectionRefusedPage props={props.props.refusal} />
     const head = props.props.head.items
     const view = head ?? ZALO_HEAD_PLACEHOLDER
     const { rail } = props.props
@@ -124,7 +130,7 @@ export const ZaloConnectionHeadBase = (props: ZaloConnectionHeadBaseProps) => {
                 isSkeleton={props.props.head.isLoading === true}
                 header={{
                     breadcrumbs: { label: props.props.crumbLabel, items: props.props.crumbs },
-                    mark: <IconTile source={nivoIconSource("chat", "leading")} tone="accent" size="md" />,
+                    mark: <ProviderLogo glyph="chat" src={props.props.markSrc} />,
                     title: view.name,
                     status: (
                         <Badge isDot tone={view.chipTone}>

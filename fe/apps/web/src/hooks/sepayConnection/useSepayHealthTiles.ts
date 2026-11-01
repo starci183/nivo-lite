@@ -19,7 +19,7 @@ export const useSepayHealthTiles = (connectionId: string) => {
             {
                 id: "last",
                 term: t("tileLast"),
-                description: last === null ? t("tileNever") : format.relativeTime(new Date(last)),
+                description: last === null ? t("tileNever") : format.relativeTime(new Date(last), new Date()),
             },
             {
                 id: "valid",

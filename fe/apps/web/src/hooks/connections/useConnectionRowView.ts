@@ -96,7 +96,7 @@ export const useConnectionRowView = (
         menuIsDisabled: actions.busy === "keys",
         menu: menuOf(c, input.canManage && (c.provider !== "google_drive" || role === "owner"), t),
         alerts: alertsOf(c, input.agentNames, t),
-        notes: notesOf(c, input.localOnly, input.agentNames, t),
+        notes: notesOf(c, input.localOnly, t),
         smtp: c.provider === "smtp" && live ? smtp.view : null,
         keys:
             actions.keys === null

@@ -17,6 +17,7 @@ import {
     CONNECTION_ROUTES,
     isLocalOnly,
     liveConnections,
+    mayConnect,
     sortRows,
     URL_PARAMS,
     useConnectionOverlays,
@@ -172,6 +173,7 @@ export const ConnectorDetailOverlay = (props: ConnectorDetailOverlayProps) => {
                 localOnly: props.localOnly ?? isLocalOnly(webSiteOrigin()),
                 ownerEmail: props.ownerEmail ?? user.data?.email ?? "",
                 canManage: props.canManage ?? role === "owner",
+                canConnect: provider !== undefined && mayConnect(role, provider),
             }}
             on={{ close: overlays.closeDetail, add: (target) => overlays.openWizard(target) }}
         />

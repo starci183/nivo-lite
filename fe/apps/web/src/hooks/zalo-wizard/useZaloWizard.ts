@@ -36,6 +36,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
     const [agentIds, setAgentIds] = useState<ReadonlyArray<string>>(allAgentIds(input.agents))
     const [note, setNote] = useState<WizardNote | null>(null)
     const [isPending, startTransition] = useTransition()
+    const lostReturn = input.resumeId === undefined ? zaloFailureOf(input.returned, tw) : null
     const resume = useQueryZaloConnectionSwr(input.resumeId, { revalidateOnFocus: false, shouldRetryOnError: false })
 
     // The stored connection arrives once: adopt it while rendering (derived state), not from an effect.
@@ -70,7 +71,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         step,
         fields,
         conn,
-        note: resumeNoteOf(note, resume.error),
+        note: resumeNoteOf(note ?? (lostReturn === null ? null : { tone: "negative", text: lostReturn }), resume.error),
         isPending,
         resume: resumeSlotOf(input.resumeId, resume),
         firstEvent,

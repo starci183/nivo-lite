@@ -13,6 +13,7 @@ export interface ZaloConnectionTestSendBaseProps {
         readonly send: DataSlot<ZaloSendView>
         readonly slotLabels: SlotLabels
         readonly recipientLabel: string
+        readonly recipientEmpty: string
         readonly recipientId: string
         readonly textLabel: string
         readonly text: string
@@ -61,6 +62,7 @@ export const ZaloConnectionTestSendBase = (props: ZaloConnectionTestSendBaseProp
             >
                 <Select
                     label={props.props.recipientLabel}
+                    placeholder={props.props.recipientEmpty}
                     options={view.options.map((option) => ({ id: option.id, label: option.label }))}
                     value={props.props.recipientId}
                     isDisabled={view.options.length === 0}

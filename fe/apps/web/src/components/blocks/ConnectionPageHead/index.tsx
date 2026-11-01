@@ -2,6 +2,8 @@
 
 import { notFound } from "next/navigation"
 import type { ReactNode } from "react"
+import { PROVIDER_LOGO } from "@/hooks/connection-providers"
+import { useConnectionRefusal } from "@/hooks/connections"
 import { useDrivePageHead } from "@/hooks/drive"
 import { useTelegramPageHead } from "@/hooks/telegramConnection"
 import { ConnectionPageHeadBase } from "./component"
@@ -27,7 +29,18 @@ type ConnectionPageHeadProps =
 export const ConnectionPageHead = (props: ConnectionPageHeadProps) => {
     const telegram = useTelegramPageHead(props.kind === "telegram" ? props.connectionId : undefined)
     const drive = useDrivePageHead(props.kind === "drive")
-    if (props.kind === "telegram" && telegram.isMissing) notFound()
+    const refusal = useConnectionRefusal()
+    if (props.kind === "telegram" && telegram.isMissing && refusal === undefined) notFound()
     const { view, on } = props.kind === "telegram" ? telegram : drive
-    return <ConnectionPageHeadBase shape={props.shape} props={view} on={on} />
+    return (
+        <ConnectionPageHeadBase
+            shape={props.shape}
+            props={{
+                ...view,
+                markSrc: PROVIDER_LOGO[props.kind === "telegram" ? "telegram" : "google_drive"] ?? "",
+                ...(refusal === undefined ? {} : { refusal }),
+            }}
+            on={on}
+        />
+    )
 }
