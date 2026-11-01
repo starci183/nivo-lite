@@ -1,7 +1,6 @@
 import {
     Badge,
     Button,
-    Cluster,
     Dialog,
     EmptyNotice,
     HorizontalScrollRegion,
@@ -13,7 +12,7 @@ import {
     TextAction,
     Textarea,
 } from "@starci/grammar/common"
-import { LANE_CLASS_NAME } from "./classNames"
+import { BOARD_CLASS_NAME, LANE_CLASS_NAME } from "./classNames"
 
 /** One deal card, every word already resolved. */
 export interface DealView {
@@ -145,7 +144,7 @@ export const SalesPipelineBase = (props: SalesPipelineBaseProps) => {
 
 const renderPipelineLanes = ({ p, on }: RenderPipelineLanesInput) => (
     <HorizontalScrollRegion overflow="needed" aria-label={p.label}>
-        <Cluster gap="row" wrap={false} align="start">
+        <div className={BOARD_CLASS_NAME}>
             {p.lanes.map((lane) => (
                 <div key={lane.stage} className={LANE_CLASS_NAME}>
                     <SurfaceListCard
@@ -197,7 +196,7 @@ const renderPipelineLanes = ({ p, on }: RenderPipelineLanesInput) => (
                     </SurfaceListCard>
                 </div>
             ))}
-        </Cluster>
+        </div>
     </HorizontalScrollRegion>
 )
 

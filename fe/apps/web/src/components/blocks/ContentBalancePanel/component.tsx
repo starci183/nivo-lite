@@ -1,4 +1,4 @@
-import { EmptyNotice, ListRow, Meter, SectionHeader, Stack, SurfaceListCard } from "@starci/grammar/common"
+import { EmptyNotice, ListRow, Meter, Stack, SurfaceListCard, Text } from "@starci/grammar/common"
 import { ContentMonthBar } from "@/components/leaves/ContentMonthBar"
 import type { ContentT } from "@/modules/types"
 
@@ -44,8 +44,16 @@ export const ContentBalancePanelBase = (props: ContentBalancePanelBaseProps) => 
     return (
         <Stack gap="row">
             <ContentMonthBar title={props.props.monthTitle} t={t} onShift={props.on.shift} onToday={props.on.today} />
-            <SectionHeader level={2} title={props.props.title} description={t("balanceBody")} />
-            <SurfaceListCard ariaLabel={t("balanceTitle")} empty={<EmptyNotice message={t("balanceEmpty")} />}>
+            <SurfaceListCard
+                label={props.props.title}
+                headingLevel={2}
+                footer={
+                    <Text size="sm" tone="muted">
+                        {t("balanceBody")}
+                    </Text>
+                }
+                empty={<EmptyNotice message={t("balanceEmpty")} />}
+            >
                 {props.props.themes.map((row) => (
                     <ListRow
                         key={row.id}
@@ -57,24 +65,29 @@ export const ContentBalancePanelBase = (props: ContentBalancePanelBaseProps) => 
                 ))}
             </SurfaceListCard>
             {props.props.channels.length > 0 ? (
-                <>
-                    <SectionHeader level={2} title={t("cadenceTitle")} description={t("cadenceBody")} />
-                    <SurfaceListCard ariaLabel={t("cadenceTitle")}>
-                        {props.props.channels.map((row) => (
-                            <ListRow
-                                key={row.id}
-                                title={
-                                    <Meter
-                                        label={row.label}
-                                        value={row.value}
-                                        maxValue={row.max}
-                                        valueLabel={row.valueLabel}
-                                    />
-                                }
-                            />
-                        ))}
-                    </SurfaceListCard>
-                </>
+                <SurfaceListCard
+                    label={t("cadenceTitle")}
+                    headingLevel={2}
+                    footer={
+                        <Text size="sm" tone="muted">
+                            {t("cadenceBody")}
+                        </Text>
+                    }
+                >
+                    {props.props.channels.map((row) => (
+                        <ListRow
+                            key={row.id}
+                            title={
+                                <Meter
+                                    label={row.label}
+                                    value={row.value}
+                                    maxValue={row.max}
+                                    valueLabel={row.valueLabel}
+                                />
+                            }
+                        />
+                    ))}
+                </SurfaceListCard>
             ) : null}
         </Stack>
     )

@@ -4,7 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./payment-order-requests.
 import { PaymentOrderRequestsService } from "./payment-order-requests.service"
 
 @Module({})
-/** The payment order requests over the primary Supabase connection: the only writer of public.payment_order_requests. */
+/** The payment order requests over the primary PostgreSQL connection: the only writer of public.payment_order_requests. */
 export class PaymentOrderRequestsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

@@ -1,4 +1,4 @@
-import { Button, Cluster, IconButton, List, ListRow, Meter, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Cluster, IconButton, ListRow, Meter, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
 import { Icon, nivoIconSource } from "@/components/leaves/Icon"
 import { ALL_SET } from "./classNames"
 
@@ -29,7 +29,6 @@ export interface OnboardingChecklistBaseProps {
     readonly props: {
         readonly steps: ReadonlyArray<OnboardingChecklistStep>
         readonly isOpen: boolean
-        readonly listId: string
         readonly title: string
         readonly allSet: string
         readonly allSetCount: string
@@ -55,7 +54,7 @@ const Steps = ({ props }: StepsProps) => {
     const nextKey = props.steps.find((step) => !step.done)?.key
     const doneIcon = { name: "complete", usage: "leading", ariaLabel: props.doneLabel } as const
     return (
-        <List as="ol" id={props.listId} label={props.title}>
+        <>
             {props.steps.map((step) => {
                 const isNext = step.key === nextKey
                 return (
@@ -85,7 +84,7 @@ const Steps = ({ props }: StepsProps) => {
                     />
                 )
             })}
-        </List>
+        </>
     )
 }
 
@@ -109,22 +108,21 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
         )
     }
     return (
-        <SurfaceCard
+        <SurfaceListCard
             label={props.title}
             headingLevel={2}
+            fact={props.progressValue}
             labelEnd={
                 <IconButton
                     intent="neutral"
                     source={nivoIconSource("disclosure", "leading")}
                     label={props.toggleLabel}
                     aria-expanded={props.isOpen}
-                    aria-controls={props.listId}
                     onPress={on.toggle}
                     isSkeleton={props.isSkeleton}
                 />
             }
-        >
-            <Stack gap="section">
+            empty={
                 <Meter
                     label={props.progressLabel}
                     value={doneCount}
@@ -134,9 +132,10 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
                     tone="informative"
                     isSkeleton={props.isSkeleton}
                 />
-                {props.isOpen ? <Steps props={props} /> : null}
-            </Stack>
-        </SurfaceCard>
+            }
+        >
+            {props.isOpen ? <Steps props={props} /> : null}
+        </SurfaceListCard>
     )
 }
 

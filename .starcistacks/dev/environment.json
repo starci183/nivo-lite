@@ -1,5 +1,5 @@
 {
   "environment": "dev",
-  "provider": "supabase",
+  "provider": "postgres",
   "project": "nivo-lite"
 }

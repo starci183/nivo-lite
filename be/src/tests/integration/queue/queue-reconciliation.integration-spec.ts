@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { reconciliationProof, lockReconcileJob } from "../../world/queue-reconciliation-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 
-describe("Queue reconciliation claims (private local Supabase)", () => {
+describe("Queue reconciliation claims (private local PostgreSQL)", () => {
     const world = useTestWorld({ modules: [] })
     const { seed, claim } = reconciliationProof(world)
 

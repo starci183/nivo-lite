@@ -1,9 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { EventsService } from "@modules/domain/events"
 import type {
+    BridgeTurn,
     GatewayToolName,
     JsonResult,
+    KnowledgeCaller,
     OptionalAuthorization,
+    ReadToolName,
     ToolArgs,
     ToolContext,
     ToolManifestEntry,
@@ -35,7 +38,7 @@ import { AgentToolsError, AgentToolsErrorCode } from "./errors/agent-tools.error
 import { agentHandoffOf, approvalOf, clipText, handoffReasonOf, leadOf, queryOf } from "./tool-args.policy"
 import { BridgeCallsService } from "./bridge-calls.service"
 import { bearerTokenOf, isBridgeToken } from "./tool-bearer.policy"
-import { isBookingTool, isGatewayTool, isToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
+import { isBookingTool, isGatewayTool, isReadTool, isToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
 import type { ToolName } from "./tool-manifest.policy"
 
 /** What the evidence line of a connector meta-tool names: the query of a search, the tool of a call, the sequence as such. */
@@ -142,25 +145,58 @@ export class AgentToolsService {
                 workspaceId: turn.workspaceId,
                 conversationId: turn.conversationId,
             }
-            return await this.dispatch(ctx, tool, args)
+            return await this.dispatch(ctx, tool, args, turn.agentId)
         }
+        if (isReadTool(tool)) return await this.readInternal(turn, tool, args)
         return await this.bridge.runInternal(turn, tool, args)
     }
 
-    private dispatch(ctx: ToolContext, tool: ToolName, args: ToolArgs): Promise<JsonResult> {
+    private async readInternal(turn: BridgeTurn, tool: ReadToolName, args: ToolArgs): Promise<JsonResult> {
+        const { workspaceId, agentId } = turn
+        const answer = await this.read({ workspaceId, conversationId: null, agentId }, tool, args)
+        await this.events.record({
+            workspaceId,
+            kind: `engine.tool.${tool}`,
+            actor: ACTOR,
+            summary: `Read ${tool} in a ${turn.source} turn`,
+            evidence: turn.wakeId,
+        })
+        return answer
+    }
+
+    private dispatch(
+        ctx: ToolContext,
+        tool: ToolName,
+        args: ToolArgs,
+        agentId: string | null = null,
+    ): Promise<JsonResult> {
         if (isBookingTool(tool)) return this.booking.run(ctx, tool, args)
         if (isGatewayTool(tool)) return this.callGateway(ctx, tool, args)
         if (tool === "conversation.handOff") return this.handToAgent(ctx, args)
-        if (tool === "knowledge.search") return this.searchKnowledge(ctx, args)
+        if (isReadTool(tool)) return this.readInConversation(ctx, tool, args, agentId)
         if (tool === "lead.create_or_update") return this.createLead(ctx, args)
         if (tool === "approval.request") return this.requestApproval(ctx, args)
         return this.handOff(ctx, args)
     }
 
-    private async searchKnowledge(ctx: ToolContext, args: ToolArgs): Promise<JsonResult> {
-        const query = queryOf(args)
-        const found = await this.knowledge.search(ctx, query)
-        await this.trace(ctx, "knowledge.search", `Knowledge search: ${query.slice(0, SUMMARY_QUERY_CHARS)}`)
+    private async readInConversation(
+        ctx: ToolContext,
+        tool: ReadToolName,
+        args: ToolArgs,
+        agentId: string | null,
+    ): Promise<JsonResult> {
+        const { workspaceId, conversationId } = ctx
+        const answer = await this.read({ workspaceId, conversationId, agentId }, tool, args)
+        const summary =
+            tool === "memory.read" ? "Memory read" : `Knowledge search: ${queryOf(args).slice(0, SUMMARY_QUERY_CHARS)}`
+        await this.trace(ctx, tool, summary)
+        return answer
+    }
+
+    /** One read of NIVO's own knowledge: the port audits it. */
+    private async read(caller: KnowledgeCaller, tool: ReadToolName, args: ToolArgs): Promise<JsonResult> {
+        if (tool === "memory.read") return { memory: await this.knowledge.memory(caller) }
+        const found = await this.knowledge.search(caller, queryOf(args))
         return {
             passages: found.passages,
             citations: found.citations.map((citation) => ({ title: citation.title, topic: citation.topic })),

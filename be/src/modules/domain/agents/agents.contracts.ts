@@ -279,7 +279,7 @@ export interface DashboardQuery {
     readonly installationId?: string | null
 }
 
-/** The OpenClaw copy of one agent, built only from Supabase. */
+/** The OpenClaw copy of one agent, built only from the NIVO database. */
 export interface AgentBundle {
     /** The installation. */
     readonly installationId: string
@@ -342,8 +342,6 @@ export interface AgentsMdInput {
     readonly rules: ReadonlyArray<BaseRuleText>
     /** The applied context, or null. */
     readonly version: OptionalContextVersionText
-    /** The standing memory of the brain, or an empty text. */
-    readonly memory: string
     /** The titles and full text of the knowledge sources. */
     readonly sources: ReadonlyArray<SourceText>
     /** The reply contract of the module, or null. */

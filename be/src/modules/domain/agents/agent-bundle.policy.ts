@@ -118,7 +118,6 @@ export const agentsMdOf = (input: AgentsMdInput, t: TextOf): string => {
             input.version === null
                 ? t("bundle.contextNone")
                 : t("bundle.contextSection", { version: input.version.version, text: input.version.text }),
-            input.memory,
             knowledgeBlockOf(input, t),
             input.contract === null ? "" : t("bundle.contractSection", { contract: input.contract }),
             input.tools,

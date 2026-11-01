@@ -8,6 +8,23 @@ namespaces:
   agentChat:
     - key: "testIntro"
       reason: 'Read as the string "testIntro" in components/blocks/MetaWizard/component.tsx, components/blocks/MetaWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+  agentWork:
+    - prefix: "source_"
+      reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (what woke a turn) comes from data, so the detector cannot enumerate the keys."
+    - prefix: "reason_"
+      reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (why a wake was held or skipped) comes from data, so the detector cannot enumerate the keys."
+    - prefix: "goal_"
+      reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (a goal's state) comes from data, so the detector cannot enumerate the keys."
+    - prefix: "goalBy_"
+      reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (who set a goal) comes from data, so the detector cannot enumerate the keys."
+    - prefix: "task_"
+      reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (a task's state) comes from data, so the detector cannot enumerate the keys."
+    - prefix: "wait_"
+      reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (what a task waits for) comes from data, so the detector cannot enumerate the keys."
+    - prefix: "event_"
+      reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (the event a trigger waits for) comes from data, so the detector cannot enumerate the keys."
+    - prefix: "tool_"
+      reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (the tool a model named in a title) comes from data, so the detector cannot enumerate the keys."
   approval:
     - prefix: "step"
       reason: "Key family built at run time as `step${key}` in hooks/overviewPromo/overviewPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."

@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useProfileRegion } from "@/hooks/agentProfile"
 import { mapSlot } from "@/hooks/slot"
-import { moduleGlyphOf } from "@/hooks/installations"
+import { moduleGlyphOf, useAgentPictures } from "@/hooks/installations"
 import { AgentProfileTagsBase } from "./component"
 
 /** The agent whose tag list the card shows. */
@@ -15,6 +15,7 @@ type AgentProfileTagsProps = {
 export const AgentProfileTags = (props: AgentProfileTagsProps) => {
     const t = useTranslations("agentProfile")
     const g = useTranslations("governance")
+    const pictureOf = useAgentPictures()
     const region = useProfileRegion(props.agentId, (agent) => ({ isFailed: false, items: agent.canTag }))
     return (
         <AgentProfileTagsBase
@@ -26,7 +27,11 @@ export const AgentProfileTags = (props: AgentProfileTagsProps) => {
                             id: target.id,
                             title: target.name,
                             description: g.has(`dept_${target.module}`) ? g(`dept_${target.module}`) : target.module,
-                            mark: { glyph: moduleGlyphOf(target.module), module: target.module },
+                            mark: {
+                                glyph: moduleGlyphOf(target.module),
+                                module: target.module,
+                                avatarUrl: pictureOf({ name: target.name }),
+                            },
                             badges: [
                                 { label: t("aiChip"), tone: "neutral" },
                                 ...(target.isActive ? [] : [{ label: t("chip_paused"), tone: "danger" as const }]),

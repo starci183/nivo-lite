@@ -1,3 +1,4 @@
+import { isDecisionWork } from "./office.helpers"
 import type { OfficeApproval, OfficeCandidate, OfficeCardPayload, OfficeMessage, OfficeWork } from "./office.types"
 
 /** Two lines of one author closer than this form one group. */
@@ -61,6 +62,12 @@ const closeGroups = (items: ReadonlyArray<ThreadEntry>): ReadonlyArray<ThreadEnt
             : item
     })
 
+/** The line NIVO posts when it puts a work item in front of the owner: its card already says the same, so the thread leaves it out while the item waits. */
+const isAskLine = (message: OfficeMessage, works: ReadonlyArray<OfficeWork>): boolean =>
+    message.card === null &&
+    message.workItemId !== null &&
+    works.some((work) => work.id === message.workItemId && isDecisionWork(work))
+
 /**
  * Merges lines, approval requests and exceptions by time, adds day separators and groups consecutive lines of one author;
  * a command card sits right under its line.
@@ -73,7 +80,9 @@ export const buildThreadEntries = (
 ): ReadonlyArray<ThreadEntry> => {
     const under = cardsByMessage(candidates)
     const timeline: ReadonlyArray<TimelineEntry> = [
-        ...messages.map((message) => ({ at: message.createdAt, message })),
+        ...messages
+            .filter((message) => !isAskLine(message, works))
+            .map((message) => ({ at: message.createdAt, message })),
         ...approvals.map((approval) => ({ at: approval.createdAt, approval })),
         ...works.map((work) => ({ at: work.createdAt, work })),
     ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())

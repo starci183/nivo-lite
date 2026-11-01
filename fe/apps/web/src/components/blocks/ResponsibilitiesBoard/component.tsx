@@ -102,6 +102,7 @@ const OWNER_GROUPS_PLACEHOLDER: ReadonlyArray<OwnerGroupView> = [
         kind: "human",
         handle: null,
         glyph: "moduleChatbot",
+        avatarUrl: null,
         rows: [PLACEHOLDER_ROW, { ...PLACEHOLDER_ROW, id: "placeholder-row-2" }],
     },
 ]

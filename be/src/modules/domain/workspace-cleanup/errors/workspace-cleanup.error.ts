@@ -17,7 +17,7 @@ export enum WorkspaceCleanupErrorCode {
     DigestMismatch = "WORKSPACE_CLEANUP_DIGEST_MISMATCH",
     /** A bounded scan of workspaces or accounts did not reach the end. */
     ScanIncomplete = "WORKSPACE_CLEANUP_SCAN_INCOMPLETE",
-    /** Supabase Auth refused to list the accounts. */
+    /** The own-auth account door refused to list the accounts. */
     AuthFailed = "WORKSPACE_CLEANUP_AUTH_FAILED",
     /** The footprint of a workspace did not answer row counts. */
     FootprintInvalid = "WORKSPACE_CLEANUP_FOOTPRINT_INVALID",

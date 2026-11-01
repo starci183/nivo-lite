@@ -5,7 +5,7 @@ import { VideoRendersService } from "./video-renders.service"
 import { VideoRenderStatusService } from "./video-render-status.service"
 
 @Module({})
-/** The video-renders capability over the primary Supabase PostgreSQL connection: the render rows the render job produces. */
+/** The video-renders capability over the primary PostgreSQL connection: the render rows the render job produces. */
 export class VideoRendersModule extends ConfigurableModuleClass {
     /** Registers the capability once in the app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

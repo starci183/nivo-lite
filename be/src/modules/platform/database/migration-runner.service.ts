@@ -25,7 +25,7 @@ const runDbPush = (): Promise<void> =>
     })
 
 @Injectable()
-/** The lite migration runner delegates the Supabase schema authority to the managed db:push wrapper. */
+/** The lite migration runner delegates the schema authority to the managed db:push wrapper. */
 export class MigrationRunnerService {
     /** Runs the managed wrapper and propagates a CLI or migration failure. */
     async run(): Promise<void> {

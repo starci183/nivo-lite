@@ -10,7 +10,7 @@ import {
     cutoverFunctions,
 } from "../../world/queue-cutover-database.service"
 
-describe("Queue cutover guards (private local Supabase)", () => {
+describe("Queue cutover guards (private local PostgreSQL)", () => {
     const sandbox = cutoverSandbox()
     const world = useTestWorld({ modules: [], sandbox })
     beforeAll(async () => {

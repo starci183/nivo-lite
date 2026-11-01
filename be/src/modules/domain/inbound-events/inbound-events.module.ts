@@ -5,7 +5,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./inbound-events.module-d
 import { InboxFeedService } from "./inbox-feed.service"
 
 @Module({})
-/** The inbound-events capability over the primary Supabase connection; it imports and exports the ledger sub-module. */
+/** The inbound-events capability over the primary PostgreSQL connection; it imports and exports the ledger sub-module. */
 export class InboundEventsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

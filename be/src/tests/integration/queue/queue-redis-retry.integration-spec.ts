@@ -7,7 +7,7 @@ import { redisQueueModules } from "../../world/redis-capabilities.options"
 import { redisJobProof, startQueueRelay, transportOf, waitForProof } from "../../world/redis-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 
-describe("Queue retry-after hints over private Redis and Supabase", () => {
+describe("Queue retry-after hints over private Redis and PostgreSQL", () => {
     const world = useTestWorld({ modules: redisQueueModules(`queue-retry-${worldIds.next()}`) })
     const { rowOf, enqueue } = redisJobProof(world)
     beforeAll(() => {

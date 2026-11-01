@@ -30,7 +30,7 @@ export class BridgeCallsService {
         return turn
     }
 
-    /** A turn with no conversation has no customer to book, search for or hand over: only the connector tools, and not the playbook sequence, which a person approves for a conversation. */
+    /** A turn with no conversation has no customer to book for or hand over: only the connector tools (the reads go through the audited read path), and not the playbook sequence, which a person approves for a conversation. */
     async runInternal(turn: BridgeTurn, tool: ToolName, args: ToolArgs): Promise<JsonResult> {
         if (!isGatewayTool(tool) || tool === "tool.sequence") return { error: "needs_conversation" }
         const answer = await this.internal.run(turn, tool, args)

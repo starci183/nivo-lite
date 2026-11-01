@@ -1,13 +1,5 @@
-import {
-    Badge,
-    Button,
-    EmptyNotice,
-    ListRow,
-    SectionHeader,
-    SurfaceCard,
-    SurfaceListCard,
-} from "@starci/grammar/common"
-import { ACTIONS_CLASS_NAME, PANEL_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
+import { Badge, Button, EmptyNotice, ListRow, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
+import { ACTIONS_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** Which decision a row takes: the agent work item behind it, or an availability change. */
 type DecisionKind = "item" | "availability"
@@ -60,47 +52,57 @@ export const ShiftsRequestsBase = (props: ShiftsRequestsBaseProps) => (
         {[...props.props.sections, { id: "recent", title: props.props.recentTitle, hint: "", rows: props.props.recent }]
             .filter((section) => section.rows.length > 0)
             .map((section) => (
-                <div key={section.id} className={SECTION_CLASS_NAME}>
-                    <SectionHeader level={2} title={section.title} description={section.hint || undefined} />
-                    <SurfaceListCard ariaLabel={section.title}>
-                        {section.rows.map((row) => (
-                            <ListRow
-                                key={row.id}
-                                title={row.title}
-                                description={row.notes.filter((note) => note !== "").join(" · ")}
-                                badges={<Badge tone={row.tone}>{row.badge}</Badge>}
-                                actions={
-                                    row.decision === null ? null : (
-                                        <div className={ACTIONS_CLASS_NAME}>
-                                            <Button
-                                                size="sm"
-                                                intent="alternative"
-                                                isDisabled={props.props.isBusy}
-                                                onPress={() => {
-                                                    if (row.decision !== null)
-                                                        props.on.approve(row.decision.kind, row.decision.targetId)
-                                                }}
-                                            >
-                                                {props.props.approveLabel}
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                intent="alternative"
-                                                isDisabled={props.props.isBusy}
-                                                onPress={() => {
-                                                    if (row.decision !== null)
-                                                        props.on.decline(row.decision.kind, row.decision.targetId)
-                                                }}
-                                            >
-                                                {props.props.declineLabel}
-                                            </Button>
-                                        </div>
-                                    )
-                                }
-                            />
-                        ))}
-                    </SurfaceListCard>
-                </div>
+                <SurfaceListCard
+                    key={section.id}
+                    label={section.title}
+                    headingLevel={2}
+                    {...(section.hint === ""
+                        ? {}
+                        : {
+                              footer: (
+                                  <Text size="sm" tone="muted">
+                                      {section.hint}
+                                  </Text>
+                              ),
+                          })}
+                >
+                    {section.rows.map((row) => (
+                        <ListRow
+                            key={row.id}
+                            title={row.title}
+                            description={row.notes.filter((note) => note !== "").join(" · ")}
+                            badges={<Badge tone={row.tone}>{row.badge}</Badge>}
+                            actions={
+                                row.decision === null ? null : (
+                                    <div className={ACTIONS_CLASS_NAME}>
+                                        <Button
+                                            size="sm"
+                                            intent="alternative"
+                                            isDisabled={props.props.isBusy}
+                                            onPress={() => {
+                                                if (row.decision !== null)
+                                                    props.on.approve(row.decision.kind, row.decision.targetId)
+                                            }}
+                                        >
+                                            {props.props.approveLabel}
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            intent="alternative"
+                                            isDisabled={props.props.isBusy}
+                                            onPress={() => {
+                                                if (row.decision !== null)
+                                                    props.on.decline(row.decision.kind, row.decision.targetId)
+                                            }}
+                                        >
+                                            {props.props.declineLabel}
+                                        </Button>
+                                    </div>
+                                )
+                            }
+                        />
+                    ))}
+                </SurfaceListCard>
             ))}
     </div>
 )

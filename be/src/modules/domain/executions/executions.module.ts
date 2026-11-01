@@ -5,7 +5,7 @@ import { ExecutionsService } from "./executions.service"
 import { ExecutionsFiguresService } from "./executions-figures.service"
 
 @Module({})
-/** The approval cards of a workspace over the primary Supabase PostgreSQL connection. */
+/** The approval cards of a workspace over the primary PostgreSQL connection. */
 export class ExecutionsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

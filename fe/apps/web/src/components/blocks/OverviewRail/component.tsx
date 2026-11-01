@@ -10,6 +10,8 @@ interface OverviewRailAgent {
     readonly module: string
     readonly glyph: ModuleIconName
     readonly name: string
+    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    readonly avatarUrl: string | null
     readonly isActive: boolean
     readonly statusLabel: string
     readonly chatHref: string
@@ -71,6 +73,7 @@ export const OverviewRailBase = (props: OverviewRailBaseProps) => {
                                 glyph={nivoIconSource(agent.glyph, "leading")}
                                 label={agent.name}
                                 seed={agent.id}
+                                src={agent.avatarUrl}
                                 module={agent.module}
                             />
                         }

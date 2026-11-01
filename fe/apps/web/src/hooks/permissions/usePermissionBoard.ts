@@ -1,6 +1,6 @@
 "use client"
 
-import { useTranslations } from "next-intl"
+import { useFormatter, useTranslations } from "next-intl"
 import { useAuthoritySection, visibleGroups } from "@/hooks/authority"
 import { useQueryAgentsSwr, useQueryApproverDirectorySwr, useQueryOfficeRoomsSwr } from "@/hooks/swr"
 import { mapSlot } from "@/hooks/slot"
@@ -17,12 +17,10 @@ type ModeTone = "success" | "warning" | "danger"
 interface PermissionBoardRow {
     readonly id: string
     readonly title: string
-    readonly department: string
-    readonly agents: string
+    /** One line: the agents it covers (absent when every rule covers every agent), whom it asks and how they decide. */
+    readonly description: string
     readonly modeLabel: string
     readonly modeTone: ModeTone
-    readonly group: ReadonlyArray<string>
-    readonly policy: string
     readonly rule: StoredRule
 }
 
@@ -40,6 +38,7 @@ const TONES: Readonly<Record<ModeKind, ModeTone>> = {
  */
 export const usePermissionBoard = () => {
     const g = useTranslations("governance")
+    const format = useFormatter()
     const { slot, reload, rules, isLocked } = useAuthoritySection()
     const agents = useQueryAgentsSwr({})
     const directory = useQueryApproverDirectorySwr()
@@ -58,18 +57,22 @@ export const usePermissionBoard = () => {
     }))
     const words = usePermissionWords({ members, rooms: roomOptions, agents: agentOptions })
 
+    const everyAgent = rules.every((rule) => rule.agents.length === 0)
     const rowOf = (department: string, action: string): PermissionBoardRow => {
         const rule = rules.find((one) => one.department === department && one.action === action)
         const shown = rule ?? defaultRule(department, action)
+        const asks = asksPerson(shown)
+        const line = [
+            everyAgent ? "" : words.agentWords(shown),
+            asks ? format.list(words.groupWords(shown), { type: "disjunction" }) : "",
+            asks ? words.policyWords(shown) : "",
+        ]
         return {
             id: `${department}/${action}`,
             title: g(`action_${action}`),
-            department: g(`dept_${department}`),
-            agents: words.agentWords(shown),
+            description: line.filter((part) => part !== "").join(" · "),
             modeLabel: words.modeWords(shown),
             modeTone: TONES[modeKindOf(shown)],
-            group: asksPerson(shown) ? words.groupWords(shown) : [],
-            policy: asksPerson(shown) ? words.policyWords(shown) : "",
             rule: shown,
         }
     }

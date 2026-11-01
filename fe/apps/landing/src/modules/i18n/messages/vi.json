@@ -262,7 +262,7 @@
           "id": "storage",
           "title": "5. Lưu trữ và bảo mật",
           "paragraphs": [
-            "Dữ liệu được lưu trên Supabase và được kiểm soát truy cập theo từng không gian làm việc. Các khóa và token kết nối (Zalo, Telegram, Google, ngân hàng) được mã hóa bằng AES-256-GCM trước khi lưu. Không có hệ thống nào an toàn tuyệt đối; chúng tôi áp dụng các biện pháp hợp lý để giảm rủi ro."
+            "Dữ liệu được lưu trong cơ sở dữ liệu của NIVO và được kiểm soát truy cập theo từng không gian làm việc. Các khóa và token kết nối (Zalo, Telegram, Google, ngân hàng) được mã hóa bằng AES-256-GCM trước khi lưu. Không có hệ thống nào an toàn tuyệt đối; chúng tôi áp dụng các biện pháp hợp lý để giảm rủi ro."
           ]
         },
         {

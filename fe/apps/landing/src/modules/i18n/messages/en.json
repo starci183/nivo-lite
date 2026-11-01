@@ -260,7 +260,7 @@
           "id": "storage",
           "title": "5. Storage and security",
           "paragraphs": [
-            "Data is stored on Supabase with access controlled per workspace. Connection secrets and tokens (Zalo, Telegram, Google, bank) are encrypted with AES-256-GCM before they are stored. No system is perfectly secure; we apply reasonable measures to reduce risk."
+            "Data is stored in the NIVO database with access controlled per workspace. Connection secrets and tokens (Zalo, Telegram, Google, bank) are encrypted with AES-256-GCM before they are stored. No system is perfectly secure; we apply reasonable measures to reduce risk."
           ]
         },
         {

@@ -7,7 +7,7 @@ import { TelegramDeliveryService } from "./telegram-delivery.service"
 import { TelegramInboxService } from "./telegram-inbox.service"
 
 @Module({})
-/** The durable inbox of the telegram-inbox webhook, over the primary Supabase PostgreSQL connection. */
+/** The durable inbox of the telegram-inbox webhook, over the primary PostgreSQL connection. */
 export class TelegramInboxModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

@@ -161,7 +161,6 @@ Names the self-hosted stack relies on (Postgres, own auth, MinIO). Owning lanes 
 
 | Key | Member | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | `api` | Connection of the self-hosted `db` as `app_be`; the default env of `starci app db plan|migrate|dump --url-env` (and of `app stack deploy --urgent --db-url-env`). Replaces the Supabase `PRIMARY_DB_URL`. |
-| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | `auth` | Google sign-in of our own auth; replace `SUPABASE_AUTH_EXTERNAL_GOOGLE_*`. |
+| `DATABASE_URL` | `api` | Connection of the self-hosted `db` as `app_be`; the default env of `starci app db plan|migrate|dump --url-env` (and of `app stack deploy --urgent --db-url-env`). |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | `auth` | Google sign-in of our own auth. |
 | auth signing key, storage endpoint and keys | `auth`, `api` | Exact names owned by sh-authbe and sh-storage (BE_AUTH_JWT_OWN_JWKS, BE_STORAGE_OWNER). |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | retired | No longer baked into the web image. |

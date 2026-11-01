@@ -1,4 +1,4 @@
-import { Badge, Cluster, SectionHeader, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, Button, EmptyNotice, ListRow, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovWaitingItem } from "@/hooks/overviewGov"
 
@@ -16,66 +16,49 @@ export interface OverviewGovWaitingProps {
     }
 }
 
-/** The decisions waiting for the owner: the oldest few, each opening Office. */
+/** The decisions waiting for the owner: the oldest few, each opening Office, in one list with the count and the source. */
 export const OverviewGovWaiting = (props: OverviewGovWaitingProps) => {
-    const cards = props.figures.items.map((item) => ({
-        item,
-        action: { kind: "link" as const, href: props.figures.chatHref, label: item.title },
-    }))
+    const { figures } = props
     return (
-        <AccountingBlock label={props.figures.title}>
+        <AccountingBlock label={figures.title}>
             <SectionHeader
                 level={2}
-                title={props.figures.title}
+                title={figures.title}
                 action={
-                    props.figures.openLabel === null ? undefined : (
-                        <TextAction href={props.figures.chatHref} appearance="section">
-                            {props.figures.openLabel}
+                    figures.openLabel === null ? undefined : (
+                        <TextAction href={figures.chatHref} appearance="section">
+                            {figures.openLabel}
                         </TextAction>
                     )
                 }
             />
-            <SurfaceCard ariaLabel={props.figures.title}>
-                <Stack gap="row">
-                    {props.figures.items.length === 0 ? (
-                        <Text tone="muted">{props.figures.none}</Text>
-                    ) : (
-                        <>
-                            <Text weight="semibold">{props.figures.count}</Text>
-                            <Stack gap="row">
-                                {cards.map(({ item, action }) => (
-                                    <SurfaceCard key={item.id} wholeAction={action}>
-                                        <Stack gap="identity">
-                                            <Cluster gap="inline">
-                                                <Badge tone="neutral">{item.department}</Badge>
-                                                {item.reason === null ? null : (
-                                                    <Badge tone="warning">{item.reason}</Badge>
-                                                )}
-                                            </Cluster>
-                                            <Text size="sm" weight="medium">
-                                                {item.title}
-                                            </Text>
-                                            {item.summary === null ? null : (
-                                                <Text size="sm" tone="muted" overflow="clamp-2">
-                                                    {item.summary}
-                                                </Text>
-                                            )}
-                                        </Stack>
-                                    </SurfaceCard>
-                                ))}
-                            </Stack>
-                            {props.figures.more === null ? null : (
-                                <Text size="sm" tone="muted">
-                                    {props.figures.more}
-                                </Text>
-                            )}
-                        </>
-                    )}
-                    <Text size="xs" tone="muted">
-                        {props.figures.source}
-                    </Text>
-                </Stack>
-            </SurfaceCard>
+            <SurfaceListCard
+                ariaLabel={figures.title}
+                {...(figures.items.length === 0 ? {} : { fact: figures.count })}
+                empty={<EmptyNotice message={figures.none} />}
+                footer={[figures.more ?? "", figures.source].filter((line) => line !== "").join(" · ")}
+            >
+                {figures.items.map((item) => (
+                    <ListRow
+                        key={item.id}
+                        title={item.title}
+                        {...(item.summary === null ? {} : { description: item.summary })}
+                        badges={
+                            <>
+                                <Badge tone="neutral">{item.department}</Badge>
+                                {item.reason === null ? null : <Badge tone="warning">{item.reason}</Badge>}
+                            </>
+                        }
+                        actions={
+                            figures.openLabel === null ? undefined : (
+                                <Button size="sm" intent="neutral" href={figures.chatHref}>
+                                    {figures.openLabel}
+                                </Button>
+                            )
+                        }
+                    />
+                ))}
+            </SurfaceListCard>
         </AccountingBlock>
     )
 }

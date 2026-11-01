@@ -13,7 +13,7 @@ import { LeadGenCommentService } from "./leadgen-comment.service"
 import { LEADGEN_COMMENT_DECISIONS } from "./leads.decorators"
 
 @Module({})
-/** The journey of a lead over the primary Supabase PostgreSQL connection. */
+/** The journey of a lead over the primary PostgreSQL connection. */
 export class LeadsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

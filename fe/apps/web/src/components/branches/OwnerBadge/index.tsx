@@ -13,6 +13,8 @@ type OwnerBadgeProps = {
     readonly handle: string | null
     /** Semantic Icon name of the agent glyph. */
     readonly glyph: ModuleIconName
+    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    readonly avatarUrl?: string | null
     /** The words under the name: the role of the owner. */
     readonly role: string
     /** The owner is drawn from the placeholder while the read is in flight. */
@@ -27,6 +29,7 @@ export const OwnerBadge = (props: OwnerBadgeProps) => (
                 glyph={nivoIconSource(props.glyph, "leading")}
                 label={props.name}
                 seed={props.handle ?? props.name}
+                src={props.avatarUrl}
                 module={props.handle ?? "chatbot"}
                 size="md"
             />

@@ -5,7 +5,7 @@ import { ContentSettingsService } from "./content-settings.service"
 import { ContentConfigurationService } from "./content-configuration.service"
 
 @Module({})
-/** The content-settings capability over the primary Supabase PostgreSQL connection: which automations a workspace switched on and their dedupe marks. */
+/** The content-settings capability over the primary PostgreSQL connection: which automations a workspace switched on and their dedupe marks. */
 export class ContentSettingsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

@@ -9,7 +9,7 @@ import { QUEUE_MODULES } from "../../world/test-capabilities.options"
 import { outboxRows, messages, observeQueue, cleanupQueue } from "../../world/proof-database.service"
 import { cronProof } from "../../world/cron-proof.service"
 
-describe("NIVO queue (local Supabase integration)", () => {
+describe("NIVO queue (local PostgreSQL integration)", () => {
     const world = useTestWorld({ modules: [...QUEUE_MODULES] })
     it("queue/enqueue-atomic-with-transaction: the outbox row commits or rolls back with its change", async () => {
         const kept = world.key("kept")

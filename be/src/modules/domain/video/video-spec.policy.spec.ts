@@ -96,10 +96,10 @@ describe("mediaPathOf", () => {
         expect(subject.mediaPathOf(IMAGE)).toBe(IMAGE)
     })
 
-    it("reads the path out of a Storage URL", async () => {
+    it("reads the path out of a legacy storage-api URL", async () => {
         const subject = await buildSubject()
 
-        const url = `https://project.supabase.co/storage/v1/object/sign/media/${WORKSPACE}/my%20photo.jpg?token=abc`
+        const url = `https://storage.example.org/storage/v1/object/sign/media/${WORKSPACE}/my%20photo.jpg?token=abc`
         expect(subject.mediaPathOf(url, WORKSPACE)).toBe(`${WORKSPACE}/my photo.jpg`)
     })
 
@@ -114,7 +114,7 @@ describe("mediaPathOf", () => {
     it("turns bytes that are not UTF-8 into the replacement character", async () => {
         const subject = await buildSubject()
 
-        const url = `https://project.supabase.co/storage/v1/object/public/media/${WORKSPACE}/%ff.jpg`
+        const url = `https://storage.example.org/storage/v1/object/public/media/${WORKSPACE}/%ff.jpg`
         expect(subject.mediaPathOf(url)).toContain("�")
     })
 
@@ -130,10 +130,10 @@ describe("mediaPathOf", () => {
         ["a path with a control character", `${WORKSPACE}/a\u0001b.jpg`],
         ["a path that is too long", `${WORKSPACE}/${"a".repeat(300)}`],
         ["a URL that does not parse", "https://"],
-        ["a URL of another bucket", `https://project.supabase.co/storage/v1/object/sign/videos/${WORKSPACE}/a.jpg`],
+        ["a URL of another bucket", `https://storage.example.org/storage/v1/object/sign/videos/${WORKSPACE}/a.jpg`],
         [
             "a URL with a broken percent escape",
-            `https://project.supabase.co/storage/v1/object/sign/media/${WORKSPACE}/a%zz.jpg`,
+            `https://storage.example.org/storage/v1/object/sign/media/${WORKSPACE}/a%zz.jpg`,
         ],
     ])("refuses %s", async (_label, input) => {
         const subject = await buildSubject()

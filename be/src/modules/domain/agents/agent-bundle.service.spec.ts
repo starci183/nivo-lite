@@ -5,11 +5,8 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
 import { AgentBundleService } from "./agent-bundle.service"
 import { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_MODULES } from "./agents.decorators"
-import { AgentsLogEvent } from "./agents.log-events"
 import type { Installation, InstallationDirectory, KnowledgeLens, ModuleProfiles } from "./agents.port"
 import { AgentsErrorCode } from "./errors/agents.error"
 import { AgentEntity } from "./persistence/entities"
@@ -65,7 +62,6 @@ const build = async (entityManager: MockEntityManager) => {
                 },
             ]),
         ),
-        memoryFor: jest.fn(() => Promise.resolve("## Memory")),
     })
     const modules = mock<ModuleProfiles>({
         knowledgeFolderOf: jest.fn((module: string) => (module === "chatbot" ? "chatbot" : null)),
@@ -74,7 +70,6 @@ const build = async (entityManager: MockEntityManager) => {
         applicationShape: jest.fn(() => "SHAPE"),
     })
     const catalog = mock<MessageCatalog>({ get: jest.fn(echo) })
-    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentBundleService,
@@ -83,14 +78,13 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: AGENTS_KNOWLEDGE, useValue: knowledge },
             { provide: AGENTS_MODULES, useValue: modules },
             { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentBundleService), installations, knowledge, modules, logger }
+    return { service: moduleRef.get(AgentBundleService), installations, knowledge, modules }
 }
 
 describe("AgentBundleService", () => {
-    it("builds AGENTS.md, SOUL.md and one file per knowledge source for the installation", async () => {
+    it("builds AGENTS.md and SOUL.md, with no knowledge file, for the installation", async () => {
         const em = mockEntityManager({ findOne: [AgentEntity, AGENT] })
         const { service, knowledge, installations } = await build(em)
 
@@ -109,7 +103,6 @@ describe("AgentBundleService", () => {
         const agentsMd = bundle.files[0]?.content ?? ""
         expect(agentsMd).toContain("bundle.rulesSection(rules=### Limit\nNo discounts)")
         expect(agentsMd).toContain("bundle.contextSection(version=4; text=Spa)")
-        expect(agentsMd).toContain("## Memory")
         expect(agentsMd).toContain("CONTRACT[bundle.replyContract(applicationClause=CLAUSE; applicationShape=SHAPE)]")
         expect(agentsMd).toContain("bundle.toolsTitle")
         expect(bundle.files[1]?.content).toContain("bundle.soulConfirmed(text=chi)")
@@ -142,17 +135,6 @@ describe("AgentBundleService", () => {
 
         expect(bundle.agentName).toBe("bundle.defaultAgentName(module=chatbot)")
     })
-
-    it("goes without the brain memory when it cannot be read", async () => {
-        const { service, knowledge, logger } = await build(mockEntityManager({ findOne: [AgentEntity, AGENT] }))
-        const failure = new Error("brain missing")
-        knowledge.memoryFor.mockRejectedValue(failure)
-
-        const bundle = await service.build(installationOf())
-
-        expect(bundle.files[0]?.content).not.toContain("## Memory")
-        expect(logger.error).toHaveBeenCalledWith(AgentsLogEvent.MemoryUnavailable, failure, { installationId: "i1" })
-    })
 })
 
 describe("AgentBundleService", () => {
@@ -169,7 +151,6 @@ describe("AgentBundleService", () => {
         const installations = mock<InstallationDirectory>()
         const modules = mock<ModuleProfiles>({ knowledgeFolderOf: jest.fn(() => "chatbot") })
         const catalog = mock<MessageCatalog>()
-        const logger = mock<Logger>()
         const moduleRef = await Test.createTestingModule({
             providers: [
                 AgentBundleService,
@@ -178,7 +159,6 @@ describe("AgentBundleService", () => {
                 { provide: AGENTS_KNOWLEDGE, useValue: null },
                 { provide: AGENTS_MODULES, useValue: modules },
                 { provide: MESSAGE_CATALOG, useValue: catalog },
-                { provide: LOGGER, useValue: logger },
             ],
         }).compile()
         const service = moduleRef.get(AgentBundleService)
