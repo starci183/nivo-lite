@@ -27,7 +27,8 @@ const agentIdsOf = (payload: unknown): ReadonlyArray<string> => {
 /**
  * Operator maintenance over the gateway, on a socket of its own: it alone connects with operator.admin, so a turn never holds that
  * scope. `agents.delete` takes the agent out of the config, purges its session rows and moves its workspace and transcripts to the
- * gateway's trash (`~/.Trash` in the container layer, gone when the task is replaced).
+ * gateway's trash; `nivo.purgeAgents` of the nivo-bridge plugin then removes them for good, with the directories of an agent already
+ * off the config.
  */
 export class GatewayAdminClient {
     constructor(
@@ -41,8 +42,18 @@ export class GatewayAdminClient {
         return this.options.gateway !== null
     }
 
-    /** Deletes every agent of the workspace the gateway has registered and answers their ids. */
+    /** Removes every agent of the workspace, registered or retired, with its sessions and files; answers the registered ids. */
     removeWorkspaceAgents(workspaceId: string): Promise<ReadonlyArray<string>> {
+        const prefix = agentIdFor(workspaceId, "")
+        return this.remove(prefix, (id) => id.startsWith(prefix))
+    }
+
+    /** Removes one agent, registered or not, with its sessions and files. */
+    removeAgent(agentId: string): Promise<ReadonlyArray<string>> {
+        return this.remove(agentId, (id) => id === agentId)
+    }
+
+    private remove(match: string, isTarget: (id: string) => boolean): Promise<ReadonlyArray<string>> {
         const gateway = this.options.gateway
         if (gateway === null) {
             return Promise.reject(new OpenclawError({ code: OpenclawErrorCode.GatewayNotConfigured }))
@@ -62,9 +73,9 @@ export class GatewayAdminClient {
             }
             const remove = async (): Promise<void> => {
                 await request("connect", connectParams(gateway.auth, process.platform, ADMIN_SCOPES))
-                const prefix = agentIdFor(workspaceId, "")
-                const removed = agentIdsOf(await request("agents.list", {})).filter((id) => id.startsWith(prefix))
+                const removed = agentIdsOf(await request("agents.list", {})).filter(isTarget)
                 await eachInOrder(removed, (agentId) => request("agents.delete", { agentId, deleteFiles: true }))
+                await request("nivo.purgeAgents", { match })
                 finish(null, removed)
             }
             timeout.addEventListener(

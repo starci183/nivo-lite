@@ -2,8 +2,12 @@ import { Test } from "@nestjs/testing"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { FakeClock, builder, fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { FakeTransaction } from "@starci/jest-preset"
-import { OPENCLAW_AGENT_REGISTRY, OPENCLAW_WORKSPACE_WRITER } from "@modules/integrations/openclaw"
-import type { AgentRegistryService, WorkspaceWriterService } from "@modules/integrations/openclaw"
+import {
+    OPENCLAW_AGENT_REGISTRY,
+    OPENCLAW_GATEWAY_ADMIN,
+    OPENCLAW_WORKSPACE_WRITER,
+} from "@modules/integrations/openclaw"
+import type { AgentRegistryService, GatewayAdminClient, WorkspaceWriterService } from "@modules/integrations/openclaw"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
@@ -119,7 +123,7 @@ const build = async (setup: Setup = {}) => {
         ),
         isCurrent: jest.fn(() => setup.current === true || setup.internalCurrent === true),
         register: jest.fn(() => setup.registered === true || setup.internalRegistered === true),
-        unregister: jest.fn(() => true),
+        managesAgents: true,
     })
     const writer = mock<WorkspaceWriterService>({
         contentHash: jest.fn(() => "hash-1"),
@@ -132,6 +136,7 @@ const build = async (setup: Setup = {}) => {
     const pause = mock<PauseClient>({ wait: jest.fn(() => Promise.resolve()) })
     const members = mock<WorkspaceMembersService>()
     const logger = mock<Logger>()
+    const gatewayAdmin = mock<GatewayAdminClient>({ enabled: true, removeAgent: jest.fn(() => Promise.resolve([])) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentSyncService,
@@ -143,6 +148,7 @@ const build = async (setup: Setup = {}) => {
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: OPENCLAW_AGENT_REGISTRY, useValue: registry },
             { provide: OPENCLAW_WORKSPACE_WRITER, useValue: writer },
+            { provide: OPENCLAW_GATEWAY_ADMIN, useValue: gatewayAdmin },
             { provide: AgentBundleService, useValue: bundles },
             { provide: AGENTS_QUEUE_PRODUCER, useValue: queue },
             { provide: PauseClient, useValue: pause },
@@ -162,6 +168,7 @@ const build = async (setup: Setup = {}) => {
         logger,
         members,
         inbox,
+        gatewayAdmin,
     }
 }
 
@@ -463,12 +470,12 @@ describe("AgentSyncService syncInstallation of a removed installation", () => {
         const removed = installationOf({ removed: true })
         const alone = await build({ installation: removed })
         await expect(alone.service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
-        expect(alone.registry.unregister).toHaveBeenCalledWith("ws-12345678aaaabbbb-chatbot")
+        expect(alone.gatewayAdmin.removeAgent).toHaveBeenCalledWith("ws-12345678aaaabbbb-chatbot")
         expect(alone.pause.wait).toHaveBeenCalledWith(2000)
         expect(alone.bundles.build).not.toHaveBeenCalled()
 
         const shared = await build({ installation: removed, sibling: true })
         await expect(shared.service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
-        expect(shared.registry.unregister).not.toHaveBeenCalled()
+        expect(shared.gatewayAdmin.removeAgent).not.toHaveBeenCalled()
     })
 })

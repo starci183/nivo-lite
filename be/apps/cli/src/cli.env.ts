@@ -42,7 +42,7 @@ export interface CliAppOptions {
     readonly channelProvisioning: ReturnType<typeof parseChannelProvisioningConfig>
     /**
      * The OpenClaw settings the agent sync is composed with. Applying a setup only queues the sync of the agent (the api worker
-     * writes it), so every key is optional here and the cli needs no OpenClaw credential.
+     * writes it), so every key is optional here. Deleting a workspace does need the gateway: prune and cleanup refuse without its address and credential.
      */
     readonly openclaw: ReturnType<typeof parseOpenclawConfig>
 }

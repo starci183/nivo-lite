@@ -10,7 +10,8 @@
 # administration of the cli reads the access-token key pair of the `auth` member.
 # With task "cleanup-workspaces" it instead runs "cli cleanup-workspaces run" (be/docs/runbooks/workspace-cleanup.md): mode "dry-run"
 # prints the receipt of every workspace that is not in "keep" and every account none of the kept workspaces holds, with its digest;
-# mode "execute" deletes them only when a fresh dry run has the reviewed "receipt_digest". Same release tag and sealed custody rules.
+# mode "execute" deletes them only when a fresh dry run has the reviewed "receipt_digest". Same release tag rule. That task runs the cli
+# inside the running nivo-api task, not on the runner: a workspace delete removes its OpenClaw agents, and only that task reaches the gateway.
 # The file is the product-owned delivery workflow of the cli app (slot app.ci-deploy).
 name: seed demo workspace
 
@@ -156,15 +157,17 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
-      - name: build the cli
-        run: npm run build:be
       - name: install SOPS
         uses: mdgreenwald/mozilla-sops-action@bb2d96a13ef438ad122e5827a57ebd75d6ff118d # v2.1.0
         with:
           version: v3.13.2
-      - name: materialize sealed custody and clean up the workspaces
+      - name: connect to the swarm manager
         env:
           XDG_DATA_HOME: ${{ runner.temp }}/starci-data
+        run: npx --no-install starci app stack connect --env "$STACK_ENVIRONMENT" --execute
+      # A workspace delete removes its OpenClaw agents first, and the gateway is reachable only from the private agents network with its
+      # token: the cli runs inside the nivo-api task, which holds both, and refuses where the gateway is not configured.
+      - name: clean up the workspaces inside nivo-api
         shell: bash
         run: |
           set -euo pipefail
@@ -178,18 +181,11 @@ jobs:
             flags+=(--dry-run)
           fi
           if [[ "$CLEANUP_ALLOW_KEPT_CASCADE" == "true" ]]; then flags+=(--allow-kept-cascade); fi
-          secret_dir="$XDG_DATA_HOME/StarCi/secrets/nivo-lite/$STACK_ENVIRONMENT"
-          trap 'rm -rf -- "$secret_dir"' EXIT
-          npx --no-install starci app secret materialize "$STACK_ENVIRONMENT" > /dev/null
-          for key in PRIMARY_DB_URL AUTH_JWT_PRIVATE_KEY AUTH_JWT_PUBLIC_KEY CHANNEL_TOKEN_KEY; do
-            test -s "$secret_dir/$key" || { echo "sealed key $key is missing"; exit 1; }
-          done
-          for file in "$secret_dir"/*; do
-            key="${file##*/}"
-            [[ "$key" =~ ^[A-Z][A-Z0-9_]{1,63}$ && -s "$file" ]] || continue
-            export "${key}_FILE=$file"
-          done
-          export PRIMARY_DB_SCHEMA=public
-          export SITE_URL=https://app.nivo.vn
-          export AUTH_WEB_ORIGIN=https://app.nivo.vn
-          node be/dist/apps/cli/src/main.js cleanup-workspaces run "${flags[@]}"
+          task="$(docker ps -q --filter label=com.docker.swarm.service.name=nivo_nivo-api --filter status=running | head -n 1)"
+          [[ -n "$task" ]] || { echo "no running nivo-api task"; exit 1; }
+          docker exec "$task" node be/dist/apps/cli/src/main.js cleanup-workspaces run "${flags[@]}"
+      - name: disconnect from the swarm manager
+        if: ${{ always() }}
+        env:
+          XDG_DATA_HOME: ${{ runner.temp }}/starci-data
+        run: npx --no-install starci app stack disconnect --env "$STACK_ENVIRONMENT" --execute

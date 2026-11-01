@@ -90,6 +90,11 @@ export class AgentRegistryService {
         return true
     }
 
+    /** Whether this deployment manages the agents of openclaw.json. */
+    get managesAgents(): boolean {
+        return this.options.manageAgents
+    }
+
     /** Takes the agent out of openclaw.json (its workspace files stay). Answers true when the file was rewritten, so the gateway reloads it. */
     unregister(agentId: string): boolean {
         const configDir = this.options.configDir

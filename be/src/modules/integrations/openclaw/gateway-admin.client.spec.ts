@@ -89,7 +89,9 @@ describe("GatewayAdminClient", () => {
             "agents.list",
             "agents.delete",
             "agents.delete",
+            "nivo.purgeAgents",
         ])
+        expect(gateway.sent[4]?.params).toEqual({ match: "ws-12345678aaaabbbb-" })
         expect(gateway.sent[0]?.params.scopes).toContain("operator.admin")
         expect(gateway.sent[2]?.params).toEqual({ agentId: SALES, deleteFiles: true })
         expect(gateway.socket.close).toHaveBeenCalledTimes(1)
