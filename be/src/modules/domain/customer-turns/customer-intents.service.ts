@@ -1,15 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import { IntentRegistryService } from "@modules/domain/intent-contracts"
-import { CUSTOMER_INTENT_DOMAIN } from "./customer-intents.policy"
+import { AgentPluginsService } from "@modules/domain/agent-plugins"
+import { CUSTOMER_PLUGIN } from "./customer-intents.policy"
 
 @Injectable()
-/** Registers the customer reply as a domain of the intent registry when the module starts, the way a wake source registers its handlers. */
+/** Registers the customer reply as a plug-in of the agent core when the module starts, the way a wake source registers its handlers. */
 export class CustomerIntentsService implements OnModuleInit {
-    constructor(private readonly registry: IntentRegistryService) {}
+    constructor(private readonly plugins: AgentPluginsService) {}
 
-    /** Adds the frames, the schema and the checks of the customer reply. */
+    /** Adds the manifest of the customer reply. */
     onModuleInit(): void {
-        this.registry.add(CUSTOMER_INTENT_DOMAIN)
+        this.plugins.add(CUSTOMER_PLUGIN)
     }
 }

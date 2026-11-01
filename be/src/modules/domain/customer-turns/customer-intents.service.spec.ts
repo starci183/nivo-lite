@@ -1,18 +1,19 @@
 import { Test } from "@nestjs/testing"
-import { IntentRegistryService } from "@modules/domain/intent-contracts"
+import { mock } from "@starci/jest-preset"
+import { AgentPluginsService } from "@modules/domain/agent-plugins"
+import { CUSTOMER_PLUGIN } from "./customer-intents.policy"
 import { CustomerIntentsService } from "./customer-intents.service"
 
 describe("CustomerIntentsService", () => {
-    it("registers the customer reply in the registry when the module starts", async () => {
+    it("registers the manifest of the customer reply when the module starts", async () => {
+        const plugins = mock<AgentPluginsService>({ add: jest.fn() })
         const moduleRef = await Test.createTestingModule({
-            providers: [CustomerIntentsService, IntentRegistryService],
+            providers: [CustomerIntentsService, { provide: AgentPluginsService, useValue: plugins }],
         }).compile()
-        const registry = moduleRef.get(IntentRegistryService)
 
         moduleRef.get(CustomerIntentsService).onModuleInit()
 
-        expect(registry.resultSchemaOf("customer_reply")).toBeDefined()
-        expect(registry.checkOf("lead_complete")).toBeDefined()
-        expect(registry.needsAnswer("customer_message")).toBe(true)
+        expect(plugins.add).toHaveBeenCalledWith(CUSTOMER_PLUGIN)
+        expect(CUSTOMER_PLUGIN.key).toBe("customer")
     })
 })

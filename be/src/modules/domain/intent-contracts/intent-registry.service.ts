@@ -41,7 +41,7 @@ export class IntentRegistryService implements IntentLookup {
     ])
     private readonly checks = new Map<IntentCheckKey, IntentCheck>(Object.entries(REQUEST_CHECKS))
 
-    /** Registers a domain. */
+    /** Registers the intents of a plug-in; the one caller is the service that takes plug-in manifests. */
     add(domain: IntentDomain): void {
         for (const [key, schema] of Object.entries(domain.results)) this.keep(this.results, key, schema)
         for (const [key, check] of Object.entries(domain.checks)) this.keep(this.checks, key, check)

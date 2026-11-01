@@ -1,5 +1,8 @@
 import { IntentRegistryService, requestFrameOf } from "@modules/domain/intent-contracts"
-import type { IntentCheck, IntentDomain, IntentFrame, IntentResultSchema } from "@modules/domain/intent-contracts"
+import type { IntentCheck, IntentFrame, IntentResultSchema } from "@modules/domain/intent-contracts"
+
+/** What a domain hands the registry. */
+type TestDomain = Parameters<IntentRegistryService["add"]>[0]
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
@@ -36,7 +39,7 @@ const answerFrame = (intent: string, owns: ReadonlyArray<string>, ownTurn = fals
 })
 
 /** A small domain for the specs of the registry and of what reads it: an answering intent, two that own a member, and one that runs alone. */
-export const TEST_DOMAIN: IntentDomain = {
+export const TEST_DOMAIN: TestDomain = {
     frames: [
         answerFrame("reply_customer", [], false, true),
         answerFrame("handoff_lead", ["lead"]),

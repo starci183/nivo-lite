@@ -1,4 +1,5 @@
-import type { IntentCheck, IntentDomain, IntentFrame } from "@modules/domain/intent-contracts"
+import type { AgentPluginManifest } from "@modules/domain/agent-plugins"
+import type { IntentCheck, IntentFrame } from "@modules/domain/intent-contracts"
 import { requestFrameOf } from "@modules/domain/intent-contracts"
 import { customerReplySchema } from "./customer-intents.schema"
 
@@ -94,9 +95,10 @@ const CUSTOMER_CHECKS: Readonly<Record<string, IntentCheck>> = {
     order_price_known: whenSet("order", (order) => typeof order.amount_vnd === "number" && order.amount_vnd > 0),
 }
 
-/** The customer reply as a domain of the registry: its frames, its one kind of result and its checks. */
-export const CUSTOMER_INTENT_DOMAIN: IntentDomain = {
-    frames: CUSTOMER_FRAMES,
+/** The customer reply as a plug-in: its frames, its one kind of result and its checks. */
+export const CUSTOMER_PLUGIN: AgentPluginManifest = {
+    key: "customer",
+    contracts: CUSTOMER_FRAMES,
     results: { [REPLY_RESULT]: customerReplySchema },
     checks: CUSTOMER_CHECKS,
 }

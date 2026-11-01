@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { AgentPluginsService } from "@modules/domain/agent-plugins"
 import { AGENTS_MESSAGES } from "@modules/domain/agents"
 import { IntentRegistryService, resolveContracts } from "@modules/domain/intent-contracts"
 import { MODULE_CATALOG } from "@modules/domain/modules"
@@ -14,7 +15,7 @@ interface World {
 
 const build = async (): Promise<World> => {
     const moduleRef = await Test.createTestingModule({
-        providers: [CustomerIntentsService, IntentRegistryService],
+        providers: [CustomerIntentsService, AgentPluginsService, IntentRegistryService],
     }).compile()
     moduleRef.get(CustomerIntentsService).onModuleInit()
     return { registry: moduleRef.get(IntentRegistryService), max: REPLY_CHECK_MAX }

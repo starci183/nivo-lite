@@ -96,7 +96,7 @@ describe("IntentRegistryService > a registration that is wrong throws", () => {
                 registry.add({
                     frames: [],
                     results: Object.fromEntries(
-                        Object.values(TEST_DOMAIN.results).map((schema) => ["Not A Key", schema]),
+                        Object.values(TEST_DOMAIN.results).map((schema) => ["Not A Key", schema] as const),
                     ),
                     checks: {},
                 }),
