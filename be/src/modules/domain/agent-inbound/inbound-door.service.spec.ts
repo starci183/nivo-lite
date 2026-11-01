@@ -99,7 +99,17 @@ const build = async ({
               ],
           })
     const container = await builder.compile()
-    return { door: container.get(InboundDoorService), tx: tx.em, events, access, wakes, runs, logger, stopReporter }
+    return {
+        door: container.get(InboundDoorService),
+        registry,
+        tx: tx.em,
+        events,
+        access,
+        wakes,
+        runs,
+        logger,
+        stopReporter,
+    }
 }
 
 const codeOf = async (run: Promise<unknown>): Promise<unknown> => {
@@ -166,6 +176,21 @@ describe("InboundDoorService.accept, the wake", () => {
         expect(events.agentsFor).not.toHaveBeenCalled()
         expect(wakes.write.mock.calls[0]?.[1]).toMatchObject({ agentId: "agent-9" })
         expect(wakes.write.mock.calls[0]?.[1].context).not.toHaveProperty("probeKey")
+    })
+})
+
+describe("InboundDoorService.accept, the context an adapter asks for", () => {
+    it("adds the ids the adapter asks for to the context of the wake", async () => {
+        const { door, tx, wakes, registry } = await build()
+        const withContext: InboundAdapter = { ...adapter, wakeContextOf: () => ({ conversationId: "conv-1" }) }
+        registry.of.mockReturnValue(withContext)
+
+        await door.accept(tx, event())
+
+        expect(wakes.write.mock.calls[0]?.[1].context).toMatchObject({
+            conversationId: "conv-1",
+            eventName: "invoice.paid",
+        })
     })
 
     it("carries the member behind the wake and the scope the adapter asked for", async () => {

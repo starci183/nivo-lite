@@ -74,6 +74,28 @@ describe("builtInAdapters", () => {
         expect(trust({ kind: "agent", id: "a-1", role: "" })).toEqual(["outsider", "member", "system", "system"])
     })
 
+    it("gives a customer wake the ids its handler reads and nothing else from the payload", async () => {
+        const { builtInAdapters } = await buildSubject()
+        const [customer, tag] = builtInAdapters()
+        const event = {
+            adapter: "customer",
+            eventType: "customer_message",
+            actor: ACTOR,
+            chain: null,
+            payload: { conversationId: "c-1", messageId: "m-1", channelEventId: 7, lookupName: true, other: "x" },
+            attachments: [],
+            evidence: [],
+            idempotencyKey: "m-1",
+            workspaceId: "ws-1",
+            agentId: "a-1",
+            scopeKey: null,
+        }
+
+        expect(customer?.wakeContextOf?.(event)).toEqual({ conversationId: "c-1", messageId: "m-1", lookupName: true })
+        expect(customer?.wakeContextOf?.({ ...event, payload: {} })).toEqual({})
+        expect(tag?.wakeContextOf).toBeUndefined()
+    })
+
     it("names the door and the reply of each adapter, and no door for the two that never take the contract pipeline", async () => {
         const { builtInAdapters } = await buildSubject()
 

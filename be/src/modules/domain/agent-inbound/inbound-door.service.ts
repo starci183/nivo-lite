@@ -78,6 +78,7 @@ export class InboundDoorService {
             source: adapter.key,
             eventKey: event.idempotencyKey,
             context: {
+                ...adapter.wakeContextOf?.(event),
                 eventName: event.eventType,
                 inbound: encodeInbound(inbound),
                 ...(target.probeKey === null ? {} : { probeKey: target.probeKey }),

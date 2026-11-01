@@ -1,8 +1,24 @@
-import type { InboundActor, InboundAdapter } from "./agent-inbound.contracts"
+import type { AgentWakeContext } from "@modules/domain/agent-work"
+import type { InboundActor, InboundAdapter, InboundEvent } from "./agent-inbound.contracts"
 import { actorTrustOf } from "./inbound-adapter.policy"
 
 /** The step kind of the door of an adapter that never takes the contract pipeline. */
 export const NO_DOOR = "none"
+
+/** The event type of a customer message. */
+export const CUSTOMER_MESSAGE = "customer_message"
+
+const CONTEXT_TEXT_KEYS = ["conversationId", "messageId", "channelEventId"] as const
+
+/** The ids and flags a customer wake carries for its handler, taken from the payload of the event: the conversation, the message and its channel id. */
+const customerContextOf = (event: InboundEvent): AgentWakeContext => {
+    const texts = CONTEXT_TEXT_KEYS.flatMap((key) => {
+        const value = event.payload[key]
+        return typeof value === "string" ? [[key, value] as const] : []
+    })
+    const { lookupName } = event.payload
+    return { ...Object.fromEntries(texts), ...(typeof lookupName === "boolean" ? { lookupName } : {}) }
+}
 
 const clockLike = (key: string, priority: number): InboundAdapter => ({
     key,
@@ -25,6 +41,7 @@ const customerAdapter: InboundAdapter = {
     doorStep: "door",
     priority: 10,
     maxAttempts: 2,
+    wakeContextOf: customerContextOf,
 }
 
 /** A tag in Office: whoever tagged declares who they are, and the trust follows from the actor. */

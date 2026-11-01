@@ -1,11 +1,13 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { INBOUND_STOP_REPORTER } from "@modules/domain/agent-inbound"
 import { BACKGROUND_VOICE } from "@modules/domain/agent-schedules"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./office-command-candidates.module-definition"
 import { COMMAND_READER } from "./office-command-candidates.decorators"
 import { OfficeCommandService } from "./office-command.service"
 import { DecisionsQueueService } from "./decisions-queue.service"
 import { OfficeBackgroundVoiceService } from "./office-background-voice.service"
+import { OfficeInboundStopReporterService } from "./office-inbound-stop-reporter.service"
 import { OfficeTagHandlerService } from "./office-tag-handler.service"
 import { OfficeTagService } from "./office-tag.service"
 import { OfficeThreadService } from "./office-thread.service"
@@ -14,7 +16,7 @@ import { OfficeThreadService } from "./office-thread.service"
 /**
  * The Office composer and thread: the owner's message becomes a command candidate the owner confirms or cancels, a line that tags
  * agents wakes them and the tagged agent answers it (the handler of the tag source), the voice a background agent speaks to its owner
- * with, and the thread read model the Office screen draws. The workspace members, events, decisions and ai-tasks capabilities must be reachable from it.
+ * with, the line that tells it a chain of agents stopped, and the thread read model the Office screen draws. The workspace members, events, decisions and ai-tasks capabilities must be reachable from it.
  */
 export class OfficeCommandCandidatesModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
@@ -28,6 +30,8 @@ export class OfficeCommandCandidatesModule extends ConfigurableModuleClass {
                 DecisionsQueueService,
                 OfficeBackgroundVoiceService,
                 { provide: BACKGROUND_VOICE, useExisting: OfficeBackgroundVoiceService },
+                OfficeInboundStopReporterService,
+                { provide: INBOUND_STOP_REPORTER, useExisting: OfficeInboundStopReporterService },
                 OfficeCommandService,
                 OfficeTagHandlerService,
                 OfficeTagService,
@@ -36,6 +40,7 @@ export class OfficeCommandCandidatesModule extends ConfigurableModuleClass {
             exports: [
                 DecisionsQueueService,
                 BACKGROUND_VOICE,
+                INBOUND_STOP_REPORTER,
                 OfficeCommandService,
                 OfficeTagService,
                 OfficeThreadService,

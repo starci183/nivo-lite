@@ -1,3 +1,4 @@
+import type { AgentWakeContext } from "@modules/domain/agent-work"
 import type { InboundTrust } from "@modules/domain/intent-contracts"
 
 /** How an adapter proves an event is real. */
@@ -89,6 +90,8 @@ export interface InboundAdapter {
     readonly priority: number
     /** The tries a wake gets. */
     readonly maxAttempts: number
+    /** The ids and flags a handler of this adapter reads from the wake context besides the event itself, taken from the event; absent adds none. */
+    wakeContextOf?(event: InboundEvent): AgentWakeContext
 }
 
 /** What the door did with an event. */
