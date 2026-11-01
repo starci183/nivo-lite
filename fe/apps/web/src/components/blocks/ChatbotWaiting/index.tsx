@@ -32,8 +32,24 @@ export const ChatbotWaiting = (props: ChatbotWaitingProps) => {
                     seeWhyLabel: c("waitingSeeWhy"),
                     moreLabel: c("waitingMoreMenu"),
                 },
+                edit:
+                    waiting.editing === null
+                        ? null
+                        : {
+                              workItemId: waiting.editing.workItemId,
+                              text: waiting.editing.text,
+                              label: c("waitingEditLabel"),
+                              sendLabel: c("waitingEditSend"),
+                              cancelLabel: c("waitingEditCancel"),
+                              isBusy: waiting.isBusy,
+                          },
             }}
-            on={{ retry: waiting.reload }}
+            on={{
+                retry: waiting.reload,
+                changeEdit: waiting.changeEdit,
+                sendEdit: waiting.sendEdit,
+                cancelEdit: waiting.cancelEdit,
+            }}
         />
     )
 }

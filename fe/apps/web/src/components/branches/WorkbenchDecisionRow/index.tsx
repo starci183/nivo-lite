@@ -45,6 +45,7 @@ const RowActions = (props: RowActionsProps) => {
         ...(command.isDanger === true ? { tone: "danger" as const } : {}),
     }))
     if (primary === null) return <WaitingFor row={row} />
+    const edit = row.edit
     return (
         <Cluster gap="inline">
             <Button
@@ -57,6 +58,11 @@ const RowActions = (props: RowActionsProps) => {
             >
                 {primary.label}
             </Button>
+            {edit === null ? null : (
+                <Button intent="neutral" size="sm" isDisabled={edit.isDisabled === true} onPress={edit.onPress}>
+                    {edit.label}
+                </Button>
+            )}
             {menu.length === 0 ? null : (
                 <DropdownMenu
                     placement="bottom end"
@@ -74,8 +80,8 @@ const RowActions = (props: RowActionsProps) => {
 
 /**
  * One decision waiting for a person, or the agent's finished work, on `ListRow`: the customer or supplier, one line, state and age,
- * one visible command and a menu for the rest. The amount, the proposal, the editor, the trace and the expiry stand under the copy in
- * that order. Approving is never a row's visible command (it commits, and lives in the why pane footer).
+ * a named command, a neutral edit and a menu for the rest. The amount, the proposal, the editor, the trace and the expiry stand under the copy in
+ * that order. The named command is an alternative button, never a commit (the commit lives in the why pane footer).
  */
 export const WorkbenchDecisionRow = (props: WorkbenchDecisionRowProps) => {
     const row = props.row
@@ -98,6 +104,11 @@ export const WorkbenchDecisionRow = (props: WorkbenchDecisionRowProps) => {
             actions={<RowActions row={row} moreLabel={props.moreLabel} />}
         >
             <Stack gap="identity">
+                {row.reason === null ? null : (
+                    <Text size="sm" tone="muted">
+                        {row.reason}
+                    </Text>
+                )}
                 {row.amount === null ? null : (
                     <Text size="md" weight="semibold" tabular>
                         {row.amount}

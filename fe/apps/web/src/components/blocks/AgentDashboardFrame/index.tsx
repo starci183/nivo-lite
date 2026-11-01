@@ -82,7 +82,6 @@ export const AgentDashboardFrame = (props: AgentDashboardFrameProps) => {
                 panel: props.tabs.find((tab) => tab.id === selected)?.content ?? null,
             }}
             props={{
-                band: frame.band,
                 why: frame.why,
                 ...frame.regions,
                 hasPlaceholder: props.hasPlaceholder === true,

@@ -23,27 +23,23 @@ export interface AgentSettingsPageBaseProps {
     }
 }
 
-/** Draws the settings of an agent: its name, mode and live switch, the connections it uses, its automations and sync, and the extra card of its type. */
+/** Draws the settings of an agent as cards straight on the page ground, two to a row at wide and one at narrow: its name, whether it answers customers, its mode, whether it works, the connections it uses, its automations, its copy and the extra card of its type; removing it is one row at the bottom. */
 export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
     const { module, installationId } = props.props
     return (
         <Stack gap="region">
             <Grid kind="cards" columns={2}>
-                <Stack gap="section">
-                    <AgentIdentityCard installationId={installationId} module={module} glyph={props.props.glyph} />
-                    <AgentModeCard installationId={installationId} module={module} />
-                </Stack>
-                <Stack gap="section">
-                    <AgentLiveCard installationId={installationId} module={module} />
-                    <AgentWorkSwitchCard installationId={installationId} />
-                    <AgentConnectionAccess installationId={installationId} module={module} />
-                    <AgentAutomations />
-                    <AgentSyncCard installationId={installationId} />
-                    {props.props.extrasKey === "chatbot_reply" ? (
-                        <AgentReplyCard installationId={installationId} module={module} />
-                    ) : null}
-                    {props.props.extrasKey === "loyalty_program" ? <LoyaltyProgramSettings /> : null}
-                </Stack>
+                <AgentIdentityCard installationId={installationId} module={module} glyph={props.props.glyph} />
+                <AgentLiveCard installationId={installationId} module={module} />
+                <AgentModeCard installationId={installationId} module={module} />
+                <AgentWorkSwitchCard installationId={installationId} />
+                <AgentConnectionAccess installationId={installationId} module={module} />
+                {props.props.extrasKey === "chatbot_reply" ? (
+                    <AgentReplyCard installationId={installationId} module={module} />
+                ) : null}
+                {props.props.extrasKey === "loyalty_program" ? <LoyaltyProgramSettings /> : null}
+                <AgentAutomations />
+                <AgentSyncCard installationId={installationId} />
             </Grid>
             <AgentRemoveCard installationId={installationId} module={module} />
         </Stack>

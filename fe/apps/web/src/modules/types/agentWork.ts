@@ -60,15 +60,15 @@ export interface AgentWorkTriggerView {
     readonly probeKey: string
 }
 
-/** One row of the turn list: why it woke, what it did, what it cost. No prompt and no customer words. */
+/** One row of the turn list: why it woke, what it did, how long it took. No prompt and no customer words. */
 export interface AgentWorkTurnView {
     readonly id: string
     readonly sourceLabel: string
     readonly outcomeLabel: string
     readonly outcomeTone: BadgeTone
     readonly wokeLabel: string
-    /** "1 200 tokens - 0.0042 - 8 s", only what is known. */
-    readonly usageLabel: string
+    /** "8 s", when it is known; empty otherwise. */
+    readonly durationLabel: string
     /** Where the work item the turn opened is decided; null when it opened none. */
     readonly workItemHref: string | null
 }

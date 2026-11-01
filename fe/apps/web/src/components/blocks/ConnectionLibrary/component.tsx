@@ -7,6 +7,8 @@ import {
     Fieldset,
     Grid,
     SearchField,
+    SectionHeader,
+    Stack,
     SurfaceCard,
     TagGroup,
     Text,
@@ -41,6 +43,8 @@ export interface LibraryCard {
     /** The provider id the guide tour points at; absent for a planned connector. */
     readonly guide?: string
     readonly badge: LibraryBadge | null
+    /** One of the connectors the workspace can use today: it stands in the first section. */
+    readonly isCurrent: boolean
     /** A planned connector: no page, only the "I want it" command. */
     readonly isSoon: boolean
     /** A planned connector: the state of its "I need this" command. */
@@ -66,6 +70,8 @@ export interface ConnectionLibraryBaseProps {
         readonly cards: ReadonlyArray<LibraryCard>
         readonly wantLabel: string
         readonly wantedLabel: string
+        readonly currentLabel: string
+        readonly othersLabel: string
         /** The chips are drawn blank while the workspace reads are on their way. */
         readonly isSkeleton: boolean
     }
@@ -138,9 +144,26 @@ const tileOf = (props: ConnectionLibraryBaseProps, card: LibraryCard) => {
     )
 }
 
+/** One section of tiles under its own heading; nothing when it holds none. */
+interface TileSectionProps {
+    readonly title: string
+    readonly cards: ReadonlyArray<LibraryCard>
+    readonly base: ConnectionLibraryBaseProps
+}
+
+const TileSection = (props: TileSectionProps) =>
+    props.cards.length === 0 ? null : (
+        <Stack gap="section">
+            <SectionHeader level={2} title={props.title} count={props.cards.length} />
+            <Grid kind="cards" columns={3}>
+                {props.cards.map((card) => tileOf(props.base, card))}
+            </Grid>
+        </Stack>
+    )
+
 /**
  * The Connections library: the search (accents ignored) and the category chips with their counts, which wrap onto the next line on a
- * narrow screen (chip.choose.role:filter), then one grid of tiles of equal height. A tile shows its status, what it is for and whom it
+ * narrow screen (chip.choose.role:filter), then the connectors the workspace can use today in one grid and the other connectors under their own heading, each grid of tiles of equal height. A tile shows its status, what it is for and whom it
  * serves.
  */
 export const ConnectionLibraryBase = (props: ConnectionLibraryBaseProps) => (
@@ -170,9 +193,18 @@ export const ConnectionLibraryBase = (props: ConnectionLibraryBaseProps) => (
         {props.props.cards.length === 0 ? (
             <EmptyNotice message={props.props.emptyMessage} description={props.props.emptyHint} />
         ) : (
-            <Grid kind="cards" columns={3}>
-                {props.props.cards.map((card) => tileOf(props, card))}
-            </Grid>
+            <Stack gap="region">
+                <TileSection
+                    title={props.props.currentLabel}
+                    cards={props.props.cards.filter((card) => card.isCurrent)}
+                    base={props}
+                />
+                <TileSection
+                    title={props.props.othersLabel}
+                    cards={props.props.cards.filter((card) => !card.isCurrent)}
+                    base={props}
+                />
+            </Stack>
         )}
     </>
 )

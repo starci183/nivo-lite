@@ -143,6 +143,7 @@ export const ConnectorDetailOverlay = (props: ConnectorDetailOverlayProps) => {
                   category: t(`cat_${found.category}`),
                   blurb: t(catalogKey(found, "blurb")),
                   brings: t(catalogKey(found, "brings")),
+                  needs: provider === undefined ? "" : t(catalogKey(found, "needs")),
                   audience: found.audience.map((audience) => t(`aud_${audience}`)).join(", "),
                   statusLabel: t(STATUS_KEYS[found.status]),
                   isOfficial: found.status === "official",
@@ -157,6 +158,7 @@ export const ConnectorDetailOverlay = (props: ConnectorDetailOverlayProps) => {
                 words: {
                     closeLabel: t("close"),
                     brings: t("detailBrings"),
+                    needs: t("detailNeeds"),
                     audience: t("detailFor"),
                     yours: t("detailYours"),
                     yoursFact: t("connectionCount", { count: rows.length }),

@@ -9,10 +9,9 @@ import type { KnowledgeRegionProps } from "@/components/composites/KnowledgeRegi
 import { SlotView } from "@/components/composites/SlotView"
 import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import type { WaitingRegionProps } from "@/components/composites/WaitingRegion"
-import { WorkbenchStatusBand } from "@/components/composites/WorkbenchStatusBand"
 import { WorkbenchWhy } from "@/components/composites/WorkbenchWhy"
 import type { WorkbenchWhyLabels } from "@/components/composites/WorkbenchWhy"
-import type { DataSlot, SlotLabels, WorkbenchBandView, WorkbenchSurface, WorkbenchWhyView } from "@/modules/types"
+import type { DataSlot, SlotLabels, WorkbenchSurface, WorkbenchWhyView } from "@/modules/types"
 import {
     COMMAND_CLASS_NAME,
     FRAME_CLASS_NAME,
@@ -90,8 +89,6 @@ interface WhyState {
 export interface AgentDashboardFrameBaseProps {
     readonly shape: AgentDashboardFrameSlots
     readonly props: {
-        /** The status band: the state, mode, version, last activity and channels; a skeleton until they are read. */
-        readonly band: RegionSlot<WorkbenchBandView>
         /** The why pane: the work item it is open on (`?why=`), null when closed. */
         readonly why: WhyState
         /** The own tab content of the module is not known yet: a tab without content shows a skeleton card. */
@@ -235,12 +232,6 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
     return (
         <div className={FRAME_CLASS_NAME}>
             {props.shape.command === null ? null : <div className={COMMAND_CLASS_NAME}>{props.shape.command}</div>}
-
-            <Region region={view.band} onRetry={props.on.retry}>
-                {(band, isSkeleton) => (
-                    <WorkbenchStatusBand label={view.band.label} view={band} isSkeleton={isSkeleton} />
-                )}
-            </Region>
 
             {renderWaiting(props, "card")}
 
