@@ -11,11 +11,13 @@ export interface WaitingCommands {
     readonly isBusy: boolean
     readonly sendAnswer: (conversationId: string, workItemId: string, text: string | null) => Promise<void>
     readonly toggleHandling: (conversationId: string, takeOver: boolean) => Promise<void>
+    /** Opens the draft of this reply for the person to change before it goes. */
+    readonly edit: (item: ChatbotWaitingReply) => void
 }
 
 /**
- * One waiting reply as a decision row: the customer, what they asked, the AI's draft as the proposal, one visible command that sends
- * the draft, and a menu to take the chat over or not reply at all. A reply the AI wrote no draft for cannot be sent from here.
+ * One waiting reply as a decision row: what is approved (a reply to the customer), what they asked, why a person is needed, the AI's draft
+ * as the proposal, a named command that sends it, a neutral edit, and a menu to take the chat over or not reply at all. A reply the AI wrote no draft for cannot be sent from here.
  */
 export const waitingRowOf = (
     t: ChatbotTranslator,
@@ -23,9 +25,10 @@ export const waitingRowOf = (
     commands: WaitingCommands,
 ): WorkbenchRowView => ({
     id: item.workItemId,
-    title: item.name === "" ? t("unknownCustomer") : item.name,
-    description: item.question,
+    title: t("waitingTitleFor", { name: item.name === "" ? t("unknownCustomer") : item.name }),
+    description: t("waitingAsked", { question: item.question }),
     badges: [{ label: chatChannelLabelOf(t, item.channel), tone: "neutral" }],
+    reason: item.draft === "" ? t("waitingReasonNoDraft") : t("waitingReason"),
     amount: null,
     proposal: item.draft,
     trace: null,
@@ -40,6 +43,7 @@ export const waitingRowOf = (
             void commands.sendAnswer(item.conversationId, item.workItemId, item.draft)
         },
     },
+    edit: { id: "edit", label: t("waitingEdit"), onPress: () => commands.edit(item) },
     menu: [
         {
             id: "takeover",

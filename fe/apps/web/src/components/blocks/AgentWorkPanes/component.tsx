@@ -270,7 +270,7 @@ export const AgentWorkPanesBase = (props: AgentWorkPanesBaseProps) => {
                     ))}
                 </PaneSection>
             </Pane>
-            <Pane area="turns">
+            <Pane area="turns" surface>
                 <PaneSection>{titleOf(props, copy.turnsTitle, (view) => view.turns.rows.length)}</PaneSection>
                 <PaneSection scroll={{ label: copy.turnsTitle }}>{turnsOf(props)}</PaneSection>
             </Pane>

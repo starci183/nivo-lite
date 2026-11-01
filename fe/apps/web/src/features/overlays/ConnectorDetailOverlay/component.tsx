@@ -30,6 +30,8 @@ export interface DetailEntry {
     readonly category: string
     readonly blurb: string
     readonly brings: string
+    /** What the owner has to have ready before adding a connection; empty for a planned connector. */
+    readonly needs: string
     readonly audience: string
     readonly statusLabel: string
     readonly isOfficial: boolean
@@ -43,6 +45,7 @@ export interface DetailEntry {
 export interface DetailWords {
     readonly closeLabel: string
     readonly brings: string
+    readonly needs: string
     readonly audience: string
     readonly yours: string
     readonly yoursFact: string
@@ -84,6 +87,12 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
     const provider = entry.provider
     return (
         <>
+            <Text size="sm">
+                <Text as="span" size="sm" weight="semibold">
+                    {detail.words.needs}:{" "}
+                </Text>
+                {entry.needs}
+            </Text>
             {detail.rows.length === 0 ? (
                 <Text size="sm" tone="muted">
                     {detail.words.none}
@@ -117,7 +126,7 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
 }
 
 /**
- * The detail of one connector of the library: what it brings in, who it is for, the workspace connections of it with their commands,
+ * The detail of one connector of the library: what it brings in, who it is for, what to have ready, the workspace connections of it with their commands,
  * and either "add a connection" (a real connector) or "I want it" (a planned one).
  */
 export const ConnectorDetailOverlayBase = (props: ConnectorDetailOverlayBaseProps) => {

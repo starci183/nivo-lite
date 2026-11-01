@@ -1,9 +1,7 @@
 "use client"
 
-import { type ModuleKey, useModuleName } from "@/hooks/installations"
-import { useSlotLabels } from "@/hooks/slot"
-import { useWorkbenchBand, useWorkbenchWhy, useWorkbenchWhyKey } from "@/hooks/workbench"
-import type { DataSlot, WorkbenchBandView } from "@/modules/types"
+import type { ModuleKey } from "@/hooks/installations"
+import { useWorkbenchWhy, useWorkbenchWhyKey } from "@/hooks/workbench"
 import { useTranslations } from "next-intl"
 import { useAgentDashboard } from "./useAgentDashboard"
 import { useAgentDashboardRegions } from "./useAgentDashboardRegions"
@@ -25,39 +23,9 @@ interface AgentDashboardFrameInput {
 /** The words and figures of the shared anatomy of an agent workbench: the dashboard of the module read in the browser, worded for the frame. */
 export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
     const t = useTranslations("agentDashboard")
-    const tw = useTranslations("workbench")
-    const slotLabels = useSlotLabels()
-    const moduleName = useModuleName(input.module)
     const { slot, reload } = useAgentDashboard(input.module, input.installationId ?? null)
     const regions = useAgentDashboardRegions(slot, input)
 
-    const dashboard = slot.items
-    const bandView = useWorkbenchBand({
-        module: input.module,
-        installationId: input.installationId,
-        mode: dashboard?.agent?.mode ?? null,
-        connections: (dashboard?.connections.items ?? []).map((connection) => ({
-            id: connection.id,
-            name: connection.name,
-            isConnected: connection.status === "connected",
-        })),
-        needFacts: {
-            connectedProviders: (dashboard?.connections.items ?? [])
-                .filter((connection) => connection.status === "connected")
-                .map((connection) => connection.provider),
-            sources: {},
-        },
-        lastDoneAt: dashboard?.done.items[0]?.at ?? null,
-    })
-    const bandPlaceholder: WorkbenchBandView = {
-        state: { label: "-", tone: "neutral", isEchoing: false },
-        mode: null,
-        version: null,
-        lastActivity: "-",
-        channels: [],
-    }
-    /** The band never fails: it shows what is known, and the name of the module stands in for nothing. */
-    const band: DataSlot<WorkbenchBandView> = slot.isLoading === true ? { isLoading: true } : { items: bandView }
     const whyKey = useWorkbenchWhyKey()
     const why = useWorkbenchWhy()
     const waitingTotal = slot.items?.waiting.total ?? 0
@@ -65,7 +33,6 @@ export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
     const tabLabel = (tab: FrameTab, waitingTab: string | undefined): string =>
         tab.id === waitingTab && waitingTotal > 0 ? `${tab.label} (${waitingTotal})` : tab.label
     return {
-        band: { label: tw("bandLabel"), slot: band, placeholder: bandPlaceholder, labels: slotLabels(moduleName) },
         why: { workItemId: whyKey.workItemId, ...why },
         closeWhy: whyKey.close,
         regions,

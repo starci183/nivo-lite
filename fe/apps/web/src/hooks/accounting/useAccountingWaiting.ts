@@ -37,6 +37,7 @@ export const useAccountingWaiting = (data: AccountingWorkbenchData) => {
                 id: card.id,
                 title: card.title,
                 summary: card.summary,
+                reason: t("waitingReason"),
                 status: card.status,
                 tone: card.statusTone,
                 amount: amount == null ? null : moneyOf(format, amount),

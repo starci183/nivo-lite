@@ -495,5 +495,5 @@ export type {
 export type { AgentWorkGoalView, AgentWorkPreset, AgentWorkStatusView, AgentWorkSwitchView } from "./agentWork"
 export type { AgentWorkTaskView, AgentWorkTriggerView, AgentWorkTurnView, AgentWorkTurnsView } from "./agentWork"
 export type { AgentWorkView, WorkspaceAgentWorkView } from "./agentWork"
-export type { WorkbenchBandView, WorkbenchChannelView, WorkbenchNeed, WorkbenchRowView } from "./workbench"
-export type { WorkbenchStateTone, WorkbenchSurface, WorkbenchTraceView, WorkbenchWhyView } from "./workbench"
+export type { WorkbenchRowView } from "./workbench"
+export type { WorkbenchSurface, WorkbenchTraceView, WorkbenchWhyView } from "./workbench"

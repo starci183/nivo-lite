@@ -24,6 +24,8 @@ export interface SalesWaitingWords {
     readonly needsAnswer: string
     readonly needsDecision: string
     readonly incomplete: string
+    /** Why a complete decision still needs the owner. */
+    readonly reasonReady: string
     readonly unknownCustomer: string
 }
 
@@ -37,7 +39,7 @@ export const isIncomplete = (decision: SalesDecision): boolean =>
     decision.missing.length > 0 || (decision.hasAmount && decision.amountVnd === null)
 
 /**
- * One pending decision as a row: the customer, the proposal, the amount, Approve as the visible command and Edit and Reject in the
+ * One pending decision as a row: the customer, the proposal, the amount, why it needs the owner, a named Approve, a neutral Edit and Reject in the
  * menu. A decision that is not complete cannot be approved from here; Edit opens it where its fields are filled.
  */
 export const salesWaitingRowOf = (
@@ -56,6 +58,7 @@ export const salesWaitingRowOf = (
                 ? { label: words.needsAnswer, tone: "warning" }
                 : { label: words.needsDecision, tone: "neutral" },
         ],
+        reason: incomplete ? words.incomplete : words.reasonReady,
         amount,
         proposal: decision.draft,
         trace: null,
@@ -68,10 +71,8 @@ export const salesWaitingRowOf = (
             ...(incomplete ? { disabledReason: words.incomplete } : {}),
             onPress: () => commands.approve(decision),
         },
-        menu: [
-            { id: "edit", label: words.edit, onPress: () => commands.edit(decision) },
-            { id: "reject", label: words.reject, isDanger: true, onPress: () => commands.reject(decision) },
-        ],
+        edit: { id: "edit", label: words.edit, onPress: () => commands.edit(decision) },
+        menu: [{ id: "reject", label: words.reject, isDanger: true, onPress: () => commands.reject(decision) }],
         waitingFor: null,
     }
 }

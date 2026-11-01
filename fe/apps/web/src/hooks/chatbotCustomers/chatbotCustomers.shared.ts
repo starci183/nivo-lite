@@ -1,4 +1,5 @@
-import type { ChatbotConversation, ChatbotRespondent } from "@/modules/types"
+import type { BadgeTone } from "@starci/grammar/common"
+import type { ChatbotConversation } from "@/modules/types"
 import { leadStageLabel } from "@/modules/utils"
 import { chatChannelLabelOf, dayKeyOf } from "@/hooks/chatbot"
 import type { ChatbotTranslator } from "@/hooks/chatbot"
@@ -18,11 +19,12 @@ export interface CustomerRowView {
     /** The conversation the row opens in the inbox. */
     readonly href: string
     readonly name: string
-    readonly company: string
-    readonly channel: string
-    readonly stage: string
-    readonly need: string
-    readonly replying: string
+    /** One line: the channel, the company and what the customer needs, as far as they are known. */
+    readonly summary: string
+    /** The deal stage; null while the customer was not captured. */
+    readonly stage: string | null
+    /** Where the conversation stands: who answers next, or that a person is awaited. */
+    readonly status: { readonly label: string; readonly tone: BadgeTone }
 }
 
 const FILTER_IDS: ReadonlySet<string> = new Set(CUSTOMER_FILTERS)
@@ -59,18 +61,24 @@ export const matchesCustomerFilter = (
 export const matchesCustomerQuery = (conversation: ChatbotConversation, query: string): boolean => {
     const words = query.trim().toLowerCase()
     if (words === "") return true
-    const text = [conversation.name, conversation.lead?.company ?? "", conversation.lead?.need ?? ""]
+    const text = [conversation.name, conversation.lead?.company ?? "", conversation.lead?.need ?? conversation.lastText]
     return text.some((part) => part.toLowerCase().includes(words))
 }
 
-/** Who answers next, in a few words. */
-export const respondentTextOf = (t: ChatbotTranslator, respondent: ChatbotRespondent): string => {
-    if (respondent.kind === "person") return t("replyingPerson", { name: respondent.name })
-    if (respondent.kind === "agent") return t("replyingAgent", { name: respondent.name })
-    return t("replyingAi")
+/** Where a conversation stands, as one badge: a customer awaited, a person in it, another agent, or the AI answering. */
+export const statusOf = (
+    t: ChatbotTranslator,
+    conversation: ChatbotConversation,
+): { readonly label: string; readonly tone: BadgeTone } => {
+    if (conversation.waiting) return { label: t("chipWaiting"), tone: "warning" }
+    if (conversation.unanswered) return { label: t("chipUnanswered"), tone: "warning" }
+    const respondent = conversation.respondent
+    if (respondent.kind === "ai") return { label: t("chipAi"), tone: "success" }
+    if (respondent.kind === "person") return { label: t("chipHandled", { name: respondent.name }), tone: "accent" }
+    return { label: t("replyingAgent", { name: respondent.name }), tone: "accent" }
 }
 
-/** The rows of the Customers table: the conversations that pass the chip and the search, as the table reads them. */
+/** The rows of the Customers list: the conversations that pass the chip and the search, as the table reads them. */
 export const customerRowsOf = (
     t: ChatbotTranslator,
     conversations: ReadonlyArray<ChatbotConversation>,
@@ -86,9 +94,13 @@ export const customerRowsOf = (
             id: conversation.id,
             href: hrefOf(conversation.id),
             name: conversation.name === "" ? t("unknownCustomer") : conversation.name,
-            company: conversation.lead?.company ?? "",
-            channel: chatChannelLabelOf(t, conversation.channel),
-            stage: conversation.lead === null ? "-" : leadStageLabel(t, conversation.lead.stage),
-            need: conversation.lead?.need ?? "-",
-            replying: respondentTextOf(t, conversation.respondent),
+            summary: [
+                chatChannelLabelOf(t, conversation.channel),
+                conversation.lead?.company ?? "",
+                conversation.lead?.need ?? conversation.lastText,
+            ]
+                .filter((part) => part !== "")
+                .join(" · "),
+            stage: conversation.lead === null ? null : leadStageLabel(t, conversation.lead.stage),
+            status: statusOf(t, conversation),
         }))

@@ -1,4 +1,4 @@
-import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Button, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
 
 /** What the waiting region shows once read. */
 interface WaitingView {
@@ -24,37 +24,30 @@ export interface WaitingRegionProps {
 }
 
 /** The decisions of a module that wait for a person, each linking to the decision. */
-export const WaitingRegion = (props: WaitingRegionProps) => (
-    <SurfaceListCard
-        label={props.label}
-        labelEnd={
-            props.view.count === null ? undefined : (
-                <Badge tone="warning" isDot isSkeleton={props.isSkeleton}>
-                    {props.view.count}
-                </Badge>
-            )
-        }
-        empty={<EmptyNotice message={props.view.emptyMessage} description={props.view.emptyDescription} />}
-        footer={
-            props.view.more === null ? undefined : (
-                <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
-                    {props.view.more}
-                </Text>
-            )
-        }
-    >
-        {props.view.rows.map((row) => (
-            <ListRow
-                key={row.id}
-                isSkeleton={props.isSkeleton}
-                title={row.title}
-                description={row.description}
-                actions={
-                    <Button size="sm" intent="neutral" href={row.href} isSkeleton={props.isSkeleton}>
-                        {props.view.openLabel}
-                    </Button>
-                }
-            />
-        ))}
-    </SurfaceListCard>
-)
+export const WaitingRegion = (props: WaitingRegionProps) =>
+    props.view.rows.length === 0 && !props.isSkeleton ? null : (
+        <SurfaceListCard
+            label={props.view.count === null ? props.label : `${props.label} · ${props.view.count}`}
+            footer={
+                props.view.more === null ? undefined : (
+                    <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
+                        {props.view.more}
+                    </Text>
+                )
+            }
+        >
+            {props.view.rows.map((row) => (
+                <ListRow
+                    key={row.id}
+                    isSkeleton={props.isSkeleton}
+                    title={row.title}
+                    description={row.description}
+                    actions={
+                        <Button size="sm" intent="neutral" href={row.href} isSkeleton={props.isSkeleton}>
+                            {props.view.openLabel}
+                        </Button>
+                    }
+                />
+            ))}
+        </SurfaceListCard>
+    )

@@ -30,7 +30,7 @@ export const useChatbotWorkbench = (installationId: string | null, focus: string
         userName: member?.displayName ?? "",
         userId: member?.userId ?? "",
         canFillGaps: member?.role === "owner" || member?.role === "manager",
-        figures: chatbotFiguresOf(t, overview.data?.metrics),
+        figures: chatbotFiguresOf(t, overview.data?.metrics, overview.data?.conversations),
         /** The conversations waiting for a person, each leading to the inbox opened on it. */
         waiting: {
             total: overview.data?.metrics.waiting ?? 0,

@@ -53,6 +53,7 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                                 id="module-name"
                                 name="name"
                                 label={view.nameLabel}
+                                isLabelHidden
                                 description={view.nameHint}
                                 value={view.name}
                                 isSkeleton={isSkeleton}
