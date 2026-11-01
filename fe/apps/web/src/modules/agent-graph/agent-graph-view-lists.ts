@@ -1,6 +1,7 @@
 import type {
     AgentGraphBranchesView,
     AgentGraphData,
+    AgentGraphModeView,
     AgentGraphProposalData,
     AgentGraphProposalView,
     AgentGraphProposalsView,
@@ -93,19 +94,26 @@ export const versionsViewOf = (data: AgentGraphData, ctx: AgentGraphContext): Ag
             title: t("versionN", { version: version.version }),
             badge,
             note: version.note,
-            byLine: t("versionBy", { by: version.byLine, runs: version.runs }),
+            byLine: version.byLine,
             restoreLabel: t("restore"),
             canRestore: ctx.canEdit && !version.isActive,
         }
     })
-    const mode = {
+    return { title: t("versionsTitle"), hint: t("versionsHint"), items: [...draft, ...saved] }
+}
+
+/** The switch beside the map: what the agent does today and what the other side would change, owner only. */
+export const modeViewOf = (data: AgentGraphData, ctx: AgentGraphContext): AgentGraphModeView => {
+    const { t } = ctx
+    const isEnforced = data.mode === "enforced"
+    const hint = isEnforced ? t("modeHintEnforced") : t("modeHintShadow")
+    return {
         title: t("modeTitle"),
         label: t("modeEnforce"),
-        hint: data.mode === "enforced" ? t("modeHintEnforced") : t("modeHintShadow"),
-        isEnforced: data.mode === "enforced",
+        hint: ctx.isOwner ? hint : `${hint} ${t("modeOwnerOnly")}`,
+        isEnforced,
         isDisabled: !ctx.isOwner,
     }
-    return { mode, title: t("versionsTitle"), hint: t("versionsHint"), items: [...draft, ...saved] }
 }
 
 /** Every branch as a sentence for the phone: when, what happens, with what and on whose rule. */

@@ -1,3 +1,4 @@
+import type { AgentGraphSetupState } from "@/modules/agent-graph"
 import type { AgentGraphAction, AgentGraphCommands, AgentGraphPhoneView, AgentGraphSideTab } from "@/modules/types"
 
 /** The tabs of the pane beside the graph, in the order they are offered. */
@@ -44,4 +45,9 @@ export const performAgentGraphAction = (commands: AgentGraphCommands, action: Ag
         case "untrace":
             return commands.untrace()
     }
+}
+
+/** The checklist of the setup and the command that applies it: "Publish and run" does the checklist and the map in one press. */
+export interface AgentGraphSetup extends AgentGraphSetupState {
+    readonly apply: () => Promise<void>
 }

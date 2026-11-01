@@ -12,7 +12,7 @@ the target of the visual pass.
 | page                             | the reader's question                                                        | what it holds                                                                                                                                 |
 | -------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/agents`                        | "who works for me, which of them still needs me, and what else could I add?" | my agents (name, role, channel, setup progress, state, next step); the role templates to add (search, group filter, card per role)            |
-| `/agents/<type>/<id>`, tab Setup | "what must I still tell this agent before it may answer customers?"          | the 8 required items (gates) with their confirmed values; the private chat with NIVO that proposes those values; the apply action ("Go live") |
+| `/agents/<type>/<id>`, tab Setup | "what must I still tell this agent before it may answer customers?"          | the 8 required items (gates) with their confirmed values; the private chat with NIVO that proposes those values; "Publish and run" (one action) |
 | tab Workbench                    | "what is it doing today?"                                                    | the module's workbench                                                                                                                        |
 | tab Settings                     | "how does it run?"                                                           | name, operating mode, live switch, channel grants, sync, removal                                                                              |
 
@@ -30,9 +30,16 @@ the target of the visual pass.
 3. **Confirm the 8 items.** Each gate is missing, proposed (NIVO filled it) or confirmed. The owner confirms a proposal,
    edits it in their own words ("Save and confirm", which confirms) or reopens it (`setSetupGate`). Progress reads
    "N/8 confirmed".
-4. **Apply / go live.** With 8/8 confirmed, "Apply" freezes the draft as the next context version (`applySetup`); the
-   agent then runs on that version. Connecting a channel and the live switch are on Settings (and Connections); the header
-   says "No channel connected" until a channel is bound.
+4. **Publish and run.** One button, "Xuất bản và chạy" (Publish and run), in the head row of the work map. Running is a state of
+   the agent; a version is only history. One press does both halves: with the checklist confirmed and changed it calls
+   `applySetup` (the draft becomes the next context version, the installation becomes ready, and the same call publishes the
+   draft of the action graph with that context version); with only the map changed it calls `publishAgentGraph` (the draft of
+   the map becomes the next graph version; an owner's edit also turns the map to `enforced`). The head row is one line, "Bản 1 đang
+   chạy · Không có thay đổi mới", with the button at its end and no second run button. The button is off when there is nothing
+   new, when the checklist is not confirmed, when the map has gaps or problems, or when the person may not edit; the status
+   line beside it says which, in words. The graph sits directly under the head row and the checklist after it. The switch
+   "Để bản đồ quyết định" sits under the graph and says what the agent does before and after it is turned on. Connecting a
+   channel and the live switch are on Settings (and Connections); the header says "No channel connected" until a channel is bound.
 5. **Switch agent.** Today the rail "Your agents" beside the tab; in the visual pass it moves to a menu in the header
    (the mockup's breadcrumb ▾), and "Add agent" goes back to `/agents`.
 

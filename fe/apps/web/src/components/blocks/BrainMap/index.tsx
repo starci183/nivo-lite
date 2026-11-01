@@ -101,12 +101,18 @@ const detailOf = (
             badges: [
                 {
                     id: "status",
-                    label: t(`status_${statusOf(dossier)}`),
+                    label: t(
+                        statusOf(dossier) === "present" && dossier.documentCount === 0
+                            ? "statusPresentNoFile"
+                            : `status_${statusOf(dossier)}`,
+                    ),
                     tone: DOSSIER_STATUS_TONE[statusOf(dossier)],
                 },
-                { id: "documents", label: t("dossierDocuments", { count: dossier.documentCount }), tone: "muted" },
             ],
-            lines: dossier.note === null ? [] : [dossier.note.text],
+            lines: [
+                ...(dossier.note === null ? [] : [dossier.note.text]),
+                ...(dossier.documentCount > 0 ? [t("dossierDocuments", { count: dossier.documentCount })] : []),
+            ],
             rowsLabel: t("mapCategoryRows"),
             rows: [],
             action: { label: t("mapOpenDossier"), href: brainDossierHref(dossier.id) },

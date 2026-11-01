@@ -80,6 +80,7 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
 
     const submit = async () => {
         if (isDone) return close()
+        if (options.visibility === null) return
         if (isEmpty) return note.setTried(true)
         note.setTried(false)
         batch.begin()
@@ -161,7 +162,7 @@ const createItemRetry =
     ) =>
     async (id: string) => {
         const item = queue.items.find((one) => one.id === id)
-        if (isBusy || item === undefined || !canRetry(item)) return
+        if (isBusy || item === undefined || !canRetry(item) || options.visibility === null) return
         batch.begin()
         batch.end(await queue.sendAll([item], options.meta()))
     }

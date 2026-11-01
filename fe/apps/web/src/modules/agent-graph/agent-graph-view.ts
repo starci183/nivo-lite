@@ -6,12 +6,13 @@ import type {
     AgentGraphPhoneView,
     AgentGraphSideTab,
 } from "@/modules/types"
+import { cardLineWithChannels } from "./agent-graph-channels"
 import { flowEdgesOf, flowNodesOf, layerHeadersOf } from "./agent-graph-flow"
 import { problemLinesOf } from "./agent-graph-problems"
 import { detailViewOf } from "./agent-graph-view-detail"
 import { adderPickOf, adderViewOf, decideEditorViewOf, problemsViewOf } from "./agent-graph-view-decide"
 import type { AgentGraphAdderPick } from "./agent-graph-view-decide"
-import { branchesViewOf, proposalsViewOf, runViewOf, versionsViewOf } from "./agent-graph-view-lists"
+import { branchesViewOf, modeViewOf, proposalsViewOf, runViewOf, versionsViewOf } from "./agent-graph-view-lists"
 import { kindWordOf } from "./agent-graph-words"
 import type { AgentGraphContext } from "./agent-graph-words"
 
@@ -45,6 +46,8 @@ const statusOf = (data: AgentGraphData, ctx: AgentGraphContext): string => {
     if (data.gaps.length > 0) return `${lead} · ${t("statusGaps", { count: data.gaps.length })}`
     if (conflicts > 0) return `${lead} · ${t("statusConflicts", { count: conflicts })}`
     if (learned > 0) return `${lead} · ${t("statusLearned", { count: learned })}`
+    if (ctx.setup.isReady && ctx.setup.isChanged) return `${lead} · ${t("statusSetupChanged")}`
+    if (!ctx.setup.isReady) return `${lead} · ${t("statusSetupMissing", { count: ctx.setup.missing })}`
     return `${lead} · ${t("statusClear")}`
 }
 
@@ -54,7 +57,8 @@ const publishBlockedOf = (data: AgentGraphData, ctx: AgentGraphContext): string 
     const first = problemLinesOf(data, ctx.t)[0]
     if (first !== undefined) return ctx.t("problemsBlock", { count: data.problems.length, first: first.text })
     if (data.gaps.length > 0) return ctx.t("gapsBlock")
-    return data.changes === 0 ? ctx.t("nothingToPublish") : ""
+    if (data.changes > 0 || (ctx.setup.isReady && ctx.setup.isChanged)) return ""
+    return ctx.setup.isReady ? ctx.t("nothingToPublish") : ctx.t("setupMissingBlock", { count: ctx.setup.missing })
 }
 
 const headOf = (data: AgentGraphData, ctx: AgentGraphContext, isPublishing: boolean): AgentGraphHeadView => ({
@@ -63,7 +67,7 @@ const headOf = (data: AgentGraphData, ctx: AgentGraphContext, isPublishing: bool
     badges: [],
     publishLabel: ctx.t("publish", { version: data.activeVersion + 1 }),
     publishBlocked: publishBlockedOf(data, ctx),
-    isPublishing,
+    isPublishing: isPublishing || ctx.setup.isApplying,
 })
 
 /**
@@ -82,10 +86,22 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
     })()
     return {
         head: headOf(data, ctx, ui.isPublishing),
+        mode: modeViewOf(data, ctx),
         canvas: {
             label: t("mapLabel"),
             emptyLabel: t("mapEmpty"),
-            nodes: flowNodesOf(data.nodes, { selectedKey: ui.selectedKey, path: run?.path ?? [] }),
+            nodes: flowNodesOf(data.nodes, { selectedKey: ui.selectedKey, path: run?.path ?? [] }).map((flow) => {
+                const node = data.nodes.find((entry) => entry.key === flow.id)
+                return node === undefined
+                    ? flow
+                    : {
+                          ...flow,
+                          description: cardLineWithChannels(node, {
+                              connected: ctx.channels,
+                              none: t("channelNone"),
+                          }),
+                      }
+            }),
             edges: flowEdgesOf(data.nodes, {
                 approved: t("edgeApproved"),
                 taken: (label) => t("edgeTaken", { label }),

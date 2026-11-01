@@ -29,6 +29,14 @@ The model never changes itself; the brain does. `mineLessons` reads the owner's 
 `suggestResolution` (deterministic, no tokens) proposes one action with its reason:
 schedule (future start date) · split (the new value names a situation: "weekend", "student", ...) · reject (much less trusted source: a customer's message, the AI's guess) · apply (as trusted or newer, or the current value unconfirmed for 120 days) · ask.
 
+## Who may read a document
+
+The owner picks "Công khai" (Public) or "Nội bộ" (Internal) for every document at add time, in upload, written text, link and Google
+Drive alike. Nothing is preselected: the add stays disabled until one is chosen, and the footer says why. NIVO may suggest Công khai for a
+shop introduction as a hint beside the choice, never as a selected value. The copy says plainly that the Chatbot answers customers
+only from Công khai documents. A fact extracted from a document takes the level of the document: from a Công khai document it is filed
+public, whatever the model judged; from a Nội bộ document it keeps the audience of the fact it may replace and is never made public.
+
 ## UI (`/brain`)
 
 | Tab     | Purpose                                                                                                                                                                                                                                           |

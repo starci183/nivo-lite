@@ -48,6 +48,7 @@ export const useAgentGraphWrites = (onSaved: (isDraftEmpty: boolean) => void) =>
         return true
     }
     return {
+        refresh: async (): Promise<boolean> => done(true, true),
         saveDocument: async (
             target: GraphTarget,
             document: AgentGraphWireDocument,

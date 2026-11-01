@@ -5,6 +5,7 @@ import { AgentGraphBranches } from "@/components/branches/AgentGraphBranches"
 import { AgentGraphProblems } from "@/components/branches/AgentGraphProblems"
 import { AgentGraphCanvas } from "@/components/composites/AgentGraphCanvas"
 import { AgentGraphHead } from "@/components/composites/AgentGraphHead"
+import { AgentGraphMode } from "@/components/composites/AgentGraphMode"
 import { AgentGraphInspector } from "@/components/composites/AgentGraphInspector"
 import { AgentGraphTabs } from "@/components/composites/AgentGraphTabs"
 import { SlotView } from "@/components/composites/SlotView"
@@ -44,6 +45,12 @@ export interface ProblemsBandProps {
 
 /** The props of the head of the work map. */
 export interface GraphHeadBandProps {
+    readonly props: GraphBandProps["props"]
+    readonly on: GraphBandProps["on"]
+}
+
+/** The props of the switch beside the map. */
+export interface GraphModeBandProps {
     readonly props: GraphBandProps["props"]
     readonly on: GraphBandProps["on"]
 }
@@ -107,6 +114,15 @@ export const GraphHeadBand = (props: GraphHeadBandProps) =>
             view={view.head}
             isSkeleton={isSkeleton}
             onPublish={() => props.on.graph({ kind: "publish" })}
+        />
+    ))
+/** The switch beside the map: does the agent work by the map or only record it. */
+export const GraphModeBand = (props: GraphModeBandProps) =>
+    viewOf(props, (view, isSkeleton) => (
+        <AgentGraphMode
+            view={view.mode}
+            isSkeleton={isSkeleton}
+            onMode={(value) => props.on.graph({ kind: "mode", value })}
         />
     ))
 /** The graph itself. */
