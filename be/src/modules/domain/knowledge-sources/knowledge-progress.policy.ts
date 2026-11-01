@@ -70,6 +70,9 @@ export const progressOfRow = (
 /** The percent of a source while its passages get their vectors: embedding fills 25 to 80. */
 export const embedPercent = (done: number, total: number): number => (total <= 0 ? 25 : 25 + (55 * done) / total)
 
+/** The percent of a source while its facts are read window by window: the facts stage fills 85 to 99, and 100 is the settled source. */
+export const factsPercent = (done: number, total: number): number => (total <= 0 ? 85 : 85 + (14 * done) / total)
+
 /** The columns a change writes, named as the entity names them; a field the change does not name is left out. */
 export const columnsOf = (change: ProgressChange): Partial<KnowledgeSourceEntity> => ({
     ...(change.status === undefined ? {} : { status: change.status }),

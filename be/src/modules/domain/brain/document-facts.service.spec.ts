@@ -300,13 +300,15 @@ describe("DocumentFactsService", () => {
     })
 
     it.each([null, undefined, ""])("keeps the original result for a provider model %s", async (model) => {
-        const { service, ai, extractions } = await build(sourceOf({ content: `${"a".repeat(3500)}b` }))
+        const { service, ai, extractions, sources } = await build(sourceOf({ content: `${"a".repeat(3500)}b` }))
         extractions.get.mockResolvedValue(null)
         const answer = Object.defineProperty({ ...REPLY }, "model", { value: model })
         ai.chat.mockResolvedValueOnce(REPLY).mockResolvedValueOnce(answer)
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
         expect(ai.chat).toHaveBeenCalledTimes(2)
         expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, model === "" ? "" : "m1", expect.anything())
+        expect(sources.advance).toHaveBeenCalledWith(WS, SOURCE, { stage: "facts", done: 1, total: 2, progress: 92 })
+        expect(sources.advance).toHaveBeenCalledWith(WS, SOURCE, { stage: "facts", done: 2, total: 2, progress: 99 })
     })
 })
 describe("DocumentFactsService", () => {

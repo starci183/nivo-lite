@@ -6,7 +6,7 @@ import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { Evidence } from "@modules/domain/brain-facts"
 import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
-import { KnowledgeSourcesService, StoredNote } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesService, StoredNote, factsPercent } from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { InjectAi } from "@modules/integrations/ai"
 import type { AiService } from "@modules/integrations/ai"
@@ -201,6 +201,12 @@ export class DocumentFactsService {
             windowsTotal: total,
             error: null,
             attempts: 0,
+        })
+        await this.sources.advance(workspaceId, source.id, {
+            stage: "facts",
+            done: next.done,
+            total,
+            progress: factsPercent(next.done, total),
         })
         return this.window(source, windows, next)
     }
