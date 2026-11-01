@@ -1,5 +1,4 @@
-import { Heading, List, ListItem, Region, Text, TextAction } from "@starci/grammar/common"
-import { LEGAL_SECTION } from "./classNames"
+import { Heading, List, ListItem, Region, Stack, Text, TextAction } from "@starci/grammar/common"
 
 /** The Google Limited Use statement, quoted verbatim, with its link and a note. */
 interface LegalSectionLimitedUse {
@@ -21,7 +20,7 @@ interface LegalSectionViewProps {
 /** A titled section: paragraphs, a list, closing paragraphs and, for Google data, the Limited Use statement. */
 export const LegalSectionView = (props: LegalSectionViewProps) => (
     <Region id={props.id} label={props.title}>
-        <div className={LEGAL_SECTION}>
+        <Stack gap="row">
             <Heading level={2}>{props.title}</Heading>
             {props.paragraphs.map((paragraph) => (
                 <Text key={paragraph}>{paragraph}</Text>
@@ -49,6 +48,6 @@ export const LegalSectionView = (props: LegalSectionViewProps) => (
                     {props.limitedUse.note === "" ? null : <Text tone="muted">{props.limitedUse.note}</Text>}
                 </>
             )}
-        </div>
+        </Stack>
     </Region>
 )

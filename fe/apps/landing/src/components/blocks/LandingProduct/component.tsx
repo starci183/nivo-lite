@@ -1,17 +1,17 @@
 import {
+    Grid,
     Heading,
-    List,
-    ListItem,
     PageContainer,
     Region,
     SectionHeader,
+    Stack,
     SurfaceCard,
     Tabs,
     Text,
 } from "@starci/grammar/common"
 import { LandingBrowserFrame } from "@/components/composites/LandingBrowserFrame"
 import { IconGlyph } from "@/components/leaves/Icon"
-import { ANCHOR, BULLETS, PRODUCT_COPY, PRODUCT_DESKTOP, PRODUCT_STACK, SECTION_STACK, VIEW_STACK } from "./classNames"
+import { ANCHOR, PRODUCT_DESKTOP, PRODUCT_STACK } from "./classNames"
 
 /** One screenshot of the product with its size. */
 interface LandingProductShot {
@@ -56,15 +56,13 @@ const CHECK_ICON = { name: "complete", usage: "leading" } as const
 
 /** The benefits of one view as a list with a check glyph each. */
 const Bullets = (props: BulletsProps) => (
-    <List className={BULLETS}>
+    <Stack gap="row">
         {props.items.map((item) => (
-            <ListItem key={item}>
-                <Text size="sm" startContent={<IconGlyph {...CHECK_ICON} />}>
-                    {item}
-                </Text>
-            </ListItem>
+            <Text key={item} size="sm" startContent={<IconGlyph {...CHECK_ICON} />}>
+                {item}
+            </Text>
         ))}
-    </List>
+    </Stack>
 )
 
 /** Five views of NIVO OS with a real screenshot and three benefits each: tabs on wide screens, a stack on phones. */
@@ -73,52 +71,56 @@ export const LandingProductBase = (props: LandingProductBaseProps) => {
     return (
         <Region id="product" labelledBy={props.props.headingId} className={ANCHOR}>
             <PageContainer measure="product">
-                <div className={SECTION_STACK}>
+                <Stack gap="section">
                     <SectionHeader id={props.props.headingId} eyebrow={props.props.eyebrow} title={props.props.title} />
                     {current === undefined ? null : (
                         <div className={PRODUCT_DESKTOP}>
                             <SurfaceCard>
-                                <Tabs
-                                    label={props.props.tabsLabel}
-                                    selectedKey={current.id}
-                                    inset="none"
-                                    labelVisibility="always"
-                                    items={props.props.views.map((view) => ({ id: view.id, label: view.tabLabel }))}
-                                    onSelect={(key) => props.on.select(String(key))}
-                                />
-                                <LandingBrowserFrame
-                                    src={current.shot.src}
-                                    alt={current.shot.alt}
-                                    label={current.shot.caption}
-                                    width={current.shot.width}
-                                    height={current.shot.height}
-                                />
-                                <div className={PRODUCT_COPY}>
-                                    <Heading level={3}>{current.title}</Heading>
-                                    <Bullets items={current.bullets} />
-                                </div>
+                                <Stack gap="section">
+                                    <Tabs
+                                        label={props.props.tabsLabel}
+                                        selectedKey={current.id}
+                                        inset="none"
+                                        labelVisibility="always"
+                                        items={props.props.views.map((view) => ({ id: view.id, label: view.tabLabel }))}
+                                        onSelect={(key) => props.on.select(String(key))}
+                                    />
+                                    <LandingBrowserFrame
+                                        src={current.shot.src}
+                                        alt={current.shot.alt}
+                                        label={current.shot.caption}
+                                        width={current.shot.width}
+                                        height={current.shot.height}
+                                    />
+                                    <Grid kind="cards" columns={2}>
+                                        <Heading level={3}>{current.title}</Heading>
+                                        <Bullets items={current.bullets} />
+                                    </Grid>
+                                </Stack>
                             </SurfaceCard>
                         </div>
                     )}
                     <div className={PRODUCT_STACK}>
-                        {props.props.views.map((view) => (
-                            <div key={view.id} className={VIEW_STACK}>
-                                <Text size="sm" tone="muted" weight="medium">
-                                    {view.tabLabel}
-                                </Text>
-                                <LandingBrowserFrame
-                                    src={view.shot.src}
-                                    alt={view.shot.alt}
-                                    label={view.shot.caption}
-                                    width={view.shot.width}
-                                    height={view.shot.height}
-                                />
-                                <Heading level={3}>{view.title}</Heading>
-                                <Bullets items={view.bullets} />
-                            </div>
-                        ))}
+                        <Stack gap="region">
+                            {props.props.views.map((view) => (
+                                <Stack key={view.id} gap="section">
+                                    <Text size="sm" tone="muted" weight="medium">
+                                        {view.tabLabel}
+                                    </Text>
+                                    <LandingBrowserFrame
+                                        src={view.shot.src}
+                                        alt={view.shot.alt}
+                                        label={view.shot.caption}
+                                        width={view.shot.width}
+                                        height={view.shot.height}
+                                    />
+                                    <Heading level={3}>{view.title}</Heading>
+                                    <Bullets items={view.bullets} />
+                                </Stack>
+                            ))}
+                        </Stack>
                     </div>
-                </div>
+                </Stack>
             </PageContainer>
         </Region>
     )

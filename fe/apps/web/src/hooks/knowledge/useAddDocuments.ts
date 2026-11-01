@@ -51,29 +51,19 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
 
     const runBatch = createDocumentBatchRunner(queue, linkRows, retryable, options)
 
-    const runNote = async () => {
-        const queued = await actions.enqueue({
-            kind: mode === "faq" ? "faq" : "text",
-            title: note.title.trim(),
-            storagePath: null,
-            url: null,
-            meta: { ...options.meta(), content: noteBody },
-        })
-        if (queued) note.reset()
-        else setFailure("errEnqueue")
-        return queued ? 1 : 0
+    const batch = {
+        begin: () => {
+            setBusy(true)
+            setFailure(null)
+        },
+        end: (queued: number) => {
+            setBusy(false)
+            setQueuedCount((now) => now + queued)
+            if (queued > 0) input.onAdded()
+        },
     }
-
-    const retryItem = async (id: string) => {
-        const item = queue.items.find((one) => one.id === id)
-        if (isBusy || item === undefined || !canRetry(item)) return
-        setBusy(true)
-        setFailure(null)
-        const queued = await queue.sendAll([item], options.meta())
-        setBusy(false)
-        setQueuedCount((now) => now + queued)
-        if (queued > 0) input.onAdded()
-    }
+    const runNote = createNoteRunner({ actions, mode, note, noteBody, options, fail: () => setFailure("errEnqueue") })
+    const retryItem = createItemRetry(queue, options, isBusy, batch)
 
     const close = () => {
         if (isBusy) return
@@ -89,12 +79,8 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
         if (isDone) return close()
         if (isEmpty) return note.setTried(true)
         note.setTried(false)
-        setBusy(true)
-        setFailure(null)
-        const queued = await (mode === "files" ? runBatch() : runNote())
-        setBusy(false)
-        setQueuedCount((now) => now + queued)
-        if (queued > 0) input.onAdded()
+        batch.begin()
+        batch.end(await (mode === "files" ? runBatch() : runNote()))
     }
 
     return {
@@ -120,6 +106,51 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
         close,
     }
 }
+
+/** What the note runner reads from the drawer. */
+interface NoteRunnerInput {
+    readonly actions: QueueActions
+    readonly mode: AddMode
+    readonly note: ReturnType<typeof useNoteDraft>
+    readonly noteBody: string
+    readonly options: ReturnType<typeof useBatchOptions>
+    readonly fail: () => void
+}
+
+/** Builds the command that queues the written note or the questions; answers how many were queued. */
+const createNoteRunner = (input: NoteRunnerInput) => async () => {
+    const queued = await input.actions.enqueue({
+        kind: input.mode === "faq" ? "faq" : "text",
+        title: input.note.title.trim(),
+        storagePath: null,
+        url: null,
+        meta: { ...input.options.meta(), content: input.noteBody },
+    })
+    if (queued) input.note.reset()
+    else input.fail()
+    return queued ? 1 : 0
+}
+
+/** How a send tells the drawer it has begun and how many documents it queued. */
+interface BatchTracker {
+    readonly begin: () => void
+    readonly end: (queued: number) => void
+}
+
+/** Builds the command that sends one failed item again. */
+const createItemRetry =
+    (
+        queue: ReturnType<typeof useAddQueue>,
+        options: ReturnType<typeof useBatchOptions>,
+        isBusy: boolean,
+        batch: BatchTracker,
+    ) =>
+    async (id: string) => {
+        const item = queue.items.find((one) => one.id === id)
+        if (isBusy || item === undefined || !canRetry(item)) return
+        batch.begin()
+        batch.end(await queue.sendAll([item], options.meta()))
+    }
 
 /** Builds the runBatch command from the current render state. */
 const createDocumentBatchRunner =

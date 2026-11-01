@@ -1,4 +1,4 @@
-import { Button, Heading, PageContainer, Region, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Heading, PageContainer, Region, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { CTA_COPY } from "./classNames"
 
 /** The resolved words the final call to action draws. */
@@ -25,12 +25,14 @@ export const LandingFinalCtaBase = (props: LandingFinalCtaBaseProps) => (
         <PageContainer measure="product">
             <SurfaceCard treatment="ink">
                 <div className={CTA_COPY}>
-                    <Heading level={2}>{props.props.title}</Heading>
-                    <Text>{props.props.text}</Text>
-                    <Button intent="neutral" size="lg" href={props.props.buttonHref}>
-                        {props.props.buttonLabel}
-                    </Button>
-                    <Text size="xs">{props.props.note}</Text>
+                    <Stack gap="section" align="start">
+                        <Heading level={2}>{props.props.title}</Heading>
+                        <Text>{props.props.text}</Text>
+                        <Button intent="neutral" size="lg" href={props.props.buttonHref}>
+                            {props.props.buttonLabel}
+                        </Button>
+                        <Text size="xs">{props.props.note}</Text>
+                    </Stack>
                 </div>
             </SurfaceCard>
         </PageContainer>

@@ -2,30 +2,24 @@
 
 import {
     ARCHIVE_MAX_ENTRIES,
-    UPLOAD_PARALLEL,
-    isArchiveName,
-    itemOfFile,
-    itemOfLink,
+    chosenItemsOf,
     forgetUploads,
     interruptedUploads,
+    isArchiveName,
+    itemOfLink,
     itemsOfZip,
     readArchive,
-    rememberUploads,
-    stripExt,
+    sendAllOf,
+    sendOneOf,
+    withFiles,
 } from "@/modules/documents"
-import type { BatchMeta, QueueActions, QueueItem } from "@/modules/documents"
+import type { BatchMeta, ChosenLink, QueueActions, QueueItem } from "@/modules/documents"
 import { useRef, useState } from "react"
 
 /** What was skipped in an archive: its name and how many entries could not be read. */
 interface ZipSkip {
     readonly name: string
     readonly count: number
-}
-
-/** A link chosen in a service: its address and the name the document is stored under. */
-export interface ChosenLink {
-    readonly url: string
-    readonly title: string
 }
 
 /** What the queue gives the drawer. */
@@ -46,19 +40,6 @@ interface AddQueue {
     readonly sendAll: (queue: ReadonlyArray<QueueItem>, meta: BatchMeta) => Promise<number>
     readonly reset: () => void
 }
-
-const isSameFile = (one: QueueItem, file: File): boolean =>
-    one.kind === "file" && one.name === file.name && one.size === file.size
-
-/** The queue items of links chosen in a service, leaving out the ones already queued. */
-const chosenItemsOf = (
-    queued: ReadonlyArray<QueueItem>,
-    links: ReadonlyArray<ChosenLink>,
-    origin: string,
-): ReadonlyArray<QueueItem> =>
-    links
-        .filter((link) => !queued.some((one) => one.kind === "link" && one.name === link.url))
-        .map((link) => ({ ...itemOfLink(link.url), title: link.title, origin }))
 
 /** The queue of files and links of the Add documents drawer: files and archive entries are checked, then uploaded and handed to the job queue. */
 export const useAddQueue = (actions: QueueActions): AddQueue => {
@@ -93,17 +74,7 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
         const files = all.filter((file) => !isArchiveName(file.name))
         if (zips.length > 0) addZips(zips)
         if (files.length === 0) return
-        setItems((now) => {
-            const fresh = files.reduce<ReadonlyArray<File>>(
-                (kept, file) =>
-                    now.some((one) => isSameFile(one, file)) ||
-                    kept.some((one) => one.name === file.name && one.size === file.size)
-                        ? kept
-                        : [...kept, file],
-                [],
-            )
-            return [...now, ...fresh.map(itemOfFile)]
-        })
+        setItems((now) => withFiles(now, files))
     }
 
     const addLinks = (urls: ReadonlyArray<string>): ReadonlyArray<QueueItem> => {
@@ -146,63 +117,5 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
             setZipSkips([])
             zipSeen.current = new Set()
         },
-    }
-}
-
-const sendAllOf = (sendOne: (item: QueueItem, meta: BatchMeta) => Promise<boolean>) => {
-    return async (queue: ReadonlyArray<QueueItem>, meta: BatchMeta): Promise<number> => {
-        rememberUploads(
-            queue.flatMap((item) => (item.file === undefined ? [] : [item.name])),
-            Date.now(),
-        )
-        let next = 0
-        const lane = async (): Promise<number> => {
-            const item = queue[next]
-            next += 1
-            if (item === undefined) return 0
-            const sent = (await sendOne(item, meta)) ? 1 : 0
-            return sent + (await lane())
-        }
-        const lanes = await Promise.all(Array.from({ length: Math.min(UPLOAD_PARALLEL, queue.length) }, lane))
-        forgetUploads()
-        return lanes.reduce((sum, count) => sum + count, 0)
-    }
-}
-
-const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => void, actions: QueueActions) => {
-    return async (item: QueueItem, meta: BatchMeta): Promise<boolean> => {
-        patch(item.id, { status: "uploading", error: undefined, uploaded: 0 })
-        const info = {
-            topic: meta.topic ?? item.topic ?? null,
-            tags: meta.tags,
-            visibility: meta.visibility,
-            module: meta.module,
-            installationId: meta.installationId,
-            origin: item.origin ?? null,
-        }
-        const path =
-            item.file === undefined
-                ? null
-                : (item.storagePath ??
-                  (await actions.upload(item.file, (fraction) => patch(item.id, { uploaded: Math.min(fraction, 1) }))))
-        if (item.kind === "file" && path === null) {
-            patch(item.id, { status: "failed", error: "errUpload" })
-            return false
-        }
-        if (path !== null) patch(item.id, { uploaded: 1, storagePath: path })
-        const queued = await actions.enqueue({
-            kind: item.kind === "link" ? "url" : "file",
-            title: item.title ?? (item.kind === "link" ? item.name.replace(/^https?:\/\//i, "") : stripExt(item.name)),
-            storagePath: path,
-            url: item.kind === "link" ? item.name : null,
-            meta: info,
-        })
-        patch(
-            item.id,
-            queued
-                ? { status: "queued", uploaded: undefined }
-                : { status: "failed", error: "errEnqueue", uploaded: undefined },
-        )
-        return queued
     }
 }

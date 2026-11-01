@@ -1,7 +1,6 @@
-import { Alert, SurfaceCard, Switch, Text } from "@starci/grammar/common"
+import { Alert, Cluster, Stack, SurfaceCard, Switch, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, WorkspaceAgentWorkView } from "@/modules/types"
-import { STACK, SWITCH_ROW } from "./classNames"
 
 /** Copy and slot of the work switch of the whole workspace. */
 export interface AgentWorkWorkspaceSwitchBaseProps {
@@ -27,8 +26,8 @@ export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBase
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <SlotView {...props.props.read} forbidden="hide" onRetry={props.on.retry}>
             {(view, isSkeleton) => (
-                <div className={STACK}>
-                    <div className={SWITCH_ROW}>
+                <Stack gap="section">
+                    <Cluster gap="row">
                         <Switch
                             name="workspace-agent-work"
                             label={props.props.switchLabel}
@@ -39,7 +38,7 @@ export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBase
                             onSelectedChange={props.on.change}
                         />
                         <Text weight="medium">{props.props.switchLabel}</Text>
-                    </div>
+                    </Cluster>
                     <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
                         {props.props.help}
                     </Text>
@@ -52,7 +51,7 @@ export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBase
                             {props.props.ownerOnly}
                         </Text>
                     )}
-                </div>
+                </Stack>
             )}
         </SlotView>
     </SurfaceCard>

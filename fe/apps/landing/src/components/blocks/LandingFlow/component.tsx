@@ -1,17 +1,18 @@
 import {
     Badge,
+    Cluster,
+    Grid,
     Heading,
-    List,
-    ListItem,
     PageContainer,
     Region,
     SectionHeader,
+    Stack,
     SurfaceCard,
     Text,
 } from "@starci/grammar/common"
 import { IconGlyph } from "@/components/leaves/Icon"
 import type { IconGlyphName } from "@/components/leaves/Icon"
-import { ANCHOR, FLOW_BODY, FLOW_GRID, FLOW_ITEM, FLOW_META, FLOW_NAME, SECTION_STACK } from "./classNames"
+import { ANCHOR } from "./classNames"
 
 /** One step of the flow: who acts, what happens, and whether the person decides. */
 interface LandingFlowStep {
@@ -42,39 +43,37 @@ interface LandingFlowBaseProps {
 export const LandingFlowBase = (props: LandingFlowBaseProps) => (
     <Region id="how" labelledBy={props.props.headingId} className={ANCHOR}>
         <PageContainer measure="product">
-            <div className={SECTION_STACK}>
+            <Stack gap="section">
                 <SectionHeader
                     id={props.props.headingId}
                     eyebrow={props.props.eyebrow}
                     title={props.props.title}
                     description={props.props.lead}
                 />
-                <List as="ol" label={props.props.title} className={FLOW_GRID}>
+                <Grid kind="cards" columns={4}>
                     {props.props.steps.map((step) => (
-                        <ListItem key={step.id} className={FLOW_ITEM}>
-                            <SurfaceCard height="fill" isHighlight={step.isHumanStep}>
-                                <div className={FLOW_BODY}>
-                                    <div className={FLOW_META}>
-                                        <Text size="xs">{step.stepLabel}</Text>
-                                        {step.isHumanStep ? <Badge tone="neutral">{props.props.humanTag}</Badge> : null}
-                                    </div>
-                                    <IconGlyph name={step.icon} isTile />
-                                    <div className={FLOW_NAME}>
-                                        <Text size="sm" weight="medium">
-                                            {step.agentName}
-                                        </Text>
-                                        {step.hasAiMark ? <Badge tone="neutral">{props.props.aiMark}</Badge> : null}
-                                    </div>
-                                    <Heading level={3}>{step.title}</Heading>
-                                    <Text size="sm" tone="muted">
-                                        {step.text}
+                        <SurfaceCard key={step.id} height="fill" isHighlight={step.isHumanStep}>
+                            <Stack gap="row">
+                                <Cluster gap="inline" justify="between">
+                                    <Text size="xs">{step.stepLabel}</Text>
+                                    {step.isHumanStep ? <Badge tone="neutral">{props.props.humanTag}</Badge> : null}
+                                </Cluster>
+                                <IconGlyph name={step.icon} isTile />
+                                <Cluster gap="inline">
+                                    <Text size="sm" weight="medium">
+                                        {step.agentName}
                                     </Text>
-                                </div>
-                            </SurfaceCard>
-                        </ListItem>
+                                    {step.hasAiMark ? <Badge tone="neutral">{props.props.aiMark}</Badge> : null}
+                                </Cluster>
+                                <Heading level={3}>{step.title}</Heading>
+                                <Text size="sm" tone="muted">
+                                    {step.text}
+                                </Text>
+                            </Stack>
+                        </SurfaceCard>
                     ))}
-                </List>
-            </div>
+                </Grid>
+            </Stack>
         </PageContainer>
     </Region>
 )

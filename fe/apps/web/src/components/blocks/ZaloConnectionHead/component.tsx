@@ -4,7 +4,6 @@ import type { ReactNode } from "react"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { ConnectionDisconnectBand } from "@/components/composites/ConnectionDisconnectBand"
 import { ConnectionDisconnectDialog } from "@/components/composites/ConnectionDisconnectDialog"
-import { railPaneProps } from "@/components/composites/ConnectionRailPane"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZaloHeadView } from "@/modules/types"
 
@@ -153,7 +152,18 @@ export const ZaloConnectionHeadBase = (props: ZaloConnectionHeadBaseProps) => {
                             <ConnectionDisconnectBand {...props.props.disconnect} onPress={props.on.askDisconnect} />
                         )}
                     </Pane>
-                    <Pane area="rail" surface scroll {...railPaneProps(rail, props.on.openRail)}>
+                    <Pane
+                        area="rail"
+                        surface
+                        scroll
+                        label={rail.label}
+                        collapse="drawer"
+                        collapseLabel={rail.label}
+                        openLabel={rail.openLabel}
+                        closeLabel={rail.closeLabel}
+                        isOpen={rail.isOpen}
+                        onOpenChange={props.on.openRail}
+                    >
                         {props.shape.rail}
                     </Pane>
                 </PaneGrid>

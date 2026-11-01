@@ -36,6 +36,7 @@
         "repo.docs",
         "be.contract.graphql",
         "be.contract.events",
+        "be.contract.mcp-tools",
         "repo.i18n-dynamic-keys",
         "be.events",
         "be.platform.event-bus"

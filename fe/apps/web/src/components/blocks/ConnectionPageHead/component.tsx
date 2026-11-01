@@ -3,7 +3,6 @@ import type { ReactNode } from "react"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { ConnectionDisconnectBand } from "@/components/composites/ConnectionDisconnectBand"
 import { ConnectionDisconnectDialog } from "@/components/composites/ConnectionDisconnectDialog"
-import { railPaneProps } from "@/components/composites/ConnectionRailPane"
 import type { ConnectionHeadView, ConnectionPageHeadCommands, ConnectionPageHeadView } from "@/modules/types"
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */
@@ -81,7 +80,18 @@ export const ConnectionPageHeadBase = (props: ConnectionPageHeadBaseProps) => {
                             <ConnectionDisconnectBand {...disconnect} onPress={props.on.askDisconnect} />
                         )}
                     </Pane>
-                    <Pane area="rail" surface scroll {...railPaneProps(rail, props.on.openRail)}>
+                    <Pane
+                        area="rail"
+                        surface
+                        scroll
+                        label={rail.label}
+                        collapse="drawer"
+                        collapseLabel={rail.label}
+                        openLabel={rail.openLabel}
+                        closeLabel={rail.closeLabel}
+                        isOpen={rail.isOpen}
+                        onOpenChange={props.on.openRail}
+                    >
                         {props.shape.rail}
                     </Pane>
                 </PaneGrid>
