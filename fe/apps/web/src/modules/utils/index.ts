@@ -24,6 +24,7 @@ export {
     accountingQuestionError,
 } from "./accounting-question"
 export { isWorkspaceSwitchSwrKey, matchesSwrKey } from "./swr-key"
+export { maskPhones } from "./phone"
 export { newIdempotencyToken } from "./token"
 export { isLeadStage, leadStageLabel, leadStageOf, leadStageSteps } from "./leadStage"
 export { toLeadGenWorkbenchData } from "./leadgen"

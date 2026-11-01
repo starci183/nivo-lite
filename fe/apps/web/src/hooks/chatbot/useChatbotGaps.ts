@@ -10,6 +10,7 @@ import {
     useMutateChatbotDismissKnowledgeGapSwr,
     useQueryChatbotGapsSwr,
 } from "@/hooks/swr"
+import { maskPhones } from "@/modules/utils"
 import { brainTabHref } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"
 
@@ -52,12 +53,9 @@ export const useChatbotGaps = (workspaceId: string | undefined, isManager: boole
         const when = format.dateTime(new Date(gap.lastSeenAt), { dateStyle: "medium" })
         return {
             id: gap.id,
-            title: gap.question,
+            title: maskPhones(gap.question),
             line: gap.count > 1 ? t("gapAsked", { n: gap.count, when }) : t("gapAskedOnce", { when }),
-            badges: [
-                { label: gap.module, tone: "neutral" },
-                ...(gap.reopenedCount > 0 ? [{ label: t("gapReopened"), tone: "warning" as const }] : []),
-            ],
+            badges: gap.reopenedCount > 0 ? [{ label: t("gapReopened"), tone: "warning" }] : [],
             answerLabel: t("gapAnswer"),
             answerHref: brainTabHref("gaps", { answer: gap.id }),
             dismissLabel: t("gapDismiss"),

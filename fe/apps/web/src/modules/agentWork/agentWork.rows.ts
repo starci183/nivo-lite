@@ -1,4 +1,5 @@
 import type { AgentWorkGoalView, AgentWorkPreset, AgentWorkTaskView, AgentWorkTriggerView } from "@/modules/types"
+import { maskPhones } from "@/modules/utils"
 import { presetOf, relative, workItemHrefOf } from "./agentWork.wire"
 import { eventWord, goalSourceWord, goalStatusWord, plainText, taskStatusWord, waitingOnWord } from "./agentWork.words"
 import type { AgentWorkContext, AgentWorkTranslator, GoalWire, TaskWire, TriggerWire } from "./agentWork.wire"
@@ -47,8 +48,8 @@ export const toGoalView = (wire: GoalWire, context: AgentWorkContext): AgentWork
     const due = relative(context, wire.dueAt)
     return {
         id: wire.id,
-        title: plainText(context.t, wire.title),
-        detail: plainText(context.t, wire.detail),
+        title: maskPhones(plainText(context.t, wire.title)),
+        detail: maskPhones(plainText(context.t, wire.detail)),
         statusLabel: goalStatusWord(context.t, wire.status),
         dueLabel: due === "" ? "" : context.t("goalDue", { when: due }),
         isOpen: wire.status === "active" || wire.status === "paused",
@@ -68,8 +69,8 @@ const waitLabelOf = (wire: TaskWire, context: AgentWorkContext): string => {
 /** One task in words, with what it waits for and the way to its work item. */
 export const toTaskView = (wire: TaskWire, context: AgentWorkContext): AgentWorkTaskView => ({
     id: wire.id,
-    title: plainText(context.t, wire.title),
-    detail: plainText(context.t, wire.detail),
+    title: maskPhones(plainText(context.t, wire.title)),
+    detail: maskPhones(plainText(context.t, wire.detail)),
     statusLabel: taskStatusWord(context.t, wire.status),
     waitLabel: waitLabelOf(wire, context),
     workItemHref: workItemHrefOf(context, wire.workItemId),

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { maskPhones } from "@modules/platform/primitives"
 
 /** The longest reply a tag or background turn keeps. */
 export const REPLY_MAX = 2000
@@ -40,7 +41,8 @@ const fieldValueSchema = z.union([
 const taskSchema = z.strictObject({
     op: z.enum(["add", "done", "wait"]),
     key: z.string().trim().min(1).max(KEY_MAX),
-    title: z.string().trim().max(TITLE_MAX).optional(),
+    // A customer phone number does not belong in a title anyone on the desk reads: it is masked as the title is taken in.
+    title: z.string().trim().max(TITLE_MAX).transform(maskPhones).optional(),
     nextActionAt: z.iso.datetime({ offset: true }).max(TIME_MAX).optional(),
 })
 
@@ -52,7 +54,7 @@ const actionSchema = z.strictObject({
         .record(z.string().max(FIELD_NAME_MAX), fieldValueSchema)
         .refine((fields) => Object.keys(fields).length <= FIELDS_MAX)
         .default({}),
-    summary: z.string().trim().max(SUMMARY_MAX).default(""),
+    summary: z.string().trim().max(SUMMARY_MAX).transform(maskPhones).default(""),
 })
 
 /** What a tag or background turn may answer; a list over its bound is cut before this reads it. */

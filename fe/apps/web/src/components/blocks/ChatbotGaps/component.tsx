@@ -66,7 +66,9 @@ export const ChatbotGapsBase = (props: ChatbotGapsBaseProps) => {
                             actions={
                                 <>
                                     <Text>
-                                        <TextAction href={row.answerHref}>{row.answerLabel}</TextAction>
+                                        {row.answerHref === "" ? null : (
+                                            <TextAction href={row.answerHref}>{row.answerLabel}</TextAction>
+                                        )}
                                     </Text>
                                     <Button
                                         intent="neutral"
