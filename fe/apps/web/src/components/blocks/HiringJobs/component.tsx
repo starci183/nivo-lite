@@ -3,7 +3,6 @@ import {
     Badge,
     Button,
     EmptyNotice,
-    Heading,
     ListRow,
     SurfaceListCard,
     Text,
@@ -15,7 +14,7 @@ import { HiringJobAdDialog, type HiringJobAdDialogProps } from "@/components/com
 import { HiringJobEditorDialog, type HiringJobEditorDialogProps } from "@/components/composites/HiringJobEditorDialog"
 
 import type { FieldOf, HiringJobValues, HiringQuestionValues, HiringSay } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, FACTS_CLASS_NAME, HEAD_CLASS_NAME } from "./classNames"
+import { ACTIONS_CLASS_NAME, FACTS_CLASS_NAME } from "./classNames"
 
 /** One job row, every word already resolved. */
 interface JobRowView {
@@ -69,16 +68,16 @@ export const HiringJobsBase = (props: HiringJobsBaseProps) => {
     const { on } = props
     return (
         <>
-            <div className={HEAD_CLASS_NAME}>
-                <Heading level={2}>{say("jobsTitle")}</Heading>
-                <Button intent="commit" onPress={on.create}>
-                    {say("jobsCreate")}
-                </Button>
-            </div>
             {error === null ? null : <Alert tone="negative" title={say("errorTitle")} description={error} />}
             <SurfaceListCard
-                ariaLabel={say("jobsList")}
+                label={say("jobsTitle")}
+                headingLevel={2}
                 fact={fact}
+                labelEnd={
+                    <Button intent="commit" onPress={on.create}>
+                        {say("jobsCreate")}
+                    </Button>
+                }
                 empty={
                     <EmptyNotice
                         message={say("jobsEmptyTitle")}

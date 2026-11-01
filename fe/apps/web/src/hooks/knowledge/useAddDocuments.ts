@@ -66,6 +66,7 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
         { fail: () => setFailure("errEnqueue"), record: queued.recordNote },
     )
     const retryItem = createItemRetry(queue, options, isBusy, batch)
+
     const close = () => {
         if (isBusy) return
         queue.reset()
@@ -79,8 +80,8 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
 
     const submit = async () => {
         if (isDone) return close()
-        if (isEmpty) return note.setTried(true)
         if (options.visibility === null) return
+        if (isEmpty) return note.setTried(true)
         note.setTried(false)
         batch.begin()
         batch.end(await (mode === "files" ? runBatch() : runNote()))
@@ -129,14 +130,12 @@ interface NoteRunnerEvents {
 /** Builds the command that queues the written note or the questions; answers how many were queued. */
 const createNoteRunner = (input: NoteRunnerInput, on: NoteRunnerEvents) => async () => {
     const title = input.note.title.trim()
-    const meta = input.options.meta()
-    if (meta === null) return 0
     const id = await input.actions.enqueue({
         kind: input.mode === "faq" ? "faq" : "text",
         title,
         storagePath: null,
         url: null,
-        meta: { ...meta, content: input.noteBody },
+        meta: { ...input.options.meta(), content: input.noteBody },
     })
     if (id === null) {
         on.fail()
@@ -163,10 +162,9 @@ const createItemRetry =
     ) =>
     async (id: string) => {
         const item = queue.items.find((one) => one.id === id)
-        const meta = options.meta()
-        if (isBusy || item === undefined || meta === null || !canRetry(item)) return
+        if (isBusy || item === undefined || !canRetry(item) || options.visibility === null) return
         batch.begin()
-        batch.end(await queue.sendAll([item], meta))
+        batch.end(await queue.sendAll([item], options.meta()))
     }
 
 /** Builds the runBatch command from the current render state. */
@@ -182,8 +180,7 @@ const createDocumentBatchRunner =
         const added = queue.addLinks(typedLinks(linkRows.links, queue.items))
         if (added.length > 0) linkRows.clear()
         const waiting = [...retryable, ...added.filter((item) => item.status === "waiting")]
-        const meta = options.meta()
-        return waiting.length === 0 || meta === null ? 0 : queue.sendAll(waiting, meta)
+        return waiting.length === 0 ? 0 : queue.sendAll(waiting, options.meta())
     }
 
 /** Whether every submitted document has completed and no draft remains. */

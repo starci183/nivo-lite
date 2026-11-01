@@ -26,6 +26,10 @@ const approvalJumpOf = (approval: OfficeApproval, words: OfficeWords, context: O
     }
 }
 
+/** The reason of a drafted reply followed by the customer words it answers, so the rows of one list can be told apart. */
+const askedLineOf = (work: OfficeWork, reason: string): string =>
+    work.draft === null || work.draft === "" || work.summary === "" ? reason : `${reason} · “${work.summary}”`
+
 const workJumpOf = (work: OfficeWork, words: OfficeWords, context: OfficeContext): OfficeJumpRowView => {
     const agent = departmentAgentOf(context, work.department)
     const lead = leadNameOf(context, work.leadId)
@@ -33,7 +37,7 @@ const workJumpOf = (work: OfficeWork, words: OfficeWords, context: OfficeContext
     return {
         id: work.id,
         title: lead === null ? action : [action, lead].join(" · "),
-        subtitle: work.reason === null ? words.g("status_failed") : words.g(`reason_${work.reason}`),
+        subtitle: askedLineOf(work, work.reason === null ? words.g("status_failed") : words.g(`reason_${work.reason}`)),
         avatar: agent === null ? NIVO_AVATAR : agentAvatarOf(agent),
     }
 }

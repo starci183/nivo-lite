@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { decideFormOf, documentWithDecide, documentWithDecidePoint, formWithChange } from "@/modules/agent-graph"
 import type { AgentGraphNodeTexts } from "@/modules/agent-graph"
 import type { AgentGraphCommands } from "@/modules/types"
+import type { AgentGraphSetup } from "./agentGraph.shared"
 import type { AgentGraphRead } from "./useAgentGraphRead"
 import type { useAgentGraphUi } from "./useAgentGraphUi"
 import type { useAgentGraphWrites } from "./useAgentGraphWrites"
@@ -16,6 +17,8 @@ interface CommandsInput {
     /** Only the owner turns the mode of the graph. */
     readonly canGrant: boolean
     readonly changes: number
+    /** The checklist of the setup, applied by the same press that publishes the map. */
+    readonly setup: AgentGraphSetup
 }
 
 /** The words of the steps an edit may add to the graph. */
@@ -74,8 +77,10 @@ export const useAgentGraphCommands = (input: CommandsInput): AgentGraphCommands 
         },
         cancel: state.closeForm,
         publish: () => {
-            if (read !== undefined)
-                void writes.publish(read.agentId, t("publishNote", { count: input.changes }), t("published"))
+            if (read === undefined) return
+            // Applying the checklist publishes the map with it, so one press is one version of both.
+            if (input.setup.isReady && input.setup.isChanged) void input.setup.apply().then(writes.refresh)
+            else void writes.publish(read.agentId, t("publishNote", { count: input.changes }), t("published"))
         },
         decide: (proposalId, isConfirmed) => {
             if (read === undefined) return

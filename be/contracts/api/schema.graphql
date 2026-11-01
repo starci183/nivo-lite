@@ -716,6 +716,7 @@ input AgentChatPageInput {
 }
 
 type AgentChatPageType {
+  avatarUrl: String
   handle: String!
   hasCustomerChannel: Boolean!
   id: ID!
@@ -5253,7 +5254,7 @@ type ModuleAgentType {
   capabilities: ModuleBilingualListType!
   handle: String!
   instructions: ModuleBilingualType!
-  name: String!
+  label: ModuleBilingualType!
   role: ModuleBilingualType!
   summary: ModuleBilingualType!
 }

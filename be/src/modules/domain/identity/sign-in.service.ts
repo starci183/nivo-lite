@@ -38,11 +38,11 @@ export class IdentitySignInService {
         return accessOf(tokens)
     }
 
-    /** Rotates the cookie token and answers a new access token; a cookie that cannot be used is cleared and the refusal rethrown. */
+    /** Rotates the cookie token and answers a new access token; a cookie that cannot be used is cleared, one a sibling just rotated is left as the sibling wrote it and the refusal rethrown. */
     async refresh(exchange: HttpExchange): Promise<AccessGrant> {
         try {
             const tokens = await this.sessions.refresh(this.cookies.read(exchange.req))
-            this.cookies.issue(exchange.res, tokens)
+            if (tokens.cookieKept !== true) this.cookies.issue(exchange.res, tokens)
             return accessOf(tokens)
         } catch (cause) {
             this.cookies.clear(exchange.res)

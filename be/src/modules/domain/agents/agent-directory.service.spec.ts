@@ -427,6 +427,7 @@ describe("AgentDirectoryService chat and turn facts", () => {
             module: "chatbot",
             status: "active",
             greeting: "Hi",
+            avatarUrl: null,
         })
         await expect((await build(missing)).chatFactsOf("w1", "a9")).resolves.toBeNull()
     })

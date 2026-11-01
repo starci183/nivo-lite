@@ -1,4 +1,4 @@
-import { Alert, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, SurfaceCard, Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import type { ContentNote } from "@/hooks/content"
 import type { ContentT, DataSlot, SlotLabels } from "@/modules/types"
@@ -14,9 +14,11 @@ interface ContentSettingsCardProps {
 
 /** The shared surface and heading of editable content settings. */
 export const ContentSettingsCard = (props: ContentSettingsCardProps) => (
-    <SurfaceCard ariaLabel={props.title}>
+    <SurfaceCard label={props.title} headingLevel={2}>
         <div className={FORM_CLASS_NAME}>
-            <SectionHeader level={2} title={props.title} description={props.description} />
+            <Text size="sm" tone="muted">
+                {props.description}
+            </Text>
             {props.children}
         </div>
     </SurfaceCard>

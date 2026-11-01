@@ -342,8 +342,6 @@ export interface AgentsMdInput {
     readonly rules: ReadonlyArray<BaseRuleText>
     /** The applied context, or null. */
     readonly version: OptionalContextVersionText
-    /** The standing memory of the brain, or an empty text. */
-    readonly memory: string
     /** The titles and full text of the knowledge sources. */
     readonly sources: ReadonlyArray<SourceText>
     /** The reply contract of the module, or null. */

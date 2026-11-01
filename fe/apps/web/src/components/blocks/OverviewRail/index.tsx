@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useOverviewData, useOverviewRail } from "@/hooks/overview"
-import { moduleGlyphOf } from "@/hooks/installations"
+import { moduleGlyphOf, useAgentPictures } from "@/hooks/installations"
 import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
 import type { IconName } from "@/components/leaves/Icon"
 import { OverviewRailBase } from "./component"
@@ -27,6 +27,7 @@ const NO_RAIL = { agents: [], activity: [] } as const
 export const OverviewRail = () => {
     const t = useTranslations("overview")
     const read = useOverviewRail()
+    const pictureOf = useAgentPictures()
     const { failed } = useOverviewData()
     if (read === undefined && failed) return null
     const data = read ?? NO_RAIL
@@ -45,6 +46,7 @@ export const OverviewRail = () => {
                     module: agent.module,
                     glyph: moduleGlyphOf(agent.module),
                     name: agent.name,
+                    avatarUrl: pictureOf({ handle: agent.handle, name: agent.name }),
                     isActive: agent.isActive,
                     statusLabel: agent.isActive ? t("active") : t("paused"),
                     chatHref: agentChatHref(agent.id),

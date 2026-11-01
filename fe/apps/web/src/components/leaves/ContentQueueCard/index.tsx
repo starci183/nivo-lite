@@ -1,4 +1,4 @@
-import { Button, Cluster, ListRow, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Cluster, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
 import type { ContentT, PostView, QuoteView } from "@/modules/types"
 import { QUOTE_CLASS_NAME } from "./classNames"
 
@@ -61,16 +61,11 @@ export const ContentQueueCard = (props: ContentQueueCardProps) => {
             }
         >
             {props.quotes.map((quote) => (
-                <SurfaceCard key={quote.channel} ariaLabel={quote.label}>
+                <SurfaceCard key={quote.channel} label={quote.label} headingLevel={4}>
                     <div className={QUOTE_CLASS_NAME}>
-                        <Stack gap="identity">
-                            <Text size="xs" tone="muted" weight="medium">
-                                {quote.label}
-                            </Text>
-                            <Text as="p" size="sm">
-                                {quote.text}
-                            </Text>
-                        </Stack>
+                        <Text as="p" size="sm">
+                            {quote.text}
+                        </Text>
                     </div>
                 </SurfaceCard>
             ))}

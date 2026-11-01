@@ -18,6 +18,8 @@ interface AgentChatRailListProps {
     readonly label: string
     readonly rows: ReadonlyArray<AgentChatRailRow>
     readonly glyph: ModuleIconName
+    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    readonly avatarUrl?: string | null | undefined
     readonly module: string
     /** The rows are still loading: the list draws waiting rows. */
     readonly isSkeleton: boolean
@@ -43,6 +45,7 @@ export const AgentChatRailList = (props: AgentChatRailListProps) => (
                     glyph={nivoIconSource(props.glyph, "leading")}
                     module={props.module}
                     label={row.title}
+                    src={props.avatarUrl}
                     size="md"
                 />
             ),

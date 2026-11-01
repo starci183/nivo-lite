@@ -16,6 +16,7 @@ import {
     InternalGatewayToolsService,
 } from "@modules/domain/agent-turns"
 import { AGENT_PROFILE_ERROR_KINDS, AGENT_PROFILE_MESSAGES, AgentProfileModule } from "@modules/domain/agent-profile"
+import { McpCallLogModule } from "@modules/domain/mcp-call-log"
 import { AGENTS_SYNC_FRESH_MS, AgentDirectoryService, AgentsModule, AgentsService } from "@modules/domain/agents"
 import {
     AI_GENERATIONS_ERROR_KINDS,
@@ -70,6 +71,7 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
         pollMs: AI_GENERATIONS_POLL_MS,
     }),
     OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
+    McpCallLogModule.register({ isGlobal: true }),
     AgentToolsModule.register({
         isGlobal: true,
         ports: {

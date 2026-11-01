@@ -156,6 +156,7 @@ export const groupRowsByOwner = (rows: ReadonlyArray<ResponsibilityRowView>): Ar
                 kind: first?.ownerKind ?? "human",
                 handle: first?.ownerHandle ?? null,
                 glyph: glyphOf(first?.ownerHandle ?? null),
+                avatarUrl: null,
                 rows: members,
             }
         })

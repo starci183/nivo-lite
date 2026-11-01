@@ -12,6 +12,7 @@ import {
     useResponsibilityFilters,
 } from "@/hooks/responsibilities"
 import type { DueKey, InitialFilters, RowStatus, SortKey } from "@/hooks/responsibilities"
+import { useAgentPictures } from "@/hooks/installations"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { ResponsibilitiesBoardBase } from "./component"
@@ -51,6 +52,7 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
     const format = useFormatter()
     const slotLabels = useSlotLabels()
     const { slot, reload } = useResponsibilities()
+    const pictureOf = useAgentPictures()
     const rows = slot.items ?? []
     const filters = useResponsibilityFilters(rows, props.initial)
     const groups = useOwnerGroups()
@@ -94,7 +96,13 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
                 listTitle: t("byOwner"),
                 count: slot.isLoading ? "" : String(filters.visibleCount),
                 verifiedLabel: t("verified", { time: verified }),
-                slot: mapSlot(slot, () => filters.groups),
+                slot: mapSlot(slot, () =>
+                    filters.groups.map((group) => ({
+                        ...group,
+                        avatarUrl:
+                            group.kind === "agent" ? pictureOf({ handle: group.handle, name: group.name }) : null,
+                    })),
+                ),
                 slotLabels: slotLabels(emptyMessage),
                 groupLabels: groups.labels,
                 draftingId: groups.draftingId,

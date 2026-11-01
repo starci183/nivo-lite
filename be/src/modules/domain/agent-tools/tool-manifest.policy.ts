@@ -1,4 +1,10 @@
-import type { BookingToolName, GatewayToolName, ToolManifestEntry, ToolName } from "./agent-tools.contracts"
+import type {
+    BookingToolName,
+    GatewayToolName,
+    ReadToolName,
+    ToolManifestEntry,
+    ToolName,
+} from "./agent-tools.contracts"
 
 /** The supported names used by manifest callers and dispatch policies. */
 export type { ToolName } from "./agent-tools.contracts"
@@ -9,6 +15,12 @@ export const TOOL_MANIFEST: ReadonlyArray<ToolManifestEntry> = [
         name: "knowledge.search",
         description: "Search the business public knowledge for passages that answer a question.",
         args: { query: "string" },
+    },
+    {
+        name: "memory.read",
+        description:
+            "Read the standing memory of the business: the facts in force and the approved lessons you work by.",
+        args: {},
     },
     {
         name: "lead.create_or_update",
@@ -82,6 +94,10 @@ export const TOOL_MANIFEST: ReadonlyArray<ToolManifestEntry> = [
 
 /** True when the text names a tool of the manifest. */
 export const isToolName = (value: string): value is ToolName => TOOL_MANIFEST.some((tool) => tool.name === value)
+
+/** True for the reads of NIVO's own knowledge, which any running turn may make under its own view. */
+export const isReadTool = (tool: ToolName): tool is ReadToolName =>
+    tool === "knowledge.search" || tool === "memory.read"
 
 /** True for the booking tools, which the booking lane serves. */
 export const isBookingTool = (tool: ToolName): tool is BookingToolName =>

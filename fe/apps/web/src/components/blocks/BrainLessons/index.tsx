@@ -34,7 +34,7 @@ const lessonActionsOf = (
 ): ReadonlyArray<RowActionView> => {
     if (lesson.status === "proposed") {
         return [
-            { id: "apply", label: t("apply"), intent: "neutral", onPress: () => desk.decide(lesson.id, "active") },
+            { id: "apply", label: t("apply"), intent: "commit", onPress: () => desk.decide(lesson.id, "active") },
             {
                 id: "skip",
                 label: t("skipLesson"),

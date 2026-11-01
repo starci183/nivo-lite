@@ -143,14 +143,6 @@ describe("IdentitySessionsService / refresh", () => {
         expect(logger.warn).toHaveBeenCalledTimes(1)
     })
 
-    it("does not end the session for a racing tab that replays the token within seconds of its rotation", async () => {
-        const { service, em } = await build([], tokenRow("2026-11-09T09:59:55.000Z"))
-
-        await expect(service.refresh("raced-token")).rejects.toMatchObject({ code: IdentityErrorCode.RefreshInvalid })
-
-        expect(em.query).not.toHaveBeenCalledWith(CLOSE_SESSION, expect.anything())
-    })
-
     it("refuses an unknown token and an expired one", async () => {
         const unknown = await build([], null)
         await expect(unknown.service.refresh("nope")).rejects.toMatchObject({ code: IdentityErrorCode.RefreshInvalid })
@@ -179,6 +171,35 @@ describe("IdentitySessionsService / refresh", () => {
             code: IdentityErrorCode.AccountDisabled,
         })
         expect(em.query).toHaveBeenCalledWith(CLOSE_SESSION, ["s1"])
+    })
+})
+
+describe("IdentitySessionsService / refresh racing a sibling", () => {
+    it("answers a racing tab that replays the token within seconds of its rotation, without rotating again or ending the session", async () => {
+        const { service, em } = await build([[USER_BY_ID, person()]], tokenRow("2026-11-09T09:59:55.000Z"))
+
+        const raced = await service.refresh("raced-token")
+
+        expect(raced).toMatchObject({ accessToken: "access.jwt", cookieKept: true })
+        expect(em.update).not.toHaveBeenCalled()
+        expect(em.insert).not.toHaveBeenCalled()
+        expect(em.query).not.toHaveBeenCalledWith(CLOSE_SESSION, expect.anything())
+    })
+
+    it("answers every one of several parallel refreshes of a token rotated moments ago and keeps refusing it once the grace is over", async () => {
+        const { service, em } = await build([[USER_BY_ID, person()]], tokenRow("2026-11-09T09:59:58.000Z"))
+
+        const answers = await Promise.all(Array.from({ length: 8 }, () => service.refresh("raced-token")))
+
+        expect(answers.every((answer) => answer.cookieKept === true)).toBe(true)
+        expect(em.update).not.toHaveBeenCalled()
+        const late = await build(
+            [[CLOSE_SESSION, [{ be_auth_close_session: true }]]],
+            tokenRow("2026-11-09T09:59:00.000Z"),
+        )
+        await expect(late.service.refresh("raced-token")).rejects.toMatchObject({
+            code: IdentityErrorCode.RefreshReused,
+        })
     })
 })
 

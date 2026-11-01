@@ -107,11 +107,14 @@ export const CATALOG: ReadonlyArray<CatalogEntry> = [
     soon("airtable", "data", ["any"], 38, "servers", "/logos/connectors/airtable_generic.svg"),
 ]
 
+/** The four connectors the workspace can use today, in the order the library shows them; every other connector sits in a later section. */
+export const CURRENT_CONNECTORS: ReadonlyArray<string> = ["google_drive", "sepay", "zalo_oa", "telegram"]
+
 /** Finds a connector by id. */
 export const entryById = (id: string): CatalogEntry | undefined => CATALOG.find((entry) => entry.id === id)
 
 /** The catalog key of one text of a connector: a provider connector reuses the provider words. */
-export const catalogKey = (entry: CatalogEntry, part: "name" | "blurb" | "brings" | "keywords"): string => {
+export const catalogKey = (entry: CatalogEntry, part: "name" | "blurb" | "brings" | "keywords" | "needs"): string => {
     if (entry.provider !== undefined && part === "name") return providerKey(entry.provider, "title")
     if (entry.provider !== undefined && part === "blurb") return providerKey(entry.provider, "blurb")
     return `catalog_${entry.id}_${part}`

@@ -1,11 +1,12 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { FACT_SOURCE_KEY, adviceFor, reviewBoardOf, useBrainBoard, useBrainCommand } from "@/hooks/brain"
+import { FACT_SOURCE_KEY, adviceFor, proposerOf, reviewBoardOf, useBrainBoard, useBrainCommand } from "@/hooks/brain"
 import type { ReviewConflict, ReviewSingle } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { KnowledgeRowView, RowActionView, RowPartView } from "@/components/composites/KnowledgeRows"
 import type { BrainFact } from "@/modules/types"
+import { applyAllOf } from "./applyAll"
 import { BrainReviewBase } from "./component"
 
 /** Connects the state and commands used by BrainReview. */
@@ -79,7 +80,16 @@ const buildBrainReviewState = (
             },
         ],
     })
-    return { t, plan, groupRow, singleRow, retireRow, board, command }
+    return {
+        t,
+        plan,
+        groupRow,
+        singleRow,
+        retireRow,
+        board,
+        command,
+        ...applyAllOf(t, plan.singles, board.nowMs, command),
+    }
 }
 
 /** The connected list of facts waiting for a decision: words each proposal, suggests what to do with it and sends the decision to the back end. */
@@ -90,7 +100,7 @@ export const BrainReview = () => {
     const slotLabels = useSlotLabels()
 
     const connected = buildBrainReviewState(board, t, command)
-    const { plan, groupRow, singleRow, retireRow } = connected
+    const { plan, groupRow, singleRow, retireRow, applyAll, readyCount } = connected
     return (
         <BrainReviewBase
             props={{
@@ -99,6 +109,15 @@ export const BrainReview = () => {
                         id: "brain-review-title",
                         title: t("waitingFactsTitle"),
                         failTitle: t("loadFailed"),
+                        action:
+                            board.canWrite && readyCount > 1
+                                ? {
+                                      id: "apply-all",
+                                      label: t("applyAll", { count: readyCount }),
+                                      intent: "commit",
+                                      onPress: applyAll,
+                                  }
+                                : undefined,
                     },
                     label: t("waitingFactsTitle"),
                     footer: t("waitingFactsFooter"),
@@ -125,17 +144,19 @@ const reviewRowActions = (
     board: ReturnType<typeof useBrainBoard>,
 ) => {
     const byLine = (fact: BrainFact): string =>
-        t("by", { who: fact.proposedBy, source: t(FACT_SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
+        fact.sourceKind === "document"
+            ? t("byDocument", { who: proposerOf(fact), trust: fact.trust })
+            : t("by", { who: fact.proposedBy, source: t(FACT_SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
     const decide = (id: string, label: string, action: "apply" | "choose"): RowActionView => ({
         id: `decide-${id}`,
         label,
-        intent: "neutral",
+        intent: "commit",
         onPress: () => command.send("fact.decide", { id, action }, { done: t("applied") }),
     })
     const reject = (id: string, label: string): RowActionView => ({
         id: `reject-${id}`,
         label,
-        intent: "alternative",
+        intent: "neutral",
         onPress: () => command.send("fact.decide", { id, action: "reject" }, { done: t("rejected") }),
     })
     const gated = (actions: ReadonlyArray<RowActionView>): ReadonlyArray<RowActionView> =>

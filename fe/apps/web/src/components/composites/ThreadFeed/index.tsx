@@ -33,7 +33,13 @@ const Messages = (props: Omit<ThreadFeedProps, "label">) => {
                     side="incoming"
                     author={message.authorName}
                     meta={message.time}
-                    avatar={<ThreadAuthorMark name={message.authorName} glyph={message.glyph} />}
+                    avatar={
+                        <ThreadAuthorMark
+                            name={message.authorName}
+                            glyph={message.glyph}
+                            avatarUrl={message.avatarUrl}
+                        />
+                    }
                     status={message.isAgent ? <Badge tone="neutral">{props.aiLabel}</Badge> : undefined}
                     footer={
                         message.approval === null ? undefined : (
@@ -60,11 +66,8 @@ const Messages = (props: Omit<ThreadFeedProps, "label">) => {
                     </div>
                     {message.quoted.map((quote) => (
                         <div key={quote} className={QUOTE_CLASS_NAME}>
-                            <SurfaceCard ariaLabel={props.quotedLabel}>
+                            <SurfaceCard label={props.quotedLabel} headingLevel={4}>
                                 <div className={QUOTE_BODY_CLASS_NAME}>
-                                    <Text size="xs" tone="muted">
-                                        {props.quotedLabel}
-                                    </Text>
                                     <Text size="sm">{quote}</Text>
                                 </div>
                             </SurfaceCard>

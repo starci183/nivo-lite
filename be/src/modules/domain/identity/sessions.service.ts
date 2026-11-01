@@ -20,12 +20,13 @@ import { digestOf } from "./password.policy"
 import { authDoors } from "./persistence/auth-doors.port"
 import { IdentityRefreshTokenEntity } from "./persistence/entities"
 
-/** A rotated token presented again this soon after its rotation is a racing tab, not a theft: refused without ending the session. */
+/** A rotated token presented again this soon after its rotation is a racing tab, not a theft: answered with an access token only (no rotation, no cookie change) and the session stays. */
 const REUSE_GRACE_MS = 30_000
 
 type Rotation =
     | { readonly kind: "rotated"; readonly row: IdentityRefreshTokenEntity; readonly next: string }
     | { readonly kind: "invalid" }
+    | { readonly kind: "raced"; readonly row: IdentityRefreshTokenEntity }
     | { readonly kind: "reused"; readonly sessionId: string }
 
 @Injectable()
@@ -64,7 +65,11 @@ export class IdentitySessionsService {
         return this.tokensFor(subject, sessionId, refreshToken, now)
     }
 
-    /** Exchanges a refresh token for a new pair; the presented token is spent. Throws when it is unknown, expired, or was already rotated. */
+    /**
+     * Exchanges a refresh token for a new pair; the presented token is spent. Throws when it is unknown, expired, or rotated long ago (reuse ends the
+     * session). A token a sibling request rotated within the grace window answers an access token marked `cookieKept`, so the
+     * caller leaves the cookie alone: the sibling already wrote the successor.
+     */
     async refresh(presented: string): Promise<SessionTokens> {
         if (presented === "") throw new IdentityError({ code: IdentityErrorCode.RefreshInvalid })
         const now = this.clock.now()
@@ -77,7 +82,7 @@ export class IdentitySessionsService {
             if (row === null || row.expiresAt <= now) return { kind: "invalid" }
             if (row.usedAt !== null) {
                 return now.getTime() - row.usedAt.getTime() <= REUSE_GRACE_MS
-                    ? { kind: "invalid" }
+                    ? { kind: "raced", row }
                     : { kind: "reused", sessionId: row.sessionId }
             }
             await scoped.update(IdentityRefreshTokenEntity, { id: row.id }, { usedAt: now })
@@ -97,6 +102,7 @@ export class IdentitySessionsService {
             throw new IdentityError({ code: IdentityErrorCode.RefreshReused })
         }
         if (rotation.kind === "invalid") throw new IdentityError({ code: IdentityErrorCode.RefreshInvalid })
+        if (rotation.kind === "raced") return this.accessOf(rotation.row, presented, now)
         const user = await authDoors.userById(this.entityManager, rotation.row.userId)
         if (user === undefined || user.disabled || user.email === null) {
             await authDoors.closeSession(this.entityManager, rotation.row.sessionId)
@@ -122,12 +128,18 @@ export class IdentitySessionsService {
             this.logger.warn(IdentityAuthLogEvent.RefreshReuseDetected, { sessionId: row.sessionId })
             throw new IdentityError({ code: IdentityErrorCode.RefreshReused })
         }
+        return this.accessOf(row, presented, now)
+    }
+
+    /** An access token for the session of a token row, without rotating; an account that is gone or disabled ends the session. */
+    private async accessOf(row: IdentityRefreshTokenEntity, presented: string, now: Date): Promise<SessionTokens> {
         const user = await authDoors.userById(this.entityManager, row.userId)
         if (user === undefined || user.disabled || user.email === null) {
             await authDoors.closeSession(this.entityManager, row.sessionId)
             throw new IdentityError({ code: IdentityErrorCode.AccountDisabled })
         }
-        return this.tokensFor({ userId: user.id, email: user.email }, row.sessionId, presented, now)
+        const tokens = await this.tokensFor({ userId: user.id, email: user.email }, row.sessionId, presented, now)
+        return { ...tokens, cookieKept: true }
     }
 
     /** The public key document access tokens verify against. */

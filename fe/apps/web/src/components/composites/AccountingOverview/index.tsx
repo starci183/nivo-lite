@@ -1,5 +1,4 @@
-import { DescriptionList, Meter, SectionHeader, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
-import { AccountingBlock } from "@/components/leaves/AccountingBlock"
+import { DescriptionList, Meter, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { AccountingSectionHead } from "@/components/branches/AccountingSectionHead"
 
 /** One figure of the strip: label, value, what it counts, the lines that say where it comes from and an optional action. */
@@ -103,29 +102,29 @@ interface MeterBlockProps {
 
 /** One region of gauges: the ageing buckets or the weeks of income. */
 const MeterBlock = (props: MeterBlockProps) => (
-    <AccountingBlock label={props.title}>
-        <SectionHeader level={2} title={props.title} description={props.intro} isSkeleton={props.isSkeleton} />
-        <SurfaceCard ariaLabel={props.title}>
-            <Stack gap="section">
-                {props.rows.map((row) => (
-                    <Meter
-                        key={row.id}
-                        label={row.label}
-                        value={row.total}
-                        maxValue={props.max}
-                        valueLabel={row.reading}
-                        {...(row.tone === undefined ? {} : { tone: row.tone })}
-                        isSkeleton={props.isSkeleton}
-                    />
-                ))}
-            </Stack>
-        </SurfaceCard>
-        {props.source === undefined ? null : (
-            <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
-                {props.source}
+    <SurfaceCard label={props.title} headingLevel={2}>
+        <Stack gap="section">
+            <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
+                {props.intro}
             </Text>
-        )}
-    </AccountingBlock>
+            {props.rows.map((row) => (
+                <Meter
+                    key={row.id}
+                    label={row.label}
+                    value={row.total}
+                    maxValue={props.max}
+                    valueLabel={row.reading}
+                    {...(row.tone === undefined ? {} : { tone: row.tone })}
+                    isSkeleton={props.isSkeleton}
+                />
+            ))}
+            {props.source === undefined ? null : (
+                <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
+                    {props.source}
+                </Text>
+            )}
+        </Stack>
+    </SurfaceCard>
 )
 
 /** Period selector, four honest measures, the receivable ageing and the weekly trend. */

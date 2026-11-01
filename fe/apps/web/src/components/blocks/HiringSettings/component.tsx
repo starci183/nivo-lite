@@ -1,4 +1,4 @@
-import { Alert, Button, Heading, Input, NumberField, SurfaceCard, Switch, Textarea } from "@starci/grammar/common"
+import { Alert, Button, Input, NumberField, SurfaceCard, Switch, Textarea } from "@starci/grammar/common"
 import type { FieldOf, HiringSay } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
@@ -39,8 +39,7 @@ export const HiringSettingsBase = (props: HiringSettingsBaseProps) => {
     const { on } = props
     return (
         <>
-            <Heading level={2}>{say("setTitle")}</Heading>
-            <SurfaceCard label={say("setCardTitle")}>
+            <SurfaceCard label={say("setCardTitle")} headingLevel={2}>
                 <div className={FORM_CLASS_NAME}>
                     <Input
                         id="st-slug"

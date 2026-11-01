@@ -32,5 +32,7 @@ export interface OwnerGroupView {
     readonly handle: string | null
     /** Semantic Icon name of the glyph an agent owner is drawn with. */
     readonly glyph: ModuleIconName
+    /** The picture the owner gave an agent owner; null draws the NIVO unicorn mascot. */
+    readonly avatarUrl: string | null
     readonly rows: ReadonlyArray<ResponsibilityRowView>
 }

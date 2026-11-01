@@ -266,7 +266,7 @@ describe("OfficeCommandService propose", () => {
         await expect(service.propose("u-1", "ws-1", request)).resolves.toEqual(reply("office.cmdReadFailed"))
         expect(catalog.get).toHaveBeenCalledWith(
             "office.cmdReadFailed",
-            { handle: "ke-toan", agent: "Accounting", list: "issue a receipt", error: "offline" },
+            { handle: "ke-toan", agent: "Accounting", list: "issue a receipt" },
             "en",
         )
         expect(logger.error).toHaveBeenCalledWith(OfficeCommandCandidatesLogEvent.CommandReadFailed, cause, {

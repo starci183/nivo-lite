@@ -24,6 +24,8 @@ export interface SessionTokens {
     readonly accessExpiresIn: number
     /** The opaque token the refresh cookie carries. */
     readonly cookieToken: string
+    /** True when the answer did not rotate the token (a racing request, or the non-rotating session door): the caller leaves the cookie as it is. */
+    readonly cookieKept?: true
     /** How long the refresh cookie lives, in seconds. */
     readonly refreshMaxAgeSeconds: number
     /** The signed-in person. */

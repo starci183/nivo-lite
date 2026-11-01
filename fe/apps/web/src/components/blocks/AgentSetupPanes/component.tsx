@@ -26,6 +26,7 @@ import {
     DetailDrawer,
     GraphCanvasBand,
     GraphHeadBand,
+    GraphModeBand,
     InspectorBand,
     ProblemsBand,
     TabsBand,
@@ -36,6 +37,7 @@ export interface AgentSetupChatContent extends AgentSetupThreadContent, AgentSet
 export interface AgentSetupCopy {
     readonly paneLabel: string
     readonly checklistLabel: string
+    readonly feedNote: string
     readonly chatLabel: string
     readonly chatTitle: string
     readonly proposalsLabel: string
@@ -125,8 +127,8 @@ const SetupBand = (props: AgentSetupPanesBaseProps) =>
         <AgentSetupBand
             gates={view.gates}
             checklistLabel={props.props.copy.checklistLabel}
+            feedNote={props.props.copy.feedNote}
             isSkeleton={isSkeleton}
-            onApply={props.on.apply}
         >
             <AgentSetupChecklist view={view} isSkeleton={isSkeleton} copy={props.props.copy} on={props.on} />
             <SetupDraftCard {...view.draft} isSkeleton={isSkeleton} />
@@ -202,6 +204,7 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                     <PaneSection scroll={{ label: copy.paneLabel }} gap="section">
                         <ProblemsBand {...props} />
                         <GraphCanvasBand {...props} />
+                        <GraphModeBand {...props} />
                         <SetupBand {...props} />
                     </PaneSection>
                 </Pane>

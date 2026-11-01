@@ -5,6 +5,7 @@ import { useMemo, useState } from "react"
 import {
     CATALOG,
     CATEGORIES,
+    CURRENT_CONNECTORS,
     catalogKey,
     matchesWords,
     searchWords,
@@ -15,6 +16,7 @@ import {
     connectionCountsOf,
 } from "@/hooks/connection-catalog"
 import type { CatalogEntry } from "@/hooks/connection-catalog"
+import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import { connectionPageHref, sortRows, useConnectionOverlays, useWantConnector } from "@/hooks/connections"
 import type { Connection, ConnectorCategory } from "@/modules/types"
 import { ConnectionLibraryBase } from "./component"
@@ -52,6 +54,7 @@ const IDLE_WANT: LibraryCard["want"] = { isPending: false, isDone: false }
 
 const cardOf = (known: KnownEntry, input: LibraryInput): LibraryCard => {
     const { entry, name, blurb } = known
+    const logo = entry.logo ?? (entry.provider === undefined ? undefined : PROVIDER_LOGO[entry.provider])
     const mine = entry.provider === undefined ? [] : input.items.filter((item) => item.provider === entry.provider)
     const count = connectionCountsOf(mine).get(entry.provider ?? "") ?? 0
     const needsCheck = entry.provider !== undefined && checkProvidersOf(mine).has(entry.provider)
@@ -63,9 +66,10 @@ const cardOf = (known: KnownEntry, input: LibraryInput): LibraryCard => {
         blurb,
         audienceLine: audienceLineOf(entry, input.t),
         glyph: entry.glyph,
-        ...(entry.logo === undefined ? {} : { logo: entry.logo }),
+        ...(logo === undefined ? {} : { logo }),
         ...(entry.provider === undefined ? {} : { guide: entry.provider }),
         badge: catalogBadgeOf(entry, count, input.t, needsCheck),
+        isCurrent: CURRENT_CONNECTORS.includes(entry.id),
         isSoon: entry.status === "soon",
         want: input.wants[entry.id] ?? IDLE_WANT,
         ...(href === null ? {} : { href }),
@@ -83,7 +87,12 @@ const libraryOf = (input: LibraryInput) => {
         blurb: t(catalogKey(entry, "blurb")),
         haystack: `${t(catalogKey(entry, "name"))} ${t(catalogKey(entry, "blurb"))} ${t(catalogKey(entry, "keywords"))}`,
     })).filter((item) => matchesWords(item.haystack, words))
+    const rankOf = (item: KnownEntry): number => {
+        const current = CURRENT_CONNECTORS.indexOf(item.entry.id)
+        return current === -1 ? CURRENT_CONNECTORS.length : current
+    }
     const byPopularity = (a: KnownEntry, b: KnownEntry) =>
+        rankOf(a) - rankOf(b) ||
         (b.entry.status === "soon" ? 0 : 1) - (a.entry.status === "soon" ? 0 : 1) ||
         b.entry.popularity - a.entry.popularity
     const perCategory = (id: ConnectorCategory) => searched.filter((item) => item.entry.category === id).length
@@ -144,6 +153,8 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
                 emptyHint: t("libEmptyHint"),
                 wantLabel: t("libWant"),
                 wantedLabel: t("libWanted"),
+                currentLabel: t("libCurrent"),
+                othersLabel: t("libOthers"),
                 cards,
                 isSkeleton: props.isSkeleton ?? false,
             }}

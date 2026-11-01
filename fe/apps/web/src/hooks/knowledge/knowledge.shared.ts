@@ -2,6 +2,7 @@ import type { useFormatter, useTranslations } from "next-intl"
 import type { ModuleKey } from "@/modules/catalog"
 import { AGENT_MODULES, batchBytesOf, queueRowOf } from "@/modules/documents"
 import type { UsageView } from "@/modules/documents"
+import type { DocumentVisibility } from "@/modules/types"
 import type { AddMode, useAddDocuments } from "./useAddDocuments"
 import type { useAddInstances } from "./useAddInstances"
 import type { AddPreset } from "./useBatchOptions"
@@ -127,26 +128,29 @@ const buildOptionsView = (
         ],
     }) as const
 
-/** What the choice of who may read says: what each choice means for the answers, or before a choice, what NIVO suggests. */
-const consequenceOf = (t: Translate, options: ReturnType<typeof useAddDocuments>["options"]): string => {
-    if (options.visibility !== null) return t(options.visibility === "public" ? "visPublicNote" : "visInternalNote")
-    if (options.suggestedVisibility === null) return t("visChooseNote")
-    return t("visSuggest", {
-        choice: t(options.suggestedVisibility === "public" ? "visPublicName" : "visInternalName"),
-    })
-}
-
 /** Builds the choice of who may read what is added. Nothing is chosen until the owner chooses. */
 const buildVisibilityView = (t: Translate, options: ReturnType<typeof useAddDocuments>["options"]) =>
     ({
         label: t("fieldVisibility"),
-        consequence: consequenceOf(t, options),
-        value: options.visibility ?? "",
+        consequence: visibilityNoteOf(t, options.visibility, options.suggested),
+        value: options.visibility,
         options: [
             { id: "public", label: t("visPublic") },
             { id: "internal", label: t("visInternal") },
         ],
     }) as const
+
+/** What the choice means for the answers; before a choice it says what the chatbot reads and what NIVO suggests. */
+const visibilityNoteOf = (
+    t: Translate,
+    chosen: DocumentVisibility | null,
+    suggested: DocumentVisibility | null,
+): string => {
+    if (chosen === "public") return t("visPublicNote")
+    if (chosen === "internal") return t("visInternalNote")
+    if (suggested === null) return t("visNoneNote")
+    return `${t("visNoneNote")} ${t(suggested === "public" ? "visSuggestPublic" : "visSuggestInternal")}`
+}
 
 /** What the view of the drawer is built from. */
 interface ViewContext {
@@ -167,8 +171,7 @@ export const buildAddDocumentsView = ({ t, formatter, props, add, canWrite, inst
         usage,
         title: t("addTitle"),
         submitLabel: submitLabelOf(t, add),
-        isSubmitBlocked: !add.isDone && add.options.visibility === null,
-        submitBlockedReason: t("visRequired"),
+        submitBlocked: add.isDone || add.options.visibility !== null ? "" : t("visNeeded"),
         failTitle: t("saveFailed"),
         readOnlyNote: canWrite ? undefined : props.readOnlyNote,
         isBusy: add.isBusy,

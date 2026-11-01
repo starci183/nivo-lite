@@ -98,26 +98,48 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
     )
 }
 
-/** Renders the OfficeExceptionCard proposal section. */
+/** One labelled block of the proposal card. */
+type ProposalPartProps = { readonly label: string; readonly body: string; readonly isMuted: boolean }
+
+/** Draws one labelled block. */
+const ProposalPart = (props: ProposalPartProps) => (
+    <>
+        <Text size="xs" tone="muted" weight="medium">
+            {props.label}
+        </Text>
+        {props.isMuted ? (
+            <Text as="p" size="sm" tone="muted">
+                {props.body}
+            </Text>
+        ) : (
+            <Text as="p" size="sm">
+                {props.body}
+            </Text>
+        )}
+    </>
+)
+
+/** Renders the OfficeExceptionCard proposal section: a drafted reply shows what the customer asked, then what NIVO would answer. */
 const renderOfficeExceptionCardProposal = (
     item: NonNullable<OfficeExceptionCardProps["item"]>,
     text: NonNullable<OfficeExceptionCardProps["text"]>,
-) => (
-    <SurfaceCard ariaLabel={item.errorText === null ? text("exceptionProposes") : text("exceptionErrorLabel")}>
-        <div className={QUOTE_CLASS_NAME}>
-            <Stack gap="identity">
-                <Text size="xs" tone="muted" weight="medium">
-                    {item.errorText === null ? text("exceptionProposes") : text("exceptionErrorLabel")}
-                </Text>
-                <Text as="p" size="sm">
-                    {item.errorText ?? item.summary}
-                </Text>
-                {item.draft === null || item.errorText !== null ? null : (
-                    <Text as="p" size="sm" tone="muted">
-                        {item.draft}
-                    </Text>
-                )}
-            </Stack>
-        </div>
-    </SurfaceCard>
-)
+) => {
+    const isReply = item.errorText === null && item.draft !== null
+    const label = item.errorText === null ? text("exceptionProposes") : text("exceptionErrorLabel")
+    return (
+        <SurfaceCard ariaLabel={label}>
+            <div className={QUOTE_CLASS_NAME}>
+                <Stack gap="identity">
+                    {isReply ? (
+                        <>
+                            <ProposalPart label={text("exceptionAsked")} body={item.summary} isMuted />
+                            <ProposalPart label={text("exceptionWillReply")} body={item.draft ?? ""} isMuted={false} />
+                        </>
+                    ) : (
+                        <ProposalPart label={label} body={item.errorText ?? item.summary} isMuted={false} />
+                    )}
+                </Stack>
+            </div>
+        </SurfaceCard>
+    )
+}

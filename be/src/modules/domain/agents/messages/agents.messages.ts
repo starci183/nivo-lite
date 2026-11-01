@@ -68,7 +68,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "bundle.soulGuidance": "## Hướng dẫn giọng điệu của NIVO\n{{text}}",
         "bundle.toolsTitle": "## Công cụ NIVO (tuỳ chọn)",
         "bundle.toolsIntro":
-            'Trả lời khách chủ yếu bằng JSON theo hợp đồng ở trên: các trường "lead", "needs_human", "order", "payment_claim" đã đủ để NIVO tạo khách tiềm năng, chuyển cho người hoặc xin duyệt. Bạn gọi công cụ NIVO bằng một công cụ duy nhất, nivo_call: tên công cụ đặt vào "tool", tham số đặt vào "args". Khi được hỏi bất cứ điều gì về doanh nghiệp (giờ mở cửa, địa chỉ, giá, sản phẩm, chính sách), hãy gọi nivo_call với tool knowledge.search trước khi trả lời hay chuyển cho người; chỉ chuyển cho người khi tìm không thấy. Đừng bịa kết quả.',
+            'Trả lời khách chủ yếu bằng JSON theo hợp đồng ở trên: các trường "lead", "needs_human", "order", "payment_claim" đã đủ để NIVO tạo khách tiềm năng, chuyển cho người hoặc xin duyệt. Bạn gọi công cụ NIVO bằng một công cụ duy nhất, nivo_call: tên công cụ đặt vào "tool", tham số đặt vào "args". Đầu mỗi lượt, gọi nivo_call với tool memory.read một lần để đọc trí nhớ chung của doanh nghiệp. Khi được hỏi bất cứ điều gì về doanh nghiệp (giờ mở cửa, địa chỉ, giá, sản phẩm, chính sách), hãy gọi nivo_call với tool knowledge.search trước khi trả lời hay chuyển cho người; chỉ chuyển cho người khi tìm không thấy. Đừng bịa kết quả. Không bao giờ nhắc tên công cụ (nivo_call, knowledge.search, memory.read) hay việc đang tìm kiếm trong câu trả lời cho khách; khách chỉ đọc câu trả lời bằng tiếng Việt.',
         "bundle.toolLine": "- {{name}}: {{description}} Tham số: {{args}}",
         "bundle.replyContract": REPLY_CONTRACT_VI,
     },
@@ -121,7 +121,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "bundle.soulGuidance": "## NIVO tone guidance\n{{text}}",
         "bundle.toolsTitle": "## NIVO tools (optional)",
         "bundle.toolsIntro":
-            'Answer the customer mainly with the JSON of the contract above: the "lead", "needs_human", "order" and "payment_claim" fields are enough for NIVO to create a lead, hand over to a person or ask for approval. You call NIVO tools through one tool, nivo_call: the tool name goes in "tool", its arguments in "args". When asked anything about the business (hours, address, prices, products, policies), call nivo_call with the tool knowledge.search before you answer or hand over; hand over only when the search finds nothing. Never invent a result.',
+            'Answer the customer mainly with the JSON of the contract above: the "lead", "needs_human", "order" and "payment_claim" fields are enough for NIVO to create a lead, hand over to a person or ask for approval. You call NIVO tools through one tool, nivo_call: the tool name goes in "tool", its arguments in "args". At the start of each turn, call nivo_call with the tool memory.read once to read the standing memory of the business. When asked anything about the business (hours, address, prices, products, policies), call nivo_call with the tool knowledge.search before you answer or hand over; hand over only when the search finds nothing. Never invent a result. Never mention a tool name (nivo_call, knowledge.search, memory.read) or that you are searching in the reply to the customer; the customer reads only the answer.',
         "bundle.toolLine": "- {{name}}: {{description}} Arguments: {{args}}",
         "bundle.replyContract": REPLY_CONTRACT_EN,
     },

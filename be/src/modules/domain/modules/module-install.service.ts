@@ -265,7 +265,8 @@ export class ModuleInstallService {
             throw new ModulesError({ code: ModulesErrorCode.InstanceNameTaken })
         }
         const reused = request.newInstance ? null : await this.unboundAgentOf(principalId, workspaceId, module.key)
-        const agentId = reused ?? (await this.createAgent(principalId, module, request, name))
+        const agentId =
+            reused ?? (await this.createAgent(principalId, module, request, request.newInstance ? wanted : null))
         const installationId = await this.installations.insert({
             workspaceId,
             moduleKey: module.key,
@@ -301,14 +302,14 @@ export class ModuleInstallService {
         principalId: string,
         module: ModuleDefinition,
         request: InstallRequest,
-        name: string,
+        wanted: string | null,
     ): Promise<string> {
         const { workspaceId, locale } = request
         const used = new Set((await this.agents.list(principalId, workspaceId)).map((agent) => agent.handle))
         const created = await this.agents.create(principalId, {
             workspaceId,
             module: module.key,
-            name: request.newInstance ? name.slice(0, AGENT_NAME_LIMITS.max) : module.agent.name,
+            name: wanted === null ? { label: module.agent.label[locale] } : agentNameOf(wanted),
             handle: freeHandle(module.agent.handle, used),
             role: module.agent.role[locale],
             instructions: module.agent.instructions[locale],

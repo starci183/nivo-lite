@@ -65,11 +65,8 @@ export const InventoryPoDrawer = (props: InventoryPoDrawerProps) => {
                     />
                 ) : null}
                 {!p.messageEditable && p.message !== "" ? (
-                    <SurfaceCard ariaLabel={say("poMessageDrafted")}>
+                    <SurfaceCard label={say("poMessageDrafted")} headingLevel={4}>
                         <div className={QUOTE_CLASS_NAME}>
-                            <Text size="xs" tone="muted" weight="medium">
-                                {say("poMessageDrafted")}
-                            </Text>
                             <Text size="sm">{p.message}</Text>
                         </div>
                     </SurfaceCard>

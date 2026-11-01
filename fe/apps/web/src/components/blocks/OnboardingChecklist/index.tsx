@@ -1,14 +1,13 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useId, useState } from "react"
+import { useState } from "react"
 import { useOverviewData, useOverviewSteps } from "@/hooks/overview"
 import { ONBOARDING_CHECKLIST_PLACEHOLDER, OnboardingChecklistBase } from "./component"
 
 /** Progress card built from real events (inert geometry while the dashboard is read, nothing if it failed); the first undone step is raised with its action, and it collapses to "all set". */
 export const OnboardingChecklist = () => {
     const t = useTranslations("promo")
-    const listId = useId()
     const [isOpen, setOpen] = useState(true)
     const read = useOverviewSteps()
     const { failed } = useOverviewData()
@@ -21,7 +20,6 @@ export const OnboardingChecklist = () => {
             props={{
                 steps,
                 isOpen,
-                listId,
                 title: t("checklistTitle"),
                 allSet: t("allSet"),
                 allSetCount: t("stepsComplete", { done, total }),

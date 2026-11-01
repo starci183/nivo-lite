@@ -36,7 +36,6 @@ export const BrainAgentView = () => {
             props={{
                 title: t("viewTitle"),
                 hint: t("viewHint"),
-                footer: t("viewFooter"),
                 tableLabel: t("viewTitle"),
                 laneLabel: t("viewLane"),
                 whoLabel: t("viewWho"),

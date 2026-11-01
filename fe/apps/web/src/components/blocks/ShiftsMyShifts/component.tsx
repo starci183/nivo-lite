@@ -4,12 +4,12 @@ import {
     EmptyNotice,
     Input,
     ListRow,
-    SectionHeader,
     Select,
     SurfaceCard,
     SurfaceListCard,
+    Text,
 } from "@starci/grammar/common"
-import { ACTIONS_CLASS_NAME, FIELD_ACTION_CLASS_NAME, FORM_GRID_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
+import { ACTIONS_CLASS_NAME, FIELD_ACTION_CLASS_NAME, FORM_GRID_CLASS_NAME } from "./classNames"
 
 /** The swap form of the one shift being swapped; `shiftId` is `null` when none is open. */
 export interface SwapForm {
@@ -61,69 +61,72 @@ export interface ShiftsMyShiftsBaseProps {
 /** Draws my upcoming shifts with check-in and the inline form that asks a colleague to swap. */
 export const ShiftsMyShiftsBase = (props: ShiftsMyShiftsBaseProps) =>
     props.props.notice === null ? (
-        <div className={SECTION_CLASS_NAME}>
-            <SectionHeader level={2} title={props.props.title} description={props.props.hint} />
-            <SurfaceListCard
-                ariaLabel={props.props.title}
-                empty={<EmptyNotice message={props.props.emptyTitle} description={props.props.emptyBody} />}
-            >
-                {props.props.shifts.map((shift) => (
-                    <ListRow
-                        key={shift.id}
-                        title={shift.title}
-                        description={shift.notes.filter((note) => note !== "").join(" · ")}
-                        badges={shift.isCheckedIn ? <Badge tone="success">{props.props.checkedInLabel}</Badge> : null}
-                        actions={
-                            <div className={ACTIONS_CLASS_NAME}>
-                                {shift.canCheckIn && !shift.isCheckedIn ? (
-                                    <Button
-                                        size="sm"
-                                        intent="alternative"
-                                        isPending={shift.isBusy}
-                                        onPress={() => props.on.checkIn(shift.id)}
-                                    >
-                                        {props.props.checkInLabel}
-                                    </Button>
-                                ) : null}
-                                <Button size="sm" intent="neutral" onPress={() => props.on.toggleSwap(shift.id)}>
-                                    {props.props.askSwapLabel}
+        <SurfaceListCard
+            label={props.props.title}
+            headingLevel={2}
+            footer={
+                <Text size="sm" tone="muted">
+                    {props.props.hint}
+                </Text>
+            }
+            empty={<EmptyNotice message={props.props.emptyTitle} description={props.props.emptyBody} />}
+        >
+            {props.props.shifts.map((shift) => (
+                <ListRow
+                    key={shift.id}
+                    title={shift.title}
+                    description={shift.notes.filter((note) => note !== "").join(" · ")}
+                    badges={shift.isCheckedIn ? <Badge tone="success">{props.props.checkedInLabel}</Badge> : null}
+                    actions={
+                        <div className={ACTIONS_CLASS_NAME}>
+                            {shift.canCheckIn && !shift.isCheckedIn ? (
+                                <Button
+                                    size="sm"
+                                    intent="alternative"
+                                    isPending={shift.isBusy}
+                                    onPress={() => props.on.checkIn(shift.id)}
+                                >
+                                    {props.props.checkInLabel}
+                                </Button>
+                            ) : null}
+                            <Button size="sm" intent="neutral" onPress={() => props.on.toggleSwap(shift.id)}>
+                                {props.props.askSwapLabel}
+                            </Button>
+                        </div>
+                    }
+                >
+                    {props.props.swap.shiftId === shift.id ? (
+                        <div className={FORM_GRID_CLASS_NAME}>
+                            <Select
+                                label={props.props.swapWithLabel}
+                                name={`swap-${shift.id}`}
+                                value={props.props.swap.toStaffId === "" ? null : props.props.swap.toStaffId}
+                                placeholder={props.props.pickPersonLabel}
+                                options={props.props.swapOptions}
+                                onValueChange={(value) => props.on.target(value ?? "")}
+                            />
+                            <Input
+                                id={`swap-why-${shift.id}`}
+                                name="reason"
+                                label={props.props.reasonLabel}
+                                value={props.props.swap.reason}
+                                onValueChange={props.on.reason}
+                            />
+                            <div className={FIELD_ACTION_CLASS_NAME}>
+                                <Button
+                                    intent="alternative"
+                                    isPending={shift.isBusy}
+                                    isDisabled={props.props.swap.toStaffId === ""}
+                                    onPress={() => props.on.send(shift.id)}
+                                >
+                                    {props.props.sendLabel}
                                 </Button>
                             </div>
-                        }
-                    >
-                        {props.props.swap.shiftId === shift.id ? (
-                            <div className={FORM_GRID_CLASS_NAME}>
-                                <Select
-                                    label={props.props.swapWithLabel}
-                                    name={`swap-${shift.id}`}
-                                    value={props.props.swap.toStaffId === "" ? null : props.props.swap.toStaffId}
-                                    placeholder={props.props.pickPersonLabel}
-                                    options={props.props.swapOptions}
-                                    onValueChange={(value) => props.on.target(value ?? "")}
-                                />
-                                <Input
-                                    id={`swap-why-${shift.id}`}
-                                    name="reason"
-                                    label={props.props.reasonLabel}
-                                    value={props.props.swap.reason}
-                                    onValueChange={props.on.reason}
-                                />
-                                <div className={FIELD_ACTION_CLASS_NAME}>
-                                    <Button
-                                        intent="alternative"
-                                        isPending={shift.isBusy}
-                                        isDisabled={props.props.swap.toStaffId === ""}
-                                        onPress={() => props.on.send(shift.id)}
-                                    >
-                                        {props.props.sendLabel}
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : null}
-                    </ListRow>
-                ))}
-            </SurfaceListCard>
-        </div>
+                        </div>
+                    ) : null}
+                </ListRow>
+            ))}
+        </SurfaceListCard>
     ) : (
         <SurfaceCard ariaLabel={props.props.notice.title}>
             <EmptyNotice message={props.props.notice.title} description={props.props.notice.body} />

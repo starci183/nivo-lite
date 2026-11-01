@@ -66,6 +66,17 @@ const isStatus = (value: string): value is DossierStatus => Object.hasOwn(DOSSIE
 /** A word without a vowel (HDTV, DKDN) is an acronym and keeps its capitals; accents are split off first, so the base letter decides. */
 const hasVowel = (word: string): boolean => /[aeiouy]/iu.test(word.normalize("NFD"))
 
+/** The standard folders of the business checklist that have a Vietnamese name, by the key of that name. */
+const FOLDER_KEYS = ["legal", "hr", "finance"] as const
+
+/** The key of a standard folder ("01 Legal files" is "legal"); null for any other name, which is shown as it is written. */
+export const folderKeyOf = (topic: string): (typeof FOLDER_KEYS)[number] | null => {
+    const [first = "", ...rest] = topic.trim().toLowerCase().split(" ").filter(Boolean)
+    const words = Number.isNaN(Number(first)) ? [first, ...rest] : rest
+    const word = words.length === 2 && words[1] === "files" ? words[0] : undefined
+    return FOLDER_KEYS.find((key) => key === word) ?? null
+}
+
 /** A folder name in capitals written as a sentence: "LEGAL FILES" becomes "Legal files", and an acronym keeps its capitals. */
 export const categoryLabelOf = (topic: string): string => {
     const lower = topic
@@ -101,6 +112,7 @@ const viewOf = (record: DossierRecord): DossierView | undefined =>
 export const categoriesOf = (
     totals: ReadonlyArray<CategoryTotals>,
     dossiers: ReadonlyArray<DossierRecord>,
+    nameOf: (topic: string) => string | undefined = () => undefined,
 ): ReadonlyArray<CategoryView> => {
     const byKey = new Map<
         string,
@@ -121,7 +133,7 @@ export const categoriesOf = (
         .map((entry) => ({
             id: entry.label,
             order: entry.order,
-            label: categoryLabelOf(entry.label),
+            label: nameOf(entry.label) ?? categoryLabelOf(entry.label),
             documentCount: entry.totals?.documentCount ?? 0,
             sizeBytes: entry.totals?.sizeBytes ?? 0,
             dossiers: entry.dossiers,
