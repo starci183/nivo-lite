@@ -5,17 +5,29 @@ import { ModuleCatalogService, WorkEngineService } from "@modules/domain/decisio
 import { EventsService } from "@modules/domain/events"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import type { IntentTrace } from "@modules/domain/intent-contracts"
 import { eachInOrder } from "@modules/platform/primitives"
 import { proposalTextOf } from "./agent-turn.policy"
+import { tagDoorResultSchema } from "./intent-step.schema"
+import { INTENT_STEP_KIND } from "./intent-turn.policy"
+import { IntentPipelineService } from "./intent-pipeline.service"
+import { IntentTurnService } from "./intent-turn.service"
+import { internalWakeOf, wakeScopeOf } from "./intent-wake.policy"
 import { AgentWriteRightService } from "./agent-write-right.service"
 import { AgentTurnsLogEvent } from "./agent-turns.log-events"
 import { readInternalProposal } from "./internal-contract.policy"
 import type {
     InternalAction,
     InternalActionResult,
+    IntentDoorResult,
     InternalSettled,
     InternalSettleInput,
+    InternalWakeRef,
+    SettledProposal,
 } from "./agent-turns.contracts"
+
+/** A signal that never aborts, for a settle that is not driven by a drain. */
+const NO_ABORT = new AbortController().signal
 
 /** Why an action is dropped: the registry has no such action. */
 const UNKNOWN_ACTION = "unknown_action"
@@ -38,15 +50,37 @@ export class InternalProposalSettlerService {
         private readonly catalog: ModuleCatalogService,
         private readonly events: EventsService,
         private readonly right: AgentWriteRightService,
+        private readonly intents: IntentTurnService,
+        private readonly pipeline: IntentPipelineService,
     ) {}
 
     /**
      * Settles the proposal the executor stored for the turn: the model's text is read here, so what is not a proposal is a plain reply.
      * `stale` means the lease had moved on and nothing was written or requested.
      */
-    async settle(turn: AgentTurnView, stored: unknown, input: InternalSettleInput): Promise<InternalSettled> {
-        if (!(await this.turns.touch(turn))) return { kind: "stale" }
-        const proposal = readInternalProposal(proposalTextOf(stored))
+    async settle(
+        turn: AgentTurnView,
+        stored: unknown,
+        input: InternalSettleInput,
+        signal: AbortSignal = NO_ABORT,
+    ): Promise<InternalSettled> {
+        if (!(await this.live(turn))) return { kind: "stale" }
+        const text = proposalTextOf(stored)
+        const plan = await this.intents.planFor(wakeScopeOf(turn))
+        if (plan === null) return this.apply(internalWakeOf(turn), text, input)
+        const read = await this.pipeline.read(turn, plan, text, signal)
+        const done = await this.pipeline.door(turn, INTENT_STEP_KIND.tagDoor, read, signal, input)
+        return this.settledOf(done, read.trace)
+    }
+
+    /** True while this worker still holds the lease of the turn. */
+    live(turn: AgentTurnView): Promise<boolean> {
+        return this.turns.touch(turn)
+    }
+
+    /** Applies the text of a proposal for a wake that is named by its ids alone, so a step can do it from its row; the caller holds the lease. */
+    async apply(turn: InternalWakeRef, text: string, input: InternalSettleInput): Promise<SettledProposal> {
+        const proposal = readInternalProposal(text)
         const ops = proposal.tasks.map((task): AgentTaskOp => ({ ...task, originWakeId: turn.wakeId }))
         await this.tasks.apply(turn.workspaceId, turn.agentId, ops)
         const actions: Array<InternalActionResult> = []
@@ -63,8 +97,18 @@ export class InternalProposalSettlerService {
         }
     }
 
+    /** What the tag door did, as the settler answers it: a split settles nothing, every other reading was applied through the one door. */
+    private settledOf(done: IntentDoorResult, trace: IntentTrace): SettledProposal {
+        const result = tagDoorResultSchema.safeParse(done)
+        const traced = { intent: trace }
+        if (!result.success || result.data.split) {
+            return { kind: "settled", reply: "", needsHuman: false, reason: "", tasks: 0, actions: [], traced }
+        }
+        return { kind: "settled", ...result.data.settled, traced }
+    }
+
     private async request(
-        turn: AgentTurnView,
+        turn: InternalWakeRef,
         action: InternalAction,
         index: number,
         input: InternalSettleInput,
@@ -72,7 +116,7 @@ export class InternalProposalSettlerService {
         const entry = await this.catalog.actionOf(action.action)
         if (entry === null) return this.drop(turn, action, index, input, UNKNOWN_ACTION)
         if (entry.moduleKey !== input.module) return this.drop(turn, action, index, input, OUTSIDE_MODULE)
-        const mayWrite = await this.right.mayWrite(turn.source, turn.context.authorUserId ?? null, turn.workspaceId)
+        const mayWrite = await this.right.mayWrite(turn.source, turn.authorUserId, turn.workspaceId)
         const item = await this.engine.runWork(
             { workspaceId: turn.workspaceId, actor: input.actorName, locale: input.locale },
             {
@@ -92,7 +136,7 @@ export class InternalProposalSettlerService {
     }
 
     private async drop(
-        turn: AgentTurnView,
+        turn: InternalWakeRef,
         action: InternalAction,
         index: number,
         input: InternalSettleInput,

@@ -73,6 +73,8 @@ export interface AgentWakeContext {
     readonly taskId?: string
     /** The probe that decides whether a schedule has work. */
     readonly probeKey?: string
+    /** The intent a follow-up turn is pinned to: set only by the turn that split off an intent with a risk, never by a fact. */
+    readonly intent?: string
 }
 
 /** One fact that wakes an agent. */

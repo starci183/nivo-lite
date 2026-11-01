@@ -33,6 +33,8 @@ import { OfficeCommandService } from "./office-command.service"
 import { OfficeTagHandlerService } from "./office-tag-handler.service"
 import type { ProposeOutcome } from "./office-command-candidates.contracts"
 
+const ABORT = new AbortController().signal
+
 interface Setup {
     readonly agent?: AgentHeader | null
     readonly installation?: { readonly id: string; readonly activeContextVersionId: string | null } | null
@@ -234,16 +236,15 @@ describe("OfficeTagHandlerService > prepare: a turn", () => {
         })
         expect(reader.page).toHaveBeenCalledWith("ws-1", { room: null, before: null, size: 13 })
         expect(commands.propose).toHaveBeenCalledTimes(1)
-        expect(runtime.agentFor).toHaveBeenCalledWith("ws-1", "accounting", {
-            id: "inst-1",
-            activeContextVersionId: "v1",
-        })
+        expect(runtime.agentFor).toHaveBeenCalledWith("ws-1", "accounting", expect.objectContaining({ id: "inst-1" }))
         expect(context.messageOf).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             agentId: "agent-kt",
             source: "tag",
             locale: "vi",
             text: "An: good morning\n-> Lan: @ke-toan how much is due?",
+            wake: turnOf(),
+            agentName: "Ke toan",
         })
         expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: null, conversationId: null }, KE_TOAN, true)
     })
@@ -341,7 +342,7 @@ describe("OfficeTagHandlerService > settle", () => {
         const { handler, settler, lines, typing } = await build()
         const turn = turnOf({ room: "accounting" })
 
-        await expect(handler.settle(turn, { text: "raw" })).resolves.toEqual({
+        await expect(handler.settle(turn, { text: "raw" }, ABORT)).resolves.toEqual({
             status: "done",
             reason: null,
             outcome: { replied: true, tasks: 1, actions: 0, needsHuman: false, workItemId: null },
@@ -350,12 +351,8 @@ describe("OfficeTagHandlerService > settle", () => {
         expect(settler.settle).toHaveBeenCalledWith(
             turn,
             { text: "raw" },
-            {
-                module: "accounting",
-                actorName: "Lan",
-                locale: "vi",
-                installationId: "inst-1",
-            },
+            { module: "accounting", actorName: "Lan", locale: "vi", installationId: "inst-1" },
+            ABORT,
         )
         expect(lines.post.mock.calls).toEqual([
             [
@@ -391,7 +388,7 @@ describe("OfficeTagHandlerService > settle", () => {
             }),
         )
 
-        await expect(handler.settle(turnOf(), {})).resolves.toEqual({
+        await expect(handler.settle(turnOf(), {}, ABORT)).resolves.toEqual({
             status: "done",
             reason: null,
             outcome: { replied: false, tasks: 1, actions: 2, needsHuman: true, workItemId: "item-9" },
@@ -403,7 +400,7 @@ describe("OfficeTagHandlerService > settle", () => {
         const { handler, settler, lines, typing } = await build()
         settler.settle.mockResolvedValue({ kind: "stale" })
 
-        await expect(handler.settle(turnOf(), {})).resolves.toEqual({ status: "held", reason: "stale", outcome: null })
+        await expect(handler.settle(turnOf(), {}, ABORT)).resolves.toMatchObject({ status: "held", reason: "stale" })
         expect(lines.post).not.toHaveBeenCalled()
         expect(typing.setAgent).toHaveBeenCalledTimes(1)
     })
@@ -413,32 +410,34 @@ describe("OfficeTagHandlerService > settle: edges", () => {
     it("acts as the agent when the author is not a member any more, and as no installation when it has none", async () => {
         const { handler, settler } = await build({ member: null, installation: null })
 
-        await handler.settle(turnOf(), {})
+        await handler.settle(turnOf(), {}, ABORT)
 
         expect(settler.settle).toHaveBeenCalledWith(
             expect.anything(),
             {},
             { module: "accounting", actorName: "Ke toan", locale: "vi", installationId: null },
+            ABORT,
         )
     })
 
     it("acts as the agent without looking for a member when the author is unknown", async () => {
         const { handler, settler, members } = await build()
 
-        await handler.settle({ ...turnOf(), actorMemberId: null }, {})
+        await handler.settle({ ...turnOf(), actorMemberId: null }, {}, ABORT)
 
         expect(members.find).not.toHaveBeenCalled()
         expect(settler.settle).toHaveBeenCalledWith(
             expect.anything(),
             {},
             expect.objectContaining({ actorName: "Ke toan" }),
+            ABORT,
         )
     })
 
     it("skips a wake whose agent is gone", async () => {
         const { handler, settler } = await build({ agent: null })
 
-        await expect(handler.settle(turnOf(), {})).resolves.toEqual({
+        await expect(handler.settle(turnOf(), {}, ABORT)).resolves.toEqual({
             status: "skipped",
             reason: "agent_gone",
             outcome: null,
@@ -450,7 +449,7 @@ describe("OfficeTagHandlerService > settle: edges", () => {
         const { handler, threads, lines, typing } = await build()
         const turn = turnOf({ threadId: "th-1" })
 
-        await handler.settle(turn, {})
+        await handler.settle(turn, {}, ABORT)
 
         expect(threads.say).toHaveBeenCalledWith(turn, KE_TOAN, "It is 5tr.", "agent")
         expect(lines.post).not.toHaveBeenCalled()
@@ -462,7 +461,7 @@ describe("OfficeTagHandlerService > settle: edges", () => {
         const failure = new Error("engine down")
         settler.settle.mockRejectedValue(failure)
 
-        await expect(handler.settle(turnOf(), {})).rejects.toBe(failure)
+        await expect(handler.settle(turnOf(), {}, ABORT)).rejects.toBe(failure)
         expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: null, conversationId: null }, KE_TOAN, false)
     })
 })

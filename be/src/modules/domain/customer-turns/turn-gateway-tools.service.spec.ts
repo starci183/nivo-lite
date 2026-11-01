@@ -9,6 +9,7 @@ import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { HubNotesService } from "./hub-notes.service"
+import { TurnGatewayPipelineService } from "./turn-gateway-pipeline.service"
 import { TurnGatewayToolsService } from "./turn-gateway-tools.service"
 import { TurnSourcesService } from "./turn-sources.service"
 
@@ -59,7 +60,7 @@ const catalog = mock<MessageCatalog>({
     get: (key: string, params?: Readonly<Record<string, string | number>>) => `${key} ${JSON.stringify(params ?? {})}`,
 })
 
-const build = async () => {
+const build = async (refuses = false) => {
     const gateway = mock<McpGatewayService>({
         search: jest
             .fn()
@@ -76,9 +77,14 @@ const build = async () => {
     const engine = mock<WorkEngineService>({ runWork: jest.fn().mockResolvedValue(item) })
     const notes = mock<HubNotesService>({ postOnce: jest.fn().mockResolvedValue(undefined) })
     const sources = mock<TurnSourcesService>({ of: jest.fn().mockReturnValue(PRICE_LIST) })
+    const pipeline = mock<TurnGatewayPipelineService>({
+        gateOf: jest.fn().mockResolvedValue({ on: refuses, refuses }),
+        resultOf: jest.fn((_gate: unknown, value: unknown) => ({ result: value })),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             TurnGatewayToolsService,
+            { provide: TurnGatewayPipelineService, useValue: pipeline },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: McpGatewayService, useValue: gateway },
             { provide: AgentConversationsService, useValue: conversations },
@@ -87,7 +93,7 @@ const build = async () => {
             { provide: TurnSourcesService, useValue: sources },
         ],
     }).compile()
-    return { service: moduleRef.get(TurnGatewayToolsService), gateway, conversations, engine, notes, sources }
+    return { service: moduleRef.get(TurnGatewayToolsService), gateway, conversations, engine, notes, sources, pipeline }
 }
 
 describe("TurnGatewayToolsService discovery", () => {
@@ -457,5 +463,35 @@ describe("TurnGatewayToolsService test chat", () => {
             service.run(CTX, "tool.sequence", { steps_json: JSON.stringify([{ name: "crm.stock.read" }]) }),
         ).resolves.toMatchObject({ status: "approval_requested" })
         expect(engine.runWork).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("TurnGatewayToolsService on the contract pipeline", () => {
+    it("refuses a write of a turn that is not pinned and calls nothing", async () => {
+        const { service, gateway } = await build(true)
+
+        await expect(service.run(CTX, "tool.call", { name: "crm.order.place" })).resolves.toEqual({
+            error: "needs_own_turn",
+        })
+        expect(gateway.call).not.toHaveBeenCalled()
+    })
+
+    it("refuses a playbook sequence of a turn that is not pinned", async () => {
+        const { service, engine } = await build(true)
+
+        await expect(service.run(CTX, "tool.sequence", { steps_json: SEQUENCE_STEPS })).resolves.toEqual({
+            error: "needs_own_turn",
+        })
+        expect(engine.runWork).not.toHaveBeenCalled()
+    })
+
+    it("leaves a tool that is not granted to the gateway to answer", async () => {
+        const { service, gateway } = await build(true)
+        gateway.describe.mockResolvedValue(null)
+        gateway.call.mockResolvedValue({ ok: false, code: "not_granted", detail: "no" })
+
+        await expect(service.run(CTX, "tool.call", { name: "crm.secret" })).resolves.toMatchObject({
+            error: "not_granted",
+        })
     })
 })
