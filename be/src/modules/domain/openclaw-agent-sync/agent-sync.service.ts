@@ -1,8 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import { agentIdFor, InjectOpenclawAgentRegistry, InjectOpenclawWorkspaceWriter } from "@modules/integrations/openclaw"
-import type { AgentRegistryService, WorkspaceWriterService } from "@modules/integrations/openclaw"
+import {
+    agentIdFor,
+    InjectOpenclawAgentRegistry,
+    InjectOpenclawGatewayAdmin,
+    InjectOpenclawWorkspaceWriter,
+} from "@modules/integrations/openclaw"
+import type { AgentRegistryService, GatewayAdminClient, WorkspaceWriterService } from "@modules/integrations/openclaw"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -79,6 +84,7 @@ export class AgentSyncService {
         @InjectInstallations() private readonly installations: InstallationDirectory,
         @InjectOpenclawAgentRegistry() private readonly registry: AgentRegistryService,
         @InjectOpenclawWorkspaceWriter() private readonly writer: WorkspaceWriterService,
+        @InjectOpenclawGatewayAdmin() private readonly gatewayAdmin: GatewayAdminClient,
         private readonly bundles: AgentBundleService,
         @InjectAgentsQueue() private readonly queue: AgentsQueue,
         private readonly pause: PauseClient,
@@ -176,13 +182,15 @@ export class AgentSyncService {
 
     /**
      * A removed installation leaves OpenClaw. The OpenClaw agent belongs to the module, not to the instance, so it is only taken out
-     * when no other instance of the module is left to run on it.
+     * when no other instance of the module is left to run on it, then with its sessions and files. A failure throws, so the job retries.
      */
     private async retire(installation: Installation): Promise<void> {
         const sibling = await this.installations.firstOfModule(installation.workspaceId, installation.module)
-        if (sibling !== null) return
-        const dropped = this.registry.unregister(agentIdFor(installation.workspaceId, installation.module))
-        if (dropped) await this.pause.wait(this.options.reloadSettleMs)
+        if (sibling !== null || !this.registry.managesAgents) return
+        const agentId = agentIdFor(installation.workspaceId, installation.module)
+        if (this.gatewayAdmin.enabled) await this.gatewayAdmin.removeAgent(agentId)
+        else if (!this.registry.unregister(agentId)) return
+        await this.pause.wait(this.options.reloadSettleMs)
     }
 
     private async fanOut(refs: ReadonlyArray<InstallationRef>): Promise<void> {

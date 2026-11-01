@@ -1,17 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { AgentPersona, AgentsMdInput, TextOf } from "./agents.contracts"
-import type { ContextVersion, KnowledgeDocument } from "./agents.port"
+import type { ContextVersion } from "./agents.port"
 import {
-    INLINE_KNOWLEDGE_MAX,
     RULES_BUDGET,
     agentsMdOf,
     appliedContextOf,
     budgetRules,
     contextTextOf,
-    knowledgeFileOf,
     personaTextOf,
-    slugOf,
     soulMdOf,
     stripMarkdown,
     toolsSectionOf,
@@ -20,7 +17,6 @@ import {
 } from "./agent-bundle.policy"
 
 type Subject = {
-    slugOf: typeof slugOf
     stripMarkdown: typeof stripMarkdown
     trimTo: typeof trimTo
     withoutSetupBlock: typeof withoutSetupBlock
@@ -28,7 +24,6 @@ type Subject = {
     personaTextOf: typeof personaTextOf
     contextTextOf: typeof contextTextOf
     appliedContextOf: typeof appliedContextOf
-    knowledgeFileOf: typeof knowledgeFileOf
     agentsMdOf: typeof agentsMdOf
     soulMdOf: typeof soulMdOf
     toolsSectionOf: typeof toolsSectionOf
@@ -57,15 +52,6 @@ const versionOf = builder<ContextVersion>({
     toneEvidence: "call the customer chi",
 })
 
-const documentOf = builder<KnowledgeDocument>({
-    title: "Service price",
-    topic: "Price",
-    kind: "document",
-    visibility: "public",
-    updatedAt: "2026-10-11T08:00:00.000Z",
-    content: "  Massage 300k\n",
-})
-
 const inputOf = builder<AgentsMdInput>({
     name: "Bot",
     module: "chatbot",
@@ -87,7 +73,6 @@ const buildSubject = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
-                    slugOf,
                     stripMarkdown,
                     trimTo,
                     withoutSetupBlock,
@@ -95,7 +80,6 @@ const buildSubject = async () => {
                     personaTextOf,
                     contextTextOf,
                     appliedContextOf,
-                    knowledgeFileOf,
                     agentsMdOf,
                     soulMdOf,
                     toolsSectionOf,
@@ -108,16 +92,6 @@ const buildSubject = async () => {
 
 describe("agent bundle policy", () => {
     describe("text helpers", () => {
-        it("makes an ASCII slug of a Vietnamese title and falls back to source", async () => {
-            const subject = await buildSubject()
-
-            expect(subject.slugOf(`Cafe${String.fromCodePoint(0xe9)} ${String.fromCodePoint(0x110, 0x111)}!`)).toBe(
-                "cafee-dd",
-            )
-            expect(subject.slugOf("***")).toBe("source")
-            expect(subject.slugOf("a".repeat(80))).toHaveLength(48)
-        })
-
         it("strips markdown headings and bold marks", async () => {
             const subject = await buildSubject()
 
@@ -146,7 +120,6 @@ describe("agent bundle policy", () => {
             expect(subject.trimTo("one\n\tthree", 6)).toBe("one ...")
             expect(subject.trimTo("abcdefgh", 4)).toBe("abcd ...")
             expect(subject.trimTo("   text", 3)).toBe(" ...")
-            expect(subject.slugOf(`${"-".repeat(2000)}Hello${"!".repeat(2000)}`)).toBe("hello")
         })
 
         it("removes complete setup blocks while preserving unmatched markers and surrounding content", async () => {
@@ -247,31 +220,6 @@ describe("agent bundle policy", () => {
             })
         })
     })
-
-    describe("knowledgeFileOf", () => {
-        it("writes a numbered file with the topic, the meta line and the text", async () => {
-            const subject = await buildSubject()
-
-            const file = subject.knowledgeFileOf(0, documentOf(), t)
-
-            expect(file.path).toBe("knowledge/01-service-price.md")
-            expect(file.content).toBe(
-                "# Service price\n\nbundle.fileTopic(topic=Price)bundle.fileMeta(ki" +
-                    "nd=document; visibility=bundle.visibilityPublic; " +
-                    "date=2026-10-11)\n\nMassage 300k\n",
-            )
-        })
-
-        it("leaves out a missing topic and marks internal documents", async () => {
-            const subject = await buildSubject()
-
-            const file = subject.knowledgeFileOf(11, documentOf({ topic: null, visibility: "internal" }), t)
-
-            expect(file.path).toBe("knowledge/12-service-price.md")
-            expect(file.content).toContain("bundle.fileMeta(kind=document; visibility=bundle.visibilityInternal")
-            expect(file.content).not.toContain("fileTopic")
-        })
-    })
 })
 
 describe("agent bundle policy", () => {
@@ -299,7 +247,7 @@ describe("agent bundle policy", () => {
                 "bundle.rulesSection(rules=### Limit\nNo discounts)",
                 "bundle.contextSection(version=2; text=ctx)",
                 "## Memory",
-                "bundle.knowledgeSection(audience=bundle.audienceCustomer; body=### Price\nMassage 300k)",
+                "bundle.knowledgeSection(audience=bundle.audienceCustomer; body=bundle.knowledgeIndex(titles=Price))",
                 "bundle.contractSection(contract=CONTRACT)",
                 "TOOLS\n",
             ])
@@ -316,15 +264,15 @@ describe("agent bundle policy", () => {
             )
         })
 
-        it("lists only the titles once the knowledge is too big to inline", async () => {
+        it("lists the titles and never the text of the knowledge", async () => {
             const subject = await buildSubject()
 
             const md = subject.agentsMdOf(
                 inputOf({
                     audience: "internal",
                     sources: [
-                        { title: "A", content: "x".repeat(INLINE_KNOWLEDGE_MAX) },
-                        { title: "B", content: "y" },
+                        { title: "A", content: "the first text" },
+                        { title: "B", content: "the second text" },
                     ],
                 }),
                 t,
@@ -333,6 +281,8 @@ describe("agent bundle policy", () => {
             expect(md).toContain(
                 "bundle.knowledgeSection(audience=bundle.audienceInternal; body=bundle.knowledgeIndex(titles=A; B))",
             )
+            expect(md).not.toContain("the first text")
+            expect(md).not.toContain("the second text")
         })
     })
 })

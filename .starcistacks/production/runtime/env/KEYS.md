@@ -52,7 +52,7 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `N8N_ALLOWED_HOSTS` | Hosts the n8n client may call; a stack setting, default `n8n`. |
 | `N8N_PROTOCOL` | The protocol n8n serves its editor and webhooks on behind the proxy; a stack setting, `https` in production. |
 | `N8N_SECURE_COOKIE` | Whether n8n marks its session cookie secure; a stack setting, `true` in production. |
-| `OPENCLAW_GATEWAY_URL` | Gateway URL (`ws://nivo-openclaw:18790`), set by the deploy block; absent or without credentials = the gateway is off. |
+| `OPENCLAW_GATEWAY_URL` | Gateway URL (`ws://nivo-openclaw:18790`), set by the deploy block; absent or without credentials = the gateway is off, and `cli prune-workspaces` and `cli cleanup-workspaces` refuse to delete. Both run inside `nivo-api`, the service that holds this key, the token and the `agents` network. |
 | `OPENCLAW_GATEWAY_TOKEN` | Gateway token, granted to the api and to openclaw from the sealed `openclaw`/`n8n` member. |
 | `OPENCLAW_GATEWAY_PASSWORD` | Alternative gateway credential when no token exists; not used in production. |
 | `BACKUP_RUN_ONCE` | Stack environment of `nivo-postgres-backup`: `1` takes one backup now and exits (tests and the manual run); unset keeps the daily schedule. |

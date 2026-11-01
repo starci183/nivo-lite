@@ -13,6 +13,8 @@ export enum WorkspacesErrorCode {
     NothingToKeep = "WORKSPACES_NOTHING_TO_KEEP",
     /** A workspace to keep does not exist: the ids are wrong, so nothing is deleted. */
     KeepNotFound = "WORKSPACES_KEEP_NOT_FOUND",
+    /** No OpenClaw gateway is configured here, so deleting would leave the workspace's agents behind. */
+    OpenclawUnavailable = "WORKSPACES_OPENCLAW_UNAVAILABLE",
     /** Some workspaces could not be deleted. */
     DeleteFailed = "WORKSPACES_DELETE_FAILED",
     /** An explicit workspace name is missing or exceeds the supported bound. */
@@ -30,6 +32,7 @@ export const WORKSPACES_ERROR_KINDS: Record<WorkspacesErrorCode, ErrorKind> = {
     [WorkspacesErrorCode.PlanUnknown]: "invalid",
     [WorkspacesErrorCode.NothingToKeep]: "invalid",
     [WorkspacesErrorCode.KeepNotFound]: "not-found",
+    [WorkspacesErrorCode.OpenclawUnavailable]: "unavailable",
     [WorkspacesErrorCode.DeleteFailed]: "internal",
     [WorkspacesErrorCode.NameInvalid]: "invalid",
     [WorkspacesErrorCode.NameAmbiguous]: "conflict",

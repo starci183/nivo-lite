@@ -1,4 +1,3 @@
-import type { SyncFile } from "@modules/integrations/openclaw"
 import type {
     AgentPersona,
     AgentsMdInput,
@@ -7,34 +6,15 @@ import type {
     TextOf,
     ToolListing,
 } from "./agents.contracts"
-import type { BaseRule, ContextVersion, KnowledgeDocument } from "./agents.port"
+import type { BaseRule, ContextVersion } from "./agents.port"
 
 /** Base rules go into every prompt of every turn: keep them to a budget (the full text stays in NIVO). */
 export const RULES_BUDGET = 5200
 const RULE_MAX = 900
 
-/** Public knowledge is inlined only while it is small; the rest is in knowledge/ and in the per-turn passages. */
-export const INLINE_KNOWLEDGE_MAX = 6000
-
-const SLUG_MAX = 48
-const COMBINING_MARKS = new RegExp(`[${String.fromCodePoint(0x300)}-${String.fromCodePoint(0x36f)}]`, "gu")
-const D_STROKE = new RegExp(String.fromCodePoint(0x111), "giu")
 const SETUP_START = "### NIVO setup"
 const SETUP_END = "### end NIVO setup"
 const WHITESPACE = /\s/u
-
-/** The file name part of a title: ASCII lower case words joined by dashes. */
-export const slugOf = (title: string): string => {
-    const slug = title
-        .normalize("NFD")
-        .replace(COMBINING_MARKS, "")
-        .replace(D_STROKE, "d")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/gu, "-")
-        .replace(/^-|-$/gu, "")
-        .slice(0, SLUG_MAX)
-    return slug === "" ? "source" : slug
-}
 
 /** The text without markdown headings and bold marks. */
 export const stripMarkdown = (text: string): string =>
@@ -115,28 +95,10 @@ export const contextTextOf = (version: ContextVersion, t: TextOf): string =>
 export const appliedContextOf = (version: ContextVersion | null, t: TextOf): OptionalContextVersionText =>
     version === null ? null : { version: version.version, text: contextTextOf(version, t) }
 
-/** One knowledge file of the bundle. */
-export const knowledgeFileOf = (index: number, document: KnowledgeDocument, t: TextOf): SyncFile => {
-    const visibility = document.visibility === "public" ? "bundle.visibilityPublic" : "bundle.visibilityInternal"
-    const topic = document.topic === null ? "" : t("bundle.fileTopic", { topic: document.topic })
-    const meta = t("bundle.fileMeta", {
-        kind: document.kind,
-        visibility: t(visibility),
-        date: document.updatedAt.slice(0, 10),
-    })
-    return {
-        path: `knowledge/${String(index + 1).padStart(2, "0")}-${slugOf(document.title)}.md`,
-        content: `# ${document.title}\n\n${topic}${meta}\n\n${document.content.trim()}\n`,
-    }
-}
-
+/** The knowledge an agent may read, by title only: the text is read through NIVO MCP, where rights are checked and audited. */
 const knowledgeBlockOf = (input: AgentsMdInput, t: TextOf): string => {
     if (input.sources.length === 0) return t("bundle.knowledgeNone")
-    const total = input.sources.reduce((sum, source) => sum + source.content.length, 0)
-    const body =
-        total <= INLINE_KNOWLEDGE_MAX
-            ? input.sources.map((source) => `### ${source.title}\n${source.content.trim()}`).join("\n\n")
-            : t("bundle.knowledgeIndex", { titles: input.sources.map((source) => source.title).join("; ") })
+    const body = t("bundle.knowledgeIndex", { titles: input.sources.map((source) => source.title).join("; ") })
     const audience = input.audience === "customer" ? "bundle.audienceCustomer" : "bundle.audienceInternal"
     return t("bundle.knowledgeSection", { audience: t(audience), body })
 }

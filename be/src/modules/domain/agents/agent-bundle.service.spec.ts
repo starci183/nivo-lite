@@ -105,7 +105,7 @@ describe("AgentBundleService", () => {
             contextVersion: 4,
             audience: "customer",
         })
-        expect(bundle.files.map((file) => file.path)).toEqual(["AGENTS.md", "SOUL.md", "knowledge/01-price.md"])
+        expect(bundle.files.map((file) => file.path)).toEqual(["AGENTS.md", "SOUL.md"])
         const agentsMd = bundle.files[0]?.content ?? ""
         expect(agentsMd).toContain("bundle.rulesSection(rules=### Limit\nNo discounts)")
         expect(agentsMd).toContain("bundle.contextSection(version=4; text=Spa)")

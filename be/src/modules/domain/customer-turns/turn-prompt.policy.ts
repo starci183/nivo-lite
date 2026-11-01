@@ -13,8 +13,6 @@ export interface TurnSystemParts {
     readonly persona: string
     /** The owner's granted authority, as a prompt section (may be empty). */
     readonly authority: string
-    /** The knowledge recalled for this question (may be empty). */
-    readonly recall: string
     /** Blocks other capabilities add for this turn (open jobs...), each possibly empty. */
     readonly extras: ReadonlyArray<string>
     /** The reply contract. */
@@ -40,7 +38,6 @@ export const turnSystemOf = (parts: TurnSystemParts): string =>
     [
         "You work inside NIVO OS, a responsibility operating system for founder-led service SMEs in Vietnam. Act within the authority the owner granted; ask when data is missing, the action is over the limit, or the outcome is unclear.",
         `${parts.persona}${parts.authority}`,
-        parts.recall,
         ...parts.extras,
         parts.contract,
         "Answer with ONLY the JSON object of the reply contract.",

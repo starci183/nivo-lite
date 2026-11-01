@@ -1,6 +1,7 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentRegistryService } from "./agent-registry.service"
+import type { GatewayAdminClient } from "./gateway-admin.client"
 import type { GatewayClient, GatewaySocketFactory } from "./gateway.client"
 import type { OpenclawFiles } from "./openclaw-files.port"
 import type { OpenclawOptions } from "./openclaw.options"
@@ -29,6 +30,9 @@ export const InjectOpenclawFiles = (): TypedParameterDecorator<OpenclawFiles> =>
 /** Token of the gateway client, for the capabilities that run a turn. */
 export const OPENCLAW_GATEWAY: unique symbol = Symbol("integrations.openclaw.gateway")
 
+/** Token of the gateway admin client, for the capabilities that remove agents. */
+export const OPENCLAW_GATEWAY_ADMIN: unique symbol = Symbol("integrations.openclaw.gateway-admin")
+
 /** Token of the agent registry, for the capabilities that register agents. */
 export const OPENCLAW_AGENT_REGISTRY: unique symbol = Symbol("integrations.openclaw.agent-registry")
 
@@ -38,6 +42,10 @@ export const OPENCLAW_WORKSPACE_WRITER: unique symbol = Symbol("integrations.ope
 /** Injects the gateway client. Parameter type: GatewayClient. */
 export const InjectOpenclawGateway = (): TypedParameterDecorator<GatewayClient> =>
     injector<GatewayClient>(OPENCLAW_GATEWAY)
+
+/** Injects the gateway admin client. Parameter type: GatewayAdminClient. */
+export const InjectOpenclawGatewayAdmin = (): TypedParameterDecorator<GatewayAdminClient> =>
+    injector<GatewayAdminClient>(OPENCLAW_GATEWAY_ADMIN)
 
 /** Injects the agent registry. Parameter type: AgentRegistryService. */
 export const InjectOpenclawAgentRegistry = (): TypedParameterDecorator<AgentRegistryService> =>

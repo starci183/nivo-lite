@@ -7,14 +7,7 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import {
-    agentsMdOf,
-    appliedContextOf,
-    budgetRules,
-    knowledgeFileOf,
-    soulMdOf,
-    toolsSectionOf,
-} from "./agent-bundle.policy"
+import { agentsMdOf, appliedContextOf, budgetRules, soulMdOf, toolsSectionOf } from "./agent-bundle.policy"
 import type { AgentBundle, OptionalAgentPersona, TextOf } from "./agents.contracts"
 import { InjectInstallations, InjectKnowledge, InjectModuleProfiles } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
@@ -32,8 +25,8 @@ const SOURCE_LIMIT = 200
 @Injectable()
 /**
  * The OpenClaw copy of one agent, built only from Supabase (the source of truth) and written one way by the sync. AGENTS.md holds the
- * NIVO base rules, the active context version, the persona, the knowledge and the reply contract; SOUL.md the tone; knowledge/*.md the
- * business documents the lens lets this agent read (a customer-facing module gets public sources only).
+ * NIVO base rules, the active context version, the persona, the knowledge and the reply contract; SOUL.md the tone. No knowledge file
+ * is written: an agent reads the business documents through NIVO MCP, where its rights are checked and audited.
  */
 export class AgentBundleService {
     constructor(
@@ -101,7 +94,6 @@ export class AgentBundleService {
             files: [
                 { path: "AGENTS.md", content: agentsMd },
                 { path: "SOUL.md", content: soulMd },
-                ...sources.map((source, index) => knowledgeFileOf(index, source, t)),
             ],
         }
     }

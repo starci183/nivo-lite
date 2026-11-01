@@ -11,6 +11,8 @@ export const WORKSPACES_MESSAGES: MessageBundle = {
         "errors.WORKSPACES_NOTHING_TO_KEEP": "Kh\u00f4ng gi\u1eef workspace n\u00e0o.",
         "errors.WORKSPACES_KEEP_NOT_FOUND": "Kh\u00f4ng t\u00ecm th\u1ea5y workspace c\u1ea7n gi\u1eef.",
         "errors.WORKSPACES_DELETE_FAILED": "Kh\u00f4ng x\u00f3a \u0111\u01b0\u1ee3c m\u1ed9t s\u1ed1 workspace.",
+        "errors.WORKSPACES_OPENCLAW_UNAVAILABLE":
+            "Ch\u01b0a c\u1ea5u h\u00ecnh OpenClaw gateway n\u00ean kh\u00f4ng x\u00f3a \u0111\u01b0\u1ee3c agent c\u1ee7a workspace. Ch\u01b0a x\u00f3a g\u00ec c\u1ea3. H\u00e3y ch\u1ea1y n\u01a1i c\u00f3 OPENCLAW_GATEWAY_URL v\u00e0 OPENCLAW_GATEWAY_TOKEN.",
     },
     en: {
         "errors.WORKSPACES_SIGNUP_DISABLED": "Free workspaces cannot be created in this environment.",
@@ -19,5 +21,7 @@ export const WORKSPACES_MESSAGES: MessageBundle = {
         "errors.WORKSPACES_NOTHING_TO_KEEP": "No workspace is kept.",
         "errors.WORKSPACES_KEEP_NOT_FOUND": "A workspace to keep was not found.",
         "errors.WORKSPACES_DELETE_FAILED": "Some workspaces could not be deleted.",
+        "errors.WORKSPACES_OPENCLAW_UNAVAILABLE":
+            "No OpenClaw gateway is configured here, so the agents of these workspaces cannot be removed. Nothing was deleted. Run this where OPENCLAW_GATEWAY_URL and OPENCLAW_GATEWAY_TOKEN are set.",
     },
 }
