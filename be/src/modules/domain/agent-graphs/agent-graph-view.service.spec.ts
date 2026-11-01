@@ -112,7 +112,9 @@ describe("AgentGraphViewService.viewOf", () => {
     })
 
     it("says the draft has something to publish when it differs from the version that decides", async () => {
-        const edited = graphOf([branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: approverOf() })])
+        const edited = graphOf([
+            branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: approverOf() }),
+        ])
         const service = await build(stateOf({ draft: edited }))
 
         const view = await service.viewOf("ws-1", "agent-1", "en")
@@ -144,7 +146,9 @@ describe("AgentGraphViewService.viewOf", () => {
         })
         expect(view.facts.map((fact) => fact.key)).toHaveLength(3)
     })
+})
 
+describe("AgentGraphViewService.viewOf > conflicts and refusals", () => {
     it("gives a conflict the rule the graph follows and the rule the Brain says now, side by side", async () => {
         const service = await build(stateOf(), true, [CONFLICT])
 
