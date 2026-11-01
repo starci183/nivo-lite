@@ -60,12 +60,7 @@ const publishBlockedOf = (data: AgentGraphData, ctx: AgentGraphContext): string 
 const headOf = (data: AgentGraphData, ctx: AgentGraphContext, isPublishing: boolean): AgentGraphHeadView => ({
     title: ctx.t("title"),
     status: statusOf(data, ctx),
-    badges: [
-        { text: ctx.t("badgeRunningN", { version: data.activeVersion }), tone: "success" },
-        data.mode === "enforced"
-            ? { text: ctx.t("modeEnforced"), tone: "accent" }
-            : { text: ctx.t("modeShadow"), tone: "muted" },
-    ],
+    badges: [],
     publishLabel: ctx.t("publish", { version: data.activeVersion + 1 }),
     publishBlocked: publishBlockedOf(data, ctx),
     isPublishing,

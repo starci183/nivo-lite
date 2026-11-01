@@ -33,7 +33,6 @@ export const AgentSetupBand = (props: AgentSetupBandProps) => {
             </Disclosure>
             <Button
                 intent="alternative"
-                width="fill"
                 isSkeleton={props.isSkeleton}
                 isPending={gates.isApplying}
                 isDisabled={!gates.canApply}
