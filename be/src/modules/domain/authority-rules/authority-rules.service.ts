@@ -107,15 +107,26 @@ export class AuthorityRulesService {
         installationId: OptionalRuleInstallation,
         agentId: OptionalRuleAgent = null,
     ): Promise<OptionalAuthorityRule> {
+        const rule = await this.ownerRuleFor(scope, action, agentId)
+        if (rule?.mode !== "auto") return rule
+        // The handling instance: the named one, else the oldest of the module.
+        const mode = await this.operations.operatingModeOf(scope.workspaceId, rule.department, installationId)
+        return applyOperatingMode(rule, mode ?? undefined)
+    }
+
+    /**
+     * The rule of an action as the owner set it, before any operating mode: the ceiling an action graph is checked against, because
+     * assist makes an agent ask for now and never lowers what the owner granted. Null when it does not apply to the named agent.
+     */
+    async ownerRuleFor(
+        scope: RulesScope,
+        action: string,
+        agentId: OptionalRuleAgent = null,
+    ): Promise<OptionalAuthorityRule> {
         const stored = await this.entityManager.findOne(AuthorityRuleEntity, {
             where: { workspaceId: scope.workspaceId, action },
         })
-        if (stored === null || !appliesToAgent(stored.agents, agentId)) return null
-        const rule = toRule(stored)
-        if (rule.mode !== "auto") return rule
-        // The handling instance: the named one, else the oldest of the module.
-        const mode = await this.operations.operatingModeOf(scope.workspaceId, stored.department, installationId)
-        return applyOperatingMode(rule, mode ?? undefined)
+        return stored === null || !appliesToAgent(stored.agents, agentId) ? null : toRule(stored)
     }
 
     /** The approval side of the rule of an action, or null when the owner granted none. */
