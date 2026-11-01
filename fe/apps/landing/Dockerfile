@@ -10,7 +10,7 @@
 # variable and no API address. It follows the image canon (knowledge/hfs/docker.md) and diverges from it nowhere.
 # No secret is built in and .dockerignore keeps credentials out of the build context.
 
-FROM node:22.14.0-alpine3.21 AS manifests
+FROM node:25.2.1-alpine3.21 AS manifests
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY fe fe
@@ -19,7 +19,7 @@ COPY fe fe
 RUN find fe -type f ! -name package.json -delete \
  && find fe -name package.json -exec node -e "const fs=require('fs');const f=process.argv[1];const p=JSON.parse(fs.readFileSync(f,'utf8'));if(p.scripts&&p.scripts.prepare){delete p.scripts.prepare;fs.writeFileSync(f,JSON.stringify(p,null,2))}" {} \;
 
-FROM node:22.14.0-alpine3.21 AS build
+FROM node:25.2.1-alpine3.21 AS build
 WORKDIR /app
 ARG NEXT_PUBLIC_SITE_URL=https://nivo.vn
 ARG NEXT_PUBLIC_APP_URL=https://app.nivo.vn
@@ -34,7 +34,7 @@ COPY fe/apps/landing fe/apps/landing
 RUN mkdir -p fe/apps/landing/public
 RUN node_modules/.bin/turbo run build --filter=@nivo-lite/landing
 
-FROM node:22.14.0-alpine3.21 AS runtime
+FROM node:25.2.1-alpine3.21 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
