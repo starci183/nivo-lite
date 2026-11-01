@@ -317,6 +317,9 @@ export interface CeilingRule {
     readonly maxMode: "ask" | "never" | null
 }
 
+/** The top of the amount range a branch covers; null when the branch has none. */
+export type AmountTop = number | null
+
 /** What the pure checks need to know about the workspace. */
 export interface GraphContext {
     /** The facts. */
@@ -326,7 +329,7 @@ export interface GraphContext {
     /** Whether the agent holds a grant on the tool, by its `connector.tool` name or the connector wildcard. */
     readonly isGranted: (tool: string) => boolean
     /** Whether the member group may approve the action up to this amount (null: no top). */
-    readonly approverCovers: (action: string, group: ApproverGroup, top: number | null) => boolean
+    readonly approverCovers: (action: string, group: ApproverGroup, top: AmountTop) => boolean
     /** Whether the group still holds at least one active seat. */
     readonly groupHasPeople: (group: ApproverGroup) => boolean
     /** Whether the agent faces customers. */
