@@ -26,6 +26,7 @@ import {
     DetailDrawer,
     GraphCanvasBand,
     GraphHeadBand,
+    GraphModeBand,
     InspectorBand,
     ProblemsBand,
     TabsBand,
@@ -126,7 +127,6 @@ const SetupBand = (props: AgentSetupPanesBaseProps) =>
             gates={view.gates}
             checklistLabel={props.props.copy.checklistLabel}
             isSkeleton={isSkeleton}
-            onApply={props.on.apply}
         >
             <AgentSetupChecklist view={view} isSkeleton={isSkeleton} copy={props.props.copy} on={props.on} />
             <SetupDraftCard {...view.draft} isSkeleton={isSkeleton} />
@@ -202,6 +202,7 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                     <PaneSection scroll={{ label: copy.paneLabel }} gap="section">
                         <ProblemsBand {...props} />
                         <GraphCanvasBand {...props} />
+                        <GraphModeBand {...props} />
                         <SetupBand {...props} />
                     </PaneSection>
                 </Pane>

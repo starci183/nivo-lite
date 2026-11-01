@@ -82,6 +82,8 @@ export interface KnowledgeAddBaseProps {
         readonly description: string
         readonly closeLabel: string
         readonly submitLabel: string
+        /** Why the add is off (nobody chose who reads it yet); empty when it is on. */
+        readonly submitBlocked: string
         readonly cancelLabel: string
         readonly failTitle: string
         readonly isOpen: boolean
@@ -150,6 +152,7 @@ const KnowledgeAddDrawer = (props: KnowledgeAddBaseProps) => (
             <DrawerFooter
                 cancelLabel={props.props.cancelLabel}
                 submitLabel={props.props.submitLabel}
+                submitBlocked={props.props.submitBlocked}
                 isPending={props.props.isBusy}
                 onCancel={props.on.close}
                 onSubmit={props.on.submit}

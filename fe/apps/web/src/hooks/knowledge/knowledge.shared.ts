@@ -2,6 +2,7 @@ import type { useFormatter, useTranslations } from "next-intl"
 import type { ModuleKey } from "@/modules/catalog"
 import { AGENT_MODULES, batchBytesOf, queueRowOf } from "@/modules/documents"
 import type { UsageView } from "@/modules/documents"
+import type { DocumentVisibility } from "@/modules/types"
 import type { AddMode, useAddDocuments } from "./useAddDocuments"
 import type { useAddInstances } from "./useAddInstances"
 import type { AddPreset } from "./useBatchOptions"
@@ -133,13 +134,21 @@ const buildOptionsView = (
 const buildVisibilityView = (t: Translate, options: ReturnType<typeof useAddDocuments>["options"]) =>
     ({
         label: t("fieldVisibility"),
-        consequence: t(options.visibility === "public" ? "visPublicNote" : "visInternalNote"),
+        consequence: visibilityNoteOf(t, options.visibility, options.suggested),
         value: options.visibility,
         options: [
             { id: "public", label: t("visPublic") },
             { id: "internal", label: t("visInternal") },
         ],
     }) as const
+
+/** What the choice means for the answers; before a choice it says what the chatbot reads and what NIVO suggests. */
+const visibilityNoteOf = (t: Translate, chosen: DocumentVisibility | null, suggested: DocumentVisibility | null): string => {
+    if (chosen === "public") return t("visPublicNote")
+    if (chosen === "internal") return t("visInternalNote")
+    if (suggested === null) return t("visNoneNote")
+    return `${t("visNoneNote")} ${t(suggested === "public" ? "visSuggestPublic" : "visSuggestInternal")}`
+}
 
 /** What the view of the drawer is built from. */
 interface ViewContext {
@@ -162,6 +171,7 @@ export const buildAddDocumentsView = ({ t, formatter, props, add, canWrite, inst
         description: t("drawerHint"),
         closeLabel: t("addCancel"),
         submitLabel: submitLabelOf(t, add),
+        submitBlocked: add.isDone || add.options.visibility !== null ? "" : t("visNeeded"),
         cancelLabel: t("addCancel"),
         failTitle: t("saveFailed"),
         readOnlyNote: canWrite ? undefined : props.readOnlyNote,

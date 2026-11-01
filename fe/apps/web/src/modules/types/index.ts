@@ -35,6 +35,7 @@ export type {
     AgentGraphDecideEditorView,
     AgentGraphDetailView,
     AgentGraphHeadView,
+    AgentGraphModeView,
     AgentGraphOptionView,
     AgentGraphPanelView,
     AgentGraphProblemsView,

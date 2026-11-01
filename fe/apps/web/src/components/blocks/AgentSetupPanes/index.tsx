@@ -129,7 +129,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
     const { canEdit } = useAgentRights()
     const { slot, reload } = useSetupState(props.installationId)
     const side = useSetupSide(props.module, props.installationId)
-    const graph = useAgentGraphPanel(props.installationId)
+    const graph = useAgentGraphPanel(props.installationId, side.setup)
     const versions = useSetupVersions(props.installationId).items?.versions ?? NO_VERSIONS
     const state = slot.items
     const sessionId = state?.session.id ?? ""

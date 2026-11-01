@@ -71,10 +71,8 @@ export const useSetupSide = (module: string, installationId: string) => {
             evidencePlaceholder: t("evidencePlaceholder"),
             isGating: gatesState.isGating,
             ...gatesLabelsOf(t),
-            applyLabel: applyLabelOf(t, gatesState.isApplying, progress.isReady, progress.total),
             isApplying: gatesState.isApplying,
             canApply: progress.isReady && !progress.isUnchanged,
-            applyHint: progress.isReady && progress.isUnchanged ? t("applyUnchanged") : t("applyHint"),
             applyTone: gatesState.applyNote.tone,
             applyTitle: t("apply"),
             applyText:
@@ -94,8 +92,22 @@ export const useSetupSide = (module: string, installationId: string) => {
             versionsSlot.reload()
         },
         on: commandsOf(gatesState),
+        setup: setupOf(progress, gatesState, isLoading),
     }
 }
+
+/** The checklist as the one publish action of the map needs it; while it is read it counts as settled. */
+const setupOf = (
+    progress: ReturnType<typeof setupProgressOf>,
+    gatesState: ReturnType<typeof useSetupGates>,
+    isLoading: boolean,
+) => ({
+    isReady: isLoading || progress.isReady,
+    isChanged: !isLoading && !progress.isUnchanged,
+    missing: progress.total - progress.confirmed,
+    isApplying: gatesState.isApplying,
+    apply: gatesState.apply,
+})
 
 /** The side column as one slot: a failed or forbidden read shows as such, any read still in flight as loading, else the view. */
 const sideSlotOf = (
@@ -106,17 +118,6 @@ const sideSlotOf = (
     if (reads.some((read) => read.isForbidden === true)) return { isForbidden: true }
     if (reads.some((read) => read.isError === true)) return { isError: true }
     return isLoading ? { isLoading: true } : { items: view }
-}
-
-/** The run action: applying, ready to run, or what it still needs ("Let it run (needs 8/8)"). */
-const applyLabelOf = (
-    t: ReturnType<typeof useTranslations<"moduleSetup">>,
-    isApplying: boolean,
-    isReady: boolean,
-    total: number,
-): string => {
-    if (isApplying) return t("applying")
-    return isReady ? t("applyRun") : t("applyNeedsAll", { total })
 }
 
 /** Resolves the gates labels for the current locale. */

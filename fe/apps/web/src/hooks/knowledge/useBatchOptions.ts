@@ -8,7 +8,7 @@ import type { DocumentVisibility } from "@/modules/types"
 /** The module value of the "For" select: a type, or one instance of a type. */
 const INSTANCE_PREFIX = "inst:"
 
-/** Opens the drawer with a topic (and visibility, tags) already chosen: on "Write" for a suggestion, on the files for a dossier. */
+/** Opens the drawer with a topic (and the visibility NIVO suggests, tags) already set: on "Write" for a suggestion, on the files for a dossier. */
 export interface AddPreset {
     readonly topic: string
     readonly visibility?: DocumentVisibility
@@ -22,13 +22,16 @@ export interface AddPreset {
 interface Options {
     readonly topic: string
     readonly tags: string
-    readonly visibility: DocumentVisibility
+    /** Who reads the batch; null until the owner chooses, there is no default. */
+    readonly visibility: DocumentVisibility | null
     readonly module: AgentModule | "all"
     readonly instanceId: string | null
 }
 
 /** What the batch options give the drawer. */
 interface BatchOptions extends Options {
+    /** What NIVO suggests for this batch (a hint beside the choice, never preselected); null when it has no opinion. */
+    readonly suggested: DocumentVisibility | null
     /** The value the "For" select shows. */
     readonly moduleValue: string
     readonly setTopic: (value: string) => void
@@ -44,7 +47,7 @@ export const useBatchOptions = (preset: AddPreset | null, instances: ReadonlyArr
     const [options, setOptions] = useState<Options>({
         topic: preset?.topic ?? "",
         tags: preset?.tags ?? "",
-        visibility: preset?.visibility ?? "public",
+        visibility: null,
         module: "all",
         instanceId: null,
     })
@@ -59,6 +62,7 @@ export const useBatchOptions = (preset: AddPreset | null, instances: ReadonlyArr
     }
     return {
         ...options,
+        suggested: preset?.visibility ?? null,
         moduleValue: options.instanceId === null ? options.module : `${INSTANCE_PREFIX}${options.instanceId}`,
         setTopic: (topic) => setOptions((now) => ({ ...now, topic: topic.slice(0, 80) })),
         setTags: (tags) => setOptions((now) => ({ ...now, tags })),
@@ -70,7 +74,8 @@ export const useBatchOptions = (preset: AddPreset | null, instances: ReadonlyArr
                 .split(",")
                 .map((tag) => tag.trim())
                 .filter(Boolean),
-            visibility: options.visibility,
+            // The add stays disabled until the owner chooses, so a batch never leaves without a choice; internal is the narrower reader.
+            visibility: options.visibility ?? "internal",
             module: options.module === "all" ? null : options.module,
             installationId: options.instanceId,
         }),

@@ -8,6 +8,12 @@ import type { DriveVisibility } from "./useDriveChoose"
 /** The visibility a radio value stands for; a value that is not one keeps the safer, internal one. */
 const visibilityOf = (value: string): DriveVisibility => (value === "public" ? "public" : "internal")
 
+/** What the chosen audience means, or, before a choice, what the chatbot reads: nothing is preselected. */
+const visibilityHelpOf = (t: ReturnType<typeof useTranslations<"driveConnection">>, value: DriveVisibility | null): string => {
+    if (value === null) return t("visNoneHelp")
+    return value === "internal" ? t("visInternalHelp") : t("visPublicHelp")
+}
+
 /**
  * The choose step of Google Drive in the words of the reader, for the page and the hub wizard alike: what the composite draws, and the
  * commands behind it. A file NIVO cannot read stays in the list, unticked, with the reason under its name.
@@ -55,7 +61,7 @@ export const useDriveChooserView = () => {
                               : {}),
                           visibility: {
                               label: t("visibilityLabel"),
-                              description: choose.visibility === "internal" ? t("visInternalHelp") : t("visPublicHelp"),
+                              description: visibilityHelpOf(t, choose.visibility),
                               value: choose.visibility,
                               options: [
                                   { value: "internal", label: t("visInternal") },
@@ -65,7 +71,7 @@ export const useDriveChooserView = () => {
                           add: {
                               label: t("add", { count: ticked }),
                               isPending: choose.isAdding,
-                              isDisabled: ticked === 0,
+                              isDisabled: ticked === 0 || choose.visibility === null,
                           },
                       },
                   }),

@@ -34,10 +34,8 @@ export interface SetupSideGates {
     readonly editLabel: string
     readonly editSaveLabel: string
     readonly editCancelLabel: string
-    readonly applyLabel: string
     readonly isApplying: boolean
     readonly canApply: boolean
-    readonly applyHint: string
     readonly applyTone: "idle" | "applied"
     readonly applyTitle: string
     readonly applyText: string

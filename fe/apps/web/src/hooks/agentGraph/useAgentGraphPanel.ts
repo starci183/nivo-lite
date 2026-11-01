@@ -14,6 +14,7 @@ import {
 } from "@/modules/agent-graph"
 import type { AgentGraphAction, AgentGraphPanelView } from "@/modules/types"
 import { performAgentGraphAction } from "./agentGraph.shared"
+import type { AgentGraphSetup } from "./agentGraph.shared"
 import { useAgentGraphCommands } from "./useAgentGraphCommands"
 import { useAgentGraphRead } from "./useAgentGraphRead"
 import { useAgentGraphUi } from "./useAgentGraphUi"
@@ -25,7 +26,7 @@ import { useAgentGraphWrites } from "./useAgentGraphWrites"
  * the seven answers of the selected node, the editor of a decision point, the problems, the proposals and the history. Words are
  * resolved here; the person may edit when they are an owner or manager, and only the owner adds what widens the reach of the agent.
  */
-export const useAgentGraphPanel = (installationId: string) => {
+export const useAgentGraphPanel = (installationId: string, setup: AgentGraphSetup) => {
     const t = useTranslations("agentGraph")
     const { canEdit, canGrant } = useAgentRights()
     const [changes, setChanges] = useState(0)
@@ -33,8 +34,8 @@ export const useAgentGraphPanel = (installationId: string) => {
     const writes = useAgentGraphWrites((isDraftEmpty) => setChanges((count) => (isDraftEmpty ? 0 : count + 1)))
     const state = useAgentGraphUi(graph.runId)
     const words = useAgentGraphWords(t)
-    const commands = useAgentGraphCommands({ read: graph.read, state, writes, canGrant, changes })
-    const ctx = { t, canEdit, isOwner: canGrant, amount: words.amount }
+    const commands = useAgentGraphCommands({ read: graph.read, state, writes, canGrant, changes, setup })
+    const ctx = { t, canEdit, isOwner: canGrant, amount: words.amount, setup }
     const phoneAreas = phoneAreasOf(state.ui.phoneView, state.ui.sideTab)
     return {
         props: {
