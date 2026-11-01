@@ -1,12 +1,12 @@
 export { allGatesConfirmed, gateEntry, gateHint, gateLabel, gatesOf, snapshotOf } from "./installations.gates"
 export { cleanInstanceName, instanceNameKey, instancesOf, nextInstanceName } from "./installations.instances"
 export {
-    AGENT_STATUS_TONE,
     installationPersonName,
     agentLifecycleOf,
     agentLifecycleTone,
     agentSubtitleOf,
-    agentStatusOf,
+    isSetupPending,
+    setupLabelKey,
     foldText,
     installationLifecycleOf,
 } from "./installations.status"
@@ -20,6 +20,7 @@ export type {
     GateStatus,
     Installation,
     InstallationConnectionNeed,
+    InstallationLifecycle,
     InstallationStatus,
     OperatingMode,
     SetupFact,

@@ -1,4 +1,5 @@
-import type { Installation } from "@/modules/installations"
+import { agentHref, isSetupPending } from "@/modules/installations"
+import type { Installation, InstallationLifecycle } from "@/modules/installations"
 import type { ConnectionStatus } from "@/modules/types"
 
 /** The longest name of an agent. */
@@ -131,7 +132,13 @@ export interface AgentInstallationView {
     readonly isMulti: boolean
     readonly mode: AgentMode
     readonly isLive: boolean
-    /** A context version was applied. */
+    /** The one state of the agent, as the back end names it. */
+    readonly lifecycle: InstallationLifecycle
+    /** The agent has no applied setup yet (not set up or being set up): it cannot be switched on. */
+    readonly isSetupPending: boolean
+    /** The Setup tab of the agent: where every not-ready state sends the owner. */
+    readonly setupHref: string
+    /** A context version was applied: the same truth as the lifecycle, never read apart from it. */
     readonly hasVersion: boolean
     readonly timeoutSec: number
     readonly holdingMessage: string
@@ -147,7 +154,10 @@ export const toAgentInstallationView = (installation: Installation): AgentInstal
     isMulti: installation.isMulti,
     mode: installation.operatingMode,
     isLive: installation.lifecycle === "running",
-    hasVersion: installation.activeContextVersionId !== null,
+    lifecycle: installation.lifecycle,
+    isSetupPending: isSetupPending(installation.lifecycle),
+    setupHref: agentHref(installation.moduleKey, installation.id),
+    hasVersion: !isSetupPending(installation.lifecycle),
     timeoutSec: replyTimeoutOf(installation.settings),
     holdingMessage: holdingMessageOf(installation.settings),
 })

@@ -47,7 +47,7 @@ export class ModuleInstallationType {
     status!: string
 
     /**
-     * What the product may say, derived from the facts: `needs_setup` (no applied version), `needs_connection`, `paused`, `ready`
+     * What the product may say, derived from the facts: `needs_setup` (no applied version, nothing confirmed yet), `setting_up` (no applied version, some gates confirmed), `needs_connection`, `paused`, `ready`
      * (applied, not switched on), `running` (applied, connected and switched on) or `removed` (uninstalled, history only). Show "running" only for `running`.
      */
     @Field()

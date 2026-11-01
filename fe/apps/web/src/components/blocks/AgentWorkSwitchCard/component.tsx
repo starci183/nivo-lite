@@ -37,6 +37,7 @@ const switchOf = (
     statusLabel: view.statusLabel,
     help: base.props.help,
     blocker: "",
+    blockerAction: null,
     quiet: view.canChange ? "" : base.props.ownerOnly,
 })
 

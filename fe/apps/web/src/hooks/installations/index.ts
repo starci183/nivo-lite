@@ -1,5 +1,6 @@
 export { carriedQuery, moduleGlyphOf, operatingModeOf } from "./installations.shared"
 export type { ModuleKey } from "@/modules/catalog"
+export { agentLifecycleTone, isSetupPending, setupLabelKey } from "@/modules/installations"
 export type { AgentTab } from "@/modules/installations"
 export { useAddInstance } from "./useAddInstance"
 export { useAgentRecordRoute } from "./useAgentRecordRoute"

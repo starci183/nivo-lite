@@ -6,6 +6,7 @@ import type {
     AgentGraphPhoneView,
     AgentGraphSideTab,
 } from "@/modules/types"
+import { isSetupPending } from "@/modules/installations"
 import { cardLineWithChannels } from "./agent-graph-channels"
 import { flowEdgesOf, flowNodesOf, layerHeadersOf } from "./agent-graph-flow"
 import { problemLinesOf } from "./agent-graph-problems"
@@ -33,13 +34,24 @@ export interface AgentGraphUi {
     readonly isPublishing: boolean
 }
 
-/** Where the graph stands, in one line: the draft or the running version, then what is left to settle. */
+/**
+ * The first words of the status line. An agent that is not set up never claims a running version, whatever version the graph holds:
+ * it says the one state of the agent. Otherwise the draft or the running version.
+ */
+const leadOf = (data: AgentGraphData, ctx: AgentGraphContext): string => {
+    const { t } = ctx
+    if (isSetupPending(ctx.lifecycle) || (ctx.lifecycle !== null && data.activeVersion === 0 && data.changes === 0)) {
+        return ctx.lifecycleLabel
+    }
+    return data.changes > 0
+        ? t("statusDraft", { count: data.changes })
+        : t("statusVersion", { version: data.activeVersion })
+}
+
+/** Where the graph stands, in one line: the state, the draft or the running version, then what is left to settle. */
 const statusOf = (data: AgentGraphData, ctx: AgentGraphContext): string => {
     const { t } = ctx
-    const lead =
-        data.changes > 0
-            ? t("statusDraft", { count: data.changes })
-            : t("statusVersion", { version: data.activeVersion })
+    const lead = leadOf(data, ctx)
     const conflicts = data.proposals.filter((proposal) => proposal.kind === "conflict").length
     const learned = data.proposals.length - conflicts
     if (data.problems.length > 0) return `${lead} · ${t("statusProblems", { count: data.problems.length })}`
@@ -48,7 +60,7 @@ const statusOf = (data: AgentGraphData, ctx: AgentGraphContext): string => {
     if (learned > 0) return `${lead} · ${t("statusLearned", { count: learned })}`
     if (ctx.setup.isReady && ctx.setup.isChanged) return `${lead} · ${t("statusSetupChanged")}`
     if (!ctx.setup.isReady) return `${lead} · ${t("statusSetupMissing", { count: ctx.setup.missing })}`
-    return `${lead} · ${t("statusClear")}`
+    return isSetupPending(ctx.lifecycle) ? lead : `${lead} · ${t("statusClear")}`
 }
 
 /** Why the draft cannot be published, in words: what is wrong first; empty when it can be. */

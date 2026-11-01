@@ -1,4 +1,5 @@
 import type { useFormatter, useTranslations } from "next-intl"
+import type { InstallationLifecycle } from "@/modules/installations"
 import type { AgentWorkPreset } from "@/modules/types"
 
 /** The translator of the Work tab. */
@@ -100,8 +101,10 @@ export interface AgentWorkContext {
     readonly format: AgentWorkFormatter
     /** The moment the data was answered, so a relative time reads against it. */
     readonly now: number
-    /** The installation is paused: it stops a turn at the gate whatever the switches say. */
-    readonly isPaused: boolean
+    /** The one state of the installation (the lifecycle the back end names); null until it is read. */
+    readonly lifecycle: InstallationLifecycle | null
+    /** That state in words: the label every other screen shows for it. */
+    readonly lifecycleLabel: string
     /** The whole workspace has work switched off. */
     readonly isWorkspaceOff: boolean
     readonly canEdit: boolean
