@@ -9,7 +9,10 @@ import {
 } from "@modules/domain/mcp-gateway"
 import type { GatewayCaller, GatewayJson } from "@modules/domain/mcp-gateway"
 import { parseJsonText } from "@modules/platform/primitives"
+import { toolResultOf } from "@modules/domain/intent-contracts"
 import { AgentWriteRightService } from "./agent-write-right.service"
+import { intentScopeOf, writesOf } from "./intent-turn.policy"
+import { IntentTurnService } from "./intent-turn.service"
 import { internalCallSchema } from "./internal-gateway-tools.schema"
 
 /** How many tools a search answers when the agent names no limit. */
@@ -29,12 +32,15 @@ const argumentsOf = (value: string | undefined): GatewayJson | null => {
  * turn's own agent, so its grants, the approved schemas, the breaker and the audit apply, and the tools marked `internalOnly` appear
  * because the call has no conversation. A turn that does have one (a customer turn that reaches this door) carries it, so the gateway hides them from it. A background turn reads only: a write is refused and the agent proposes an action instead, which
  * a person decides. A tag turn may write only when the colleague who wrote it is an owner or a manager. A call the grants hold for a
- * person is not opened as an approval from here: the agent hears `approval_required` and proposes an action for it.
+ * person is not opened as an approval from here: the agent hears `approval_required` and proposes an action for it. On the contract pipeline a
+ * write is refused with `needs_own_turn` unless the turn is pinned to the intent that owns it, and the result of a call reaches the model
+ * as marked data.
  */
 export class InternalGatewayToolsService implements InternalTools {
     constructor(
         private readonly gateway: McpGatewayService,
         private readonly right: AgentWriteRightService,
+        private readonly intents: IntentTurnService,
     ) {}
 
     /** Runs one meta-tool for the turn's agent. */
@@ -79,14 +85,15 @@ export class InternalGatewayToolsService implements InternalTools {
         if (callArgs === null) return { error: "invalid_arguments", detail: "arguments_json is not a JSON object" }
         const described = await this.gateway.describe(caller, name)
         if (described === null) return { error: "not_granted_or_unknown" }
-        if (
-            described.scope !== "read" &&
-            !(await this.right.mayWrite(turn.source, turn.authorUserId, turn.workspaceId))
-        )
+        const writes = writesOf(described.scope)
+        if (writes && !(await this.right.mayWrite(turn.source, turn.authorUserId, turn.workspaceId)))
             return { error: "read_only_turn" }
+        const scope = intentScopeOf(turn)
+        const pipeline = await this.intents.pipelineOf(scope)
+        if (pipeline && writes && scope.pinned === null) return { error: "needs_own_turn" }
         const opKey = `${turn.wakeId}:${name}:${argsHashOf(callArgs).slice(0, 16)}`
         const result = await this.gateway.call({ ...caller, opKey }, name, callArgs)
-        if (result.ok) return { result: result.value }
+        if (result.ok) return { result: pipeline ? toolResultOf(result.value) : result.value }
         if (result.code === "approval_required") return { error: "approval_required", reason: result.reason }
         return { error: result.code, detail: result.detail }
     }

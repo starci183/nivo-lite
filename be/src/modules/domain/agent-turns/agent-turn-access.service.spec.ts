@@ -87,6 +87,7 @@ describe("AgentTurnAccessService.admit", () => {
             source: "tag",
             conversationId: null,
             authorUserId: "user-9",
+            pinnedIntent: null,
         })
         expect(service.runningOn).toHaveBeenCalledWith(RUNTIME)
     })
@@ -102,6 +103,12 @@ describe("AgentTurnAccessService.admit", () => {
             source: "customer",
             authorUserId: null,
         })
+    })
+
+    it("carries the intent a split turn is pinned to, read from its wake and never from the model", async () => {
+        const { access } = await build([running({ context: { room: "sales", intent: "confirm_order" } })])
+
+        await expect(access.admit(credential())).resolves.toMatchObject({ pinnedIntent: "confirm_order" })
     })
 
     it("uses the wake as the job of a customer turn that carries no message", async () => {

@@ -6,6 +6,11 @@ import { AgentTurnAccessService } from "./agent-turn-access.service"
 import { AgentTurnExecutorService } from "./agent-turn-executor.service"
 import { AgentWriteRightService } from "./agent-write-right.service"
 import { AGENT_TURN_RUNNER } from "./agent-turns.decorators"
+import { IntentPipelineService } from "./intent-pipeline.service"
+import { IntentSplitService } from "./intent-split.service"
+import { IntentStepHandlersService } from "./intent-step-handlers.service"
+import { IntentTagDoorStepService } from "./intent-tag-door-step.service"
+import { IntentTurnService } from "./intent-turn.service"
 import { InternalGatewayToolsService } from "./internal-gateway-tools.service"
 import { InternalProposalSettlerService } from "./internal-proposal-settler.service"
 import { InternalTurnContextService } from "./internal-turn-context.service"
@@ -17,7 +22,8 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-turns.module-defi
 /**
  * One turn of an agent on the runtime: the runner behind the replaceable seam, the executor the drain calls (the gates of quota,
  * breaker and the background cap, then the model, then the meter), the context and the proposal of a tag or background turn, and the
- * door that finds the running turn of a tool call from the OpenClaw bridge plugin. It binds the turn executor the agent-work drain
+ * door that finds the running turn of a tool call from the OpenClaw bridge plugin, and the contract pipeline a customer's message and a tag
+ * share (the contracts of the turn, the prompt and reading built from them, the steps of its run, and the split of an intent that runs alone). It binds the turn executor the agent-work drain
  * waits for, and leaves the action graph's brief and the handlers of each source to the capabilities that own them.
  */
 export class AgentTurnsModule extends ConfigurableModuleClass {
@@ -29,6 +35,11 @@ export class AgentTurnsModule extends ConfigurableModuleClass {
             AgentTurnBriefService,
             AgentTurnAccessService,
             AgentWriteRightService,
+            IntentPipelineService,
+            IntentSplitService,
+            IntentStepHandlersService,
+            IntentTagDoorStepService,
+            IntentTurnService,
             InternalGatewayToolsService,
             InternalProposalSettlerService,
             InternalTurnContextService,

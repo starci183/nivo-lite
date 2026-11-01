@@ -3,7 +3,9 @@ import { mock } from "@starci/jest-preset"
 import type { BridgeTurn } from "@modules/domain/agent-tools"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import type { GatewayCallResult } from "@modules/domain/mcp-gateway"
+import { toolResultOf } from "@modules/domain/intent-contracts"
 import { AgentWriteRightService } from "./agent-write-right.service"
+import { IntentTurnService } from "./intent-turn.service"
 import { InternalGatewayToolsService } from "./internal-gateway-tools.service"
 
 const turn = (over: Partial<BridgeTurn> = {}): BridgeTurn => ({
@@ -37,12 +39,14 @@ interface Options {
     readonly described?: Described | null
     readonly result?: GatewayCallResult
     readonly mayWrite?: boolean
+    readonly pipeline?: boolean
 }
 
 const build = async ({
     described = READ,
     result = { ok: true, value: { rows: 2 } },
     mayWrite = true,
+    pipeline = false,
 }: Options = {}) => {
     const gateway = mock<McpGatewayService>({
         search: jest.fn(() => Promise.resolve([READ])),
@@ -50,14 +54,16 @@ const build = async ({
         call: jest.fn(() => Promise.resolve(result)),
     })
     const right = mock<AgentWriteRightService>({ mayWrite: jest.fn(() => Promise.resolve(mayWrite)) })
+    const intents = mock<IntentTurnService>({ pipelineOf: jest.fn(() => Promise.resolve(pipeline)) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             InternalGatewayToolsService,
+            { provide: IntentTurnService, useValue: intents },
             { provide: McpGatewayService, useValue: gateway },
             { provide: AgentWriteRightService, useValue: right },
         ],
     }).compile()
-    return { tools: moduleRef.get(InternalGatewayToolsService), gateway, right }
+    return { tools: moduleRef.get(InternalGatewayToolsService), gateway, right, intents }
 }
 
 describe("InternalGatewayToolsService > search and describe", () => {
@@ -212,6 +218,67 @@ describe("InternalGatewayToolsService > what the gateway answers", () => {
         await expect(tools.run(turn(), "tool.call", { name: READ.name })).resolves.toEqual({
             error: "not_granted",
             detail: "no grant",
+        })
+    })
+})
+
+describe("InternalGatewayToolsService > the contract pipeline", () => {
+    const tagTurn = (over: Partial<BridgeTurn> = {}): BridgeTurn =>
+        turn({ source: "tag", authorUserId: "user-1", ...over })
+
+    it("asks whether the turn is on the pipeline with the scope of the turn row", async () => {
+        const { tools, intents } = await build({ pipeline: true })
+
+        await tools.run(tagTurn({ pinnedIntent: "confirm_order" }), "tool.call", { name: READ.name })
+
+        expect(intents.pipelineOf).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            source: "tag",
+            authorUserId: "user-1",
+            pinned: "confirm_order",
+        })
+    })
+
+    it("refuses a write of a turn that is not pinned: the write waits for a turn of its own", async () => {
+        const { tools, gateway } = await build({ described: WRITE, pipeline: true })
+
+        await expect(tools.run(tagTurn(), "tool.call", { name: WRITE.name })).resolves.toEqual({
+            error: "needs_own_turn",
+        })
+        expect(gateway.call).not.toHaveBeenCalled()
+    })
+
+    it("lets the turn pinned to an intent write", async () => {
+        const { tools, gateway } = await build({ described: WRITE, pipeline: true })
+
+        await expect(
+            tools.run(tagTurn({ pinnedIntent: "pay_supplier" }), "tool.call", { name: WRITE.name }),
+        ).resolves.toEqual({ result: toolResultOf({ rows: 2 }) })
+        expect(gateway.call).toHaveBeenCalledTimes(1)
+    })
+
+    it("lets an unpinned turn read, and hands the result over as marked data", async () => {
+        const { tools } = await build({ pipeline: true })
+
+        await expect(tools.run(tagTurn(), "tool.call", { name: READ.name })).resolves.toEqual({
+            result: toolResultOf({ rows: 2 }),
+        })
+    })
+
+    it("keeps the refusal of a person who may not write ahead of the one for a turn of its own", async () => {
+        const { tools } = await build({ described: WRITE, pipeline: true, mayWrite: false })
+
+        await expect(tools.run(tagTurn(), "tool.call", { name: WRITE.name })).resolves.toEqual({
+            error: "read_only_turn",
+        })
+    })
+
+    it("leaves a turn with no contracts exactly as it was: a write goes through and the result is not wrapped", async () => {
+        const { tools } = await build({ described: WRITE, pipeline: false })
+
+        await expect(tools.run(tagTurn(), "tool.call", { name: WRITE.name })).resolves.toEqual({
+            result: { rows: 2 },
         })
     })
 })

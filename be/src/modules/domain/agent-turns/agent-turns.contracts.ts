@@ -1,7 +1,16 @@
 import type { Installation } from "@modules/domain/agents"
+import type {
+    IntentAudience,
+    IntentContract,
+    IntentGapText,
+    IntentTrace,
+    IntentTrigger,
+    SafeRoadCause,
+    TurnContracts,
+} from "@modules/domain/intent-contracts"
 import type { SubjectType } from "@modules/domain/work-items"
 import type { RunUsage } from "@modules/integrations/openclaw"
-import type { AgentWakeSource } from "@modules/domain/agent-work"
+import type { AgentTurnView, AgentWakeSource } from "@modules/domain/agent-work"
 import type { Locale } from "@modules/platform/i18n"
 
 /** One turn to run on the runtime. */
@@ -102,6 +111,10 @@ export interface InternalTurnInput {
     readonly locale: Locale
     /** The words of the wake: a colleague's line, an event or a probe's brief. They are data, not instructions. */
     readonly text: string
+    /** The turn this context is for; with the agent's name it lets the context be the contract prompt when the graph holds contracts. */
+    readonly wake?: AgentTurnView
+    /** The agent's display name, the one trusted line of the contract prompt. */
+    readonly agentName?: string
 }
 
 /** What came of one action of a proposal. */
@@ -109,22 +122,38 @@ export type InternalActionResult =
     | { readonly index: number; readonly action: string; readonly outcome: "requested"; readonly workItemId: string }
     | { readonly index: number; readonly action: string; readonly outcome: "dropped"; readonly reason: string }
 
+/** A proposal the settler applied. */
+export interface SettledProposal {
+    /** It was applied. */
+    readonly kind: "settled"
+    /** What to say. */
+    readonly reply: string
+    /** True when the model wants a person. */
+    readonly needsHuman: boolean
+    /** Why. */
+    readonly reason: string
+    /** How many task changes were applied. */
+    readonly tasks: number
+    /** What came of each action. */
+    readonly actions: ReadonlyArray<InternalActionResult>
+    /** The trace of a turn on the contract pipeline, as a member of the turn's outcome; absent on a turn without contracts. */
+    readonly traced?: IntentTraced
+}
+
+/** The lease had moved on, so nothing was written or requested. */
+export interface StaleProposal {
+    /** It was not applied. */
+    readonly kind: "stale"
+}
+
 /** What the settler did with a proposal. */
-export type InternalSettled =
-    | { readonly kind: "stale" }
-    | {
-          readonly kind: "settled"
-          /** What to say. */
-          readonly reply: string
-          /** True when the model wants a person. */
-          readonly needsHuman: boolean
-          /** Why. */
-          readonly reason: string
-          /** How many task changes were applied. */
-          readonly tasks: number
-          /** What came of each action. */
-          readonly actions: ReadonlyArray<InternalActionResult>
-      }
+export type InternalSettled = StaleProposal | SettledProposal
+
+/** The trace of a pipeline turn, named as the member of the outcome it becomes. */
+export interface IntentTraced {
+    /** The trace. */
+    readonly intent: IntentTrace
+}
 
 /** What the settler needs to know about the turn besides the proposal. */
 export interface InternalSettleInput {
@@ -152,3 +181,153 @@ export type OptionalReadiness = string | null
 
 /** The installation of an agent, or none. */
 export type OptionalRunningInstallation = Installation | null
+
+/** What a turn on the contract pipeline settles against: the version, the trigger, the audience and the contracts it was offered. */
+export interface IntentPlan {
+    /** The published version the contracts came from. */
+    readonly versionId: string
+    /** What started the turn. */
+    readonly trigger: IntentTrigger
+    /** Who the turn answers to. */
+    readonly audience: IntentAudience
+    /** The intent a split turn is pinned to, or null on a first turn. */
+    readonly pinned: string | null
+    /** The contracts the turn may pick from: one when pinned. */
+    readonly contracts: ReadonlyArray<IntentContract>
+}
+
+/** What the pipeline needs to know about a wake to find the contracts of its turn. */
+export interface IntentScope {
+    /** The workspace of the agent. */
+    readonly workspaceId: string
+    /** The agent. */
+    readonly agentId: string
+    /** What woke the agent. */
+    readonly source: AgentWakeSource
+    /** The account that wrote the tagging message, or null: it decides the audience of a tag. */
+    readonly authorUserId: string | null
+    /** The intent a split turn is pinned to, or null. */
+    readonly pinned: string | null
+}
+
+/** The plan of a pipeline turn with the prompt built from it. */
+export interface IntentTurnPlan extends IntentPlan {
+    /** The whole message of the turn. */
+    readonly prompt: string
+}
+
+/** The turn and wake a proposal settles for: what a stored step row carries, so a step can settle from the row alone. */
+export interface InternalWakeRef {
+    /** The workspace of the agent. */
+    readonly workspaceId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The wake. */
+    readonly wakeId: string
+    /** The turn row. */
+    readonly turnId: string
+    /** What woke the agent. */
+    readonly source: AgentWakeSource
+    /** The account that wrote the tagging message, or null. */
+    readonly authorUserId: string | null
+}
+
+/** What the model's text came to, as a step row keeps it: the result of a picked intent is the text a door reads. */
+export type IntentReadingRow =
+    | {
+          /** One intent, its result valid. */
+          readonly kind: "picked"
+          /** The contract. */
+          readonly contract: IntentContract
+          /** The result, as JSON text. */
+          readonly resultText: string
+          /** The members dropped because another intent owns them. */
+          readonly dropped: ReadonlyArray<string>
+      }
+    | {
+          /** An intent that runs alone was picked. */
+          readonly kind: "split"
+          /** The contract. */
+          readonly contract: IntentContract
+      }
+    | {
+          /** The turn cannot go on. */
+          readonly kind: "safe"
+          /** Why. */
+          readonly cause: SafeRoadCause
+          /** The code of what failed. */
+          readonly detail: string
+          /** The intent, when one was picked. */
+          readonly intent: string | null
+          /** The question nothing fits, when the cause is `no_intent`. */
+          readonly gap: IntentGapText | null
+          /** The text a person may reuse as a draft, or empty. */
+          readonly draft: string
+      }
+
+/** What a turn read came to. */
+export interface IntentRead {
+    /** The reading of the model's text. */
+    readonly reading: IntentReadingRow
+    /** The trace that goes on the turn's outcome. */
+    readonly trace: IntentTrace
+}
+
+/** The wake and turn a door acts for, as a step row keeps it. */
+export interface WakeRow {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The lock scope. */
+    readonly scopeKey: string
+    /** The wake. */
+    readonly wakeId: string
+    /** The turn row. */
+    readonly turnId: string
+    /** What woke the agent. */
+    readonly source: AgentWakeSource
+    /** The fact's key. */
+    readonly eventKey: string
+    /** Ids and flags of the fact. */
+    readonly context: Readonly<Record<string, string | boolean>>
+    /** The member behind the wake. */
+    readonly actorMemberId: string | null
+    /** The attempt. */
+    readonly attempts: number
+    /** The attempts the wake may have. */
+    readonly maxAttempts: number
+    /** When the wake was written, as ISO text. */
+    readonly wakeCreatedAt: string
+}
+
+/** The input of a door step. */
+export interface DoorInput {
+    /** The wake. */
+    readonly wake: WakeRow
+    /** The reading. */
+    readonly reading: IntentReadingRow
+    /** The trace. */
+    readonly trace: IntentTrace
+}
+
+/** What the settler needs of a tag turn to act from a row alone. */
+export interface TagDoorInput extends DoorInput {
+    /** The agent, the actor and the language the proposal is applied under. */
+    readonly settle: InternalSettleInput
+}
+
+/** What a door answers: the members its step stores. */
+export interface IntentDoorResult {
+    /** Any member. */
+    readonly [key: string]: unknown
+}
+
+/** The intent a wake is pinned to, or none. */
+export type OptionalIntent = string | null
+
+/** The contracts of a turn, or none. */
+export type OptionalTurnContracts = TurnContracts | null
+
+/** The plan of a turn on the pipeline, or none. */
+export type OptionalIntentPlan = IntentPlan | null
