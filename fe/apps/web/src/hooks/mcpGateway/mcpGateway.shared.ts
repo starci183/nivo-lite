@@ -1,20 +1,14 @@
 import type { useQueryMcpConnectorsSwr } from "@/hooks/swr"
-import type { useFormatter, useTranslations } from "next-intl"
 import { agentsRowOf } from "@/hooks/mcpGrants"
 import type { McpToolAgentsOf, McpToolAgentsView } from "@/hooks/mcpGrants"
 import type { McpConnectorCommands } from "./useMcpConnectorCommands"
+import { toolNameOf, toolTextOf } from "@/modules/mcpGateway"
+import type { McpBadgeView, McpFormatter, McpTone, McpTranslator } from "@/modules/mcpGateway"
+
+export type { McpBadgeView, McpFormatter, McpTone, McpTranslator } from "@/modules/mcpGateway"
 
 /** One gateway connector as the `mcpConnectors` read answers it. */
 type McpConnectorType = NonNullable<ReturnType<typeof useQueryMcpConnectorsSwr>["data"]>[number]
-
-/** The tones a gateway badge may take. */
-export type McpTone = "success" | "warning" | "accent" | "neutral" | "danger"
-
-/** One badge of a gateway row. */
-export interface McpBadgeView {
-    readonly label: string
-    readonly tone: McpTone
-}
 
 /** One command button of a connector row. */
 interface McpActionView {
@@ -44,22 +38,11 @@ interface McpConnectorRowView {
     readonly tools: { readonly label: string; readonly rows: ReadonlyArray<McpToolRowView> }
 }
 
-/** The words of the gateway region (the `mcpGateway` catalog). */
-export type McpTranslator = ReturnType<typeof useTranslations<"mcpGateway">>
-/** The reader-locale formatter of dates and numbers. */
-export type McpFormatter = ReturnType<typeof useFormatter>
-
 const STATUS_TONE: ReadonlyMap<string, McpTone> = new Map([
     ["active", "success"],
     ["degraded", "warning"],
 ])
 const SCOPES: ReadonlySet<string> = new Set(["read", "write"])
-
-/** The catalog text of a native tool (`sepay.transactions.list` reads `tool_sepay-transactions-list`; its plain name `toolName_...`), else what its server sent. */
-const toolTextOf = (t: McpTranslator, kind: "tool" | "toolName", id: string, fallback: string): string => {
-    const key = `${kind}_${id.replaceAll(".", "-")}`
-    return t.has(key) ? t(key) : fallback
-}
 
 /** The status words of a connector: the catalog word of a known status, else the status as the gateway named it. */
 const statusOf = (t: McpTranslator, status: string): string =>
@@ -85,7 +68,7 @@ const toolRowsOf = (
     connector.tools.map((tool) => ({
         ...agentsRowOf(agentsOf(tool.name)),
         id: tool.name,
-        title: toolTextOf(t, "toolName", tool.name, tool.name),
+        title: toolNameOf(t, tool.name, new Set(connector.kind === "native" ? [connector.key] : [])),
         description: [scopeOf(t, tool.scope), toolTextOf(t, "tool", tool.name, tool.description)]
             .filter(Boolean)
             .join(" · "),
@@ -176,7 +159,7 @@ export const connectorRowsOf = (
     connectors.map((connector) => ({
         id: connector.key,
         title: connectorTitleOf(t, connector.key, connector.name),
-        description: `${connector.key}.* · ${timesOf(t, format, connector)}`,
+        description: timesOf(t, format, connector),
         badges: [
             { label: statusOf(t, connector.status), tone: STATUS_TONE.get(connector.status) ?? "neutral" },
             { label: connector.kind === "native" ? t("native") : t("remote"), tone: "accent" },

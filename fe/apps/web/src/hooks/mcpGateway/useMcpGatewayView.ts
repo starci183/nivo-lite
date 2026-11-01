@@ -9,6 +9,7 @@ import {
 import { useFormatter, useTranslations } from "next-intl"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { connectorRowsOf } from "./mcpGateway.shared"
+import { argsWordsOf, constraintBadgesOf, modeWordOf, outcomeWordOf, toolNameOf } from "@/modules/mcpGateway"
 import type { McpBadgeView, McpFormatter, McpTone, McpToolRowView, McpTranslator } from "./mcpGateway.shared"
 import { useMcpConnectorCommands } from "./useMcpConnectorCommands"
 import { useMcpConnectorForms } from "./useMcpConnectorForms"
@@ -43,14 +44,15 @@ const grantRowsOf = (
     t: McpTranslator,
     format: McpFormatter,
     grants: ReadonlyArray<McpGrantType>,
+    nativeKeys: ReadonlySet<string>,
 ): ReadonlyArray<McpToolRowView> =>
     grants.map((grant) => ({
         id: `${grant.agentId}:${grant.tool}`,
-        title: grant.tool,
+        title: toolNameOf(t, grant.tool, nativeKeys),
         description: grant.agentName,
         badges: [
-            { label: grant.mode, tone: MODE_TONE.get(grant.mode) ?? "neutral" },
-            ...(grant.constraintsJson === "[]" ? [] : [plain(grant.constraintsJson)]),
+            { label: modeWordOf(t, grant.mode), tone: MODE_TONE.get(grant.mode) ?? "neutral" },
+            ...constraintBadgesOf(t, grant.constraintsJson),
             ...(grant.limitVnd === null ? [] : [plain(t("limitVnd", { amount: format.number(grant.limitVnd) }))]),
         ],
     }))
@@ -60,20 +62,21 @@ const logRowsOf = (
     t: McpTranslator,
     format: McpFormatter,
     lines: ReadonlyArray<McpCallType>,
+    nativeKeys: ReadonlySet<string>,
 ): ReadonlyArray<McpToolRowView> =>
     lines.map((line) => ({
         id: line.id,
-        title: `${line.tool} · ${line.agentName}`,
+        title: `${toolNameOf(t, line.tool, nativeKeys)} · ${line.agentName}`,
         description: [
             format.dateTime(new Date(line.at), { dateStyle: "short", timeStyle: "medium" }),
-            line.argsMasked,
+            argsWordsOf(t, line.argsMasked),
             line.approvedBy === null ? "" : t("approvedBy", { name: line.approvedBy }),
         ]
             .filter(Boolean)
             .join(" · "),
         badges: [
             {
-                label: line.errorCode === null ? line.outcome : `${line.outcome}: ${line.errorCode}`,
+                label: outcomeWordOf(t, line.outcome),
                 tone: OUTCOME_TONE.get(line.outcome) ?? "danger",
             },
             plain(t("duration", { ms: line.durationMs })),
@@ -98,6 +101,7 @@ export const useMcpGatewayView = (enabled: boolean) => {
     const commands = useMcpConnectorCommands(reload)
     const grantCommands = useMcpGrantCommands(grants.data ?? [], () => grants.mutate())
     const forms = useMcpConnectorForms(reload, connectors.data ?? [])
+    const nativeKeys = new Set((connectors.data ?? []).filter((c) => c.kind === "native").map((c) => c.key))
     const held = new Map((grants.data ?? []).map((grant) => [grantKeyOf(grant.agentId, grant.tool), grant.mode]))
     /** Every active agent gets a switch on every tool; on means a grant exists that is not `never`. */
     const agentsOf: McpToolAgentsOf = (tool) => ({
@@ -125,13 +129,13 @@ export const useMcpGatewayView = (enabled: boolean) => {
                 label: t("grants"),
                 emptyMessage: t("grantsEmpty"),
                 emptyDescription: t("grantsEmptyHint"),
-                rows: grantRowsOf(t, format, grants.data ?? []),
+                rows: grantRowsOf(t, format, grants.data ?? [], nativeKeys),
             },
             {
                 label: t("log"),
                 emptyMessage: t("logEmpty"),
                 emptyDescription: t("logEmptyHint"),
-                rows: logRowsOf(t, format, log.data ?? []),
+                rows: logRowsOf(t, format, log.data ?? [], nativeKeys),
             },
         ],
     }
