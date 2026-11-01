@@ -66,7 +66,7 @@ npx --no-install starci app check --wiring
 
 It compiles each real `be/apps/<app>/src/app.module.ts` with `be/src/tests/fixtures/builders/<app>.builder.ts` and resolves
 every provider. Proof is the line `boot wiring: checked, 3 app(s), 0 failure(s)`. `BE_APP_BOOT_PROOF_MISSING` is a failure
-and blocks at any count. `BOOT_PROOF_TIMEOUT` is no verdict: run it again on a quieter host. It writes `.starcistacks/cache/`,
+and blocks at any count. `BOOT_PROOF_TIMEOUT` is no verdict: run it again on a quieter host. It writes the app check cache folder,
 which is tracked, so it never runs in the shared checkout, and that folder is not staged.
 
 **Process boot**, new, because wiring runs no `be/apps/<app>/src/main.ts` and no env reader:
@@ -304,7 +304,7 @@ Touch only your paths (rule 4: two tools never touch the same checkout; a defect
 your branch with the hook on. Never: `eslint-disable`, `ts-ignore`, `as` casts, `--no-verify`, gate edits, stash, `reset --hard`, a
 branch switch in another checkout, `npm install`, `deps source`, `git push`, deploy, a migration on a shared database, opening
 `*.env` or `*.enc*` (LANE-BRIEF; rules 1, 2, 3). TS holds no raw SQL: CRUD through entities, anything else `callDbFunction`. Duplicate
-code is extracted, never reordered to dodge the detector. Do not stage `.starcistacks/cache/`.
+code is extracted, never reordered to dodge the detector. Do not stage the app check cache folder.
 
 Every public method covers its branches and its dependencies' answers (BE-TEST-5), every logic file full coverage (R273), and no owner
 import cycle exists, type-only imports included (R27). Done for a back-end brief means: the
