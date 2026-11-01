@@ -143,6 +143,8 @@ const nodeSchema = z
             .optional(),
         action: z.string().max(100).optional(),
         pipeline: z.string().max(100).optional(),
+        handoverTo: z.string().max(100).optional(),
+        moneySources: z.array(z.string().min(1).max(40)).max(10).optional(),
     })
     .strict()
 

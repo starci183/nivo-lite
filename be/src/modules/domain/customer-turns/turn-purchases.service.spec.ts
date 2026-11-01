@@ -73,16 +73,24 @@ const invoice: InvoiceRow = {
     period_ends_on: null,
 }
 
-const build = async (openOrders: ReadonlyArray<object> = [], created = true) => {
-    const engine = mock<WorkEngineService>({
-        startOrderWork: jest.fn().mockResolvedValue({ id: "w2", status: "done", lead_id: "l9" }),
-    })
+const ORDER_WORK = { id: "w2", status: "done", lead_id: "l9", subject_type: "order", subject_id: "o-9" }
+
+const build = async (
+    openOrders: ReadonlyArray<object> = [],
+    created = true,
+    work: object = ORDER_WORK,
+    recorded: { amount_vnd: number | null } | null = { amount_vnd: 50_000 },
+) => {
+    const engine = mock<WorkEngineService>({ startOrderWork: jest.fn().mockResolvedValue(work) })
     const inbound = mock<InboundEventsService>({
         recordInput: jest.fn().mockResolvedValue({ duplicate: false, inboundEventId: "e1" }),
         mark: jest.fn().mockResolvedValue(undefined),
     })
     const claims = mock<PaymentClaimsService>({ start: jest.fn().mockResolvedValue({ created }) })
-    const orders = mock<OrdersService>({ listForLead: jest.fn().mockResolvedValue(openOrders) })
+    const orders = mock<OrdersService>({
+        listForLead: jest.fn().mockResolvedValue(openOrders),
+        find: jest.fn().mockResolvedValue(recorded),
+    })
     const conversations = mock<AgentConversationsService>({ attachLead: jest.fn() })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => key) })
     const moduleRef = await Test.createTestingModule({
@@ -101,14 +109,35 @@ const build = async (openOrders: ReadonlyArray<object> = [], created = true) => 
 
 describe("TurnPurchasesService", () => {
     it("runs a new order through Sales and ties the customer to the conversation", async () => {
-        const { purchases } = await build()
+        const { purchases, orders } = await build()
         const settled = await purchases.recordOrder(ctx, turn, {
             reply,
             order: { items: "Tra sua", amountVnd: 50_000 },
             channel,
             leadId: null,
         })
-        expect(settled).toEqual({ lines: ["customerTurns.orderRecorded"], changed: true, leadId: "l9" })
+        expect(settled).toEqual({
+            lines: ["customerTurns.orderRecorded"],
+            changed: true,
+            leadId: "l9",
+            orderAmountVnd: 50_000,
+        })
+        expect(orders.find).toHaveBeenCalledWith(WS, "o-9")
+    })
+
+    it("answers no order amount when the work drafted no order, the record is gone or it holds no amount", async () => {
+        const input = { reply, order: { items: "Tra sua", amountVnd: 50_000 }, channel, leadId: null }
+        const lead = await build([], true, { ...ORDER_WORK, subject_type: "lead" })
+        const unnamed = await build([], true, { ...ORDER_WORK, subject_id: null })
+        const gone = await build([], true, ORDER_WORK, null)
+        const blank = await build([], true, ORDER_WORK, { amount_vnd: null })
+
+        await expect(lead.purchases.recordOrder(ctx, turn, input)).resolves.toMatchObject({ orderAmountVnd: null })
+        await expect(unnamed.purchases.recordOrder(ctx, turn, input)).resolves.toMatchObject({ orderAmountVnd: null })
+        await expect(gone.purchases.recordOrder(ctx, turn, input)).resolves.toMatchObject({ orderAmountVnd: null })
+        await expect(blank.purchases.recordOrder(ctx, turn, input)).resolves.toMatchObject({ orderAmountVnd: null })
+        expect(lead.orders.find).not.toHaveBeenCalled()
+        expect(unnamed.orders.find).not.toHaveBeenCalled()
     })
 
     it("does not order the same item twice while its order is open", async () => {
@@ -119,7 +148,7 @@ describe("TurnPurchasesService", () => {
             channel,
             leadId: "l1",
         })
-        expect(settled).toEqual({ lines: [], changed: false, leadId: "l1" })
+        expect(settled).toEqual({ lines: [], changed: false, leadId: "l1", orderAmountVnd: 50_000 })
     })
 
     it("joins a check already open for a repeated payment claim", async () => {

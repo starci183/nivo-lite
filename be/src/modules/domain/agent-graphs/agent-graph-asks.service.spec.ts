@@ -18,6 +18,7 @@ const VIEW: DecisionView = {
     versionId: "version-1",
     action: "pay_supplier",
     branchKey: "middle",
+    path: ["decide", "middle"],
     amount: 7_200_000,
     approvalRequestId: "request-1",
     closed: false,

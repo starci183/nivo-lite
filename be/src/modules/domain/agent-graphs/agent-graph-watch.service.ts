@@ -28,6 +28,8 @@ const SEED_LOCALE = "vi"
 export interface WatchReport {
     /** Agents given their graph. */
     readonly seeded: number
+    /** Seeds brought up to the rule they came from. */
+    readonly refreshed: number
     /** Proposals the closed decisions taught. */
     readonly learned: number
     /** Proposals that a Brain rule was replaced. */
@@ -36,8 +38,8 @@ export interface WatchReport {
 
 @Injectable()
 /**
- * The tick of the graphs, run in code with no model: it gives an agent that has no graph its seed (in batches of 50), reads the
- * decisions that ended lately and raises what they teach, and compares each Brain rule behind a version that decides with the rule in
+ * The tick of the graphs, run in code with no model: it gives an agent that has no graph its seed (in batches of 50), keeps a seed
+ * in step with the rule it came from, reads the decisions that ended lately and raises what they teach, and compares each Brain rule behind a version that decides with the rule in
  * force. A changed rule raises a conflict for the owner and changes no graph: the agent keeps running on the version the owner confirmed.
  */
 export class AgentGraphWatchService {
@@ -51,12 +53,32 @@ export class AgentGraphWatchService {
         private readonly brain: BrainFactsService,
     ) {}
 
-    /** Runs the three passes. */
+    /** Runs the four passes. */
     async tick(): Promise<WatchReport> {
         const seeded = await this.seedMissing()
+        const refreshed = await this.refreshSeeds()
         const learned = await this.learn()
         const conflicts = await this.compareBrain()
-        return { seeded, learned, conflicts }
+        return { seeded, refreshed, learned, conflicts }
+    }
+
+    /** Walks the installations and brings each seed up to its rule, at most the batch in one tick. */
+    private async refreshSeeds(after = "", page = 0, moved = 0): Promise<number> {
+        if (page >= PAGES || moved >= SEED_BATCH) return moved
+        const rows = await this.installations.page(after, PAGE)
+        const last = rows.at(-1)
+        if (last === undefined) return moved
+        let made = 0
+        await eachInOrder(rows, async (row) => {
+            const state = row.agentId === null ? null : await this.graphs.stateOfAgent(row.workspaceId, row.agentId)
+            if (
+                state !== null &&
+                made + moved < SEED_BATCH &&
+                (await this.seed.refresh(state, row.moduleKey, SEED_LOCALE))
+            )
+                made += 1
+        })
+        return this.refreshSeeds(last.id, page + 1, moved + made)
     }
 
     /** Seeds one page of the walk, then the next, until the batch is full or the installations are all seen. */

@@ -894,21 +894,30 @@ Owner's bar: an agent acts exactly as its graph says. The model proposes; before
 | A branch `stop`, or a stop node     | `stop`   | Nothing leaves and nobody is asked. The item closes rejected, `closed_as` `stopped`, and no person can approve it through                                                                    |
 | The act of another action           | `divert` | The hand-over the graph names: the proposal does not run, the backend runs that action on the same subject, and a reply is withheld. Its own target is the optional `handoverTo` of the node |
 
-A `tool` run consults only a decide point on `gateway_call`: the seeded approval of that action is the step a held call takes after its grant, not a judgement on calls the grant lets through. With no decide point the grant decides, and the run is recorded.
+A `tool` run has no work item to hand on, so a branch that leads to another action stops the call. It consults only a decide point on `gateway_call`: the seeded approval of that action is the step a held call takes after its grant, not a judgement on calls the grant lets through. With no decide point the grant decides, and the run is recorded.
 
 **Facts come from the backend, never from the model.** A condition reads the registry and nothing else, so a fact the model made up cannot exist. Beside the amount facts (15.4), `OutgoingFactReaderService` computes these from the text that would really leave and the record of the work, for any action and any agent:
 
-| Fact                                         | Computed from                                                                     |
-| -------------------------------------------- | --------------------------------------------------------------------------------- |
-| `outgoing.amount_vnd`                        | The largest money figure in the text, by `outgoingFactsOf`; 0 when it states none |
-| `outgoing.has_amount`                        | Whether the text states a money figure                                            |
-| `outgoing.has_link`                          | Whether the text holds a link                                                     |
-| `outgoing.has_phone`                         | Whether the text holds a phone number                                             |
-| `outgoing.length`                            | The number of characters                                                          |
-| `customer.known`                             | Whether the work names a lead                                                     |
-| `tool.name`, `tool.connector`, `handover.to` | The call the road is about to make                                                |
+| Fact                                            | Computed from                                                                     |
+| ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| `outgoing.amount_vnd`                           | The largest money figure in the text, by `outgoingFactsOf`; 0 when it states none |
+| `outgoing.has_amount`                           | Whether the text states a money figure                                            |
+| `outgoing.has_link`                             | Whether the text holds a link                                                     |
+| `outgoing.has_phone`                            | Whether the text holds a phone number                                             |
+| `outgoing.length`                               | The number of characters                                                          |
+| `outgoing.says_received`                        | Whether the text tells the customer money arrived, by a fixed list of phrases     |
+| `customer.known`                                | Whether the work names a lead                                                     |
+| `money.amount_vnd`, `money.source`, `money.via` | The money of the turn, below                                                      |
+| `tool.name`, `tool.connector`, `handover.to`    | The call the road is about to make                                                |
 
 No text means the `outgoing.*` facts are absent. **A fact that cannot be computed takes the safe branch and says so**: the branch falls to the `else`, an `else` never runs alone (15.3), the run stores the fact in `unread`, and a reply adds a workbench line naming it.
+
+**The money of a turn.** A branch on money reads one fact, whatever brought the amount: `money.amount_vnd`, with `money.source` (`claimed` or `received`) and `money.via` (the road: `sepay`, `chat_text`, `chat_image`, `chat_file`, `order_record`, `invoice_paid`, open to new ones) beside it. Each is a fact like any other, so a condition can read the source too. A turn carries `MoneyTurn`, a list of `MoneyEvidence` and whether it had a money event, and a new source adds an entry and changes nothing else.
+
+- **The trigger chooses.** `moneySources` on a trigger node says which vias count for this agent, because a shop with no SePay rightly starts from what the customer says or sends. Unset, every via counts. The rest of the graph runs the same way for either.
+- **`claimed` is not `received`, and the record says which.** A chat message, a transfer image or file and an order are claims: an image can be forged, and an order is what was asked. A money feed and an invoice the books hold as paid are `received`. The approval note and the Office line name the via, so the owner reads "khách báo" or "SePay". Received wins when a turn holds both. What a reply says about money follows the graph, which can branch on `outgoing.says_received`; no rule is hardcoded.
+- **A money event with no amount waits.** An order or a payment claim whose amount is missing or unclear leaves the fact out, so the branch falls to its `else`. A turn with no money event reads 0, which is a reading and not a gap, so a greeting or a price question does not wait.
+- **An order amount is a claim for now.** `OrderEntity.amount_vnd` holds the figure the model reported, checked against the prices written in the knowledge. `order_record` keeps the branch on one recorded figure, not on a fresh number each turn, but it is not yet quantity times price.
 
 **The safe branch.** A graph that holds the action never hands it back to the gate. A failed read, a fact past its budget, a version that does not parse, a walk that finds no path, a decide point with no `else`: the action asks, with `unjudged` naming why (`fact_unread`, `no_route`, `no_else`, `unreadable`, `failed`), and a person decides. A run needs a readable graph to name its version, so `unreadable` and `failed` are logged rather than listed.
 
@@ -917,6 +926,8 @@ No text means the `outgoing.*` facts are absent. **A fact that cannot be compute
 - `enforced` is what a graph is. Publishing, by anyone and of any kind, never touches the mode, and a new agent is enforced from its seed. Nothing has to be flipped.
 - `shadow` is one thing only: the owner chose, for one agent, to watch a graph before it decides. Every road then walks and records, `shadow_diff` marks a difference from what ran, and the verdict stays the gate's. It holds through later publishes until the owner turns it back. Only the owner role sets the mode, in either direction, because turning a graph off widens the agent; `mode_set_by` and `mode_set_at` keep who and when.
 - **Data rights start at the first publish.** A seed holds `rights: []`, no person chose that, and `graphProblems` never read it. Default deny on a seed would cut every agent off from its own Brain, so `AgentDataRightsService` governs from the first version a person published. Actions are enforced from the seed.
+
+**Rules the graph does not hold.** Prose decides nothing. A sentence of the published setup that names a figure and an approval, with no condition of the graph on that figure, is listed as `unheldRules` on the graph the owner opens. It warns and does not block a publish, and it reads figures, so a rule in words alone raises nothing.
 
 **What the owner sees.** Each walk writes one row of `agent_graph_decisions`: road, mode, version, path, facts as read, what was `unread`, why it was `unjudged`, the gate's answer, the outcome, and the `work_item_id` when there is one. A reply or tool run keys on `dedupe_key`, which holds the digest of the text or the step, so a redelivery writes no second row while a different draft for the same message is judged again. A reply that asks is recorded once, on its work item. `agentGraphRuns(installationId)` lists them newest first, with what the graph did and whether it differed from the gate. An action no node holds is listed too, as `not_in_graph`.
 
@@ -931,6 +942,7 @@ No text means the `outgoing.*` facts are absent. **A fact that cannot be compute
 | Work with no agent                                  | `resolve_installation` found none: a person's desk action, a workspace-level job                                                   | The gate decides                                                                                   |
 | A person's edit of a waiting item                   | A person decided, and the approver saw it                                                                                          | The gate re-reads the edit; the branch is not walked again                                         |
 | A person's own reply                                | `chatreply` is a person speaking, not an agent                                                                                     | The decision log                                                                                   |
+| An order the model does not report                  | A turn with no money event reads 0, and a price question cannot be told from an order without judging meaning                      | Nothing yet: it needs the order to be read by the backend, not reported by the model               |
 | What the customer tells the agent                   | A chat application, a contact or an identity records what was said; it does not act on the world                                   | The module's own validation                                                                        |
 | A model that proposes nothing                       | A graph decides what a proposal may do, not whether one is made                                                                    | `holdOver` and the trigger's own turn                                                              |
 | A branch that asks and leads to another action      | The person approves the action on the path, and its own node names the approver                                                    | The diverted work asks, on the approver of its own node                                            |

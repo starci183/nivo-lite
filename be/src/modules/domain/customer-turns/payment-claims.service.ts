@@ -79,6 +79,8 @@ export class PaymentClaimsService {
                     payer: name,
                     claim: claim.claim.slice(0, CLAIM_MAX),
                     conversation_id: claim.conversationId,
+                    money_via: "chat_text",
+                    money_source: "claimed",
                 },
             },
         })

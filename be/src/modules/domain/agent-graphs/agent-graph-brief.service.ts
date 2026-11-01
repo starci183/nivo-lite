@@ -5,13 +5,13 @@ import { AgentGraphsService } from "./agent-graphs.service"
 @Injectable()
 /**
  * What the action graph lets an agent ask for, as the intents the brief of a turn lists: the actions of the act nodes of the active
- * version, each with the title the owner gave it. Only an enforced graph speaks; a graph in shadow changes nothing the agent is told.
- * The boundaries are not listed: the back end applies them, so they earn no tokens.
+ * version, each with the title the owner gave it. A graph the owner set to shadow changes nothing the agent is told. The boundaries are
+ * not listed: the backend applies them whatever the model chooses, so they earn no tokens.
  */
 export class AgentGraphBriefService implements AgentGraphBrief {
     constructor(private readonly graphs: AgentGraphsService) {}
 
-    /** The intents the active version allows; none for an agent with no graph or one still in shadow. */
+    /** The intents the active version allows; none for an agent with no graph or one in shadow. */
     async intentsOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphIntent>> {
         const state = await this.graphs.stateOfAgent(workspaceId, agentId)
         if (state?.mode !== "enforced" || state.active === null) return []

@@ -1,5 +1,6 @@
 import type { ApprovalPolicy, ApproverGroup } from "@modules/domain/authority-rules"
 import type { DataRight } from "@modules/domain/mcp-gateway"
+import type { UnheldRule } from "./policies/unheld-rules.policy"
 
 /** The most nodes one graph may hold. */
 export const MAX_GRAPH_NODES = 60
@@ -18,7 +19,7 @@ export const TRUST_THRESHOLD = 20
 /** The fact a decision keeps beside the amount the records hold: the amount the model wrote, when the two differ. */
 export const MODEL_AMOUNT_FACT = "model.amount_vnd"
 
-/** A decision after which the agent is judged by its graph: shadow only records, enforced decides. */
+/** How a graph runs: `enforced` decides, and is what a graph is; `shadow` only records, and only the owner sets it, for one agent. */
 export type GraphMode = "shadow" | "enforced"
 
 /** The four kinds of node: what starts a flow, what the backend decides, what the flow works out, and what it finally does. */
@@ -204,6 +205,10 @@ export interface GraphNode {
     readonly action?: string | undefined
     /** On `act`: a template key the engine runs. */
     readonly pipeline?: string | undefined
+    /** On `act` of a hand-over: the agent or department it hands to. */
+    readonly handoverTo?: string | undefined
+    /** On a trigger: which sources of money count for this agent (`sepay`, `chat_text`, `chat_image`...); unset, every source does. */
+    readonly moneySources?: ReadonlyArray<string> | undefined
 }
 
 /** The whole graph of one agent. */
@@ -222,6 +227,8 @@ export interface FactSpec {
     readonly type: "number" | "string" | "boolean"
     /** `vnd` makes the fact an amount the authority rules cap. */
     readonly unit: "vnd" | "percent" | "count" | null
+    /** True when it says something about the turn or its text, so it is never taken for the amount of the work. */
+    readonly notWorkAmount?: boolean | undefined
     /** The allowed. */
     readonly allowed?: ReadonlyArray<string> | undefined
     /** The key of the catalog sentence that names the fact in the owner words. */
@@ -343,7 +350,7 @@ export interface ClosedDecision {
     /** The branch key. */
     readonly branchKey: string
     /** The closed as. */
-    readonly closedAs: "done" | "approved" | "edited" | "rejected" | "expired"
+    readonly closedAs: DecisionClosedAs
     /** The amount. */
     readonly amount: number | null
 }
@@ -393,7 +400,10 @@ export type ProposalStatus = "open" | "confirmed" | "declined" | "superseded"
 export type ProposalKind = "conflict" | "learned" | "template_update"
 
 /** How a decision closed. */
-export type DecisionClosedAs = "done" | "approved" | "edited" | "rejected" | "expired"
+export type DecisionClosedAs = "done" | "approved" | "edited" | "rejected" | "expired" | "stopped"
+
+/** What a recorded run came to: `auto` when it ran. */
+export type DecisionOutcome = "auto" | "ask" | "stop" | "divert"
 
 /** One version of a graph as the owner lists it. */
 export interface GraphVersionView {
@@ -475,6 +485,8 @@ export interface AgentGraphView {
     readonly proposals: ReadonlyArray<GraphProposalView>
     /** The facts a condition may be written on. */
     readonly facts: ReadonlyArray<FactView>
+    /** The sums the setup text states as a rule that no condition of the graph holds: prose decides nothing. */
+    readonly unheldRules: ReadonlyArray<UnheldRule>
 }
 
 /** Looks a sentence of the message catalog up in the language of the reader, so a policy stays pure and holds no wording. */

@@ -450,6 +450,7 @@ describe("SetupChatService", () => {
             handle: "books",
             role: "Accounting",
             approval_rule: "",
+            module: "chatbot",
             instructions: "Keep these rules.\n\n### NIVO setup v1\nOld rules\n### end NIVO setup",
             knowledge: "Keep these notes.\n\n### NIVO setup v1\nOld notes\n### end NIVO setup",
         })

@@ -9,6 +9,7 @@ import { GatewayCallPerformerService } from "./gateway-call-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
 import { FollowUpPerformerService } from "./follow-up-performer.service"
+import { HandOverConversationPerformerService } from "./hand-over-conversation-performer.service"
 import { HandoffLeadPerformerService } from "./handoff-lead-performer.service"
 import { IssueInvoicePerformerService } from "./issue-invoice-performer.service"
 import { QuotePerformerService } from "./quote-performer.service"
@@ -34,6 +35,7 @@ const build = async () => {
     const remind = mock<BookingRemindPerformerService>()
     const redeem = mock<RedeemRewardPerformerService>()
     const gatewayCall = mock<GatewayCallPerformerService>()
+    const handOver = mock<HandOverConversationPerformerService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkPerformersRegistrarService,
@@ -52,6 +54,7 @@ const build = async () => {
             { provide: BookingRemindPerformerService, useValue: remind },
             { provide: RedeemRewardPerformerService, useValue: redeem },
             { provide: GatewayCallPerformerService, useValue: gatewayCall },
+            { provide: HandOverConversationPerformerService, useValue: handOver },
         ],
     }).compile()
 
@@ -72,11 +75,12 @@ const build = async () => {
         remind,
         redeem,
         gatewayCall,
+        handOver,
     }
 }
 
 describe("WorkPerformersRegistrarService", () => {
-    it("registers sales, booking, reminder and reward performers at boot", async () => {
+    it("registers sales, booking, reminder, reward and hand-over performers at boot", async () => {
         const {
             moduleRef,
             registry,
@@ -94,6 +98,7 @@ describe("WorkPerformersRegistrarService", () => {
             remind,
             redeem,
             gatewayCall,
+            handOver,
         } = await build()
 
         const registered = new Map<string, WorkPerformer>()
@@ -121,8 +126,10 @@ describe("WorkPerformersRegistrarService", () => {
             "remind_booking",
             "redeem_reward",
             "gateway_call",
+            "hand_over_conversation",
         ])
         expect(registered.get("gateway_call")).toBe(gatewayCall)
+        expect(registered.get("hand_over_conversation")).toBe(handOver)
         expect(registered.get("handoff_lead")).toBe(handoff)
         expect(registered.get("classify_lead")).toBe(classify)
         expect(registered.get("send_follow_up")).toBe(followUp)
@@ -139,7 +146,7 @@ describe("WorkPerformersRegistrarService", () => {
         expect(registered.get("reschedule")).toBe(booking)
         expect(registered.get("remind_booking")).toBe(remind)
         expect(registered.get("redeem_reward")).toBe(redeem)
-        expect(registry.add).toHaveBeenCalledTimes(17)
+        expect(registry.add).toHaveBeenCalledTimes(18)
         expect(registry.add).toHaveBeenCalledWith("cancel_booking", booking)
         expect(registry.add).toHaveBeenCalledWith("cancel_with_fee", booking)
         expect(registry.add).toHaveBeenCalledWith("confirm_booking", booking)

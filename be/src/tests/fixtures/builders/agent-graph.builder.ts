@@ -86,6 +86,8 @@ interface Node {
         | undefined
     readonly action?: string | undefined
     readonly pipeline?: string | undefined
+    readonly handoverTo?: string | undefined
+    readonly moneySources?: ReadonlyArray<string> | undefined
 }
 /** The whole graph of one agent. */
 interface GraphDocument {
@@ -98,6 +100,7 @@ interface GraphDocument {
     }>
 }
 type GraphMode = "shadow" | "enforced"
+type GraphChangeKind = "seed" | "chat" | "edit" | "conflict" | "learned" | "template" | "rollback"
 
 const [GraphEntity, VersionEntity, , ProposalEntity, DecisionEntity] = agentGraphsEntities
 
@@ -266,6 +269,7 @@ interface State {
     readonly draftRev: number
     readonly activeVersionId: string | null
     readonly active: GraphDocument | null
+    readonly activeKind: GraphChangeKind | null
 }
 
 /** The graph of one agent as the store reads it: the owner example, active and decided, in shadow until a spec says otherwise. */
@@ -278,6 +282,7 @@ export const stateOf = builder<State>({
     draftRev: 1,
     activeVersionId: "version-1",
     active: graphOf(OWNER_EXAMPLE),
+    activeKind: "edit",
 })
 
 /** A graph document the product cannot read: a title longer than a node may carry. */
@@ -324,21 +329,56 @@ export const versionRow = (
         publishedAt: ROW_TIME,
     })
 
-/** One stored decision of a graph. */
-export const decisionRow = (
-    id = "decision-1",
-    closedAs: InstanceType<typeof DecisionEntity>["closedAs"] = null,
-    facts: InstanceType<typeof DecisionEntity>["facts"] = { [AMOUNT_FACT]: 7_200_000 },
+const rowOfDecision = (
+    id: string,
+    closedAs: InstanceType<typeof DecisionEntity>["closedAs"],
+    facts: InstanceType<typeof DecisionEntity>["facts"],
+    overrides: Partial<InstanceType<typeof DecisionEntity>>,
 ): InstanceType<typeof DecisionEntity> =>
     Object.assign(new DecisionEntity(), {
         id,
         workspaceId: "ws-1",
         agentId: "agent-1",
         workItemId: "item-9",
+        dedupeKey: null,
+        road: "work",
+        mode: "enforced",
+        gateVerdict: "ask",
+        versionId: "version-1",
+        action: "pay_supplier",
+        path: ["decide", "middle"],
         branchKey: "middle",
+        outcome: "ask",
+        approvalRequestId: "request-1",
+        unread: [],
+        unjudged: null,
+        subjectType: null,
+        subjectId: null,
+        shadowDiff: false,
+        createdAt: ROW_TIME,
         closedAs,
         facts,
+        ...overrides,
     })
+
+/** One stored decision of a graph. */
+export const decisionRow = (
+    id = "decision-1",
+    closedAs: InstanceType<typeof DecisionEntity>["closedAs"] = null,
+    facts: InstanceType<typeof DecisionEntity>["facts"] = { [AMOUNT_FACT]: 7_200_000 },
+): InstanceType<typeof DecisionEntity> => rowOfDecision(id, closedAs, facts, {})
+
+/** A stored run that left no work item: a reply the graph judged, keyed on the digest of its text. */
+export const unfiledDecisionRow = (id = "decision-2"): InstanceType<typeof DecisionEntity> =>
+    rowOfDecision(id, null, {}, { workItemId: null, dedupeKey: "reply:abc", road: "reply", gateVerdict: null })
+
+/** A stored run the graph stopped, whose work closed as stopped. */
+export const stoppedDecisionRow = (id = "decision-3"): InstanceType<typeof DecisionEntity> =>
+    rowOfDecision(id, "stopped", { "order.amount_vnd": 9 }, { outcome: "stop", shadowDiff: true })
+
+/** A stored run no branch decided, which entered the graph at the node of the branch key. */
+export const unbranchedDecisionRow = (id = "decision-4"): InstanceType<typeof DecisionEntity> =>
+    rowOfDecision(id, "approved", {}, { path: ["decide"], branchKey: "decide" })
 
 /** One stored proposal of a graph. */
 export const proposalRow = (

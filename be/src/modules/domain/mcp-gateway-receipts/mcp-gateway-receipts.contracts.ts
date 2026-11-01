@@ -5,7 +5,8 @@ export interface GatewayJson {
 }
 
 /** Why a gateway operation needs a person's approval. */
-export type GatewayApprovalReason = "ask_mode" | "over_constraint" | "over_limit_vnd" | "no_rule" | "tainted_input"
+export type GatewayApprovalReason =
+    "ask_mode" | "over_constraint" | "over_limit_vnd" | "no_rule" | "tainted_input" | "graph_ask"
 
 /** Why a gateway operation did not produce a result. */
 export type GatewayFailure =

@@ -50,4 +50,8 @@ export class AgentGraphType {
     /** The facts a condition may be written on (key, label, type, unit, allowed), as JSON text. */
     @Field(() => String)
     factsJson!: string
+
+    /** The sums the setup text states as a rule that the graph does not hold, as JSON text. */
+    @Field(() => String)
+    unheldRulesJson!: string
 }

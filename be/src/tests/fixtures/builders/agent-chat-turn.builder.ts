@@ -18,6 +18,7 @@ export const PROFILE: AgentProfile = {
     instructions: "Be brief",
     knowledge: "Open 9 to 6",
     approval_rule: "owner",
+    module: "chatbot",
 }
 
 export const CONVERSATION: ChatConversation = {

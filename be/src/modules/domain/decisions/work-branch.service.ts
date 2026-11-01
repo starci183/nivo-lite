@@ -1,7 +1,10 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { InjectWorkBranchDecider } from "@modules/domain/authority-rules"
-import type { WorkBranchDecider } from "@modules/domain/authority-rules"
+import type { GraphAnswer, GraphCheck, WorkBranchDecider } from "@modules/domain/authority-rules"
 import type { BranchConsult, BranchOutcome } from "./work-branch.contracts"
+
+/** The answer with no graph bound: nothing narrows what leaves. */
+const NO_GRAPH: GraphAnswer = { outcome: "run", unread: [], unjudged: null, divert: null }
 
 @Injectable()
 /**
@@ -10,6 +13,11 @@ import type { BranchConsult, BranchOutcome } from "./work-branch.contracts"
  */
 export class WorkBranchService {
     constructor(@Optional() @InjectWorkBranchDecider() private readonly branches: WorkBranchDecider | null = null) {}
+
+    /** What the graph says about something that leaves with no work item. */
+    check(request: GraphCheck): Promise<GraphAnswer> {
+        return this.branches?.check(request) ?? Promise.resolve(NO_GRAPH)
+    }
 
     /** The proposal to judge, its verdict, and the decision a waiting item keeps. */
     async consult({ workspaceId, item, proposal, origin, gate }: BranchConsult): Promise<BranchOutcome> {
@@ -25,7 +33,12 @@ export class WorkBranchService {
         return {
             proposal: branch.proposal,
             verdict: branch.verdict,
-            carried: { proposal: branch.proposal, branchDecisionId: branch.decisionId },
+            carried: {
+                proposal: branch.proposal,
+                ...(branch.decisionId === null ? {} : { branchDecisionId: branch.decisionId }),
+                stopped: branch.stopped,
+                divert: branch.divert,
+            },
         }
     }
 }

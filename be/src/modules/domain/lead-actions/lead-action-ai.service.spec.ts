@@ -72,6 +72,7 @@ const profile: AgentProfile = {
     instructions: "Follow up on tea orders",
     knowledge: "Hue Tea products",
     approval_rule: "Ask before discounts",
+    module: "chatbot",
 }
 
 const proposal: ProposedResponsibility = {

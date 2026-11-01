@@ -35,4 +35,12 @@ export type {
 } from "./mcp-gateway.contracts"
 export { dataKindOfTool } from "./data-rights.policy"
 export { DATA_RIGHTS_GATE } from "./mcp-gateway.decorators"
-export type { DataRight, DataRightsGate, OptionalDataRights } from "./mcp-gateway.contracts"
+export { TOOL_GRAPH_GATE } from "./tool-graph.decorators"
+export type {
+    DataRight,
+    DataRightsGate,
+    OptionalDataRights,
+    ToolGraphCall,
+    ToolGraphGate,
+    ToolGraphVerdict,
+} from "./mcp-gateway.contracts"

@@ -37,6 +37,7 @@ describe("agents mapper", () => {
 
         expect(subject.firstProfileOf(rowOf())).toEqual({
             id: "a1",
+            module: "chatbot",
             name: "Bot",
             handle: "bot",
             role: "Front desk",

@@ -33,7 +33,7 @@ export class AgentGraphPublishService {
         private readonly installations: InstallationRecordsService,
     ) {}
 
-    /** Publishes the draft of the agent as the next version; a publish by the owner makes the graph decide for the agent. */
+    /** Publishes the draft of the agent as the next version. The mode stays as it is: a graph is enforced unless the owner set it to shadow. */
     async publishDraft(
         workspaceId: string,
         agentId: string,
@@ -43,9 +43,7 @@ export class AgentGraphPublishService {
         contextVersionId: string | null = null,
     ): Promise<GraphVersionView> {
         const state = await this.requireState(workspaceId, agentId)
-        const version = await this.publishDocument(state, state.draft, by, note, kind, contextVersionId)
-        if (by.role === "owner" && kind === "edit") await this.graphs.setMode(workspaceId, agentId, "enforced")
-        return version
+        return this.publishDocument(state, state.draft, by, note, kind, contextVersionId)
     }
 
     /** Publishes the graph a confirmed proposal made as the next version, under the same checks as any change (a widening is the owner's alone). */
@@ -75,11 +73,11 @@ export class AgentGraphPublishService {
         return this.publishDocument(state, document, by, "", "rollback")
     }
 
-    /** Sets whether the graph decides or only records. Only an owner turns it to `enforced`; anyone who may edit turns it back to `shadow`. */
+    /** Sets whether the graph decides or only records. Only the owner does, either way: turning a graph off widens what the agent may do. */
     setMode(workspaceId: string, agentId: string, mode: GraphMode, by: Publisher): Promise<GraphState> {
-        if (mode === "enforced" && by.role !== "owner")
+        if (by.role !== "owner")
             return Promise.reject(new AgentGraphsError({ code: AgentGraphsErrorCode.WidensNeedsOwner }))
-        return this.graphs.setMode(workspaceId, agentId, mode)
+        return this.graphs.setMode(workspaceId, agentId, mode, by.memberId)
     }
 
     private async requireState(workspaceId: string, agentId: string): Promise<GraphState> {

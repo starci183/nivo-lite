@@ -63,6 +63,30 @@ describe("run-trace.policy runTraceOf", () => {
         ])
     })
 
+    it("follows the path of a run that no decide point held, from the node the walk entered at", async () => {
+        const subject = await build()
+        const approving = {
+            nodes: [
+                nodeOf({ key: "start", kind: "trigger", step: "customer_message", next: ["ask", "other"] }),
+                nodeOf({ key: "other", kind: "output", step: "write", next: [] }),
+                nodeOf({ key: "ask", kind: "output", step: "approval", next: ["act"] }),
+                nodeOf({ key: "act", kind: "output", step: "write", action: "send_quote", next: [] }),
+            ],
+            rights: [],
+        }
+
+        expect(
+            keys(
+                subject.runTraceOf(approving, {
+                    action: "send_quote",
+                    branchKey: "ask",
+                    trigger: null,
+                    path: ["ask", "act"],
+                }),
+            ),
+        ).toEqual(["start", "ask", "act"])
+    })
+
     it("starts from the trigger that woke the agent, or the first trigger when the graph has none like it", async () => {
         const subject = await build()
         const tagged = {

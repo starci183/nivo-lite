@@ -18,7 +18,12 @@ import { applyConflict } from "./policies/conflict-patch.policy"
 import type { ConflictPatch } from "./policies/conflict-patch.policy"
 import { localeOf, wireOfView } from "./policies/graph-wire.policy"
 import { applyLearned } from "./policies/proposal-patch.policy"
-import type { AgentGraphRunWire, AgentGraphWire, OptionalLanguage } from "./policies/graph-wire.policy"
+import type {
+    AgentGraphRunEntryWire,
+    AgentGraphRunWire,
+    AgentGraphWire,
+    OptionalLanguage,
+} from "./policies/graph-wire.policy"
 
 /** Who asks: the account and the workspace it acts in. */
 export interface GraphActor {
@@ -42,6 +47,9 @@ const parsed = (text: string): unknown => {
         throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid, cause: error })
     }
 }
+
+/** The most runs one listing answers. */
+const RUNS_MAX = 100
 
 @Injectable()
 /**
@@ -112,7 +120,8 @@ export class AgentGraphAdminService {
             this.proposals.conflictOf(actor.workspaceId, agentId, proposalId),
             this.graphs.stateOfAgent(actor.workspaceId, agentId),
         ])
-        if (state?.active != null && conflict !== null) return this.confirmConflict(actor, by, proposalId, conflict, { state, active: state.active })
+        if (state?.active != null && conflict !== null)
+            return this.confirmConflict(actor, by, proposalId, conflict, { state, active: state.active })
         if (patch === null || state?.active == null)
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
         const document = applyLearned(state.active, patch)
@@ -161,14 +170,19 @@ export class AgentGraphAdminService {
         return this.running.runOf(actor.workspaceId, workItemId)
     }
 
+    /** The latest runs of the agent against its graph, newest first. */
+    async runs(actor: GraphActor, agentId: string, limit: number): Promise<ReadonlyArray<AgentGraphRunEntryWire>> {
+        await this.publisherOf(actor)
+        return this.running.runsOf(actor.workspaceId, agentId, Math.min(RUNS_MAX, Math.max(1, limit)))
+    }
+
     /** Who can answer each ask of the draft graph. An agent without a graph has no asks, so its coverage is empty. */
     async coverage(actor: GraphActor, agentId: string): Promise<ReadonlyArray<AskCoverage>> {
         await this.publisherOf(actor)
         const state = await this.graphs.stateOfAgent(actor.workspaceId, agentId)
         if (state === null) return []
         const installation = await this.installations.findById(state.installationId)
-        if (installation === null)
-            throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
+        if (installation === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
         return this.context.coverageOf({ ...state, moduleKey: installation.moduleKey }, state.draft)
     }
 
