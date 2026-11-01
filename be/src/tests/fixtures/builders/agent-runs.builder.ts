@@ -128,3 +128,7 @@ export const chainStepRowsOf = (): ReadonlyArray<AgentRunStepEntity> => [
     stepRowOf({ seq: 3, stepKey: "door", status: "running", result: null }),
     stepRowOf({ seq: 4, stepKey: "out", status: "pending", result: null }),
 ]
+
+/** The step row of the second step of run-1, running and waiting on work item item-1. */
+export const runningWaitRowOf = (): AgentRunStepEntity =>
+    stepRowOf({ id: "s-2", seq: 2, stepKey: "step-2", status: "running", waitItemId: "item-1" })

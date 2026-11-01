@@ -1,5 +1,7 @@
 /** Log events of the work engine and the command bus. */
 export enum WorkEngineLogEvent {
+    /** The closed-item hook threw; the decision stands and whoever waits recovers from the item. */
+    ClosedHookFailed = "decisions.closed_hook_failed",
     /** A failed item could not be marked failed; the in-memory failure is reported instead. */
     MarkFailedFailed = "decisions.mark_failed_failed",
     /** A line of the evidence log could not be written; the work goes on. */

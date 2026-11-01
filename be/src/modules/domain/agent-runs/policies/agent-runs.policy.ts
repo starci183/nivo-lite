@@ -33,6 +33,9 @@ export const COMPENSATION_LEASE_SECONDS = 120
 /** The most steps one advance drives before it leaves the rest to a job, so a long run never holds a worker for ever. */
 export const ADVANCE_MAX_STEPS = 50
 
+/** How long a shutdown waits for the steps in flight before it gives their claims back, milliseconds. */
+export const SHUTDOWN_WAIT_MS = 10_000
+
 /** The most items one sweep pass reads of each kind. */
 export const SWEEP_LIMIT = 50
 

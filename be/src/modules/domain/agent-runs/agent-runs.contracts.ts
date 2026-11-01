@@ -101,12 +101,22 @@ export type StepAnswer =
           readonly code: string
       }
 
+/** A person's verdict on the work item a wait step holds. */
+export interface StepDecision {
+    /** Whether the item was approved. */
+    readonly approved: boolean
+    /** Who decided: a member id, or `timeout` when the wait ran out. */
+    readonly by: string
+}
+
 /** The business of one kind of step. It runs from the row alone, and running it twice has the effect of once. */
 export interface AgentStepHandler {
     /** The kind. */
     readonly kind: string
     /** Runs one try. */
     run(step: StepView, signal: AbortSignal): Promise<StepAnswer>
+    /** Turns the verdict on a wait step's work item into its result and the steps that follow, inside the decision's own transaction. Without it the verdict is the result. */
+    onDecided?(step: StepView, decision: StepDecision): StepAnswer
     /** Undoes a done step, when this kind is the compensation another step named. */
     compensate?(step: StepView, signal: AbortSignal): Promise<void>
     /** Tells a person a run died at this step, with the trigger intact, and the customer the honest holding line. */

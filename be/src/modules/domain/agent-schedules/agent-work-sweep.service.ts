@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { AgentRunSweepService } from "@modules/domain/agent-runs"
 import type { EntityManager } from "typeorm"
 import {
     AgentTasksService,
@@ -43,6 +44,7 @@ export class AgentWorkSweepService {
         private readonly triggers: AgentTriggersService,
         private readonly retention: AgentWakeRetentionService,
         private readonly sync: AgentTriggerSyncService,
+        private readonly runSweep: AgentRunSweepService,
     ) {}
 
     /** Runs one pass and answers what it did. */
@@ -52,6 +54,7 @@ export class AgentWorkSweepService {
         await eachInOrder(due, async (item) => {
             done.push(await this.guarded(item))
         })
+        await this.sweepRuns()
         const report: SweepReport = {
             drains: done.filter((kind) => kind === "drains").length,
             tasks: done.filter((kind) => kind === "tasks").length,
@@ -61,6 +64,15 @@ export class AgentWorkSweepService {
         }
         this.logger.info(AgentSchedulesLogEvent.SweepDone, { ...report })
         return report
+    }
+
+    /** The durable runs ride the same minute: their steps past a deadline are resumed, retried or stopped visibly. One failing pass never stops the rest. */
+    private async sweepRuns(): Promise<void> {
+        try {
+            await this.runSweep.sweep()
+        } catch (cause) {
+            this.logger.error(AgentSchedulesLogEvent.SweepItemFailed, cause, { kind: "runs" })
+        }
     }
 
     private async guarded(item: AgentWorkDue): Promise<Done> {

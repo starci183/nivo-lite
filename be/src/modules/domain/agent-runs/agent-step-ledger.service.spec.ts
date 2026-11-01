@@ -134,6 +134,16 @@ describe("AgentStepLedgerService.commit", () => {
     })
 })
 
+describe("AgentStepLedgerService.release", () => {
+    it("gives the claim back under its fence and says whether it was still the holder", async () => {
+        const em = mockEntityManager({ query: [call("agent_step_release", 3), [{ agent_step_release: true }]] })
+        const { service } = await build(em)
+
+        await expect(service.release(stepViewOf({ fence: 4 }))).resolves.toBe(true)
+        expect(em.query).toHaveBeenCalledWith(call("agent_step_release", 3), ["run-1", "turn", 4])
+    })
+})
+
 describe("AgentStepLedgerService compensation", () => {
     it("claims the last step still to undo", async () => {
         const em = mockEntityManager({

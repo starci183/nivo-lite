@@ -1,16 +1,17 @@
 import { Injectable, Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { AGENT_RUN_WAIT_TIMEOUT } from "../../modules/domain/agent-runs/agent-runs.decorators"
+import { AGENT_RUN_ITEM_VERDICTS, AGENT_RUN_WAIT_TIMEOUT } from "../../modules/domain/agent-runs/agent-runs.decorators"
 import { AgentRunHandlersService } from "../../modules/domain/agent-runs/agent-run-handlers.service"
 import { TOOL_OUTCOME_UNKNOWN } from "../../modules/domain/agent-runs/policies/agent-runs.policy"
 import type {
     AgentStepHandler,
     StepAnswer,
+    StepDecision,
     StepJson,
     StepSpec,
     StepView,
 } from "../../modules/domain/agent-runs/agent-runs.contracts"
-import type { AgentRunWaitTimeout, WaitExpiry } from "../../modules/domain/agent-runs/agent-runs-engine.contracts"
+import type { AgentRunItemVerdicts, AgentRunWaitTimeout, WaitExpiry } from "../../modules/domain/agent-runs/agent-runs-engine.contracts"
 
 /** A promise a proof settles by hand. */
 interface Deferred {
@@ -205,6 +206,26 @@ const toolAndUndo = (world: ScriptedWorld): ReadonlyArray<AgentStepHandler> => [
     undoOf(world, "undo_tool", "tool"),
 ]
 
+const askOf = (world: ScriptedWorld, kind: string, decides: boolean): AgentStepHandler => ({
+    kind,
+    run: (step) =>
+        Promise.resolve({
+            kind: "wait",
+            workItemId: String(step.input.itemId),
+            deadlineAt: new Date(String(step.input.deadlineAt)),
+        }),
+    deadLetter: toldBy(world),
+    ...(decides
+        ? {
+              onDecided: (step: StepView, decision: StepDecision): StepAnswer => ({
+                  kind: "done",
+                  result: { approved: decision.approved, by: decision.by },
+                  next: decision.approved ? [chainFrom("reply", wakeOf(step))] : [],
+              }),
+          }
+        : {}),
+})
+
 const replyAndOthers = (world: ScriptedWorld): ReadonlyArray<AgentStepHandler> => [
     {
         kind: "reply",
@@ -221,16 +242,8 @@ const replyAndOthers = (world: ScriptedWorld): ReadonlyArray<AgentStepHandler> =
         },
         deadLetter: toldBy(world),
     },
-    {
-        kind: "ask",
-        run: (step) =>
-            Promise.resolve({
-                kind: "wait",
-                workItemId: String(step.input.itemId),
-                deadlineAt: new Date(String(step.input.deadlineAt)),
-            }),
-        deadLetter: toldBy(world),
-    },
+    askOf(world, "ask", true),
+    askOf(world, "ask_plain", false),
     {
         kind: "late",
         run: () => Promise.resolve({ kind: "failed", code: "late_failure" }),
@@ -262,6 +275,18 @@ export class ScriptedTimeout implements AgentRunWaitTimeout {
 }
 
 @Injectable()
+/** The verdicts the work items hold, as a proof scripts them: the closed items it declares. */
+export class ScriptedVerdicts implements AgentRunItemVerdicts {
+    /** The items that closed by a decision. */
+    readonly closed = new Map<string, StepDecision>()
+
+    /** Answers the verdicts of the scripted items among the ids. */
+    verdictsOf(ids: ReadonlyArray<string>): Promise<ReadonlyMap<string, StepDecision>> {
+        return Promise.resolve(new Map([...this.closed].filter(([id]) => ids.includes(id))))
+    }
+}
+
+@Injectable()
 class HandlersRegistration {
     constructor(registry: AgentRunHandlersService, world: ScriptedWorld) {
         handlersOf(world).forEach((handler) => registry.add(handler))
@@ -279,10 +304,12 @@ export class ScriptedRunsModule {
             providers: [
                 ScriptedWorld,
                 ScriptedTimeout,
+                ScriptedVerdicts,
                 HandlersRegistration,
+                { provide: AGENT_RUN_ITEM_VERDICTS, useExisting: ScriptedVerdicts },
                 { provide: AGENT_RUN_WAIT_TIMEOUT, useExisting: ScriptedTimeout },
             ],
-            exports: [ScriptedWorld, ScriptedTimeout, AGENT_RUN_WAIT_TIMEOUT],
+            exports: [ScriptedWorld, ScriptedTimeout, ScriptedVerdicts, AGENT_RUN_WAIT_TIMEOUT, AGENT_RUN_ITEM_VERDICTS],
         }
     }
 }

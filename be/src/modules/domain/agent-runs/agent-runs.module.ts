@@ -1,8 +1,14 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { WORK_ITEM_CLOSED } from "@modules/domain/decisions"
 import { AgentStepQueueModule } from "@modules/queues/agent-step"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
+import { AgentRunItemClosedService } from "./agent-run-item-closed.service"
+import { AgentRunItemVerdictsService } from "./agent-run-item-verdicts.service"
+import { AGENT_RUN_ITEM_VERDICTS } from "./agent-runs.decorators"
+import { AGENT_WAKE_INTERRUPTIONS } from "@modules/domain/agent-work"
+import { AgentRunInflightService } from "./agent-run-inflight.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
@@ -31,6 +37,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentRunStoreService,
                 AgentStepLedgerService,
                 AgentRunHandlersService,
+                AgentRunInflightService,
                 AgentRunDeadLetterService,
                 AgentRunCompensationService,
                 AgentRunStepsService,
@@ -38,8 +45,16 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentRunSweepService,
                 AgentRunTraceService,
                 AgentStepJobService,
+                AgentRunItemClosedService,
+                AgentRunItemVerdictsService,
+                { provide: WORK_ITEM_CLOSED, useExisting: AgentRunItemClosedService },
+                { provide: AGENT_RUN_ITEM_VERDICTS, useExisting: AgentRunItemVerdictsService },
+                { provide: AGENT_WAKE_INTERRUPTIONS, useExisting: AgentRunsService },
             ],
             exports: [
+                WORK_ITEM_CLOSED,
+                AGENT_RUN_ITEM_VERDICTS,
+                AGENT_WAKE_INTERRUPTIONS,
                 AgentStepQueueModule,
                 AgentRunsService,
                 AgentRunHandlersService,

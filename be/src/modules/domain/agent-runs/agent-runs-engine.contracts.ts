@@ -1,4 +1,4 @@
-import type { AgentRunStatus, AgentStepHandler, AgentStepStatus, StepEffect, StepJson, StepSpec, StepView } from "./agent-runs.contracts"
+import type { AgentRunStatus, AgentStepHandler, StepDecision, AgentStepStatus, StepEffect, StepJson, StepSpec, StepView } from "./agent-runs.contracts"
 
 /** One run as the engine and the trace read it. */
 export interface RunView {
@@ -65,6 +65,14 @@ export type ClaimResult =
     | { readonly kind: "later"; readonly retryAfterMs: number }
     | { readonly kind: "busy" | "closed" | "idle" | "gone" }
 
+/** What finishes a wait step: its result and the steps that follow. */
+export interface WaitAnswer {
+    /** What the step stores as its result. */
+    readonly result: StepJson
+    /** The steps that follow, written with it. */
+    readonly next: ReadonlyArray<StepSpec>
+}
+
 /** How one try of a step ended, for the caller that drove it. */
 export type StepEnd =
     | { readonly kind: "done"; readonly result: StepJson }
@@ -97,14 +105,6 @@ export type StepCommit =
     | { readonly kind: "wait"; readonly workItemId: string; readonly deadlineAt: Date }
     | { readonly kind: "retry"; readonly code: string; readonly afterMs: number }
     | { readonly kind: "failed"; readonly code: string }
-
-/** A person's answer to the work item a wait step holds: the step's result and the steps that follow. */
-export interface WaitAnswer {
-    /** What the step stores as its result. */
-    readonly result: StepJson
-    /** The steps that follow, written with it. */
-    readonly next: ReadonlyArray<StepSpec>
-}
 
 /** The step a run row lists, in order, for the trace. */
 export interface RunStepView {
@@ -168,6 +168,8 @@ export interface RunSweepReport {
     readonly compensating: number
     /** Stopped runs a person was told about. */
     readonly unspoken: number
+    /** Waits whose work item had already closed by a decision, finished with that decision. */
+    readonly recovered: number
 }
 
 /** What the graph's timeout did with a wait that ran out. */
@@ -179,4 +181,10 @@ export type WaitExpiry =
 export interface AgentRunWaitTimeout {
     /** Applies the branch's timeout to the work item (a backup group, a stop, or silence) and says whether a new wait began. */
     expire(workItemId: string): Promise<WaitExpiry>
+}
+
+/** The verdicts already given on work items: the closed item is the durable record of a decision, so a wait is finished from it, never from the clock. */
+export interface AgentRunItemVerdicts {
+    /** The verdict of each item among `ids` that closed approved or rejected; an item still open has none. */
+    verdictsOf(ids: ReadonlyArray<string>): Promise<ReadonlyMap<string, StepDecision>>
 }

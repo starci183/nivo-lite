@@ -117,6 +117,10 @@
           "reason": "commits an undo under its fence and sends the run to a person when its tries are spent"
         },
         {
+          "name": "public.agent_step_release",
+          "reason": "gives a claim back at once when a worker shuts down, so the sweep takes the step without waiting for its deadline"
+        },
+        {
           "name": "public.agent_run_spoken",
           "reason": "marks that a person was told a run stopped, true for the first mark only"
         },

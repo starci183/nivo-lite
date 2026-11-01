@@ -99,6 +99,21 @@ CREATE FUNCTION public.agent_run_step_json(s public.agent_run_steps) RETURNS jso
   );
 $$;
 
+-- Where a run stands after one of its steps changed: done when nothing is open and no step follows, going while any step can run, waiting only
+-- when nothing can run and a wait is open. A wait parks its own branch, not the run.
+CREATE FUNCTION public.agent_run_status_after(p_run uuid, p_more boolean) RETURNS text
+    LANGUAGE sql STABLE
+    SET search_path TO 'public'
+    AS $
+  SELECT CASE
+    WHEN p_more THEN 'running'
+    WHEN NOT EXISTS (SELECT 1 FROM public.agent_run_steps o WHERE o.run_id = p_run AND o.status <> 'done') THEN 'done'
+    WHEN EXISTS (SELECT 1 FROM public.agent_run_steps o WHERE o.run_id = p_run
+                  AND (o.status IN ('pending', 'failed') OR (o.status = 'running' AND o.wait_item_id IS NULL))) THEN 'running'
+    ELSE 'waiting'
+  END;
+$;
+
 -- Writes steps behind the last one of a run, once: a step key already there is left as it is, so a replay writes nothing twice. Answers how many
 -- rows were written; a run that has ended takes none.
 CREATE FUNCTION public.agent_run_append(p_run uuid, p_specs jsonb) RETURNS integer
@@ -125,7 +140,8 @@ BEGIN
       RETURNING 1
   )
   SELECT count(*) INTO v_count FROM written;
-  UPDATE public.agent_runs r SET step_seq = r.step_seq + v_total WHERE r.id = v_run.id;
+  UPDATE public.agent_runs r SET step_seq = r.step_seq + v_total,
+         status = CASE WHEN v_count > 0 AND r.status = 'waiting' THEN 'running' ELSE r.status END WHERE r.id = v_run.id;
   RETURN v_count;
 END;
 $$;
@@ -151,7 +167,8 @@ BEGIN
   END IF;
   IF p_step_key IS NULL THEN
     SELECT * INTO v_step FROM public.agent_run_steps s
-     WHERE s.run_id = p_run AND s.status IN ('pending', 'running', 'failed') ORDER BY s.seq LIMIT 1 FOR UPDATE;
+     WHERE s.run_id = p_run AND (s.status IN ('pending', 'failed') OR (s.status = 'running' AND s.wait_item_id IS NULL))
+     ORDER BY s.seq LIMIT 1 FOR UPDATE;
     IF NOT FOUND THEN
       RETURN jsonb_build_object('result', 'idle');
     END IF;
@@ -209,15 +226,12 @@ BEGIN
   END IF;
   IF p_outcome = 'done' THEN
     UPDATE public.agent_run_steps s SET status = 'done', result = p_result, error_code = NULL, claim_until = NULL, wait_item_id = NULL WHERE s.id = v_step.id;
-    UPDATE public.agent_runs r SET
-        status = CASE WHEN NOT p_more AND NOT EXISTS (
-            SELECT 1 FROM public.agent_run_steps o WHERE o.run_id = v_run_id AND o.status NOT IN ('done')) THEN 'done' ELSE 'running' END,
-        finished_at = CASE WHEN NOT p_more AND NOT EXISTS (
-            SELECT 1 FROM public.agent_run_steps o WHERE o.run_id = v_run_id AND o.status NOT IN ('done')) THEN now() ELSE r.finished_at END
+    UPDATE public.agent_runs r SET status = public.agent_run_status_after(v_run_id, p_more),
+        finished_at = CASE WHEN public.agent_run_status_after(v_run_id, p_more) = 'done' THEN now() ELSE r.finished_at END
      WHERE r.id = v_run_id;
   ELSIF p_outcome = 'wait' THEN
     UPDATE public.agent_run_steps s SET wait_item_id = p_wait_item, claim_until = p_deadline WHERE s.id = v_step.id;
-    UPDATE public.agent_runs r SET status = 'waiting' WHERE r.id = v_run_id;
+    UPDATE public.agent_runs r SET status = public.agent_run_status_after(v_run_id, false) WHERE r.id = v_run_id;
   ELSIF p_outcome = 'retry' THEN
     UPDATE public.agent_run_steps s SET status = 'pending', error_code = p_error, claim_until = NULL, wait_item_id = NULL,
            not_before = now() + make_interval(secs => p_retry_s) WHERE s.id = v_step.id;
@@ -251,12 +265,9 @@ BEGIN
   END IF;
   UPDATE public.agent_run_steps s SET status = 'done', result = p_result, error_code = NULL, claim_until = NULL, wait_item_id = NULL, fence = s.fence + 1
    WHERE s.id = v_step.id;
-  UPDATE public.agent_runs r SET
-      status = CASE WHEN NOT p_more AND NOT EXISTS (
-          SELECT 1 FROM public.agent_run_steps o WHERE o.run_id = v_run_id AND o.status NOT IN ('done')) THEN 'done' ELSE 'running' END,
-      finished_at = CASE WHEN NOT p_more AND NOT EXISTS (
-          SELECT 1 FROM public.agent_run_steps o WHERE o.run_id = v_run_id AND o.status NOT IN ('done')) THEN now() ELSE r.finished_at END
-   WHERE r.id = v_run_id;
+  UPDATE public.agent_runs r SET status = public.agent_run_status_after(v_run_id, p_more),
+        finished_at = CASE WHEN public.agent_run_status_after(v_run_id, p_more) = 'done' THEN now() ELSE r.finished_at END
+     WHERE r.id = v_run_id;
   RETURN jsonb_build_object('result', 'resumed', 'runId', v_run_id, 'stepKey', v_step.step_key);
 END;
 $$;
@@ -337,6 +348,19 @@ BEGIN
 END;
 $$;
 
+-- Gives a claim back at once, for a worker that is shutting down: the step stays running under its fence but its claim has run out, so the sweep
+-- or the next boot takes it without waiting for the deadline. A claim that moved on, or a wait, is left alone. Answers whether it was released.
+CREATE FUNCTION public.agent_step_release(p_run uuid, p_step_key text, p_fence bigint) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $
+BEGIN
+  UPDATE public.agent_run_steps s SET claim_until = now() - interval '1 second'
+   WHERE s.run_id = p_run AND s.step_key = p_step_key AND s.fence = p_fence AND s.status = 'running' AND s.wait_item_id IS NULL;
+  RETURN FOUND;
+END;
+$;
+
 -- Marks that a person was told about a run that stopped; false when it was already marked, so the handler's deadLetter is called once.
 CREATE FUNCTION public.agent_run_spoken(p_run uuid) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
@@ -366,7 +390,7 @@ CREATE FUNCTION public.agent_run_due(p_limit integer)
      FROM public.agent_run_steps s
      JOIN public.agent_runs r ON r.id = s.run_id
     WHERE s.status = 'pending' AND s.not_before < now() - interval '1 minute' AND r.status = 'running'
-      AND NOT EXISTS (SELECT 1 FROM public.agent_run_steps e WHERE e.run_id = s.run_id AND e.seq < s.seq AND e.status IN ('pending', 'running', 'failed'))
+      AND NOT EXISTS (SELECT 1 FROM public.agent_run_steps e WHERE e.run_id = s.run_id AND e.seq < s.seq AND (e.status IN ('pending', 'failed') OR (e.status = 'running' AND e.wait_item_id IS NULL)))
     ORDER BY s.not_before LIMIT p_limit)
   UNION ALL
   (SELECT 'compensating'::text, s.run_id, s.workspace_id, s.agent_id, s.step_key, s.fence, COALESCE(s.claim_until, s.updated_at)
@@ -382,6 +406,7 @@ CREATE FUNCTION public.agent_run_due(p_limit integer)
     ORDER BY r.updated_at LIMIT p_limit);
 $$;
 
+REVOKE ALL ON FUNCTION public.agent_run_status_after(uuid, boolean) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_run_step_json(public.agent_run_steps) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_run_append(uuid, jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_step_claim(uuid, text) FROM PUBLIC, anon, authenticated;
@@ -390,8 +415,10 @@ REVOKE ALL ON FUNCTION public.agent_step_resume(uuid, jsonb, boolean) FROM PUBLI
 REVOKE ALL ON FUNCTION public.agent_run_route(uuid, text, text, text, text[]) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_comp_claim(uuid, integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_comp_commit(uuid, text, bigint, boolean, text, integer, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_step_release(uuid, text, bigint) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_run_spoken(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.agent_run_due(integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_run_status_after(uuid, boolean) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_run_step_json(public.agent_run_steps) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_run_append(uuid, jsonb) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_step_claim(uuid, text) TO app_be;
@@ -400,5 +427,6 @@ GRANT EXECUTE ON FUNCTION public.agent_step_resume(uuid, jsonb, boolean) TO app_
 GRANT EXECUTE ON FUNCTION public.agent_run_route(uuid, text, text, text, text[]) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_comp_claim(uuid, integer) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_comp_commit(uuid, text, bigint, boolean, text, integer, integer) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_step_release(uuid, text, bigint) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_run_spoken(uuid) TO app_be;
 GRANT EXECUTE ON FUNCTION public.agent_run_due(integer) TO app_be;

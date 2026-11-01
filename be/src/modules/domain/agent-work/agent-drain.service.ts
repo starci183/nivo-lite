@@ -12,6 +12,7 @@ import type { AgentTurnDrainPayload, AgentTurnQueue } from "@modules/queues/agen
 import { AgentTurnsService } from "./agent-turns.service"
 import { AgentEndedWakesService } from "./agent-ended-wakes.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
+import { AgentWakeInterruptionService } from "./agent-wake-interruption.service"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
 import { HEARTBEAT_MAX_BEATS, HEARTBEAT_MS, sessionKeyOf } from "./agent-work.policy"
 import type { AgentTurnEnding, AgentTurnUsage, AgentTurnView } from "./agent-work.contracts"
@@ -71,6 +72,7 @@ export class AgentDrainService {
         private readonly turns: AgentTurnsService,
         private readonly handlers: AgentWorkHandlersService,
         private readonly endedWakes: AgentEndedWakesService,
+        private readonly interruptions: AgentWakeInterruptionService,
     ) {
         this.owner = ids.next()
     }
@@ -153,6 +155,7 @@ export class AgentDrainService {
                 agentId: turn.agentId,
                 wakeId: turn.wakeId,
             })
+            await this.interruptions.tell(turn, signal)
             return { kind: "ending", ending: await this.failure(turn, attempt.cause, true) }
         }
         const { run } = attempt
