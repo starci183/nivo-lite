@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import type { AgentHandleCard } from "@modules/domain/agents"
-import type { TranscriptLine } from "./office-command-candidates.contracts"
+import type { OfficeTranscriptLine } from "./office-command-candidates.contracts"
 import {
     holdLineKeyOf,
     isHeldReason,
@@ -31,7 +31,7 @@ const agent = (handle: string): AgentHandleCard => ({
     name: handle.toUpperCase(),
 })
 
-const line = (id: string, author = "Lan", body = `line ${id}`): TranscriptLine => ({ id, author, body })
+const line = (id: string, author = "Lan", body = `line ${id}`): OfficeTranscriptLine => ({ id, author, body })
 
 describe("office-tag.policy > taggedAgentsOf", () => {
     it("keeps the order the author wrote and drops a handle nobody holds", async () => {

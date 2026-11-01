@@ -1,7 +1,7 @@
 import { createServer } from "node:http"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { parseJsonText } from "@modules/platform/primitives"
-import { allowingLoopback } from "./loopback-mcp.world"
+import { allowingLoopback } from "./loopback-mcp.adapter"
 
 /** The local connector's one write; the gateway derives the same replay key on every delivery. */
 const HOLD_TOOL = {

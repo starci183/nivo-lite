@@ -60,7 +60,12 @@ interface Tenant {
 export const persistBrainScenario = async (manager: EntityManager, own: Tenant, other: Tenant): Promise<void> => {
     const shop = { subject: "Shop", attribute: "Opening hours" } as const
     await Promise.all([
-        persistActiveFact(manager, { ...shop, workspaceId: own.workspaceId, value: "8 to 21 every day", scope: "public" }),
+        persistActiveFact(manager, {
+            ...shop,
+            workspaceId: own.workspaceId,
+            value: "8 to 21 every day",
+            scope: "public",
+        }),
         persistActiveFact(manager, {
             workspaceId: own.workspaceId,
             subject: "Shop",
@@ -68,7 +73,12 @@ export const persistBrainScenario = async (manager: EntityManager, own: Tenant, 
             value: "40 percent on every sale",
             scope: "internal",
         }),
-        persistActiveFact(manager, { ...shop, workspaceId: other.workspaceId, value: "9 to 17 weekdays", scope: "public" }),
+        persistActiveFact(manager, {
+            ...shop,
+            workspaceId: other.workspaceId,
+            value: "9 to 17 weekdays",
+            scope: "public",
+        }),
         grantTool(manager, own.workspaceId, own.agentId, "brain.search"),
         grantTool(manager, other.workspaceId, other.agentId, "brain.search"),
     ])
@@ -83,7 +93,11 @@ interface StoredCall {
 }
 
 /** The audit lines of an agent's calls to one tool, with the masked arguments and result summary the console would read. */
-export const storedCallsOf = async (manager: EntityManager, agentId: string, tool: string): Promise<Array<StoredCall>> => {
+export const storedCallsOf = async (
+    manager: EntityManager,
+    agentId: string,
+    tool: string,
+): Promise<Array<StoredCall>> => {
     const rows = await manager.find(McpCallLogEntity, { where: { agentId, tool }, take: 10 })
     return rows.map((row) => ({
         tool: row.tool,

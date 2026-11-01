@@ -9,6 +9,8 @@ export const allowingLoopback = (host: string): jest.SpyInstance => {
     return jest
         .spyOn(publicEndpoint, "publicAddressOf")
         .mockImplementation((url) =>
-            URL.canParse(url) && new URL(url).hostname === host ? Promise.resolve({ address: host, family: 4 }) : check(url),
+            URL.canParse(url) && new URL(url).hostname === host
+                ? Promise.resolve({ address: host, family: 4 })
+                : check(url),
         )
 }

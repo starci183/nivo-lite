@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { clipped, customerMasked, emailMasked, isoOf, needsAttention } from "./native-masking.policy"
+import { clipped, customerMasked, emailMasked, isoTextOf, needsAttention } from "./native-masking.policy"
 
 /** The members of the subject under test. */
 interface Subject {
     readonly clipped: typeof clipped
     readonly customerMasked: typeof customerMasked
     readonly emailMasked: typeof emailMasked
-    readonly isoOf: typeof isoOf
+    readonly isoTextOf: typeof isoTextOf
     readonly needsAttention: typeof needsAttention
 }
 
@@ -15,7 +15,9 @@ const SUBJECT = Symbol("native-masking.policy")
 /** The policy functions, read through the Nest testing module. */
 const build = async (): Promise<Subject> => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { clipped, customerMasked, emailMasked, isoOf, needsAttention } }],
+        providers: [
+            { provide: SUBJECT, useValue: { clipped, customerMasked, emailMasked, isoTextOf, needsAttention } },
+        ],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -86,14 +88,14 @@ describe("needsAttention", () => {
     })
 })
 
-describe("isoOf", () => {
+describe("isoTextOf", () => {
     it("words a database instant as ISO 8601", async () => {
         const subject = await build()
-        expect(subject.isoOf("2026-10-30 10:12:00.123+00")).toBe("2026-10-30T10:12:00.123Z")
+        expect(subject.isoTextOf("2026-10-30 10:12:00.123+00")).toBe("2026-10-30T10:12:00.123Z")
     })
 
     it("answers nothing for a text that is no instant", async () => {
         const subject = await build()
-        expect(subject.isoOf("soon")).toBe("")
+        expect(subject.isoTextOf("soon")).toBe("")
     })
 })

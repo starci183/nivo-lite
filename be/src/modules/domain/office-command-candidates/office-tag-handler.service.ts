@@ -34,7 +34,7 @@ import type {
     TagSurface,
     TagTalk,
     TagVoice,
-    TranscriptLine,
+    OfficeTranscriptLine,
 } from "./office-command-candidates.contracts"
 import { OfficeCommandCandidatesLogEvent } from "./office-command-candidates.log-events"
 import { holdLineKeyOf, isHeldReason, TRANSCRIPT_SIZE, transcriptOf } from "./office-tag.policy"
@@ -197,7 +197,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
         )
     }
 
-    private async taggedLine(turn: AgentTurnView, messageId: string): Promise<TranscriptLine | undefined> {
+    private async taggedLine(turn: AgentTurnView, messageId: string): Promise<OfficeTranscriptLine | undefined> {
         const text = await this.reader.textOf(turn.workspaceId, messageId)
         return text === undefined ? undefined : { id: messageId, author: "", body: text.body }
     }

@@ -141,7 +141,8 @@ export class McpGatewayAdminService {
     async registerRemote(actor: ConnectionActor, input: RemoteConnectorInput): Promise<void> {
         await this.connections.authorize(actor, MANAGER)
         const credential = input.credential ?? null
-        if (!KEY.test(input.key) || this.natives.some((adapter) => adapter.manifest.key === input.key)) throw invalid("key")
+        if (!KEY.test(input.key) || this.natives.some((adapter) => adapter.manifest.key === input.key))
+            throw invalid("key")
         if (input.name.trim() === "") throw invalid("name")
         if (!isUrl(input.url) || !(await this.remote.isReachable(input.url))) throw invalid("url")
         if (credential !== null && !isBearerCredential(credential)) throw invalid("credential")

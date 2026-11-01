@@ -62,7 +62,7 @@ export interface DecisionRun {
 }
 
 /** What a decision records. */
-export interface DecisionRecord {
+export interface NewDecision {
     /** The workspace id. */
     readonly workspaceId: string
     /** The agent id. */
@@ -98,7 +98,7 @@ export class AgentGraphDecisionsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** Writes the decision of an item once; a retry gets the id of the row already there. */
-    async record(decision: DecisionRecord): Promise<string> {
+    async record(decision: NewDecision): Promise<string> {
         await this.entityManager
             .createQueryBuilder(AgentGraphDecisionEntity, "decision")
             .insert()

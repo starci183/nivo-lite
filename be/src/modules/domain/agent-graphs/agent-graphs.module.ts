@@ -6,6 +6,7 @@ import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
 import { DATA_RIGHTS_GATE } from "@modules/domain/mcp-gateway"
 import { AgentDataRightsService } from "./agent-data-rights.service"
 import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
+import { AgentGraphAsksService } from "./agent-graph-asks.service"
 import { AgentGraphBriefService } from "./agent-graph-brief.service"
 import { AgentGraphDeciderService } from "./agent-graph-decider.service"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
@@ -62,6 +63,7 @@ const WHOLE: Part = {
         AgentGraphViewService,
         AgentGraphAdminService,
         AgentGraphApprovalsService,
+        AgentGraphAsksService,
         AgentGraphRunService,
         AgentGraphWatchService,
         AgentGraphSetupService,

@@ -18,7 +18,7 @@ export interface RuntimeAgentDeps {
 }
 
 /** The installation of an agent, or null when it has none. */
-export type OptionalInstallation = Installation | null
+export type OptionalRuntimeInstallation = Installation | null
 
 /**
  * The runtime agent a turn of this module runs on: the module's own agent when the runtime already knows it; otherwise its copy is built
@@ -28,7 +28,7 @@ export const runtimeAgentFor = async (
     deps: RuntimeAgentDeps,
     workspaceId: string,
     module: string,
-    installation: OptionalInstallation,
+    installation: OptionalRuntimeInstallation,
 ): Promise<string> => {
     const own = agentIdFor(workspaceId, module)
     if (deps.registry.has(own)) return own
@@ -53,7 +53,7 @@ export class RuntimeAgentService {
     ) {}
 
     /** The runtime agent a turn of the module runs on. */
-    agentFor(workspaceId: string, module: string, installation: OptionalInstallation): Promise<string> {
+    agentFor(workspaceId: string, module: string, installation: OptionalRuntimeInstallation): Promise<string> {
         return runtimeAgentFor(
             {
                 registry: this.registry,

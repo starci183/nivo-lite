@@ -114,6 +114,24 @@ export interface FactRecord {
     readonly decisionNote: string | null
 }
 
+/** What decides who may read a fact: its scope, the modules it is restricted to and the instance it is kept for. */
+export interface FactReach {
+    /** Who may read it. */
+    readonly scope: Scope
+    /** The modules that may read a restricted fact. */
+    readonly modules: ReadonlyArray<string>
+    /** The one agent instance that reads it; null = every instance. */
+    readonly installationId: string | null
+}
+
+/** The window in which a fact holds. */
+export interface FactWindow {
+    /** From when it holds. */
+    readonly validFrom: string | null
+    /** Until when it holds. */
+    readonly validTo: string | null
+}
+
 /** A fact, or null when there is none. */
 export type MaybeFact = FactRecord | null
 

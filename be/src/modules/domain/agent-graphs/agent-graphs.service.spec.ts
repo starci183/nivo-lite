@@ -134,6 +134,28 @@ describe("AgentGraphsService reads (continued)", () => {
     })
 })
 
+describe("AgentGraphsService.approverOf", () => {
+    const decision = {
+        id: "decision-1",
+        workspaceId: "ws-1",
+        agentId: "agent-1",
+        workItemId: "item-9",
+        versionId: "version-1",
+        action: "pay_supplier",
+        branchKey: "middle",
+        amount: 7_200_000,
+        approvalRequestId: null,
+        closed: false,
+    }
+
+    it("names the approver the branch of a decision had in the version that decided, or nobody", async () => {
+        const service = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow()] }))
+
+        await expect(service.approverOf(decision)).resolves.toMatchObject({ policy: "any", timeoutMinutes: 240 })
+        await expect(service.approverOf({ ...decision, branchKey: "small" })).resolves.toBeNull()
+    })
+})
+
 describe("AgentGraphsService for a job that walks every agent", () => {
     it("reads the graph of an agent by its id alone, and answers nothing for an agent with none", async () => {
         const found = await build(mockEntityManager({ findOne: [[AgentGraphEntity, graphRow("shadow", null)]] }))

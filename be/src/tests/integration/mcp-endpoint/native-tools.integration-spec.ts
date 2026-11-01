@@ -20,7 +20,10 @@ const call = (who: ReturnType<typeof tenant>, name: string, args: Record<string,
             jsonrpc: "2.0",
             id: 1,
             method: "tools/call",
-            params: { name: "tool.call", arguments: { name, arguments: args, ...(opKey === undefined ? {} : { opKey }) } },
+            params: {
+                name: "tool.call",
+                arguments: { name, arguments: args, ...(opKey === undefined ? {} : { opKey }) },
+            },
         },
     })
 

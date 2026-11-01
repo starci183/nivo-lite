@@ -31,13 +31,19 @@ export interface FactConflict {
  * The lines of what is on record for the setup chat: the facts that match the owner message first, then the rest by trust, never a
  * customer or a person, at most 30 lines of 160 characters inside 2400 characters.
  */
-export const knownLinesOf = (inForce: ReadonlyArray<FactRecord>, hits: ReadonlyArray<FactRecord>): ReadonlyArray<string> => {
+export const knownLinesOf = (
+    inForce: ReadonlyArray<FactRecord>,
+    hits: ReadonlyArray<FactRecord>,
+): ReadonlyArray<string> => {
     const shown = (fact: FactRecord): boolean => !PRIVATE_SUBJECTS.has(fact.subjectType)
     const hitIds = new Set(hits.map((fact) => fact.id))
     const rest = inForce.filter((fact) => !hitIds.has(fact.id)).sort((a, b) => b.trust - a.trust)
     const ordered = [...hits, ...rest].filter(shown).slice(0, KNOWN_LINES_MAX)
     const lines = ordered.map((fact) =>
-        ellipsize(`- ${fact.subjectLabel} - ${fact.attributeLabel}: ${fact.value}`.replace(/\s+/gu, " "), KNOWN_LINE_CHARS),
+        ellipsize(
+            `- ${fact.subjectLabel} - ${fact.attributeLabel}: ${fact.value}`.replace(/\s+/gu, " "),
+            KNOWN_LINE_CHARS,
+        ),
     )
     return withinBudget(lines, KNOWN_CHARS_MAX)
 }
@@ -55,7 +61,9 @@ export const conflictsOf = (
         const current = inForce.find(
             (fact) => fact.subjectKey === subjectKey && fact.attribute === attribute && !sameValue(fact.value, value),
         )
-        return current === undefined ? [] : [{ subject: subjectLabel, attribute: attributeLabel, current: current.value, proposed: value }]
+        return current === undefined
+            ? []
+            : [{ subject: subjectLabel, attribute: attributeLabel, current: current.value, proposed: value }]
     })
 
 /** The conflicts the reply does not already name by their current value, at most two. */

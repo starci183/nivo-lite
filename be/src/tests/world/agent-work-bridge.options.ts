@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AGENT_TURNS_OPTIONS } from "../../modules/domain/agent-turns/agent-turns.decorators"
@@ -5,8 +6,8 @@ import { AgentTurnAccessService } from "../../modules/domain/agent-turns/agent-t
 import { Secret } from "@modules/platform/config"
 import { AGENT_WORK_MODULES } from "./agent-work-capabilities.options"
 
-/** The secret the proofs sign the bridge plugin's credential with. */
-export const BRIDGE_PROOF_SECRET = "bridge-proof-secret"
+/** The secret, drawn per run, the proofs sign the bridge plugin's credential with. */
+export const BRIDGE_PROOF_SECRET = randomBytes(24).toString("hex")
 
 @Module({})
 class AgentBridgeAccessModule {

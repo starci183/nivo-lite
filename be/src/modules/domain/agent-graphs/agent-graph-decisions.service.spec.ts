@@ -5,10 +5,10 @@ import { decisionRow } from "@tests/fixtures/builders/agent-graph.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
-import type { DecisionRecord } from "./agent-graph-decisions.service"
+import type { NewDecision } from "./agent-graph-decisions.service"
 import { AgentGraphDecisionEntity } from "./persistence/entities"
 
-const RECORD: DecisionRecord = {
+const RECORD: NewDecision = {
     workspaceId: "ws-1",
     agentId: "agent-1",
     workItemId: "item-9",

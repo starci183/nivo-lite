@@ -44,7 +44,10 @@ const build = async (em: MockEntityManager) => {
     const hub = mock<RealtimeHub>()
     const logger = mock<Logger>()
     const seats = mock<WorkspaceMemberSeatsService>()
-    seats.activeUsers.mockResolvedValue([{ userId: "u1", displayName: "A" }, { userId: "u2", displayName: "B" }])
+    seats.activeUsers.mockResolvedValue([
+        { userId: "u1", displayName: "A" },
+        { userId: "u2", displayName: "B" },
+    ])
     const clock = new FakeClock(AT)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -89,8 +92,14 @@ describe("KnowledgeProgressService write", () => {
         expect(order).toEqual(["update", "publish", "publish"])
         const progressId: unknown = expect.stringMatching(/^progress:/)
         const frame = { ...STATE, id: progressId, kind: "progress" }
-        expect(hub.publish).toHaveBeenCalledWith(expect.objectContaining({ name: knowledgeProgressTopic("u1", WS).name }), frame)
-        expect(hub.publish).toHaveBeenCalledWith(expect.objectContaining({ name: knowledgeProgressTopic("u2", WS).name }), frame)
+        expect(hub.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ name: knowledgeProgressTopic("u1", WS).name }),
+            frame,
+        )
+        expect(hub.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ name: knowledgeProgressTopic("u2", WS).name }),
+            frame,
+        )
     })
 
     it("does not push when the row could not be stored", async () => {

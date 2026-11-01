@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto"
 import { createServer } from "node:http"
 import type { IncomingMessage, Server as HttpServer, ServerResponse } from "node:http"
 import { parseJsonText } from "@modules/platform/primitives"
-import { allowingLoopback } from "./loopback-mcp.world"
+import { allowingLoopback } from "./loopback-mcp.adapter"
 
 /** What the local remote server saw: how many requests carried the expected bearer and how many it refused. */
 export interface RemoteServerSeen {
