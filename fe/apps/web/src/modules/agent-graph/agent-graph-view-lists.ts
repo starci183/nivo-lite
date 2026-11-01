@@ -123,7 +123,7 @@ export const branchesViewOf = (data: AgentGraphData, ctx: AgentGraphContext): Ag
     const { t } = ctx
     const decide = data.nodes.find((node) => node.branches.length > 0)
     return {
-        title: decide === undefined ? t("branchesTitle") : decide.intent,
+        title: decide === undefined ? t("branchesTitle") : ctx.actionWord(decide.intent),
         hint: t("branchesHint"),
         emptyLabel: t("branchesEmpty"),
         rows: branchHitsOf(data.nodes).flatMap((hit) => {

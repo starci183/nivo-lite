@@ -137,7 +137,7 @@ export const detailViewOf = (data: AgentGraphData, nodeKey: string, ctx: AgentGr
         subtitle:
             hit === null
                 ? doneByWordOf(t, node)
-                : t("branchOf", { position: hit.position + 1, intent: hit.parent.intent }),
+                : t("branchOf", { position: hit.position + 1, intent: ctx.actionWord(hit.parent.intent) }),
         problemTitle: problems.length === 0 ? "" : t("problemTitle"),
         problems: problems.map((line) => line.text),
         answers: when === null ? answers : [when, ...answers],

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
+import { actionWordOf } from "@/hooks/actionWord"
 import { useAgentRights } from "@/hooks/agentSettings"
 import { useInstallations, useInstanceChannels } from "@/hooks/installations"
 import { mapSlot } from "@/hooks/slot"
@@ -30,6 +31,7 @@ import { useAgentGraphWrites } from "./useAgentGraphWrites"
 export const useAgentGraphPanel = (installationId: string, setup: AgentGraphSetup) => {
     const t = useTranslations("agentGraph")
     const tAgent = useTranslations("modulesCore")
+    const tGovernance = useTranslations("governance")
     const { installations } = useInstallations()
     const { canEdit, canGrant } = useAgentRights()
     const [changes, setChanges] = useState(0)
@@ -45,6 +47,7 @@ export const useAgentGraphPanel = (installationId: string, setup: AgentGraphSetu
         canEdit,
         isOwner: canGrant,
         amount: words.amount,
+        actionWord: (action: string) => actionWordOf(tGovernance, action),
         setup,
         channels: channelsOf(graph.read?.agentId ?? null),
         lifecycle,

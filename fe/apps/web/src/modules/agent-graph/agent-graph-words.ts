@@ -20,6 +20,8 @@ export interface AgentGraphContext {
     readonly isOwner: boolean
     /** Writes an amount in dong as an owner says it: "5 million". */
     readonly amount: (vnd: number) => string
+    /** An action key in the words every other screen says it, never the key. */
+    readonly actionWord: (action: string) => string
     /** Where the checklist of the agent stands: the other half of what "Publish and run" does. */
     readonly setup: AgentGraphSetupState
     /** The names of the channels the agent is connected to. */
