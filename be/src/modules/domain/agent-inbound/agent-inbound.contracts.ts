@@ -4,24 +4,38 @@ export type InboundTrust = "outsider" | "member" | "manager" | "system"
 /** How an adapter proves an event is real. */
 export type InboundAuthentication = "session" | "signature" | "internal"
 
-/** Who sent the event. */
+/** Who sent the event, as the adapter declares it. Trust is derived from it; a plug-in decides what the actor may do. */
 export interface InboundActor {
-    /** The trust the adapter gave them. */
-    readonly trust: InboundTrust
-    /** Their id in the adapter's own world, or null. */
-    readonly ref: string | null
-    /** The name to show, or null. */
-    readonly name: string | null
+    /** What it is: a member, an agent, a system, an outsider. An adapter may declare another. */
+    readonly kind: string
+    /** Its id in the adapter's own world, or null. */
+    readonly id: string | null
+    /** Its role, or null when it has none. */
+    readonly role: string | null
 }
 
-/** One thing the event proves, read by a fact reader. Shape owned with generic `sources`: see lane/graph-enforce. */
+/** One thing the event carries. The core carries it and never reads it: a fact reader reads entries by key. */
 export interface InboundEvidence {
-    /** Where it came from: the adapter, a file, a tool. */
-    readonly source: string
+    /** What it names. */
+    readonly key: string
+    /** Its value. */
+    readonly value: string | number | boolean
     /** What it is. */
     readonly kind: string
-    /** Its values, bounded and flat. */
-    readonly fields: Readonly<Record<string, string | number | boolean>>
+    /** How it arrived: the adapter, a file, a tool. */
+    readonly via: string
+}
+
+/** The chain of agents an event belongs to, so a tag between agents cannot run for ever. */
+export interface InboundChain {
+    /** The chain. */
+    readonly id: string
+    /** How many agent wakes led here. */
+    readonly depth: number
+    /** The agents already in it. */
+    readonly agentIds: ReadonlyArray<string>
+    /** What is new in this event, or null: an agent in the chain is woken again only for a new cause. */
+    readonly cause: string | null
 }
 
 /** A file that came with an event. */
@@ -40,6 +54,8 @@ export interface InboundEvent {
     readonly eventType: string
     /** Who sent it. */
     readonly actor: InboundActor
+    /** The chain it belongs to, or null when no agent led to it. */
+    readonly chain: InboundChain | null
     /** The words and fields of the event, as data. */
     readonly payload: Readonly<Record<string, unknown>>
     /** The files. */
@@ -62,6 +78,8 @@ export interface InboundAdapter {
     readonly key: string
     /** How it proves events. */
     readonly authentication: InboundAuthentication
+    /** The trust of an actor of this adapter. */
+    trustOf(actor: InboundActor): InboundTrust
     /** True when the sender waits for an answer: a failed model turn gives the holding line at once. */
     readonly awaitsAnswer: boolean
     /** The step kind that delivers an answer, or null when the adapter has no channel: the run ends without a reply. */
