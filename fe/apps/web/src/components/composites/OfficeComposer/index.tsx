@@ -3,7 +3,6 @@ import {
     Button,
     Cluster,
     Fieldset,
-    HorizontalScrollRegion,
     Icon,
     IconButton,
     PaneSection,
@@ -35,26 +34,19 @@ type QuickPromptsProps = {
 /** The row of quick questions above the field. */
 const QuickPrompts = (props: QuickPromptsProps) => (
     <Fieldset legend={props.view.text("quickLabel")} isLegendHidden>
-        <HorizontalScrollRegion
-            overflow="needed"
-            aria-label={props.view.text("quickLabel")}
-            scrollPreviousLabel={props.view.text("quickPrevious")}
-            scrollNextLabel={props.view.text("quickNext")}
-        >
-            <Cluster gap="inline" wrap={false}>
-                {props.prompts.map((prompt) => (
-                    <Button
-                        key={prompt}
-                        intent="neutral"
-                        size="sm"
-                        isDisabled={props.view.isSkeleton}
-                        onPress={() => props.onPrompt(prompt)}
-                    >
-                        {prompt}
-                    </Button>
-                ))}
-            </Cluster>
-        </HorizontalScrollRegion>
+        <Cluster gap="inline">
+            {props.prompts.map((prompt) => (
+                <Button
+                    key={prompt}
+                    intent="neutral"
+                    size="sm"
+                    isDisabled={props.view.isSkeleton}
+                    onPress={() => props.onPrompt(prompt)}
+                >
+                    {prompt}
+                </Button>
+            ))}
+        </Cluster>
     </Fieldset>
 )
 
