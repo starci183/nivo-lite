@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { needsAttention } from "./native-masking.policy"
-import { providerTools } from "./provider-tools.manifest"
+import { providerTools } from "./provider-tools.policy"
 import type { ProviderRoute } from "./provider-tools.service"
 import { ProviderToolsService } from "./provider-tools.service"
 

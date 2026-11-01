@@ -35,7 +35,7 @@ const item = itemOf({
 
 const build = async (
     state: GraphState | null,
-    facts: Record<string, number> | Error = { [AMOUNT_FACT]: 7_200_000 },
+    facts: Record<string, number | undefined> | Error = { [AMOUNT_FACT]: 7_200_000 },
 ) => {
     const logger = mock<Logger>()
     const graphs = mock<AgentGraphsService>({ stateOfInstallation: jest.fn().mockResolvedValue(state) })
@@ -146,6 +146,18 @@ describe("AgentGraphDeciderService.decide in shadow", () => {
 
         expect(built.decisions.record).toHaveBeenCalledWith(
             expect.objectContaining({ branchKey: "small", outcome: "auto", shadowDiff: false }),
+        )
+    })
+})
+
+describe("AgentGraphDeciderService.decide records the facts", () => {
+    it("keeps only the facts that were read in the decision", async () => {
+        const built = await build(stateOf(), { [AMOUNT_FACT]: 7_200_000, "order.unseen": undefined })
+
+        await built.service.decide(requestOf(gateOf(AUTO)))
+
+        expect(built.decisions.record).toHaveBeenCalledWith(
+            expect.objectContaining({ facts: { [AMOUNT_FACT]: 7_200_000, "model.amount_vnd": 4_900_000 } }),
         )
     })
 })

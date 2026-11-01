@@ -133,7 +133,7 @@ export class McpGatewayService {
         private readonly credentials: McpConnectorCredentialService,
         private readonly receipts: GatewayReceiptsService,
         private readonly nativeRunner: NativeRunnerService,
-        @Optional() @InjectDataRightsGate() private readonly dataRights?: DataRightsGate,
+        @Optional() @InjectDataRightsGate() private readonly dataRights: DataRightsGate | null = null,
     ) {}
 
     /** The connectors of a workspace: every native one, and the remote ones it registered. */
@@ -306,7 +306,7 @@ export class McpGatewayService {
     /** What the agent's data rights decide about a native read: every other call, and an agent no enforced graph governs, passes untouched. */
     private async reachOf(caller: GatewayCaller, resolved: Resolved): Promise<DataRightVerdict> {
         const gate = this.dataRights
-        if (gate === undefined || resolved.connector.manifest.kind !== "native" || resolved.spec.scope !== "read")
+        if (gate === null || resolved.connector.manifest.kind !== "native" || resolved.spec.scope !== "read")
             return { kind: "open" }
         return judgeDataRight(await gate.rightsOf(caller.workspaceId, caller.agentId), resolved.name, caller)
     }

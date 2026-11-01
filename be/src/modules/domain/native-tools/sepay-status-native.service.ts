@@ -4,7 +4,7 @@ import { SEPAY_MANIFEST, SepayNativeService } from "@modules/domain/mcp-gateway"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { needsAttention } from "./native-masking.policy"
 import { NativeViewService } from "./native-view.service"
-import { providerTools } from "./provider-tools.manifest"
+import { providerTools } from "./provider-tools.policy"
 import type { ProviderRoute } from "./provider-tools.service"
 import { ProviderToolsService } from "./provider-tools.service"
 

@@ -422,6 +422,19 @@ describe("OfficeTagHandlerService > settle: edges", () => {
         )
     })
 
+    it("acts as the agent without looking for a member when the author is unknown", async () => {
+        const { handler, settler, members } = await build()
+
+        await handler.settle({ ...turnOf(), actorMemberId: null }, {})
+
+        expect(members.find).not.toHaveBeenCalled()
+        expect(settler.settle).toHaveBeenCalledWith(
+            expect.anything(),
+            {},
+            expect.objectContaining({ actorName: "Ke toan" }),
+        )
+    })
+
     it("skips a wake whose agent is gone", async () => {
         const { handler, settler } = await build({ agent: null })
 

@@ -157,6 +157,15 @@ describe("base-graph.policy (continued)", () => {
         )
     })
 
+    it("leaves the always-asking approval with no approver when the owner set no rule for its action", async () => {
+        const subject = await build()
+        const template = templateOf({ authority: { action: "pay_supplier", alwaysAsk: true } })
+
+        const graph = subject.baseGraphOf(moduleOf(), [template], [], VOICE)
+
+        expect(graph.nodes.find((node) => node.key === "always:payment-reminder")?.approver).toBeNull()
+    })
+
     it("rises with a template version, because the version is the source of the start node", async () => {
         const subject = await build()
 

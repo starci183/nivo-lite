@@ -111,3 +111,16 @@ describe("learn-signals.policy", () => {
         expect(subject.learnSignals(two).map((entry) => entry.branchKey)).toEqual(["a"])
     })
 })
+
+describe("learn-signals.policy (evidence)", () => {
+    it("keeps the amounts only of the evidence that had one", async () => {
+        const subject = await build()
+        const noAmount = decisions(REJECT_HITS, "rejected").map((decision, index) =>
+            index === 0 ? { ...decision, amount: null } : decision,
+        )
+
+        expect(subject.learnSignals(noAmount)).toMatchObject([
+            { signal: "reject", amounts: Array.from({ length: REJECT_HITS - 1 }, () => 6_000_000) },
+        ])
+    })
+})

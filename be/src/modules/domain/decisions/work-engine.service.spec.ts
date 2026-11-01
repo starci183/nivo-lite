@@ -11,6 +11,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type * as Work from "./decisions.contracts"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
+import { WorkBranchService } from "./work-branch.service"
 import { WorkChainService } from "./work-chain.service"
 import { OUTBOUND_ACCESS_GATE } from "./work-engine.decorators"
 import { WorkEngineService } from "./work-engine.service"
@@ -50,8 +51,7 @@ import {
 import type { WorkEngineFixtureOptions } from "@tests/fixtures/builders/work-engine.builder"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
-const quoteResult = { summary: "Sent the quote" }
-const autoResult = { path: "auto", result: quoteResult, evidence: "captured", leadId: null }
+const autoResult = { path: "auto", result: { summary: "Sent the quote" }, evidence: "captured", leadId: null }
 const blankPatch = { proposal: quote, subjectType: null, subjectId: null, leadId: null }
 const existingItem = objectLike({ id: "item-1" })
 const doneItem = objectLike({ status: "done" })
@@ -107,6 +107,13 @@ const build = async (options: WorkEngineFixtureOptions = {}) => {
         fieldLabels: jest.fn().mockReturnValue("Need"),
     })
     const recorder = mock<WorkRecorderService>()
+    const branching = mock<WorkBranchService>({
+        consult: jest.fn(async (request) => ({
+            proposal: request.proposal,
+            verdict: await request.gate(request.proposal),
+            carried: {},
+        })),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkEngineService,
@@ -121,6 +128,7 @@ const build = async (options: WorkEngineFixtureOptions = {}) => {
             { provide: WorkChainService, useValue: chain },
             { provide: WorkApprovalService, useValue: approval },
             { provide: WorkRecorderService, useValue: recorder },
+            { provide: WorkBranchService, useValue: branching },
         ],
     }).compile()
     return {
@@ -147,9 +155,7 @@ describe("WorkEngineService / durable execution choices", () => {
     it("uses the exact queued draft without preparation and asks when the producer requires approval", async () => {
         const proposal = approvalMessageOf({ summary: "API message", fields: {} })
         const built = await build({ items: { claim: resolved(itemOf({ proposal })) } })
-
         await built.service.runQueuedItem(ctx, "item-1")
-
         expect(built.performer?.prepare).not.toHaveBeenCalled()
         expect(built.items.savePrepared).not.toHaveBeenCalled()
         expect(built.ask).toHaveBeenCalledWith(ctx, expect.objectContaining({ proposal }), proposal, authorityAsk)
@@ -161,7 +167,6 @@ describe("WorkEngineService / durable execution choices", () => {
         const built = await build({
             items: { nextQueued: resolved(itemOf({ proposal })), claim: resolved(itemOf({ proposal })) },
         })
-
         expect(await built.service.runQueued(ctx, 1)).toBe(1)
         expect(built.performer?.prepare).not.toHaveBeenCalled()
         expect(built.performer?.perform).toHaveBeenCalledWith(ctx, expect.anything(), proposal, autoPlan.by)
@@ -175,9 +180,7 @@ describe("WorkEngineService / durable execution choices", () => {
             performer: performerOf({ prepare: resolved({ proposal: prepared }) }),
             items: { claim: resolved(itemOf({ proposal })) },
         })
-
         await built.service.runQueuedItem(ctx, "item-1")
-
         expect(built.items.savePrepared).toHaveBeenCalledWith("item-1", {
             ...blankPatch,
             proposal: { ...prepared, execution: { preset: undefined, noChain: true, forceAsk: undefined } },
@@ -188,9 +191,7 @@ describe("WorkEngineService / durable execution choices", () => {
     it("retains noChain after approving and editing an order that has an invoice successor", async () => {
         const proposal = approvalMessageOf({ draft: "Original" })
         const built = await build(noChainOrderOptions(proposal))
-
         const completed = await built.service.resumeWork(ctx, "item-1", "approved", { draft: "Edited" }, owner)
-
         expect(completed.status).toBe("done")
         expect(built.performer?.perform).toHaveBeenCalledWith(
             ctx,

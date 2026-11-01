@@ -12,8 +12,8 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { QueueTimeout } from "@modules/platform/queue"
 import { SEPAY_MANIFEST } from "./adapters/sepay-native.service"
-import type { GatewayCaller, NativeAdapter, NativeConnectorManifest } from "./mcp-gateway.contracts"
-import { MCP_GATEWAY_OPTIONS, NATIVE_ADAPTERS } from "./mcp-gateway.decorators"
+import type { DataRightsGate, GatewayCaller, NativeAdapter, NativeConnectorManifest } from "./mcp-gateway.contracts"
+import { DATA_RIGHTS_GATE, MCP_GATEWAY_OPTIONS, NATIVE_ADAPTERS } from "./mcp-gateway.decorators"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import { McpGatewayService } from "./mcp-gateway.service"
@@ -49,9 +49,19 @@ import {
     TIMED_OUT_WRITES,
     VALID_WRITE_IDENTITIES,
 } from "@tests/fixtures/builders/mcp-gateway-scenario.builder"
-import { INTERNAL_SEPAY_MANIFEST, OPEN_SEPAY_MANIFEST, TAINTING_MANIFEST, taintedTurnExpected, taintedTurnOf } from "@tests/fixtures/builders/mcp-gateway-taint.builder"
+import {
+    INTERNAL_SEPAY_MANIFEST,
+    OPEN_SEPAY_MANIFEST,
+    TAINTING_MANIFEST,
+    taintedTurnExpected,
+    taintedTurnOf,
+} from "@tests/fixtures/builders/mcp-gateway-taint.builder"
 
-const build = async (setup: GatewaySpecSetup = {}, manifest = OPEN_SEPAY_MANIFEST, added: ReadonlyArray<NativeConnectorManifest> = []) => {
+const build = async (
+    setup: GatewaySpecSetup = {},
+    manifest = OPEN_SEPAY_MANIFEST,
+    added: ReadonlyArray<NativeConnectorManifest> = [],
+) => {
     const clock = new FakeClock("2026-10-20T02:00:00.000Z")
     const logger = mock<Logger>()
     const remote = mock<McpRemote>()
@@ -63,6 +73,7 @@ const build = async (setup: GatewaySpecSetup = {}, manifest = OPEN_SEPAY_MANIFES
     const callLog = mock<McpCallLogService>()
     const credentials = mock<McpConnectorCredentialService>({ endpointOf: openedEndpointOf })
     const receipts = mock<GatewayReceiptsService>()
+    const dataRights = mock<DataRightsGate>({ rightsOf: jest.fn().mockResolvedValue(setup.rights ?? null) })
     const cancel = jest.fn()
     const runner = mock<NativeRunnerService>({
         run: (...call) => new NativeRunnerService(timeout).run(...call),
@@ -72,7 +83,10 @@ const build = async (setup: GatewaySpecSetup = {}, manifest = OPEN_SEPAY_MANIFES
         providers: [
             McpGatewayService,
             { provide: MCP_GATEWAY_OPTIONS, useValue: { defaultTimeoutMs: setup.timeoutMs ?? 4000 } },
-            { provide: NATIVE_ADAPTERS, useValue: [native, ...added.map((extra) => mock<NativeAdapter>({ manifest: extra }))] },
+            {
+                provide: NATIVE_ADAPTERS,
+                useValue: [native, ...added.map((extra) => mock<NativeAdapter>({ manifest: extra }))],
+            },
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
             { provide: MCP_REMOTE, useValue: remote },
@@ -82,6 +96,7 @@ const build = async (setup: GatewaySpecSetup = {}, manifest = OPEN_SEPAY_MANIFES
             { provide: McpConnectorCredentialService, useValue: credentials },
             { provide: GatewayReceiptsService, useValue: receipts },
             { provide: NativeRunnerService, useValue: runner },
+            { provide: DATA_RIGHTS_GATE, useValue: dataRights },
         ],
     }).compile()
     const gateway = moduleRef.get(McpGatewayService)
@@ -91,9 +106,7 @@ const build = async (setup: GatewaySpecSetup = {}, manifest = OPEN_SEPAY_MANIFES
 describe("McpGatewayService registry and discovery", () => {
     it("lists every native connector with its row's status and bounded time limit, and the remote rows", async () => {
         const { gateway } = await build(gatewayScenarioOf("registry"))
-
         const connectors = await gateway.connectorsOf("ws-1")
-
         expect(connectors.map((connector) => [connector.manifest.key, connector.status, connector.timeoutMs])).toEqual(
             EXPECTED.connectorStates,
         )
@@ -105,9 +118,7 @@ describe("McpGatewayService registry and discovery", () => {
         const { gateway, native } = await build(gatewayScenarioOf("registry"), SEPAY_MANIFEST, [
             { ...SEPAY_MANIFEST, key: "brain", name: "Brain" },
         ])
-
         const connectors = await gateway.connectorsOf("ws-1")
-
         expect(native.invoke).not.toHaveBeenCalled()
         expect(connectors.map((connector) => connector.manifest.key)).toEqual(["sepay", "brain", "hakuen"])
         expect(connectors[1]).toMatchObject({ status: "active", timeoutMs: 4000, approvedTools: null })
@@ -115,7 +126,6 @@ describe("McpGatewayService registry and discovery", () => {
 
     it("answers the grants of an agent and the agents granted a tool", async () => {
         const { gateway, grants } = await build()
-
         await expect(gateway.grantsOf("ws-1", "sales")).resolves.toEqual(EXPECTED.grants)
         await expect(gateway.agentsGranted("ws-1", ["sepay.*"])).resolves.toEqual(["a1", "a2"])
         expect(grants.listOfAgent).toHaveBeenCalledWith("ws-1", "sales")
@@ -124,9 +134,7 @@ describe("McpGatewayService registry and discovery", () => {
 
     it("searches only the approved, granted tools of the connectors that are not disabled", async () => {
         const { gateway } = await build(gatewayScenarioOf("discovery"))
-
         const found = await gateway.search(CALLER, "spa slots", 3)
-
         expect(found.map((tool) => tool.name)).not.toContain("hakuen.spa.findSlots")
         expect(found.every((tool) => tool.name.startsWith("hakuen."))).toBe(true)
         expect(found[0]?.name).toBe("hakuen.spa.hold")
@@ -167,7 +175,6 @@ describe("McpGatewayService.call refusals", () => {
 
     it("refuses a remote tool whose live schema is not the approved one, and audits it", async () => {
         const { gateway, remote, callLog } = await build(gatewayScenarioOf("schema-refusal"))
-
         await expect(gateway.call(CALLER, "hakuen.booking.hold", { roomType: "deluxe" })).resolves.toEqual(
             refusalOf("schema_unapproved", "hakuen.booking.hold"),
         )
@@ -182,7 +189,6 @@ describe("McpGatewayService.call refusals", () => {
 
     it("refuses a read the agent is not granted and audits it", async () => {
         const { gateway, callLog, native } = await build()
-
         await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 5 })).resolves.toEqual(
             refusalOf("not_granted", "sepay.transactions.list"),
         )
@@ -192,7 +198,6 @@ describe("McpGatewayService.call refusals", () => {
 
     it("asks a person in ask mode or over a constraint, and audits the approval", async () => {
         const { gateway, callLog, remote } = await build(gatewayScenarioOf("approval"))
-
         await expect(gateway.call(CALLER, "hakuen.booking.cancel", { bookingId: "b1" })).resolves.toEqual(
             EXPECTED.askModeRefusal,
         )
@@ -213,7 +218,6 @@ describe("McpGatewayService write identities", () => {
         const role = await gateway.toolForRole(caller.workspaceId, "receivable.find")
         assert(role.ok)
         const tool = isNative ? "sepay.transactions.list" : role.tool.name
-
         const first = await gateway.call(caller, tool, {})
         const retried = await gateway.call(caller, tool, {})
         const refused = refusalOf("idempotency_key_required", tool)
@@ -227,7 +231,6 @@ describe("McpGatewayService write identities", () => {
 
     it.each(VALID_WRITE_IDENTITIES)("claims a write with identity %j", async (caller) => {
         const { gateway, remote, receipts } = await build()
-
         await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(EXPECTED.reply)
         expect(receipts.run).toHaveBeenCalledTimes(1)
         expect(remote.call).toHaveBeenCalledTimes(1)
@@ -237,7 +240,6 @@ describe("McpGatewayService write identities", () => {
 describe("McpGatewayService.call remote connectors", () => {
     it("calls the remote tool with the bearer opened from its sealed row, masks the audit and answers the result", async () => {
         const { gateway, remote, callLog } = await build()
-
         await expect(
             gateway.call({ ...CALLER, opKey: "reveal-1" }, "hakuen.keycode.reveal", { stayId: "s1" }),
         ).resolves.toEqual(EXPECTED.reply)
@@ -249,10 +251,8 @@ describe("McpGatewayService.call remote connectors", () => {
         const { gateway, remote, receipts, grants, connectors } = await build()
         const { caller, args, before, after, firstHasReplayKey } = scenario
         connectors.list.mockResolvedValueOnce([before]).mockResolvedValueOnce([after])
-
         const first = await gateway.call(caller, "hakuen.booking.confirm", args)
         const retried = await gateway.call(caller, "hakuen.booking.confirm", args)
-
         expect([first, retried]).toEqual(EXPECTED.retriedAnswers)
         expect(remote.call).toHaveBeenCalledTimes(1)
         expect(receipts.run).toHaveBeenCalledTimes(2)
@@ -267,12 +267,10 @@ describe("McpGatewayService.call remote connectors", () => {
         const { gateway, remote } = await build()
         const step: GatewayCaller = { ...CALLER, workItemId: "item-1" }
         const hold = { roomType: "deluxe", checkIn: "2026-10-24", nights: 2, guests: 2, guestId: "g1" }
-
         await gateway.call(step, "hakuen.booking.hold", hold)
         await gateway.call(step, "hakuen.booking.hold", hold)
         await gateway.call({ ...step, opKey: "item-1:rehold" }, "hakuen.booking.hold", hold)
         await gateway.call(step, "hakuen.booking.hold", { ...hold, idempotencyKey: "mine" })
-
         const keys = remote.call.mock.calls.map(([request]) => request.args.idempotencyKey)
         expect(keys[0]).toMatch(/^nivo:[0-9a-f]{64}$/u)
         expect(keys[1]).toMatch(/^nivo:[0-9a-f]{64}$/u)
@@ -284,10 +282,8 @@ describe("McpGatewayService.call remote connectors", () => {
         const { gateway, remote, receipts, grants } = await build()
         const caller = { ...CALLER, opKey: "customer-message:confirm" }
         const args = { holdId: "hold-1", discountPct: 0 }
-
         const first = await gateway.call(caller, "hakuen.booking.confirm", args)
         const retried = await gateway.call(caller, "hakuen.booking.confirm", { discountPct: 0, holdId: "hold-1" })
-
         expect([first, retried]).toEqual(EXPECTED.retriedAnswers)
         expect(remote.call).toHaveBeenCalledTimes(1)
         expect(receipts.run).toHaveBeenCalledTimes(2)
@@ -302,7 +298,6 @@ describe("McpGatewayService.call remote connectors", () => {
     it("answers a tool refusal as tool_error with the masked summary", async () => {
         const { gateway, remote, callLog } = await build()
         remote.call.mockResolvedValue({ isError: true, value: { error: { code: "NO_AVAILABILITY" } } })
-
         await expect(gateway.call(CALLER, "hakuen.rooms.searchAvailability", {})).resolves.toEqual(EXPECTED.toolRefusal)
         expect(linesOf(callLog)[0]).toMatchObject({ outcome: "error", errorCode: "tool_error" })
     })
@@ -313,7 +308,6 @@ describe("McpGatewayService.call remote connectors", () => {
         const { gateway, remote, callLog, logger } = await build({ rows: [connectorOf({ url: null })] })
         const timeout = new McpError({ code: McpErrorCode.Timeout, params: { url: "" } })
         remote.call.mockRejectedValueOnce(timeout).mockRejectedValueOnce(new Error("boom"))
-
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toEqual(EXPECTED.readTimeout)
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toEqual(EXPECTED.readFailure)
         expect(remote.call.mock.calls[0]?.[0].endpoint.url).toBe("")
@@ -324,7 +318,6 @@ describe("McpGatewayService.call remote connectors", () => {
     it("runs an approved replay of a side-effect with no rule and records who approved it", async () => {
         const { gateway, callLog } = await build({ grants: [] })
         const caller = { ...CALLER, workItemId: "approved-item", approvedBy: "manager-1" }
-
         await expect(gateway.call(caller, "hakuen.booking.cancel", { bookingId: "b1" })).resolves.toMatchObject({
             ok: true,
         })
@@ -339,7 +332,6 @@ describe("McpGatewayService.call writes that time out", () => {
         const { gateway, remote, callLog } = await build()
         remote.call.mockRejectedValueOnce(timeout()).mockResolvedValueOnce({ isError: false, value: { holdId: "h1" } })
         const step: GatewayCaller = { ...CALLER, workItemId: "item-1" }
-
         await expect(gateway.call(step, "hakuen.booking.hold", { roomType: "deluxe" })).resolves.toEqual(EXPECTED.held)
         const [first, second] = remote.call.mock.calls.map(([request]) => request.args)
         expect(second).toEqual(first)
@@ -351,7 +343,6 @@ describe("McpGatewayService.call writes that time out", () => {
         const { gateway, remote, callLog, receipts } = await build()
         const caller = { ...CALLER, opKey: "timed-out-write" }
         remote.call.mockRejectedValue(timeout())
-
         const first = await gateway.call(caller, tool, args)
         expect(first).toEqual(EXPECTED.unknownWriteOutcome)
         await expect(gateway.call(caller, tool, args)).resolves.toEqual(first)
@@ -363,7 +354,6 @@ describe("McpGatewayService.call writes that time out", () => {
     it("does not send a failed write again when it did not time out", async () => {
         const { gateway, remote } = await build()
         remote.call.mockRejectedValue(new Error("refused"))
-
         await expect(
             gateway.call({ ...CALLER, workItemId: "item-1" }, "hakuen.booking.hold", { roomType: "deluxe" }),
         ).resolves.toEqual({ ok: false, code: "unavailable", detail: "internal" })
@@ -376,7 +366,6 @@ describe("McpGatewayService breaker", () => {
         const { gateway, remote, receipts, clock } = await build()
         await openRemoteGatewayBreaker(gateway, remote)
         const caller = { ...CALLER, opKey: "confirm-after-recovery" }
-
         await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(EXPECTED.circuitOpen)
         expect(receipts.run).not.toHaveBeenCalled()
         clock.advance(120_000)
@@ -392,7 +381,6 @@ describe("McpGatewayService breaker", () => {
         await gateway.call(caller, "hakuen.booking.confirm", {})
         await openRemoteGatewayBreaker(gateway, remote)
         clock.advance(120_000)
-
         await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(EXPECTED.reply)
         remote.call.mockResolvedValue({ isError: false, value: { stay: null } })
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toEqual(answerOf({ stay: null }))
@@ -402,7 +390,6 @@ describe("McpGatewayService breaker", () => {
     it("opens after five failures of a connector, refuses it meanwhile and audits it, while another connector runs", async () => {
         const { gateway, remote, native, callLog } = await build({ grants: [grantOf(), grantOf({ tool: "sepay.*" })] })
         await openRemoteGatewayBreaker(gateway, remote)
-
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toEqual(EXPECTED.circuitOpen)
         await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toMatchObject({ ok: true })
         await expect(
@@ -418,12 +405,10 @@ describe("McpGatewayService breaker", () => {
         await openRemoteGatewayBreaker(gateway, remote)
         clock.advance(120_000)
         const answer = pendingRemoteReplyOf(remote)
-
         const probe = gateway.call(CALLER, "hakuen.stay.current", {})
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toMatchObject({ detail: "circuit_open" })
         answer({ isError: false, value: { stay: null } })
         await expect(probe).resolves.toEqual({ ok: true, value: { stay: null } })
-
         remote.call.mockResolvedValue({ isError: false, value: { stay: null } })
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toMatchObject({ ok: true })
     })
@@ -445,7 +430,6 @@ describe("McpGatewayService.call native connectors", () => {
 
     it("returns and audits invalid arguments without opening the connector's breaker or logging a server failure", async () => {
         const { gateway, native, callLog, logger } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
-
         for (let attempt = 0; attempt < 6; attempt += 1) {
             await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 51 })).resolves.toEqual(
                 refusalOf("invalid_arguments", "Invalid tool arguments"),
@@ -466,7 +450,6 @@ describe("McpGatewayService.call native connectors", () => {
             code: "invalid_arguments",
         })
         native.invoke.mockResolvedValue({ transactions: [] })
-
         await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 1 })).resolves.toMatchObject({ ok: true })
         expect(native.invoke).toHaveBeenCalledTimes(6)
     })
@@ -475,8 +458,10 @@ describe("McpGatewayService.call native connectors", () => {
 describe("McpGatewayService internal-only tools", () => {
     it("keeps a customer conversation from the tool, audited before the adapter, and shows it outside one", async () => {
         const name = "sepay.transactions.list"
-        const { gateway, native, callLog } = await build({ grants: [grantOf({ tool: "sepay.*" })] }, INTERNAL_SEPAY_MANIFEST)
-
+        const { gateway, native, callLog } = await build(
+            { grants: [grantOf({ tool: "sepay.*" })] },
+            INTERNAL_SEPAY_MANIFEST,
+        )
         await expect(gateway.call(CALLER, name, {})).resolves.toEqual(refusalOf("internal_only", name))
         await expect(gateway.search(CALLER, "bank transactions", 5)).resolves.toEqual([])
         await expect(gateway.describe(CALLER, name)).resolves.toBeNull()
@@ -491,8 +476,25 @@ describe("McpGatewayService internal-only tools", () => {
 describe("McpGatewayService tainted turns", () => {
     it("asks a person for a write of a turn that read tainted text, until one approves it or the window ends", async () => {
         const { gateway, callLog, clock } = await build({ grants: [grantOf({ tool: "sepay.*" })] }, TAINTING_MANIFEST)
-
         await expect(taintedTurnOf(gateway, clock, CALLER)).resolves.toEqual(taintedTurnExpected)
         expect(linesOf(callLog).map((line) => line.errorCode)).toContain("tainted_input")
+    })
+})
+
+describe("McpGatewayService data rights", () => {
+    const right = { kind: "payments", scope: "workspace", hide: ["account"], mask: [] } as const
+
+    it("refuses a native read with no data right and audits it, and shows the read without the fields a right hides", async () => {
+        const refused = await build({ grants: [grantOf({ tool: "sepay.*" })], rights: [] })
+        const narrowed = await build({ grants: [grantOf({ tool: "sepay.*" })], rights: [right] })
+        narrowed.native.invoke.mockResolvedValue({ transactions: [{ id: "t1", account: "0123" }] })
+        await expect(refused.gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(
+            refusalOf("not_granted", "no_data_right"),
+        )
+        expect(refused.native.invoke).not.toHaveBeenCalled()
+        expect(linesOf(refused.callLog)[0]).toMatchObject({ outcome: "refused", errorCode: "no_data_right" })
+        await expect(narrowed.gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(
+            answerOf({ transactions: [{ id: "t1" }] }),
+        )
     })
 })

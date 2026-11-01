@@ -66,10 +66,10 @@ export class AgentGraphSetupService implements SetupGraphPort {
 
     /** The seat of the person the owner named, or an empty text when nobody or more than one answers to that name. */
     async seatNamed(workspaceId: string, name: string): Promise<string> {
-        const found = (await this.members.directory(workspaceId)).filter(
+        const [only, ...others] = (await this.members.directory(workspaceId)).filter(
             (person) => person.status === "active" && nameKey(person.name) === nameKey(name),
         )
-        return found.length === 1 ? (found[0]?.memberId ?? "") : ""
+        return only !== undefined && others.length === 0 ? only.memberId : ""
     }
 
     /** Publishes the draft of the graph with the context version the setup became; a draft that did not change publishes nothing. */

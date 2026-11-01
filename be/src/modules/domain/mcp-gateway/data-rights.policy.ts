@@ -20,7 +20,7 @@ const KIND_OF_CONNECTOR: Readonly<Record<string, DataKind>> = {
 }
 
 /** The kind of data a tool reads, from the connector in front of its name, or null when it reads none the store holds. */
-export const dataKindOfTool = (tool: string): OptionalDataKind => KIND_OF_CONNECTOR[tool.split(".")[0] ?? ""] ?? null
+export const dataKindOfTool = (tool: string): OptionalDataKind => KIND_OF_CONNECTOR[tool.split(".", 1).join("")] ?? null
 
 /**
  * The data rights of one native read, default deny. No governed agent: the read passes as before. A tool with no data kind is

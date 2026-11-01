@@ -91,6 +91,25 @@ describe("run-trace.policy runTraceOf", () => {
             ["start", "decide", "act", "end"],
         )
     })
+})
+
+describe("run-trace.policy runTraceOf (forks)", () => {
+    it("goes to the first of several when none of them reaches the condition", async () => {
+        const subject = await build()
+        const strayed = {
+            ...BASE,
+            nodes: BASE.nodes
+                .map((node) => (node.key === "start" ? { ...node, next: ["other", "other2"] } : node))
+                .concat(
+                    nodeOf({ key: "other", kind: "output", step: "write", next: [] }),
+                    nodeOf({ key: "other2", kind: "output", step: "write", next: [] }),
+                ),
+        }
+
+        expect(
+            keys(subject.runTraceOf(strayed, { action: "pay_supplier", branchKey: "small", trigger: null })),
+        ).toEqual(["start", "other"])
+    })
 
     it("stops at a loop, at a graph with no trigger and at a node that leads nowhere", async () => {
         const subject = await build()

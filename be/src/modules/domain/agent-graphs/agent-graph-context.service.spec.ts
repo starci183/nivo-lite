@@ -35,7 +35,7 @@ const grant = (memberId: string, maxAmount: number | null): MemberGrant => ({
     updated_at: "2026-11-01T00:00:00.000Z",
 })
 
-const build = async (options: { audience?: "customer" | "internal"; rule?: "none" } = {}) => {
+const build = async (options: { audience?: "customer" | "internal"; rule?: "none"; unlisted?: true } = {}) => {
     const facts = mock<GraphFactsService>({ registry: jest.fn().mockReturnValue(FACTS) })
     const rules = mock<AuthorityRulesService>({
         ruleFor: jest.fn().mockResolvedValue(
@@ -73,10 +73,13 @@ const build = async (options: { audience?: "customer" | "internal"; rule?: "none
     const modules = mock<ModulesService>({
         find: jest.fn().mockResolvedValue({
             audience: options.audience ?? "internal",
-            authorityActions: [
-                { action: "pay_supplier", maxMode: "ask" },
-                { action: "other", maxMode: null },
-            ],
+            authorityActions:
+                options.unlisted === true
+                    ? []
+                    : [
+                          { action: "pay_supplier", maxMode: "ask" },
+                          { action: "other", maxMode: null },
+                      ],
         }),
     })
     const moduleRef = await Test.createTestingModule({
@@ -113,6 +116,16 @@ describe("AgentGraphContextService.contextOf ceilings and facts", () => {
 
         expect(context.ceilings).toEqual([
             { action: "pay_supplier", mode: "never", limitVnd: null, autoMax: null, maxMode: "ask" },
+        ])
+    })
+
+    it("puts no cap on an action the module catalogue does not list", async () => {
+        const { service } = await build({ unlisted: true })
+
+        const context = await service.contextOf(SCOPE, DOCUMENT)
+
+        expect(context.ceilings).toEqual([
+            { action: "pay_supplier", mode: "auto", limitVnd: 5_000_000, autoMax: 20_000_000, maxMode: null },
         ])
     })
 
@@ -207,7 +220,7 @@ describe("AgentGraphContextService.coverageOf", () => {
         ])
     })
 
-    it("names a person left out by the id when the directory does not know them, and has nothing to say about a graph that asks nobody", async () => {
+    it("has nobody to name when the directory is empty, and nothing to say about a graph that asks nobody", async () => {
         const { service, members } = await build()
         members.directory.mockResolvedValue([])
 

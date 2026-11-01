@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { failingLookup, resolvingTo } from "@tests/world/dns-lookup.world"
+import { failingLookup, resolvingTo } from "@tests/world/dns-lookup.adapter"
 import { isPublicEndpoint, publicAddressOf } from "./public-endpoint.policy"
 
 /** The members of the subject under test. */

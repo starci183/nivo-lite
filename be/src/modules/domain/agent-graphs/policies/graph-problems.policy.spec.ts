@@ -268,7 +268,12 @@ describe("graph-problems.policy decide points (continued)", () => {
 
         subject.graphProblems(
             graph,
-            contextOf({ approverCovers: (_action, _group, top) => (tops.push(top) > 0 ? true : true) }),
+            contextOf({
+                approverCovers: (_action, _group, top) => {
+                    tops.push(top)
+                    return true
+                },
+            }),
         )
 
         expect(tops).toEqual([20_000_000, null])
@@ -290,10 +295,35 @@ describe("graph-problems.policy decide points (continued)", () => {
 
         subject.graphProblems(
             graph,
-            contextOf({ approverCovers: (_action, _group, top) => (tops.push(top) > 0 ? true : true) }),
+            contextOf({
+                approverCovers: (_action, _group, top) => {
+                    tops.push(top)
+                    return true
+                },
+            }),
         )
 
         expect(tops).toEqual([null])
+    })
+})
+
+describe("graph-problems.policy without a fact counted in dong", () => {
+    it("asks the approver to cover no top at all, as no branch can be placed on an amount", async () => {
+        const subject = await build()
+        const tops: Array<number | null> = []
+
+        subject.graphProblems(
+            graphOf(OWNER_EXAMPLE),
+            contextOf({
+                facts: {},
+                approverCovers: (_action, _group, top) => {
+                    tops.push(top)
+                    return true
+                },
+            }),
+        )
+
+        expect(tops).toEqual([null, null])
     })
 })
 
@@ -398,6 +428,9 @@ describe("graph-problems.policy rightsProblems", () => {
         expect(codes(subject.rightsProblems(using("zalo.send", true), contextOf()))).toEqual([
             "placeholder_live",
             "no_data_right",
+        ])
+        expect(subject.rightsProblems(using(null, true), denied)).toMatchObject([
+            { code: "placeholder_live", detail: "SePay" },
         ])
         expect(subject.rightsProblems(using(null), denied)).toEqual([])
         expect(subject.rightsProblems(using("office.note"), contextOf())).toEqual([])

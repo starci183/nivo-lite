@@ -378,6 +378,19 @@ describe("ChatbotWorkbenchService thread", () => {
         expect(staff.namesOf).toHaveBeenCalledWith("ws-1", ["st-1"])
     })
 
+    it("names no staff member when the one the escalation is assigned to is gone", async () => {
+        const { service, staff } = await build({
+            conversation: conversationOf(),
+            waiting: [waitingOf({ subject_id: "c-1", assigned_staff_id: "st-9" })],
+        })
+        staff.namesOf.mockResolvedValue([])
+
+        const thread = await service.thread("u-1", "ws-1", "c-1")
+
+        expect(staff.namesOf).toHaveBeenCalledWith("ws-1", ["st-9"])
+        expect(thread.escalation?.staffName).toBeNull()
+    })
+
     it("answers a thread without lead or escalation without reading staff", async () => {
         const { service, staff, leadFacts } = await build({
             conversation: conversationOf({ lead_id: null, visitor_name: "Minh" }),

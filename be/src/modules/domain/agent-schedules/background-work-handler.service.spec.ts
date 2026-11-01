@@ -206,6 +206,15 @@ describe("BackgroundWorkHandlerService.prepare gates", () => {
         expect(probes.decide).toHaveBeenCalledTimes(1)
     })
 
+    it("lets a schedule slot run when its trigger is gone, since there is no period to be older than", async () => {
+        const { handler, triggers } = await build()
+
+        await expect(
+            handler.prepare(wake("schedule", { triggerId: "trigger-1", slot: String(NOW - 86_400_000) })),
+        ).resolves.toMatchObject({ kind: "run" })
+        expect(triggers.byId).toHaveBeenCalledWith("trigger-1")
+    })
+
     it("does not read a trigger for an internal wake", async () => {
         const { handler, triggers } = await build()
 
@@ -243,6 +252,16 @@ describe("BackgroundWorkHandlerService.settle", () => {
             wakeCreatedAt: new Date("2026-11-10T03:00:00.000Z"),
             text: "Three invoices are late.",
         })
+    })
+
+    it("settles for an agent with no installation, with no installation id", async () => {
+        const { handler, settler, installations } = await build()
+        installations.ofAgent.mockResolvedValue(null)
+        const turn = wake("schedule")
+
+        await handler.settle(turn, null)
+
+        expect(settler.settle).toHaveBeenCalledWith(turn, null, expect.objectContaining({ installationId: null }))
     })
 
     it("says nothing when the agent has nothing to say", async () => {

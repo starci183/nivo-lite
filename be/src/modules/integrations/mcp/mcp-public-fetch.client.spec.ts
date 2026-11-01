@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { resolvingTo } from "@tests/world/dns-lookup.world"
+import { resolvingTo } from "@tests/world/dns-lookup.adapter"
 import { HTTP_CLIENT } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
 import { McpErrorCode } from "./errors/mcp.error"

@@ -54,13 +54,12 @@ export class GraphFactsService {
         const cancel = this.timeout.schedule(() => {
             expiry.abort()
         }, this.options.readTimeoutMs ?? DEFAULT_READ_TIMEOUT_MS)
-        try {
-            return await Promise.race([reader.read(workspaceId, subject, own), deadline])
-        } catch (cause) {
+        const read = Promise.resolve().then(() => reader.read(workspaceId, subject, own))
+        const answered = await Promise.race([read, deadline]).catch((cause: unknown): FactValues => {
             this.logger.error(AgentGraphsLogEvent.FactUnreadable, cause, { workspaceId, subjectId: subject.id })
             return {}
-        } finally {
-            cancel()
-        }
+        })
+        cancel()
+        return answered
     }
 }

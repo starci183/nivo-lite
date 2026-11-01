@@ -77,6 +77,20 @@ describe("branch-setup.policy", () => {
         })
     })
 
+    it("leaves a branch that is neither the line nor the ask above it as it is", async () => {
+        const subject = await build()
+        const three = graphOf([
+            branchOf({ key: "small", when: amountIs("lt", 5_000_000), then: "auto", next: "act" }),
+            branchOf({ key: "big", when: amountIs("gte", 5_000_000), then: "ask", next: "ask" }),
+            branchOf({ key: "huge", when: amountIs("gte", 50_000_000), then: "stop", next: "stop" }),
+            branchOf({ key: "else", when: "else", then: "ask", next: "ask" }),
+        ])
+
+        const branches = branchesOf(subject.applyBranchSetup(three, SETUP) ?? three)
+
+        expect(branches[2]).toEqual(branchesOf(three)[2])
+    })
+
     it("answers nothing for an action with no pair of branches, and leaves the other nodes alone", async () => {
         const subject = await build()
 

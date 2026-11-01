@@ -40,7 +40,13 @@ const MODULE = {
 }
 
 const build = async (
-    options: { agentId?: string | null; installed?: boolean; existing?: boolean; setup?: ApprovalSetup | null } = {},
+    options: {
+        agentId?: string | null
+        installed?: boolean
+        existing?: boolean
+        setup?: ApprovalSetup | null
+        rule?: "none"
+    } = {},
 ) => {
     const existing = options.existing === true ? stateOf() : null
     const graphs = mock<AgentGraphsService>({
@@ -75,7 +81,7 @@ const build = async (
     })
     const rules = mock<AuthorityRulesService>({
         approvalSetup: jest.fn().mockResolvedValue(options.setup === undefined ? SETUP : options.setup),
-        ruleFor: jest.fn().mockResolvedValue({ limit_vnd: 5_000_000 }),
+        ruleFor: jest.fn().mockResolvedValue(options.rule === "none" ? null : { limit_vnd: 5_000_000 }),
     })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const moduleRef = await Test.createTestingModule({
@@ -128,6 +134,19 @@ describe("AgentGraphSeedService.ensureFor", () => {
 
         const seed = graphs.ensure.mock.calls[0]?.[3]
         expect(seed?.nodes.map((node) => node.key)).toContain("stop:pay_supplier")
+    })
+
+    it("seeds a rule that runs alone on any amount read when the owner set no effective rule", async () => {
+        const { service, graphs } = await build({ rule: "none", setup: { ...SETUP, auto_max: null, ask_max: null } })
+
+        await service.ensureFor("inst-1", "en")
+
+        const seed = graphs.ensure.mock.calls[0]?.[3]
+        const decide = seed?.nodes.find((node) => node.key === "decide:pay_supplier")?.decide
+        expect(decide?.branches.map((branch) => [branch.key, branch.when])).toEqual([
+            ["auto", { fact: "pay_supplier.amount_vnd", op: "known" }],
+            ["else", "else"],
+        ])
     })
 
     it("leaves a graph that exists as it is", async () => {

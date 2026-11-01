@@ -41,15 +41,23 @@ const signalsOf = (history: ReadonlyArray<ClosedDecision>, branchKey: string): R
     const rejected = recent.filter(disliked)
     const expired = recent.filter((decision) => decision.closedAs === "expired")
     return [
-        ...(run.length >= TRUST_THRESHOLD
-            ? [proposal("trust", branchKey, run.slice(-TRUST_THRESHOLD), true, run[0]?.id ?? "")]
-            : []),
-        ...(rejected.length >= REJECT_HITS
-            ? [proposal("reject", branchKey, rejected, false, rejected.at(-1)?.id ?? "")]
-            : []),
-        ...(expired.length >= TIMEOUT_HITS
-            ? [proposal("timeout", branchKey, expired, false, expired.at(-1)?.id ?? "")]
-            : []),
+        ...run
+            .slice(0, 1)
+            .flatMap((first) =>
+                run.length >= TRUST_THRESHOLD
+                    ? [proposal("trust", branchKey, run.slice(-TRUST_THRESHOLD), true, first.id)]
+                    : [],
+            ),
+        ...rejected
+            .slice(-1)
+            .flatMap((last) =>
+                rejected.length >= REJECT_HITS ? [proposal("reject", branchKey, rejected, false, last.id)] : [],
+            ),
+        ...expired
+            .slice(-1)
+            .flatMap((last) =>
+                expired.length >= TIMEOUT_HITS ? [proposal("timeout", branchKey, expired, false, last.id)] : [],
+            ),
     ]
 }
 

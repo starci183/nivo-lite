@@ -10,6 +10,7 @@ import { INBOX } from "@modules/platform/inbox"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentEventWakesService } from "./agent-event-wakes.service"
+import * as policy from "./agent-schedules.policy"
 import { AgentTriggerSyncService } from "./agent-trigger-sync.service"
 import type { InternalEventFact } from "./agent-schedules.contracts"
 
@@ -114,6 +115,18 @@ describe("AgentEventWakesService.installationChanged", () => {
 
         expect(installations.byId.mock.calls).toEqual([["ws-1", "inst-1"]])
         expect(sync.seed.mock.calls).toEqual([])
+    })
+
+    it("seeds the triggers the module declares for the agent of the installation", async () => {
+        const seeds = [{ key: "morning", preset: "daily_at" as const, atTime: "08:00" }]
+        const declared = jest.spyOn(policy, "triggersOfModule").mockReturnValue(seeds)
+        const { service, sync } = await build({ installation: { ...runtimeInstallationOf(), module: "timed" } })
+
+        await expect(service.installationChanged(CHANGE, CLAIM)).resolves.toBeUndefined()
+
+        expect(declared).toHaveBeenCalledWith(expect.anything(), "timed")
+        expect(sync.seed.mock.calls).toEqual([["ws-1", "a1", seeds]])
+        declared.mockRestore()
     })
 
     it("seeds nothing for a change of the whole workspace, a missing or removed installation, or a redelivery", async () => {

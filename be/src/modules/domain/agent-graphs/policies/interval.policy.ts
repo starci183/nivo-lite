@@ -99,9 +99,10 @@ export const boundaryFindings = (decide: DecidePoint, fact: string): ReadonlyArr
             (left, right) =>
                 left.interval.lo - right.interval.lo || Number(left.interval.loOpen) - Number(right.interval.loOpen),
         )
-    return placed.slice(1).flatMap((entry, index): ReadonlyArray<BoundaryFinding> => {
-        const previous = placed[index]
-        if (previous === undefined) return []
+    const neighbours = placed.flatMap((previous, index) =>
+        placed.slice(index + 1, index + 2).map((entry) => ({ previous, entry })),
+    )
+    return neighbours.flatMap(({ previous, entry }): ReadonlyArray<BoundaryFinding> => {
         if (sharesStretch(previous.interval, entry.interval))
             return [{ kind: "overlap", before: previous.branch, after: entry.branch }]
         return leavesHole(previous.interval, entry.interval)

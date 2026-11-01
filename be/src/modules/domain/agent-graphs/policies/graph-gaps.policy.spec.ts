@@ -91,18 +91,6 @@ describe("graph-gaps.policy", () => {
         ])
     })
 
-    it("judges an approver against the top of the amounts of the branch", async () => {
-        const subject = await build()
-        const tops: Array<number | null> = []
-
-        subject.graphGapsOf(
-            graphOf(OWNER_EXAMPLE),
-            contextOf({ approverCovers: (_action, _group, top) => (tops.push(top) > 0 ? true : true) }),
-        )
-
-        expect(tops).toEqual([20_000_000, null])
-    })
-
     it("has nothing to say about a node that decides nothing, and treats a branch with no amount as having no top", async () => {
         const subject = await build()
         const noAmount = graphOf([
@@ -121,5 +109,42 @@ describe("graph-gaps.policy", () => {
             { code: "approver_no_grant", nodeKey: "decide", branchKey: "kind" },
         ])
         expect(decideOf([]).decide?.branches).toEqual([])
+    })
+})
+
+describe("graph-gaps.policy the top of a branch", () => {
+    it("judges an approver against the top of the amounts of the branch", async () => {
+        const subject = await build()
+        const tops: Array<number | null> = []
+
+        subject.graphGapsOf(
+            graphOf(OWNER_EXAMPLE),
+            contextOf({
+                approverCovers: (_action, _group, top) => {
+                    tops.push(top)
+                    return true
+                },
+            }),
+        )
+
+        expect(tops).toEqual([20_000_000, null])
+    })
+
+    it("judges every approver with no top when the module declares no fact counted in dong", async () => {
+        const subject = await build()
+        const tops: Array<number | null> = []
+
+        subject.graphGapsOf(
+            graphOf(OWNER_EXAMPLE),
+            contextOf({
+                facts: {},
+                approverCovers: (_action, _group, top) => {
+                    tops.push(top)
+                    return true
+                },
+            }),
+        )
+
+        expect(tops).toEqual([null, null])
     })
 })

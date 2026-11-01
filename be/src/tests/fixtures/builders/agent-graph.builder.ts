@@ -1,5 +1,6 @@
 import { builder } from "@starci/jest-preset"
 import { agentGraphsEntities } from "@modules/domain/agent-graphs"
+import type { GraphContext } from "@modules/domain/agent-graphs"
 /** The people a request can go to. */
 interface Group {
     readonly roles: ReadonlyArray<"owner" | "manager" | "staff">
@@ -246,7 +247,7 @@ const NO_CEILINGS: ReadonlyArray<Ceiling> = []
 const OUTWARD: boolean = false
 
 /** A workspace in which every approver is covered, the rule is open, every tool is granted and the agent faces nobody. */
-export const contextOf = builder({
+export const contextOf = builder<GraphContext>({
     facts: FACTS,
     ceilings: NO_CEILINGS,
     isGranted: (_tool: string): boolean => true,

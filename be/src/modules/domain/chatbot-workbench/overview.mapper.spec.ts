@@ -299,3 +299,21 @@ describe("chatbot overview mapper respondent", () => {
         expect(result.waiting).toEqual([])
     })
 })
+
+describe("chatbot overview mapper staff names", () => {
+    it("names no staff member for a waiting reply assigned to one the desk no longer lists", async () => {
+        const subject = await buildSubject()
+
+        const result = subject.buildChatbotOverview({
+            workspaceId: "ws-1",
+            now: NOW,
+            ...DESK,
+            conversations: [conversationOf()],
+            messages: [],
+            waiting: [waitingOf({ subject_id: "c-1", assigned_staff_id: "gone" })],
+            leads: [],
+        })
+
+        expect(result.waiting.map((item) => item.staffName)).toEqual([null])
+    })
+})

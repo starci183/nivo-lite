@@ -1,6 +1,5 @@
-import { Injectable, Optional } from "@nestjs/common"
-import { AuthorityRulesService, evaluateGate, InjectWorkBranchDecider } from "@modules/domain/authority-rules"
-import type { WorkBranchDecider } from "@modules/domain/authority-rules"
+import { Injectable } from "@nestjs/common"
+import { AuthorityRulesService, evaluateGate } from "@modules/domain/authority-rules"
 import { WorkItemsService } from "@modules/domain/work-items"
 import type { OptionalWorkItem } from "@modules/domain/work-items"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -25,6 +24,7 @@ import type { InboundWorkSource } from "./inbound-work.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
+import { WorkBranchService } from "./work-branch.service"
 import { WorkChainService } from "./work-chain.service"
 import type {
     FinishPlan,
@@ -77,7 +77,7 @@ export class WorkEngineService {
         private readonly chain: WorkChainService,
         private readonly approval: WorkApprovalService,
         private readonly recorder: WorkRecorderService,
-        @Optional() @InjectWorkBranchDecider() private readonly branches?: WorkBranchDecider,
+        private readonly branching: WorkBranchService,
     ) {}
 
     /**
@@ -248,19 +248,18 @@ export class WorkEngineService {
         origin: WorkOrigin | null,
     ): Promise<Judgement> {
         const rule = await this.rules.ruleFor(ctx, item.action, item.installation_id)
-        const branch = await this.branches?.decide({
+        const {
+            proposal: judged,
+            verdict: base,
+            carried,
+        } = await this.branching.consult({
             workspaceId: ctx.workspaceId,
             item,
             proposal,
+            origin,
             gate: (read) => this.gate(item, rule, read, false),
-            turnId: origin?.turnId ?? null,
-            wakeId: origin?.wakeId ?? null,
         })
-        const judged = branch?.proposal ?? proposal
-        const base = branch?.verdict ?? (await this.gate(item, rule, proposal, false))
         const forced = opts.forceAsk === undefined ? base : askBecause(base, opts.forceAsk)
-        const carried =
-            branch === null || branch === undefined ? {} : { proposal: judged, branchDecisionId: branch.decisionId }
         if (forced.verdict !== "auto" || !isCustomerOutbound(item.action)) return { verdict: forced, rule, ...carried }
         const access = await this.access.accessOf(ctx, item, judged)
         return { verdict: accessLetsRunAlone(access) ? forced : askBecause(forced, "over_authority"), rule, ...carried }

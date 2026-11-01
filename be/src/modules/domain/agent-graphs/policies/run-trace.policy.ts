@@ -75,12 +75,13 @@ export const runTraceOf = (document: GraphDocument, run: RunToTrace): ReadonlyAr
     const start = triggers.find((node) => node.step === run.trigger) ?? triggers[0]
     const steps: Array<RunStep> = []
     for (let current = start; current !== undefined && steps.length < MAX_STEPS;) {
-        const taken = current.decide?.intent === run.action ? run.branchKey : null
+        const { decide } = current
+        const taken = decide?.intent === run.action ? run.branchKey : null
         steps.push(stepOf(current, taken))
         const options =
-            taken === null
+            decide === undefined || taken === null
                 ? successorsOf(current)
-                : (current.decide?.branches.filter((branch) => branch.key === taken).map((branch) => branch.next) ?? [])
+                : decide.branches.filter((branch) => branch.key === taken).map((branch) => branch.next)
         const next =
             condition === undefined || steps.some((entry) => entry.key === condition.key)
                 ? options[0]
