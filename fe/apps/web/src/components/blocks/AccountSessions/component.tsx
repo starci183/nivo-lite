@@ -1,8 +1,8 @@
-import { Badge, Button, ListRow, Region, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Badge, Button, ListRow, Region, Stack, SurfaceListCard, Text } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SessionRowView, SlotLabels } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
+import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** Copy, rows and state the connected sessions section supplies. */
 export interface AccountSessionsBaseProps {
@@ -63,13 +63,7 @@ const OthersAction = (props: OthersActionProps) =>
 export const AccountSessionsBase = (props: AccountSessionsBaseProps) => {
     const isBusy = props.props.busy !== undefined
     return (
-        <Region labelledBy="account-sessions-title" className={SECTION_CLASS_NAME}>
-            <SectionHeader
-                id="account-sessions-title"
-                level={2}
-                title={props.props.title}
-                description={props.props.hint}
-            />
+        <Region label={props.props.title}>
             <SlotView
                 slot={props.props.slot}
                 placeholder={props.props.placeholder}
@@ -77,8 +71,17 @@ export const AccountSessionsBase = (props: AccountSessionsBaseProps) => {
                 onRetry={props.on.retry}
             >
                 {(rows, isSkeleton) => (
-                    <>
-                        <SurfaceListCard ariaLabel={props.props.title} isLoading={isSkeleton}>
+                    <Stack gap="row">
+                        <SurfaceListCard
+                            label={props.props.title}
+                            headingLevel={2}
+                            isLoading={isSkeleton}
+                            footer={
+                                <Text size="sm" tone="muted">
+                                    {props.props.hint}
+                                </Text>
+                            }
+                        >
                             {rows.map((row) => (
                                 <ListRow
                                     key={row.id}
@@ -128,7 +131,7 @@ export const AccountSessionsBase = (props: AccountSessionsBaseProps) => {
                                 isSkeleton={isSkeleton}
                             />
                         </div>
-                    </>
+                    </Stack>
                 )}
             </SlotView>
         </Region>
