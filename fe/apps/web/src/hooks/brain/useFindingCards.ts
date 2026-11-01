@@ -4,7 +4,7 @@ import { useFormatter, useTranslations } from "next-intl"
 import { SEVERITY_TONE, needsDocumentOf, quotesOf } from "@/modules/brain"
 import type { FindingCardView, FindingView } from "@/modules/brain"
 import { brainDossierHref } from "@/modules/routes"
-import { cardActionsOf, ownerPartOf, statusPartOf } from "./brain.shared"
+import { cardActionsOf, ownerPartOf, placeWordsOf, statusPartOf } from "./brain.shared"
 import type { FindingCardContext } from "./brain.shared"
 
 /** Puts a finding into the words of a card of the queue: its quotes side by side and the actions that answer it. */
@@ -45,7 +45,7 @@ export const useFindingCards = () => {
                 ...extraBadges,
             ],
             meta: meta.length === 0 ? null : meta.join(" · "),
-            quotes: quotesOf(finding),
+            quotes: quotesOf(finding, placeWordsOf(t)),
             actions: cardActionsOf(t, finding, context),
         }
     }

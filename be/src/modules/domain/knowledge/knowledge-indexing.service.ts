@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { KnowledgeChunksService, chunkPassages, reusePlanOf, toVector } from "@modules/domain/knowledge-chunks"
-import type { ChunkDraft, MissingPassage } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService, chunkLocated, reusePlanOf, toVector } from "@modules/domain/knowledge-chunks"
+import type { ChunkDraft, LocatedText, MissingPassage, PassagePlace } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote, embedPercent } from "@modules/domain/knowledge-sources"
 import type { MaybeSource, SourceRecord } from "@modules/domain/knowledge-sources"
 import { InjectLogger } from "@modules/platform/logging"
@@ -26,15 +26,22 @@ const CLOSED: ReadonlySet<string> = new Set(["ready", "extracting_facts", "faile
 /** How long one embeddings batch may take while a document is indexed. */
 const EMBED_TIMEOUT_MS = 20_000
 
-/** One passage with its vector, or without one when the provider gave none. */
-const draftOf = (text: string, vector: ReadonlyArray<number> | undefined): ChunkDraft => ({
+/** One passage with its vector, or without one when the provider gave none, and the place it sits at in its document. */
+const draftOf = (text: string, vector: ReadonlyArray<number> | undefined, place: PassagePlace | null): ChunkDraft => ({
     text,
     vector: vector === undefined ? null : toVector(vector),
+    ...(place === null ? {} : { place }),
 })
 
 /** The passages to store without vectors: each piece as keyword-only text. */
-const keywordDraftsOf = (pieces: ReadonlyArray<string>): Array<ChunkDraft> =>
-    pieces.map((text) => draftOf(text, undefined))
+const keywordDraftsOf = (pieces: ReadonlyArray<LocatedText>): Array<ChunkDraft> =>
+    pieces.map((piece) => draftOf(piece.text, undefined, piece.place))
+
+/** How many passages a document has and the place each sits at, by order. */
+interface PassageLayout {
+    readonly total: number
+    readonly places: ReadonlyArray<PassagePlace | null>
+}
 
 @Injectable()
 /** Reads a document, cuts it into passages, embeds them and stores them, then hands the source on to the reading of its facts. */
@@ -73,7 +80,7 @@ export class KnowledgeIndexingService {
             if (await this.unchanged.holdsWhole(source, content)) return await this.unchanged.keep(source)
             const title = read.value.title ?? source.title
             await this.sources.startIndexing(source.workspaceId, source.id, content, title)
-            return await this.store({ ...source, content, title })
+            return await this.store({ ...source, content, title }, read.value.parts)
         } catch (cause) {
             const failure = failureOf(cause)
             if (failure.transient) throw cause
@@ -107,20 +114,33 @@ export class KnowledgeIndexingService {
      * queued and the source moves to its facts stage. A large document with no credits left keeps the vectors it already paid for,
      * stores only the missing passages without vectors, and waits.
      */
-    private async store(source: SourceRecord): Promise<IndexOutcome> {
-        const pieces = chunkPassages(source.content)
+    private async store(source: SourceRecord, parts: ReadonlyArray<LocatedText> | undefined): Promise<IndexOutcome> {
+        const located = chunkLocated(parts ?? [{ place: null, text: source.content }])
+        const pieces = located.map((piece) => piece.text)
         if (pieces.length === 0) return this.close(source, StoredNote.NoPassages)
         const { workspaceId, id } = source
         await this.sources.enterStage(workspaceId, id, { stage: "chunk", done: pieces.length, total: pieces.length })
         if (!this.embeddings.configured()) {
-            await this.chunks.replace({ ...this.writeOf(source), drafts: keywordDraftsOf(pieces) })
+            await this.chunks.replace({ ...this.writeOf(source), drafts: keywordDraftsOf(located) })
             return this.finish(source, StoredNote.KeywordOnly, pieces.length)
         }
         const stored = await this.chunks.embeddedOf(workspaceId, id)
         const { moves, missing } = reusePlanOf(pieces, stored, this.embeddings.model())
         await this.chunks.arrange({ workspaceId, sourceId: id, moves, count: pieces.length })
+        if (parts !== undefined) {
+            await this.chunks.place({
+                workspaceId,
+                sourceId: id,
+                places: located.map((piece, order) => ({ order, place: piece.place })),
+            })
+        }
         const noCredits = missing.length > BULK_CHUNKS && (await this.usage.blockedBy(workspaceId, "embedding", true))
-        await this.embedMissing(source, pieces.length, missing, noCredits)
+        await this.embedMissing(
+            source,
+            { total: pieces.length, places: located.map((piece) => piece.place) },
+            missing,
+            noCredits,
+        )
         if (!noCredits) return this.finish(source, null, pieces.length)
         await this.sources.blockIndexing(workspaceId, id, StoredNote.NoCreditsForIndex, pieces.length)
         return "blocked"
@@ -141,10 +161,11 @@ export class KnowledgeIndexingService {
     /** Embeds the passages that have no vector of the model in use, one batch at a time, and stores each batch at once. With `withoutVectors` (no credits left) it only stores them as keyword passages. A batch the provider fails throws, so nothing is stored keyword-only by accident. */
     private async embedMissing(
         source: SourceRecord,
-        total: number,
+        layout: PassageLayout,
         todo: ReadonlyArray<MissingPassage>,
         withoutVectors: boolean,
     ): Promise<void> {
+        const { total } = layout
         const size = this.options.indexChunkDelayMs > 0 ? 1 : EMBED_BATCH
         const batches = Array.from({ length: Math.ceil(todo.length / size) }, (_, index) =>
             todo.slice(index * size, index * size + size),
@@ -164,7 +185,7 @@ export class KnowledgeIndexingService {
             await this.chunks.keep({
                 ...this.writeOf(source),
                 drafts: batch.map((entry, offset) => ({
-                    ...draftOf(entry.text, vectors?.[offset]),
+                    ...draftOf(entry.text, vectors?.[offset], layout.places[entry.order] ?? null),
                     order: entry.order,
                 })),
             })

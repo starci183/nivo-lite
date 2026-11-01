@@ -1,6 +1,6 @@
-import type { DocumentReaders } from "./documents.contracts"
+import type { DocumentReaders, PlacedDocument, PlacedText } from "./documents.contracts"
 import { DocumentsError, DocumentsErrorCode } from "./errors/documents.error"
-import { pptxToText, xlsxToText } from "./ooxml.mapper"
+import { joinedText, pptxSlides, pptxToText, xlsxSheets, xlsxToText } from "./ooxml.mapper"
 import type { TextKind } from "./text-kind.policy"
 
 /** The first bytes of a zip archive, which every Office file starts with. */
@@ -41,6 +41,39 @@ export const textFromBytes = async (kind: TextKind, bytes: Uint8Array, readers: 
         if (kind === "pdf") return await readers.pdf(bytes)
         if (kind === "docx") return await readers.docx(bytes)
         return kind === "xlsx" ? xlsxToText(bytes) : pptxToText(bytes)
+    } catch (cause) {
+        throw new DocumentsError({ code: DocumentsErrorCode.FileUnreadable, params: { kind }, cause })
+    }
+}
+
+/** The text of a PDF page by page, one stretch per page numbered from 1. */
+const pdfParts = (pages: ReadonlyArray<string>): Array<PlacedText> =>
+    pages.map((text, index) => ({ place: { kind: "page", label: String(index + 1) }, text }))
+
+/**
+ * Plain text of a file's bytes together with where each stretch sits: the page of a PDF, the slide of a presentation, the sheet of a
+ * workbook. Any other kind is one stretch with no place. The merged text is the one `textFromBytes` gives, and a file that cannot be
+ * read is refused the same way.
+ */
+export const placedFromBytes = async (
+    kind: TextKind,
+    bytes: Uint8Array,
+    readers: DocumentReaders,
+): Promise<PlacedDocument> => {
+    if (kind === "text" || kind === "docx") {
+        const text = await textFromBytes(kind, bytes, readers)
+        return { text, parts: [{ place: null, text }] }
+    }
+    if (kind === "pdf" ? !isPdf(bytes) : !isZip(bytes)) {
+        throw new DocumentsError({ code: DocumentsErrorCode.FileInvalid, params: { kind } })
+    }
+    try {
+        if (kind === "pdf") {
+            const read = await readers.pdfPages(bytes)
+            return { text: read.text, parts: pdfParts(read.pages) }
+        }
+        const parts = kind === "xlsx" ? xlsxSheets(bytes) : pptxSlides(bytes)
+        return { text: joinedText(parts), parts }
     } catch (cause) {
         throw new DocumentsError({ code: DocumentsErrorCode.FileUnreadable, params: { kind }, cause })
     }

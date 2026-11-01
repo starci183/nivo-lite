@@ -1,11 +1,13 @@
 import { Test } from "@nestjs/testing"
-import { CHUNK_OVERLAP, CHUNK_SIZE, chunkPassages, chunkText, normalizeText } from "./chunk.policy"
+import { CHUNK_OVERLAP, CHUNK_SIZE, chunkLocated, chunkPassages, chunkText, normalizeText } from "./chunk.policy"
+import type { PassagePlace } from "./knowledge-chunks.contracts"
 import fixtures from "./chunk.policy.fixtures.json"
 
 type Subject = {
     normalizeText: typeof normalizeText
     chunkText: typeof chunkText
     chunkPassages: typeof chunkPassages
+    chunkLocated: typeof chunkLocated
 }
 
 const words = (count: number): string => Array.from({ length: count }, (_, index) => `w${index}`).join(" ")
@@ -14,7 +16,7 @@ const SUBJECT = Symbol("chunk.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { normalizeText, chunkText, chunkPassages } }],
+        providers: [{ provide: SUBJECT, useValue: { normalizeText, chunkText, chunkPassages, chunkLocated } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -459,5 +461,34 @@ describe("chunkPassages one-line edits on the Vietnamese samples", () => {
 
         expect(structural.mean).toBeGreaterThan(fixed.mean)
         expect(structural.worst).toBeGreaterThan(fixed.worst)
+    })
+})
+
+describe("chunkLocated", () => {
+    it("cuts a document of one stretch with no place exactly as chunkPassages does", async () => {
+        const subject = await buildSubject()
+        const text = Array.from({ length: 40 }, (_, index) => `Paragraph ${index} ${words(40)}`).join("\n\n")
+
+        expect(subject.chunkLocated([{ place: null, text }]).map((one) => one.text)).toEqual(
+            subject.chunkPassages(text),
+        )
+    })
+
+    it("gives each passage the place of its stretch, never crosses a place and keeps a repeated passage once", async () => {
+        const subject = await buildSubject()
+        const footer = "Confidential footer repeated on every page of the file"
+        const one: PassagePlace = { kind: "page", label: "1" }
+        const two: PassagePlace = { kind: "page", label: "2" }
+
+        expect(
+            subject.chunkLocated([
+                { place: one, text: `Intro words\n\n${footer}` },
+                { place: two, text: `More words here\n\n${footer}` },
+                { place: null, text: " " },
+            ]),
+        ).toEqual([
+            { place: one, text: `Intro words\n\n${footer}` },
+            { place: two, text: "More words here" },
+        ])
     })
 })

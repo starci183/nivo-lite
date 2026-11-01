@@ -13,6 +13,7 @@ import {
 import { FakeClock, mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
+import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
 import { MemberLookupService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -53,9 +54,11 @@ const build = async (em: MockEntityManager) => {
     const catalog = mock<MessageCatalog>({
         get: jest.fn((key: string, _params: object, locale: string) => `${locale}:${key}`),
     })
+    const chunks = mock<KnowledgeChunksService>({ placesOf: jest.fn().mockResolvedValue(new Map()) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DossierFindingsService,
+            { provide: KnowledgeChunksService, useValue: chunks },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(AT) },
             { provide: MESSAGE_CATALOG, useValue: catalog },
@@ -64,7 +67,7 @@ const build = async (em: MockEntityManager) => {
             { provide: ReviewInputsService, useValue: inputs },
         ],
     }).compile()
-    return { service: moduleRef.get(DossierFindingsService), members, lookup, catalog }
+    return { service: moduleRef.get(DossierFindingsService), members, lookup, catalog, chunks }
 }
 
 describe("DossierFindingsService list", () => {
@@ -124,6 +127,35 @@ describe("DossierFindingsService list", () => {
             expect.objectContaining({ id: F2, dossierRef: null, title: "Stored title", draftId: null }),
         ])
         expect(next.pageInfo.hasNextPage).toBe(false)
+    })
+})
+
+describe("DossierFindingsService evidence places", () => {
+    const quoted = (passageId: string | null) => ({
+        role: "claim" as const,
+        label: "Price list",
+        sourceId: "s1",
+        sourceTitle: "Bang gia.pdf",
+        passageId,
+        factId: null,
+        factLine: null,
+        quote: "Gia 5.000.000 dong",
+    })
+
+    it("names the page of a quoted passage and leaves a passage with no stored place without one", async () => {
+        const em = mockEntityManager({ find: [DossierRemedyDraftEntity, []] })
+        queueQueryBuilders(em, [{ getMany: [findingOf({ evidence: [quoted("p1"), quoted("p2"), quoted(null)] })] }])
+        const { service, chunks } = await build(em)
+        chunks.placesOf.mockResolvedValue(new Map([["p1", { kind: "page", label: "3" }]]))
+
+        const page = await service.list("u1", WS, {}, "en")
+
+        expect(chunks.placesOf).toHaveBeenCalledWith(WS, ["p1", "p2"])
+        expect(page.nodes[0]?.evidence).toEqual([
+            { ...quoted("p1"), placeKind: "page", placeLabel: "3" },
+            quoted("p2"),
+            quoted(null),
+        ])
     })
 })
 

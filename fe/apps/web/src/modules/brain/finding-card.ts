@@ -1,4 +1,4 @@
-import type { FindingAction, FindingEvidenceView, FindingView } from "./finding-view"
+import type { EvidencePlaceView, FindingAction, FindingEvidenceView, FindingView } from "./finding-view"
 import type { RowTone } from "./findings"
 
 /** Words taken from a document, with the document they come from and what the words are. */
@@ -46,8 +46,18 @@ const MAX_QUOTES = 2
 /** The evidence that has words to show: its quote, else the fact it rests on. */
 const wordsOf = (one: FindingEvidenceView): string | null => one.quote ?? one.factLine
 
-/** The quotes of a finding, at most two, each with its document. */
-export const quotesOf = (finding: FindingView): ReadonlyArray<FindingQuoteView> =>
+/** Says a place in words ("Trang 3"); the words come from the message catalog, so the caller gives them. */
+export type PlaceWords = (place: EvidencePlaceView) => string
+
+/** What a quote is and where in its document it sits, as one line; absent when it has neither. */
+export const bylineOf = (one: FindingEvidenceView, placeWords: PlaceWords): string | undefined => {
+    const parts = [one.sourceTitle === null ? null : one.label, one.place === null ? null : placeWords(one.place)]
+    const kept = parts.filter((part): part is string => part !== null)
+    return kept.length === 0 ? undefined : kept.join(" · ")
+}
+
+/** The quotes of a finding, at most two, each with its document and the page, slide or sheet it sits at. */
+export const quotesOf = (finding: FindingView, placeWords: PlaceWords): ReadonlyArray<FindingQuoteView> =>
     finding.evidence
         .flatMap((one, index): ReadonlyArray<FindingQuoteView> => {
             const text = wordsOf(one)
@@ -56,7 +66,7 @@ export const quotesOf = (finding: FindingView): ReadonlyArray<FindingQuoteView> 
                 {
                     id: `${finding.id}-${index}`,
                     source: one.sourceTitle ?? one.label,
-                    byline: one.sourceTitle === null ? undefined : one.label,
+                    byline: bylineOf(one, placeWords),
                     text,
                 },
             ]

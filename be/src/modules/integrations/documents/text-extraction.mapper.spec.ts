@@ -3,13 +3,13 @@ import { strToU8, zipSync } from "fflate"
 import { mock } from "@starci/jest-preset"
 import type { DocumentReaders } from "./documents.contracts"
 import { DocumentsErrorCode } from "./errors/documents.error"
-import { textFromBytes } from "./text-extraction.mapper"
+import { placedFromBytes, textFromBytes } from "./text-extraction.mapper"
 
 const SUBJECT = Symbol("text-extraction.mapper")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { textFromBytes } }],
+        providers: [{ provide: SUBJECT, useValue: { textFromBytes, placedFromBytes } }],
     }).compile()
     return moduleRef.get<typeof import("./text-extraction.mapper")>(SUBJECT)
 }
@@ -171,6 +171,78 @@ describe("textFromBytes", () => {
                 code: DocumentsErrorCode.FileUnreadable,
                 params: { kind: "pdf" },
             })
+        })
+    })
+})
+
+describe("placedFromBytes", () => {
+    it("gives a PDF page by page, numbered from 1, with the merged text the pdf reader gives", async () => {
+        const subject = await build()
+        const readers = mock<DocumentReaders>()
+        readers.pdfPages.mockResolvedValue({ text: "One\nTwo", pages: ["One", "Two"] })
+
+        await expect(subject.placedFromBytes("pdf", PDF, readers)).resolves.toEqual({
+            text: "One\nTwo",
+            parts: [
+                { place: { kind: "page", label: "1" }, text: "One" },
+                { place: { kind: "page", label: "2" }, text: "Two" },
+            ],
+        })
+    })
+
+    it("gives a workbook sheet by sheet, named, with the text textFromBytes gives", async () => {
+        const subject = await build()
+        const bytes = zipOf({
+            "xl/workbook.xml": '<workbook><sheet name="Gia"/><sheet name="Kho"/></workbook>',
+            "xl/worksheets/sheet1.xml": "<worksheet><row><c><v>1</v></c></row></worksheet>",
+            "xl/worksheets/sheet2.xml": "<worksheet><row><c><v>2</v></c></row></worksheet>",
+        })
+
+        const placed = await subject.placedFromBytes("xlsx", bytes, mock<DocumentReaders>())
+
+        expect(placed.parts.map((part) => part.place)).toEqual([
+            { kind: "sheet", label: "Gia" },
+            { kind: "sheet", label: "Kho" },
+        ])
+        expect(placed.text).toBe(await subject.textFromBytes("xlsx", bytes, mock<DocumentReaders>()))
+    })
+
+    it("gives a presentation slide by slide, with the number of the slide in the deck", async () => {
+        const subject = await build()
+        const bytes = zipOf({
+            "ppt/slides/slide1.xml": "<p:sld><a:p><a:r><a:t>Hi</a:t></a:r></a:p></p:sld>",
+            "ppt/slides/slide2.xml": "<p:sld><a:p><a:r><a:t>Bye</a:t></a:r></a:p></p:sld>",
+        })
+
+        const placed = await subject.placedFromBytes("pptx", bytes, mock<DocumentReaders>())
+
+        expect(placed.parts).toEqual([
+            { place: { kind: "slide", label: "1" }, text: "## Slide 1\nHi" },
+            { place: { kind: "slide", label: "2" }, text: "## Slide 2\nBye" },
+        ])
+        expect(placed.text).toBe(await subject.textFromBytes("pptx", bytes, mock<DocumentReaders>()))
+    })
+
+    it("gives plain text as one stretch with no place", async () => {
+        const subject = await build()
+
+        await expect(subject.placedFromBytes("text", encode("Hello"), mock<DocumentReaders>())).resolves.toEqual({
+            text: "Hello",
+            parts: [{ place: null, text: "Hello" }],
+        })
+    })
+
+    it("refuses a body of the wrong kind and reports a reader failure as unreadable", async () => {
+        const subject = await build()
+        const readers = mock<DocumentReaders>()
+        readers.pdfPages.mockRejectedValue(new Error("locked"))
+
+        await expect(subject.placedFromBytes("pdf", encode("nope"), readers)).rejects.toMatchObject({
+            code: DocumentsErrorCode.FileInvalid,
+        })
+        await expect(subject.placedFromBytes("pdf", PDF, readers)).rejects.toMatchObject({
+            code: DocumentsErrorCode.FileUnreadable,
+            params: { kind: "pdf" },
         })
     })
 })

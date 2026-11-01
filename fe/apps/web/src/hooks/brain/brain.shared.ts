@@ -1,11 +1,21 @@
 import type { useTranslations } from "next-intl"
 import { confirmSidesOf, findingActionsOf, isActive } from "@/modules/brain"
-import type { FindingAction, FindingCardActionView, FindingView, MemberOption } from "@/modules/brain"
+import type {
+    EvidencePlaceView,
+    FindingAction,
+    FindingCardActionView,
+    FindingView,
+    MemberOption,
+} from "@/modules/brain"
 import { brainUploadHref } from "@/modules/routes"
 import type { DossierIdentity } from "./useDossierIdentities"
 
 /** The words of the dossier review. */
 export type Translate = ReturnType<typeof useTranslations<"dossierReview">>
+
+/** Where a quote sits in its document, in words: "Trang 3", "Slide 2" or the name of the sheet. */
+export const placeWordsOf = (t: Translate) => (place: EvidencePlaceView) =>
+    t(`place_${place.kind}`, { label: place.label })
 
 /** Where a finding stands, when that is worth saying: confirmed, dismissed, or how it was resolved; nothing for an open one. */
 export const statusPartOf = (t: Translate, finding: FindingView): string | null => {

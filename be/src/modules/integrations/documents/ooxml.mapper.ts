@@ -1,4 +1,5 @@
 import { strFromU8, unzipSync } from "fflate"
+import type { PlacedText } from "./documents.contracts"
 import { DocumentsError, DocumentsErrorCode } from "./errors/documents.error"
 
 /** The most rows of one sheet that reach the text of a workbook. */
@@ -120,8 +121,11 @@ const sheetPartOf = (target: string | undefined, position: number): string => {
     return target.startsWith("/") ? target.slice(1) : `xl/${target}`
 }
 
-/** Each sheet as a text table (cells joined by " | "), empty rows skipped, at most XLSX_MAX_ROWS rows per sheet. */
-export const xlsxToText = (bytes: Uint8Array): string => {
+/** The text of a workbook or deck joined from its stretches, one blank line between them. */
+export const joinedText = (parts: ReadonlyArray<PlacedText>): string => parts.map((part) => part.text).join("\n\n")
+
+/** The sheets of a workbook that hold rows, each as its text table and the sheet name as its place. */
+export const xlsxSheets = (bytes: Uint8Array): Array<PlacedText> => {
     const parts = partsOf(
         bytes,
         (name) =>
@@ -134,17 +138,22 @@ export const xlsxToText = (bytes: Uint8Array): string => {
     if (book === undefined) throw new DocumentsError({ code: DocumentsErrorCode.FileInvalid, params: { kind: "xlsx" } })
     const targets = relationshipTargets(parts["xl/_rels/workbook.xml.rels"] ?? "")
     const shared = sharedStringsOf(parts["xl/sharedStrings.xml"] ?? "")
-    const blocks: Array<string> = []
+    const blocks: Array<PlacedText> = []
     for (const [index, sheet] of [...book.matchAll(/<sheet\b[^>]*>/gu)].entries()) {
         const position = index + 1
         const name = attributeOf(sheet[0], "name") ?? `Sheet ${position}`
         const relationship = attributeOf(sheet[0], "id")
         const xml = parts[sheetPartOf(relationship === null ? undefined : targets.get(relationship), position)]
         const lines = xml === undefined ? [] : sheetLines(xml, shared)
-        if (lines.length > 0) blocks.push(`## ${name}\n${lines.join("\n")}`)
+        if (lines.length > 0) {
+            blocks.push({ place: { kind: "sheet", label: name }, text: `## ${name}\n${lines.join("\n")}` })
+        }
     }
-    return blocks.join("\n\n")
+    return blocks
 }
+
+/** Each sheet as a text table (cells joined by " | "), empty rows skipped, at most XLSX_MAX_ROWS rows per sheet. */
+export const xlsxToText = (bytes: Uint8Array): string => joinedText(xlsxSheets(bytes))
 
 /** The paragraphs of a slide, one line each; the slide number field is left out. */
 const paragraphs = (xml: string): string =>
@@ -164,7 +173,10 @@ const notesOf = (parts: Readonly<Record<string, string>>, slidePart: string): st
 }
 
 /** Slides in order: "## Slide N" then the text of every shape; speaker notes follow as "Notes:". */
-export const pptxToText = (bytes: Uint8Array): string => {
+export const pptxToText = (bytes: Uint8Array): string => joinedText(pptxSlides(bytes))
+
+/** The slides that hold text, each as its text and its slide number as its place. */
+export const pptxSlides = (bytes: Uint8Array): Array<PlacedText> => {
     const parts = partsOf(
         bytes,
         (name) =>
@@ -177,14 +189,16 @@ export const pptxToText = (bytes: Uint8Array): string => {
         .sort(([a], [b]) => slideNumber(a) - slideNumber(b))
     if (slides.length === 0)
         throw new DocumentsError({ code: DocumentsErrorCode.FileInvalid, params: { kind: "pptx" } })
-    const blocks: Array<string> = []
+    const blocks: Array<PlacedText> = []
     for (const [index, [part, xml]] of slides.entries()) {
         const body = paragraphs(xml)
         const notes = notesOf(parts, part)
         const lines = [`## Slide ${index + 1}`, body, notes === "" ? "" : `Notes:\n${notes}`].filter(
             (line) => line !== "",
         )
-        if (lines.length > 1) blocks.push(lines.join("\n"))
+        if (lines.length > 1) {
+            blocks.push({ place: { kind: "slide", label: String(index + 1) }, text: lines.join("\n") })
+        }
     }
-    return blocks.join("\n\n")
+    return blocks
 }

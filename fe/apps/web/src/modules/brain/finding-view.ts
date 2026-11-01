@@ -8,8 +8,10 @@ import {
     FINDING_STATUSES,
     REMEDY_ACTIONS,
     REMEDY_DRAFT_STATUSES,
+    EVIDENCE_PLACE_KINDS,
 } from "./findings"
 import type {
+    EvidencePlaceKind,
     FindingKind,
     FindingResolution,
     FindingSeverity,
@@ -17,6 +19,13 @@ import type {
     RemedyAction,
     RemedyDraftStatus,
 } from "./findings"
+
+/** Where in its document a quote sits: the page of a PDF, the slide of a presentation or the sheet of a workbook. */
+export interface EvidencePlaceView {
+    readonly kind: EvidencePlaceKind
+    /** The page or slide number, or the sheet name. */
+    readonly label: string
+}
 
 /** The evidence of a finding that a reader can follow back to a document or a fact. */
 export interface FindingEvidenceView {
@@ -26,6 +35,8 @@ export interface FindingEvidenceView {
     readonly sourceTitle: string | null
     readonly factLine: string | null
     readonly quote: string | null
+    /** Where the quote sits in its document; null for a quote stored before places and for a file with none. */
+    readonly place: EvidencePlaceView | null
 }
 
 /** A finding as the back end `dossierFindings` query answers it. */
@@ -46,6 +57,8 @@ export interface FindingRecord {
         readonly sourceTitle?: string | null | undefined
         readonly factLine?: string | null | undefined
         readonly quote?: string | null | undefined
+        readonly placeKind?: string | null | undefined
+        readonly placeLabel?: string | null | undefined
     }>
     readonly remedyAction: string
     readonly remedyDocumentType?: string | null | undefined
@@ -92,6 +105,12 @@ const oneOf = <T extends string>(set: ReadonlyArray<T>, value: string): T | unde
 const orNull = <T extends string>(set: ReadonlyArray<T>, value: string | null | undefined): T | null =>
     (value === null || value === undefined ? undefined : oneOf(set, value)) ?? null
 
+/** The place a quote sits at; null unless the back end names a known kind and a label. */
+const placeOf = (kind: string | null | undefined, label: string | null | undefined): EvidencePlaceView | null => {
+    const known = orNull(EVIDENCE_PLACE_KINDS, kind)
+    return known === null || label === null || label === undefined || label === "" ? null : { kind: known, label }
+}
+
 /** The day part of an instant or date the back end sends; null when absent. */
 const dayOf = (value: string | null | undefined): string | null =>
     value === null || value === undefined || value === "" ? null : value.slice(0, 10)
@@ -127,6 +146,7 @@ export const findingViewOf = (record: FindingRecord): FindingView | undefined =>
             sourceTitle: one.sourceTitle ?? null,
             factLine: one.factLine ?? null,
             quote: one.quote ?? null,
+            place: placeOf(one.placeKind, one.placeLabel),
         })),
         remedyAction,
         status,

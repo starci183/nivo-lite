@@ -1,3 +1,5 @@
+import type { LocatedText } from "./knowledge-chunks.contracts"
+
 /** About 800 characters per passage. */
 export const CHUNK_SIZE = 800
 
@@ -271,14 +273,24 @@ export const chunkText = (text: string, size: number = CHUNK_SIZE, overlap: numb
  * is split at its paragraphs and sentences, and identical passages and repeated long paragraphs are kept once. Unlike `chunkText` a passage
  * carries no tail of the one before it, which would tie its hash to its neighbour.
  */
-export const chunkPassages = (text: string, size: number = CHUNK_SIZE): Array<string> => {
-    const body = normalizeText(text)
-    if (body === "") return []
+export const chunkPassages = (text: string, size: number = CHUNK_SIZE): Array<string> =>
+    chunkLocated([{ place: null, text }], size).map((passage) => passage.text)
+
+/**
+ * The passages of a document that names its places (the pages of a PDF, the slides of a presentation, the sheets of a workbook): each
+ * stretch is cut as `chunkPassages` cuts a document, so no passage crosses a place, and carries the place it came from. Repeated passages
+ * and long paragraphs are kept once across the whole document. A document of one stretch with no place is cut exactly as `chunkPassages`.
+ */
+export const chunkLocated = (parts: ReadonlyArray<LocatedText>, size: number = CHUNK_SIZE): Array<LocatedText> => {
     const seenBlocks = new Set<string>()
     const isNew = firstSeen(new Set())
-    return sectionsOf(body).flatMap((section) =>
-        packed(piecesOf(section, size, seenBlocks), size)
-            .filter(isNew)
-            .map((piece) => piece.text),
-    )
+    return parts.flatMap((part) => {
+        const body = normalizeText(part.text)
+        if (body === "") return []
+        return sectionsOf(body).flatMap((section) =>
+            packed(piecesOf(section, size, seenBlocks), size)
+                .filter(isNew)
+                .map((piece): LocatedText => ({ place: part.place, text: piece.text })),
+        )
+    })
 }

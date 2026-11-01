@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
+import type { PassagePlace } from "@modules/domain/knowledge-chunks"
 import { MemberLookupService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -50,6 +52,22 @@ const RANK = "CASE f.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'me
 const AFTER =
     "(CASE f.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END > :rank OR (CASE f.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END = :rank AND (f.lastSeenAt < :at OR (f.lastSeenAt = :at AND f.id < :id))))"
 
+/** The ids of the passages the evidence of these findings quotes, distinct. */
+const passageIdsOf = (rows: ReadonlyArray<DossierFindingEntity>): Array<string> => [
+    ...new Set(
+        rows.flatMap((row) => row.evidence.flatMap((item) => (item.passageId === null ? [] : [item.passageId]))),
+    ),
+]
+
+/** The finding with the place of each passage its evidence quotes; a passage with no stored place stays without one. */
+const withPlaces = (record: FindingRecord, places: ReadonlyMap<string, PassagePlace>): FindingRecord => ({
+    ...record,
+    evidence: record.evidence.map((item) => {
+        const place = item.passageId === null ? undefined : places.get(item.passageId)
+        return place === undefined ? item : { ...item, placeKind: place.kind, placeLabel: place.label }
+    }),
+})
+
 const noteOf = (text: string | null | undefined): string | null => {
     const note = (text ?? "").trim()
     return note.length < NOTE.min || note.length > NOTE.max ? null : note
@@ -65,6 +83,7 @@ export class DossierFindingsService {
         private readonly members: WorkspaceMembersService,
         private readonly lookup: MemberLookupService,
         private readonly inputs: ReviewInputsService,
+        private readonly chunks: KnowledgeChunksService,
     ) {}
 
     /** One page of findings, the most severe and most recently seen first; rule findings in the reader's locale. */
@@ -114,11 +133,7 @@ export class DossierFindingsService {
             .limit(page.first + 1)
             .getMany()
         const shown = rows.slice(0, page.first)
-        const render = await this.renderer(
-            workspaceId,
-            shown.map((row) => row.id),
-            locale,
-        )
+        const render = await this.renderer(workspaceId, shown, locale)
         const nodes = shown.map(render)
         const last = shown.at(-1)
         return {
@@ -283,15 +298,19 @@ export class DossierFindingsService {
         const fresh = await this.entityManager.findOneOrFail(DossierFindingEntity, {
             where: { id: findingId, workspaceId },
         })
-        return (await this.renderer(workspaceId, [fresh.id], locale))(fresh)
+        return (await this.renderer(workspaceId, [fresh], locale))(fresh)
     }
 
-    /** How findings read for the doors: with their dossier, their latest draft and, for a rule finding, its words in the locale. */
+    /**
+     * How findings read for the doors: with their dossier, their latest draft, the page, slide or sheet each quoted passage sits at and,
+     * for a rule finding, its words in the locale.
+     */
     private async renderer(
         workspaceId: string,
-        findingIds: ReadonlyArray<string>,
+        found: ReadonlyArray<DossierFindingEntity>,
         locale: Locale,
     ): Promise<(row: DossierFindingEntity) => FindingRecord> {
+        const findingIds = found.map((row) => row.id)
         const dossiers = new Map((await this.inputs.all(workspaceId)).map((dossier) => [dossier.id, dossier]))
         const drafts =
             findingIds.length === 0
@@ -304,17 +323,21 @@ export class DossierFindingsService {
                   })
         const latestDraft = new Map<string, DossierRemedyDraftEntity>()
         for (const draft of drafts) if (!latestDraft.has(draft.findingId)) latestDraft.set(draft.findingId, draft)
+        const places = await this.chunks.placesOf(workspaceId, passageIdsOf(found))
         return (row) =>
-            toFindingRecord(row, {
-                dossier: row.dossierId === null ? undefined : dossiers.get(row.dossierId),
-                draft: latestDraft.get(row.id),
-                text:
-                    row.origin === "rule" && row.code !== null
-                        ? {
-                              title: this.catalog.get(`findings.${row.code}.title`, row.params, locale),
-                              detail: this.catalog.get(`findings.${row.code}.detail`, row.params, locale),
-                          }
-                        : { title: row.title, detail: row.detail },
-            })
+            withPlaces(
+                toFindingRecord(row, {
+                    dossier: row.dossierId === null ? undefined : dossiers.get(row.dossierId),
+                    draft: latestDraft.get(row.id),
+                    text:
+                        row.origin === "rule" && row.code !== null
+                            ? {
+                                  title: this.catalog.get(`findings.${row.code}.title`, row.params, locale),
+                                  detail: this.catalog.get(`findings.${row.code}.detail`, row.params, locale),
+                              }
+                            : { title: row.title, detail: row.detail },
+                }),
+                places,
+            )
     }
 }

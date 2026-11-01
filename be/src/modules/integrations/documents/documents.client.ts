@@ -6,6 +6,7 @@ import type {
     DriveFileText,
     DriveFolderListing,
     GoogleAccessToken,
+    PlacedDocument,
 } from "./documents.contracts"
 import { InjectDocumentsOptions } from "./documents.decorators"
 import type { DocumentsOptions } from "./documents.options"
@@ -15,8 +16,9 @@ import { DriveFolderClient } from "./drive-folder.client"
 import { resolveLink } from "./drive-link.policy"
 import { DocumentsError, DocumentsErrorCode } from "./errors/documents.error"
 import { PublicLinkClient } from "./public-link.client"
-import { textFromBytes } from "./text-extraction.mapper"
+import { placedFromBytes, textFromBytes } from "./text-extraction.mapper"
 import { fileTextKind, hasExtension, sniffTextKind } from "./text-kind.policy"
+import type { TextKind } from "./text-kind.policy"
 
 /** The longest title taken from a page or file name. */
 const TITLE_CHARS = 160
@@ -70,6 +72,16 @@ export class DocumentsClient implements DocumentsPort {
 
     /** The text of uploaded file bytes: the name decides the kind, else the magic bytes and the content type do. */
     async readFile(name: string, bytes: Uint8Array, contentType: string): Promise<string> {
+        return textFromBytes(this.kindOf(name, bytes, contentType), bytes, this.options.readers)
+    }
+
+    /** The text of uploaded file bytes with the place of each stretch; the kind is decided as `readFile` decides it. */
+    async readPlacedFile(name: string, bytes: Uint8Array, contentType: string): Promise<PlacedDocument> {
+        return placedFromBytes(this.kindOf(name, bytes, contentType), bytes, this.options.readers)
+    }
+
+    /** The kind of an uploaded file: its name decides, else the magic bytes and the content type; any other file is refused as an unsupported type. */
+    private kindOf(name: string, bytes: Uint8Array, contentType: string): TextKind {
         const kind = fileTextKind(name) ?? sniffTextKind(bytes, contentType)
         if (kind === null) {
             throw new DocumentsError({
@@ -77,7 +89,7 @@ export class DocumentsClient implements DocumentsPort {
                 params: { type: contentType || "unknown" },
             })
         }
-        return textFromBytes(kind, bytes, this.options.readers)
+        return kind
     }
 
     /** The text of one Drive file the token can open. */

@@ -3293,6 +3293,8 @@ type DossierFindingEvidenceType {
 }
 
 input DossierFindingNoteInput {
+  placeKind: String
+  placeLabel: String
   findingId: ID! @inputBounds(maxLength: 36)
   note: String = null @inputBounds(maxLength: 500)
 }

@@ -81,3 +81,9 @@ export const queryOfDossier = (dossierId?: string): FindingsQuery => ({
 
 /** The read of the queue of what needs doing: findings that still need somebody, worst first as the back end orders them. */
 export const queryOfQueue = (): FindingsQuery => ({ statuses: ["open", "confirmed"] })
+
+/** The kinds of place a quoted passage can sit at in its document, as the back end names them. */
+export const EVIDENCE_PLACE_KINDS = ["page", "slide", "sheet"] as const
+
+/** One of the kinds of place of a quote. */
+export type EvidencePlaceKind = (typeof EVIDENCE_PLACE_KINDS)[number]

@@ -141,6 +141,13 @@ export interface FindingEvidence {
     readonly factLine: string | null
     /** The words, copied verbatim. */
     readonly quote: string | null
+    /**
+     * What the place of the passage counts (page, slide or sheet), read from the stored passage when a finding is listed; absent in
+     * stored evidence, and absent for a passage stored before places or one the file names no place for.
+     */
+    readonly placeKind?: string | null
+    /** The page or slide number, or the sheet name, with the kind. */
+    readonly placeLabel?: string | null
 }
 
 /** A message param as the API lists it. */

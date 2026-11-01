@@ -4,7 +4,7 @@ import { useFormatter, useTranslations } from "next-intl"
 import { SEVERITY_TONE, findingActionsOf } from "@/modules/brain"
 import type { FindingActionView, FindingRowView, FindingView, MemberOption } from "@/modules/brain"
 import { brainDossierHref, brainUploadHref, knowledgeSourceHref } from "@/modules/routes"
-import { ownerPartOf, statusPartOf } from "./brain.shared"
+import { ownerPartOf, placeWordsOf, statusPartOf } from "./brain.shared"
 
 /** The dossier a pane's findings are filed under: what the upload action needs to file a document under it. */
 export interface UploadTarget {
@@ -61,7 +61,13 @@ export const useFindingRows = () => {
             evidence: finding.evidence.map((one, index) => ({
                 id: `${finding.id}-${index}`,
                 label: one.quote ?? one.factLine ?? one.label,
-                ...(one.quote === null ? {} : { description: one.label }),
+                ...(one.quote === null
+                    ? {}
+                    : {
+                          description: [one.label, one.place === null ? null : placeWordsOf(t)(one.place)]
+                              .filter((part) => part !== null)
+                              .join(" · "),
+                      }),
             })),
             sources: [...sources].map(([id, title]) => ({
                 id,

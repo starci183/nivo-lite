@@ -1,4 +1,4 @@
-import type { PassageView } from "@modules/domain/knowledge-chunks"
+import type { LocatedText, PassageView } from "@modules/domain/knowledge-chunks"
 import type { SourceDetail } from "@modules/domain/knowledge-sources"
 import type { DriveFolderListing, MaybeDriveAccess } from "@modules/integrations/documents"
 import type { AiUsage } from "@modules/integrations/ai"
@@ -168,6 +168,8 @@ export interface ReadText {
     readonly text: string
     /** A title read from the page or file, or null to keep the title. */
     readonly title: string | null
+    /** The stretches the text is made of with the page, slide or sheet each sits at; absent when the file names no places. */
+    readonly parts?: ReadonlyArray<LocatedText>
 }
 
 /** What reading a source gave: its text, or the stored code of why it cannot be read. */

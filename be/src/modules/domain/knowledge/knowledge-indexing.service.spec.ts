@@ -9,6 +9,7 @@ import {
     stored,
 } from "@tests/fixtures/builders/knowledge-indexing.builder"
 import { KnowledgeChunksService, chunkPassages } from "@modules/domain/knowledge-chunks"
+import type { PassagePlace } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "@modules/domain/knowledge-sources"
 import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote } from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
@@ -28,6 +29,7 @@ import { UsageMeterService } from "./usage-meter.service"
 
 const WS = INDEXING_WS
 const run = { sourceId: "s1", workspaceId: WS }
+const PAGE: PassagePlace = { kind: "page", label: "2" }
 /** Lets the pending promise chain of the service run. */
 const flush = async (): Promise<void> => {
     for (let turn = 0; turn < 20; turn += 1) await Promise.resolve()
@@ -193,6 +195,17 @@ describe("KnowledgeIndexingService", () => {
 
 describe("KnowledgeIndexingService", () => {
     describe("index", () => {
+        it("stores the page of a passage and teaches it to the stored ones", async () => {
+            const { service, chunks, reader } = await build()
+            reader.read.mockResolvedValue({
+                kind: "ok",
+                value: { text: "Hi", title: null, parts: [{ place: PAGE, text: "Hi" }] },
+            })
+            await service.index(run)
+            expect(chunks.place).toHaveBeenCalledWith(expect.objectContaining({ places: [{ order: 0, place: PAGE }] }))
+            expect(chunks.keep.mock.calls.flatMap(([write]) => write.drafts)[0]?.place).toEqual(PAGE)
+        })
+
         it("stores a passage the provider gave no vector for without one", async () => {
             const { service, chunks, embeddings } = await build()
             embeddings.embed.mockResolvedValue([])

@@ -111,7 +111,7 @@ const localApiOptions = (): ApiOptions => ({
         driveBase: "https://drive.invalid",
         oauthBase: null,
         google: null,
-        readers: { docx: refuseNetwork, pdf: refuseNetwork },
+        readers: { docx: refuseNetwork, pdf: refuseNetwork, pdfPages: refuseNetwork },
     },
     workspaces: { allowFreeWorkspace: true },
     workspaceInvites: { siteUrl: SITE, inviteDays: 7 },

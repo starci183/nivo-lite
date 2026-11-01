@@ -27,6 +27,8 @@ const chunkOf = builder<KnowledgeChunkEntity>({
     embeddingModel: null,
     installationId: null,
     contentHash: null,
+    placeKind: null,
+    placeLabel: null,
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
 })
 
@@ -51,6 +53,8 @@ const passage = (ord: number, embedding: string | null, embeddingModel: string |
     embedding,
     embeddingModel,
     contentHash: embeddingModel === null ? null : passageHashOf(content, embeddingModel),
+    placeKind: null,
+    placeLabel: null,
 })
 
 /** The order numbers of the rows an insert was given. */
@@ -469,5 +473,26 @@ describe("KnowledgeChunksService arrange", () => {
             workspaceId: WS,
             ord: MoreThanOrEqual(3),
         })
+    })
+})
+
+describe("KnowledgeChunksService place", () => {
+    it("writes the place of each order on the stored passages and reads it back by passage id", async () => {
+        const row = Object.assign(chunkOf(), { placeKind: "sheet", placeLabel: "Gia" })
+        const em = mockEntityManager({ find: [KnowledgeChunkEntity, [row, Object.assign(chunkOf(), { id: "c2" })]] })
+        const update = queueQueryBuilders(em, [{ execute: {} }])[0]
+        const service = await build(em)
+        await service.place({
+            workspaceId: WS,
+            sourceId: "s1",
+            places: [{ order: 0, place: { kind: "sheet", label: "Gia" } }],
+        })
+
+        expect(update?.callsOf("setParameters")).toEqual([
+            [{ workspaceId: WS, sourceId: "s1", orders: [0], kinds: ["sheet"], labels: ["Gia"] }],
+        ])
+        await expect(service.placesOf(WS, ["c1", "c2"])).resolves.toEqual(
+            new Map([["c1", { kind: "sheet", label: "Gia" }]]),
+        )
     })
 })

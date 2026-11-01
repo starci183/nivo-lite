@@ -28,6 +28,8 @@ const query1: Document = gql`
                     sourceTitle
                     factLine
                     quote
+                    placeKind
+                    placeLabel
                 }
                 remedyAction
                 remedyDocumentType

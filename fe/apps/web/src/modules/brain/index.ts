@@ -36,6 +36,7 @@ export {
 export type {
     DossierReviewRecord,
     DraftView,
+    EvidencePlaceView,
     FindingAction,
     FindingView,
     MemberOption,
