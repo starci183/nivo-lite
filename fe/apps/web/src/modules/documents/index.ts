@@ -13,6 +13,8 @@ export {
     DOCUMENT_STATUS_KEYS,
     isAgentModule,
     isDocumentActive,
+    isDuplicateNote,
+    isFinalFailure,
     isReadyNote,
     moduleFilterOf,
     noteKeyOf,

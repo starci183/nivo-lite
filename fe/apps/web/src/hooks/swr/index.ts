@@ -72,7 +72,13 @@ export { useMutateDraftLoyaltyCampaignSwr, useMutateDuplicateVideoProjectSwr } f
 export { useMutateEnqueueKnowledgeSourceSwr, useMutateExplainShiftsScheduleSwr } from "./api"
 export { useMutateFinishWebhookConnectionSwr, useMutateGenerateHiringAdSwr } from "./api"
 export { useMutateGrantAgentConnectionSwr, useMutateHandoffToAccountingSwr } from "./api"
-export { useMutateImportInventoryPasteSwr, useMutateInstallModuleSwr, useMutateKeepCurrentBrainFactSwr } from "./api"
+export {
+    useMutateApplyBrainFactGroupSwr,
+    useMutateImportInventoryPasteSwr,
+    useMutateInstallModuleSwr,
+    useMutateKeepCurrentBrainFactSwr,
+    useMutateUndoBrainFactBatchSwr,
+} from "./api"
 export { useMutateLinkHiringStaffSwr, useMutateMaintainBrainSwr, useMutateMarkBookingNoShowSwr } from "./api"
 export { useMutateMarkContentPublishedSwr, useMutateMarkOrderShippedSwr, useMutateMarkVideoPublishedSwr } from "./api"
 export { useMutateMoveBookingSwr, useMutateMoveContentItemSwr, useMutateMoveHiringCandidateSwr } from "./api"

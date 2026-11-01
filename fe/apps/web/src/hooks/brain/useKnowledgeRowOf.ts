@@ -6,12 +6,15 @@ import {
     DOCUMENT_STATUS_TONE,
     isAgentModule,
     isDocumentActive,
+    isDuplicateNote,
+    isFinalFailure,
     isReadyNote,
     noteKeyOf,
     useKnowledgeProgressViewOf,
     useLibraryCommands,
     useWorkspaceMember,
 } from "@/hooks/knowledge"
+import { appliedBatchOf, waitingFactCountOf } from "@/modules/brain"
 import type { DocumentRowActionView, DocumentRowBadgeView, DocumentRowView, LiveProgress } from "@/modules/documents"
 import type { BrainExtraction, KnowledgeDocument } from "@/modules/types"
 import { useBrainBoard } from "./useBrainBoard"
@@ -61,7 +64,22 @@ const badgesOf = (
 interface RetryChoice {
     readonly canRetry: boolean
     readonly canRetryFacts: boolean
+    /** How many facts of an internal document wait for a person and may be applied together; 0 offers nothing. */
+    readonly bulkCount: number
+    /** The batch of facts of the document applied together and still in force, or null. */
+    readonly batch: string | null
 }
+
+/** The action that takes the facts applied together from a document back to review, when there are some. */
+const bulkUndoOf = (
+    t: Translate,
+    commands: ReturnType<typeof useLibraryCommands>,
+    sourceId: string,
+    batch: string | null,
+): ReadonlyArray<DocumentRowActionView> =>
+    batch === null
+        ? []
+        : [{ id: "undo-facts", label: t("bulkUndo"), onPress: () => commands.undoFacts(batch, sourceId) }]
 
 /** The neutral "try again" of a row: the document itself, or only the reading of its facts. */
 const retryActionsOf = (
@@ -74,6 +92,16 @@ const retryActionsOf = (
     ...(choice.canRetryFacts
         ? [{ id: "retry-facts", label: t("retry"), onPress: () => commands.reread(sourceId) }]
         : []),
+    ...(choice.bulkCount > 0
+        ? [
+              {
+                  id: "apply-facts",
+                  label: t("bulkApply", { count: choice.bulkCount }),
+                  onPress: () => commands.applyFacts(sourceId),
+              },
+          ]
+        : []),
+    ...bulkUndoOf(t, commands, sourceId, choice.batch),
 ]
 
 /**
@@ -97,19 +125,28 @@ export const useKnowledgeRowOf = (live: Readonly<Record<string, LiveProgress>>) 
             t(`kind_${source.kind}`),
             ...(source.topic === null ? [] : [source.topic]),
             format.dateTime(new Date(source.createdAt), { dateStyle: "medium" }),
+            ...(source.partCount > 1 ? [t("docParts", { count: source.partCount })] : []),
         ]
         const reading = board.extractions.find((one) => one.sourceId === source.id)?.status
         const status = statusLabelOf(t, source, reading, member.canWrite ? factsOf(source) : null)
+        const failedNote = source.status === "failed" ? source.error : null
         const canRetry =
-            member.canWrite && source.status === "failed" && source.error !== null && !isReadyNote(source.error)
-        const canRetryFacts = member.canWrite && source.status === "ready" && reading !== "done"
+            member.canWrite && failedNote !== null && !isReadyNote(failedNote) && !isFinalFailure(failedNote)
+        const duplicate = source.error !== null && isDuplicateNote(source.error)
+        const canRetryFacts = member.canWrite && source.status === "ready" && reading !== "done" && !duplicate
+        const bulkable = member.canWrite && source.status === "ready" && source.visibility === "internal"
         return {
             id: source.id,
             title: source.title,
             lines: [parts.join(" · "), ...(source.error === null ? [] : [t(noteKeyOf(source.error))])],
             badges: badgesOf(t, source, status, reading),
             progress: progressOf(source.id) ?? undefined,
-            actions: retryActionsOf(t, commands, source.id, { canRetry, canRetryFacts }),
+            actions: retryActionsOf(t, commands, source.id, {
+                canRetry,
+                canRetryFacts,
+                bulkCount: bulkable ? waitingFactCountOf(board.facts, source.id) : 0,
+                batch: bulkable ? appliedBatchOf(board.facts, source.id) : null,
+            }),
         }
     }
     return { rowOf, commands, member, board }

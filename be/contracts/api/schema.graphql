@@ -1175,14 +1175,14 @@ type ApiKeyType {
   revokedAt: String
 }
 
+input ApplyBrainFactGroupInput {
+  sourceId: ID! @inputBounds(maxLength: 36)
+}
+
 type ApplyImportType {
   blocks: Int!
   positions: Int!
   staff: Int!
-}
-
-input ApplyBrainFactGroupInput {
-  sourceId: ID!
 }
 
 input ApplyInventoryStarterInput {
@@ -8808,14 +8808,14 @@ type TrustType {
   streak: Int!
 }
 
+input UndoBrainFactBatchInput {
+  batchId: String! @inputBounds(maxLength: 64)
+}
+
 type UnmatchedContractType {
   contractId: ID!
   customerName: String!
   reason: String!
-}
-
-input UndoBrainFactBatchInput {
-  batchId: String!
 }
 
 input UpdateAuthorityInput {

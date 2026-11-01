@@ -64,6 +64,7 @@ export const toBrainFact = (row: BrainFactType): BrainFact => ({
     proposedAt: row.proposedAt,
     decidedBy: row.decidedBy ?? null,
     decidedAt: row.decidedAt ?? null,
+    decisionNote: row.decisionNote ?? null,
 })
 
 /** The lesson a `brain` lesson item stands for. */

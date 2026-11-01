@@ -64,6 +64,8 @@ export interface BrainFact {
     readonly proposedAt: string
     readonly decidedBy: string | null
     readonly decidedAt: string | null
+    /** The reason given with the decision; a fact applied together with others starts it with `bulk:` and the batch. */
+    readonly decisionNote: string | null
 }
 
 /** How an agent should work, learnt from the owner. */

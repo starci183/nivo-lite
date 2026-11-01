@@ -47,7 +47,17 @@ const READY_NOTES: ReadonlySet<string> = new Set([
     "KNOWLEDGE_NOTE_NO_CREDITS_INDEX",
     "KNOWLEDGE_NOTE_NO_CREDITS_FACTS",
     "KNOWLEDGE_NOTE_FACTS_UNREAD",
+    "KNOWLEDGE_NOTE_DUPLICATE",
 ])
+
+/** Codes of a failure that trying again cannot clear: the file needs something done to it first. */
+const FINAL_FAILURES: ReadonlySet<string> = new Set(["KNOWLEDGE_NOTE_NEEDS_OCR"])
+
+/** Whether a stored code is a failure that trying again would only repeat. */
+export const isFinalFailure = (code: string): boolean => FINAL_FAILURES.has(code)
+
+/** Whether a stored code says the text is the same as a document the workspace already holds, so there is nothing to read again. */
+export const isDuplicateNote = (code: string): boolean => code === "KNOWLEDGE_NOTE_DUPLICATE"
 
 /** Whether a stored code is a note on a document that works, not the reason it failed. */
 export const isReadyNote = (code: string): boolean => READY_NOTES.has(code)
