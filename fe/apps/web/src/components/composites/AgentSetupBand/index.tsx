@@ -1,7 +1,8 @@
-import { Alert, Button, Disclosure, Text } from "@starci/grammar/common"
+import { Alert, Button, Disclosure, Stack, Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { SetupMeter } from "@/components/branches/SetupMeter"
 import type { SetupSideView } from "@/modules/types"
+import { LIST_MEASURE_CLASS_NAME } from "./classNames"
 
 /** View, the title of the checklist, the run action and the checklist itself. */
 interface AgentSetupBandProps {
@@ -29,7 +30,9 @@ export const AgentSetupBand = (props: AgentSetupBandProps) => {
                 isSkeleton={props.isSkeleton}
             />
             <Disclosure title={props.checklistLabel} defaultExpanded={!gates.canApply}>
-                {props.children}
+                <div className={LIST_MEASURE_CLASS_NAME}>
+                    <Stack gap="row">{props.children}</Stack>
+                </div>
             </Disclosure>
             <Button
                 intent="alternative"

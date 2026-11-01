@@ -1,4 +1,4 @@
-import { Badge, Button, List, ListRow, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, ListRow, SurfaceListCard } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
@@ -29,46 +29,31 @@ export interface AuthorityStaffBaseProps {
     }
 }
 
-/** Draws the staff section: the people NIVO can hand an exception to. Staff are never required for routine work. */
+/** Draws the staff section: the people NIVO can hand an exception to, one list with its explanation under it. Staff are never required for routine work. */
 export const AuthorityStaffBase = (props: AuthorityStaffBaseProps) => {
     const view = props.props
     return (
-        <SurfaceCard label={view.title} headingLevel={2}>
-            <Stack gap="section">
-                <Text size="sm" tone="muted">
-                    {view.description}
-                </Text>
-                <SlotView
-                    slot={view.slot}
-                    placeholder={view.placeholder}
-                    labels={view.slotLabels}
-                    onRetry={props.on.retry}
-                >
-                    {(rows, isSkeleton) => (
-                        <List label={view.title}>
-                            {rows.map((row) => (
-                                <ListRow
-                                    key={row.id}
-                                    isSkeleton={isSkeleton}
-                                    title={row.name}
-                                    description={row.role}
-                                    badges={row.hasAccount ? <Badge tone="accent">{view.hasAccountLabel}</Badge> : null}
-                                    actions={
-                                        row.inviteHref === null ? null : (
-                                            <Button intent="neutral" href={row.inviteHref}>
-                                                {view.inviteLabel}
-                                            </Button>
-                                        )
-                                    }
-                                />
-                            ))}
-                        </List>
-                    )}
-                </SlotView>
-                <Text size="xs" tone="muted">
-                    {view.note}
-                </Text>
-            </Stack>
-        </SurfaceCard>
+        <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
+            {(rows, isSkeleton) => (
+                <SurfaceListCard label={view.title} headingLevel={2} footer={`${view.description} ${view.note}`}>
+                    {rows.map((row) => (
+                        <ListRow
+                            key={row.id}
+                            isSkeleton={isSkeleton}
+                            title={row.name}
+                            description={row.role}
+                            badges={row.hasAccount ? <Badge tone="accent">{view.hasAccountLabel}</Badge> : null}
+                            actions={
+                                row.inviteHref === null ? null : (
+                                    <Button intent="neutral" href={row.inviteHref}>
+                                        {view.inviteLabel}
+                                    </Button>
+                                )
+                            }
+                        />
+                    ))}
+                </SurfaceListCard>
+            )}
+        </SlotView>
     )
 }

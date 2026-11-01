@@ -18,7 +18,6 @@ export const PermissionsPage = async () => {
                 header: homePageHeadingOf({
                     crumbLabel: t("crumbLabel"),
                     crumbHome: t("crumbHome"),
-                    eyebrow: t("eyebrow"),
                     title: t("title"),
                     description: t("description"),
                 }),

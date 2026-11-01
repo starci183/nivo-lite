@@ -1,8 +1,8 @@
-import { Avatar, DataTable, IncludedMark, SurfaceCard, Text } from "@starci/grammar/common"
+import { Avatar, DataTable, IncludedMark, SectionHeader, Stack, Text } from "@starci/grammar/common"
 import type { DataTableRow } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { CELL_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
+import { CELL_CLASS_NAME } from "./classNames"
 
 /** One audience of the matrix: the customer, or an installed agent by its human name. */
 export interface AudienceView {
@@ -116,21 +116,20 @@ const MatrixTable = (props: MatrixTableProps) => {
     )
 }
 
-/** Draws what each audience (the customer and every installed agent) reads of the shared knowledge: a mark or a dash per cell. */
+/** Draws what each audience (the customer and every installed agent) reads of the shared knowledge: a mark or a dash per cell, a comparison, so the table stands in the section with no card. */
 export const BrainAgentViewBase = (props: BrainAgentViewBaseProps) => (
-    <SurfaceCard label={props.props.title} headingLevel={2}>
-        <div className={STACK_CLASS_NAME}>
-            <Text size="sm" tone="muted">
-                {props.props.hint}
-            </Text>
-            <SlotView
-                slot={props.props.matrix}
-                placeholder={MATRIX_PLACEHOLDER}
-                labels={props.props.slotLabels}
-                onRetry={props.on.retry}
-            >
-                {(matrix, isSkeleton) => <MatrixTable view={props.props} matrix={matrix} isSkeleton={isSkeleton} />}
-            </SlotView>
-        </div>
-    </SurfaceCard>
+    <Stack gap="row">
+        <SectionHeader level={2} title={props.props.title} />
+        <SlotView
+            slot={props.props.matrix}
+            placeholder={MATRIX_PLACEHOLDER}
+            labels={props.props.slotLabels}
+            onRetry={props.on.retry}
+        >
+            {(matrix, isSkeleton) => <MatrixTable view={props.props} matrix={matrix} isSkeleton={isSkeleton} />}
+        </SlotView>
+        <Text size="sm" tone="muted">
+            {props.props.hint}
+        </Text>
+    </Stack>
 )
