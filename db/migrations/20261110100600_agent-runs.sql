@@ -358,7 +358,8 @@ CREATE FUNCTION public.agent_run_due(p_limit integer)
     AS $$
   (SELECT 'expired'::text, s.run_id, s.workspace_id, s.agent_id, s.step_key, s.fence, s.claim_until
      FROM public.agent_run_steps s
-    WHERE s.status = 'running' AND s.claim_until < now()
+     JOIN public.agent_runs r ON r.id = s.run_id
+    WHERE s.status = 'running' AND s.claim_until < now() AND r.status IN ('running', 'waiting')
     ORDER BY s.claim_until LIMIT p_limit)
   UNION ALL
   (SELECT 'ready'::text, s.run_id, s.workspace_id, s.agent_id, s.step_key, s.fence, s.not_before
@@ -370,7 +371,9 @@ CREATE FUNCTION public.agent_run_due(p_limit integer)
   UNION ALL
   (SELECT 'compensating'::text, s.run_id, s.workspace_id, s.agent_id, s.step_key, s.fence, COALESCE(s.claim_until, s.updated_at)
      FROM public.agent_run_steps s
-    WHERE s.status = 'compensating' AND (s.claim_until IS NULL OR s.claim_until < now()) AND s.updated_at < now() - interval '1 minute'
+     JOIN public.agent_runs r ON r.id = s.run_id
+    WHERE s.status = 'compensating' AND r.status = 'compensating' AND (s.claim_until IS NULL OR s.claim_until < now())
+      AND s.updated_at < now() - interval '1 minute'
     ORDER BY s.updated_at LIMIT p_limit)
   UNION ALL
   (SELECT 'unspoken'::text, r.id, r.workspace_id, r.agent_id, ''::text, 0::bigint, r.updated_at
