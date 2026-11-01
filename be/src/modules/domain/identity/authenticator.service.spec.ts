@@ -82,6 +82,7 @@ describe("IdentityAuthenticatorService / verifyPassword", () => {
         })
 
         expect(attempts.admit).toHaveBeenCalledWith("login", "an@example.test")
+        expect(attempts.clear.mock.calls).toEqual([["login", "an@example.test"]])
         expect(em.query).toHaveBeenCalledWith(USER_BY_EMAIL, ["an@example.test"])
         expect(passwords.verify).toHaveBeenCalledWith("right-pw", "$2a$10$stored")
     })
@@ -91,14 +92,18 @@ describe("IdentityAuthenticatorService / verifyPassword", () => {
         await expect(wrong.service.verifyPassword("an@example.test", "bad")).rejects.toMatchObject({
             code: IdentityErrorCode.InvalidCredentials,
         })
+        expect(wrong.attempts.clear).not.toHaveBeenCalled()
 
         const unknown = await build({ query: [[USER_BY_EMAIL, []]] }, true, false)
         await expect(unknown.service.verifyPassword("ghost@example.test", "bad")).rejects.toMatchObject({
             code: IdentityErrorCode.InvalidCredentials,
         })
         expect(unknown.passwords.verify).toHaveBeenCalledWith("bad", "")
+        expect(unknown.attempts.clear).not.toHaveBeenCalled()
     })
+})
 
+describe("IdentityAuthenticatorService / verifyPassword refusals", () => {
     it("refuses a disabled account even with the right password", async () => {
         const { service } = await build({ query: [[USER_BY_EMAIL, [{ ...ACCOUNT, disabled: true }]]] })
 
@@ -115,8 +120,18 @@ describe("IdentityAuthenticatorService / verifyPassword", () => {
         })
     })
 
+    it("clears the count of an address whose password is right even when the account is refused", async () => {
+        const { service, attempts } = await build({ query: [[USER_BY_EMAIL, [{ ...ACCOUNT, disabled: true }]]] })
+
+        await expect(service.verifyPassword("an@example.test", "right-pw")).rejects.toMatchObject({
+            code: IdentityErrorCode.AccountDisabled,
+        })
+
+        expect(attempts.clear.mock.calls).toEqual([["login", "an@example.test"]])
+    })
+
     it("rate limits an address before it reads the account", async () => {
-        const { service, em, passwords } = await build({}, false)
+        const { service, em, passwords, attempts } = await build({}, false)
 
         await expect(service.verifyPassword("an@example.test", "guess")).rejects.toMatchObject({
             code: IdentityErrorCode.TooManyAttempts,
@@ -124,6 +139,7 @@ describe("IdentityAuthenticatorService / verifyPassword", () => {
 
         expect(em.query).not.toHaveBeenCalled()
         expect(passwords.verify).not.toHaveBeenCalled()
+        expect(attempts.clear).not.toHaveBeenCalled()
     })
 
     it("refuses a password longer than bcrypt reads without comparing it", async () => {

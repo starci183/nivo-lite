@@ -212,6 +212,7 @@ describe("IdentityPasswordResetService / change", () => {
         await expect(service.change(PRINCIPAL, "current-pw", "a-new-password")).resolves.toBeUndefined()
 
         expect(attempts.admit).toHaveBeenCalledWith("login", "an@example.test")
+        expect(attempts.clear.mock.calls).toEqual([["login", "an@example.test"]])
         expect(passwords.verify).toHaveBeenCalledWith("current-pw", "$2a$10$stored")
         expect(em.query).toHaveBeenCalledWith(SET_PASSWORD, ["u1", "$2b$10$new", new Date(NOW)])
     })
@@ -234,6 +235,7 @@ describe("IdentityPasswordResetService / change", () => {
         await expect(wrong.service.change(PRINCIPAL, "wrong", "a-new-password")).rejects.toMatchObject({
             code: IdentityErrorCode.InvalidCredentials,
         })
+        expect(wrong.attempts.clear).not.toHaveBeenCalled()
 
         const long = await build({ query: [[USER_BY_EMAIL, [STORED]]] })
         long.passwords.verify.mockResolvedValue(false)

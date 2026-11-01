@@ -37,7 +37,7 @@ export const useAgentGraphPanel = (installationId: string, setup: AgentGraphSetu
     const writes = useAgentGraphWrites((isDraftEmpty) => setChanges((count) => (isDraftEmpty ? 0 : count + 1)))
     const state = useAgentGraphUi(graph.runId)
     const words = useAgentGraphWords(t)
-    const commands = useAgentGraphCommands({ read: graph.read, state, writes, canGrant, changes, setup })
+    const commands = useAgentGraphCommands({ read: graph.read, state, writes, canGrant, setup })
     const channelsOf = useInstanceChannels()
     const lifecycle = installations?.find((one) => one.id === installationId)?.lifecycle ?? null
     const ctx = {

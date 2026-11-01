@@ -13,10 +13,15 @@ export class RunSetupTurnStep implements JobStep {
 
     /**
      * Records the step with the token this worker holds FIRST, so a stale token stops here before any effect; then the turn runs once.
-     * A turn answered already is recognised by its reply and left alone.
+     * A turn answered already is recognised by its reply and left alone; a failure that heals throws, so the queue attempts the turn again.
      */
     async run(job: ClaimedJob): Promise<void> {
         await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "answer" })
         await this.turns.run(job.payload)
+    }
+
+    /** Runs once when the attempts are used up: the owner is told NIVO is busy, unless the message was answered. */
+    async abandon(payload: object): Promise<void> {
+        await this.turns.giveUp(payload)
     }
 }

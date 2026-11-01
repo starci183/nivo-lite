@@ -1,4 +1,4 @@
-import { mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -158,35 +158,77 @@ describe("SetupSessionsService", () => {
         await expect((await build(em)).open(opening)).rejects.toBe("down")
     })
 
-    it("stores the draft of an open session", async () => {
-        const em = mockEntityManager({
-            update: [ModuleSetupSessionEntity, { affected: 1 }],
-            findOne: [ModuleSetupSessionEntity, row],
+    it("changes the draft inside one transaction that locks the row and reads it again there", async () => {
+        const tx = fakeTransaction(
+            mockEntityManager({
+                findOne: [ModuleSetupSessionEntity, row],
+                update: [ModuleSetupSessionEntity, { affected: 1 }],
+            }),
+        )
+        const next = jest.fn(() => ({ draft: { summary: "Tea", facts: [] }, gateEvidence: {} }))
+
+        await expect((await build(tx.em)).change("ses-1", next)).resolves.toEqual({
+            ...session,
+            draft: { summary: "Tea", facts: [] },
+            gateEvidence: {},
         })
-        const change = { draft: session.draft, gateEvidence: session.gateEvidence }
 
-        await expect((await build(em)).save("ses-1", change)).resolves.toEqual(session)
-
-        expect(em.update).toHaveBeenCalledWith(
+        expect(next.mock.calls).toEqual([[{ draft: session.draft, gateEvidence: session.gateEvidence }]])
+        expect(tx.em.findOne).toHaveBeenCalledWith(ModuleSetupSessionEntity, {
+            where: { id: "ses-1", status: "draft" },
+            lock: { mode: "pessimistic_write" },
+        })
+        expect(tx.committedWrites.map((write) => write.method)).toEqual(["update"])
+        expect(tx.em.update).toHaveBeenCalledWith(
             ModuleSetupSessionEntity,
-            { id: "ses-1", status: "draft" },
-            { draftSnapshot: session.draft, gateEvidence: session.gateEvidence },
+            { id: "ses-1" },
+            { draftSnapshot: { summary: "Tea", facts: [] }, gateEvidence: {} },
         )
     })
+})
 
-    it("answers nothing when the session is no longer a draft", async () => {
-        const em = mockEntityManager({ update: [ModuleSetupSessionEntity, {}] })
+describe("SetupSessionsService > change in a row", () => {
+    it("lets two changes in a row both land, the second reading what the first wrote", async () => {
+        const tx = fakeTransaction(mockEntityManager({ update: [ModuleSetupSessionEntity, { affected: 1 }] }))
+        const held = { current: row }
+        tx.em.findOne.mockImplementation(() => Promise.resolve(held.current))
+        tx.em.update.mockImplementation((_entity, _where, set) => {
+            held.current = Object.assign(new ModuleSetupSessionEntity(), held.current, set)
+            return Promise.resolve({ affected: 1, raw: [], generatedMaps: [] })
+        })
+        const service = await build(tx.em)
 
-        await expect((await build(em)).save("ses-1", { draft: session.draft, gateEvidence: {} })).resolves.toBeNull()
+        await service.change("ses-1", (current) => ({
+            draft: current.draft,
+            gateEvidence: { ...current.gateEvidence, scope: { status: "confirmed", evidence: "A" } },
+        }))
+        const second = await service.change("ses-1", (current) => ({
+            draft: current.draft,
+            gateEvidence: { ...current.gateEvidence, hours: { status: "confirmed", evidence: "B" } },
+        }))
+
+        expect(second?.gateEvidence).toEqual({
+            tone: { status: "proposed", evidence: "warm" },
+            scope: { status: "confirmed", evidence: "A" },
+            hours: { status: "confirmed", evidence: "B" },
+        })
     })
 
-    it("answers nothing when the session vanished after the update", async () => {
-        const em = mockEntityManager({
-            update: [ModuleSetupSessionEntity, { affected: 1 }],
-            findOne: [ModuleSetupSessionEntity, null],
-        })
+    it("leaves the row alone when the edit answers null", async () => {
+        const tx = fakeTransaction(mockEntityManager({ findOne: [ModuleSetupSessionEntity, row] }))
 
-        await expect((await build(em)).save("ses-1", { draft: session.draft, gateEvidence: {} })).resolves.toBeNull()
+        await expect((await build(tx.em)).change("ses-1", () => null)).resolves.toEqual(session)
+
+        expect(tx.committedWrites).toEqual([])
+    })
+
+    it("answers null, and never runs the edit, when the session is no longer a draft", async () => {
+        const tx = fakeTransaction(mockEntityManager({ findOne: [ModuleSetupSessionEntity, null] }))
+        const next = jest.fn(() => null)
+
+        await expect((await build(tx.em)).change("ses-1", next)).resolves.toBeNull()
+
+        expect(next).not.toHaveBeenCalled()
     })
 
     it("closes the draft as applied", async () => {
@@ -221,13 +263,12 @@ describe("SetupSessionsService", () => {
     })
 
     it("leaves the draft unchanged when the requested fact is absent", async () => {
-        const em = mockEntityManager({ findOne: [ModuleSetupSessionEntity, row] })
-        const service = await build(em)
+        const tx = fakeTransaction(mockEntityManager({ findOne: [ModuleSetupSessionEntity, row] }))
+        const service = await build(tx.em)
 
         await expect(service.dropFact("inst-1", "missing")).resolves.toBeUndefined()
 
-        expect(em.findOne).toHaveBeenCalledTimes(1)
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        expect(tx.committedWrites).toEqual([])
     })
 
     it("removes matching facts while retaining the other facts, draft summary and evidence", async () => {
@@ -240,17 +281,19 @@ describe("SetupSessionsService", () => {
             ],
         }
         const current = Object.assign(new ModuleSetupSessionEntity(), row, { draftSnapshot: draft })
-        const em = mockEntityManager({
-            findOne: [ModuleSetupSessionEntity, current],
-            update: [ModuleSetupSessionEntity, { affected: 1 }],
-        })
-        const service = await build(em)
+        const tx = fakeTransaction(
+            mockEntityManager({
+                findOne: [ModuleSetupSessionEntity, current],
+                update: [ModuleSetupSessionEntity, { affected: 1 }],
+            }),
+        )
+        const service = await build(tx.em)
 
         await expect(service.dropFact("inst-1", "city")).resolves.toBeUndefined()
 
-        expect(em.update).toHaveBeenCalledWith(
+        expect(tx.em.update).toHaveBeenCalledWith(
             ModuleSetupSessionEntity,
-            { id: "ses-1", status: "draft" },
+            { id: "ses-1" },
             {
                 draftSnapshot: { summary: "Tea shop in Hue", facts: [{ key: "hours", text: "9 to 5" }] },
                 gateEvidence: { tone: { status: "proposed", evidence: "warm" } },

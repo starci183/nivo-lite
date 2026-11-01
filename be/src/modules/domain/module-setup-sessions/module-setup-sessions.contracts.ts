@@ -50,6 +50,9 @@ export interface NewSetupSession {
     readonly gateEvidence: GateEvidence
 }
 
+/** How a change reads the open draft: from the draft and gates as they are now to the next ones, or null to leave them. */
+export type SetupSessionEdit = (current: SetupSessionChange) => SetupSessionChange | null
+
 /** What a turn or a gate change stores on the open draft. */
 export interface SetupSessionChange {
     /** The draft. */

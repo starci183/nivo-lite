@@ -143,6 +143,11 @@ describe("SetupWritesService", () => {
         expect(tx.commits).toBe(1)
         expect(tx.em.update).toHaveBeenCalledWith(
             ModuleSetupWriteEntity,
+            { setupSessionId: "ses-1", sourceMessageId: "msg-1", status: "proposed" },
+            { status: "superseded" },
+        )
+        expect(tx.em.update).toHaveBeenCalledWith(
+            ModuleSetupWriteEntity,
             { setupSessionId: "ses-1", targetKey: In(["fact:city", "rule:send_quote"]), status: "proposed" },
             { status: "superseded" },
         )
@@ -166,16 +171,21 @@ describe("SetupWritesService", () => {
                 payload: rule.payload,
             },
         ])
-        expect(tx.committedWrites.map((write) => write.method)).toEqual(["update", "insert"])
+        expect(tx.committedWrites.map((write) => write.method)).toEqual(["update", "update", "insert"])
     })
 
-    it("stores nothing when a turn proposed no card", async () => {
-        const em = mockEntityManager()
+    it("stores nothing but supersedes the cards of an earlier attempt when a turn proposed no card", async () => {
+        const tx = fakeTransaction(mockEntityManager({ update: [ModuleSetupWriteEntity, { affected: 1 }] }))
 
-        await expect((await build(em)).propose("ws-1", "ses-1", "msg-1", [])).resolves.toBeUndefined()
+        await expect((await build(tx.em)).propose("ws-1", "ses-1", "msg-1", [])).resolves.toBeUndefined()
 
-        expect(em.insert).not.toHaveBeenCalled()
-        expect(em.transaction).not.toHaveBeenCalled()
+        expect(tx.em.insert).not.toHaveBeenCalled()
+        expect(tx.committedWrites.map((write) => write.method)).toEqual(["update"])
+        expect(tx.em.update).toHaveBeenCalledWith(
+            ModuleSetupWriteEntity,
+            { setupSessionId: "ses-1", sourceMessageId: "msg-1", status: "proposed" },
+            { status: "superseded" },
+        )
     })
 })
 

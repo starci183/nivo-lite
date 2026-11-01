@@ -2,15 +2,11 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import { SETUP_GRAPH } from "./modules.decorators"
-import type { SetupApplier, SetupGraphPort } from "./modules.port"
+import type { SetupApplicant, SetupApplier, SetupGraphPort } from "./modules.port"
 import { SetupGraphService } from "./setup-graph.service"
 
-const APPLIER: SetupApplier = {
-    workspaceId: "ws-1",
-    principalId: "user-1",
-    installationId: "inst-1",
-    contextVersionId: "cv-1",
-}
+const APPLICANT: SetupApplicant = { workspaceId: "ws-1", principalId: "user-1", installationId: "inst-1" }
+const APPLIER: SetupApplier = { ...APPLICANT, version: 8, contextVersionId: "cv-1" }
 
 const build = async (port: Partial<SetupGraphPort>) => {
     const graph = mock<SetupGraphPort>(port)
@@ -63,12 +59,28 @@ describe("SetupGraphService with a graph", () => {
     })
 })
 
+describe("SetupGraphService checkPublish", () => {
+    it("hands the check to the graph and answers its newest version, letting a refusal through", async () => {
+        const open = await build({ checkPublish: jest.fn().mockResolvedValue(7) })
+        const refused = await build({
+            checkPublish: jest.fn().mockRejectedValue(new ModulesError({ code: ModulesErrorCode.GraphGapsOpen })),
+        })
+
+        await expect(open.service.checkPublish(APPLICANT)).resolves.toBe(7)
+        expect(open.graph.checkPublish).toHaveBeenCalledWith(APPLICANT)
+        await expect(refused.service.checkPublish(APPLICANT)).rejects.toMatchObject({
+            code: ModulesErrorCode.GraphGapsOpen,
+        })
+    })
+})
+
 describe("SetupGraphService with no graph", () => {
     it("answers as if the flow were whole, finds no seat, and publishes nothing", async () => {
         const { service } = await buildWithoutGraph()
 
         await expect(service.gapOf("ws-1", "inst-1")).resolves.toBeNull()
         await expect(service.requireWhole("ws-1", "inst-1")).resolves.toBeUndefined()
+        await expect(service.checkPublish(APPLICANT)).resolves.toBe(0)
         await expect(service.publish(APPLIER)).resolves.toBeUndefined()
         await expect(service.seatNamed("ws-1", "Nam")).resolves.toBeNull()
     })

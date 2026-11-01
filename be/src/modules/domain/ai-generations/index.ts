@@ -13,6 +13,7 @@ export type {
     GenerationRequested,
     GenerationStatus,
     GenerationEnqueued,
+    GenerationFailureReason,
     GuideAsk,
     ResponseFormat,
 } from "./ai-generations.contracts"

@@ -1,12 +1,16 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
+import { HttpSecurityEntity } from "./persistence/entities"
 import { PRIMARY_ENTITY_MANAGER } from "./primary.decorators"
 import { PostgresRateLimitStoreClient } from "./postgres-rate-limit-store.client"
 
 const RATE_LIMIT_CONSUME = 'SELECT * FROM "public"."http_rate_limit_consume"($1, $2, $3)'
 
 const build = async (rows: ReadonlyArray<unknown> = [{ http_rate_limit_consume: true }]) => {
-    const manager = mockEntityManager({ query: [RATE_LIMIT_CONSUME, rows] })
+    const manager = mockEntityManager({
+        query: [RATE_LIMIT_CONSUME, rows],
+        delete: [HttpSecurityEntity, { affected: 1 }],
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [PostgresRateLimitStoreClient, { provide: PRIMARY_ENTITY_MANAGER, useValue: manager }],
     }).compile()
@@ -46,5 +50,13 @@ describe("PostgresRateLimitStoreClient", () => {
         manager.query.mockRejectedValue(failure)
 
         await expect(store.consume("default:127.0.0.1", 60_000, 600)).rejects.toBe(failure)
+    })
+
+    it("clears the window of a key by deleting its one row", async () => {
+        const { store, manager } = await build()
+
+        await expect(store.clear("login:abc")).resolves.toBeUndefined()
+
+        expect(manager.delete.mock.calls).toEqual([[HttpSecurityEntity, { bucketKey: "login:abc" }]])
     })
 })

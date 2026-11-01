@@ -66,15 +66,23 @@ export class SetupWritesService {
         return row === null ? null : toRecord(row)
     }
 
-    /** Stores the cards a turn proposed; a card replaces the waiting card of the same target. */
+    /**
+     * Stores the cards a turn proposed; a card replaces the waiting card of the same target. The waiting cards of the same owner message
+     * (a turn attempted before) are replaced first, so a repeated turn never leaves two sets of cards.
+     */
     async propose(
         workspaceId: string,
         sessionId: string,
         sourceMessageId: string,
         cards: ReadonlyArray<ProposedCardRecord>,
     ): Promise<void> {
-        if (cards.length === 0) return
         await this.entityManager.transaction(async (tx) => {
+            await tx.update(
+                ModuleSetupWriteEntity,
+                { setupSessionId: sessionId, sourceMessageId, status: "proposed" },
+                { status: "superseded" },
+            )
+            if (cards.length === 0) return
             await tx.update(
                 ModuleSetupWriteEntity,
                 { setupSessionId: sessionId, targetKey: In(cards.map((card) => card.target_key)), status: "proposed" },

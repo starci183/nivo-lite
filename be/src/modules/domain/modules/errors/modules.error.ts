@@ -58,6 +58,8 @@ export enum ModulesErrorCode {
     CardRuleUnknownAction = "MODULES_CARD_RULE_UNKNOWN_ACTION",
     /** The confirmed rule runs an action by itself past its cap. */
     CardRuleModeCapped = "MODULES_CARD_RULE_MODE_CAPPED",
+    /** A turn of the setup chat failed in a way that heals (gateway, model, empty answer): the queue attempts it again. */
+    SetupTurnTransient = "MODULES_SETUP_TURN_TRANSIENT",
 }
 
 /** How each modules code travels. */
@@ -90,6 +92,7 @@ export const MODULES_ERROR_KINDS: Record<ModulesErrorCode, ErrorKind> = {
     [ModulesErrorCode.CardFactNotApplied]: "conflict",
     [ModulesErrorCode.CardRuleUnknownAction]: "invalid",
     [ModulesErrorCode.CardRuleModeCapped]: "invalid",
+    [ModulesErrorCode.SetupTurnTransient]: "unavailable",
 }
 
 /** The one error class of the modules capability. */
