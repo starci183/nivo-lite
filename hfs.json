@@ -41,6 +41,24 @@
         "be.events",
         "be.platform.event-bus"
       ],
+      "sqlPassThrough": [
+        {
+          "file": "src/modules/platform/database/customer-sessions.client.ts",
+          "reason": "runs the statement text a customer data source read sends over a read-only session; the app writes no SQL there"
+        },
+        {
+          "file": "src/modules/platform/database/customer-sessions.client.spec.ts",
+          "reason": "proves the customer session passes its statement text through as given"
+        },
+        {
+          "file": "src/modules/platform/database/postgres-session.client.ts",
+          "reason": "runs the statement text an outside Postgres session is given, as it is; the app writes no SQL there"
+        },
+        {
+          "file": "src/modules/platform/database/postgres-session.client.spec.ts",
+          "reason": "proves the outside Postgres session passes its statement text through as given"
+        }
+      ],
       "dbFunctions": [
         {
           "name": "public.agent_turn_begin",

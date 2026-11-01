@@ -1,14 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { McpError, McpErrorCode } from "@modules/integrations/mcp"
-import { failureCodeOf, isTimeout, refusalOf, roleIn, usable, visibleTo } from "./connector-call.policy"
+import { failureCodeOf, isTimeout, refusalOf, roleIn, usable, toolVisibleTo } from "./connector-call.policy"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import type { GatewayCaller, GatewayToolSpec, WorkspaceConnector } from "./mcp-gateway.contracts"
 
 /** The members of the subject under test. */
 interface Subject {
     readonly usable: typeof usable
-    readonly visibleTo: typeof visibleTo
+    readonly toolVisibleTo: typeof toolVisibleTo
     readonly roleIn: typeof roleIn
     readonly isTimeout: typeof isTimeout
     readonly refusalOf: typeof refusalOf
@@ -23,7 +23,7 @@ const build = async (): Promise<Subject> => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { usable, visibleTo, roleIn, isTimeout, refusalOf, failureCodeOf },
+                useValue: { usable, toolVisibleTo, roleIn, isTimeout, refusalOf, failureCodeOf },
             },
         ],
     }).compile()
@@ -63,15 +63,15 @@ describe("usable", () => {
     })
 })
 
-describe("visibleTo", () => {
+describe("toolVisibleTo", () => {
     it("hides an internal-only tool from a conversation and shows everything else", async () => {
         const policy = await build()
         const conversation = { ...CALLER, conversationId: "c1" }
 
-        expect(policy.visibleTo(conversation, specOf({ internalOnly: true }))).toBe(false)
-        expect(policy.visibleTo(CALLER, specOf({ internalOnly: true }))).toBe(true)
-        expect(policy.visibleTo(conversation, specOf())).toBe(true)
-        expect(policy.visibleTo(conversation, specOf({ internalOnly: false }))).toBe(true)
+        expect(policy.toolVisibleTo(conversation, specOf({ internalOnly: true }))).toBe(false)
+        expect(policy.toolVisibleTo(CALLER, specOf({ internalOnly: true }))).toBe(true)
+        expect(policy.toolVisibleTo(conversation, specOf())).toBe(true)
+        expect(policy.toolVisibleTo(conversation, specOf({ internalOnly: false }))).toBe(true)
     })
 
     it("hides an internal-only tool from a customer-facing agent outside any conversation, and shows it to an internal one", async () => {
@@ -79,9 +79,9 @@ describe("visibleTo", () => {
         const facing = { ...CALLER, audience: "customer" as const }
         const staff = { ...CALLER, audience: "internal" as const }
 
-        expect(policy.visibleTo(facing, specOf({ internalOnly: true }))).toBe(false)
-        expect(policy.visibleTo(staff, specOf({ internalOnly: true }))).toBe(true)
-        expect(policy.visibleTo(facing, specOf())).toBe(true)
+        expect(policy.toolVisibleTo(facing, specOf({ internalOnly: true }))).toBe(false)
+        expect(policy.toolVisibleTo(staff, specOf({ internalOnly: true }))).toBe(true)
+        expect(policy.toolVisibleTo(facing, specOf())).toBe(true)
     })
 })
 

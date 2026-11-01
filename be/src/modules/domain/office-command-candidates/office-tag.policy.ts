@@ -1,5 +1,5 @@
 import type { AgentHandleCard } from "@modules/domain/agents"
-import type { TagLineKey, TranscriptLine } from "./office-command-candidates.contracts"
+import type { TagLineKey, OfficeTranscriptLine } from "./office-command-candidates.contracts"
 
 /** The most agents one line may tag: a longer list is cut, in the order the author wrote it. */
 export const MAX_TAGS = 3
@@ -23,7 +23,7 @@ export const taggedAgentsOf = (
  * The words of a tag wake: the lines said before, oldest first, then the line that tagged the agent, marked. Only people's and agents'
  * lines are kept, NIVO's own notes are not part of the talk. The caller labels the whole text as data.
  */
-export const transcriptOf = (before: ReadonlyArray<TranscriptLine>, tagged: TranscriptLine): string =>
+export const transcriptOf = (before: ReadonlyArray<OfficeTranscriptLine>, tagged: OfficeTranscriptLine): string =>
     [...before.filter((line) => line.id !== tagged.id).slice(-TRANSCRIPT_SIZE), tagged]
         .map((line) => [line.id === tagged.id ? `${TAGGED_MARK} ` : "", line.author, ": ", line.body].join(""))
         .join("\n")

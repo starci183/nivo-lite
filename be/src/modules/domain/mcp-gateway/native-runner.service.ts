@@ -51,7 +51,12 @@ export class NativeRunnerService {
     }
 
     /** The adapter's answer, or its refusal of an expected case read as a tool error; any other failure is thrown. */
-    private async answer(adapter: NativeAdapter, caller: GatewayCaller, tool: string, args: GatewayJson): Promise<NativeRun> {
+    private async answer(
+        adapter: NativeAdapter,
+        caller: GatewayCaller,
+        tool: string,
+        args: GatewayJson,
+    ): Promise<NativeRun> {
         const who = { agentId: caller.agentId, conversationId: caller.conversationId }
         try {
             return { kind: "ok", value: await adapter.invoke(caller.workspaceId, tool, args, who) }

@@ -15,7 +15,7 @@ export const usable = (connector: WorkspaceConnector, tool: string): boolean =>
     connector.approvedTools === null || connector.approvedTools.has(tool)
 
 /** True when the caller may see the tool: a tool for internal use is hidden from a customer conversation and from a customer-facing agent. */
-export const visibleTo = (caller: GatewayCaller, spec: GatewayToolSpec): boolean =>
+export const toolVisibleTo = (caller: GatewayCaller, spec: GatewayToolSpec): boolean =>
     spec.internalOnly !== true || (caller.conversationId === null && caller.audience !== "customer")
 
 /**

@@ -7,9 +7,9 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [{ provide: SUBJECT, useValue: { driveFileUrl, driveReadMode, isDriveId, resolveLink } }],
     }).compile()
-    return moduleRef.get<Pick<typeof import("./drive-link.policy"), "driveFileUrl" | "driveReadMode" | "isDriveId" | "resolveLink">>(
-        SUBJECT,
-    )
+    return moduleRef.get<
+        Pick<typeof import("./drive-link.policy"), "driveFileUrl" | "driveReadMode" | "isDriveId" | "resolveLink">
+    >(SUBJECT)
 }
 
 const ID = "1AbCdEfGhIjKlMnOp"

@@ -301,9 +301,13 @@ describe("McpGatewayAdminService.registerRemote and setCredential", () => {
         await expect(register(connectorInputOf({ key: "Hakuen" }))).rejects.toMatchObject({ params: { field: "key" } })
         await expect(register(connectorInputOf({ key: "sepay" }))).rejects.toMatchObject({ params: { field: "key" } })
         await expect(register(connectorInputOf({ name: "  " }))).rejects.toMatchObject({ params: { field: "name" } })
-        await expect(register(connectorInputOf({ url: "ftp://x.test" }))).rejects.toMatchObject({ params: { field: "url" } })
+        await expect(register(connectorInputOf({ url: "ftp://x.test" }))).rejects.toMatchObject({
+            params: { field: "url" },
+        })
         remote.isReachable.mockResolvedValueOnce(false)
-        await expect(register(connectorInputOf({ url: "https://10.0.0.5/mcp" }))).rejects.toMatchObject({ params: { field: "url" } })
+        await expect(register(connectorInputOf({ url: "https://10.0.0.5/mcp" }))).rejects.toMatchObject({
+            params: { field: "url" },
+        })
         await expect(register(connectorInputOf({ credential: "line\nbreak" }))).rejects.toMatchObject({
             code: McpGatewayErrorCode.Invalid,
             params: { field: "credential" },

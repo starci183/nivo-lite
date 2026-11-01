@@ -13,7 +13,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { argsHashOf, masked, summaryOf } from "./audit-mask.policy"
 import { breakerAfter, breakerGate, CLOSED } from "./circuit-breaker.policy"
-import { failureCodeOf, isTimeout, roleIn, usable, visibleTo } from "./connector-call.policy"
+import { failureCodeOf, isTimeout, roleIn, usable, toolVisibleTo } from "./connector-call.policy"
 import { isTainted, withTaint } from "./taint.policy"
 import { grantOf, nativeConnectorOf, remoteConnectorOf } from "./connector-row.mapper"
 import { judgeGrant } from "./grant.policy"
@@ -205,7 +205,9 @@ export class McpGatewayService {
         const active = connectors.filter((connector) => connector.status !== "disabled")
         const manifests = active.map((connector) => ({
             ...connector.manifest,
-            tools: connector.manifest.tools.filter((spec) => usable(connector, spec.name) && visibleTo(caller, spec)),
+            tools: connector.manifest.tools.filter(
+                (spec) => usable(connector, spec.name) && toolVisibleTo(caller, spec),
+            ),
         }))
         return searchTools(manifests, grants, query, limit)
     }
@@ -218,7 +220,7 @@ export class McpGatewayService {
         ])
         const grant = grantFor(grants, name)
         if ("ok" in resolved || !usable(resolved.connector, resolved.spec.name)) return null
-        if (!visibleTo(caller, resolved.spec)) return null
+        if (!toolVisibleTo(caller, resolved.spec)) return null
         if (grant === null || grant.mode === "never") return null
         const { spec } = resolved
         return {
@@ -239,7 +241,7 @@ export class McpGatewayService {
         const resolved = await this.resolve(caller.workspaceId, name)
         if (!parsed.success) return this.refuseArguments(caller, resolved, UNRECORDED_ARGUMENTS, started)
         if ("ok" in resolved) return resolved
-        if (!visibleTo(caller, resolved.spec)) {
+        if (!toolVisibleTo(caller, resolved.spec)) {
             await this.audit(caller, resolved, parsed.data, {
                 outcome: "refused",
                 code: "internal_only",

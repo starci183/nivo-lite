@@ -118,11 +118,7 @@ export class ChannelConnectionsService {
     }
 
     /** Connects the bot again in the row it already has: a new token and webhook secret, a clean status. */
-    private async reconnectTelegram(
-        actor: ConnectionActor,
-        id: string,
-        fresh: TelegramReconnect,
-    ): Promise<string> {
+    private async reconnectTelegram(actor: ConnectionActor, id: string, fresh: TelegramReconnect): Promise<string> {
         await this.connections.writeSecret(id, fresh.token, fresh.secret)
         await this.connections.patch(actor.workspaceId, id, {
             name: fresh.name,

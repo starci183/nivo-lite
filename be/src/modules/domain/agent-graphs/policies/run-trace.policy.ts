@@ -2,7 +2,7 @@ import type { GraphDocument, GraphNode, GraphNodeKind, GraphNodeStep, TriggerSte
 import { successorsOf } from "./graph-problems.policy"
 
 /** One node a run went through. */
-export interface RunStep {
+export interface TraceStep {
     /** The node. */
     readonly key: string
     /** Its title, in the owner's words. */
@@ -39,7 +39,7 @@ export const triggerStepOf = (source: string | null): TriggerStep | null =>
 
 const MAX_STEPS = 60
 
-const stepOf = (node: GraphNode, branchKey: string | null): RunStep => ({
+const stepOf = (node: GraphNode, branchKey: string | null): TraceStep => ({
     key: node.key,
     title: node.title,
     kind: node.kind,
@@ -68,12 +68,12 @@ const reaches = (byKey: ReadonlyMap<string, GraphNode>, from: string, target: st
  * output. Where a node leads to several, the one that can reach the condition is taken. A trigger the graph has no node for starts
  * from its first trigger.
  */
-export const runTraceOf = (document: GraphDocument, run: RunToTrace): ReadonlyArray<RunStep> => {
+export const runTraceOf = (document: GraphDocument, run: RunToTrace): ReadonlyArray<TraceStep> => {
     const byKey = new Map(document.nodes.map((node) => [node.key, node]))
     const triggers = document.nodes.filter((node) => node.kind === "trigger")
     const condition = document.nodes.find((node) => node.decide?.intent === run.action)
     const start = triggers.find((node) => node.step === run.trigger) ?? triggers[0]
-    const steps: Array<RunStep> = []
+    const steps: Array<TraceStep> = []
     for (let current = start; current !== undefined && steps.length < MAX_STEPS;) {
         const taken = current.decide?.intent === run.action ? run.branchKey : null
         steps.push(stepOf(current, taken))

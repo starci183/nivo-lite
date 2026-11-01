@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { resolvingTo } from "@tests/world/dns-lookup.world"
+import { resolvingTo } from "@tests/world/dns-lookup.adapter"
 import { Secret } from "@modules/platform/config"
 import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
 import { parseJsonText } from "@modules/platform/primitives"

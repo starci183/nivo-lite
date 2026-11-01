@@ -13,7 +13,7 @@ import type {
     AgentTriggerWrite,
     OptionalAgentTriggerRecord,
     OptionalDate,
-    OptionalId,
+    OptionalActorId,
 } from "./agent-work.contracts"
 
 @Injectable()
@@ -63,7 +63,7 @@ export class AgentTriggersService {
      * (`actorUserId`) must be an owner or manager; a module seeding its triggers passes null. The row is marked unreconciled so the
      * scheduler is made to agree with it.
      */
-    async save(actorUserId: OptionalId, write: AgentTriggerWrite): Promise<AgentTriggerRecord> {
+    async save(actorUserId: OptionalActorId, write: AgentTriggerWrite): Promise<AgentTriggerRecord> {
         if (actorUserId !== null) await this.access.manager(actorUserId, write.workspaceId)
         await this.access.agent(write.workspaceId, write.agentId)
         const fields = triggerFields(write)

@@ -32,7 +32,7 @@ export type AgentTriggerPreset = "every_15m" | "hourly" | "daily_at" | "weekdays
 export type AgentTriggerKind = "schedule" | "event"
 
 /** An id, or none. */
-export type OptionalId = string | null
+export type OptionalActorId = string | null
 
 /** A moment, or none. */
 export type OptionalDate = Date | null

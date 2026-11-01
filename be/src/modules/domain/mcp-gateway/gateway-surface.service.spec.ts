@@ -14,7 +14,13 @@ import {
 import type { GatewayCaller } from "./mcp-gateway.contracts"
 import { McpGatewayService } from "./mcp-gateway.service"
 
-const CALLER: GatewayCaller = { workspaceId: "ws-1", agentId: "agent-1", conversationId: null, workItemId: null, audience: "internal" }
+const CALLER: GatewayCaller = {
+    workspaceId: "ws-1",
+    agentId: "agent-1",
+    conversationId: null,
+    workItemId: null,
+    audience: "internal",
+}
 const MESSAGE = { jsonrpc: "2.0", id: 1, method: "tools/list" }
 const REPLY = { body: { jsonrpc: "2.0" as const, id: 1, result: { tools: [] } } }
 const READ = {
@@ -130,7 +136,11 @@ describe("GatewaySurfaceService audience", () => {
         await handed.call("tool.search", { query: "bank" })
 
         expect(scopes.lensOf).toHaveBeenCalledWith("ws-1", "agent-1")
-        expect(gateway.search).toHaveBeenCalledWith(expect.objectContaining({ conversationId: null, audience }), "bank", 5)
+        expect(gateway.search).toHaveBeenCalledWith(
+            expect.objectContaining({ conversationId: null, audience }),
+            "bank",
+            5,
+        )
     })
 })
 

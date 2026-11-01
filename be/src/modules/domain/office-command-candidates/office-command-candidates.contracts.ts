@@ -336,7 +336,7 @@ export interface TagSpeaker {
 }
 
 /** One line of the talk a tagged agent reads: who said it and what. */
-export interface TranscriptLine {
+export interface OfficeTranscriptLine {
     /** The line's id. */
     readonly id: string
     /** The name of whoever said it. */
@@ -348,9 +348,9 @@ export interface TranscriptLine {
 /** The talk a tag wake reads: what was said before, and the line that tagged the agent. */
 export interface TagTalk {
     /** The lines said before, oldest first. */
-    readonly before: ReadonlyArray<TranscriptLine>
+    readonly before: ReadonlyArray<OfficeTranscriptLine>
     /** The line that tagged the agent. */
-    readonly tagged: TranscriptLine
+    readonly tagged: OfficeTranscriptLine
 }
 
 /** Where a tag was written and where the answer goes: the Office thread or a work thread. */

@@ -115,7 +115,9 @@ describe("conflictsOf", () => {
             payload: { action: "refund", field: "mode", mode: "ask", limitVnd: undefined },
         }
 
-        expect(subject.conflictsOf([writeOf("Shop", "Phone", "123"), writeOf("Bar", "Hours", "1"), rule], [factOf()])).toEqual([])
+        expect(
+            subject.conflictsOf([writeOf("Shop", "Phone", "123"), writeOf("Bar", "Hours", "1"), rule], [factOf()]),
+        ).toEqual([])
     })
 })
 
@@ -126,7 +128,10 @@ describe("unmentionedConflicts", () => {
         const subject = await build()
 
         expect(
-            subject.unmentionedConflicts([conflict("A"), conflict("B"), conflict("C"), conflict("D")], "You said A only"),
+            subject.unmentionedConflicts(
+                [conflict("A"), conflict("B"), conflict("C"), conflict("D")],
+                "You said A only",
+            ),
         ).toEqual([conflict("B"), conflict("C")])
     })
 })

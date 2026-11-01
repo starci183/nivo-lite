@@ -1,9 +1,9 @@
-import type { FactAudience, FactRecord, InstallationScope } from "./brain-facts.contracts"
+import type { FactAudience, FactReach, FactRecord, FactWindow, InstallationScope } from "./brain-facts.contracts"
 import { factSlugOf } from "./fact-key.policy"
 
 /** Whether a fact is visible to an agent with this audience, module and instance (the view of the one shared brain). */
 export const visibleTo = (
-    fact: Pick<FactRecord, "scope" | "modules" | "installationId">,
+    fact: FactReach,
     audience: FactAudience,
     module: string,
     installationId: InstallationScope,
@@ -15,7 +15,7 @@ export const visibleTo = (
 }
 
 /** Whether a fact is in force at this instant (its validity window). */
-export const inForce = (fact: Pick<FactRecord, "validFrom" | "validTo">, at: number): boolean =>
+export const inForce = (fact: FactWindow, at: number): boolean =>
     (fact.validFrom === null || Date.parse(fact.validFrom) <= at) &&
     (fact.validTo === null || Date.parse(fact.validTo) > at)
 

@@ -8,7 +8,7 @@ export const hakuenConnectorRowOf = builder<McpConnectorRow>({
     kind: "remote",
     url: "https://hakuen.test/mcp",
     credential_state: "set",
-    credential_set_at: "2026-10-22T01:00:00.000Z",
+    credential_set_at: new Date(Date.UTC(2026, 9, 22, 1)).toISOString(),
     status: "active",
     contract_version: "hakuen-mcp@1",
     timeout_ms: 3000,

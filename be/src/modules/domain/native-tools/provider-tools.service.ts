@@ -4,7 +4,7 @@ import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
 import type { GatewayJson, NativeCaller } from "@modules/domain/mcp-gateway"
-import { customerMasked, isoOf } from "./native-masking.policy"
+import { customerMasked, isoTextOf } from "./native-masking.policy"
 import { argumentsOf, nativeRefusal, unknownTool } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 import { PROVIDER_EVENTS_SCHEMA, PROVIDER_STATUS_SCHEMA } from "./provider-tools.schema"
@@ -99,7 +99,7 @@ export class ProviderToolsService {
         const customers = new Map(conversations.map((conversation) => [conversation.id, conversation.externalId]))
         return {
             events: messages.map((message) => ({
-                at: isoOf(message.createdAt),
+                at: isoTextOf(message.createdAt),
                 direction: message.role === "user" ? "in" : "out",
                 delivery: message.role === "user" ? "received" : (message.deliveryStatus ?? "pending"),
                 customerMasked: customerMasked(customers.get(message.conversationId) ?? null),

@@ -32,7 +32,12 @@ describe("native-adapters.policy", () => {
 
     it("gives the place of a default to the adapter that comes later under the same key", async () => {
         const subject = await build()
-        const [sepay, einvoice, brain, richer] = [adapter("sepay"), adapter("einvoice"), adapter("brain"), adapter("sepay")]
+        const [sepay, einvoice, brain, richer] = [
+            adapter("sepay"),
+            adapter("einvoice"),
+            adapter("brain"),
+            adapter("sepay"),
+        ]
 
         const kept = subject.withoutShadowed([sepay, einvoice, brain, richer])
 

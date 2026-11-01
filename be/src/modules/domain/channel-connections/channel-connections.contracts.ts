@@ -1,3 +1,4 @@
+import type { ZaloSetupSecret } from "@modules/integrations/channel-setup"
 import type { ConnectionRecord, Environment, FirstEvent, ConnectionStatus, Provider } from "@modules/domain/connections"
 
 /** The bank and payment feeds a wizard can create. */
@@ -202,3 +203,6 @@ export type OptionalWorkspacePaymentAccount = WorkspacePaymentAccount | null
 
 /** An amount in VND for a VietQR, or null when the payer types it. */
 export type OptionalQrAmount = number | null
+
+/** The Zalo credential read from a sealed secret, or null when the text is not one. */
+export type OptionalZaloSecret = ZaloSetupSecret | null

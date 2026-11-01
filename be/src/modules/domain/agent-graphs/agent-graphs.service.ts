@@ -5,7 +5,15 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { graphDocumentSchema } from "./agent-graphs.schema"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
-import type { GraphChangeKind, GraphDocument, GraphMode, GraphVersionView } from "./agent-graphs.contracts"
+import type {
+    BranchApprover,
+    GraphChangeKind,
+    GraphDocument,
+    GraphMode,
+    GraphVersionView,
+} from "./agent-graphs.contracts"
+import type { DecisionView } from "./agent-graph-decisions.service"
+import { branchApproverOf } from "./policies/branch-approver.policy"
 import { sourcesIndexOf } from "./policies/sources-index.policy"
 import { AgentGraphEntity, AgentGraphSourceEntity, AgentGraphVersionEntity } from "./persistence/entities"
 
@@ -206,6 +214,12 @@ export class AgentGraphsService {
         const parsed = graphDocumentSchema.safeParse(row.document)
         if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
         return parsed.data
+    }
+
+    /** The approver the branch of a decision named in the version that decided, or null when that version no longer names one. */
+    async approverOf(decision: DecisionView): Promise<BranchApprover | null> {
+        const document = await this.documentOf(decision.workspaceId, decision.agentId, decision.versionId)
+        return branchApproverOf(document, decision.action, decision.branchKey)
     }
 
     /** Of these agents, the ones that have no graph yet. */
