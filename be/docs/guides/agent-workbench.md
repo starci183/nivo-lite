@@ -240,11 +240,11 @@ quote: send_quote waits for the approver in the thread ── approved ── Cu
 ```
 
 - `TurnHandoffService.move` and the performer share one method, `AgentConversationsService.handOver`, extracted to the lower capability so no owner cycle appears (R27). It records through `ConversationOwnershipEventsService`.
-- With no Sales agent bound to `inbound_chat` on that connection with `ask` or `auto` access, nothing moves: the lead is captured and Chatbot keeps answering, as today.
+- The website chat has no connection to bind, so it reaches the workspace's active Sales agent. On a channel, with no Sales agent bound to `inbound_chat` on that connection with `ask` or `auto` access, nothing moves: the lead is captured and Chatbot keeps answering.
 - `handled_by IS NULL` already guards the move, so a person who holds a chat keeps it. Take over works from both desks because both write `handled_by`.
 - `personaOf` writes the speaker's role and instructions under `agent.speaksAs`, which is the front agent's name when `front_agent_id` is set. The customer's channel shows the OA or the bot either way.
 - `customerOfAgents` reads `agent_id IN (...) OR front_agent_id IN (...)`, so Chatbot keeps the chat, and it does not run: a turn runs for `agent_id` only.
-- `handoff_lead` is `auto` by default, so the handover needs no approval. The line "Lead handed to Sales AI" stays a staff-only system line (`customerTurns.chatHandoff`).
+- `handoff_lead` is `auto` by default and assist mode leaves it alone (as it does `reply_customer`, `operating-mode.policy.ts`), so the handover needs no approval. The line "Lead handed to Sales AI" stays a staff-only system line (`customerTurns.chatHandoff`).
 - On `DealWonEvent` a reactor hands the conversation back to `front_agent_id` if a Sales agent still speaks in it and no person holds it.
 - Sales reads the customer through a NIVO MCP tool, section 11. It never reads the Chatbot's turns or memory.
 

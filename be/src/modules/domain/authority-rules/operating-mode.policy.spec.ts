@@ -35,6 +35,12 @@ describe("applyOperatingMode", () => {
         expect(subject.applyOperatingMode(ruleOf(), mode)).toEqual(ruleOf())
     })
 
+    it.each(["reply_customer", "handoff_lead"])("keeps %s auto in assist mode", async (action) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.applyOperatingMode(ruleOf({ action }), "assist")).toEqual(ruleOf({ action }))
+    })
+
     it.each(["ask", "never"] as const)("keeps a %s rule in assist mode", async (mode) => {
         const { subject } = await buildSubject()
 

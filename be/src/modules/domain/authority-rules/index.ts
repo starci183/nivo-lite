@@ -1,5 +1,6 @@
 export { AUTHORITY_RULES_ERROR_KINDS } from "./errors/authority-rules.error"
 export { AUTHORITY_RULES_MESSAGES } from "./messages/authority-rules.messages"
+export { assistAsks } from "./operating-mode.policy"
 export type {
     ApprovalPolicy,
     ApprovalSetup,
