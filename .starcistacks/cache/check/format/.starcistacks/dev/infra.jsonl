@@ -1,0 +1,5 @@
+{"findings":[],"hash":"507343021de7ffc0d66915cfeecfc9291880fe55aed85ddeda8dcdb9c3e74543","path":".starcistacks/dev/infra/swarm/recovery/restore-proof.md","step":"prettier"}
+{"findings":[],"hash":"ecebcd0536be48f5b20191488d1390db31923904166be92cbd22038c43bfed30","path":".starcistacks/dev/infra/swarm/release/current.yaml","step":"prettier"}
+{"findings":[],"hash":"7ef398508512ca153f450f077e4bcce594b43d2e131fe96ebe64275a0249506e","path":".starcistacks/dev/infra/swarm/release/images.lock.yaml","step":"prettier"}
+{"findings":[],"hash":"721136dadde18cdd941a61173e571de093ddbbfc9d110c4454678c3445bf444d","path":".starcistacks/dev/infra/swarm/release/previous.yaml","step":"prettier"}
+{"findings":[],"hash":"bf70995f1b61e1ce8d99d2e95d595dda3ef13e5d4f5d516dc9bd9db68e50e959","path":".starcistacks/dev/infra/swarm/stack.yaml","step":"prettier"}

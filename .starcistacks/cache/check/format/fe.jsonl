@@ -1,0 +1,4 @@
+{"findings":[],"hash":"977333824ef4cb60e6199f860815d848d00277c6f47136300174ead19709ee2e","path":"fe/eslint.config.mjs","step":"prettier"}
+{"findings":[],"hash":"c64ccd276b14e340d6418c6c342c927df7a56a739a95f0215004de416de9259c","path":"fe/i18n-dynamic-keys.yaml","step":"prettier"}
+{"findings":[],"hash":"492a27a38a841d1c7b556ba9599bcdb24a395ae86e2472028977173f8f63fcd7","path":"fe/stylelint.config.mjs","step":"prettier"}
+{"findings":[],"hash":"b8e1cb6f05a72d5e193b5a55718f11a148e7e39eb0015a759aa9d525492579d3","path":"fe/tsconfig.json","step":"prettier"}

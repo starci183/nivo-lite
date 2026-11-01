@@ -1,0 +1,5 @@
+{"findings":[],"hash":"f9a75b684c80b54c02bc62c5274eb6dd844eaef8765be24cff56c15a13fc8aa6","path":".github/workflows/ci.yml","step":"prettier"}
+{"findings":[],"hash":"41501d9c2a12ae5dc32e2641a9722f664416e8baf52a0307f317194563c7de7c","path":".github/workflows/cli-deploy.yml","step":"prettier"}
+{"findings":[],"hash":"419ae7c6400140c901e15419122b15f8a4fec0603773a582812de3b0198db439","path":".github/workflows/images.yml","step":"prettier"}
+{"findings":[],"hash":"f8ad34ff73f1da4d0a4e6e14883a22c558834f45271a3b050c6c7e67c2c59295","path":".github/workflows/stack-deploy.yml","step":"prettier"}
+{"findings":[],"hash":"f6ebd21c16a99cabae649705144aadc9fbdc55650318f67293e177d640554fae","path":".github/workflows/stack-key-restore.yml","step":"prettier"}

@@ -1,0 +1,5 @@
+{"data":{"extra":"","files":10579,"paths":"8d8dd6cf444c5c9c9afe7d1f86928146a5bf33d549272b9d3bdf65b05a37b3ee","stylesheets":0},"findings":[],"hash":"45654ca27e4f9b59215ac22c3608bc5586daff5fdf921a3c656aedd7e45106f6","path":".side","step":"meta"}
+{"data":{"cross":"91ab4d824b494158ff628f68d7c56a062bca67e8b2004725621b385c42fb7869","ends":[]},"findings":[],"hash":"75ea5555585f51b7cd57ef98fb2bd67694d57337f7ecb84b6b9b885c16d0c990","path":"eslint.config.mjs","step":"eslint"}
+{"data":{"globals":false,"imports":[]},"findings":[],"hash":"75ea5555585f51b7cd57ef98fb2bd67694d57337f7ecb84b6b9b885c16d0c990","path":"eslint.config.mjs","step":"imports"}
+{"data":{"cross":"91ab4d824b494158ff628f68d7c56a062bca67e8b2004725621b385c42fb7869","ends":[]},"findings":[],"hash":"159a0b24dcd2167797407d8b54db1e044a58893bd731ddcf056b6cd67f119543","path":"jest.config.js","step":"eslint"}
+{"data":{"globals":true,"imports":[]},"findings":[],"hash":"159a0b24dcd2167797407d8b54db1e044a58893bd731ddcf056b6cd67f119543","path":"jest.config.js","step":"imports"}
