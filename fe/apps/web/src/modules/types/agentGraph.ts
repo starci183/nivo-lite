@@ -58,15 +58,13 @@ export interface AgentGraphApproverData {
     readonly backupName: string
 }
 
-/** One branch of a decide point: the sentence of its condition, its bounds and what it does. */
+/** One branch of a decide point: the sentence of its condition and what it does. */
 export interface AgentGraphBranchData {
     readonly key: string
-    /** "5 to under 20 million", written by the back end in the language of the reader. */
+    /** "from 5 million to under 20 million": short, for the edge of the map, in the language of the reader. */
     readonly when: string
-    /** The inclusive lower bound of the amount; null when the branch has none. */
-    readonly fromVnd: number | null
-    /** The exclusive upper bound of the amount; null when the branch has none. */
-    readonly toVnd: number | null
+    /** The same with the name of the fact, "the order amount from 5 million to under 20 million". */
+    readonly whenFull: string
     readonly then: AgentGraphThen
     /** The node the branch goes to. */
     readonly next: string
@@ -183,11 +181,40 @@ export interface AgentGraphMemberData {
     readonly upToVnd: number | null
 }
 
-/** One problem the checks found in the draft. */
+/** One problem the checks found in the draft: its code, where it is, and the words the back end kept to name what is wrong. */
 export interface AgentGraphProblemData {
     readonly code: string
     readonly nodeKey: string
-    readonly text: string
+    /** The branch it is about; empty when it is about the node. */
+    readonly branchKey: string
+    readonly detail: string
+}
+
+/** One thing the setup chat still has to ask: its code and where it is. */
+export interface AgentGraphGapData {
+    readonly code: string
+    readonly nodeKey: string
+    readonly branchKey: string
+}
+
+/** What a condition compares a fact with. */
+export type AgentGraphOp = "lt" | "lte" | "gt" | "gte" | "eq" | "neq" | "in" | "known"
+
+/** One fact a condition may be written on, with its words. */
+export interface AgentGraphFactData {
+    readonly key: string
+    readonly label: string
+    readonly type: "number" | "string" | "boolean"
+    readonly unit: "vnd" | "percent" | "count" | null
+    /** The values it may hold, for a fact that is one of a few; empty for any. */
+    readonly allowed: ReadonlyArray<string>
+}
+
+/** One thing the graph can be asked to do: an action a node performs, and whether a decision point already guards it. */
+export interface AgentGraphActionData {
+    readonly action: string
+    readonly title: string
+    readonly isGuarded: boolean
 }
 
 /** The graph of one agent as the editor opens it. */
@@ -195,19 +222,39 @@ export interface AgentGraphData {
     readonly mode: "shadow" | "enforced"
     readonly activeVersion: number
     readonly changes: number
-    readonly gaps: number
+    readonly gaps: ReadonlyArray<AgentGraphGapData>
     readonly problems: ReadonlyArray<AgentGraphProblemData>
     readonly nodes: ReadonlyArray<AgentGraphNodeData>
     readonly versions: ReadonlyArray<AgentGraphVersionData>
     readonly proposals: ReadonlyArray<AgentGraphProposalData>
     readonly runs: ReadonlyArray<AgentGraphRunData>
     readonly members: ReadonlyArray<AgentGraphMemberData>
+    /** The facts a condition may be written on. */
+    readonly facts: ReadonlyArray<AgentGraphFactData>
+    /** The actions the agent performs, for adding a decision point to one. */
+    readonly actions: ReadonlyArray<AgentGraphActionData>
 }
 
-/** The form of one branch while the owner edits it. */
-export interface AgentGraphBranchForm {
-    readonly fromVnd: number
-    readonly toVnd: number
+/** One comparison of a condition while the owner edits it: a fact, how it is compared, and the value. */
+export interface AgentGraphTermForm {
+    readonly fact: string
+    readonly op: AgentGraphOp
+    /** The value of a number fact. */
+    readonly amount: number
+    /** The value of any other fact; for "is one of", the values apart by commas. */
+    readonly text: string
+}
+
+/** One branch of a decision point while the owner edits it: when it applies, what happens and who is asked. */
+export interface AgentGraphRowForm {
+    /** The key the branch has in the draft; empty for a branch not saved yet. */
+    readonly key: string
+    /** The last branch, for every case no other branch took: it has no terms. */
+    readonly isElse: boolean
+    /** True for a condition the form cannot draw as rows (any of, nested): it is kept as it is. */
+    readonly isLocked: boolean
+    /** The terms, all of which must hold. */
+    readonly terms: ReadonlyArray<AgentGraphTermForm>
     readonly then: AgentGraphThen
     readonly approverId: string
     readonly timeoutHours: number
@@ -215,12 +262,33 @@ export interface AgentGraphBranchForm {
     readonly backupId: string
 }
 
-/** What a draft change did, for the box "Will change" of the form. */
-export interface AgentGraphChangeLine {
-    readonly kind: "bounds" | "then" | "approver" | "timeout"
-    readonly before: string
-    readonly after: string
+/** The whole decision point while the owner edits it: its branches, in the order they are tried. */
+export interface AgentGraphDecideForm {
+    readonly nodeKey: string
+    readonly rows: ReadonlyArray<AgentGraphRowForm>
 }
+
+/** A field of a branch the form changes. */
+export type AgentGraphRowField = "then" | "approverId" | "timeoutHours" | "onTimeout" | "backupId"
+
+/** A field of a term the form changes. */
+export type AgentGraphTermField = "fact" | "op" | "amount" | "text"
+
+/** One change the owner makes to the form: add, remove or move a branch or a term, or set a field. */
+export type AgentGraphFormChange =
+    | { readonly kind: "addRow" }
+    | { readonly kind: "removeRow"; readonly row: number }
+    | { readonly kind: "moveRow"; readonly row: number; readonly delta: -1 | 1 }
+    | { readonly kind: "addTerm"; readonly row: number }
+    | { readonly kind: "removeTerm"; readonly row: number; readonly term: number }
+    | {
+          readonly kind: "setTerm"
+          readonly row: number
+          readonly term: number
+          readonly field: AgentGraphTermField
+          readonly value: string | number
+      }
+    | { readonly kind: "setRow"; readonly row: number; readonly field: AgentGraphRowField; readonly value: string | number }
 
 /** A node as the graph draws it at a glance, in the shape the graph component takes. */
 export interface AgentGraphFlowNode {
@@ -231,8 +299,8 @@ export interface AgentGraphFlowNode {
     readonly shape: AgentGraphShape
     readonly count: string
     readonly isPlaceholder: boolean
-    /** Where the card sits, in graph units: its band is the column, its order in the band the row. */
-    readonly position: { readonly x: number; readonly y: number }
+    /** True while a run is traced and this step is not on its path. */
+    readonly isDimmed: boolean
 }
 
 /** An edge of the graph; a branch of a decide node reads its condition on the edge. */
@@ -261,5 +329,6 @@ export type AgentGraphRight = "none" | "missing" | "covers" | "short"
 
 /** The words a change to the draft needs, written by the hook in the language of the reader. */
 export interface AgentGraphWords {
-    readonly when: (fromVnd: number | null, toVnd: number | null) => string
+    /** An amount in dong as an owner says it: "5 million". */
+    readonly amount: (vnd: number) => string
 }

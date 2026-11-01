@@ -1,14 +1,16 @@
 import type {
-    AgentGraphBranchForm,
     AgentGraphData,
+    AgentGraphDecideForm,
     AgentGraphHeadView,
     AgentGraphPanelView,
     AgentGraphPhoneView,
     AgentGraphSideTab,
 } from "@/modules/types"
-import { BANDS, bandCentreOf, branchHitOf, flowEdgesOf, flowNodesOf } from "./agent-graph-flow"
+import { flowEdgesOf, flowNodesOf, layerHeadersOf } from "./agent-graph-flow"
+import { problemLinesOf } from "./agent-graph-problems"
 import { detailViewOf } from "./agent-graph-view-detail"
-import { editorViewOf } from "./agent-graph-view-editor"
+import { adderPickOf, adderViewOf, decideEditorViewOf, problemsViewOf } from "./agent-graph-view-decide"
+import type { AgentGraphAdderPick } from "./agent-graph-view-decide"
 import { branchesViewOf, proposalsViewOf, runViewOf, versionsViewOf } from "./agent-graph-view-lists"
 import { kindWordOf } from "./agent-graph-words"
 import type { AgentGraphContext } from "./agent-graph-words"
@@ -19,8 +21,12 @@ export interface AgentGraphUi {
     readonly sideTab: AgentGraphSideTab
     readonly phoneView: AgentGraphPhoneView
     readonly isDrawerOpen: boolean
-    /** The form of the branch being edited; null when none is. */
-    readonly form: AgentGraphBranchForm | null
+    /** The decision point being edited; null when none is. */
+    readonly form: AgentGraphDecideForm | null
+    /** The form as it was when the owner opened it, to tell whether anything changed. */
+    readonly formStart: AgentGraphDecideForm | null
+    /** The action and the fact the owner picked to add a decision point on. */
+    readonly adder: AgentGraphAdderPick
     /** The run being traced on the graph; empty when none is. */
     readonly runId: string
     readonly isPublishing: boolean
@@ -35,17 +41,20 @@ const statusOf = (data: AgentGraphData, ctx: AgentGraphContext): string => {
             : t("statusVersion", { version: data.activeVersion })
     const conflicts = data.proposals.filter((proposal) => proposal.kind === "conflict").length
     const learned = data.proposals.length - conflicts
-    if (data.gaps > 0) return `${lead} · ${t("statusGaps", { count: data.gaps })}`
+    if (data.problems.length > 0) return `${lead} · ${t("statusProblems", { count: data.problems.length })}`
+    if (data.gaps.length > 0) return `${lead} · ${t("statusGaps", { count: data.gaps.length })}`
     if (conflicts > 0) return `${lead} · ${t("statusConflicts", { count: conflicts })}`
     if (learned > 0) return `${lead} · ${t("statusLearned", { count: learned })}`
     return `${lead} · ${t("statusClear")}`
 }
 
-/** Why the draft cannot be published; empty when it can. */
+/** Why the draft cannot be published, in words: what is wrong first; empty when it can be. */
 const publishBlockedOf = (data: AgentGraphData, ctx: AgentGraphContext): string => {
     if (!ctx.canEdit) return ctx.t("cannotEdit")
-    if (data.changes === 0) return ctx.t("nothingToPublish")
-    return data.gaps > 0 ? ctx.t("gapsBlock") : ""
+    const first = problemLinesOf(data, ctx.t)[0]
+    if (first !== undefined) return ctx.t("problemsBlock", { count: data.problems.length, first: first.text })
+    if (data.gaps.length > 0) return ctx.t("gapsBlock")
+    return data.changes === 0 ? ctx.t("nothingToPublish") : ""
 }
 
 const headOf = (data: AgentGraphData, ctx: AgentGraphContext, isPublishing: boolean): AgentGraphHeadView => ({
@@ -64,15 +73,13 @@ const headOf = (data: AgentGraphData, ctx: AgentGraphContext, isPublishing: bool
 
 /**
  * Every word the graph panes draw, from the graph and what the person is doing: the head, the cards painted by selection or by a
- * traced run, the detail of the selected node, the form of a branch, the proposals, the history and the phone list.
+ * traced run, the detail of the selected node, the form of a decision point, the problems, the proposals, the history and the phone
+ * list.
  */
 export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGraphContext): AgentGraphPanelView => {
     const { t } = ctx
     const run = data.runs.find((entry) => entry.id === ui.runId) ?? null
-    const editor =
-        ui.form === null || branchHitOf(data.nodes, ui.selectedKey) === null
-            ? null
-            : editorViewOf(data, { nodeKey: ui.selectedKey, form: ui.form }, ctx)
+    const editor = ui.form === null ? null : decideEditorViewOf(data, ui.form, ui.formStart, ctx)
     const proposals = data.proposals.length
     const inspector = (() => {
         if (editor !== null) return "editor"
@@ -92,7 +99,7 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
                     return at >= 0 && run?.path[at + 1] === target
                 },
             }),
-            headers: BANDS.map((kind) => ({ label: kindWordOf(t, kind), at: bandCentreOf(kind) })),
+            headers: layerHeadersOf(data.nodes, (kind) => kindWordOf(t, kind)),
             selectedId: ui.selectedKey,
         },
         sideTab: ui.sideTab,
@@ -121,6 +128,8 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
         inspector,
         detail: detailViewOf(data, ui.selectedKey, ctx),
         editor,
+        problems: problemsViewOf(data, ctx),
+        adder: adderViewOf(data, adderPickOf(data, ui.adder), ctx),
         run: run === null ? null : runViewOf(run, ctx),
         proposals: proposalsViewOf(data, ctx),
         versions: versionsViewOf(data, ctx),

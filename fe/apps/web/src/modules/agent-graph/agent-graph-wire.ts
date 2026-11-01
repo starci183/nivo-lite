@@ -97,6 +97,16 @@ const proposalSchema = z.object({
     widens: z.boolean(),
     evidence: z.array(z.string()),
     createdAt: z.string(),
+    before: z.string().nullable().optional(),
+    after: z.string().nullable().optional(),
+})
+
+const factSchema = z.object({
+    key: z.string(),
+    label: z.string(),
+    type: z.enum(["number", "string", "boolean"]),
+    unit: z.enum(["vnd", "percent", "count"]).nullable(),
+    allowed: z.array(z.string()),
 })
 
 const traceSchema = z.array(
@@ -140,14 +150,17 @@ export type AgentGraphWireProblem = z.infer<typeof problemSchema>
 export type AgentGraphWireGap = z.infer<typeof gapSchema>
 /** One proposal waiting for a person. */
 export type AgentGraphWireProposal = z.infer<typeof proposalSchema>
+/** One fact a condition may be written on. */
+export type AgentGraphWireFact = z.infer<typeof factSchema>
 
-/** The five JSON texts of `agentGraph`, as they arrive. */
+/** The six JSON texts of `agentGraph`, as they arrive. */
 export interface AgentGraphWireTexts {
     readonly draftJson: string
     readonly cardsJson: string
     readonly gapsJson: string
     readonly problemsJson: string
     readonly proposalsJson: string
+    readonly factsJson: string
 }
 
 /** The graph after its texts were parsed; the one place the wire is read. */
@@ -157,9 +170,10 @@ export interface AgentGraphWire {
     readonly gaps: ReadonlyArray<AgentGraphWireGap>
     readonly problems: ReadonlyArray<AgentGraphWireProblem>
     readonly proposals: ReadonlyArray<AgentGraphWireProposal>
+    readonly facts: ReadonlyArray<AgentGraphWireFact>
 }
 
-/** Parses the five texts of the graph with their schemas; null when any of them is not what the contract says. */
+/** Parses the six texts of the graph with their schemas; null when any of them is not what the contract says. */
 export const parseAgentGraphWire = (texts: AgentGraphWireTexts): AgentGraphWire | null => {
     const read = <T extends z.ZodType>(schema: T, text: string): z.infer<T> | null => {
         try {
@@ -174,6 +188,8 @@ export const parseAgentGraphWire = (texts: AgentGraphWireTexts): AgentGraphWire 
     const gaps = read(z.array(gapSchema), texts.gapsJson)
     const problems = read(z.array(problemSchema), texts.problemsJson)
     const proposals = read(z.array(proposalSchema), texts.proposalsJson)
+    const facts = read(z.array(factSchema), texts.factsJson)
     if (document === null || cards === null || gaps === null || problems === null || proposals === null) return null
-    return { document, cards, gaps, problems, proposals }
+    if (facts === null) return null
+    return { document, cards, gaps, problems, proposals, facts }
 }

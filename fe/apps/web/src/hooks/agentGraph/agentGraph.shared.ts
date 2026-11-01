@@ -21,14 +21,18 @@ export const performAgentGraphAction = (commands: AgentGraphCommands, action: Ag
             return commands.mode(action.value)
         case "restore":
             return commands.restore(action.value)
-        case "field":
-            return commands.field(action.name, action.value)
+        case "edit":
+            return commands.edit(action.value)
+        case "form":
+            return commands.change(action.change)
+        case "adderPick":
+            return commands.pickAdder(action.field, action.value)
+        case "addDecide":
+            return commands.addDecide(action.action, action.fact)
         case "decide":
             return commands.decide(action.value, action.isConfirmed)
         case "closeDrawer":
             return commands.closeDrawer()
-        case "edit":
-            return commands.edit()
         case "save":
             return commands.save()
         case "cancel":

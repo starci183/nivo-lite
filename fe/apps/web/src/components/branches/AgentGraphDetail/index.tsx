@@ -7,6 +7,7 @@ import {
     List,
     ListRow,
     SectionHeader,
+    Stack,
     Text,
 } from "@starci/grammar/common"
 import type { AgentGraphAnswerView, AgentGraphDetailView } from "@/modules/types"
@@ -15,7 +16,7 @@ import type { AgentGraphAnswerView, AgentGraphDetailView } from "@/modules/types
 type AgentGraphDetailProps = {
     readonly view: AgentGraphDetailView
     readonly isSkeleton: boolean
-    readonly onEdit: () => void
+    readonly onEdit: (nodeKey: string) => void
     readonly onRuns: () => void
 }
 
@@ -89,10 +90,18 @@ export const AgentGraphDetail = (props: AgentGraphDetailProps) => (
             isSkeleton={props.isSkeleton}
             meta={<Badge isSkeleton={props.isSkeleton}>{props.view.badge}</Badge>}
         />
-        {props.view.problem === "" ? null : (
+        {props.view.problems.length === 0 ? null : (
             <Alert
                 title={props.view.problemTitle}
-                description={props.view.problem}
+                description={
+                    <Stack gap="inline">
+                        {props.view.problems.map((problem) => (
+                            <Text key={problem} size="sm">
+                                {problem}
+                            </Text>
+                        ))}
+                    </Stack>
+                }
                 tone="cautionary"
                 appearance="soft"
             />
@@ -108,7 +117,12 @@ export const AgentGraphDetail = (props: AgentGraphDetailProps) => (
             }))}
         />
         {props.view.editLabel === "" ? null : (
-            <Button intent="commit" size="sm" isSkeleton={props.isSkeleton} onPress={props.onEdit}>
+            <Button
+                intent="commit"
+                size="sm"
+                isSkeleton={props.isSkeleton}
+                onPress={() => props.onEdit(props.view.editNodeKey)}
+            >
                 {props.view.editLabel}
             </Button>
         )}

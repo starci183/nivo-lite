@@ -5,7 +5,7 @@ export const AGENT_GRAPH_PLACEHOLDER: AgentGraphData = {
     mode: "shadow",
     activeVersion: 0,
     changes: 0,
-    gaps: 0,
+    gaps: [],
     problems: [],
     nodes: [
         {
@@ -30,4 +30,6 @@ export const AGENT_GRAPH_PLACEHOLDER: AgentGraphData = {
     proposals: [],
     runs: [],
     members: [],
+    facts: [],
+    actions: [],
 }

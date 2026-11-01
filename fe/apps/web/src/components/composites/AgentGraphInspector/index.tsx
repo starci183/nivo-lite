@@ -1,5 +1,6 @@
 import { AgentGraphDetail } from "@/components/branches/AgentGraphDetail"
-import { AgentGraphEditor } from "@/components/branches/AgentGraphEditor"
+import { AgentGraphAdder } from "@/components/branches/AgentGraphAdder"
+import { AgentGraphDecideEditor } from "@/components/branches/AgentGraphDecideEditor"
 import { AgentGraphProposals } from "@/components/branches/AgentGraphProposals"
 import { AgentGraphRun } from "@/components/branches/AgentGraphRun"
 import { AgentGraphVersions } from "@/components/branches/AgentGraphVersions"
@@ -40,10 +41,10 @@ export const AgentGraphInspector = (props: AgentGraphInspectorProps) => {
     }
     if (view.inspector === "editor" && view.editor !== null) {
         return (
-            <AgentGraphEditor
+            <AgentGraphDecideEditor
                 view={view.editor}
                 isSkeleton={props.isSkeleton}
-                onField={(name, value) => onAction({ kind: "field", name, value })}
+                onChange={(change) => onAction({ kind: "form", change })}
                 onSave={() => onAction({ kind: "save" })}
                 onCancel={() => onAction({ kind: "cancel" })}
             />
@@ -55,11 +56,19 @@ export const AgentGraphInspector = (props: AgentGraphInspectorProps) => {
         )
     }
     return (
-        <AgentGraphDetail
-            view={view.detail}
-            isSkeleton={props.isSkeleton}
-            onEdit={() => onAction({ kind: "edit" })}
-            onRuns={() => onAction({ kind: "trace" })}
-        />
+        <>
+            <AgentGraphDetail
+                view={view.detail}
+                isSkeleton={props.isSkeleton}
+                onEdit={(value) => onAction({ kind: "edit", value })}
+                onRuns={() => onAction({ kind: "trace" })}
+            />
+            <AgentGraphAdder
+                view={view.adder}
+                isSkeleton={props.isSkeleton}
+                onPick={(field, value) => onAction({ kind: "adderPick", field, value })}
+                onAdd={(action, fact) => onAction({ kind: "addDecide", action, fact })}
+            />
+        </>
     )
 }

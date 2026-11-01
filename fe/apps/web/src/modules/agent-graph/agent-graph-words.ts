@@ -1,9 +1,9 @@
 import type { useTranslations } from "next-intl"
 import type {
     AgentGraphApproverData,
+    AgentGraphSourceData,
     AgentGraphNodeKind,
     AgentGraphOnTimeout,
-    AgentGraphSourceKind,
     AgentGraphThen,
 } from "@/modules/types"
 
@@ -17,8 +17,8 @@ export interface AgentGraphContext {
     readonly canEdit: boolean
     /** Only the owner may add what widens the agent's reach. */
     readonly isOwner: boolean
-    /** Writes an amount in the number format of the reader. */
-    readonly number: (value: number) => string
+    /** Writes an amount in dong as an owner says it: "5 million". */
+    readonly amount: (vnd: number) => string
 }
 
 /** The word of a node kind: the lane it sits in. */
@@ -33,8 +33,8 @@ export const kindWordOf = (t: AgentGraphT, kind: AgentGraphNodeKind): string => 
 }
 
 /** The word of the rule behind a node: where it came from. */
-export const sourceWordOf = (t: AgentGraphT, kind: AgentGraphSourceKind): string => {
-    const words: Readonly<Record<AgentGraphSourceKind, string>> = {
+export const sourceWordOf = (t: AgentGraphT, kind: AgentGraphSourceData["kind"]): string => {
+    const words: Readonly<Record<AgentGraphSourceData["kind"], string>> = {
         brain: t("source_brain"),
         template: t("source_template"),
         chat: t("source_chat"),
@@ -74,4 +74,11 @@ export const timeoutLineOf = (t: AgentGraphT, approver: AgentGraphApproverData):
     if (approver.onTimeout === "stop") return t("timeoutLineStop", { hours })
     if (approver.onTimeout === "agent_owner") return t("timeoutLineOwner", { hours })
     return t("timeoutLineUnset")
+}
+
+/** The word of a role of the workspace: who is asked when a branch names a role and not a person. */
+export const roleWordOf = (t: AgentGraphT, role: string): string => {
+    if (role === "owner") return t("role_owner")
+    if (role === "manager") return t("role_manager")
+    return role === "staff" ? t("role_staff") : role
 }
