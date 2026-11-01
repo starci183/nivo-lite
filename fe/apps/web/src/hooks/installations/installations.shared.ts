@@ -1,7 +1,7 @@
 import type { ModuleIconName } from "@/modules/types"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
-import { agentHref, agentListHref, installationLifecycleOf, instancesOf } from "@/modules/installations"
+import { agentHref, agentListHref, displayNameOf, installationLifecycleOf, instancesOf } from "@/modules/installations"
 import { AGENTS_ROUTE } from "@/modules/routes"
 import type { AgentTab, Installation, InstallationStatus, OperatingMode } from "@/modules/installations"
 
@@ -57,10 +57,9 @@ const toInstallation = (row: InstallationWire): Installation | null =>
               id: row.id,
               workspaceId: row.workspaceId,
               moduleKey: row.moduleKey,
-              name: row.name,
+              name: displayNameOf(row),
               isMulti: row.isMulti,
               agentId: row.agentId ?? null,
-              agentName: row.agentName,
               agentAvatarUrl: row.agentAvatarUrl ?? null,
               agentHandle: row.agentHandle,
               status: statusOf(row.status),

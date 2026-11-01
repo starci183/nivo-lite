@@ -138,6 +138,7 @@ const OwnersBody = ({ groups, ...props }: OwnersBodyProps) => {
                                         <AgentMark
                                             glyph={nivoIconSource(group.glyph, "leading")}
                                             label={group.name}
+                                            seed={group.key}
                                             module={group.module}
                                             size="md"
                                         />

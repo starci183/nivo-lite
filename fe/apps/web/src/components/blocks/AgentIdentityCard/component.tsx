@@ -8,6 +8,8 @@ import { GROW } from "./classNames"
 /** What the name card shows once the installation arrived, every word resolved. */
 export interface IdentityView {
     readonly markLabel: string
+    /** The id of the agent: the seed every mark of this agent draws its waiting colour from. */
+    readonly markSeed: string
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly avatarUrl: string | null
     readonly nameLabel: string
@@ -48,6 +50,7 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                             glyph={nivoIconSource(props.props.glyph, "leading")}
                             module={props.props.module}
                             label={view.markLabel}
+                            seed={view.markSeed}
                             src={view.avatarUrl}
                             size="lg"
                         />

@@ -1,7 +1,7 @@
 export {
     AGENT_NAME_MAX,
+    AGENT_NAME_MIN,
     HOLDING_MAX,
-    INSTANCE_NAME_MAX,
     REPLY_TIMEOUT_MAX,
     REPLY_TIMEOUT_MIN,
     hasBoundConnection,

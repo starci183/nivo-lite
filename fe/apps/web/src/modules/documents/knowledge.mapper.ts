@@ -9,7 +9,7 @@ import type {
 } from "@/modules/api"
 import { isModuleKey } from "@/modules/catalog"
 import type { Installation, InstallationStatus, OperatingMode } from "@/modules/installations"
-import { installationLifecycleOf } from "@/modules/installations"
+import { displayNameOf, installationLifecycleOf } from "@/modules/installations"
 import type {
     DocumentKind,
     DocumentPassage,
@@ -149,10 +149,9 @@ export const toWireInstallation = (row: ModuleInstallationType): Installation | 
         id: row.id,
         workspaceId: row.workspaceId,
         moduleKey: row.moduleKey,
-        name: row.name,
+        name: displayNameOf(row),
         isMulti: row.isMulti,
         agentId: row.agentId ?? null,
-        agentName: row.agentName,
         agentAvatarUrl: row.agentAvatarUrl ?? null,
         agentHandle: row.agentHandle ?? null,
         status: INSTALLATION_STATUSES.find((known) => known === row.status) ?? "setup",

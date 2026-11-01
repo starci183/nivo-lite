@@ -2,6 +2,7 @@ export { allGatesConfirmed, gateEntry, gateHint, gateLabel, gatesOf, snapshotOf 
 export { cleanInstanceName, instanceNameKey, instancesOf, nextInstanceName } from "./installations.instances"
 export {
     AGENT_STATUS_TONE,
+    displayNameOf,
     installationPersonName,
     agentLifecycleOf,
     agentLifecycleTone,

@@ -82,6 +82,7 @@ export const ApprovalCard = (props: ApprovalCardProps) => {
                             <AgentMark
                                 glyph={nivoIconSource(view.agent.glyph, "leading")}
                                 label={view.agent.name}
+                                seed={view.agent.name}
                                 module="chatbot"
                                 size="sm"
                             />

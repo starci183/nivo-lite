@@ -70,6 +70,7 @@ export const OverviewRailBase = (props: OverviewRailBaseProps) => {
                             <AgentMark
                                 glyph={nivoIconSource(agent.glyph, "leading")}
                                 label={agent.name}
+                                seed={agent.id}
                                 module={agent.module}
                             />
                         }

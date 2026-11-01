@@ -12,8 +12,8 @@ type AgentMarkProps = {
     readonly [metadata: string]: unknown
     /** The agent's display name: the spoken name of the mark and its initials while the picture loads. */
     readonly label: string
-    /** The agent id when the caller knows it: the seed of the initials drawn while the picture loads. Defaults to the name. */
-    readonly seed?: string | undefined
+    /** The agent id: the one seed of the colour drawn while the picture loads, so the same agent wears the same colour on every screen. */
+    readonly seed: string
     /** The picture the owner gave the agent; without one the NIVO unicorn mascot is drawn. */
     readonly src?: string | null | undefined
     /** The agent is not known yet: the avatar draws as a waiting shape. */
@@ -35,7 +35,7 @@ export const AgentMark = (props: AgentMarkProps) => (
     <Avatar
         name={props.label}
         kind="agent"
-        seed={props.seed ?? props.label}
+        seed={props.seed}
         src={props.src ? props.src : AGENT_MASCOT_SRC}
         size={AVATAR_SIZE[props.size ?? "md"]}
         isSkeleton={props.isSkeleton === true}

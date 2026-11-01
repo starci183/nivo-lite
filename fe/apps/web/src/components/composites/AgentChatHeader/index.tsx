@@ -12,6 +12,8 @@ export interface AgentChatHeaderProps {
     readonly glyph: ModuleIconName
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly avatarUrl?: string | null | undefined
+    /** The id of the agent: the one seed of its mark on every screen. */
+    readonly seed: string
     readonly module: string
     /** The agent is still loading: the mark and the lines draw as waiting shapes. */
     readonly isSkeleton: boolean
@@ -33,6 +35,7 @@ interface HeaderMarkProps {
     readonly module: string
     readonly name: string
     readonly avatarUrl: string | null | undefined
+    readonly seed: string
     readonly isSkeleton: boolean
 }
 
@@ -44,6 +47,7 @@ const HeaderMark = (props: HeaderMarkProps) => {
             glyph={nivoIconSource(props.glyph, "leading")}
             module={props.module}
             label={props.name}
+            seed={props.seed}
             src={props.avatarUrl}
             size="md"
         />
@@ -64,6 +68,7 @@ export const AgentChatHeader = (props: AgentChatHeaderProps) => (
                 module={props.module}
                 name={props.name}
                 avatarUrl={props.avatarUrl}
+                seed={props.seed}
                 isSkeleton={props.isSkeleton}
             />
             <Stack gap="identity">

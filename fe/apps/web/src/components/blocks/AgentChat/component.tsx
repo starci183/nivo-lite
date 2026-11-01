@@ -45,6 +45,8 @@ export interface AgentChatViewProps {
     readonly module: string
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly avatarUrl: string | null
+    /** The id of the agent: the one seed of its mark on every screen. */
+    readonly seed: string
     readonly railTitle: string
     /** The trigger that opens the conversation rail where it is a drawer, and the control that closes it. */
     readonly historyLabel: string
@@ -53,14 +55,14 @@ export interface AgentChatViewProps {
     readonly isStarting: boolean
     readonly railSlot: DataSlot<ReadonlyArray<AgentChatRailRow>>
     readonly railLabels: SlotLabels
-    readonly header: Omit<AgentChatHeaderProps, "glyph" | "module" | "onBack" | "onTakeover" | "onOpenLead">
+    readonly header: Omit<AgentChatHeaderProps, "glyph" | "module" | "seed" | "onBack" | "onTakeover" | "onOpenLead">
     readonly channelTabs: ChannelTabsView | null
     readonly threadSlot: DataSlot<ThreadView>
     readonly threadLabels: SlotLabels
     readonly thread: Omit<AgentChatThreadProps, "children"> & { readonly label: string }
     readonly welcome: Omit<PromoWelcomeBandProps, "onClose"> | null
-    readonly messages: Omit<AgentChatMessagesProps, "glyph" | "module" | "isSkeleton">
-    readonly empty: Omit<AgentChatEmptyProps, "glyph" | "module" | "onVisitorName" | "onPrompt" | "onStart">
+    readonly messages: Omit<AgentChatMessagesProps, "glyph" | "module" | "seed" | "isSkeleton">
+    readonly empty: Omit<AgentChatEmptyProps, "glyph" | "module" | "seed" | "onVisitorName" | "onPrompt" | "onStart">
     readonly composer: Omit<AgentChatComposerProps, "onDraft" | "onPrompt" | "onSend">
 }
 
@@ -105,6 +107,7 @@ const Thread = (props: AgentChatBaseProps) => (
                         glyph={props.props.glyph}
                         module={props.props.module}
                         avatarUrl={props.props.avatarUrl}
+                        seed={props.props.seed}
                         isSkeleton={isSkeleton}
                     />
                 ) : (
@@ -113,6 +116,7 @@ const Thread = (props: AgentChatBaseProps) => (
                         glyph={props.props.glyph}
                         module={props.props.module}
                         avatarUrl={props.props.avatarUrl}
+                        seed={props.props.seed}
                         onVisitorName={props.on.visitorName}
                         onPrompt={props.on.send}
                         onStart={props.on.start}
@@ -130,6 +134,7 @@ const Head = (props: AgentChatBaseProps) => (
         glyph={props.props.glyph}
         module={props.props.module}
         avatarUrl={props.props.avatarUrl}
+        seed={props.props.seed}
         onBack={props.on.back}
         onTakeover={props.on.toggleTakeover}
         onOpenLead={props.on.openLead}
@@ -170,6 +175,7 @@ const RailList = (props: RailListProps) => (
                 glyph={props.view.glyph}
                 module={props.view.module}
                 avatarUrl={props.view.avatarUrl}
+                seed={props.view.seed}
                 isSkeleton={isSkeleton}
                 onPick={props.onPick}
             />

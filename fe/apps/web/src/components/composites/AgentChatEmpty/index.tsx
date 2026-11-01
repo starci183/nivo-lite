@@ -16,6 +16,8 @@ export interface AgentChatEmptyProps {
     readonly glyph: ModuleIconName
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly avatarUrl?: string | null | undefined
+    /** The id of the agent: the one seed of its mark on every screen. */
+    readonly seed: string
     readonly module: string
     readonly greeting: string
     readonly help: string
@@ -41,6 +43,7 @@ export const AgentChatEmpty = (props: AgentChatEmptyProps) => (
             glyph={nivoIconSource(props.glyph, "leading")}
             module={props.module}
             label={props.agentName}
+            seed={props.seed}
             src={props.avatarUrl}
             size="lg"
         />
