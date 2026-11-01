@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import {
     AGENT_NAME_MAX,
-    INSTANCE_NAME_MAX,
+    AGENT_NAME_MIN,
     useAgentInstallation,
     useAgentRights,
     useSaveAgentName,
@@ -23,6 +23,7 @@ type AgentIdentityCardProps = {
 
 const PLACEHOLDER: IdentityView = {
     markLabel: "-",
+    markSeed: "-",
     avatarUrl: null,
     nameLabel: "-",
     nameHint: "-",
@@ -33,19 +34,17 @@ const PLACEHOLDER: IdentityView = {
     canSave: false,
 }
 
-/** The connected name card: one name field for the agent (and its instance), saved on its own. */
+/** The connected name card: the one display name of the agent, the name every screen shows, saved on its own. */
 export const AgentIdentityCard = (props: AgentIdentityCardProps) => {
     const t = useTranslations("modulesCore")
     const slotLabels = useSlotLabels()
     const { canEdit } = useAgentRights()
     const { slot, reload } = useAgentInstallation(props.installationId, props.module)
     const agent = slot.items
-    const isInstance = agent?.isMulti === true
-    const saved = (isInstance ? agent?.name : agent?.agentName) ?? ""
+    const saved = agent?.name ?? ""
     const [draft, setDraft] = useState<string | null>(null)
     const name = draft ?? saved
-    const { save, isSaving } = useSaveAgentName(props.installationId, isInstance)
-    const minLength = isInstance ? 1 : 2
+    const { save, isSaving } = useSaveAgentName(props.installationId)
     const saveName = async () => {
         if (await save(name)) setDraft(null)
     }
@@ -59,15 +58,16 @@ export const AgentIdentityCard = (props: AgentIdentityCardProps) => {
                 isPending: isSaving,
                 read: {
                     slot: mapSlot(slot, (installation): IdentityView => ({
-                        markLabel: installation.agentName,
+                        markLabel: installation.name,
+                        markSeed: installation.agentId ?? installation.id,
                         avatarUrl: installation.agentAvatarUrl,
-                        nameLabel: t(isInstance ? "instanceNameTitle" : "displayName"),
-                        nameHint: t(isInstance ? "instanceNameSettingsHint" : "displayNameHint"),
+                        nameLabel: t("displayName"),
+                        nameHint: t("displayNameHint"),
                         name,
-                        maxLength: isInstance ? INSTANCE_NAME_MAX : AGENT_NAME_MAX,
+                        maxLength: AGENT_NAME_MAX,
                         line: t("agentLine", { handle: installation.agentHandle }),
-                        saveLabel: t(isInstance ? "saveInstanceName" : "saveName"),
-                        canSave: canEdit && name.trim().length >= minLength && name.trim() !== saved,
+                        saveLabel: t("saveName"),
+                        canSave: canEdit && name.trim().length >= AGENT_NAME_MIN && name.trim() !== saved,
                     })),
                     placeholder: PLACEHOLDER,
                     labels: slotLabels(t("agentTitle")),

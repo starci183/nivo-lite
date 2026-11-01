@@ -1,11 +1,11 @@
 import type { Installation } from "@/modules/installations"
 import type { ConnectionStatus } from "@/modules/types"
 
+/** The shortest name of an agent. */
+export const AGENT_NAME_MIN = 2
+
 /** The longest name of an agent. */
 export const AGENT_NAME_MAX = 40
-
-/** The longest label of an instance. */
-export const INSTANCE_NAME_MAX = 80
 
 /** How long a customer waits for the agent by default before the app answers directly, in seconds. */
 const DEFAULT_REPLY_TIMEOUT_SEC = 25
@@ -123,12 +123,11 @@ export type AgentMode = "assist" | "autopilot"
 export interface AgentInstallationView {
     readonly id: string
     readonly agentId: string | null
-    readonly agentName: string
+    /** The one display name of the agent. */
+    readonly name: string
     readonly agentHandle: string
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly agentAvatarUrl: string | null
-    /** The instance label. */
-    readonly name: string
     /** The type allows several instances. */
     readonly isMulti: boolean
     readonly mode: AgentMode
@@ -143,10 +142,9 @@ export interface AgentInstallationView {
 export const toAgentInstallationView = (installation: Installation): AgentInstallationView => ({
     id: installation.id,
     agentId: installation.agentId,
-    agentName: installation.agentName,
+    name: installation.name,
     agentHandle: installation.agentHandle,
     agentAvatarUrl: installation.agentAvatarUrl,
-    name: installation.name,
     isMulti: installation.isMulti,
     mode: installation.operatingMode,
     isLive: installation.lifecycle === "running",

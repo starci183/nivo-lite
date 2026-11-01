@@ -39,12 +39,13 @@ export const AgentSyncCard = (props: AgentSyncCardProps) => {
                 tone: "warning" as const,
             }
         }
+        // Green only when the copy runs a version the owner applied; a synced copy with no version yet is not a success to celebrate.
+        if (status.syncedVersion === null) {
+            return { checkedAt: status.checkedAt, text: t("syncOkNone", { ago: when }), tone: "neutral" as const }
+        }
         return {
             checkedAt: status.checkedAt,
-            text:
-                status.syncedVersion === null
-                    ? t("syncOkNone", { ago: when })
-                    : t("syncOk", { version: status.syncedVersion, ago: when }),
+            text: t("syncOk", { version: status.syncedVersion, ago: when }),
             tone: "success" as const,
         }
     })()

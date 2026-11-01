@@ -48,6 +48,7 @@ export const AgentChat = (props: AgentChatProps) => {
                 glyph,
                 module: moduleKey,
                 avatarUrl: agent?.avatarUrl ?? null,
+                seed: agentId,
                 railTitle: t("railTitle"),
                 historyLabel: t("historyToggle"),
                 historyCloseLabel: t("historyClose"),

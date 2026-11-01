@@ -41,9 +41,22 @@ export const agentLifecycleOf = (installation: Installation | null | undefined):
 export const agentLifecycleTone = (lifecycle: AgentLifecycle): (typeof AGENT_LIFECYCLE_TONE)[AgentLifecycle] =>
     AGENT_LIFECYCLE_TONE[lifecycle]
 
-/** The name an installed agent answers to: its own human name, else the instance label. */
+/** The two name fields a back end installation row holds. */
+interface NamedInstallationRow {
+    readonly agentName: string
+    readonly name: string
+}
+
+/**
+ * The one display name of an installed agent: the name of its agent, else the instance label the back end keeps beside it. The back
+ * end holds both fields; the screens get only this one, so the header, Settings, the profile and the chat can never disagree.
+ */
+export const displayNameOf = (row: NamedInstallationRow): string =>
+    row.agentName.trim() === "" ? row.name : row.agentName
+
+/** The name an installed agent answers to: its one display name, else its handle. */
 export const installationPersonName = (installation: Installation): string =>
-    [installation.agentName, installation.agentHandle, installation.name].find((name) => name.trim() !== "") ?? ""
+    [installation.name, installation.agentHandle].find((name) => name.trim() !== "") ?? ""
 
 /** Accent-insensitive text for matching: NFD, marks stripped, d-stroke folded, lower case. */
 export const foldText = (text: string): string =>

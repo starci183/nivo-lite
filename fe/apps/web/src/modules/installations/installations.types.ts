@@ -26,13 +26,14 @@ export type Installation = {
     readonly id: string
     readonly workspaceId: string
     readonly moduleKey: ModuleKey
-    /** The instance label; the type name for the first instance and every single-instance type. */
+    /**
+     * The one display name of the agent, as the owner gave it: the header, Settings, the profile, Office, the chat and the OpenClaw
+     * copy all show this name. The instance label the back end keeps beside it only tells instances of one type apart; no screen reads it.
+     */
     readonly name: string
     /** The type allows several instances (copied from the catalogue at insert). */
     readonly isMulti: boolean
     readonly agentId: string | null
-    /** The display name and handle of the agent (read-through, for headers and mentions). */
-    readonly agentName: string
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly agentAvatarUrl: string | null
     readonly agentHandle: string

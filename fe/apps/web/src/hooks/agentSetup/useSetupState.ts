@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { slotOfSwr } from "@/hooks/slot"
+import { displayNameOf } from "@/modules/installations"
 import type { SetupWrite, DataSlot } from "@/modules/types"
 import type { SetupMessage, SetupRevision, SetupSession } from "@/modules/installations"
 
@@ -63,7 +64,7 @@ export const useSetupState = (
                 ? undefined
                 : {
                       instance: {
-                          name: data.installation.name,
+                          name: displayNameOf(data.installation),
                           isMulti: data.installation.isMulti,
                           activeVersionId: data.installation.activeContextVersionId ?? null,
                       },
