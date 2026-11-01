@@ -1,8 +1,8 @@
+import { Cluster } from "@starci/grammar/common"
 import type { ConsoleNavItem } from "@/modules/types"
 import { ConsoleSidebar } from "../../composites/ConsoleSidebar"
 import { LanguageMenu } from "../../composites/LanguageMenu"
 import { ThemeSwitch } from "../../composites/ThemeSwitch"
-import { CONTROLS } from "./classNames"
 
 /** The destinations, words and state of the compact navigation drawer, resolved by the connected block. */
 export interface ConsoleDrawerContentBaseProps {
@@ -32,7 +32,7 @@ export const ConsoleDrawerContentBase = (props: ConsoleDrawerContentBaseProps) =
         presentation="drawer"
         groupLabels={props.props.groupLabels}
         header={
-            <div className={CONTROLS}>
+            <Cluster gap="inline" wrap={false}>
                 <LanguageMenu
                     label={props.props.languageLabel}
                     value={props.props.locale}
@@ -45,7 +45,7 @@ export const ConsoleDrawerContentBase = (props: ConsoleDrawerContentBaseProps) =
                     label={props.props.themeLabel}
                     onChange={props.on.chooseDark}
                 />
-            </div>
+            </Cluster>
         }
         onGo={props.on.go}
     />

@@ -1,8 +1,7 @@
 import { useMemo } from "react"
-import { SurfaceCard, Text } from "@starci/grammar/common"
+import { Grid, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { WholeCardAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
-import { KPI_COPY_CLASS_NAME, KPI_GRID_CLASS_NAME } from "./classNames"
 
 /** One count: its label, value, the list it opens and whether a non-zero value asks for attention. */
 interface OverviewKpi {
@@ -35,10 +34,10 @@ export const OverviewKpis = (props: OverviewKpisProps) => {
     )
     return (
         <AccountingBlock label={props.label}>
-            <div className={KPI_GRID_CLASS_NAME}>
+            <Grid kind="cards">
                 {cards.map(({ kpi, action }) => (
                     <SurfaceCard key={kpi.id} {...(action === undefined ? {} : { wholeAction: action })}>
-                        <div className={KPI_COPY_CLASS_NAME}>
+                        <Stack gap="identity">
                             <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
                                 {kpi.label}
                             </Text>
@@ -50,10 +49,10 @@ export const OverviewKpis = (props: OverviewKpisProps) => {
                             >
                                 {String(kpi.value)}
                             </Text>
-                        </div>
+                        </Stack>
                     </SurfaceCard>
                 ))}
-            </div>
+            </Grid>
         </AccountingBlock>
     )
 }

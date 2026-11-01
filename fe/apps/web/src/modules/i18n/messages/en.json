@@ -7788,6 +7788,7 @@
   },
   "driveConnection": {
     "title": "Google Drive",
+    "stepsLabel": "Setup progress",
     "crumbLabel": "Breadcrumb",
     "crumbConnections": "Connections",
     "crumbDrive": "Google Drive",
@@ -7886,6 +7887,7 @@
   },
   "telegramConnection": {
     "title": "Telegram bot connection",
+    "stepsLabel": "Setup progress",
     "crumbLabel": "Breadcrumb",
     "crumbConnections": "Connections",
     "crumbTelegram": "Telegram bot",

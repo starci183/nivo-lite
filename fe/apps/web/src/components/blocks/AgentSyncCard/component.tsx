@@ -1,5 +1,4 @@
-import { Badge, Button, RelativeTime, SurfaceCard, Text } from "@starci/grammar/common"
-import { ACTIONS, STACK } from "./classNames"
+import { Badge, Button, Cluster, RelativeTime, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 
 /** Copy and state of the sync card of an agent. */
 export interface AgentSyncCardBaseProps {
@@ -22,33 +21,35 @@ export interface AgentSyncCardBaseProps {
 /** Draws the OpenClaw copy of an agent quietly: which version it holds and when it was checked, with a button to sync again. */
 export const AgentSyncCardBase = (props: AgentSyncCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <div className={STACK}>
-            <div className={ACTIONS} aria-live="polite">
-                <Badge isDot tone={props.props.lineTone}>
-                    {props.props.lineCheckedAt === null ? (
-                        props.props.lineText
-                    ) : (
-                        <RelativeTime
-                            dateTime={props.props.lineCheckedAt}
-                            locale={props.props.locale}
-                            template={props.props.lineText}
-                            fallback={props.props.lineText.replace("{time}", "")}
-                        />
-                    )}
-                </Badge>
-                <Button
-                    intent="neutral"
-                    size="sm"
-                    isPending={props.props.isQueuing}
-                    isDisabled={props.props.isResyncDisabled}
-                    onPress={props.on.resync}
-                >
-                    {props.props.resyncLabel}
-                </Button>
+        <Stack gap="section">
+            <div aria-live="polite">
+                <Cluster gap="row">
+                    <Badge isDot tone={props.props.lineTone}>
+                        {props.props.lineCheckedAt === null ? (
+                            props.props.lineText
+                        ) : (
+                            <RelativeTime
+                                dateTime={props.props.lineCheckedAt}
+                                locale={props.props.locale}
+                                template={props.props.lineText}
+                                fallback={props.props.lineText.replace("{time}", "")}
+                            />
+                        )}
+                    </Badge>
+                    <Button
+                        intent="neutral"
+                        size="sm"
+                        isPending={props.props.isQueuing}
+                        isDisabled={props.props.isResyncDisabled}
+                        onPress={props.on.resync}
+                    >
+                        {props.props.resyncLabel}
+                    </Button>
+                </Cluster>
             </div>
             <Text size="xs" tone="muted">
                 {props.props.help}
             </Text>
-        </div>
+        </Stack>
     </SurfaceCard>
 )

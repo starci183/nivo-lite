@@ -1,5 +1,4 @@
-import { Badge, EmptyNotice, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
-import { ROW_FACTS_CLASS_NAME } from "./classNames"
+import { Badge, Cluster, EmptyNotice, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 
 /** One status mark on a row. */
 interface AccountingRecordBadge {
@@ -60,14 +59,14 @@ export const AccountingRecordList = (props: AccountingRecordListProps) => (
                     </>
                 }
             >
-                <div className={ROW_FACTS_CLASS_NAME}>
+                <Cluster gap="inline" align="baseline" justify="between">
                     <Text weight="semibold" isSkeleton={props.isSkeleton}>
                         {record.amount}
                     </Text>
                     <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
                         {record.footnote}
                     </Text>
-                </div>
+                </Cluster>
             </ListRow>
         ))}
     </SurfaceListCard>

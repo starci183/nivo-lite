@@ -1,7 +1,8 @@
-import { Badge, SurfaceCard, Switch, Text } from "@starci/grammar/common"
+import { SurfaceCard } from "@starci/grammar/common"
+import { SwitchStatus } from "@/components/composites/SwitchStatus"
+import type { SwitchStatusProps } from "@/components/composites/SwitchStatus"
 import { SlotView } from "@/components/composites/SlotView"
 import type { AgentWorkSwitchView, DataSlot, SlotLabels } from "@/modules/types"
-import { STACK, SWITCH_ROW } from "./classNames"
 
 /** Copy and slot of the work switch card of one agent. */
 export interface AgentWorkSwitchCardBaseProps {
@@ -21,37 +22,29 @@ export interface AgentWorkSwitchCardBaseProps {
     readonly on: { readonly change: (on: boolean) => void; readonly retry: () => void }
 }
 
+/** The switch and its status, locked for anyone who may read it and not move it. */
+const switchOf = (
+    base: AgentWorkSwitchCardBaseProps,
+    view: AgentWorkSwitchView,
+    isSkeleton: boolean,
+): SwitchStatusProps => ({
+    label: base.props.switchLabel,
+    isSelected: view.isOn,
+    isSkeleton,
+    isDisabled: base.props.isDisabled || !view.canChange,
+    onChange: base.on.change,
+    tone: view.tone,
+    statusLabel: view.statusLabel,
+    help: base.props.help,
+    blocker: "",
+    quiet: view.canChange ? "" : base.props.ownerOnly,
+})
+
 /** Draws the kill switch of one agent: its label stays readable beside the switch, and the card says who may move it. */
 export const AgentWorkSwitchCardBase = (props: AgentWorkSwitchCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <SlotView {...props.props.read} onRetry={props.on.retry}>
-            {(view, isSkeleton) => (
-                <div className={STACK}>
-                    <div className={SWITCH_ROW}>
-                        <Switch
-                            name="agent-work"
-                            label={props.props.switchLabel}
-                            isLabelHidden
-                            isSelected={view.isOn}
-                            isSkeleton={isSkeleton}
-                            isDisabled={props.props.isDisabled || !view.canChange}
-                            onSelectedChange={props.on.change}
-                        />
-                        <Text weight="medium">{props.props.switchLabel}</Text>
-                    </div>
-                    <Badge isDot isSkeleton={isSkeleton} tone={view.tone}>
-                        {view.statusLabel}
-                    </Badge>
-                    <Text size="sm" tone="muted">
-                        {props.props.help}
-                    </Text>
-                    {view.canChange ? null : (
-                        <Text size="sm" tone="muted">
-                            {props.props.ownerOnly}
-                        </Text>
-                    )}
-                </div>
-            )}
+            {(view, isSkeleton) => <SwitchStatus {...switchOf(props, view, isSkeleton)} />}
         </SlotView>
     </SurfaceCard>
 )

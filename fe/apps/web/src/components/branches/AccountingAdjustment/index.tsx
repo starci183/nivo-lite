@@ -1,6 +1,5 @@
-import { Alert, Button, Form, Input, Text, Textarea } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Form, Input, Stack, Text, Textarea } from "@starci/grammar/common"
 import { AccountingFormActions } from "@/components/leaves/AccountingFormActions"
-import { BLOCK_CLASS_NAME, FORM_ACTIONS_CLASS_NAME } from "./classNames"
 
 interface LedgerAdjustForm {
     readonly intro: string
@@ -43,7 +42,7 @@ const AdjustForm = (props: AccountingAdjustmentProps) => {
     const form = props.props.form
     return (
         <Form label={props.props.adjustTitle} isPending={form.isSaving} onSubmit={props.on.submitAdjust}>
-            <div className={BLOCK_CLASS_NAME}>
+            <Stack gap="row">
                 <Text size="sm" tone="muted">
                     {form.intro}
                 </Text>
@@ -74,7 +73,7 @@ const AdjustForm = (props: AccountingAdjustmentProps) => {
                     isSaving={form.isSaving}
                     onCancel={props.on.cancelAdjust}
                 />
-            </div>
+            </Stack>
         </Form>
     )
 }
@@ -105,10 +104,10 @@ export const AccountingAdjustment = (props: AccountingAdjustmentProps) => {
     }
     if (drawer.adjustMode === "form") return <AdjustForm props={drawer} on={props.on} />
     return (
-        <div className={FORM_ACTIONS_CLASS_NAME}>
+        <Cluster gap="row">
             <Button intent="neutral" onPress={props.on.startAdjust}>
                 {drawer.openLabel}
             </Button>
-        </div>
+        </Cluster>
     )
 }

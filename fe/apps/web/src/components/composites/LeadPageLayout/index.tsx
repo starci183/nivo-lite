@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { PrimaryRailLayout } from "@starci/grammar/common"
-import { COLUMN_CLASS_NAME } from "./classNames"
+import { PrimaryRailLayout, Stack } from "@starci/grammar/common"
 
 /** The regions of the lead page body, each already connected to its data. */
 type LeadPageLayoutProps = {
@@ -13,7 +12,7 @@ export const LeadPageLayout = (props: LeadPageLayoutProps) => (
     <PrimaryRailLayout
         railWidth="standard"
         align="start"
-        primary={<div className={COLUMN_CLASS_NAME}>{props.primary}</div>}
-        rail={<div className={COLUMN_CLASS_NAME}>{props.rail}</div>}
+        primary={<Stack gap="region">{props.primary}</Stack>}
+        rail={<Stack gap="region">{props.rail}</Stack>}
     />
 )

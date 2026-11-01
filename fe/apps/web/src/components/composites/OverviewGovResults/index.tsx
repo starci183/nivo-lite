@@ -1,15 +1,8 @@
 import { Fragment } from "react"
-import { Divider, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Cluster, Divider, SectionHeader, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovStatusRow } from "@/hooks/overviewResults"
-import {
-    STACK_CLASS_NAME,
-    GOAL_LINE_CLASS_NAME,
-    STATUS_LIST_CLASS_NAME,
-    STATUS_CELL_CLASS_NAME,
-    STATUS_LABEL_CLASS_NAME,
-    STATUS_ROW_CLASS_NAME,
-} from "./classNames"
+import { STATUS_CELL_CLASS_NAME, STATUS_LABEL_CLASS_NAME } from "./classNames"
 
 /** The figures of the results block. */
 export interface OverviewGovResultsProps {
@@ -32,24 +25,28 @@ interface StatusRowProps {
 
 /** One status: what it is and what it rests on, then its figure. */
 const StatusRow = (props: StatusRowProps) => (
-    <div className={STATUS_ROW_CLASS_NAME}>
+    <Cluster gap="section" align="start" justify="between">
         <div className={STATUS_LABEL_CLASS_NAME}>
-            <Text size="sm" weight="semibold">
-                {props.row.label}
-            </Text>
-            <Text size="xs" tone="muted">
-                {props.row.context}
-            </Text>
+            <Stack gap="identity">
+                <Text size="sm" weight="semibold">
+                    {props.row.label}
+                </Text>
+                <Text size="xs" tone="muted">
+                    {props.row.context}
+                </Text>
+            </Stack>
         </div>
         <div className={STATUS_CELL_CLASS_NAME}>
-            <Text weight="semibold">{props.row.value}</Text>
-            {props.row.count === null ? null : (
-                <Text size="xs" tone="muted">
-                    {props.row.count}
-                </Text>
-            )}
+            <Stack gap="identity">
+                <Text weight="semibold">{props.row.value}</Text>
+                {props.row.count === null ? null : (
+                    <Text size="xs" tone="muted">
+                        {props.row.count}
+                    </Text>
+                )}
+            </Stack>
         </div>
-    </div>
+    </Cluster>
 )
 
 /** The results by status, each figure naming what it rests on. */
@@ -57,32 +54,30 @@ export const OverviewGovResults = (props: OverviewGovResultsProps) => (
     <AccountingBlock label={props.figures.title}>
         <SectionHeader level={2} title={props.figures.title} description={props.figures.intro} />
         <SurfaceCard ariaLabel={props.figures.title}>
-            <div className={STACK_CLASS_NAME}>
-                <div className={STATUS_LIST_CLASS_NAME}>
-                    {props.figures.rows.map((row, index) => (
-                        <Fragment key={row.id}>
-                            {index > 0 ? <Divider semantics="presentation" /> : null}
-                            <StatusRow row={row} />
-                        </Fragment>
-                    ))}
-                </div>
+            <Stack gap="row">
+                {props.figures.rows.map((row, index) => (
+                    <Fragment key={row.id}>
+                        {index > 0 ? <Divider semantics="presentation" /> : null}
+                        <StatusRow row={row} />
+                    </Fragment>
+                ))}
                 <Text size="sm" tone="muted">
                     {props.figures.service}
                 </Text>
                 {props.figures.goals.map((goal) => (
-                    <div key={goal.id} className={GOAL_LINE_CLASS_NAME}>
+                    <Cluster key={goal.id} gap="row">
                         <Text size="sm" {...(goal.isSet ? {} : { tone: "muted" as const })}>
                             {goal.text}
                         </Text>
                         {goal.isSet ? null : (
                             <TextAction href={props.figures.goalHref}>{props.figures.goalSetLabel}</TextAction>
                         )}
-                    </div>
+                    </Cluster>
                 ))}
                 <Text size="xs" tone="muted">
                     {props.figures.testNote}
                 </Text>
-            </div>
+            </Stack>
         </SurfaceCard>
     </AccountingBlock>
 )

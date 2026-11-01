@@ -1,12 +1,14 @@
 import {
     Alert,
     Button,
+    Cluster,
     EmptyNotice,
     Heading,
     List,
     ListItem,
     Meter,
     Select,
+    Stack,
     Stepper,
     Text,
     Textarea,
@@ -15,14 +17,6 @@ import { LeadPanel } from "@/components/composites/LeadPanel"
 import { SlotView } from "@/components/composites/SlotView"
 import { Icon } from "@/components/leaves/Icon"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import {
-    EVIDENCE_HEAD_CLASS_NAME,
-    EVIDENCE_ITEM_CLASS_NAME,
-    EVIDENCE_LIST_CLASS_NAME,
-    EVIDENCE_STACK_CLASS_NAME,
-    FORM_STACK_CLASS_NAME,
-    STACK_CLASS_NAME,
-} from "./classNames"
 
 /** One recorded piece of evidence, already resolved to text. */
 export interface EvidenceView {
@@ -102,7 +96,7 @@ export const LeadOutcomeBase = (props: LeadOutcomeBaseProps) => {
         <LeadPanel anchor="outcome" label={l.title}>
             <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
                 {(view, isSkeleton) => (
-                    <div className={STACK_CLASS_NAME}>
+                    <Stack gap="region">
                         <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
                             {view.fact}
                         </Text>
@@ -112,7 +106,7 @@ export const LeadOutcomeBase = (props: LeadOutcomeBaseProps) => {
                             currentStepId={view.currentStepId}
                             isLoading={isSkeleton}
                         />
-                        <div className={EVIDENCE_STACK_CLASS_NAME}>
+                        <Stack gap="inline">
                             <Meter
                                 label={l.meterLabel}
                                 value={view.meterValue}
@@ -123,9 +117,9 @@ export const LeadOutcomeBase = (props: LeadOutcomeBaseProps) => {
                             <Text as="p" size="xs" tone="muted" isSkeleton={isSkeleton}>
                                 {view.evidenceNote}
                             </Text>
-                        </div>
+                        </Stack>
                         {renderOutcomeFields({ l, view, on, p, isSkeleton })}
-                    </div>
+                    </Stack>
                 )}
             </SlotView>
         </LeadPanel>
@@ -143,7 +137,7 @@ interface RenderOutcomeFieldsContext {
 /** Builds the LeadOutcomeContent section from the current view. */
 const renderOutcomeFields = ({ l, view, on, p, isSkeleton }: RenderOutcomeFieldsContext) => (
     <>
-        <div className={FORM_STACK_CLASS_NAME}>
+        <Stack gap="section">
             <Select
                 label={l.stageLabel}
                 options={l.stageOptions}
@@ -174,7 +168,7 @@ const renderOutcomeFields = ({ l, view, on, p, isSkeleton }: RenderOutcomeFields
             >
                 {l.recordLabel}
             </Button>
-        </div>
+        </Stack>
         {isSkeleton ? null : renderRecorded({ l, view })}
     </>
 )
@@ -185,32 +179,34 @@ const renderRecorded = ({ l, view }: Pick<RenderOutcomeFieldsContext, "l" | "vie
         {view.recorded.length === 0 ? (
             <EmptyNotice message={l.noEvidenceTitle} description={l.noEvidenceHint} />
         ) : (
-            <div className={EVIDENCE_STACK_CLASS_NAME}>
+            <Stack gap="inline">
                 <Heading level={3}>{view.recordedTitle}</Heading>
-                <List className={EVIDENCE_LIST_CLASS_NAME} label={view.recordedTitle}>
+                <List label={view.recordedTitle}>
                     {view.recorded.map((item) => (
-                        <ListItem key={item.id} className={EVIDENCE_ITEM_CLASS_NAME}>
-                            <div className={EVIDENCE_HEAD_CLASS_NAME}>
-                                <Text
-                                    as="span"
-                                    size="xs"
-                                    tone="muted"
-                                    weight="semibold"
-                                    startContent={<Icon props={EVIDENCE_ICON} />}
-                                >
-                                    {l.evidenceLabel}
+                        <ListItem key={item.id}>
+                            <Stack gap="identity">
+                                <Cluster gap="inline">
+                                    <Text
+                                        as="span"
+                                        size="xs"
+                                        tone="muted"
+                                        weight="semibold"
+                                        startContent={<Icon props={EVIDENCE_ICON} />}
+                                    >
+                                        {l.evidenceLabel}
+                                    </Text>
+                                    <Text as="span" size="xs" tone="muted">
+                                        {item.byline}
+                                    </Text>
+                                </Cluster>
+                                <Text as="p" size="sm">
+                                    {item.text}
                                 </Text>
-                                <Text as="span" size="xs" tone="muted">
-                                    {item.byline}
-                                </Text>
-                            </div>
-                            <Text as="p" size="sm">
-                                {item.text}
-                            </Text>
+                            </Stack>
                         </ListItem>
                     ))}
                 </List>
-            </div>
+            </Stack>
         )}
     </>
 )

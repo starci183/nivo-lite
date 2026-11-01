@@ -1,5 +1,5 @@
 import { ContentEditorAssets } from "@/components/composites/ContentEditorAssets"
-import { Alert, AlertDialog, Button, Dialog, Text, type BadgeTone } from "@starci/grammar/common"
+import { Alert, AlertDialog, Button, Cluster, Dialog, Stack, Text, type BadgeTone } from "@starci/grammar/common"
 import { ContentEditorDetails } from "@/components/leaves/ContentEditorDetails"
 import { ContentEditorHistory } from "@/components/leaves/ContentEditorHistory"
 import type { LinkRow } from "@/components/leaves/ContentEditorLinks"
@@ -19,7 +19,6 @@ import type {
     Pillar,
     PublishStep,
 } from "@/modules/types"
-import { DESCRIPTION_CLASS_NAME, FOOTER_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What the post editor draws. */
 export interface ContentPostEditorBaseProps {
@@ -102,7 +101,7 @@ export const ContentPostEditorBase = (props: ContentPostEditorBaseProps) => {
             title={item.title}
             closeLabel={t("close")}
             description={
-                <div className={DESCRIPTION_CLASS_NAME}>
+                <Cluster gap="inline">
                     <ContentStatusBadge tone={props.props.tone} label={props.props.statusLabel} />
                     {props.props.scheduledText ? (
                         <Text as="span" size="sm" tone="muted">
@@ -114,7 +113,7 @@ export const ContentPostEditorBase = (props: ContentPostEditorBaseProps) => {
                             {t("approvedBy", { who: item.approved_by })}
                         </Text>
                     ) : null}
-                </div>
+                </Cluster>
             }
             footer={canManage ? renderEditorFooter(props) : undefined}
         >
@@ -154,7 +153,7 @@ const renderEditorFooter = (props: ContentPostEditorBaseProps) => {
     )
 
     return (
-        <div className={FOOTER_CLASS_NAME}>
+        <Cluster gap="inline" justify="end">
             {["idea", "draft", "skipped"].includes(status) ? (
                 <Button intent="destructive" step="entry" isDisabled={isPending} onPress={() => on.deleteOpen(true)}>
                     {t("remove")}
@@ -178,7 +177,7 @@ const renderEditorFooter = (props: ContentPostEditorBaseProps) => {
                     {t("submit")}
                 </Button>
             ) : null}
-        </div>
+        </Cluster>
     )
 }
 
@@ -224,7 +223,7 @@ const renderEditorBody = (props: ContentPostEditorBaseProps) => {
     const on = props.on
     const status = item.status
     return (
-        <div className={FORM_CLASS_NAME}>
+        <Stack gap="row">
             {props.props.note ? (
                 <Alert
                     title={props.props.note.text}
@@ -256,7 +255,7 @@ const renderEditorBody = (props: ContentPostEditorBaseProps) => {
                     {t("reopenNote")}
                 </Text>
             ) : null}
-        </div>
+        </Stack>
     )
 }
 

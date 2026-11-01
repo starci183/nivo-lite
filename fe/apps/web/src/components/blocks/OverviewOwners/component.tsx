@@ -4,10 +4,12 @@ import type { ComponentProps } from "react"
 import {
     Badge,
     Button,
+    Cluster,
     EmptyNotice,
     ListRow,
     Region,
     SectionHeader,
+    Stack,
     SurfaceCard,
     SurfaceListCard,
     Text,
@@ -17,15 +19,7 @@ import { TileIcon } from "@/components/composites/TileIcon"
 import type { ModuleIconName } from "@/modules/types"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import {
-    GROUPS_CLASS_NAME,
-    MAIN_CLASS_NAME,
-    META_CLASS_NAME,
-    OWNER_MARK_CLASS_NAME,
-    OWNER_TEXT_CLASS_NAME,
-    SECTION_CLASS_NAME,
-    SECTION_HEAD_CLASS_NAME,
-} from "./classNames"
+import { OWNER_MARK_CLASS_NAME, OWNER_TEXT_CLASS_NAME } from "./classNames"
 
 /** One responsibility row, already in the reader's words. */
 export interface OverviewOwnersRow {
@@ -95,7 +89,7 @@ export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => {
         [props.props.groups],
     )
     return (
-        <div className={MAIN_CLASS_NAME}>
+        <Stack gap="section">
             <SectionHeader
                 level={2}
                 title={props.props.title}
@@ -103,7 +97,7 @@ export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => {
                 isSkeleton={props.props.isSkeleton}
             />
             <OwnersBody {...props} groups={groups} />
-        </div>
+        </Stack>
     )
 }
 
@@ -131,42 +125,46 @@ const OwnersBody = ({ groups, ...props }: OwnersBodyProps) => {
         )
     }
     return (
-        <div className={GROUPS_CLASS_NAME}>
+        <Stack gap="region">
             {groups.map((group) => (
-                <Region key={group.key} className={SECTION_CLASS_NAME} label={group.ariaLabel}>
-                    <div className={SECTION_HEAD_CLASS_NAME}>
-                        <div className={OWNER_MARK_CLASS_NAME}>
-                            {group.glyph === null ? (
-                                <PersonAvatar name={group.name} size="md" />
-                            ) : (
-                                <AgentMark
-                                    glyph={nivoIconSource(group.glyph, "leading")}
-                                    label={group.name}
-                                    module={group.module}
-                                    size="md"
-                                />
-                            )}
-                            <div className={OWNER_TEXT_CLASS_NAME}>
-                                <Text weight="semibold" overflow="truncate">
-                                    {group.name}
-                                </Text>
-                                <Text size="sm" tone="muted" overflow="truncate">
-                                    {group.roleText}
-                                </Text>
+                <Region key={group.key} label={group.ariaLabel}>
+                    <Stack gap="row">
+                        <Cluster gap="row" justify="between" wrap={false}>
+                            <div className={OWNER_MARK_CLASS_NAME}>
+                                <Cluster gap="row" wrap={false}>
+                                    {group.glyph === null ? (
+                                        <PersonAvatar name={group.name} size="md" />
+                                    ) : (
+                                        <AgentMark
+                                            glyph={nivoIconSource(group.glyph, "leading")}
+                                            label={group.name}
+                                            module={group.module}
+                                            size="md"
+                                        />
+                                    )}
+                                    <div className={OWNER_TEXT_CLASS_NAME}>
+                                        <Text weight="semibold" overflow="truncate">
+                                            {group.name}
+                                        </Text>
+                                        <Text size="sm" tone="muted" overflow="truncate">
+                                            {group.roleText}
+                                        </Text>
+                                    </div>
+                                </Cluster>
                             </div>
-                        </div>
-                        <Text size="sm" tone="muted">
-                            {group.countText}
-                        </Text>
-                    </div>
-                    <SurfaceListCard ariaLabel={group.cardsLabel}>
-                        {group.rows.map((row) => (
-                            <OverviewOwnerRow key={row.id} row={row} props={props.props} on={props.on} />
-                        ))}
-                    </SurfaceListCard>
+                            <Text size="sm" tone="muted">
+                                {group.countText}
+                            </Text>
+                        </Cluster>
+                        <SurfaceListCard ariaLabel={group.cardsLabel}>
+                            {group.rows.map((row) => (
+                                <OverviewOwnerRow key={row.id} row={row} props={props.props} on={props.on} />
+                            ))}
+                        </SurfaceListCard>
+                    </Stack>
                 </Region>
             ))}
-        </div>
+        </Stack>
     )
 }
 
@@ -203,7 +201,7 @@ const OverviewOwnerRow = ({ row, ...props }: OverviewOwnerRowProps) => (
             </>
         }
     >
-        <div className={META_CLASS_NAME}>
+        <Cluster gap="inline">
             <Text size="xs" tone="muted">
                 {row.ownerText}
             </Text>
@@ -216,7 +214,7 @@ const OverviewOwnerRow = ({ row, ...props }: OverviewOwnerRowProps) => (
                     {row.dueText}
                 </Text>
             )}
-        </div>
+        </Cluster>
         {row.nextText === null ? null : <Text size="sm">{row.nextText}</Text>}
     </ListRow>
 )

@@ -1,8 +1,8 @@
-import { SectionHeader, Text } from "@starci/grammar/common"
+import { Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { AccountingBlock } from "@/components/leaves/AccountingBlock"
+import { AccountingHeadLine } from "@/components/leaves/AccountingHeadLine"
 import { AccountingRecordList } from "@/components/leaves/AccountingRecordList"
-import { HEAD_CLASS_NAME } from "./classNames"
 
 /** One status mark on a row. */
 interface AccountingSectionBadge {
@@ -42,10 +42,9 @@ interface AccountingRecordSectionProps {
 /** A region with a heading, an optional action and form, the record list and a closing note. */
 export const AccountingRecordSection = (props: AccountingRecordSectionProps) => (
     <AccountingBlock label={props.title}>
-        <div className={HEAD_CLASS_NAME}>
-            <SectionHeader level={2} title={props.title} description={props.intro} isSkeleton={props.isSkeleton} />
+        <AccountingHeadLine title={props.title} intro={props.intro} isSkeleton={props.isSkeleton}>
             {props.action}
-        </div>
+        </AccountingHeadLine>
         {props.children}
         <AccountingRecordList
             label={props.title}

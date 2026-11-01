@@ -1,6 +1,6 @@
-import { Button, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Cluster, ListRow, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { ContentT, PostView, QuoteView } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, QUOTE_CLASS_NAME } from "./classNames"
+import { QUOTE_CLASS_NAME } from "./classNames"
 
 /** Props of {@link ContentQueueCard}. */
 interface ContentQueueCardProps {
@@ -30,7 +30,7 @@ export const ContentQueueCard = (props: ContentQueueCardProps) => {
             title={post.title}
             description={post.when}
             actions={
-                <div className={ACTIONS_CLASS_NAME}>
+                <Cluster gap="inline">
                     <Button intent="neutral" size="sm" onPress={() => props.onOpen(post.id)}>
                         {t("queueOpen")}
                     </Button>
@@ -57,18 +57,20 @@ export const ContentQueueCard = (props: ContentQueueCardProps) => {
                             </Button>
                         </>
                     ) : null}
-                </div>
+                </Cluster>
             }
         >
             {props.quotes.map((quote) => (
                 <SurfaceCard key={quote.channel} ariaLabel={quote.label}>
                     <div className={QUOTE_CLASS_NAME}>
-                        <Text size="xs" tone="muted" weight="medium">
-                            {quote.label}
-                        </Text>
-                        <Text as="p" size="sm">
-                            {quote.text}
-                        </Text>
+                        <Stack gap="identity">
+                            <Text size="xs" tone="muted" weight="medium">
+                                {quote.label}
+                            </Text>
+                            <Text as="p" size="sm">
+                                {quote.text}
+                            </Text>
+                        </Stack>
                     </div>
                 </SurfaceCard>
             ))}

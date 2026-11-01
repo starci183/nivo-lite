@@ -1,6 +1,5 @@
-import { Input, Tabs, Textarea } from "@starci/grammar/common"
+import { Input, Stack, Tabs, Textarea } from "@starci/grammar/common"
 import type { ContentT } from "@/modules/types"
-import { FIELDS_CLASS_NAME } from "./classNames"
 
 /** The text of the channel that is open. */
 export interface OpenVariant {
@@ -36,7 +35,7 @@ export const ContentEditorVariants = (props: ContentEditorVariantsProps) => (
             items={props.tabs}
             onSelect={props.onTab}
         />
-        <div className={FIELDS_CLASS_NAME}>
+        <Stack gap="row">
             <Textarea
                 label={props.t("variantFor", { channel: props.open.label })}
                 rows={9}
@@ -63,6 +62,6 @@ export const ContentEditorVariants = (props: ContentEditorVariantsProps) => (
                 isDisabled={!props.isEditable}
                 onValueChange={props.onNote}
             />
-        </div>
+        </Stack>
     </>
 )

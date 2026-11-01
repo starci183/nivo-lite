@@ -2,28 +2,21 @@ import {
     Alert,
     Badge,
     Button,
+    Cluster,
     DescriptionList,
     EmptyNotice,
+    Grid,
     Heading,
     List,
     ListItem,
-    SurfaceCard,
+    Quote,
+    Stack,
     Text,
 } from "@starci/grammar/common"
 import { LeadMark } from "@/components/composites/LeadMark"
 import { LeadPanel } from "@/components/composites/LeadPanel"
 import { SlotView } from "@/components/composites/SlotView"
 import type { LeadIcon, DataSlot, SlotLabels } from "@/modules/types"
-import {
-    CHIPS_CLASS_NAME,
-    FACTS_GRID_CLASS_NAME,
-    GROUP_CLASS_NAME,
-    HEADER_ACTIONS_CLASS_NAME,
-    HEADER_CLASS_NAME,
-    LIST_CLASS_NAME,
-    QUOTE_CLASS_NAME,
-    STACK_CLASS_NAME,
-} from "./classNames"
 
 /** One line of the AI brief with its glyph. */
 export interface BriefLine {
@@ -117,10 +110,10 @@ interface RenderBriefAndSignalsContext {
 /** Builds the LeadContextContent section from the current view. */
 const renderBriefAndSignals = ({ l, view }: RenderBriefAndSignalsContext) => (
     <>
-        <div className={GROUP_CLASS_NAME}>
+        <Stack gap="row">
             <Heading level={3}>{l.briefLabel}</Heading>
             {view.briefLines.length > 0 ? (
-                <List className={LIST_CLASS_NAME} label={l.briefLabel}>
+                <List label={l.briefLabel}>
                     {view.briefLines.map((line) => (
                         <ListItem key={line.id}>
                             <Text startContent={<LeadMark icon={line.icon} />}>{line.text}</Text>
@@ -130,18 +123,18 @@ const renderBriefAndSignals = ({ l, view }: RenderBriefAndSignalsContext) => (
             ) : (
                 <Text>{view.briefText}</Text>
             )}
-        </div>
+        </Stack>
         {view.signals.length > 0 ? (
-            <div className={GROUP_CLASS_NAME}>
+            <Stack gap="row">
                 <Heading level={3}>{l.signalsLabel}</Heading>
-                <div className={CHIPS_CLASS_NAME}>
+                <Cluster gap="inline">
                     {view.signals.map((signal) => (
                         <Badge key={signal.id} tone="warning">
                             {signal.label}
                         </Badge>
                     ))}
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
         ) : null}
     </>
 )
@@ -156,16 +149,16 @@ interface RenderContextBodyContext {
 }
 /** Builds the Stack section from the current view. */
 const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyContext) => (
-    <div className={STACK_CLASS_NAME}>
+    <Stack gap="region">
         {view.hasBrief ? (
-            <div className={HEADER_CLASS_NAME}>
-                <div className={HEADER_ACTIONS_CLASS_NAME}>
+            <Cluster gap="row" justify="between">
+                <Cluster gap="inline">
                     <Badge tone="neutral">{l.aiChip}</Badge>
                     <Text size="sm" tone="muted">
                         {view.statusText}
                     </Text>
-                </div>
-                <div className={HEADER_ACTIONS_CLASS_NAME}>
+                </Cluster>
+                <Cluster gap="inline">
                     {view.hasConversation ? (
                         <Button intent="neutral" size="sm" href="#history">
                             {l.viewConversation}
@@ -177,10 +170,10 @@ const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyCont
                     <Button intent="neutral" size="sm" isPending={p.isPending} onPress={on.refresh}>
                         {l.refresh}
                     </Button>
-                </div>
-            </div>
+                </Cluster>
+            </Cluster>
         ) : null}
-        <div className={FACTS_GRID_CLASS_NAME}>
+        <Grid kind="cards" columns={2}>
             <DescriptionList
                 layout="stacked"
                 isDivided
@@ -199,15 +192,11 @@ const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyCont
                     { id: "captured", term: l.factCaptured, description: view.captured },
                 ]}
             />
-        </div>
-        <div className={GROUP_CLASS_NAME}>
+        </Grid>
+        <Stack gap="row">
             <Heading level={3}>{l.customerWords}</Heading>
-            <SurfaceCard>
-                <blockquote className={QUOTE_CLASS_NAME}>
-                    <Text isSkeleton={isSkeleton}>{view.need}</Text>
-                </blockquote>
-            </SurfaceCard>
-        </div>
+            <Quote isSkeleton={isSkeleton}>{view.need}</Quote>
+        </Stack>
         {view.hasBrief ? (
             renderBriefAndSignals({ l, view })
         ) : (
@@ -221,5 +210,5 @@ const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyCont
             />
         )}
         {p.error === null ? null : <Alert tone="negative" title={l.errorTitle} description={p.error} />}
-    </div>
+    </Stack>
 )

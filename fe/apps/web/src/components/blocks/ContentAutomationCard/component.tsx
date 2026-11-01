@@ -1,6 +1,5 @@
-import { Alert, SectionHeader, SurfaceCard, Switch } from "@starci/grammar/common"
+import { Alert, SectionHeader, Stack, SurfaceCard, Switch } from "@starci/grammar/common"
 import type { ContentNoteView, ContentT } from "@/modules/types"
-import { FORM_CLASS_NAME } from "./classNames"
 
 /** One automation switch. */
 export interface AutomationRow {
@@ -30,7 +29,7 @@ export const ContentAutomationCardBase = (props: ContentAutomationCardBaseProps)
     const { t } = props.props
     return (
         <SurfaceCard ariaLabel={t("settingsAuto")}>
-            <div className={FORM_CLASS_NAME}>
+            <Stack gap="row">
                 <SectionHeader level={2} title={t("settingsAuto")} description={t("settingsAutoBody")} />
                 {props.props.rows.map((row) => (
                     <Switch
@@ -50,7 +49,7 @@ export const ContentAutomationCardBase = (props: ContentAutomationCardBaseProps)
                         onDismiss={props.on.dismissNote}
                     />
                 ) : null}
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 }

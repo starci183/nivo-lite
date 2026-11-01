@@ -1,6 +1,15 @@
-import { Button, Page, SectionHeader, Skeleton, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
+import {
+    Button,
+    Grid,
+    Page,
+    SectionHeader,
+    Skeleton,
+    Stack,
+    SurfaceCard,
+    SurfaceListCard,
+    Text,
+} from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
-import { KPI_GRID_CLASS_NAME, PAGE_CLASS_NAME } from "./classNames"
 
 /** A block that keeps its heading while its content loads. */
 interface OverviewLoadingBlock {
@@ -35,7 +44,7 @@ export const OverviewLoadingPageBase = (props: OverviewLoadingPageBaseProps) => 
             actions: <Button intent="neutral">-</Button>,
         }}
     >
-        <div className={PAGE_CLASS_NAME}>
+        <Stack gap="section">
             {props.props.blocks.map((block) => (
                 <AccountingBlock key={block.id} label={block.title}>
                     <SectionHeader level={2} title={block.title} description={block.description ?? undefined} />
@@ -46,7 +55,7 @@ export const OverviewLoadingPageBase = (props: OverviewLoadingPageBaseProps) => 
             ))}
             <SectionHeader level={2} title={props.props.ownerBelowTitle} />
             <AccountingBlock label={props.props.kpiLabel}>
-                <div className={KPI_GRID_CLASS_NAME}>
+                <Grid kind="cards">
                     {props.props.kpiLabels.map((label) => (
                         <SurfaceCard key={label} ariaLabel={label}>
                             <Text size="xs" tone="muted">
@@ -57,10 +66,10 @@ export const OverviewLoadingPageBase = (props: OverviewLoadingPageBaseProps) => 
                             </Text>
                         </SurfaceCard>
                     ))}
-                </div>
+                </Grid>
             </AccountingBlock>
             <SectionHeader level={2} title={props.props.byOwnerTitle} />
             <SurfaceListCard ariaLabel={props.props.listLabel} isLoading />
-        </div>
+        </Stack>
     </Page>
 )

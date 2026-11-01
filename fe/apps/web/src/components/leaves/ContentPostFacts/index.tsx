@@ -1,6 +1,5 @@
-import { Badge, Text } from "@starci/grammar/common"
+import { Badge, Cluster, Stack, Text } from "@starci/grammar/common"
 import type { PostView } from "@/modules/types"
-import { CHIPS_CLASS_NAME, FACTS_CLASS_NAME } from "./classNames"
 
 /** Props of {@link ContentPostFacts}. */
 interface ContentPostFactsProps {
@@ -15,7 +14,7 @@ interface ContentPostFactsProps {
 
 /** The facts of a post under its title: when, the short brief, its channels and its theme. */
 export const ContentPostFacts = (props: ContentPostFactsProps) => (
-    <div className={FACTS_CLASS_NAME}>
+    <Stack gap="identity">
         <Text size="xs" tone="muted">
             {props.post.when}
         </Text>
@@ -24,7 +23,7 @@ export const ContentPostFacts = (props: ContentPostFactsProps) => (
                 {props.post.brief}
             </Text>
         ) : null}
-        <div className={CHIPS_CLASS_NAME}>
+        <Cluster gap="inline">
             {props.post.channels.map((label) => (
                 <Badge key={label} tone="neutral">
                     {label}
@@ -35,6 +34,6 @@ export const ContentPostFacts = (props: ContentPostFactsProps) => (
                     {props.post.pillar ?? props.noPillar}
                 </Text>
             ) : null}
-        </div>
-    </div>
+        </Cluster>
+    </Stack>
 )

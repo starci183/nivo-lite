@@ -1,5 +1,4 @@
-import { Button, Input, SurfaceCard } from "@starci/grammar/common"
-import { ACTIONS, STACK } from "./classNames"
+import { Button, Cluster, Input, Stack, SurfaceCard } from "@starci/grammar/common"
 
 /** Copy and state of the reply card of a chatbot. */
 export interface AgentReplyCardBaseProps {
@@ -28,7 +27,7 @@ export interface AgentReplyCardBaseProps {
 /** Draws the reply card of a chatbot: the longest a customer waits before the app answers directly, and the holding message. */
 export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <div className={STACK}>
+        <Stack gap="section">
             <Input
                 id="reply-timeout"
                 name="reply-timeout"
@@ -38,7 +37,7 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                 isDisabled={props.props.isPending}
                 onValueChange={props.on.timeout}
             />
-            <div className={ACTIONS}>
+            <Cluster gap="row">
                 <Button
                     intent="neutral"
                     isPending={props.props.isPending}
@@ -47,7 +46,7 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                 >
                     {props.props.saveLabel}
                 </Button>
-            </div>
+            </Cluster>
             <Input
                 id="holding-message"
                 name="holding-message"
@@ -58,7 +57,7 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                 isDisabled={props.props.isPending}
                 onValueChange={props.on.holding}
             />
-            <div className={ACTIONS}>
+            <Cluster gap="row">
                 <Button
                     intent="neutral"
                     isPending={props.props.isPending}
@@ -67,7 +66,7 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                 >
                     {props.props.saveLabel}
                 </Button>
-            </div>
-        </div>
+            </Cluster>
+        </Stack>
     </SurfaceCard>
 )

@@ -1,3 +1,4 @@
+import { Cluster, Stack } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { AgentDashboardFrame } from "@/components/blocks/AgentDashboardFrame"
 import { ContentAddPost } from "@/components/blocks/ContentAddPost"
@@ -16,7 +17,6 @@ import { ContentQuickIdea } from "@/components/blocks/ContentQuickIdea"
 import { ContentReadOnlyNotice } from "@/components/blocks/ContentReadOnlyNotice"
 import { ContentWorkbenchGate } from "@/components/blocks/ContentWorkbenchGate"
 import { ContentWorkbenchStatus } from "@/components/blocks/ContentWorkbenchStatus"
-import { PANEL_CLASS_NAME, TOOLBAR_CLASS_NAME } from "./classNames"
 
 /** The tab names of the content workbench. */
 interface ContentWorkbenchTabs {
@@ -47,22 +47,22 @@ interface PanelProps {
 
 /** A tab panel: the plan command for a member who may manage the content, the read status, then the blocks of the tab. */
 const Panel = (props: PanelProps) => (
-    <div className={PANEL_CLASS_NAME}>
+    <Stack gap="row">
         <ContentWorkbenchGate requireManage>
             <ContentPlanAction />
         </ContentWorkbenchGate>
         <ContentWorkbenchStatus />
         {props.children}
-    </div>
+    </Stack>
 )
 
 /** The commands above the calendar and the list, for a member who may manage the content. */
 const Commands = () => (
     <ContentWorkbenchGate requireManage>
-        <div className={TOOLBAR_CLASS_NAME}>
+        <Cluster gap="inline">
             <ContentQuickIdea />
             <ContentAddPost />
-        </div>
+        </Cluster>
     </ContentWorkbenchGate>
 )
 

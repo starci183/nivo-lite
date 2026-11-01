@@ -1,7 +1,6 @@
-import { DescriptionList, SurfaceCard, Text } from "@starci/grammar/common"
+import { DescriptionList, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { STACK_CLASS } from "./classNames"
 
 /** One group of assigners: the roles, or the rooms. */
 export interface AssignerRow {
@@ -28,13 +27,13 @@ export interface AgentProfileAssignableBaseProps {
 /** Draws the roles and the department rooms whose members may hand the agent work. */
 export const AgentProfileAssignableBase = (props: AgentProfileAssignableBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <div className={STACK_CLASS}>
+        <Stack gap="section">
             <Text size="sm" tone="muted">
                 {props.props.description}
             </Text>
             <SlotView {...props.props.read} onRetry={props.on.retry}>
                 {(rows, isSkeleton) => <DescriptionList layout="stacked" isLoading={isSkeleton} items={rows} />}
             </SlotView>
-        </div>
+        </Stack>
     </SurfaceCard>
 )

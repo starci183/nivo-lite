@@ -1,7 +1,6 @@
-import { Badge, Button, ListRow, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, Button, ListRow, Stack, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { STACK_CLASS_NAME } from "./classNames"
 
 /** One order in the history with its display text resolved. */
 export interface SalesOrderRowView {
@@ -41,7 +40,7 @@ export const SalesOrdersBase = (props: SalesOrdersBaseProps) => {
     const { props: p, on } = props
     return (
         <SurfaceCard label={p.title} headingLevel={2}>
-            <div className={STACK_CLASS_NAME}>
+            <Stack gap="section">
                 <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={p.slotLabels} onRetry={on.retry}>
                     {(rows, isSkeleton) => (
                         <SurfaceListCard ariaLabel={p.title} isLoading={isSkeleton}>
@@ -85,7 +84,7 @@ export const SalesOrdersBase = (props: SalesOrdersBaseProps) => {
                         {p.paginationFailure === null ? p.loadMoreLabel : p.retryLabel}
                     </Button>
                 ) : null}
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 }

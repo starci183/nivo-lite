@@ -1,9 +1,8 @@
-import { Alert, Button, EmptyNotice, ListRow, SurfaceListCard } from "@starci/grammar/common"
+import { Alert, Button, EmptyNotice, ListRow, Stack, SurfaceListCard } from "@starci/grammar/common"
 import { ContentChannelBadges } from "@/components/leaves/ContentChannelBadges"
 import { ContentPostFacts } from "@/components/leaves/ContentPostFacts"
 import { ContentQueueCard } from "@/components/leaves/ContentQueueCard"
 import type { ContentNoteView, ContentT, PostView, QuoteView } from "@/modules/types"
-import { PANEL_CLASS_NAME } from "./classNames"
 
 /** A post waiting for the owner, with the text of each channel and whether a decision is open for it. */
 export interface WaitingPost {
@@ -48,7 +47,7 @@ export const ContentQueuePanelBase = (props: ContentQueuePanelBaseProps) => {
         />
     ))
     return (
-        <div className={PANEL_CLASS_NAME}>
+        <Stack gap="row">
             <Alert title={t("queueWhy")} tone="informative" />
             <SurfaceListCard
                 ariaLabel={t("tabQueue")}
@@ -75,6 +74,6 @@ export const ContentQueuePanelBase = (props: ContentQueuePanelBaseProps) => {
                     {readyRows}
                 </SurfaceListCard>
             ) : null}
-        </div>
+        </Stack>
     )
 }

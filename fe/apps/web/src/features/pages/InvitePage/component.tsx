@@ -17,7 +17,7 @@ export const InvitePageBase = (props: InvitePageBaseProps) => (
         primaryLabel={props.props.label}
         primary={
             <Page measure="reading">
-                <Stack gap="section" measure="form">
+                <Stack gap="region" measure="form">
                     <BrandLogo variant="full" height={40} />
                     <InviteOverview token={props.props.token} />
                 </Stack>

@@ -7788,6 +7788,7 @@
   },
   "driveConnection": {
     "title": "Google Drive",
+    "stepsLabel": "Tiến độ thiết lập",
     "crumbLabel": "Đường dẫn",
     "crumbConnections": "Kết nối",
     "crumbDrive": "Google Drive",
@@ -7886,6 +7887,7 @@
   },
   "telegramConnection": {
     "title": "Kết nối Bot Telegram",
+    "stepsLabel": "Tiến độ thiết lập",
     "crumbLabel": "Đường dẫn",
     "crumbConnections": "Kết nối",
     "crumbTelegram": "Bot Telegram",

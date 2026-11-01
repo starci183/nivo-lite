@@ -1,8 +1,8 @@
-import { Alert, Badge, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Badge, Cluster, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { COPY_CLASS, PERSON_CLASS, STACK_CLASS } from "./classNames"
+import { COPY_CLASS } from "./classNames"
 
 /** Who answers for the agent, with every word resolved. */
 export interface OwnerView {
@@ -34,21 +34,23 @@ export const AgentProfileOwnerBase = (props: AgentProfileOwnerBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <SlotView {...props.props.read} onRetry={props.on.retry}>
             {(owner, isSkeleton) => (
-                <div className={STACK_CLASS}>
-                    <div className={PERSON_CLASS}>
+                <Stack gap="section">
+                    <Cluster gap="section" wrap={false}>
                         <PersonAvatar name={owner.name} size="lg" />
                         <div className={COPY_CLASS}>
-                            <Text weight="medium" isSkeleton={isSkeleton}>
-                                {owner.name}
-                            </Text>
-                            <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
-                                {owner.roleLabel}
-                            </Text>
-                            <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
-                                {owner.note}
-                            </Text>
+                            <Stack gap="identity">
+                                <Text weight="medium" isSkeleton={isSkeleton}>
+                                    {owner.name}
+                                </Text>
+                                <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                                    {owner.roleLabel}
+                                </Text>
+                                <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                                    {owner.note}
+                                </Text>
+                            </Stack>
                         </div>
-                    </div>
+                    </Cluster>
                     {owner.notice === null ? null : (
                         <Alert tone="cautionary" title={owner.notice.title} description={owner.notice.description} />
                     )}
@@ -57,7 +59,7 @@ export const AgentProfileOwnerBase = (props: AgentProfileOwnerBaseProps) => (
                             <Badge tone="neutral">{owner.fallback.label}</Badge> {owner.fallback.name}
                         </Text>
                     )}
-                </div>
+                </Stack>
             )}
         </SlotView>
     </SurfaceCard>

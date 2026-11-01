@@ -4,6 +4,7 @@ import {
     EmptyNotice,
     ListBox,
     ListRow,
+    Stack,
     SurfaceCard,
     SurfaceListCard,
     Text,
@@ -13,7 +14,7 @@ import { ContentMonthBar } from "@/components/leaves/ContentMonthBar"
 import { ContentPostFacts } from "@/components/leaves/ContentPostFacts"
 import { ContentStatusBadge } from "@/components/leaves/ContentStatusBadge"
 import type { ContentT, PostView } from "@/modules/types"
-import { AGENDA_CLASS_NAME, GRID_WRAP_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
+import { AGENDA_CLASS_NAME, GRID_WRAP_CLASS_NAME } from "./classNames"
 
 /** What the calendar panel draws. */
 export interface ContentCalendarPanelBaseProps {
@@ -64,7 +65,7 @@ export const ContentCalendarPanelBase = (props: ContentCalendarPanelBaseProps) =
         )
     }
     return (
-        <div className={PANEL_CLASS_NAME}>
+        <Stack gap="row">
             {props.props.note ? (
                 <Alert
                     title={props.props.note.text}
@@ -115,7 +116,7 @@ export const ContentCalendarPanelBase = (props: ContentCalendarPanelBaseProps) =
                     ))}
                 </SurfaceListCard>
             ) : null}
-        </div>
+        </Stack>
     )
 }
 
@@ -127,36 +128,38 @@ const renderContentCalendarGrid = (
 ) => {
     return (
         <div className={GRID_WRAP_CLASS_NAME}>
-            <ContentMonthGrid
-                title={title}
-                cells={props.props.cells}
-                byDay={props.props.byDay}
-                todayKey={props.props.todayKey}
-                pickedId={props.props.pickedId}
-                overKey={props.props.overKey}
-                expandedKey={props.props.expandedKey}
-                canManage={props.props.canManage}
-                weekdays={t("weekdays").split(",")}
-                t={t}
-                onOpen={props.on.open}
-                onDragStart={props.on.dragStart}
-                onPick={props.on.pick}
-                onDragEnd={props.on.dragEnd}
-                onDragOver={props.on.dragOver}
-                onDragLeave={props.on.dragLeave}
-                onDrop={props.on.drop}
-                onExpand={props.on.expand}
-            />
-            {props.props.canManage ? (
-                <Text size="xs" tone="muted">
-                    {t("dragHint")}
-                </Text>
-            ) : null}
-            {props.props.monthItems.length === 0 ? (
-                <Text size="sm" tone="muted">
-                    {t("emptyMonthBody")}
-                </Text>
-            ) : null}
+            <Stack gap="inline">
+                <ContentMonthGrid
+                    title={title}
+                    cells={props.props.cells}
+                    byDay={props.props.byDay}
+                    todayKey={props.props.todayKey}
+                    pickedId={props.props.pickedId}
+                    overKey={props.props.overKey}
+                    expandedKey={props.props.expandedKey}
+                    canManage={props.props.canManage}
+                    weekdays={t("weekdays").split(",")}
+                    t={t}
+                    onOpen={props.on.open}
+                    onDragStart={props.on.dragStart}
+                    onPick={props.on.pick}
+                    onDragEnd={props.on.dragEnd}
+                    onDragOver={props.on.dragOver}
+                    onDragLeave={props.on.dragLeave}
+                    onDrop={props.on.drop}
+                    onExpand={props.on.expand}
+                />
+                {props.props.canManage ? (
+                    <Text size="xs" tone="muted">
+                        {t("dragHint")}
+                    </Text>
+                ) : null}
+                {props.props.monthItems.length === 0 ? (
+                    <Text size="sm" tone="muted">
+                        {t("emptyMonthBody")}
+                    </Text>
+                ) : null}
+            </Stack>
         </div>
     )
 }

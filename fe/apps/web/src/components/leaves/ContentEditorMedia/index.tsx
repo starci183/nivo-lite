@@ -1,16 +1,18 @@
 import {
     Button,
+    Cluster,
     FileDropzone,
+    Grid,
     Image,
     MediaFrame,
     SectionHeader,
     Select,
+    Stack,
     Text,
     TextAction,
     Video,
 } from "@starci/grammar/common"
 import type { ContentT, MediaTile } from "@/modules/types"
-import { MEDIA_GRID_CLASS_NAME, MEDIA_TILE_CLASS_NAME, TOOLS_CLASS_NAME } from "./classNames"
 
 /** Props of {@link ContentEditorMedia}. */
 interface ContentEditorMediaProps {
@@ -62,9 +64,9 @@ export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
                 {props.t("mediaEmpty")}
             </Text>
         ) : (
-            <div className={MEDIA_GRID_CLASS_NAME}>
+            <Grid kind="cards" columns={3}>
                 {props.media.map((tile) => (
-                    <div key={tile.key} className={MEDIA_TILE_CLASS_NAME}>
+                    <Stack key={tile.key} gap="identity">
                         <Thumb tile={tile} />
                         <Text size="xs" overflow="truncate">
                             {tile.name}
@@ -85,9 +87,9 @@ export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
                                 {props.t("mediaRemove")}
                             </Button>
                         ) : null}
-                    </div>
+                    </Stack>
                 ))}
-            </div>
+            </Grid>
         )}
         {props.isEditable ? renderContentEditorMediaTools(props) : null}
         {props.isEditable && props.isLibraryOpen && props.library.length === 0 ? (
@@ -96,16 +98,16 @@ export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
             </Text>
         ) : null}
         {props.isEditable && props.isLibraryOpen && props.library.length > 0 ? (
-            <div className={MEDIA_GRID_CLASS_NAME}>
+            <Grid kind="cards" columns={3}>
                 {props.library.map((tile) => (
-                    <div key={tile.key} className={MEDIA_TILE_CLASS_NAME}>
+                    <Stack key={tile.key} gap="identity">
                         <Thumb tile={tile} />
                         <TextAction appearance="plain" size="xs" onPress={() => props.onAttach(tile.key)}>
                             {tile.name}
                         </TextAction>
-                    </div>
+                    </Stack>
                 ))}
-            </div>
+            </Grid>
         ) : null}
     </>
 )
@@ -117,7 +119,7 @@ const renderContentEditorMediaTools = (
         "isPending" | "onToggleLibrary" | "t" | "isUploading" | "onUpload" | "videos" | "onAttachVideo"
     >,
 ) => (
-    <div className={TOOLS_CLASS_NAME}>
+    <Cluster gap="inline">
         <Button intent="neutral" size="sm" isDisabled={props.isPending} onPress={props.onToggleLibrary}>
             {props.t("mediaAttachLibrary")}
         </Button>
@@ -145,5 +147,5 @@ const renderContentEditorMediaTools = (
                 }}
             />
         ) : null}
-    </div>
+    </Cluster>
 )

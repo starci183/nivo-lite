@@ -1,5 +1,5 @@
+import { Stack } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { PAGE_CLASS_NAME } from "./classNames"
 
 /** The regions of the Leads page body, each already connected to its data. */
 type LeadsPageLayoutProps = {
@@ -12,9 +12,9 @@ type LeadsPageLayoutProps = {
 
 /** The Leads page body: the optional form, the list and the promotion in one column. */
 export const LeadsPageLayout = (props: LeadsPageLayoutProps) => (
-    <div className={PAGE_CLASS_NAME}>
+    <Stack gap="region">
         {props.form}
         {props.board}
         {props.promo}
-    </div>
+    </Stack>
 )

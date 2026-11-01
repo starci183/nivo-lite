@@ -1,7 +1,6 @@
-import { Alert, Button, DescriptionList, Meter, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, DescriptionList, Meter, SectionHeader, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, MarketingReportView, SlotLabels } from "@/modules/types"
-import { BODY, DAYS, STACK } from "./classNames"
 
 /** The words of the Performance tab. */
 export interface MarketingReportWords {
@@ -43,13 +42,13 @@ interface SectionProps {
 const Suggestion = ({ words, view }: SectionProps) =>
     view.suggestion === null ? null : (
         <SurfaceCard label={words.suggestionTitle}>
-            <div className={BODY}>
+            <Stack gap="section">
                 <Text weight="semibold">{view.suggestion.title}</Text>
                 <Text size="sm">{view.suggestion.body}</Text>
                 <Text size="xs" tone="muted">
                     {view.suggestion.sources}
                 </Text>
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 
@@ -57,12 +56,12 @@ const Suggestion = ({ words, view }: SectionProps) =>
 const TopPosts = ({ words, view }: SectionProps) =>
     view.posts.length === 0 ? null : (
         <SurfaceCard label={words.postsTitle}>
-            <div className={BODY}>
+            <Stack gap="section">
                 <DescriptionList layout="columns" isDivided items={view.posts} />
                 <Text size="xs" tone="muted">
                     {view.postsNote}
                 </Text>
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 
@@ -70,7 +69,7 @@ const Report = (props: ReportProps) => {
     const { words } = props.props
     const { view, isSkeleton } = props
     return (
-        <div className={STACK}>
+        <Stack gap="region">
             <SectionHeader
                 level={2}
                 title={words.title}
@@ -91,11 +90,11 @@ const Report = (props: ReportProps) => {
             />
             <DescriptionList layout="stat-strip" isDivided isLoading={isSkeleton} items={view.kpis} />
             <SurfaceCard label={words.chartTitle}>
-                <div className={BODY}>
+                <Stack gap="section">
                     <Text size="sm" tone="muted">
                         {words.chartNote}
                     </Text>
-                    <div className={DAYS}>
+                    <Stack gap="row">
                         {view.days.map((day) => (
                             <Meter
                                 key={day.id}
@@ -108,14 +107,12 @@ const Report = (props: ReportProps) => {
                                 isSkeleton={isSkeleton}
                             />
                         ))}
-                    </div>
-                </div>
+                    </Stack>
+                </Stack>
             </SurfaceCard>
             {view.channels.length === 0 ? null : (
                 <SurfaceCard label={words.channelsTitle}>
-                    <div className={BODY}>
-                        <DescriptionList layout="columns" isDivided items={view.channels} />
-                    </div>
+                    <DescriptionList layout="columns" isDivided items={view.channels} />
                 </SurfaceCard>
             )}
             {view.insight === "" ? null : (
@@ -128,7 +125,7 @@ const Report = (props: ReportProps) => {
                     {words.postHint}
                 </Text>
             ) : null}
-        </div>
+        </Stack>
     )
 }
 

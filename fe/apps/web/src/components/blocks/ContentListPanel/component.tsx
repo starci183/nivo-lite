@@ -1,8 +1,7 @@
-import { EmptyNotice, ListBox, SurfaceCard, TagGroup } from "@starci/grammar/common"
+import { EmptyNotice, ListBox, Stack, SurfaceCard, TagGroup } from "@starci/grammar/common"
 import { ContentPostFacts } from "@/components/leaves/ContentPostFacts"
 import { ContentStatusBadge } from "@/components/leaves/ContentStatusBadge"
 import type { ContentT, PostView } from "@/modules/types"
-import { PANEL_CLASS_NAME } from "./classNames"
 
 /** What the list panel draws. */
 export interface ContentListPanelBaseProps {
@@ -23,7 +22,7 @@ export interface ContentListPanelBaseProps {
 export const ContentListPanelBase = (props: ContentListPanelBaseProps) => {
     const { t } = props.props
     return (
-        <div className={PANEL_CLASS_NAME}>
+        <Stack gap="row">
             <TagGroup
                 label={t("filterLabel")}
                 items={props.props.filters}
@@ -48,6 +47,6 @@ export const ContentListPanelBase = (props: ContentListPanelBaseProps) => {
                     />
                 )}
             </SurfaceCard>
-        </div>
+        </Stack>
     )
 }

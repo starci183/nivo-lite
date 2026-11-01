@@ -1,9 +1,9 @@
 import { SlotView } from "@/components/composites/SlotView"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { DataSlot, ModuleIconName, SlotLabels } from "@/modules/types"
-import { Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Cluster, Input, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { AgentMark } from "../../leaves/AgentMark"
-import { ACTIONS, GROW, ROW, STACK } from "./classNames"
+import { GROW } from "./classNames"
 
 /** What the name card shows once the installation arrived, every word resolved. */
 export interface IdentityView {
@@ -40,8 +40,8 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <SlotView {...props.props.read} onRetry={props.on.retry}>
             {(view, isSkeleton) => (
-                <div className={STACK}>
-                    <div className={ROW}>
+                <Stack gap="section">
+                    <Cluster gap="row" wrap={false} align="end">
                         <AgentMark
                             glyph={nivoIconSource(props.props.glyph, "leading")}
                             module={props.props.module}
@@ -60,11 +60,11 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                                 onValueChange={(value) => props.on.name(value.slice(0, view.maxLength))}
                             />
                         </div>
-                    </div>
+                    </Cluster>
                     <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
                         {view.line}
                     </Text>
-                    <div className={ACTIONS}>
+                    <Cluster gap="row">
                         <Button
                             intent="neutral"
                             isSkeleton={isSkeleton}
@@ -74,8 +74,8 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                         >
                             {view.saveLabel}
                         </Button>
-                    </div>
-                </div>
+                    </Cluster>
+                </Stack>
             )}
         </SlotView>
     </SurfaceCard>

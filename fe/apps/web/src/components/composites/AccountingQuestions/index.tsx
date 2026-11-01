@@ -1,7 +1,6 @@
-import { EmptyNotice, Region, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { EmptyNotice, Region, SectionHeader, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { AccountingQuestionCard } from "@/components/branches/AccountingQuestionCard"
 import type { AccountingQuestionCardView, AccountingQuestionsView } from "@/modules/types"
-import { CARDS_CLASS_NAME, GROUP_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** Atom-only question groups and addressed decision actions. */
 type AccountingQuestionsProps = AccountingQuestionsView & {
@@ -13,11 +12,11 @@ type AccountingQuestionsProps = AccountingQuestionsView & {
 export const AccountingQuestions = (props: AccountingQuestionsProps) => {
     if (props.props.groups.length === 0)
         return (
-            <div className={PANEL_CLASS_NAME}>
+            <Stack gap="region">
                 <SurfaceCard ariaLabel={props.props.empty}>
                     <EmptyNotice message={props.props.empty} description={props.props.emptyBody} />
                 </SurfaceCard>
-            </div>
+            </Stack>
         )
     const groups = props.props.groups.map((group) => ({
         ...group,
@@ -36,13 +35,13 @@ export const AccountingQuestions = (props: AccountingQuestionsProps) => {
         })),
     }))
     return (
-        <div className={PANEL_CLASS_NAME}>
+        <Stack gap="region">
             <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
                 {props.props.intro}
             </Text>
             {groups.map((group) => (
                 <Region key={group.id} label={group.title}>
-                    <div className={GROUP_CLASS_NAME}>
+                    <Stack gap="row">
                         <SectionHeader
                             level={2}
                             title={group.title}
@@ -50,7 +49,7 @@ export const AccountingQuestions = (props: AccountingQuestionsProps) => {
                             description={group.hint}
                             isSkeleton={props.isSkeleton}
                         />
-                        <div className={CARDS_CLASS_NAME}>
+                        <Stack gap="section">
                             {group.rows.map((row) => (
                                 <AccountingQuestionCard
                                     key={row.props.id}
@@ -59,10 +58,10 @@ export const AccountingQuestions = (props: AccountingQuestionsProps) => {
                                     isSkeleton={props.isSkeleton}
                                 />
                             ))}
-                        </div>
-                    </div>
+                        </Stack>
+                    </Stack>
                 </Region>
             ))}
-        </div>
+        </Stack>
     )
 }

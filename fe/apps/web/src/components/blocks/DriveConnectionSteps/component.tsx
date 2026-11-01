@@ -24,6 +24,8 @@ export interface DriveConnectionStepsBaseProps {
     readonly shape: Readonly<Record<string, ReactNode>>
     readonly props: {
         readonly steps: ReadonlyArray<DriveSetupStepView>
+        /** Names the progress landmark of the stepper. */
+        readonly stepsLabel: string
         /** Set while there is no grant: the page says what to do in place of the steps. */
         readonly ungranted?: DriveUngrantedView
         readonly isGranting: boolean
@@ -76,6 +78,7 @@ export const DriveConnectionStepsBase = (props: DriveConnectionStepsBaseProps) =
     }
     return (
         <ConnectionSteps
+            label={props.props.stepsLabel}
             steps={props.props.steps.map((step) => ({
                 ...step,
                 body: props.shape[step.id] ?? null,

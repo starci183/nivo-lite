@@ -1,5 +1,14 @@
-import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard, Text, Textarea } from "@starci/grammar/common"
-import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
+import {
+    Badge,
+    Button,
+    Cluster,
+    EmptyNotice,
+    ListRow,
+    Stack,
+    SurfaceListCard,
+    Text,
+    Textarea,
+} from "@starci/grammar/common"
 
 /** One public comment waiting for a decision, every word already resolved. */
 interface LeadGenCommentView {
@@ -60,7 +69,7 @@ export const LeadGenCommentList = (props: LeadGenCommentListProps) => {
                         badges={<Badge tone="neutral">{row.sourceLabel}</Badge>}
                         actions={
                             row.isEditing ? null : (
-                                <div className={ACTIONS_CLASS_NAME}>
+                                <Cluster gap="inline">
                                     <Button
                                         intent="neutral"
                                         size="sm"
@@ -78,7 +87,7 @@ export const LeadGenCommentList = (props: LeadGenCommentListProps) => {
                                     >
                                         {props.approveLabel}
                                     </Button>
-                                </div>
+                                </Cluster>
                             )
                         }
                     >
@@ -96,7 +105,7 @@ const renderLeadGenCommentListComment = (
     props: LeadGenCommentListProps,
     isBusy: boolean,
 ) => (
-    <div className={FORM_CLASS_NAME}>
+    <Stack gap="row">
         <Text as="p" size="sm">
             {row.comment}
         </Text>
@@ -109,7 +118,7 @@ const renderLeadGenCommentListComment = (
                     isDisabled={props.isApproving}
                     onValueChange={(value) => props.onDraft(row.id, value)}
                 />
-                <div className={ACTIONS_CLASS_NAME}>
+                <Cluster gap="inline">
                     <Button
                         intent="neutral"
                         size="sm"
@@ -127,7 +136,7 @@ const renderLeadGenCommentListComment = (
                     >
                         {props.saveApproveLabel}
                     </Button>
-                </div>
+                </Cluster>
             </>
         ) : (
             <Text as="p" size="sm" tone="muted">
@@ -135,7 +144,7 @@ const renderLeadGenCommentListComment = (
             </Text>
         )}
         {row.error === null ? null : (
-            <div className={ACTIONS_CLASS_NAME}>
+            <Cluster gap="inline">
                 <Text size="sm" live="assertive">
                     {row.error}
                 </Text>
@@ -144,7 +153,7 @@ const renderLeadGenCommentListComment = (
                         {props.retryLabel}
                     </Button>
                 ) : null}
-            </div>
+            </Cluster>
         )}
-    </div>
+    </Stack>
 )

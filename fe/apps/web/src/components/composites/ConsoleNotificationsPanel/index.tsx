@@ -1,4 +1,4 @@
-import { Button, List, ListRow, Text, TextAction } from "@starci/grammar/common"
+import { Button, List, ListRow, Stack, Text, TextAction } from "@starci/grammar/common"
 import type { ConsolePending } from "@/modules/types"
 import { PANEL } from "./classNames"
 
@@ -22,27 +22,29 @@ type ConsoleNotificationsPanelProps = {
 /** The approvals waiting for a person: the five newest and the way to the Office, shown in the bell's popover. */
 export const ConsoleNotificationsPanel = (props: ConsoleNotificationsPanelProps) => (
     <div className={PANEL}>
-        {props.count === 0 ? (
-            <Text tone="muted" size="sm">
-                {props.copy.nothingWaiting}
-            </Text>
-        ) : (
-            <List label={props.copy.title}>
-                {props.pending.slice(0, 5).map((item) => (
-                    <ListRow
-                        key={item.id}
-                        title={
-                            <TextAction href={item.href} appearance="inline" onFollow={props.onClose}>
-                                {item.leadName}
-                            </TextAction>
-                        }
-                        description={item.summary}
-                    />
-                ))}
-            </List>
-        )}
-        <Button intent="neutral" size="sm" width="fill" onPress={props.onOpenOffice}>
-            {props.copy.openOffice}
-        </Button>
+        <Stack gap="row">
+            {props.count === 0 ? (
+                <Text tone="muted" size="sm">
+                    {props.copy.nothingWaiting}
+                </Text>
+            ) : (
+                <List label={props.copy.title}>
+                    {props.pending.slice(0, 5).map((item) => (
+                        <ListRow
+                            key={item.id}
+                            title={
+                                <TextAction href={item.href} appearance="inline" onFollow={props.onClose}>
+                                    {item.leadName}
+                                </TextAction>
+                            }
+                            description={item.summary}
+                        />
+                    ))}
+                </List>
+            )}
+            <Button intent="neutral" size="sm" width="fill" onPress={props.onOpenOffice}>
+                {props.copy.openOffice}
+            </Button>
+        </Stack>
     </div>
 )

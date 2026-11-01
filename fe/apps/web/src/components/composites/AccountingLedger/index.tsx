@@ -1,11 +1,10 @@
-import { Badge, Drawer, SectionHeader, Text, Timeline } from "@starci/grammar/common"
+import { Badge, Cluster, Drawer, SectionHeader, Stack, Text, Timeline } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/leaves/AccountingBlock"
 import { AccountingAdjustment, type AccountingAdjustmentView } from "@/components/branches/AccountingAdjustment"
 import { AccountingRecordList } from "@/components/leaves/AccountingRecordList"
 import { AccountingSectionHead } from "@/components/branches/AccountingSectionHead"
 import type { AccountingLineageItem } from "@/hooks/accounting"
 import type { AccountingRecordView } from "@/hooks/accountingRecords"
-import { CHIPS_CLASS_NAME, DRAWER_BODY_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** The drawer of one ledger line: what it is, where it came from and what the member may do about it. */
 interface LedgerDrawer extends AccountingAdjustmentView {
@@ -61,7 +60,7 @@ export const AccountingLedger = (props: AccountingLedgerProps) => {
         isSkeleton,
     }
     return (
-        <div className={PANEL_CLASS_NAME}>
+        <Stack gap="region">
             <AccountingSectionHead {...sectionHead}>
                 <AccountingRecordList
                     label={data.title}
@@ -85,7 +84,7 @@ export const AccountingLedger = (props: AccountingLedgerProps) => {
                 closeLabel={drawer.closeLabel}
                 placement="right"
             >
-                <div className={DRAWER_BODY_CLASS_NAME}>
+                <Stack gap="region">
                     <AccountingBlock label={drawer.lineageTitle}>
                         <SectionHeader level={3} title={drawer.lineageTitle} description={drawer.lineageIntro} />
                         <Timeline
@@ -97,7 +96,7 @@ export const AccountingLedger = (props: AccountingLedgerProps) => {
                                 ...(step.timeLabel === null ? {} : { timeLabel: step.timeLabel }),
                                 description: (
                                     <>
-                                        <div className={CHIPS_CLASS_NAME}>
+                                        <Cluster gap="inline">
                                             <Badge tone={step.isCorrection ? "accent" : "neutral"}>
                                                 {step.kindLabel}
                                             </Badge>
@@ -107,7 +106,7 @@ export const AccountingLedger = (props: AccountingLedgerProps) => {
                                                     {step.statusText}
                                                 </Text>
                                             )}
-                                        </div>
+                                        </Cluster>
                                         {step.detail === null ? null : (
                                             <Text size="sm" tone="muted">
                                                 {step.detail}
@@ -122,9 +121,9 @@ export const AccountingLedger = (props: AccountingLedgerProps) => {
                         <SectionHeader level={3} title={drawer.adjustTitle} />
                         <AccountingAdjustment props={drawer} on={on} />
                     </AccountingBlock>
-                </div>
+                </Stack>
             </Drawer>
-        </div>
+        </Stack>
     )
 }
 

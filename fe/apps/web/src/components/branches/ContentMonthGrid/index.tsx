@@ -1,7 +1,7 @@
-import { Button, DataTable, type DataTableCellInteraction, EmptyNotice, Text } from "@starci/grammar/common"
+import { Button, DataTable, type DataTableCellInteraction, EmptyNotice, Stack, Text } from "@starci/grammar/common"
 import { ContentPostChip } from "@/components/leaves/ContentPostChip"
 import type { ContentT, PostView } from "@/modules/types"
-import { CELL_CLASS_NAME, POST_CLASS_NAME } from "./classNames"
+import { CELL_CLASS_NAME } from "./classNames"
 
 /** The most chips one day shows before "+n more". */
 const MAX_CHIPS = 3
@@ -95,35 +95,37 @@ const MonthDayCell = ({ props, cell }: MonthDayCellProps) => {
     const today = key === props.todayKey
     return (
         <div className={CELL_CLASS_NAME}>
-            <Text as="span" size="xs" weight={today ? "semibold" : "normal"} tone={today ? "accent" : "muted"}>
-                {cell.day}
-            </Text>
-            {shown.map((post) => (
-                <div key={post.id} className={POST_CLASS_NAME}>
-                    <ContentPostChip
-                        post={post}
-                        draggable={props.canManage && post.canMove}
-                        onOpen={props.onOpen}
-                        onDragStart={props.onDragStart}
-                        onDragEnd={props.onDragEnd}
-                    />
-                    {props.canManage && post.canMove ? (
-                        <Button
-                            intent="neutral"
-                            size="sm"
-                            aria-pressed={props.pickedId === post.id}
-                            onPress={() => props.onPick(post.id)}
-                        >
-                            {props.t("calendarPickMove")}: {post.title}
-                        </Button>
-                    ) : null}
-                </div>
-            ))}
-            {list.length > MAX_CHIPS && props.expandedKey !== key ? (
-                <Button intent="neutral" size="sm" onPress={() => props.onExpand(key)}>
-                    {props.t("moreItems", { n: list.length - MAX_CHIPS })}
-                </Button>
-            ) : null}
+            <Stack gap="identity">
+                <Text as="span" size="xs" weight={today ? "semibold" : "normal"} tone={today ? "accent" : "muted"}>
+                    {cell.day}
+                </Text>
+                {shown.map((post) => (
+                    <Stack key={post.id} gap="identity">
+                        <ContentPostChip
+                            post={post}
+                            draggable={props.canManage && post.canMove}
+                            onOpen={props.onOpen}
+                            onDragStart={props.onDragStart}
+                            onDragEnd={props.onDragEnd}
+                        />
+                        {props.canManage && post.canMove ? (
+                            <Button
+                                intent="neutral"
+                                size="sm"
+                                aria-pressed={props.pickedId === post.id}
+                                onPress={() => props.onPick(post.id)}
+                            >
+                                {props.t("calendarPickMove")}: {post.title}
+                            </Button>
+                        ) : null}
+                    </Stack>
+                ))}
+                {list.length > MAX_CHIPS && props.expandedKey !== key ? (
+                    <Button intent="neutral" size="sm" onPress={() => props.onExpand(key)}>
+                        {props.t("moreItems", { n: list.length - MAX_CHIPS })}
+                    </Button>
+                ) : null}
+            </Stack>
         </div>
     )
 }

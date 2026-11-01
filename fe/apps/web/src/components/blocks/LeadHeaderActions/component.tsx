@@ -1,7 +1,6 @@
-import { Button, DropdownMenu, IconButton, Text } from "@starci/grammar/common"
+import { Button, Cluster, DropdownMenu, IconButton, Text } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { LeadPrimaryAction } from "@/modules/types"
-import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** The words of the action bar. */
 export interface HeaderActionLabels {
@@ -39,7 +38,7 @@ export const LeadHeaderActionsBase = (props: LeadHeaderActionsBaseProps) => {
     const l = p.labels
     const primary = p.primary
     return (
-        <div className={ACTIONS_CLASS_NAME}>
+        <Cluster gap="inline">
             <Text size="sm" tone="muted" live="polite">
                 {p.notice ?? ""}
             </Text>
@@ -82,6 +81,6 @@ export const LeadHeaderActionsBase = (props: LeadHeaderActionsBaseProps) => {
                     />
                 }
             />
-        </div>
+        </Cluster>
     )
 }

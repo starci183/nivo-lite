@@ -14,7 +14,7 @@ interface TelegramSetupStepView {
 export interface TelegramConnectionStepsBaseProps {
     /** The body of each step but the first, connected by the page: the first step is guidance alone. */
     readonly shape: Readonly<Record<string, ReactNode>>
-    readonly props: { readonly steps: ReadonlyArray<TelegramSetupStepView> }
+    readonly props: { readonly steps: ReadonlyArray<TelegramSetupStepView>; readonly stepsLabel: string }
     readonly on: { readonly toggle: (id: string, isOpen: boolean) => void }
 }
 
@@ -24,6 +24,7 @@ export interface TelegramConnectionStepsBaseProps {
  */
 export const TelegramConnectionStepsBase = (props: TelegramConnectionStepsBaseProps) => (
     <ConnectionSteps
+        label={props.props.stepsLabel}
         steps={props.props.steps.map((step) => ({ ...step, body: props.shape[step.id] ?? null }))}
         onToggle={props.on.toggle}
     />

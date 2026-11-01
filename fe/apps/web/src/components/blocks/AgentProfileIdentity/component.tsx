@@ -1,10 +1,9 @@
-import { Form, Input, SurfaceCard } from "@starci/grammar/common"
+import { Form, Input, Stack, SurfaceCard } from "@starci/grammar/common"
 import { AvatarEditor } from "@/components/composites/AvatarEditor"
 import { FormActions } from "@/components/composites/FormActions"
 import { SlotView } from "@/components/composites/SlotView"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { FORM_CLASS, STACK_CLASS } from "./classNames"
 
 /** What the identity card shows once the agent arrived. */
 export interface ProfileIdentityView {
@@ -55,7 +54,7 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
         <SurfaceCard label={view.title} headingLevel={2}>
             <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
                 {(identity, isSkeleton) => (
-                    <div className={STACK_CLASS}>
+                    <Stack gap="region">
                         <AvatarEditor
                             id="agent-avatar"
                             preview={
@@ -66,7 +65,7 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
                             onRemove={props.on.remove}
                         />
                         <Form label={view.title} onSubmit={props.on.save} isPending={view.isSaving}>
-                            <div className={FORM_CLASS}>
+                            <Stack gap="section" measure="form">
                                 <Input
                                     id="agent-name"
                                     name="name"
@@ -86,9 +85,9 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
                                     isPending={view.isSaving}
                                     isSkeleton={isSkeleton}
                                 />
-                            </div>
+                            </Stack>
                         </Form>
-                    </div>
+                    </Stack>
                 )}
             </SlotView>
         </SurfaceCard>

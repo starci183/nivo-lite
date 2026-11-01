@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
 import { useTelegramSteps } from "@/hooks/telegramConnection"
 import { TelegramConnectionStepsBase } from "./component"
@@ -12,6 +13,13 @@ interface TelegramConnectionStepsProps {
 
 /** The connected setup steps: done or not from the page read, the first one not done opens. */
 export const TelegramConnectionSteps = (props: TelegramConnectionStepsProps) => {
+    const t = useTranslations("telegramConnection")
     const { steps, toggle } = useTelegramSteps(props.connectionId)
-    return <TelegramConnectionStepsBase shape={props.shape} props={{ steps }} on={{ toggle }} />
+    return (
+        <TelegramConnectionStepsBase
+            shape={props.shape}
+            props={{ steps, stepsLabel: t("stepsLabel") }}
+            on={{ toggle }}
+        />
+    )
 }

@@ -21,6 +21,7 @@ export const DriveConnectionSteps = (props: DriveConnectionStepsProps) => {
             shape={props.shape}
             props={{
                 steps,
+                stepsLabel: t("stepsLabel"),
                 isGranting,
                 ...(standing === "none"
                     ? { ungranted: { message: t("emptyTitle"), description: t("emptyBody"), action: t("grant") } }

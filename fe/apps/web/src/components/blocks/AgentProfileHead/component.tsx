@@ -1,8 +1,19 @@
-import { Badge, Button, NumberField, Page, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import {
+    Badge,
+    Button,
+    Cluster,
+    Grid,
+    NumberField,
+    Page,
+    Select,
+    Stack,
+    SurfaceCard,
+    Text,
+    Textarea,
+} from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { AgentMark } from "@/components/leaves/AgentMark"
-import { BODY_CLASS, COMPOSER_CLASS, COMPOSER_FOOT_CLASS, TASK_CLASS } from "./classNames"
 
 /** What the heading shows once the agent arrived, every word resolved. */
 export interface ProfileHeadView {
@@ -74,7 +85,7 @@ type ComposerProps = Pick<AgentProfileHeadBaseProps, "props" | "on">
 const TaskFields = (props: ComposerProps) => {
     const view = props.props.composer
     return (
-        <div className={TASK_CLASS}>
+        <Grid kind="form" columns={2}>
             <Select
                 label={view.taskLabel}
                 options={view.tasks}
@@ -108,7 +119,7 @@ const TaskFields = (props: ComposerProps) => {
                     />
                 </>
             ) : null}
-        </div>
+        </Grid>
     )
 }
 
@@ -117,7 +128,7 @@ const AssignComposer = (props: ComposerProps) => {
     const { composer, head } = props.props
     return (
         <SurfaceCard label={head.composerTitle} headingLevel={2}>
-            <div className={COMPOSER_CLASS}>
+            <Stack gap="row">
                 <Textarea
                     id="agent-assign-text"
                     name="text"
@@ -131,7 +142,7 @@ const AssignComposer = (props: ComposerProps) => {
                     onSubmitShortcut={props.on.send}
                 />
                 <TaskFields {...props} />
-                <div className={COMPOSER_FOOT_CLASS}>
+                <Cluster gap="row" justify="between">
                     <Badge tone="accent">{head.mention}</Badge>
                     <Text size="sm" tone="muted">
                         {composer.hint}
@@ -144,8 +155,8 @@ const AssignComposer = (props: ComposerProps) => {
                     >
                         {composer.sendLabel}
                     </Button>
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
         </SurfaceCard>
     )
 }
@@ -188,10 +199,10 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                 ),
             }}
         >
-            <div className={BODY_CLASS}>
+            <Stack gap="region">
                 {view.composer.isOpen ? <AssignComposer {...props} /> : null}
                 {props.shape.body}
-            </div>
+            </Stack>
         </Page>
     )
 }

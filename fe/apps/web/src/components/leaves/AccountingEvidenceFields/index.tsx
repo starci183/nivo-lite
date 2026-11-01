@@ -1,6 +1,5 @@
 import { parseDate } from "@internationalized/date"
-import { Input, DateField, Textarea } from "@starci/grammar/common"
-import { FORM_GRID_CLASS_NAME, FORM_WIDE_CLASS_NAME } from "./classNames"
+import { Input, DateField, Grid, Stack, Textarea } from "@starci/grammar/common"
 
 /** The name of one manual evidence input. */
 export type AccountingEvidenceFieldName = "amount" | "date" | "content" | "payer" | "note"
@@ -27,27 +26,29 @@ interface AccountingEvidenceFieldsProps {
 
 /** Renders amount, date, content, payer and note inputs for manual evidence. */
 export const AccountingEvidenceFields = (props: AccountingEvidenceFieldsProps) => (
-    <div className={FORM_GRID_CLASS_NAME}>
-        <Input
-            id="wb-acc-amount"
-            name="amount"
-            label={props.amountLabel}
-            value={props.amount}
-            isRequired
-            isDisabled={props.isSaving}
-            description={props.amountHint ?? undefined}
-            onValueChange={(value) => props.onChange("amount", value)}
-        />
-        <DateField
-            name="date"
-            label={props.dateLabel}
-            isRequired
-            isDisabled={props.isSaving}
-            value={parseDate(props.date)}
-            maxValue={parseDate(props.maxDate)}
-            onValueChange={(value) => props.onChange("date", value === null ? "" : value.toString())}
-        />
-        <div className={FORM_WIDE_CLASS_NAME}>
+    <Stack gap="section">
+        <Grid kind="form">
+            <Input
+                id="wb-acc-amount"
+                name="amount"
+                label={props.amountLabel}
+                value={props.amount}
+                isRequired
+                isDisabled={props.isSaving}
+                description={props.amountHint ?? undefined}
+                onValueChange={(value) => props.onChange("amount", value)}
+            />
+            <DateField
+                name="date"
+                label={props.dateLabel}
+                isRequired
+                isDisabled={props.isSaving}
+                value={parseDate(props.date)}
+                maxValue={parseDate(props.maxDate)}
+                onValueChange={(value) => props.onChange("date", value === null ? "" : value.toString())}
+            />
+        </Grid>
+        <Grid kind="form" columns={1}>
             <Input
                 id="wb-acc-content"
                 name="content"
@@ -58,8 +59,6 @@ export const AccountingEvidenceFields = (props: AccountingEvidenceFieldsProps) =
                 description={props.contentHint}
                 onValueChange={(value) => props.onChange("content", value)}
             />
-        </div>
-        <div className={FORM_WIDE_CLASS_NAME}>
             <Input
                 id="wb-acc-payer"
                 name="payer"
@@ -68,8 +67,6 @@ export const AccountingEvidenceFields = (props: AccountingEvidenceFieldsProps) =
                 isDisabled={props.isSaving}
                 onValueChange={(value) => props.onChange("payer", value)}
             />
-        </div>
-        <div className={FORM_WIDE_CLASS_NAME}>
             <Textarea
                 id="wb-acc-note"
                 name="note"
@@ -79,6 +76,6 @@ export const AccountingEvidenceFields = (props: AccountingEvidenceFieldsProps) =
                 isDisabled={props.isSaving}
                 onValueChange={(value) => props.onChange("note", value)}
             />
-        </div>
-    </div>
+        </Grid>
+    </Stack>
 )

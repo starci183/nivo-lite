@@ -1,5 +1,4 @@
-import { Button } from "@starci/grammar/common"
-import { ACTIONS_CLASS_NAME } from "./classNames"
+import { Button, Cluster } from "@starci/grammar/common"
 
 /** The way out and the primary action of a form. */
 interface AccountingFormActionsProps {
@@ -11,12 +10,12 @@ interface AccountingFormActionsProps {
 
 /** The closing line of a form: the way out first, the primary action last. */
 export const AccountingFormActions = (props: AccountingFormActionsProps) => (
-    <div className={ACTIONS_CLASS_NAME}>
+    <Cluster gap="row">
         <Button intent="neutral" isDisabled={props.isSaving} onPress={props.onCancel}>
             {props.cancelLabel}
         </Button>
         <Button intent="commit" type="submit" isPending={props.isSaving}>
             {props.saveLabel}
         </Button>
-    </div>
+    </Cluster>
 )

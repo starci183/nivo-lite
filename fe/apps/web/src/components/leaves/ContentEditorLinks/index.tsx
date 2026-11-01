@@ -1,6 +1,5 @@
-import { Button, Input, SectionHeader } from "@starci/grammar/common"
+import { Button, Cluster, Input, SectionHeader, Stack } from "@starci/grammar/common"
 import type { ContentT } from "@/modules/types"
-import { LINKS_CLASS_NAME, LINK_ROW_CLASS_NAME } from "./classNames"
 
 /** One link row of the editor. */
 export interface LinkRow {
@@ -35,9 +34,9 @@ const LINK_FIELDS: ReadonlyArray<LinkField> = [
 export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
     <>
         <SectionHeader level={3} title={props.t("linksTitle")} />
-        <div className={LINKS_CLASS_NAME}>
+        <Stack gap="row">
             {props.links.map((link) => (
-                <div key={link.key} className={LINK_ROW_CLASS_NAME}>
+                <Cluster key={link.key} gap="inline" align="end">
                     {LINK_FIELDS.map((field) => (
                         <Input
                             key={field.key}
@@ -54,7 +53,7 @@ export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
                             {props.t("linkRemove")}
                         </Button>
                     ) : null}
-                </div>
+                </Cluster>
             ))}
             {props.isEditable ? (
                 <div>
@@ -63,6 +62,6 @@ export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
                     </Button>
                 </div>
             ) : null}
-        </div>
+        </Stack>
     </>
 )

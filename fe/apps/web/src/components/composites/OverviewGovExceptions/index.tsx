@@ -1,7 +1,6 @@
-import { Badge, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Cluster, SectionHeader, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovExceptionChip } from "@/hooks/overviewGov"
-import { STACK_CLASS_NAME, CHIP_ROW_CLASS_NAME } from "./classNames"
 
 /** The figures of the exceptions block. */
 export interface OverviewGovExceptionsProps {
@@ -19,25 +18,25 @@ export const OverviewGovExceptions = (props: OverviewGovExceptionsProps) => (
     <AccountingBlock label={props.figures.title}>
         <SectionHeader level={2} title={props.figures.title} />
         <SurfaceCard ariaLabel={props.figures.title}>
-            <div className={STACK_CLASS_NAME}>
+            <Stack gap="row">
                 {props.figures.total === null ? (
                     <Text tone="muted">{props.figures.none}</Text>
                 ) : (
                     <>
                         <Text weight="semibold">{props.figures.total}</Text>
-                        <div className={CHIP_ROW_CLASS_NAME}>
+                        <Cluster gap="inline">
                             {props.figures.chips.map((chip) => (
                                 <Badge key={chip.id} tone={chip.tone}>
                                     {chip.label}
                                 </Badge>
                             ))}
-                        </div>
+                        </Cluster>
                     </>
                 )}
                 <Text size="xs" tone="muted">
                     {props.figures.source}
                 </Text>
-            </div>
+            </Stack>
         </SurfaceCard>
     </AccountingBlock>
 )

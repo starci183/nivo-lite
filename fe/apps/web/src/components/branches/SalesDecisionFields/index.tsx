@@ -1,5 +1,4 @@
-import { Input, Textarea } from "@starci/grammar/common"
-import { FORM_CLASS_NAME } from "./classNames"
+import { Input, Stack, Textarea } from "@starci/grammar/common"
 
 /** One data field NIVO is missing and the person fills in. */
 interface MissingFieldView {
@@ -27,7 +26,7 @@ interface SalesDecisionFieldsProps {
 
 /** The missing fields, the editable draft and the editable amount of one pending decision. */
 export const SalesDecisionFields = (props: SalesDecisionFieldsProps) => (
-    <div className={FORM_CLASS_NAME}>
+    <Stack gap="row">
         {props.missing.map((field) => (
             <Input
                 key={field.name}
@@ -58,5 +57,5 @@ export const SalesDecisionFields = (props: SalesDecisionFieldsProps) => (
                 onValueChange={props.onAmount}
             />
         ) : null}
-    </div>
+    </Stack>
 )

@@ -1,10 +1,9 @@
-import { Skeleton, SurfaceCard, Text } from "@starci/grammar/common"
+import { Skeleton, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { OverviewGovSummary, type OverviewGovSummaryProps } from "@/components/composites/OverviewGovSummary"
 import { OverviewGovResults, type OverviewGovResultsProps } from "@/components/composites/OverviewGovResults"
 import { OverviewGovWaiting, type OverviewGovWaitingProps } from "@/components/composites/OverviewGovWaiting"
 import { OverviewGovExceptions, type OverviewGovExceptionsProps } from "@/components/composites/OverviewGovExceptions"
 import { OverviewGovHistory, type OverviewGovHistoryProps } from "@/components/composites/OverviewGovHistory"
-import { STACK_CLASS_NAME } from "./classNames"
 
 /** Every block of the governance section, as plain words. */
 export interface OverviewGovernanceFigures {
@@ -44,12 +43,12 @@ export const OverviewGovernanceBase = (props: OverviewGovernanceBaseProps) => {
         )
     }
     return (
-        <div className={STACK_CLASS_NAME}>
+        <Stack gap="row">
             <OverviewGovSummary figures={figures.summary} />
             <OverviewGovResults figures={figures.results} />
             <OverviewGovWaiting figures={figures.waiting} />
             <OverviewGovExceptions figures={figures.exceptions} />
             <OverviewGovHistory figures={figures.history} />
-        </div>
+        </Stack>
     )
 }

@@ -1,6 +1,6 @@
-import { Button, Input, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Cluster, Input, SectionHeader, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { ContentT, DownloadFile, PublishStep } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, QUOTE_CLASS_NAME, STEP_CLASS_NAME } from "./classNames"
+import { QUOTE_CLASS_NAME } from "./classNames"
 
 /** The proof typed for one channel. */
 export interface PublishProof {
@@ -39,7 +39,7 @@ export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
                         </Text>
                     }
                 >
-                    <div className={STEP_CLASS_NAME}>
+                    <Stack gap="row">
                         {step.isZalo ? (
                             <Text size="xs" tone="muted">
                                 {props.t("zaloNote")}
@@ -52,7 +52,7 @@ export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
                                 </Text>
                             </div>
                         </SurfaceCard>
-                        <div className={ACTIONS_CLASS_NAME}>
+                        <Cluster gap="inline">
                             <Button intent="neutral" size="sm" onPress={() => props.onCopy(step.channel)}>
                                 {props.t("copy")}
                             </Button>
@@ -68,7 +68,7 @@ export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
                                     {`${props.t("download")}: ${file.name}`}
                                 </Button>
                             ))}
-                        </div>
+                        </Cluster>
                         {step.doneText === null ? null : (
                             <Text size="sm" weight="medium" live="polite">
                                 {step.doneText}
@@ -77,7 +77,7 @@ export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
                         {step.doneText === null && props.canManage
                             ? renderContentEditorPublishProofFields(step, props, proof)
                             : null}
-                    </div>
+                    </Stack>
                 </SurfaceCard>
             )
         })}

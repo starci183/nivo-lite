@@ -1,5 +1,13 @@
 import type { DropdownMenuEntry, DropdownMenuItem } from "@starci/grammar/common"
-import { AvatarButton, DropdownMenu, IconButton, NavigationFeatureNav, Popover, Switch } from "@starci/grammar/common"
+import {
+    AvatarButton,
+    Cluster,
+    DropdownMenu,
+    IconButton,
+    NavigationFeatureNav,
+    Popover,
+    Switch,
+} from "@starci/grammar/common"
 import type { ConsolePending } from "@/modules/types"
 import { ACCOUNT_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
 import { ConsoleNotificationsPanel } from "../../composites/ConsoleNotificationsPanel"
@@ -8,7 +16,7 @@ import { ConsoleWorkspaceMenu } from "../../composites/ConsoleWorkspaceMenu"
 import { FoundingBadge } from "../../composites/FoundingBadge"
 import { languageMenuEntries } from "../../composites/LanguageMenu"
 import { nivoIconSource } from "../../leaves/Icon"
-import { ACTIONS, BADGE, BRAND, SWITCHES } from "./classNames"
+import { BADGE, SWITCHES } from "./classNames"
 
 /** Everything the console top bar draws, resolved by the connected block. */
 export interface ConsoleHeaderBaseProps {
@@ -61,7 +69,7 @@ export interface ConsoleHeaderBaseProps {
 type BrandProps = Pick<ConsoleHeaderBaseProps, "props">
 
 const Brand = ({ props }: BrandProps) => (
-    <div className={BRAND}>
+    <Cluster gap="inline" wrap={false}>
         <ConsoleWorkspaceMenu
             workspaceName={props.workspaceName}
             logoUrl={props.workspaceLogoUrl}
@@ -71,7 +79,7 @@ const Brand = ({ props }: BrandProps) => (
         <div className={BADGE}>
             <FoundingBadge isFoundingMember={props.isFoundingMember} label={props.foundingLabel} />
         </div>
-    </div>
+    </Cluster>
 )
 
 /** The props both parts of the search share. */
@@ -111,36 +119,38 @@ const withLooks = (entries: ReadonlyArray<DropdownMenuEntry>): ReadonlyArray<Dro
     )
 
 const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
-    <div className={ACTIONS}>
+    <Cluster gap="inline" wrap={false} justify="end">
         <div className={SWITCHES}>
-            <DropdownMenu
-                placement="bottom end"
-                entries={languageMenuEntries({
-                    label: props.languageLabel,
-                    value: props.locale,
-                    options: props.localeOptions,
-                    isDisabled: props.isLocalePending,
-                    onChange: on.chooseLocale,
-                })}
-                trigger={
-                    <IconButton
-                        source={nivoIconSource("locale", "leading")}
-                        label={props.languageLabel}
-                        intent="dismiss"
-                        size="control"
-                        isDisabled={props.isLocalePending}
-                    />
-                }
-            />
-            <Switch
-                label={props.themeLabel}
-                isLabelHidden
-                size="control"
-                isSelected={props.isDark}
-                onSelectedChange={on.chooseDark}
-                thumbIcon={nivoIconSource("light", "leading")}
-                selectedThumbIcon={nivoIconSource("dark", "leading")}
-            />
+            <Cluster gap="inline" wrap={false}>
+                <DropdownMenu
+                    placement="bottom end"
+                    entries={languageMenuEntries({
+                        label: props.languageLabel,
+                        value: props.locale,
+                        options: props.localeOptions,
+                        isDisabled: props.isLocalePending,
+                        onChange: on.chooseLocale,
+                    })}
+                    trigger={
+                        <IconButton
+                            source={nivoIconSource("locale", "leading")}
+                            label={props.languageLabel}
+                            intent="dismiss"
+                            size="control"
+                            isDisabled={props.isLocalePending}
+                        />
+                    }
+                />
+                <Switch
+                    label={props.themeLabel}
+                    isLabelHidden
+                    size="control"
+                    isSelected={props.isDark}
+                    onSelectedChange={on.chooseDark}
+                    thumbIcon={nivoIconSource("light", "leading")}
+                    selectedThumbIcon={nivoIconSource("dark", "leading")}
+                />
+            </Cluster>
         </div>
         <Popover
             isOpen={props.isNotificationsOpen}
@@ -178,7 +188,7 @@ const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
                 />
             }
         />
-    </div>
+    </Cluster>
 )
 
 /** Draws the console top bar: the workspace lockup on the left; the search field in the middle (an icon on a phone); language, appearance, bell and account on the right; the compact tab row under it. */

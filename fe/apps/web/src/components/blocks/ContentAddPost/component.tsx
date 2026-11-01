@@ -1,7 +1,6 @@
-import { Button, CheckboxGroup, Dialog, Input, Select } from "@starci/grammar/common"
+import { Button, CheckboxGroup, Dialog, Input, Select, Stack } from "@starci/grammar/common"
 import { ContentCommandNote } from "@/components/composites/ContentSettingsCard"
 import type { ContentChannel, ContentNoteView, ContentT } from "@/modules/types"
-import { FORM_CLASS_NAME } from "./classNames"
 
 /** What the add-a-post command draws. */
 export interface ContentAddPostBaseProps {
@@ -75,7 +74,7 @@ const renderNewPostFields = (
     isPending: ContentAddPostBaseProps["props"]["isPending"],
 ) => {
     return (
-        <div className={FORM_CLASS_NAME}>
+        <Stack gap="row">
             <Input
                 id="add-title"
                 name="title"
@@ -120,6 +119,6 @@ const renderNewPostFields = (
                 onValueChange={props.on.channels}
             />
             <ContentCommandNote note={props.props.note} closeLabel={t("close")} onDismiss={props.on.dismissNote} />
-        </div>
+        </Stack>
     )
 }
