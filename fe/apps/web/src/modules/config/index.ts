@@ -31,9 +31,16 @@ export const graphqlTuning = {
     retryMaxAttempts: 3,
 } as const
 
-/** The public origin of the landing site (privacy and terms live there, not in the console). */
+/** The landing origin of the local stack (the dev compose names it), used when a development run leaves the variable unset. */
+const LOCAL_LANDING_ORIGIN = "http://landing.localhost"
+
+/** The public origin of the landing site (privacy and terms live there, not in the console). A production build must set it; a development run falls back to the local landing. */
 export const landingUrl = (): string => {
-    const value = required("NEXT_PUBLIC_LANDING_URL", process.env.NEXT_PUBLIC_LANDING_URL)
+    const configured = process.env.NEXT_PUBLIC_LANDING_URL
+    const value =
+        process.env.NODE_ENV !== "production" && (configured === undefined || configured === "")
+            ? LOCAL_LANDING_ORIGIN
+            : required("NEXT_PUBLIC_LANDING_URL", configured)
     let end = value.length
     while (value[end - 1] === "/") end -= 1
     return value.slice(0, end)

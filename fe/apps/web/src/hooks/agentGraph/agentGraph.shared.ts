@@ -4,7 +4,7 @@ import type { AgentGraphAction, AgentGraphCommands, AgentGraphPhoneView, AgentGr
 export const SIDE_TABS: ReadonlyArray<AgentGraphSideTab> = ["chat", "detail", "proposals", "versions"]
 
 /** The views the phone offers in place of two panes, in the order they are offered. */
-export const PHONE_VIEWS: ReadonlyArray<AgentGraphPhoneView> = ["branches", "graph", "chat", "proposals"]
+export const PHONE_VIEWS: ReadonlyArray<AgentGraphPhoneView> = ["branches", "graph", "chat", "proposals", "versions"]
 
 /** Runs the command an action names. */
 export const performAgentGraphAction = (commands: AgentGraphCommands, action: AgentGraphAction): void => {

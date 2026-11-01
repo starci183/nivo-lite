@@ -113,7 +113,11 @@ export const useWorkbenchBand = (input: WorkbenchBandInput) => {
                 isMissing: true,
             })),
     ]
+    /** The lifecycle is the one source of the state: the work read refines it only while the agent is running. */
     const stateOf = (): WorkbenchBandView["state"] => {
+        if (installation !== undefined && installation.lifecycle !== "running") {
+            return { label: tm(`lifecycle_${installation.lifecycle}`), tone: "neutral", isEchoing: false }
+        }
         if (status !== null) {
             return {
                 label: stateWordsOf(t, status.kind),
@@ -121,8 +125,9 @@ export const useWorkbenchBand = (input: WorkbenchBandInput) => {
                 isEchoing: status.kind === "working",
             }
         }
-        if (installation === undefined) return null
-        return { label: tm(`lifecycle_${installation.lifecycle}`), tone: "neutral", isEchoing: false }
+        return installation === undefined
+            ? null
+            : { label: tm(`lifecycle_${installation.lifecycle}`), tone: "neutral", isEchoing: false }
     }
     const view: WorkbenchBandView = {
         state: stateOf(),

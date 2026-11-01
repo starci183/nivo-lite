@@ -32,7 +32,7 @@ export const useAgentGraphUi = (initialRunId: string) => {
         phoneView: (value: string) => {
             const view = PHONE_VIEWS.find((entry) => entry === value) ?? "branches"
             setPhoneView(view)
-            if (view === "chat" || view === "proposals") setSideTab(view)
+            if (view === "chat" || view === "proposals" || view === "versions") setSideTab(view)
         },
         trace: (id: string) => {
             setRunId(id)

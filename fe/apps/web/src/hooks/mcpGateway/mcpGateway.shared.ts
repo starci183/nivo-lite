@@ -55,19 +55,15 @@ const STATUS_TONE: ReadonlyMap<string, McpTone> = new Map([
 ])
 const SCOPES: ReadonlySet<string> = new Set(["read", "write"])
 
-/** The catalog key of a tool id (`sepay.transactions.list` reads `tool_sepay-transactions-list`). */
-const toolKeyOf = (id: string): string => `tool_${id.replaceAll(".", "-")}`
+/** The catalog text of a native tool (`sepay.transactions.list` reads `tool_sepay-transactions-list`; its plain name `toolName_...`), else what its server sent. */
+const toolTextOf = (t: McpTranslator, kind: "tool" | "toolName", id: string, fallback: string): string => {
+    const key = `${kind}_${id.replaceAll(".", "-")}`
+    return t.has(key) ? t(key) : fallback
+}
 
 /** The status words of a connector: the catalog word of a known status, else the status as the gateway named it. */
 const statusOf = (t: McpTranslator, status: string): string =>
     t.has(`status_${status}`) ? t(`status_${status}`) : status
-
-/**
- * What a tool does, in the reader locale: the catalog text of a native tool, keyed by its id; a remote tool shows the description its
- * server sent. The description the gateway sends stays the one the agents read.
- */
-const toolDescriptionOf = (t: McpTranslator, id: string, description: string): string =>
-    t.has(toolKeyOf(id)) ? t(toolKeyOf(id)) : description
 
 /** The title of a connector: the catalog name of a native connector, else the name it was registered with. */
 const connectorTitleOf = (t: McpTranslator, key: string, name: string): string =>
@@ -89,8 +85,8 @@ const toolRowsOf = (
     connector.tools.map((tool) => ({
         ...agentsRowOf(agentsOf(tool.name)),
         id: tool.name,
-        title: tool.name,
-        description: [scopeOf(t, tool.scope), toolDescriptionOf(t, tool.name, tool.description)]
+        title: toolTextOf(t, "toolName", tool.name, tool.name),
+        description: [scopeOf(t, tool.scope), toolTextOf(t, "tool", tool.name, tool.description)]
             .filter(Boolean)
             .join(" · "),
         badges: [

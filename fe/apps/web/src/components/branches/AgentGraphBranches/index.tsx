@@ -1,4 +1,4 @@
-import { Badge, Button, DescriptionList, SectionHeader, Text } from "@starci/grammar/common"
+import { Badge, Button, DescriptionList, EmptyNotice, SectionHeader, Text } from "@starci/grammar/common"
 import type { AgentGraphBranchesView } from "@/modules/types"
 
 /** Every branch of the graph as a sentence, for the phone where four lanes cannot be read. */
@@ -12,6 +12,7 @@ interface AgentGraphBranchesProps {
 export const AgentGraphBranches = (props: AgentGraphBranchesProps) => (
     <>
         <SectionHeader level={3} title={props.view.title} description={props.view.hint} isSkeleton={props.isSkeleton} />
+        {props.isSkeleton || props.view.rows.length > 0 ? null : <EmptyNotice message={props.view.emptyLabel} />}
         <DescriptionList
             layout="stacked"
             isDivided

@@ -262,10 +262,8 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                     <PaneSection align="center">
                         <GraphHeadBand {...props} />
                     </PaneSection>
-                    <PaneSection>
+                    <PaneSection scroll={{ label: copy.paneLabel }} gap="section">
                         <SetupBand {...props} />
-                    </PaneSection>
-                    <PaneSection scroll={{ label: copy.paneLabel }}>
                         <GraphCanvasBand {...props} />
                     </PaneSection>
                 </Pane>

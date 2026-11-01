@@ -31,7 +31,7 @@ export interface AgentGraphLayoutView {
 export type AgentGraphSideTab = "chat" | "detail" | "proposals" | "versions"
 
 /** The four views the phone offers in place of two panes. */
-export type AgentGraphPhoneView = "branches" | "graph" | "chat" | "proposals"
+export type AgentGraphPhoneView = "branches" | "graph" | "chat" | "proposals" | "versions"
 
 /** One line of a list answer: the owner's words and, under them, the technical name. */
 export interface AgentGraphLine {
