@@ -1,7 +1,6 @@
-import { DescriptionList, Meter, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { DescriptionList, Meter, SectionHeader, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/leaves/AccountingBlock"
 import { AccountingSectionHead } from "@/components/branches/AccountingSectionHead"
-import { MEASURE_META_CLASS_NAME, PANEL_CLASS_NAME, WEEKS_CLASS_NAME } from "./classNames"
 
 /** One figure of the strip: label, value, what it counts, the lines that say where it comes from and an optional action. */
 interface AccountingOverviewMeasure {
@@ -69,7 +68,7 @@ interface MeasureMetaProps {
 
 /** The lines under one figure: what it counts and where it comes from. */
 const MeasureMeta = (props: MeasureMetaProps) => (
-    <div className={MEASURE_META_CLASS_NAME}>
+    <Stack gap="identity">
         <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
             {props.hint}
         </Text>
@@ -83,7 +82,7 @@ const MeasureMeta = (props: MeasureMetaProps) => (
                 {props.actionLabel}
             </TextAction>
         ) : null}
-    </div>
+    </Stack>
 )
 
 /** A titled card of gauges, one per row, with an optional line saying where the figures come from. */
@@ -107,7 +106,7 @@ const MeterBlock = (props: MeterBlockProps) => (
     <AccountingBlock label={props.title}>
         <SectionHeader level={2} title={props.title} description={props.intro} isSkeleton={props.isSkeleton} />
         <SurfaceCard ariaLabel={props.title}>
-            <div className={WEEKS_CLASS_NAME}>
+            <Stack gap="section">
                 {props.rows.map((row) => (
                     <Meter
                         key={row.id}
@@ -119,7 +118,7 @@ const MeterBlock = (props: MeterBlockProps) => (
                         isSkeleton={props.isSkeleton}
                     />
                 ))}
-            </div>
+            </Stack>
         </SurfaceCard>
         {props.source === undefined ? null : (
             <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
@@ -133,7 +132,7 @@ const MeterBlock = (props: MeterBlockProps) => (
 export const AccountingOverview = (props: AccountingOverviewProps) => {
     const isSkeleton = props.isSkeleton
     return (
-        <div className={PANEL_CLASS_NAME}>
+        <Stack gap="section">
             <AccountingSectionHead
                 title={props.props.title}
                 intro={props.props.intro}
@@ -185,7 +184,7 @@ export const AccountingOverview = (props: AccountingOverviewProps) => {
                 source={props.props.trendSource}
                 isSkeleton={isSkeleton}
             />
-        </div>
+        </Stack>
     )
 }
 

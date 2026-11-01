@@ -1,16 +1,19 @@
 import {
     Badge,
     Button,
+    Cluster,
     DescriptionList,
+    Grid,
     PageContainer,
     Region,
     SectionHeader,
+    Stack,
     SurfaceCard,
     Text,
 } from "@starci/grammar/common"
 import { LandingFact } from "@/components/composites/LandingFact"
 import type { IconGlyphName } from "@/components/leaves/Icon"
-import { ANCHOR, BENTO, FACTS_COL, PRICE_ROW, PRICE_STACK, SECTION_STACK, TILE_BODY, TILE_FOOT } from "./classNames"
+import { ANCHOR } from "./classNames"
 
 /** One scope fact beside the price card. */
 interface LandingOfferFact {
@@ -67,22 +70,22 @@ export const LandingOfferBase = (props: LandingOfferBaseProps) => {
     return (
         <Region id="founding" label={props.props.regionLabel} className={ANCHOR}>
             <PageContainer measure="product">
-                <div className={SECTION_STACK}>
+                <Stack gap="section">
                     <SectionHeader eyebrow={props.props.eyebrow} title={props.props.title} />
-                    <div className={BENTO}>
-                        <div className={FACTS_COL}>
+                    <Grid kind="cards" columns={3}>
+                        <Stack gap="section">
                             {props.props.leftFacts.map((fact) => (
                                 <LandingFact key={fact.id} icon={fact.icon} title={fact.title} text={fact.text} />
                             ))}
-                        </div>
+                        </Stack>
                         {renderLandingOfferPrice(props, campaign)}
-                        <div className={FACTS_COL}>
+                        <Stack gap="section">
                             {props.props.rightFacts.map((fact) => (
                                 <LandingFact key={fact.id} icon={fact.icon} title={fact.title} text={fact.text} />
                             ))}
-                        </div>
-                    </div>
-                </div>
+                        </Stack>
+                    </Grid>
+                </Stack>
             </PageContainer>
         </Region>
     )
@@ -100,8 +103,8 @@ const renderLandingOfferPrice = (
         isHighlight
         height="fill"
     >
-        <div className={TILE_BODY}>
-            <div className={PRICE_STACK}>
+        <Stack gap="section">
+            <Stack gap="identity">
                 <Text size="sm" tone="muted" weight="medium">
                     {props.props.planName}
                 </Text>
@@ -110,14 +113,14 @@ const renderLandingOfferPrice = (
                         {campaign.basePrice}
                     </Text>
                 )}
-                <div className={PRICE_ROW}>
+                <Cluster gap="inline" align="baseline">
                     <Text size="metric-lead" weight="semibold">
                         {props.props.price}
                     </Text>
                     <Text size="sm" tone="muted">
                         {props.props.perMonth}
                     </Text>
-                </div>
+                </Cluster>
                 <Text size="sm" tone="muted">
                     {props.props.priceNote}
                 </Text>
@@ -126,8 +129,8 @@ const renderLandingOfferPrice = (
                         {campaign.saving}
                     </Text>
                 )}
-            </div>
-            <div className={TILE_FOOT}>
+            </Stack>
+            <Stack gap="row">
                 {campaign === null ? null : (
                     <>
                         <div role="timer" aria-label={campaign.countdownLabel}>
@@ -148,7 +151,7 @@ const renderLandingOfferPrice = (
                     {props.props.ctaLabel}
                 </Button>
                 <Text size="xs">{props.props.fine}</Text>
-            </div>
-        </div>
+            </Stack>
+        </Stack>
     </SurfaceCard>
 )

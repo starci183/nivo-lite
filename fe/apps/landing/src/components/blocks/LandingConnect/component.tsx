@@ -3,12 +3,13 @@ import {
     Button,
     PageContainer,
     Region,
+    Grid,
     SectionHeader,
     ListRow,
+    Stack,
     SurfaceListCard,
     Text,
 } from "@starci/grammar/common"
-import { CONNECT_COPY, CONNECT_GRID, SECTION_STACK } from "./classNames"
 
 /** One channel of the list: its words and whether it works today. */
 interface LandingConnectChannel {
@@ -41,42 +42,49 @@ interface LandingConnectBaseProps {
 export const LandingConnectBase = (props: LandingConnectBaseProps) => (
     <Region labelledBy={props.props.headingId}>
         <PageContainer measure="product">
-            <div className={CONNECT_GRID}>
-                <div className={CONNECT_COPY}>
-                    <SectionHeader
-                        id={props.props.headingId}
-                        eyebrow={props.props.eyebrow}
-                        title={props.props.title}
-                        description={props.props.lead}
-                    />
-                    <Button intent="commit" size="lg" href={props.props.ctaHref}>
-                        {props.props.ctaLabel}
-                    </Button>
-                </div>
-                <div className={SECTION_STACK}>
-                    <SurfaceListCard ariaLabel={props.props.title}>
-                        {props.props.channels.map((channel) => (
-                            <ListRow
-                                key={channel.id}
-                                title={channel.name}
-                                description={channel.text}
-                                badges={
-                                    channel.isLive ? (
-                                        <Badge tone="success" isDot>
-                                            {props.props.liveLabel}
-                                        </Badge>
-                                    ) : (
-                                        <Badge tone="neutral">{props.props.roadmapLabel}</Badge>
-                                    )
-                                }
-                            />
-                        ))}
-                    </SurfaceListCard>
-                    <Text size="sm" tone="muted">
-                        {props.props.note}
-                    </Text>
-                </div>
-            </div>
+            <Grid
+                kind="main-rail"
+                railWidth="wide"
+                align="start"
+                primary={
+                    <Stack gap="section" align="start">
+                        <SectionHeader
+                            id={props.props.headingId}
+                            eyebrow={props.props.eyebrow}
+                            title={props.props.title}
+                            description={props.props.lead}
+                        />
+                        <Button intent="commit" size="lg" href={props.props.ctaHref}>
+                            {props.props.ctaLabel}
+                        </Button>
+                    </Stack>
+                }
+                rail={
+                    <Stack gap="section">
+                        <SurfaceListCard ariaLabel={props.props.title}>
+                            {props.props.channels.map((channel) => (
+                                <ListRow
+                                    key={channel.id}
+                                    title={channel.name}
+                                    description={channel.text}
+                                    badges={
+                                        channel.isLive ? (
+                                            <Badge tone="success" isDot>
+                                                {props.props.liveLabel}
+                                            </Badge>
+                                        ) : (
+                                            <Badge tone="neutral">{props.props.roadmapLabel}</Badge>
+                                        )
+                                    }
+                                />
+                            ))}
+                        </SurfaceListCard>
+                        <Text size="sm" tone="muted">
+                            {props.props.note}
+                        </Text>
+                    </Stack>
+                }
+            />
         </PageContainer>
     </Region>
 )

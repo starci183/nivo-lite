@@ -1,6 +1,5 @@
-import { List, ListItem, PageContainer, Region, SurfaceCard, Text } from "@starci/grammar/common"
+import { Grid, PageContainer, Region, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { IconGlyph, type IconGlyphName } from "@/components/leaves/Icon"
-import { SECTION_STACK, TRUST_LIST, TRUST_ROW, TRUST_WHO } from "./classNames"
 
 /** One situation the product watches. */
 interface LandingTrustChip {
@@ -30,31 +29,36 @@ export const LandingTrustStripBase = (props: LandingTrustStripBaseProps) => {
     return (
         <Region label={props.props.forLabel}>
             <PageContainer measure="product">
-                <div className={SECTION_STACK}>
+                <Stack gap="section">
                     <Text tone="muted">{props.props.lead}</Text>
                     <SurfaceCard>
-                        <div className={TRUST_ROW}>
-                            <div className={TRUST_WHO}>
-                                <Text size="xs">{props.props.forLabel}</Text>
-                                <Text size="md" weight="semibold">
-                                    {props.props.audience}
-                                </Text>
-                                <Text size="sm" tone="muted">
-                                    {props.props.sub}
-                                </Text>
-                            </div>
-                            <List label={props.props.forLabel} className={TRUST_LIST}>
-                                {chips.map((chip) => (
-                                    <ListItem key={chip.id}>
-                                        <Text size="sm" startContent={<IconGlyph {...chip.iconProps} />}>
+                        <Grid
+                            kind="main-rail"
+                            railWidth="wide"
+                            align="start"
+                            primary={
+                                <Stack gap="identity">
+                                    <Text size="xs">{props.props.forLabel}</Text>
+                                    <Text size="md" weight="semibold">
+                                        {props.props.audience}
+                                    </Text>
+                                    <Text size="sm" tone="muted">
+                                        {props.props.sub}
+                                    </Text>
+                                </Stack>
+                            }
+                            rail={
+                                <Grid kind="cards" columns={2}>
+                                    {chips.map((chip) => (
+                                        <Text key={chip.id} size="sm" startContent={<IconGlyph {...chip.iconProps} />}>
                                             {chip.label}
                                         </Text>
-                                    </ListItem>
-                                ))}
-                            </List>
-                        </div>
+                                    ))}
+                                </Grid>
+                            }
+                        />
                     </SurfaceCard>
-                </div>
+                </Stack>
             </PageContainer>
         </Region>
     )

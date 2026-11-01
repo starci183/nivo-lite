@@ -2,26 +2,18 @@ import { Fragment } from "react"
 import {
     Avatar,
     Badge,
+    Cluster,
     Divider,
+    Grid,
     PageContainer,
     Region,
     SectionHeader,
+    Stack,
     SurfaceCard,
     SurfaceCopyGroup,
     Text,
 } from "@starci/grammar/common"
-import {
-    AI_NOTE,
-    ANCHOR,
-    AUTHOR,
-    AUTHOR_TEXT,
-    BAND_FIRST,
-    BAND_LAST,
-    BAND_MID,
-    PRINCIPLES,
-    QUOTE,
-    SECTION_STACK,
-} from "./classNames"
+import { ANCHOR } from "./classNames"
 
 /** One principle: a title over its explanation. */
 interface LandingCommitmentPrinciple {
@@ -55,7 +47,7 @@ interface LandingCommitmentBaseProps {
 export const LandingCommitmentBase = (props: LandingCommitmentBaseProps) => (
     <Region id="commitment" label={props.props.regionLabel} className={ANCHOR}>
         <PageContainer measure="product">
-            <div className={SECTION_STACK}>
+            <Stack gap="section">
                 <SectionHeader
                     eyebrow={props.props.eyebrow}
                     title={props.props.titleLines.map((line, position) => (
@@ -65,39 +57,42 @@ export const LandingCommitmentBase = (props: LandingCommitmentBaseProps) => (
                         </Fragment>
                     ))}
                 />
-                <SurfaceCard composition="joined">
-                    <div className={BAND_FIRST}>
-                        <SurfaceCopyGroup>
-                            <Text size="xs">{props.props.panelLabel}</Text>
-                            <Text weight="medium">{props.props.panelText}</Text>
-                        </SurfaceCopyGroup>
-                        <div className={AUTHOR}>
-                            <Avatar name={props.props.author} src={props.props.authorMarkSrc} size="md" isDecorative />
-                            <div className={AUTHOR_TEXT}>
-                                <Text weight="medium">{props.props.author}</Text>
-                                <Text size="sm" tone="muted">
-                                    {props.props.authorRole}
-                                </Text>
-                            </div>
-                        </div>
-                    </div>
-                    <Divider semantics="presentation" />
-                    <div className={BAND_MID}>
-                        <div className={QUOTE}>
+                <SurfaceCard>
+                    <Stack gap="row">
+                        <Stack gap="row">
+                            <SurfaceCopyGroup>
+                                <Text size="xs">{props.props.panelLabel}</Text>
+                                <Text weight="medium">{props.props.panelText}</Text>
+                            </SurfaceCopyGroup>
+                            <Cluster gap="row">
+                                <Avatar
+                                    name={props.props.author}
+                                    src={props.props.authorMarkSrc}
+                                    size="md"
+                                    isDecorative
+                                />
+                                <Stack gap="identity">
+                                    <Text weight="medium">{props.props.author}</Text>
+                                    <Text size="sm" tone="muted">
+                                        {props.props.authorRole}
+                                    </Text>
+                                </Stack>
+                            </Cluster>
+                        </Stack>
+                        <Divider semantics="presentation" />
+                        <Stack gap="row">
                             <Text size="md" weight="medium">
                                 {props.props.quote}
                             </Text>
-                        </div>
-                        <div className={AI_NOTE}>
-                            <Badge tone="neutral">{props.props.aiChip}</Badge>
-                            <Text size="sm" tone="muted">
-                                {props.props.aiNote}
-                            </Text>
-                        </div>
-                    </div>
-                    <Divider semantics="presentation" />
-                    <div className={BAND_LAST}>
-                        <div className={PRINCIPLES}>
+                            <Cluster gap="inline">
+                                <Badge tone="neutral">{props.props.aiChip}</Badge>
+                                <Text size="sm" tone="muted">
+                                    {props.props.aiNote}
+                                </Text>
+                            </Cluster>
+                        </Stack>
+                        <Divider semantics="presentation" />
+                        <Grid kind="cards" columns={2}>
                             {props.props.principles.map((principle) => (
                                 <SurfaceCopyGroup key={principle.id}>
                                     <Text weight="medium">{principle.title}</Text>
@@ -106,10 +101,10 @@ export const LandingCommitmentBase = (props: LandingCommitmentBaseProps) => (
                                     </Text>
                                 </SurfaceCopyGroup>
                             ))}
-                        </div>
-                    </div>
+                        </Grid>
+                    </Stack>
                 </SurfaceCard>
-            </div>
+            </Stack>
         </PageContainer>
     </Region>
 )

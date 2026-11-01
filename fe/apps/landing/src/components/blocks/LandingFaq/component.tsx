@@ -1,6 +1,6 @@
-import { PageContainer, Region, SectionHeader } from "@starci/grammar/common"
+import { Grid, PageContainer, Region, SectionHeader, Stack } from "@starci/grammar/common"
 import { LandingFaqColumn } from "@/components/composites/LandingFaqColumn"
-import { ANCHOR, FAQ_GRID, SECTION_STACK } from "./classNames"
+import { ANCHOR } from "./classNames"
 
 /** One question with its answer. */
 interface LandingFaqEntry {
@@ -27,17 +27,17 @@ interface LandingFaqBaseProps {
 export const LandingFaqBase = (props: LandingFaqBaseProps) => (
     <Region id="faq" label={props.props.regionLabel} className={ANCHOR}>
         <PageContainer measure="product">
-            <div className={SECTION_STACK}>
+            <Stack gap="section">
                 <SectionHeader eyebrow={props.props.eyebrow} title={props.props.title} />
-                <div className={FAQ_GRID}>
+                <Grid kind="cards" columns={2}>
                     <LandingFaqColumn
                         label={props.props.leftLabel}
                         entries={props.props.left}
                         defaultOpenId={props.props.openFirstId}
                     />
                     <LandingFaqColumn label={props.props.rightLabel} entries={props.props.right} />
-                </div>
-            </div>
+                </Grid>
+            </Stack>
         </PageContainer>
     </Region>
 )

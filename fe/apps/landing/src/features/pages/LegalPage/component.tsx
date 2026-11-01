@@ -1,11 +1,10 @@
-import { Alert, Page } from "@starci/grammar/common"
+import { Alert, Page, Stack } from "@starci/grammar/common"
 import { LandingFooter } from "@/components/blocks/LandingFooter"
 import { LandingNavActions } from "@/components/blocks/LandingNavActions"
 import { LandingNavBrand } from "@/components/blocks/LandingNavBrand"
 import { LandingNavLinks } from "@/components/blocks/LandingNavLinks"
 import { LegalSectionView } from "@/components/composites/LegalSectionView"
 import { SiteShell } from "@/components/composites/SiteShell"
-import { LEGAL_MAIN, LEGAL_STACK } from "./classNames"
 
 /** One block of the document, as plain words. */
 interface LegalPageSection {
@@ -45,24 +44,22 @@ export const LegalPageBase = (props: LegalPageBaseProps) => (
         navigation={<LandingNavLinks anchorBase="/" />}
         actions={<LandingNavActions />}
     >
-        <div className={LEGAL_MAIN}>
-            <Page measure="reading" header={{ title: props.props.title, description: props.props.intro }}>
-                <div className={LEGAL_STACK}>
-                    <Alert tone="cautionary" title={props.props.draft} />
-                    {props.props.sections.map((section) => (
-                        <LegalSectionView
-                            key={section.id}
-                            id={section.id}
-                            title={section.title}
-                            paragraphs={section.paragraphs}
-                            items={section.items}
-                            afterItems={section.afterItems}
-                            limitedUse={section.hasLimitedUse ? props.props.limitedUse : null}
-                        />
-                    ))}
-                </div>
-                <LandingFooter anchorBase="/" />
-            </Page>
-        </div>
+        <Page measure="reading" header={{ title: props.props.title, description: props.props.intro }}>
+            <Stack gap="section">
+                <Alert tone="cautionary" title={props.props.draft} />
+                {props.props.sections.map((section) => (
+                    <LegalSectionView
+                        key={section.id}
+                        id={section.id}
+                        title={section.title}
+                        paragraphs={section.paragraphs}
+                        items={section.items}
+                        afterItems={section.afterItems}
+                        limitedUse={section.hasLimitedUse ? props.props.limitedUse : null}
+                    />
+                ))}
+            </Stack>
+            <LandingFooter anchorBase="/" />
+        </Page>
     </SiteShell>
 )

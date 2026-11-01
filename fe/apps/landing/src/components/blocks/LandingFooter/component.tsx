@@ -1,5 +1,4 @@
-import { Footer, Image, Text, TextAction } from "@starci/grammar/common"
-import { FOOT_BRAND, FOOT_LEGAL } from "./classNames"
+import { Footer, Image, Stack, Text, TextAction } from "@starci/grammar/common"
 
 /** One link of a footer directory. */
 interface LandingFooterLink {
@@ -40,7 +39,7 @@ export const LandingFooterBase = (props: LandingFooterBaseProps) => (
     <Footer
         label={props.props.label}
         brand={
-            <div className={FOOT_BRAND}>
+            <Stack gap="section">
                 <TextAction href={props.props.homeHref}>
                     <Image
                         src={props.props.logoSrc}
@@ -58,17 +57,17 @@ export const LandingFooterBase = (props: LandingFooterBaseProps) => (
                 <Text size="sm" weight="medium">
                     {props.props.tagline}
                 </Text>
-            </div>
+            </Stack>
         }
         groups={props.props.groups}
         legal={
-            <div className={FOOT_LEGAL}>
+            <Stack gap="identity">
                 <Text size="sm">{props.props.copyright}</Text>
                 <Text size="sm" tone="muted">
                     {props.props.legalLine}
                 </Text>
                 <Text size="xs">{props.props.legalNote}</Text>
-            </div>
+            </Stack>
         }
     />
 )

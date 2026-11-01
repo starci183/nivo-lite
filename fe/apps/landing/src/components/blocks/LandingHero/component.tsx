@@ -3,6 +3,8 @@ import {
     Avatar,
     Badge,
     Button,
+    Cluster,
+    Grid,
     Heading,
     Image,
     IncludedMark,
@@ -10,20 +12,12 @@ import {
     ListRow,
     PageContainer,
     Region,
+    Stack,
     SurfaceCard,
     Text,
 } from "@starci/grammar/common"
 import { LandingBrowserFrame } from "@/components/composites/LandingBrowserFrame"
-import {
-    HERO_ACTIONS,
-    HERO_ART_BAND,
-    HERO_COPY,
-    HERO_FACT,
-    HERO_FACTS,
-    HERO_GRID,
-    LEAD_MEASURE,
-    SECTION_STACK,
-} from "./classNames"
+import { HERO_ART_BAND, LEAD_MEASURE } from "./classNames"
 
 /** One row of the "what NIVO follows today" card. */
 interface LandingHeroRow {
@@ -62,9 +56,9 @@ interface LandingHeroBaseProps {
 export const LandingHeroBase = (props: LandingHeroBaseProps) => (
     <Region label={props.props.regionLabel}>
         <PageContainer measure="product">
-            <div className={SECTION_STACK}>
-                <div className={HERO_GRID}>
-                    <div className={HERO_COPY}>
+            <Stack gap="section">
+                <Grid kind="cards" columns={2}>
+                    <Stack gap="section" align="start">
                         <Badge tone="accent">{props.props.offerBadge}</Badge>
                         <Heading level={1} scale="display">
                             {props.props.titleLines.map((line, position) => (
@@ -77,26 +71,26 @@ export const LandingHeroBase = (props: LandingHeroBaseProps) => (
                         <div className={LEAD_MEASURE}>
                             <Text tone="muted">{props.props.lead}</Text>
                         </div>
-                        <div className={HERO_ACTIONS}>
-                            <Button intent="commit" size="lg" width="fill" href={props.props.ctaHref}>
+                        <Cluster gap="row">
+                            <Button intent="commit" size="lg" href={props.props.ctaHref}>
                                 {props.props.ctaLabel}
                             </Button>
-                            <Button intent="alternative" size="lg" width="fill" href={props.props.secondaryHref}>
+                            <Button intent="alternative" size="lg" href={props.props.secondaryHref}>
                                 {props.props.secondaryLabel}
                             </Button>
-                        </div>
-                        <div className={HERO_FACTS}>
+                        </Cluster>
+                        <Cluster gap="row">
                             {props.props.facts.map((fact) => (
-                                <div key={fact} className={HERO_FACT}>
+                                <Cluster key={fact} gap="inline">
                                     <IncludedMark />
                                     <Text size="sm">{fact}</Text>
-                                </div>
+                                </Cluster>
                             ))}
-                        </div>
+                        </Cluster>
                         <Text size="xs" tone="muted">
                             {props.props.tagline}
                         </Text>
-                    </div>
+                    </Stack>
                     <SurfaceCard label={props.props.cardTitle} headingLevel={2} composition="joined">
                         <div className={HERO_ART_BAND} aria-hidden="true">
                             <Image src={props.props.artSrc} alt="" aspect="wide" fit="contain" plate="none" />
@@ -113,7 +107,7 @@ export const LandingHeroBase = (props: LandingHeroBaseProps) => (
                             ))}
                         </List>
                     </SurfaceCard>
-                </div>
+                </Grid>
                 <LandingBrowserFrame
                     src={props.props.shotSrc}
                     alt={props.props.shotAlt}
@@ -122,7 +116,7 @@ export const LandingHeroBase = (props: LandingHeroBaseProps) => (
                     height={830}
                     priority
                 />
-            </div>
+            </Stack>
         </PageContainer>
     </Region>
 )
