@@ -46,7 +46,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
             "## Ngữ cảnh đã duyệt\n(Chưa có phiên bản nào được áp dụng. Việc gì cần dữ kiện thì nói đồng nghiệp sẽ xác nhận, đừng đoán.)",
         "bundle.contextFacts": "Các điều cần nhớ thêm:\n{{facts}}",
         "bundle.knowledgeSection":
-            "## Tri thức doanh nghiệp ({{audience}})\nTri thức được đọc qua NIVO: gọi nivo_call với tool knowledge.search để tìm thêm. Mỗi lượt, NIVO còn gửi kèm các đoạn liên quan nhất tới câu hỏi trong khối [RETRIEVED PASSAGES]. Chỉ trả lời từ đây và từ các đoạn đó; thứ gì không có thì không bịa.\n\n{{body}}",
+            "## Tri thức doanh nghiệp ({{audience}})\nTri thức chỉ đọc qua NIVO: gọi nivo_call với tool knowledge.search để tìm đoạn trả lời câu hỏi. Chỉ trả lời từ các đoạn đó; thứ gì không có thì không bịa.\n\n{{body}}",
         "bundle.audienceCustomer": "chỉ thông tin công khai",
         "bundle.audienceInternal": "công khai và nội bộ",
         "bundle.bookingAddendum":
@@ -60,7 +60,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "bundle.memoryLessons": "## Bài học đã duyệt (cách làm việc chủ muốn)\n{{body}}",
         "bundle.memoryWhen": " (khi: {{when}})",
         "bundle.knowledgeNone": "## Tri thức doanh nghiệp\n(Chưa có nguồn tri thức nào được phép dùng.)",
-        "bundle.knowledgeIndex": "Các nguồn bạn được đọc qua nivo_call: {{titles}}.",
+        "bundle.knowledgeIndex": "Các nguồn bạn được đọc: {{titles}}.",
         "bundle.contractSection": "## Hợp đồng câu trả lời\n{{contract}}",
         "bundle.soulTitle": "# Giọng điệu của {{name}}",
         "bundle.soulConfirmed": "## Cách xưng hô và phong cách (chủ doanh nghiệp đã xác nhận)\n{{text}}",
@@ -68,7 +68,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "bundle.soulGuidance": "## Hướng dẫn giọng điệu của NIVO\n{{text}}",
         "bundle.toolsTitle": "## Công cụ NIVO (tuỳ chọn)",
         "bundle.toolsIntro":
-            'Trả lời khách chủ yếu bằng JSON theo hợp đồng ở trên: các trường "lead", "needs_human", "order", "payment_claim" đã đủ để NIVO tạo khách tiềm năng, chuyển cho người hoặc xin duyệt. Mỗi lượt NIVO có thể kèm khối [OPTIONAL TOOLS] (địa chỉ và token chỉ dùng cho lượt đó). Chỉ khi khối đó có mặt VÀ runtime của bạn cho phép gọi HTTP thì mới gọi công cụ; nếu không thì bỏ qua, đừng bịa kết quả.',
+            'Trả lời khách chủ yếu bằng JSON theo hợp đồng ở trên: các trường "lead", "needs_human", "order", "payment_claim" đã đủ để NIVO tạo khách tiềm năng, chuyển cho người hoặc xin duyệt. Bạn gọi công cụ NIVO bằng một công cụ duy nhất, nivo_call: tên công cụ đặt vào "tool", tham số đặt vào "args". Khi được hỏi bất cứ điều gì về doanh nghiệp (giờ mở cửa, địa chỉ, giá, sản phẩm, chính sách), hãy gọi nivo_call với tool knowledge.search trước khi trả lời hay chuyển cho người; chỉ chuyển cho người khi tìm không thấy. Đừng bịa kết quả.',
         "bundle.toolLine": "- {{name}}: {{description}} Tham số: {{args}}",
         "bundle.replyContract": REPLY_CONTRACT_VI,
     },
@@ -99,7 +99,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
             "## Approved context\n(No version has been applied yet. When a fact is needed, say a colleague will confirm; do not guess.)",
         "bundle.contextFacts": "More to remember:\n{{facts}}",
         "bundle.knowledgeSection":
-            "## Business knowledge ({{audience}})\nKnowledge is read through NIVO: call nivo_call with the tool knowledge.search to find more. Each turn NIVO also sends the passages closest to the question in the [RETRIEVED PASSAGES] block. Answer only from here and from those passages; never invent what is missing.\n\n{{body}}",
+            "## Business knowledge ({{audience}})\nKnowledge is read only through NIVO: call nivo_call with the tool knowledge.search to find the passages that answer a question. Answer only from those passages; never invent what is missing.\n\n{{body}}",
         "bundle.audienceCustomer": "public information only",
         "bundle.audienceInternal": "public and internal",
         "bundle.bookingAddendum":
@@ -113,7 +113,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "bundle.memoryLessons": "## Approved lessons (how the owner wants the work done)\n{{body}}",
         "bundle.memoryWhen": " (when: {{when}})",
         "bundle.knowledgeNone": "## Business knowledge\n(No knowledge source may be used yet.)",
-        "bundle.knowledgeIndex": "Sources you may read through nivo_call: {{titles}}.",
+        "bundle.knowledgeIndex": "Sources you may read: {{titles}}.",
         "bundle.contractSection": "## Reply contract\n{{contract}}",
         "bundle.soulTitle": "# Tone of {{name}}",
         "bundle.soulConfirmed": "## Address and style (confirmed by the business owner)\n{{text}}",
@@ -121,7 +121,7 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "bundle.soulGuidance": "## NIVO tone guidance\n{{text}}",
         "bundle.toolsTitle": "## NIVO tools (optional)",
         "bundle.toolsIntro":
-            'Answer the customer mainly with the JSON of the contract above: the "lead", "needs_human", "order" and "payment_claim" fields are enough for NIVO to create a lead, hand over to a person or ask for approval. Each turn NIVO may add an [OPTIONAL TOOLS] block (an address and a token valid for that turn only). Call a tool only when that block is present AND your runtime allows HTTP calls; otherwise ignore it and never invent a result.',
+            'Answer the customer mainly with the JSON of the contract above: the "lead", "needs_human", "order" and "payment_claim" fields are enough for NIVO to create a lead, hand over to a person or ask for approval. You call NIVO tools through one tool, nivo_call: the tool name goes in "tool", its arguments in "args". When asked anything about the business (hours, address, prices, products, policies), call nivo_call with the tool knowledge.search before you answer or hand over; hand over only when the search finds nothing. Never invent a result.',
         "bundle.toolLine": "- {{name}}: {{description}} Arguments: {{args}}",
         "bundle.replyContract": REPLY_CONTRACT_EN,
     },

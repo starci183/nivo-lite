@@ -119,13 +119,13 @@ const build = async (options: RuntimeBuildOptions = {}) => {
 }
 
 describe("CustomerTurnRuntimeService", () => {
-    it("runs the turn on the module's agent with the recalled knowledge and meters it", async () => {
+    it("runs the turn on the module's agent without the knowledge text and meters it", async () => {
         const { runtime, gateway, usage } = await build()
         const answer = await runtime.propose(turn)
         expect(answer).toMatchObject({ reply: "50k", needsHuman: false })
         const request = gateway.runTurn.mock.calls[0]?.[0]
         expect(request?.threadKey).toBe(`agent:${request?.agentId}:c1`)
-        expect(request?.message).toContain("KNOW")
+        expect(request?.message).not.toContain("KNOW")
         expect(usage.record).toHaveBeenCalledWith(expect.objectContaining({ kind: "chat_reply", module: "chatbot" }))
     })
 
@@ -152,13 +152,13 @@ describe("CustomerTurnRuntimeService", () => {
         })
     })
 
-    it("adds every module brief to the agent's context alongside the recalled knowledge", async () => {
+    it("adds every module brief to the agent's context without the knowledge text", async () => {
         const { runtime, gateway, modules } = await build()
         modules.briefs.mockResolvedValueOnce(["BOOKING RULES", "LOYALTY FACTS"])
         await expect(runtime.propose(turn)).resolves.toMatchObject({ reply: "50k", needsHuman: false })
         expect(modules.briefs).toHaveBeenCalledWith(turn.conversation)
         const request = gateway.runTurn.mock.calls[0]?.[0]
-        expect(request?.message).toContain("KNOW")
+        expect(request?.message).not.toContain("KNOW")
         expect(request?.message).toContain("BOOKING RULES")
         expect(request?.message).toContain("LOYALTY FACTS")
     })
@@ -174,7 +174,7 @@ describe("CustomerTurnRuntimeService", () => {
             part: "modules",
         })
         const request = gateway.runTurn.mock.calls[0]?.[0]
-        expect(request?.message).toContain("KNOW")
+        expect(request?.message).not.toContain("KNOW")
         expect(usage.record).toHaveBeenCalledTimes(1)
     })
 })

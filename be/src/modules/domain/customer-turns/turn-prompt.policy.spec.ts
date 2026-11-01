@@ -63,13 +63,12 @@ describe("turnSystemOf", () => {
         const system = subject.turnSystemOf({
             persona: "persona",
             authority: "\nauthority",
-            recall: "recall",
             extras: ["", "jobs"],
             contract: "contract",
         })
         expect(system.startsWith("You work inside NIVO OS")).toBe(true)
         expect(system).toContain("persona\nauthority")
-        expect(system).toContain("recall\n\njobs\n\ncontract")
+        expect(system).toContain("jobs\n\ncontract")
         expect(system.endsWith("Answer with ONLY the JSON object of the reply contract.")).toBe(true)
         expect(system.includes("\n\n\n\n")).toBe(false)
     })
