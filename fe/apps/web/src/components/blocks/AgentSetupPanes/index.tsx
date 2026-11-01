@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useAgentRights } from "@/hooks/agentSettings"
+import { useAgentGraphPanel } from "@/hooks/agentGraph"
 import {
     useSetupBrandCards,
     useSetupChat,
@@ -64,6 +65,7 @@ const proposalsOf = (t: SetupCopy, gates: ReadonlyArray<SetupSideGate>): AgentSe
 /** What the thread and the composer draw, every word resolved. */
 const chatContentOf = (input: ChatInput): AgentSetupChatContent => {
     const { t, state, chat } = input
+    const kit = input.brand.content
     return {
         emptyTitle: t("emptyTitle"),
         emptyBody: t("emptyBody"),
@@ -94,22 +96,8 @@ const chatContentOf = (input: ChatInput): AgentSetupChatContent => {
             .filter((gate) => gate.status === "missing")
             .slice(0, SUGGESTIONS)
             .map((gate) => ({ id: gate.key, label: gate.label })),
-        brandKits:
-            input.brand.content === null
-                ? null
-                : {
-                      isReading: input.brand.content.isReading,
-                      readingLabel: input.brand.content.readingLabel,
-                      cards: input.brand.content.cards,
-                  },
-        attach:
-            input.brand.content === null
-                ? null
-                : {
-                      label: input.brand.content.attachLabel,
-                      prompt: input.brand.content.attachPrompt,
-                      isReading: input.brand.content.isReading,
-                  },
+        brandKits: kit === null ? null : { isReading: kit.isReading, readingLabel: kit.readingLabel, cards: kit.cards },
+        attach: kit === null ? null : { label: kit.attachLabel, prompt: kit.attachPrompt, isReading: kit.isReading },
     }
 }
 
@@ -119,7 +107,6 @@ const copyOf = (t: SetupCopy): AgentSetupCopy => ({
     checklistLabel: t("checklistLabel"),
     chatLabel: t("chatLabel"),
     chatTitle: t("chatTitle"),
-    chatHint: t("chatHint"),
     proposalsLabel: t("proposalsLabel"),
     confirmLabel: t("confirm"),
     proposalEditLabel: t("proposalEdit"),
@@ -142,6 +129,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
     const { canEdit } = useAgentRights()
     const { slot, reload } = useSetupState(props.installationId)
     const side = useSetupSide(props.module, props.installationId)
+    const graph = useAgentGraphPanel(props.installationId)
     const versions = useSetupVersions(props.installationId).items?.versions ?? NO_VERSIONS
     const state = slot.items
     const sessionId = state?.session.id ?? ""
@@ -176,6 +164,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
                 chatPlaceholder: content,
                 side: side.slot,
                 sidePlaceholder: side.placeholder,
+                ...graph.props,
                 slotLabels: slotLabels(t("emptyTitle")),
                 forbidden: canEdit ? "" : access("forbidden"),
                 threadRef,
@@ -193,6 +182,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
                 open: (href) => router.push(href),
                 retryChat: reload,
                 retrySide: side.reload,
+                ...graph.on,
             }}
         />
     )

@@ -911,6 +911,8 @@ type AgentGoalType {
   source: String!
   status: String!
   title: String!
+}
+
 type AgentGraphCoverageType {
   approvers: [String!]!
   branchKey: String
@@ -5577,8 +5579,8 @@ type Mutation {
   runDocumentImport(input: RunDocumentImportInput!): CsvImportResultType!
   runFlow(input: RunFlowInput!): RunFlowType!
   saveAgentGoal(input: SaveAgentGoalInput!): AgentGoalType!
-  saveAgentTrigger(input: SaveAgentTriggerInput!): AgentTriggerType!
   saveAgentGraphDraft(input: SaveAgentGraphDraftInput!): Int!
+  saveAgentTrigger(input: SaveAgentTriggerInput!): AgentTriggerType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
   saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
   saveBookingHours(input: SaveBookingHoursInput!): SaveBookingHoursType!
@@ -7291,6 +7293,12 @@ input SaveAgentGoalInput {
   title: String! @inputBounds(maxLength: 200)
 }
 
+input SaveAgentGraphDraftInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  documentJson: String! @inputBounds(maxLength: 400000)
+  rev: Int! @inputBounds(min: 0)
+}
+
 input SaveAgentTriggerInput {
   atTime: String = null @inputBounds(maxLength: 5)
   enabled: Boolean!
@@ -7301,10 +7309,6 @@ input SaveAgentTriggerInput {
   probeKey: String = null @inputBounds(maxLength: 80)
   timeZone: String = null @inputBounds(maxLength: 64)
   triggerId: ID = null @inputBounds(maxLength: 36)
-input SaveAgentGraphDraftInput {
-  agentId: String! @inputBounds(maxLength: 36)
-  documentJson: String! @inputBounds(maxLength: 400000)
-  rev: Int! @inputBounds(min: 0)
 }
 
 input SaveAuthorityRuleInput {

@@ -1,0 +1,77 @@
+import type { useTranslations } from "next-intl"
+import type {
+    AgentGraphApproverData,
+    AgentGraphNodeKind,
+    AgentGraphOnTimeout,
+    AgentGraphSourceKind,
+    AgentGraphThen,
+} from "@/modules/types"
+
+/** The translator of the graph copy. */
+export type AgentGraphT = ReturnType<typeof useTranslations<"agentGraph">>
+
+/** What the builders of the views know about the person and the language. */
+export interface AgentGraphContext {
+    readonly t: AgentGraphT
+    /** Owners and managers edit the graph. */
+    readonly canEdit: boolean
+    /** Only the owner may add what widens the agent's reach. */
+    readonly isOwner: boolean
+    /** Writes an amount in the number format of the reader. */
+    readonly number: (value: number) => string
+}
+
+/** The word of a node kind: the lane it sits in. */
+export const kindWordOf = (t: AgentGraphT, kind: AgentGraphNodeKind): string => {
+    const words: Readonly<Record<AgentGraphNodeKind, string>> = {
+        trigger: t("kind_trigger"),
+        execute: t("kind_execute"),
+        condition: t("kind_condition"),
+        output: t("kind_output"),
+    }
+    return words[kind]
+}
+
+/** The word of the rule behind a node: where it came from. */
+export const sourceWordOf = (t: AgentGraphT, kind: AgentGraphSourceKind): string => {
+    const words: Readonly<Record<AgentGraphSourceKind, string>> = {
+        brain: t("source_brain"),
+        template: t("source_template"),
+        chat: t("source_chat"),
+        learned: t("source_learned"),
+        owner: t("source_owner"),
+        rule: t("source_rule"),
+        corrected: t("source_corrected"),
+    }
+    return words[kind]
+}
+
+/** The word of what a branch does. */
+export const thenWordOf = (t: AgentGraphT, then: AgentGraphThen): string => {
+    const words: Readonly<Record<AgentGraphThen, string>> = {
+        auto: t("then_auto"),
+        ask: t("then_ask"),
+        stop: t("then_stop"),
+    }
+    return words[then]
+}
+
+/** The word of what happens when nobody answers in time. */
+export const timeoutWordOf = (t: AgentGraphT, kind: AgentGraphOnTimeout): string => {
+    const words: Readonly<Record<AgentGraphOnTimeout, string>> = {
+        backup: t("timeout_backup"),
+        stop: t("timeout_stop"),
+        agent_owner: t("timeout_owner"),
+        unset: t("timeout_unset"),
+    }
+    return words[kind]
+}
+
+/** The line of the approver card: how long they have and who takes over. */
+export const timeoutLineOf = (t: AgentGraphT, approver: AgentGraphApproverData): string => {
+    const hours = Math.round(approver.timeoutMinutes / 60)
+    if (approver.onTimeout === "backup") return t("timeoutLineBackup", { hours, name: approver.backupName })
+    if (approver.onTimeout === "stop") return t("timeoutLineStop", { hours })
+    if (approver.onTimeout === "agent_owner") return t("timeoutLineOwner", { hours })
+    return t("timeoutLineUnset")
+}
