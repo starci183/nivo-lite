@@ -5,12 +5,17 @@ import { useSWRConfig } from "swr"
 import {
     QUERY_DOSSIER_FINDINGS_SWR_KEY,
     QUERY_DOSSIER_REMEDY_DRAFT_SWR_KEY,
+    QUERY_BRAIN_TODO_SWR_KEY,
     QUERY_DOSSIER_REVIEW_SUMMARY_SWR_KEY,
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 
-/** The reads every write of the review changes besides the lists of findings: the summary and the drafts. */
-const REVIEW_READS: ReadonlyArray<string> = [QUERY_DOSSIER_REVIEW_SUMMARY_SWR_KEY, QUERY_DOSSIER_REMEDY_DRAFT_SWR_KEY]
+/** The reads every write of the review changes besides the lists of findings: the summary, the drafts and the count of what needs the owner. */
+const REVIEW_READS: ReadonlyArray<string> = [
+    QUERY_DOSSIER_REVIEW_SUMMARY_SWR_KEY,
+    QUERY_DOSSIER_REMEDY_DRAFT_SWR_KEY,
+    QUERY_BRAIN_TODO_SWR_KEY,
+]
 
 /** A cache key of the findings connection (any filter), so a write refreshes every list that shows findings. */
 const isFindingsCacheKey = (key: unknown): key is string =>

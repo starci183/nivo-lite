@@ -159,6 +159,20 @@ describe("DossierFindingsService evidence places", () => {
     })
 })
 
+describe("DossierFindingsService activeCount", () => {
+    it("counts the findings that are open or confirmed in one count, with no list read", async () => {
+        const em = mockEntityManager({ count: [DossierFindingEntity, 7] })
+        const { service } = await build(em)
+
+        await expect(service.activeCount(WS)).resolves.toBe(7)
+
+        expect(em.count).toHaveBeenCalledWith(DossierFindingEntity, {
+            where: { workspaceId: WS, status: In(["open", "confirmed"]) },
+        })
+        expect(em.find).not.toHaveBeenCalled()
+    })
+})
+
 describe("DossierFindingsService list of nothing", () => {
     it("answers an empty page without reading findings when no draft awaits approval", async () => {
         const em = mockEntityManager({ find: [DossierRemedyDraftEntity, []] })

@@ -11,19 +11,6 @@ export interface TodoFilterOption {
     readonly count: number
 }
 
-/** What the queue is counted from. */
-interface TodoCounts {
-    /** Findings still open or confirmed. */
-    readonly findings: number
-    /** Cards of facts waiting for a decision. */
-    readonly factCards: number
-    /** Customer questions nobody has answered. */
-    readonly questions: number
-}
-
-/** The one number of what needs doing: findings, facts waiting and customer questions. The tab and the rail show this number. */
-export const todoCountOf = (counts: TodoCounts): number => counts.findings + counts.factCards + counts.questions
-
 /** The filters of the queue: all of it first, then every kind of finding that has items, the facts waiting and the questions. */
 export const todoFiltersOf = (
     findings: ReadonlyArray<FindingView>,

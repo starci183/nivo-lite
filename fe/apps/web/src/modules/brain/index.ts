@@ -44,7 +44,7 @@ export type {
 } from "./finding-view"
 export { FINDING_FILTERS, SEVERITY_TONE, filterOfStatus, queryOfDossier, queryOfQueue } from "./findings"
 export type { FindingFilter, FindingsQuery } from "./findings"
-export { findingsOfFilter, todoCountOf, todoFiltersOf } from "./todo"
+export { findingsOfFilter, todoFiltersOf } from "./todo"
 export type { TodoFilter } from "./todo"
 export { MAP_ROOT_ID, MAP_STATUS_FILTERS, dossierOfFile, mapFilesOf, mapGraphOf, selectionOf } from "./map"
 export type { MapSelection, MapStatusFilter, MapStatusOf } from "./map"

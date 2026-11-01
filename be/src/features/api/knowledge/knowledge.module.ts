@@ -20,6 +20,7 @@ import { SetKnowledgeSuggestionStateHandler } from "./application/set-knowledge-
 import { CreateKnowledgeUploadHandler } from "./application/create-knowledge-upload.handler"
 import { ReembedKnowledgeHandler } from "./application/reembed-knowledge.handler"
 import { GetBrainHandler } from "./application/get-brain.handler"
+import { BrainTodoHandler } from "./application/brain-todo.handler"
 import { SaveBrainFactHandler } from "./application/save-brain-fact.handler"
 import { DecideBrainFactHandler } from "./application/decide-brain-fact.handler"
 import { KeepCurrentBrainFactHandler } from "./application/keep-current-brain-fact.handler"
@@ -58,6 +59,7 @@ import { ConfigurableModuleClass } from "./knowledge.module-definition"
         CreateKnowledgeUploadHandler,
         ReembedKnowledgeHandler,
         GetBrainHandler,
+        BrainTodoHandler,
         SaveBrainFactHandler,
         DecideBrainFactHandler,
         KeepCurrentBrainFactHandler,

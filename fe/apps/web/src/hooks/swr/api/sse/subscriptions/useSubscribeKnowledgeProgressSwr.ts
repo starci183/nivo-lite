@@ -6,6 +6,7 @@ import { useViewerKeyId, useWorkspaceKey } from "@/hooks/workspaceKey"
 import { streamKnowledgeProgress } from "@/modules/api/sse/knowledge/stream-knowledge-progress"
 import type { KnowledgeProgressPush } from "@/modules/api/sse/knowledge/stream-knowledge-progress"
 import { QUERY_BRAIN_SWR_KEY } from "../../graphql/queries/useQueryBrainSwr"
+import { QUERY_BRAIN_TODO_SWR_KEY } from "../../graphql/queries/useQueryBrainTodoSwr"
 import { QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "../../graphql/queries/useQueryKnowledgeSourcesSwr"
 import { QUERY_KNOWLEDGE_USAGE_SWR_KEY } from "../../graphql/queries/useQueryKnowledgeUsageSwr"
 
@@ -67,7 +68,9 @@ export const useSubscribeKnowledgeProgressSwr = () => {
                 Array.isArray(read) && read[1] === workspaceId && SETTLED_READS.has(read[0])
             /** The Second Brain holds where the reading of the facts stands: it is read at once, so a document that settled is never drawn as unread. */
             const staleBrain = (read: unknown): boolean =>
-                Array.isArray(read) && read[1] === workspaceId && read[0] === QUERY_BRAIN_SWR_KEY
+                Array.isArray(read) &&
+                read[1] === workspaceId &&
+                (read[0] === QUERY_BRAIN_SWR_KEY || read[0] === QUERY_BRAIN_TODO_SWR_KEY)
             const refreshSoon = () => {
                 clearTimeout(pending)
                 pending = setTimeout(() => void mutate(staleList), SETTLE_DEBOUNCE_MS)

@@ -1829,6 +1829,13 @@ type BrainLessonType {
   title: String!
 }
 
+type BrainTodoType {
+  facts: Int!
+  findings: Int!
+  questions: Int!
+  total: Int!
+}
+
 type BrainType {
   extractions: [BrainExtractionType!]!
   facts: [BrainFactType!]!
@@ -3286,6 +3293,8 @@ type DossierFindingEvidenceType {
   factLine: String
   label: String!
   passageId: ID
+  placeKind: String
+  placeLabel: String
   quote: String
   role: String!
   sourceId: ID
@@ -3293,8 +3302,6 @@ type DossierFindingEvidenceType {
 }
 
 input DossierFindingNoteInput {
-  placeKind: String
-  placeLabel: String
   findingId: ID! @inputBounds(maxLength: 36)
   note: String = null @inputBounds(maxLength: 500)
 }
@@ -6384,6 +6391,7 @@ type Query {
   bookingBoard(input: BookingBoardInput): BookingBoardType!
   brain: BrainType!
   brainDossiers: [BrainDossierType!]!
+  brainTodo: BrainTodoType!
   brandProposals(input: BrandProposalsInput!): [BrandProposalType!]!
   chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
   chatMarkerState(input: ChatTargetInput!): ChatMarkerStateType!

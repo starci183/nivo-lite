@@ -1,7 +1,7 @@
 "use client"
 
 import { mutate } from "swr"
-import { QUERY_BRAIN_SWR_KEY } from "@/hooks/swr"
+import { QUERY_BRAIN_SWR_KEY, QUERY_BRAIN_TODO_SWR_KEY } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useBrainFactTriggers } from "./useBrainFactTriggers"
 import type { BrainFactRequests } from "./useBrainFactTriggers"
@@ -56,7 +56,9 @@ export const useBrainCommand = (): BrainCommand => {
             })
             if (result === undefined) return
             options?.onResult?.(result)
-            await mutate((key) => Array.isArray(key) && key[0] === QUERY_BRAIN_SWR_KEY)
+            await mutate(
+                (key) => Array.isArray(key) && (key[0] === QUERY_BRAIN_SWR_KEY || key[0] === QUERY_BRAIN_TODO_SWR_KEY),
+            )
         })()
     }
     return { isPending: facts.isPending || lessons.isPending, send }

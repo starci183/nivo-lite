@@ -4,6 +4,7 @@ import { INBOX, InboxService } from "@modules/platform/inbox"
 import { BrainCommandRunnerService } from "./brain-command-runner.service"
 import { BrainLearningService } from "./brain-learning.service"
 import { BrainPageService } from "./brain-page.service"
+import { BrainTodoService } from "./brain-todo.service"
 import { BrainService } from "./brain.service"
 import { BRAIN_CORRECTIONS } from "./brain.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./brain.module-definition"
@@ -25,6 +26,7 @@ export class BrainModule extends ConfigurableModuleClass {
                 { provide: BRAIN_CORRECTIONS, useClass: options.corrections },
                 { provide: INBOX, useClass: InboxService },
                 BrainPageService,
+                BrainTodoService,
                 BrainService,
                 BrainLearningService,
                 BrainCommandRunnerService,
@@ -37,6 +39,7 @@ export class BrainModule extends ConfigurableModuleClass {
                 IndexedSourcesService,
                 BrainCommandRunnerService,
                 BrainPageService,
+                BrainTodoService,
                 BrainService,
                 BrainLearningService,
                 DocumentFactsService,

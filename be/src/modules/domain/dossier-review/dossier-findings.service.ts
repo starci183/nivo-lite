@@ -151,6 +151,11 @@ export class DossierFindingsService {
         }
     }
 
+    /** How many findings still need somebody, open or confirmed, in one count; the caller has proven the workspace. */
+    activeCount(workspaceId: string): Promise<number> {
+        return this.entityManager.count(DossierFindingEntity, { where: { workspaceId, status: In([...ACTIVE]) } })
+    }
+
     /** The review at a glance: active findings by status and severity, drafts to approve, the newest run and the reviewed dossiers. */
     async summary(userId: string, workspaceId: string): Promise<ReviewSummary> {
         await this.members.require(userId, workspaceId)
