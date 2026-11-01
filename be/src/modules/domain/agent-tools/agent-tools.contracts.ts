@@ -69,9 +69,22 @@ export type BookingToolName = "booking.find_slots" | "booking.request" | "bookin
 /** The connector meta-tools of the gateway: find, describe and call the connector tools the agent is granted. */
 export type GatewayToolName = "tool.search" | "tool.describe" | "tool.call" | "tool.sequence"
 
+/** The reads of NIVO's own knowledge, each audited in mcp_call_log. */
+export type ReadToolName = "knowledge.search" | "memory.read"
+
+/** Who makes a read of NIVO's own knowledge; a turn with no conversation reads as its agent. */
+export interface KnowledgeCaller {
+    /** The workspace of the turn. */
+    readonly workspaceId: string
+    /** The conversation of the turn, or null for a tag, an event or a clock. */
+    readonly conversationId: string | null
+    /** The agent of the turn, when known. */
+    readonly agentId: string | null
+}
+
 /** The supported tool names used to validate calls before dispatching them to a capability. */
 export type ToolName =
-    | "knowledge.search"
+    | ReadToolName
     | "lead.create_or_update"
     | "approval.request"
     | "handoff.to_person"

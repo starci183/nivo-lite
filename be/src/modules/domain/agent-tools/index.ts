@@ -28,6 +28,7 @@ export type {
     OptionalBridgeTurn,
     GatewayToolName,
     JsonResult,
+    KnowledgeCaller,
     KnowledgePassages,
     LeadDraft,
     LeadWriteResult,
