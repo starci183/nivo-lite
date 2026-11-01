@@ -7,6 +7,7 @@ import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
+import type { IntentBusiness, IntentGap } from "@modules/domain/intent-contracts"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import type { ClosedDecision } from "./agent-graphs.contracts"
 import { AgentGraphProposalEntity } from "./persistence/entities"
@@ -174,7 +175,7 @@ describe("AgentGraphProposalsService.raiseConflict", () => {
 
 describe("AgentGraphProposalsService.openOf", () => {
     it("lists the proposals still open, newest first", async () => {
-        const row = proposalRow()
+        const row = Object.assign(proposalRow(), { patch: {} })
         const em = mockEntityManager({ find: [AgentGraphProposalEntity, [row]] })
         const { service } = await build([], em)
 
@@ -188,6 +189,8 @@ describe("AgentGraphProposalsService.openOf", () => {
                 widens: true,
                 evidence: ["d0"],
                 createdAt: ROW_TIME.toISOString(),
+                intent: null,
+                text: null,
             },
         ])
         expect(em.find).toHaveBeenCalledWith(
@@ -304,5 +307,168 @@ describe("AgentGraphProposalsService.decline", () => {
             expect.objectContaining({ code: AgentGraphsErrorCode.ProposalNotFound }),
         )
         await expect(service.decline("ws-1", "agent-1", "p9", "member-1")).rejects.toBeInstanceOf(AgentGraphsError)
+    })
+})
+
+describe("AgentGraphProposalsService.raiseGap", () => {
+    const gap: IntentGap = {
+        workspaceId: "ws-1",
+        agentId: "agent-1",
+        versionId: "version-1",
+        trigger: "customer_message",
+        question: "Do you ship to Hue?",
+        topic: "Shipping",
+    }
+
+    it("raises the gap once per question, informational and never a widening", async () => {
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [inserted(true), inserted(false)])
+        const { service } = await build([], em)
+
+        await expect(service.raiseGap(gap)).resolves.toBe(true)
+
+        expect(fake?.callsOf("values")[0]?.[0]).toEqual({
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            dedupeKey: "gap:do you ship to hue",
+            kind: "gap",
+            baseVersionId: "version-1",
+            nodeKey: null,
+            branchKey: null,
+            patch: { question: "Do you ship to Hue?", topic: "Shipping", trigger: "customer_message" },
+            widens: false,
+            evidence: [],
+        })
+        expect(fake?.callsOf("orIgnore")).toEqual([[]])
+    })
+
+    it("raises nothing a second time for the same question worded another way", async () => {
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [inserted(false)])
+        const { service } = await build([], em)
+
+        await expect(service.raiseGap({ ...gap, question: "  DO YOU SHIP TO HUE " })).resolves.toBe(false)
+
+        expect(fake?.callsOf("values")[0]?.[0]).toMatchObject({ dedupeKey: "gap:do you ship to hue" })
+    })
+
+    it("lists a gap with its question as the text", async () => {
+        const row = Object.assign(proposalRow(), { kind: "gap", patch: { question: "Do you ship to Hue?" } })
+        const { service } = await build([], mockEntityManager({ find: [AgentGraphProposalEntity, [row]] }))
+
+        await expect(service.openOf("ws-1", "agent-1")).resolves.toMatchObject([
+            { kind: "gap", intent: null, text: "Do you ship to Hue?" },
+        ])
+    })
+})
+
+describe("AgentGraphProposalsService the contracts", () => {
+    const business: IntentBusiness = {
+        intent: "reply_customer",
+        task: "A deposit comes first.",
+        limits: [
+            {
+                text: "Deposit is 30%.",
+                triggers: [],
+                audiences: ["customer"],
+                sources: [{ kind: "brain", factId: "fact-9", passage: "Deposit 30%", valueHash: "h" }],
+            },
+        ],
+        sources: [],
+    }
+
+    it("raises the contract for the owner to approve, with the facts it cites as evidence, once per content", async () => {
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [inserted(true)])
+        const { service } = await build([], em)
+
+        await expect(service.raiseContract("ws-1", "agent-1", "version-1", business, ["fact-9"])).resolves.toBe(true)
+
+        expect(fake?.callsOf("values")[0]?.[0]).toMatchObject({
+            kind: "contract",
+            baseVersionId: "version-1",
+            patch: { intent: "reply_customer", task: "A deposit comes first.", contract: business },
+            widens: false,
+            evidence: ["fact-9"],
+        })
+        expect(JSON.stringify(fake?.callsOf("values")[0]?.[0])).toMatch(
+            /"dedupeKey":"contract:reply_customer:[0-9a-f]{64}"/u,
+        )
+        expect(fake?.callsOf("orIgnore")).toEqual([[]])
+    })
+
+    it("lists a contract with its intent and task", async () => {
+        const row = Object.assign(proposalRow(), {
+            kind: "contract",
+            patch: { intent: "reply_customer", task: "A deposit comes first." },
+        })
+        const { service } = await build([], mockEntityManager({ find: [AgentGraphProposalEntity, [row]] }))
+
+        await expect(service.openOf("ws-1", "agent-1")).resolves.toMatchObject([
+            { kind: "contract", intent: "reply_customer", text: "A deposit comes first." },
+        ])
+    })
+})
+
+describe("AgentGraphProposalsService the contracts to confirm", () => {
+    const business: IntentBusiness = {
+        intent: "reply_customer",
+        task: "A deposit comes first.",
+        limits: [],
+        sources: [],
+    }
+
+    it("reads an open contract proposal as the business half it sets, and nothing from one that is not", async () => {
+        const row = Object.assign(proposalRow(), { kind: "contract", patch: { contract: business } })
+        const open = await build([], mockEntityManager({ findOne: [AgentGraphProposalEntity, row] }))
+        const em = mockEntityManager({ findOne: [AgentGraphProposalEntity, null] })
+        const closed = await build([], em)
+        const broken = await build(
+            [],
+            mockEntityManager({
+                findOne: [
+                    AgentGraphProposalEntity,
+                    Object.assign(proposalRow(), { kind: "contract", patch: { contract: { intent: 3 } } }),
+                ],
+            }),
+        )
+
+        await expect(open.service.contractOf("ws-1", "agent-1", "p1")).resolves.toEqual(business)
+        await expect(closed.service.contractOf("ws-1", "agent-1", "p1")).resolves.toBeNull()
+        await expect(broken.service.contractOf("ws-1", "agent-1", "p1")).resolves.toBeNull()
+        expect(em.findOne).toHaveBeenCalledWith(AgentGraphProposalEntity, {
+            where: { id: "p1", workspaceId: "ws-1", agentId: "agent-1", status: "open", kind: "contract" },
+        })
+    })
+
+    it("turns an open gap into a contract proposal and overtakes the gap", async () => {
+        const gap = Object.assign(proposalRow(), { id: "gap-1", kind: "gap", baseVersionId: "version-1" })
+        const em = mockEntityManager({
+            findOne: [AgentGraphProposalEntity, gap],
+            update: [AgentGraphProposalEntity, { affected: 1 }],
+        })
+        const [fake] = queueQueryBuilders(em, [inserted(true)])
+        const { service } = await build([], em)
+
+        await expect(service.contractFromGap("ws-1", "agent-1", "gap-1", business)).resolves.toBe(true)
+
+        expect(fake?.callsOf("values")[0]?.[0]).toMatchObject({
+            kind: "contract",
+            evidence: ["gap-1"],
+            baseVersionId: "version-1",
+        })
+        expect(em.update).toHaveBeenCalledWith(
+            AgentGraphProposalEntity,
+            { id: "gap-1", workspaceId: "ws-1", agentId: "agent-1", status: "open" },
+            { status: "superseded" },
+        )
+    })
+
+    it("refuses to turn into a contract a gap that is not open", async () => {
+        const { service } = await build([], mockEntityManager({ findOne: [AgentGraphProposalEntity, null] }))
+
+        await expect(service.contractFromGap("ws-1", "agent-1", "gap-1", business)).rejects.toEqual(
+            expect.objectContaining({ code: AgentGraphsErrorCode.ProposalNotFound }),
+        )
     })
 })

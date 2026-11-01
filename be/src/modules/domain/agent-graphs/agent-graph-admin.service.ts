@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { BrainFactsService } from "@modules/domain/brain-facts"
+import type { IntentBusiness } from "@modules/domain/intent-contracts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { AgentGraphContextService } from "./agent-graph-context.service"
@@ -16,6 +17,7 @@ import type { GraphDocument, GraphMode, GraphVersionView } from "./agent-graphs.
 import type { GraphState } from "./agent-graphs.service"
 import { applyConflict } from "./policies/conflict-patch.policy"
 import type { ConflictPatch } from "./policies/conflict-patch.policy"
+import { applyContract } from "./policies/contract-patch.policy"
 import { localeOf, wireOfView } from "./policies/graph-wire.policy"
 import { applyLearned } from "./policies/proposal-patch.policy"
 import type { AgentGraphRunWire, AgentGraphWire, OptionalLanguage } from "./policies/graph-wire.policy"
@@ -107,6 +109,8 @@ export class AgentGraphAdminService {
      */
     async confirm(actor: GraphActor, agentId: string, proposalId: string): Promise<GraphVersionView> {
         const by = await this.publisherOf(actor)
+        const contract = await this.proposals.contractOf(actor.workspaceId, agentId, proposalId)
+        if (contract !== null) return this.confirmContract(actor, agentId, by, proposalId, contract)
         const [patch, conflict, state] = await Promise.all([
             this.proposals.learnedOf(actor.workspaceId, agentId, proposalId),
             this.proposals.conflictOf(actor.workspaceId, agentId, proposalId),
@@ -123,6 +127,40 @@ export class AgentGraphAdminService {
         const version = await this.publishing.publishLearned(actor.workspaceId, agentId, document, by)
         await this.proposals.confirm(actor.workspaceId, agentId, proposalId, by.memberId, version.id)
         return version
+    }
+
+    /**
+     * Confirms a contract proposal: the business half of the intent is set in the graph that decides and published as the next version,
+     * and the owner's unpublished edits of the draft stay, with the same contract in them. A contract the graph already holds is overtaken.
+     */
+    private async confirmContract(
+        actor: GraphActor,
+        agentId: string,
+        by: Publisher,
+        proposalId: string,
+        business: IntentBusiness,
+    ): Promise<GraphVersionView> {
+        const { workspaceId } = actor
+        const state = await this.graphs.stateOfAgent(workspaceId, agentId)
+        const document = state?.active == null ? null : applyContract(state.active, business)
+        if (state?.active == null || document === null) {
+            await this.proposals.supersede(workspaceId, agentId, proposalId)
+            throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
+        }
+        const version = await this.publishing.publishContract(workspaceId, agentId, document, by)
+        await this.proposals.confirm(workspaceId, agentId, proposalId, by.memberId, version.id)
+        if (JSON.stringify(state.draft) !== JSON.stringify(state.active)) {
+            const now = await this.graphs.stateOfAgent(workspaceId, agentId)
+            const kept = applyContract(state.draft, business) ?? state.draft
+            if (now !== null) await this.graphs.saveDraft(workspaceId, agentId, now.draftRev, kept)
+        }
+        return version
+    }
+
+    /** Turns a gap into a contract proposal: the owner states the task and limits, and the gap is overtaken by it. */
+    async contractFromGap(actor: GraphActor, agentId: string, gapId: string, business: IntentBusiness): Promise<void> {
+        await this.publisherOf(actor)
+        await this.proposals.contractFromGap(actor.workspaceId, agentId, gapId, business)
     }
 
     /**
