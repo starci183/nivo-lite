@@ -26,6 +26,7 @@ const query1: Document = gql`
             attention {
                 action
                 company
+                conversationId
                 customer
                 decisionId
                 key
@@ -88,6 +89,7 @@ const query1: Document = gql`
                 amountVnd
                 assignedStaffId
                 assignedStaffName
+                conversationId
                 createdAt
                 customer
                 draft

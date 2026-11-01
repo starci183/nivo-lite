@@ -17,7 +17,7 @@ import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions
 import { LivenessModule } from "@modules/domain/liveness"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
-import { NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
+import { CUSTOMER_TOOL_ADAPTERS, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
@@ -105,7 +105,12 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     DataRecordsModule.register({ isGlobal: true }),
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     ...mcpKnowledgeModules(options),
-    McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, keyCheck: true, natives: NATIVE_TOOL_ADAPTERS }),
+    McpGatewayModule.register({
+        isGlobal: true,
+        ...options.mcpGateway,
+        keyCheck: true,
+        natives: [...NATIVE_TOOL_ADAPTERS, ...CUSTOMER_TOOL_ADAPTERS],
+    }),
     SystemHealthHttpModule.register({}),
     McpEndpointHttpModule.register({}),
 ]

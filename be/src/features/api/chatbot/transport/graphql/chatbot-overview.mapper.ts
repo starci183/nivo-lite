@@ -1,4 +1,5 @@
 import type { ChatbotOverview } from "@modules/domain/chatbot-workbench"
+import { toChatbotConversationType } from "./chatbot-conversation.mapper"
 import type { GetChatbotOverviewRequest } from "../../application/get-chatbot-overview.contracts"
 import type { ChatbotOverviewInput } from "./dto/chatbot-overview.input"
 import type { ChatbotOverviewType } from "./dto/chatbot-overview.type"
@@ -12,6 +13,7 @@ export const toChatbotOverviewRequest = (
 /** Maps the domain overview to its GraphQL type. */
 export const toChatbotOverviewType = (result: ChatbotOverview): ChatbotOverviewType => ({
     ...result,
-    conversations: result.conversations.map((conversation) => ({ ...conversation })),
+    conversations: result.conversations.map(toChatbotConversationType),
     metrics: { ...result.metrics },
+    waiting: result.waiting.map((item) => ({ ...item })),
 })

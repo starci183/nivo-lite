@@ -1,6 +1,6 @@
 "use client"
 
-import { useLocale, useTranslations } from "next-intl"
+import { useFormatter, useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref } from "@/modules/routes"
 import { useQueryKnowledgeUsageSwr } from "@/hooks/swr"
@@ -18,7 +18,7 @@ import { useUsageView } from "./useUsageView"
  */
 export const useAddDocumentsView = (props: AddDocumentsViewInput) => {
     const t = useTranslations("knowledge")
-    const locale = useLocale()
+    const formatter = useFormatter()
     const { data: usage } = useQueryKnowledgeUsageSwr()
     const usageView = useUsageView(usage)
     const router = navigation.useRouter()
@@ -42,6 +42,6 @@ export const useAddDocumentsView = (props: AddDocumentsViewInput) => {
     return {
         add,
         open,
-        view: buildAddDocumentsView({ t, locale, props, add, canWrite, instances, zone, usage: usageView }),
+        view: buildAddDocumentsView({ t, formatter, props, add, canWrite, instances, zone, usage: usageView }),
     }
 }

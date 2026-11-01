@@ -1,4 +1,7 @@
-import type { KnowledgeProgressPush, KnowledgeProgressStage } from "@/modules/api/sse/knowledge/stream-knowledge-progress"
+import type {
+    KnowledgeProgressPush,
+    KnowledgeProgressStage,
+} from "@/modules/api/sse/knowledge/stream-knowledge-progress"
 import type { KnowledgeDocument } from "@/modules/types"
 import { toSourceStatus } from "./knowledge.mapper"
 import { isDocumentActive } from "./status"
@@ -52,9 +55,7 @@ export const overlayPush = (document: KnowledgeDocument, push: KnowledgeProgress
 
 /** The stage a stored text names, or null for none or one this page does not know. */
 const stageOf = (value: string | null): KnowledgeProgressStage | null =>
-    value === "read" || value === "chunk" || value === "embed" || value === "store" || value === "facts"
-        ? value
-        : null
+    value === "read" || value === "chunk" || value === "embed" || value === "store" || value === "facts" ? value : null
 
 /** What a worker is doing on a document, or null when no worker is on it. */
 export const liveOf = (document: KnowledgeDocument, push: KnowledgeProgressPush | undefined): LiveProgress | null => {

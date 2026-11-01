@@ -16,10 +16,10 @@ interface DrivePageData {
 export const useDrivePage = (enabled = true) => {
     const read = useQueryDriveGrantSwr(enabled)
     return {
-        slot: mapSlot(
-            slotOfSwr(read),
-            (grant): DrivePageData => ({ standing: driveStandingOf(grant.state), email: grant.email }),
-        ),
+        slot: mapSlot(slotOfSwr(read), (grant): DrivePageData => ({
+            standing: driveStandingOf(grant.state),
+            email: grant.email,
+        })),
         reload: () => void read.mutate(),
         mutate: read.mutate,
     }

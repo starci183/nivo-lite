@@ -35,6 +35,9 @@ export const DEAL_WON_TOPIC = "deal_won"
 /** The queue of the `automations` consumer of `deal_won`. */
 export const DEAL_WON_AUTOMATIONS_TOPIC_QUEUE = "deal_won__automations"
 
+/** The queue of the `conversation_handback` consumer of `deal_won`. */
+export const DEAL_WON_CONVERSATION_HANDBACK_TOPIC_QUEUE = "deal_won__conversation_handback"
+
 /** The event name and pgmq topic of `order_confirmed`. */
 export const ORDER_CONFIRMED_TOPIC = "order_confirmed"
 

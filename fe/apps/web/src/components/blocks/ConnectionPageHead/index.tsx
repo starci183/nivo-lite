@@ -29,7 +29,5 @@ export const ConnectionPageHead = (props: ConnectionPageHeadProps) => {
     const drive = useDrivePageHead(props.kind === "drive")
     if (props.kind === "telegram" && telegram.isMissing) notFound()
     const { view, on } = props.kind === "telegram" ? telegram : drive
-    return (
-        <ConnectionPageHeadBase shape={props.shape} props={view} on={on} />
-    )
+    return <ConnectionPageHeadBase shape={props.shape} props={view} on={on} />
 }

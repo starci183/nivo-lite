@@ -75,9 +75,7 @@ export const useConnectionRowCommands = (connectionId: string, provider: Provide
             },
             reconnectGoogle,
             disconnect: async () =>
-                removed(
-                    await settle(() => triggerDisconnect(connectionId), t("toastDisconnected")),
-                ),
+                removed(await settle(() => triggerDisconnect(connectionId), t("toastDisconnected"))),
             remove: async () => removed(await settle(() => triggerRemove({ connectionId }), t("toastRemoved"))),
         }
     }, [

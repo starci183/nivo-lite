@@ -53,7 +53,13 @@ const actionsOf = (props: DriveWizardBaseProps): ReadonlyArray<WizardAction> => 
     if (index === 0) {
         return [
             { id: "grant", label: text.grant, intent: "alternative", isNext: true, isPending, onPress: props.on.grant },
-            { id: "close", label: text.close, intent: "dismiss", isDisabled: isPending, onPress: () => props.on.close(false) },
+            {
+                id: "close",
+                label: text.close,
+                intent: "dismiss",
+                isDisabled: isPending,
+                onPress: () => props.on.close(false),
+            },
         ]
     }
     if (index === 1) return [{ id: "later", label: text.later, intent: "neutral", onPress: () => props.on.close(true) }]

@@ -42,6 +42,7 @@ const conversationOf = (module = "chatbot", visitorName: string | null = "Lan"):
         approvalRule: "",
         greeting: "",
     },
+    speaksAs: null,
 })
 const turnOf = (conversation: TurnConversation = conversationOf()): CustomerTurn => ({
     conversation,

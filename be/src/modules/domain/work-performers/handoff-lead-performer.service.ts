@@ -14,6 +14,7 @@ import { LeadCapturedEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
+import { LeadHandoverService } from "./lead-handover.service"
 import { PerformerKitService } from "./performer-kit.service"
 import { leadHref, textOf } from "./performer.policy"
 
@@ -30,6 +31,7 @@ export class HandoffLeadPerformerService implements WorkPerformer {
         private readonly evidence: EvidenceService,
         private readonly apiCompletion: PublicLeadCompletionService,
         private readonly contracts: ContractsService,
+        private readonly handover: LeadHandoverService,
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectEventBus() private readonly bus: EventBus,
     ) {}
@@ -79,6 +81,7 @@ export class HandoffLeadPerformerService implements WorkPerformer {
             await this.inbound.mark(ctx.workspaceId, item.inbound_event_id, null, lead.id)
         if (textOf(fields.conversation_id) !== "") {
             await this.conversations.attachLead(ctx.workspaceId, textOf(fields.conversation_id), lead.id)
+            await this.handover.toSales(ctx, textOf(fields.conversation_id), lead.contact_name)
         }
         // The lead now carries its contact, so a contract of this customer finds it for the renewal.
         await this.contracts.linkCustomers(ctx.workspaceId)

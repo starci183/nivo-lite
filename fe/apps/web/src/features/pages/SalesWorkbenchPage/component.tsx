@@ -8,10 +8,12 @@ import { SalesFigures } from "@/components/blocks/SalesFigures"
 import { SalesHandoffs } from "@/components/blocks/SalesHandoffs"
 import { SalesOrders } from "@/components/blocks/SalesOrders"
 import { SalesPipeline } from "@/components/blocks/SalesPipeline"
+import { ChatbotInbox } from "@/components/blocks/ChatbotInbox"
+import { SalesWaiting } from "@/components/blocks/SalesWaiting"
 import { SalesWorkbenchGate } from "@/components/blocks/SalesWorkbenchGate"
 
 /** The six Sales areas, by tab id. */
-type SalesTab = "attention" | "pipeline" | "decisions" | "handoff" | "contracts" | "activity"
+type SalesTab = "attention" | "pipeline" | "decisions" | "handoff" | "contracts" | "activity" | "conversation"
 
 /** The resolved route state and the tab names of the Sales workbench. */
 interface SalesWorkbenchPageBaseProps {
@@ -22,6 +24,8 @@ interface SalesWorkbenchPageBaseProps {
         readonly tab: string
         /** The decision to highlight, if any. */
         readonly focus: string | null
+        /** The conversation of a customer to draw beside the desk (`?conversation=`). */
+        readonly conversation: string | null
         readonly tabs: Readonly<Record<SalesTab, string>>
     }
 }
@@ -54,11 +58,26 @@ export const SalesWorkbenchPageBase = (props: SalesWorkbenchPageBaseProps) => {
             initialTab={p.tab}
             ribbon={<SalesFigures />}
             waitingTab="decisions"
-            tabs={AREAS.map((area) => ({
-                id: area.id,
-                label: p.tabs[area.id],
-                content: <SalesWorkbenchGate placeholder={p.tabs[area.id]}>{area.draw(p.focus)}</SalesWorkbenchGate>,
-            }))}
+            waiting={<SalesWaiting />}
+            tabs={[
+                ...AREAS.map((area) => ({
+                    id: area.id,
+                    label: p.tabs[area.id],
+                    content: (
+                        <SalesWorkbenchGate placeholder={p.tabs[area.id]}>{area.draw(p.focus)}</SalesWorkbenchGate>
+                    ),
+                })),
+                ...(p.conversation === null
+                    ? []
+                    : [
+                          {
+                              id: "conversation",
+                              label: p.tabs.conversation,
+                              // The customer is one record with one conversation: the thread and side panel are the ones the Chatbot draws.
+                              content: <ChatbotInbox installationId={null} focus={p.conversation} />,
+                          },
+                      ]),
+            ]}
         />
     )
 }

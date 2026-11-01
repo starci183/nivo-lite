@@ -15,6 +15,8 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.notShared": "(chưa cho biết)",
         "performers.handoffSummary": "Chuyển {{name}} cho Sales AI: {{need}}",
         "performers.handoffDone": "Đã chuyển {{name}} cho Sales AI",
+        "performers.handoffOwnership":
+            "Đã ghi nhận nhu cầu của {{name}}, Sales AI trả lời tiếp trong cùng cuộc trò chuyện.",
         "performers.leadMatched": "Khớp với khách hàng đã có {{name}} (không tạo trùng)",
         "performers.classifySummary": "Phân loại {{name}}: {{stage}} (độ chắc chắn {{pct}}%)",
         "performers.classified": "Đã phân loại {{name}}: {{stage}} · Bước tiếp theo: {{next}}",
@@ -153,6 +155,8 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.notShared": "(not shared)",
         "performers.handoffSummary": "Hand {{name}} to Sales AI: {{need}}",
         "performers.handoffDone": "Handed {{name}} to Sales AI",
+        "performers.handoffOwnership":
+            "{{name}}'s need is on record, so Sales AI answers next in the same conversation.",
         "performers.leadMatched": "Matched existing customer {{name}} (no duplicate created)",
         "performers.classifySummary": "Classify {{name}}: {{stage}} (confidence {{pct}}%)",
         "performers.classified": "Classified {{name}}: {{stage}} · Next step: {{next}}",

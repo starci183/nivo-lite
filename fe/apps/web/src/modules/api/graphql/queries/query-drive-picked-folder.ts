@@ -33,7 +33,10 @@ enum QueryDrivePickedFolder {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryDrivePickedFolder, TypedDocumentNode<QueryDrivePickedFolderResponse, InputVariables<QueryDrivePickedFolderRequest>>> = {
+const queryMap: Record<
+    QueryDrivePickedFolder,
+    TypedDocumentNode<QueryDrivePickedFolderResponse, InputVariables<QueryDrivePickedFolderRequest>>
+> = {
     [QueryDrivePickedFolder.Query1]: query1,
 }
 
@@ -43,7 +46,11 @@ interface QueryDrivePickedFolderParams extends QueryParams<QueryDrivePickedFolde
 }
 
 /** Lists the files of a folder the owner picked in Google Picker with a browser token, used once and never stored. Rejects with the back end failure. */
-export const queryDrivePickedFolder = async ({ query = QueryDrivePickedFolder.Query1, request, signal }: QueryDrivePickedFolderParams) => {
+export const queryDrivePickedFolder = async ({
+    query = QueryDrivePickedFolder.Query1,
+    request,
+    signal,
+}: QueryDrivePickedFolderParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

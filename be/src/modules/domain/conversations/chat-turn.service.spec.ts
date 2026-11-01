@@ -370,6 +370,7 @@ const conversation = (patch: Partial<TurnConversation> = {}): TurnConversation =
         approvalRule: "ask",
         greeting: "Hi",
     },
+    speaksAs: null,
     ...patch,
 })
 

@@ -1,8 +1,10 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule, Type } from "@nestjs/common"
+import { LeadReadService } from "@modules/domain/leads"
 import { SepayNativeService } from "@modules/domain/mcp-gateway"
 import type { NativeAdapter } from "@modules/domain/mcp-gateway"
 import { BrainNativeService } from "./brain-native.service"
+import { CustomerNativeService } from "./customer-native.service"
 import { DossierNativeService } from "./dossier-native.service"
 import { DriveNativeService } from "./drive-native.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./native-tools.module-definition"
@@ -25,6 +27,9 @@ export const NATIVE_TOOL_ADAPTERS: ReadonlyArray<Type<NativeAdapter>> = [
     SepayStatusNativeService,
 ]
 
+/** The native tools that read a customer's record: the apps that run the leads capability pass them to the gateway beside the others. */
+export const CUSTOMER_TOOL_ADAPTERS: ReadonlyArray<Type<NativeAdapter>> = [CustomerNativeService]
+
 @Module({})
 /**
  * The read tools of the NIVO MCP door beyond the bank and e-invoice ones: they answer what the business knows and how its providers
@@ -34,6 +39,8 @@ export class NativeToolsModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        const customer = options.customer === true ? CUSTOMER_TOOL_ADAPTERS : []
+        const leadReader = options.leadReader === true ? [LeadReadService] : []
         return {
             ...base,
             providers: [
@@ -42,8 +49,10 @@ export class NativeToolsModule extends ConfigurableModuleClass {
                 ProviderToolsService,
                 SepayNativeService,
                 ...NATIVE_TOOL_ADAPTERS,
+                ...customer,
+                ...leadReader,
             ],
-            exports: [...NATIVE_TOOL_ADAPTERS],
+            exports: [...NATIVE_TOOL_ADAPTERS, ...customer],
         }
     }
 }

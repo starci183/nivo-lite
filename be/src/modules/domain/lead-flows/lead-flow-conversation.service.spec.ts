@@ -31,6 +31,7 @@ const TURN: TurnConversation = {
     connectionId: "connection-1",
     installationId: null,
     agent: { ...PROFILE, module: "lead_gen", approvalRule: "", greeting: "" },
+    speaksAs: null,
 }
 
 const TARGET: FlowConversationTarget = {
@@ -160,6 +161,7 @@ describe("LeadFlowConversationService", () => {
                     approvalRule: "",
                     greeting: "",
                 },
+                speaksAs: null,
             }),
         )
 

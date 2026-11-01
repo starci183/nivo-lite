@@ -2036,6 +2036,12 @@ input ChatTypingTargetInput {
   room: String = null @inputBounds(maxLength: 20)
 }
 
+type ChatbotConversationLeadType {
+  company: String!
+  need: String!
+  stage: String!
+}
+
 type ChatbotConversationType {
   channel: String!
   handledBy: String
@@ -2043,9 +2049,12 @@ type ChatbotConversationType {
   lastAt: String!
   lastRole: String
   lastText: String!
+  lead: ChatbotConversationLeadType
   leadId: ID
   messageCount: Int!
   name: String!
+  respondentKind: String!
+  respondentName: String
   unanswered: Boolean!
   waiting: Boolean!
 }
@@ -2120,6 +2129,7 @@ type ChatbotOverviewType {
   conversations: [ChatbotConversationType!]!
   metrics: ChatbotMetricsType!
   nowIso: String!
+  waiting: [ChatbotWaitingType!]!
   workspaceId: ID!
 }
 
@@ -2134,6 +2144,17 @@ type ChatbotThreadType {
   handledAt: String
   lead: ChatbotLeadType
   messages: [ChatbotMessageType!]!
+}
+
+type ChatbotWaitingType {
+  channel: String!
+  conversationId: ID!
+  draft: String!
+  name: String!
+  question: String!
+  since: String!
+  staffName: String
+  workItemId: ID!
 }
 
 input CheckConnectionInput {
@@ -7096,6 +7117,7 @@ type SalesActivityType {
 type SalesAttentionType {
   action: String
   company: String!
+  conversationId: ID
   customer: String!
   decisionId: ID
   key: String!
@@ -7163,6 +7185,7 @@ type SalesDecisionType {
   amountVnd: Float
   assignedStaffId: ID
   assignedStaffName: String
+  conversationId: ID
   createdAt: String!
   customer: String!
   draft: String!

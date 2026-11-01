@@ -27,6 +27,13 @@ const query1: Document = gql`
                 handledBy
                 waiting
                 unanswered
+                lead {
+                    stage
+                    need
+                    company
+                }
+                respondentKind
+                respondentName
             }
             metrics {
                 leadsCaptured7d
@@ -36,6 +43,16 @@ const query1: Document = gql`
                 waiting
             }
             nowIso
+            waiting {
+                workItemId
+                conversationId
+                channel
+                name
+                question
+                draft
+                staffName
+                since
+            }
             workspaceId
         }
     }

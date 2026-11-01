@@ -78,6 +78,22 @@ describe("AgentMessagesFeedReadService > lastDeliveredReplyIn", () => {
     })
 })
 
+describe("AgentMessagesFeedReadService > lastCustomerAtIn", () => {
+    it("answers when the customer last wrote, and null when they never did", async () => {
+        const wrote = new Date("2026-10-30T08:15:00.000Z")
+        const found = mockEntityManager({ findOne: [AgentMessageEntity, { ...failedZaloReply(), createdAt: wrote }] })
+        const none = mockEntityManager({ findOne: [AgentMessageEntity, null] })
+
+        await expect((await build(found)).lastCustomerAtIn("c1")).resolves.toEqual(wrote)
+        await expect((await build(none)).lastCustomerAtIn("c1")).resolves.toBeNull()
+        expect(found.findOne).toHaveBeenCalledWith(AgentMessageEntity, {
+            select: { createdAt: true },
+            where: { conversationId: "c1", role: "user" },
+            order: { createdAt: "DESC" },
+        })
+    })
+})
+
 describe("AgentMessagesFeedReadService > lastWritesSince", () => {
     it("answers when each customer last wrote after the moment, newest first, bounded", async () => {
         const rows = [{ conversationId: "c1", lastAt: "2026-10-28 09:00:00+00" }]

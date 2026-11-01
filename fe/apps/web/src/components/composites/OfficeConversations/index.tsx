@@ -1,6 +1,16 @@
 import { useState } from "react"
 import type { ReactNode } from "react"
-import { AvatarGroup, Badge, Cluster, ListBox, PaneSection, SearchField, Stack, Tabs, Text } from "@starci/grammar/common"
+import {
+    AvatarGroup,
+    Badge,
+    Cluster,
+    ListBox,
+    PaneSection,
+    SearchField,
+    Stack,
+    Tabs,
+    Text,
+} from "@starci/grammar/common"
 import type { AvatarGroupItem, ListBoxItem } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { Icon } from "@/components/leaves/Icon"
@@ -89,20 +99,20 @@ const trailingOf = (row: OfficeConversationRowView): ListBoxItem["trailing"] => 
                 </Text>
             )}
             <Cluster gap="identity" wrap={false}>
-            {row.isLastSeen ? (
-                <Text
-                    as="span"
-                    size="sm"
-                    tone="accent"
-                    startContent={
-                        <>
-                            <Icon props={{ name: "messageSeen", usage: "chip" }} />
-                            <Icon props={{ name: "messageSeen", usage: "chip" }} />
-                        </>
-                    }
-                />
-            ) : null}
-            {row.badge === null ? null : badgeOf(row.badge)}
+                {row.isLastSeen ? (
+                    <Text
+                        as="span"
+                        size="sm"
+                        tone="accent"
+                        startContent={
+                            <>
+                                <Icon props={{ name: "messageSeen", usage: "chip" }} />
+                                <Icon props={{ name: "messageSeen", usage: "chip" }} />
+                            </>
+                        }
+                    />
+                ) : null}
+                {row.badge === null ? null : badgeOf(row.badge)}
             </Cluster>
         </Stack>
     </div>

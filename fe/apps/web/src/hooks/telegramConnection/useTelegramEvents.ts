@@ -31,7 +31,10 @@ export const useTelegramEvents = (connectionId: string | undefined) => {
                 id: event.id,
                 title: titles[event.outcome] ?? t("eventReplyNotSent"),
                 description: [who, time].filter(Boolean).join(" · "),
-                badge: { label: labels[event.outcome] ?? t("outcomeNotSent"), tone: OUTCOME_TONES[event.outcome] ?? "danger" },
+                badge: {
+                    label: labels[event.outcome] ?? t("outcomeNotSent"),
+                    tone: OUTCOME_TONES[event.outcome] ?? "danger",
+                },
             }
         }),
     )

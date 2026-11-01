@@ -65,3 +65,40 @@ export interface NivoEntry {
     readonly version: number
     readonly updatedAt: string
 }
+
+/** One link input. */
+export interface LinkRowView {
+    readonly id: string
+    readonly label: string
+    readonly value: string
+    readonly error?: string | undefined
+}
+
+/** One file or link waiting to be added, already worded. */
+export interface QueueRowView {
+    readonly id: string
+    readonly name: string
+    readonly detail: string
+    readonly statusLabel: string
+    readonly statusTone: "neutral" | "warning" | "success" | "danger"
+    readonly error?: string | undefined
+    readonly canRemove: boolean
+    /** The words of the button that sends only this failed file again; absent when it cannot be retried. */
+    readonly retryLabel?: string | undefined
+}
+
+/** The bytes of the batch on their way to storage. */
+export interface BatchBytesView {
+    readonly label: string
+    /** 0 to 100, by bytes. */
+    readonly value: number
+    readonly valueText: string
+}
+
+/** The notice that uploads stopped when the page reloaded. */
+export interface StoppedUploadsView {
+    readonly text: string
+    readonly dismissLabel: string
+    /** Reopens the file picker: a browser cannot resume a file after a reload. */
+    readonly pickLabel: string
+}

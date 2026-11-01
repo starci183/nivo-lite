@@ -34,11 +34,24 @@ export const useDrivePageHead = (enabled: boolean) => {
         ],
         gridLabel: t("title"),
         mainLabel: t("mainLabel"),
-        rail: { label: t("progressTitle"), openLabel: t("progressOpen"), closeLabel: t("progressClose"), isOpen: isRailOpen },
-        ...(standing === "lost" ? { action: { label: t("regrant"), intent: "commit" as const, isPending: isGranting } } : {}),
+        rail: {
+            label: t("progressTitle"),
+            openLabel: t("progressOpen"),
+            closeLabel: t("progressClose"),
+            isOpen: isRailOpen,
+        },
+        ...(standing === "lost"
+            ? { action: { label: t("regrant"), intent: "commit" as const, isPending: isGranting } }
+            : {}),
         notices: failure === undefined ? notices : [failure, ...notices],
         ...(canDisconnect
-            ? { disconnect: { title: t("disconnectTitle"), description: t("disconnectBody"), label: t("disconnectEntry") } }
+            ? {
+                  disconnect: {
+                      title: t("disconnectTitle"),
+                      description: t("disconnectBody"),
+                      label: t("disconnectEntry"),
+                  },
+              }
             : {}),
         confirm: {
             isOpen: isAsking,

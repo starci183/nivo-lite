@@ -1,6 +1,7 @@
 /**
  * Presentation data of the Chatbot inbox. Generated GraphQL payloads are normalized by the connected data hook.
  */
+import type { LeadStageId } from "./leads"
 
 /** The channel a customer wrote from. */
 export type ChatbotChannel = "telegram" | "zalo" | "facebook" | "instagram" | "website"
@@ -39,6 +40,35 @@ export interface ChatbotConversation {
     readonly waiting: boolean
     /** The customer wrote last and nobody (AI or person) has answered yet. */
     readonly unanswered: boolean
+    /** The customer record behind the conversation; null while the customer was not captured. */
+    readonly lead: ChatbotConversationLead | null
+    /** Who answers next. */
+    readonly respondent: ChatbotRespondent
+}
+
+/** The customer record as the conversation list shows it: where the deal stands and what the customer needs. */
+export interface ChatbotConversationLead {
+    readonly stage: LeadStageId
+    readonly need: string
+    readonly company: string
+}
+
+/** Who answers the customer next: the AI of this desk, a person who holds the chat, or the other agent a hand-over moved it to. */
+export type ChatbotRespondent =
+    | { readonly kind: "ai" }
+    | { readonly kind: "person"; readonly name: string }
+    | { readonly kind: "agent"; readonly name: string }
+
+/** A customer reply that waits for a person. */
+export interface ChatbotWaitingReply {
+    readonly workItemId: string
+    readonly conversationId: string
+    readonly channel: ChatbotChannel
+    readonly name: string
+    readonly question: string
+    readonly draft: string
+    readonly staffName: string | null
+    readonly since: string
 }
 
 /** The figures above the inbox. */
@@ -88,4 +118,6 @@ export interface ChatbotOverview {
     readonly nowIso: string
     readonly conversations: ReadonlyArray<ChatbotConversation>
     readonly metrics: ChatbotMetrics
+    /** The customer replies that wait for a person, oldest first. */
+    readonly waiting: ReadonlyArray<ChatbotWaitingReply>
 }

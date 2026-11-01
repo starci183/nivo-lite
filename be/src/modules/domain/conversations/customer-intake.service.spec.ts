@@ -38,6 +38,7 @@ const turnConversationOf = (agentId: string): TurnConversation => ({
         approvalRule: "ask",
         greeting: "",
     },
+    speaksAs: null,
 })
 
 const build = async (

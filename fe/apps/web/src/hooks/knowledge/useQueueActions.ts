@@ -30,9 +30,13 @@ export const useQueueActions = (): QueueActions => {
                 showSuccessToast: false,
             })
             if (address === undefined) return null
-            const sent = await runRest(() => putPresigned({ url: address.signedUrl, file, ...(onProgress === undefined ? {} : { onProgress }) }), {
-                showSuccessToast: false,
-            })
+            const sent = await runRest(
+                () =>
+                    putPresigned({ url: address.signedUrl, file, ...(onProgress === undefined ? {} : { onProgress }) }),
+                {
+                    showSuccessToast: false,
+                },
+            )
             return sent === null ? null : address.path
         },
         enqueue: async (item) => {

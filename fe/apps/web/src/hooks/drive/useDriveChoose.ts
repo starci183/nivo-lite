@@ -35,7 +35,13 @@ const useDriveAdd = (input: DriveAddInput) => {
             chosen.map((file) => ({ url: file.url, title: file.name })),
             DRIVE_ORIGIN,
         )
-        const sent = await queue.sendAll(items, { topic: null, tags: [], visibility, module: null, installationId: null })
+        const sent = await queue.sendAll(items, {
+            topic: null,
+            tags: [],
+            visibility,
+            module: null,
+            installationId: null,
+        })
         queue.reset()
         setAdding(false)
         setAdded(sent)

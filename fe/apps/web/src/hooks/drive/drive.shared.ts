@@ -1,3 +1,4 @@
+import type { useFormatter, useTranslations } from "next-intl"
 /** The origin the sources added from Google Drive carry, which the progress pane lists by. */
 export const DRIVE_ORIGIN = "google_drive"
 
@@ -23,7 +24,8 @@ export const driveStandingOf = (value: string): DriveGrantStanding => {
 }
 
 /** The sentence a reason in `?drive=error&reason=` stands for. */
-export type DriveFailureKey = "failDenied" | "failScope" | "failUnavailable" | "failNoRefresh" | "failState" | "failGeneric"
+export type DriveFailureKey =
+    "failDenied" | "failScope" | "failUnavailable" | "failNoRefresh" | "failState" | "failGeneric"
 
 /** The sentence of the reason the Google callback brought back; a reason this app does not know reads as the generic one. */
 export const driveFailureKeyOf = (reason: string): DriveFailureKey => {
@@ -87,3 +89,23 @@ export interface DriveListing {
 /** The files of a listing NIVO can read: the ones that can be ticked. */
 export const readableFilesOf = (listing: DriveListing): ReadonlyArray<DriveFileRow> =>
     listing.files.filter(isReadableDriveFile)
+
+/** The line under a file in the choose step: where it is, how big and when it changed, or why it cannot be read. */
+export const driveFileNoteOf = (
+    t: ReturnType<typeof useTranslations<"driveConnection">>,
+    format: ReturnType<typeof useFormatter>,
+    file: DriveFileRow,
+): string => {
+    if (!isReadableDriveFile(file)) return t("fileUnreadable")
+    const size =
+        file.sizeBytes === null
+            ? ""
+            : t("fileSize", { size: format.number(file.sizeBytes / (1024 * 1024), { maximumFractionDigits: 1 }) })
+    const modified =
+        file.modifiedTime === null
+            ? ""
+            : t("fileModified", {
+                  date: format.dateTime(new Date(file.modifiedTime), { day: "2-digit", month: "2-digit" }),
+              })
+    return [file.path, size, modified].filter(Boolean).join(" · ")
+}

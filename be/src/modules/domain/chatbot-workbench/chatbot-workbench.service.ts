@@ -51,12 +51,27 @@ export class ChatbotWorkbenchService {
         if (conversations.length === 0) return emptyChatbotOverview(request.workspaceId, now)
         const ids = conversations.map((row) => row.id)
         const leadIds = conversations.flatMap((row) => (row.lead_id === null ? [] : [row.lead_id]))
-        const [messages, waiting, leads] = await Promise.all([
+        const [messages, waiting, leads, agentNames] = await Promise.all([
             this.messageReads.briefsIn(request.workspaceId, ids, new Date(now - 30 * DAY_MS), 6000),
             this.waiting(request.workspaceId),
             this.leads.listByIds(request.workspaceId, leadIds),
+            this.agentNamesOf(
+                request.workspaceId,
+                conversations.map((row) => row.agent_id),
+            ),
         ])
-        return buildChatbotOverview({ workspaceId: request.workspaceId, now, conversations, messages, waiting, leads })
+        const staffNames = await this.staffNamesOf(request.workspaceId, waiting)
+        return buildChatbotOverview({
+            workspaceId: request.workspaceId,
+            now,
+            conversations,
+            messages,
+            waiting,
+            leads,
+            agentIds: agents,
+            agentNames,
+            staffNames,
+        })
     }
 
     /** A customer conversation of the caller's workspace with its lead and assigned escalation. */
@@ -70,16 +85,16 @@ export class ChatbotWorkbenchService {
             conversation.lead_id === null ? undefined : this.leadFacts.lead(workspaceId, conversation.lead_id),
         ])
         const item = waiting.find((row) => waitingConversationId(row) === conversationId)
-        const [staff] =
-            item?.assigned_staff_id === undefined || item.assigned_staff_id === null
-                ? []
-                : await this.staff.namesOf(workspaceId, [item.assigned_staff_id])
+        const staffNames = await this.staffNamesOf(workspaceId, item === undefined ? [] : [item])
+        const agentNames = await this.agentNamesOf(workspaceId, [conversation.agent_id])
+        const staffId = item?.assigned_staff_id ?? null
         return buildChatbotThread({
             conversation,
             messages,
             waiting,
             lead: lead ?? null,
-            staffName: staff?.name ?? null,
+            staffName: staffId === null ? null : (staffNames.get(staffId) ?? null),
+            agentNames,
         })
     }
 
@@ -115,6 +130,20 @@ export class ChatbotWorkbenchService {
             if (installations.length > 1) return own.agentId === null ? [] : [own.agentId]
         }
         return this.agentDirectory.idsOfModule(request.workspaceId, "chatbot", 100)
+    }
+
+    /** The display names of the agents, by agent id. */
+    private async agentNamesOf(workspaceId: string, agentIds: ReadonlyArray<string>): Promise<Map<string, string>> {
+        const cards = await this.agentDirectory.cardsOf(workspaceId, [...new Set(agentIds)])
+        return new Map(cards.map((card) => [card.id, card.name]))
+    }
+
+    /** The display names of the staff the waiting replies are assigned to, by staff id. */
+    private async staffNamesOf(workspaceId: string, waiting: ReadonlyArray<WaitingRow>): Promise<Map<string, string>> {
+        const ids = waiting.flatMap((row) => (row.assigned_staff_id === null ? [] : [row.assigned_staff_id]))
+        if (ids.length === 0) return new Map()
+        const staff = await this.staff.namesOf(workspaceId, [...new Set(ids)])
+        return new Map(staff.map((member) => [member.id, member.name]))
     }
 
     /** The customer-reply work items waiting for a decision, oldest first. */

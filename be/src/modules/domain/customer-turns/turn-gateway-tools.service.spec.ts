@@ -34,6 +34,7 @@ const CONVERSATION: TurnConversation = {
         approvalRule: "",
         greeting: "",
     },
+    speaksAs: null,
 }
 const CALLER = { workspaceId: "ws", agentId: "sales", conversationId: "c1", workItemId: null }
 const DESCRIBED = {

@@ -46,7 +46,11 @@ export const CONNECTION_ROUTES = {
 } as const
 
 /** The URL segment of the providers that have a page of their own: `/connections/<segment>/<connection id>`. */
-const PAGE_SEGMENT: Readonly<Partial<Record<Provider, string>>> = { sepay: "sepay", zalo_oa: "zalo", telegram: "telegram" }
+const PAGE_SEGMENT: Readonly<Partial<Record<Provider, string>>> = {
+    sepay: "sepay",
+    zalo_oa: "zalo",
+    telegram: "telegram",
+}
 
 /** The providers whose page is the only one of the workspace (a single grant), so its address carries no connection id. */
 const SINGLE_PAGE: Readonly<Partial<Record<Provider, string>>> = { google_drive: "drive" }

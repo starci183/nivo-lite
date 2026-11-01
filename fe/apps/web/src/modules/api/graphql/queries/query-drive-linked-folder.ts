@@ -32,7 +32,10 @@ enum QueryDriveLinkedFolder {
     Query1 = "query1",
 }
 
-const queryMap: Record<QueryDriveLinkedFolder, TypedDocumentNode<QueryDriveLinkedFolderResponse, InputVariables<QueryDriveLinkedFolderRequest>>> = {
+const queryMap: Record<
+    QueryDriveLinkedFolder,
+    TypedDocumentNode<QueryDriveLinkedFolderResponse, InputVariables<QueryDriveLinkedFolderRequest>>
+> = {
     [QueryDriveLinkedFolder.Query1]: query1,
 }
 
@@ -42,7 +45,11 @@ interface QueryDriveLinkedFolderParams extends QueryParams<QueryDriveLinkedFolde
 }
 
 /** Lists the files of a Google Drive folder the workspace grant can read (three levels, at most 300 files). Rejects with the back end failure. */
-export const queryDriveLinkedFolder = async ({ query = QueryDriveLinkedFolder.Query1, request, signal }: QueryDriveLinkedFolderParams) => {
+export const queryDriveLinkedFolder = async ({
+    query = QueryDriveLinkedFolder.Query1,
+    request,
+    signal,
+}: QueryDriveLinkedFolderParams) => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

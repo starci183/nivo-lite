@@ -10,5 +10,3 @@ export const SIDE_COLUMN_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-4")
 export const PANEL_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-4")
 /** The module's own page command under the heading. */
 export const COMMAND_CLASS_NAME = cn("flex", "min-w-0", "flex-wrap", "gap-2")
-/** The mode badge and the area tabs in one row above the regions. */
-export const TOOLBAR_CLASS_NAME = cn("flex", "min-w-0", "flex-wrap", "items-center", "gap-3")

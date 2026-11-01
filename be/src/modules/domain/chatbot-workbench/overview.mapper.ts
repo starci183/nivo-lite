@@ -1,6 +1,18 @@
 import { isoOf } from "@modules/domain/brain-facts"
-import type { ChatbotMetrics, ChatbotOverview } from "./chatbot-workbench.contracts"
-import { toConversation, waitingConversationId } from "./conversation.policy"
+import type {
+    ChatbotConversation,
+    ChatbotMetrics,
+    ChatbotOverview,
+    ChatbotWaiting,
+} from "./chatbot-workbench.contracts"
+import {
+    leadOf,
+    proposalDraft,
+    proposalQuestion,
+    respondentOf,
+    toConversation,
+    waitingConversationId,
+} from "./conversation.policy"
 import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
 import type { MessageBrief } from "@modules/domain/agent-messages"
 import type { LeadBriefRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
@@ -21,8 +33,14 @@ export interface OverviewRecords {
     readonly messages: ReadonlyArray<MessageBrief>
     /** Open customer reply escalations. */
     readonly waiting: ReadonlyArray<WaitingRow>
-    /** Names and capture dates of linked leads. */
+    /** Names, stages and capture dates of linked leads. */
     readonly leads: ReadonlyArray<LeadBriefRow>
+    /** The agents of the desk being read. */
+    readonly agentIds: ReadonlyArray<string>
+    /** The names of the agents that speak in the conversations, by agent id. */
+    readonly agentNames: ReadonlyMap<string, string>
+    /** The names of the staff the waiting replies are assigned to, by staff id. */
+    readonly staffNames: ReadonlyMap<string, string>
 }
 
 const median = (values: ReadonlyArray<number>): number | null => {
@@ -55,12 +73,34 @@ export const emptyChatbotOverview = (workspaceId: string, now: number): ChatbotO
     nowIso: new Date(now).toISOString(),
     conversations: [],
     metrics: emptyMetrics(),
+    waiting: [],
 })
+
+/** The waiting replies of the conversations in the list, oldest first, each with the customer it answers. */
+const waitingOf = (records: OverviewRecords, conversations: ReadonlyArray<ChatbotConversation>) =>
+    records.waiting.flatMap((item): Array<ChatbotWaiting> => {
+        const conversation = conversations.find((row) => row.id === waitingConversationId(item))
+        if (conversation === undefined) return []
+        return [
+            {
+                workItemId: item.id,
+                conversationId: conversation.id,
+                channel: conversation.channel,
+                name: conversation.name,
+                question: proposalQuestion(item.proposal),
+                draft: proposalDraft(item.proposal),
+                staffName:
+                    item.assigned_staff_id === null ? null : (records.staffNames.get(item.assigned_staff_id) ?? null),
+                since: isoOf(item.created_at),
+            },
+        ]
+    })
 
 /** The conversation list by latest activity, with Vietnam-day and thirty-day response figures. */
 export const buildChatbotOverview = (records: OverviewRecords): ChatbotOverview => {
     const waiting = new Set(records.waiting.map(waitingConversationId).filter((id): id is string => id !== null))
-    const leadName = new Map(records.leads.map((lead) => [lead.id, lead.contact_name]))
+    const leadById = new Map(records.leads.map((lead) => [lead.id, lead]))
+    const own = new Set(records.agentIds)
     const byConversation = new Map<string, Array<MessageBrief>>()
     for (const message of records.messages) {
         const lines = byConversation.get(message.conversation_id) ?? []
@@ -73,12 +113,11 @@ export const buildChatbotOverview = (records: OverviewRecords): ChatbotOverview 
             const lines = byConversation.get(row.id) ?? []
             const response = firstResponseMinutes(lines)
             if (response !== null) deltas.push(response)
-            return toConversation(
-                row,
-                lines,
-                row.lead_id === null ? undefined : leadName.get(row.lead_id),
-                waiting.has(row.id),
-            )
+            const lead = row.lead_id === null ? undefined : leadById.get(row.lead_id)
+            return toConversation(row, lines, lead?.contact_name, waiting.has(row.id), {
+                lead: leadOf(lead),
+                respondent: respondentOf(row, own, records.agentNames),
+            })
         })
         .sort((a, b) => b.lastAt.localeCompare(a.lastAt))
     const dayStart = Math.floor((records.now + VN_OFFSET_MS) / DAY_MS) * DAY_MS - VN_OFFSET_MS
@@ -96,5 +135,6 @@ export const buildChatbotOverview = (records: OverviewRecords): ChatbotOverview 
                 (lead) => Date.parse(isoOf(lead.created_at)) >= records.now - 7 * DAY_MS,
             ).length,
         },
+        waiting: waitingOf(records, conversations),
     }
 }

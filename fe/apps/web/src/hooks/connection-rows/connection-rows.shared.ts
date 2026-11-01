@@ -145,7 +145,14 @@ export const alertsOf = (
     return [
         ...(needsAgent ? [{ id: "agent", tone: "cautionary" as const, title: t("noAgent"), description: hint }] : []),
         ...(c.lastError !== null && live
-            ? [{ id: "error", tone: "negative" as const, title: t("statusError"), description: connectionErrorOf(c.lastError, t) }]
+            ? [
+                  {
+                      id: "error",
+                      tone: "negative" as const,
+                      title: t("statusError"),
+                      description: connectionErrorOf(c.lastError, t),
+                  },
+              ]
             : []),
     ]
 }

@@ -7,8 +7,7 @@ import { ConnectionEventsRailBase } from "./component"
 
 /** Which provider the rail serves: the Telegram bot of the url, or the workspace's Google Drive grant. */
 type ConnectionEventsRailProps =
-    | { readonly kind: "telegram"; readonly connectionId: string }
-    | { readonly kind: "drive" }
+    { readonly kind: "telegram"; readonly connectionId: string } | { readonly kind: "drive" }
 
 /**
  * The connected live rail of a provider page: the events of the Telegram bot (real inbound and outbound messages, asked again every

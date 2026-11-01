@@ -12,6 +12,7 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { ChatbotEscalationForm } from "@/components/branches/ChatbotEscalationForm"
+import { ChatbotStageSteps, type ChatbotStageStepsProps } from "@/components/branches/ChatbotStageSteps"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { HEAD_TEXT_CLASS_NAME, UNTIL_DOCKED_CLASS_NAME } from "./classNames"
 
@@ -58,6 +59,8 @@ export interface ChatbotSidePanelProps {
     readonly channelLine: string
     readonly escalation: ChatbotSideEscalation | null
     readonly handling: ChatbotSideHandling
+    /** The stage of the customer's deal; null while the customer was not captured. */
+    readonly stage: ChatbotStageStepsProps | null
     readonly leadTitle: string
     readonly leadNone: string
     readonly lead: ChatbotSideLead | null
@@ -123,31 +126,41 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
                 </PaneSection>
             )}
             {renderChatbotSidePanelHandling(handling, props)}
-            <PaneSection>
-                <Region label={props.leadTitle}>
-                    <Stack gap="row">
-                        <SectionHeader level={3} title={props.leadTitle} />
-                        {props.lead === null ? (
-                            <Text size="sm" tone="muted">
-                                {props.leadNone}
-                            </Text>
-                        ) : (
-                            <>
-                                <Text weight="semibold">{props.lead.name}</Text>
-                                <DescriptionList layout="columns" items={props.lead.facts} />
-                                <Cluster gap="inline">
-                                    <Button intent="neutral" size="sm" href={props.lead.openHref}>
-                                        {props.lead.openLabel}
-                                    </Button>
-                                </Cluster>
-                            </>
-                        )}
-                    </Stack>
-                </Region>
-            </PaneSection>
+            {props.stage === null ? null : (
+                <PaneSection>
+                    <ChatbotStageSteps {...props.stage} />
+                </PaneSection>
+            )}
+            {renderChatbotSidePanelLead(props)}
         </>
     )
 }
+
+/** Renders the ChatbotSidePanel lead section: the person this chat became, or that there is none yet. */
+const renderChatbotSidePanelLead = (props: Pick<ChatbotSidePanelProps, "leadTitle" | "leadNone" | "lead">) => (
+    <PaneSection>
+        <Region label={props.leadTitle}>
+            <Stack gap="row">
+                <SectionHeader level={3} title={props.leadTitle} />
+                {props.lead === null ? (
+                    <Text size="sm" tone="muted">
+                        {props.leadNone}
+                    </Text>
+                ) : (
+                    <>
+                        <Text weight="semibold">{props.lead.name}</Text>
+                        <DescriptionList layout="columns" items={props.lead.facts} />
+                        <Cluster gap="inline">
+                            <Button intent="neutral" size="sm" href={props.lead.openHref}>
+                                {props.lead.openLabel}
+                            </Button>
+                        </Cluster>
+                    </>
+                )}
+            </Stack>
+        </Region>
+    </PaneSection>
+)
 
 /** Renders the ChatbotSidePanel handling section. */
 const renderChatbotSidePanelHandling = (

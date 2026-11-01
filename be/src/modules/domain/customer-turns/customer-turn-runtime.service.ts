@@ -176,7 +176,7 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
                 .catch((cause: unknown): ReadonlyArray<string> => [this.skip(cause, workspaceId, "modules")]),
         ])
         const text = turnSystemOf({
-            persona: personaOf(conversation.agent),
+            persona: personaOf(conversation.agent, conversation.speaksAs),
             authority,
             recall: recalled.brief,
             extras: [jobs, ...modules],

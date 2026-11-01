@@ -47,30 +47,30 @@ export const OfficeTasks = (props: OfficeTasksProps) => {
     return (
         <div className={STACK_CLASS_NAME}>
             <Stack gap="section">
-            <Cluster gap="row" align="end">
-                <div className={FILTER_CLASS_NAME}>
-                    <Select
-                        label={text("filterOwner")}
-                        options={ownerOptions}
-                        value={owner}
-                        onValueChange={(value) => setOwner(value ?? ALL)}
-                    />
-                </div>
-                <div className={FILTER_CLASS_NAME}>
-                    <Select
-                        label={text("filterStatus")}
-                        options={statusOptions}
-                        value={status}
-                        onValueChange={(value) => setStatus(value ?? ALL)}
-                    />
-                </div>
-                {owner !== ALL || status !== ALL ? (
-                    <Button intent="neutral" onPress={clear}>
-                        {text("clearFilters")}
-                    </Button>
-                ) : null}
-            </Cluster>
-            {renderOfficeTasksVisibleTasks(text, visible, tasks, props, clear)}
+                <Cluster gap="row" align="end">
+                    <div className={FILTER_CLASS_NAME}>
+                        <Select
+                            label={text("filterOwner")}
+                            options={ownerOptions}
+                            value={owner}
+                            onValueChange={(value) => setOwner(value ?? ALL)}
+                        />
+                    </div>
+                    <div className={FILTER_CLASS_NAME}>
+                        <Select
+                            label={text("filterStatus")}
+                            options={statusOptions}
+                            value={status}
+                            onValueChange={(value) => setStatus(value ?? ALL)}
+                        />
+                    </div>
+                    {owner !== ALL || status !== ALL ? (
+                        <Button intent="neutral" onPress={clear}>
+                            {text("clearFilters")}
+                        </Button>
+                    ) : null}
+                </Cluster>
+                {renderOfficeTasksVisibleTasks(text, visible, tasks, props, clear)}
             </Stack>
         </div>
     )

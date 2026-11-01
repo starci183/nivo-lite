@@ -32,7 +32,7 @@ interface ChatbotInboxViewInput {
     readonly router: ReturnType<typeof navigation.useRouter>
     readonly pathname: string
     readonly conversation: ChatbotConversation | null
-    readonly escalation: ChatbotEscalation | null
+    readonly escalation: NonNullable<ChatbotThread["escalation"]> | null
 }
 
 /** The overview before it is read: no conversations, so the panes keep their words and draw no rows. */
@@ -41,6 +41,7 @@ const EMPTY_OVERVIEW: ChatbotOverview = {
     nowIso: new Date(0).toISOString(),
     conversations: [],
     metrics: { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 },
+    waiting: [],
 }
 
 /** Builds inbox panes and controls while retaining the list filter. */
@@ -196,5 +197,3 @@ const propsOf = ({
         }),
     }
 }
-
-type ChatbotEscalation = NonNullable<ChatbotThread["escalation"]>

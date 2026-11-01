@@ -21,9 +21,16 @@ export interface TurnSystemParts {
     readonly contract: string
 }
 
-/** The persona section of a customer-facing agent. */
-export const personaOf = (agent: TurnConversation["agent"]): string =>
-    `You are ${agent.name} (@${agent.handle}), role: ${agent.role}.
+/** The name the agent answers under: its own with its handle, or the front agent's name alone after a hand-over. */
+const nameLineOf = (agent: TurnConversation["agent"], speaksAs: TurnConversation["speaksAs"]): string =>
+    speaksAs === null ? agent.name + " (@" + agent.handle + ")" : speaksAs
+
+/**
+ * The persona section of a customer-facing agent. After a hand-over the speaker keeps its own role and instructions but answers under
+ * the name of the agent that opened the door (`speaksAs`), so the customer sees one name; the handle then stays out.
+ */
+export const personaOf = (agent: TurnConversation["agent"], speaksAs: TurnConversation["speaksAs"]): string =>
+    `You are ${nameLineOf(agent, speaksAs)}, role: ${agent.role}.
 Instructions: ${agent.instructions}
 Business knowledge: ${agent.knowledge.trim() === "" ? "(none)" : agent.knowledge}
 Approval rule: ${agent.approvalRule.trim() === "" ? "Commitments need human approval." : agent.approvalRule}`

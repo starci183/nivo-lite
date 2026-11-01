@@ -1,4 +1,13 @@
-import { Alert, Button, CheckboxGroup, EmptyNotice, FormGrid, Input, RadioGroup, SectionHeader } from "@starci/grammar/common"
+import {
+    Alert,
+    Button,
+    CheckboxGroup,
+    EmptyNotice,
+    FormGrid,
+    Input,
+    RadioGroup,
+    SectionHeader,
+} from "@starci/grammar/common"
 import type { PresentationState } from "@starci/grammar/common"
 
 /** One file the owner can tick: its name, the line under it, and whether NIVO can read it at all. */
@@ -139,7 +148,12 @@ export const DriveFileChooser = (props: DriveFileChooserProps) => {
                     onValueChange={props.on.changeLink}
                 />
             </FormGrid>
-            <Button intent="neutral" isPending={link.isReading} isDisabled={link.value.trim() === ""} onPress={props.on.read}>
+            <Button
+                intent="neutral"
+                isPending={link.isReading}
+                isDisabled={link.value.trim() === ""}
+                onPress={props.on.read}
+            >
                 {link.readLabel}
             </Button>
             {props.props.error === "" ? null : <Alert tone="negative" appearance="soft" title={props.props.error} />}

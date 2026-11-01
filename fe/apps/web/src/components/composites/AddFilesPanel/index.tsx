@@ -1,42 +1,6 @@
 import { Badge, Button, FileDropzone, Input, ListRow, Progress, SurfaceListCard, Text } from "@starci/grammar/common"
+import type { BatchBytesView, LinkRowView, QueueRowView, StoppedUploadsView } from "@/modules/types"
 import { LINK_FIELD_CLASS_NAME, LINK_ROW_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
-
-/** One link input. */
-export interface LinkRowView {
-    readonly id: string
-    readonly label: string
-    readonly value: string
-    readonly error?: string | undefined
-}
-
-/** One file or link waiting to be added, already worded. */
-export interface QueueRowView {
-    readonly id: string
-    readonly name: string
-    readonly detail: string
-    readonly statusLabel: string
-    readonly statusTone: "neutral" | "warning" | "success" | "danger"
-    readonly error?: string | undefined
-    readonly canRemove: boolean
-    /** The words of the button that sends only this failed file again; absent when it cannot be retried. */
-    readonly retryLabel?: string | undefined
-}
-
-/** The bytes of the batch on their way to storage. */
-export interface BatchBytesView {
-    readonly label: string
-    /** 0 to 100, by bytes. */
-    readonly value: number
-    readonly valueText: string
-}
-
-/** The notice that uploads stopped when the page reloaded. */
-export interface StoppedUploadsView {
-    readonly text: string
-    readonly dismissLabel: string
-    /** Reopens the file picker: a browser cannot resume a file after a reload. */
-    readonly pickLabel: string
-}
 
 /** The words, values and state of the files and links panel. */
 type AddFilesPanelProps = {
@@ -65,24 +29,14 @@ type AddFilesPanelProps = {
     readonly onDismissStopped: () => void
 }
 
-/** The files, the links and what is waiting to be added. */
-export const AddFilesPanel = (props: AddFilesPanelProps) => (
-    <div className={PANEL_CLASS_NAME}>
-        <FileDropzone
-            id="knowledge-add-files"
-            name="files"
-            label={props.dropPrompt}
-            description={props.dropHint}
-            prompt={props.dropPrompt}
-            multiple
-            hideFileList
-            isDisabled={props.isBusy}
-            onFilesChange={props.onFiles}
-        />
-        <Text weight="semibold">{props.linksLabel}</Text>
-        <Text size="sm" tone="muted">
-            {props.linksHint}
-        </Text>
+/** The link fields and the commands that change their number. */
+type LinkRowsProps = Pick<
+    AddFilesPanelProps,
+    "links" | "linkPlaceholder" | "linkRemoveLabel" | "isBusy" | "onLink" | "onCheckLink" | "onRemoveLink"
+>
+
+const LinkRows = (props: LinkRowsProps) => (
+    <>
         {props.links.map((link) => (
             <div key={link.id} className={LINK_ROW_CLASS_NAME}>
                 <div className={LINK_FIELD_CLASS_NAME}>
@@ -109,20 +63,24 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
                 </Button>
             </div>
         ))}
-        <Button intent="neutral" isDisabled={props.isBusy} onPress={props.onAddLink}>
-            {props.addLinkLabel}
-        </Button>
-        {props.note === undefined ? null : (
-            <Text size="sm" tone="muted" live="polite">
-                {props.note}
-            </Text>
-        )}
+    </>
+)
+
+/** The notice that an earlier page's uploads stopped, with the ways to go on. */
+type StoppedNoticeProps = Pick<AddFilesPanelProps, "stopped" | "isBusy" | "onDismissStopped">
+
+const StoppedNotice = (props: StoppedNoticeProps) => (
+    <>
         {props.stopped === undefined ? null : (
             <>
                 <Text size="sm" tone="muted" live="polite">
                     {props.stopped.text}
                 </Text>
-                <Button intent="commit" isDisabled={props.isBusy} onPress={() => document.getElementById("knowledge-add-files")?.click()}>
+                <Button
+                    intent="commit"
+                    isDisabled={props.isBusy}
+                    onPress={() => document.getElementById("knowledge-add-files")?.click()}
+                >
                     {props.stopped.pickLabel}
                 </Button>
                 <Button intent="neutral" onPress={props.onDismissStopped}>
@@ -130,9 +88,14 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
                 </Button>
             </>
         )}
-        {props.batch === undefined ? null : (
-            <Progress label={props.batch.label} value={props.batch.value} valueText={props.batch.valueText} />
-        )}
+    </>
+)
+
+/** The queue of files and links waiting to be added. */
+type QueueCardProps = Pick<AddFilesPanelProps, "queue" | "queueTitle" | "removeLabel" | "onRetryItem" | "onRemoveItem">
+
+const QueueCard = (props: QueueCardProps) => (
+    <>
         {props.queue.length === 0 ? null : (
             <SurfaceListCard ariaLabel={props.queueTitle} empty={null}>
                 {props.queue.map((item) => (
@@ -163,5 +126,54 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
                 ))}
             </SurfaceListCard>
         )}
+    </>
+)
+
+/** The files, the links and what is waiting to be added. */
+export const AddFilesPanel = (props: AddFilesPanelProps) => (
+    <div className={PANEL_CLASS_NAME}>
+        <FileDropzone
+            id="knowledge-add-files"
+            name="files"
+            label={props.dropPrompt}
+            description={props.dropHint}
+            prompt={props.dropPrompt}
+            multiple
+            hideFileList
+            isDisabled={props.isBusy}
+            onFilesChange={props.onFiles}
+        />
+        <Text weight="semibold">{props.linksLabel}</Text>
+        <Text size="sm" tone="muted">
+            {props.linksHint}
+        </Text>
+        <LinkRows
+            links={props.links}
+            linkPlaceholder={props.linkPlaceholder}
+            linkRemoveLabel={props.linkRemoveLabel}
+            isBusy={props.isBusy}
+            onLink={props.onLink}
+            onCheckLink={props.onCheckLink}
+            onRemoveLink={props.onRemoveLink}
+        />
+        <Button intent="neutral" isDisabled={props.isBusy} onPress={props.onAddLink}>
+            {props.addLinkLabel}
+        </Button>
+        {props.note === undefined ? null : (
+            <Text size="sm" tone="muted" live="polite">
+                {props.note}
+            </Text>
+        )}
+        <StoppedNotice stopped={props.stopped} isBusy={props.isBusy} onDismissStopped={props.onDismissStopped} />
+        {props.batch === undefined ? null : (
+            <Progress label={props.batch.label} value={props.batch.value} valueText={props.batch.valueText} />
+        )}
+        <QueueCard
+            queue={props.queue}
+            queueTitle={props.queueTitle}
+            removeLabel={props.removeLabel}
+            onRetryItem={props.onRetryItem}
+            onRemoveItem={props.onRemoveItem}
+        />
     </div>
 )

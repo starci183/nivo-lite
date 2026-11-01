@@ -1,5 +1,3 @@
-import type { EntityManager } from "typeorm"
-
 /** A conversation as the intake reads it. */
 export interface ConversationRef {
     /** The conversation id. */
@@ -78,6 +76,8 @@ export interface TurnConversation extends ConversationTarget {
     readonly installationId: string | null
     /** The agent that speaks. */
     readonly agent: TurnAgent
+    /** The name the customer knows: the front agent's name after a hand-over, null while the speaking agent is the front door. */
+    readonly speaksAs: string | null
 }
 
 /** The latest customer conversation of a lead. */
@@ -145,18 +145,28 @@ export type OptionalHumanConversation = HumanConversation | null
 /** The human holder, or null when the AI handles the conversation. */
 export type HumanHolder = string | null
 
-/** Hands a customer conversation to another agent in the caller's transaction. */
-export interface HandToAgentParams {
-    /** The transaction the move joins, so the move and its record commit together. */
-    readonly manager: EntityManager
+/** A conversation a hand-back may return to its front agent: who speaks now and who opened the door. */
+export interface HandedConversation {
+    /** The conversation id. */
+    readonly id: string
+    /** The agent that speaks in it now. */
+    readonly agentId: string
+    /** The agent that opened the door. */
+    readonly frontAgentId: string
+}
+
+/** Hands a customer conversation from one agent to another and records why. */
+export interface HandOverParams {
     /** The workspace of the conversation. */
     readonly workspaceId: string
     /** The conversation to move. */
     readonly conversationId: string
+    /** The agent that speaks in it now. */
+    readonly fromAgentId: string
     /** The agent that speaks in it from now on. */
-    readonly agentId: string
-    /** The installation of that agent; null keeps the conversation's current installation. */
-    readonly installationId: string | null
+    readonly toAgentId: string
+    /** Why, in the owner's words: the ownership history shows it. */
+    readonly reason: string
 }
 
 /** The party a connector keeps for the customer of a conversation, remembered on the conversation. */

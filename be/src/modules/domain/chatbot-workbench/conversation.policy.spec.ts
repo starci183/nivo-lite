@@ -1,17 +1,50 @@
 import type * as SubjectModule from "./conversation.policy"
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import { channelOf, roleOf, toConversation, waitingConversationId } from "./conversation.policy"
+import {
+    channelOf,
+    leadOf,
+    proposalDraft,
+    proposalQuestion,
+    respondentOf,
+    roleOf,
+    toConversation,
+    waitingConversationId,
+} from "./conversation.policy"
 import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
 import type { MessageBrief } from "@modules/domain/agent-messages"
 import type { WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 const SUBJECT = Symbol("conversation.policy")
-type Subject = Pick<typeof SubjectModule, "channelOf" | "roleOf" | "waitingConversationId" | "toConversation">
+type Subject = Pick<
+    typeof SubjectModule,
+    | "channelOf"
+    | "leadOf"
+    | "proposalDraft"
+    | "proposalQuestion"
+    | "respondentOf"
+    | "roleOf"
+    | "waitingConversationId"
+    | "toConversation"
+>
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { channelOf, roleOf, waitingConversationId, toConversation } }],
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    channelOf,
+                    leadOf,
+                    proposalDraft,
+                    proposalQuestion,
+                    respondentOf,
+                    roleOf,
+                    waitingConversationId,
+                    toConversation,
+                },
+            },
+        ],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -21,11 +54,16 @@ const conversationOf = builder<CustomerConversationRow>({
     channel: "zalo",
     visitor_name: null,
     lead_id: "l-1",
+    agent_id: "agent-1",
+    front_agent_id: null,
     handled_by: null,
     handled_at: null,
     external_id: "zalo-9",
     created_at: "2026-10-13T01:00:00.000Z",
 })
+
+/** A customer the AI of this desk answers, with no record behind it. */
+const PLAIN = { lead: null, respondent: { kind: "ai", name: null } } as const
 
 const messageOf = builder<MessageBrief>({
     id: "m-1",
@@ -94,7 +132,7 @@ describe("conversation policy", () => {
     it("maps an empty conversation using its creation date and no display name", async () => {
         const subject = await buildSubject()
 
-        expect(subject.toConversation(conversationOf(), [], undefined, false)).toEqual({
+        expect(subject.toConversation(conversationOf(), [], undefined, false, PLAIN)).toEqual({
             id: "c-1",
             channel: "zalo",
             name: "",
@@ -106,6 +144,8 @@ describe("conversation policy", () => {
             handledBy: null,
             waiting: false,
             unanswered: false,
+            lead: null,
+            respondent: { kind: "ai", name: null },
         })
     })
 })
@@ -121,7 +161,12 @@ describe("conversation policy", () => {
         ]
 
         const conversation = conversationOf({ visitor_name: "  Minh  " })
-        expect(subject.toConversation(conversation, messages, "Hoa", true)).toEqual({
+        expect(
+            subject.toConversation(conversation, messages, "Hoa", true, {
+                lead: { stage: "qualified", need: "T-shirts", company: "Hoa Shop" },
+                respondent: { kind: "agent", name: "Sales AI" },
+            }),
+        ).toEqual({
             id: "c-1",
             channel: "zalo",
             name: "Minh",
@@ -133,6 +178,8 @@ describe("conversation policy", () => {
             handledBy: null,
             waiting: true,
             unanswered: false,
+            lead: { stage: "qualified", need: "T-shirts", company: "Hoa Shop" },
+            respondent: { kind: "agent", name: "Sales AI" },
         })
     })
 
@@ -144,6 +191,7 @@ describe("conversation policy", () => {
             [messageOf({ role: "system", body: "Opened" })],
             "Hoa",
             false,
+            PLAIN,
         )
 
         expect(result).toMatchObject({
@@ -161,14 +209,14 @@ describe("conversation policy", () => {
 
         const body = "x".repeat(138) + "  more"
 
-        expect(subject.toConversation(conversationOf(), [messageOf({ body })], "", false).lastText).toBe(
+        expect(subject.toConversation(conversationOf(), [messageOf({ body })], "", false, PLAIN).lastText).toBe(
             "x".repeat(138) + "...",
         )
         expect(
-            subject.toConversation(conversationOf(), [messageOf({ body: "x".repeat(141) })], "", false).lastText,
+            subject.toConversation(conversationOf(), [messageOf({ body: "x".repeat(141) })], "", false, PLAIN).lastText,
         ).toBe("x".repeat(139) + "...")
         expect(
-            subject.toConversation(conversationOf(), [messageOf({ body: "x".repeat(140) })], "", false).lastText,
+            subject.toConversation(conversationOf(), [messageOf({ body: "x".repeat(140) })], "", false, PLAIN).lastText,
         ).toBe("x".repeat(140))
     })
 })
@@ -188,6 +236,7 @@ describe("conversation policy", () => {
                 [messageOf()],
                 undefined,
                 waiting,
+                PLAIN,
             )
 
             expect(result.unanswered).toBe(expected)
@@ -195,4 +244,74 @@ describe("conversation policy", () => {
             expect(result.waiting).toBe(waiting)
         },
     )
+})
+
+describe("customer record and respondent", () => {
+    const names = new Map([["agent-2", "Sales AI"]])
+
+    it("shows the stage, need and company of a customer, and nothing for a customer not captured", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.leadOf({ stage: "proposal", need: "T-shirts", company: "Hoa Shop" })).toEqual({
+            stage: "proposal",
+            need: "T-shirts",
+            company: "Hoa Shop",
+        })
+        expect(subject.leadOf(undefined)).toBeNull()
+    })
+
+    it("names the person who holds the chat before anything else", async () => {
+        const subject = await buildSubject()
+        const row = conversationOf({ handled_by: "Lan", agent_id: "agent-2", front_agent_id: "agent-1" })
+
+        expect(subject.respondentOf(row, new Set(["agent-1"]), names)).toEqual({ kind: "person", name: "Lan" })
+    })
+
+    it("answers with the AI while the agent of the desk speaks, in a chat nobody handed over", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.respondentOf(conversationOf(), new Set(["agent-1"]), names)).toEqual({ kind: "ai", name: null })
+    })
+
+    it("answers with the AI once the chat is handed back to the front agent", async () => {
+        const subject = await buildSubject()
+        const row = conversationOf({ agent_id: "agent-1", front_agent_id: "agent-1" })
+
+        expect(subject.respondentOf(row, new Set(["agent-1"]), names)).toEqual({ kind: "ai", name: null })
+    })
+
+    it("names the other agent that a hand-over moved the chat to, and an empty name when it is unknown", async () => {
+        const subject = await buildSubject()
+        const row = conversationOf({ agent_id: "agent-2", front_agent_id: "agent-1" })
+
+        expect(subject.respondentOf(row, new Set(["agent-1"]), names)).toEqual({ kind: "agent", name: "Sales AI" })
+        expect(subject.respondentOf(row, new Set(["agent-1"]), new Map())).toEqual({ kind: "agent", name: "" })
+    })
+
+    it("reads a thread with no desk as the chat of the agent that was handed it", async () => {
+        const subject = await buildSubject()
+        const row = conversationOf({ agent_id: "agent-2", front_agent_id: "agent-1" })
+
+        expect(subject.respondentOf(row, new Set(), names)).toEqual({ kind: "agent", name: "Sales AI" })
+    })
+})
+
+describe("waiting reply proposal", () => {
+    it("reads the question field, else the summary, else nothing", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.proposalQuestion({ fields: { question: "Warranty?" }, summary: "S" })).toBe("Warranty?")
+        expect(subject.proposalQuestion({ fields: { question: 3 }, summary: "S" })).toBe("S")
+        expect(subject.proposalQuestion({ fields: [], summary: "S" })).toBe("S")
+        expect(subject.proposalQuestion({ summary: 4 })).toBe("")
+        expect(subject.proposalQuestion(null)).toBe("")
+    })
+
+    it("reads the draft when it is text, else nothing", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.proposalDraft({ draft: "Hello" })).toBe("Hello")
+        expect(subject.proposalDraft({ draft: 1 })).toBe("")
+        expect(subject.proposalDraft(null)).toBe("")
+    })
 })

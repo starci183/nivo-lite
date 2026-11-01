@@ -32,6 +32,7 @@ const CONVERSATION: TurnConversation = {
         approvalRule: "",
         greeting: "",
     },
+    speaksAs: null,
 }
 const INSTALLATION: Installation = {
     id: "i1",

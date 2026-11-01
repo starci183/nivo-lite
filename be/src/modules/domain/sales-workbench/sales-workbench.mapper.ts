@@ -7,6 +7,7 @@ import type { LeadView as LeadRecord } from "@modules/domain/leads"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
 import type { WorkItemView } from "./work-item-view.contracts"
 import { handoffsOf } from "./sales-handoffs.mapper"
+import { conversationByLeadOf, conversationOf } from "./sales-conversations.mapper"
 import type {
     TestRunName,
     AttentionKind,
@@ -178,6 +179,8 @@ interface Lookups {
     readonly waitingByLead: ReadonlyMap<string, WorkItemView>
     /** The recorded closing reason and instant of each customer. */
     readonly closedByLead: ReadonlyMap<string, { reason: string | null; at: string }>
+    /** The newest customer conversation of each customer (the rows arrive newest first). */
+    readonly conversationByLead: ReadonlyMap<string, string>
 }
 
 const lookupsOf = (rows: SalesRows): Lookups => {
@@ -206,6 +209,7 @@ const lookupsOf = (rows: SalesRows): Lookups => {
         quoteByLead,
         waitingByLead,
         closedByLead,
+        conversationByLead: conversationByLeadOf(rows.conversations),
     }
 }
 
@@ -258,6 +262,7 @@ const decisionsOf = (rows: SalesRows, look: Lookups): ReadonlyArray<SalesDecisio
             assignedStaffId: item.assigned_staff_id,
             assignedStaffName: item.assignedStaffName,
             createdAt: item.created_at,
+            conversationId: conversationOf(look.conversationByLead, item.lead_id),
         }))
     const stepById = new Map(rows.steps.map((step) => [step.id, step]))
     const fromDrafts = rows.drafts.map((draft): SalesDecision => {
@@ -280,6 +285,7 @@ const decisionsOf = (rows: SalesRows, look: Lookups): ReadonlyArray<SalesDecisio
             assignedStaffId: null,
             assignedStaffName: null,
             createdAt: draft.created_at,
+            conversationId: conversationOf(look.conversationByLead, lead?.id ?? null),
         }
     })
     return [...fromItems, ...fromDrafts].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
@@ -312,6 +318,7 @@ const awaitingReplies = (rows: SalesRows, look: Lookups): Array<AttentionRow> =>
             decisionId: null,
             action: null,
             missing: [],
+            conversationId: conversation.id,
         })
     }
     return rowsOut
@@ -343,6 +350,7 @@ const attentionOf = (
             decisionId: decision.id,
             action: decision.action === "follow_up" ? "send_follow_up" : decision.action,
             missing: decision.missing,
+            conversationId: decision.conversationId,
         })
     }
     for (const item of rows.items) {
@@ -363,6 +371,7 @@ const attentionOf = (
             decisionId: null,
             action: item.action,
             missing: [],
+            conversationId: conversationOf(look.conversationByLead, item.lead_id),
         })
     }
     for (const step of rows.steps) {
@@ -389,6 +398,7 @@ const attentionOf = (
             decisionId: null,
             action: null,
             missing: [],
+            conversationId: conversationOf(look.conversationByLead, lead.id),
         })
     }
     rowsOut.push(...awaitingReplies(rows, look))

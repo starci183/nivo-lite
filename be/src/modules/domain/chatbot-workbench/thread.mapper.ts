@@ -1,6 +1,14 @@
 import { isoOf } from "@modules/domain/brain-facts"
 import type { ChatbotLead, ChatbotMessage, ChatbotThread } from "./chatbot-workbench.contracts"
-import { roleOf, toConversation, waitingConversationId } from "./conversation.policy"
+import {
+    leadOf,
+    proposalDraft,
+    proposalQuestion,
+    respondentOf,
+    roleOf,
+    toConversation,
+    waitingConversationId,
+} from "./conversation.policy"
 import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
 import type { ChatThreadLine } from "@modules/domain/agent-messages"
 import type { LeadRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
@@ -17,6 +25,8 @@ export interface ThreadRecords {
     readonly lead: LeadRow | null
     /** The assigned staff display name, when assigned. */
     readonly staffName: string | null
+    /** The names of the agents that speak in the conversation, by agent id. */
+    readonly agentNames: ReadonlyMap<string, string>
 }
 
 const toMessage = (row: ChatThreadLine): ChatbotMessage => ({
@@ -40,25 +50,15 @@ const toLead = (row: LeadRow): ChatbotLead => ({
     email: row.email,
 })
 
-const proposalText = (proposal: WaitingRow["proposal"], key: "summary" | "draft"): string => {
-    const value = proposal?.[key]
-    return typeof value === "string" ? value : ""
-}
-
-const proposalQuestion = (proposal: WaitingRow["proposal"]): string => {
-    const fields = proposal?.fields
-    if (typeof fields === "object" && fields !== null && !Array.isArray(fields) && "question" in fields) {
-        return typeof fields.question === "string" ? fields.question : proposalText(proposal, "summary")
-    }
-    return proposalText(proposal, "summary")
-}
-
 /** One thread with normalized messages, customer facts and the first open escalation. */
 export const buildChatbotThread = (records: ThreadRecords): ChatbotThread => {
     const conversation = records.conversation
     const item = records.waiting.find((work) => waitingConversationId(work) === conversation.id) ?? null
     return {
-        conversation: toConversation(conversation, records.messages, records.lead?.contact_name, item !== null),
+        conversation: toConversation(conversation, records.messages, records.lead?.contact_name, item !== null, {
+            lead: leadOf(records.lead ?? undefined),
+            respondent: respondentOf(conversation, new Set(), records.agentNames),
+        }),
         messages: records.messages.map(toMessage),
         lead: records.lead === null ? null : toLead(records.lead),
         escalation:
@@ -67,7 +67,7 @@ export const buildChatbotThread = (records: ThreadRecords): ChatbotThread => {
                 : {
                       workItemId: item.id,
                       question: proposalQuestion(item.proposal),
-                      draft: proposalText(item.proposal, "draft"),
+                      draft: proposalDraft(item.proposal),
                       staffName: records.staffName,
                       since: isoOf(item.created_at),
                   },

@@ -39,6 +39,7 @@ const turn: CustomerTurn = {
             approvalRule: "",
             greeting: "",
         },
+        speaksAs: null,
     },
     messageId: "m1",
     body: "I want one milk tea",

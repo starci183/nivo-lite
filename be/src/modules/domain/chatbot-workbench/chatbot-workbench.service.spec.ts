@@ -3,7 +3,7 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { AgentConversationsErrorCode, AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { AgentMessagesReadService } from "@modules/domain/agent-messages"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import type { AgentLens } from "@modules/domain/agents"
+import type { AgentCard, AgentLens } from "@modules/domain/agents"
 import { LeadAutomationReadService, LeadReadService } from "@modules/domain/leads"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesService } from "@modules/domain/modules"
@@ -40,6 +40,7 @@ interface Facts {
     readonly waiting: ReadonlyArray<WaitingRow>
     readonly lenses: ReadonlyArray<AgentLens>
     readonly leadViews: ReadonlyArray<typeof LEAD_VIEW>
+    readonly cards: ReadonlyArray<AgentCard>
 }
 
 const build = async (facts: Partial<Facts> = {}) => {
@@ -63,6 +64,7 @@ const build = async (facts: Partial<Facts> = {}) => {
     const agentDirectory = mock<AgentDirectoryService>()
     agentDirectory.idsOfModule.mockResolvedValue([...(facts.agentIds ?? [])])
     agentDirectory.activeLensesOf.mockResolvedValue([...(facts.lenses ?? [])])
+    agentDirectory.cardsOf.mockResolvedValue([...(facts.cards ?? [])])
     const conversationReads = mock<AgentConversationsReadService>()
     conversationReads.customerOfAgents.mockResolvedValue([...(facts.conversations ?? [])])
     conversationReads.customerById.mockResolvedValue(facts.conversation ?? null)
@@ -120,6 +122,8 @@ const EXPECTED_OVERVIEW = {
             handledBy: null,
             waiting: false,
             unanswered: false,
+            lead: { stage: "new", need: "T-shirts", company: "Hoa Shop" },
+            respondent: { kind: "ai", name: null },
         },
         {
             id: "c-2",
@@ -133,9 +137,23 @@ const EXPECTED_OVERVIEW = {
             handledBy: "s-1",
             waiting: true,
             unanswered: true,
+            lead: null,
+            respondent: { kind: "person", name: "s-1" },
         },
     ],
     metrics: { today: 1, waiting: 1, p50FirstResponseMin: 2, sample: 1, leadsCaptured7d: 1 },
+    waiting: [
+        {
+            workItemId: "w-1",
+            conversationId: "c-2",
+            channel: "website",
+            name: "Minh",
+            question: "",
+            draft: "",
+            staffName: null,
+            since: "2026-10-13T02:00:00.000Z",
+        },
+    ],
 }
 
 const EXPECTED_THREAD = {
@@ -151,6 +169,8 @@ const EXPECTED_THREAD = {
         handledBy: null,
         waiting: true,
         unanswered: false,
+        lead: { stage: "new", need: "T-shirts", company: "Hoa Shop" },
+        respondent: { kind: "ai", name: null },
     },
     messages: [
         {
@@ -247,6 +267,7 @@ describe("ChatbotWorkbenchService overview of installations", () => {
             nowIso: NOW,
             conversations: [],
             metrics: EMPTY_METRICS,
+            waiting: [],
         })
     })
 
@@ -300,6 +321,24 @@ describe("ChatbotWorkbenchService overview of installations", () => {
         expect(overview.conversations).toEqual([])
         expect(agentDirectory.idsOfModule).toHaveBeenCalledWith("ws-1", "chatbot", 100)
         expect(conversationReads.customerOfAgents).toHaveBeenCalledWith("ws-1", ["a-1", "a-0"], 200)
+    })
+})
+
+describe("ChatbotWorkbenchService overview after a hand-over", () => {
+    it("names the agent a conversation moved to and the staff member a waiting reply is assigned to", async () => {
+        const { service, agentDirectory, staff } = await build({
+            agentIds: ["a-1"],
+            conversations: [conversationOf({ agent_id: "a-2", front_agent_id: "a-1" })],
+            cards: [{ id: "a-2", name: "Sales AI", module: "sales", canTagAgentIds: [] }],
+            waiting: [waitingOf({ subject_id: "c-1", assigned_staff_id: "st-1" })],
+        })
+
+        const overview = await service.overview("u-1", { workspaceId: "ws-1", installationId: null })
+
+        expect(overview.conversations[0]?.respondent).toEqual({ kind: "agent", name: "Sales AI" })
+        expect(overview.waiting.map((item) => item.staffName)).toEqual(["Minh"])
+        expect(agentDirectory.cardsOf).toHaveBeenCalledWith("ws-1", ["a-2"])
+        expect(staff.namesOf).toHaveBeenCalledWith("ws-1", ["st-1"])
     })
 })
 

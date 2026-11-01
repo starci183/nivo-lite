@@ -1,11 +1,6 @@
 import { Drawer, SegmentedControl, Text } from "@starci/grammar/common"
-import {
-    AddFilesPanel,
-    type BatchBytesView,
-    type LinkRowView,
-    type QueueRowView,
-    type StoppedUploadsView,
-} from "@/components/composites/AddFilesPanel"
+import type { BatchBytesView, LinkRowView, QueueRowView, StoppedUploadsView } from "@/modules/types"
+import { AddFilesPanel } from "@/components/composites/AddFilesPanel"
 
 import { AddNotePanel, type PairView } from "@/components/composites/AddNotePanel"
 

@@ -66,4 +66,8 @@ export class SalesDecisionType {
     /** The created at. */
     @Field(() => String)
     createdAt!: string
+
+    /** The newest conversation of the customer. */
+    @Field(() => ID, { nullable: true })
+    conversationId!: string | null
 }

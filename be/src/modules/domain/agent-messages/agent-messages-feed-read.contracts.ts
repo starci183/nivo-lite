@@ -27,6 +27,9 @@ export interface DeliveredReply {
 /** The delivered reply, or null when no delivery was tried. */
 export type OptionalDeliveredReply = DeliveredReply | null
 
+/** When a customer last wrote, or null when they never did. */
+export type OptionalCustomerMoment = Date | null
+
 /** When the customer of one conversation last wrote. */
 export interface ConversationWrite {
     /** The conversation. */

@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { ConversationOwnershipEventsModule } from "@modules/domain/conversation-ownership-events"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-conversations.module-definition"
+import { ConversationHandoverService } from "./conversation-handover.service"
 import { AgentConversationReadService } from "./agent-conversation-reads.service"
 import { AgentConversationsReadService } from "./agent-conversations-read.service"
 import { AgentConversationsAutomationReadService } from "./agent-conversations-automation-read.service"
@@ -21,15 +24,19 @@ export class AgentConversationsModule extends ConfigurableModuleClass {
         }
         return {
             ...base,
+            imports: [...(base.imports ?? []), ConversationOwnershipEventsModule.register({})],
             providers: [
                 ...(base.providers ?? []),
+                { provide: INBOX, useClass: InboxService },
                 AgentConversationsService,
+                ConversationHandoverService,
                 AgentConversationReadService,
                 AgentConversationsReadService,
                 AgentConversationsAutomationReadService,
             ],
             exports: [
                 AgentConversationsService,
+                ConversationHandoverService,
                 AgentConversationReadService,
                 AgentConversationsReadService,
                 AgentConversationsAutomationReadService,

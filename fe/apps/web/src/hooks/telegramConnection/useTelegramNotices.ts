@@ -12,7 +12,10 @@ import { useTelegramPage } from "./useTelegramPage"
  * The notices under the header of a Telegram bot page, in reading order: why the bot cannot work, the refused command, a local site
  * Telegram cannot reach, and no agent yet. `command` is the failure of the last owner command, empty when there is none.
  */
-export const useTelegramNotices = (connectionId: string | undefined, command: string): ReadonlyArray<ConnectionNotice> => {
+export const useTelegramNotices = (
+    connectionId: string | undefined,
+    command: string,
+): ReadonlyArray<ConnectionNotice> => {
     const t = useTranslations("telegramConnection")
     const tc = useTranslations("connections")
     const { slot } = useTelegramPage(connectionId)

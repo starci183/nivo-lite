@@ -151,29 +151,29 @@ const renderChatbotThreadViewEntries = (
             return (
                 <ChatBubble
                     key={entry.id}
-                        side={entry.side}
-                        author={entry.author}
-                        meta={entry.meta}
-                        status={entry.aiMark === null ? undefined : <Badge tone="neutral">{entry.aiMark}</Badge>}
-                        avatar={
-                            entry.avatarName === null ? undefined : (
-                                <Avatar name={entry.avatarName} size="sm" isDecorative />
-                            )
-                        }
-                        footer={
-                            entry.deliveryText === null ? undefined : (
-                                <Text
-                                    size="xs"
-                                    weight="medium"
-                                    tone={entry.deliveryTone === "accent" ? "accent" : "muted"}
-                                    live="polite"
-                                >
-                                    {entry.deliveryText}
-                                </Text>
-                            )
-                        }
-                    >
-                        {entry.text}
+                    side={entry.side}
+                    author={entry.author}
+                    meta={entry.meta}
+                    status={entry.aiMark === null ? undefined : <Badge tone="neutral">{entry.aiMark}</Badge>}
+                    avatar={
+                        entry.avatarName === null ? undefined : (
+                            <Avatar name={entry.avatarName} size="sm" isDecorative />
+                        )
+                    }
+                    footer={
+                        entry.deliveryText === null ? undefined : (
+                            <Text
+                                size="xs"
+                                weight="medium"
+                                tone={entry.deliveryTone === "accent" ? "accent" : "muted"}
+                                live="polite"
+                            >
+                                {entry.deliveryText}
+                            </Text>
+                        )
+                    }
+                >
+                    {entry.text}
                 </ChatBubble>
             )
         })}

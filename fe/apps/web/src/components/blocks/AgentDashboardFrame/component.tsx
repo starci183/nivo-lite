@@ -1,6 +1,5 @@
-import type { ReactNode } from "react"
-import { Badge, SurfaceListCard, Tabs } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import type { ReactElement, ReactNode } from "react"
+import { Button, List, ListRow, Pane, PaneGrid, PaneSection, SurfaceListCard, Tabs } from "@starci/grammar/common"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import type { ConnectionsRegionProps } from "@/components/composites/ConnectionsRegion"
 import { DoneRegion } from "@/components/composites/DoneRegion"
@@ -10,14 +9,16 @@ import type { KnowledgeRegionProps } from "@/components/composites/KnowledgeRegi
 import { SlotView } from "@/components/composites/SlotView"
 import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import type { WaitingRegionProps } from "@/components/composites/WaitingRegion"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import { WorkbenchStatusBand } from "@/components/composites/WorkbenchStatusBand"
+import { WorkbenchWhy } from "@/components/composites/WorkbenchWhy"
+import type { WorkbenchWhyLabels } from "@/components/composites/WorkbenchWhy"
+import type { DataSlot, SlotLabels, WorkbenchBandView, WorkbenchSurface, WorkbenchWhyView } from "@/modules/types"
 import {
     COMMAND_CLASS_NAME,
     FRAME_CLASS_NAME,
     PANEL_CLASS_NAME,
     SIDE_COLUMN_CLASS_NAME,
     SIDE_GRID_CLASS_NAME,
-    TOOLBAR_CLASS_NAME,
 } from "./classNames"
 
 /** One area of the module under the strip: the strip draws its label, the content is placed through the slots. */
@@ -34,22 +35,16 @@ interface AgentDashboardFrameSlots {
     readonly command: ReactNode
     /** The figures block of the module (the ribbon under the heading); null for none. */
     readonly ribbon: ReactNode
-    /** The waiting card of the module in place of the built-in one; null draws the dashboard waiting region. */
-    readonly waiting: ReactNode
+    /** The waiting card of the module in place of the built-in one, drawn for the surface it stands on; null draws the dashboard waiting region. */
+    readonly waiting: ((surface: WorkbenchSurface) => ReactNode) | ReactNode
+    /** The decision of one work item for the footer of the why pane, the same mutation as its row; null draws no decision. */
+    readonly whyDecision: ((workItemId: string) => ReactNode) | null
     /** The gaps card of the module after the regions; null for none. */
     readonly gaps: ReactNode
     /** Layers the module opens over the workbench, drawn after the open area; null for none. */
     readonly overlay: ReactNode
     /** The content of the open area; null shows the skeleton card while `hasPlaceholder`. */
     readonly panel: ReactNode
-}
-
-/** What the heading shows once the agent is read. */
-export interface AgentDashboardHeadView {
-    readonly title: string
-    readonly mode: { readonly label: string; readonly tone: BadgeTone } | null
-    /** The default page command, "Talk to the agent"; null while there is no agent or a module brings its own. */
-    readonly chat: { readonly label: string; readonly href: string } | null
 }
 
 /** One region of the dashboard: its card label, its slot, the same-shape placeholder and the words of its status. */
@@ -79,14 +74,26 @@ const Region = <V,>(props: RegionProps<V>) => (
     </SlotView>
 )
 
+/** The why pane of one work item, beside the list. */
+interface WhyState {
+    readonly workItemId: string | null
+    /** The recorded path of the decision; null when none is recorded. */
+    readonly view: WorkbenchWhyView | null
+    readonly labels: WorkbenchWhyLabels
+    readonly paneLabel: string
+    readonly listLabel: string
+    readonly openLabel: string
+    readonly closeLabel: string
+}
+
 /** Copy, slots and data of the shared page anatomy of an agent workbench. */
 export interface AgentDashboardFrameBaseProps {
     readonly shape: AgentDashboardFrameSlots
     readonly props: {
-        /** The heading: a skeleton until the agent is read. */
-        readonly head: DataSlot<AgentDashboardHeadView>
-        readonly headPlaceholder: AgentDashboardHeadView
-        readonly headLabels: SlotLabels
+        /** The status band: the state, mode, version, last activity and channels; a skeleton until they are read. */
+        readonly band: RegionSlot<WorkbenchBandView>
+        /** The why pane: the work item it is open on (`?why=`), null when closed. */
+        readonly why: WhyState
         /** The own tab content of the module is not known yet: a tab without content shows a skeleton card. */
         readonly hasPlaceholder: boolean
         readonly waiting: RegionSlot<WaitingRegionProps["view"]>
@@ -100,59 +107,156 @@ export interface AgentDashboardFrameBaseProps {
     readonly on: {
         readonly selectTab: (id: string) => void
         readonly retry: () => void
+        readonly closeWhy: () => void
     }
 }
 
-/** Draws the workbench body for the instance Page: the mode badge and the area tabs as a toolbar, the regions and the open area below. */
+/** The rows of a region as an app-owned list, for a pane: a card never stands inside a pane (pane-grid.choose.frame:cards). */
+/** The rows of a region and the words around them. */
+interface PaneRowsProps {
+    readonly label: string
+    readonly rows: WaitingRegionProps["view"]["rows"]
+    readonly openLabel: string | null
+    readonly isSkeleton: boolean
+}
+
+const PaneRows = (props: PaneRowsProps) => (
+    <List label={props.label}>
+        {props.rows.map((row) => (
+            <ListRow
+                key={row.id}
+                isSkeleton={props.isSkeleton}
+                title={row.title}
+                description={row.description}
+                actions={
+                    props.openLabel === null ? undefined : (
+                        <Button size="sm" intent="neutral" href={row.href} isSkeleton={props.isSkeleton}>
+                            {props.openLabel}
+                        </Button>
+                    )
+                }
+            />
+        ))}
+    </List>
+)
+
+/** The waiting card of the module for a surface; a module without its own draws the dashboard's. */
+const renderWaiting = (base: AgentDashboardFrameBaseProps, surface: WorkbenchSurface): ReactElement => {
+    const view = base.props
+    const own = base.shape.waiting
+    if (typeof own === "function") return <>{own(surface)}</>
+    if (surface === "card") {
+        return (
+            <>
+                {own ?? (
+                    <Region region={view.waiting} onRetry={base.on.retry}>
+                        {(waiting, isSkeleton) => (
+                            <WaitingRegion label={view.waiting.label} view={waiting} isSkeleton={isSkeleton} />
+                        )}
+                    </Region>
+                )}
+            </>
+        )
+    }
+    return (
+        <Region region={view.waiting} onRetry={base.on.retry}>
+            {(waiting, isSkeleton) => (
+                <PaneRows
+                    label={view.waiting.label}
+                    rows={waiting.rows}
+                    openLabel={waiting.openLabel}
+                    isSkeleton={isSkeleton}
+                />
+            )}
+        </Region>
+    )
+}
+
+/**
+ * With `?why=` the body is two panes (pane-grid.choose.page:nested): the waiting rows and Done as app-owned lists, and the why of
+ * one item beside them; on a phone the why pane is a drawer over the list. The band, the figures and the tabs do not draw.
+ */
+const renderWhyPanes = (base: AgentDashboardFrameBaseProps, why: WhyState, workItemId: string) => {
+    const view = base.props
+    return (
+        <PaneGrid
+            label={why.paneLabel}
+            areas={{ base: ["list"], medium: ["list why"] }}
+            columns={{ base: ["fill"], medium: ["fill", "wide"] }}
+        >
+            <Pane area="list" scroll label={why.listLabel}>
+                <PaneSection grow>
+                    {renderWaiting(base, "pane")}
+                    <Region region={view.done} onRetry={base.on.retry}>
+                        {(done, isSkeleton) => (
+                            <PaneRows
+                                label={view.done.label}
+                                rows={done.rows}
+                                openLabel={null}
+                                isSkeleton={isSkeleton}
+                            />
+                        )}
+                    </Region>
+                </PaneSection>
+            </Pane>
+            <Pane
+                area="why"
+                scroll
+                label={why.paneLabel}
+                collapse="drawer"
+                collapseLabel={why.paneLabel}
+                openLabel={why.openLabel}
+                closeLabel={why.closeLabel}
+                isOpen
+                onOpenChange={(isOpen) => {
+                    if (!isOpen) base.on.closeWhy()
+                }}
+            >
+                <WorkbenchWhy
+                    view={why.view}
+                    labels={why.labels}
+                    decision={base.shape.whyDecision === null ? null : base.shape.whyDecision(workItemId)}
+                    isSkeleton={false}
+                />
+            </Pane>
+        </PaneGrid>
+    )
+}
+
+/**
+ * Draws the workbench body for the instance Page, top to bottom: the status band, what waits for a person, the figures, the
+ * module's areas as tabs with the open one, then done, connections and knowledge (workbench section 3).
+ */
 export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => {
     const view = props.props
+    if (view.why.workItemId !== null) return renderWhyPanes(props, view.why, view.why.workItemId)
     const hasStrip = view.tabs.length > 1
     const active = view.tabs.find((tab) => tab.id === view.selectedTab)
     return (
         <div className={FRAME_CLASS_NAME}>
-            <div className={TOOLBAR_CLASS_NAME}>
-                <SlotView
-                    slot={view.head}
-                    placeholder={view.headPlaceholder}
-                    labels={view.headLabels}
-                    forbidden="notice"
-                    onRetry={props.on.retry}
-                >
-                    {(head) =>
-                        head.mode === null ? null : (
-                            <Badge tone={head.mode.tone} isDot>
-                                {head.mode.label}
-                            </Badge>
-                        )
-                    }
-                </SlotView>
-                {hasStrip ? (
-                    <Tabs
-                        label={view.tabsLabel}
-                        selectedKey={view.selectedTab}
-                        inset="none"
-                        labelVisibility="always"
-                        items={view.tabs.map((tab) => ({ id: tab.id, label: tab.label }))}
-                        panelId={tabPanelId}
-                        onSelect={props.on.selectTab}
-                    />
-                ) : null}
-            </div>
             {props.shape.command === null ? null : <div className={COMMAND_CLASS_NAME}>{props.shape.command}</div>}
+
+            <Region region={view.band} onRetry={props.on.retry}>
+                {(band, isSkeleton) => (
+                    <WorkbenchStatusBand label={view.band.label} view={band} isSkeleton={isSkeleton} />
+                )}
+            </Region>
+
+            {renderWaiting(props, "card")}
 
             {props.shape.ribbon}
 
-            {props.shape.waiting ?? (
-                <Region region={view.waiting} onRetry={props.on.retry}>
-                    {(waiting, isSkeleton) => (
-                        <WaitingRegion label={view.waiting.label} view={waiting} isSkeleton={isSkeleton} />
-                    )}
-                </Region>
-            )}
-
-            {renderDashboardRegions(view, props)}
-            {props.shape.gaps}
-
+            {hasStrip ? (
+                <Tabs
+                    label={view.tabsLabel}
+                    selectedKey={view.selectedTab}
+                    inset="none"
+                    labelVisibility="always"
+                    items={view.tabs.map((tab) => ({ id: tab.id, label: tab.label }))}
+                    panelId={tabPanelId}
+                    onSelect={props.on.selectTab}
+                />
+            ) : null}
             <div
                 className={PANEL_CLASS_NAME}
                 role={hasStrip ? "tabpanel" : undefined}
@@ -163,6 +267,9 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
                         <SurfaceListCard ariaLabel={active?.label ?? view.tabsLabel} isLoading />
                     ) : null)}
             </div>
+
+            {renderDashboardRegions(view, props)}
+            {props.shape.gaps}
             {props.shape.overlay}
         </div>
     )

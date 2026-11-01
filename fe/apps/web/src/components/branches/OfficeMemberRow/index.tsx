@@ -21,77 +21,77 @@ export const OfficeMemberRow = (props: OfficeMemberRowProps) => (
         {props.avatar}
         <div className={CONTENT_CLASS_NAME}>
             <Cluster gap="inline" wrap={false}>
-            <div className={TEXT_CLASS_NAME}>
-                <div className={LINE_CLASS_NAME}>
-                    <Cluster gap="inline">
-                        <div className={NAME_CLASS_NAME}>
-                            <Text weight="medium" overflow="truncate">
-                                {props.member.name}
+                <div className={TEXT_CLASS_NAME}>
+                    <div className={LINE_CLASS_NAME}>
+                        <Cluster gap="inline">
+                            <div className={NAME_CLASS_NAME}>
+                                <Text weight="medium" overflow="truncate">
+                                    {props.member.name}
+                                </Text>
+                            </div>
+                            {props.member.isMe ? (
+                                <div className={CHIP_CLASS_NAME}>
+                                    <Badge tone="accent">{props.youLabel}</Badge>
+                                </div>
+                            ) : null}
+                        </Cluster>
+                    </div>
+                    <div className={LINE_CLASS_NAME}>
+                        <Cluster gap="inline" wrap={false}>
+                            {props.member.presence === null ? null : (
+                                <div className={CHIP_CLASS_NAME}>
+                                    <Badge tone="success" isDot>
+                                        {props.member.presence}
+                                    </Badge>
+                                </div>
+                            )}
+                            <Text size="sm" tone="muted" overflow="truncate">
+                                {props.member.detail}
                             </Text>
-                        </div>
-                        {props.member.isMe ? (
-                            <div className={CHIP_CLASS_NAME}>
-                                <Badge tone="accent">{props.youLabel}</Badge>
-                            </div>
-                        ) : null}
-                    </Cluster>
-                </div>
-                <div className={LINE_CLASS_NAME}>
-                    <Cluster gap="inline" wrap={false}>
-                        {props.member.presence === null ? null : (
-                            <div className={CHIP_CLASS_NAME}>
-                                <Badge tone="success" isDot>
-                                    {props.member.presence}
-                                </Badge>
-                            </div>
-                        )}
-                        <Text size="sm" tone="muted" overflow="truncate">
-                            {props.member.detail}
+                        </Cluster>
+                    </div>
+                    {props.member.seen === null ? null : (
+                        <Text size="xs" tone="muted" overflow="truncate">
+                            {props.member.seen}
                         </Text>
-                    </Cluster>
+                    )}
+                    {props.member.note === null ? null : (
+                        <Text size="xs" tone="muted">
+                            {props.member.note}
+                        </Text>
+                    )}
+                    {props.member.noteAction === null ? null : (
+                        <TextAction size="xs" href={props.member.noteAction.href}>
+                            {props.member.noteAction.label}
+                        </TextAction>
+                    )}
                 </div>
-                {props.member.seen === null ? null : (
-                    <Text size="xs" tone="muted" overflow="truncate">
-                        {props.member.seen}
-                    </Text>
+                {props.member.mention === null && props.member.chatHref === null ? null : (
+                    <ItemActions>
+                        <Cluster gap="identity" wrap={false}>
+                            {props.member.mention === null ? null : (
+                                <Tooltip content={props.mentionLabel}>
+                                    <IconButton
+                                        intent="neutral"
+                                        source={nivoIconSource("mention", "leading")}
+                                        label={props.mentionLabel}
+                                        onPress={() => props.onMention(props.member.mention ?? "")}
+                                    />
+                                </Tooltip>
+                            )}
+                            {props.member.chatHref === null ? null : (
+                                <Tooltip content={props.chatLabel}>
+                                    <IconButton
+                                        intent="neutral"
+                                        source={nivoIconSource("chat", "leading")}
+                                        label={props.chatLabel}
+                                        href={props.member.chatHref}
+                                    />
+                                </Tooltip>
+                            )}
+                        </Cluster>
+                    </ItemActions>
                 )}
-                {props.member.note === null ? null : (
-                    <Text size="xs" tone="muted">
-                        {props.member.note}
-                    </Text>
-                )}
-                {props.member.noteAction === null ? null : (
-                    <TextAction size="xs" href={props.member.noteAction.href}>
-                        {props.member.noteAction.label}
-                    </TextAction>
-                )}
-            </div>
-            {props.member.mention === null && props.member.chatHref === null ? null : (
-                <ItemActions>
-                    <Cluster gap="identity" wrap={false}>
-                        {props.member.mention === null ? null : (
-                            <Tooltip content={props.mentionLabel}>
-                                <IconButton
-                                    intent="neutral"
-                                    source={nivoIconSource("mention", "leading")}
-                                    label={props.mentionLabel}
-                                    onPress={() => props.onMention(props.member.mention ?? "")}
-                                />
-                            </Tooltip>
-                        )}
-                        {props.member.chatHref === null ? null : (
-                            <Tooltip content={props.chatLabel}>
-                                <IconButton
-                                    intent="neutral"
-                                    source={nivoIconSource("chat", "leading")}
-                                    label={props.chatLabel}
-                                    href={props.member.chatHref}
-                                />
-                            </Tooltip>
-                        )}
-                    </Cluster>
-                </ItemActions>
-            )}
             </Cluster>
         </div>
     </Cluster>

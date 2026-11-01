@@ -85,7 +85,12 @@ export const useDriveListing = (failedPickerMessage: string) => {
             const result = await settle(() => readPicked({ folderId: folder.id, token: choice.token }))
             if (result.kind !== "ok") return setError(result.message)
             const picked = result.value
-            show({ name: picked.name, files: picked.files.map(rowOf), truncated: picked.truncated, empty: picked.empty })
+            show({
+                name: picked.name,
+                files: picked.files.map(rowOf),
+                truncated: picked.truncated,
+                empty: picked.empty,
+            })
         },
         [settle, readPicked, show],
     )

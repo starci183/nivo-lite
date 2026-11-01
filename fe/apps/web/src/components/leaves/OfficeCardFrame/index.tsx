@@ -35,23 +35,23 @@ export const OfficeCardFrame = (props: OfficeCardFrameProps) => {
     const isHighlight = props.identity?.isFocused ?? props.isHighlight
     return (
         <ChatBubble
-                {...(anchor === undefined ? {} : { id: anchor })}
-                author={props.identity?.author ?? props.author ?? ""}
-                avatar={<div className={AVATAR_SLOT_CLASS_NAME}>{props.avatar}</div>}
-                status={props.status ?? aiStatusOf(props.identity, props.aiLabel)}
-                {...(meta === undefined ? {} : { meta })}
-                footer={
-                    <div className={CARD_CLASS_NAME}>
-                        <SurfaceCard
-                            ariaLabel={props.identity?.title ?? props.label ?? ""}
-                            {...(isHighlight === undefined ? {} : { isHighlight })}
-                        >
-                            <Stack gap="row">{props.children}</Stack>
-                        </SurfaceCard>
-                    </div>
-                }
-            >
-                {props.head}
+            {...(anchor === undefined ? {} : { id: anchor })}
+            author={props.identity?.author ?? props.author ?? ""}
+            avatar={<div className={AVATAR_SLOT_CLASS_NAME}>{props.avatar}</div>}
+            status={props.status ?? aiStatusOf(props.identity, props.aiLabel)}
+            {...(meta === undefined ? {} : { meta })}
+            footer={
+                <div className={CARD_CLASS_NAME}>
+                    <SurfaceCard
+                        ariaLabel={props.identity?.title ?? props.label ?? ""}
+                        {...(isHighlight === undefined ? {} : { isHighlight })}
+                    >
+                        <Stack gap="row">{props.children}</Stack>
+                    </SurfaceCard>
+                </div>
+            }
+        >
+            {props.head}
         </ChatBubble>
     )
 }

@@ -41,62 +41,62 @@ export const OfficeHeader = (props: OfficeHeaderProps) => {
         <PaneSection align="center">
             <div className={HEAD_BAND_CLASS_NAME}>
                 <Cluster gap="row" wrap={false}>
-                <Cluster gap="row" wrap={false}>
-                    <div className={PHONE_ONLY_CLASS_NAME}>
-                        <IconButton
-                            intent="dismiss"
-                            source={nivoIconSource("back", "leading")}
-                            label={text("back")}
-                            onPress={on.back}
-                        />
-                    </div>
-                    <div className={HEAD_AVATAR_CLASS_NAME}>
-                        <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
-                    </div>
-                </Cluster>
-                <div className={HEAD_TITLE_CLASS_NAME}>
-                    <Cluster gap="inline" wrap={false}>
-                        <Heading level={1}>{isTasks ? text("tasksTitle") : view.title}</Heading>
-                        {!isTasks && view.isMuted ? (
-                            <Icon props={{ name: "muted", usage: "leading", ariaLabel: text("mutedChat") }} />
-                        ) : null}
-                    </Cluster>
-                    {isTasks ? null : (
-                        <Text size="xs" tone="muted">
-                            {view.subtitle}
-                        </Text>
-                    )}
-                </div>
-                <div className={HEAD_ACTIONS_CLASS_NAME}>
-                    <Cluster gap="inline" wrap={false}>
-                    {isTasks ? (
-                        <div className={WIDE_ONLY_CLASS_NAME}>
-                            <Button intent="dismiss" size="sm" onPress={on.showChat}>
-                                {text("tasksBack")}
-                            </Button>
+                    <Cluster gap="row" wrap={false}>
+                        <div className={PHONE_ONLY_CLASS_NAME}>
+                            <IconButton
+                                intent="dismiss"
+                                source={nivoIconSource("back", "leading")}
+                                label={text("back")}
+                                onPress={on.back}
+                            />
                         </div>
-                    ) : null}
-                    {!isTasks && view.chip !== null ? (
-                        <Button intent="neutral" size="sm" onPress={on.chip}>
-                            {view.chip}
-                        </Button>
-                    ) : null}
-                    <IconButton
-                        intent="neutral"
-                        source={nivoIconSource(view.isMuted ? "muted" : "unmuted", "leading")}
-                        label={view.isMuted ? text("unmuteChat") : text("muteChat")}
-                        isActive={view.isMuted}
-                        onPress={on.toggleMute}
-                    />
-                    <IconButton
-                        intent="neutral"
-                        source={nivoIconSource("sidebar", "leading")}
-                        label={view.isInfoOpen ? text("infoClose") : text("infoOpen")}
-                        isActive={view.isInfoOpen}
-                        onPress={on.toggleInfo}
-                    />
+                        <div className={HEAD_AVATAR_CLASS_NAME}>
+                            <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
+                        </div>
                     </Cluster>
-                </div>
+                    <div className={HEAD_TITLE_CLASS_NAME}>
+                        <Cluster gap="inline" wrap={false}>
+                            <Heading level={1}>{isTasks ? text("tasksTitle") : view.title}</Heading>
+                            {!isTasks && view.isMuted ? (
+                                <Icon props={{ name: "muted", usage: "leading", ariaLabel: text("mutedChat") }} />
+                            ) : null}
+                        </Cluster>
+                        {isTasks ? null : (
+                            <Text size="xs" tone="muted">
+                                {view.subtitle}
+                            </Text>
+                        )}
+                    </div>
+                    <div className={HEAD_ACTIONS_CLASS_NAME}>
+                        <Cluster gap="inline" wrap={false}>
+                            {isTasks ? (
+                                <div className={WIDE_ONLY_CLASS_NAME}>
+                                    <Button intent="dismiss" size="sm" onPress={on.showChat}>
+                                        {text("tasksBack")}
+                                    </Button>
+                                </div>
+                            ) : null}
+                            {!isTasks && view.chip !== null ? (
+                                <Button intent="neutral" size="sm" onPress={on.chip}>
+                                    {view.chip}
+                                </Button>
+                            ) : null}
+                            <IconButton
+                                intent="neutral"
+                                source={nivoIconSource(view.isMuted ? "muted" : "unmuted", "leading")}
+                                label={view.isMuted ? text("unmuteChat") : text("muteChat")}
+                                isActive={view.isMuted}
+                                onPress={on.toggleMute}
+                            />
+                            <IconButton
+                                intent="neutral"
+                                source={nivoIconSource("sidebar", "leading")}
+                                label={view.isInfoOpen ? text("infoClose") : text("infoOpen")}
+                                isActive={view.isInfoOpen}
+                                onPress={on.toggleInfo}
+                            />
+                        </Cluster>
+                    </div>
                 </Cluster>
             </div>
         </PaneSection>

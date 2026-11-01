@@ -120,7 +120,9 @@ export class AgentConversationsReadService {
         if (agentIds.length === 0) return Promise.resolve([])
         return this.customerColumns()
             .where("c.workspace_id = :workspaceId AND c.kind = 'customer'", { workspaceId })
-            .andWhere("c.agent_id IN (:...agentIds)", { agentIds: [...agentIds] })
+            .andWhere("(c.agent_id IN (:...agentIds) OR c.front_agent_id IN (:...agentIds))", {
+                agentIds: [...agentIds],
+            })
             .orderBy("c.created_at", "DESC")
             .limit(limit)
             .getRawMany<CustomerConversationRow>()
@@ -144,6 +146,8 @@ export class AgentConversationsReadService {
             .createQueryBuilder(AgentConversationEntity, "c")
             .select("c.id", "id")
             .addSelect("c.channel", "channel")
+            .addSelect("c.agent_id", "agent_id")
+            .addSelect("c.front_agent_id", "front_agent_id")
             .addSelect("c.visitor_name", "visitor_name")
             .addSelect("c.lead_id", "lead_id")
             .addSelect("c.handled_by", "handled_by")

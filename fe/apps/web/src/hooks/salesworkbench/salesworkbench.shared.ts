@@ -2,6 +2,7 @@ import { DEAL_STAGES } from "@/hooks/sales"
 import type { SalesWorkbenchType } from "@/hooks/swr"
 import { isActionKey, isModuleKey } from "@/modules/catalog"
 import type { AttentionKind, FlowDecisionRow, LeadStageId, SalesWorkbenchData } from "@/modules/types"
+import { leadStageLabel } from "@/modules/utils"
 
 const reasonOf = (value: string | null | undefined): FlowDecisionRow["reason"] =>
     value === "routine" ||
@@ -31,6 +32,7 @@ export const salesWorkbenchViewOf = (data: SalesWorkbenchType): SalesWorkbenchDa
         owner: row.owner ?? null,
         workItemId: row.workItemId ?? null,
         decisionId: row.decisionId ?? null,
+        conversationId: row.conversationId ?? null,
         action: row.action ? actionOf(row.action) : null,
     })),
     deals: data.deals.map((row) => ({
@@ -55,6 +57,7 @@ export const salesWorkbenchViewOf = (data: SalesWorkbenchType): SalesWorkbenchDa
         amountVnd: row.amountVnd ?? null,
         assignedStaffId: row.assignedStaffId ?? null,
         assignedStaffName: row.assignedStaffName ?? null,
+        conversationId: row.conversationId ?? null,
     })),
     decided: data.decided.map(decidedRowOf),
     handoffs: data.handoffs.map(handoffRowOf),
@@ -147,3 +150,7 @@ const handoffRowOf = (row: SalesWorkbenchType["handoffs"][number]): SalesWorkben
     carrier: row.carrier ?? null,
     trackingCode: row.trackingCode ?? null,
 })
+
+/** The words of a lead stage in the language of the page that asks, the one set the desk and the pipeline share. */
+export const stageWordOf = (t: Parameters<typeof leadStageLabel>[0], stage: LeadStageId): string =>
+    leadStageLabel(t, stage)

@@ -1,6 +1,7 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql"
 import { ChatbotConversationType } from "./chatbot-conversation.type"
 import { ChatbotMetricsType } from "./chatbot-metrics.type"
+import { ChatbotWaitingType } from "./chatbot-waiting.type"
 
 @ObjectType()
 /** The selected Chatbot inbox and header figures. */
@@ -20,4 +21,8 @@ export class ChatbotOverviewType {
     /** The metrics value. */
     @Field(() => ChatbotMetricsType)
     metrics!: ChatbotMetricsType
+
+    /** The customer replies that wait for a person. */
+    @Field(() => [ChatbotWaitingType])
+    waiting!: Array<ChatbotWaitingType>
 }

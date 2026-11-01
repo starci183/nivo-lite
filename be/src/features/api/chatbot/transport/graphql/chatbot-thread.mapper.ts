@@ -1,4 +1,5 @@
 import type { ChatbotThread } from "@modules/domain/chatbot-workbench"
+import { toChatbotConversationType } from "./chatbot-conversation.mapper"
 import type { GetChatbotThreadRequest } from "../../application/get-chatbot-thread.contracts"
 import type { ChatbotThreadInput } from "./dto/chatbot-thread.input"
 import type { ChatbotThreadType } from "./dto/chatbot-thread.type"
@@ -12,7 +13,7 @@ export const toChatbotThreadRequest = (workspaceId: string, input: ChatbotThread
 /** Maps the domain thread to its GraphQL type. */
 export const toChatbotThreadType = (result: ChatbotThread): ChatbotThreadType => ({
     ...result,
-    conversation: { ...result.conversation },
+    conversation: toChatbotConversationType(result.conversation),
     messages: result.messages.map((message) => ({ ...message })),
     lead: result.lead,
     escalation: result.escalation,

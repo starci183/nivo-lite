@@ -25,7 +25,8 @@ export const useKnowledgeSources = (module?: ModuleKey | "all") => {
     const { data, isLoading } = swrRead
     const error = readError(swrRead)
     const sources = useMemo(
-        () => (data === undefined ? undefined : data.map((row) => overlayPush(toKnowledgeDocument(row), pushed?.[row.id]))),
+        () =>
+            data === undefined ? undefined : data.map((row) => overlayPush(toKnowledgeDocument(row), pushed?.[row.id])),
         [data, pushed],
     )
     const live = useMemo(

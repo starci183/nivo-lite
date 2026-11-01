@@ -17,6 +17,8 @@ export const MEMBER: WorkspaceMember = {
 export const conversationOf = builder<CustomerConversationRow>({
     id: "c-1",
     channel: "zalo",
+    agent_id: "agent-1",
+    front_agent_id: null,
     visitor_name: null,
     lead_id: "l-1",
     handled_by: null,
@@ -49,7 +51,14 @@ export const waitingOf = builder<WaitingRow>({
     created_at: "2026-10-13T02:00:00.000Z",
 })
 
-export const LEAD_BRIEF: LeadBriefRow = { id: "l-1", contact_name: "Hoa", created_at: "2026-10-12T00:00:00.000Z" }
+export const LEAD_BRIEF: LeadBriefRow = {
+    id: "l-1",
+    contact_name: "Hoa",
+    company: "Hoa Shop",
+    need: "T-shirts",
+    stage: "new",
+    created_at: "2026-10-12T00:00:00.000Z",
+}
 
 export const LEAD: LeadRow = {
     id: "l-1",

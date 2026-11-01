@@ -87,8 +87,10 @@ export type {
     ChatbotMessage,
     ChatbotMetrics,
     ChatbotOverview,
+    ChatbotRespondent,
     ChatbotRole,
     ChatbotThread,
+    ChatbotWaitingReply,
 } from "./chatbot"
 export type {
     BookingAction,
@@ -292,6 +294,10 @@ export type {
     DocumentStatus,
     IdeaDecision,
     DocumentVisibility,
+    BatchBytesView,
+    LinkRowView,
+    QueueRowView,
+    StoppedUploadsView,
 } from "./knowledge"
 export type {
     ShiftsAvailRowView,
@@ -486,15 +492,8 @@ export type {
     SepayEventView,
     SepayStepView,
 } from "./sepay-connection"
-export type {
-    AgentWorkGoalView,
-    AgentWorkPreset,
-    AgentWorkStatusView,
-    AgentWorkSwitchView,
-    AgentWorkTaskView,
-    AgentWorkTriggerView,
-    AgentWorkTurnView,
-    AgentWorkTurnsView,
-    AgentWorkView,
-    WorkspaceAgentWorkView,
-} from "./agentWork"
+export type { AgentWorkGoalView, AgentWorkPreset, AgentWorkStatusView, AgentWorkSwitchView } from "./agentWork"
+export type { AgentWorkTaskView, AgentWorkTriggerView, AgentWorkTurnView, AgentWorkTurnsView } from "./agentWork"
+export type { AgentWorkView, WorkspaceAgentWorkView } from "./agentWork"
+export type { WorkbenchBandView, WorkbenchChannelView, WorkbenchNeed, WorkbenchRowView } from "./workbench"
+export type { WorkbenchStateTone, WorkbenchSurface, WorkbenchTraceView, WorkbenchWhyView } from "./workbench"

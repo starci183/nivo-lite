@@ -19,6 +19,8 @@ const buildSubject = async () => {
 const conversationOf = builder<CustomerConversationRow>({
     id: "c-1",
     channel: "zalo",
+    agent_id: "agent-1",
+    front_agent_id: null,
     visitor_name: null,
     lead_id: "l-1",
     handled_by: null,
@@ -70,6 +72,8 @@ const EXPECTED_THREAD = {
         handledBy: null,
         waiting: true,
         unanswered: false,
+        lead: { stage: "new", need: "T-shirts", company: "Hoa Shop" },
+        respondent: { kind: "ai", name: null },
     },
     messages: [
         {
@@ -173,6 +177,7 @@ describe("chatbot thread mapper", () => {
             ],
             lead: LEAD,
             staffName: "Minh",
+            agentNames: new Map(),
         })
 
         expect(result).toEqual(EXPECTED_THREAD)
@@ -190,6 +195,7 @@ describe("chatbot thread mapper", () => {
                 waiting: [],
                 lead: null,
                 staffName: null,
+                agentNames: new Map(),
             }),
         ).toEqual({
             conversation: {
@@ -204,6 +210,8 @@ describe("chatbot thread mapper", () => {
                 handledBy: null,
                 waiting: false,
                 unanswered: false,
+                lead: null,
+                respondent: { kind: "ai", name: null },
             },
             messages: [],
             lead: null,
@@ -232,6 +240,7 @@ describe("chatbot thread mapper", () => {
             waiting: [waitingOf({ proposal })],
             lead: null,
             staffName: null,
+            agentNames: new Map(),
         })
 
         expect(result.escalation).toEqual({
@@ -242,5 +251,28 @@ describe("chatbot thread mapper", () => {
             since: "2026-10-13T01:02:00.000Z",
         })
         expect(result.conversation.waiting).toBe(true)
+    })
+})
+
+describe("chatbot thread mapper respondent", () => {
+    it("names the agent a hand-over moved the thread to, and the person who holds it first", async () => {
+        const subject = await buildSubject()
+        const handed = conversationOf({ agent_id: "agent-2", front_agent_id: "agent-1" })
+        const base = {
+            messages: [],
+            waiting: [],
+            lead: null,
+            staffName: null,
+            agentNames: new Map([["agent-2", "Sales AI"]]),
+        }
+
+        expect(subject.buildChatbotThread({ ...base, conversation: handed }).conversation.respondent).toEqual({
+            kind: "agent",
+            name: "Sales AI",
+        })
+        expect(
+            subject.buildChatbotThread({ ...base, conversation: { ...handed, handled_by: "Lan" } }).conversation
+                .respondent,
+        ).toEqual({ kind: "person", name: "Lan" })
     })
 })

@@ -1,8 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { isReadableDriveFile } from "./drive.shared"
-import type { DriveFileRow } from "./drive.shared"
+import { driveFileNoteOf, isReadableDriveFile } from "./drive.shared"
 import { useDriveChoose } from "./useDriveChoose"
 import type { DriveVisibility } from "./useDriveChoose"
 
@@ -19,21 +18,10 @@ export const useDriveChooserView = () => {
     const choose = useDriveChoose(t("pickFailed"))
     const { listing, selected } = choose
 
-    const sizeOf = (file: DriveFileRow): string =>
-        file.sizeBytes === null ? "" : t("fileSize", { size: format.number(file.sizeBytes / (1024 * 1024), { maximumFractionDigits: 1 }) })
-    const descriptionOf = (file: DriveFileRow): string => {
-        if (!isReadableDriveFile(file)) return t("fileUnreadable")
-        const modified =
-            file.modifiedTime === null
-                ? ""
-                : t("fileModified", { date: format.dateTime(new Date(file.modifiedTime), { day: "2-digit", month: "2-digit" }) })
-        return [file.path, sizeOf(file), modified].filter(Boolean).join(" · ")
-    }
-
     const ticked = listing === null ? 0 : listing.files.filter((file) => selected.includes(file.id)).length
     return {
         added: choose.added,
-                props: {
+        props: {
             link: {
                 label: t("linkLabel"),
                 placeholder: t("linkPlaceholder"),
@@ -55,14 +43,16 @@ export const useDriveChooserView = () => {
                           files: listing.files.map((file) => ({
                               value: file.id,
                               label: file.name,
-                              description: descriptionOf(file),
+                              description: driveFileNoteOf(t, format, file),
                               isDisabled: !isReadableDriveFile(file),
                           })),
                           selected,
                           notices: listing.truncated
                               ? [{ id: "truncated", tone: "cautionary" as const, title: t("truncated") }]
                               : [],
-                          ...(listing.empty ? { empty: { message: t("pickedEmptyTitle"), description: t("pickedEmptyBody") } } : {}),
+                          ...(listing.empty
+                              ? { empty: { message: t("pickedEmptyTitle"), description: t("pickedEmptyBody") } }
+                              : {}),
                           visibility: {
                               label: t("visibilityLabel"),
                               description: choose.visibility === "internal" ? t("visInternalHelp") : t("visPublicHelp"),

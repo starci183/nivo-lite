@@ -153,6 +153,8 @@ describe("AgentConversationsReadService > customer inbox", () => {
     const ROW = {
         id: "c-1",
         channel: "zalo",
+        agent_id: "a-1",
+        front_agent_id: null,
         visitor_name: null,
         lead_id: null,
         handled_by: null,
@@ -166,7 +168,10 @@ describe("AgentConversationsReadService > customer inbox", () => {
         const [read] = queueSubQueryBuilders(em, [{ getRawMany: [ROW] }])
 
         await expect((await build(em)).customerOfAgents("ws-1", ["a-1"], 200)).resolves.toEqual([ROW])
-        expect(read?.argsOf("andWhere")).toContainEqual(["c.agent_id IN (:...agentIds)", { agentIds: ["a-1"] }])
+        expect(read?.argsOf("andWhere")).toContainEqual([
+            "(c.agent_id IN (:...agentIds) OR c.front_agent_id IN (:...agentIds))",
+            { agentIds: ["a-1"] },
+        ])
         expect(read?.argsOf("orderBy")).toContainEqual(["c.created_at", "DESC"])
         expect(read?.argsOf("limit")).toContainEqual([200])
     })
