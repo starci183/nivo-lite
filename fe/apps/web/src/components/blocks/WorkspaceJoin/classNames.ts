@@ -1,8 +1,5 @@
 import { cn } from "@heroui/react"
 
-/** The form inside the card: field row then the notice (GAP-4). */
-export const STACK_CLASS_NAME = cn("flex", "flex-col", "gap-4")
-
 /** Invite link input beside its button; stacked on mobile (GAP-3). */
 export const LINK_ROW_CLASS_NAME = cn("flex", "flex-col", "gap-3", "sm:flex-row", "sm:items-end")
 

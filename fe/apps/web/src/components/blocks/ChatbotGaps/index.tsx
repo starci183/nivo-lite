@@ -20,7 +20,6 @@ export const ChatbotGaps = (props: ChatbotGapsProps) => {
     return (
         <ChatbotGapsBase
             props={{
-                id: "chatbot-gaps-title",
                 title: gaps.title,
                 description: gaps.description,
                 slot: gaps.slot,

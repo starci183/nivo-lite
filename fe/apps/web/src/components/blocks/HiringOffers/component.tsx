@@ -1,7 +1,7 @@
-import { Alert, Badge, Button, EmptyNotice, Heading, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, EmptyNotice, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import type { HiringSay } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, HEAD_CLASS_NAME } from "./classNames"
+import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** One offer, every word already resolved. */
 interface OfferRowView {
@@ -42,14 +42,6 @@ export const HiringOffersBase = (props: HiringOffersBaseProps) => {
     const { on } = props
     return (
         <>
-            <div className={HEAD_CLASS_NAME}>
-                <Heading level={2}>{say("offersTitle")}</Heading>
-                {approveLabel === null ? null : (
-                    <Button intent="commit" href={decisionsHref}>
-                        {approveLabel}
-                    </Button>
-                )}
-            </div>
             {error === null ? null : (
                 <Alert
                     tone="negative"
@@ -61,7 +53,17 @@ export const HiringOffersBase = (props: HiringOffersBaseProps) => {
             )}
             <SurfaceListCard
                 label={say("offersList")}
+                headingLevel={2}
                 fact={fact}
+                {...(approveLabel === null
+                    ? {}
+                    : {
+                          labelEnd: (
+                              <Button intent="commit" href={decisionsHref}>
+                                  {approveLabel}
+                              </Button>
+                          ),
+                      })}
                 empty={<EmptyNotice message={say("offersEmptyTitle")} description={say("offersEmptyBody")} />}
             >
                 {rows.map((row) => (

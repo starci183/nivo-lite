@@ -60,11 +60,8 @@ const Messages = (props: Omit<ThreadFeedProps, "label">) => {
                     </div>
                     {message.quoted.map((quote) => (
                         <div key={quote} className={QUOTE_CLASS_NAME}>
-                            <SurfaceCard ariaLabel={props.quotedLabel}>
+                            <SurfaceCard label={props.quotedLabel} headingLevel={4}>
                                 <div className={QUOTE_BODY_CLASS_NAME}>
-                                    <Text size="xs" tone="muted">
-                                        {props.quotedLabel}
-                                    </Text>
                                     <Text size="sm">{quote}</Text>
                                 </div>
                             </SurfaceCard>

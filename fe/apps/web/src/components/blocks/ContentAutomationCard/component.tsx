@@ -1,4 +1,4 @@
-import { Alert, SectionHeader, Stack, SurfaceCard, Switch } from "@starci/grammar/common"
+import { Alert, Stack, SurfaceCard, Switch, Text } from "@starci/grammar/common"
 import type { ContentNoteView, ContentT } from "@/modules/types"
 
 /** One automation switch. */
@@ -28,9 +28,11 @@ export interface ContentAutomationCardBaseProps {
 export const ContentAutomationCardBase = (props: ContentAutomationCardBaseProps) => {
     const { t } = props.props
     return (
-        <SurfaceCard ariaLabel={t("settingsAuto")}>
+        <SurfaceCard label={t("settingsAuto")} headingLevel={2}>
             <Stack gap="row">
-                <SectionHeader level={2} title={t("settingsAuto")} description={t("settingsAutoBody")} />
+                <Text size="sm" tone="muted">
+                    {t("settingsAutoBody")}
+                </Text>
                 {props.props.rows.map((row) => (
                     <Switch
                         key={row.key}

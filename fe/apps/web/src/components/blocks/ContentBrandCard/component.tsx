@@ -1,4 +1,4 @@
-import { Button, Cluster, Input, SectionHeader, Stack, SurfaceCard, Textarea } from "@starci/grammar/common"
+import { Button, Cluster, Input, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import { ContentCommandNote } from "@/components/composites/ContentSettingsCard"
 import type { ContentNoteView, ContentT } from "@/modules/types"
 
@@ -29,9 +29,11 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
     const { t, canManage, isPending } = props.props
     const locked = !canManage || isPending
     return (
-        <SurfaceCard ariaLabel={t("settingsBrand")}>
+        <SurfaceCard label={t("settingsBrand")} headingLevel={2}>
             <Stack gap="row">
-                <SectionHeader level={2} title={t("settingsBrand")} description={t("settingsBrandBody")} />
+                <Text size="sm" tone="muted">
+                    {t("settingsBrandBody")}
+                </Text>
                 <Textarea
                     label={t("brandVoice")}
                     rows={3}
