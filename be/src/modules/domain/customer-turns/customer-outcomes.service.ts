@@ -7,6 +7,7 @@ import type { CustomerTurn, ChatTurnProposal, CustomerOutcomes, TurnVerdict } fr
 import { CommandBusService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import { HiringPublicService } from "@modules/domain/hiring"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InvoicesService } from "@modules/domain/invoices"
 import type { InvoiceRow } from "@modules/domain/invoices"
@@ -39,6 +40,8 @@ const LOCALE: Locale = "vi"
 /** The name under which the engine acts in evidence and in conversation hand-offs. */
 const ENGINE_ACTOR = "OpenClaw"
 const SUMMARY_QUESTION_MAX = 160
+/** The action whose rule says whether a reply leaves alone. */
+const REPLY_ACTION = "reply_customer"
 /** How many queued chain steps a turn drains after it: one more when an order queued its invoice. */
 const DRAIN_STEPS = 2
 const DRAIN_STEPS_AFTER_ORDER = 3
@@ -108,6 +111,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         private readonly invoices: InvoicesService,
         private readonly conversations: AgentConversationsService,
         private readonly bindings: AgentBindingsService,
+        private readonly rules: AuthorityRulesService,
         private readonly hiring: HiringPublicService,
         private readonly purchases: TurnPurchasesService,
         private readonly staff: StaffEscalationService,
@@ -262,8 +266,9 @@ export class CustomerOutcomesService implements CustomerOutcomes {
     }
 
     /**
-     * Agent access through the conversation's connection: "auto" (or the website chat) sends; "ask" and "read" turn the reply into a
-     * waiting answer with the draft, which the approved reply_customer sends. Answers the lines to show; none means the reply leaves now.
+     * The owner's reply rule and the agent's access through the conversation's connection: rule "auto" with access "auto" (or the
+     * website chat) sends; anything else turns the reply into a waiting answer with the draft, which the approved reply_customer sends.
+     * Answers the lines to show; none means the reply leaves now.
      */
     private async approvalOf(ctx: WorkContext, turn: CustomerTurn, reply: string): Promise<ReadonlyArray<string>> {
         const { conversation } = turn
@@ -279,8 +284,15 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         return [this.text("replyAwaitsApproval", {})]
     }
 
-    /** True when this agent may not send through the conversation's connection on its own (access "ask" or "read"). */
+    /** True when the owner's reply rule asks first, or this agent may not send through the conversation's connection on its own. */
     private async needsApproval(conversation: TurnConversation): Promise<boolean> {
+        const rule = await this.rules.ruleFor(
+            { workspaceId: conversation.workspaceId },
+            REPLY_ACTION,
+            conversation.installationId,
+            conversation.agent.id,
+        )
+        if (rule !== null && rule.mode !== "auto") return true
         if (conversation.connectionId === null) return false
         const grants = await this.bindings.agentsFor(conversation.connectionId, PURPOSES)
         const mine = grants.find((grant) => grant.id === conversation.agent.id)
@@ -335,15 +347,17 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         // The conversation is now this customer: named after them (a channel account name is often not the person's name).
         await this.conversations.rename(conversation.id, lead.contactName)
         if (item.lead_id !== null) await this.conversations.attachLead(ctx.workspaceId, conversation.id, item.lead_id)
-        const verdict =
-            item.status === "done"
-                ? this.text("verdictAuto", {})
-                : this.text("verdictAsk", { reason: this.text(`reason.${item.reason ?? "routine"}`, {}) })
         return {
-            lines: [this.text("chatHandoff", { verdict })],
+            lines: [this.handoffLine(item)],
             changed: true,
             leadId: item.lead_id ?? conversation.leadId,
         }
+    }
+
+    /** The staff line of a hand-off: it says handed only once it ran. */
+    private handoffLine(item: WorkItem): string {
+        if (item.status === "done") return this.text("chatHandoff", { verdict: this.text("verdictAuto", {}) })
+        return this.text("chatHandoffWaiting", { reason: this.text(`reason.${item.reason ?? "routine"}`, {}) })
     }
 
     /** The answer needs a person: a waiting reply_customer item with the proposed answer, and the advising staff member tagged. */

@@ -9,10 +9,10 @@
 //   node scripts/integration/queue-cutover-sandbox.mjs apply <file> apply one migration file of db/migrations to the sandbox
 //   node scripts/integration/queue-cutover-sandbox.mjs drop         remove the sandbox
 //
-// Connection: PRIMARY_DB_URL (a local database of the private Supabase stack; any other host is refused).
-// Prerequisite: a database named nivo_proof_base on the same server, initialised by Supabase (roles, auth and storage schemas,
-// the pg_cron, pgmq and pg_net extensions) with none of this app's migrations. pg_cron can only live in the cron database,
-// so a template clone is the one way to get a second database that already carries it.
+// Connection: PRIMARY_DB_URL (a local database of the private stack; any other host is refused).
+// Prerequisite: a database named nivo_proof_base on the same server, initialised by db/bootstrap.sql (roles, auth and storage schemas)
+// on the managed db image (pgmq included) with none of this app's migrations. A template clone is the one way to get a second
+// database that already carries that initial state.
 import { readFileSync, readdirSync } from "node:fs"
 import path from "node:path"
 import pg from "pg"
@@ -58,7 +58,7 @@ const migrationFiles = () =>
 /** Drops the sandbox, ending any session still open on it. */
 const drop = () => using("postgres", (client) => client.query(`DROP DATABASE IF EXISTS ${SANDBOX} WITH (FORCE)`))
 
-/** Applies one migration file in one implicit transaction, the way the Supabase CLI applies it. */
+/** Applies one migration file in one implicit transaction, the way `starci app db migrate` applies it. */
 const apply = (file) =>
     using(SANDBOX, (client) => client.query(readFileSync(path.join(MIGRATIONS, path.basename(file)), "utf8")))
 

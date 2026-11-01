@@ -12,8 +12,12 @@ export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "pa
  */
 export type InstallationConnectionNeed = { readonly role: string; readonly providers: ReadonlyArray<string> }
 
-/** The lifecycle the back end names: set up, waiting for a connection, paused, applied but not switched on, running, or removed. */
-export type InstallationLifecycle = "needs_setup" | "needs_connection" | "paused" | "ready" | "running" | "removed"
+/**
+ * The one state of an agent, named by the back end and read by every screen: not set up yet, being set up (a gate confirmed, no version
+ * applied), waiting for a connection, paused, applied but not switched on, running, or removed.
+ */
+export type InstallationLifecycle =
+    "needs_setup" | "setting_up" | "needs_connection" | "paused" | "ready" | "running" | "removed"
 
 /** How an installed agent runs: it proposes everything (assist) or follows the authority rules alone (autopilot). */
 export type OperatingMode = "assist" | "autopilot"
@@ -26,13 +30,14 @@ export type Installation = {
     readonly id: string
     readonly workspaceId: string
     readonly moduleKey: ModuleKey
-    /** The instance label; the type name for the first instance and every single-instance type. */
+    /**
+     * The one display name of the agent, as the owner gave it: the header, Settings, the profile, Office, the chat and the OpenClaw
+     * copy all show this name. The instance label the back end keeps beside it only tells instances of one type apart; no screen reads it.
+     */
     readonly name: string
     /** The type allows several instances (copied from the catalogue at insert). */
     readonly isMulti: boolean
     readonly agentId: string | null
-    /** The display name and handle of the agent (read-through, for headers and mentions). */
-    readonly agentName: string
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly agentAvatarUrl: string | null
     readonly agentHandle: string

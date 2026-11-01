@@ -4,6 +4,7 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import type { Logger } from "@modules/platform/logging"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { KnowledgeGapNotesService } from "@modules/domain/agent-knowledge"
 import { CommandBusService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
@@ -65,13 +66,12 @@ const build = async () => {
     const evidenceDouble = mock<EvidenceService>(evidence)
     const itemsDouble = mock<WorkItemsService>(items)
     const inboundDouble = mock<InboundEventsService>(inbound)
-    const invoicesDouble = mock<InvoicesService>(invoices)
     const conversationsDouble = mock<AgentConversationsService>(conversations)
     const bindingsDouble = mock<AgentBindingsService>(bindings)
-    const hiringDouble = mock<HiringPublicService>(hiring)
+    const rules = { ruleFor: jest.fn().mockResolvedValue(null) }
+    const rulesDouble = mock<AuthorityRulesService>(rules)
     const purchasesDouble = mock<TurnPurchasesService>(purchases)
     const staffDouble = mock<StaffEscalationService>(staff)
-    const gapsDouble = mock<KnowledgeGapNotesService>(gaps)
     const modulesDouble = mock<TurnModulesService>(modules)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -84,13 +84,14 @@ const build = async () => {
             { provide: EvidenceService, useValue: evidenceDouble },
             { provide: WorkItemsService, useValue: itemsDouble },
             { provide: InboundEventsService, useValue: inboundDouble },
-            { provide: InvoicesService, useValue: invoicesDouble },
+            { provide: InvoicesService, useValue: mock<InvoicesService>(invoices) },
             { provide: AgentConversationsService, useValue: conversationsDouble },
             { provide: AgentBindingsService, useValue: bindingsDouble },
-            { provide: HiringPublicService, useValue: hiringDouble },
+            { provide: AuthorityRulesService, useValue: rulesDouble },
+            { provide: HiringPublicService, useValue: mock<HiringPublicService>(hiring) },
             { provide: TurnPurchasesService, useValue: purchasesDouble },
             { provide: StaffEscalationService, useValue: staffDouble },
-            { provide: KnowledgeGapNotesService, useValue: gapsDouble },
+            { provide: KnowledgeGapNotesService, useValue: mock<KnowledgeGapNotesService>(gaps) },
             { provide: TurnModulesService, useValue: modulesDouble },
         ],
     }).compile()
@@ -107,6 +108,7 @@ const build = async () => {
         evidence,
         items,
         bindings,
+        rules,
         hiring,
         staff,
         logger,
@@ -367,6 +369,14 @@ describe("CustomerOutcomesService", () => {
 })
 
 describe("CustomerOutcomesService", () => {
+    it("holds a website reply when the owner's reply rule asks first and sends it when the rule is auto", async () => {
+        const { outcomes, rules } = await build()
+        rules.ruleFor.mockResolvedValue({ mode: "ask" })
+        await expect(outcomes.settle(turnOf(), proposalOf({}))).resolves.toMatchObject({ send: false })
+        rules.ruleFor.mockResolvedValue({ mode: "auto" })
+        await expect(outcomes.settle(turnOf(), proposalOf({}))).resolves.toMatchObject({ send: true })
+    })
+
     it("holds the reply for approval when the connection access is ask", async () => {
         const { outcomes, bindings, staff, engine } = await build()
         bindings.agentsFor.mockResolvedValue([{ id: "a1", access: "ask" }])
@@ -431,7 +441,8 @@ describe("CustomerOutcomesService", () => {
             turnOf(),
             proposalOf({ lead: { contact_name: "Lan", need: "tea", email: "lan@example.com" } }),
         )
-        expect(verdict.lines).toContain("customerTurns.chatHandoff")
+        expect(verdict.lines).toContain("customerTurns.chatHandoffWaiting")
+        expect(verdict.lines).not.toContain("customerTurns.chatHandoff")
         expect(asking.conversations.attachLead).not.toHaveBeenCalled()
         expect(asking.conversations.rename).toHaveBeenCalledWith("c1", "Lan")
     })

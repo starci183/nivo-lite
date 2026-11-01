@@ -24,7 +24,7 @@ const options = {
     },
     database: {
         name: "primary",
-        provider: "supabase" as const,
+        provider: "postgres" as const,
         url: new Secret(`postgresql://wiring:${wiringIds.next()}@database.invalid:5432/wiring`),
         schema: "public",
     },

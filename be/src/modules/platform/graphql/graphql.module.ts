@@ -14,7 +14,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./graphql.module-definiti
 import { localizeErrorsPlugin } from "./localize-errors.mapper"
 
 @Module({})
-/** The one code-first Apollo server of the app: schema from the resolvers, the shared error formatter and a depth limit. Lite serves no subscriptions: push goes through Supabase Realtime. */
+/** The one code-first Apollo server of the app: schema from the resolvers, the shared error formatter and a depth limit. Lite serves no subscriptions: push goes through the realtime hub. */
 export class GraphqlModule extends ConfigurableModuleClass {
     /** Registers the capability once per app; the feature resolvers join the schema by being providers. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

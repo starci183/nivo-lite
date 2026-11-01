@@ -5,10 +5,11 @@ import { GrammarRoot } from "@starci/grammar/common"
 import { NextIntlClientProvider } from "next-intl"
 import { ThemeProvider, useTheme } from "next-themes"
 import { useSyncExternalStore } from "react"
-import { SWRConfig } from "swr"
+import { SWRConfig, useSWRConfig } from "swr"
 import type { ReactNode } from "react"
 import { SideEffectsLayout } from "@/features/layouts/SideEffectsLayout"
 import { intlTagOf, navigation } from "@/modules/i18n"
+import { bindViewerCache } from "@/modules/viewer-cache"
 import { ReduxProvider, useAppSelector } from "@/redux"
 
 /** What the provider stack takes from the locale layout. */
@@ -57,6 +58,12 @@ const GrammarRouting = (props: LayerProps) => {
  */
 const READ_DEFAULTS = { focusThrottleInterval: 30_000 } as const
 
+/** Points the writes of every hook at the cache around it. */
+const ViewerCacheBinding = () => {
+    bindViewerCache(useSWRConfig().mutate)
+    return null
+}
+
 /** Each viewer gets their own SWR cache: a real identity change remounts the provider on a fresh Map, so nothing from the previous person can be drawn. */
 const ViewerCache = (props: LayerProps) => {
     const viewerId = useAppSelector((state) => state.viewer.viewerId)
@@ -65,6 +72,7 @@ const ViewerCache = (props: LayerProps) => {
             key={viewerId === undefined ? "pending" : (viewerId ?? "signed-out")}
             value={{ ...READ_DEFAULTS, provider: () => new Map() }}
         >
+            <ViewerCacheBinding />
             {props.children}
         </SWRConfig>
     )

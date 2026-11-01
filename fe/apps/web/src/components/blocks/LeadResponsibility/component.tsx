@@ -164,6 +164,7 @@ const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => 
                     <AgentMark
                         glyph={nivoIconSource(current.agentGlyph, "leading")}
                         label={current.ownerName}
+                        seed={current.ownerName}
                         src={current.agentAvatarUrl}
                         module="chatbot"
                         size="md"

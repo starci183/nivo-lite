@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { useMutateCreateVideoMediaUploadSwr, QUERY_VIDEO_MEDIA_SWR_KEY, usePutPresignedSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"

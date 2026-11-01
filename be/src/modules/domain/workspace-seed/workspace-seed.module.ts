@@ -11,7 +11,7 @@ import { WorkspaceSeedService } from "./workspace-seed.service"
 
 @Module({})
 /**
- * The demo-workspace seed: accounts through Supabase Auth, the workspace and memberships through their capabilities, and named
+ * The demo-workspace seed: accounts through the own-auth account doors, the workspace and memberships through their capabilities, and named
  * workspace profiles (brand, agents, grants, documents queued into the knowledge ingestion, Hub rooms) written through the owner
  * classes the app root binds behind the ports.
  */

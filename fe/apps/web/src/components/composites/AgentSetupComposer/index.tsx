@@ -1,4 +1,4 @@
-import { Button, Cluster, FileDropzone, Form, TagGroup, Textarea } from "@starci/grammar/common"
+import { Button, Cluster, FileDropzone, Form, Textarea } from "@starci/grammar/common"
 import { FIELD } from "./classNames"
 
 /** What the composer draws: the starts of a message, the field with its hint, the send action and the brand PDF. */
@@ -45,18 +45,19 @@ interface AgentSetupComposerProps {
 export const AgentSetupComposer = (props: AgentSetupComposerProps) => (
     <>
         {props.content.suggestions.length === 0 ? null : (
-            <TagGroup
-                label={props.copy.suggestionsLabel}
-                selectionMode="single"
-                size="sm"
-                isSkeleton={props.isSkeleton}
-                items={props.content.suggestions}
-                selectedIds={[]}
-                onSelectionChange={(ids) => {
-                    const picked = ids[0]
-                    if (picked !== undefined) props.on.suggest(picked)
-                }}
-            />
+            <Cluster gap="row">
+                {props.content.suggestions.map((suggestion) => (
+                    <Button
+                        key={suggestion.id}
+                        intent="neutral"
+                        size="sm"
+                        isSkeleton={props.isSkeleton}
+                        onPress={() => props.on.suggest(suggestion.id)}
+                    >
+                        {suggestion.label}
+                    </Button>
+                ))}
+            </Cluster>
         )}
         <Form
             label={props.copy.formLabel}

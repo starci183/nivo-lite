@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useAgentInstallation, useAgentRights, useChooseLive } from "@/hooks/agentSettings"
+import { agentLifecycleTone, setupLabelKey } from "@/hooks/installations"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AgentLiveCardBase } from "./component"
 import type { LiveView } from "./component"
@@ -13,7 +14,13 @@ type AgentLiveCardProps = {
     readonly module: string
 }
 
-const PLACEHOLDER: LiveView = { isLive: false, statusLabel: "-", blocker: "" }
+const PLACEHOLDER: LiveView = {
+    isLive: false,
+    statusLabel: "-",
+    statusTone: "neutral",
+    blocker: "",
+    blockerAction: null,
+}
 
 /** The connected live card: the switch shows at once and goes back when the server refuses it. */
 export const AgentLiveCard = (props: AgentLiveCardProps) => {
@@ -40,8 +47,12 @@ export const AgentLiveCard = (props: AgentLiveCardProps) => {
                 read: {
                     slot: mapSlot(slot, (installation): LiveView => ({
                         isLive,
-                        statusLabel: isLive ? t("lifecycle_running") : t("lifecycle_ready"),
-                        blocker: installation.hasVersion ? "" : t("liveNeedsVersion"),
+                        statusLabel: t(`lifecycle_${installation.lifecycle}`),
+                        statusTone: agentLifecycleTone(installation.lifecycle),
+                        blocker: installation.isSetupPending ? t("liveNeedsVersion") : "",
+                        blockerAction: installation.isSetupPending
+                            ? { label: t(setupLabelKey(installation.lifecycle)), href: installation.setupHref }
+                            : null,
                     })),
                     placeholder: PLACEHOLDER,
                     labels: slotLabels(t("liveHelp")),

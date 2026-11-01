@@ -4,7 +4,7 @@ import { AutomationTemplatesService } from "./automation-templates.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./automation-templates.module-definition"
 
 @Module({})
-/** The automation templates capability over the primary Supabase PostgreSQL connection. */
+/** The automation templates capability over the primary PostgreSQL connection. */
 export class AutomationTemplatesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

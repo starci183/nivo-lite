@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback, useMemo } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { useConnectionsRefresh } from "@/hooks/connections"

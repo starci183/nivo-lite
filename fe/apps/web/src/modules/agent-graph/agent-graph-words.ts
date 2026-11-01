@@ -1,4 +1,5 @@
 import type { useTranslations } from "next-intl"
+import type { InstallationLifecycle } from "@/modules/installations"
 import type {
     AgentGraphApproverData,
     AgentGraphSourceData,
@@ -23,6 +24,10 @@ export interface AgentGraphContext {
     readonly setup: AgentGraphSetupState
     /** The names of the channels the agent is connected to. */
     readonly channels: ReadonlyArray<string>
+    /** The one state of the agent (the lifecycle the back end names); null until it is read. */
+    readonly lifecycle: InstallationLifecycle | null
+    /** That state in words: the label every other screen shows for it. */
+    readonly lifecycleLabel: string
 }
 
 /** The checklist of the setup as the one publish action sees it. */

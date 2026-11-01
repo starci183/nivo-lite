@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { QUERY_MY_WORKSPACES_SWR_KEY, useMutateAcceptInviteSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"

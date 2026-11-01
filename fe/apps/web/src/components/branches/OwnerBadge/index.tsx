@@ -28,6 +28,7 @@ export const OwnerBadge = (props: OwnerBadgeProps) => (
             <AgentMark
                 glyph={nivoIconSource(props.glyph, "leading")}
                 label={props.name}
+                seed={props.handle ?? props.name}
                 src={props.avatarUrl}
                 module={props.handle ?? "chatbot"}
                 size="md"

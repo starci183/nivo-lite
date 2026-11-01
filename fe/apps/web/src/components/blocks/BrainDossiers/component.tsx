@@ -1,9 +1,11 @@
 import type { ReactNode } from "react"
-import { DescriptionList, Drawer, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { Cluster, DescriptionList, Drawer, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import { DossierRowsCard } from "@/components/composites/DossierRowsCard"
 import type { DossierRowView } from "@/components/composites/DossierRowsCard"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
+import { ChecklistImportEntry } from "./ChecklistImportEntry"
+import type { ChecklistImportEntryEvents, ChecklistImportEntryView } from "./ChecklistImportEntry"
 import { DOSSIERS_CLASS_NAME } from "./classNames"
 
 export type { DossierRowView } from "@/components/composites/DossierRowsCard"
@@ -38,6 +40,8 @@ export interface BrainDossiersBaseProps {
         readonly listFooter: string
         readonly emptyCategory: string
         readonly emptyAll: string
+        /** Loads the dossiers of a checklist workbook: the entry above the cards and its dialog; null for a member who may only read. */
+        readonly checklistImport: ChecklistImportEntryView | null
         /** A dossier is open: its findings show in a drawer. */
         readonly hasDetail: boolean
         readonly detailLabel: string
@@ -46,7 +50,7 @@ export interface BrainDossiersBaseProps {
         readonly placeholder: DossiersContent
         readonly slotLabels: SlotLabels
     }
-    readonly on: { readonly retry: () => void; readonly closeDetail: () => void }
+    readonly on: ChecklistImportEntryEvents & { readonly retry: () => void; readonly closeDetail: () => void }
 }
 
 /**
@@ -57,6 +61,11 @@ export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
     const view = props.props
     return (
         <div className={DOSSIERS_CLASS_NAME}>
+            {view.checklistImport === null ? null : (
+                <Cluster gap="inline" justify="end">
+                    <ChecklistImportEntry view={view.checklistImport} on={props.on} />
+                </Cluster>
+            )}
             <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
                 {(content, isSkeleton) => (
                     <>

@@ -10,7 +10,7 @@ import { useActiveWorkspace } from "@/hooks/workspaces"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 
 /** Records a manual credit, reports duplicates and revalidates the accounting figures. */
 export const useRecordManualEvidence = () => {

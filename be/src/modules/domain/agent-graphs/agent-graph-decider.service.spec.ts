@@ -225,7 +225,7 @@ describe("AgentGraphDeciderService.decide enforced", () => {
 
         expect(built.reader.read).toHaveBeenCalledWith(
             expect.anything(),
-            { type: "order", id: "", workItemId: "item-9" },
+            { type: "order", id: "", workItemId: "item-9", amountVnd: 4_900_000 },
             expect.anything(),
         )
     })

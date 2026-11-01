@@ -72,7 +72,7 @@ export class AgentGraphContextService {
         )
         const ceilings = await Promise.all(
             actions.map(async (action): Promise<CeilingRule> => {
-                const rule = await this.rules.ruleFor(scope, action, scope.installationId, scope.agentId)
+                const rule = await this.rules.ownerRuleFor(scope, action, scope.agentId)
                 return {
                     action,
                     mode: rule?.mode ?? "never",

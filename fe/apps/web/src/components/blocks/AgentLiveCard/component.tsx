@@ -7,9 +7,13 @@ import type { DataSlot, SlotLabels } from "@/modules/types"
 /** What the card draws once the installation arrived, every word resolved. */
 export interface LiveView {
     readonly isLive: boolean
+    /** The one state of the agent in words: the label every other screen shows for it. */
     readonly statusLabel: string
+    readonly statusTone: SwitchStatusProps["tone"]
     /** Why the agent cannot go live yet; empty when it can. */
     readonly blocker: string
+    /** The step that clears the blocker, as a button to Setup; null when nothing blocks. */
+    readonly blockerAction: SwitchStatusProps["blockerAction"]
 }
 
 /** Copy and slot of the live card. */
@@ -36,10 +40,11 @@ const switchOf = (base: AgentLiveCardBaseProps, view: LiveView, isSkeleton: bool
     isSkeleton,
     isDisabled: base.props.isDisabled,
     onChange: base.on.live,
-    tone: view.isLive ? "success" : "neutral",
+    tone: view.statusTone,
     statusLabel: view.statusLabel,
     help: base.props.help,
     blocker: view.blocker,
+    blockerAction: view.blockerAction,
     quiet: "",
 })
 

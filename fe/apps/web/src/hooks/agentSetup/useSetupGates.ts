@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { useRefreshInstallation } from "@/hooks/agentSettings"
 import {
     useMutateApplySetupSwr,

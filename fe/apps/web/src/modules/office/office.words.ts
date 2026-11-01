@@ -65,11 +65,22 @@ export const departmentAgentOf = (context: OfficeContext, department: string): O
 export const leadNameOf = (context: OfficeContext, leadId: string | null): string | null =>
     context.leads.find((lead) => lead.id === leadId)?.name ?? null
 
-/** The status line of an agent that is not on duty: waiting for a connection, needing setup, ready but not switched on, or paused. The one wording of the lifecycle in every Office list. */
+/** The status line of an agent that is not on duty: its lifecycle in the one wording every screen uses. */
 export const offDutyOf = (agent: OfficeAgent, words: OfficeWords): string => {
     if (agent.waitsFor !== null) return words.t("waitingConnection")
-    if (agent.lifecycle === "needs_setup" || agent.lifecycle === "notInstalled") return words.t("offNeedsSetup")
-    if (agent.lifecycle === "needs_connection") return words.t("waitingConnection")
-    if (agent.lifecycle === "ready") return words.t("offReady")
-    return words.t("paused")
+    switch (agent.lifecycle) {
+        case "needs_setup":
+        case "notInstalled":
+            return words.t("offNeedsSetup")
+        case "setting_up":
+            return words.t("offSettingUp")
+        case "needs_connection":
+            return words.t("waitingConnection")
+        case "ready":
+            return words.t("offReady")
+        case "removed":
+            return words.t("offRemoved")
+        default:
+            return words.t("paused")
+    }
 }

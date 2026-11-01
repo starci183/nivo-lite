@@ -172,7 +172,7 @@ assume nothing happened.
 
 - `MCP_GATEWAY_TIMEOUT_MS` (default 4000), `MCP_CLIENT_NAME` (the client name announced to remote servers, default
   `nivo-mcp-gateway`), `PORT`, `HTTP_SECURITY_ALLOWED_ORIGINS`, the primary database and `CHANNEL_TOKEN_KEY`
-  (the connection key). The mcp app needs no Supabase setting and no shared token: each agent brings its own key.
+  (the connection key). The mcp app needs no shared token: each agent brings its own key.
 - No connector credential is an environment key. A remote connector's bearer credential is sealed per workspace in its own
   `mcp_connectors` row (`credential_sealed`, AES-256-GCM under `CHANNEL_TOKEN_KEY`, through the same connection-secrets cipher as
   a channel connection's credential). `credential_state` is `none` (the server takes no credential), `needed` (it takes one and none

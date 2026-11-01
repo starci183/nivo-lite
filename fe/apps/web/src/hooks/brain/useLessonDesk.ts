@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useTranslations } from "next-intl"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { QUERY_BRAIN_SWR_KEY, useMutateRequestLessonMiningSwr, useQueryLessonMiningStatusSwr } from "@/hooks/swr"
 import { mineOutcomeOf } from "@/modules/brain"
 import type { MineOutcome } from "@/modules/brain"

@@ -4,7 +4,7 @@ import { useMemo } from "react"
 import { useSetConnectionAgents } from "@/hooks/connections"
 import { slotOfSwr } from "@/hooks/slot"
 import { QUERY_SEPAY_CONNECTION_SWR_KEY, useQueryConnectionAgentsSwr } from "@/hooks/swr"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { matchesSwrKey } from "@/modules/utils"
 import type { SepayAgentView } from "@/modules/types"
 

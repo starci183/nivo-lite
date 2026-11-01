@@ -4,7 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./zalo-wizard-drafts.modu
 import { ZaloWizardDraftsService } from "./zalo-wizard-drafts.service"
 
 @Module({})
-/** The keys the Zalo wizard handed over while the back end seals them, over the primary Supabase PostgreSQL connection. */
+/** The keys the Zalo wizard handed over while the back end seals them, over the primary PostgreSQL connection. */
 export class ZaloWizardDraftsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

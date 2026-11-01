@@ -1,6 +1,6 @@
 "use client"
 
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { QUERY_SHIFTS_MINE_SWR_KEY, QUERY_SHIFTS_WORKBENCH_SWR_KEY } from "@/hooks/swr"
 
 const SHIFTS_KEYS: ReadonlySet<string> = new Set([QUERY_SHIFTS_WORKBENCH_SWR_KEY, QUERY_SHIFTS_MINE_SWR_KEY])

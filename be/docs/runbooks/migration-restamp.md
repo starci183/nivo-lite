@@ -1,13 +1,8 @@
 # Migration restamp map
 
-The lite conversion renamed every `supabase/migrations` file to kebab-case and re-stamped the 24 migrations dated after 2026-10-12 to sequential stamps (20261012100100 onward, current order kept).
+The lite conversion renamed every migration file to kebab-case and re-stamped the 24 migrations dated after 2026-10-12 to sequential stamps (20261012100100 onward, current order kept).
 
-Prod already applied the OLD versions. At cutover, per row where the version changed, run on prod:
-
-```
-supabase migration repair --status reverted <old-version>
-supabase migration repair --status applied <new-version>
-```
+The earlier database applied the OLD versions. Production was reset to an empty database (see `.starcistacks/production/infra/swarm/recovery/db-runbook.md`), so no history repair runs there; the map is kept as the record of the renames and mirrors `database.restamp` of `.starcistacks/application-stacks.yaml`. A development database created before the conversion is rebuilt with `npm run db:reset` and `npm run db:push`.
 
 Rows where only the name changed need no repair (the version key is the timestamp).
 
@@ -86,9 +81,7 @@ Rows where only the name changed need no repair (the version key is the timestam
 
 ## Added by the conversion
 
-`db/migrations/archive/20261012102500_be-platform.sql` is new (the app_be role, public.queue, public.jobs). It is idempotent, so a database that already holds those objects accepts it. Apply it on prod with `supabase db push` after the repair above; set the `app_be` password once with `alter role app_be password ...` (never in a migration).
-
-A local dev stack started before the conversion holds the OLD versions in `supabase_migrations.schema_migrations`; run the same repair there or `supabase db reset`.
+`db/migrations/archive/20261012102500_be-platform.sql` is new (the app_be role, public.queue, public.jobs). It is idempotent, so a database that already holds those objects accepts it. Set the `app_be` password once with `alter role app_be password ...` (never in a migration).
 
 ## Order of the baseline pair and the forward migrations
 

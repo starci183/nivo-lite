@@ -6,7 +6,7 @@ import { TransactionsFiguresService } from "./transactions-figures.service"
 import { TransactionsLedgerService } from "./transactions-ledger.service"
 
 @Module({})
-/** The payments of a workspace as the ledger sees them over the primary Supabase PostgreSQL connection: the only writer of public.transactions. */
+/** The payments of a workspace as the ledger sees them over the primary PostgreSQL connection: the only writer of public.transactions. */
 export class TransactionsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
+import { In, IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { UsageMeterService } from "@modules/domain/knowledge"
 import { InjectClock } from "@modules/platform/clock"
@@ -11,6 +11,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { isDossierReviewPayload } from "@modules/queues/knowledge"
+import { UNFILED_DOSSIER_ID, UNFILED_DOSSIER_NAME } from "./dossier-inputs.contracts"
 import type { DossierInputs, FindingCandidate, ReviewContext, RuleOutput } from "./dossier-inputs.contracts"
 import { DOSSIER_REVIEW_CAPS, FINDING_SEVERITIES, JOB_FAILED } from "./dossier-review.contracts"
 import type { AiState, JobOutcome } from "./dossier-review.contracts"
@@ -21,13 +22,14 @@ import { statusOf } from "./dossier-status.policy"
 import { guardCandidates } from "./evidence.policy"
 import type { DropReason, EvidenceCorpus, GuardOutcome, KnownFinding } from "./evidence.policy"
 import { toFindingRows, toFindingUpdate, toStoredFinding } from "./finding-record.mapper"
-import { citedIds, evidenceHashOf, fingerprintOf } from "./fingerprint.policy"
+import { citedIds, coverageKey, evidenceHashOf, fingerprintOf } from "./fingerprint.policy"
 import { DossierFindingEntity, DossierReviewEntity, DossierReviewRunEntity } from "./persistence/entities"
 import { reconcile } from "./reconcile.policy"
 import type { Reconciliation } from "./reconcile.policy"
 import { buildBundle, corpusOf, inputsFingerprintOf, reasonedCandidates, resolvedByModel } from "./review-bundle.policy"
+import { ReviewCriticService } from "./review-critic.service"
 import { ReviewInputsService } from "./review-inputs.service"
-import { runRules } from "./rule-engine.policy"
+import { RULE_KEYS, runRules } from "./rule-engine.policy"
 
 /** The most stored findings one run reads. */
 const STORED_MAX = 5_000
@@ -115,6 +117,7 @@ export class DossierReviewRunnerService {
         @InjectDossierReasoner() private readonly reasoner: DossierReasoner,
         private readonly inputs: ReviewInputsService,
         private readonly usage: UsageMeterService,
+        private readonly critic: ReviewCriticService,
     ) {}
 
     /** Runs the review a job names; a payload of another shape, or a run another worker holds or finished, changes nothing. */
@@ -125,7 +128,10 @@ export class DossierReviewRunnerService {
         }
         const now = this.clock.now()
         const run = await this.claim(payload.workspaceId, payload.runId, now)
-        if (run === null) return "skipped"
+        if (run === null) {
+            await this.critic.settle(payload.workspaceId, payload.runId)
+            return "skipped"
+        }
         const pass = await this.passOf(run, now)
         const ai = await this.modelPass(pass)
         const outcome = reconcile({
@@ -142,6 +148,7 @@ export class DossierReviewRunnerService {
             aiResolved: ai.resolved,
         })
         await this.persist(pass, ai, outcome)
+        await this.critic.settle(run.workspaceId, run.id)
         return "done"
     }
 
@@ -153,6 +160,7 @@ export class DossierReviewRunnerService {
             { id: payload.runId, workspaceId: payload.workspaceId, status: In(["queued", "running"]) },
             { status: "failed", finishedAt: this.clock.now(), error: JOB_FAILED },
         )
+        await this.critic.settle(payload.workspaceId, payload.runId)
     }
 
     /** Takes a queued run, or one whose worker has been silent for 15 minutes; null when another worker holds it or it ended. */
@@ -178,14 +186,18 @@ export class DossierReviewRunnerService {
             run.dossierId,
             now.toISOString().slice(0, 10),
         )
-        const ids = context.dossiers.map((inputs) => inputs.dossier.id)
+        const filed = {
+            ...context,
+            dossiers: context.dossiers.filter((inputs) => inputs.dossier.id !== UNFILED_DOSSIER_ID),
+        }
+        const ids = filed.dossiers.map((inputs) => inputs.dossier.id)
         const corpus = corpusOf(context.dossiers)
-        const rules = runRules(context)
+        const rules = this.unfiledAsNone(runRules(context), run.dossierId === null)
         const where = { workspaceId: run.workspaceId, dossierId: In(ids) }
         return {
             run,
             now,
-            context,
+            context: filed,
             targetIds,
             corpus,
             rules,
@@ -194,19 +206,49 @@ export class DossierReviewRunnerService {
                 corpus,
                 [],
             ),
-            stored:
-                ids.length === 0
-                    ? []
-                    : await this.entityManager.find(DossierFindingEntity, { where, take: STORED_MAX }),
+            stored: await this.entityManager.find(DossierFindingEntity, {
+                where:
+                    ids.length === 0
+                        ? [{ workspaceId: run.workspaceId, dossierId: IsNull() }]
+                        : [where, { workspaceId: run.workspaceId, dossierId: IsNull() }],
+                take: STORED_MAX,
+            }),
             reviews:
                 ids.length === 0 ? [] : await this.entityManager.find(DossierReviewEntity, { where, take: STORED_MAX }),
         }
     }
 
+    /** What the rules found about the documents no dossier claims is filed under no dossier (the stand-in gives way to null), and a whole-set run has covered those findings, so one that is no longer detected resolves. */
+    private unfiledAsNone(output: RuleOutput, wholeSet: boolean): RuleOutput {
+        return {
+            candidates: output.candidates.map((candidate) => ({
+                ...candidate,
+                dossierId: candidate.dossierId === UNFILED_DOSSIER_ID ? null : candidate.dossierId,
+                relatedDossierIds: candidate.relatedDossierIds.filter((id) => id !== UNFILED_DOSSIER_ID),
+            })),
+            coverage: [
+                ...output.coverage.map((key) =>
+                    key.endsWith(`|${UNFILED_DOSSIER_ID}`)
+                        ? coverageKey(key.slice(0, -UNFILED_DOSSIER_ID.length - 1), null)
+                        : key,
+                ),
+                ...(wholeSet ? RULE_KEYS.map((key) => coverageKey(key, null)) : []),
+            ],
+        }
+    }
+
     /** A rule candidate with its title and detail in Vietnamese, the language the dossiers are written in. */
     private rendered(candidate: FindingCandidate): FindingCandidate {
+        const params = Object.fromEntries(
+            Object.entries(candidate.params).map(([key, value]) => [
+                key,
+                value.includes(UNFILED_DOSSIER_NAME)
+                    ? value.replace(UNFILED_DOSSIER_NAME, this.catalog.get("unfiled.label", {}, "vi"))
+                    : value,
+            ]),
+        )
         const text = (field: string, max: number): string =>
-            clip(this.catalog.get(["findings", candidate.code, field].join("."), candidate.params, "vi"), max)
+            clip(this.catalog.get(["findings", candidate.code, field].join("."), params, "vi"), max)
         return {
             ...candidate,
             title: text("title", DOSSIER_REVIEW_CAPS.titleMax),

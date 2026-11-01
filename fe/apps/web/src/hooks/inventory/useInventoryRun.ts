@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { QUERY_INVENTORY_WORKBENCH_SWR_KEY } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"

@@ -3,17 +3,17 @@ import { mock } from "@starci/jest-preset"
 import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { ok, refused } from "@modules/platform/primitives"
-import { SupabaseCvStorageService } from "./supabase-cv-storage.service"
+import { ObjectCvStorageService } from "./object-cv-storage.service"
 
 const build = async () => {
     const objects = mock<StorageObjectsPort>()
     const moduleRef = await Test.createTestingModule({
-        providers: [SupabaseCvStorageService, { provide: STORAGE_OBJECTS, useValue: objects }],
+        providers: [ObjectCvStorageService, { provide: STORAGE_OBJECTS, useValue: objects }],
     }).compile()
-    return { objects, storage: moduleRef.get(SupabaseCvStorageService) }
+    return { objects, storage: moduleRef.get(ObjectCvStorageService) }
 }
 
-describe("SupabaseCvStorageService", () => {
+describe("ObjectCvStorageService", () => {
     it("signs a ten-minute view link in the hiring bucket", async () => {
         const { objects, storage } = await build()
         objects.signedUrls.mockResolvedValue(ok([{ path: "ws/a.pdf", signedUrl: "https://s/a" }]))

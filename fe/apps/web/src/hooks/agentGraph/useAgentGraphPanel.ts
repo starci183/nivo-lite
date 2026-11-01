@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useAgentRights } from "@/hooks/agentSettings"
-import { useInstanceChannels } from "@/hooks/installations"
+import { useInstallations, useInstanceChannels } from "@/hooks/installations"
 import { mapSlot } from "@/hooks/slot"
 import {
     AGENT_GRAPH_PLACEHOLDER,
@@ -29,6 +29,8 @@ import { useAgentGraphWrites } from "./useAgentGraphWrites"
  */
 export const useAgentGraphPanel = (installationId: string, setup: AgentGraphSetup) => {
     const t = useTranslations("agentGraph")
+    const tAgent = useTranslations("modulesCore")
+    const { installations } = useInstallations()
     const { canEdit, canGrant } = useAgentRights()
     const [changes, setChanges] = useState(0)
     const graph = useAgentGraphRead(installationId, changes)
@@ -37,6 +39,7 @@ export const useAgentGraphPanel = (installationId: string, setup: AgentGraphSetu
     const words = useAgentGraphWords(t)
     const commands = useAgentGraphCommands({ read: graph.read, state, writes, canGrant, changes, setup })
     const channelsOf = useInstanceChannels()
+    const lifecycle = installations?.find((one) => one.id === installationId)?.lifecycle ?? null
     const ctx = {
         t,
         canEdit,
@@ -44,6 +47,8 @@ export const useAgentGraphPanel = (installationId: string, setup: AgentGraphSetu
         amount: words.amount,
         setup,
         channels: channelsOf(graph.read?.agentId ?? null),
+        lifecycle,
+        lifecycleLabel: lifecycle === null ? "" : tAgent(`lifecycle_${lifecycle}`),
     }
     const phoneAreas = phoneAreasOf(state.ui.phoneView, state.ui.sideTab)
     return {

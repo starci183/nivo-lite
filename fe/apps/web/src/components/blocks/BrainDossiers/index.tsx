@@ -9,6 +9,7 @@ import {
     reviewedStatusOf,
     statusCountsOf,
     useBrainDossiers,
+    useChecklistImport,
     useDossierReviewSummary,
     worstSeverityOf,
 } from "@/hooks/brain"
@@ -17,9 +18,9 @@ import { useWorkspaceMember } from "@/hooks/knowledge"
 import { loadingSlot, mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { brainDossierHref, brainTabHref, brainUploadHref } from "@/modules/routes"
-import { placeholderDossierRows } from "@/components/composites/DossierRowsCard"
+import { placeholderDossierCategory } from "@/components/composites/DossierRowsCard"
 import { BrainDossiersBase } from "./component"
-import type { CategoryRowView, DossierRowView, DossiersContent } from "./component"
+import type { DossierRowView, DossiersContent } from "./component"
 
 type Translate = ReturnType<typeof useTranslations<"secondBrain">>
 type ReviewTranslate = ReturnType<typeof useTranslations<"dossierReview">>
@@ -33,16 +34,10 @@ interface RowContext {
     readonly canWrite: boolean
 }
 
-const placeholderCategory = (n: number): CategoryRowView => ({
-    id: `placeholder-${n}`,
-    title: "-",
-    dossiers: placeholderDossierRows(`placeholder-${n}`),
-})
-
 /** Cards of the same shape as a ready page, drawn as geometry while the categories and dossiers are read. */
 const PLACEHOLDER: DossiersContent = {
     figures: [1, 2, 3, 4].map((n) => ({ id: `placeholder-${n}`, label: "-", value: "0" })),
-    categories: [1, 2].map(placeholderCategory),
+    categories: [1, 2].map(placeholderDossierCategory),
 }
 
 /** The one line of a dossier: what is missing, else what is already held; nothing when the checklist says neither. */
@@ -128,6 +123,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
     const slotLabels = useSlotLabels()
     const { categories, slot, reload } = useBrainDossiers()
     const summary = useDossierReviewSummary()
+    const checklist = useChecklistImport(reload, member.canWrite)
     const context: RowContext = {
         t,
         review,
@@ -156,6 +152,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
                 listFooter: t("dossiersFooter"),
                 emptyCategory: t("dossiersEmptyCategory"),
                 emptyAll: t("dossiersEmpty"),
+                checklistImport: checklist.view,
                 hasDetail: props.dossier !== undefined,
                 detailLabel: review("detailLabel"),
                 detailCloseLabel: review("detailClose"),
@@ -172,7 +169,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
                 placeholder: PLACEHOLDER,
                 slotLabels: slotLabels(t("dossiersEmpty")),
             }}
-            on={{ retry: reload, closeDetail: () => router.replace(brainTabHref("dossiers")) }}
+            on={{ retry: reload, ...checklist.on, closeDetail: () => router.replace(brainTabHref("dossiers")) }}
         />
     )
 }

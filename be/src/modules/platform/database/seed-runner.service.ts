@@ -6,7 +6,7 @@ import { InjectPrimaryEntityManager } from "./primary.decorators"
 const SEED_FILE = "db/seed.sql"
 
 @Injectable()
-/** Executes the one tracked Supabase seed through the shared least-privilege EntityManager. */
+/** Executes the one tracked seed through the shared least-privilege EntityManager. */
 export class SeedRunnerService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 

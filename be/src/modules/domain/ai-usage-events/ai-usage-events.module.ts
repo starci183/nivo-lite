@@ -6,7 +6,7 @@ import { AiUsageOverviewService } from "./ai-usage-overview.service"
 import { UsageGateService } from "./usage-gate.service"
 
 @Module({})
-/** The usage capability over the primary Supabase connection: model-call metering, the monthly allowance and its owner notices. */
+/** The usage capability over the primary PostgreSQL connection: model-call metering, the monthly allowance and its owner notices. */
 export class AiUsageEventsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

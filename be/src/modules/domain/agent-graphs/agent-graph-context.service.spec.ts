@@ -38,7 +38,7 @@ const grant = (memberId: string, maxAmount: number | null): MemberGrant => ({
 const build = async (options: { audience?: "customer" | "internal"; rule?: "none"; unlisted?: true } = {}) => {
     const facts = mock<GraphFactsService>({ registry: jest.fn().mockReturnValue(FACTS) })
     const rules = mock<AuthorityRulesService>({
-        ruleFor: jest.fn().mockResolvedValue(
+        ownerRuleFor: jest.fn().mockResolvedValue(
             options.rule === "none"
                 ? null
                 : {
@@ -105,7 +105,7 @@ describe("AgentGraphContextService.contextOf ceilings and facts", () => {
         expect(context.ceilings).toEqual([
             { action: "pay_supplier", mode: "auto", limitVnd: 5_000_000, autoMax: 20_000_000, maxMode: "ask" },
         ])
-        expect(rules.ruleFor).toHaveBeenCalledWith(SCOPE, "pay_supplier", "inst-1", "agent-1")
+        expect(rules.ownerRuleFor).toHaveBeenCalledWith(SCOPE, "pay_supplier", "agent-1")
         expect(modules.find).toHaveBeenCalledWith("accounting")
     })
 

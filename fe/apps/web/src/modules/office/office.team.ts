@@ -53,7 +53,7 @@ export const toOfficeAgents = (rows: ReadonlyArray<InstallationWire>): ReadonlyA
                       avatarUrl: row.agentAvatarUrl ?? null,
                       isActive: row.lifecycle === "running",
                       lifecycle: row.lifecycle,
-                      waitsFor: row.status === "needs_connection" ? row.connectionNeeds : null,
+                      waitsFor: row.lifecycle === "needs_connection" ? row.connectionNeeds : null,
                   },
               ],
     )

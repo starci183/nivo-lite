@@ -1,3 +1,4 @@
+import { assistAsks } from "@modules/domain/authority-rules"
 import type { Capability } from "@modules/domain/automation-templates"
 import type {
     ContextSnapshot,
@@ -156,7 +157,7 @@ export const contextVersionFor = (
     return all.length > 0 ? Math.max(...all) : null
 }
 
-/** The mode of the owner's rule for an action, with the department's operating mode applied: assist turns auto into ask. */
+/** The mode of the owner's rule for an action, with the department's operating mode applied: assist turns auto into ask where it asks. */
 export const gateModeFor = (
     action: string,
     rules: OverviewRows["rules"],
@@ -164,5 +165,7 @@ export const gateModeFor = (
 ): GateMode => {
     const rule = rules.find((candidate) => candidate.action === action)
     if (rule === undefined) return "never"
-    return rule.mode === "auto" && operatingModes[rule.department] === "assist" ? "ask" : rule.mode
+    return rule.mode === "auto" && operatingModes[rule.department] === "assist" && assistAsks(action)
+        ? "ask"
+        : rule.mode
 }

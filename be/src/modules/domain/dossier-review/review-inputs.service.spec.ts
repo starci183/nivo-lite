@@ -147,14 +147,14 @@ describe("ReviewInputsService collect", () => {
     it("reads a dossier, the dossiers the pack relates to it and those its facts also cite", async () => {
         const { service, dossiers, sources, chunks, facts } = await build()
         dossiers.all.mockResolvedValue([D1, D2, D8, D9, D58])
-        sources.sourcesOfTopics.mockResolvedValue([S1, S2, S8, S9, UNNUMBERED, UNFILED, TEMPLATE])
+        sources.readySources.mockResolvedValue([S1, S2, S8, S9, UNNUMBERED, UNFILED, TEMPLATE])
         facts.ofSources.mockResolvedValueOnce([signed, stray, signed, undated]).mockResolvedValueOnce([signed, listed])
         chunks.passagesOfSources.mockResolvedValue([{ id: "p1", sourceId: "s2", order: 0, text: "Dieu le cong ty" }])
         facts.list.mockResolvedValue([factOf({ id: "fa", status: "active" })])
 
         const collected = await service.collect(WS, "d2", TODAY)
 
-        expect(sources.sourcesOfTopics).toHaveBeenCalledWith(WS, ["LEGAL FILES", "MEMBERS", "TEMPLATES"], 2000)
+        expect(sources.readySources).toHaveBeenCalledWith(WS, 2000)
         expect(facts.ofSources).toHaveBeenNthCalledWith(
             1,
             WS,
@@ -210,7 +210,7 @@ describe("ReviewInputsService collect of other passes", () => {
     it("reads every dossier for a workspace run, a template dossier's documents as templates", async () => {
         const { service, dossiers, sources, facts } = await build()
         dossiers.all.mockResolvedValue([D1, D58])
-        sources.sourcesOfTopics.mockResolvedValue([S1, TEMPLATE])
+        sources.readySources.mockResolvedValue([S1, TEMPLATE])
 
         const collected = await service.collect(WS, null, TODAY)
 
@@ -224,7 +224,7 @@ describe("ReviewInputsService collect of other passes", () => {
         const { service, dossiers, sources } = await build()
         const other = dossierOf({ id: "dx", ref: "99", name: "Other" })
         dossiers.all.mockResolvedValue([D1, other])
-        sources.sourcesOfTopics.mockResolvedValue([S1])
+        sources.readySources.mockResolvedValue([S1])
 
         const collected = await service.collect(WS, "dx", TODAY)
 
@@ -235,7 +235,7 @@ describe("ReviewInputsService collect of other passes", () => {
     it("reads nothing for a dossier the workspace does not have", async () => {
         const { service, dossiers, sources, facts, chunks } = await build()
         dossiers.all.mockResolvedValue([D1])
-        sources.sourcesOfTopics.mockResolvedValue([S1])
+        sources.readySources.mockResolvedValue([S1])
 
         await expect(service.collect(WS, "missing", TODAY)).resolves.toEqual({
             context: { today: TODAY, dossiers: [], activeFacts: [] },
@@ -243,5 +243,53 @@ describe("ReviewInputsService collect of other passes", () => {
         })
         expect(facts.ofSources).not.toHaveBeenCalled()
         expect(chunks.passagesOfSources).not.toHaveBeenCalled()
+    })
+})
+
+describe("ReviewInputsService documents no dossier claims", () => {
+    it("reads them on a whole-set run as the documents of a stand-in dossier with no checklist row and no pack entry", async () => {
+        const { service, dossiers, sources, facts } = await build()
+        dossiers.all.mockResolvedValue([D2])
+        sources.readySources.mockResolvedValue([S2, UNNUMBERED, UNFILED])
+        facts.ofSources.mockResolvedValue([])
+
+        const collected = await service.collect(WS, null, TODAY)
+
+        const standIn = collected.context.dossiers.find((inputs) => inputs.dossier.id === "unfiled")
+        expect(standIn?.entry).toBeNull()
+        expect(standIn?.documents.map((doc) => doc.id)).toEqual(["sx", "sy"])
+        expect(collected.targetIds).toEqual(["d2"])
+    })
+
+    it("leaves them out of a run of one dossier", async () => {
+        const { service, dossiers, sources } = await build()
+        dossiers.all.mockResolvedValue([D2])
+        sources.readySources.mockResolvedValue([S2, UNFILED])
+
+        const collected = await service.collect(WS, "d2", TODAY)
+
+        expect(collected.context.dossiers.map((inputs) => inputs.dossier.id)).toEqual(["d2"])
+    })
+})
+
+describe("ReviewInputsService dossierOf", () => {
+    it("answers the dossier the title and the opening of the document point to", async () => {
+        const { service, dossiers, chunks } = await build()
+        dossiers.all.mockResolvedValue([D1, D2])
+        chunks.passagesOfSources.mockResolvedValue([{ id: "p1", sourceId: "sz", order: 0, text: "Dieu le cong ty" }])
+
+        const found = await service.dossierOf(WS, sourceOf({ id: "sz", title: "scan 0192", topic: null }))
+
+        expect(found?.id).toBe("d2")
+        expect(chunks.passagesOfSources).toHaveBeenCalledWith(WS, ["sz"], 3)
+    })
+
+    it("answers nothing when no dossier clearly leads", async () => {
+        const { service, dossiers } = await build()
+        dossiers.all.mockResolvedValue([D1, D2])
+
+        await expect(
+            service.dossierOf(WS, sourceOf({ id: "sz", title: "Lunch menu", topic: null })),
+        ).resolves.toBeUndefined()
     })
 })

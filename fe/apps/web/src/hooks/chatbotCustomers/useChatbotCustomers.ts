@@ -26,7 +26,7 @@ export const useChatbotCustomers = (installationId: string | null) => {
             "chatbot",
             installationId,
             "workbench",
-            new URLSearchParams({ tab: "inbox", focus: conversationId }).toString(),
+            new URLSearchParams({ tab: "customers", focus: conversationId }).toString(),
         )
     const rows =
         overview === undefined

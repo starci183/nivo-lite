@@ -279,7 +279,7 @@ export interface DashboardQuery {
     readonly installationId?: string | null
 }
 
-/** The OpenClaw copy of one agent, built only from Supabase. */
+/** The OpenClaw copy of one agent, built only from the NIVO database. */
 export interface AgentBundle {
     /** The installation. */
     readonly installationId: string

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import {
     QUERY_AGENT_DASHBOARD_SWR_KEY,
     QUERY_VIDEO_BRAND_SWR_KEY,

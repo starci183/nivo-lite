@@ -5,7 +5,7 @@ import { ContextVersionsService } from "./context-versions.service"
 import { ContextVersionsAdminReadService } from "./context-versions-admin-read.service"
 
 @Module({})
-/** The immutable context versions a setup applies to an installation, over the primary Supabase PostgreSQL connection. */
+/** The immutable context versions a setup applies to an installation, over the primary PostgreSQL connection. */
 export class ModuleContextVersionsModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

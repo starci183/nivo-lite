@@ -1,4 +1,4 @@
-import { Badge, Stack, Text } from "@starci/grammar/common"
+import { Badge, Button, Stack, Text } from "@starci/grammar/common"
 import type { ComponentProps } from "react"
 import { LabelledSwitch } from "@/components/branches/LabelledSwitch"
 
@@ -11,6 +11,8 @@ export interface SwitchStatusProps extends ComponentProps<typeof LabelledSwitch>
     readonly help: string
     /** What stands in the way, in the normal text colour; empty when nothing does. */
     readonly blocker: string
+    /** The next step the blocker names, as a button that leads there; null when there is none. */
+    readonly blockerAction: { readonly label: string; readonly href: string } | null
     /** A last quiet line, for example who may move the switch; empty when there is none. */
     readonly quiet: string
 }
@@ -32,6 +34,11 @@ export const SwitchStatus = (props: SwitchStatusProps) => (
             {props.help}
         </Text>
         {props.blocker === "" ? null : <Text size="sm">{props.blocker}</Text>}
+        {props.blockerAction === null ? null : (
+            <Button intent="commit" size="sm" href={props.blockerAction.href}>
+                {props.blockerAction.label}
+            </Button>
+        )}
         {props.quiet === "" ? null : (
             <Text size="sm" tone="muted">
                 {props.quiet}

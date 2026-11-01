@@ -9,9 +9,9 @@ import {
     stored,
 } from "@tests/fixtures/builders/knowledge-indexing.builder"
 import { KnowledgeChunksService, chunkPassages } from "@modules/domain/knowledge-chunks"
-import type { PassagePlace } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "@modules/domain/knowledge-sources"
 import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote } from "@modules/domain/knowledge-sources"
+import { SourcePartsService, partsOf } from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { DocumentsError, DocumentsErrorCode } from "@modules/integrations/documents"
 import { LOGGER } from "@modules/platform/logging"
@@ -29,7 +29,6 @@ import { UsageMeterService } from "./usage-meter.service"
 
 const WS = INDEXING_WS
 const run = { sourceId: "s1", workspaceId: WS }
-const PAGE: PassagePlace = { kind: "page", label: "2" }
 /** Lets the pending promise chain of the service run. */
 const flush = async (): Promise<void> => {
     for (let turn = 0; turn < 20; turn += 1) await Promise.resolve()
@@ -37,6 +36,7 @@ const flush = async (): Promise<void> => {
 
 const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs = 0) => {
     const sources = mock<KnowledgeSourcesService>()
+    const parts = mock<SourcePartsService>()
     const chunks = mock<KnowledgeChunksService>()
     const reader = mock<SourceReaderService>()
     const embeddings = mock<EmbeddingService>()
@@ -62,6 +62,7 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
         providers: [
             KnowledgeIndexingService,
             { provide: KnowledgeSourcesService, useValue: sources },
+            { provide: SourcePartsService, useValue: parts },
             { provide: KnowledgeChunksService, useValue: chunks },
             { provide: SourceReaderService, useValue: reader },
             { provide: UnchangedSourceService, useValue: unchanged },
@@ -75,6 +76,7 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
     return {
         service: moduleRef.get(KnowledgeIndexingService),
         sources,
+        parts,
         chunks,
         reader,
         unchanged,
@@ -195,17 +197,6 @@ describe("KnowledgeIndexingService", () => {
 
 describe("KnowledgeIndexingService", () => {
     describe("index", () => {
-        it("stores the page of a passage and teaches it to the stored ones", async () => {
-            const { service, chunks, reader } = await build()
-            reader.read.mockResolvedValue({
-                kind: "ok",
-                value: { text: "Hi", title: null, parts: [{ place: PAGE, text: "Hi" }] },
-            })
-            await service.index(run)
-            expect(chunks.place).toHaveBeenCalledWith(expect.objectContaining({ places: [{ order: 0, place: PAGE }] }))
-            expect(chunks.keep.mock.calls.flatMap(([write]) => write.drafts)[0]?.place).toEqual(PAGE)
-        })
-
         it("stores a passage the provider gave no vector for without one", async () => {
             const { service, chunks, embeddings } = await build()
             embeddings.embed.mockResolvedValue([])
@@ -305,7 +296,6 @@ describe("KnowledgeIndexingService", () => {
 
         it.each<[string, string, string]>([
             ["no text", "   ", StoredNote.Empty],
-            ["too much text", "x".repeat(MAX_SOURCE_CHARS + 1), StoredNote.TooLong],
             ["text that makes no passage", TABLE_WITHOUT_ROWS, StoredNote.NoPassages],
         ])("closes a source with %s as failed", async (_name, text, note) => {
             const { service, sources, reader } = await build()
@@ -314,6 +304,20 @@ describe("KnowledgeIndexingService", () => {
             await expect(service.index(run)).resolves.toBe("failed")
 
             expect(sources.fail).toHaveBeenCalledWith(WS, "s1", note)
+        })
+
+        it("keeps the first part of a text longer than a source may be and makes each later part a source", async () => {
+            const { service, sources, parts, reader } = await build()
+            const text = Array.from({ length: Math.ceil((MAX_SOURCE_CHARS * 1.5) / 11) }, () => "row | cell").join("\n")
+            const [first = "", second = ""] = partsOf(text, MAX_SOURCE_CHARS)
+            reader.read.mockResolvedValue({ kind: "ok", value: { text, title: null } })
+            parts.splitLong.mockResolvedValue("Hours (1/2)")
+
+            await expect(service.index(run)).resolves.toBe("indexed")
+
+            expect(parts.splitLong).toHaveBeenCalledWith(WS, "s1", "Hours", [second])
+            expect(sources.startIndexing).toHaveBeenCalledWith(WS, "s1", first, "Hours (1/2)")
+            expect(sources.fail).not.toHaveBeenCalled()
         })
 
         it("closes a source the reader refuses with the code of the reason", async () => {

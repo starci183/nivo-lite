@@ -4,10 +4,14 @@ import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { eachInOrder } from "@modules/platform/primitives"
 import { KnowledgeProgressService } from "./knowledge-progress.service"
 import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import { NOW } from "./source-input.policy"
+
+/** The most documents one end of a run lets go. */
+const WAITING_MAX = 500
 
 @Injectable()
 /**
@@ -30,6 +34,20 @@ export class SourceCriticStageService {
     /** The critic's run for this document ended in any way: the stage goes, only when it is still `critic`, so a reindex that began meanwhile keeps its own stage. */
     async leave(workspaceId: string, sourceId: string): Promise<void> {
         await this.move(workspaceId, sourceId, { stage: "critic" }, null)
+    }
+
+    /** The last run of the workspace ended: no document waits on the critic any more, so every document still wearing the stage leaves it. */
+    async leaveAll(workspaceId: string): Promise<void> {
+        try {
+            const waiting = await this.entityManager.find(KnowledgeSourceEntity, {
+                select: { id: true },
+                where: { workspaceId, stage: "critic" },
+                take: WAITING_MAX,
+            })
+            await eachInOrder(waiting, (source) => this.leave(workspaceId, source.id))
+        } catch (cause) {
+            this.logger.error(KnowledgeSourcesLogEvent.ProgressFailed, cause, { workspaceId })
+        }
     }
 
     /** Writes the stage of the source where it still stands as `from` says, then announces the row when one changed. */

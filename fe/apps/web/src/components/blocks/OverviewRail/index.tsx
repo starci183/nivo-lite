@@ -26,6 +26,7 @@ const NO_RAIL = { agents: [], activity: [] } as const
 /** The overview rail with its copy resolved in the browser. */
 export const OverviewRail = () => {
     const t = useTranslations("overview")
+    const tAgent = useTranslations("modulesCore")
     const read = useOverviewRail()
     const pictureOf = useAgentPictures()
     const { failed } = useOverviewData()
@@ -47,8 +48,8 @@ export const OverviewRail = () => {
                     glyph: moduleGlyphOf(agent.module),
                     name: agent.name,
                     avatarUrl: pictureOf({ handle: agent.handle, name: agent.name }),
-                    isActive: agent.isActive,
-                    statusLabel: agent.isActive ? t("active") : t("paused"),
+                    isActive: agent.lifecycle === "running",
+                    statusLabel: tAgent(`lifecycle_${agent.lifecycle}`),
                     chatHref: agentChatHref(agent.id),
                 })),
                 activityTitle: t("activity"),

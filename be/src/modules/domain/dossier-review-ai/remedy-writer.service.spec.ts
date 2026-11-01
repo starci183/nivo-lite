@@ -74,6 +74,7 @@ describe("RemedyWriterService", () => {
                 json: true,
                 schema: REMEDY_SCHEMA,
                 timeoutMs: 90_000,
+                budget: { effort: "off", maxTokens: 16_000 },
                 context: null,
             })
         })

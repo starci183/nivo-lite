@@ -19,7 +19,7 @@ export const useAgentPictures = (): ((agent: AgentRef) => string | null) => {
     return useMemo(() => {
         const rows = installations ?? []
         const byHandle = new Map(rows.map((row) => [row.agentHandle, row.agentAvatarUrl]))
-        const byName = new Map(rows.map((row) => [row.agentName, row.agentAvatarUrl]))
+        const byName = new Map(rows.map((row) => [row.name, row.agentAvatarUrl]))
         return (agent) => byHandle.get(agent.handle ?? "") ?? byName.get(agent.name ?? "") ?? null
     }, [installations])
 }

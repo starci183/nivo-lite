@@ -53,6 +53,16 @@ export interface AiChatRequest {
     readonly timeoutMs: number
     /** The retrieval step; null when the task needs no business notes. */
     readonly context: AiContext | null
+    /** What a reasoning model may spend on the call; absent leaves the model's own defaults. */
+    readonly budget?: AiBudget
+}
+
+/** The spend a call caps: how hard a reasoning model thinks and how many tokens it may write (reasoning included). */
+export interface AiBudget {
+    /** The reasoning the endpoint is asked for: none, or an effort. */
+    readonly effort: "off" | "low" | "medium" | "high"
+    /** The most completion tokens the call may produce, reasoning included. */
+    readonly maxTokens: number
 }
 
 /** One chat answer. */

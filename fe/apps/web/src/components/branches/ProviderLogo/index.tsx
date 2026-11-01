@@ -10,6 +10,8 @@ type ProviderLogoProps = {
     readonly glyph: IconName
     /** A bank wordmark is a horizontal logo: it gets a 64x40 frame instead of a square tile. */
     readonly isWordmark?: boolean
+    /** `md` is the 40px tile of a row; `lg` is the 48px mark of a library tile header. */
+    readonly size?: "md" | "lg"
 }
 
 /** The provider's own mark in a neutral tile, or a bank's wordmark in its frame. Decorative: the name sits beside it. */
@@ -25,6 +27,21 @@ export const ProviderLogo = (props: ProviderLogoProps) => {
                 width={64}
                 height={26}
                 className={providerLogoClassNames.wordmark}
+            />
+        )
+    }
+    if (props.size === "lg") {
+        return props.src === undefined ? (
+            <IconTile source={nivoIconSource(props.glyph, "leading")} tone="neutral" size="md" />
+        ) : (
+            <Image
+                src={props.src}
+                alt=""
+                aspect="square"
+                fit="contain"
+                width={48}
+                height={48}
+                className={providerLogoClassNames.largeMark}
             />
         )
     }

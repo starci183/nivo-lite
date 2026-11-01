@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback, useMemo, useState } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { useAvatarUpload } from "@/hooks/avatar"
 import type { AvatarDoors } from "@/hooks/avatar"
 import {

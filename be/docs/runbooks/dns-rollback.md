@@ -21,7 +21,7 @@ In the Tino panel record, outside git (password manager or the owner's notes), t
 
 All four hosts already have A records pointing at the VPS. Verify `nivo.vn`, `www.nivo.vn`, `app.nivo.vn` and `api.nivo.vn` with `nslookup <host> 1.1.1.1` before the cutover; the edge obtains a Let's Encrypt certificate for each host on its first request. **Deploy stack** serves the landing on the apex and `www`, the console on `app`, and the API on `api`. Check `https://nivo.vn/health/live` and `https://www.nivo.vn/health/live` for the landing and `https://app.nivo.vn/health/live` for the console. If a record has to change: edit it in the Tino panel, set a short TTL first (300 s) and wait for the old TTL to expire before the switch.
 
-At cutover, set the Supabase Authentication Site URL to `https://app.nivo.vn`; allow Redirect URLs `https://app.nivo.vn/**`, `https://nivo.vn/**`, `https://www.nivo.vn/**`, `http://localhost:3000/**` and `http://127.0.0.1:3000/**`. Keep the old hosts for links sent before cutover.
+At cutover, set `AUTH_WEB_ORIGIN` and `AUTH_GOOGLE_CALLBACK_URL` (`https://api.nivo.vn/auth/google/callback`) to the new hosts, and add that callback to the Google OAuth client's authorized redirect URIs; keep the old hosts there for links sent before cutover.
 
 ## Rollback
 

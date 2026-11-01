@@ -5,6 +5,7 @@ import type { ModuleKey } from "@/hooks/installations"
 import { useSlotLabels } from "@/hooks/slot"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import type { DataSlot } from "@/modules/types"
+import { maskPhones } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
 import { PENDING_DASHBOARD, type AgentDashboardView, type DashboardRow } from "./agentDashboard.shared"
 import { useAgentDashboardConnections } from "./useAgentDashboardConnections"
@@ -77,7 +78,7 @@ const knowledgeOf = (
                       openHref: KNOWLEDGE_ROUTES.library,
                       rows: gaps.items.map((gap) => ({
                           id: gap.id,
-                          title: gap.question,
+                          title: maskPhones(gap.question),
                           description: whenOf(gap.lastSeenAt),
                           asked: t("gapAsked", { n: gap.count }),
                       })),
@@ -98,7 +99,7 @@ export const useAgentDashboardRegions = (slot: DataSlot<AgentDashboardView>, inp
     const actionOf = (action: string): string => (g.has(`action_${action}`) ? g(`action_${action}`) : "")
     const rowOf = (item: DashboardRow) => ({
         id: item.id,
-        title: item.title,
+        title: maskPhones(item.title),
         description: [item.customer, actionOf(item.action), whenOf(item.at)].filter(Boolean).join(" · "),
         href: item.href,
     })

@@ -1,7 +1,7 @@
 import type { BadgeTone } from "@starci/grammar/common"
 
 /** How an agent stands at the top of its Work tab. */
-export type AgentWorkStatusKind = "working" | "idle" | "paused" | "breaker" | "off" | "workspaceOff"
+export type AgentWorkStatusKind = "working" | "idle" | "notSetUp" | "paused" | "breaker" | "off" | "workspaceOff"
 
 /** The status band: the state in words, the next run and the queue. */
 export interface AgentWorkStatusView {

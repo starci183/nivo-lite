@@ -19,6 +19,7 @@ const isRunning = (latest: { readonly turns: ReadonlyArray<{ readonly status: st
  */
 export const useAgentWork = (module: string, installationId: string) => {
     const t = useTranslations("agentWork")
+    const tAgent = useTranslations("modulesCore")
     const format = useFormatter()
     const { canEdit } = useAgentRights()
     const { installation } = useAgentInstallation(installationId, module)
@@ -32,7 +33,8 @@ export const useAgentWork = (module: string, installationId: string) => {
         },
     )
     const workspace = useQueryWorkspaceAgentWorkSwr({ refreshInterval: WORK_POLL_IDLE_MS })
-    const isPaused = installation?.lifecycle === "paused"
+    const lifecycle = installation?.lifecycle ?? null
+    const lifecycleLabel = lifecycle === null ? "" : tAgent(`lifecycle_${lifecycle}`)
     const isWorkspaceOff = workspace.data?.workEnabled === false
     const { data, mutate } = read
     const view = useMemo(
@@ -43,12 +45,13 @@ export const useAgentWork = (module: string, installationId: string) => {
                       t,
                       format,
                       now,
-                      isPaused,
+                      lifecycle,
+                      lifecycleLabel,
                       isWorkspaceOff,
                       canEdit,
                       hrefOfWorkItem: (workItemId) => workItemHref(module, workItemId),
                   }),
-        [data, t, format, now, isPaused, isWorkspaceOff, canEdit, module],
+        [data, t, format, now, lifecycle, lifecycleLabel, isWorkspaceOff, canEdit, module],
     )
     const slot = slotOfSwr<AgentWorkView>({ data: view, error: read.error, isLoading: read.isLoading })
     return { slot, reload: () => void mutate() }

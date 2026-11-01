@@ -1,3 +1,4 @@
+import { isSetupPending } from "@/modules/installations"
 import type { AgentWorkStatusView, AgentWorkView } from "@/modules/types"
 import { toGoalView, toTaskView, toTriggerView } from "./agentWork.rows"
 import { toTurnsView } from "./agentWork.turns"
@@ -21,8 +22,17 @@ export const toStatusView = (wire: AgentWorkWire, context: AgentWorkContext): Ag
     const isRunning = wire.turns.some((turn) => turn.status === "running")
     const next = relative(context, nextRunOf(wire.triggers))
     const base = {
-        nextRunLabel: next === "" ? t("nextRunNone") : t("nextRun", { when: next }),
-        queueLabel: t("queue", { n: wire.pendingWakes }),
+        nextRunLabel: next === "" ? "" : t("nextRun", { when: next }),
+        queueLabel: wire.pendingWakes === 0 ? "" : t("queue", { n: wire.pendingWakes }),
+    }
+    if (isSetupPending(context.lifecycle)) {
+        return {
+            ...base,
+            kind: "notSetUp",
+            label: context.lifecycleLabel,
+            tone: "warning",
+            stopNotice: t("noticeNotSetUp"),
+        }
     }
     if (context.isWorkspaceOff) {
         return {
@@ -36,8 +46,14 @@ export const toStatusView = (wire: AgentWorkWire, context: AgentWorkContext): Ag
     if (!wire.state.workEnabled) {
         return { ...base, kind: "off", label: t("statusOff"), tone: "danger", stopNotice: t("noticeOff") }
     }
-    if (context.isPaused) {
-        return { ...base, kind: "paused", label: t("statusPaused"), tone: "neutral", stopNotice: t("noticePaused") }
+    if (context.lifecycle === "paused") {
+        return {
+            ...base,
+            kind: "paused",
+            label: context.lifecycleLabel,
+            tone: "neutral",
+            stopNotice: t("noticePaused"),
+        }
     }
     if (isBreakerOpen) {
         const when = relative(context, wire.state.breakerUntil)

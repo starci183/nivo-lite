@@ -63,7 +63,8 @@ export const isAttribute = (fact: ReviewFact, attributes: ReadonlyArray<string>)
     attributes.includes(fact.attribute)
 
 /** The dossier label people read: its reference and name. */
-export const dossierLabel = (inputs: DossierInputs): string => `${inputs.dossier.ref}. ${inputs.dossier.name}`
+export const dossierLabel = (inputs: DossierInputs): string =>
+    inputs.dossier.ref === "" ? inputs.dossier.name : `${inputs.dossier.ref}. ${inputs.dossier.name}`
 
 /** The title of each document of the pass, by id. */
 export const titlesOf = (context: ReviewContext): ReadonlyMap<string, string> =>

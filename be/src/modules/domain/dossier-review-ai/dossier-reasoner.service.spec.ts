@@ -73,7 +73,7 @@ const build = async () => {
 }
 
 describe("DossierReasonerService review call", () => {
-    it("asks the model once in JSON mode with the system prompt, the bundle text, the schema and a 60 s timeout", async () => {
+    it("asks the model once in JSON mode with the system prompt, the bundle text, the schema and a 60 s timeout and a no-reasoning budget", async () => {
         const { reasoner, ai } = await build()
         ai.chat.mockResolvedValue(answerOf())
         await reasoner.review(bundleOf())
@@ -86,6 +86,7 @@ describe("DossierReasonerService review call", () => {
             json: true,
             schema: DOSSIER_REVIEW_SCHEMA,
             timeoutMs: 60_000,
+            budget: { effort: "off", maxTokens: 8000 },
             context: null,
         })
     })

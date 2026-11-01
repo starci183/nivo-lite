@@ -28,16 +28,7 @@ const nextConfig: NextConfig = {
     turbopack: { root: WORKSPACE_ROOT },
     async redirects() {
         const APP_ORIGIN = appUrl()
-        return [
-            // The Supabase return of the time the Site URL was nivo.vn: the code goes to the console's callback.
-            {
-                source: "/",
-                has: [{ type: "query", key: "code" }],
-                destination: `${APP_ORIGIN}/auth/callback`,
-                permanent: false,
-            },
-            { source: `/:path((?!${LANDING_OWNED}).+)`, destination: `${APP_ORIGIN}/:path`, permanent: true },
-        ]
+        return [{ source: `/:path((?!${LANDING_OWNED}).+)`, destination: `${APP_ORIGIN}/:path`, permanent: true }]
     },
 }
 

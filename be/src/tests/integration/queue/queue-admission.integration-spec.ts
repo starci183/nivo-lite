@@ -13,7 +13,7 @@ import {
 } from "../../world/queue-reconciliation-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 
-describe("Queue admission fences (private local Supabase)", () => {
+describe("Queue admission fences (private local PostgreSQL)", () => {
     const world = useTestWorld({ modules: [] })
     const { seed } = reconciliationProof(world)
     const start = async (id: string): Promise<AdmittedQueueRun> => {

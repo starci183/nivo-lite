@@ -18,11 +18,11 @@
 #                  AOF with appendfsync everysec on the persisted volume redis-data. PostgreSQL stays the durable record: the relay republishes any
 #                  committed outbox row Redis loses, so a broker restart can cost at most the last second of broker state, never an admitted job.
 #
-#   db  the PostgreSQL database (owner ruling 2026-10-29: production left Supabase cloud), on the private `agents` network
+#   db  the PostgreSQL database (owner ruling 2026-10-29), on the private `agents` network
 #                  (db:5432, no published port) on the persisted volume postgres-data; the api and the mcp gateway connect as app_be
 #   nivo-postgres-backup  the daily age-encrypted pg_dump of db onto the persisted volume postgres-backups (14 days)
 #
-# Health signals: the container healthcheck is LIVENESS only (process-local /healthz; a Supabase outage never restarts the api). READINESS
+# Health signals: the container healthcheck is LIVENESS only (process-local /healthz; a database outage never restarts the api). READINESS
 # (/readyz: the database answers) gates traffic at the shared ingress (Traefik health check in routes.yml) and the deploy acceptance, never a restart.
 # Stateful services update stop-first (one writer per volume); stateless ones start-first with rollback on failure.
 

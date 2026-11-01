@@ -43,11 +43,11 @@ npm run build:be
 npm run build:fe
 ```
 
-Local development uses a Supabase CLI-managed Docker container for PostgreSQL. The API, web console and landing run separately and need their own runtime or build configuration. The [development runbook](.starcistacks/dev/README.md) owns the required local API settings, custody boundaries and startup procedure; the API's typed readers and the front-end configuration modules validate their respective inputs.
+Local development uses a Docker container of the managed `db` image for PostgreSQL (`npm run db:create`, `db:start`, `db:push`), a local MinIO for object storage and a local Redis; auth is the API's own. The API, web console and landing run separately and need their own runtime or build configuration. The [development runbook](.starcistacks/dev/README.md) owns the required local API settings, custody boundaries and startup procedure; the API's typed readers and the front-end configuration modules validate their respective inputs.
 
 Application secret custody uses sealed files `.starcistacks/<env>/secrets/<slug>.enc` (SOPS dotenv, age recipient in `.sops.yaml`; the matching identity stays with the StarCi runtime owner). The API accepts `<NAME>_FILE=<path>` through `EnvSource`; Swarm deployments mount versioned Docker secrets at `/run/secrets/<NAME>`. Manage sealed custody through `starci app secret`. The development runbook explains the current recipe's legacy configuration input; it does not use production custody as a local fallback.
 
-Follow that runbook before starting the local application processes. A running Supabase stack establishes dependency startup; application configuration, database readiness and browser behavior still need their own verification.
+Follow that runbook before starting the local application processes. A running database container establishes dependency startup; application configuration, database readiness and browser behavior still need their own verification.
 
 Images: `npm run docker:build` builds the API and command line images; the web image is `docker build -f fe/apps/web/Dockerfile .` from the root. Deploys are manual workflows, described with the cutover in `be/docs/runbooks/cutover.md`.
 

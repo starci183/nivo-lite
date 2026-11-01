@@ -1,7 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { KnowledgeChunksService, chunkLocated, reusePlanOf, toVector } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService, reusePlanOf, toVector } from "@modules/domain/knowledge-chunks"
 import type { ChunkDraft, LocatedText, MissingPassage, PassagePlace } from "@modules/domain/knowledge-chunks"
-import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote, embedPercent } from "@modules/domain/knowledge-sources"
+import {
+    KnowledgeSourcesService,
+    MAX_SOURCE_CHARS,
+    SourcePartsService,
+    StoredNote,
+    embedPercent,
+    partsOf,
+} from "@modules/domain/knowledge-sources"
 import type { MaybeSource, SourceRecord } from "@modules/domain/knowledge-sources"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -15,6 +22,7 @@ import { KnowledgeLogEvent } from "./knowledge.log-events"
 import { InjectKnowledgeFullOptions } from "./knowledge.decorators"
 import type { KnowledgeFullOptions } from "./knowledge.options"
 import { KnowledgeError, KnowledgeErrorCode } from "./errors/knowledge.error"
+import { layoutOf } from "./passage-layout.policy"
 import { failureOf } from "./source-failure.policy"
 import { SourceReaderService } from "./source-reader.service"
 import { UnchangedSourceService } from "./unchanged-source.service"
@@ -49,6 +57,7 @@ export class KnowledgeIndexingService {
     constructor(
         @InjectLogger() private readonly logger: Logger,
         private readonly sources: KnowledgeSourcesService,
+        private readonly parts: SourcePartsService,
         private readonly chunks: KnowledgeChunksService,
         private readonly reader: SourceReaderService,
         private readonly unchanged: UnchangedSourceService,
@@ -62,7 +71,8 @@ export class KnowledgeIndexingService {
      * Indexes one source: read, chunk, embed, store; then queue the reading of its facts. A source that can never be read is closed
      * as failed with its stored code and the job ends; a failure worth retrying is thrown, for the queue to retry; `failSource` closes
      * the source when the retries run out. A text the source already holds whole does no work at all: a note or a file (its stored object
-     * never changes) is known unchanged before it is read, a link only after, since the page can change.
+     * never changes) is known unchanged before it is read, a link only after, since the page can change. A text longer than a source may
+     * be is cut at line ends: the first part stays in this source, each later part becomes a source of its own.
      */
     async index(run: IndexRun): Promise<IndexOutcome> {
         const source = await this.sources.sourceOf(run.workspaceId, run.sourceId)
@@ -76,11 +86,17 @@ export class KnowledgeIndexingService {
             if (read.kind === "refused") return await this.close(source, read.code)
             const content = read.value.text.trim()
             if (content === "") return await this.close(source, StoredNote.Empty)
-            if (content.length > MAX_SOURCE_CHARS) return await this.close(source, StoredNote.TooLong)
             if (await this.unchanged.holdsWhole(source, content)) return await this.unchanged.keep(source)
-            const title = read.value.title ?? source.title
-            await this.sources.startIndexing(source.workspaceId, source.id, content, title)
-            return await this.store({ ...source, content, title }, read.value.parts)
+            const [first = content, ...later] = partsOf(content, MAX_SOURCE_CHARS)
+            const named = read.value.title ?? source.title
+            const title =
+                later.length === 0 ? named : await this.parts.splitLong(source.workspaceId, source.id, named, later)
+            await this.sources.startIndexing(source.workspaceId, source.id, first, title)
+            // A long text is split into several documents, so the places of the file's stretches no longer line up with any one of them.
+            return await this.store(
+                { ...source, content: first, title },
+                later.length === 0 ? read.value.parts : undefined,
+            )
         } catch (cause) {
             const failure = failureOf(cause)
             if (failure.transient) throw cause
@@ -115,7 +131,7 @@ export class KnowledgeIndexingService {
      * stores only the missing passages without vectors, and waits.
      */
     private async store(source: SourceRecord, parts: ReadonlyArray<LocatedText> | undefined): Promise<IndexOutcome> {
-        const located = chunkLocated(parts ?? [{ place: null, text: source.content }])
+        const { located, places } = layoutOf(source.content, parts)
         const pieces = located.map((piece) => piece.text)
         if (pieces.length === 0) return this.close(source, StoredNote.NoPassages)
         const { workspaceId, id } = source
@@ -127,13 +143,7 @@ export class KnowledgeIndexingService {
         const stored = await this.chunks.embeddedOf(workspaceId, id)
         const { moves, missing } = reusePlanOf(pieces, stored, this.embeddings.model())
         await this.chunks.arrange({ workspaceId, sourceId: id, moves, count: pieces.length })
-        if (parts !== undefined) {
-            await this.chunks.place({
-                workspaceId,
-                sourceId: id,
-                places: located.map((piece, order) => ({ order, place: piece.place })),
-            })
-        }
+        if (places.length > 0) await this.chunks.place({ workspaceId, sourceId: id, places })
         const noCredits = missing.length > BULK_CHUNKS && (await this.usage.blockedBy(workspaceId, "embedding", true))
         await this.embedMissing(
             source,

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { QUERY_AUTOMATIONS_SWR_KEY, useMutateProposeAutomationBodySwr, useMutateRunAutomationNowSwr } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"

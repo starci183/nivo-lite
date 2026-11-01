@@ -24,28 +24,40 @@ import type { DescriptionListStatItem } from "@starci/grammar/common"
 import type { useFormatter, useTranslations } from "next-intl"
 import type { ValuesInput1 } from "./useAccountingQuestions"
 
-/** Presents the backend-calculated monthly figures in the reader's locale; a figure fed by a missing connection says so, never 0. */
+/** Presents the backend-calculated figures in the reader's locale, each naming its period (this month, or as of today for the ageing); a figure fed by a missing connection says so, never 0. */
 export const accountingFiguresOf = (
     data: AccountingWorkbenchData,
     format: AccountingFormat,
     t: AccountingTranslator,
 ): ReadonlyArray<DescriptionListStatItem> => {
+    const thisMonth = t("periodThisInline")
+    const termOf = (term: string, period: string) => t("figureTerm", { term, period })
     const moneyItem = (
         id: string,
         term: string,
         measure: AccountingMeasure,
         unit: "countInvoices" | "countPayments",
-    ) => ({ id, term, description: moneyOf(format, measure.vnd), meta: t(unit, { n: measure.count }) })
+    ) => ({
+        id,
+        term: termOf(term, thisMonth),
+        description: moneyOf(format, measure.vnd),
+        meta: t(unit, { n: measure.count }),
+    })
     const slots = [data.ageing.d0, data.ageing.d30, data.ageing.d60]
     return [
         moneyItem("income", t("mIncome"), data.periods.this.income, "countInvoices"),
         moneyItem("receivable", t("mReceivable"), data.periods.this.receivable, "countInvoices"),
         data.creditsSource === null
-            ? { id: "unmatched", term: t("mUnmatched"), description: t("notConnected"), meta: t("notConnectedHint") }
+            ? {
+                  id: "unmatched",
+                  term: termOf(t("mUnmatched"), thisMonth),
+                  description: t("notConnected"),
+                  meta: t("notConnectedHint"),
+              }
             : moneyItem("unmatched", t("mUnmatched"), data.periods.this.unmatched, "countPayments"),
         {
             id: "ageing",
-            term: t("mAgeing"),
+            term: termOf(t("mAgeing"), t("periodTodayInline")),
             description: slots.map((slot) => slot.count).join(" / "),
             meta: slots.map((slot) => moneyOf(format, slot.vnd)).join(" · "),
         },

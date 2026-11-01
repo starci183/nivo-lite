@@ -57,6 +57,7 @@ export const ListRegion = (props: ListRegionProps) => (
                                   glyph={nivoIconSource(row.mark.glyph, "leading")}
                                   module={row.mark.module}
                                   label={row.title}
+                                  seed={row.id}
                                   src={row.mark.avatarUrl}
                               />
                           )

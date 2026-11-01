@@ -1,11 +1,12 @@
-import type { Installation } from "@/modules/installations"
+import { agentHref, isSetupPending } from "@/modules/installations"
+import type { Installation, InstallationLifecycle } from "@/modules/installations"
 import type { ConnectionStatus } from "@/modules/types"
+
+/** The shortest name of an agent. */
+export const AGENT_NAME_MIN = 2
 
 /** The longest name of an agent. */
 export const AGENT_NAME_MAX = 40
-
-/** The longest label of an instance. */
-export const INSTANCE_NAME_MAX = 80
 
 /** How long a customer waits for the agent by default before the app answers directly, in seconds. */
 const DEFAULT_REPLY_TIMEOUT_SEC = 25
@@ -123,17 +124,22 @@ export type AgentMode = "assist" | "autopilot"
 export interface AgentInstallationView {
     readonly id: string
     readonly agentId: string | null
-    readonly agentName: string
+    /** The one display name of the agent. */
+    readonly name: string
     readonly agentHandle: string
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly agentAvatarUrl: string | null
-    /** The instance label. */
-    readonly name: string
     /** The type allows several instances. */
     readonly isMulti: boolean
     readonly mode: AgentMode
     readonly isLive: boolean
-    /** A context version was applied. */
+    /** The one state of the agent, as the back end names it. */
+    readonly lifecycle: InstallationLifecycle
+    /** The agent has no applied setup yet (not set up or being set up): it cannot be switched on. */
+    readonly isSetupPending: boolean
+    /** The Setup tab of the agent: where every not-ready state sends the owner. */
+    readonly setupHref: string
+    /** A context version was applied: the same truth as the lifecycle, never read apart from it. */
     readonly hasVersion: boolean
     readonly timeoutSec: number
     readonly holdingMessage: string
@@ -143,14 +149,16 @@ export interface AgentInstallationView {
 export const toAgentInstallationView = (installation: Installation): AgentInstallationView => ({
     id: installation.id,
     agentId: installation.agentId,
-    agentName: installation.agentName,
+    name: installation.name,
     agentHandle: installation.agentHandle,
     agentAvatarUrl: installation.agentAvatarUrl,
-    name: installation.name,
     isMulti: installation.isMulti,
     mode: installation.operatingMode,
     isLive: installation.lifecycle === "running",
-    hasVersion: installation.activeContextVersionId !== null,
+    lifecycle: installation.lifecycle,
+    isSetupPending: isSetupPending(installation.lifecycle),
+    setupHref: agentHref(installation.moduleKey, installation.id),
+    hasVersion: !isSetupPending(installation.lifecycle),
     timeoutSec: replyTimeoutOf(installation.settings),
     holdingMessage: holdingMessageOf(installation.settings),
 })

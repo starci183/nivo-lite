@@ -4,7 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./authority-rules.module-
 import { AuthorityRulesService } from "./authority-rules.service"
 
 @Module({})
-/** The rule of the owner for each action of the registry, over the primary Supabase PostgreSQL connection. */
+/** The rule of the owner for each action of the registry, over the primary PostgreSQL connection. */
 export class AuthorityRulesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

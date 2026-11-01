@@ -11,9 +11,9 @@ const build = async () => {
 }
 
 describe("storedAvatarAddress", () => {
-    it("drops an address of the old Supabase Storage so the screens show the generated initials picture", async () => {
+    it("drops an address of the legacy storage-api so the screens show the generated initials picture", async () => {
         const subject = await build()
-        const old = "https://abc.supabase.co/storage/v1/object/public/avatars_public/people/1.png"
+        const old = "https://storage.example.org/storage/v1/object/public/avatars_public/people/1.png"
 
         expect(subject.storedAvatarAddress(old)).toBeNull()
     })

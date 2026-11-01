@@ -1,8 +1,7 @@
 import type { useFormatter, useTranslations } from "next-intl"
 import type { ModuleKey } from "@/modules/catalog"
-import { AGENT_MODULES, batchBytesOf, queueRowOf } from "@/modules/documents"
+import { AGENT_MODULES, batchBytesOf, queueRowOf, visibilityNoteOf } from "@/modules/documents"
 import type { UsageView } from "@/modules/documents"
-import type { DocumentVisibility } from "@/modules/types"
 import type { AddMode, useAddDocuments } from "./useAddDocuments"
 import type { useAddInstances } from "./useAddInstances"
 import type { AddPreset } from "./useBatchOptions"
@@ -40,7 +39,9 @@ const submitLabelOf = (t: Translate, add: ReturnType<typeof useAddDocuments>): s
 /** The line under the files and links that says what is missing or what is happening. */
 const filesNoteOf = (t: Translate, add: ReturnType<typeof useAddDocuments>): string | undefined => {
     if (add.queue.isReading) return t("zipReading")
-    return add.note.tried && add.mode === "files" && add.pendingCount === 0 ? t("hintNoDocs") : undefined
+    if (!add.note.tried) return undefined
+    if (add.mode === "files" && add.pendingCount === 0) return t("hintNoDocs")
+    return add.options.visibility === null ? t("hintChooseVisibility") : undefined
 }
 
 /** The notice that says the uploads of an earlier page stopped when it reloaded. */
@@ -139,18 +140,6 @@ const buildVisibilityView = (t: Translate, options: ReturnType<typeof useAddDocu
             { id: "internal", label: t("visInternal") },
         ],
     }) as const
-
-/** What the choice means for the answers; before a choice it says what the chatbot reads and what NIVO suggests. */
-const visibilityNoteOf = (
-    t: Translate,
-    chosen: DocumentVisibility | null,
-    suggested: DocumentVisibility | null,
-): string => {
-    if (chosen === "public") return t("visPublicNote")
-    if (chosen === "internal") return t("visInternalNote")
-    if (suggested === null) return t("visNoneNote")
-    return `${t("visNoneNote")} ${t(suggested === "public" ? "visSuggestPublic" : "visSuggestInternal")}`
-}
 
 /** What the view of the drawer is built from. */
 interface ViewContext {

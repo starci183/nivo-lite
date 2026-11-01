@@ -1,8 +1,8 @@
 # NIVO (nivo-lite) application stack, schema starci/application-stacks@1.
 #
-# dev        docker-swarm: the local Supabase (supabase CLI) with the api, console and landing in containers.
+# dev        docker-swarm: the api, console and landing in containers over the local db container (npm run db:create), Redis and MinIO.
 # production docker-swarm on ONE Ubuntu VPS (single-manager swarm: orchestration without manager failover). The database is the self-hosted
-#            db service of the stack (owner ruling 2026-10-29); the Supabase Cloud project (locked, exceed_egress_quota) is retired at cutover. Runbook: .starcistacks/production/README.md (the seven commands, the release flow, the cutover window).
+#            db service of the stack (owner ruling 2026-10-29); production starts on an empty database. Runbook: .starcistacks/production/README.md (the seven commands, the release flow, the cutover window).
 #
 # Facts the schema has no field for, stated here and in the production runbook so a reader of the manifest finds them:
 #   Secret custody   sealed members .starcistacks/production/secrets/<slug>.enc (sops, age recipient in .sops.yaml). The deploy decrypts them in
@@ -84,7 +84,7 @@ components:
     role: stateful
     image: ghcr.io/starci183/nivo-lite-db:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
     compose: infra/swarm/stack.yaml
-    purpose: The production PostgreSQL 17 (owner ruling 2026-10-29, self-hosted, production left Supabase cloud; rulings lite-official-postgres-image, lite-db-image-in-stacks). Internal only on the private agents network as db:5432, no published port; the managed db image (.starcistacks/images/db/Dockerfile, the Docker Official postgres image) carries pgvector and pgmq, the contrib extensions unaccent and pgcrypto ship with it. The persisted named volume nivo-engine_postgres-data holds the data; the api and the mcp gateway connect as the least-privilege app_be role (PRIMARY_DB_URL).
+    purpose: The production PostgreSQL 17 (owner ruling 2026-10-29, self-hosted; rulings lite-official-postgres-image, lite-db-image-in-stacks). Internal only on the private agents network as db:5432, no published port; the managed db image (.starcistacks/images/db/Dockerfile, the Docker Official postgres image) carries pgvector and pgmq, the contrib extensions unaccent and pgcrypto ship with it. The persisted named volume nivo-engine_postgres-data holds the data; the api and the mcp gateway connect as the least-privilege app_be role (PRIMARY_DB_URL).
     required: true
   nivo-postgres-backup:
     role: stateful
@@ -198,17 +198,12 @@ environments:
         retention: None; the repository migrations are the source, the local volume is recreated on demand.
         owner: Development operator
         restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
-      - component: supabase
-        target: Local Supabase development data is disposable; `supabase db reset` rebuilds it from db/migrations and the seed.
-        retention: None; the repository migrations are the source, the local volume is recreated on demand.
-        owner: Development operator
-        restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
       - component: nivo-redis
-        target: The local Redis volume only mirrors the broker copy of queued jobs; the PostgreSQL job_outbox of the local Supabase is the record and the relay republishes any row the broker lost, so the volume is disposable.
+        target: The local Redis volume only mirrors the broker copy of queued jobs; the PostgreSQL job_outbox of the local db is the record and the relay republishes any row the broker lost, so the volume is disposable.
         retention: None; the volume is recreated on demand and the relay refills it from the outbox.
         owner: Development operator
         restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
-    # Local development holds no sealed secret: the Supabase CLI owns the local backing stack and the operator supplies its
+    # Local development holds no sealed secret: the operator owns the local backing containers (db, Redis, MinIO) and supplies their
     # development configuration through the untracked .starcistacks/dev/api.dev.env. It is not a deployed Swarm component.
     secrets:
       - name: auth
@@ -761,7 +756,7 @@ database:
     minAgeHours: 48
 k8s:
   status: deferred
-  reason: Whole-package Kubernetes deployment is deferred; production is a single-manager Docker Swarm on one VPS, and dev uses a local Docker Swarm with Supabase CLI backing.
+  reason: Whole-package Kubernetes deployment is deferred; production is a single-manager Docker Swarm on one VPS, and dev uses a local Docker Swarm over local backing containers.
 # Ownership is declared here; this does not provision Sonar or change the conditional CI scan.
 services:
   #   container-registry:

@@ -107,7 +107,7 @@ const processAll = async (world: LiteWorld, processed: Array<string>, failed: Ar
     )
 }
 
-describe("Queue pgmq to BullMQ cutover (private local Supabase and Redis)", () => {
+describe("Queue pgmq to BullMQ cutover (private local PostgreSQL and Redis)", () => {
     const sandbox = cutoverSandbox()
     const world = useTestWorld({ modules: redisJobsModules(`cutover-${worldIds.next()}`, 5000), sandbox })
     beforeAll(async () => {

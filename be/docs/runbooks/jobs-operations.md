@@ -107,7 +107,7 @@ unsettled, close rejects and logs the deadline failure while leaving its resourc
 
 ## Local proof
 
-Run integration checks against a private local Supabase database and a private Redis instance on free loopback ports. Set Redis
+Run integration checks against a private local PostgreSQL database and a private Redis instance on free loopback ports. Set Redis
 `maxmemory` and `maxmemory-policy noeviction` explicitly, use an isolated queue prefix, and remove only the containers created for
 the proof. The scoped integration suites cover queue recovery, retry delay, relay repair, webhooks, public API processing, cron and
 the pre-migration cutover data move.

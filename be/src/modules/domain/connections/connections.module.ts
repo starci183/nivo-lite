@@ -11,7 +11,7 @@ import { ConnectionBindingsReadService } from "./connection-bindings-read.servic
 import { ConnectionSecretReadsService } from "./connection-secret-reads.service"
 
 @Module({})
-/** The connections capability over the primary Supabase PostgreSQL connection. */
+/** The connections capability over the primary PostgreSQL connection. */
 export class ConnectionsModule extends ConfigurableModuleClass {
     /** Registers the read-only mode (the mcp app): the bindings read alone, with no storage and nothing that calls a provider. */
     static readOnly(options: Extract<typeof OPTIONS_TYPE, { readonly readOnly: true }>): DynamicModule {

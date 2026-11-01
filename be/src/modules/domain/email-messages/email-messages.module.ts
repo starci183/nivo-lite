@@ -7,7 +7,7 @@ import { SmtpWizardService } from "./smtp-wizard.service"
 import { WorkspaceMailService } from "./workspace-mail.service"
 
 @Module({})
-/** The email log of a workspace and the sending of its mail over the primary Supabase PostgreSQL connection: the only writer of public.email_messages. */
+/** The email log of a workspace and the sending of its mail over the primary PostgreSQL connection: the only writer of public.email_messages. */
 export class EmailMessagesModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

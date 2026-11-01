@@ -4,7 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./module-setup-writes.mod
 import { SetupWritesService } from "./setup-writes.service"
 
 @Module({})
-/** The confirm cards the setup chat proposes, over the primary Supabase PostgreSQL connection. */
+/** The confirm cards the setup chat proposes, over the primary PostgreSQL connection. */
 export class ModuleSetupWritesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

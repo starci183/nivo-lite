@@ -10,7 +10,7 @@ import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 
 /** Decides an accounting question and reloads the workbench after the backend resumes it. */
 export const useDecideAccountingQuestion = () => {

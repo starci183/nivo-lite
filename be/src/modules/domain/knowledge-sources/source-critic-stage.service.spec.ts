@@ -80,3 +80,26 @@ describe("SourceCriticStageService leave", () => {
         expect(progress.announce).not.toHaveBeenCalled()
     })
 })
+
+describe("SourceCriticStageService leaveAll", () => {
+    it("lets every document still wearing the stage go, each announced", async () => {
+        const em = mockEntityManager({
+            find: [
+                KnowledgeSourceEntity,
+                [
+                    Object.assign(new KnowledgeSourceEntity(), { id: "s1" }),
+                    Object.assign(new KnowledgeSourceEntity(), { id: "s2" }),
+                ],
+            ],
+            update: [KnowledgeSourceEntity, { affected: 1 }],
+        })
+        const { service, progress } = await build(em)
+
+        await service.leaveAll(WS)
+
+        expect(progress.announce.mock.calls).toEqual([
+            [WS, "s1"],
+            [WS, "s2"],
+        ])
+    })
+})

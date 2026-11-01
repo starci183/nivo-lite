@@ -2,6 +2,7 @@ import { AgentDashboardFrame } from "@/components/blocks/AgentDashboardFrame"
 import { ChatbotCustomers } from "@/components/blocks/ChatbotCustomers"
 import { ChatbotFigures } from "@/components/blocks/ChatbotFigures"
 import { ChatbotGaps } from "@/components/blocks/ChatbotGaps"
+import { ChatbotInbox } from "@/components/blocks/ChatbotInbox"
 import { ChatbotWaiting } from "@/components/blocks/ChatbotWaiting"
 
 /** The instance the workbench opens for. */
@@ -10,6 +11,8 @@ interface ChatbotWorkbenchPageBaseProps {
         readonly installationId: string | null
         /** The tab the route asks for: customers or gaps. */
         readonly tab: string | null
+        /** The conversation of a customer the route opens: the Customers tab then draws its thread. */
+        readonly focus: string | null
         readonly customersLabel: string
         readonly gapsLabel: string
     }
@@ -28,12 +31,17 @@ export const ChatbotWorkbenchPageBase = (props: ChatbotWorkbenchPageBaseProps) =
             ribbon={<ChatbotFigures installationId={p.installationId} />}
             waiting={<ChatbotWaiting installationId={p.installationId} />}
             gaps={null}
-            initialTab={p.tab}
+            initialTab={p.focus === null ? p.tab : "customers"}
             tabs={[
                 {
                     id: "customers",
                     label: p.customersLabel,
-                    content: <ChatbotCustomers installationId={p.installationId} />,
+                    content:
+                        p.focus === null ? (
+                            <ChatbotCustomers installationId={p.installationId} />
+                        ) : (
+                            <ChatbotInbox installationId={p.installationId} focus={p.focus} />
+                        ),
                 },
                 {
                     id: "gaps",

@@ -9,6 +9,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./knowledge-sources.modul
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
 import { SourceCategoriesService } from "./source-categories.service"
 import { SourceCriticStageService } from "./source-critic-stage.service"
+import { SourcePartsService } from "./source-parts.service"
 import { SourceQuotaService } from "./source-quota.service"
 import { KnowledgeSourcesReadableService } from "./knowledge-sources-readable.service"
 import { KnowledgeSourcesAdminReadService } from "./knowledge-sources-admin-read.service"
@@ -45,6 +46,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 KnowledgeProgressService,
                 SourceCriticStageService,
                 SourceQuotaService,
+                SourcePartsService,
                 SourceCategoriesService,
                 DossierSourcesService,
                 ApiKnowledgeSourcesService,
@@ -58,6 +60,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 KnowledgeProgressService,
                 SourceCriticStageService,
                 SourceQuotaService,
+                SourcePartsService,
                 SourceCategoriesService,
                 DossierSourcesService,
                 ApiKnowledgeSourcesService,

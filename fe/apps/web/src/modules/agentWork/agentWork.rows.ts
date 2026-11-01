@@ -1,5 +1,7 @@
 import type { AgentWorkGoalView, AgentWorkPreset, AgentWorkTaskView, AgentWorkTriggerView } from "@/modules/types"
+import { maskPhones } from "@/modules/utils"
 import { presetOf, relative, workItemHrefOf } from "./agentWork.wire"
+import { eventWord, goalSourceWord, goalStatusWord, plainText, taskStatusWord, waitingOnWord } from "./agentWork.words"
 import type { AgentWorkContext, AgentWorkTranslator, GoalWire, TaskWire, TriggerWire } from "./agentWork.wire"
 
 /** The sentence a preset reads as. */
@@ -11,19 +13,25 @@ const presetSentence = (t: AgentWorkTranslator, preset: AgentWorkPreset | null, 
     return t("presetUnknown")
 }
 
+/** The next run of a trigger in words; none when it has none. */
+const nextOf = (context: AgentWorkContext, at: unknown): string => {
+    const when = relative(context, at)
+    return when === "" ? "" : context.t("triggerNext", { when })
+}
+
 /** One trigger as a sentence, with the next run in words. */
 export const toTriggerView = (wire: TriggerWire, context: AgentWorkContext): AgentWorkTriggerView => {
     const preset = presetOf(wire.preset)
     const atTime = wire.atTime ?? ""
     const when =
         wire.kind === "event"
-            ? context.t("triggerEvent", { event: wire.eventName ?? "" })
+            ? context.t("triggerEvent", { event: eventWord(context.t, wire.eventName) })
             : presetSentence(context.t, preset, atTime)
     const hasProbe = wire.probeKey !== null && wire.probeKey !== undefined
     return {
         id: wire.id,
         sentence: hasProbe ? context.t("triggerWithProbe", { when }) : when,
-        nextRunLabel: wire.enabled ? relative(context, wire.nextRunAt) : "",
+        nextRunLabel: wire.enabled ? nextOf(context, wire.nextRunAt) : "",
         isEnabled: wire.enabled,
         isRemovable: wire.seedKey === null || wire.seedKey === undefined,
         kind: wire.kind,
@@ -35,44 +43,24 @@ export const toTriggerView = (wire: TriggerWire, context: AgentWorkContext): Age
     }
 }
 
-const goalStatusLabel = (t: AgentWorkTranslator, status: string): string => {
-    if (status === "active") return t("goalActive")
-    if (status === "paused") return t("goalPaused")
-    if (status === "done") return t("goalDone")
-    return t("goalDropped")
-}
-
-const goalSourceLabel = (t: AgentWorkTranslator, source: string): string => {
-    if (source === "owner") return t("sourceOwner")
-    if (source === "module") return t("sourceModule")
-    return t("sourceAgent")
-}
-
 /** One goal in words. */
 export const toGoalView = (wire: GoalWire, context: AgentWorkContext): AgentWorkGoalView => {
     const due = relative(context, wire.dueAt)
     return {
         id: wire.id,
-        title: wire.title,
-        detail: wire.detail,
-        statusLabel: goalStatusLabel(context.t, wire.status),
+        title: maskPhones(plainText(context.t, wire.title)),
+        detail: maskPhones(plainText(context.t, wire.detail)),
+        statusLabel: goalStatusWord(context.t, wire.status),
         dueLabel: due === "" ? "" : context.t("goalDue", { when: due }),
         isOpen: wire.status === "active" || wire.status === "paused",
-        source: goalSourceLabel(context.t, wire.source),
+        source: goalSourceWord(context.t, wire.source),
     }
-}
-
-const waitingOnLabel = (t: AgentWorkTranslator, waitingOn: string | null | undefined): string => {
-    if (waitingOn === "approval") return t("waitApproval")
-    if (waitingOn === "member") return t("waitMember")
-    if (waitingOn === "event") return t("waitEvent")
-    return ""
 }
 
 const waitLabelOf = (wire: TaskWire, context: AgentWorkContext): string => {
     const { t } = context
     const next = relative(context, wire.nextActionAt)
-    const on = waitingOnLabel(t, wire.waitingOn)
+    const on = waitingOnWord(t, wire.waitingOn)
     if (on !== "" && next !== "") return t("waitWithNext", { on, next })
     if (on !== "") return on
     return next === "" ? "" : t("waitNext", { next })
@@ -81,9 +69,9 @@ const waitLabelOf = (wire: TaskWire, context: AgentWorkContext): string => {
 /** One task in words, with what it waits for and the way to its work item. */
 export const toTaskView = (wire: TaskWire, context: AgentWorkContext): AgentWorkTaskView => ({
     id: wire.id,
-    title: wire.title,
-    detail: wire.detail,
-    statusLabel: wire.status === "waiting" ? context.t("taskWaiting") : context.t("taskOpen"),
+    title: maskPhones(plainText(context.t, wire.title)),
+    detail: maskPhones(plainText(context.t, wire.detail)),
+    statusLabel: taskStatusWord(context.t, wire.status),
     waitLabel: waitLabelOf(wire, context),
     workItemHref: workItemHrefOf(context, wire.workItemId),
 })

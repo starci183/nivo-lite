@@ -7,7 +7,7 @@
  *   - A scene background is an image or a video from the workspace `media` bucket, a solid colour, or a gradient.
  *   - Per scene: `caption` (burned in, bottom), `text` (big headline, centred), `voiceover` (Vietnamese text to speech).
  *   - `transition` is how this scene LEAVES into the next one (ignored on the last scene).
- *   - Assets are named by their path inside the bucket `media` ("<workspace_id>/<file>") or by a Supabase Storage URL of that bucket;
+ *   - Assets are named by their path inside the bucket `media` ("<workspace_id>/<file>") or by a storage URL of that bucket;
  *     the validator normalises both to the bare path and refuses any path outside the workspace folder.
  */
 
@@ -220,7 +220,7 @@ const hasUnsafeSegment = (path: string): boolean =>
 
 /**
  * An asset reference -> the bare path inside the `media` bucket, or null. Accepts the path itself or a storage URL: the S3 form
- * (https://host/<prefix>-media/<path>?signature) or the old Supabase form (.../storage/v1/object/{sign|authenticated|public}/media/<path>[?token]). `workspaceId` (when given) must be the first path segment.
+ * (https://host/<prefix>-media/<path>?signature) or the legacy storage-api form (.../storage/v1/object/{sign|authenticated|public}/media/<path>[?token]). `workspaceId` (when given) must be the first path segment.
  */
 export const mediaPathOf = (value: unknown, workspaceId?: string): string | null => {
     if (typeof value !== "string") return null
