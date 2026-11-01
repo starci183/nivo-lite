@@ -1,6 +1,6 @@
 # Environment keys (development)
 
-Names only. Local development has no sealed member: the Supabase CLI prints its own demo credentials and the operator writes them to the untracked
+Names only. Local development has no sealed member: the operator writes the local database URL and the local keys to the untracked
 `.starcistacks/dev/api.dev.env`. The api reads the same keys as in production (see the production KEYS.md); the public build values below are the
 local ones.
 

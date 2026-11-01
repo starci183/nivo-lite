@@ -1,6 +1,6 @@
 {
   "environment": "production",
-  "provider": "supabase",
+  "provider": "postgres",
   "project": "nivo-lite",
   "runtime": "docker-swarm"
 }
