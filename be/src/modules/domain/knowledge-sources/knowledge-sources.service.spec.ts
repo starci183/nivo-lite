@@ -54,7 +54,7 @@ const updated = (em: MockEntityManager, changes: object) =>
 const insertedTx = () =>
     fakeTransaction(mockEntityManager({ insert: [KnowledgeSourceEntity, { identifiers: [{ id: "s1" }] }] }))
 const instance = { id: "i1", workspaceId: WS, moduleKey: "chatbot" }
-const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content: "Open 8 to 21" })
+const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content: "Open 8-21", visibility: "internal" })
 /** A manager that hands out one fake statement per createQueryBuilder call, in order. */
 const withStatements = (em: MockEntityManager, ...answers: Array<QueryBuilderAnswers>) => ({
     em,
@@ -106,7 +106,7 @@ describe("KnowledgeSourcesService addSource", () => {
             tags: ["a"],
             visibility: "internal",
             title: "Hours",
-            content: "Open 8 to 21",
+            content: "Open 8-21",
             status: "queued",
             progress: 0,
             storagePath: null,

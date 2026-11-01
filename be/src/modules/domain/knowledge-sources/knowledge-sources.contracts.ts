@@ -78,7 +78,7 @@ export interface AddSourceInput {
     readonly module?: string | undefined
     /** The agent instance that alone reads the document; omitted = every instance. */
     readonly installationId?: string | undefined
-    /** public or internal; internal when omitted. */
+    /** public or internal, as the owner chose; a source without one is refused. */
     readonly visibility?: string | undefined
     /** Where it came from: a folder, a ZIP, the Google Picker. */
     readonly origin?: string | undefined

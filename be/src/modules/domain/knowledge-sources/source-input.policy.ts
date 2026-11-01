@@ -90,8 +90,9 @@ const contentOf = (kind: SourceKind, url: string, content: string): string => {
     return kind === "file" ? "" : content
 }
 
-/** public only when asked for it. */
-const visibilityOf = (value: string | undefined): "public" | "internal" => (value === "public" ? "public" : "internal")
+/** The audience the owner chose, or null when none was chosen: there is no default, only the owner decides who may read. */
+const chosenVisibility = (value: string | undefined): "public" | "internal" | null =>
+    value === "public" || value === "internal" ? value : null
 
 /** The title: the one given, else for a link or file the one derived from its address or name. */
 const titleOf = (given: string, kind: SourceKind, url: string, path: string): string => {
@@ -132,6 +133,8 @@ const inputRefusal = (workspaceId: string, kind: SourceKind, body: SourceBody): 
 export const normalizeSource = (workspaceId: string, input: AddSourceInput): NormalizedSourceOutcome => {
     const kind = SOURCE_KINDS.find((candidate) => candidate === input.kind)
     if (kind === undefined) return refused(KnowledgeSourcesErrorCode.SourceKindUnknown)
+    const visibility = chosenVisibility(input.visibility)
+    if (visibility === null) return refused(KnowledgeSourcesErrorCode.VisibilityRequired)
     const url = (input.url ?? "").trim()
     const path = (input.storagePath ?? "").trim()
     const content = (input.content ?? "").trim()
@@ -150,7 +153,7 @@ export const normalizeSource = (workspaceId: string, input: AddSourceInput): Nor
         tags: tagsOf(input.tags),
         module: textOrNull(input.module, 40),
         installationId: textOrNull(input.installationId, 40),
-        visibility: visibilityOf(input.visibility),
+        visibility,
         origin: textOrNull(input.origin, 300),
     })
 }
@@ -161,7 +164,7 @@ export const normalizeUpdate = (input: UpdateSourceInput): NormalizedUpdate => (
     topic: input.topic === undefined ? null : input.topic.trim().slice(0, 80),
     tags: input.tags === undefined ? null : tagsOf(input.tags),
     module: input.module === undefined ? null : input.module.trim().slice(0, 40),
-    visibility: input.visibility === undefined ? null : visibilityOf(input.visibility),
+    visibility: chosenVisibility(input.visibility),
 })
 
 /** The new text of a source to read again, checked: present and not too long. */

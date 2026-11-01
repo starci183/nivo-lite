@@ -3491,7 +3491,7 @@ input EnqueueKnowledgeSourceInput {
   title: String! @inputBounds(maxLength: 300)
   topic: String @inputBounds(maxLength: 200)
   url: String @inputBounds(maxLength: 2048)
-  visibility: String @inputBounds(maxLength: 40)
+  visibility: String! @inputBounds(maxLength: 40)
 }
 
 type ExplainScheduleType {

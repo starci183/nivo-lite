@@ -18,17 +18,17 @@ interface DriveAddInput {
 }
 
 /**
- * Adding the ticked files: ordinary link sources marked `google_drive`, stored under their own file names, who may use them as chosen,
- * through the same queue as every other document (one `enqueueKnowledgeSource` each, with its per-item errors).
+ * Adding the ticked files: ordinary link sources marked `google_drive`, stored under their own file names,
+ * who may use them chosen by the owner and never assumed, through the same queue as every other document (one `enqueueKnowledgeSource` each, with its per-item errors).
  */
 const useDriveAdd = (input: DriveAddInput) => {
     const queue = useAddQueue(useQueueActions())
-    const [visibility, setVisibility] = useState<DriveVisibility>("internal")
+    const [visibility, setVisibility] = useState<DriveVisibility | null>(null)
     const [isAdding, setAdding] = useState(false)
     const [added, setAdded] = useState(0)
     const { listing, selected, onSent } = input
     const add = useCallback(async (): Promise<void> => {
-        if (listing === null) return
+        if (listing === null || visibility === null) return
         const chosen = listing.files.filter((file) => selected.includes(file.id) && isReadableDriveFile(file))
         setAdding(true)
         const items = queue.addChosenLinks(

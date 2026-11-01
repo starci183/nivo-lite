@@ -42,7 +42,27 @@ const buildSubject = async () => {
 
 const WS = "11111111-1111-4111-8111-111111111111"
 
-const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content: "Open 8 to 21" })
+const inputOf = builder<AddSourceInput>({
+    kind: "text",
+    title: "Hours",
+    content: "Open 8 to 21",
+    visibility: "internal",
+})
+
+describe("normalizeSource audience", () => {
+    it.each([
+        ["missing", undefined],
+        ["unknown", "other"],
+        ["empty", ""],
+    ])("refuses a source whose audience is %s: the owner chooses, nothing is assumed", async (_name, visibility) => {
+        const subject = await buildSubject()
+
+        expect(subject.normalizeSource(WS, inputOf({ visibility }))).toMatchObject({
+            kind: "refused",
+            code: KnowledgeSourcesErrorCode.VisibilityRequired,
+        })
+    })
+})
 
 describe("normalizeSource", () => {
     it("tidies a note", async () => {
@@ -80,11 +100,11 @@ describe("normalizeSource", () => {
         })
     })
 
-    it("keeps a Q&A list internal by default and empty optional fields null", async () => {
+    it("keeps empty optional fields of a Q&A list null", async () => {
         const subject = await buildSubject()
 
         expect(
-            subject.normalizeSource(WS, inputOf({ kind: "faq", topic: "  ", module: "", visibility: "other" })),
+            subject.normalizeSource(WS, inputOf({ kind: "faq", topic: "  ", module: "", visibility: "internal" })),
         ).toMatchObject({
             kind: "ok",
             value: { kind: "faq", topic: null, module: null, visibility: "internal", origin: null },

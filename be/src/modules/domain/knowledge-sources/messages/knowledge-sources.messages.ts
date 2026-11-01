@@ -17,6 +17,7 @@ export const KNOWLEDGE_SOURCES_MESSAGES: MessageBundle = {
         "errors.KNOWLEDGE_SOURCES_QUOTA_EXCEEDED":
             "Tài liệu {{size}} MB vượt quá giới hạn dữ liệu thô của workspace: đã dùng {{used}} / {{limit}} MB, còn lại {{left}} MB. Hãy xoá bớt tài liệu hoặc chọn tệp nhỏ hơn.",
         "errors.KNOWLEDGE_SOURCES_UPLOAD_MISSING": "Chưa thấy tệp được tải lên. Hãy tải lên lại.",
+        "errors.KNOWLEDGE_SOURCES_VISIBILITY_REQUIRED": "Hãy chọn Công khai hay Nội bộ cho tài liệu này.",
     },
     en: {
         "errors.KNOWLEDGE_SOURCES_NOT_FOUND": "This knowledge source was not found.",
@@ -35,5 +36,6 @@ export const KNOWLEDGE_SOURCES_MESSAGES: MessageBundle = {
         "errors.KNOWLEDGE_SOURCES_QUOTA_EXCEEDED":
             "This {{size}} MB document would exceed the workspace's raw data limit: {{used}} of {{limit}} MB used, {{left}} MB left. Delete some documents or pick a smaller file.",
         "errors.KNOWLEDGE_SOURCES_UPLOAD_MISSING": "The uploaded file was not found. Upload it again.",
+        "errors.KNOWLEDGE_SOURCES_VISIBILITY_REQUIRED": "Choose Public or Internal for this document.",
     },
 }
