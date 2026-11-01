@@ -3,6 +3,7 @@ import { builder } from "@starci/jest-preset"
 import type { AgentPersona, AgentsMdInput, TextOf } from "./agents.contracts"
 import type { ContextVersion } from "./agents.port"
 import {
+    INLINE_KNOWLEDGE_MAX,
     RULES_BUDGET,
     agentsMdOf,
     appliedContextOf,
@@ -247,7 +248,7 @@ describe("agent bundle policy", () => {
                 "bundle.rulesSection(rules=### Limit\nNo discounts)",
                 "bundle.contextSection(version=2; text=ctx)",
                 "## Memory",
-                "bundle.knowledgeSection(audience=bundle.audienceCustomer; body=bundle.knowledgeIndex(titles=Price))",
+                "bundle.knowledgeSection(audience=bundle.audienceCustomer; body=### Price\nMassage 300k)",
                 "bundle.contractSection(contract=CONTRACT)",
                 "TOOLS\n",
             ])
@@ -264,15 +265,15 @@ describe("agent bundle policy", () => {
             )
         })
 
-        it("lists the titles and never the text of the knowledge", async () => {
+        it("lists only the titles once the knowledge is too big to inline", async () => {
             const subject = await buildSubject()
 
             const md = subject.agentsMdOf(
                 inputOf({
                     audience: "internal",
                     sources: [
-                        { title: "A", content: "the first text" },
-                        { title: "B", content: "the second text" },
+                        { title: "A", content: "x".repeat(INLINE_KNOWLEDGE_MAX) },
+                        { title: "B", content: "y" },
                     ],
                 }),
                 t,
@@ -281,8 +282,6 @@ describe("agent bundle policy", () => {
             expect(md).toContain(
                 "bundle.knowledgeSection(audience=bundle.audienceInternal; body=bundle.knowledgeIndex(titles=A; B))",
             )
-            expect(md).not.toContain("the first text")
-            expect(md).not.toContain("the second text")
         })
     })
 })
