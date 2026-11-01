@@ -31,6 +31,7 @@ const VIEW: AgentGraphView = {
     problems: [],
     cards: [],
     proposals: [],
+    warnings: [],
     facts: [{ key: "order.amount_vnd", label: "the order amount", type: "number", unit: "vnd", allowed: [] }],
 }
 

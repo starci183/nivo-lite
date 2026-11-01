@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { MAX_LIMITS, MAX_LIMIT_LENGTH, MAX_TASK_LENGTH } from "./agent-graphs-contract.contracts"
 import { MAX_CONDITION_TERMS, MAX_DOES_LENGTH, MAX_GRAPH_NODES, MAX_TITLE_LENGTH } from "./agent-graphs.contracts"
 import type { Condition, GraphDocument } from "./agent-graphs.contracts"
 
@@ -155,7 +156,43 @@ const rightSchema = z
     })
     .strict()
 
+const intentSourceSchema = z.discriminatedUnion("kind", [
+    z
+        .object({
+            kind: z.literal("brain"),
+            factId: z.string().max(200),
+            passage: z.string().max(2000),
+            valueHash: z.string().max(200),
+        })
+        .strict(),
+    z.object({ kind: z.literal("chat"), messageId: z.string().max(200), quote: z.string().max(500) }).strict(),
+    z.object({ kind: z.literal("owner"), memberId: z.string().max(200) }).strict(),
+])
+
+const businessLimitSchema = z
+    .object({
+        text: z.string().min(1).max(MAX_LIMIT_LENGTH),
+        triggers: z.array(z.enum(["customer_message", "tag"])).max(2),
+        audiences: z.array(z.enum(["customer", "manager", "staff"])).max(3),
+        sources: z.array(intentSourceSchema).max(10),
+    })
+    .strict()
+
+/** The business half of one contract: the task and limits of this shop, frozen in a version. */
+export const intentBusinessSchema = z
+    .object({
+        intent: z.string().min(1).max(100),
+        task: z.string().max(MAX_TASK_LENGTH),
+        limits: z.array(businessLimitSchema).max(MAX_LIMITS),
+        sources: z.array(intentSourceSchema).max(10),
+    })
+    .strict()
+
 /** The graph of one agent, validated at every write and every read: nothing else parses. */
 export const graphDocumentSchema: z.ZodType<GraphDocument> = z
-    .object({ nodes: z.array(nodeSchema).max(MAX_GRAPH_NODES * 2), rights: z.array(rightSchema).max(10) })
+    .object({
+        nodes: z.array(nodeSchema).max(MAX_GRAPH_NODES * 2),
+        rights: z.array(rightSchema).max(10),
+        contracts: z.array(intentBusinessSchema).max(MAX_GRAPH_NODES).optional(),
+    })
     .strict()

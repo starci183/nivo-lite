@@ -58,6 +58,16 @@ export class AgentGraphPublishService {
         return this.publishDocument(await this.requireState(workspaceId, agentId), document, by, "", "learned")
     }
 
+    /** Publishes the graph a confirmed contract proposal made as the next version (a change made in the setup chat), under the same checks as any change. */
+    async publishContract(
+        workspaceId: string,
+        agentId: string,
+        document: GraphDocument,
+        by: Publisher,
+    ): Promise<GraphVersionView> {
+        return this.publishDocument(await this.requireState(workspaceId, agentId), document, by, "", "chat")
+    }
+
     /** Publishes the graph a confirmed Brain conflict made as the next version, under the same checks as any change. */
     async publishConflict(
         workspaceId: string,

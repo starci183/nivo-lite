@@ -1,4 +1,5 @@
 import type { ApprovalPolicy, ApproverGroup } from "@modules/domain/authority-rules"
+import type { FrameAction, IntentBusiness } from "@modules/domain/intent-contracts"
 import type { DataRight } from "@modules/domain/mcp-gateway"
 
 /** The most nodes one graph may hold. */
@@ -212,6 +213,8 @@ export interface GraphDocument {
     readonly nodes: ReadonlyArray<GraphNode>
     /** The rights. */
     readonly rights: ReadonlyArray<DataRight>
+    /** The business half of the contracts the owner approved, by intent; a graph with none runs on the frames alone. */
+    readonly contracts?: ReadonlyArray<IntentBusiness> | undefined
 }
 
 /** One thing a fact can be compared with: its type, unit and allowed values. */
@@ -284,6 +287,10 @@ export interface GraphProblem {
         | "no_data_right"
         | "outsider_wide"
         | "bad_condition"
+        | "intent_no_frame"
+        | "trigger_no_intent"
+        | "contract_unknown_intent"
+        | "contract_no_task"
     /** The node key. */
     readonly nodeKey: string
     /** The branch key. */
@@ -334,6 +341,8 @@ export interface GraphContext {
     readonly groupHasPeople: (group: ApproverGroup) => boolean
     /** Whether the agent faces customers. */
     readonly facesCustomers: boolean
+    /** The catalogue actions of the module, which the frames of the contracts are made from; absent leaves the contract checks out. */
+    readonly actions?: ReadonlyArray<FrameAction> | undefined
 }
 
 /** One decision the learning reads, newest last. */
@@ -390,7 +399,7 @@ export type GraphChangeKind = "seed" | "chat" | "edit" | "conflict" | "learned" 
 export type ProposalStatus = "open" | "confirmed" | "declined" | "superseded"
 
 /** The kinds of proposal. */
-export type ProposalKind = "conflict" | "learned" | "template_update"
+export type ProposalKind = "conflict" | "learned" | "template_update" | "gap" | "contract"
 
 /** How a decision closed. */
 export type DecisionClosedAs = "done" | "approved" | "edited" | "rejected" | "expired"
@@ -447,6 +456,10 @@ export interface GraphProposalView {
     readonly before?: string | null | undefined
     /** For a conflict: the passage the Brain says now; null for the other kinds. */
     readonly after?: string | null | undefined
+    /** For a contract: the intent it is about; null for the other kinds. */
+    readonly intent?: string | null | undefined
+    /** For a gap: the question nothing fitted; for a contract: the task the shop states; null for the other kinds. */
+    readonly text?: string | null | undefined
 }
 
 /** The graph of one agent as the editor opens it. */
@@ -475,6 +488,8 @@ export interface AgentGraphView {
     readonly proposals: ReadonlyArray<GraphProposalView>
     /** The facts a condition may be written on. */
     readonly facts: ReadonlyArray<FactView>
+    /** What is wrong with the contracts of the draft and does not stop a publish. */
+    readonly warnings: ReadonlyArray<GraphProblem>
 }
 
 /** Looks a sentence of the message catalog up in the language of the reader, so a policy stays pure and holds no wording. */

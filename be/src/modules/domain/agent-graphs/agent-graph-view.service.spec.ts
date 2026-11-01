@@ -164,3 +164,27 @@ describe("AgentGraphViewService.viewOf", () => {
         expect(OWNER_EXAMPLE).toHaveLength(3)
     })
 })
+
+describe("AgentGraphViewService.viewOf the warnings of the contracts", () => {
+    it("shows a contract the graph cannot use as a warning that stops nothing", async () => {
+        const draft = {
+            ...graphOf(OWNER_EXAMPLE),
+            contracts: [{ intent: "give_discount", task: "", limits: [], sources: [] }],
+        }
+        const service = await build(stateOf({ draft }))
+
+        const view = await service.viewOf("ws-1", "agent-1", "en")
+
+        expect(view.problems).toEqual([])
+        expect(view.warnings.map((warning) => [warning.code, warning.detail])).toEqual([
+            ["contract_unknown_intent", "give_discount"],
+            ["contract_no_task", "give_discount"],
+        ])
+    })
+
+    it("shows none for a graph with no contracts block", async () => {
+        const service = await build(stateOf())
+
+        await expect(service.viewOf("ws-1", "agent-1", "en")).resolves.toMatchObject({ warnings: [] })
+    })
+})
