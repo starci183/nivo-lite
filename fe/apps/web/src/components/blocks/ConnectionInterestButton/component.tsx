@@ -1,5 +1,4 @@
-import { Alert, Button } from "@starci/grammar/common"
-import { connectionInterestButtonClassNames as classNames } from "./classNames"
+import { Alert, Button, Stack } from "@starci/grammar/common"
 
 /** The "I want it" command of a planned connector and what it answered. */
 export interface ConnectionInterestButtonBaseProps {
@@ -20,7 +19,7 @@ export const ConnectionInterestButtonBase = (props: ConnectionInterestButtonBase
     const { props: command, on } = props
 
     return (
-        <div className={classNames.stack}>
+        <Stack gap="section">
             <div>
                 <Button
                     intent="commit"
@@ -32,6 +31,6 @@ export const ConnectionInterestButtonBase = (props: ConnectionInterestButtonBase
                 </Button>
             </div>
             {command.note === undefined ? null : <Alert tone="informative" title={command.note} />}
-        </div>
+        </Stack>
     )
 }

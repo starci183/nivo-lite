@@ -1,5 +1,5 @@
 import type { AgentStepView, DataSlot, SlotLabels } from "@/modules/types"
-import { Alert, CheckboxGroup, Input, SegmentedControl, Text } from "@starci/grammar/common"
+import { Alert, CheckboxGroup, Grid, Input, SegmentedControl, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { TelegramUserChats } from "@/components/composites/TelegramUserChats"
 import { TelegramUserLogin } from "@/components/composites/TelegramUserLogin"
@@ -7,7 +7,6 @@ import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { backAction, closeAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
 import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
-import { telegramUserWizardClassNames as classNames } from "./classNames"
 
 /** A field of the personal Telegram login, also its stage. */
 type LoginField = "phone" | "code" | "password"
@@ -191,7 +190,7 @@ const actionsOf = (view: TelegramUserWizardBaseProps, ready: TelegramReady): Rea
 /** Step "consent": the connection name and the commitment the owner agrees to before logging in. */
 const ConsentStep = ({ props, on }: TelegramUserWizardBaseProps) => (
     <>
-        <div className={classNames.fields}>
+        <Grid kind="form">
             <Input
                 id="tgu-name"
                 name="name"
@@ -201,7 +200,7 @@ const ConsentStep = ({ props, on }: TelegramUserWizardBaseProps) => (
                 value={props.consent.name}
                 onValueChange={(value) => on.field("name", value)}
             />
-        </div>
+        </Grid>
         <Text size="sm" weight="semibold">
             {props.text.consentTitle}
         </Text>

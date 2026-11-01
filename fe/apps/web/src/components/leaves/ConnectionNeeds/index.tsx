@@ -1,5 +1,4 @@
-import { Text, TextAction } from "@starci/grammar/common"
-import { NEEDS_CLASS_NAME } from "./classNames"
+import { Stack, Text, TextAction } from "@starci/grammar/common"
 
 /** The connections an agent waits for, already in the reader language, and where to connect them. */
 export interface ConnectionNeedsProps {
@@ -12,7 +11,7 @@ export interface ConnectionNeedsProps {
 /** What a `needs_connection` agent waits for, with a link to Settings, Connections; nothing when it waits for nothing. */
 export const ConnectionNeeds = (props: ConnectionNeedsProps) =>
     props.lines.length === 0 ? null : (
-        <div className={NEEDS_CLASS_NAME}>
+        <Stack gap="identity">
             {props.lines.map((line) => (
                 <Text key={line} size="xs" tone="muted">
                     {line}
@@ -21,5 +20,5 @@ export const ConnectionNeeds = (props: ConnectionNeedsProps) =>
             <TextAction size="xs" href={props.href}>
                 {props.linkLabel}
             </TextAction>
-        </div>
+        </Stack>
     )

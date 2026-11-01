@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { Alert, Button, Form } from "@starci/grammar/common"
-import { AUTH_FIELDS_CLASS_NAME } from "./classNames"
+import { Alert, Button, Form, Stack } from "@starci/grammar/common"
 
 /** The words and state of one auth form step. */
 interface AuthFormProps {
@@ -19,7 +18,7 @@ interface AuthFormProps {
 /** One auth form step: a labelled form, the submit error (when there is one) above the fields. */
 export const AuthForm = (props: AuthFormProps) => (
     <Form label={props.label} onSubmit={props.onSubmit} isPending={props.isPending}>
-        <div className={AUTH_FIELDS_CLASS_NAME}>
+        <Stack gap="section">
             {props.error === undefined ? null : (
                 <Alert title={props.error.title} description={props.error.text} tone="negative" />
             )}
@@ -30,6 +29,6 @@ export const AuthForm = (props: AuthFormProps) => (
                 </Button>
             )}
             {props.footer}
-        </div>
+        </Stack>
     </Form>
 )

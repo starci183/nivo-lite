@@ -1,5 +1,0 @@
-/** The app step's fields in one column (RESPONSIVE-1) and the provider link row. */
-export const zaloWizardClassNames = {
-    fields: "flex min-w-0 flex-col gap-4",
-    buttons: "flex flex-wrap items-center gap-2",
-} as const

@@ -1,7 +1,6 @@
-import { Badge, Button, List, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, List, ListRow, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { FIELDS_CLASS } from "./classNames"
 
 /** One staff member as the list draws it. */
 export interface StaffRowView {
@@ -35,7 +34,7 @@ export const AuthorityStaffBase = (props: AuthorityStaffBaseProps) => {
     const view = props.props
     return (
         <SurfaceCard label={view.title} headingLevel={2}>
-            <div className={FIELDS_CLASS}>
+            <Stack gap="section">
                 <Text size="sm" tone="muted">
                     {view.description}
                 </Text>
@@ -69,7 +68,7 @@ export const AuthorityStaffBase = (props: AuthorityStaffBaseProps) => {
                 <Text size="xs" tone="muted">
                     {view.note}
                 </Text>
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 }

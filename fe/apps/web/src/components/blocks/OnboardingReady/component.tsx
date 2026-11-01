@@ -1,5 +1,5 @@
-import { Button, Heading, SurfaceCard, Text } from "@starci/grammar/common"
-import { STACK_CLASS_NAME } from "./classNames"
+import { Button, Heading, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { CENTERED_CLASS_NAME } from "./classNames"
 
 /** Copy and state the connected ready screen supplies. */
 export interface OnboardingReadyBaseProps {
@@ -16,14 +16,16 @@ export interface OnboardingReadyBaseProps {
 /** Draws the end of the first run: the workspace is ready, the first thing to do, and the way in. */
 export const OnboardingReadyBase = (props: OnboardingReadyBaseProps) => (
     <SurfaceCard ariaLabel={props.props.title} measure="form">
-        <div className={STACK_CLASS_NAME}>
-            <Heading level={1} isSkeleton={props.props.isSkeleton}>
-                {props.props.heading}
-            </Heading>
-            <Text tone="muted">{props.props.description}</Text>
-            <Button intent="commit" onPress={props.on.enter}>
-                {props.props.enterLabel}
-            </Button>
+        <div className={CENTERED_CLASS_NAME}>
+            <Stack gap="section" align="center">
+                <Heading level={1} isSkeleton={props.props.isSkeleton}>
+                    {props.props.heading}
+                </Heading>
+                <Text tone="muted">{props.props.description}</Text>
+                <Button intent="commit" onPress={props.on.enter}>
+                    {props.props.enterLabel}
+                </Button>
+            </Stack>
         </div>
     </SurfaceCard>
 )

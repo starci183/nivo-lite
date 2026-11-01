@@ -1,10 +1,10 @@
 import { Fragment } from "react"
-import { Divider, Heading, NumberField, SegmentedControl, Text } from "@starci/grammar/common"
+import { Divider, Heading, NumberField, SegmentedControl, Stack, Text } from "@starci/grammar/common"
 import { AuthoritySection } from "@/components/composites/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/composites/AuthoritySection"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { GROUP_CLASS, RULE_LIMIT_CLASS, RULE_LIST_CLASS, RULE_NAME_CLASS, RULE_ROW_CLASS } from "./classNames"
+import { RULE_LIMIT_CLASS, RULE_ROW_CLASS } from "./classNames"
 
 /** One mode a rule can be set to. */
 export interface ModeOptionView {
@@ -61,21 +61,21 @@ export const AuthorityScopeBase = (props: AuthorityScopeBaseProps) => {
             {(groups, isSkeleton) => (
                 <AuthoritySection section={view.section} isSkeleton={isSkeleton} onSave={props.on.save}>
                     {groups.map((group) => (
-                        <div key={group.department} className={GROUP_CLASS}>
+                        <Stack key={group.department} gap="inline">
                             <Heading level={3}>{group.title}</Heading>
                             {group.shared === "" ? null : (
                                 <Text size="xs" tone="muted">
                                     {group.shared}
                                 </Text>
                             )}
-                            <div className={RULE_LIST_CLASS}>
+                            <Stack gap="row">
                                 {group.rows.map((row, index) => (
                                     <Fragment key={row.key}>
                                         {index > 0 ? <Divider semantics="presentation" /> : null}
                                         <div className={RULE_ROW_CLASS}>
-                                            <div className={RULE_NAME_CLASS}>
+                                            <Stack gap="identity">
                                                 <Text weight="medium">{row.name}</Text>
-                                            </div>
+                                            </Stack>
                                             <SegmentedControl
                                                 label={row.modeLabel}
                                                 isSkeleton={isSkeleton}
@@ -101,8 +101,8 @@ export const AuthorityScopeBase = (props: AuthorityScopeBaseProps) => {
                                         </div>
                                     </Fragment>
                                 ))}
-                            </div>
-                        </div>
+                            </Stack>
+                        </Stack>
                     ))}
                     <Text size="xs" tone="muted">
                         {view.limitHint}

@@ -1,11 +1,10 @@
-import { Alert, Button, Input, Text } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Grid, Input, Text } from "@starci/grammar/common"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { backAction, nextAction, startActions, WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
 import { WizardFrame } from "@/components/composites/WizardFrame"
 import { WizardGuideView } from "@/components/composites/WizardGuideView"
 import type { AgentStepView, CopyLabels, GuideScreen, WizardNote } from "@/modules/types"
-import { telegramWizardClassNames as classNames } from "./classNames"
 
 /** Copy, state and commands of the Telegram wizard. */
 export interface TelegramWizardBaseProps {
@@ -87,11 +86,11 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
         >
             {view.step === "bot" ? (
                 <>
-                    <div className={classNames.buttons}>
+                    <Cluster gap="inline">
                         <Button intent="neutral" href={view.providerHref} target="_blank" rel="noreferrer">
                             {view.text.openProvider}
                         </Button>
-                    </div>
+                    </Cluster>
                     <WizardGuideView
                         screens={view.screens}
                         copy={view.copy}
@@ -101,7 +100,7 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
                 </>
             ) : null}
             {view.step === "token" ? (
-                <div className={classNames.fields}>
+                <Grid kind="form" columns={1}>
                     <Input
                         id="tg-name"
                         name="name"
@@ -121,7 +120,7 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
                         value={view.form.token}
                         onValueChange={on.token}
                     />
-                </div>
+                </Grid>
             ) : null}
             {view.step === "check" && view.isChecking ? (
                 <Text size="sm" live="polite">
