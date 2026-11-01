@@ -45,6 +45,7 @@ import { RunMarketingTickQueueModule } from "@features/jobs/run-marketing-tick"
 import { RunLeadGenQueueModule } from "@features/jobs/run-lead-gen"
 import { SweepRealtimeEventsQueueModule } from "@features/jobs/sweep-realtime-events"
 import { SweepSystemHistoryQueueModule } from "@features/jobs/sweep-system-history"
+import { RunAgentStepQueueModule } from "@features/jobs/run-agent-step"
 import { RunAgentTurnQueueModule } from "@features/jobs/run-agent-turn"
 import { FireAgentScheduleQueueModule } from "@features/jobs/fire-agent-schedule"
 import { SweepAgentWorkQueueModule } from "@features/jobs/sweep-agent-work"
@@ -97,6 +98,7 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     RunShiftsAlertsQueueModule.register({}),
     RunAccountingMorningQueueModule.register({}),
     RunMarketingTickQueueModule.register({}),
+    RunAgentStepQueueModule.register({}),
     RunAgentTurnQueueModule.register({}),
     FireAgentScheduleQueueModule.register({}),
     SweepAgentWorkQueueModule.register({}),
