@@ -14,6 +14,7 @@ import { useOverviewData } from "./useOverviewData"
  */
 export const useOverviewRail = () => {
     const t = useTranslations("responsibilities")
+    const g = useTranslations("governance")
     const { dashboard } = useOverviewData()
     const { installations } = useInstallations()
     return useMemo(() => {
@@ -32,7 +33,7 @@ export const useOverviewRail = () => {
                       ]
                     : [],
             ),
-            activity: toActivityModels(dashboard.events, new Date(), t),
+            activity: toActivityModels(dashboard.events, new Date(), t, g),
         }
-    }, [dashboard, installations, t])
+    }, [dashboard, installations, t, g])
 }

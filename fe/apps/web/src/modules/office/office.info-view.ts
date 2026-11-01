@@ -33,7 +33,7 @@ const askedLineOf = (work: OfficeWork, reason: string): string =>
 const workJumpOf = (work: OfficeWork, words: OfficeWords, context: OfficeContext): OfficeJumpRowView => {
     const agent = departmentAgentOf(context, work.department)
     const lead = leadNameOf(context, work.leadId)
-    const action = words.g(`action_${work.action}`)
+    const action = words.actionWord(work.action)
     return {
         id: work.id,
         title: lead === null ? action : [action, lead].join(" · "),

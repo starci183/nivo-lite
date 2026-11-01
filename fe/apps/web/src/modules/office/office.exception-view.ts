@@ -73,7 +73,7 @@ const candidateChoicesOf = (work: OfficeWork, words: OfficeWords): OfficeExcepti
     }))
 
 const workTitleOf = (work: OfficeWork, words: OfficeWords, leadName: string | null): string => {
-    const action = words.g(`action_${work.action}`)
+    const action = words.actionWord(work.action)
     return leadName === null ? action : [action, leadName].join(" · ")
 }
 

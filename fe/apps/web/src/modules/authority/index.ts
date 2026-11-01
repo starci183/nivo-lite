@@ -29,3 +29,4 @@ export type {
     RuleUnit,
     StoredRule,
 } from "./rules"
+export { actionWordOf } from "./actionWord"

@@ -2,6 +2,7 @@
 
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useMemo } from "react"
+import { actionWordOf } from "@/hooks/actionWord"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { isModuleKey, pickCopy } from "@/modules/catalog"
 import type { OfficeWords } from "@/modules/office"
@@ -20,6 +21,7 @@ export const useOfficeWords = (): OfficeWords => {
         return {
             t: (key, values) => t(key, values),
             g: (key, values) => g(key, values),
+            actionWord: (action) => actionWordOf(g, action),
             time,
             day,
             stamp: (iso) => `${time(iso)}, ${day(iso)}`,

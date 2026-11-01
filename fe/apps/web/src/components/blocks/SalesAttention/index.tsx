@@ -16,6 +16,7 @@ import { leadPath } from "@/modules/routes"
 import type { AttentionRow } from "@/modules/types"
 import { SalesAttentionBase } from "./component"
 import type { AttentionItemView } from "./component"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** The words of a message that has any, else null. */
 const textOrNull = (text: string | undefined): string | null => (text === undefined || text === "" ? null : text)
@@ -70,7 +71,7 @@ export const SalesAttention = () => {
             ? t("needMissing", { fields: row.missing.map(fieldLabel).join(", ") })
             : row.need
     const titleOf = (row: AttentionRow): string | null =>
-        row.action && row.kind !== "overdue" && row.kind !== "awaiting_reply" ? g(`action_${row.action}`) : null
+        row.action && row.kind !== "overdue" && row.kind !== "awaiting_reply" ? actionWordOf(g, row.action) : null
     const itemOf = (row: AttentionRow): AttentionItemView => ({
         key: row.key,
         kind: row.kind,

@@ -12,6 +12,7 @@ import type {
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { flowViewMapper } from "./leads.shared"
+import { actionWordOf } from "@/hooks/actionWord"
 
 type Tones = Readonly<Record<string, BadgeTone>>
 
@@ -77,7 +78,7 @@ export const useLeadFlowView = (): ((flow: LeadFlow) => FlowView) => {
     })
     const decisionOf = (decision: DecisionRow): FlowEntryView => {
         const department = g(`dept_${decision.department}`)
-        const action = g(`action_${decision.action}`)
+        const action = actionWordOf(g, decision.action)
         const gateReason = decision.reason ? g(`reason_${decision.reason}`) : null
         return {
             id: decision.id,
@@ -116,7 +117,7 @@ const stepOfOf = (
             id: item.id,
             head: joined([
                 g(`dept_${item.department}`),
-                g(`action_${item.action}`),
+                actionWordOf(g, item.action),
                 g(`status_${item.status}`),
                 item.decidedPath ? g(`path_${item.decidedPath}`) : null,
             ]),

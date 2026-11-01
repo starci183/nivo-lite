@@ -9,6 +9,7 @@ import { asksPerson, defaultRule, modeKindOf } from "@/modules/permissions"
 import type { Approver, ModeKind } from "@/modules/permissions"
 import type { DataSlot } from "@/modules/types"
 import { usePermissionWords } from "./usePermissionWords"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** The tone of the badge a mode wears. */
 type ModeTone = "success" | "warning" | "danger"
@@ -69,7 +70,7 @@ export const usePermissionBoard = () => {
         ]
         return {
             id: `${department}/${action}`,
-            title: g(`action_${action}`),
+            title: actionWordOf(g, action),
             description: line.filter((part) => part !== "").join(" · "),
             modeLabel: words.modeWords(shown),
             modeTone: TONES[modeKindOf(shown)],

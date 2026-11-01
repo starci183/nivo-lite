@@ -17,6 +17,7 @@ import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 import type { DecisionKind, DecisionRecord } from "@/modules/types"
 import { DecisionsBoardBase, type DecisionListView, type DecisionsBoardRowView } from "./component"
+import { actionWordOf } from "@/hooks/actionWord"
 
 const ALL = "all"
 
@@ -45,7 +46,7 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
         const parts = splitBasis(row.note)
         return {
             id: row.id,
-            actionLabel: g(`action_${row.action}`),
+            actionLabel: actionWordOf(g, row.action),
             outcomeLabel: g(`outcome_${row.outcome}`),
             outcomeTone: outcomeTone(row.outcome),
             when: format.dateTime(new Date(row.created_at), { dateStyle: "short", timeStyle: "short" }),
