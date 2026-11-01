@@ -28,23 +28,23 @@ const entry = (moduleKey: string): ActionEntry => ({
     label: { vi: "Send an invoice", en: "Send an invoice" },
 })
 
-const INVOICE_ID = "3f1c2b9e-1d2a-4c3b-9a8e-0a1b2c3d4e5f"
-const LEAD_ID = "7a2d4c1e-5b6f-4e8a-b1c2-9f8e7d6c5b4a"
-
 const action = (over: Partial<InternalAction> = {}): InternalAction => ({
     action: "send_invoice",
-    subject: { type: "invoice", id: INVOICE_ID },
-    leadId: LEAD_ID,
+    subject: { type: "invoice", id: "0f8fad5b-d9cb-469f-a165-70867728950e" },
+    leadId: "6f1c2a44-3b7e-4c11-9a52-0d3e8f7b1a10",
     fields: { amount_vnd: 9_000_000 },
     summary: "Send invoice 1",
     ...over,
 })
 
-const proposal = (over: Partial<InternalProposal> = {}): StoredProposal => ({
+/** What a model writes: the refusals are the reader's, never the model's. */
+type WrittenProposal = Omit<InternalProposal, "refused">
+
+const proposal = (over: Partial<WrittenProposal> = {}): StoredProposal => ({
     text: JSON.stringify(full(over)),
 })
 
-const full = (over: Partial<InternalProposal>): InternalProposal => ({
+const full = (over: Partial<WrittenProposal>): WrittenProposal => ({
     reply: "On it.",
     tasks: [],
     actions: [],
@@ -157,8 +157,8 @@ describe("InternalProposalSettlerService > actions", () => {
             {
                 action: "send_invoice",
                 subject_type: "invoice",
-                subject_id: INVOICE_ID,
-                lead_id: LEAD_ID,
+                subject_id: "0f8fad5b-d9cb-469f-a165-70867728950e",
+                lead_id: "6f1c2a44-3b7e-4c11-9a52-0d3e8f7b1a10",
                 dedupeKey: "agentturn:wake-5:0",
                 preset: true,
                 forceAsk: undefined,
@@ -244,10 +244,32 @@ describe("InternalProposalSettlerService > the shape of a request", () => {
 
         expect(engine.runWork.mock.calls.map(([, spec]) => [spec.subject_type, spec.subject_id, spec.lead_id])).toEqual(
             [
-                ["lead", null, LEAD_ID],
+                ["lead", null, "6f1c2a44-3b7e-4c11-9a52-0d3e8f7b1a10"],
                 ["inbound", null, null],
             ],
         )
+    })
+})
+
+describe("InternalProposalSettlerService > an id that is no record's", () => {
+    it("refuses a subject that is no record id: the engine is not called, the refusal is audited, the reply still leaves", async () => {
+        const { settler, engine, events } = await build()
+        const stored = {
+            text: JSON.stringify({
+                reply: "Noted",
+                actions: [{ action: "send_invoice", subject: { type: "conversation", id: "chatbot" } }],
+            }),
+        }
+
+        const settled = await settler.settle(agentTurnViewOf({ source: "tag" }), stored, input)
+
+        expect(engine.runWork).not.toHaveBeenCalled()
+        expect(events.record).toHaveBeenCalledWith(expect.objectContaining({ kind: "agent.action_dropped" }))
+        expect(settled).toMatchObject({
+            kind: "settled",
+            reply: "Noted",
+            actions: [{ outcome: "dropped", reason: "invalid_record_id" }],
+        })
     })
 })
 

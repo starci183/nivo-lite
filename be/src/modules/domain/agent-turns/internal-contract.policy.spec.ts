@@ -10,18 +10,42 @@ const build = async () => {
     return moduleRef.get<{ readInternalProposal: typeof readInternalProposal }>(SUBJECT)
 }
 
-const INVOICE_ID = "3f1c2b9e-1d2a-4c3b-9a8e-0a1b2c3d4e5f"
-const LEAD_ID = "7a2d4c1e-5b6f-4e8a-b1c2-9f8e7d6c5b4a"
-
 const json = (value: unknown): string => JSON.stringify(value)
 
 const action = {
     action: "send_invoice",
-    subject: { type: "invoice", id: INVOICE_ID },
-    leadId: LEAD_ID,
+    subject: { type: "invoice", id: "0f8fad5b-d9cb-469f-a165-70867728950e" },
+    leadId: "6f1c2a44-3b7e-4c11-9a52-0d3e8f7b1a10",
     fields: { amount_vnd: 4_000_000, note: "late", urgent: true, calm: false, empty: null },
     summary: "Chase the invoice",
 }
+
+describe("readInternalProposal > ids that are no record's", () => {
+    it.each([
+        ["a subject named by a handle", { ...action, subject: { type: "conversation", id: "chatbot" } }],
+        ["a lead named by a word", { ...action, leadId: "customer" }],
+    ])("refuses %s alone and keeps the rest of the proposal", async (_case, bad) => {
+        const subject = await build()
+
+        const proposal = subject.readInternalProposal(
+            json({ reply: "Noted", tasks: [{ op: "done", key: "old" }], actions: [bad, action], needsHuman: true }),
+        )
+
+        expect(proposal.reply).toBe("Noted")
+        expect(proposal.needsHuman).toBe(true)
+        expect(proposal.tasks).toHaveLength(1)
+        expect(proposal.actions.map((kept) => kept.subject?.id)).toEqual(["0f8fad5b-d9cb-469f-a165-70867728950e"])
+        expect(proposal.refused).toEqual([{ action: "send_invoice", reason: "invalid_record_id" }])
+    })
+
+    it("names an action that gave no name", async () => {
+        const subject = await build()
+
+        const proposal = subject.readInternalProposal(json({ actions: [{ leadId: "x" }] }))
+
+        expect(proposal.refused).toEqual([{ action: "unnamed", reason: "invalid_record_id" }])
+    })
+})
 
 describe("readInternalProposal > a valid proposal", () => {
     it("reads every part", async () => {
@@ -54,12 +78,13 @@ describe("readInternalProposal > a valid proposal", () => {
             actions: [
                 {
                     action: "send_invoice",
-                    subject: { type: "invoice", id: INVOICE_ID },
-                    leadId: LEAD_ID,
+                    subject: { type: "invoice", id: "0f8fad5b-d9cb-469f-a165-70867728950e" },
+                    leadId: "6f1c2a44-3b7e-4c11-9a52-0d3e8f7b1a10",
                     fields: { amount_vnd: 4_000_000, note: "late", urgent: "true", calm: "false", empty: null },
                     summary: "Chase the invoice",
                 },
             ],
+            refused: [],
             needsHuman: true,
             reason: "Large amount",
         })
@@ -71,6 +96,7 @@ describe("readInternalProposal > a valid proposal", () => {
         expect(subject.readInternalProposal("{}")).toEqual({
             reply: "",
             tasks: [],
+            refused: [],
             actions: [],
             needsHuman: false,
             reason: "",
@@ -103,6 +129,7 @@ describe("readInternalProposal > what is not a proposal", () => {
         expect(subject.readInternalProposal("  Just words.  ")).toEqual({
             reply: "Just words.",
             tasks: [],
+            refused: [],
             actions: [],
             needsHuman: false,
             reason: "",
@@ -125,23 +152,7 @@ describe("readInternalProposal > what is not a proposal", () => {
             json({ reply: "Kept", tasks: [{ op: "explode", key: "k" }], actions: [action] }),
         )
 
-        expect(proposal).toEqual({ reply: "Kept", tasks: [], actions: [], needsHuman: false, reason: "" })
-    })
-
-    it("keeps the reply and drops the actions when a subject id or a lead id is no row id", async () => {
-        const subject = await build()
-
-        const wordSubject = { ...action, subject: { type: "invoice", id: "chatbot" } }
-        const wordLead = { ...action, leadId: "lead-1" }
-
-        expect(subject.readInternalProposal(json({ reply: "Kept", actions: [wordSubject] }))).toEqual({
-            reply: "Kept",
-            tasks: [],
-            actions: [],
-            needsHuman: false,
-            reason: "",
-        })
-        expect(subject.readInternalProposal(json({ reply: "Kept", actions: [wordLead] })).actions).toEqual([])
+        expect(proposal).toEqual({ reply: "Kept", tasks: [], actions: [], refused: [], needsHuman: false, reason: "" })
     })
 
     it("falls back to the whole text when a failing object has no reply of its own", async () => {

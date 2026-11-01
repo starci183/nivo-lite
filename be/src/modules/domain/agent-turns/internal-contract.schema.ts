@@ -18,8 +18,8 @@ const FIELD_TEXT_MAX = 2000
 const FIELDS_MAX = 30
 const TIME_MAX = 40
 
-/** A row id, which is a uuid column: a word the model wrote there ("chatbot") refuses the proposal instead of failing the write. */
-const idSchema = z.guid()
+/** The id of a record: a uuid, because the columns it reaches are. A name or a handle the model made up is no id. */
+const recordIdSchema = z.uuid()
 
 const subjectTypeSchema = z.enum([
     "lead",
@@ -48,10 +48,16 @@ const taskSchema = z.strictObject({
     nextActionAt: z.iso.datetime({ offset: true }).max(TIME_MAX).optional(),
 })
 
+/** The ids of an action, read on their own: an action that fails here is refused alone, and the rest of the proposal stands. */
+export const actionIdsSchema = z.looseObject({
+    subject: z.looseObject({ id: recordIdSchema }).optional(),
+    leadId: recordIdSchema.nullish(),
+})
+
 const actionSchema = z.strictObject({
     action: z.string().trim().min(1).max(ACTION_MAX),
-    subject: z.strictObject({ type: subjectTypeSchema, id: idSchema }).optional(),
-    leadId: idSchema.nullish(),
+    subject: z.strictObject({ type: subjectTypeSchema, id: recordIdSchema }).optional(),
+    leadId: recordIdSchema.nullish(),
     fields: z
         .record(z.string().max(FIELD_NAME_MAX), fieldValueSchema)
         .refine((fields) => Object.keys(fields).length <= FIELDS_MAX)

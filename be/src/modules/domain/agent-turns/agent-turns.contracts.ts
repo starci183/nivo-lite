@@ -70,6 +70,14 @@ export interface InternalAction {
     readonly summary: string
 }
 
+/** An action of a proposal that goes no further, and why. */
+export interface RefusedInternalAction {
+    /** The action as it was asked for. */
+    readonly action: string
+    /** The typed reason, kept in the audit. */
+    readonly reason: string
+}
+
 /** What a tag or background turn answers. */
 export interface InternalProposal {
     /** What to say; empty when there is nothing to say. */
@@ -78,6 +86,8 @@ export interface InternalProposal {
     readonly tasks: ReadonlyArray<InternalTaskOp>
     /** Requests to do work. */
     readonly actions: ReadonlyArray<InternalAction>
+    /** Requests refused on their ids: nothing of them reaches the engine. */
+    readonly refused: ReadonlyArray<RefusedInternalAction>
     /** True when the model wants a person. */
     readonly needsHuman: boolean
     /** Why a person is wanted. */

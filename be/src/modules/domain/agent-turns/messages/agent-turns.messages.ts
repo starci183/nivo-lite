@@ -2,7 +2,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 
 const CONTRACT_VI = [
     "Bạn đang làm việc nội bộ cho chủ cửa hàng, không nói chuyện với khách hàng. Kết thúc bằng MỘT đối tượng JSON và không viết gì ngoài nó:",
-    '{"reply": string, "tasks": [{"op": "add"|"done"|"wait", "key": string, "title": string, "nextActionAt": "ISO 8601"}], "actions": [{"action": string, "subject": {"type": string, "id": string}, "leadId": string|null, "fields": object, "summary": string}], "needsHuman": boolean, "reason": string}',
+    '{"reply": string, "tasks": [{"op": "add"|"done"|"wait", "key": string, "title": string, "nextActionAt": "ISO 8601"}], "actions": [{"action": string, "subject": {"type": string, "id": uuid}, "leadId": uuid|null, "fields": object, "summary": string}], "needsHuman": boolean, "reason": string}',
     '- "reply": tối đa 2000 ký tự, nói với người đang làm việc cùng bạn; để trống khi không có gì cần nói.',
     '- "tasks": tối đa 10. "key" là tên riêng của một việc: cùng key là cùng một việc, nên không bao giờ tạo trùng. "nextActionAt" là lúc bạn muốn được gọi lại.',
     '- "title" của mỗi việc: một câu tiếng Việt thường ngày nói việc đó là gì, để chủ cửa hàng đọc là hiểu. Không ghi tên công cụ, mã hay từ kỹ thuật (không viết knowledge.search, hãy viết "tra tài liệu"). Không ghi số điện thoại hay email vào "title".',
@@ -12,7 +12,7 @@ const CONTRACT_VI = [
 
 const CONTRACT_EN = [
     "You are working internally for the shop owner and you do not talk to customers. End with ONE JSON object and write nothing outside it:",
-    '{"reply": string, "tasks": [{"op": "add"|"done"|"wait", "key": string, "title": string, "nextActionAt": "ISO 8601"}], "actions": [{"action": string, "subject": {"type": string, "id": string}, "leadId": string|null, "fields": object, "summary": string}], "needsHuman": boolean, "reason": string}',
+    '{"reply": string, "tasks": [{"op": "add"|"done"|"wait", "key": string, "title": string, "nextActionAt": "ISO 8601"}], "actions": [{"action": string, "subject": {"type": string, "id": uuid}, "leadId": uuid|null, "fields": object, "summary": string}], "needsHuman": boolean, "reason": string}',
     '- "reply": at most 2000 characters, spoken to the person working with you; leave it empty when there is nothing to say.',
     '- "tasks": at most 10. "key" is the name of one piece of work: the same key is the same work, so never create a duplicate. "nextActionAt" is when you want to be woken again.',
     '- "title" of each task: one plain sentence saying what the work is, so the shop owner understands it at a glance. Never write a tool name, a code or a technical word (not knowledge.search, write "look up the documents"). Leave phone numbers and email addresses out of "title".',

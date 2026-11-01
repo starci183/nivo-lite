@@ -27,7 +27,7 @@ const OUTSIDE_MODULE = "outside_module"
  * Applies what a tag or background turn proposed, and nothing more. A task change is written under the agent's own key, so applying the
  * same proposal twice changes nothing the second time. An action is a request and never an effect: it goes to the work engine with the
  * agent as actor and the key `agentturn:<wakeId>:<index>`, so the authority gate decides, and a turn whose person may not write (a staff tag, a background turn) always asks one. An
- * unknown action, or one outside the agent's module, is dropped and audited. A worker that lost its lease runs nothing.
+ * unknown action, one outside the agent's module, or one whose ids are no record's, is dropped and audited, and the reply still leaves. A worker that lost its lease runs nothing.
  */
 export class InternalProposalSettlerService {
     constructor(
@@ -53,6 +53,9 @@ export class InternalProposalSettlerService {
         await eachInOrder(proposal.actions, async (action, index) => {
             actions.push(await this.request(turn, action, index, input))
         })
+        await eachInOrder(proposal.refused, async (refused, index) => {
+            actions.push(await this.drop(turn, refused.action, proposal.actions.length + index, input, refused.reason))
+        })
         return {
             kind: "settled",
             reply: proposal.reply,
@@ -70,8 +73,8 @@ export class InternalProposalSettlerService {
         input: InternalSettleInput,
     ): Promise<InternalActionResult> {
         const entry = await this.catalog.actionOf(action.action)
-        if (entry === null) return this.drop(turn, action, index, input, UNKNOWN_ACTION)
-        if (entry.moduleKey !== input.module) return this.drop(turn, action, index, input, OUTSIDE_MODULE)
+        if (entry === null) return this.drop(turn, action.action, index, input, UNKNOWN_ACTION)
+        if (entry.moduleKey !== input.module) return this.drop(turn, action.action, index, input, OUTSIDE_MODULE)
         const mayWrite = await this.right.mayWrite(turn.source, turn.context.authorUserId ?? null, turn.workspaceId)
         const item = await this.engine.runWork(
             { workspaceId: turn.workspaceId, actor: input.actorName, locale: input.locale },
@@ -93,7 +96,7 @@ export class InternalProposalSettlerService {
 
     private async drop(
         turn: AgentTurnView,
-        action: InternalAction,
+        action: string,
         index: number,
         input: InternalSettleInput,
         reason: string,
@@ -108,9 +111,9 @@ export class InternalProposalSettlerService {
             workspaceId: turn.workspaceId,
             kind: "agent.action_dropped",
             actor: input.actorName,
-            summary: `Action ${action.action} was dropped: ${reason}`,
+            summary: `Action ${action} was dropped: ${reason}`,
             evidence: `agentturn:${turn.wakeId}:${String(index)}`,
         })
-        return { index, action: action.action, outcome: "dropped", reason }
+        return { index, action, outcome: "dropped", reason }
     }
 }
