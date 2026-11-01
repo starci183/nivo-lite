@@ -1,8 +1,8 @@
 import type { ReactNode } from "react"
-import { Badge, Button, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
 import type { OfficeExceptionView, OfficeText } from "@/modules/types"
-import { QUOTE_CLASS_NAME, STATUS_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
+import { QUOTE_CLASS_NAME } from "./classNames"
 
 /** What one exception draws; the owner's controls come in as `form`. */
 type OfficeExceptionCardProps = {
@@ -26,36 +26,38 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
             aiLabel={text("aiBadge")}
             avatar={props.avatar}
             head={
-                <div className={TEXT_CLASS_NAME}>
+                <Stack gap="identity">
                     <Text weight="semibold">{item.title}</Text>
                     {item.hint === null ? null : (
                         <Text size="sm" tone="muted">
                             {item.hint}
                         </Text>
                     )}
-                </div>
+                </Stack>
             }
         >
-            <div className={STATUS_CLASS_NAME}>
+            <Cluster gap="inline">
                 <Badge tone={BADGE_TONES[item.status]} isDot>
                     {item.badge}
                 </Badge>
                 <Badge tone="neutral">{item.department}</Badge>
                 {item.reasonBadge === null ? null : <Badge tone="neutral">{item.reasonBadge}</Badge>}
-            </div>
+            </Cluster>
             {renderOfficeExceptionCardProposal(item, text)}
             {item.creditLine === null ? null : (
                 <SurfaceCard ariaLabel={text("reconcileCredit")}>
                     <div className={QUOTE_CLASS_NAME}>
-                        <Text size="xs" tone="muted" weight="medium">
-                            {text("reconcileCredit")}
-                        </Text>
-                        <Text as="p" size="sm">
-                            {item.creditLine}
-                        </Text>
-                        <Text as="p" size="sm" tone="muted">
-                            {text("reconcileWarning")}
-                        </Text>
+                        <Stack gap="identity">
+                            <Text size="xs" tone="muted" weight="medium">
+                                {text("reconcileCredit")}
+                            </Text>
+                            <Text as="p" size="sm">
+                                {item.creditLine}
+                            </Text>
+                            <Text as="p" size="sm" tone="muted">
+                                {text("reconcileWarning")}
+                            </Text>
+                        </Stack>
                     </div>
                 </SurfaceCard>
             )}
@@ -103,17 +105,19 @@ const renderOfficeExceptionCardProposal = (
 ) => (
     <SurfaceCard ariaLabel={item.errorText === null ? text("exceptionProposes") : text("exceptionErrorLabel")}>
         <div className={QUOTE_CLASS_NAME}>
-            <Text size="xs" tone="muted" weight="medium">
-                {item.errorText === null ? text("exceptionProposes") : text("exceptionErrorLabel")}
-            </Text>
-            <Text as="p" size="sm">
-                {item.errorText ?? item.summary}
-            </Text>
-            {item.draft === null || item.errorText !== null ? null : (
-                <Text as="p" size="sm" tone="muted">
-                    {item.draft}
+            <Stack gap="identity">
+                <Text size="xs" tone="muted" weight="medium">
+                    {item.errorText === null ? text("exceptionProposes") : text("exceptionErrorLabel")}
                 </Text>
-            )}
+                <Text as="p" size="sm">
+                    {item.errorText ?? item.summary}
+                </Text>
+                {item.draft === null || item.errorText !== null ? null : (
+                    <Text as="p" size="sm" tone="muted">
+                        {item.draft}
+                    </Text>
+                )}
+            </Stack>
         </div>
     </SurfaceCard>
 )

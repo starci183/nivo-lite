@@ -1,23 +1,17 @@
-/** The controls at the end of the header. */
-export const HEAD_ACTIONS_CLASS_NAME = "flex shrink-0 items-center gap-2"
+/** The actions of the header keep their own width. */
+export const HEAD_ACTIONS_CLASS_NAME = "shrink-0"
 
-/** The back arrow and the group mark side by side. */
-export const MARK_CLASS_NAME = "flex items-center gap-3"
-
-/** The back arrow, only on phones. */
-export const PHONE_ONLY_CLASS_NAME = "flex md:hidden"
-
-/** The group mark in the header, hidden on phones. */
+/** The room mark shows from the medium breakpoint. */
 export const HEAD_AVATAR_CLASS_NAME = "hidden shrink-0 md:flex"
 
-/** Shown from sm up. */
+/** The back button shows on a phone only. */
+export const PHONE_ONLY_CLASS_NAME = "flex md:hidden"
+
+/** The back-to-chat button shows from the small breakpoint. */
 export const WIDE_ONLY_CLASS_NAME = "hidden sm:inline"
 
-/** The head row of the chat column: mark, title with member line, controls; its band takes the pane inset. */
-export const HEAD_BAND_CLASS_NAME = "flex min-w-0 items-center gap-3"
+/** The header band can shrink below its content so the title truncates. */
+export const HEAD_BAND_CLASS_NAME = "min-w-0"
 
-/** The room name and its member line. */
+/** The title column takes the width the mark and the actions leave. */
 export const HEAD_TITLE_CLASS_NAME = "flex min-w-0 flex-1 flex-col"
-
-/** The room name beside the muted mark. */
-export const HEAD_TITLE_ROW_CLASS_NAME = "flex min-w-0 items-center gap-2"

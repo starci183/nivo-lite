@@ -1,12 +1,11 @@
 import type { ReactNode } from "react"
-import { Badge, Text } from "@starci/grammar/common"
+import { Badge, Cluster, Stack, Text } from "@starci/grammar/common"
 import { OfficeCardActions } from "@/components/leaves/OfficeCardActions"
 import { OfficeCardBody } from "@/components/leaves/OfficeCardBody"
 import { OfficeCardDetails } from "@/components/leaves/OfficeCardDetails"
 import { OfficeCardMedia } from "@/components/leaves/OfficeCardMedia"
 import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
 import type { OfficeCardDraft, OfficeResultCardView, OfficeText } from "@/modules/types"
-import { STATUS_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
 
 /** What one agent result card draws. */
 type OfficeResultCardProps = {
@@ -58,22 +57,22 @@ export const OfficeResultCard = (props: OfficeResultCardProps) => {
             avatar={props.avatar}
             head={card.lead === null ? <Text size="sm">{card.typeLabel}</Text> : <Text>{card.lead}</Text>}
         >
-            <div className={TEXT_CLASS_NAME}>
+            <Stack gap="identity">
                 <Text weight="semibold">{card.title}</Text>
                 {card.subtitle === null ? null : (
                     <Text size="sm" tone="muted">
                         {card.subtitle}
                     </Text>
                 )}
-            </div>
-            <div className={STATUS_CLASS_NAME}>
+            </Stack>
+            <Cluster gap="inline">
                 {card.badge === null ? null : (
                     <Badge tone={TONES[card.state]} isDot>
                         {card.badge}
                     </Badge>
                 )}
                 <Badge tone="neutral">{card.typeLabel}</Badge>
-            </div>
+            </Cluster>
             <OfficeCardBody
                 card={card}
                 text={text}

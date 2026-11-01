@@ -1,4 +1,4 @@
-import { Button, Heading, IconButton, IconTile, PaneSection, Text } from "@starci/grammar/common"
+import { Button, Cluster, Heading, IconButton, IconTile, PaneSection, Text } from "@starci/grammar/common"
 import { Icon, nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeText } from "@/modules/types"
 import {
@@ -6,8 +6,6 @@ import {
     HEAD_AVATAR_CLASS_NAME,
     HEAD_BAND_CLASS_NAME,
     HEAD_TITLE_CLASS_NAME,
-    HEAD_TITLE_ROW_CLASS_NAME,
-    MARK_CLASS_NAME,
     PHONE_ONLY_CLASS_NAME,
     WIDE_ONLY_CLASS_NAME,
 } from "./classNames"
@@ -42,7 +40,8 @@ export const OfficeHeader = (props: OfficeHeaderProps) => {
     return (
         <PaneSection align="center">
             <div className={HEAD_BAND_CLASS_NAME}>
-                <div className={MARK_CLASS_NAME}>
+                <Cluster gap="row" wrap={false}>
+                <Cluster gap="row" wrap={false}>
                     <div className={PHONE_ONLY_CLASS_NAME}>
                         <IconButton
                             intent="dismiss"
@@ -54,14 +53,14 @@ export const OfficeHeader = (props: OfficeHeaderProps) => {
                     <div className={HEAD_AVATAR_CLASS_NAME}>
                         <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
                     </div>
-                </div>
+                </Cluster>
                 <div className={HEAD_TITLE_CLASS_NAME}>
-                    <div className={HEAD_TITLE_ROW_CLASS_NAME}>
+                    <Cluster gap="inline" wrap={false}>
                         <Heading level={1}>{isTasks ? text("tasksTitle") : view.title}</Heading>
                         {!isTasks && view.isMuted ? (
                             <Icon props={{ name: "muted", usage: "leading", ariaLabel: text("mutedChat") }} />
                         ) : null}
-                    </div>
+                    </Cluster>
                     {isTasks ? null : (
                         <Text size="xs" tone="muted">
                             {view.subtitle}
@@ -69,6 +68,7 @@ export const OfficeHeader = (props: OfficeHeaderProps) => {
                     )}
                 </div>
                 <div className={HEAD_ACTIONS_CLASS_NAME}>
+                    <Cluster gap="inline" wrap={false}>
                     {isTasks ? (
                         <div className={WIDE_ONLY_CLASS_NAME}>
                             <Button intent="dismiss" size="sm" onPress={on.showChat}>
@@ -95,7 +95,9 @@ export const OfficeHeader = (props: OfficeHeaderProps) => {
                         isActive={view.isInfoOpen}
                         onPress={on.toggleInfo}
                     />
+                    </Cluster>
                 </div>
+                </Cluster>
             </div>
         </PaneSection>
     )

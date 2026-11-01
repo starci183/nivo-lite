@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import {
     Button,
+    Cluster,
     Fieldset,
     HorizontalScrollRegion,
     Icon,
@@ -12,7 +13,7 @@ import {
 } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeComposerProps } from "@/modules/types"
-import { CHIPS_CLASS_NAME, FIELD_CLASS_NAME, HINT_CLASS_NAME, ROW_CLASS_NAME } from "./classNames"
+import { FIELD_CLASS_NAME, HINT_CLASS_NAME } from "./classNames"
 
 /** Resolves quick questions, including the optional connected chatbot. */
 const promptsOf = (view: OfficeComposerProps["props"]): ReadonlyArray<string> => [
@@ -39,19 +40,20 @@ const QuickPrompts = (props: QuickPromptsProps) => (
             aria-label={props.view.text("quickLabel")}
             scrollPreviousLabel={props.view.text("quickPrevious")}
             scrollNextLabel={props.view.text("quickNext")}
-            className={CHIPS_CLASS_NAME}
         >
-            {props.prompts.map((prompt) => (
-                <Button
-                    key={prompt}
-                    intent="neutral"
-                    size="sm"
-                    isDisabled={props.view.isSkeleton}
-                    onPress={() => props.onPrompt(prompt)}
-                >
-                    {prompt}
-                </Button>
-            ))}
+            <Cluster gap="inline" wrap={false}>
+                {props.prompts.map((prompt) => (
+                    <Button
+                        key={prompt}
+                        intent="neutral"
+                        size="sm"
+                        isDisabled={props.view.isSkeleton}
+                        onPress={() => props.onPrompt(prompt)}
+                    >
+                        {prompt}
+                    </Button>
+                ))}
+            </Cluster>
         </HorizontalScrollRegion>
     </Fieldset>
 )
@@ -85,7 +87,7 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
                 <QuickPrompts view={view} prompts={prompts} onPrompt={onPrompt} />
             </PaneSection>
             <PaneSection gap="inline">
-                <div className={ROW_CLASS_NAME}>
+                <Cluster gap="inline" align="end" wrap={false}>
                     <Tooltip content={text("mentionButton")}>
                         <IconButton
                             intent="neutral"
@@ -117,7 +119,7 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
                     >
                         {text("send")}
                     </Button>
-                </div>
+                </Cluster>
                 <div className={HINT_CLASS_NAME}>
                     <Text size="xs" tone="muted">
                         {text("composerHint")}

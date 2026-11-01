@@ -1,6 +1,6 @@
 import { useState } from "react"
 import type { ReactNode } from "react"
-import { AvatarGroup, Badge, ListBox, PaneSection, SearchField, Tabs, Text } from "@starci/grammar/common"
+import { AvatarGroup, Badge, Cluster, ListBox, PaneSection, SearchField, Stack, Tabs, Text } from "@starci/grammar/common"
 import type { AvatarGroupItem, ListBoxItem } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { Icon } from "@/components/leaves/Icon"
@@ -10,7 +10,7 @@ import type {
     OfficeText,
     OfficeUnreadBadgeView,
 } from "@/modules/types"
-import { INDICATOR_CLASS_NAME, TRAILING_CLASS_NAME } from "./classNames"
+import { TRAILING_CLASS_NAME } from "./classNames"
 
 const contains = (value: string, query: string): boolean => value.toLowerCase().includes(query.toLowerCase())
 
@@ -82,12 +82,13 @@ const badgeOf = (badge: OfficeUnreadBadgeView): ReactNode => {
 /** The trailing cell of a row: the time, over the double check of my read last line and the unread indicator. */
 const trailingOf = (row: OfficeConversationRowView): ListBoxItem["trailing"] => (
     <div className={TRAILING_CLASS_NAME}>
-        {row.time === null ? null : (
-            <Text size="xs" tone="muted">
-                {row.time}
-            </Text>
-        )}
-        <div className={INDICATOR_CLASS_NAME}>
+        <Stack gap="identity" align="end">
+            {row.time === null ? null : (
+                <Text size="xs" tone="muted">
+                    {row.time}
+                </Text>
+            )}
+            <Cluster gap="identity" wrap={false}>
             {row.isLastSeen ? (
                 <Text
                     as="span"
@@ -102,7 +103,8 @@ const trailingOf = (row: OfficeConversationRowView): ListBoxItem["trailing"] => 
                 />
             ) : null}
             {row.badge === null ? null : badgeOf(row.badge)}
-        </div>
+            </Cluster>
+        </Stack>
     </div>
 )
 

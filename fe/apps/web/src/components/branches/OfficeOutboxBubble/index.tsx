@@ -1,7 +1,6 @@
 import { ChatBubble, Text } from "@starci/grammar/common"
 import { Icon } from "@/components/leaves/Icon"
 import type { OfficeOutboxView, OfficeText } from "@/modules/types"
-import { ROW_FIRST_CLASS_NAME } from "./classNames"
 
 /** What the optimistic bubble of a line being sent draws. */
 type OfficeOutboxBubbleProps = {
@@ -13,7 +12,7 @@ type OfficeOutboxBubbleProps = {
 export const OfficeOutboxBubble = (props: OfficeOutboxBubbleProps) => {
     const { line, text } = props
     return (
-        <div className={ROW_FIRST_CLASS_NAME} data-status={line.isFailed ? "failed" : "sending"}>
+        <div data-status={line.isFailed ? "failed" : "sending"}>
             <ChatBubble
                 side="outgoing"
                 footer={

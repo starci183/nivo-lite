@@ -1,7 +1,6 @@
 import { OfficeExceptionFields, BASIS_MIN_CHARS } from "@/components/leaves/OfficeExceptionFields"
-import { Button, Text } from "@starci/grammar/common"
+import { Button, Cluster, Text } from "@starci/grammar/common"
 import type { OfficeCardDraft, OfficeExceptionView, OfficeText, OfficeWorkDecision } from "@/modules/types"
-import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** What the owner's controls of an exception draw. */
 type OfficeExceptionFormProps = {
@@ -137,7 +136,7 @@ const renderOfficeExceptionFormActions = ({
     item,
     setIsEditing,
 }: OfficeExceptionActionsInput) => (
-    <div className={ACTIONS_CLASS_NAME}>
+    <Cluster gap="inline">
         {item.status === "failed" ? null : (
             <Button
                 intent="commit"
@@ -160,5 +159,5 @@ const renderOfficeExceptionFormActions = ({
         >
             {text("exceptionReject")}
         </Button>
-    </div>
+    </Cluster>
 )

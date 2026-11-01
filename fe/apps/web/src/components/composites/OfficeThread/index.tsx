@@ -1,4 +1,4 @@
-import { Button, ChatBubbleSkeletons, Divider, EmptyNotice, Text } from "@starci/grammar/common"
+import { Button, ChatBubbleSkeletons, Divider, EmptyNotice, Stack, Text } from "@starci/grammar/common"
 import { OfficeApprovalCard } from "@/components/branches/OfficeApprovalCard"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { OfficeCommandCard } from "@/components/branches/OfficeCommandCard"
@@ -9,10 +9,26 @@ import { OfficeMessageRow } from "@/components/branches/OfficeMessageRow"
 import { OfficeOutboxBubble } from "@/components/branches/OfficeOutboxBubble"
 import { OfficeResultCard } from "@/components/branches/OfficeResultCard"
 import type { OfficeCommandView, OfficeThreadProps } from "@/modules/types"
-import { BAND_CLASS_NAME, BODY_CLASS_NAME, DAY_CLASS_NAME, TYPING_CLASS_NAME } from "./classNames"
+import { TYPING_CLASS_NAME } from "./classNames"
 
 /** A thread item that sits in an inset band: every kind but the day divider. */
 type OfficeThreadBandItem = Exclude<OfficeThreadProps["props"]["items"][number], { readonly kind: "day" }>
+
+/** A day divider, or a run of entries by one author: a message continues the run before it, anything else starts one. */
+type OfficeThreadGroup =
+    | { readonly kind: "day"; readonly key: string; readonly label: string }
+    | { readonly kind: "run"; readonly key: string; readonly items: ReadonlyArray<OfficeThreadBandItem> }
+
+/** Folds the thread's items into day dividers and runs of continued messages. */
+const groupsOf = (items: OfficeThreadProps["props"]["items"]): ReadonlyArray<OfficeThreadGroup> =>
+    items.reduce<ReadonlyArray<OfficeThreadGroup>>((groups, item) => {
+        if (item.kind === "day") return [...groups, { kind: "day", key: item.key, label: item.label }]
+        const last = groups.at(-1)
+        if (item.kind === "message" && item.isContinuation && last?.kind === "run") {
+            return [...groups.slice(0, -1), { ...last, items: [...last.items, item] }]
+        }
+        return [...groups, { kind: "run", key: item.key, items: [item] }]
+    }, [])
 
 /**
  * The thread's message column, inside the scroll band of its pane: the earlier button, day dividers, lines, approval,
@@ -22,43 +38,33 @@ export const OfficeThread = (props: OfficeThreadProps) => {
     const view = props.props
     const { text } = view
     return (
-        <div className={BODY_CLASS_NAME}>
-            {view.isSkeleton ? (
-                <div className={BAND_CLASS_NAME}>
-                    <ChatBubbleSkeletons count={3} hasAvatar />
-                </div>
-            ) : null}
+        <Stack gap="row" measure="reading">
+            {view.isSkeleton ? <ChatBubbleSkeletons count={3} hasAvatar /> : null}
             {!view.isSkeleton && view.hasEarlier ? (
-                <div className={BAND_CLASS_NAME}>
-                    <Button intent="neutral" size="sm" isPending={view.isLoadingEarlier} onPress={props.on.loadEarlier}>
-                        {text("loadEarlier")}
-                    </Button>
-                </div>
+                <Button intent="neutral" size="sm" isPending={view.isLoadingEarlier} onPress={props.on.loadEarlier}>
+                    {text("loadEarlier")}
+                </Button>
             ) : null}
             {!view.isSkeleton && view.items.length === 0 ? (
-                <div className={BAND_CLASS_NAME}>
-                    <EmptyNotice message={text("emptyMessage")} description={text("emptyMessageHint")} />
-                </div>
+                <EmptyNotice message={text("emptyMessage")} description={text("emptyMessageHint")} />
             ) : null}
             {renderOfficeThreadItems(props)}
-            {view.outbox.map((line) => (
-                <div key={line.id} className={BAND_CLASS_NAME}>
-                    <OfficeOutboxBubble line={line} text={text} />
-                </div>
-            ))}
-            {view.reading === null ? null : (
-                <div className={BAND_CLASS_NAME}>{renderOfficeThreadCommand(null, view.reading, props)}</div>
+            {view.outbox.length === 0 ? null : (
+                <Stack gap="identity">
+                    {view.outbox.map((line) => (
+                        <OfficeOutboxBubble key={line.id} line={line} text={text} />
+                    ))}
+                </Stack>
             )}
-            <div className={BAND_CLASS_NAME}>
-                <div className={TYPING_CLASS_NAME}>
-                    {view.typing === "" ? null : (
-                        <Text size="sm" tone="muted" live="polite">
-                            {view.typing}
-                        </Text>
-                    )}
-                </div>
+            {view.reading === null ? null : renderOfficeThreadCommand(null, view.reading, props)}
+            <div className={TYPING_CLASS_NAME}>
+                {view.typing === "" ? null : (
+                    <Text size="sm" tone="muted" live="polite">
+                        {view.typing}
+                    </Text>
+                )}
             </div>
-        </div>
+        </Stack>
     )
 }
 
@@ -66,15 +72,13 @@ export const OfficeThread = (props: OfficeThreadProps) => {
 const renderOfficeThreadItems = (props: OfficeThreadProps) =>
     props.props.isSkeleton
         ? null
-        : props.props.items.map((item) =>
-              item.kind === "day" ? (
-                  <div key={item.key} className={DAY_CLASS_NAME}>
-                      <Divider label={item.label} />
-                  </div>
+        : groupsOf(props.props.items).map((group) =>
+              group.kind === "day" ? (
+                  <Divider key={group.key} label={group.label} />
               ) : (
-                  <div key={item.key} className={BAND_CLASS_NAME}>
-                      {renderOfficeThreadItem(item, props)}
-                  </div>
+                  <Stack key={group.key} gap="identity">
+                      {group.items.map((item) => renderOfficeThreadItem(item, props))}
+                  </Stack>
               ),
           )
 

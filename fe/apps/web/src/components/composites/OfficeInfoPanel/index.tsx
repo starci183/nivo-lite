@@ -1,17 +1,10 @@
-import { Button, IconButton, PaneSection, Region, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Cluster, IconButton, PaneSection, Region, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { OfficeMemberRow } from "@/components/branches/OfficeMemberRow"
 import { OfficeRoomResources } from "@/components/branches/OfficeRoomResources"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeInfoPanelProps, OfficeJumpRowView, OfficeText, OfficeWaitingRowView } from "@/modules/types"
-import {
-    HEAD_CLASS_NAME,
-    HEAD_TEXT_CLASS_NAME,
-    JUMP_ROW_CLASS_NAME,
-    SECTION_CLASS_NAME,
-    TEXT_CLASS_NAME,
-    TITLE_CLASS_NAME,
-} from "./classNames"
+import { HEAD_TEXT_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
 
 type JumpRowProps<Row extends OfficeJumpRowView> = {
     readonly row: Row
@@ -28,7 +21,7 @@ const JumpRow = <Row extends OfficeJumpRowView>(props: JumpRowProps<Row>) => (
             label: `${props.jumpLabel}: ${props.row.title}`,
         }}
     >
-        <div className={JUMP_ROW_CLASS_NAME}>
+        <Cluster gap="row" align="start" wrap={false}>
             <OfficeAvatar avatar={props.row.avatar} size="xs" />
             <div className={TEXT_CLASS_NAME}>
                 <Text size="sm" weight="medium" overflow="clamp-2">
@@ -38,7 +31,7 @@ const JumpRow = <Row extends OfficeJumpRowView>(props: JumpRowProps<Row>) => (
                     {props.row.subtitle}
                 </Text>
             </div>
-        </div>
+        </Cluster>
     </SurfaceCard>
 )
 
@@ -52,20 +45,22 @@ type JumpListProps<Row extends OfficeJumpRowView> = {
 
 /** A list of waiting things; each row jumps to its card in the thread. */
 const JumpList = <Row extends OfficeJumpRowView>(props: JumpListProps<Row>) => (
-    <Region label={props.title} className={SECTION_CLASS_NAME}>
-        <div className={TITLE_CLASS_NAME}>
-            <Text weight="semibold">{props.title}</Text>
-            <Text size="sm" tone="muted">{`${props.rows.length}`}</Text>
-        </div>
-        {props.rows.length === 0 ? (
-            <Text size="sm" tone="muted">
-                {props.none}
-            </Text>
-        ) : (
-            props.rows.map((row) => (
-                <JumpRow key={row.id} row={row} jumpLabel={props.jumpLabel} onJump={props.onJump} />
-            ))
-        )}
+    <Region label={props.title}>
+        <Stack gap="inline">
+            <Cluster gap="inline" justify="between">
+                <Text weight="semibold">{props.title}</Text>
+                <Text size="sm" tone="muted">{`${props.rows.length}`}</Text>
+            </Cluster>
+            {props.rows.length === 0 ? (
+                <Text size="sm" tone="muted">
+                    {props.none}
+                </Text>
+            ) : (
+                props.rows.map((row) => (
+                    <JumpRow key={row.id} row={row} jumpLabel={props.jumpLabel} onJump={props.onJump} />
+                ))
+            )}
+        </Stack>
     </Region>
 )
 
@@ -80,7 +75,7 @@ export const OfficeInfoHead = (props: OfficeInfoHeadProps) => {
     const { text } = props.props
     return (
         <PaneSection align="center">
-            <div className={HEAD_CLASS_NAME}>
+            <Cluster gap="row" wrap={false}>
                 <div className={HEAD_TEXT_CLASS_NAME}>
                     <Text weight="semibold">{text("infoTitle")}</Text>
                 </div>
@@ -90,7 +85,7 @@ export const OfficeInfoHead = (props: OfficeInfoHeadProps) => {
                     label={text("infoClose")}
                     onPress={props.on.close}
                 />
-            </div>
+            </Cluster>
         </PaneSection>
     )
 }
@@ -124,16 +119,16 @@ export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
                 text={text}
                 onJump={props.on.jumpCard}
             />
-            <Region label={text("tasksTitle")} className={SECTION_CLASS_NAME}>
-                <div className={TITLE_CLASS_NAME}>
+            <Region label={text("tasksTitle")}>
+                <Stack gap="inline">
                     <Text weight="semibold">{text("tasksTitle")}</Text>
-                </div>
-                <Text size="sm" tone="muted">
-                    {info.tasksSummary}
-                </Text>
-                <Button intent="neutral" size="sm" width="fill" onPress={props.on.openTasks}>
-                    {text("tasksOpen")}
-                </Button>
+                    <Text size="sm" tone="muted">
+                        {info.tasksSummary}
+                    </Text>
+                    <Button intent="neutral" size="sm" width="fill" onPress={props.on.openTasks}>
+                        {text("tasksOpen")}
+                    </Button>
+                </Stack>
             </Region>
         </PaneSection>
     )
@@ -145,24 +140,26 @@ const renderOfficeInfoPanelMembers = (
     info: NonNullable<OfficeInfoPanelProps["props"]["info"]>,
     props: OfficeInfoPanelProps,
 ) => (
-    <Region label={text("membersTitle")} className={SECTION_CLASS_NAME}>
-        <div className={TITLE_CLASS_NAME}>
-            <Text weight="semibold">{text("membersTitle")}</Text>
-            <Text size="sm" tone="muted">{`${info.members.length}`}</Text>
-        </div>
-        {info.members.map((member) => (
-            <OfficeMemberRow
-                key={member.id}
-                avatar={<OfficeAvatar avatar={member.avatar} />}
-                member={member}
-                youLabel={text("youTag")}
-                mentionLabel={text("mention")}
-                chatLabel={text("chat11")}
-                onMention={props.on.mention}
-            />
-        ))}
-        <Button intent="neutral" size="sm" width="fill" href={info.addAgentHref}>
-            {text("addAgent")}
-        </Button>
+    <Region label={text("membersTitle")}>
+        <Stack gap="inline">
+            <Cluster gap="inline" justify="between">
+                <Text weight="semibold">{text("membersTitle")}</Text>
+                <Text size="sm" tone="muted">{`${info.members.length}`}</Text>
+            </Cluster>
+            {info.members.map((member) => (
+                <OfficeMemberRow
+                    key={member.id}
+                    avatar={<OfficeAvatar avatar={member.avatar} />}
+                    member={member}
+                    youLabel={text("youTag")}
+                    mentionLabel={text("mention")}
+                    chatLabel={text("chat11")}
+                    onMention={props.on.mention}
+                />
+            ))}
+            <Button intent="neutral" size="sm" width="fill" href={info.addAgentHref}>
+                {text("addAgent")}
+            </Button>
+        </Stack>
     </Region>
 )

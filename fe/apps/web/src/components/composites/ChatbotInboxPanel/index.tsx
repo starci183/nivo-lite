@@ -40,7 +40,7 @@ export const ChatbotInboxPanel = (props: ChatbotInboxPanelProps) => (
         columns={{ base: ["fill"], medium: ["standard", "fill"], wide: ["standard", "fill", "wide"] }}
     >
         <Pane area="list" surface>
-            <PaneSection scroll={{ label: props.title }}>{props.list}</PaneSection>
+            {props.list}
         </Pane>
         <Pane area="thread">
             {props.actionError === null ? null : (
@@ -49,7 +49,7 @@ export const ChatbotInboxPanel = (props: ChatbotInboxPanelProps) => (
                 </PaneSection>
             )}
             {props.hasSelection ? (
-                <PaneSection grow>{props.thread}</PaneSection>
+                props.thread
             ) : (
                 <PaneSection align="center" grow>
                     {props.isSkeleton === true ? null : (
@@ -71,7 +71,7 @@ export const ChatbotInboxPanel = (props: ChatbotInboxPanelProps) => (
                 isOpen={props.isInfoOpen}
                 onOpenChange={props.onInfoOpenChange}
             >
-                <PaneSection>{props.side}</PaneSection>
+                {props.side}
             </Pane>
         ) : null}
     </PaneGrid>

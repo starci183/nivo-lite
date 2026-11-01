@@ -1,6 +1,5 @@
-import { Input, RadioGroup, Text, Textarea } from "@starci/grammar/common"
+import { Input, RadioGroup, Stack, Text, Textarea } from "@starci/grammar/common"
 import type { OfficeExceptionView, OfficeText } from "@/modules/types"
-import { FIELDS_CLASS_NAME } from "./classNames"
 
 /** The least written basis before an unclear credit may be marked paid. */
 export const BASIS_MIN_CHARS = 10
@@ -41,7 +40,7 @@ const renderMissingFields = (
 ) => {
     const { text, item, values, isLocked, onValues: setValues } = props
     return (
-        <div className={FIELDS_CLASS_NAME}>
+        <Stack gap="row">
             <Text size="sm" weight="medium">
                 {text("exceptionMissing")}
             </Text>
@@ -56,7 +55,7 @@ const renderMissingFields = (
                     onValueChange={(next) => setValues((current) => ({ ...current, [field.name]: next }))}
                 />
             ))}
-        </div>
+        </Stack>
     )
 }
 

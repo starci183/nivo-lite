@@ -1,16 +1,19 @@
 import { useState } from "react"
-import { Badge, Button, EmptyNotice, IconTile, ListItem, Select, SurfaceListCard, Text } from "@starci/grammar/common"
+import {
+    Badge,
+    Button,
+    Cluster,
+    EmptyNotice,
+    IconTile,
+    ListItem,
+    Select,
+    Stack,
+    SurfaceListCard,
+    Text,
+} from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeTasksProps } from "@/modules/types"
-import {
-    FILTERS_CLASS_NAME,
-    FILTER_CLASS_NAME,
-    ROW_CLASS_NAME,
-    ROW_MAIN_CLASS_NAME,
-    ROW_SIDE_CLASS_NAME,
-    ROW_TITLE_CLASS_NAME,
-    STACK_CLASS_NAME,
-} from "./classNames"
+import { FILTER_CLASS_NAME, ROW_MAIN_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 const ALL = "all"
 
@@ -43,7 +46,8 @@ export const OfficeTasks = (props: OfficeTasksProps) => {
 
     return (
         <div className={STACK_CLASS_NAME}>
-            <div className={FILTERS_CLASS_NAME}>
+            <Stack gap="section">
+            <Cluster gap="row" align="end">
                 <div className={FILTER_CLASS_NAME}>
                     <Select
                         label={text("filterOwner")}
@@ -65,8 +69,9 @@ export const OfficeTasks = (props: OfficeTasksProps) => {
                         {text("clearFilters")}
                     </Button>
                 ) : null}
-            </div>
+            </Cluster>
             {renderOfficeTasksVisibleTasks(text, visible, tasks, props, clear)}
+            </Stack>
         </div>
     )
 }
@@ -104,27 +109,29 @@ const renderOfficeTasksVisibleTasks = (
         }
     >
         {visible.map((task) => (
-            <ListItem key={task.id} className={ROW_CLASS_NAME}>
-                <IconTile source={nivoIconSource("review", "leading")} tone="accent" size="md" />
-                <div className={ROW_MAIN_CLASS_NAME}>
-                    <div className={ROW_TITLE_CLASS_NAME}>
-                        <Text weight="semibold">{task.title}</Text>
-                        <Badge tone={STATUS_TONES[task.status]} isDot>
-                            {text(STATUS_KEYS[task.status])}
-                        </Badge>
+            <ListItem key={task.id}>
+                <Cluster gap="row">
+                    <IconTile source={nivoIconSource("review", "leading")} tone="accent" size="md" />
+                    <div className={ROW_MAIN_CLASS_NAME}>
+                        <Stack gap="identity">
+                            <Cluster gap="inline">
+                                <Text weight="semibold">{task.title}</Text>
+                                <Badge tone={STATUS_TONES[task.status]} isDot>
+                                    {text(STATUS_KEYS[task.status])}
+                                </Badge>
+                            </Cluster>
+                            <Text size="sm" tone="muted" overflow="clamp-2">
+                                {task.nextAction}
+                            </Text>
+                            <Text size="sm" tone="muted">
+                                {task.meta}
+                            </Text>
+                        </Stack>
                     </div>
-                    <Text size="sm" tone="muted" overflow="clamp-2">
-                        {task.nextAction}
-                    </Text>
-                    <Text size="sm" tone="muted">
-                        {task.meta}
-                    </Text>
-                </div>
-                <div className={ROW_SIDE_CLASS_NAME}>
                     <Button intent="neutral" size="sm" href={task.leadHref}>
                         {text("openArrow")}
                     </Button>
-                </div>
+                </Cluster>
             </ListItem>
         ))}
     </SurfaceListCard>

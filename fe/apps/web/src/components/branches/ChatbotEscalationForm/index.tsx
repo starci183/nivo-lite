@@ -1,5 +1,4 @@
-import { Alert, Badge, Button, Divider, Region, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
-import { ACTIONS_CLASS_NAME, ESCALATION_CLASS_NAME, QUESTION_CLASS_NAME } from "./classNames"
+import { Alert, Badge, Button, Cluster, Region, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 
 /** The waiting question the AI handed to a person, with the draft answer and how the last attempt went. */
 interface ChatbotEscalationFormProps {
@@ -24,14 +23,13 @@ interface ChatbotEscalationFormProps {
 /** The recessed band of the customer pane where a person answers a question the AI could not. */
 export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
     <Region label={props.title}>
-        <Divider semantics="presentation" />
-        <div className={ESCALATION_CLASS_NAME}>
-            <div className={ACTIONS_CLASS_NAME}>
+        <Stack gap="row">
+            <Cluster gap="inline">
                 <Badge tone="warning" isDot>
                     {props.title}
                 </Badge>
-            </div>
-            <div className={QUESTION_CLASS_NAME}>
+            </Cluster>
+            <Stack gap="identity">
                 <Text size="xs" tone="muted">
                     {props.askedLabel}
                 </Text>
@@ -43,7 +41,7 @@ export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
                         {props.assigned}
                     </Text>
                 )}
-            </div>
+            </Stack>
             <Textarea
                 label={props.draftLabel}
                 description={props.draftHint}
@@ -55,7 +53,7 @@ export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
             {props.noticeTone === null ? null : (
                 <Alert tone={props.noticeTone} title={props.noticeTitle} description={props.noticeText ?? undefined} />
             )}
-            <div className={ACTIONS_CLASS_NAME}>
+            <Cluster gap="inline">
                 <Button
                     intent="commit"
                     isPending={props.isAnswering}
@@ -67,7 +65,7 @@ export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
                 <Button intent="alternative" isDisabled={props.isAnswering} onPress={props.onDeclineAnswer}>
                     {props.declineLabel}
                 </Button>
-            </div>
-        </div>
+            </Cluster>
+        </Stack>
     </Region>
 )

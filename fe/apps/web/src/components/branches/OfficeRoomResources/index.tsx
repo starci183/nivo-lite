@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
-import { Badge, Button, Region, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, Region, Stack, Text } from "@starci/grammar/common"
 import type { OfficeChannelRowView, OfficeJumpRowView, OfficePinRowView, OfficeText } from "@/modules/types"
-import { ROW_CLASS_NAME, SECTION_CLASS_NAME, TEXT_CLASS_NAME, TITLE_CLASS_NAME } from "./classNames"
+import { TEXT_CLASS_NAME } from "./classNames"
 
 /** What the room resources draw: the channels of the room and its pinned documents. */
 type OfficeRoomResourcesProps = {
@@ -21,16 +21,18 @@ type SectionProps = {
 
 /** One titled section of the room panel. */
 const Section = (props: SectionProps) => (
-    <Region label={props.title} className={SECTION_CLASS_NAME}>
-        <div className={TITLE_CLASS_NAME}>
-            <Text weight="semibold">{props.title}</Text>
-            {props.count === null ? null : (
-                <Text size="sm" tone="muted">
-                    {props.count}
-                </Text>
-            )}
-        </div>
-        {props.children}
+    <Region label={props.title}>
+        <Stack gap="inline">
+            <Cluster gap="inline" justify="between">
+                <Text weight="semibold">{props.title}</Text>
+                {props.count === null ? null : (
+                    <Text size="sm" tone="muted">
+                        {props.count}
+                    </Text>
+                )}
+            </Cluster>
+            {props.children}
+        </Stack>
     </Region>
 )
 
@@ -54,7 +56,7 @@ export const OfficeRoomResources = (props: OfficeRoomResourcesProps) => (
         {props.channels.length === 0 ? null : (
             <Section title={props.text("channelsTitle")} count={`${props.channels.length}`}>
                 {props.channels.map((channel) => (
-                    <div key={channel.id} className={ROW_CLASS_NAME}>
+                    <Cluster key={channel.id} gap="row" align="start" wrap={false}>
                         <div className={TEXT_CLASS_NAME}>
                             <Text weight="medium" overflow="truncate">
                                 {channel.name}
@@ -68,7 +70,7 @@ export const OfficeRoomResources = (props: OfficeRoomResourcesProps) => (
                         <Badge tone={channel.isConnected ? "success" : "warning"} isDot>
                             {channel.statusLabel}
                         </Badge>
-                    </div>
+                    </Cluster>
                 ))}
             </Section>
         )}
