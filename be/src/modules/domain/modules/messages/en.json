@@ -127,6 +127,7 @@
   "modulesCatalog.chatbot.gates.hours_sla.writes.1.attributeLabel": "Thời gian phản hồi của nhân viên",
   "modulesCatalog.chatbot.gates.handoff.label": "Handoff rules",
   "modulesCatalog.chatbot.gates.handoff.hint": "When the bot must hand over to a person, and to whom.",
+  "modulesCatalog.chatbot.gates.handoff.writes.0.attributeLabel": "When a person takes over",
   "modulesCatalog.chatbot.gates.prohibited.label": "Prohibited commitments",
   "modulesCatalog.chatbot.gates.prohibited.hint": "Price, schedule, warranty, refunds... the bot must never promise.",
   "modulesCatalog.chatbot.gates.prohibited.writes.0.attributeLabel": "Điều chatbot không được hứa",
