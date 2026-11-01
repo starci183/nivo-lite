@@ -9,7 +9,7 @@ import type {
 } from "@/modules/types"
 import { isDecisionWork, waitingOf } from "./office.helpers"
 import type { OfficeAgent, OfficeApproval, OfficePerson, OfficeStaff, OfficeTask, OfficeWork } from "./office.types"
-import { NIVO_AVATAR, agentAvatarOf, avatarOfAgentId, departmentAgentOf, leadNameOf } from "./office.words"
+import { NIVO_AVATAR, agentAvatarOf, avatarOfAgentId, departmentAgentOf, leadNameOf, offDutyOf } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
 
 const ONLINE_MS = 15 * 60_000
@@ -115,15 +115,6 @@ const waitsForOf = (agent: OfficeAgent, words: OfficeWords): string | null =>
                       : words.t("needsConnection", { providers: need.providers.join(words.t("providersOr")) }),
               )
               .join(" · ")
-
-/** The status line of an agent that is not on duty: waiting for a connection, or paused. */
-const offDutyOf = (agent: OfficeAgent, words: OfficeWords): string => {
-    if (agent.waitsFor !== null) return words.t("waitingConnection")
-    if (agent.lifecycle === "needs_setup" || agent.lifecycle === "notInstalled") return words.t("offNeedsSetup")
-    if (agent.lifecycle === "needs_connection") return words.t("waitingConnection")
-    if (agent.lifecycle === "ready") return words.t("offReady")
-    return words.t("paused")
-}
 
 const agentMemberOf = (agent: OfficeAgent, words: OfficeWords): OfficeMemberRowView => ({
     id: agent.id,
