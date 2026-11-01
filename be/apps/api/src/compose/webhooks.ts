@@ -1,5 +1,6 @@
 import { WebhookProofsModule } from "@modules/domain/webhook-proofs"
 import type { DynamicModule } from "@nestjs/common"
+import { GenericHttpModule } from "@features/webhooks/generic"
 import { TelegramHttpModule } from "@features/webhooks/telegram"
 import { ZaloHttpModule } from "@features/webhooks/zalo"
 import { ExternalApiHttpModule } from "@features/api/external-api"
@@ -8,6 +9,7 @@ import { SystemHealthHttpModule } from "@features/api/system-health"
 export const webhooksModules = (): Array<DynamicModule> => [
     WebhookProofsModule.register({ isGlobal: true }),
     TelegramHttpModule.register({}),
+    GenericHttpModule.register({}),
     ZaloHttpModule.register({}),
     ExternalApiHttpModule.register({}),
     SystemHealthHttpModule.register({}),
