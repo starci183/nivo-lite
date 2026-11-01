@@ -4470,7 +4470,7 @@
     "syncError": "Sync failed: {reason}",
     "syncReasonUnknown": "could not sync, try again later",
     "syncReasonWorkspaceUnavailable": "the agent workspace is not ready yet, try again later",
-    "syncDrift": "Out of step: Supabase v{active}, OpenClaw v{synced}",
+    "syncDrift": "Out of step: NIVO v{active}, OpenClaw v{synced}",
     "syncNever": "none",
     "syncOkNone": "OpenClaw copy: no context version yet · {ago}",
     "syncOk": "OpenClaw copy: v{version} · {ago}",

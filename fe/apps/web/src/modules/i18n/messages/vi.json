@@ -4470,7 +4470,7 @@
     "syncError": "Lỗi đồng bộ: {reason}",
     "syncReasonUnknown": "chưa đồng bộ được, hãy thử lại sau",
     "syncReasonWorkspaceUnavailable": "không gian làm việc của agent chưa sẵn sàng, hãy thử lại sau",
-    "syncDrift": "Đang lệch: Supabase v{active}, OpenClaw v{synced}",
+    "syncDrift": "Đang lệch: NIVO v{active}, OpenClaw v{synced}",
     "syncNever": "chưa có",
     "syncOkNone": "Bản trên OpenClaw: chưa có phiên bản ngữ cảnh · {ago}",
     "syncOk": "Bản trên OpenClaw: v{version} · {ago}",
