@@ -89,6 +89,42 @@
           "reason": "switches work on or off for one agent of a workspace, creating its state row"
         },
         {
+          "name": "public.agent_run_append",
+          "reason": "writes the steps of a run once under the run lock, so a replay writes none twice"
+        },
+        {
+          "name": "public.agent_step_claim",
+          "reason": "claims one step of a run under a new fence, or answers why it cannot be claimed"
+        },
+        {
+          "name": "public.agent_step_commit",
+          "reason": "commits what a claimed step did under its fence, so a write under an old fence changes nothing"
+        },
+        {
+          "name": "public.agent_step_resume",
+          "reason": "finishes the step that waits on a work item, inside the transaction of the decision that answered it"
+        },
+        {
+          "name": "public.agent_run_route",
+          "reason": "moves a run to the status a policy chose, once, and marks the done steps to undo"
+        },
+        {
+          "name": "public.agent_comp_claim",
+          "reason": "claims the last step still to undo under a new fence, or ends the run as compensated"
+        },
+        {
+          "name": "public.agent_comp_commit",
+          "reason": "commits an undo under its fence and sends the run to a person when its tries are spent"
+        },
+        {
+          "name": "public.agent_run_spoken",
+          "reason": "marks that a person was told a run stopped, true for the first mark only"
+        },
+        {
+          "name": "public.agent_run_due",
+          "reason": "lists the steps past their deadline, the ready steps nobody picked up and the stopped runs nobody was told about"
+        },
+        {
           "name": "public.event_bus_send",
           "reason": "sends a typed event once to its pgmq topic in the publisher transaction"
         },
