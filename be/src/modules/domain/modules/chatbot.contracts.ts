@@ -132,9 +132,10 @@ export const CHATBOT_MODULE: ModuleDefinition = {
             hint_en: catalogCopy("modulesCatalog.chatbot.gates.handoff.hint", "en"),
             writes: [
                 {
-                    kind: "rule",
-                    action: "handoff_lead",
-                    field: "mode",
+                    kind: "fact",
+                    subjectType: "business",
+                    attributeLabel: catalogCopy("modulesCatalog.chatbot.gates.handoff.writes.0.attributeLabel", "vi"),
+                    scope: "internal",
                 },
             ],
         },

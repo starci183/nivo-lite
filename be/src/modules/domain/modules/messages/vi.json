@@ -127,6 +127,7 @@
   "modulesCatalog.chatbot.gates.hours_sla.writes.1.attributeLabel": "Thời gian phản hồi của nhân viên",
   "modulesCatalog.chatbot.gates.handoff.label": "Khi nào chuyển cho người",
   "modulesCatalog.chatbot.gates.handoff.hint": "Tình huống nào bot phải chuyển cho nhân viên và chuyển cho ai.",
+  "modulesCatalog.chatbot.gates.handoff.writes.0.attributeLabel": "Khi nào chuyển cho người",
   "modulesCatalog.chatbot.gates.prohibited.label": "Điều không được hứa",
   "modulesCatalog.chatbot.gates.prohibited.hint": "Giá, lịch, bảo hành, hoàn tiền... bot không được tự cam kết.",
   "modulesCatalog.chatbot.gates.prohibited.writes.0.attributeLabel": "Điều chatbot không được hứa",
