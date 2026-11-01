@@ -196,12 +196,9 @@ export class SetupChatService {
             created.id,
             keepsStatus ? installation.status : "ready",
         )
-        await this.graph.publish({
-            workspaceId,
-            principalId,
-            installationId: installation.id,
-            contextVersionId: created.id,
-        })
+        const applier = { workspaceId, principalId, installationId: installation.id, contextVersionId: created.id }
+        await this.graph.publish(applier)
+        await this.graph.proposeContracts(applier)
         await this.readiness.settle(workspaceId, installation.id)
         if (installation.agentId !== null) {
             await this.writeAgentTexts(

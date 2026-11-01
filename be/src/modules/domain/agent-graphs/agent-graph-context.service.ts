@@ -94,6 +94,10 @@ export class AgentGraphContextService {
                 return set.approvers.length + set.excluded.filter((entry) => entry.reason !== "inactive").length > 0
             },
             facesCustomers: catalog.audience === "customer",
+            actions: catalog.authorityActions.map((entry) => ({
+                action: entry.action,
+                amountLimit: entry.amountLimit,
+            })),
         }
     }
 

@@ -6,4 +6,6 @@ export enum AgentGraphsLogEvent {
     AskNotRouted = "agent_graphs.ask_not_routed",
     /** The graph could not decide and left the item to the gate. */
     DecideFailed = "agent_graphs.decide_failed",
+    /** The contracts and gaps of a setup could not be proposed; the setup itself stands. */
+    ContractSetupFailed = "agent_graphs.contract_setup_failed",
 }

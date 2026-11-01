@@ -1,5 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { AgentGraphBrief, GraphIntent } from "@modules/domain/agent-turns"
+import type { IntentAudience, IntentTrigger } from "@modules/domain/intent-contracts"
+import { AgentGraphContractsService } from "./agent-graph-contracts.service"
+import type { OptionalTurnContracts } from "./agent-graph-contracts.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 
 @Injectable()
@@ -9,7 +12,20 @@ import { AgentGraphsService } from "./agent-graphs.service"
  * The boundaries are not listed: the back end applies them, so they earn no tokens.
  */
 export class AgentGraphBriefService implements AgentGraphBrief {
-    constructor(private readonly graphs: AgentGraphsService) {}
+    constructor(
+        private readonly graphs: AgentGraphsService,
+        private readonly contracts: AgentGraphContractsService,
+    ) {}
+
+    /** The contracts the trigger of a turn reaches in the published version, or null when the turn stays on the prompt it had. */
+    contractsOf(
+        workspaceId: string,
+        agentId: string,
+        trigger: IntentTrigger,
+        audience: IntentAudience,
+    ): Promise<OptionalTurnContracts> {
+        return this.contracts.turnContractsOf(workspaceId, agentId, trigger, audience)
+    }
 
     /** The intents the active version allows; none for an agent with no graph or one still in shadow. */
     async intentsOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphIntent>> {

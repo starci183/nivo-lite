@@ -10,6 +10,7 @@ import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.er
 import { AgentGraphsService } from "./agent-graphs.service"
 import type { AgentGraphView, GraphDocument, GraphProposalView } from "./agent-graphs.contracts"
 import { graphGapsOf } from "./policies/graph-gaps.policy"
+import { contractWarnings } from "./policies/contract-problems.policy"
 import { graphProblems } from "./policies/graph-problems.policy"
 import { nodeCardOf } from "./policies/node-card.policy"
 
@@ -64,6 +65,7 @@ export class AgentGraphViewService {
             activeVersionId: state.activeVersionId,
             gaps: graphGapsOf(state.draft, context),
             problems: graphProblems(state.draft, context),
+            warnings: contractWarnings(state.draft),
             cards: state.draft.nodes.map((node) => nodeCardOf(node, nameOf(node.approver?.group.members[0]), say)),
             proposals: await Promise.all(proposals.map((proposal) => this.withPassages(workspaceId, state.draft, proposal))),
             facts: Object.values(context.facts).map((spec) => ({

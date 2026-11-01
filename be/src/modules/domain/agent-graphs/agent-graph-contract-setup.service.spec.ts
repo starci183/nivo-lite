@@ -1,0 +1,253 @@
+import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
+import type { InstallationDirectory } from "@modules/domain/agents"
+import { DirectGenerationService } from "@modules/domain/ai-generations"
+import { BrainFactsService } from "@modules/domain/brain-facts"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import { ModulesService } from "@modules/domain/modules"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
+import { END, TRIGGER, nodeOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
+import { AgentGraphContractSetupService } from "./agent-graph-contract-setup.service"
+import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
+import { AgentGraphsService } from "./agent-graphs.service"
+import { valueHashOf } from "./policies/conflict.policy"
+import type { OptionalGraphState } from "./agent-graphs.service"
+import type { GraphDocument } from "./agent-graphs.contracts"
+
+const APPLIER = { workspaceId: "ws-1", principalId: "user-1", installationId: "inst-1", contextVersionId: "cv-1" }
+
+const ACTIONS = ["reply_customer", "send_quote"].map((action) => ({ action, amountLimit: action === "send_quote" }))
+
+const RECORD = {
+    id: "f1",
+    subjectLabel: "Deposit",
+    attributeLabel: "Rate",
+    value: "30% of the booking",
+}
+
+const ACTIVE: GraphDocument = {
+    nodes: [
+        nodeOf({ ...TRIGGER, key: "msg", next: ["answer"] }),
+        nodeOf({ ...TRIGGER, key: "tag", step: "tag", next: ["quote"] }),
+        nodeOf({ key: "answer", action: "reply_customer", title: "Answer", next: ["end"] }),
+        nodeOf({ key: "quote", action: "send_quote", title: "Quote", next: ["end"] }),
+        END,
+    ],
+    rights: [],
+}
+
+const SOURCE = { kind: "brain" as const, factId: "f1", passage: RECORD.value, valueHash: valueHashOf(RECORD.value) }
+
+/** The graph when the contract the model will propose is already published. */
+const HOLDING: GraphDocument = {
+    ...ACTIVE,
+    contracts: [
+        {
+            intent: "reply_customer",
+            task: "A booking means a deposit.",
+            limits: [{ text: "Deposit is 30%.", triggers: [], audiences: [], sources: [SOURCE] }],
+            sources: [SOURCE],
+        },
+    ],
+}
+
+const answer = (contracts: unknown) => ({
+    ok: true as const,
+    output: JSON.stringify({ contracts }),
+    generationId: "g1",
+})
+
+const MODEL = answer([
+    {
+        intent: "reply_customer",
+        task: "A booking means a deposit.",
+        task_fact_ids: ["f1"],
+        limits: [{ text: "Deposit is 30%.", triggers: [], audiences: [], fact_ids: ["f1"] }],
+    },
+])
+
+interface Options {
+    readonly state?: OptionalGraphState
+    readonly records?: ReadonlyArray<typeof RECORD>
+    readonly generation?: unknown
+    readonly version?: unknown
+    readonly installed?: boolean
+    readonly multi?: boolean
+}
+
+const READ_VERSION = {
+    version: 1,
+    summary: "Anything above 9.000.000 needs approval.",
+    gates: [],
+    facts: [],
+    toneEvidence: "",
+}
+
+const build = async (options: Options = {}) => {
+    const state =
+        options.state === undefined ? stateOf({ active: ACTIVE, activeVersionId: "version-1" }) : options.state
+    const installation =
+        options.installed === false ? null : { id: "inst-1", moduleKey: "chatbot", isMulti: options.multi !== false }
+    const graphs = mock<AgentGraphsService>({ stateOfInstallation: jest.fn().mockResolvedValue(state) })
+    const installations = mock<InstallationRecordsService>({ findById: jest.fn().mockResolvedValue(installation) })
+    const modules = mock<ModulesService>({ find: jest.fn().mockResolvedValue({ authorityActions: ACTIONS }) })
+    const facts = mock<BrainFactsService>({ forView: jest.fn().mockResolvedValue(options.records ?? [RECORD]) })
+    const generations = mock<DirectGenerationService>({ run: jest.fn().mockResolvedValue(options.generation ?? MODEL) })
+    const proposals = mock<AgentGraphProposalsService>({
+        raiseContract: jest.fn().mockResolvedValue(true),
+        raiseGap: jest.fn().mockResolvedValue(true),
+    })
+    const version = options.version === undefined ? READ_VERSION : options.version
+    const directory = mock<InstallationDirectory>({ contextVersionOf: jest.fn().mockResolvedValue(version) })
+    const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
+    const logger = mock<Logger>({ error: jest.fn() })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AgentGraphContractSetupService,
+            { provide: AgentGraphsService, useValue: graphs },
+            { provide: InstallationRecordsService, useValue: installations },
+            { provide: ModulesService, useValue: modules },
+            { provide: BrainFactsService, useValue: facts },
+            { provide: DirectGenerationService, useValue: generations },
+            { provide: AgentGraphProposalsService, useValue: proposals },
+            { provide: AGENTS_INSTALLATIONS, useValue: directory },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: LOGGER, useValue: logger },
+        ],
+    }).compile()
+    return { service: moduleRef.get(AgentGraphContractSetupService), generations, facts, proposals, logger }
+}
+
+describe("AgentGraphContractSetupService.proposeFor", () => {
+    it("asks the model once for the intents the graph offers and raises each contract it can back with Brain facts", async () => {
+        const { service, generations, facts, proposals } = await build({ version: null })
+
+        await expect(service.proposeFor(APPLIER)).resolves.toBe(1)
+
+        expect(facts.forView).toHaveBeenCalledWith("ws-1", "internal", "chatbot", "inst-1", 500)
+        const request = jest.mocked(generations.run).mock.calls[0]?.[0]
+        expect(request).toMatchObject({ purpose: "setup_chat", responseFormat: "json", kind: "setup", module: "setup" })
+        expect(request?.messages[1]?.content).toContain("- reply_customer: Answer")
+        expect(request?.messages[1]?.content).toContain("- send_quote: Quote")
+        expect(request?.messages[1]?.content).toContain(
+            '<data kind="brain_facts">\nf1 | Deposit | Rate: 30% of the booking\n</data>',
+        )
+        expect(proposals.raiseContract).toHaveBeenCalledWith(
+            "ws-1",
+            "agent-1",
+            "version-1",
+            expect.objectContaining({ intent: "reply_customer", task: "A booking means a deposit." }),
+            ["f1"],
+        )
+    })
+
+    it("reads the facts of the whole workspace for an installation that is not one of several", async () => {
+        const { service, facts } = await build({ version: null, multi: false })
+
+        await service.proposeFor(APPLIER)
+
+        expect(facts.forView).toHaveBeenCalledWith("ws-1", "internal", "chatbot", null, 500)
+    })
+
+    it("raises no contract for a limit that cites no fact, an intent not offered, or one the graph already holds", async () => {
+        const invented = await build({
+            version: null,
+            generation: answer([
+                { intent: "reply_customer", task: "Invented.", limits: [{ text: "Invented.", fact_ids: ["nope"] }] },
+                { intent: "invent_work", task: "x", task_fact_ids: ["f1"], limits: [] },
+            ]),
+        })
+        const held = await build({ version: null, state: stateOf({ active: HOLDING, activeVersionId: "version-1" }) })
+
+        await expect(invented.service.proposeFor(APPLIER)).resolves.toBe(0)
+        await expect(held.service.proposeFor(APPLIER)).resolves.toBe(0)
+        expect(invented.proposals.raiseContract).not.toHaveBeenCalled()
+    })
+
+    it("counts only the proposals that were new", async () => {
+        const { service, proposals } = await build({ version: null })
+        jest.mocked(proposals.raiseContract).mockResolvedValue(false)
+
+        await expect(service.proposeFor(APPLIER)).resolves.toBe(0)
+    })
+})
+
+describe("AgentGraphContractSetupService.proposeFor when there is nothing to propose", () => {
+    it("proposes nothing for a model that failed or answered what is not the contract", async () => {
+        const failed = await build({ version: null, generation: { ok: false, reason: "timeout", message: "busy" } })
+        const text = await build({ version: null, generation: { ok: true, output: "no json here", generationId: "g" } })
+        const shape = await build({
+            version: null,
+            generation: { ok: true, output: '{"contracts": 3}', generationId: "g" },
+        })
+
+        await expect(failed.service.proposeFor(APPLIER)).resolves.toBe(0)
+        await expect(text.service.proposeFor(APPLIER)).resolves.toBe(0)
+        await expect(shape.service.proposeFor(APPLIER)).resolves.toBe(0)
+        expect(failed.proposals.raiseContract).not.toHaveBeenCalled()
+    })
+
+    it("asks nothing of the model when the Brain holds no fact, the graph offers no intent or the installation is gone", async () => {
+        const empty = await build({ version: null, records: [] })
+        const idle = await build({
+            version: null,
+            state: stateOf({ active: { nodes: [END], rights: [] }, activeVersionId: "version-1" }),
+        })
+        const gone = await build({ version: null, installed: false })
+
+        await expect(empty.service.proposeFor(APPLIER)).resolves.toBe(0)
+        await expect(idle.service.proposeFor(APPLIER)).resolves.toBe(0)
+        await expect(gone.service.proposeFor(APPLIER)).resolves.toBe(0)
+        expect(empty.generations.run).not.toHaveBeenCalled()
+        expect(idle.generations.run).not.toHaveBeenCalled()
+    })
+
+    it("does nothing for a graph with no published version, another workspace, or none at all", async () => {
+        const fresh = await build({ state: stateOf({ active: null, activeVersionId: null }) })
+        const other = await build({ state: stateOf({ workspaceId: "ws-2", active: ACTIVE }) })
+        const none = await build({ state: null })
+
+        await expect(fresh.service.proposeFor(APPLIER)).resolves.toBe(0)
+        await expect(other.service.proposeFor(APPLIER)).resolves.toBe(0)
+        await expect(none.service.proposeFor(APPLIER)).resolves.toBe(0)
+        expect(fresh.generations.run).not.toHaveBeenCalled()
+    })
+
+    it("raises a gap for a rule only the prose of the setup states, never a second one for the same sentence", async () => {
+        const { service, proposals } = await build({ generation: answer([]) })
+
+        await expect(service.proposeFor(APPLIER)).resolves.toBe(1)
+
+        expect(proposals.raiseGap).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            versionId: "version-1",
+            trigger: "customer_message",
+            question: "Anything above 9.000.000 needs approval",
+            topic: "[intentContracts.setup.unheldTopic]",
+        })
+    })
+
+    it("raises no gap when the setup has no context version", async () => {
+        const { service, proposals } = await build({ generation: answer([]), version: null })
+
+        await expect(service.proposeFor(APPLIER)).resolves.toBe(0)
+        expect(proposals.raiseGap).not.toHaveBeenCalled()
+    })
+
+    it("never fails the setup: a failure is logged with ids only and counts for nothing", async () => {
+        const { service, generations, logger } = await build({ version: null })
+        jest.mocked(generations.run).mockRejectedValue(new Error("engine down"))
+
+        await expect(service.proposeFor(APPLIER)).resolves.toBe(0)
+
+        expect(logger.error).toHaveBeenCalledWith("agent_graphs.contract_setup_failed", expect.any(Error), {
+            workspaceId: "ws-1",
+            installationId: "inst-1",
+        })
+    })
+})

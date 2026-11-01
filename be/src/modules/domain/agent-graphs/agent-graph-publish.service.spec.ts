@@ -234,3 +234,46 @@ describe("AgentGraphPublishService.setMode", () => {
         expect(graphs.setMode).not.toHaveBeenCalled()
     })
 })
+
+describe("AgentGraphPublishService.publishContract", () => {
+    it("publishes the graph a confirmed contract made as a chat version, under the same checks", async () => {
+        const { service, graphs } = await build(stateOf())
+        const document = {
+            ...stateOf().draft,
+            contracts: [{ intent: "pay_supplier", task: "Pay.", limits: [], sources: [] }],
+        }
+
+        await expect(service.publishContract("ws-1", "agent-1", document, MANAGER)).resolves.toBe(VERSION)
+
+        expect(graphs.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ kind: "chat", document, memberId: "dinh" }),
+        )
+    })
+})
+
+describe("AgentGraphPublishService the contracts of a graph", () => {
+    const ACTIONS = [{ action: "pay_supplier", amountLimit: true }]
+
+    it("refuses a graph whose intent has no frame in the catalogue of the module", async () => {
+        const context = { ...contextOf(), actions: [{ action: "send_quote", amountLimit: true }] }
+        const { service, graphs } = await build(stateOf(), { context })
+
+        expect(await codeOf(service.publishDraft("ws-1", "agent-1", OWNER, "Edit"))).toBe(
+            AgentGraphsErrorCode.PublishRefused,
+        )
+        expect(graphs.publish).not.toHaveBeenCalled()
+    })
+
+    it("publishes a graph with no contracts block, and a contract that only warns", async () => {
+        const warned = {
+            ...stateOf().draft,
+            contracts: [{ intent: "give_discount", task: "", limits: [], sources: [] }],
+        }
+        const context = { ...contextOf(), actions: ACTIONS }
+        const shipped = await build(stateOf(), { context })
+        const warning = await build(stateOf({ draft: warned }), { context })
+
+        await expect(shipped.service.publishDraft("ws-1", "agent-1", OWNER, "Edit")).resolves.toBe(VERSION)
+        await expect(warning.service.publishDraft("ws-1", "agent-1", OWNER, "Edit")).resolves.toBe(VERSION)
+    })
+})

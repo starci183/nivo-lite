@@ -4,6 +4,7 @@ import { MemberGrantsService } from "@modules/domain/member-grants"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { AgentGraphContextService } from "./agent-graph-context.service"
+import { AgentGraphContractSetupService } from "./agent-graph-contract-setup.service"
 import { AgentGraphPublishService } from "./agent-graph-publish.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
@@ -39,6 +40,7 @@ export class AgentGraphSetupService implements SetupGraphPort {
         private readonly publishing: AgentGraphPublishService,
         private readonly members: MemberGrantsService,
         private readonly seats: WorkspaceMemberSeatsService,
+        private readonly contracts: AgentGraphContractSetupService,
     ) {}
 
     /** Writes a confirmed branch into the draft of the graph of the installation. */
@@ -86,6 +88,11 @@ export class AgentGraphSetupService implements SetupGraphPort {
             "chat",
             applier.contextVersionId,
         )
+    }
+
+    /** Proposes the contracts and gaps the applied setup calls for, for the owner to approve. */
+    proposeContracts(applier: SetupApplier): Promise<number> {
+        return this.contracts.proposeFor(applier)
     }
 
     private async stateOf(workspaceId: string, installationId: string): Promise<GraphState> {
