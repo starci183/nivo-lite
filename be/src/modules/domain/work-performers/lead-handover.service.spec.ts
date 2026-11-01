@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
+import { AgentsService } from "@modules/domain/agents"
 import type { BoundAgent } from "@modules/domain/agent-connections"
 import {
     AgentConversationsErrorCode,
@@ -46,9 +47,14 @@ const bound = (module: string, id: string): BoundAgent => ({
     purpose: "inbound_chat",
 })
 
-const build = async (reachable: ReadonlyArray<BoundAgent> = [bound("sales", "sales-agent")]) => {
+const build = async (
+    reachable: ReadonlyArray<BoundAgent> = [bound("sales", "sales-agent")],
+    conversation: TurnConversation = CONVERSATION,
+    activeSales: { readonly id: string } | null = { id: "site-sales" },
+) => {
+    const agents = mock<AgentsService>({ agentOfDepartment: jest.fn().mockResolvedValue(activeSales) })
     const conversations = mock<AgentConversationsService>({
-        turnOf: jest.fn().mockResolvedValue({ kind: "ok", value: CONVERSATION }),
+        turnOf: jest.fn().mockResolvedValue({ kind: "ok", value: conversation }),
         isTestChat: jest.fn().mockResolvedValue(false),
     })
     const handover = mock<ConversationHandoverService>({ handOver: jest.fn().mockResolvedValue(true) })
@@ -64,6 +70,7 @@ const build = async (reachable: ReadonlyArray<BoundAgent> = [bound("sales", "sal
             { provide: AgentConversationsService, useValue: conversations },
             { provide: ConversationHandoverService, useValue: handover },
             { provide: AgentBindingsService, useValue: bindings },
+            { provide: AgentsService, useValue: agents },
             { provide: PerformerKitService, useValue: kit },
         ],
     }).compile()
@@ -133,5 +140,25 @@ describe("LeadHandoverService toSales", () => {
         handover.handOver.mockResolvedValueOnce(false)
 
         await expect(service.toSales(ctx, "conv-1", "Lan")).resolves.toBe(false)
+    })
+})
+
+describe("LeadHandoverService website chat", () => {
+    it("hands a website chat, which no connection carries, to the active Sales agent", async () => {
+        const website = { ...CONVERSATION, channel: "website", connectionId: null }
+        const { service, handover } = await build([], website)
+
+        await expect(service.toSales(ctx, "conv-1", "Lan")).resolves.toBe(true)
+
+        expect(handover.handOver).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "site-sales" }))
+    })
+
+    it("keeps the Chatbot answering on a website chat when the workspace has no active Sales agent", async () => {
+        const website = { ...CONVERSATION, channel: "website", connectionId: null }
+        const { service, handover } = await build([], website, null)
+
+        await expect(service.toSales(ctx, "conv-1", "Lan")).resolves.toBe(false)
+
+        expect(handover.handOver).not.toHaveBeenCalled()
     })
 })
