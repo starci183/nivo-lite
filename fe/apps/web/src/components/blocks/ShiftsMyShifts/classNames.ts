@@ -1,8 +1,5 @@
 import { cn } from "@heroui/react"
 
-/** One heading over its list (GAP-3). */
-export const SECTION_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3")
-
 /** Badge and buttons of a shift (GAP-3 case-3). */
 export const ACTIONS_CLASS_NAME = cn("flex", "min-w-0", "flex-wrap", "items-center", "gap-3")
 
