@@ -48,17 +48,6 @@ const renderEvidence = ({ gate, ...props }: SetupGateBodyProps) => {
                         {props.confirmLabel}
                     </Button>
                 ) : null}
-                {gate.status === "confirmed" ? (
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isSkeleton={props.isSkeleton}
-                        isPending={props.isGating}
-                        onPress={() => props.onGate(gate.key, "reopen")}
-                    >
-                        {props.unconfirmLabel}
-                    </Button>
-                ) : null}
             </Cluster>
         </>
     )
@@ -91,6 +80,16 @@ const renderEdit = ({ gate, ...props }: SetupGateBodyProps) => (
             <Button intent="neutral" size="sm" onPress={props.onStopEdit}>
                 {props.editCancelLabel}
             </Button>
+            {gate.status === "confirmed" ? (
+                <Button
+                    intent="neutral"
+                    size="sm"
+                    isPending={props.isGating}
+                    onPress={() => props.onGate(gate.key, "reopen")}
+                >
+                    {props.unconfirmLabel}
+                </Button>
+            ) : null}
         </Cluster>
     </>
 )

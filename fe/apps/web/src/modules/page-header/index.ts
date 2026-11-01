@@ -42,7 +42,8 @@ interface HomePageHeadingInput {
     readonly crumbLabel: string
     /** The first crumb: the dashboard. */
     readonly crumbHome: string
-    readonly eyebrow: string
+    /** The short line above the facts; absent when the title already says it. */
+    readonly eyebrow?: string
     readonly title: string
     readonly description: string
 }
@@ -55,7 +56,7 @@ export const homePageHeadingOf = (input: HomePageHeadingInput): PageHeaderConten
             { id: "home", label: input.crumbHome, href: APP_ROUTES.dashboard },
             { id: "current", label: input.title },
         ],
-        eyebrow: input.eyebrow,
+        ...(input.eyebrow !== undefined && { eyebrow: input.eyebrow }),
         title: input.title,
         description: input.description,
     })

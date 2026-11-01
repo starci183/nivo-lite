@@ -1,8 +1,8 @@
-import { Badge, DescriptionList, SurfaceCard } from "@starci/grammar/common"
+import { Badge, ListRow, SurfaceListCard } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, MethodView, SlotLabels } from "@/modules/types"
 
-/** Copy and values the connected sign-in methods card supplies. */
+/** Copy and values the connected sign-in methods list supplies. */
 export interface AccountMethodsBaseProps {
     readonly props: {
         readonly title: string
@@ -18,7 +18,7 @@ export interface AccountMethodsBaseProps {
     }
 }
 
-/** Draws the sign-in methods card without reading copy, navigation or API state. */
+/** Draws the sign-in methods, a fixed set, as one list with the status of each, without reading copy, navigation or API state. */
 export const AccountMethodsBase = (props: AccountMethodsBaseProps) => (
     <SlotView
         slot={props.props.slot}
@@ -27,22 +27,20 @@ export const AccountMethodsBase = (props: AccountMethodsBaseProps) => (
         onRetry={props.on.retry}
     >
         {(methods, isSkeleton) => (
-            <SurfaceCard label={props.props.title} headingLevel={2}>
-                <DescriptionList
-                    layout="columns"
-                    isLoading={isSkeleton}
-                    isDivided
-                    items={methods.map((method) => ({
-                        id: method.id,
-                        term: method.label,
-                        description: (
+            <SurfaceListCard label={props.props.title} headingLevel={2}>
+                {methods.map((method) => (
+                    <ListRow
+                        key={method.id}
+                        isSkeleton={isSkeleton}
+                        title={method.label}
+                        badges={
                             <Badge tone={method.isLinked ? "success" : "neutral"} isSkeleton={isSkeleton}>
                                 {method.isLinked ? props.props.linkedLabel : props.props.notLinkedLabel}
                             </Badge>
-                        ),
-                    }))}
-                />
-            </SurfaceCard>
+                        }
+                    />
+                ))}
+            </SurfaceListCard>
         )}
     </SlotView>
 )

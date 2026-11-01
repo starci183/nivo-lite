@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, LeadingNumber, List, ListRow } from "@starci/grammar/common"
+import { Alert, Badge, Button, LeadingNumber, ListRow, SurfaceListCard } from "@starci/grammar/common"
 import { SetupGateBody } from "@/components/branches/SetupGateBody"
 import type { SetupSideGate, SetupSideView } from "@/modules/types"
 
@@ -118,7 +118,7 @@ export const AgentSetupChecklist = (props: AgentSetupChecklistProps) => {
                     }}
                 />
             )}
-            <List label={props.view.gates.title}>
+            <SurfaceListCard ariaLabel={props.view.gates.title}>
                 {props.view.gates.gates.map((gate, index) => (
                     <GateRow
                         key={gate.key}
@@ -128,7 +128,7 @@ export const AgentSetupChecklist = (props: AgentSetupChecklistProps) => {
                         isCurrent={gate.key === current}
                     />
                 ))}
-            </List>
+            </SurfaceListCard>
         </>
     )
 }
