@@ -83,6 +83,7 @@ const build = async () => {
     const sessions = mock<SetupSessionsService>()
     sessions.latest.mockResolvedValue(sessionOf())
     sessions.find.mockResolvedValue(sessionOf())
+    sessions.change.mockImplementation((id, next) => Promise.resolve(sessionOf({ id, ...next(sessionOf()) })))
     const messages = mock<SetupMessagesService>()
     const versions = mock<ContextVersionsService>()
     const members = mock<WorkspaceMembersService>()
@@ -268,9 +269,7 @@ describe("SetupChatService > postMessage", () => {
 
 describe("SetupChatService > setGate", () => {
     it("confirms an edited gate in the words of the owner", async () => {
-        const { service, sessions } = await build()
-        sessions.save.mockImplementation((id, change) => Promise.resolve(sessionOf({ id, ...change })))
-
+        const { service } = await build()
         const saved = await service.setGate("u1", "ws-1", "s-1", "scope", "edit", "  Invoices only  ")
 
         expect(saved.gateEvidence).toEqual({
@@ -280,7 +279,6 @@ describe("SetupChatService > setGate", () => {
 
     it("refuses an unknown gate, a gate without evidence and a draft closed meanwhile", async () => {
         const { service, sessions } = await build()
-        sessions.save.mockResolvedValue(null)
 
         await expect(service.setGate("u1", "ws-1", "s-1", "nope", "confirm", "")).rejects.toMatchObject({
             code: ModulesErrorCode.GateUnknown,
@@ -288,6 +286,7 @@ describe("SetupChatService > setGate", () => {
         await expect(service.setGate("u1", "ws-1", "s-1", "scope", "confirm", "")).rejects.toMatchObject({
             code: ModulesErrorCode.GateEmpty,
         })
+        sessions.change.mockResolvedValue(null)
         await expect(service.setGate("u1", "ws-1", "s-1", "scope", "reopen", "")).rejects.toMatchObject({
             code: ModulesErrorCode.SetupSessionClosed,
         })

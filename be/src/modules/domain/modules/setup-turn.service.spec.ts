@@ -108,12 +108,14 @@ const MODEL_ANSWER = JSON.stringify({
 })
 
 /** The one reply a turn gives when NIVO is busy. */
-const BUSY_POST = [
-    [{ workspaceId: "ws-1", setupSessionId: "s-1", role: "assistant", author: "NIVO", body: "[generation.busy]" }],
+const postOf = (body: string) => [
+    [{ workspaceId: "ws-1", setupSessionId: "s-1", role: "assistant", author: "NIVO", body }],
 ]
 
 /** Five seconds after the owner message of the spec. */
 const NOW = new Date("2026-10-01T00:01:05.000Z")
+
+const TONE = { status: "confirmed", evidence: "Warm", confirmed_by: "Lan", confirmed_at: NOW.toISOString() } as const
 
 const build = async () => {
     const clock = new FakeClock(NOW)
@@ -130,7 +132,12 @@ const build = async () => {
     installations.find.mockResolvedValue(installationOf())
     const sessions = mock<SetupSessionsService>()
     sessions.find.mockResolvedValue(sessionOf())
-    sessions.save.mockResolvedValue(sessionOf())
+    const stored = { current: sessionOf() }
+    sessions.change.mockImplementation((_id, next) => {
+        const change = next({ draft: stored.current.draft, gateEvidence: stored.current.gateEvidence })
+        if (change !== null) stored.current = sessionOf({ ...stored.current, ...change })
+        return Promise.resolve(stored.current)
+    })
     const messages = mock<SetupMessagesService>()
     messages.find.mockResolvedValue(lineOf())
     messages.ofSession.mockResolvedValue([lineOf({ id: "m-1", body: "Hi" }), lineOf()])
@@ -160,6 +167,7 @@ const build = async () => {
         ],
     }).compile()
     return {
+        stored,
         service: moduleRef.get(SetupTurnService),
         generations,
         installations,
@@ -185,37 +193,20 @@ describe("SetupTurnService", () => {
     })
 
     it("merges what the model learned into the draft, proposes its writes and posts its reply", async () => {
-        const { service, sessions, messages, cards } = await build()
+        const { service, stored, messages, cards } = await build()
 
         await service.run(PAYLOAD)
 
-        expect(sessions.save.mock.calls).toEqual([
-            [
-                "s-1",
-                {
-                    draft: {
-                        summary: "A bakery in Hanoi.",
-                        facts: [
-                            { key: "city", text: "Hanoi" },
-                            { key: "hours", text: "Open 7 to 21" },
-                        ],
-                    },
-                    gateEvidence: { scope: { status: "confirmed", evidence: "Answer customers" } },
-                },
+        expect(stored.current.draft).toEqual({
+            summary: "A bakery in Hanoi.",
+            facts: [
+                { key: "city", text: "Hanoi" },
+                { key: "hours", text: "Open 7 to 21" },
             ],
-        ])
+        })
+        expect(stored.current.gateEvidence).toEqual({ scope: { status: "confirmed", evidence: "Answer customers" } })
         expect(cards.propose).toHaveBeenCalledWith("ws-1", "s-1", "m-2", [])
-        expect(messages.post.mock.calls).toEqual([
-            [
-                {
-                    workspaceId: "ws-1",
-                    setupSessionId: "s-1",
-                    role: "assistant",
-                    author: "NIVO",
-                    body: "Noted the hours.",
-                },
-            ],
-        ])
+        expect(messages.post.mock.calls).toEqual(postOf("Noted the hours."))
     })
 
     it("never answers a message twice", async () => {
@@ -230,6 +221,27 @@ describe("SetupTurnService", () => {
 })
 
 describe("SetupTurnService > a failed model call", () => {
+    it("merges into the gates as they are at save time, so a gate confirmed during the model call survives", async () => {
+        const { service, stored, generations } = await build()
+        generations.run.mockImplementation(() => {
+            stored.current = sessionOf({
+                gateEvidence: {
+                    scope: { status: "confirmed", evidence: "Answer customers" },
+                    tone: TONE,
+                },
+            })
+            return Promise.resolve({ ok: true, output: MODEL_ANSWER, generationId: "gen-1", timings: {}, usage: null })
+        })
+
+        await service.run(PAYLOAD)
+
+        expect(stored.current.gateEvidence).toEqual({
+            scope: { status: "confirmed", evidence: "Answer customers" },
+            tone: TONE,
+        })
+        expect(stored.current.draft.summary).toBe("A bakery in Hanoi.")
+    })
+
     it.each(["quota", "not_configured", "engine_offline"] as const)(
         "posts the own message of a %s refusal at once and keeps the draft",
         async (reason) => {
@@ -238,18 +250,8 @@ describe("SetupTurnService > a failed model call", () => {
 
             await expect(service.run(PAYLOAD)).resolves.toBeUndefined()
 
-            expect(sessions.save).not.toHaveBeenCalled()
-            expect(messages.post.mock.calls).toEqual([
-                [
-                    {
-                        workspaceId: "ws-1",
-                        setupSessionId: "s-1",
-                        role: "assistant",
-                        author: "NIVO",
-                        body: "Own message.",
-                    },
-                ],
-            ])
+            expect(sessions.change).not.toHaveBeenCalled()
+            expect(messages.post.mock.calls).toEqual(postOf("Own message."))
         },
     )
 
@@ -262,7 +264,7 @@ describe("SetupTurnService > a failed model call", () => {
             params: { reason },
         })
 
-        expect(sessions.save).not.toHaveBeenCalled()
+        expect(sessions.change).not.toHaveBeenCalled()
         expect(cards.propose).not.toHaveBeenCalled()
         expect(messages.post.mock.calls).toEqual([])
     })
@@ -275,7 +277,9 @@ describe("SetupTurnService > a failed model call", () => {
 
         expect(messages.post.mock.calls).toEqual([])
     })
+})
 
+describe("SetupTurnService > a turn out of time", () => {
     it("tells the owner NIVO is busy, without a model call, when under 15 s of the budget are left", async () => {
         const { service, generations, messages, clock } = await build()
         clock.set(new Date("2026-10-01T00:02:47.000Z"))
@@ -283,7 +287,7 @@ describe("SetupTurnService > a failed model call", () => {
         await service.run(PAYLOAD)
 
         expect(generations.run).not.toHaveBeenCalled()
-        expect(messages.post.mock.calls).toEqual(BUSY_POST)
+        expect(messages.post.mock.calls).toEqual(postOf("[generation.busy]"))
     })
 
     it("tells the owner NIVO is busy at once when a transient failure leaves no room for another attempt", async () => {
@@ -295,7 +299,7 @@ describe("SetupTurnService > a failed model call", () => {
 
         await expect(service.run(PAYLOAD)).resolves.toBeUndefined()
 
-        expect(messages.post.mock.calls).toEqual(BUSY_POST)
+        expect(messages.post.mock.calls).toEqual(postOf("[generation.busy]"))
     })
 })
 
@@ -436,7 +440,7 @@ describe("SetupTurnService", () => {
 
     it("posts nothing when the draft closed while the model answered", async () => {
         const { service, sessions, messages, cards } = await build()
-        sessions.save.mockResolvedValue(null)
+        sessions.change.mockResolvedValue(null)
 
         await service.run(PAYLOAD)
 
@@ -464,7 +468,7 @@ describe("SetupTurnService > giveUp", () => {
         await service.giveUp(PAYLOAD)
 
         expect(catalog.get).toHaveBeenCalledWith("generation.busy", {}, "en")
-        expect(messages.post.mock.calls).toEqual(BUSY_POST)
+        expect(messages.post.mock.calls).toEqual(postOf("[generation.busy]"))
     })
 
     it("posts nothing when the message was answered already", async () => {

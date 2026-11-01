@@ -148,8 +148,10 @@ export class SetupTurnService {
             this.catalog.get("setup.noted", {}, job.locale),
             this.catalog.get("setup.business", {}, job.locale),
         )
-        const merged = mergeSetupTurn(session.draft, session.gateEvidence, turn)
-        const saved = await this.sessions.save(session.id, { draft: merged.draft, gateEvidence: merged.gates })
+        const saved = await this.sessions.change(session.id, (current) => {
+            const merged = mergeSetupTurn(current.draft, current.gateEvidence, turn)
+            return { draft: merged.draft, gateEvidence: merged.gates }
+        })
         if (saved === null) return
         await this.cards.propose(job.workspaceId, session.id, message.id, turn.writes)
         await this.reply(job, session.id, this.withConflictNotes(job, turn, onRecord.inForce))

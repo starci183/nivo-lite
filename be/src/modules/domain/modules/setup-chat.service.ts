@@ -146,17 +146,18 @@ export class SetupChatService {
         if (!module.gates.some((gate) => gate.key === gateKey)) {
             throw new ModulesError({ code: ModulesErrorCode.GateUnknown })
         }
-        const next = gateAfter(
-            action,
-            gateEntry(session.gateEvidence, gateKey),
-            evidence.trim().slice(0, EVIDENCE_MAX),
-            member.displayName,
-            this.clock.now(),
-        )
-        if (next === null) throw new ModulesError({ code: ModulesErrorCode.GateEmpty })
-        const saved = await this.sessions.save(session.id, {
-            draft: session.draft,
-            gateEvidence: { ...session.gateEvidence, [gateKey]: next },
+        const evidenceText = evidence.trim().slice(0, EVIDENCE_MAX)
+        const at = this.clock.now()
+        const saved = await this.sessions.change(session.id, (current) => {
+            const next = gateAfter(
+                action,
+                gateEntry(current.gateEvidence, gateKey),
+                evidenceText,
+                member.displayName,
+                at,
+            )
+            if (next === null) throw new ModulesError({ code: ModulesErrorCode.GateEmpty })
+            return { draft: current.draft, gateEvidence: { ...current.gateEvidence, [gateKey]: next } }
         })
         if (saved === null) throw new ModulesError({ code: ModulesErrorCode.SetupSessionClosed })
         return saved

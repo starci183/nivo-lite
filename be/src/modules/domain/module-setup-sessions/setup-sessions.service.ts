@@ -5,7 +5,7 @@ import type {
     NewSetupSession,
     OptionalSetupSessionRecord,
     SetupRevisionRecord,
-    SetupSessionChange,
+    SetupSessionEdit,
     SetupSessionRecord,
 } from "./module-setup-sessions.contracts"
 import { ModuleSetupSessionEntity } from "./persistence/entities"
@@ -77,16 +77,29 @@ export class SetupSessionsService {
         return toRecord(row)
     }
 
-    /** Stores the draft and the gate evidence on the open draft; null when the session is not a draft any more. */
-    async save(sessionId: string, change: SetupSessionChange): Promise<OptionalSetupSessionRecord> {
-        const saved = await this.entityManager.update(
-            ModuleSetupSessionEntity,
-            { id: sessionId, status: "draft" },
-            { draftSnapshot: change.draft, gateEvidence: change.gateEvidence },
-        )
-        if ((saved.affected ?? 0) === 0) return null
-        const row = await this.entityManager.findOne(ModuleSetupSessionEntity, { where: { id: sessionId } })
-        return row === null ? null : toRecord(row)
+    /**
+     * The one way to change the draft and the gate evidence: `next` receives them as they are now, read again inside a transaction that
+     * locks the row, and answers the next ones (or null to leave them as they are). Two changes in a row both land, and a change that
+     * waited on a model call merges into what the owner did meanwhile. Null when the session is not a draft any more. `next` must not
+     * wait on anything slow: the row stays locked while it runs.
+     */
+    change(sessionId: string, next: SetupSessionEdit): Promise<OptionalSetupSessionRecord> {
+        return this.entityManager.transaction(async (tx) => {
+            const locked = await tx.findOne(ModuleSetupSessionEntity, {
+                where: { id: sessionId, status: "draft" },
+                lock: { mode: "pessimistic_write" },
+            })
+            if (locked === null) return null
+            const current = toRecord(locked)
+            const change = next({ draft: current.draft, gateEvidence: current.gateEvidence })
+            if (change === null) return current
+            await tx.update(
+                ModuleSetupSessionEntity,
+                { id: sessionId },
+                { draftSnapshot: change.draft, gateEvidence: change.gateEvidence },
+            )
+            return { ...current, draft: change.draft, gateEvidence: change.gateEvidence }
+        })
     }
 
     /** Closes the draft as applied. */
@@ -98,9 +111,12 @@ export class SetupSessionsService {
     async dropFact(installationId: string, factKey: string): Promise<void> {
         const latest = await this.latest(installationId)
         if (latest?.status !== "draft") return
-        const facts = latest.draft.facts.filter((fact) => fact.key !== factKey)
-        if (facts.length === latest.draft.facts.length) return
-        await this.save(latest.id, { draft: { ...latest.draft, facts }, gateEvidence: latest.gateEvidence })
+        await this.change(latest.id, (current) => {
+            const facts = current.draft.facts.filter((fact) => fact.key !== factKey)
+            return facts.length === current.draft.facts.length
+                ? null
+                : { draft: { ...current.draft, facts }, gateEvidence: current.gateEvidence }
+        })
     }
 }
 
