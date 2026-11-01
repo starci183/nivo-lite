@@ -12,9 +12,6 @@ import type { BaseRule, ContextVersion } from "./agents.port"
 export const RULES_BUDGET = 5200
 const RULE_MAX = 900
 
-/** Public knowledge is inlined only while it is small; the rest reaches an agent as per-turn passages and through knowledge.search. */
-export const INLINE_KNOWLEDGE_MAX = 6000
-
 const SETUP_START = "### NIVO setup"
 const SETUP_END = "### end NIVO setup"
 const WHITESPACE = /\s/u
@@ -98,13 +95,10 @@ export const contextTextOf = (version: ContextVersion, t: TextOf): string =>
 export const appliedContextOf = (version: ContextVersion | null, t: TextOf): OptionalContextVersionText =>
     version === null ? null : { version: version.version, text: contextTextOf(version, t) }
 
+/** The knowledge an agent may read, by title only: the text is read through NIVO MCP, where rights are checked and audited. */
 const knowledgeBlockOf = (input: AgentsMdInput, t: TextOf): string => {
     if (input.sources.length === 0) return t("bundle.knowledgeNone")
-    const total = input.sources.reduce((sum, source) => sum + source.content.length, 0)
-    const body =
-        total <= INLINE_KNOWLEDGE_MAX
-            ? input.sources.map((source) => `### ${source.title}\n${source.content.trim()}`).join("\n\n")
-            : t("bundle.knowledgeIndex", { titles: input.sources.map((source) => source.title).join("; ") })
+    const body = t("bundle.knowledgeIndex", { titles: input.sources.map((source) => source.title).join("; ") })
     const audience = input.audience === "customer" ? "bundle.audienceCustomer" : "bundle.audienceInternal"
     return t("bundle.knowledgeSection", { audience: t(audience), body })
 }

@@ -3,11 +3,11 @@ import type { Installation } from "@modules/domain/agents"
 import type { ChatBookingRequest } from "@modules/domain/work-performers"
 import type { KnowledgeSources } from "./gateway-turns.contracts"
 
-/** The authoritative context of a turn and the knowledge it quotes. */
+/** The authoritative context of a turn and the knowledge found for it. */
 export interface TurnSystem {
     /** The system text the agent answers under. */
     readonly text: string
-    /** The knowledge the recall put into that text, as card sources. */
+    /** The knowledge the recall found for the question, as card sources; its text reaches the agent only through knowledge.search. */
     readonly sources: KnowledgeSources
 }
 
