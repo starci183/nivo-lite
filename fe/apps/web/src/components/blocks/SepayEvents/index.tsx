@@ -16,7 +16,7 @@ type Translate = ReturnType<typeof useTranslations<"sepayConnection">>
 const detailOf = (t: Translate, event: SepayEventView, time: string): string => {
     if (event.outcome === "unauthorized") return t("detailRefused", { time })
     if (event.outcome === "duplicate") return t("detailDuplicate", { time })
-    return t("detailOk", { time, id: event.providerEventId ?? "-" })
+    return t("detailOk", { time })
 }
 
 const TONES = { accepted: "success", duplicate: "neutral", unauthorized: "danger" } as const

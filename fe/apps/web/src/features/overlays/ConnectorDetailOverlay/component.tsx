@@ -65,6 +65,8 @@ export interface ConnectorDetailOverlayBaseProps {
         readonly localOnly: boolean
         readonly ownerEmail: string
         readonly canManage: boolean
+        /** The viewer may start a connection of this connector. */
+        readonly canConnect: boolean
     }
     readonly on: {
         readonly close: () => void
@@ -112,7 +114,7 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
                     ))}
                 </SurfaceListCard>
             )}
-            {detail.canManage ? (
+            {detail.canConnect ? (
                 <div>
                     <Button intent="commit" onPress={() => props.on.add(provider)}>
                         {detail.words.add}

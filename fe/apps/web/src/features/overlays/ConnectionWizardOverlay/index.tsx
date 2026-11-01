@@ -6,11 +6,13 @@ import { purposeFor } from "@/hooks/connection-access"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
 import { useQueryAuthUserSwr } from "@/hooks/auth"
 import {
+    mayConnect,
     moneyProviderOf,
     boardSlotOf,
     useConnectionOverlays,
     useConnectionsData,
     useConnectionsRefresh,
+    useConnectionsRole,
     wizardTargetOf,
 } from "@/hooks/connections"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
@@ -32,7 +34,8 @@ interface ConnectionWizardOverlayProps {
 
 /**
  * The wizard drawer of every provider. The URL says which one is open (`connect`, `conn`, and the return params of an OAuth login),
- * so a row, a library card and an OAuth return open the same drawer, and a refresh keeps it.
+ * so a row, a library card and an OAuth return open the same drawer, and a refresh keeps it. A role that may not finish the wizard
+ * never sees it, whatever the URL says.
  */
 export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => {
     const t = useTranslations("connections")
@@ -40,12 +43,14 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
     const params = useSearchParams()
     const overlays = useConnectionOverlays()
     const data = useConnectionsData()
+    const { role } = useConnectionsRole()
     const slotLabelsOf = useSlotLabels()
     // The signed-in person only prefills the SMTP test recipient: the drawer never waits on it.
     const user = slotOfSwr(useQueryAuthUserSwr())
     const items = props.items ?? data.items
     const agents = props.agents ?? data.activeAgents
-    const found = wizardTargetOf((name) => params.get(name), items)
+    const asked = wizardTargetOf((name) => params.get(name), items)
+    const found = asked !== null && mayConnect(role, asked.provider) ? asked : null
     const def = found === null ? null : PROVIDERS[found.provider]
     const target: WizardTargetView | null =
         found === null || def === null ? null : { ...found, kind: def.kind, money: moneyProviderOf(found.provider) }

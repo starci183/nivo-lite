@@ -1,7 +1,9 @@
 import type { useQueryMcpConnectorsSwr } from "@/hooks/swr"
-import type { useFormatter, useTranslations } from "next-intl"
+import type { useFormatter } from "next-intl"
 import { agentsRowOf } from "@/hooks/mcpGrants"
 import type { McpToolAgentsOf, McpToolAgentsView } from "@/hooks/mcpGrants"
+import { toolTextOf } from "@/modules/mcpGateway/mcpGateway.words"
+import type { McpTranslator } from "@/modules/mcpGateway/mcpGateway.words"
 import type { McpConnectorCommands } from "./useMcpConnectorCommands"
 
 /** One gateway connector as the `mcpConnectors` read answers it. */
@@ -44,8 +46,6 @@ interface McpConnectorRowView {
     readonly tools: { readonly label: string; readonly rows: ReadonlyArray<McpToolRowView> }
 }
 
-/** The words of the gateway region (the `mcpGateway` catalog). */
-export type McpTranslator = ReturnType<typeof useTranslations<"mcpGateway">>
 /** The reader-locale formatter of dates and numbers. */
 export type McpFormatter = ReturnType<typeof useFormatter>
 
@@ -54,12 +54,6 @@ const STATUS_TONE: ReadonlyMap<string, McpTone> = new Map([
     ["degraded", "warning"],
 ])
 const SCOPES: ReadonlySet<string> = new Set(["read", "write"])
-
-/** The catalog text of a native tool (`sepay.transactions.list` reads `tool_sepay-transactions-list`; its plain name `toolName_...`), else what its server sent. */
-const toolTextOf = (t: McpTranslator, kind: "tool" | "toolName", id: string, fallback: string): string => {
-    const key = `${kind}_${id.replaceAll(".", "-")}`
-    return t.has(key) ? t(key) : fallback
-}
 
 /** The status words of a connector: the catalog word of a known status, else the status as the gateway named it. */
 const statusOf = (t: McpTranslator, status: string): string =>
@@ -176,12 +170,12 @@ export const connectorRowsOf = (
     connectors.map((connector) => ({
         id: connector.key,
         title: connectorTitleOf(t, connector.key, connector.name),
-        description: `${connector.key}.* · ${timesOf(t, format, connector)}`,
+        description: timesOf(t, format, connector),
         badges: [
             { label: statusOf(t, connector.status), tone: STATUS_TONE.get(connector.status) ?? "neutral" },
             { label: connector.kind === "native" ? t("native") : t("remote"), tone: "accent" },
             {
-                label: t("tools", { count: connector.tools.length, version: connector.contractVersion }),
+                label: t("tools", { count: connector.tools.length }),
                 tone: "neutral",
             },
             ...credentialBadgesOf(t, connector),

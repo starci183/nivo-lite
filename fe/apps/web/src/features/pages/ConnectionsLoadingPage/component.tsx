@@ -32,8 +32,7 @@ export const ConnectionsLoadingPageBase = (props: ConnectionsLoadingPageBaseProp
             homeHref: props.props.homeHref,
             title: props.props.title,
             description: props.props.description,
-            addLabel: props.props.addLabel,
-            addHref: props.props.addHref,
+            add: { label: props.props.addLabel, href: props.props.addHref },
             tabs: {
                 label: props.props.title,
                 selectedKey: "connected",

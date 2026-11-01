@@ -3,6 +3,8 @@
 import { notFound } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useState, type ReactNode } from "react"
+import { PROVIDER_LOGO } from "@/hooks/connection-providers"
+import { useConnectionRefusal } from "@/hooks/connections"
 import { useSlotLabels } from "@/hooks/slot"
 import { useZaloChecks, useZaloHead, useZaloPage } from "@/hooks/zaloConnection"
 import { navigation } from "@/modules/i18n"
@@ -31,7 +33,8 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
     const { slot } = useZaloPage(props.connectionId)
     const [isAsking, setIsAsking] = useState(false)
     const [isRailOpen, setRailOpen] = useState(false)
-    if (isMissing) notFound()
+    const refusal = useConnectionRefusal()
+    if (isMissing && refusal === undefined) notFound()
     const banner = head.items?.banner ?? ""
     const notices: ReadonlyArray<ZaloPageNotice> = [
         ...(banner === "" ? [] : [{ id: "banner", tone: "negative" as const, title: banner }]),
@@ -46,6 +49,8 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
             shape={props.shape}
             props={{
                 head,
+                markSrc: PROVIDER_LOGO.zalo_oa ?? "",
+                ...(refusal === undefined ? {} : { refusal }),
                 slotLabels: slotLabels(t("headEmpty")),
                 crumbLabel: t("crumbLabel"),
                 crumbs: [

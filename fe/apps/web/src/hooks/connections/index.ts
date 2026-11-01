@@ -5,6 +5,7 @@ export {
     CONNECTION_ROUTES,
     isLocalOnly,
     liveConnections,
+    mayConnect,
     moneyProviderOf,
     sortRows,
     statusKey,
@@ -27,5 +28,6 @@ export { useQueryZaloReturnSwr } from "@/hooks/swr"
 export type { ZaloReturnInput } from "@/hooks/swr"
 export { useConnectionsData } from "./useConnectionsData"
 export { useConnectionsRole } from "./useConnectionsRole"
+export { useConnectionRefusal } from "./useConnectionRefusal"
 
 export type { AgentWish } from "./useSetConnectionAgents"
