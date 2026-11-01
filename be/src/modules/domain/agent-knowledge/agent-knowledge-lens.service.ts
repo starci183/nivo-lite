@@ -98,11 +98,6 @@ export class AgentKnowledgeLensService implements KnowledgeLens {
         }))
     }
 
-    /** The standing memory of the shared brain seen through the lens, as markdown. */
-    memoryFor(workspaceId: string, module: string, installationId: OptionalId): Promise<string> {
-        return this.recall.standingMemory(viewOf({ workspaceId, module, installationId }))
-    }
-
     /** The authority, escalation and tone rules of the folders, the module's own before core, then by slug. */
     async baseRulesOf(folders: ReadonlyArray<string>): Promise<ReadonlyArray<BaseRule>> {
         const rank = (module: string): number => folders.indexOf(module)

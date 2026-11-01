@@ -17,7 +17,7 @@ One shared memory per workspace; every agent reads it through its own view. Owne
 
 ## Where agents get it
 
-- the agent rules file (OpenClaw sync, `buildAgentBundle`): the "facts in force" section (every fact in the agent's view, grouped by subject, budgeted) and the "approved lessons" section. Every brain change calls `enqueueWorkspaceSync`.
+- The agent reads it through NIVO MCP, never from a file: `memory.read` answers the "facts in force" section (every fact in the agent's view, grouped by subject, budgeted) and the "approved lessons" section, and `knowledge.search` answers a question. A turn with a conversation reads the customer view; any other turn reads its own agent's view. Each read leaves a line in `mcp_call_log`, and a read that cannot be audited is not answered.
 - Per turn (`buildAgentContext`): `recall` adds `BRAIN FACTS [F1..]` matching the question and, for internal agents, `DATA RECORDS [D1..]` from `data_records` on connections the agent holds a grant on. Numbers are quoted as stored, never summed from text. Citations carry layer `brain` / `data`.
 
 ## Self-learning (reviewed)

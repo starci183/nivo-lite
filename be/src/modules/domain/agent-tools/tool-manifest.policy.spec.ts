@@ -34,6 +34,7 @@ describe("tool manifest policy", () => {
         await build()
         expect(TOOL_MANIFEST.map((tool) => tool.name)).toEqual([
             "knowledge.search",
+            "memory.read",
             "lead.create_or_update",
             "approval.request",
             "handoff.to_person",
