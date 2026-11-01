@@ -10,12 +10,15 @@ const build = async () => {
     return moduleRef.get<{ readInternalProposal: typeof readInternalProposal }>(SUBJECT)
 }
 
+const INVOICE_ID = "3f1c2b9e-1d2a-4c3b-9a8e-0a1b2c3d4e5f"
+const LEAD_ID = "7a2d4c1e-5b6f-4e8a-b1c2-9f8e7d6c5b4a"
+
 const json = (value: unknown): string => JSON.stringify(value)
 
 const action = {
     action: "send_invoice",
-    subject: { type: "invoice", id: "inv-1" },
-    leadId: "lead-1",
+    subject: { type: "invoice", id: INVOICE_ID },
+    leadId: LEAD_ID,
     fields: { amount_vnd: 4_000_000, note: "late", urgent: true, calm: false, empty: null },
     summary: "Chase the invoice",
 }
@@ -51,8 +54,8 @@ describe("readInternalProposal > a valid proposal", () => {
             actions: [
                 {
                     action: "send_invoice",
-                    subject: { type: "invoice", id: "inv-1" },
-                    leadId: "lead-1",
+                    subject: { type: "invoice", id: INVOICE_ID },
+                    leadId: LEAD_ID,
                     fields: { amount_vnd: 4_000_000, note: "late", urgent: "true", calm: "false", empty: null },
                     summary: "Chase the invoice",
                 },
@@ -123,6 +126,22 @@ describe("readInternalProposal > what is not a proposal", () => {
         )
 
         expect(proposal).toEqual({ reply: "Kept", tasks: [], actions: [], needsHuman: false, reason: "" })
+    })
+
+    it("keeps the reply and drops the actions when a subject id or a lead id is no row id", async () => {
+        const subject = await build()
+
+        const wordSubject = { ...action, subject: { type: "invoice", id: "chatbot" } }
+        const wordLead = { ...action, leadId: "lead-1" }
+
+        expect(subject.readInternalProposal(json({ reply: "Kept", actions: [wordSubject] }))).toEqual({
+            reply: "Kept",
+            tasks: [],
+            actions: [],
+            needsHuman: false,
+            reason: "",
+        })
+        expect(subject.readInternalProposal(json({ reply: "Kept", actions: [wordLead] })).actions).toEqual([])
     })
 
     it("falls back to the whole text when a failing object has no reply of its own", async () => {

@@ -13,11 +13,13 @@ const TITLE_MAX = 200
 const ACTION_MAX = 80
 const SUMMARY_MAX = 300
 const REASON_MAX = 300
-const ID_MAX = 80
 const FIELD_NAME_MAX = 60
 const FIELD_TEXT_MAX = 2000
 const FIELDS_MAX = 30
 const TIME_MAX = 40
+
+/** A row id, which is a uuid column: a word the model wrote there ("chatbot") refuses the proposal instead of failing the write. */
+const idSchema = z.guid()
 
 const subjectTypeSchema = z.enum([
     "lead",
@@ -48,8 +50,8 @@ const taskSchema = z.strictObject({
 
 const actionSchema = z.strictObject({
     action: z.string().trim().min(1).max(ACTION_MAX),
-    subject: z.strictObject({ type: subjectTypeSchema, id: z.string().trim().min(1).max(ID_MAX) }).optional(),
-    leadId: z.string().trim().min(1).max(ID_MAX).nullish(),
+    subject: z.strictObject({ type: subjectTypeSchema, id: idSchema }).optional(),
+    leadId: idSchema.nullish(),
     fields: z
         .record(z.string().max(FIELD_NAME_MAX), fieldValueSchema)
         .refine((fields) => Object.keys(fields).length <= FIELDS_MAX)

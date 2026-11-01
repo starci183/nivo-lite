@@ -28,10 +28,13 @@ const entry = (moduleKey: string): ActionEntry => ({
     label: { vi: "Send an invoice", en: "Send an invoice" },
 })
 
+const INVOICE_ID = "3f1c2b9e-1d2a-4c3b-9a8e-0a1b2c3d4e5f"
+const LEAD_ID = "7a2d4c1e-5b6f-4e8a-b1c2-9f8e7d6c5b4a"
+
 const action = (over: Partial<InternalAction> = {}): InternalAction => ({
     action: "send_invoice",
-    subject: { type: "invoice", id: "inv-1" },
-    leadId: "lead-1",
+    subject: { type: "invoice", id: INVOICE_ID },
+    leadId: LEAD_ID,
     fields: { amount_vnd: 9_000_000 },
     summary: "Send invoice 1",
     ...over,
@@ -154,8 +157,8 @@ describe("InternalProposalSettlerService > actions", () => {
             {
                 action: "send_invoice",
                 subject_type: "invoice",
-                subject_id: "inv-1",
-                lead_id: "lead-1",
+                subject_id: INVOICE_ID,
+                lead_id: LEAD_ID,
                 dedupeKey: "agentturn:wake-5:0",
                 preset: true,
                 forceAsk: undefined,
@@ -241,7 +244,7 @@ describe("InternalProposalSettlerService > the shape of a request", () => {
 
         expect(engine.runWork.mock.calls.map(([, spec]) => [spec.subject_type, spec.subject_id, spec.lead_id])).toEqual(
             [
-                ["lead", null, "lead-1"],
+                ["lead", null, LEAD_ID],
                 ["inbound", null, null],
             ],
         )
