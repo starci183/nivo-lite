@@ -1,6 +1,6 @@
 "use client"
 
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { QUERY_BRAIN_SWR_KEY } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useBrainFactTriggers } from "./useBrainFactTriggers"

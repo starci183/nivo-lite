@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import type { SetupWriteDecision } from "@/modules/types"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { toCardDecision } from "@/hooks/setupCards"

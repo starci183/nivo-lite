@@ -1,6 +1,6 @@
 "use client"
 
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import {
     QUERY_WORKSPACE_INVITES_SWR_KEY,
     QUERY_WORKSPACE_MEMBERS_SWR_KEY,

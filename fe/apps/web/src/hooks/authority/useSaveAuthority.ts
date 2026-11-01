@@ -6,7 +6,7 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 
 /** The profile fields one section writes (the back end keeps the rest). */
 export type AuthorityPatch = MutateUpdateAuthorityRequest["patch"]

@@ -10,7 +10,7 @@ import type { MutateRequestPaymentOrderRequest } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { usePaymentOrderInvocation } from "./usePaymentOrderInvocation"
 import { readError } from "@/hooks/workspaceread"
 

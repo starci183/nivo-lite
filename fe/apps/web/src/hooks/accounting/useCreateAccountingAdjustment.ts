@@ -6,7 +6,7 @@ import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 
 /** Records a correction, reports its outcome and refreshes the accounting ledger. */
 export const useCreateAccountingAdjustment = () => {

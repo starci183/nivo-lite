@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import {
     QUERY_AUTHORITY_SWR_KEY,
     QUERY_MEMBER_GRANTS_SWR_KEY,

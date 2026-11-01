@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { QUERY_MY_ACCOUNT_SWR_KEY, useMutateLogoutOtherSessionsSwr } from "@/hooks/swr"
 import { toast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"

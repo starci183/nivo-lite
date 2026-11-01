@@ -1,6 +1,6 @@
 "use client"
 
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { canDecideItem, type ShellMember } from "@/hooks/member"
 
 import {

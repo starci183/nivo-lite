@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { QUERY_MODULE_INSTALLATIONS_SWR_KEY, QUERY_SETUP_STATE_SWR_KEY } from "@/hooks/swr"
 
 const KEYS: ReadonlySet<unknown> = new Set([QUERY_MODULE_INSTALLATIONS_SWR_KEY, QUERY_SETUP_STATE_SWR_KEY])

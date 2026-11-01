@@ -1,6 +1,6 @@
 "use client"
 
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import {
     QUERY_AGENT_GRAPH_COVERAGE_SWR_KEY,
     QUERY_AGENT_GRAPH_SWR_KEY,

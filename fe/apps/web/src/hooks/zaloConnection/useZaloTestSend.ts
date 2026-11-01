@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
-import { mutate as mutateCache } from "swr"
+import { mutate as mutateCache } from "@/modules/viewer-cache"
 import { useSettledGraphQL, useZaloFailureLabel } from "@/hooks/connection-wizard"
 import { mapSlot } from "@/hooks/slot"
 import { QUERY_ZALO_CONNECTION_EVENTS_SWR_KEY, useMutateSendZaloTestMessageSwr } from "@/hooks/swr"

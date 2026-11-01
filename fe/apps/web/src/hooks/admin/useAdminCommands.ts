@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import {
     useMutateAdminExtendSubscriptionSwr,
     useMutateAdminResendWorkspaceInviteSwr,

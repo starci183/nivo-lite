@@ -2,7 +2,7 @@
 
 import { useCallback } from "react"
 import { useTranslations } from "next-intl"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { useQueryPaymentOrderSwr } from "@/hooks/swr"
 import { useCreditsCheckoutStore } from "@/hooks/zustand/creditsCheckout"
 import type { PayOrder } from "@/modules/types"

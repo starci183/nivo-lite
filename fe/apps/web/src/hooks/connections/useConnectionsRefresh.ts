@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback } from "react"
-import { mutate } from "swr"
+import { mutate } from "@/modules/viewer-cache"
 import { QUERY_CONNECTIONS_SWR_KEY } from "@/hooks/swr"
 import { matchesSwrKey } from "@/modules/utils"
 
