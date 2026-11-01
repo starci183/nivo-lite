@@ -9,8 +9,8 @@ type AgentGraphCanvasProps = {
 }
 
 /**
- * The work map top to bottom, each step below the ones that lead to it (the trigger, what the agent works out, the condition that
- * picks a branch, what comes out), read and selected, never wired: a decision is a diamond whose edges read the condition, a step
+ * The work map left to right, a column per stage and one row per branch of a condition, so each path reads on one line (the trigger,
+ * what the agent works out, the condition that picks a branch, what comes out), read and selected, never wired: a decision is a diamond whose edges read the condition, a step
  * a person answers is round, the rest are rectangles. A selected card and the cards of a traced run paint by tone; the others dim.
  */
 export const AgentGraphCanvas = (props: AgentGraphCanvasProps) => (
@@ -18,8 +18,7 @@ export const AgentGraphCanvas = (props: AgentGraphCanvasProps) => (
         label={props.view.label}
         nodes={props.view.nodes}
         edges={props.view.edges}
-        direction="TB"
-        layout="layered"
+        layout="lanes"
         headers={props.view.headers}
         fit="readable"
         height="lg"

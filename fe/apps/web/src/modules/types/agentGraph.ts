@@ -288,13 +288,20 @@ export type AgentGraphFormChange =
           readonly field: AgentGraphTermField
           readonly value: string | number
       }
-    | { readonly kind: "setRow"; readonly row: number; readonly field: AgentGraphRowField; readonly value: string | number }
+    | {
+          readonly kind: "setRow"
+          readonly row: number
+          readonly field: AgentGraphRowField
+          readonly value: string | number
+      }
 
 /** A node as the graph draws it at a glance, in the shape the graph component takes. */
 export interface AgentGraphFlowNode {
     readonly id: string
     readonly label: string
     readonly description: string
+    /** What the step is: the lanes layout sets its tone and its row from it. */
+    readonly kind: AgentGraphNodeKind
     readonly tone: AgentGraphTone
     readonly shape: AgentGraphShape
     readonly count: string
