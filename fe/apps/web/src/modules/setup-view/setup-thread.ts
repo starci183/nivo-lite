@@ -42,14 +42,17 @@ export const setupThreadOf = (
         const at = (reply ?? message).id
         cardsAt.set(at, [...(cardsAt.get(at) ?? []), ...own])
     })
+    const applied = revisions.filter((revision) => revision.status === "applied")
+    const oldestFirst = [...versions].sort((a, b) => a.version - b.version)
     return revisions.flatMap((revision): Array<ThreadGroup> => {
         const own = sorted.filter((message) => message.setupSessionId === revision.id)
         const threadMessages = own.map((message) => ({ message, cards: cardsAt.get(message.id) ?? [] }))
         if (revision.id === draftId) return [{ id: revision.id, messages: threadMessages, divider: "" }]
         if (own.length === 0) return []
-        const version = versions.find((candidate) => candidate.version === revision.revision)
+        // Each apply closes one revision and writes one version, so they pair by order; their numbers differ.
+        const version = oldestFirst[applied.indexOf(revision)]
         const divider = version
-            ? words.applied(revision.revision, version.appliedAt, version.appliedBy)
+            ? words.applied(version.version, version.appliedAt, version.appliedBy)
             : words.appliedPlain(revision.revision)
         return [{ id: revision.id, messages: threadMessages, divider }]
     })
