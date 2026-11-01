@@ -3,11 +3,18 @@ import { slotOfSwr } from "@/hooks/slot"
 import { isInvalidFailure, isNotFoundFailure } from "@/modules/failure"
 import type { ConnectionNotice, DataSlot, SlotLabels } from "@/modules/types"
 
-/** The refresh interval of a connection page: never while the connection is healthy, else every `pollMs`. */
-export const pollUnlessHealthy =
+/** How many times slower a healthy connection page is asked again than one that needs attention. */
+const HEALTHY_SLOWDOWN = 4
+
+/**
+ * The refresh interval of a connection page: every `pollMs` while the connection needs attention, and `HEALTHY_SLOWDOWN` times
+ * slower while it is healthy. It is never 0: a read that stops at a healthy first answer is never asked again, so a token that
+ * expires later would stay "healthy" on screen.
+ */
+export const pollConnectionPage =
     (pollMs: number) =>
     (page: { readonly healthy: boolean } | undefined): number =>
-        page?.healthy === true ? 0 : pollMs
+        page?.healthy === true ? pollMs * HEALTHY_SLOWDOWN : pollMs
 
 /** Whether a failed read of a connection page means no such connection exists (an id the back end does not know, or one that is no id). */
 const isMissingPageRead = (error: unknown): boolean =>
