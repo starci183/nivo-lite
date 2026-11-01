@@ -15,6 +15,7 @@ import type { CustomerTurn } from "@modules/domain/conversations"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { CustomerCorePlanService } from "./customer-core-plan.service"
+import { CustomerIntentSettleService } from "./customer-intent-settle.service"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { holdReasonOf, isStaleWake, turnRefOf } from "./customer-turn.policy"
 
@@ -41,7 +42,8 @@ const underWake = (loaded: CustomerTurn, wake: AgentWakeView | AgentTurnView): C
  * holding line (at most once per hour), `CustomerOutcomesService.settle` and the reply stored once per message are the methods of
  * `ChatTurnService`, called here under the lease. The handler adds what only a wake has: a wake older than ten minutes is held over, and a
  * model turn runs in the executor, under its gates, between `prepare` and `settle`. Every effect is idempotent per customer message, so a
- * retried wake or a stored proposal repeats nothing.
+ * retried wake or a stored proposal repeats nothing. A turn the published graph holds contracts for settles through the contract pipeline
+ * instead (`CustomerIntentSettleService`), whose door reaches the same `respond`.
  */
 export class CustomerWorkHandlerService implements AgentWorkHandler, OnModuleInit {
     /** The source this handler answers: a customer's message. */
@@ -53,6 +55,7 @@ export class CustomerWorkHandlerService implements AgentWorkHandler, OnModuleIni
         private readonly chat: ChatTurnService,
         private readonly runtime: CustomerTurnRuntimeService,
         private readonly plans: CustomerCorePlanService,
+        private readonly intents: CustomerIntentSettleService,
     ) {}
 
     /** Registers the handler with the drain once the app has started. */
@@ -69,15 +72,20 @@ export class CustomerWorkHandlerService implements AgentWorkHandler, OnModuleIni
             return { kind: "end", ending: await this.hold(loaded, turn, STALE) }
         }
         const ready = await this.chat.ready(loaded, turn.context.lookupName === true)
-        const plan = await this.plans.planOf(ready)
+        const plan = await this.plans.planOf(ready, turn)
         if (typeof plan === "string") return { kind: "end", ending: await this.hold(ready, turn, plan) }
         return { kind: "run", plan }
     }
 
     /** Reads the model's text as the proposal and puts it through the outcome handler; the reply is stored and sent once per message. */
-    async settle(turn: AgentTurnView, proposal: unknown): Promise<AgentHandlerEnding> {
+    async settle(turn: AgentTurnView, proposal: unknown, signal: AbortSignal): Promise<AgentHandlerEnding> {
         const loaded = await this.load(turn)
         if (loaded === undefined) return ended("skipped", TARGET_GONE, null)
+        const intended = await this.intents.settle(turn, proposalTextOf(proposal), signal)
+        if (intended !== null) {
+            this.plans.end(loaded)
+            return intended
+        }
         await this.chat.respond(underWake(loaded, turn), this.runtime.proposalFrom(proposalTextOf(proposal)))
         this.plans.end(loaded)
         return ended("done", null, { replied: true })

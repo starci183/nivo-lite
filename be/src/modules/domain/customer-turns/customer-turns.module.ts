@@ -4,6 +4,9 @@ import { AgentKnowledgeModule } from "@modules/domain/agent-knowledge"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./customer-turns.module-definition"
 import { CustomerCorePlanService } from "./customer-core-plan.service"
+import { CustomerDoorStepService } from "./customer-door-step.service"
+import { CustomerIntentContextService } from "./customer-intent-context.service"
+import { CustomerIntentSettleService } from "./customer-intent-settle.service"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { CustomerWorkHandlerService } from "./customer-work-handler.service"
 import { PaymentClaimsService } from "./payment-claims.service"
@@ -12,6 +15,7 @@ import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
 import { GatewayContextService } from "./gateway-context.service"
 import { HubNotesService } from "./hub-notes.service"
+import { TurnGatewayPipelineService } from "./turn-gateway-pipeline.service"
 import { TurnGatewayToolsService } from "./turn-gateway-tools.service"
 import { TurnHandoffService } from "./turn-handoff.service"
 import { TurnSourcesService } from "./turn-sources.service"
@@ -36,12 +40,16 @@ export class CustomerTurnsModule extends ConfigurableModuleClass {
             TurnPurchasesService,
             HubNotesService,
             GatewayContextService,
+            TurnGatewayPipelineService,
             TurnGatewayToolsService,
             TurnHandoffService,
             TurnSourcesService,
             TurnToolAccessService,
             TurnModulesService,
             CustomerTurnRuntimeService,
+            CustomerIntentContextService,
+            CustomerIntentSettleService,
+            CustomerDoorStepService,
             CustomerCorePlanService,
             CustomerWorkHandlerService,
         ]

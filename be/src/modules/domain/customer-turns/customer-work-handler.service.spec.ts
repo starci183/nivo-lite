@@ -3,11 +3,12 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { agentTurnViewOf, agentWakeViewOf } from "@tests/fixtures/builders/agent-work.builder"
 import { runtimeTurn } from "@tests/fixtures/builders/customer-turn-runtime.builder"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
-import type { AgentTurnPlan } from "@modules/domain/agent-work"
+import type { AgentHandlerEnding, AgentTurnPlan } from "@modules/domain/agent-work"
 import { ChatTurnService } from "@modules/domain/conversations"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { CLOCK } from "@modules/platform/clock"
 import { CustomerCorePlanService } from "./customer-core-plan.service"
+import { CustomerIntentSettleService } from "./customer-intent-settle.service"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { CustomerWorkHandlerService } from "./customer-work-handler.service"
 
@@ -23,6 +24,8 @@ const PLAN: AgentTurnPlan = {
     timeoutMs: 25_000,
 }
 
+const SIGNAL = new AbortController().signal
+
 const ORIGIN = { turnId: "turn-1", wakeId: "wake-1" }
 
 const wakeOf = (patch: { readonly context?: Record<string, unknown>; readonly ageMs?: number } = {}) =>
@@ -31,7 +34,7 @@ const wakeOf = (patch: { readonly context?: Record<string, unknown>; readonly ag
         wakeCreatedAt: new Date(NOW - (patch.ageMs ?? 1_000)),
     })
 
-const build = async (loaded: CustomerTurn | null = runtimeTurn) => {
+const build = async (loaded: CustomerTurn | null = runtimeTurn, intended: AgentHandlerEnding | null = null) => {
     const chat = mock<ChatTurnService>()
     chat.turnOf.mockResolvedValue(loaded ?? undefined)
     chat.answeredByPerson.mockReturnValue(false)
@@ -48,6 +51,7 @@ const build = async (loaded: CustomerTurn | null = runtimeTurn) => {
         proposedAnswer: "",
         detail: {},
     })
+    const intents = mock<CustomerIntentSettleService>({ settle: jest.fn().mockResolvedValue(intended) })
     const handlers = mock<AgentWorkHandlersService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -57,9 +61,10 @@ const build = async (loaded: CustomerTurn | null = runtimeTurn) => {
             { provide: ChatTurnService, useValue: chat },
             { provide: CustomerTurnRuntimeService, useValue: runtime },
             { provide: CustomerCorePlanService, useValue: plans },
+            { provide: CustomerIntentSettleService, useValue: intents },
         ],
     }).compile()
-    return { handler: moduleRef.get(CustomerWorkHandlerService), chat, runtime, plans, handlers }
+    return { handler: moduleRef.get(CustomerWorkHandlerService), chat, runtime, plans, handlers, intents }
 }
 
 describe("CustomerWorkHandlerService registration", () => {
@@ -84,7 +89,7 @@ describe("CustomerWorkHandlerService.prepare", () => {
 
         expect(chat.turnOf).toHaveBeenCalledWith({ conversationId: "c1", messageId: "m1", channelEventId: "tg:42:1" })
         expect(chat.ready).toHaveBeenCalledWith(runtimeTurn, true)
-        expect(plans.planOf).toHaveBeenCalledWith(runtimeTurn)
+        expect(plans.planOf).toHaveBeenCalledWith(runtimeTurn, expect.anything())
     })
 
     it("ends the wake as skipped when the message is gone or the wake names none", async () => {
@@ -151,7 +156,7 @@ describe("CustomerWorkHandlerService.settle", () => {
     it("reads the stored text as the proposal and answers it through the shared code, carrying the turn and wake", async () => {
         const { handler, chat, runtime, plans } = await build()
 
-        await expect(handler.settle(wakeOf(), { text: "the model words" })).resolves.toEqual({
+        await expect(handler.settle(wakeOf(), { text: "the model words" }, SIGNAL)).resolves.toEqual({
             status: "done",
             reason: null,
             outcome: { replied: true },
@@ -168,7 +173,7 @@ describe("CustomerWorkHandlerService.settle", () => {
     it("treats a stored proposal with no text as an empty one, which the reading turns into a question for a person", async () => {
         const { handler, runtime } = await build()
 
-        await handler.settle(wakeOf(), null)
+        await handler.settle(wakeOf(), null, SIGNAL)
 
         expect(runtime.proposalFrom).toHaveBeenCalledWith("")
     })
@@ -176,11 +181,36 @@ describe("CustomerWorkHandlerService.settle", () => {
     it("ends as skipped when the message is gone by then", async () => {
         const { handler, chat } = await build(null)
 
-        await expect(handler.settle(wakeOf(), { text: "x" })).resolves.toMatchObject({
+        await expect(handler.settle(wakeOf(), { text: "x" }, SIGNAL)).resolves.toMatchObject({
             status: "skipped",
             reason: "target_gone",
         })
         expect(chat.respond).not.toHaveBeenCalled()
+    })
+})
+
+describe("CustomerWorkHandlerService.settle > the contract pipeline", () => {
+    const ENDING: AgentHandlerEnding = { status: "done", reason: null, outcome: { replied: true, intent: {} } }
+
+    it("settles a turn the pipeline took through it alone: the legacy reading and respond are not run", async () => {
+        const { handler, chat, runtime, plans, intents } = await build(runtimeTurn, ENDING)
+        const turn = wakeOf()
+
+        await expect(handler.settle(turn, { text: "envelope" }, SIGNAL)).resolves.toBe(ENDING)
+
+        expect(intents.settle).toHaveBeenCalledWith(turn, "envelope", SIGNAL)
+        expect(runtime.proposalFrom).not.toHaveBeenCalled()
+        expect(chat.respond).not.toHaveBeenCalled()
+        expect(plans.end).toHaveBeenCalledWith(runtimeTurn)
+    })
+
+    it("settles a turn the pipeline did not take as it always did", async () => {
+        const { handler, chat, intents } = await build()
+
+        await handler.settle(wakeOf(), { text: "plain" }, SIGNAL)
+
+        expect(intents.settle).toHaveBeenCalledWith(expect.anything(), "plain", SIGNAL)
+        expect(chat.respond).toHaveBeenCalledTimes(1)
     })
 })
 

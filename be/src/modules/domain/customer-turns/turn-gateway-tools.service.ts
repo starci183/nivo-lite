@@ -16,6 +16,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { parseJsonText } from "@modules/platform/primitives"
 import type { HubNoteSource } from "./gateway-turns.contracts"
 import { HubNotesService, toolSourcesOf } from "./hub-notes.service"
+import { TurnGatewayPipelineService } from "./turn-gateway-pipeline.service"
 import {
     gatewaySequenceStepsSchema,
     turnGatewayCallSchema,
@@ -30,6 +31,8 @@ const ENGINE_ACTOR = "OpenClaw"
 const GATEWAY_CALL_ACTION = "gateway_call"
 /** How many tools a search answers when the agent names no limit. */
 const SEARCH_LIMIT_DEFAULT = 5
+/** The answer of a write in a turn that is not pinned to the intent that owns it: the write waits for a turn of its own. */
+const NEEDS_OWN_TURN: JsonResult = { error: "needs_own_turn" }
 /** The answer of a test chat's write: nothing reaches the connector. */
 const SIMULATION: JsonResult = { error: "simulation", detail: "a test chat runs connector tools read-only" }
 
@@ -69,7 +72,8 @@ const digestOf = (value: GatewayJson): string => argsHashOf(value).slice(0, 16)
  * business knowledge. A call over the agent's limits, and every sequence (the playbook steps a person approves at once), opens the
  * `gateway_call` approval with the exact arguments and the turn's sources, and the agent hears `approval_requested`. A write the agent
  * made posts an `action_done` card. An owner's test chat runs read-only: search, describe and read-scope calls run for real, while a
- * write-scope call or sequence is refused with a typed `simulation` answer before it reaches the connector.
+ * write-scope call or sequence is refused with a typed `simulation` answer before it reaches the connector. On the contract pipeline a
+ * write or a sequence of an unpinned turn is refused with `needs_own_turn`, and a call's result reaches the model as marked data.
  */
 export class TurnGatewayToolsService implements GatewayTools {
     constructor(
@@ -79,6 +83,7 @@ export class TurnGatewayToolsService implements GatewayTools {
         private readonly engine: WorkEngineService,
         private readonly notes: HubNotesService,
         private readonly sources: TurnSourcesService,
+        private readonly pipeline: TurnGatewayPipelineService,
     ) {}
 
     /** Runs one meta-tool for the job's own conversation; a conversation of another workspace answers not found. */
@@ -130,12 +135,14 @@ export class TurnGatewayToolsService implements GatewayTools {
         const described = await this.gateway.describe(caller, name)
         const writes = described?.scope !== "read"
         if (writes && (await this.conversations.isTestChat(conversation.id))) return SIMULATION
+        const gate = await this.pipeline.gateOf(ctx, conversation)
+        if (gate.refuses && described !== null && writes) return NEEDS_OWN_TURN
         const stepKey = `${ctx.jobId}:${name}:${digestOf(callArgs)}`
         const result = await this.gateway.call({ ...caller, opKey: stepKey }, name, callArgs)
         if (result.ok) {
             if (described !== null && writes)
                 await this.postDone(ctx, conversation, name, described.description, stepKey)
-            return { result: result.value }
+            return this.pipeline.resultOf(gate, result.value)
         }
         if (result.code !== "approval_required") return { error: result.code, detail: result.detail }
         return this.ask(ctx, conversation, {
@@ -169,6 +176,7 @@ export class TurnGatewayToolsService implements GatewayTools {
         if (unknown !== undefined) return { error: "not_granted_or_unknown", detail: unknown.name }
         const writes = described.some((tool) => tool?.scope !== "read")
         if (writes && (await this.conversations.isTestChat(conversation.id))) return SIMULATION
+        if (writes && (await this.pipeline.gateOf(ctx, conversation)).refuses) return NEEDS_OWN_TURN
         const names = steps.map((step) => step.name)
         const reply = parsed.data.reply?.trim() ?? ""
         return this.ask(ctx, conversation, {
