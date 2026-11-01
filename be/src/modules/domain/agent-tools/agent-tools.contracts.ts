@@ -21,6 +21,8 @@ export interface ToolContext {
     readonly workspaceId: string
     /** The conversation of the job. */
     readonly conversationId: string
+    /** The intent a split turn is pinned to, when the call comes from the bridge; absent on a per-job token. */
+    readonly pinnedIntent?: string | null
 }
 
 /** Who a credential admits: the job and the workspace it acts for, nothing else. */
@@ -48,6 +50,8 @@ export interface BridgeTurn extends ToolPrincipal {
     readonly conversationId: string | null
     /** The account that wrote the tagging message, or null. */
     readonly authorUserId: string | null
+    /** The intent a split turn is pinned to, or null: read from the wake, never from what the model sent. */
+    readonly pinnedIntent?: string | null
 }
 
 /** A running turn, or null when the credential names none. */
