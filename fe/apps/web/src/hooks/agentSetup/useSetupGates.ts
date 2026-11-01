@@ -6,6 +6,9 @@ import { useRefreshInstallation } from "@/hooks/agentSettings"
 import {
     useMutateApplySetupSwr,
     useMutateSetSetupGateSwr,
+    QUERY_AGENT_GRAPH_COVERAGE_SWR_KEY,
+    QUERY_AGENT_GRAPH_SWR_KEY,
+    QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY,
     QUERY_SETUP_STATE_SWR_KEY,
     QUERY_SETUP_VERSIONS_SWR_KEY,
 } from "@/hooks/swr"
@@ -20,6 +23,15 @@ type ApplyNote = { readonly tone: "idle" | "applied"; readonly version: number }
 
 const SETUP_KEYS: ReadonlySet<unknown> = new Set([QUERY_SETUP_STATE_SWR_KEY, QUERY_SETUP_VERSIONS_SWR_KEY])
 const isSetupKey = (key: unknown): boolean => Array.isArray(key) && SETUP_KEYS.has(key[0])
+
+/** An apply publishes a graph version too, so the head of the map ("version N running") is read again with the setup. */
+const APPLY_KEYS: ReadonlySet<unknown> = new Set([
+    ...SETUP_KEYS,
+    QUERY_AGENT_GRAPH_SWR_KEY,
+    QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY,
+    QUERY_AGENT_GRAPH_COVERAGE_SWR_KEY,
+])
+const isApplyKey = (key: unknown): boolean => Array.isArray(key) && APPLY_KEYS.has(key[0])
 
 /** The gate checklist of the setup: confirm, reopen or edit one gate, and apply the draft as a version. A failure was already toasted. */
 export const useSetupGates = (setupSessionId: string, installationId: string) => {
@@ -55,7 +67,7 @@ export const useSetupGates = (setupSessionId: string, installationId: string) =>
         const applied = await runGraphQL(() => applySetup.trigger({ installationId }), { showSuccessToast: false })
         if (applied === undefined) return
         setApplyNote({ tone: "applied", version: applied.version })
-        await mutate(isSetupKey)
+        await mutate(isApplyKey)
         await refreshInstallation()
     }, [runGraphQL, applySetup, installationId, refreshInstallation])
     return {
