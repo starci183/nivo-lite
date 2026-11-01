@@ -14,6 +14,7 @@ import type {
 } from "./agent-graphs.contracts"
 import type { DecisionView } from "./agent-graph-decisions.service"
 import { branchApproverOf } from "./policies/branch-approver.policy"
+import { withoutStrayStops } from "./policies/stray-stops.policy"
 import { sourcesIndexOf } from "./policies/sources-index.policy"
 import { AgentGraphEntity, AgentGraphSourceEntity, AgentGraphVersionEntity } from "./persistence/entities"
 
@@ -290,7 +291,7 @@ export class AgentGraphsService {
             agentId: row.agentId,
             installationId: row.installationId,
             mode: row.mode,
-            draft: draft.data,
+            draft: withoutStrayStops(draft.data),
             draftRev: row.draftRev,
             activeVersionId: row.activeVersionId,
             active: active?.success === true ? active.data : null,
