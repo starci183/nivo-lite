@@ -3,6 +3,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Display text of the dossier-review codes, the title and detail of every rule finding, and the tail of a NIVO draft; Vietnamese and English. */
 export const DOSSIER_REVIEW_MESSAGES: MessageBundle = {
     vi: {
+        "unfiled.label": "các tài liệu chưa xếp hồ sơ",
         "errors.DOSSIER_REVIEW_FINDING_NOT_FOUND": "Không tìm thấy phát hiện này trong không gian làm việc.",
         "errors.DOSSIER_REVIEW_DRAFT_NOT_FOUND": "Không tìm thấy dự thảo này trong không gian làm việc.",
         "errors.DOSSIER_REVIEW_TRANSITION_REFUSED":
@@ -82,6 +83,7 @@ export const DOSSIER_REVIEW_MESSAGES: MessageBundle = {
             'Dự thảo do NIVO soạn ngày {{date}} theo phát hiện "{{title}}". Cần rà soát, điền chỗ trống và ký trước khi sử dụng.',
     },
     en: {
+        "unfiled.label": "the documents not filed under a dossier",
         "errors.DOSSIER_REVIEW_FINDING_NOT_FOUND": "This finding does not exist in the workspace.",
         "errors.DOSSIER_REVIEW_DRAFT_NOT_FOUND": "This draft does not exist in the workspace.",
         "errors.DOSSIER_REVIEW_TRANSITION_REFUSED": "The finding or draft is no longer in a state that allows this.",

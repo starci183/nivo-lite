@@ -23,7 +23,7 @@ export interface DossierRowView {
 }
 
 /** Rows of the same shape as ready ones, drawn as geometry while the dossiers are read. */
-export const placeholderDossierRows = (key: string): ReadonlyArray<DossierRowView> =>
+const placeholderDossierRows = (key: string): ReadonlyArray<DossierRowView> =>
     [1, 2, 3].map((n) => ({
         id: `${key}-${n}`,
         name: "-",
@@ -35,6 +35,15 @@ export const placeholderDossierRows = (key: string): ReadonlyArray<DossierRowVie
             { id: "documents", label: "-", tone: "neutral" },
         ],
     }))
+
+/** One category of placeholder rows, the same shape as a ready one. */
+export const placeholderDossierCategory = (n: number) => ({
+    id: `placeholder-${n}`,
+    label: "-",
+    meta: "-",
+    title: "-",
+    dossiers: placeholderDossierRows(`placeholder-${n}`),
+})
 
 /** What the card of dossiers draws: the copy, the rows and whether they are a placeholder. */
 interface DossierRowsCardProps {

@@ -2416,6 +2416,17 @@
     "resolution_draft": "Đã duyệt dự thảo",
     "resolution_manual": "Xử lý bên ngoài",
     "resolution_not_detected": "Không còn phát hiện",
+    "importChecklist": "Nhập danh mục hồ sơ",
+    "importTitle": "Nhập danh mục hồ sơ từ Excel",
+    "importIntro": "Chọn bảng đối chiếu và hồ sơ còn thiếu (tệp .xlsx). NIVO đọc từng dòng hồ sơ và tình trạng của nó.",
+    "importWarning": "Danh mục hiện có sẽ được thay bằng danh mục trong tệp. Tài liệu đã nạp không bị xoá.",
+    "importDropLabel": "Tệp danh mục",
+    "importDropPrompt": "Thả tệp .xlsx vào đây hoặc chọn tệp",
+    "importDropHint": "Một tệp Excel, tối đa 10 MB",
+    "importConfirm": "Nhập danh mục",
+    "importCancel": "Huỷ",
+    "importClose": "Đóng",
+    "importDone": "Đã nhập danh mục hồ sơ",
     "reviewAll": "Rà soát lại cả bộ",
     "reviewOne": "Rà soát hồ sơ này",
     "reviewQueued": "Đã yêu cầu rà soát",
@@ -3511,7 +3522,9 @@
     "suggest_lead_routing_topic": "Giờ làm việc và ai nhận khách",
     "suggest_lead_routing_hint": "Khung giờ gọi lại, ai nhận khách nóng, khách ngoài giờ xử lý ra sao. Ví dụ: Hương nhận khách 8-18h; sau 18h hẹn gọi 8h sáng; khách nóng báo Zalo chủ ngay.",
     "suggest_brand_voice_topic": "Cách xưng hô và giọng điệu mẫu",
-    "suggest_brand_voice_hint": "Vài câu mẫu bạn ưng ý để agent nói đúng giọng của bạn."
+    "suggest_brand_voice_hint": "Vài câu mẫu bạn ưng ý để agent nói đúng giọng của bạn.",
+    "hintChooseVisibility": "Chọn ai được đọc trước khi thêm.",
+    "visChooseNote": "Chọn ai được đọc tài liệu này trước khi thêm: khách hàng được biết, hoặc chỉ nội bộ."
   },
   "lead": {
     "contextTitle": "Bối cảnh khách hàng",

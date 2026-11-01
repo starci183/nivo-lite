@@ -13,6 +13,7 @@ import {
     sizeLabelOf,
     statusCountsOf,
     useBrainDossiers,
+    useChecklistImport,
     useBrainPageHeader,
     useDossierReviewCommands,
     useDossierReviewSummary,
@@ -23,7 +24,7 @@ import { useUsageView, useWorkspaceMember } from "@/hooks/knowledge"
 import { loadingSlot, mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { brainDossierHref, brainTabHref } from "@/modules/routes"
-import { placeholderDossierRows } from "@/components/composites/DossierRowsCard"
+import { placeholderDossierCategory } from "@/components/composites/DossierRowsCard"
 import { BrainDossiersBase } from "./component"
 import type { CategoryRowView, DossierRowView, DossiersContent } from "./component"
 
@@ -38,17 +39,9 @@ interface RowContext {
     readonly openId: string | undefined
 }
 
-const placeholderCategory = (n: number): CategoryRowView => ({
-    id: `placeholder-${n}`,
-    label: "-",
-    meta: "-",
-    title: "-",
-    dossiers: placeholderDossierRows(`placeholder-${n}`),
-})
-
 /** Rows of the same shape as a ready page, drawn as geometry while the categories and dossiers are read. */
 const PLACEHOLDER: DossiersContent = {
-    categories: [1, 2, 3].map(placeholderCategory),
+    categories: [1, 2, 3].map(placeholderDossierCategory),
     counts: [1, 2, 3, 4, 5].map((n) => ({ id: `placeholder-${n}`, label: "-", tone: "neutral" })),
 }
 
@@ -77,7 +70,11 @@ const dossierRowOf = (context: RowContext, dossier: DossierView): DossierRowView
     const note = withDocuments(noteOf(t, dossier.note), dossier.documentCount > 0 ? documents : null)
     const status = {
         id: "status",
-        label: t(standing.status === "present" && dossier.documentCount === 0 ? "statusPresentNoFile" : `status_${standing.status}`),
+        label: t(
+            standing.status === "present" && dossier.documentCount === 0
+                ? "statusPresentNoFile"
+                : `status_${standing.status}`,
+        ),
         tone: DOSSIER_STATUS_TONE[standing.status],
     }
     return {
@@ -136,6 +133,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
     const header = useBrainPageHeader("dossiers", props.header)
     const summary = useDossierReviewSummary()
     const commands = useDossierReviewCommands()
+    const checklist = useChecklistImport(reload, member.canWrite)
     const [picked, setPicked] = useState<string | undefined>(undefined)
     const [isCategoriesOpen, setCategoriesOpen] = useState(false)
     const context: RowContext = { t, review, reviewOf: summary.reviewOf, openId: props.dossier }
@@ -169,6 +167,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
                           runningLabel: review("reviewRunning"),
                       }
                     : null,
+                checklistImport: checklist.view,
                 hasDetail: props.dossier !== undefined,
                 detailLabel: review("detailLabel"),
                 detailCloseLabel: review("detailClose"),
@@ -193,6 +192,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
                 retry: reload,
                 categoriesOpenChange: setCategoriesOpen,
                 reviewAll: () => void commands.requestReview(null),
+                ...checklist.on,
                 closeDetail: () => router.replace(brainTabHref("dossiers")),
             }}
         />

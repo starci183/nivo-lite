@@ -2416,6 +2416,17 @@
     "resolution_draft": "An approved draft covers it",
     "resolution_manual": "Done outside",
     "resolution_not_detected": "No longer found",
+    "importChecklist": "Import checklist",
+    "importTitle": "Import the dossier checklist from Excel",
+    "importIntro": "Choose the checklist and missing dossiers workbook (.xlsx). NIVO reads each dossier row and where it stands.",
+    "importWarning": "The dossiers now listed are replaced by those in the file. Documents already added are kept.",
+    "importDropLabel": "Checklist file",
+    "importDropPrompt": "Drop an .xlsx file here or choose one",
+    "importDropHint": "One Excel file, up to 10 MB",
+    "importConfirm": "Import checklist",
+    "importCancel": "Cancel",
+    "importClose": "Close",
+    "importDone": "Dossier checklist imported",
     "reviewAll": "Review all dossiers",
     "reviewOne": "Review this dossier",
     "reviewQueued": "Review requested",
@@ -3511,7 +3522,9 @@
     "suggest_lead_routing_topic": "Working hours and who receives leads",
     "suggest_lead_routing_hint": "Call-back hours, who gets hot leads, what happens out of hours. E.g. Huong takes leads 8-18h; after 18h promise a call at 8am; hot leads ping the owner on Zalo.",
     "suggest_brand_voice_topic": "Voice and sample replies",
-    "suggest_brand_voice_hint": "A few sample replies you like."
+    "suggest_brand_voice_hint": "A few sample replies you like.",
+    "hintChooseVisibility": "Choose who may read before adding.",
+    "visChooseNote": "Choose who may read these documents before adding them: customers may know, or internal only."
   },
   "lead": {
     "contextTitle": "Customer context",

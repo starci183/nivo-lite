@@ -18,6 +18,7 @@ export type { CategoryView, DossierView, NumberFormatter } from "@/modules/brain
 export { useDossierFindings } from "./useDossierFindings"
 export { useDossierRecord } from "./useDossierRecord"
 export { useDossierRemedyDraft } from "./useDossierRemedyDraft"
+export { useChecklistImport } from "./useChecklistImport"
 export { useDossierReviewCommands } from "./useDossierReviewCommands"
 export { useDossierReviewSummary } from "./useDossierReviewSummary"
 export { useFindingDialog } from "./useFindingDialog"

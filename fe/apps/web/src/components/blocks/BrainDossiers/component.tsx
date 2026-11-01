@@ -11,12 +11,15 @@ import {
     PaneSection,
     SectionHeader,
 } from "@starci/grammar/common"
-import type { BadgeTone, PageHeaderContent, PaneGridProps } from "@starci/grammar/common"
+import type { BadgeTone, PageHeaderContent } from "@starci/grammar/common"
 import { DossierRowsCard } from "@/components/composites/DossierRowsCard"
 import type { DossierRowView } from "@/components/composites/DossierRowsCard"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
+import { ChecklistImportEntry } from "./ChecklistImportEntry"
+import type { ChecklistImportEntryView } from "./ChecklistImportEntry"
 import { CATEGORY_CLASS_NAME, COUNTS_CLASS_NAME } from "./classNames"
+import { LAYOUT } from "./layout"
 
 export type { DossierRowView } from "@/components/composites/DossierRowsCard"
 
@@ -77,6 +80,8 @@ export interface BrainDossiersBaseProps {
             readonly isRunning: boolean
             readonly runningLabel: string
         } | null
+        /** Loads the dossiers of a checklist workbook: the entry in the heading and its dialog; null for a member who may only read. */
+        readonly checklistImport: ChecklistImportEntryView | null
         /** A dossier is open: its detail pane takes the third column from the wide breakpoint and is a drawer below it. */
         readonly hasDetail: boolean
         readonly detailLabel: string
@@ -90,6 +95,10 @@ export interface BrainDossiersBaseProps {
         readonly retry: () => void
         readonly categoriesOpenChange: (isOpen: boolean) => void
         readonly reviewAll: () => void
+        readonly openImport: () => void
+        readonly pickImport: (files: Array<File>) => void
+        readonly confirmImport: () => void
+        readonly closeImport: () => void
         readonly closeDetail: () => void
     }
 }
@@ -139,6 +148,7 @@ const Commands = (props: Pick<BrainDossiersBaseProps, "props" | "on">) => {
                     {view.reviewAll.isRunning ? view.reviewAll.runningLabel : view.reviewAll.label}
                 </Button>
             )}
+            {view.checklistImport === null ? null : <ChecklistImportEntry view={view.checklistImport} on={props.on} />}
             {view.addHref === null ? null : (
                 <Button intent="commit" href={view.addHref}>
                     {view.addLabel}
@@ -201,18 +211,6 @@ const InSlot = (props: InSlotProps) => (
         {props.children}
     </SlotView>
 )
-
-/** The arrangement of the panes: the categories beside the dossiers, and the open dossier as a third column from the wide breakpoint. */
-const LAYOUT: Record<"plain" | "withDetail", Required<Pick<PaneGridProps, "areas" | "columns">>> = {
-    plain: {
-        areas: { base: ["main"], medium: ["list main"] },
-        columns: { base: ["fill"], medium: ["standard", "fill"] },
-    },
-    withDetail: {
-        areas: { base: ["main"], medium: ["list main"], wide: ["list main detail"] },
-        columns: { base: ["fill"], medium: ["standard", "fill"], wide: ["standard", "fill", "wide"] },
-    },
-}
 
 /**
  * Draws the dossiers tab of the Second Brain as a panes page: the header with its tabs, then a PaneGrid attached flush

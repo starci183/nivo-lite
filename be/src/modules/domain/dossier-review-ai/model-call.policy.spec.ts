@@ -31,6 +31,7 @@ class ProbeService extends ModelCallPolicy {
             schema: SCHEMA,
             timeoutMs: 1000,
             purpose: "probe",
+            budget: { effort: "low", maxTokens: 1000 },
         })
     }
 }
@@ -78,6 +79,7 @@ describe("ModelCallPolicy", () => {
             json: true,
             schema: SCHEMA,
             timeoutMs: 1000,
+            budget: { effort: "low", maxTokens: 1000 },
             context: null,
         })
         expect(usage.record).toHaveBeenCalledTimes(1)

@@ -208,7 +208,7 @@ const registerClaims = () => {
                 { id: "r1", workspaceId: WS },
                 { status: "running", startedAt: new Date(NOW) },
             )
-            expect(em.find).not.toHaveBeenCalled()
+            expect(em.find).toHaveBeenCalledTimes(1)
             expect(em.insert).not.toHaveBeenCalled()
             expect(em.upsert).not.toHaveBeenCalled()
             expect(endOf(em)).toEqual({

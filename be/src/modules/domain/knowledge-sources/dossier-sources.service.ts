@@ -56,6 +56,26 @@ export class DossierSourcesService {
         return rows.map(toDossierSource)
     }
 
+    /** Every document of the workspace that was read (ready), oldest first, at most `limit` and never more than the read bound: the review files them under dossiers or reads them on their own. */
+    async readySources(workspaceId: string, limit: number): Promise<ReadonlyArray<DossierSource>> {
+        const rows = await this.entityManager.find(KnowledgeSourceEntity, {
+            select: COLUMNS,
+            where: { workspaceId, status: "ready" },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: Math.min(limit, DOSSIER_SOURCES_MAX),
+        })
+        return rows.map(toDossierSource)
+    }
+
+    /** Files a document under a dossier: its topic becomes the dossier's category and its tags the given ones. */
+    async fileUnder(workspaceId: string, sourceId: string, topic: string, tags: ReadonlyArray<string>): Promise<void> {
+        await this.entityManager.update(
+            KnowledgeSourceEntity,
+            { id: sourceId, workspaceId },
+            { topic, tags: [...tags] },
+        )
+    }
+
     /** The first document carrying this tag, or null. */
     async byTag(workspaceId: string, tag: string): Promise<MaybeDossierSource> {
         const row = await this.entityManager.findOne(KnowledgeSourceEntity, {
