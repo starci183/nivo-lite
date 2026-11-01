@@ -131,7 +131,7 @@ export class OfficeCommandService {
             orders: pool.refs.orders.map((order) => ({ id: order.id, order_no: order.orderNo, lead_id: order.leadId })),
             text: message.body,
         })
-        if (!reading.ok) return this.reply(ctx, "office.cmdReadFailed", { ...names, error: reading.error })
+        if (!reading.ok) return this.reply(ctx, "office.cmdReadFailed", names)
         if (reading.choice.intent === "question") return { kind: "chat" }
 
         const resolution = resolveCandidate(reading.choice, accepts, pool.refs)

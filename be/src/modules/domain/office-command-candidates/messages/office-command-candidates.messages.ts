@@ -15,8 +15,7 @@ export const OFFICE_COMMAND_CANDIDATES_MESSAGES: MessageBundle = {
         "office.cmdUnmapped": "Mình chưa khớp tin này với lệnh nào của @{{handle}}. {{agent}} nhận: {{list}}.",
         "office.cmdMissing":
             "Để gửi “{{what}}” cho @{{handle}} mình còn thiếu {{missing}}. Bạn ghi rõ trong tin nhắn rồi gửi lại nhé.",
-        "office.cmdReadFailed":
-            "NIVO chưa đọc được tin này thành lệnh cho @{{handle}} ({{error}}). {{agent}} nhận: {{list}}.",
+        "office.cmdReadFailed": "{{agent}} chưa trả lời được lúc này, bạn thử lại nhé.",
         "office.cmdNeedOrder": "mã đơn hàng (ví dụ #DH-1)",
         "office.cmdNeedLead": "tên khách hàng",
         "office.cmdNeedInvoice": "hóa đơn",
@@ -46,8 +45,7 @@ export const OFFICE_COMMAND_CANDIDATES_MESSAGES: MessageBundle = {
         "office.cmdUnmapped": "I could not match that to a command for @{{handle}}. {{agent}} accepts: {{list}}.",
         "office.cmdMissing":
             "To send “{{what}}” to @{{handle}} I still need {{missing}}. Name it in your message and try again.",
-        "office.cmdReadFailed":
-            "NIVO could not read that as a command for @{{handle}} ({{error}}). {{agent}} accepts: {{list}}.",
+        "office.cmdReadFailed": "{{agent}} cannot answer right now, please try again.",
         "office.cmdNeedOrder": "the order (for example #DH-1)",
         "office.cmdNeedLead": "the customer's name",
         "office.cmdNeedInvoice": "the invoice",

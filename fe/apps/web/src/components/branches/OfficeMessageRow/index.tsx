@@ -25,7 +25,7 @@ const Body = (props: BodyProps) => (
     <Text as="p">
         {props.parts.map((part) =>
             part.isMention ? (
-                <Text key={part.key} as="span" weight="medium" tone="accent">
+                <Text key={part.key} as="span">
                     {part.text}
                 </Text>
             ) : (

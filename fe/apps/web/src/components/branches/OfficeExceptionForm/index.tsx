@@ -144,7 +144,9 @@ const renderOfficeExceptionFormActions = ({
                 isDisabled={isLocked || isOtherIncomplete || isBasisMissing}
                 onPress={onApprove}
             >
-                {isEditing ? text("exceptionSaveContinue") : text("exceptionApprove")}
+                {isEditing
+                    ? text("exceptionSaveContinue")
+                    : text(item.draft === null ? "exceptionApprove" : "exceptionSendDraft")}
             </Button>
         )}
         {item.status === "failed" || item.isReconcile || (item.draft === null && item.amount === null) ? null : (
