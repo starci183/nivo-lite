@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useBrainCommand, useBrainStats, useBrainUsage } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { brainTabHref } from "@/modules/routes"
 import { BrainPipelineBase } from "./component"
 
 /** The connected pipeline: how many documents came in, what NIVO learnt, what waits for review and what the agents use, with the allowance meter. */
@@ -53,6 +54,10 @@ export const BrainPipeline = () => {
                             meta: t("stepUseMeta", { n: agents }),
                         },
                     ],
+                    next:
+                        figures.waiting > 0
+                            ? { label: t("nextReview", { count: figures.waiting }), href: brainTabHref("review") }
+                            : undefined,
                     maintain: isMaintenanceDue
                         ? {
                               title: brain("maintainTitle"),

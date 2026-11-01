@@ -1,4 +1,4 @@
-export { SCOPE_KEY, SCOPE_TONE, FACT_SOURCE_KEY, TYPE_KEY, adviceFor, reviewBoardOf } from "@/modules/brain"
+export { SCOPE_KEY, SCOPE_TONE, FACT_SOURCE_KEY, TYPE_KEY, adviceFor, proposerOf, reviewBoardOf } from "@/modules/brain"
 export type { MineOutcome, ReviewConflict, ReviewSingle } from "@/modules/brain"
 export { useBrainCommand } from "./useBrainCommand"
 export { useFactForm } from "./useFactForm"

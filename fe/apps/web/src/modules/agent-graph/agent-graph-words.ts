@@ -21,6 +21,8 @@ export interface AgentGraphContext {
     readonly amount: (vnd: number) => string
     /** Where the checklist of the agent stands: the other half of what "Publish and run" does. */
     readonly setup: AgentGraphSetupState
+    /** The names of the channels the agent is connected to. */
+    readonly channels: ReadonlyArray<string>
 }
 
 /** The checklist of the setup as the one publish action sees it. */

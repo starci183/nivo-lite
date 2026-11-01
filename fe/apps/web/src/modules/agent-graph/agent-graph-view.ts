@@ -6,6 +6,7 @@ import type {
     AgentGraphPhoneView,
     AgentGraphSideTab,
 } from "@/modules/types"
+import { cardLineWithChannels } from "./agent-graph-channels"
 import { flowEdgesOf, flowNodesOf, layerHeadersOf } from "./agent-graph-flow"
 import { problemLinesOf } from "./agent-graph-problems"
 import { detailViewOf } from "./agent-graph-view-detail"
@@ -89,7 +90,18 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
         canvas: {
             label: t("mapLabel"),
             emptyLabel: t("mapEmpty"),
-            nodes: flowNodesOf(data.nodes, { selectedKey: ui.selectedKey, path: run?.path ?? [] }),
+            nodes: flowNodesOf(data.nodes, { selectedKey: ui.selectedKey, path: run?.path ?? [] }).map((flow) => {
+                const node = data.nodes.find((entry) => entry.key === flow.id)
+                return node === undefined
+                    ? flow
+                    : {
+                          ...flow,
+                          description: cardLineWithChannels(node, {
+                              connected: ctx.channels,
+                              none: t("channelNone"),
+                          }),
+                      }
+            }),
             edges: flowEdgesOf(data.nodes, {
                 approved: t("edgeApproved"),
                 taken: (label) => t("edgeTaken", { label }),

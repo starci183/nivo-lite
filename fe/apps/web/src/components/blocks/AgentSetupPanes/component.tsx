@@ -37,6 +37,7 @@ export interface AgentSetupChatContent extends AgentSetupThreadContent, AgentSet
 export interface AgentSetupCopy {
     readonly paneLabel: string
     readonly checklistLabel: string
+    readonly feedNote: string
     readonly chatLabel: string
     readonly chatTitle: string
     readonly proposalsLabel: string
@@ -126,6 +127,7 @@ const SetupBand = (props: AgentSetupPanesBaseProps) =>
         <AgentSetupBand
             gates={view.gates}
             checklistLabel={props.props.copy.checklistLabel}
+            feedNote={props.props.copy.feedNote}
             isSkeleton={isSkeleton}
         >
             <AgentSetupChecklist view={view} isSkeleton={isSkeleton} copy={props.props.copy} on={props.on} />

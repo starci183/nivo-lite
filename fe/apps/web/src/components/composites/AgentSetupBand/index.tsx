@@ -1,4 +1,4 @@
-import { Alert, Disclosure } from "@starci/grammar/common"
+import { Alert, Disclosure, Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { SetupMeter } from "@/components/branches/SetupMeter"
 import type { SetupSideView } from "@/modules/types"
@@ -7,6 +7,8 @@ import type { SetupSideView } from "@/modules/types"
 interface AgentSetupBandProps {
     readonly gates: SetupSideView["gates"]
     readonly checklistLabel: string
+    /** What the confirmed items do and do not feed: the agent's instructions, not the answers customers get from the Brain. */
+    readonly feedNote: string
     readonly isSkeleton: boolean
     /** The items, the draft, the knowledge and the versions, drawn by the block. */
     readonly children: ReactNode
@@ -27,6 +29,9 @@ export const AgentSetupBand = (props: AgentSetupBandProps) => {
                 total={gates.total}
                 isSkeleton={props.isSkeleton}
             />
+            <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
+                {props.feedNote}
+            </Text>
             <Disclosure title={props.checklistLabel} defaultExpanded={!gates.canApply}>
                 {props.children}
             </Disclosure>

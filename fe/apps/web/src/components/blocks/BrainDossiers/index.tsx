@@ -58,6 +58,12 @@ const noteOf = (t: Translate, note: DossierView["note"]): string | null => {
     return note.kind === "missing" ? t("dossierMissing", { text: note.text }) : note.text
 }
 
+/** A line followed by the count of its documents; either may be missing. */
+const withDocuments = (note: string | null, documents: string | null): string | null => {
+    const parts = [note, documents].filter((part) => part !== null)
+    return parts.length === 0 ? null : parts.join(" · ")
+}
+
 /**
  * A dossier in the words of the list: the status the review stands at (the checklist's own until it has looked), then the
  * count of its active findings in the tone of the worst, or else its documents; the other count goes into the line.
@@ -68,10 +74,10 @@ const dossierRowOf = (context: RowContext, dossier: DossierView): DossierRowView
     const standing = reviewedStatusOf(dossier.status, reviewed)
     const worst = reviewed === undefined ? null : worstSeverityOf(reviewed)
     const documents = t("dossierDocuments", { count: dossier.documentCount })
-    const note = noteOf(t, dossier.note)
+    const note = withDocuments(noteOf(t, dossier.note), dossier.documentCount > 0 ? documents : null)
     const status = {
         id: "status",
-        label: t(`status_${standing.status}`),
+        label: t(standing.status === "present" && dossier.documentCount === 0 ? "statusPresentNoFile" : `status_${standing.status}`),
         tone: DOSSIER_STATUS_TONE[standing.status],
     }
     return {
@@ -79,10 +85,10 @@ const dossierRowOf = (context: RowContext, dossier: DossierView): DossierRowView
         name: dossier.name,
         href: brainDossierHref(dossier.id),
         isSelected: dossier.id === context.openId,
-        note: worst === null ? note : [note, documents].filter((part) => part !== null).join(" · "),
+        note: worst === null ? note : withDocuments(note, documents),
         badges:
             reviewed === undefined || worst === null
-                ? [status, { id: "documents", label: documents, tone: "muted" }]
+                ? [status]
                 : [
                       status,
                       {

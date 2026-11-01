@@ -230,7 +230,7 @@ export class DocumentFactsService {
                     autoApply: false,
                     // A document kept for one agent instance proposes facts for that instance only.
                     installationId: source.installationId,
-                    proposedBy: `Document: ${source.title.slice(0, 80)}`,
+                    proposedBy: source.title.slice(0, 80),
                     evidence: [this.documentEvidence(source, fact.quote)],
                 })
                 filed += 1

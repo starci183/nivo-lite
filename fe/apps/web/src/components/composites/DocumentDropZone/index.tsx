@@ -30,6 +30,7 @@ export const DocumentDropZone = (props: DocumentDropZoneProps) => (
                 id="brain-drop-files"
                 name="files"
                 label={props.prompt}
+                isLabelHidden
                 description={props.hint}
                 prompt={props.prompt}
                 multiple

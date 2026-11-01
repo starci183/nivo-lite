@@ -136,6 +136,7 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
             id="knowledge-add-files"
             name="files"
             label={props.dropPrompt}
+            isLabelHidden
             description={props.dropHint}
             prompt={props.dropPrompt}
             multiple

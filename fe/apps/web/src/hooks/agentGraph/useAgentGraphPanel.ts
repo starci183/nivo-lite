@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useAgentRights } from "@/hooks/agentSettings"
+import { useInstanceChannels } from "@/hooks/installations"
 import { mapSlot } from "@/hooks/slot"
 import {
     AGENT_GRAPH_PLACEHOLDER,
@@ -35,7 +36,15 @@ export const useAgentGraphPanel = (installationId: string, setup: AgentGraphSetu
     const state = useAgentGraphUi(graph.runId)
     const words = useAgentGraphWords(t)
     const commands = useAgentGraphCommands({ read: graph.read, state, writes, canGrant, changes, setup })
-    const ctx = { t, canEdit, isOwner: canGrant, amount: words.amount, setup }
+    const channelsOf = useInstanceChannels()
+    const ctx = {
+        t,
+        canEdit,
+        isOwner: canGrant,
+        amount: words.amount,
+        setup,
+        channels: channelsOf(graph.read?.agentId ?? null),
+    }
     const phoneAreas = phoneAreasOf(state.ui.phoneView, state.ui.sideTab)
     return {
         props: {

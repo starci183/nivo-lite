@@ -121,6 +121,19 @@ export const fileMarkOf = (title: string): string => {
     return dot < 0 || dot === title.length - 1 ? "FILE" : title.slice(dot + 1, dot + 5).toUpperCase()
 }
 
+/** How many letters of a name fit across a bubble of this width. */
+const LETTERS_PER_UNIT = 1 / 8
+
+/** The name inside a bubble when all of it fits; a name that would be cut stays out, and the hover and the side pane carry it. */
+const captionOf = (name: string, diameter: number): string | undefined =>
+    name.length <= diameter * LETTERS_PER_UNIT ? name : undefined
+
+/** The caption of a bubble as a property, so a bubble whose name does not fit carries none. */
+const captionFor = (name: string, diameter: number): { readonly caption?: string } => {
+    const caption = captionOf(name, diameter)
+    return caption === undefined ? {} : { caption }
+}
+
 const ROOT_DIAMETER = 120
 const CATEGORY_RANGE = { min: 66, max: 106 } as const
 const DOSSIER_RANGE = { min: 30, max: 92 } as const
@@ -166,14 +179,15 @@ export const mapGraphOf = (
     const edges: FlowGraphEdge[] = []
     categories.forEach((category, index) => {
         const categoryId = mapCategoryId(category.id)
+        const categoryDiameter = flowGraphDiameter(category.documentCount, maxCategory, CATEGORY_RANGE)
         nodes.push({
             id: categoryId,
             label: categoryShortOf(category),
             description: category.label,
             form: "bubble",
             mark: categoryMarkOf(category, index),
-            caption: categoryShortOf(category),
-            diameter: flowGraphDiameter(category.documentCount, maxCategory, CATEGORY_RANGE),
+            ...captionFor(categoryShortOf(category), categoryDiameter),
+            diameter: categoryDiameter,
             tone: "neutral",
             fill: "soft",
             ring: ringOf(category, statusOf),
@@ -184,12 +198,14 @@ export const mapGraphOf = (
         for (const dossier of category.dossiers) {
             const status = statusOf(dossier)
             const isDimmed = !isShown(dossier, filter, statusOf)
+            const dossierDiameter = flowGraphDiameter(dossier.documentCount, maxDossier, DOSSIER_RANGE)
             nodes.push({
                 id: dossier.id,
                 label: dossier.name,
                 form: "bubble",
                 mark: dossier.ref,
-                diameter: flowGraphDiameter(dossier.documentCount, maxDossier, DOSSIER_RANGE),
+                ...captionFor(dossier.name, dossierDiameter),
+                diameter: dossierDiameter,
                 tone: MAP_STATUS_TONE[status],
                 fill: MAP_STATUS_FILL[status],
                 isDimmed,

@@ -1,4 +1,4 @@
-import { Alert, DescriptionList, Meter, SurfaceCard } from "@starci/grammar/common"
+import { Alert, DescriptionList, Meter, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { PIPELINE_REGION_CLASS_NAME } from "./classNames"
@@ -27,9 +27,17 @@ interface MaintainView {
     readonly actionLabel: string
 }
 
+/** The one line that says what to do next, linked to the tab where it is done. */
+interface NextView {
+    readonly label: string
+    readonly href: string
+}
+
 /** The pipeline as its slot carries it: the four steps, and the action that brings the brain up to date when something is due. */
 export interface PipelineView {
     readonly steps: ReadonlyArray<StepView>
+    /** Facts wait for the owner: the line that sends them to the review tab. Nothing is drawn for it while undefined. */
+    readonly next?: NextView | undefined
     /** Something is due: a scheduled value waits to take over or a value in force has ended. Nothing is drawn for it while undefined. */
     readonly maintain?: MaintainView | undefined
 }
@@ -95,6 +103,11 @@ export const BrainPipelineBase = (props: BrainPipelineBaseProps) => (
                             )}
                         </div>
                     </SurfaceCard>
+                    {pipeline.next === undefined ? null : (
+                        <Text>
+                            <TextAction href={pipeline.next.href}>{pipeline.next.label}</TextAction>
+                        </Text>
+                    )}
                     {pipeline.maintain === undefined ? null : (
                         <Alert
                             tone="cautionary"

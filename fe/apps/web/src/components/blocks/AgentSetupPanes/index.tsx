@@ -105,6 +105,7 @@ const chatContentOf = (input: ChatInput): AgentSetupChatContent => {
 const copyOf = (t: SetupCopy): AgentSetupCopy => ({
     paneLabel: t("paneLabel"),
     checklistLabel: t("checklistLabel"),
+    feedNote: t("feedNote"),
     chatLabel: t("chatLabel"),
     chatTitle: t("chatTitle"),
     proposalsLabel: t("proposalsLabel"),

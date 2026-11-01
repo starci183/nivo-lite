@@ -1,11 +1,12 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { FACT_SOURCE_KEY, adviceFor, reviewBoardOf, useBrainBoard, useBrainCommand, useLessonDesk } from "@/hooks/brain"
+import { FACT_SOURCE_KEY, adviceFor, proposerOf, reviewBoardOf, useBrainBoard, useBrainCommand, useLessonDesk } from "@/hooks/brain"
 import type { ReviewConflict, ReviewSingle } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { KnowledgeRowView, RowActionView, RowPartView } from "@/components/composites/KnowledgeRows"
 import type { BrainFact, BrainLesson } from "@/modules/types"
+import { applyAllOf } from "./applyAll"
 import { BrainReviewBase } from "./component"
 
 /** The connected review list: words each proposal, suggests what to do with it and sends the decision to the back end. */
@@ -80,7 +81,7 @@ const buildBrainReviewState = (
             },
         ],
     })
-    return { t, plan, groupRow, singleRow, retireRow, board, command }
+    return { t, plan, groupRow, singleRow, retireRow, board, command, ...applyAllOf(t, plan.singles, board.nowMs, command) }
 }
 
 /** Draws the connected view from its current state. */
@@ -92,7 +93,7 @@ export const BrainReview = () => {
 
     const desk = useLessonDesk("")
     const connected = buildBrainReviewState(board, t, command)
-    const { plan, groupRow, singleRow, retireRow } = connected
+    const { plan, groupRow, singleRow, retireRow, applyAll, readyCount } = connected
     const lessonRow = (lesson: BrainLesson): KnowledgeRowView => ({
         id: lesson.id,
         title: lesson.title,
@@ -103,13 +104,13 @@ export const BrainReview = () => {
                   {
                       id: "approve",
                       label: t("apply"),
-                      intent: "neutral",
+                      intent: "commit",
                       onPress: () => desk.decide(lesson.id, "active"),
                   },
                   {
                       id: "reject",
                       label: t("reject"),
-                      intent: "alternative",
+                      intent: "neutral",
                       onPress: () => desk.decide(lesson.id, "rejected"),
                   },
               ]
@@ -124,6 +125,15 @@ export const BrainReview = () => {
                         title: t("tabReview"),
                         description: t("reviewIntro"),
                         failTitle: t("loadFailed"),
+                        action:
+                            board.canWrite && readyCount > 1
+                                ? {
+                                      id: "apply-all",
+                                      label: t("applyAll", { count: readyCount }),
+                                      intent: "commit",
+                                      onPress: applyAll,
+                                  }
+                                : undefined,
                     },
                     label: t("tabReview"),
                     isPending: command.isPending || desk.isPending,
@@ -151,17 +161,19 @@ const reviewRowActions = (
     board: ReturnType<typeof useBrainBoard>,
 ) => {
     const byLine = (fact: BrainFact): string =>
-        t("by", { who: fact.proposedBy, source: t(FACT_SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
+        fact.sourceKind === "document"
+            ? t("byDocument", { who: proposerOf(fact), trust: fact.trust })
+            : t("by", { who: fact.proposedBy, source: t(FACT_SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
     const decide = (id: string, label: string, action: "apply" | "choose"): RowActionView => ({
         id: `decide-${id}`,
         label,
-        intent: "neutral",
+        intent: "commit",
         onPress: () => command.send("fact.decide", { id, action }, { done: t("applied") }),
     })
     const reject = (id: string, label: string): RowActionView => ({
         id: `reject-${id}`,
         label,
-        intent: "alternative",
+        intent: "neutral",
         onPress: () => command.send("fact.decide", { id, action: "reject" }, { done: t("rejected") }),
     })
     const gated = (actions: ReadonlyArray<RowActionView>): ReadonlyArray<RowActionView> =>

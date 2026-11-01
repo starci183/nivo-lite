@@ -29,7 +29,7 @@ const oneLineOf = (hint: string): string => {
 
 type Translate = ReturnType<typeof useTranslations<"knowledge">>
 
-/** One open idea: its topic and a one-line hint, with add, not-applicable and hide as quiet icon actions. */
+/** One open idea: its topic and a one-line hint, with add, not-applicable and hide as words. */
 const openRowOf = (
     t: Translate,
     commands: ReturnType<typeof useLibraryCommands>,
@@ -42,21 +42,18 @@ const openRowOf = (
         {
             id: "add",
             label: t("suggestAdd"),
-            icon: "add",
             intent: "neutral",
             href: brainTabHref("sources", { add: item.key }),
         },
         {
             id: "na",
             label: t("suggestNotApplicable"),
-            icon: "close",
             intent: "dismiss",
             onPress: () => commands.decide(item.key, "not_applicable"),
         },
         {
             id: "hide",
             label: t("suggestDismiss"),
-            icon: "hidePassword",
             intent: "dismiss",
             onPress: () => commands.decide(item.key, "dismissed"),
         },

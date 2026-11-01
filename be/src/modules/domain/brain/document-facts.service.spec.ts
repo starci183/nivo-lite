@@ -343,7 +343,7 @@ describe("DocumentFactsService", () => {
             validFrom: "2026-10-11T17:00:00.000Z",
             autoApply: false,
             installationId: "i1",
-            proposedBy: "Document: Hours",
+            proposedBy: "Hours",
             evidence: [
                 {
                     kind: "document",
@@ -391,7 +391,7 @@ describe("DocumentFactsService", () => {
             validFrom: null,
             autoApply: false,
             installationId: null,
-            proposedBy: "Document: Hours",
+            proposedBy: "Hours",
             evidence: [
                 {
                     kind: "document",
