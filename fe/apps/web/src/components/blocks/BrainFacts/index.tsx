@@ -1,7 +1,15 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { SCOPE_KEY, SCOPE_TONE, FACT_SOURCE_KEY, TYPE_KEY, useBrainBoard, useBrainCommand } from "@/hooks/brain"
+import {
+    SCOPE_KEY,
+    SCOPE_TONE,
+    FACT_SOURCE_KEY,
+    TYPE_KEY,
+    needsMaintenance,
+    useBrainBoard,
+    useBrainCommand,
+} from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { brainTabHref } from "@/modules/routes"
 import type { BrainFact } from "@/modules/types"
@@ -57,19 +65,23 @@ export const BrainFacts = () => {
                     section: {
                         id: "brain-facts-title",
                         title: t("tabFacts"),
-                        description: t("factsIntro"),
                         failTitle: t("loadFailed"),
                         action: board.canWrite
                             ? { id: "add", label: t("addFact"), href: brainTabHref("facts", { fact: "new" }) }
                             : undefined,
                     },
                     label: t("tabFacts"),
+                    footer: t("factsFooter"),
                     isPending: command.isPending,
                     slot: mapSlot(board.slot, () => shown.map(rowOf)),
                     slotLabels: slotLabels(t("factsEmpty")),
                 },
+                maintain:
+                    board.canWrite && needsMaintenance(board.facts, board.nowMs)
+                        ? { title: t("maintainTitle"), body: t("maintainBody"), actionLabel: t("maintainAction") }
+                        : undefined,
             }}
-            on={{ retry: board.reload }}
+            on={{ retry: board.reload, maintain: () => command.send("brain.maintain", undefined) }}
         />
     )
 }

@@ -1,4 +1,4 @@
-import { Avatar, DataTable, IncludedMark, SurfaceCard, Text } from "@starci/grammar/common"
+import { Avatar, DataTable, IncludedMark, SectionHeader, Text } from "@starci/grammar/common"
 import type { DataTableRow } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
@@ -46,6 +46,7 @@ export interface BrainAgentViewBaseProps {
     readonly props: {
         readonly title: string
         readonly hint: string
+        readonly footer: string
         readonly tableLabel: string
         readonly laneLabel: string
         readonly whoLabel: string
@@ -118,19 +119,18 @@ const MatrixTable = (props: MatrixTableProps) => {
 
 /** Draws what each audience (the customer and every installed agent) reads of the shared knowledge: a mark or a dash per cell. */
 export const BrainAgentViewBase = (props: BrainAgentViewBaseProps) => (
-    <SurfaceCard label={props.props.title} headingLevel={2}>
-        <div className={STACK_CLASS_NAME}>
-            <Text size="sm" tone="muted">
-                {props.props.hint}
-            </Text>
-            <SlotView
-                slot={props.props.matrix}
-                placeholder={MATRIX_PLACEHOLDER}
-                labels={props.props.slotLabels}
-                onRetry={props.on.retry}
-            >
-                {(matrix, isSkeleton) => <MatrixTable view={props.props} matrix={matrix} isSkeleton={isSkeleton} />}
-            </SlotView>
-        </div>
-    </SurfaceCard>
+    <div className={STACK_CLASS_NAME}>
+        <SectionHeader level={2} title={props.props.title} description={props.props.hint} />
+        <SlotView
+            slot={props.props.matrix}
+            placeholder={MATRIX_PLACEHOLDER}
+            labels={props.props.slotLabels}
+            onRetry={props.on.retry}
+        >
+            {(matrix, isSkeleton) => <MatrixTable view={props.props} matrix={matrix} isSkeleton={isSkeleton} />}
+        </SlotView>
+        <Text size="sm" tone="muted">
+            {props.props.footer}
+        </Text>
+    </div>
 )

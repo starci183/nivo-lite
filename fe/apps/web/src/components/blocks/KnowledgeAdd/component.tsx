@@ -1,17 +1,14 @@
-import { Drawer, SegmentedControl, Text } from "@starci/grammar/common"
+import { Alert, Button, Meter, SegmentedControl, SurfaceCard, Text } from "@starci/grammar/common"
 import type { BatchBytesView, LinkRowView, QueueRowView, StoppedUploadsView } from "@/modules/types"
 import { AddFilesPanel } from "@/components/composites/AddFilesPanel"
 
 import { AddNotePanel, type PairView } from "@/components/composites/AddNotePanel"
 
-import { DocumentDropZone, type DropWayView } from "@/components/composites/DocumentDropZone"
-import { DrawerFooter } from "@/components/composites/DrawerFooter"
 import { FormNotice } from "@/components/composites/FormNotice"
 import { AddOptionsPanel, type ChoiceView } from "@/components/composites/AddOptionsPanel"
-import { AddProgressPanel, type AddProgressPanelProps } from "@/components/composites/AddProgressPanel"
 import { AddVisibilityPanel, type AddVisibilityView } from "@/components/composites/AddVisibilityPanel"
 
-import { DRAWER_BODY_CLASS_NAME } from "./classNames"
+import { BODY_CLASS_NAME, DRIVE_CLASS_NAME } from "./classNames"
 
 /** The words and values of the files and links panel. */
 interface FilesView {
@@ -62,29 +59,40 @@ interface OptionsView {
     readonly moduleOptions: ReadonlyArray<ChoiceView>
 }
 
-/** The words and ways of the drop zone the page shows in place of an add button. */
-interface ZoneView {
+/** The raw document allowance as the meter draws it. */
+interface UsageView {
     readonly label: string
-    readonly prompt: string
-    readonly hint: string
-    readonly ways: ReadonlyArray<DropWayView>
-    readonly driveNote?: string | undefined
-    readonly driveFailure?: string | undefined
+    readonly value: number
+    readonly max: number
+    readonly valueLabel: string
+    readonly tone: "affirmative" | "cautionary" | "negative"
+}
+
+/** The Google Drive way in: the button for where the grant stands, and its words. */
+interface DriveView {
+    readonly label: string | undefined
+    readonly note?: string | undefined
+    readonly trouble?: string | undefined
+}
+
+/** What follows a finished batch: how many questions NIVO now has for the owner, and the way to them. */
+interface SummaryView {
+    readonly title: string
+    readonly actionLabel: string
 }
 
 /** Copy, values and state the connected drawer supplies. */
 export interface KnowledgeAddBaseProps {
     readonly props: {
-        /** Set when the member may only read: the words replace the drop zone and the drawer. */
+        /** Set when the member may only read: the words replace the form. */
         readonly readOnlyNote?: string | undefined
-        readonly zone: ZoneView
+        readonly drive: DriveView
         readonly title: string
-        readonly description: string
-        readonly closeLabel: string
         readonly submitLabel: string
-        readonly cancelLabel: string
+        /** The owner has not chosen who may read: the add button waits, and says why. */
+        readonly isSubmitBlocked: boolean
+        readonly submitBlockedReason: string
         readonly failTitle: string
-        readonly isOpen: boolean
         readonly isBusy: boolean
         readonly modeLabel: string
         readonly modeOptions: ReadonlyArray<ChoiceView>
@@ -92,14 +100,16 @@ export interface KnowledgeAddBaseProps {
         readonly files: FilesView
         readonly note: NoteView
         readonly visibility: AddVisibilityView
-        readonly progress: AddProgressPanelProps
+        readonly summary: SummaryView | null
+        /** How much of the raw document allowance is used; nothing is drawn for it while undefined. */
+        readonly usage: UsageView | undefined
         readonly options: OptionsView
         readonly notice?: string | undefined
         readonly error?: string | undefined
     }
     readonly on: {
-        readonly dropFiles: (files: Array<File>) => void
-        readonly close: () => void
+        readonly connectDrive: () => void
+        readonly seeQuestions: () => void
         readonly setMode: (value: string) => void
         readonly addFiles: (files: Array<File>) => void
         readonly setLink: (id: string, value: string) => void
@@ -122,87 +132,111 @@ export interface KnowledgeAddBaseProps {
     }
 }
 
-/** Draws the drop zone and the drawer that adds documents: files and links, a written note, or questions with answers. */
+/** Draws the form that adds documents: files and links, a written note, or questions with answers, then who may read them. */
 export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) =>
     props.props.readOnlyNote !== undefined ? (
         <Text size="sm" tone="muted">
             {props.props.readOnlyNote}
         </Text>
     ) : (
-        <>
-            <DocumentDropZone {...props.props.zone} isDisabled={props.props.isBusy} onFiles={props.on.dropFiles} />
-            <KnowledgeAddDrawer {...props} />
-        </>
+        <SurfaceCard label={props.props.title} headingLevel={2}>
+            <div className={BODY_CLASS_NAME}>
+                <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.notice} />
+                <SegmentedControl
+                    label={props.props.modeLabel}
+                    isLabelHidden
+                    options={props.props.modeOptions.map((one) => ({ value: one.id, label: one.label }))}
+                    value={props.props.mode}
+                    isDisabled={props.props.isBusy}
+                    onValueChange={props.on.setMode}
+                />
+                {props.props.mode === "files" ? <FilesPart {...props} /> : <NotePart {...props} />}
+                <AddVisibilityPanel
+                    {...props.props.visibility}
+                    isBusy={props.props.isBusy}
+                    onChange={props.on.setVisibility}
+                />
+                <AddOptionsPanel
+                    {...props.props.options}
+                    isBusy={props.props.isBusy}
+                    onTopic={props.on.setTopic}
+                    onTags={props.on.setTags}
+                    onModule={props.on.setModule}
+                />
+                <div>
+                    <Button
+                        intent="commit"
+                        isPending={props.props.isBusy}
+                        isDisabled={props.props.isSubmitBlocked}
+                        {...(props.props.isSubmitBlocked ? { disabledReason: props.props.submitBlockedReason } : {})}
+                        onPress={props.on.submit}
+                    >
+                        {props.props.submitLabel}
+                    </Button>
+                </div>
+                {props.props.usage === undefined ? null : (
+                    <Meter
+                        label={props.props.usage.label}
+                        value={props.props.usage.value}
+                        minValue={0}
+                        maxValue={props.props.usage.max}
+                        valueLabel={props.props.usage.valueLabel}
+                        tone={props.props.usage.tone}
+                    />
+                )}
+                {props.props.summary === null ? null : (
+                    <Alert
+                        tone="informative"
+                        title={props.props.summary.title}
+                        action={{ label: props.props.summary.actionLabel, onAction: props.on.seeQuestions }}
+                    />
+                )}
+            </div>
+        </SurfaceCard>
     )
 
-/** Draws the document entry panels and footer in the open drawer. */
-const KnowledgeAddDrawer = (props: KnowledgeAddBaseProps) => (
-    <Drawer
-        isOpen={props.props.isOpen}
-        onOpenChange={(open) => {
-            if (!open) props.on.close()
-        }}
-        title={props.props.title}
-        description={props.props.description}
-        closeLabel={props.props.closeLabel}
-        placement="right"
-        footer={
-            <DrawerFooter
-                cancelLabel={props.props.cancelLabel}
-                submitLabel={props.props.submitLabel}
-                isPending={props.props.isBusy}
-                onCancel={props.on.close}
-                onSubmit={props.on.submit}
-            />
-        }
-    >
-        <div className={DRAWER_BODY_CLASS_NAME}>
-            <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.notice} />
-            <AddProgressPanel {...props.props.progress} />
-            <SegmentedControl
-                label={props.props.modeLabel}
-                isLabelHidden
-                options={props.props.modeOptions.map((one) => ({ value: one.id, label: one.label }))}
-                value={props.props.mode}
-                isDisabled={props.props.isBusy}
-                onValueChange={props.on.setMode}
-            />
-            {props.props.mode === "files" ? (
-                <AddFilesPanel
-                    {...props.props.files}
-                    isBusy={props.props.isBusy}
-                    onFiles={props.on.addFiles}
-                    onLink={props.on.setLink}
-                    onCheckLink={props.on.checkLink}
-                    onAddLink={props.on.addLink}
-                    onRemoveLink={props.on.removeLink}
-                    onRemoveItem={props.on.removeItem}
-                    onRetryItem={props.on.retryItem}
-                    onDismissStopped={props.on.dismissStopped}
-                />
-            ) : (
-                <AddNotePanel
-                    {...props.props.note}
-                    isBusy={props.props.isBusy}
-                    onTitle={props.on.setTitle}
-                    onContent={props.on.setContent}
-                    onPair={props.on.setPair}
-                    onAddPair={props.on.addPair}
-                    onRemovePair={props.on.removePair}
-                />
+/** The files and links a person adds, with the Google Drive way in under them. */
+const FilesPart = (props: KnowledgeAddBaseProps) => (
+    <>
+        <AddFilesPanel
+            {...props.props.files}
+            isBusy={props.props.isBusy}
+            onFiles={props.on.addFiles}
+            onLink={props.on.setLink}
+            onCheckLink={props.on.checkLink}
+            onAddLink={props.on.addLink}
+            onRemoveLink={props.on.removeLink}
+            onRemoveItem={props.on.removeItem}
+            onRetryItem={props.on.retryItem}
+            onDismissStopped={props.on.dismissStopped}
+        />
+        <div className={DRIVE_CLASS_NAME}>
+            {props.props.drive.label === undefined ? null : (
+                <Button intent="neutral" isDisabled={props.props.isBusy} onPress={props.on.connectDrive}>
+                    {props.props.drive.label}
+                </Button>
             )}
-            <AddVisibilityPanel
-                {...props.props.visibility}
-                isBusy={props.props.isBusy}
-                onChange={props.on.setVisibility}
-            />
-            <AddOptionsPanel
-                {...props.props.options}
-                isBusy={props.props.isBusy}
-                onTopic={props.on.setTopic}
-                onTags={props.on.setTags}
-                onModule={props.on.setModule}
-            />
+            {props.props.drive.note === undefined ? null : (
+                <Text size="sm" tone="muted">
+                    {props.props.drive.note}
+                </Text>
+            )}
+            {props.props.drive.trouble === undefined ? null : (
+                <Alert tone="negative" title={props.props.drive.trouble} />
+            )}
         </div>
-    </Drawer>
+    </>
+)
+
+/** The written note, or the questions with their answers. */
+const NotePart = (props: KnowledgeAddBaseProps) => (
+    <AddNotePanel
+        {...props.props.note}
+        isBusy={props.props.isBusy}
+        onTitle={props.on.setTitle}
+        onContent={props.on.setContent}
+        onPair={props.on.setPair}
+        onAddPair={props.on.addPair}
+        onRemovePair={props.on.removePair}
+    />
 )

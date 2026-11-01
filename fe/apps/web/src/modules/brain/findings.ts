@@ -59,18 +59,6 @@ export const FINDING_FILTERS = ["open", "confirmed", "closed"] as const
 /** One of the lists of the findings pane. */
 export type FindingFilter = (typeof FINDING_FILTERS)[number]
 
-/** The filters of the to do list, in the order they are drawn. */
-export const TODO_FILTERS = ["all", "mine", "unassigned", "drafts"] as const
-
-/** One of the filters of the to do list. */
-export type TodoFilter = (typeof TODO_FILTERS)[number]
-
-/** The severity choices of the to do list: every severity, or any. */
-export const TODO_SEVERITY_FILTERS = ["all", ...FINDING_SEVERITIES] as const
-
-/** One of the severity choices of the to do list. */
-export type TodoSeverityFilter = (typeof TODO_SEVERITY_FILTERS)[number]
-
 /** What narrows a read of findings, in the words of the domain; the read turns it into its request. */
 export interface FindingsQuery {
     readonly dossierId?: string
@@ -91,13 +79,5 @@ export const queryOfDossier = (dossierId?: string): FindingsQuery => ({
     statuses: FINDING_STATUSES,
 })
 
-/** The read of the to do list: findings that still need somebody, narrowed by the filter and the severity. */
-export const queryOfTodo = (filter: TodoFilter, severity: TodoSeverityFilter): FindingsQuery => {
-    const base: FindingsQuery = {
-        statuses: ["open", "confirmed"],
-        ...(severity === "all" ? {} : { severities: [severity] }),
-    }
-    if (filter === "mine") return { ...base, assignee: "mine" }
-    if (filter === "unassigned") return { ...base, assignee: "unassigned" }
-    return filter === "drafts" ? { ...base, draftsAwaiting: true } : base
-}
+/** The read of the queue of what needs doing: findings that still need somebody, worst first as the back end orders them. */
+export const queryOfQueue = (): FindingsQuery => ({ statuses: ["open", "confirmed"] })

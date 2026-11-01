@@ -16,7 +16,8 @@ export interface FindingCommands {
     readonly isPending: boolean
     /** Reviews one dossier, or the whole set when none is named. */
     readonly requestReview: (dossierId: string | null) => Promise<boolean>
-    readonly confirm: (findingId: string) => Promise<boolean>
+    /** Confirms an open finding; the note says what the owner confirmed, for example which document is right. */
+    readonly confirm: (findingId: string, note?: string) => Promise<boolean>
     readonly dismiss: (findingId: string, reason: string) => Promise<boolean>
     readonly reopen: (findingId: string) => Promise<boolean>
     readonly resolve: (findingId: string, note: string) => Promise<boolean>
@@ -38,7 +39,11 @@ export const useFindingCommands = (): FindingCommands => {
         requestReview: async (dossierId) =>
             (await run(() => requestReview.trigger(dossierId === null ? {} : { dossierId }), t("reviewQueued"))) !==
             undefined,
-        confirm: async (findingId) => (await run(() => confirm.trigger({ findingId }), t("confirmed"))) !== undefined,
+        confirm: async (findingId, note) =>
+            (await run(
+                () => confirm.trigger({ findingId, ...(note === undefined ? {} : { note }) }),
+                t("confirmed"),
+            )) !== undefined,
         dismiss: async (findingId, reason) =>
             (await run(() => dismiss.trigger({ findingId, reason: reason.trim() }), t("dismissed"))) !== undefined,
         reopen: async (findingId) => (await run(() => reopen.trigger({ findingId }), t("reopened"))) !== undefined,

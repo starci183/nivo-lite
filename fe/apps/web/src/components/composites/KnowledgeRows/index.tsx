@@ -37,6 +37,8 @@ export interface KnowledgeListView {
     readonly isPending: boolean
     readonly slot: DataSlot<ReadonlyArray<KnowledgeRowView>>
     readonly slotLabels: SlotLabels
+    /** The note under the rows, in the card's footer. */
+    readonly footer?: string | undefined
 }
 
 /** What the frame of a list draws: the section around the rows, and the region's own status view in the rows' place. */
@@ -45,6 +47,8 @@ interface KnowledgeRowsSectionProps {
     readonly isPending: boolean
     /** The heading is a placeholder of the same shape. */
     readonly isSkeleton?: boolean
+    /** The heading belongs to the card of the rows (its label, with the action at the end of the label row): the section draws none. */
+    readonly isHeadingInCard?: boolean
     /** Content drawn between the heading and the list. */
     readonly before?: ReactNode
     /** The list, or the status view of the slot that reads it. */
@@ -54,22 +58,25 @@ interface KnowledgeRowsSectionProps {
 /** The frame of a list under a named heading with its failure alert and polite notice; the region's slot renders inside it. */
 export const KnowledgeRowsSection = (props: KnowledgeRowsSectionProps) => {
     const section = props.section
+    const named = props.isHeadingInCard === true ? { label: section.title } : { labelledBy: section.id }
     return (
-        <Region labelledBy={section.id} className={SECTION_CLASS_NAME}>
-            <div className={HEAD_CLASS_NAME}>
-                <div className={TITLE_CLASS_NAME}>
-                    <SectionHeader
-                        id={section.id}
-                        level={2}
-                        title={section.title}
-                        description={section.description}
-                        isSkeleton={props.isSkeleton ?? false}
-                    />
+        <Region {...named} className={SECTION_CLASS_NAME}>
+            {props.isHeadingInCard === true ? null : (
+                <div className={HEAD_CLASS_NAME}>
+                    <div className={TITLE_CLASS_NAME}>
+                        <SectionHeader
+                            id={section.id}
+                            level={2}
+                            title={section.title}
+                            description={section.description}
+                            isSkeleton={props.isSkeleton ?? false}
+                        />
+                    </div>
+                    {section.action === undefined ? null : (
+                        <ActionList items={[section.action]} isPending={props.isPending} />
+                    )}
                 </div>
-                {section.action === undefined ? null : (
-                    <ActionList items={[section.action]} isPending={props.isPending} />
-                )}
-            </div>
+            )}
             {section.error === undefined ? null : (
                 <Alert tone="negative" title={section.failTitle} description={section.error} />
             )}
@@ -83,3 +90,12 @@ export const KnowledgeRowsSection = (props: KnowledgeRowsSectionProps) => {
         </Region>
     )
 }
+
+/** The props of the card of a list: its label is the heading outside the shell, its action hugs the end of the label row and its note is the footer. */
+export const rowListPropsOf = (list: KnowledgeListView) => ({
+    label: list.label,
+    isLabelVisible: true,
+    action: list.section.action,
+    footer: list.footer,
+    isPending: list.isPending,
+})

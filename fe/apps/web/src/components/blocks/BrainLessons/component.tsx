@@ -3,6 +3,7 @@ import {
     KNOWLEDGE_ROWS_PLACEHOLDER,
     KnowledgeRowList,
     KnowledgeRowsSection,
+    rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeListView } from "@/components/composites/KnowledgeRows"
 import { SlotView } from "@/components/composites/SlotView"
@@ -111,6 +112,7 @@ export const BrainLessonsBase = (props: BrainLessonsBaseProps) => {
     const list = props.props.list
     return (
         <KnowledgeRowsSection
+            isHeadingInCard
             section={list.section}
             isPending={list.isPending}
             before={props.props.write === undefined ? null : <WritePart view={props.props.write} on={props.on} />}
@@ -122,12 +124,7 @@ export const BrainLessonsBase = (props: BrainLessonsBaseProps) => {
                 onRetry={props.on.retry}
             >
                 {(rows, isSkeleton) => (
-                    <KnowledgeRowList
-                        label={list.label}
-                        rows={rows}
-                        isPending={list.isPending}
-                        isSkeleton={isSkeleton}
-                    />
+                    <KnowledgeRowList {...rowListPropsOf(list)} rows={rows} isSkeleton={isSkeleton} />
                 )}
             </SlotView>
         </KnowledgeRowsSection>

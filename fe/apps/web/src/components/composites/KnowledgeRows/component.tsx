@@ -58,7 +58,14 @@ export interface KnowledgeRowView {
 
 /** What the card of rows draws. */
 export interface KnowledgeRowListProps {
+    /** Names the card; it is also drawn as the card's heading, outside its shell, when `isLabelVisible`. */
     readonly label: string
+    /** Draw the label as the heading of the card; the action sits at the end of that label row. */
+    readonly isLabelVisible?: boolean | undefined
+    /** One command of the whole list, hugging the end of the label row. */
+    readonly action?: RowActionView | undefined
+    /** The note under the rows. */
+    readonly footer?: string | undefined
     readonly rows: ReadonlyArray<KnowledgeRowView>
     readonly isPending: boolean
     /** The rows are a placeholder of the same shape: each draws as inert geometry. */
@@ -146,6 +153,21 @@ export const ActionList = (props: ActionListProps) =>
         </div>
     )
 
+/** The command of a whole list at the end of its label row: always a button, a link-button when it leads somewhere. */
+const LabelAction = (props: ItemButtonProps) =>
+    props.item.href === undefined ? (
+        <ItemButton {...props} />
+    ) : (
+        <Button
+            intent={
+                props.item.intent === "destructive" || props.item.intent === undefined ? "neutral" : props.item.intent
+            }
+            href={props.item.href}
+        >
+            {props.item.label}
+        </Button>
+    )
+
 /** One row: the title with its lines, the badges, the actions and the parts that have their own. */
 const Row = (props: RowProps) => (
     <ListRow
@@ -191,13 +213,30 @@ const Row = (props: RowProps) => (
 )
 
 /** The rows of a list as a card; what shows while there are none is the caller's (a region's status view). */
-export const KnowledgeRowList = (props: KnowledgeRowListProps) => (
-    <SurfaceListCard ariaLabel={props.label} empty={null}>
-        {props.rows.map((row) => (
-            <Row key={row.id} row={row} isPending={props.isPending} isSkeleton={props.isSkeleton ?? false} />
-        ))}
-    </SurfaceListCard>
-)
+export const KnowledgeRowList = (props: KnowledgeRowListProps) => {
+    const rows = props.rows.map((row) => (
+        <Row key={row.id} row={row} isPending={props.isPending} isSkeleton={props.isSkeleton ?? false} />
+    ))
+    if (props.isLabelVisible !== true) {
+        return (
+            <SurfaceListCard ariaLabel={props.label} empty={null} footer={props.footer}>
+                {rows}
+            </SurfaceListCard>
+        )
+    }
+    return (
+        <SurfaceListCard
+            label={props.label}
+            empty={null}
+            footer={props.footer}
+            labelEnd={
+                props.action === undefined ? undefined : <LabelAction item={props.action} isPending={props.isPending} />
+            }
+        >
+            {rows}
+        </SurfaceListCard>
+    )
+}
 
 /** The list itself: a card of rows, or the notice that shows while there are none. */
 export const Rows = (props: RowsProps) => (

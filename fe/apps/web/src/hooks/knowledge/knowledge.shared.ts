@@ -14,9 +14,7 @@ export interface AddDocumentsViewInput {
     readonly readOnlyNote: string
     /** The agent the list of documents is filtered to; the drawer returns to it when it closes. */
     readonly module: ModuleKey | "all"
-    /** Whether the address asks for the drawer to be open. */
-    readonly isOpen: boolean
-    /** The idea the drawer was opened from, or null. */
+    /** The idea the form was opened from, or null. */
     readonly preset: AddPreset | null
 }
 
@@ -129,12 +127,21 @@ const buildOptionsView = (
         ],
     }) as const
 
-/** Builds the choice of who may read what is added, with what each choice means for the answers. */
+/** What the choice of who may read says: what each choice means for the answers, or before a choice, what NIVO suggests. */
+const consequenceOf = (t: Translate, options: ReturnType<typeof useAddDocuments>["options"]): string => {
+    if (options.visibility !== null) return t(options.visibility === "public" ? "visPublicNote" : "visInternalNote")
+    if (options.suggestedVisibility === null) return t("visChooseNote")
+    return t("visSuggest", {
+        choice: t(options.suggestedVisibility === "public" ? "visPublicName" : "visInternalName"),
+    })
+}
+
+/** Builds the choice of who may read what is added. Nothing is chosen until the owner chooses. */
 const buildVisibilityView = (t: Translate, options: ReturnType<typeof useAddDocuments>["options"]) =>
     ({
         label: t("fieldVisibility"),
-        consequence: t(options.visibility === "public" ? "visPublicNote" : "visInternalNote"),
-        value: options.visibility,
+        consequence: consequenceOf(t, options),
+        value: options.visibility ?? "",
         options: [
             { id: "public", label: t("visPublic") },
             { id: "internal", label: t("visInternal") },
@@ -159,13 +166,11 @@ export const buildAddDocumentsView = ({ t, formatter, props, add, canWrite, inst
         zone,
         usage,
         title: t("addTitle"),
-        description: t("drawerHint"),
-        closeLabel: t("addCancel"),
         submitLabel: submitLabelOf(t, add),
-        cancelLabel: t("addCancel"),
+        isSubmitBlocked: !add.isDone && add.options.visibility === null,
+        submitBlockedReason: t("visRequired"),
         failTitle: t("saveFailed"),
         readOnlyNote: canWrite ? undefined : props.readOnlyNote,
-        isOpen: props.isOpen,
         isBusy: add.isBusy,
         modeLabel: t("addTitle"),
         modeOptions: MODES.map((mode) => ({ id: mode, label: t(MODE_KEYS[mode]) })),
@@ -178,11 +183,8 @@ export const buildAddDocumentsView = ({ t, formatter, props, add, canWrite, inst
         error: add.failure === null ? undefined : t(add.failure),
     }) as const
 
-/** The drop zone the page shows in place of an add button: its words, its ways in and where the Drive grant stands. */
+/** The Google Drive way in beside the files, and where the grant stands. */
 export interface ZoneView {
-    readonly label: string
-    readonly prompt: string
-    readonly hint: string
     readonly ways: ReadonlyArray<{ readonly id: string; readonly label: string; readonly onPress: () => void }>
     readonly driveNote?: string | undefined
     readonly driveFailure?: string | undefined

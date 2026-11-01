@@ -3,6 +3,7 @@ import {
     KNOWLEDGE_ROWS_PLACEHOLDER,
     KnowledgeRowList,
     KnowledgeRowsSection,
+    rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeListView, KnowledgeRowListProps } from "@/components/composites/KnowledgeRows"
 import { SlotView } from "@/components/composites/SlotView"
@@ -23,15 +24,10 @@ export interface KnowledgeSuggestionsBaseProps {
 export const KnowledgeSuggestionsBase = (props: KnowledgeSuggestionsBaseProps) => {
     const list = props.props.list
     return (
-        <KnowledgeRowsSection section={list.section} isPending={list.isPending}>
+        <KnowledgeRowsSection isHeadingInCard section={list.section} isPending={list.isPending}>
             <SlotView slot={list.slot} placeholder={KNOWLEDGE_ROWS_PLACEHOLDER} labels={list.slotLabels}>
                 {(rows, isSkeleton) => (
-                    <KnowledgeRowList
-                        label={list.label}
-                        rows={rows}
-                        isPending={list.isPending}
-                        isSkeleton={isSkeleton}
-                    />
+                    <KnowledgeRowList {...rowListPropsOf(list)} rows={rows} isSkeleton={isSkeleton} />
                 )}
             </SlotView>
             {props.props.more === undefined ? null : (

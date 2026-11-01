@@ -1,21 +1,14 @@
 /** The tabs of the Second Brain page, in the order they are drawn. */
-export const BRAIN_TABS = [
-    "dossiers",
-    "map",
-    "todo",
-    "sources",
-    "review",
-    "facts",
-    "lessons",
-    "gaps",
-    "agents",
-] as const
+export const BRAIN_TABS = ["todo", "dossiers", "sources", "map", "facts", "lessons", "agents"] as const
 
 /** One tab of the Second Brain page. */
 export type BrainTab = (typeof BRAIN_TABS)[number]
 
 /** The tab the page opens on when the address names none. */
-export const DEFAULT_BRAIN_TAB: BrainTab = "dossiers"
+export const DEFAULT_BRAIN_TAB: BrainTab = "todo"
+
+/** The tabs the page used to have: what waited for review and the customer questions are now the one queue of the to do tab. */
+export const LEGACY_BRAIN_TABS: ReadonlyArray<string> = ["review", "gaps"]
 
 /** Extra address parameters of a Second Brain tab (the document filter, the add drawer, the fact form). */
 type BrainParams = Readonly<Record<string, string | undefined>>

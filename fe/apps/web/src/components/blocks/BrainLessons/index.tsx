@@ -4,9 +4,13 @@ import { useTranslations } from "next-intl"
 import { useBrainBoard, useLessonDesk } from "@/hooks/brain"
 import type { MineOutcome } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
+import type { KnowledgeRowView, RowActionView } from "@/components/composites/KnowledgeRows"
 import type { BrainLesson, SlotLabels } from "@/modules/types"
 import { BrainLessonsBase } from "./component"
+
+/** Proposed lessons first: they wait for a decision. */
+const proposedFirst = (left: BrainLesson, right: BrainLesson): number =>
+    Number(right.status === "proposed") - Number(left.status === "proposed")
 
 const STATUS_TONE: Readonly<Record<BrainLesson["status"], "success" | "warning" | "neutral">> = {
     active: "success",
@@ -20,6 +24,35 @@ const STATUS_KEY: Readonly<Record<BrainLesson["status"], "statusActive" | "statu
     proposed: "statusProposed",
     retired: "statusRetired",
     rejected: "statusRetired",
+}
+
+/** What an owner can do with a lesson: apply or skip a proposed one, stop using one in force. */
+const lessonActionsOf = (
+    lesson: BrainLesson,
+    t: ReturnType<typeof useTranslations<"brain">>,
+    desk: ReturnType<typeof useLessonDesk>,
+): ReadonlyArray<RowActionView> => {
+    if (lesson.status === "proposed") {
+        return [
+            { id: "apply", label: t("apply"), intent: "neutral", onPress: () => desk.decide(lesson.id, "active") },
+            {
+                id: "skip",
+                label: t("skipLesson"),
+                intent: "dismiss",
+                onPress: () => desk.decide(lesson.id, "rejected"),
+            },
+        ]
+    }
+    return lesson.status === "active"
+        ? [
+              {
+                  id: "retire",
+                  label: t("retireLesson"),
+                  intent: "neutral",
+                  onPress: () => desk.decide(lesson.id, "retired"),
+              },
+          ]
+        : []
 }
 
 /** The connected lessons: how each agent should work, the proposals to approve and the form that writes one. */
@@ -37,17 +70,7 @@ const buildBrainLessonsState = (
         return t("mineDone", { n: mined.proposed, c: mined.corrections, k: mined.newCases })
     }
     const rowOf = (lesson: BrainLesson): KnowledgeRowView => {
-        const retire =
-            lesson.status === "active"
-                ? [
-                      {
-                          id: "retire",
-                          label: t("retireLesson"),
-                          intent: "neutral" as const,
-                          onPress: () => desk.decide(lesson.id, "retired"),
-                      },
-                  ]
-                : []
+        const decisions: ReadonlyArray<RowActionView> = lessonActionsOf(lesson, t, desk)
         return {
             id: lesson.id,
             title: lesson.title,
@@ -56,7 +79,7 @@ const buildBrainLessonsState = (
                 { label: agentName(lesson.module), tone: "neutral" },
                 { label: t(STATUS_KEY[lesson.status]), tone: STATUS_TONE[lesson.status] },
             ],
-            actions: board.canWrite ? retire : [],
+            actions: board.canWrite ? decisions : [],
         }
     }
     return { desk, t, noticeOf, board, rowOf }
@@ -97,14 +120,14 @@ const brainLessonsProps = (
         list: {
             section: {
                 id: "brain-lessons-title",
-                title: t("tabLessons"),
-                description: t("lessonsIntro"),
+                title: t("lessonsTitle"),
                 failTitle: t("loadFailed"),
                 notice: desk.mined === null ? undefined : noticeOf(desk.mined),
             },
-            label: t("tabLessons"),
+            label: t("lessonsTitle"),
+            footer: t("lessonsFooter"),
             isPending: desk.isPending,
-            slot: mapSlot(board.slot, () => board.lessons.filter((lesson) => lesson.status !== "proposed").map(rowOf)),
+            slot: mapSlot(board.slot, () => [...board.lessons].sort(proposedFirst).map(rowOf)),
             slotLabels,
         },
         write: board.canWrite

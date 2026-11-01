@@ -963,15 +963,10 @@
     "crumbLabel": "Đường dẫn",
     "crumbHome": "Tổng quan",
     "title": "Second Brain",
-    "tabReview": "Cần duyệt",
     "tabFacts": "Sự thật",
     "tabLessons": "Bài học",
     "mapEmptyTitle": "Bộ não còn trống",
     "mapEmptyBody": "Thêm tài liệu đầu tiên - bảng giá, chính sách, quy trình, tệp hoặc link Google Drive. NIVO index xong là mọi agent dùng được.",
-    "reviewEmptyTitle": "Không có gì cần duyệt",
-    "reviewEmptyBody": "Đề xuất từ agent, nhân viên và khách nằm ở đây trước khi agent nào được dùng.",
-    "reviewIntro": "Đề xuất đang chờ bạn quyết: sự thật đọc từ tài liệu, giá trị mới và bài học.",
-    "factsIntro": "Những điều agent được dùng khi trả lời. Mỗi sự thật có phạm vi: công khai, nội bộ hoặc chỉ một số agent.",
     "selectPlaceholder": "Chọn một mục",
     "proposed": "Đề xuất",
     "conflict": "Khác giá trị đang dùng",
@@ -1006,7 +1001,6 @@
     "fNote": "Lấy từ đâu (không bắt buộc)",
     "save": "Lưu",
     "cancel": "Hủy",
-    "lessonsIntro": "Cách từng agent nên làm việc. Bài học đến từ những lần bạn sửa bản nháp của agent và từ những gì bạn ghi ở đây.",
     "lessonsAgent": "Agent",
     "lessonsAll": "Mọi agent",
     "mine": "Tìm bài học từ các lần tôi sửa",
@@ -1040,7 +1034,7 @@
     "tPlace": "Địa điểm",
     "tOther": "Khác",
     "loadFailed": "Chưa tải được Second Brain. Tài liệu và sự thật vẫn an toàn; thử lại nhé.",
-    "gapsTitle": "Câu khách hỏi chưa có câu trả lời",
+    "gapsTitle": "Khách hỏi chưa đáp",
     "gapsIntro": "Agent chưa trả lời được những câu này từ những gì đã biết. Thêm câu trả lời để mọi agent dùng được.",
     "gapsEmpty": "Không có câu nào đang chờ: mọi câu khách hỏi đều đã có câu trả lời.",
     "gapAsked": "Hỏi {n} lần · gần nhất {when}",
@@ -1078,7 +1072,14 @@
     "reasonAsk": "Hai nguồn nói khác nhau và nguồn mới ({trust}) kém tin cậy hơn nguồn cũ ({currentTrust}). Hỏi lại {who} trước khi quyết.",
     "maintainTitle": "Bộ não cần được cập nhật",
     "maintainBody": "Đã đến lúc một giá trị mới có hiệu lực, hoặc một giá trị đang dùng đã hết hạn. Cập nhật để các trợ lý đọc đúng giá trị.",
-    "maintainAction": "Cập nhật ngay"
+    "maintainAction": "Cập nhật ngay",
+    "waitingFactsTitle": "Sự thật chờ duyệt",
+    "waitingFactsFooter": "Sự thật chỉ dùng được sau khi bạn áp dụng.",
+    "waitingFactsEmpty": "Không có sự thật nào chờ duyệt.",
+    "factsFooter": "Agent chỉ dùng sự thật ở đây khi trả lời.",
+    "lessonsTitle": "Bài học từ các lần bạn sửa",
+    "lessonsFooter": "NIVO chỉ đề xuất, bạn quyết định có áp dụng hay không.",
+    "skipLesson": "Bỏ qua"
   },
   "common": {
     "open": "Mở",
@@ -2370,7 +2371,7 @@
     "findingsLabel": "Các phát hiện",
     "kind_contradiction": "Mâu thuẫn",
     "kind_expired": "Hết hạn",
-    "kind_missing": "Còn thiếu",
+    "kind_missing": "Thiếu",
     "kind_outdated": "Chưa cập nhật",
     "kind_unreasonable": "Bất hợp lý",
     "kind_unsigned": "Chưa ký",
@@ -2399,11 +2400,23 @@
     "severity_high": "Cao",
     "severity_low": "Thấp",
     "severity_medium": "Trung bình",
-    "tabTodo": "Cần xử lý",
     "todoLabel": "Các phát hiện cần xử lý",
     "unassigned": "Chưa giao",
     "upload": "Tải tài liệu lên",
-    "viewDraft": "Xem dự thảo"
+    "viewDraft": "Xem dự thảo",
+    "filterWithCount": "{label} {n}",
+    "filterFacts": "Sự thật",
+    "filterAsk": "Khách hỏi",
+    "cardConfirmSide": "{source} đúng",
+    "confirmNote": "Bạn xác nhận: {source} đúng",
+    "cardNeedsDocument": "Cần bổ sung văn bản",
+    "cardUploadOther": "Tải tài liệu khác",
+    "cardUpload": "Tải giấy tờ",
+    "cardAskDraft": "NIVO soạn giúp",
+    "cardAssign": "Giao người làm",
+    "cardDone": "Đã xử lý xong",
+    "cardSkip": "Bỏ qua",
+    "cardDossier": "Hồ sơ {name}"
   },
   "email": {
     "err_auth": "Sai tên đăng nhập hoặc mật khẩu. Kiểm tra lại địa chỉ email và mật khẩu bạn đã dán.",
@@ -2655,11 +2668,7 @@
     "office": {
       "title": "Office",
       "what": "Phòng làm việc chung: nhắn với đội và các agent AI, duyệt việc AI đề xuất.",
-      "steps": [
-        "Mở Office",
-        "Gõ @tên-agent để gọi agent",
-        "Duyệt hoặc sửa các thẻ chờ duyệt"
-      ],
+      "steps": ["Mở Office", "Gõ @tên-agent để gọi agent", "Duyệt hoặc sửa các thẻ chờ duyệt"],
       "keywords": [
         "office",
         "van phong",
@@ -2680,20 +2689,8 @@
     "overview": {
       "title": "Tổng quan",
       "what": "Bức tranh chung: kết quả, việc đang chờ, ngoại lệ cần chú ý.",
-      "steps": [
-        "Mở Tổng quan",
-        "Xem các thẻ kết quả và việc chờ"
-      ],
-      "keywords": [
-        "tong quan",
-        "dashboard",
-        "bao cao",
-        "ket qua",
-        "doanh thu",
-        "tinh hinh",
-        "overview",
-        "report"
-      ]
+      "steps": ["Mở Tổng quan", "Xem các thẻ kết quả và việc chờ"],
+      "keywords": ["tong quan", "dashboard", "bao cao", "ket qua", "doanh thu", "tinh hinh", "overview", "report"]
     },
     "authority": {
       "title": "Giao quyền",
@@ -2720,28 +2717,13 @@
     "inbox": {
       "title": "Đầu vào",
       "what": "Mọi thứ đi vào: tin nhắn khách, đơn, giao dịch ngân hàng, từ mọi kênh.",
-      "steps": [
-        "Mở Đầu vào",
-        "Lọc theo kênh hoặc loại"
-      ],
-      "keywords": [
-        "dau vao",
-        "inbox",
-        "tin nhan den",
-        "tin nhan khach",
-        "giao dich den",
-        "don moi",
-        "hop thu"
-      ]
+      "steps": ["Mở Đầu vào", "Lọc theo kênh hoặc loại"],
+      "keywords": ["dau vao", "inbox", "tin nhan den", "tin nhan khach", "giao dich den", "don moi", "hop thu"]
     },
     "leads": {
       "title": "Khách hàng",
       "what": "Danh sách khách và cơ hội bán hàng, ai phụ trách và việc tiếp theo.",
-      "steps": [
-        "Mở Khách hàng",
-        "Bấm Thêm khách hàng để thêm một khách",
-        "Mở một khách để xem lịch sử và giao việc"
-      ],
+      "steps": ["Mở Khách hàng", "Bấm Thêm khách hàng để thêm một khách", "Mở một khách để xem lịch sử và giao việc"],
       "keywords": [
         "khach hang",
         "lead",
@@ -2758,44 +2740,19 @@
     "responsibilities": {
       "title": "Trách nhiệm",
       "what": "Ai đang chịu trách nhiệm việc gì, hạn chót và bước tiếp theo.",
-      "steps": [
-        "Mở Trách nhiệm",
-        "Lọc theo người phụ trách hoặc trạng thái"
-      ],
-      "keywords": [
-        "trach nhiem",
-        "ai lam gi",
-        "viec cua ai",
-        "han chot",
-        "phu trach",
-        "responsibility",
-        "task"
-      ]
+      "steps": ["Mở Trách nhiệm", "Lọc theo người phụ trách hoặc trạng thái"],
+      "keywords": ["trach nhiem", "ai lam gi", "viec cua ai", "han chot", "phu trach", "responsibility", "task"]
     },
     "decisions": {
       "title": "Lịch sử quyết định",
       "what": "Nhật ký mọi quyết định: AI tự làm, người duyệt, người sửa, kèm lý do.",
-      "steps": [
-        "Mở Lịch sử quyết định",
-        "Lọc theo bộ phận hoặc người quyết định"
-      ],
-      "keywords": [
-        "lich su quyet dinh",
-        "quyet dinh",
-        "nhat ky",
-        "ai da duyet",
-        "decision",
-        "audit"
-      ]
+      "steps": ["Mở Lịch sử quyết định", "Lọc theo bộ phận hoặc người quyết định"],
+      "keywords": ["lich su quyet dinh", "quyet dinh", "nhat ky", "ai da duyet", "decision", "audit"]
     },
     "automations": {
       "title": "Tự động hoá",
       "what": "Quy trình tự chạy theo lịch hoặc sự kiện: nhắc nợ, báo cáo, chăm sóc khách.",
-      "steps": [
-        "Mở Tự động hoá",
-        "Chọn một mẫu có sẵn hoặc tạo mới",
-        "Bật quy trình"
-      ],
+      "steps": ["Mở Tự động hoá", "Chọn một mẫu có sẵn hoặc tạo mới", "Bật quy trình"],
       "keywords": [
         "tu dong hoa",
         "tu dong",
@@ -2811,12 +2768,7 @@
     "knowledge": {
       "title": "Tri thức",
       "what": "Dạy AI về doanh nghiệp: bảng giá, chính sách, câu hỏi thường gặp, tài liệu, link.",
-      "steps": [
-        "Mở Tri thức",
-        "Bấm Thêm nguồn",
-        "Dán nội dung, tải tệp hoặc dán link",
-        "Lưu để AI dùng khi trả lời"
-      ],
+      "steps": ["Mở Tri thức", "Bấm Thêm nguồn", "Dán nội dung, tải tệp hoặc dán link", "Lưu để AI dùng khi trả lời"],
       "keywords": [
         "tri thuc",
         "kien thuc",
@@ -2856,11 +2808,7 @@
     "modules": {
       "title": "Agent",
       "what": "Cài và cấu hình các agent: Chatbot, Bán hàng, Kế toán, Đặt lịch, Kho, Tuyển dụng…",
-      "steps": [
-        "Mở Agent",
-        "Chọn agent cần dùng và bấm Cài",
-        "Làm theo các bước thiết lập"
-      ],
+      "steps": ["Mở Agent", "Chọn agent cần dùng và bấm Cài", "Làm theo các bước thiết lập"],
       "keywords": [
         "module",
         "modules",
@@ -2879,12 +2827,7 @@
     "team": {
       "title": "Đội ngũ",
       "what": "Mời người vào workspace và chọn vai trò: Chủ sở hữu, Quản lý, Nhân viên.",
-      "steps": [
-        "Mở Đội ngũ",
-        "Bấm Mời thành viên",
-        "Nhập email và chọn vai trò",
-        "Gửi lời mời hoặc sao chép link mời"
-      ],
+      "steps": ["Mở Đội ngũ", "Bấm Mời thành viên", "Nhập email và chọn vai trò", "Gửi lời mời hoặc sao chép link mời"],
       "keywords": [
         "doi ngu",
         "moi nhan vien",
@@ -2902,17 +2845,8 @@
     "connections": {
       "title": "Kết nối",
       "what": "Nối NIVO với ngân hàng, Telegram, Zalo OA, email, Google Sheets, n8n.",
-      "steps": [
-        "Mở Kết nối",
-        "Chọn dịch vụ và bấm Thêm kết nối",
-        "Làm theo hướng dẫn từng bước"
-      ],
-      "keywords": [
-        "ket noi",
-        "tich hop",
-        "connection",
-        "integration"
-      ]
+      "steps": ["Mở Kết nối", "Chọn dịch vụ và bấm Thêm kết nối", "Làm theo hướng dẫn từng bước"],
+      "keywords": ["ket noi", "tich hop", "connection", "integration"]
     },
     "connections-sepay": {
       "title": "Kết nối SePay (tiền về)",
@@ -2968,12 +2902,7 @@
         "Dán Callback URL và Webhook URL sang Zalo, bật sự kiện tin nhắn",
         "Bấm Kết nối Zalo OA để chủ OA đồng ý"
       ],
-      "keywords": [
-        "zalo",
-        "zalo oa",
-        "official account",
-        "oa"
-      ]
+      "keywords": ["zalo", "zalo oa", "official account", "oa"]
     },
     "connections-smtp": {
       "title": "Email gửi đi",
@@ -2983,29 +2912,13 @@
         "Nhập máy chủ SMTP hoặc chọn nhà cung cấp",
         "Gửi thử một email"
       ],
-      "keywords": [
-        "email",
-        "smtp",
-        "gui email",
-        "gmail",
-        "thu dien tu"
-      ]
+      "keywords": ["email", "smtp", "gui email", "gmail", "thu dien tu"]
     },
     "connections-google": {
       "title": "Google Sheets",
       "what": "NIVO ghi đơn hàng vào bảng tính Google của bạn.",
-      "steps": [
-        "Mở Kết nối › Google (Sheets) › Thêm kết nối",
-        "Đăng nhập Google và cho phép",
-        "Chọn bảng tính"
-      ],
-      "keywords": [
-        "google sheet",
-        "google sheets",
-        "bang tinh",
-        "excel",
-        "spreadsheet"
-      ]
+      "steps": ["Mở Kết nối › Google (Sheets) › Thêm kết nối", "Đăng nhập Google và cho phép", "Chọn bảng tính"],
+      "keywords": ["google sheet", "google sheets", "bang tinh", "excel", "spreadsheet"]
     },
     "connections-webhook": {
       "title": "n8n / Webhook",
@@ -3015,29 +2928,13 @@
         "Dán URL webhook của n8n",
         "Chọn sự kiện cần gửi và gửi thử"
       ],
-      "keywords": [
-        "n8n",
-        "webhook",
-        "zapier",
-        "make.com",
-        "make"
-      ]
+      "keywords": ["n8n", "webhook", "zapier", "make.com", "make"]
     },
     "developers": {
       "title": "Nhà phát triển (API)",
       "what": "Tạo khóa API để phần mềm khác đọc và ghi dữ liệu NIVO.",
-      "steps": [
-        "Mở Nhà phát triển",
-        "Đặt tên khóa và bấm Tạo",
-        "Sao chép khóa ngay, NIVO chỉ hiện một lần"
-      ],
-      "keywords": [
-        "api",
-        "khoa api",
-        "api key",
-        "developer",
-        "lap trinh"
-      ]
+      "steps": ["Mở Nhà phát triển", "Đặt tên khóa và bấm Tạo", "Sao chép khóa ngay, NIVO chỉ hiện một lần"],
+      "keywords": ["api", "khoa api", "api key", "developer", "lap trinh"]
     },
     "billing": {
       "title": "Credit và gói",
@@ -3067,10 +2964,7 @@
     "account": {
       "title": "Tài khoản của bạn",
       "what": "Đổi tên hiển thị, email, mật khẩu và đăng xuất các thiết bị khác.",
-      "steps": [
-        "Mở menu ảnh đại diện › Tài khoản",
-        "Sửa thông tin và bấm Lưu"
-      ],
+      "steps": ["Mở menu ảnh đại diện › Tài khoản", "Sửa thông tin và bấm Lưu"],
       "keywords": [
         "tai khoan cua toi",
         "thong tin tai khoan",
@@ -3161,7 +3055,6 @@
     "addTitle": "Thêm tài liệu",
     "tabFiles": "Tệp & liên kết",
     "tabWrite": "Viết",
-    "drawerHint": "Thả tệp, dán liên kết - NIVO đọc và index cho mọi agent.",
     "filesDrop": "Thả tệp vào đây hoặc chọn tệp",
     "filesHint": "PDF, Word, Excel, PowerPoint, CSV, TXT, MD, ZIP · tối đa 50 MB mỗi tệp, tổng tối đa 50 MB dữ liệu thô cho cả workspace, ZIP tối đa 200 MB",
     "linksField": "Liên kết",
@@ -3238,8 +3131,8 @@
     "fieldModule": "Dùng cho",
     "moduleAll": "Mọi agent",
     "fieldVisibility": "Ai được dùng",
-    "visPublic": "Khách hàng được biết",
-    "visInternal": "Chỉ nội bộ",
+    "visPublic": "Công khai: chatbot trả lời khách",
+    "visInternal": "Nội bộ: chỉ đội ngũ và agent nội bộ",
     "visPublicNote": "Chatbot chăm sóc khách sẽ trả lời từ tài liệu này. Chọn mục này nếu bạn muốn khách hỏi và nhận được câu trả lời.",
     "visInternalNote": "Chỉ nhân viên và agent nội bộ đọc được. Chatbot chăm sóc khách sẽ không thấy tài liệu này và trả lời là chưa có thông tin.",
     "faqQuestion": "Câu hỏi",
@@ -3249,7 +3142,7 @@
     "urlHint": "Một trang web công khai. NIVO đọc chữ trên trang một lần; thêm lại để cập nhật.",
     "save": "Thêm",
     "saveFailed": "Chưa thêm được",
-    "listTitle": "Các nguồn tài liệu",
+    "listTitle": "Tài liệu đã nạp",
     "listCount": "{count} nguồn",
     "emptyTitle": "Chưa có tài liệu nào",
     "filterModule": "Hiển thị",
@@ -3326,8 +3219,6 @@
     "libLearned": "Đã học · {count} sự thật",
     "libLearnedPlain": "Đã học",
     "libFailed": "Lỗi",
-    "zoneLink": "Dán liên kết",
-    "zoneWrite": "Viết tay",
     "askQuestion": "Câu hỏi",
     "askAudience": "Hỏi như",
     "askNoAgents": "Chưa có agent nào được cài. Cài một agent để hỏi thử như agent đó.",
@@ -3478,7 +3369,20 @@
     "suggest_lead_routing_topic": "Giờ làm việc và ai nhận khách",
     "suggest_lead_routing_hint": "Khung giờ gọi lại, ai nhận khách nóng, khách ngoài giờ xử lý ra sao. Ví dụ: Hương nhận khách 8-18h; sau 18h hẹn gọi 8h sáng; khách nóng báo Zalo chủ ngay.",
     "suggest_brand_voice_topic": "Cách xưng hô và giọng điệu mẫu",
-    "suggest_brand_voice_hint": "Vài câu mẫu bạn ưng ý để agent nói đúng giọng của bạn."
+    "suggest_brand_voice_hint": "Vài câu mẫu bạn ưng ý để agent nói đúng giọng của bạn.",
+    "processingTitle": "Đang xử lý",
+    "processingSteps": "Các bước xử lý",
+    "ingest_read": "Đọc",
+    "ingest_index": "Lập chỉ mục",
+    "ingest_facts": "Trích sự thật",
+    "ingest_critic": "Phản biện",
+    "summaryAsk": "NIVO có {count} điều cần hỏi bạn",
+    "summarySee": "Xem ngay",
+    "visChooseNote": "Chatbot chỉ trả lời khách từ tài liệu Công khai. Hãy chọn ai được đọc trước khi thêm.",
+    "visSuggest": "NIVO gợi ý {choice} cho tài liệu này, bạn quyết định.",
+    "visPublicName": "Công khai",
+    "visInternalName": "Nội bộ",
+    "visRequired": "Chọn ai được đọc tài liệu này trước khi thêm."
   },
   "lead": {
     "contextTitle": "Bối cảnh khách hàng",
@@ -5094,16 +4998,6 @@
   },
   "secondBrain": {
     "intro": "Bộ nhớ chung của doanh nghiệp. Mọi agent đọc từ đây.",
-    "pipelineLabel": "Đường đi của tri thức",
-    "stepSources": "Nạp",
-    "stepSourcesMeta": "{n} đang đọc",
-    "stepSourcesLive": "{detail}",
-    "stepLearn": "Học",
-    "stepLearnMeta": "{facts} sự thật · {lessons} bài học",
-    "stepReview": "Duyệt",
-    "stepReviewMeta": "{n} xung đột",
-    "stepUse": "Dùng",
-    "stepUseMeta": "cho {n} agent",
     "tabsLabel": "Các phần của Second Brain",
     "tab_dossiers": "Hồ sơ",
     "tab_todo": "Cần xử lý",
@@ -5123,12 +5017,8 @@
     "mapCategoryRows": "Hồ sơ của danh mục",
     "mapOpenDossier": "Mở hồ sơ",
     "tab_sources": "Nạp tài liệu",
-    "tab_review": "Chờ duyệt",
-    "tab_review_count": "Chờ duyệt {n}",
     "tab_facts": "Sự thật",
     "tab_lessons": "Bài học",
-    "tab_gaps": "Khách hỏi chưa đáp",
-    "tab_gaps_count": "Khách hỏi chưa đáp {n}",
     "tab_agents": "Agent thấy gì",
     "audienceCustomer": "Khách",
     "viewTitle": "Agent thấy gì",
@@ -5142,23 +5032,23 @@
     "lane_factPublic": "Sự thật công khai",
     "lane_factInternal": "Sự thật nội bộ",
     "lane_factRestricted": "Sự thật hạn chế theo agent",
-    "dossiersGridLabel": "Hồ sơ theo danh mục",
-    "dossiersCategories": "Danh mục hồ sơ",
-    "dossiersCategoriesClose": "Đóng danh mục hồ sơ",
-    "dossiersList": "Hồ sơ của danh mục",
-    "dossiersTitle": "Tình trạng {count} hồ sơ",
-    "dossiersAdd": "+ Thêm tài liệu",
     "dossiersEmpty": "Chưa có tài liệu hay hồ sơ nào. Thêm tài liệu để bắt đầu.",
     "dossiersEmptyCategory": "Danh mục này chưa có hồ sơ nào được theo dõi.",
     "categoryMeta": "{count, plural, =0 {Chưa có tài liệu} other {# tài liệu}} · {size}",
     "dossierDocuments": "{count, plural, =0 {Chưa có tài liệu} other {# tài liệu}}",
     "dossierMissing": "Còn thiếu: {text}",
-    "statusCount": "{status} {count}",
-    "status_present": "Đã có",
+    "status_present": "Đủ",
     "status_partial": "Có một phần",
     "status_drafted": "Đã soạn dự thảo",
     "status_missing": "Chưa có",
-    "status_template": "Biểu mẫu"
+    "status_template": "Biểu mẫu",
+    "addDocuments": "Thêm tài liệu",
+    "figuresLabel": "Tình trạng hồ sơ",
+    "figureAsk": "Cần hỏi bạn",
+    "dossiersFooter": "NIVO rà soát lại mỗi khi có tài liệu mới.",
+    "dossierSee": "Xem",
+    "dossierUpload": "Tải giấy tờ",
+    "viewFooter": "Đổi quyền đọc ở từng tài liệu."
   },
   "shell": {
     "navOverview": "Tổng quan",

@@ -52,6 +52,7 @@ export {
     BRAIN_TABS,
     DEFAULT_BRAIN_TAB,
     KNOWLEDGE_ROUTES,
+    LEGACY_BRAIN_TABS,
     brainDossierHref,
     brainTabHref,
     brainUploadHref,

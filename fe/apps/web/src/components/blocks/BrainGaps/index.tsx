@@ -32,7 +32,7 @@ export const BrainGaps = (props: BrainGapsProps) => {
                 ...(gap.reopenedCount > 0 ? [{ label: t("gapReopened"), tone: "warning" as const }] : []),
             ],
             actions: [
-                { id: "answer", label: t("gapAnswer"), href: brainTabHref("gaps", { answer: gap.id }) },
+                { id: "answer", label: t("gapAnswer"), href: brainTabHref("todo", { answer: gap.id }) },
                 {
                     id: "dismiss",
                     label: t("gapDismiss"),
@@ -50,7 +50,6 @@ export const BrainGaps = (props: BrainGapsProps) => {
                     section: {
                         id: "brain-gaps-title",
                         title: t("gapsTitle"),
-                        description: t("gapsIntro"),
                         failTitle: t("loadFailed"),
                     },
                     label: t("gapsTitle"),

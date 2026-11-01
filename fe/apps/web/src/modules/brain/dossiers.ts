@@ -134,15 +134,6 @@ export const categoriesOf = (
         })
 }
 
-/** The category that holds a dossier, so the list shows the dossier that is open; undefined when none is open or it is not among them. */
-export const categoryIdOf = (
-    categories: ReadonlyArray<CategoryView>,
-    dossierId: string | undefined,
-): string | undefined =>
-    dossierId === undefined
-        ? undefined
-        : categories.find((category) => category.dossiers.some((one) => one.id === dossierId))?.id
-
 /**
  * How many dossiers stand at each status, in the order the counts are listed. The status of a dossier is the checklist's own
  * unless the caller says otherwise (the review recomputes it).

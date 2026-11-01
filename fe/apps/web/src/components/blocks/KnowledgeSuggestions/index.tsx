@@ -92,10 +92,10 @@ export const KnowledgeSuggestions = () => {
                     section: {
                         id: "knowledge-suggestions-title",
                         title: t("suggestTitle"),
-                        description: t("suggestHint"),
                         failTitle: t("detailFailed"),
                     },
                     label: t("suggestTitle"),
+                    footer: t("suggestHint"),
                     isPending: commands.isPending,
                     slot: ideas.isLoading
                         ? loadingSlot<ReadonlyArray<KnowledgeRowView>>()
