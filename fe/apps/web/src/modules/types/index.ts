@@ -76,6 +76,7 @@ export type {
     AccountingQuestion,
     AccountingQuestionGroup,
     AccountingSourceKind,
+    AccountingUpcomingDue,
     AccountingWorkbenchData,
     AccountingPanelBaseProps,
 } from "./accounting"

@@ -14,8 +14,8 @@ export const RECORD_RECEIVABLE_PAYMENT = "record_receivable_payment"
 /** The action whose decision records the chief accountant's verdict on an e-invoice exception; it has no performer. */
 const REVIEW_EINVOICE = "review_einvoice"
 
-/** The action whose decision confirms that an outgoing payment paid a supplier invoice; it has no performer. */
-const CONFIRM_SUPPLIER_PAYMENT = "confirm_supplier_payment"
+/** The action whose approval confirms that an outgoing payment paid a supplier invoice (performed by `SupplierPaymentPerformerService`). */
+export const CONFIRM_SUPPLIER_PAYMENT = "confirm_supplier_payment"
 
 /** The one key of the decision about a supplier invoice's payment: the invoice is asked about once. */
 export const supplierPaymentKey = (payable: GatewayPayable): string =>
@@ -56,19 +56,24 @@ export class AccountingDecisionsService {
         return { kind: "work_item", id: item.id }
     }
 
-    /** Asks whether an outgoing payment that only partly matches a supplier invoice paid it; approving it stops the reminders. */
+    /**
+     * Sends an outgoing payment that may have paid a supplier invoice through the work engine, about the invoice row: the gate and
+     * the action graph decide an exact match, an unclear one always waits for a person. Approving it, or the gate passing it,
+     * marks the row paid (performed by `SupplierPaymentPerformerService`).
+     */
     async askSupplierPayment(workspaceId: string, question: SupplierPaymentQuestion): Promise<HubCardRef> {
         const { payable, debit } = question
         const item = await this.engine.runWork(deskContext(workspaceId), {
             action: CONFIRM_SUPPLIER_PAYMENT,
-            subject_type: "invoice",
+            subject_type: "supplier_payable",
+            subject_id: question.payableId,
             dedupeKey: supplierPaymentKey(payable),
             preset: true,
             noChain: true,
-            forceAsk: "unclear_outcome",
+            forceAsk: question.unclear ? "unclear_outcome" : undefined,
             seed: {
                 summary: question.summary,
-                amount_vnd: debit.amountVnd,
+                amount_vnd: payable.amountVnd,
                 fields: {
                     invoice_no: payable.invoiceNo,
                     seller_tax_code: payable.sellerTaxCode,

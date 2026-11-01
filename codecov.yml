@@ -148,6 +148,7 @@ component_management:
         - "be/src/modules/domain/sales/**"
         - "be/src/modules/domain/sepay-transactions/**"
         - "be/src/modules/domain/shifts/**"
+        - "be/src/modules/domain/supplier-payables/**"
         - "be/src/modules/domain/telegram-inbox/**"
         - "be/src/modules/domain/thread-messages/**"
         - "be/src/modules/domain/thread-work/**"

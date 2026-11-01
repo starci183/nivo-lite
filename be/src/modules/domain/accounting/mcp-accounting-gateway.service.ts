@@ -91,6 +91,12 @@ export class McpAccountingGatewayService implements AccountingGateway {
         return resolution.ok ? resolution.tool.connectorName : null
     }
 
+    /** The display name of the connector the workspace's `invoice.list` resolves to; null when none does. */
+    async payablesSource(workspaceId: string): Promise<OptionalConnectorName> {
+        const resolution = await this.gateway.toolForRole(workspaceId, "invoice.list")
+        return resolution.ok ? resolution.tool.connectorName : null
+    }
+
     /** Whether the workspace can play `invoice.list` and both `receivable.*` roles now (a usable tool for each). */
     async connections(workspaceId: string): Promise<DeskConnections> {
         const [invoices, receivables] = await Promise.all([

@@ -119,6 +119,8 @@ export const SUPPLIER_COPY = {
     memo: "Nội dung chuyển khoản",
     text: (supplier: string, invoiceNo: string, invoice: number, paid: number): string =>
         `Đối chiếu thanh toán ${supplier || "NCC"} · HĐ ${invoiceNo}: hóa đơn ${invoice.toLocaleString("vi-VN")} ₫, đã chi ${paid.toLocaleString("vi-VN")} ₫. Cần Kế toán trưởng xác nhận.`,
+    exactText: (supplier: string, invoiceNo: string, amount: number): string =>
+        `Chi trả ${supplier || "NCC"} · HĐ ${invoiceNo}: ${amount.toLocaleString("vi-VN")} ₫, khớp số tiền và số hóa đơn.`,
 } as const
 
 /** The text of one invoice issue. */

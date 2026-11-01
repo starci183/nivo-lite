@@ -166,6 +166,7 @@ const build = async ({
         gateway,
         review,
         receivables,
+        supplierPayments,
         room,
         renewals,
     }
@@ -178,9 +179,14 @@ describe("DeskDailyService", () => {
     })
 
     it("settles the installation, checks the invoices, matches the open credits, posts the card and the reminders due today", async () => {
-        const { daily, brain, readiness, review, receivables, room } = await build()
+        const { daily, brain, readiness, review, receivables, room, supplierPayments } = await build()
 
         const outcome = await daily.run(WS)
+
+        expect(supplierPayments.openPayables).toHaveBeenCalledWith(WS, {
+            suppliers: [{ name: "linh-an", taxCode: "0100109106", termDays: 7 }],
+            defaultTermDays: 30,
+        })
 
         expect(readiness.settle).toHaveBeenCalledWith(WS, "inst-1")
         expect(brain.list).toHaveBeenCalledWith(WS, { statuses: ["active"] })

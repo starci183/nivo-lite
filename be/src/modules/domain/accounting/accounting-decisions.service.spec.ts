@@ -74,15 +74,15 @@ describe("AccountingDecisionsService decision-only questions", () => {
             matched: false,
         }
 
-        await expect(decisions.askSupplierPayment(WS, { payable, debit, summary: "Confirm" })).resolves.toEqual({
-            kind: "work_item",
-            id: "wi-1",
-        })
+        const question = { payable, debit, payableId: "pay-1", unclear: true, summary: "Confirm" }
+
+        await expect(decisions.askSupplierPayment(WS, question)).resolves.toEqual({ kind: "work_item", id: "wi-1" })
 
         expect(supplierPaymentKey(payable)).toBe("confirm_supplier_payment:0100109106:17")
         expect(engine.runWork).toHaveBeenCalledWith(CTX, {
             action: "confirm_supplier_payment",
-            subject_type: "invoice",
+            subject_type: "supplier_payable",
+            subject_id: "pay-1",
             dedupeKey: "confirm_supplier_payment:0100109106:17",
             preset: true,
             noChain: true,
@@ -93,6 +93,25 @@ describe("AccountingDecisionsService decision-only questions", () => {
                 fields: { invoice_no: "17", seller_tax_code: "0100109106", debit_ref: "d-1" },
             },
         })
+    })
+
+    it("leaves an exact supplier payment to the gate and the action graph: no forced ask", async () => {
+        const { decisions, engine } = await build()
+        const payable = {
+            supplier: "Linh An",
+            sellerTaxCode: "0100109106",
+            invoiceNo: "17",
+            amountVnd: 4_620_000,
+            issuedOn: "2026-10-19",
+        }
+        const debit = { creditRef: "d-1", reference: "HD 17", amountVnd: 4_620_000, occurredAt: "", matched: true }
+
+        await decisions.askSupplierPayment(WS, { payable, debit, payableId: "pay-1", unclear: false, summary: "Paid" })
+
+        expect(engine.runWork).toHaveBeenCalledWith(
+            CTX,
+            expect.objectContaining({ forceAsk: undefined, subject_id: "pay-1" }),
+        )
     })
 
     it("opens an e-invoice exception as a decision-only review, once per invoice", async () => {

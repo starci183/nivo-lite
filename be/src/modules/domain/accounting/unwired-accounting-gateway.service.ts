@@ -46,6 +46,11 @@ export class UnwiredAccountingGatewayService implements AccountingGateway {
         return Promise.resolve(null)
     }
 
+    /** No connector feeds supplier invoices. */
+    payablesSource(): Promise<OptionalConnectorName> {
+        return Promise.resolve(null)
+    }
+
     /** No optional feature is connected. */
     connections(): Promise<DeskConnections> {
         return Promise.resolve({ invoices: false, receivables: false })

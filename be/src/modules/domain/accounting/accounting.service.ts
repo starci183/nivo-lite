@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { BrainFactsService } from "@modules/domain/brain-facts"
 import { DecisionsService } from "@modules/domain/decisions"
 import { StaffService } from "@modules/domain/staff"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -13,6 +14,8 @@ import type { AccountingWorkbenchView } from "./accounting-workbench-view.contra
 import { toAccountingWorkbenchView } from "./accounting-workbench-view.mapper"
 import type { AccountingLedgerEntry } from "@modules/domain/ledger"
 import { buildAccountingWorkbench } from "./accounting-workbench.policy"
+import { vnDayOf } from "./desk-daily.service"
+import { taxProfileOf } from "./tax-profile.policy"
 
 @Injectable()
 /** The member-scoped accounting read side over live records, naming the connector that feeds the payment credits. */
@@ -22,6 +25,7 @@ export class AccountingService {
         private readonly members: WorkspaceMembersService,
         private readonly decisions: DecisionsService,
         private readonly staff: StaffService,
+        private readonly facts: BrainFactsService,
         @InjectAccountingGateway() private readonly gateway: AccountingGateway,
         @InjectClock() private readonly clock: Clock,
     ) {}
@@ -33,21 +37,27 @@ export class AccountingService {
     /** The period figures, evidence, waiting questions, staff, corrections and ledger for any active member. */
     async workbench(principalId: string, workspaceId: string): Promise<AccountingWorkbenchView> {
         const member = await this.members.require(principalId, workspaceId)
-        const [book, exceptions, staff, creditsSource] = await Promise.all([
+        const [book, exceptions, staff, creditsSource, payablesSource, facts] = await Promise.all([
             this.books.read(workspaceId),
             this.decisions.listAccountingWaiting(principalId, workspaceId),
             this.staff.list(workspaceId),
             this.gateway.creditsSource(workspaceId),
+            this.gateway.payablesSource(workspaceId),
+            this.facts.list(workspaceId, { statuses: ["active"] }),
         ])
+        const now = this.clock.now()
         return toAccountingWorkbenchView(
             buildAccountingWorkbench({
                 book,
-                now: this.clock.now(),
+                now,
                 exceptions,
                 staff,
                 ownerName: member.displayName,
                 role: member.role,
                 creditsSource,
+                payablesSource,
+                profile: taxProfileOf(facts),
+                today: vnDayOf(now),
             }),
         )
     }

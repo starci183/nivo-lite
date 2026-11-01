@@ -11,6 +11,9 @@ import { DATED_HOLIDAYS, FIXED_HOLIDAYS } from "./vn-holidays.contracts"
 
 const DAY_MS = 86_400_000
 
+/** How far ahead the morning card, the reminders and the workbench look for dues. */
+export const HORIZON_DAYS = 30
+
 const BASIS = TAX_BASIS
 
 const pad = (value: number): string => String(value).padStart(2, "0")

@@ -235,8 +235,8 @@ export interface InvoiceQuestion {
     readonly summary: string
 }
 
-/** An open supplier invoice and the outgoing payment that only partly matches it (the amount, or the invoice number). */
-export interface UnclearPayment {
+/** An open supplier invoice and the outgoing payment matched to it. */
+export interface PayablePayment {
     /** The open supplier invoice. */
     readonly payable: GatewayPayable
     /** The outgoing payment, from the workspace's `payment.debits.list` tool. */
@@ -245,16 +245,20 @@ export interface UnclearPayment {
 
 /** How the outgoing payments matched the open supplier invoices. */
 export interface PayableMatches {
-    /** The invoices an outgoing payment of their exact amount, naming their number, paid. */
-    readonly paid: ReadonlyArray<GatewayPayable>
+    /** The invoices an outgoing payment of their exact amount, naming their number, paid; each with that payment. */
+    readonly paid: ReadonlyArray<PayablePayment>
     /** The invoices still to pay. */
     readonly open: ReadonlyArray<GatewayPayable>
-    /** The open invoices an outgoing payment only partly matches, each for the chief accountant to confirm. */
-    readonly unclear: ReadonlyArray<UnclearPayment>
+    /** The open invoices an outgoing payment only partly matches (the amount, or the number), each for the chief accountant to confirm. */
+    readonly unclear: ReadonlyArray<PayablePayment>
 }
 
 /** A supplier payment the matching could not settle alone, with the one sentence the person decides on. */
-export interface SupplierPaymentQuestion extends UnclearPayment {
+export interface SupplierPaymentQuestion extends PayablePayment {
+    /** The supplier invoice row the work item is about. */
+    readonly payableId: string
+    /** True when the match is only partial: a person always decides it. */
+    readonly unclear: boolean
     /** The one sentence the person decides on. */
     readonly summary: string
 }

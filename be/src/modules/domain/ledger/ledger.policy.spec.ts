@@ -8,6 +8,7 @@ import {
     settlementInput,
     settlementExpected,
 } from "../../../tests/fixtures/builders/ledger.builder"
+import { paidPayableRow, payableRow } from "../../../tests/fixtures/builders/supplier-payables.builder"
 import { Test } from "@nestjs/testing"
 import { buildLedger, customerOf, toMs } from "./ledger.policy"
 
@@ -210,4 +211,112 @@ describe("ledger.policy", () => {
             ],
         })
     })
+})
+
+const EXPENSE_WORK = {
+    id: "work-1",
+    action: "confirm_supplier_payment",
+    status: "done",
+    subject_type: "supplier_payable",
+    subject_id: "pay-1",
+    created_at: PAID,
+} as const
+
+const EXPENSE_DECISION = {
+    id: "decision-1",
+    work_item_id: "work-1",
+    action: "confirm_supplier_payment",
+    decided_by: "NIVO",
+    decider_kind: "policy",
+    outcome: "auto_done",
+    note: null,
+    created_at: PAID,
+} as const
+
+const registerExpenseLine = () => {
+    it("draws a paid supplier invoice as one expense line with its invoice, payment and decision", async () => {
+        const subject = await build()
+
+        const ledger = subject.buildLedger(
+            input({
+                payables: [paidPayableRow({ paidAt: PAID })],
+                works: [EXPENSE_WORK],
+                decisions: [EXPENSE_DECISION],
+            }),
+        )
+
+        expect(ledger).toEqual([
+            {
+                id: "pay:pay-1",
+                targetType: "supplier_payable",
+                targetId: "pay-1",
+                at: PAID,
+                description: "Linh An / 17",
+                kind: "expense",
+                amount: 4620000,
+                status: "paid",
+                linked: "17",
+                adjustmentCount: 0,
+                lineage: [
+                    {
+                        kind: "invoice",
+                        title: "17",
+                        detail: "Linh An",
+                        at: "2026-10-01",
+                        status: "paid",
+                        amount: 4620000,
+                    },
+                    { kind: "payment", title: "d-1", detail: "Lan", at: PAID, status: "paid", amount: 4620000 },
+                    {
+                        kind: "decision",
+                        title: "confirm_supplier_payment",
+                        detail: null,
+                        at: PAID,
+                        status: "auto_done",
+                        amount: null,
+                    },
+                ],
+            },
+        ])
+    })
+}
+
+const registerExpenseEdges = () => {
+    it("draws no line for an open supplier invoice", async () => {
+        const subject = await build()
+
+        expect(subject.buildLedger(input({ payables: [payableRow()] }))).toEqual([])
+    })
+
+    it("falls back to the first sighting for a paid invoice with no payment time and leaves an empty supplier out", async () => {
+        const subject = await build()
+
+        const [entry] = subject.buildLedger(
+            input({ payables: [paidPayableRow({ paidAt: null, supplier: "", debitRef: null })] }),
+        )
+
+        expect(entry).toMatchObject({ at: "2026-10-15T00:00:00.000Z", description: "17" })
+        expect(entry?.lineage.map((step) => [step.kind, step.title, step.detail])).toEqual([
+            ["invoice", "17", null],
+            ["payment", "-", "Lan"],
+        ])
+    })
+
+    it("sorts an expense among income by time", async () => {
+        const subject = await build()
+
+        const ledger = subject.buildLedger(
+            input({
+                payables: [paidPayableRow({ paidAt: "2026-10-05T00:00:00.000Z" })],
+                transactions: [transaction()],
+            }),
+        )
+
+        expect(ledger.map((entry) => entry.kind)).toEqual(["expense", "income"])
+    })
+}
+
+describe("ledger.policy expenses", () => {
+    registerExpenseLine()
+    registerExpenseEdges()
 })

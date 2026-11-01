@@ -114,6 +114,7 @@ describe("toAccountingWorkbenchView", () => {
                 works: [],
                 decisions: [],
                 adjustments: [],
+                payables: [],
                 adjustmentsReady: true,
             },
             now: new Date("2026-10-12T10:00:00.000Z"),
@@ -122,6 +123,9 @@ describe("toAccountingWorkbenchView", () => {
             ownerName: "Lan",
             role: "owner",
             creditsSource: null,
+            payablesSource: null,
+            profile: null,
+            today: "2026-10-12",
         })
 
         const view = subject.toAccountingWorkbenchView(data)

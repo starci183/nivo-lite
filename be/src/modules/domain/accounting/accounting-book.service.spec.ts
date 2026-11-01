@@ -6,6 +6,8 @@ import { EvidenceService } from "@modules/domain/decisions"
 import { InvoicesService } from "@modules/domain/invoices"
 import { OrdersService } from "@modules/domain/orders"
 import type { SalesOrderListRow } from "@modules/domain/orders"
+import { SupplierPayablesService } from "@modules/domain/supplier-payables"
+import type { SupplierPayableRow } from "@modules/domain/supplier-payables"
 import { TransactionsService } from "@modules/domain/transactions"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { AccountingBookService } from "./accounting-book.service"
@@ -41,6 +43,9 @@ const ADJUSTMENT: AccountingAdjustmentRow = {
     created_at: "2026-10-12T10:00:00Z",
 }
 
+const OPEN_PAYABLE = mock<SupplierPayableRow>({ id: "pay-1", status: "open" })
+const PAID_PAYABLE = mock<SupplierPayableRow>({ id: "pay-2", status: "paid" })
+
 const build = async (orders: ReadonlyArray<SalesOrderListRow>, ready = true) => {
     const invoices = mock<InvoicesService>({ listAccounting: jest.fn(() => Promise.resolve([])) })
     const transactions = mock<TransactionsService>({ listAccounting: jest.fn(() => Promise.resolve([])) })
@@ -49,6 +54,10 @@ const build = async (orders: ReadonlyArray<SalesOrderListRow>, ready = true) => 
     const evidence = mock<EvidenceService>({ listAccounting: jest.fn(() => Promise.resolve([])) })
     const adjustments = mock<AccountingAdjustmentsService>({
         history: jest.fn(() => Promise.resolve({ items: ready ? [ADJUSTMENT] : [], ready })),
+    })
+    const payables = mock<SupplierPayablesService>({
+        listOpen: jest.fn(() => Promise.resolve([OPEN_PAYABLE])),
+        listPaid: jest.fn(() => Promise.resolve([PAID_PAYABLE])),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -59,6 +68,7 @@ const build = async (orders: ReadonlyArray<SalesOrderListRow>, ready = true) => 
             { provide: WorkItemsService, useValue: workItems },
             { provide: EvidenceService, useValue: evidence },
             { provide: AccountingAdjustmentsService, useValue: adjustments },
+            { provide: SupplierPayablesService, useValue: payables },
         ],
     }).compile()
     return { service: moduleRef.get(AccountingBookService), orderService }
@@ -74,6 +84,7 @@ describe("AccountingBookService", () => {
         expect(book.adjustments).toEqual([ADJUSTMENT])
         expect(book.adjustmentsReady).toBe(true)
         expect(book.invoices).toEqual([])
+        expect(book.payables).toEqual([OPEN_PAYABLE, PAID_PAYABLE])
         expect(orderService.list).toHaveBeenCalledWith(WORKSPACE, 500)
     })
 

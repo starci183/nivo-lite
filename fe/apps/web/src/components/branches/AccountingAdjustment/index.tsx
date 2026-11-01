@@ -19,9 +19,11 @@ interface LedgerAdjustForm {
 /** Settled copy and values of the append-only correction controls. */
 export interface AccountingAdjustmentView {
     readonly adjustTitle: string
-    readonly adjustMode: "notReady" | "managersOnly" | "form" | "button"
+    readonly adjustMode: "notReady" | "managersOnly" | "form" | "button" | "unavailable"
     readonly notReadyText: string
     readonly managersOnlyText: string
+    /** Said for a line a correction cannot be attached to (a supplier payment). */
+    readonly unavailableText: string
     readonly openLabel: string
     readonly form: LedgerAdjustForm
 }
@@ -91,6 +93,13 @@ export const AccountingAdjustment = (props: AccountingAdjustmentProps) => {
         return (
             <Text size="sm" tone="muted">
                 {drawer.managersOnlyText}
+            </Text>
+        )
+    }
+    if (drawer.adjustMode === "unavailable") {
+        return (
+            <Text size="sm" tone="muted">
+                {drawer.unavailableText}
             </Text>
         )
     }

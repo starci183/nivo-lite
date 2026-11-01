@@ -1,6 +1,7 @@
 import type { AccountingLedgerEntry } from "@modules/domain/ledger"
 import type { AccountingWaitingWorkRow as WorkItemView } from "@modules/domain/decisions"
 import type { StaffRow as Staff } from "@modules/domain/staff"
+import type { UpcomingDue } from "./accounting-desk.contracts"
 
 /**
  * Plain data of the Accounting workbench (read side). Everything is derived from the records the flow already keeps:
@@ -168,6 +169,12 @@ export interface AccountingWorkbenchData {
     readonly credits: ReadonlyArray<AccountingCredit>
     /** The display name of the connector that feeds payment credits (`payment.credits.list`), or null when none is connected. */
     readonly creditsSource: string | null
+    /** The display name of the connector that feeds supplier invoices (`invoice.list`), or null when none is connected. */
+    readonly payablesSource: string | null
+    /** The tax deadlines and open supplier invoices due within the horizon, soonest first; null when the Brain has no tax profile. */
+    readonly upcoming: ReadonlyArray<UpcomingDue> | null
+    /** The days before a due date from which it counts as near (the tax profile's reminder days); null with no tax profile. */
+    readonly reminderDays: number | null
     /** The newest internal invoice evidence. */
     readonly invoices: ReadonlyArray<AccountingInvoice>
     /** Orders that have not been invoiced. */

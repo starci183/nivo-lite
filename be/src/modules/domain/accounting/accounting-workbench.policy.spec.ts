@@ -3,7 +3,13 @@ import { builder } from "@starci/jest-preset"
 import type { AccountingWaitingWorkRow } from "@modules/domain/decisions"
 import type { InvoiceAccountingRow } from "@modules/domain/invoices"
 import type { TransactionAccountingRow } from "@modules/domain/transactions"
+import {
+    PAYABLE_PROFILE as PROFILE,
+    paidPayableRow,
+    payableRow,
+} from "../../../tests/fixtures/builders/supplier-payables.builder"
 import type { AccountingBook, BookOrder } from "./accounting-book.contracts"
+import type { TaxProfile } from "./accounting-desk.contracts"
 import { buildAccountingWorkbench } from "./accounting-workbench.policy"
 
 const SUBJECT = Symbol("accounting-workbench.policy")
@@ -20,12 +26,7 @@ const registerPeriodTotals = () => {
         const subject = await buildSubject()
         const invoices = [
             invoiceOf({ id: "paid", status: "paid", paid_at: "2026-10-02T00:00:00.000Z" }),
-            invoiceOf({
-                id: "paid-issued",
-                status: "paid",
-                issued_at: "2026-10-07T00:00:00.000Z",
-                amount_vnd: 200,
-            }),
+            invoiceOf({ id: "paid-issued", status: "paid", issued_at: "2026-10-07T00:00:00.000Z", amount_vnd: 200 }),
             invoiceOf({
                 id: "paid-created",
                 status: "paid",
@@ -58,7 +59,6 @@ const registerPeriodTotals = () => {
             txOf({ id: "invalid", occurred_at: "invalid", amount_vnd: 70 }),
         ]
         const result = workbenchOf(subject, bookOf({ invoices, transactions }))
-
         expect(result.periods).toEqual({
             this: {
                 key: "this",
@@ -430,6 +430,7 @@ const bookOf = builder<AccountingBook>({
     works: [],
     decisions: [],
     adjustments: [],
+    payables: [],
     adjustmentsReady: true,
 })
 const workbenchOf = (
@@ -438,10 +439,58 @@ const workbenchOf = (
     exceptions: ReadonlyArray<AccountingWaitingWorkRow> = [],
     role = "owner",
     creditsSource: string | null = null,
-) => subject.buildAccountingWorkbench({ book, now: NOW, exceptions, staff: [], ownerName: "Lan", role, creditsSource })
+    payablesSource: string | null = null,
+    profile: TaxProfile | null = null,
+) =>
+    subject.buildAccountingWorkbench({
+        book,
+        now: NOW,
+        exceptions,
+        staff: [],
+        ownerName: "Lan",
+        role,
+        creditsSource,
+        payablesSource,
+        profile,
+        today: "2026-10-15",
+    })
 const measure = (vnd: number, count: number) => ({ vnd, count })
 
+const registerPayables = () => {
+    it("names the invoice connector it was given, and hands the profile's dues over from the stored rows", async () => {
+        const subject = await buildSubject()
+
+        const none = workbenchOf(subject, bookOf({ payables: [payableRow()] }), [], "owner", null, "Viettel S-Invoice")
+        const some = workbenchOf(subject, bookOf(), [], "owner", null, null, PROFILE)
+
+        expect(none).toMatchObject({ payablesSource: "Viettel S-Invoice", upcoming: null, reminderDays: null })
+        expect(some).toMatchObject({ payablesSource: null, reminderDays: 7 })
+        expect(some.upcoming?.length).toBeGreaterThan(0)
+    })
+
+    it("adds one expense line for a paid supplier invoice, none for an open one, and leaves test records out", async () => {
+        const subject = await buildSubject()
+
+        const result = workbenchOf(
+            subject,
+            bookOf({
+                payables: [
+                    paidPayableRow(),
+                    payableRow({ id: "pay-2", invoiceNo: "18" }),
+                    paidPayableRow({ id: "pay-3", invoiceNo: "DBG-2" }),
+                ],
+            }),
+        )
+
+        expect(result.ledger.filter((entry) => entry.kind === "expense").map((entry) => entry.id)).toEqual([
+            "pay:pay-1",
+        ])
+        expect(result.excludedTest).toBe(1)
+    })
+}
+
 describe("buildAccountingWorkbench", () => {
+    registerPayables()
     registerPeriodTotals()
     registerInvoiceAgeing()
     registerWaitingWork()

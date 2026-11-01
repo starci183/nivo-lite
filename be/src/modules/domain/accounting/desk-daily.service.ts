@@ -30,14 +30,12 @@ import { SUMMARY_COPY } from "./messages/accounting-desk.messages"
 import { ReceivableReconcileService } from "./receivable-reconcile.service"
 import { RenewalCashService } from "./renewal-cash.service"
 import { SupplierPaymentsService } from "./supplier-payments.service"
-import { payablesDue, remindersToday, upcomingDues } from "./tax-calendar.policy"
+import { HORIZON_DAYS, payablesDue, remindersToday, upcomingDues } from "./tax-calendar.policy"
 import { suppliersOf, taxProfileOf } from "./tax-profile.policy"
 
 const DAY_MS = 86_400_000
 /** Vietnam is UTC+7 all year. */
 const VN_OFFSET_MS = 7 * 3_600_000
-/** How far ahead the card and the reminders look. */
-const HORIZON_DAYS = 30
 /** How many items of each part of the renewal story the reader answers. */
 const RENEWAL_ROWS = 20
 /** The module whose workspaces get the morning run. */
@@ -125,8 +123,9 @@ export class DeskDailyService {
         const reconciled = connected.receivables
             ? await this.reconcileAll(workspaceId, credits)
             : { recorded: 0, tool: null }
+        const terms = { suppliers, defaultTermDays: profile.supplierTermDays }
         const payables = payablesDue(
-            await this.supplierPayments.openPayables(workspaceId),
+            await this.supplierPayments.openPayables(workspaceId, terms),
             suppliers,
             profile.supplierTermDays,
         )

@@ -110,6 +110,7 @@ import { responsibilitiesEntities } from "@modules/domain/responsibilities"
 import { sepayTransactionsEntities } from "@modules/domain/sepay-transactions"
 import { shiftsEntities } from "@modules/domain/shifts"
 import { staffEntities } from "@modules/domain/staff"
+import { supplierPayablesEntities } from "@modules/domain/supplier-payables"
 import { telegramInboxEntities } from "@modules/domain/telegram-inbox"
 import { threadMessagesEntities } from "@modules/domain/thread-messages"
 import { threadWorkEntities } from "@modules/domain/thread-work"
@@ -252,6 +253,7 @@ export const PRIMARY_ENTITIES = [
     ...sepayTransactionsEntities,
     ...shiftsEntities,
     ...staffEntities,
+    ...supplierPayablesEntities,
     ...telegramInboxEntities,
     ...threadMessagesEntities,
     ...threadWorkEntities,

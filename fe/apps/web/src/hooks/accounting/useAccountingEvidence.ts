@@ -8,6 +8,7 @@ import { digitsToNumber, moneyOf, vietnamToday } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { useWatch } from "react-hook-form"
+import { supplierNeedOf } from "@/hooks/accountingUpcoming"
 import { useRecordManualEvidence } from "./useRecordManualEvidence"
 
 /** The Evidence tab: credits, invoices and orders without an invoice, plus the manual evidence form. */
@@ -68,6 +69,7 @@ export const useAccountingEvidence = (data: AccountingWorkbenchData) => {
             ordersEmpty: t("ordersEmpty"),
             ordersEmptyBody: t("ordersEmptyBody"),
             orders: orderRecordsOf(t, format, data.ordersWithoutInvoice),
+            supplierNeed: supplierNeedOf(t, data.payablesSource),
             isFormOpen,
             formOpenLabel: t("manualOpen"),
             form: {

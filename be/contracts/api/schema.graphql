@@ -270,6 +270,16 @@ type AccountingStaffType {
   workspaceId: String!
 }
 
+type AccountingUpcomingDueType {
+  amountVnd: Float
+  daysLeft: Int!
+  dueOn: String!
+  kind: String!
+  note: String!
+  ref: String!
+  source: String!
+}
+
 type AccountingWaitingType {
   count: Int!
   knownVnd: Float!
@@ -298,9 +308,12 @@ type AccountingWorkbenchType {
   now: String!
   ordersWithoutInvoice: [AccountingOrderType!]!
   ownerName: String!
+  payablesSource: String
   periods: AccountingPeriodsType!
   questions: [AccountingQuestionType!]!
+  reminderDays: Int
   staff: [AccountingStaffType!]!
+  upcoming: [AccountingUpcomingDueType!]
   waiting: AccountingWaitingType!
 }
 

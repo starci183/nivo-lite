@@ -10,12 +10,14 @@ import { useCreateAccountingAdjustment } from "./useCreateAccountingAdjustment"
 
 type LedgerFilter = "all" | AccountingLedgerKind
 
-/** What the drawer offers about corrections, by what the member may do. */
+/** What the drawer offers about corrections, by what the member may do; a supplier payment takes none. */
 const adjustModeOf = (
     ready: boolean,
     canAdjust: boolean,
     isAdjusting: boolean,
-): "notReady" | "managersOnly" | "form" | "button" => {
+    kind: AccountingLedgerKind | null,
+): "notReady" | "managersOnly" | "form" | "button" | "unavailable" => {
+    if (kind === "expense") return "unavailable"
     if (!ready) return "notReady"
     if (!canAdjust) return "managersOnly"
     return isAdjusting ? "form" : "button"
@@ -53,7 +55,8 @@ export const useAccountingLedger = (data: AccountingWorkbenchData) => {
         closeDrawer()
     }
     const actions = {
-        selectFilter: (key: string) => setFilter(key === "income" || key === "receivable" ? key : "all"),
+        selectFilter: (key: string) =>
+            setFilter(key === "income" || key === "receivable" || key === "expense" ? key : "all"),
         openEntry: setOpenId,
         closeDrawer: closeAll,
         startAdjust: () => setIsAdjusting(true),
@@ -84,7 +87,8 @@ export const useAccountingLedger = (data: AccountingWorkbenchData) => {
                 lineageIntro: t("lineageIntro"),
                 lineage: open === null ? [] : lineageItemsOf(t, format, open.lineage),
                 adjustTitle: t("adjustTitle"),
-                adjustMode: adjustModeOf(data.adjustmentsReady, data.canAdjust, isAdjusting),
+                adjustMode: adjustModeOf(data.adjustmentsReady, data.canAdjust, isAdjusting, open?.kind ?? null),
+                unavailableText: t("adjustExpenseUnavailable"),
                 notReadyText: t("adjustNotReady"),
                 managersOnlyText: t("adjustManagersOnly"),
                 openLabel: t("adjustOpen"),
@@ -124,5 +128,6 @@ const propsLabelsOf = (t: ReturnType<typeof useTranslations<"workbenchAccounting
         { id: "all", label: t("kindAll") },
         { id: "income", label: t("kind_income") },
         { id: "receivable", label: t("kind_receivable") },
+        { id: "expense", label: t("kind_expense") },
     ],
 })

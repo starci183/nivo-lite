@@ -17,16 +17,16 @@ export interface AccountingLineageStep {
     readonly amount: number | null
 }
 
-/** Whether a ledger line is money in or an amount owed. */
-export type AccountingLedgerKind = "income" | "receivable"
+/** Whether a ledger line is money in, an amount owed to the shop, or money paid out to a supplier. */
+export type AccountingLedgerKind = "income" | "receivable" | "expense"
 /** The state of a ledger line. */
 export type AccountingLedgerStatus = "issued" | "paid" | "void" | "settled" | "matched" | "unmatched" | "needs_review"
 /** The kind of record a correction points at. */
-export type AccountingTargetType = "invoice" | "transaction"
+export type AccountingTargetType = "invoice" | "transaction" | "supplier_payable"
 
 /** One line of the ledger derived from invoices and payments. */
 export interface AccountingLedgerEntry {
-    /** "inv:<id>" or "tx:<id>" */
+    /** "inv:<id>", "tx:<id>" or "pay:<id>" */
     readonly id: string
     /** The kind of corrected record. */
     readonly targetType: AccountingTargetType

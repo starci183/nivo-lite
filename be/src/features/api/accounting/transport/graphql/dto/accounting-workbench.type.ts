@@ -6,6 +6,7 @@ import { AccountingCreditType } from "./accounting-credit.type"
 import { AccountingInvoiceType } from "./accounting-invoice.type"
 import { AccountingOrderType } from "./accounting-order.type"
 import { AccountingQuestionType } from "./accounting-question.type"
+import { AccountingUpcomingDueType } from "./accounting-upcoming-due.type"
 import { AccountingStaffType } from "./accounting-staff.type"
 import { AccountingLedgerEntryType } from "./accounting-ledger-entry.type"
 
@@ -35,6 +36,18 @@ export class AccountingWorkbenchType {
     /** The display name of the connector that feeds payment credits, or null when none is connected. */
     @Field(() => String, { nullable: true })
     creditsSource!: string | null
+
+    /** The display name of the connector that feeds supplier invoices, or null when none is connected. */
+    @Field(() => String, { nullable: true })
+    payablesSource!: string | null
+
+    /** The tax deadlines and open supplier invoices falling due soon; null when the Brain has no tax profile. */
+    @Field(() => [AccountingUpcomingDueType], { nullable: true })
+    upcoming!: ReadonlyArray<AccountingUpcomingDueType> | null
+
+    /** The days before a due date from which it counts as near; null when the Brain has no tax profile. */
+    @Field(() => Int, { nullable: true })
+    reminderDays!: number | null
 
     /** invoices. */
     @Field(() => [AccountingInvoiceType])
