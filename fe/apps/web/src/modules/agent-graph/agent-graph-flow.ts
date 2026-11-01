@@ -31,6 +31,7 @@ export const flowNodesOf = (
             id: node.key,
             label: node.title,
             description: node.card.description,
+            kind: node.kind,
             tone,
             shape: node.card.shape,
             count: node.card.count,
@@ -98,7 +99,8 @@ const layersOf = (nodes: ReadonlyArray<AgentGraphNodeData>): ReadonlyMap<string,
         for (const edge of edges) {
             const from = layers.get(edge.source)
             const to = layers.get(edge.target)
-            if (from !== undefined && to !== undefined && to <= from && from < nodes.length) layers.set(edge.target, from + 1)
+            if (from !== undefined && to !== undefined && to <= from && from < nodes.length)
+                layers.set(edge.target, from + 1)
         }
     }
     return layers
