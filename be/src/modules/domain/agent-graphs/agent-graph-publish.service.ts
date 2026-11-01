@@ -33,7 +33,10 @@ export class AgentGraphPublishService {
         private readonly installations: InstallationRecordsService,
     ) {}
 
-    /** Publishes the draft of the agent as the next version; a publish by the owner makes the graph decide for the agent. */
+    /**
+     * Publishes the draft of the agent as the next version (or as the number given, when the setup numbers both of its rows alike). A
+     * publish by the owner, from the map or from the setup chat, makes the graph decide for the agent; a manager leaves the mode as it is.
+     */
     async publishDraft(
         workspaceId: string,
         agentId: string,
@@ -41,11 +44,19 @@ export class AgentGraphPublishService {
         note: string,
         kind: GraphChangeKind = "edit",
         contextVersionId: string | null = null,
+        versionNumber?: number,
     ): Promise<GraphVersionView> {
         const state = await this.requireState(workspaceId, agentId)
-        const version = await this.publishDocument(state, state.draft, by, note, kind, contextVersionId)
-        if (by.role === "owner" && kind === "edit") await this.graphs.setMode(workspaceId, agentId, "enforced")
+        const version = await this.publishDocument(state, state.draft, by, note, kind, contextVersionId, versionNumber)
+        if (by.role === "owner" && (kind === "edit" || kind === "chat"))
+            await this.graphs.setMode(workspaceId, agentId, "enforced")
         return version
+    }
+
+    /** Refuses, writing nothing, when publishing the draft would be refused: a problem in the graph, or a widening by someone who is not the owner. */
+    async requirePublishable(workspaceId: string, agentId: string, by: Publisher): Promise<void> {
+        const state = await this.requireState(workspaceId, agentId)
+        await this.checked(state, state.draft, by)
     }
 
     /** Publishes the graph a confirmed proposal made as the next version, under the same checks as any change (a widening is the owner's alone). */
@@ -95,7 +106,22 @@ export class AgentGraphPublishService {
         note: string,
         kind: GraphChangeKind,
         contextVersionId: string | null = null,
+        versionNumber?: number,
     ): Promise<GraphVersionView> {
+        await this.checked(state, document, by)
+        return this.graphs.publish({
+            workspaceId: state.workspaceId,
+            agentId: state.agentId,
+            document,
+            kind,
+            note,
+            memberId: by.memberId,
+            contextVersionId,
+            version: versionNumber,
+        })
+    }
+
+    private async checked(state: GraphState, document: GraphDocument, by: Publisher): Promise<void> {
         const installation = await this.installations.findById(state.installationId)
         if (installation === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
         const context = await this.context.contextOf({ ...state, moduleKey: installation.moduleKey }, document)
@@ -108,14 +134,5 @@ export class AgentGraphPublishService {
         const diff = graphDiff(state.active ?? EMPTY, document, { actorMemberId: by.memberId, facts: context.facts })
         if (diff.widens && by.role !== "owner")
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.WidensNeedsOwner })
-        return this.graphs.publish({
-            workspaceId: state.workspaceId,
-            agentId: state.agentId,
-            document,
-            kind,
-            note,
-            memberId: by.memberId,
-            contextVersionId,
-        })
     }
 }
