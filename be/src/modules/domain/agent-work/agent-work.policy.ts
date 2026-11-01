@@ -1,3 +1,4 @@
+import { wakeSources } from "./agent-wake-source.policy"
 import type {
     AgentWakeContext,
     AgentWakeSource,
@@ -14,12 +15,6 @@ export const AGENT_SCOPE = "agent"
 
 /** The start of the scope key of a customer conversation. */
 export const CONVERSATION_SCOPE_PREFIX = "conversation:"
-
-/** Lower runs first: a customer waits on a phone, a colleague in Office, an event or a clock can wait. */
-const PRIORITIES: Readonly<Record<AgentWakeSource, number>> = { customer: 10, tag: 20, internal: 30, schedule: 40 }
-
-/** The most times a wake is tried: a customer gets a second try for a crash only, everything else three. */
-const ATTEMPT_BUDGETS: Readonly<Record<AgentWakeSource, number>> = { customer: 2, tag: 3, internal: 3, schedule: 3 }
 
 /** The lease of a running turn, in seconds; the heartbeat renews it. */
 export const LEASE_SECONDS = 90
@@ -61,10 +56,10 @@ export const IDLE_LEASE_RETENTION_MS = 2 * 24 * 60 * 60_000
 export const DEFAULT_TIME_ZONE = "Asia/Ho_Chi_Minh"
 
 /** The priority of a wake of this source. */
-export const priorityOf = (source: AgentWakeSource): number => PRIORITIES[source]
+export const priorityOf = (source: AgentWakeSource): number => wakeSources.of(source).priority
 
 /** The attempts a wake of this source may have. */
-export const attemptBudgetOf = (source: AgentWakeSource): number => ATTEMPT_BUDGETS[source]
+export const attemptBudgetOf = (source: AgentWakeSource): number => wakeSources.of(source).maxAttempts
 
 /** The wait in seconds before the next try of a wake that failed on this attempt (1 is the first try): 1, 5 and 15 minutes, 15 for any later one. */
 export const retryWaitOf = (attempt: number): number => {
@@ -72,9 +67,9 @@ export const retryWaitOf = (attempt: number): number => {
     return attempt === 2 ? 300 : 900
 }
 
-/** The lock scope of a wake: a customer conversation locks by itself, everything else locks the agent. */
+/** The lock scope of a wake: a source that answers inside a conversation locks that conversation by itself, everything else locks the agent. */
 export const scopeKeyOf = (source: AgentWakeSource, context: AgentWakeContext): string =>
-    source === "customer" && context.conversationId !== undefined
+    wakeSources.of(source).scopedToConversation && context.conversationId !== undefined
         ? `${CONVERSATION_SCOPE_PREFIX}${context.conversationId}`
         : AGENT_SCOPE
 
@@ -86,11 +81,14 @@ export const boundedWakeAt = (requested: Date, now: Date): Date => {
 }
 
 /** True for a wake that is background work: nobody waits for its answer, so it counts against the day's cap. */
-export const isBackground = (source: AgentWakeSource): boolean => source === "internal" || source === "schedule"
+export const isBackground = (source: AgentWakeSource): boolean => wakeSources.lookup(source)?.background === true
 
-/** Whether a wake held by a switch runs again when work is switched back on: a customer or a tag, written less than a day ago. */
+/** Whether a wake held by a switch runs again when work is switched back on: a source that restores, written less than a day ago. */
 export const restoresHeldWake = (source: AgentWakeSource, createdAt: Date, now: Date): boolean =>
-    (source === "customer" || source === "tag") && now.getTime() - createdAt.getTime() < RESTORE_WINDOW_MS
+    wakeSources.lookup(source)?.restoresHeld === true && now.getTime() - createdAt.getTime() < RESTORE_WINDOW_MS
+
+/** True when the sender of a wake of this source waits for an answer, so a runtime that is down gets the holding line at once. */
+export const awaitsAnswer = (source: AgentWakeSource): boolean => wakeSources.lookup(source)?.awaitsAnswer === true
 
 /** Whether the background cap of the day is spent; a count of another day is not. */
 export const backgroundCapSpent = (state: BackgroundCount, cap: number, today: string): boolean =>

@@ -14,6 +14,9 @@ export { AgentWorkHandlersService } from "./agent-work-handlers.service"
 export { AgentWorkReadService } from "./agent-work-read.service"
 export { AgentWorkSettingsService } from "./agent-work-settings.service"
 export { AGENT_TURN_EXECUTOR, AGENT_WAKE_INTERRUPTIONS } from "./agent-work.decorators"
+export { AgentWorkAccessService } from "./agent-work-access.service"
+export { decodeInbound, encodeInbound } from "./agent-work-inbound.policy"
+export { wakeSources } from "./agent-wake-source.policy"
 export { backgroundCapSpent, breakerOpen, isBackground } from "./agent-work.policy"
 export type {
     AgentGoalRecord,
@@ -37,11 +40,13 @@ export type {
     AgentWorkView,
     WorkspaceAgentWorkView,
 } from "./agent-work.contracts"
+export type { AgentWakeInbound, AgentWakeTraits } from "./agent-work-source.contracts"
 export type {
     AgentHandlerEnding,
     AgentTurnExecutor,
     AgentTurnPlan,
     AgentTurnPrep,
     AgentTurnRun,
+    AgentWorkFallback,
     AgentWorkHandler,
 } from "./agent-work.port"

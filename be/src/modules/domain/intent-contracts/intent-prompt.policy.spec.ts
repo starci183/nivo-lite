@@ -16,16 +16,23 @@ const build = async () => {
     }>(SUBJECT)
 }
 
+const WORDS: Readonly<Record<string, string>> = {
+    ...INTENT_CONTRACTS_MESSAGES.en,
+    "intentContracts.result.test_answer": '{"reply": string}',
+    "intentContracts.check.reply_present": '"reply" is not empty',
+    "intentContracts.check.reply_bounded": '"reply" is short',
+}
+
 const say = (key: string, params: Readonly<Record<string, string | number>> = {}): string =>
-    `${INTENT_CONTRACTS_MESSAGES.en?.[key] ?? `?${key}`}`.replace("{{intent}}", String(params.intent ?? ""))
+    `${WORDS[key] ?? `?${key}`}`.replace("{{intent}}", String(params.intent ?? ""))
 
 const reply: IntentContract = {
     intent: "reply_customer",
     label: "Answer",
-    risk: "none",
+    ownTurn: false,
     task: "Answer the customer.",
     limits: ["Be brief.", "Never promise a discount."],
-    result: "customer_reply",
+    result: "test_answer",
     owns: [],
     checks: ["reply_present", "reply_bounded"],
 }
@@ -43,13 +50,13 @@ const gateway: IntentContract = {
     ...reply,
     intent: "gateway_call",
     label: "Tools",
-    risk: "write",
+    ownTurn: true,
     limits: ["Be brief."],
 }
 
 const spec = (patch: Partial<IntentPromptSpec> = {}): IntentPromptSpec => ({
     trigger: "customer_message",
-    audience: "customer",
+    trust: "outsider",
     identity: "You are Mai, the assistant of a shop.",
     input: [{ kind: "customer_message", text: "Hello" }],
     contracts: [reply, lead],
@@ -187,15 +194,6 @@ describe("INTENT_CONTRACTS_MESSAGES", () => {
     it("holds the same keys in Vietnamese and English", () => {
         expect(Object.keys(INTENT_CONTRACTS_MESSAGES.vi ?? {}).sort()).toEqual(
             Object.keys(INTENT_CONTRACTS_MESSAGES.en ?? {}).sort(),
-        )
-    })
-
-    it("keeps the sentences of the reply contract that still apply, word for word", () => {
-        expect(INTENT_CONTRACTS_MESSAGES.en?.["intentContracts.limit.payment_claim"]).toContain(
-            "Never say the payment is received.",
-        )
-        expect(INTENT_CONTRACTS_MESSAGES.en?.["intentContracts.limit.proposal"]).toBe(
-            "Your reply is only a PROPOSAL: NIVO checks it against the owner's authority before anything reaches the customer.",
         )
     })
 })

@@ -13,7 +13,7 @@ import type { SettledProposal } from "./agent-turns.contracts"
 const contract = {
     intent: "reply_customer",
     label: "Reply",
-    risk: "none",
+    ownTurn: false,
     task: "",
     limits: [],
     result: "agent_request",
@@ -24,7 +24,7 @@ const contract = {
 const trace = {
     versionId: "v-1",
     trigger: "tag",
-    audience: "manager",
+    trust: "manager",
     offered: ["reply_customer"],
     intent: "reply_customer",
     result: "picked",
@@ -154,17 +154,14 @@ describe("IntentTagDoorStepService", () => {
         await run(stepOf(noIntent))
 
         expect(settler.apply).toHaveBeenCalledWith(expect.anything(), "agentTurns.safeRoad:en", settle)
-        expect(intents.raiseGap).toHaveBeenCalledWith(
-            {
-                question: "Do you ship abroad?",
-                topic: "shipping | abroad",
-                workspaceId: "ws-1",
-                agentId: "agent-kt",
-                versionId: "v-1",
-                trigger: "tag",
-            },
-            "accounting",
-        )
+        expect(intents.raiseGap).toHaveBeenCalledWith({
+            question: "Do you ship abroad?",
+            topic: "shipping | abroad",
+            workspaceId: "ws-1",
+            agentId: "agent-kt",
+            versionId: "v-1",
+            trigger: "tag",
+        })
     })
 
     it.each([

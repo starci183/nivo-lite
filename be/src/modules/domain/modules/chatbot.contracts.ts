@@ -197,6 +197,17 @@ export const CHATBOT_MODULE: ModuleDefinition = {
             next: ["classify_lead"],
         },
         {
+            action: "hand_over_conversation",
+            label: catalogText("modulesCatalog.chatbot.authorityActions.hand_over_conversation.label"),
+            mode: "auto",
+            limitVnd: null,
+            requiredFields: [],
+            amountLimit: false,
+            maxMode: null,
+            note: catalogCopy("modulesCatalog.chatbot.authorityActions.hand_over_conversation.note", "en"),
+            next: [],
+        },
+        {
             action: "gateway_call",
             label: catalogText("modulesCatalog.chatbot.authorityActions.gateway_call.label"),
             mode: "ask",
@@ -222,6 +233,13 @@ export const CHATBOT_MODULE: ModuleDefinition = {
             subjectType: "conversation",
             requiredFields: ["subject_id"],
             description: catalogText("modulesCatalog.chatbot.accepts.handoff_lead.description"),
+        },
+        {
+            command: "hand_over_conversation",
+            action: "hand_over_conversation",
+            subjectType: "conversation",
+            requiredFields: ["subject_id"],
+            description: catalogText("modulesCatalog.chatbot.accepts.hand_over_conversation.description"),
         },
         {
             command: "tool_call",

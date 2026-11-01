@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import type { FrameAction, IntentBusiness } from "@modules/domain/intent-contracts"
+import type { IntentBusiness } from "@modules/domain/intent-contracts"
 import { END, TRIGGER, nodeOf } from "@tests/fixtures/builders/agent-graph.builder"
 import type { GraphDocument } from "../agent-graphs.contracts"
 import { contractProblems, contractWarnings } from "./contract-problems.policy"
@@ -16,10 +16,8 @@ const build = async () => {
     }>(SUBJECT)
 }
 
-const ACTIONS: ReadonlyArray<FrameAction> = [
-    { action: "send_quote", amountLimit: true },
-    { action: "reply_customer", amountLimit: false },
-]
+const FRAMED: ReadonlyArray<string> = ["send_quote", "reply_customer"]
+const hasFrame = (intent: string): boolean => FRAMED.includes(intent)
 
 const graphWith = (action: string, contracts: ReadonlyArray<IntentBusiness> = []): GraphDocument => ({
     nodes: [nodeOf({ ...TRIGGER, key: "start", next: ["act"] }), nodeOf({ key: "act", action, next: ["end"] }), END],
@@ -39,13 +37,13 @@ describe("contractProblems", () => {
     it("has none for a graph whose intents are in the catalogue and whose trigger reaches one", async () => {
         const subject = await build()
 
-        expect(subject.contractProblems(graphWith("send_quote"), ACTIONS)).toEqual([])
+        expect(subject.contractProblems(graphWith("send_quote"), hasFrame)).toEqual([])
     })
 
     it("refuses an intent the catalogue has no frame for, naming the node and the intent", async () => {
         const subject = await build()
 
-        expect(subject.contractProblems(graphWith("invent_work"), ACTIONS)).toEqual([
+        expect(subject.contractProblems(graphWith("invent_work"), hasFrame)).toEqual([
             { code: "intent_no_frame", nodeKey: "act", branchKey: null, detail: "invent_work" },
         ])
     })
@@ -62,7 +60,7 @@ describe("contractProblems", () => {
             rights: [],
         }
 
-        expect(subject.contractProblems(idle, ACTIONS)).toEqual([
+        expect(subject.contractProblems(idle, hasFrame)).toEqual([
             { code: "trigger_no_intent", nodeKey: "start", branchKey: null, detail: "" },
             { code: "trigger_no_intent", nodeKey: "tag", branchKey: null, detail: "" },
         ])

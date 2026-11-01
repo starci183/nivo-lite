@@ -15,7 +15,7 @@ import {
     RuntimeAgentService,
     internalTimeoutMsOf,
 } from "@modules/domain/agent-turns"
-import type { InternalActionResult } from "@modules/domain/agent-turns"
+import type { InternalActionResult, InternalTurnInput } from "@modules/domain/agent-turns"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentHeader } from "@modules/domain/agents"
 import { ChatTypingService } from "@modules/domain/chat-typing"
@@ -104,7 +104,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
         const answered = await this.commandCardOf(turn)
         if (answered !== null) return { kind: "end", ending: endOf("done", null, { command: answered }) }
         const runtimeAgentId = await this.runtime.agentFor(turn.workspaceId, agent.module, installation)
-        const message = await this.context.messageOf({
+        const input: InternalTurnInput = {
             workspaceId: turn.workspaceId,
             agentId: turn.agentId,
             source: "tag",
@@ -112,7 +112,8 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
             text: transcriptOf(talk.before, talk.tagged),
             wake: turn,
             agentName: agent.name,
-        })
+        }
+        const message = await this.context.messageOf(input)
         await this.show(turn, agent, true)
         return {
             kind: "run",
@@ -121,6 +122,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
                 runtimeAgentId,
                 threadKey: threadKeyFor(runtimeAgentId, surface.sessionOf(turn)),
                 message,
+                ...(await this.context.attachmentsOf(input)),
                 timeoutMs: internalTimeoutMsOf("tag"),
             },
         }

@@ -1,3 +1,4 @@
+import { WAKE_SOURCE_KEY } from "./agent-wake-source.policy"
 import { DEFAULT_TIME_ZONE } from "./agent-work.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentTriggerKind, AgentTriggerPreset, AgentTriggerWrite } from "./agent-work.contracts"
@@ -20,7 +21,12 @@ export interface TriggerFields {
     readonly probeKey: string | null
     /** Off means the trigger fires nothing. */
     readonly enabled: boolean
+    /** The sources an event trigger answers to; none for a clock, empty for every source. */
+    readonly sources: Array<string>
 }
+
+/** The most sources one event trigger may name. */
+export const TRIGGER_SOURCES_MAX = 10
 
 const needsTime = (preset: AgentTriggerPreset): boolean => preset === "daily_at" || preset === "weekdays_at"
 
@@ -39,6 +45,7 @@ const clockFields = (write: AgentTriggerWrite, preset: AgentTriggerPreset): Trig
         eventName: null,
         probeKey: write.probeKey,
         enabled: write.enabled,
+        sources: [],
     }
 }
 
@@ -49,6 +56,10 @@ export const triggerFields = (write: AgentTriggerWrite): TriggerFields => {
         return clockFields(write, write.preset)
     }
     if (write.eventName === null || write.eventName === "" || write.preset !== null) throw shapeInvalid()
+    const sources = [...new Set(write.sources ?? [])]
+    if (sources.length > TRIGGER_SOURCES_MAX || sources.some((source) => !WAKE_SOURCE_KEY.test(source))) {
+        throw shapeInvalid()
+    }
     return {
         kind: "event",
         preset: null,
@@ -57,5 +68,6 @@ export const triggerFields = (write: AgentTriggerWrite): TriggerFields => {
         eventName: write.eventName,
         probeKey: write.probeKey,
         enabled: write.enabled,
+        sources,
     }
 }

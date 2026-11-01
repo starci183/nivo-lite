@@ -79,6 +79,7 @@ const profileOf = (knowledge: string): AgentProfile => ({
     instructions: "Be brief",
     knowledge,
     approval_rule: "",
+    module: "chatbot",
 })
 
 const conversation = { id: "conv-1", agentId: "agent-1", channel: "telegram", visitorName: "Khach" }

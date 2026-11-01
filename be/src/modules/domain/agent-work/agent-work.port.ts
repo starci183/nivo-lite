@@ -63,3 +63,9 @@ export interface WakeInterruptions {
     /** The runtime went down while the wake's turn ran; `code` says why. */
     interrupted(wakeId: string, code: string, signal: AbortSignal): Promise<void>
 }
+
+/** The handler of every source no handler answers by name: an inbound adapter with nothing of its own. It names the sources it takes. */
+export interface AgentWorkFallback extends AgentWorkHandler {
+    /** True for a source this fallback takes when no handler registered for it. */
+    answers(source: AgentWakeSource): boolean
+}

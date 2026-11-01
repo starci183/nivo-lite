@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { WORK_ITEM_CLOSED } from "@modules/domain/decisions"
+import { WORK_ITEM_CLOSED } from "@modules/domain/work-items"
 import { AgentStepQueueModule } from "@modules/queues/agent-step"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"

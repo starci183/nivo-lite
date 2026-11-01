@@ -14,6 +14,10 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
         "customerTurns.paymentConfirmedReply":
             "Cảm ơn bạn! Khoản thanh toán cho mã {{no}} đã được shop nhận và xác nhận rồi ạ.",
         "customerTurns.replyAwaitsApproval": "Câu trả lời đang chờ duyệt: agent này chưa được tự gửi qua kênh này",
+        "customerTurns.replyAwaitsGraph": "Câu trả lời đang chờ duyệt: sơ đồ của agent yêu cầu người duyệt",
+        "customerTurns.replyStoppedByGraph": "Câu trả lời không được gửi: sơ đồ của agent dừng ở bước này",
+        "customerTurns.replyDivertedByGraph": "Câu trả lời không được gửi: sơ đồ của agent chuyển sang bước khác",
+        "customerTurns.graphUnread": "Không đọc được {{facts}} nên đi nhánh an toàn",
         "customerTurns.chatHandoff": "Đã chuyển lead cho Sales AI · {{verdict}}",
         "customerTurns.chatHandoffWaiting": "Lead chờ bạn duyệt trước khi chuyển cho Sales AI ({{reason}})",
         "customerTurns.verdictAuto": "tự động theo chính sách",
@@ -63,6 +67,10 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
             "Thank you! Your payment for {{no}} has already been received and confirmed.",
         "customerTurns.replyAwaitsApproval":
             "The reply waits for approval: this agent may not send through this channel on its own",
+        "customerTurns.replyAwaitsGraph": "The reply is waiting: the agent's graph needs a person to approve it",
+        "customerTurns.replyStoppedByGraph": "The reply was not sent: the agent's graph stops here",
+        "customerTurns.replyDivertedByGraph": "The reply was not sent: the agent's graph took another step",
+        "customerTurns.graphUnread": "Could not read {{facts}}, so the turn took the safe branch",
         "customerTurns.chatHandoff": "Lead handed to Sales AI · {{verdict}}",
         "customerTurns.chatHandoffWaiting": "Lead waits for your approval before it goes to Sales AI ({{reason}})",
         "customerTurns.verdictAuto": "automatic, within your policy",

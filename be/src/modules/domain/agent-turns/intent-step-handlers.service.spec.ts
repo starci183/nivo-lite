@@ -9,7 +9,7 @@ import { IntentTurnService } from "./intent-turn.service"
 const contract: IntentContract = {
     intent: "reply_customer",
     label: "Reply",
-    risk: "none",
+    ownTurn: false,
     task: "",
     limits: [],
     result: "customer_reply",
@@ -20,7 +20,7 @@ const contract: IntentContract = {
 const plan = {
     versionId: "v-1",
     trigger: "customer_message",
-    audience: "customer",
+    trust: "outsider",
     pinned: null,
     contracts: [contract],
 }
@@ -28,7 +28,7 @@ const plan = {
 const trace: IntentTrace = {
     versionId: "v-1",
     trigger: "customer_message",
-    audience: "customer",
+    trust: "outsider",
     offered: ["reply_customer"],
     intent: "reply_customer",
     result: "picked",

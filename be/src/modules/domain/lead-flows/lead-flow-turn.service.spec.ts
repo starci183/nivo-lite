@@ -234,6 +234,7 @@ describe("LeadFlowTurnService", () => {
                 instructions: "Ask one question at a time",
                 knowledge: "Owner notes",
                 approval_rule: "manual",
+                module: "chatbot",
             },
             first: true,
             pendingQuestion: "How many boxes?",

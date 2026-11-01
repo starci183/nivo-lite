@@ -47,6 +47,7 @@ describe("triggerFields", () => {
             eventName: null,
             probeKey: "invoices_due",
             enabled: true,
+            sources: [],
         })
     })
 
@@ -76,9 +77,35 @@ describe("triggerFields", () => {
             eventName: "bank_credit_booked",
             probeKey: "invoices_due",
             enabled: true,
+            sources: [],
         })
     })
+})
 
+describe("triggerFields for the sources of an event trigger", () => {
+    it("keeps the distinct sources an event trigger names", async () => {
+        const { triggerFields } = await buildSubject()
+        const fields = triggerFields(
+            write({
+                kind: "event",
+                preset: null,
+                eventName: "invoice.paid",
+                sources: ["generic_webhook", "generic_webhook", "tag"],
+            }),
+        )
+        expect(fields.sources).toEqual(["generic_webhook", "tag"])
+    })
+
+    it.each([
+        ["a source that is not a key", ["Not A Key"]],
+        ["more sources than a trigger may name", Array.from({ length: 11 }, (_, at) => "source_" + String(at))],
+    ])("refuses %s", async (_name, sources) => {
+        const input = write({ kind: "event", preset: null, eventName: "invoice.paid", sources })
+        expect(await refusal(input)).toEqual(expect.objectContaining({ code: AgentWorkErrorCode.TriggerShapeInvalid }))
+    })
+})
+
+describe("triggerFields refusals", () => {
     it.each(["25:00", "8:30", "08:60", "noon"])("refuses the time %s of a daily preset", async (atTime) => {
         expect(await refusal(write({ atTime }))).toEqual(
             expect.objectContaining({ code: AgentWorkErrorCode.TimeInvalid }),

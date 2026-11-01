@@ -3,7 +3,7 @@ import { mock } from "@starci/jest-preset"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AGENT_TURN_EXECUTOR } from "./agent-work.decorators"
-import type { AgentTurnExecutor, AgentWorkHandler } from "./agent-work.port"
+import type { AgentTurnExecutor, AgentWorkFallback, AgentWorkHandler } from "./agent-work.port"
 
 const handler = (...sources: AgentWorkHandler["sources"]): AgentWorkHandler => mock<AgentWorkHandler>({ sources })
 
@@ -62,5 +62,31 @@ describe("AgentWorkHandlersService", () => {
             new AgentWorkError({ code: AgentWorkErrorCode.HandlerDuplicate, params: { source: "tag" } }),
         )
         expect(service.of("customer")).toBeUndefined()
+    })
+})
+
+describe("AgentWorkHandlersService fallbacks", () => {
+    const fallback = (takes: string): AgentWorkFallback =>
+        mock<AgentWorkFallback>({ sources: [], answers: jest.fn((source: string) => source === takes) })
+
+    it("answers a source that has no handler of its own with the first fallback that takes it", async () => {
+        const service = await build()
+        const first = fallback("generic_webhook")
+        const second = fallback("other_adapter")
+        service.addFallback(first)
+        service.addFallback(second)
+
+        expect(service.of("generic_webhook")).toBe(first)
+        expect(service.of("other_adapter")).toBe(second)
+        expect(service.of("tag")).toBeUndefined()
+    })
+
+    it("prefers the handler registered for the source over any fallback", async () => {
+        const service = await build()
+        const own = handler("generic_webhook")
+        service.addFallback(fallback("generic_webhook"))
+        service.add(own)
+
+        expect(service.of("generic_webhook")).toBe(own)
     })
 })

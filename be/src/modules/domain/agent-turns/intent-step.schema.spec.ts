@@ -17,7 +17,7 @@ import { TURN_TEXT_MAX } from "./intent-turn.policy"
 const contract = {
     intent: "reply_customer",
     label: "Reply",
-    risk: "none",
+    ownTurn: false,
     task: "Answer the customer",
     limits: ["Never promise a price"],
     result: "customer_reply",
@@ -28,7 +28,7 @@ const contract = {
 const plan = {
     versionId: "v-1",
     trigger: "customer_message",
-    audience: "customer",
+    trust: "outsider",
     pinned: null,
     contracts: [contract],
 }
@@ -36,7 +36,7 @@ const plan = {
 const trace = {
     versionId: "v-1",
     trigger: "customer_message",
-    audience: "customer",
+    trust: "outsider",
     offered: ["reply_customer"],
     intent: "reply_customer",
     result: "picked",

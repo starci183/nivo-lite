@@ -66,7 +66,7 @@ export const contractsFromSetup = (
                           {
                               text: limit.text,
                               triggers: limit.triggers,
-                              audiences: limit.audiences,
+                              trusts: limit.trusts,
                               sources: backing.map(sourceOf),
                               ids: backing.map((fact) => fact.id),
                           },
@@ -80,10 +80,10 @@ export const contractsFromSetup = (
                 business: {
                     intent: entry.intent,
                     task,
-                    limits: limits.map(({ text, triggers, audiences, sources }) => ({
+                    limits: limits.map(({ text, triggers, trusts, sources }) => ({
                         text,
                         triggers,
-                        audiences,
+                        trusts,
                         sources,
                     })),
                     sources: taskFacts.map(sourceOf),

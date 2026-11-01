@@ -370,7 +370,7 @@ describe("AgentGraphProposalsService the contracts", () => {
             {
                 text: "Deposit is 30%.",
                 triggers: [],
-                audiences: ["customer"],
+                trusts: ["outsider"],
                 sources: [{ kind: "brain", factId: "fact-9", passage: "Deposit 30%", valueHash: "h" }],
             },
         ],

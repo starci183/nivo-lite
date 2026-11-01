@@ -1,4 +1,5 @@
 export { CUSTOMER_TURNS_MESSAGES } from "./messages/customer-turns.messages"
+export { CUSTOMER_INTENTS_MESSAGES } from "./messages/customer-intents.messages"
 export { CustomerTurnsModule } from "./customer-turns.module"
 export { CustomerOutcomesService } from "./customer-outcomes.service"
 export { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"

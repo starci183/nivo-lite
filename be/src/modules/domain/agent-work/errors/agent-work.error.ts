@@ -21,6 +21,10 @@ export enum AgentWorkErrorCode {
     TimeInvalid = "AGENT_WORK_TIME_INVALID",
     /** Two handlers claim the same wake source. */
     HandlerDuplicate = "AGENT_WORK_HANDLER_DUPLICATE",
+    /** A wake names a source no adapter recorded. */
+    SourceUnknown = "AGENT_WORK_SOURCE_UNKNOWN",
+    /** A source key is not a key, or a source is recorded twice with other traits. */
+    SourceInvalid = "AGENT_WORK_SOURCE_INVALID",
 }
 
 /** How each agent-work code travels. */
@@ -34,6 +38,8 @@ export const AGENT_WORK_ERROR_KINDS: Record<AgentWorkErrorCode, ErrorKind> = {
     [AgentWorkErrorCode.TriggerShapeInvalid]: "invalid",
     [AgentWorkErrorCode.TimeInvalid]: "invalid",
     [AgentWorkErrorCode.HandlerDuplicate]: "internal",
+    [AgentWorkErrorCode.SourceUnknown]: "internal",
+    [AgentWorkErrorCode.SourceInvalid]: "internal",
 }
 
 /** The one error class of the agent-work capability. */

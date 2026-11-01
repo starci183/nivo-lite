@@ -22,5 +22,5 @@ export interface BranchOutcome {
     /** The verdict of the branch, or of the gate when the graph had no say. */
     readonly verdict: GateVerdict
     /** The proposal and the decision the graph recorded, absent when the gate decided alone. */
-    readonly carried: Pick<Judgement, "proposal" | "branchDecisionId">
+    readonly carried: Pick<Judgement, "proposal" | "branchDecisionId" | "stopped" | "divert">
 }

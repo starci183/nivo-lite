@@ -231,5 +231,5 @@ export const graphProblems = (graph: GraphDocument, context: GraphContext): Read
     ...rightsProblems(graph, context),
     ...outsiderProblems(graph, context),
     ...blankProblems(graph),
-    ...(context.actions === undefined ? [] : contractProblems(graph, context.actions)),
+    ...(context.hasFrame === undefined ? [] : contractProblems(graph, context.hasFrame)),
 ]

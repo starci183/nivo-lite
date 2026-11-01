@@ -1,24 +1,14 @@
-/** What started a turn: the trigger step of the graph. A new trigger is one more entry here and in the frames that accept it. */
-export type IntentTrigger = "customer_message" | "tag"
+/** How far the back end trusts who sent an event; it selects the limits of the turn. An adapter declares it, code never infers it. */
+export type InboundTrust = "outsider" | "member" | "manager" | "system"
 
-/** Who the turn answers to, which selects the limits: an outsider, a colleague who may write, a colleague who may not. */
-export type IntentAudience = "customer" | "manager" | "staff"
+/** What started a turn: the event type a trigger node of the graph matches on. A new trigger is an adapter that declares a new type. */
+export type IntentTrigger = string & Record<never, never>
 
-/** Why an intent is split into a turn of its own: nothing, a write tool, or money. */
-export type IntentRisk = "none" | "write" | "money"
+/** The schema of a result: a bounded key the registry resolves, so a domain brings its own. An unknown key throws at registration. */
+export type IntentResultKind = string & Record<never, never>
 
-/** The schema of a result, a key of the table in `intent-result.schema.ts`. */
-export type IntentResultKind = "customer_reply" | "agent_request" | "own_turn_pick"
-
-/** A check the back end runs on a parsed result, a key of the table in `intent-check.policy.ts`. */
-export type IntentCheckKey =
-    | "reply_present"
-    | "reply_bounded"
-    | "lead_complete"
-    | "order_complete"
-    | "order_price_known"
-    | "action_is_intent"
-    | "action_has_summary"
+/** A check the back end runs on a parsed result: a bounded key the registry resolves. An unknown key throws at registration. */
+export type IntentCheckKey = string & Record<never, never>
 
 /** Where a business value of a contract came from. Its members fit the sources of a graph node. */
 export type IntentSource =
@@ -32,8 +22,8 @@ export interface BusinessLimit {
     readonly text: string
     /** The triggers it binds; empty binds every trigger. */
     readonly triggers: ReadonlyArray<IntentTrigger>
-    /** The audiences it binds; empty binds every audience. */
-    readonly audiences: ReadonlyArray<IntentAudience>
+    /** The trusts it binds; empty binds every trust. */
+    readonly trusts: ReadonlyArray<InboundTrust>
     /** Where it came from. */
     readonly sources: ReadonlyArray<IntentSource>
 }
@@ -56,28 +46,32 @@ export interface IntentFrame {
     readonly intent: string
     /** The triggers it can run under. */
     readonly triggers: ReadonlyArray<IntentTrigger>
-    /** Why it runs alone, if it does. */
-    readonly risk: IntentRisk
+    /** True when the intent runs in a turn of its own; the domain decides why. */
+    readonly ownTurn: boolean
+    /** True when this intent answers its audience, so a turn of that trigger needs one of them to pick from. */
+    readonly answers: boolean
     /** The message key of the task in words. */
     readonly taskKey: string
-    /** The message keys of the fixed limits, by audience. */
-    readonly limitKeys: Readonly<Partial<Record<IntentAudience, ReadonlyArray<string>>>>
+    /** The message keys of the fixed limits, by the trust of who sent the event. */
+    readonly limitKeys: Readonly<Partial<Record<InboundTrust, ReadonlyArray<string>>>>
     /** The schema of the result. */
     readonly result: IntentResultKind
     /** The members of the result this intent owns: on any other intent they are dropped when the graph holds this one. */
     readonly owns: ReadonlyArray<string>
+    /** The message key of each fixed limit that is about one member of the result, by member: left out when another offered intent owns it. */
+    readonly limitMembers: Readonly<Record<string, string>>
     /** The checks of the result. */
     readonly checks: ReadonlyArray<IntentCheckKey>
 }
 
-/** One contract as a turn uses it: the frame, with the business values of the published version bound to this trigger and audience. */
+/** One contract as a turn uses it: the frame, with the business values of the published version bound to this trigger and trust. */
 export interface IntentContract {
     /** The intent. */
     readonly intent: string
     /** The title the owner gave it in the graph. */
     readonly label: string
-    /** Why it runs alone, if it does. */
-    readonly risk: IntentRisk
+    /** True when the intent runs in a turn of its own. */
+    readonly ownTurn: boolean
     /** The task in words. */
     readonly task: string
     /** The limits that bind this turn, the frame's first. */
@@ -110,11 +104,11 @@ export interface IntentInputPart {
 export interface IntentPromptSpec {
     /** The trigger. */
     readonly trigger: IntentTrigger
-    /** The audience. */
-    readonly audience: IntentAudience
+    /** The trust of who sent the event. */
+    readonly trust: InboundTrust
     /** Who the agent is: one line, trusted, written by code. */
     readonly identity: string
-    /** The input, in the order the model reads it. */
+    /** The input, in the sequence the model reads it. */
     readonly input: ReadonlyArray<IntentInputPart>
     /** The contracts it may pick from. */
     readonly contracts: ReadonlyArray<IntentContract>
@@ -184,8 +178,8 @@ export interface IntentTrace {
     readonly versionId: string
     /** The trigger. */
     readonly trigger: IntentTrigger
-    /** The audience. */
-    readonly audience: IntentAudience
+    /** The trust of who sent the event. */
+    readonly trust: InboundTrust
     /** The intents it could pick from. */
     readonly offered: ReadonlyArray<string>
     /** The intent picked, or null. */

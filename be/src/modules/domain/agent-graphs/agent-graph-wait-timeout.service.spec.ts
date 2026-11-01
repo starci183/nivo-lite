@@ -14,6 +14,7 @@ const decision = (over: Partial<DecisionView> = {}): DecisionView => ({
     agentId: "agent-1",
     workItemId: "item-1",
     versionId: "v-1",
+    path: [],
     action: "refund",
     branchKey: "big",
     amount: 100,

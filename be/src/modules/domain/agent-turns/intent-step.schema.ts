@@ -22,40 +22,29 @@ const NAME_MAX = 120
 const COUNT_MAX = 100
 const TIME_MAX = 40
 const REPLY_MAX = 2000
+const MONEY_MAX = 4000
 
 const idSchema = z.string().min(1).max(ID_MAX)
 const triggerSchema = z.enum(["customer_message", "tag"])
-const audienceSchema = z.enum(["customer", "manager", "staff"])
+const trustSchema = z.enum(["outsider", "member", "manager", "system"])
 
 /** One contract as a step row keeps it. */
 export const contractSchema = z.strictObject({
     intent: z.string().min(1).max(INTENT_MAX),
     label: z.string().max(LABEL_MAX),
-    risk: z.enum(["none", "write", "money"]),
+    ownTurn: z.boolean(),
     task: z.string().max(TASK_MAX),
     limits: z.array(z.string().max(LIMIT_MAX)).max(LIMITS_MAX),
-    result: z.enum(["customer_reply", "agent_request", "own_turn_pick"]),
+    result: z.string().min(1).max(INTENT_MAX),
     owns: z.array(z.string().max(INTENT_MAX)).max(OWNS_MAX),
-    checks: z
-        .array(
-            z.enum([
-                "reply_present",
-                "reply_bounded",
-                "lead_complete",
-                "order_complete",
-                "order_price_known",
-                "action_is_intent",
-                "action_has_summary",
-            ]),
-        )
-        .max(CHECKS_MAX),
+    checks: z.array(z.string().min(1).max(INTENT_MAX)).max(CHECKS_MAX),
 })
 
 /** What a turn settles against, as a step row keeps it. */
 export const planRowSchema = z.strictObject({
     versionId: idSchema,
     trigger: triggerSchema,
-    audience: audienceSchema,
+    trust: trustSchema,
     pinned: z.string().max(INTENT_MAX).nullable(),
     contracts: z.array(contractSchema).max(CONTRACTS_MAX),
 })
@@ -94,7 +83,7 @@ export const readingRowSchema = z.discriminatedUnion("kind", [
 export const traceRowSchema = z.strictObject({
     versionId: idSchema,
     trigger: triggerSchema,
-    audience: audienceSchema,
+    trust: trustSchema,
     offered: z.array(z.string().max(INTENT_MAX)).max(CONTRACTS_MAX),
     intent: z.string().max(INTENT_MAX).nullable(),
     result: z.enum(["picked", "split", "no_intent", "invalid_output", "check_failed"]),
@@ -128,6 +117,7 @@ export const doorInputSchema = z.strictObject({
     wake: wakeRowSchema,
     reading: readingRowSchema,
     trace: traceRowSchema,
+    moneyText: z.string().max(MONEY_MAX).optional(),
 })
 
 const settleInputSchema = z.strictObject({

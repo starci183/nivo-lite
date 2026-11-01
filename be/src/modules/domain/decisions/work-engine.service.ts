@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AuthorityRulesService, evaluateGate } from "@modules/domain/authority-rules"
+import type { BranchDivert, GraphAnswer, GraphCheck } from "@modules/domain/authority-rules"
 import { WorkItemsService } from "@modules/domain/work-items"
 import type { OptionalWorkItem } from "@modules/domain/work-items"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -53,10 +54,17 @@ import { WorkIntakeService } from "./work-intake.service"
 import { InjectWorkPerformerRegistry } from "./work-performer.port"
 import type { WorkPerformerRegistry } from "./work-performer.port"
 import { WorkRecorderService } from "./work-recorder.service"
+import { divertSpecOf } from "./work-divert.policy"
+import type { DivertSource } from "./work-divert.policy"
 import { processOptionsOf, proposalWithOptions } from "./work-options.policy"
 
 /** The decider of every automatic path. */
 const NIVO_BY: Finisher = { name: "NIVO", kind: "policy" }
+
+/** Who the log names when the graph ended the work. */
+const GRAPH_BY: Decider = { name: "NIVO", kind: "staff" }
+
+const isDiverted = (judgement: Judgement): boolean => judgement.divert !== undefined && judgement.divert !== null
 
 @Injectable()
 /**
@@ -97,6 +105,16 @@ export class WorkEngineService {
             { preset: spec.preset, noChain: spec.noChain, forceAsk: spec.forceAsk },
             spec.origin ?? null,
         )
+    }
+
+    /** What the action graph says about something that leaves with no work item: a reply, a hand-over. */
+    checkGraph(request: GraphCheck): Promise<GraphAnswer> {
+        return this.branching.check(request)
+    }
+
+    /** Runs the action a branch leads to in place of what was proposed, on the same subject. */
+    runDiverted(ctx: WorkContext, divert: BranchDivert, source: DivertSource): Promise<WorkItem> {
+        return this.runWork(ctx, divertSpecOf(divert, source))
     }
 
     /** Queues the next department's step for a finished item. */
@@ -216,12 +234,39 @@ export class WorkEngineService {
             }
             const judgement = await this.judge(ctx, current, proposal, opts, origin)
             const judged = judgement.proposal ?? proposal
+            if (judgement.stopped === true || isDiverted(judgement)) {
+                return await this.endedByGraph(ctx, current, judged, judgement.divert ?? null, origin)
+            }
             if (judgement.verdict.verdict === "ask") return await this.approval.ask(ctx, current, judged, judgement)
             const plan: FinishPlan = { path: "auto", by: NIVO_BY, outcome: "auto_done" }
             return await this.finish(ctx, performer, current, judged, plan, opts.noChain === true)
         } catch (cause) {
             return this.fail(ctx, current, cause)
         }
+    }
+
+    /** The graph ended this work: nobody is asked and nothing runs, and a branch that leads to another action starts that action. */
+    private async endedByGraph(
+        ctx: WorkContext,
+        item: WorkItem,
+        proposal: Proposal,
+        divert: BranchDivert | null,
+        origin: WorkOrigin | null,
+    ): Promise<WorkItem> {
+        const note = this.catalog.get(divert === null ? "engine.graphStopped" : "engine.graphDiverted", {}, ctx.locale)
+        const ended = await this.rejectItem(ctx, item, proposal, GRAPH_BY, note)
+        if (divert !== null) {
+            await this.runDiverted(ctx, divert, {
+                key: item.id,
+                subjectType: item.subject_type,
+                subjectId: item.subject_id,
+                leadId: item.lead_id,
+                installationId: item.installation_id,
+                origin,
+                proposal,
+            })
+        }
+        return ended
     }
 
     private prepare(ctx: WorkContext, performer: WorkPerformer | null, item: WorkItem): Promise<Prepared> {
@@ -328,16 +373,26 @@ export class WorkEngineService {
         note: string | null,
     ): Promise<WorkItem> {
         try {
-            await this.registry.performerOf(item.action)?.onReject?.(ctx, item, merged, by)
-            const rejected = await this.items.markRejected(item.id, merged, {
-                summary: this.catalog.get("engine.rejectedResult", {}, ctx.locale),
-            })
-            await this.recorder.rejected(ctx, item, merged, by, note)
-            return rejected
+            return await this.rejectItem(ctx, item, merged, by, note)
         } catch (cause) {
             await this.fail(ctx, item, cause)
             throw cause
         }
+    }
+
+    private async rejectItem(
+        ctx: WorkContext,
+        item: WorkItem,
+        merged: Proposal,
+        by: Decider,
+        note: string | null,
+    ): Promise<WorkItem> {
+        await this.registry.performerOf(item.action)?.onReject?.(ctx, item, merged, by)
+        const rejected = await this.items.markRejected(item.id, merged, {
+            summary: this.catalog.get("engine.rejectedResult", {}, ctx.locale),
+        })
+        await this.recorder.rejected(ctx, item, merged, by, note)
+        return rejected
     }
 
     private async approve(

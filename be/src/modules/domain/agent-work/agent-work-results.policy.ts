@@ -1,4 +1,5 @@
 import { isRecord } from "@modules/platform/primitives"
+import { wakeSources } from "./agent-wake-source.policy"
 import type { AgentBegin, AgentEndedWake, AgentFinish, AgentProposeResult } from "./agent-work-turns.contracts"
 import type {
     AgentLocale,
@@ -22,12 +23,12 @@ const CONTEXT_TEXT_KEYS = [
     "subjectId",
     "taskId",
     "probeKey",
+    "inbound",
+    "intent",
 ] as const
 
-const sourceOf = (value: unknown): AgentWakeSource | null => {
-    if (value === "customer" || value === "tag" || value === "internal" || value === "schedule") return value
-    return null
-}
+const sourceOf = (value: unknown): AgentWakeSource | null =>
+    typeof value === "string" && wakeSources.lookup(value) !== undefined ? value : null
 
 const localeOf = (value: unknown): AgentLocale | undefined => {
     if (value === "vi" || value === "en") return value

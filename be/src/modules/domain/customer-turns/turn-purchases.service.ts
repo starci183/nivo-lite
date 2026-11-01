@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { WorkEngineService, formatVnd } from "@modules/domain/decisions"
-import type { WorkContext } from "@modules/domain/decisions"
+import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { OrdersService } from "@modules/domain/orders"
@@ -44,9 +44,10 @@ export class TurnPurchasesService {
             eventId: `${turn.channelEventId}:order`,
         })
         if (recorded.duplicate) return { lines: [], changed: false, leadId }
-        if (leadId !== null && (await this.hasOpenOrder(ctx.workspaceId, leadId, order))) {
+        const open = leadId === null ? undefined : await this.openOrderOf(ctx.workspaceId, leadId, order)
+        if (open !== undefined) {
             await this.inbound.mark(ctx.workspaceId, recorded.inboundEventId, "processed", leadId)
-            return { lines: [], changed: false, leadId }
+            return { lines: [], changed: false, leadId, orderAmountVnd: open.amount_vnd }
         }
         const item = await this.engine.startOrderWork(
             ctx,
@@ -61,16 +62,24 @@ export class TurnPurchasesService {
             lines: [this.text("orderRecorded", { items: order.items, amount: formatVnd(order.amountVnd, ctx.locale) })],
             changed: true,
             leadId: ordered,
+            orderAmountVnd: await this.recordAmountOf(ctx.workspaceId, item),
         }
     }
 
-    private async hasOpenOrder(workspaceId: string, leadId: string, order: CapturedOrder): Promise<boolean> {
+    /** The amount on the record the order work drafted, or null when it drafted none. */
+    private async recordAmountOf(workspaceId: string, item: WorkItem): Promise<number | null> {
+        if (item.subject_type !== "order" || item.subject_id === null) return null
+        return (await this.orders.find(workspaceId, item.subject_id))?.amount_vnd ?? null
+    }
+
+    /** The open order of the customer for the same items at the same amount, if there is one. */
+    private async openOrderOf(workspaceId: string, leadId: string, order: CapturedOrder) {
         const orders = await this.orders.listForLead(workspaceId, leadId)
-        return orders.some(
-            (open) =>
-                OPEN_ORDER_STATUSES.has(open.status) &&
-                open.amount_vnd === order.amountVnd &&
-                sameItems(open.items, order.items),
+        return orders.find(
+            (entry) =>
+                OPEN_ORDER_STATUSES.has(entry.status) &&
+                entry.amount_vnd === order.amountVnd &&
+                sameItems(entry.items, order.items),
         )
     }
 

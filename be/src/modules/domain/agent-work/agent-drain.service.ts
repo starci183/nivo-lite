@@ -14,7 +14,7 @@ import { AgentEndedWakesService } from "./agent-ended-wakes.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWakeInterruptionService } from "./agent-wake-interruption.service"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
-import { HEARTBEAT_MAX_BEATS, HEARTBEAT_MS, sessionKeyOf } from "./agent-work.policy"
+import { HEARTBEAT_MAX_BEATS, HEARTBEAT_MS, awaitsAnswer, sessionKeyOf } from "./agent-work.policy"
 import type { AgentTurnEnding, AgentTurnUsage, AgentTurnView } from "./agent-work.contracts"
 import type {
     AgentHandlerEnding,
@@ -112,7 +112,7 @@ export class AgentDrainService {
     }
 
     /**
-     * How a failed attempt ends. A customer whose runtime is down gets the holding line at once and the wake is done with no retry; any
+     * How a failed attempt ends. A sender who waits for an answer (a customer) whose runtime is down gets the holding line at once and the wake is done with no retry; any
      * other failure is retried silently until the budget is spent, and the last failure is dead, announced once through the handler (the
      * owner's line for background work, the colleague's or the customer's own line otherwise). The error code still counts toward the breaker.
      */
@@ -120,7 +120,7 @@ export class AgentDrainService {
         const failed = failedBy(cause)
         const exhausted = turn.attempts >= turn.maxAttempts
         if (exhausted) this.logger.warn(AgentWorkLogEvent.WakeDead, { agentId: turn.agentId, wakeId: turn.wakeId })
-        const immediate = modelDown && turn.source === "customer"
+        const immediate = modelDown && awaitsAnswer(turn.source)
         const handler = this.handlers.of(turn.source)
         if (handler === undefined || !(immediate || exhausted)) return failed
         try {

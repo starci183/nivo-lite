@@ -1,13 +1,25 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { isRecord } from "@modules/platform/primitives"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectAgentTurnQueue } from "@modules/queues/agent-turn"
 import type { AgentTurnQueue } from "@modules/queues/agent-turn"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
-import { attemptBudgetOf, priorityOf, scopeKeyOf } from "./agent-work.policy"
+import { wakeSources } from "./agent-wake-source.policy"
+import { scopeKeyOf } from "./agent-work.policy"
 import { AgentWakeEntity } from "./persistence/entities"
 import type { AgentWake } from "./agent-work.contracts"
+import type { OptionalWakeId } from "./agent-work-source.contracts"
+
+/** The id of the row an insert returned, or null when it wrote none. */
+const idOf = (raw: unknown): OptionalWakeId => {
+    if (!Array.isArray(raw)) return null
+    const rows: ReadonlyArray<unknown> = raw
+    const [row] = rows
+    if (!isRecord(row)) return null
+    return typeof row.id === "string" ? row.id : null
+}
 
 @Injectable()
 /**
@@ -22,7 +34,13 @@ export class AgentWakeService {
 
     /** Writes the wake and its drain job in `tx`; answers false when the fact was already written, in which case nothing is enqueued. */
     async wake(tx: EntityManager, wake: AgentWake): Promise<boolean> {
-        const scopeKey = scopeKeyOf(wake.source, wake.context)
+        return (await this.write(tx, wake)) !== null
+    }
+
+    /** Writes the wake and its drain job in `tx` and answers the wake's id; null when the fact was already written, in which case nothing is enqueued. */
+    async write(tx: EntityManager, wake: AgentWake): Promise<OptionalWakeId> {
+        const traits = wakeSources.of(wake.source)
+        const scopeKey = wake.scopeKey ?? scopeKeyOf(wake.source, wake.context)
         const inserted = await tx
             .createQueryBuilder(AgentWakeEntity, "w")
             .insert()
@@ -32,15 +50,17 @@ export class AgentWakeService {
                 source: wake.source,
                 eventKey: wake.eventKey,
                 scopeKey,
-                priority: priorityOf(wake.source),
-                maxAttempts: attemptBudgetOf(wake.source),
+                priority: traits.priority,
+                maxAttempts: traits.maxAttempts,
+                background: traits.background,
                 context: wake.context,
                 actorMemberId: wake.actorMemberId,
             })
             .orIgnore()
             .returning("id")
             .execute()
-        if (!Array.isArray(inserted.raw) || inserted.raw.length === 0) return false
+        const id = idOf(inserted.raw)
+        if (id === null) return null
         await this.queue.enqueueDrain(
             { workspaceId: wake.workspaceId, agentId: wake.agentId, scopeKey },
             wake.source,
@@ -48,6 +68,6 @@ export class AgentWakeService {
             tx,
         )
         this.logger.info(AgentWorkLogEvent.WakeWritten, { agentId: wake.agentId, source: wake.source, scopeKey })
-        return true
+        return id
     }
 }

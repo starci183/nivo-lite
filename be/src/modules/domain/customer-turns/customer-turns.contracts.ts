@@ -145,6 +145,8 @@ export interface TurnSettled {
     readonly changed: boolean
     /** The customer, as far as it is known now. */
     readonly leadId: string | null
+    /** The amount on the order record of this turn, or null when it has no record or the record has no amount. */
+    readonly orderAmountVnd?: number | null
 }
 
 /** An order a reply proposed, judged and ready to record. */

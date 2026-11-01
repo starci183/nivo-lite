@@ -1,14 +1,15 @@
 import { Test } from "@nestjs/testing"
 import type { BridgeTurn } from "@modules/domain/agent-tools"
 import type { IntentContract, IntentReading } from "@modules/domain/intent-contracts"
-import type { IntentPlan } from "./agent-turns.contracts"
+import type { IntentPlan, IntentReadingRow } from "./agent-turns.contracts"
 import {
+    doorNodeOf,
     intentScopeOf,
     offeredOf,
     pinnedOf,
     readingRowOf,
     splitEventKeyOf,
-    tagAudienceOf,
+    tagTrustOf,
     traceOf,
     triggerOf,
     writesOf,
@@ -22,12 +23,13 @@ const build = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
+                    doorNodeOf,
                     intentScopeOf,
                     offeredOf,
                     pinnedOf,
                     readingRowOf,
                     splitEventKeyOf,
-                    tagAudienceOf,
+                    tagTrustOf,
                     traceOf,
                     triggerOf,
                     writesOf,
@@ -36,12 +38,13 @@ const build = async () => {
         ],
     }).compile()
     return moduleRef.get<{
+        doorNodeOf: typeof doorNodeOf
         intentScopeOf: typeof intentScopeOf
         offeredOf: typeof offeredOf
         pinnedOf: typeof pinnedOf
         readingRowOf: typeof readingRowOf
         splitEventKeyOf: typeof splitEventKeyOf
-        tagAudienceOf: typeof tagAudienceOf
+        tagTrustOf: typeof tagTrustOf
         traceOf: typeof traceOf
         triggerOf: typeof triggerOf
         writesOf: typeof writesOf
@@ -51,7 +54,7 @@ const build = async () => {
 const contract = (intent: string): IntentContract => ({
     intent,
     label: intent,
-    risk: "none",
+    ownTurn: false,
     task: "",
     limits: [],
     result: "customer_reply",
@@ -62,7 +65,7 @@ const contract = (intent: string): IntentContract => ({
 const plan: IntentPlan = {
     versionId: "v-1",
     trigger: "customer_message",
-    audience: "customer",
+    trust: "outsider",
     pinned: null,
     contracts: [contract("reply_customer"), contract("confirm_order")],
 }
@@ -90,11 +93,11 @@ describe("intent turn policy > what starts a turn", () => {
         expect(policy.splitEventKeyOf("wake-1", "confirm_order")).toBe("intent:wake-1:confirm_order")
     })
 
-    it("makes the audience of a tag a manager when its author may write, else staff", async () => {
+    it("makes the trust of a tag a manager when its author may write, else a member", async () => {
         const policy = await build()
 
-        expect(policy.tagAudienceOf(true)).toBe("manager")
-        expect(policy.tagAudienceOf(false)).toBe("staff")
+        expect(policy.tagTrustOf(true)).toBe("manager")
+        expect(policy.tagTrustOf(false)).toBe("member")
     })
 
     it("treats every scope but read as a write", async () => {
@@ -136,7 +139,7 @@ describe("intent turn policy > the trace", () => {
         expect(policy.traceOf(plan, reading)).toEqual({
             versionId: "v-1",
             trigger: "customer_message",
-            audience: "customer",
+            trust: "outsider",
             offered: ["reply_customer", "confirm_order"],
             intent: "reply_customer",
             result: "picked",
@@ -234,5 +237,38 @@ describe("intent turn policy > the scope of a bridge turn", () => {
         const policy = await build()
 
         expect(policy.intentScopeOf({ ...base, pinnedIntent: "confirm_order" }).pinned).toBe("confirm_order")
+    })
+})
+
+describe("intent turn policy > the node of the door", () => {
+    const keys = { turn: "understand", acts: { confirm_order: "confirm" } }
+    const picked: IntentReadingRow = {
+        kind: "picked",
+        contract: contract("confirm_order"),
+        resultText: "{}",
+        dropped: [],
+    }
+
+    it("is the act node of the intent the reading picked", async () => {
+        const policy = await build()
+
+        expect(policy.doorNodeOf(keys, picked)).toBe("confirm")
+        expect(policy.doorNodeOf(keys, { kind: "split", contract: contract("confirm_order") })).toBe("confirm")
+    })
+
+    it("is the node where the turn picks for an intent the graph has no act node for, and for the safe road with none", async () => {
+        const policy = await build()
+        const safe: IntentReadingRow = {
+            kind: "safe",
+            cause: "no_intent",
+            detail: "none",
+            intent: null,
+            gap: null,
+            draft: "",
+        }
+
+        expect(policy.doorNodeOf(keys, { ...picked, contract: contract("reply_customer") })).toBe("understand")
+        expect(policy.doorNodeOf(keys, safe)).toBe("understand")
+        expect(policy.doorNodeOf(keys, { ...safe, intent: "confirm_order" })).toBe("confirm")
     })
 })

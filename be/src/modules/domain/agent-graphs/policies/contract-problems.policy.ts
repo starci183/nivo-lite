@@ -1,13 +1,5 @@
-import { frameOfIntent } from "@modules/domain/intent-contracts"
-import type { FrameAction, IntentTrigger } from "@modules/domain/intent-contracts"
-import type { GraphDocument, GraphNodeStep, GraphProblem } from "../agent-graphs.contracts"
-import { heldIntents, intentOfNode, reachableIntents } from "./intent-of-step.policy"
-
-/** The triggers a contract runs under. */
-const CONTRACT_TRIGGERS: ReadonlyArray<IntentTrigger> = ["customer_message", "tag"]
-
-const triggerOf = (step: GraphNodeStep): IntentTrigger | null =>
-    CONTRACT_TRIGGERS.find((trigger) => trigger === step) ?? null
+import type { GraphDocument, GraphProblem } from "../agent-graphs.contracts"
+import { eventTypesOf, heldIntents, intentOfNode, intentsFrom } from "./intent-of-step.policy"
 
 const problem = (code: GraphProblem["code"], nodeKey: string, detail = ""): GraphProblem => ({
     code,
@@ -17,25 +9,22 @@ const problem = (code: GraphProblem["code"], nodeKey: string, detail = ""): Grap
 })
 
 /**
- * What stops a graph from being published because no contract can be made of it: a node whose intent the catalogue has no frame for, and
- * a trigger that reaches no intent at all. Both are the code's to know, so the owner cannot publish past them.
+ * What stops a graph from being published because no contract can be made of it: a node whose intent has no frame, and a trigger that
+ * matches events and reaches no intent at all. Both are the code's to know, so the owner cannot publish past them.
  */
 export const contractProblems = (
     graph: GraphDocument,
-    actions: ReadonlyArray<FrameAction>,
+    hasFrame: (intent: string) => boolean,
 ): ReadonlyArray<GraphProblem> => [
     ...graph.nodes.flatMap((node) => {
         const intent = intentOfNode(node)
-        return intent !== null && frameOfIntent(intent, actions, "tag") === null
-            ? [problem("intent_no_frame", node.key, intent)]
-            : []
+        return intent !== null && !hasFrame(intent) ? [problem("intent_no_frame", node.key, intent)] : []
     }),
-    ...graph.nodes.flatMap((node) => {
-        const trigger = node.kind === "trigger" ? triggerOf(node.step) : null
-        return trigger !== null && reachableIntents(graph, trigger).length === 0
+    ...graph.nodes.flatMap((node) =>
+        eventTypesOf(node).length > 0 && intentsFrom(graph, [node.key]).length === 0
             ? [problem("trigger_no_intent", node.key)]
-            : []
-    }),
+            : [],
+    ),
 ]
 
 /**

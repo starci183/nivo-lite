@@ -1,5 +1,4 @@
-/** How far the back end trusts who sent an event; it selects the limits of the turn. An adapter declares it, code never infers it. */
-export type InboundTrust = "outsider" | "member" | "manager" | "system"
+import type { InboundTrust } from "@modules/domain/intent-contracts"
 
 /** How an adapter proves an event is real. */
 export type InboundAuthentication = "session" | "signature" | "internal"

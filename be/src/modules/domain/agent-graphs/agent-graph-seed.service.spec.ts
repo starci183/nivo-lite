@@ -7,9 +7,10 @@ import { InstallationRecordsService } from "@modules/domain/module-installations
 import { ModulesService } from "@modules/domain/modules"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { stateOf } from "@tests/fixtures/builders/agent-graph.builder"
+import { OWNER_EXAMPLE, graphOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphsService } from "./agent-graphs.service"
+import type { GraphState } from "./agent-graphs.service"
 
 const SETUP: ApprovalSetup = {
     department: "accounting",
@@ -39,6 +40,15 @@ const MODULE = {
     ],
 }
 
+const VERSION = {
+    id: "version-2",
+    version: 2,
+    changeKind: "seed",
+    note: "",
+    publishedAt: "2026-11-01T01:00:00.000Z",
+    publishedBy: null,
+} as const
+
 const build = async (
     options: {
         agentId?: string | null
@@ -46,12 +56,14 @@ const build = async (
         existing?: boolean
         setup?: ApprovalSetup | null
         rule?: "none"
+        action?: string
     } = {},
 ) => {
     const existing = options.existing === true ? stateOf() : null
     const graphs = mock<AgentGraphsService>({
         stateOfAgent: jest.fn().mockResolvedValue(existing),
         ensure: jest.fn().mockResolvedValue(stateOf()),
+        publish: jest.fn().mockResolvedValue(VERSION),
     })
     const installations = mock<InstallationRecordsService>({
         findById: jest.fn().mockResolvedValue(
@@ -65,7 +77,12 @@ const build = async (
                   },
         ),
     })
-    const modules = mock<ModulesService>({ find: jest.fn().mockResolvedValue(MODULE) })
+    const modules = mock<ModulesService>({
+        find: jest.fn().mockResolvedValue({
+            ...MODULE,
+            authorityActions: [{ ...MODULE.authorityActions[0], action: options.action ?? "pay_supplier" }],
+        }),
+    })
     const templates = mock<AutomationTemplatesService>({
         listTemplates: jest.fn().mockResolvedValue([
             {
@@ -164,5 +181,61 @@ describe("AgentGraphSeedService.ensureFor", () => {
         await expect(bare.service.ensureFor("inst-1", "en")).resolves.toBeNull()
         expect(gone.graphs.ensure).not.toHaveBeenCalled()
         expect(bare.graphs.ensure).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphSeedService.refresh", () => {
+    /** The state of an agent whose graph is the seed the default rules derive. */
+    const seedState = async (): Promise<GraphState> => {
+        const { service, graphs } = await build()
+        await service.ensureFor("inst-1", "en")
+        const document = graphs.ensure.mock.calls[0]?.[3] ?? graphOf(OWNER_EXAMPLE)
+        return stateOf({ activeKind: "seed", draft: document, active: document })
+    }
+
+    it("publishes a new seed, by nobody, when the rules now derive a graph that does something else", async () => {
+        const state = await seedState()
+        const { service, graphs } = await build({ setup: null })
+
+        await expect(service.refresh(state, "accounting", "en")).resolves.toBe(true)
+
+        const input = graphs.publish.mock.calls[0]?.[0]
+        expect(input).toMatchObject({
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            kind: "seed",
+            note: "",
+            memberId: null,
+            contextVersionId: null,
+        })
+        expect(input?.document.nodes.map((node) => node.key)).toContain("stop:pay_supplier")
+    })
+
+    it("leaves a seed alone when the rules still derive what it does", async () => {
+        const state = await seedState()
+        const { service, graphs } = await build()
+
+        await expect(service.refresh(state, "accounting", "vi")).resolves.toBe(false)
+        expect(graphs.publish).not.toHaveBeenCalled()
+    })
+
+    it("leaves alone a version a person published, a graph with no version and a graph with unpublished edits", async () => {
+        const seeded = await seedState()
+        const { service, graphs, rules } = await build({ setup: null })
+        const edited = { ...seeded.draft, nodes: seeded.draft.nodes.slice(1) }
+
+        await expect(service.refresh({ ...seeded, activeKind: "edit" }, "accounting", "en")).resolves.toBe(false)
+        await expect(service.refresh({ ...seeded, active: null }, "accounting", "en")).resolves.toBe(false)
+        await expect(service.refresh({ ...seeded, draft: edited }, "accounting", "en")).resolves.toBe(false)
+        expect(rules.approvalSetup).not.toHaveBeenCalled()
+        expect(graphs.publish).not.toHaveBeenCalled()
+    })
+
+    it("leaves a seed alone when the graph the rules derive cannot be read", async () => {
+        const state = await seedState()
+        const { service, graphs } = await build({ action: "x".repeat(70) })
+
+        await expect(service.refresh(state, "accounting", "en")).resolves.toBe(false)
+        expect(graphs.publish).not.toHaveBeenCalled()
     })
 })

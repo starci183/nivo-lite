@@ -90,7 +90,7 @@ const raised = (state: GraphState): GraphDocument => ({
 })
 
 describe("AgentGraphPublishService.publishDraft", () => {
-    it("publishes a draft that is whole and does not widen, and an owner's publish makes the graph decide", async () => {
+    it("publishes a draft that is whole and does not widen, and an owner's publish leaves the mode alone", async () => {
         const state = stateOf()
         const { service, graphs, context } = await build(state)
 
@@ -109,7 +109,7 @@ describe("AgentGraphPublishService.publishDraft", () => {
             memberId: "boss",
             contextVersionId: null,
         })
-        expect(graphs.setMode).toHaveBeenCalledWith("ws-1", "agent-1", "enforced")
+        expect(graphs.setMode).not.toHaveBeenCalled()
     })
 
     it("lets a manager publish what does not widen, without changing the mode", async () => {
@@ -213,22 +213,25 @@ describe("AgentGraphPublishService.restore", () => {
 })
 
 describe("AgentGraphPublishService.setMode", () => {
-    it("lets the owner make the graph decide, and any editor put it back to recording", async () => {
+    it("lets the owner set the mode either way, and keeps who did", async () => {
         const { service, graphs } = await build(stateOf())
 
         await service.setMode("ws-1", "agent-1", "enforced", OWNER)
-        await service.setMode("ws-1", "agent-1", "shadow", MANAGER)
+        await service.setMode("ws-1", "agent-1", "shadow", OWNER)
 
         expect(graphs.setMode.mock.calls).toEqual([
-            ["ws-1", "agent-1", "enforced"],
-            ["ws-1", "agent-1", "shadow"],
+            ["ws-1", "agent-1", "enforced", "boss"],
+            ["ws-1", "agent-1", "shadow", "boss"],
         ])
     })
 
-    it("refuses a manager who would make the graph decide", async () => {
+    it("refuses a manager either way, because turning a graph off widens the agent", async () => {
         const { service, graphs } = await build(stateOf())
 
         expect(await codeOf(service.setMode("ws-1", "agent-1", "enforced", MANAGER))).toBe(
+            AgentGraphsErrorCode.WidensNeedsOwner,
+        )
+        expect(await codeOf(service.setMode("ws-1", "agent-1", "shadow", MANAGER))).toBe(
             AgentGraphsErrorCode.WidensNeedsOwner,
         )
         expect(graphs.setMode).not.toHaveBeenCalled()
@@ -252,10 +255,10 @@ describe("AgentGraphPublishService.publishContract", () => {
 })
 
 describe("AgentGraphPublishService the contracts of a graph", () => {
-    const ACTIONS = [{ action: "pay_supplier", amountLimit: true }]
+    const FRAMED = (intent: string): boolean => intent === "pay_supplier"
 
     it("refuses a graph whose intent has no frame in the catalogue of the module", async () => {
-        const context = { ...contextOf(), actions: [{ action: "send_quote", amountLimit: true }] }
+        const context = { ...contextOf(), hasFrame: (intent: string) => intent === "send_quote" }
         const { service, graphs } = await build(stateOf(), { context })
 
         expect(await codeOf(service.publishDraft("ws-1", "agent-1", OWNER, "Edit"))).toBe(
@@ -269,7 +272,7 @@ describe("AgentGraphPublishService the contracts of a graph", () => {
             ...stateOf().draft,
             contracts: [{ intent: "give_discount", task: "", limits: [], sources: [] }],
         }
-        const context = { ...contextOf(), actions: ACTIONS }
+        const context = { ...contextOf(), hasFrame: FRAMED }
         const shipped = await build(stateOf(), { context })
         const warning = await build(stateOf({ draft: warned }), { context })
 

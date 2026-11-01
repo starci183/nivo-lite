@@ -1,3 +1,4 @@
+import type { MoneyTurn } from "@modules/domain/authority-rules"
 import type { FactSpec, FactValues } from "./agent-graphs.contracts"
 
 /** The subject a fact is read about: the record the work item names, and the work item itself. */
@@ -10,6 +11,14 @@ export interface FactSubject {
     readonly workItemId: string
     /** The amount in dong the work item proposes, for the facts that are the amount of the work itself (an order, a quote, a discount). */
     readonly amountVnd?: number | null | undefined
+    /** The text that would really leave, or null when the work sends none. */
+    readonly text?: string | null | undefined
+    /** The customer the work names, or null when it names none. */
+    readonly leadId?: string | null | undefined
+    /** The money of the turn, as far as the trigger of the graph accepts it; absent on work that has none. */
+    readonly money?: MoneyTurn | undefined
+    /** What the road knows about the call, by fact key: the tool it is about to run, the agent it is about to hand to. */
+    readonly attributes?: Readonly<Record<string, string>> | undefined
 }
 
 /**

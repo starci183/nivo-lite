@@ -5,7 +5,9 @@ import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./customer-turns.module-definition"
 import { CustomerCorePlanService } from "./customer-core-plan.service"
 import { CustomerDoorStepService } from "./customer-door-step.service"
+import { CustomerFinalReplyService } from "./customer-final-reply.service"
 import { CustomerIntentContextService } from "./customer-intent-context.service"
+import { CustomerIntentsService } from "./customer-intents.service"
 import { CustomerIntentSettleService } from "./customer-intent-settle.service"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { CustomerWorkHandlerService } from "./customer-work-handler.service"
@@ -48,7 +50,9 @@ export class CustomerTurnsModule extends ConfigurableModuleClass {
             TurnModulesService,
             CustomerTurnRuntimeService,
             CustomerIntentContextService,
+            CustomerIntentsService,
             CustomerIntentSettleService,
+            CustomerFinalReplyService,
             CustomerDoorStepService,
             CustomerCorePlanService,
             CustomerWorkHandlerService,

@@ -7,13 +7,10 @@ const INTENTS_MAX = 60
 
 const limitSchema = z.object({
     text: z.string().trim().min(1).max(MAX_LIMIT_LENGTH),
-    triggers: z
-        .array(z.enum(["customer_message", "tag"]))
-        .max(2)
-        .default([]),
-    audiences: z
-        .array(z.enum(["customer", "manager", "staff"]))
-        .max(3)
+    triggers: z.array(z.string().min(1).max(ID_MAX)).max(20).default([]),
+    trusts: z
+        .array(z.enum(["outsider", "member", "manager", "system"]))
+        .max(4)
         .default([]),
     fact_ids: z.array(z.string().max(ID_MAX)).max(IDS_MAX).default([]),
 })

@@ -1,5 +1,14 @@
 import type { Proposal, ReasonCode } from "@modules/domain/work-items"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
+/** The action a write tool is judged under, and the action of a conversation hand-over. */
+export const GATEWAY_CALL_ACTION = "gateway_call"
+export const HANDOVER_ACTION = "hand_over_conversation"
+
+/** The facts a road knows about the call it is about to make: the tool, its connector, and the agent a hand-over reaches. */
+export const TOOL_NAME_FACT = "tool.name"
+export const TOOL_CONNECTOR_FACT = "tool.connector"
+export const HANDOVER_TO_FACT = "handover.to"
+
 /** What a rule of the owner's authority says about an action: run alone, ask a person, or never. */
 export type RuleMode = "auto" | "ask" | "never"
 

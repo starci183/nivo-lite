@@ -23,6 +23,7 @@ export const PROFILE: AgentProfile = {
     instructions: "",
     knowledge: "",
     approval_rule: "",
+    module: "chatbot",
 }
 
 export const eventOf = builder<MetaEvent>({

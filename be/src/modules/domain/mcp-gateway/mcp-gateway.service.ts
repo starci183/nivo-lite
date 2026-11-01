@@ -20,6 +20,8 @@ import { judgeGrant } from "./grant.policy"
 import { gatewayArgumentsSchema } from "./gateway-tools.schema"
 import { withReplayKey } from "./idempotency-key.policy"
 import { InjectDataRightsGate, InjectMcpGatewayOptions, InjectNativeAdapters } from "./mcp-gateway.decorators"
+import { InjectToolGraphGate } from "./tool-graph.decorators"
+import { graphHoldOf } from "./graph-hold.policy"
 import { applyFields, judgeDataRight } from "./data-rights.policy"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
@@ -29,6 +31,7 @@ import type {
     CallOutcome,
     DataRight,
     DataRightsGate,
+    ToolGraphGate,
     DataRightVerdict,
     DiscoveredTool,
     GatewayCaller,
@@ -133,6 +136,7 @@ export class McpGatewayService {
         private readonly credentials: McpConnectorCredentialService,
         private readonly receipts: GatewayReceiptsService,
         private readonly nativeRunner: NativeRunnerService,
+        @Optional() @InjectToolGraphGate() private readonly toolGraph: ToolGraphGate | null = null,
         @Optional() @InjectDataRightsGate() private readonly dataRights: DataRightsGate | null = null,
     ) {}
 
@@ -286,6 +290,11 @@ export class McpGatewayService {
                 started,
             })
             return { ok: false, code: "not_granted", detail: "no_data_right" }
+        }
+        const held = await graphHoldOf(this.toolGraph, caller, { ...resolved, scope: resolved.spec.scope, sent })
+        if (held !== null) {
+            await this.audit(caller, resolved, sent, { outcome: held.outcome, code: held.code, summary: "", started })
+            return held.result
         }
         if (this.mustAsk(caller, resolved)) {
             await this.audit(caller, resolved, sent, {

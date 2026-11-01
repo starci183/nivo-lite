@@ -78,9 +78,14 @@ const build = async (
     const brain = mock<BrainFactsService>({
         get: jest
             .fn()
-            .mockResolvedValue(options.brainValue === null ? null : { id: "fact-2", value: options.brainValue ?? "Under 10M" }),
+            .mockResolvedValue(
+                options.brainValue === null ? null : { id: "fact-2", value: options.brainValue ?? "Under 10M" },
+            ),
     })
-    const running = mock<AgentGraphRunService>({ runOf: jest.fn().mockResolvedValue({ decisionId: "decision-1" }) })
+    const running = mock<AgentGraphRunService>({
+        runOf: jest.fn().mockResolvedValue({ decisionId: "decision-1" }),
+        runsOf: jest.fn().mockResolvedValue([{ id: "decision-1" }]),
+    })
     const context = mock<AgentGraphContextService>({ coverageOf: jest.fn().mockResolvedValue([{ nodeKey: "decide" }]) })
     const installations = mock<InstallationRecordsService>({
         ofAgent: jest.fn().mockResolvedValue(options.installed === false ? null : { id: "inst-1" }),
@@ -103,17 +108,8 @@ const build = async (
             { provide: BrainFactsService, useValue: brain },
         ],
     }).compile()
-    return {
-        service: moduleRef.get(AgentGraphAdminService),
-        graphs,
-        seed,
-        view,
-        publishing,
-        proposals,
-        running,
-        context,
-        brain,
-    }
+    const service = moduleRef.get(AgentGraphAdminService)
+    return { service, graphs, seed, view, publishing, proposals, running, context, brain }
 }
 
 describe("AgentGraphAdminService access", () => {
@@ -312,6 +308,27 @@ describe("AgentGraphAdminService the run and the coverage", () => {
 
         await expect(service.run(ACTOR, "item-9")).resolves.toEqual({ decisionId: "decision-1" })
         expect(running.runOf).toHaveBeenCalledWith("ws-1", "item-9")
+    })
+
+    it("lists the latest runs of the agent for a seat that may see the graph, at most a hundred and at least one", async () => {
+        const { service, running } = await build()
+
+        await expect(service.runs(ACTOR, "agent-1", 30)).resolves.toEqual([{ id: "decision-1" }])
+        await service.runs(ACTOR, "agent-1", 5000)
+        await service.runs(ACTOR, "agent-1", 0)
+
+        expect(running.runsOf.mock.calls).toEqual([
+            ["ws-1", "agent-1", 30],
+            ["ws-1", "agent-1", 100],
+            ["ws-1", "agent-1", 1],
+        ])
+    })
+
+    it("refuses the list of runs to a seat that may not see the graph", async () => {
+        const { service, running } = await build({ role: "staff" })
+
+        await expect(service.runs(ACTOR, "agent-1", 30)).rejects.toBeInstanceOf(AgentGraphsError)
+        expect(running.runsOf).not.toHaveBeenCalled()
     })
 
     it("reads who can answer each ask of the draft graph", async () => {

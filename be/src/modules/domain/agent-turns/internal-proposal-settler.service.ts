@@ -69,7 +69,7 @@ export class InternalProposalSettlerService {
         const plan = await this.intents.planFor(wakeScopeOf(turn))
         if (plan === null) return this.apply(internalWakeOf(turn), text, input)
         const read = await this.pipeline.read(turn, plan, text, signal)
-        const done = await this.pipeline.door(turn, INTENT_STEP_KIND.tagDoor, read, signal, input)
+        const done = await this.pipeline.door(turn, INTENT_STEP_KIND.tagDoor, read, signal, { settle: input })
         return this.settledOf(done, read.trace)
     }
 

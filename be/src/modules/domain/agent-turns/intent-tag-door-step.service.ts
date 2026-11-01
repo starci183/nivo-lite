@@ -63,17 +63,14 @@ export class IntentTagDoorStepService implements OnModuleInit {
 
     /** A turn no intent fits raises what was asked as a gap of the module, once per question. */
     private async raiseGap(input: TagDoorInput): Promise<void> {
-        const { reading, trace, wake, settle } = input
+        const { reading, trace, wake } = input
         if (reading.kind !== "safe" || reading.cause !== "no_intent" || reading.gap === null) return
-        await this.intents.raiseGap(
-            {
-                ...reading.gap,
-                workspaceId: wake.workspaceId,
-                agentId: wake.agentId,
-                versionId: trace.versionId,
-                trigger: trace.trigger,
-            },
-            settle.module,
-        )
+        await this.intents.raiseGap({
+            ...reading.gap,
+            workspaceId: wake.workspaceId,
+            agentId: wake.agentId,
+            versionId: trace.versionId,
+            trigger: trace.trigger,
+        })
     }
 }

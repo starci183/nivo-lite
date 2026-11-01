@@ -941,6 +941,27 @@ type AgentGraphExcludedType {
   reason: String!
 }
 
+type AgentGraphRunEntryType {
+  action: String!
+  branchKey: String!
+  closedAs: String
+  createdAt: String!
+  differs: Boolean!
+  factsJson: String!
+  gateVerdict: String
+  id: String!
+  mode: String!
+  outcome: String!
+  pathJson: String!
+  road: String!
+  subjectId: String
+  subjectType: String
+  unjudged: String
+  unreadJson: String!
+  version: Int
+  workItemId: String
+}
+
 type AgentGraphRunType {
   agentId: String!
   approvalRequestId: String
@@ -969,6 +990,7 @@ type AgentGraphType {
   mode: String!
   problemsJson: String!
   proposalsJson: String!
+  unheldRulesJson: String!
 }
 
 type AgentGraphVersionType {
@@ -4652,6 +4674,11 @@ input ListAgentGraphCoverageInput {
   agentId: String! @inputBounds(maxLength: 36)
 }
 
+input ListAgentGraphRunsInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  limit: Int! = 50
+}
+
 input ListAgentGraphVersionsInput {
   agentId: String! @inputBounds(maxLength: 36)
 }
@@ -6359,6 +6386,7 @@ type Query {
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
   agentGraphCoverage(input: ListAgentGraphCoverageInput!): [AgentGraphCoverageType!]!
   agentGraphRun(input: GetAgentGraphRunInput!): AgentGraphRunType!
+  agentGraphRuns(input: ListAgentGraphRunsInput!): [AgentGraphRunEntryType!]!
   agentKnowledgeLenses: [AgentKnowledgeLensType!]!
   agentPage(input: AgentIdInput!): AgentPageType!
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!

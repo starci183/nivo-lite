@@ -26,9 +26,24 @@ const SOURCE: BrainSourceInForce = {
 const factOf = (id: string, status: string, value: string): FactRecord =>
     Object.assign(mock<FactRecord>(), { id, status, value, subjectKey: "policy", attribute: "approval" })
 
+interface Row {
+    id: string
+    agentId: string | null
+    workspaceId: string
+    moduleKey: string
+}
+
+const rowOf = (id: string, agentId: string | null): Row => ({
+    id,
+    agentId,
+    workspaceId: "ws-1",
+    moduleKey: "accounting",
+})
+
 const build = async (
     options: {
-        pages?: ReadonlyArray<ReadonlyArray<{ id: string; agentId: string | null }>>
+        pages?: ReadonlyArray<ReadonlyArray<Row>>
+        moved?: boolean
         missing?: ReadonlyArray<string>
         seeded?: boolean
         closedAgents?: ReadonlyArray<string>
@@ -38,12 +53,18 @@ const build = async (
         successor?: FactRecord | null
     } = {},
 ) => {
-    const pages = [...(options.pages ?? [[{ id: "inst-1", agentId: "agent-1" }]]), []]
+    const pages = options.pages ?? [[rowOf("inst-1", "agent-1")]]
     const installations = mock<InstallationRecordsService>({
-        page: jest.fn().mockImplementation(() => Promise.resolve(pages.shift() ?? [])),
+        page: jest.fn().mockImplementation((after: string) => {
+            const index = after === "" ? -1 : pages.findIndex((page) => page.at(-1)?.id === after)
+            return Promise.resolve(pages[index + 1] ?? [])
+        }),
     })
     const graphs = mock<AgentGraphsService>({
         missingGraph: jest.fn().mockResolvedValue(options.missing ?? ["agent-1"]),
+        stateOfAgent: jest
+            .fn()
+            .mockResolvedValue(options.state === undefined ? stateOf({ mode: "enforced" }) : options.state),
         statesOfAgent: jest
             .fn()
             .mockResolvedValue(options.state === undefined ? stateOf({ mode: "enforced" }) : options.state),
@@ -51,6 +72,7 @@ const build = async (
     })
     const seed = mock<AgentGraphSeedService>({
         ensureFor: jest.fn().mockResolvedValue(options.seeded === false ? null : stateOf()),
+        refresh: jest.fn().mockResolvedValue(options.moved ?? false),
     })
     const decisions = mock<AgentGraphDecisionsService>({
         agentsClosedSince: jest.fn().mockResolvedValue(options.closedAgents ?? []),
@@ -95,17 +117,12 @@ describe("AgentGraphWatchService seeding", () => {
         await expect(service.tick()).resolves.toMatchObject({ seeded: 1 })
 
         expect(seed.ensureFor).toHaveBeenCalledWith("inst-1", "vi")
-        expect(installations.page.mock.calls.map((call) => call[0])).toEqual(["", "inst-1"])
+        expect(installations.page.mock.calls.map((call) => call[0])).toEqual(["", "inst-1", "", "inst-1"])
     })
 
     it("leaves alone an installation with no agent and an agent that has a graph, and counts only the seeds that happened", async () => {
         const none = await build({
-            pages: [
-                [
-                    { id: "inst-1", agentId: null },
-                    { id: "inst-2", agentId: "agent-2" },
-                ],
-            ],
+            pages: [[rowOf("inst-1", null), rowOf("inst-2", "agent-2")]],
             missing: [],
         })
         const refused = await build({ seeded: false })
@@ -116,15 +133,53 @@ describe("AgentGraphWatchService seeding", () => {
     })
 
     it("seeds at most fifty agents in one tick", async () => {
-        const many = Array.from({ length: 60 }, (_unused, index) => ({
-            id: `inst-${index}`,
-            agentId: `agent-${index}`,
-        }))
+        const many = Array.from({ length: 60 }, (_unused, index) => rowOf(`inst-${index}`, `agent-${index}`))
         const { service, seed, graphs } = await build({ pages: [many] })
-        graphs.missingGraph.mockResolvedValue(many.map((row) => row.agentId))
+        graphs.missingGraph.mockResolvedValue(many.map((_row, index) => `agent-${index}`))
 
         await expect(service.tick()).resolves.toMatchObject({ seeded: 50 })
         expect(seed.ensureFor).toHaveBeenCalledTimes(50)
+    })
+})
+
+describe("AgentGraphWatchService refreshing", () => {
+    it("brings a seed up to its rule, for the installation of the agent and its module", async () => {
+        const { service, seed, graphs } = await build({ missing: [], moved: true })
+
+        await expect(service.tick()).resolves.toMatchObject({ refreshed: 1 })
+
+        expect(graphs.stateOfAgent).toHaveBeenCalledWith("ws-1", "agent-1")
+        expect(seed.refresh).toHaveBeenCalledWith(stateOf({ mode: "enforced" }), "accounting", "vi")
+    })
+
+    it("counts only the seeds that moved, and reads nothing of an installation with no agent or an agent with no graph", async () => {
+        const stays = await build({ missing: [] })
+        const noAgent = await build({ missing: [], moved: true, pages: [[rowOf("inst-1", null)]] })
+        const noGraph = await build({ missing: [], moved: true, state: null })
+
+        await expect(stays.service.tick()).resolves.toMatchObject({ refreshed: 0 })
+        await expect(noAgent.service.tick()).resolves.toMatchObject({ refreshed: 0 })
+        await expect(noGraph.service.tick()).resolves.toMatchObject({ refreshed: 0 })
+        expect(noAgent.graphs.stateOfAgent).not.toHaveBeenCalled()
+        expect(noGraph.seed.refresh).not.toHaveBeenCalled()
+    })
+
+    it("moves at most fifty seeds in one tick, across pages", async () => {
+        const rows = Array.from({ length: 90 }, (_unused, index) => rowOf(`inst-${index}`, `agent-${index}`))
+        const pages = [rows.slice(0, 30), rows.slice(30, 60), rows.slice(60)]
+        const { service, seed } = await build({ pages, missing: [], moved: true })
+
+        await expect(service.tick()).resolves.toMatchObject({ refreshed: 50 })
+        expect(seed.refresh).toHaveBeenCalledTimes(50)
+    })
+
+    it("walks at most ten pages of installations", async () => {
+        const pages = Array.from({ length: 12 }, (_unused, index) => [rowOf(`inst-${index}`, `agent-${index}`)])
+        const { service, seed } = await build({ pages, missing: [] })
+
+        await service.tick()
+
+        expect(seed.refresh).toHaveBeenCalledTimes(10)
     })
 })
 

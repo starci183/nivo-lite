@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import type { AgentTriggerPreset } from "@modules/domain/agent-work"
 import {
     MIN_PERIOD_MINUTES,
+    firstPerAgent,
     isMissed,
     latestMissedSlot,
     offsetMinutesOf,
@@ -19,6 +20,7 @@ const buildSubject = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
+                    firstPerAgent,
                     isMissed,
                     latestMissedSlot,
                     offsetMinutesOf,
@@ -31,6 +33,7 @@ const buildSubject = async () => {
         ],
     }).compile()
     return moduleRef.get<{
+        firstPerAgent: typeof firstPerAgent
         isMissed: typeof isMissed
         latestMissedSlot: typeof latestMissedSlot
         offsetMinutesOf: typeof offsetMinutesOf
@@ -245,5 +248,19 @@ describe("triggersOfModule", () => {
         ])
         expect(triggersOfModule(catalog, "chatbot")).toEqual([])
         expect(triggersOfModule(catalog, "unknown")).toEqual([])
+    })
+})
+
+describe("firstPerAgent", () => {
+    it("keeps the first row of each agent, in the order given", async () => {
+        const { firstPerAgent } = await buildSubject()
+        const rows = [
+            { agentId: "a", probeKey: "one" },
+            { agentId: "b", probeKey: "two" },
+            { agentId: "a", probeKey: "three" },
+        ]
+
+        expect(firstPerAgent(rows)).toEqual([rows[0], rows[1]])
+        expect(firstPerAgent([])).toEqual([])
     })
 })

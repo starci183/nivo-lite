@@ -23,6 +23,8 @@ export interface RunToTrace {
     readonly branchKey: string
     /** The trigger that woke the agent, or null when it is not known. */
     readonly trigger: TriggerStep | null
+    /** The nodes the walk went through, which name the way when the run took no condition. */
+    readonly path?: ReadonlyArray<string> | undefined
 }
 
 /** The wake sources, as the trigger node each one starts. */
@@ -48,7 +50,7 @@ const stepOf = (node: GraphNode, branchKey: string | null): TraceStep => ({
 })
 
 /** True when walking forward from `from` can reach `target`. */
-const reaches = (byKey: ReadonlyMap<string, GraphNode>, from: string, target: string): boolean => {
+export const reaches = (byKey: ReadonlyMap<string, GraphNode>, from: string, target: string): boolean => {
     const seen = new Set<string>()
     const queue = [from]
     for (let key = queue.shift(); key !== undefined; key = queue.shift()) {
@@ -71,7 +73,10 @@ const reaches = (byKey: ReadonlyMap<string, GraphNode>, from: string, target: st
 export const runTraceOf = (document: GraphDocument, run: RunToTrace): ReadonlyArray<TraceStep> => {
     const byKey = new Map(document.nodes.map((node) => [node.key, node]))
     const triggers = document.nodes.filter((node) => node.kind === "trigger")
-    const condition = document.nodes.find((node) => node.decide?.intent === run.action)
+    const path = run.path ?? []
+    const condition =
+        document.nodes.find((node) => node.decide?.intent === run.action) ??
+        document.nodes.find((node) => node.key === path[0])
     const start = triggers.find((node) => node.step === run.trigger) ?? triggers[0]
     const steps: Array<TraceStep> = []
     for (let current = start; current !== undefined && steps.length < MAX_STEPS;) {
@@ -84,7 +89,7 @@ export const runTraceOf = (document: GraphDocument, run: RunToTrace): ReadonlyAr
                 : decide.branches.filter((branch) => branch.key === taken).map((branch) => branch.next)
         const next =
             condition === undefined || steps.some((entry) => entry.key === condition.key)
-                ? options[0]
+                ? (options.find((key) => path.includes(key)) ?? options[0])
                 : (options.find((key) => reaches(byKey, key, condition.key)) ?? options[0])
         current = next === undefined || steps.some((entry) => entry.key === next) ? undefined : byKey.get(next)
     }

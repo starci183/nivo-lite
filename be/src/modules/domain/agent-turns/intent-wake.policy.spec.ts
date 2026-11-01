@@ -1,16 +1,22 @@
 import { Test } from "@nestjs/testing"
 import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
-import { internalWakeOf, splitWakeOf, wakeRefOf, wakeRowOf, wakeScopeOf } from "./intent-wake.policy"
+import { internalWakeOf, splitWakeOf, tagFileRefOf, wakeRefOf, wakeRowOf, wakeScopeOf } from "./intent-wake.policy"
 
 const SUBJECT = Symbol("intent-wake.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { internalWakeOf, splitWakeOf, wakeRefOf, wakeRowOf, wakeScopeOf } }],
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: { internalWakeOf, splitWakeOf, tagFileRefOf, wakeRefOf, wakeRowOf, wakeScopeOf },
+            },
+        ],
     }).compile()
     return moduleRef.get<{
         internalWakeOf: typeof internalWakeOf
         splitWakeOf: typeof splitWakeOf
+        tagFileRefOf: typeof tagFileRefOf
         wakeRefOf: typeof wakeRefOf
         wakeRowOf: typeof wakeRowOf
         wakeScopeOf: typeof wakeScopeOf
@@ -65,7 +71,9 @@ describe("intent wake policy", () => {
         expect(policy.internalWakeOf(bare).authorUserId).toBeNull()
         expect(policy.wakeRefOf(policy.wakeRowOf(bare)).authorUserId).toBeNull()
     })
+})
 
+describe("intent wake policy > the follow-up, the scope and the files", () => {
     it("writes the follow-up of a split with the same facts, pinned, under a key of its own", async () => {
         const policy = await build()
 
@@ -92,6 +100,23 @@ describe("intent wake policy", () => {
         expect(policy.wakeScopeOf({ ...turn, context: { intent: "confirm_order" } })).toMatchObject({
             authorUserId: null,
             pinned: "confirm_order",
+        })
+    })
+
+    it("finds the files of a tag in the line that tagged the agent, in the room or in a thread", async () => {
+        const policy = await build()
+        const line = agentTurnViewOf({ source: "tag", context: { messageId: "msg-1", threadId: "th-1" } })
+
+        expect(policy.tagFileRefOf(line)).toEqual({
+            workspaceId: "ws-1",
+            kind: "tag",
+            conversationId: null,
+            messageId: "msg-1",
+            threadId: "th-1",
+        })
+        expect(policy.tagFileRefOf(agentTurnViewOf({ source: "tag" }))).toMatchObject({
+            messageId: null,
+            threadId: null,
         })
     })
 })

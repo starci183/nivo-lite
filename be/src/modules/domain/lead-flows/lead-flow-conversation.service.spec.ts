@@ -19,6 +19,7 @@ const PROFILE: AgentProfile = {
     instructions: "",
     knowledge: "",
     approval_rule: "",
+    module: "chatbot",
 }
 
 const REF: ConversationRef = { id: "conv-1", agentId: "agent-1", leadId: null, handledBy: null, visitorName: "Lan" }

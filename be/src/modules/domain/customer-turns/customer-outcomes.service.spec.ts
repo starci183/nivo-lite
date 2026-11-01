@@ -32,6 +32,7 @@ const engineOf = () => ({
         .mockResolvedValue(mock<WorkItem>({ id: "w1", status: "waiting_decision", lead_id: null })),
     startOrderWork: jest.fn().mockResolvedValue({ id: "w2", status: "done", lead_id: "l9" }),
     runQueued: jest.fn().mockResolvedValue(0),
+    checkGraph: jest.fn().mockResolvedValue({ outcome: "run", unread: [], unjudged: null, divert: null }),
 })
 
 const build = async () => {

@@ -42,6 +42,10 @@ interface PaymentParties {
     readonly orderNo: string | null
 }
 
+/** A credit the bank feed reports is money received, not a claim. */
+const SEPAY = "sepay"
+const RECEIVED = "received"
+
 @Injectable()
 /**
  * `reconcile_payment`: Accounting matches an incoming payment (a bank credit or a customer's "I paid") to the invoice it settles. Only a
@@ -99,6 +103,7 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
                 candidates: match.pool.map((invoice) => candidateOf(invoice, this.labelOf(ctx, invoice))),
                 fields: {
                     amount_vnd: amount,
+                    ...(bank === null ? {} : { money_via: SEPAY, money_source: RECEIVED }),
                     reference: transaction.reference,
                     payer: transaction.payer,
                     ...(bank === null ? {} : { bank }),

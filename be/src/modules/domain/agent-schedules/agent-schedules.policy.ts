@@ -153,3 +153,7 @@ export const latestMissedSlot = (missed: Date, next: Date, trigger: SlotTrigger,
 
 /** True when the slot the row remembers is late enough to have been missed. */
 export const isMissed = (at: Date, now: Date): boolean => now.getTime() - at.getTime() > MISSED_AFTER_MS
+
+/** The first trigger of each agent, in the order given: an agent that asked for an event twice is woken once. */
+export const firstPerAgent = <Row extends { readonly agentId: string }>(rows: ReadonlyArray<Row>): ReadonlyArray<Row> =>
+    rows.filter((row, at) => rows.findIndex((other) => other.agentId === row.agentId) === at)

@@ -1,100 +1,90 @@
 import { Test } from "@nestjs/testing"
-import { MODULE_CATALOG } from "@modules/domain/modules"
-import { LIMIT_MEMBERS, REPLY_INTENTS, frameOfIntent } from "./intent-frames.policy"
+import type { IntentFrame } from "./intent-contracts.contracts"
+import { answerNeeded, frameOfIntent, requestFrameOf } from "./intent-frames.policy"
 
 const SUBJECT = Symbol("intent-frames.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { frameOfIntent } }],
+        providers: [{ provide: SUBJECT, useValue: { answerNeeded, frameOfIntent, requestFrameOf } }],
     }).compile()
-    return moduleRef.get<{ frameOfIntent: typeof frameOfIntent }>(SUBJECT)
+    return moduleRef.get<{
+        answerNeeded: typeof answerNeeded
+        frameOfIntent: typeof frameOfIntent
+        requestFrameOf: typeof requestFrameOf
+    }>(SUBJECT)
 }
 
-const catalogue = MODULE_CATALOG.flatMap((module) =>
-    module.authorityActions.map((action) => ({ action: action.action, amountLimit: action.amountLimit })),
-)
+const ACTIONS = [
+    { action: "send_quote", amountLimit: true },
+    { action: "remind", amountLimit: false },
+]
 
-describe("frameOfIntent > the catalogue", () => {
-    it.each(catalogue.map((action) => [action.action, action] as const))(
-        "gives the catalogue action %s a frame a tag can ask for",
-        async (_name, action) => {
-            const subject = await build()
+const DOMAIN_FRAME: IntentFrame = {
+    ...requestFrameOf("remind", false),
+    triggers: ["chat_message"],
+    answers: true,
+    taskKey: "task.remind",
+    result: "domain_result",
+}
 
-            const frame = subject.frameOfIntent(action.action, [action], "tag")
-
-            expect(frame?.intent).toBe(action.action)
-            expect(frame?.result).toBe("agent_request")
-            expect(frame?.triggers).toEqual(["tag"])
-            expect(frame?.risk).toBe(action.amountLimit ? "money" : action.action === "gateway_call" ? "write" : "none")
-        },
-    )
-
-    it("walks every action of every module", () => {
-        expect(catalogue.length).toBeGreaterThan(40)
-        expect(MODULE_CATALOG.every((module) => module.authorityActions.length > 0)).toBe(true)
-    })
-
-    it("gives money to an amount limited action and write to the gateway call", async () => {
+describe("requestFrameOf", () => {
+    it("is the request of a tag, for the manager and the member, read by the generic result and its two checks", async () => {
         const subject = await build()
 
-        expect(subject.frameOfIntent("send_quote", [{ action: "send_quote", amountLimit: true }], "tag")?.risk).toBe(
-            "money",
-        )
-        expect(
-            subject.frameOfIntent("gateway_call", [{ action: "gateway_call", amountLimit: false }], "tag")?.risk,
-        ).toBe("write")
+        const frame = subject.requestFrameOf("remind", false)
+
+        expect(frame).toMatchObject({
+            intent: "remind",
+            triggers: ["tag"],
+            ownTurn: false,
+            answers: false,
+            result: "agent_request",
+            owns: [],
+            checks: ["action_is_intent", "action_has_summary"],
+        })
+        expect(Object.keys(frame.limitKeys)).toEqual(["manager", "member"])
     })
 
-    it("has no frame for an intent that is not in the catalogue", async () => {
+    it("runs in a turn of its own when it is told so", async () => {
         const subject = await build()
 
-        expect(subject.frameOfIntent("invent_work", catalogue, "tag")).toBeNull()
-        expect(subject.frameOfIntent("invent_work", catalogue, "customer_message")).toBeNull()
+        expect(subject.requestFrameOf("remind", true).ownTurn).toBe(true)
     })
 })
 
-describe("frameOfIntent > the reply family", () => {
-    const actions = REPLY_INTENTS.map((action) => ({ action, amountLimit: false }))
-
-    it.each(REPLY_INTENTS)("gives %s a customer frame with the customer reply result", async (intent) => {
+describe("frameOfIntent", () => {
+    it("gives the generic request to any catalogue action for a tag, in a turn of its own when the catalogue says an amount limits it", async () => {
         const subject = await build()
 
-        const frame = subject.frameOfIntent(intent, actions, "customer_message")
-
-        expect(frame?.triggers).toEqual(["customer_message"])
-        expect(frame?.result).toBe("customer_reply")
-        expect(frame?.limitKeys.customer?.length).toBeGreaterThan(8)
-        expect(frame?.risk).toBe(intent === "gateway_call" ? "write" : "none")
+        expect(subject.frameOfIntent([], "send_quote", ACTIONS, "tag")?.ownTurn).toBe(true)
+        expect(subject.frameOfIntent([], "remind", ACTIONS, "tag")?.ownTurn).toBe(false)
     })
 
-    it("names the members each reply intent owns", async () => {
-        const subject = await build()
-        const owns = (intent: string) => subject.frameOfIntent(intent, actions, "customer_message")?.owns
-
-        expect(owns("handoff_lead")).toEqual(["lead"])
-        expect(owns("confirm_order")).toEqual(["order"])
-        expect(owns("confirm_booking")).toEqual(["booking_request"])
-        expect(owns("redeem_reward")).toEqual(["loyalty"])
-        expect(owns("screen_candidate")).toEqual(["application"])
-        expect(owns("reply_customer")).toEqual([])
-    })
-
-    it("has no customer frame for an intent the module does not hold", async () => {
+    it("has no frame for an intent that is not in the catalogue, whatever a domain registered", async () => {
         const subject = await build()
 
+        expect(subject.frameOfIntent([DOMAIN_FRAME], "invent_work", ACTIONS, "tag")).toBeNull()
         expect(
-            subject.frameOfIntent(
-                "confirm_order",
-                [{ action: "reply_customer", amountLimit: false }],
-                "customer_message",
-            ),
+            subject.frameOfIntent([{ ...DOMAIN_FRAME, intent: "invent_work" }], "invent_work", ACTIONS, "chat_message"),
         ).toBeNull()
     })
 
-    it("ties the lead and order rules to their members", () => {
-        expect(Object.values(LIMIT_MEMBERS)).toEqual(
-            expect.arrayContaining(["lead", "order", "booking_request", "loyalty", "application"]),
-        )
+    it("prefers the frame a domain registered for the trigger, and gives nothing for a trigger no frame accepts", async () => {
+        const subject = await build()
+
+        expect(subject.frameOfIntent([DOMAIN_FRAME], "remind", ACTIONS, "chat_message")).toBe(DOMAIN_FRAME)
+        expect(subject.frameOfIntent([DOMAIN_FRAME], "send_quote", ACTIONS, "chat_message")).toBeNull()
+        expect(subject.frameOfIntent([DOMAIN_FRAME], "remind", ACTIONS, "tag")?.result).toBe("agent_request")
+    })
+})
+
+describe("answerNeeded", () => {
+    it("is true only for a trigger that some frame answers", async () => {
+        const subject = await build()
+
+        expect(subject.answerNeeded([DOMAIN_FRAME], "chat_message")).toBe(true)
+        expect(subject.answerNeeded([DOMAIN_FRAME], "tag")).toBe(false)
+        expect(subject.answerNeeded([], "chat_message")).toBe(false)
     })
 })

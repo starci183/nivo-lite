@@ -32,6 +32,7 @@ export const summaryOf = (row: AgentRecord): AgentSummary => ({
 
 const profileOf = (row: AgentRecord): AgentProfile => ({
     id: row.id,
+    module: row.module,
     name: row.name,
     handle: row.handle,
     role: row.role,

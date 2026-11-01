@@ -3,7 +3,7 @@ import { mock } from "@starci/jest-preset"
 import { itemOf, owner } from "@tests/fixtures/builders/work-engine.builder"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { WORK_ITEM_CLOSED } from "./work-engine.decorators"
+import { WORK_ITEM_CLOSED } from "@modules/domain/work-items"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
 import { WorkItemClosedService } from "./work-item-closed.service"
 import type { WorkItemClosedHook } from "./work-engine.port"
@@ -11,6 +11,7 @@ import type { WorkItemClosedHook } from "./work-engine.port"
 const ctx = { workspaceId: "ws-1", actor: "Lan", locale: "en" } as const
 
 const hook = mock<WorkItemClosedHook>()
+const NO_HOOK: WorkItemClosedHook | null = null
 
 const buildBound = async () => {
     const told: Array<string> = []
@@ -32,7 +33,11 @@ const buildBound = async () => {
 
 const buildBare = async () => {
     const container = await Test.createTestingModule({
-        providers: [WorkItemClosedService, { provide: LOGGER, useValue: mock<Logger>() }],
+        providers: [
+            WorkItemClosedService,
+            { provide: WORK_ITEM_CLOSED, useValue: NO_HOOK },
+            { provide: LOGGER, useValue: mock<Logger>() },
+        ],
     }).compile()
     return container.get(WorkItemClosedService)
 }

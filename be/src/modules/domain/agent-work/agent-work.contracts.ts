@@ -1,5 +1,8 @@
-/** What starts a wake. */
-export type AgentWakeSource = "customer" | "tag" | "internal" | "schedule"
+/**
+ * What starts a wake: the key of the adapter that normalized the fact. The four built-in keys are listed so they read well; an adapter
+ * registered at the inbound door adds its own, and what a source means to the work core is its traits, never its name.
+ */
+export type AgentWakeSource = "customer" | "tag" | "internal" | "schedule" | (string & Record<never, never>)
 
 /** Where a wake stands. */
 export type AgentWakeStatus = "pending" | "running" | "done" | "skipped" | "held" | "failed" | "dead"
@@ -75,6 +78,8 @@ export interface AgentWakeContext {
     readonly probeKey?: string
     /** The intent a follow-up turn is pinned to: set only by the turn that split off an intent with a risk, never by a fact. */
     readonly intent?: string
+    /** The normalized event of an inbound adapter, as the JSON text of an `AgentWakeInbound` (a context holds text and flags only); `decodeInbound` reads it. */
+    readonly inbound?: string
 }
 
 /** One fact that wakes an agent. */
@@ -91,6 +96,8 @@ export interface AgentWake {
     readonly context: AgentWakeContext
     /** The member behind the wake, when a person is. */
     readonly actorMemberId: string | null
+    /** The lock scope the adapter wants; absent derives it from the source and the context. */
+    readonly scopeKey?: string
 }
 
 /** A wake as a handler sees it: what woke the agent and for whom, with or without a turn behind it. */
@@ -368,6 +375,8 @@ export interface AgentTriggerWrite {
     readonly probeKey: string | null
     /** Off means the trigger stays and fires nothing. */
     readonly enabled: boolean
+    /** The sources (adapter keys) an event trigger answers to; absent or empty answers to every source. */
+    readonly sources?: ReadonlyArray<string>
 }
 
 /** One turn as the work tab lists it: no prompt and no customer words. */

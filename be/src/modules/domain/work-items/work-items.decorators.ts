@@ -8,3 +8,6 @@ export const WORK_ITEMS_LEADS: unique symbol = Symbol("domain.work-items.leads")
 /** Injects the lead directory port. Parameter type: WorkItemsLeadDirectory. */
 export const InjectWorkItemsLeads = (): TypedParameterDecorator<WorkItemsLeadDirectory> =>
     injector<WorkItemsLeadDirectory>(WORK_ITEMS_LEADS)
+
+/** Token of the closed-item hook; the app root binds it to the runs that wait on a decision. */
+export const WORK_ITEM_CLOSED: unique symbol = Symbol("domain.work-items.closed")

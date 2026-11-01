@@ -1,6 +1,6 @@
 import type { AgentWakeContext, AgentWakeSource } from "@modules/domain/agent-work"
 import type {
-    IntentAudience,
+    InboundTrust,
     IntentContract,
     IntentReading,
     IntentTrace,
@@ -8,7 +8,7 @@ import type {
     TurnContracts,
 } from "@modules/domain/intent-contracts"
 import type { BridgeTurn } from "@modules/domain/agent-tools"
-import type { IntentPlan, IntentReadingRow, IntentScope, OptionalIntent } from "./agent-turns.contracts"
+import type { IntentNodeKeys, IntentPlan, IntentReadingRow, IntentScope, OptionalIntent } from "./agent-turns.contracts"
 
 /** The step kinds of a pipeline turn: the model's text, its reading, and the door of each trigger. */
 export const INTENT_STEP_KIND = {
@@ -16,13 +16,6 @@ export const INTENT_STEP_KIND = {
     readResult: "read_result",
     customerDoor: "door",
     tagDoor: "tag_door",
-} as const
-
-/** The node keys of the published graph the steps stand for. */
-export const INTENT_NODE_KEY = {
-    turn: "intent_turn",
-    readResult: "intent_read_result",
-    door: "intent_door",
 } as const
 
 /** The longest model text a step row keeps. */
@@ -52,7 +45,7 @@ export const traceOf = (plan: IntentPlan, reading: IntentReading): IntentTrace =
     const base = {
         versionId: plan.versionId,
         trigger: plan.trigger,
-        audience: plan.audience,
+        trust: plan.trust,
         offered: plan.contracts.map((contract) => contract.intent),
     }
     if (reading.kind === "safe") {
@@ -62,8 +55,8 @@ export const traceOf = (plan: IntentPlan, reading: IntentReading): IntentTrace =
     return { ...base, intent: reading.contract.intent, result: reading.kind, detail: "", dropped }
 }
 
-/** The audience of a tag: a manager when its author may write, else staff. */
-export const tagAudienceOf = (mayWrite: boolean): IntentAudience => (mayWrite ? "manager" : "staff")
+/** The trust of a tag: a manager when its author may write, else a member. */
+export const tagTrustOf = (mayWrite: boolean): InboundTrust => (mayWrite ? "manager" : "member")
 
 /** The scope a running turn of the bridge belongs to: read from the turn row and never from what the model sent. */
 export const intentScopeOf = (turn: BridgeTurn): IntentScope => ({
@@ -84,3 +77,9 @@ export const readingRowOf = (reading: IntentReading): IntentReadingRow =>
               dropped: reading.dropped,
           }
         : reading
+
+/** The node of the published graph the door stands for: the act node of the intent the reading picked, else the node where the turn picks. */
+export const doorNodeOf = (keys: IntentNodeKeys, reading: IntentReadingRow): string => {
+    const intent = reading.kind === "safe" ? reading.intent : reading.contract.intent
+    return (intent === null ? undefined : keys.acts[intent]) ?? keys.turn
+}

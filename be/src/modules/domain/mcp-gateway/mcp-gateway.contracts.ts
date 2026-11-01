@@ -465,6 +465,31 @@ export type DataRightVerdict =
     | { readonly kind: "deny"; readonly reason: "no_right" | "no_kind" | "no_conversation" }
     | { readonly kind: "narrow"; readonly right: DataRight }
 
+/** One write an agent is about to make, as the action graph reads it. */
+export interface ToolGraphCall {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The customer conversation it serves, or null. */
+    readonly conversationId: string | null
+    /** What makes this call one call: its step, or its work item. */
+    readonly key: string
+    /** The tool. */
+    readonly name: string
+    /** The agent turn, or null. */
+    readonly turnId: string | null
+}
+
+/** What the action graph says about a write tool. */
+export type ToolGraphVerdict = { readonly kind: "run" } | { readonly kind: "ask" } | { readonly kind: "stop" }
+
+/** The action graph, consulted on every write that no person approved; absent until a graph is bound. */
+export interface ToolGraphGate {
+    /** What the graph of the agent says about this call. */
+    judge(call: ToolGraphCall): Promise<ToolGraphVerdict>
+}
+
 /**
  * The rights of an agent, supplied by the owner of the action graph (bound at the app root). Null means the agent is not governed
  * by an enforced graph yet and its reads pass as they did; a list, even an empty one, is the whole of what it may read.

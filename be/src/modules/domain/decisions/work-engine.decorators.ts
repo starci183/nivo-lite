@@ -1,3 +1,4 @@
+import { WORK_ITEM_CLOSED } from "@modules/domain/work-items"
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type {
@@ -65,9 +66,6 @@ export const InjectWorkChainsHistory = (): TypedParameterDecorator<WorkChainsHis
 /** Injects the work threads history port. Parameter type: WorkThreadsHistory. */
 export const InjectWorkThreadsHistory = (): TypedParameterDecorator<WorkThreadsHistory> =>
     injector<WorkThreadsHistory>(WORK_THREADS_HISTORY)
-
-/** Token of the closed-item hook; the app root binds it to the runs that wait on a decision. */
-export const WORK_ITEM_CLOSED: unique symbol = Symbol("domain.decisions.work-item-closed")
 
 /** Injects the closed-item hook. Parameter type: WorkItemClosedHook. */
 export const InjectWorkItemClosed = (): TypedParameterDecorator<WorkItemClosedHook> =>
