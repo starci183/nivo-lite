@@ -17,7 +17,10 @@ export const useKnowledgeProgressViewOf = (live: Readonly<Record<string, LivePro
         return {
             title: t("progressTitle"),
             stage: state.stage === null ? t("stage_wait") : t(KNOWLEDGE_STAGE_KEYS[state.stage]),
-            count: counted ? t("stageCount", { done: state.done ?? 0, total: state.total ?? 0 }) : null,
+            count: [
+                ...(counted ? [t("stageCount", { done: state.done ?? 0, total: state.total ?? 0 })] : []),
+                `${Math.round(state.percent)}%`,
+            ].join(" · "),
             value: state.percent,
             label: t("progressLabel"),
         }

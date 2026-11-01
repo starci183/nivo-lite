@@ -5013,7 +5013,7 @@
     "pipelineLabel": "Đường đi của tri thức",
     "stepSources": "Nạp",
     "stepSourcesMeta": "{n} đang đọc",
-    "stepSourcesLive": "{n} đang đọc · {detail}",
+    "stepSourcesLive": "{detail}",
     "stepLearn": "Học",
     "stepLearnMeta": "{facts} sự thật · {lessons} bài học",
     "stepReview": "Duyệt",

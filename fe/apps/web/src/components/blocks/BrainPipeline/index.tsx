@@ -29,8 +29,7 @@ export const BrainPipeline = () => {
                                 reading === null
                                     ? t("stepSourcesMeta", { n: figures.processing })
                                     : t("stepSourcesLive", {
-                                          n: figures.processing,
-                                          detail: [reading.stage, reading.count, `${Math.round(reading.value)}%`]
+                                          detail: [reading.stage, reading.count]
                                               .filter((part) => part !== null)
                                               .join(" · "),
                                       }),

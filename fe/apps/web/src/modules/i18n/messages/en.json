@@ -5013,7 +5013,7 @@
     "pipelineLabel": "How knowledge moves",
     "stepSources": "Take in",
     "stepSourcesMeta": "{n} being read",
-    "stepSourcesLive": "{n} being read · {detail}",
+    "stepSourcesLive": "{detail}",
     "stepLearn": "Learn",
     "stepLearnMeta": "{facts} facts · {lessons} lessons",
     "stepReview": "Review",
