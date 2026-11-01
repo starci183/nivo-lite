@@ -119,19 +119,25 @@ const buildOptionsView = (
         tagsLabel: t("fieldTags"),
         tagsHint: t("fieldTagsHint"),
         moduleLabel: t("fieldModule"),
-        visibilityLabel: t("fieldVisibility"),
         topic: options.topic,
         tags: options.tags,
         module: options.moduleValue,
-        visibility: options.visibility,
         moduleOptions: [
             { id: "all", label: t("moduleAll") },
             ...AGENT_MODULES.map((key) => ({ id: key, label: t(`module_${key}`) })),
             ...instances.map((one) => ({ id: `inst:${one.id}`, label: one.label })),
         ],
-        visibilityOptions: [
-            { id: "internal", label: t("visInternal") },
+    }) as const
+
+/** Builds the choice of who may read what is added, with what each choice means for the answers. */
+const buildVisibilityView = (t: Translate, options: ReturnType<typeof useAddDocuments>["options"]) =>
+    ({
+        label: t("fieldVisibility"),
+        consequence: t(options.visibility === "public" ? "visPublicNote" : "visInternalNote"),
+        value: options.visibility,
+        options: [
             { id: "public", label: t("visPublic") },
+            { id: "internal", label: t("visInternal") },
         ],
     }) as const
 
@@ -166,6 +172,7 @@ export const buildAddDocumentsView = ({ t, formatter, props, add, canWrite, inst
         mode: add.mode,
         files: buildDocumentFilesView(t, formatter, add),
         note: buildNoteView(t, add),
+        visibility: buildVisibilityView(t, add.options),
         options: buildOptionsView(t, add.options, instances),
         notice: add.queuedCount > 0 ? t("batchQueued", { count: add.queuedCount }) : undefined,
         error: add.failure === null ? undefined : t(add.failure),

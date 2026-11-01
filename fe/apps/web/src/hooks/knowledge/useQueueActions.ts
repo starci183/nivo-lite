@@ -1,6 +1,6 @@
 "use client"
 
-import { mutate } from "swr"
+import { useSWRConfig } from "swr"
 import {
     QUERY_BRAIN_DOSSIERS_SWR_KEY,
     QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY,
@@ -16,9 +16,10 @@ import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
 /**
  * The queue commands of the add drawer: asks the back end for the presigned address a file goes to, PUTs the bytes to
  * it without the bearer, and hands the document to the job queue through GraphQL. Each failure is toasted; the
- * documents list revalidates when something was queued.
+ * documents list revalidates when something was queued (through the cache of the viewer, which a global `mutate` never reaches).
  */
 export const useQueueActions = (): QueueActions => {
+    const { mutate } = useSWRConfig()
     const runGraphQL = useGraphQLWithToast()
     const runRest = useRestWithToast()
     const { trigger: putPresigned } = usePutPresignedSwr()
@@ -58,7 +59,7 @@ export const useQueueActions = (): QueueActions => {
                     }),
                 { showSuccessToast: false },
             )
-            if (queued === undefined) return false
+            if (queued === undefined) return null
             await mutate(
                 (key) =>
                     Array.isArray(key) &&
@@ -67,7 +68,7 @@ export const useQueueActions = (): QueueActions => {
                         key[0] === QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY ||
                         key[0] === QUERY_BRAIN_DOSSIERS_SWR_KEY),
             )
-            return true
+            return queued.id
         },
     }
 }

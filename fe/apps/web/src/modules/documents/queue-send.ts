@@ -78,7 +78,7 @@ export const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => voi
             return false
         }
         if (path !== null) patch(item.id, { uploaded: 1, storagePath: path })
-        const queued = await actions.enqueue({
+        const sourceId = await actions.enqueue({
             kind: item.kind === "link" ? "url" : "file",
             title: item.title ?? (item.kind === "link" ? item.name.replace(/^https?:\/\//i, "") : stripExt(item.name)),
             storagePath: path,
@@ -87,10 +87,10 @@ export const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => voi
         })
         patch(
             item.id,
-            queued
-                ? { status: "queued", uploaded: undefined }
-                : { status: "failed", error: "errEnqueue", uploaded: undefined },
+            sourceId === null
+                ? { status: "failed", error: "errEnqueue", uploaded: undefined }
+                : { status: "queued", uploaded: undefined, sourceId },
         )
-        return queued
+        return sourceId !== null
     }
 }

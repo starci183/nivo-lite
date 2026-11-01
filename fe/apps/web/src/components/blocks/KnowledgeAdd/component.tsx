@@ -8,6 +8,8 @@ import { DocumentDropZone, type DropWayView } from "@/components/composites/Docu
 import { DrawerFooter } from "@/components/composites/DrawerFooter"
 import { FormNotice } from "@/components/composites/FormNotice"
 import { AddOptionsPanel, type ChoiceView } from "@/components/composites/AddOptionsPanel"
+import { AddProgressPanel, type AddProgressPanelProps } from "@/components/composites/AddProgressPanel"
+import { AddVisibilityPanel, type AddVisibilityView } from "@/components/composites/AddVisibilityPanel"
 
 import { DRAWER_BODY_CLASS_NAME } from "./classNames"
 
@@ -54,13 +56,10 @@ interface OptionsView {
     readonly tagsLabel: string
     readonly tagsHint: string
     readonly moduleLabel: string
-    readonly visibilityLabel: string
     readonly topic: string
     readonly tags: string
     readonly module: string
-    readonly visibility: string
     readonly moduleOptions: ReadonlyArray<ChoiceView>
-    readonly visibilityOptions: ReadonlyArray<ChoiceView>
 }
 
 /** The words and ways of the drop zone the page shows in place of an add button. */
@@ -92,6 +91,8 @@ export interface KnowledgeAddBaseProps {
         readonly mode: string
         readonly files: FilesView
         readonly note: NoteView
+        readonly visibility: AddVisibilityView
+        readonly progress: AddProgressPanelProps
         readonly options: OptionsView
         readonly notice?: string | undefined
         readonly error?: string | undefined
@@ -156,6 +157,8 @@ const KnowledgeAddDrawer = (props: KnowledgeAddBaseProps) => (
         }
     >
         <div className={DRAWER_BODY_CLASS_NAME}>
+            <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.notice} />
+            <AddProgressPanel {...props.props.progress} />
             <SegmentedControl
                 label={props.props.modeLabel}
                 isLabelHidden
@@ -188,15 +191,18 @@ const KnowledgeAddDrawer = (props: KnowledgeAddBaseProps) => (
                     onRemovePair={props.on.removePair}
                 />
             )}
+            <AddVisibilityPanel
+                {...props.props.visibility}
+                isBusy={props.props.isBusy}
+                onChange={props.on.setVisibility}
+            />
             <AddOptionsPanel
                 {...props.props.options}
                 isBusy={props.props.isBusy}
                 onTopic={props.on.setTopic}
                 onTags={props.on.setTags}
                 onModule={props.on.setModule}
-                onVisibility={props.on.setVisibility}
             />
-            <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.notice} />
         </div>
     </Drawer>
 )

@@ -8,6 +8,7 @@ import { useBatchOptions } from "./useBatchOptions"
 import type { AddPreset } from "./useBatchOptions"
 import { useLinkRows } from "./useLinkRows"
 import { useNoteDraft } from "./useNoteDraft"
+import { useQueuedDocs, type QueuedDoc } from "./useQueuedDocs"
 
 /** What the drawer is adding: files and links, a written note, or a list of questions and answers. */
 export type AddMode = "files" | "write" | "faq"
@@ -40,7 +41,7 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
     const [isBusy, setBusy] = useState(false)
     const [failure, setFailure] = useState<string | null>(null)
     const [queuedCount, setQueuedCount] = useState(0)
-
+    const queued = useQueuedDocs(queue.items)
     const noteBody = mode === "faq" ? pairsToText(note.pairs, faqLabels) : note.content
     const retryable = queue.items.filter(canRetry)
     const typed = typedLinks(linkRows.links, queue.items).filter((url) => linkProblemOf(url) === null)
@@ -48,9 +49,7 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
     const isNoteEmpty = note.title.trim() === "" || noteBody.trim() === ""
     const isEmpty = mode === "files" ? pendingCount === 0 : isNoteEmpty
     const isDone = isDocumentBatchDone(queuedCount, isBusy, mode, pendingCount, note.title, noteBody)
-
     const runBatch = createDocumentBatchRunner(queue, linkRows, retryable, options)
-
     const batch = {
         begin: () => {
             setBusy(true)
@@ -62,7 +61,10 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
             if (queued > 0) input.onAdded()
         },
     }
-    const runNote = createNoteRunner({ actions, mode, note, noteBody, options, fail: () => setFailure("errEnqueue") })
+    const runNote = createNoteRunner(
+        { actions, mode, note, noteBody, options },
+        { fail: () => setFailure("errEnqueue"), record: queued.recordNote },
+    )
     const retryItem = createItemRetry(queue, options, isBusy, batch)
 
     const close = () => {
@@ -72,6 +74,7 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
         note.reset()
         setFailure(null)
         setQueuedCount(0)
+        queued.reset()
         input.onClose()
     }
 
@@ -92,6 +95,7 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
         isBusy,
         failure,
         queuedCount,
+        queuedDocs: queued.docs,
         pendingCount,
         hasFailed: queue.items.some((item) => item.status === "failed"),
         isDone,
@@ -114,21 +118,31 @@ interface NoteRunnerInput {
     readonly note: ReturnType<typeof useNoteDraft>
     readonly noteBody: string
     readonly options: ReturnType<typeof useBatchOptions>
+}
+
+/** What the note runner tells the drawer: the note was refused, or it was queued as this document. */
+interface NoteRunnerEvents {
     readonly fail: () => void
+    readonly record: (doc: QueuedDoc) => void
 }
 
 /** Builds the command that queues the written note or the questions; answers how many were queued. */
-const createNoteRunner = (input: NoteRunnerInput) => async () => {
-    const queued = await input.actions.enqueue({
+const createNoteRunner = (input: NoteRunnerInput, on: NoteRunnerEvents) => async () => {
+    const title = input.note.title.trim()
+    const id = await input.actions.enqueue({
         kind: input.mode === "faq" ? "faq" : "text",
-        title: input.note.title.trim(),
+        title,
         storagePath: null,
         url: null,
         meta: { ...input.options.meta(), content: input.noteBody },
     })
-    if (queued) input.note.reset()
-    else input.fail()
-    return queued ? 1 : 0
+    if (id === null) {
+        on.fail()
+        return 0
+    }
+    input.note.reset()
+    on.record({ id, title })
+    return 1
 }
 
 /** How a send tells the drawer it has begun and how many documents it queued. */

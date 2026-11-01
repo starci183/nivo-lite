@@ -19,13 +19,21 @@ export const BrainPipeline = () => {
                 label: t("pipelineLabel"),
                 usage,
                 slotLabels: slotLabels(t("pipelineLabel")),
-                pipeline: mapSlot(slot, ({ figures, agents, isMaintenanceDue }) => ({
+                pipeline: mapSlot(slot, ({ figures, agents, reading, isMaintenanceDue }) => ({
                     steps: [
                         {
                             id: "sources",
                             label: t("stepSources"),
                             value: String(figures.documents),
-                            meta: t("stepSourcesMeta", { n: figures.processing }),
+                            meta:
+                                reading === null
+                                    ? t("stepSourcesMeta", { n: figures.processing })
+                                    : t("stepSourcesLive", {
+                                          n: figures.processing,
+                                          detail: [reading.stage, reading.count, `${Math.round(reading.value)}%`]
+                                              .filter((part) => part !== null)
+                                              .join(" · "),
+                                      }),
                         },
                         {
                             id: "lessons",

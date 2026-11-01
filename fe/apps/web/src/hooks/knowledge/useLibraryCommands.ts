@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { mutate } from "swr"
+import { useSWRConfig } from "swr"
 import {
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
     QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY,
@@ -26,6 +26,7 @@ interface LibraryCommands {
 
 /** Retrying a failed document and deciding a suggestion; each outcome is toasted and the matching list is revalidated. */
 export const useLibraryCommands = (): LibraryCommands => {
+    const { mutate } = useSWRConfig()
     const runGraphQL = useGraphQLWithToast()
     const { trigger: retrySource } = useMutateRetryKnowledgeSourceSwr()
     const { trigger: reindexSource } = useMutateReindexKnowledgeSourceSwr()

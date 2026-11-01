@@ -23,6 +23,8 @@ export interface QueueItem {
     readonly storagePath?: string | undefined
     /** How much of the file has reached storage while it uploads, 0 to 1; the browser holds it, no database does. */
     readonly uploaded?: number | undefined
+    /** The document the queue made of it once handed over: the progress of its reading is looked up by it. */
+    readonly sourceId?: string | undefined
 }
 
 /** What a send of one item needs: where it goes and the options chosen once for the batch. */
@@ -55,7 +57,8 @@ export interface EnqueueItem {
 export interface QueueActions {
     /** Sends the bytes to storage; `onProgress` is told the fraction sent, 0 to 1, while they travel. */
     readonly upload: (file: File, onProgress?: (fraction: number) => void) => Promise<string | null>
-    readonly enqueue: (input: EnqueueItem) => Promise<boolean>
+    /** Hands the document to the job queue; answers the id of the new document, or null when it was refused. */
+    readonly enqueue: (input: EnqueueItem) => Promise<string | null>
 }
 
 /** The most bytes one file may have. */

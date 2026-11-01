@@ -1,6 +1,7 @@
 "use client"
 
 import { useAddDocumentsView } from "@/hooks/knowledge"
+import { useAddProgress } from "@/hooks/brain"
 import type { AddPreset, ModuleKey } from "@/hooks/knowledge"
 import { KnowledgeAddBase } from "./component"
 
@@ -23,9 +24,10 @@ interface KnowledgeAddProps {
 export const KnowledgeAdd = (props: KnowledgeAddProps) => {
     const { add, open, view } = useAddDocumentsView(props)
     const { note, options, queue } = add
+    const progress = useAddProgress(add.queuedDocs)
     return (
         <KnowledgeAddBase
-            props={view}
+            props={{ ...view, progress }}
             on={{
                 dropFiles: (files) => {
                     queue.addFiles(files)

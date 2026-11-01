@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { mutate } from "swr"
+import { useSWRConfig } from "swr"
 import {
     QUERY_KNOWLEDGE_SOURCE_SWR_KEY,
     QUERY_BRAIN_DOSSIERS_SWR_KEY,
@@ -28,7 +28,8 @@ interface SourceCommands {
     readonly remove: () => void
 }
 
-const revalidateDocuments = () =>
+/** Reads the lists a document change touches again, through the mutate of the viewer's cache (a global one never reaches it). */
+const revalidateDocuments = (mutate: ReturnType<typeof useSWRConfig>["mutate"]) =>
     mutate(
         (key) =>
             Array.isArray(key) &&
@@ -42,6 +43,7 @@ const revalidateDocuments = () =>
 /** Reading a document again, changing who may read it and deleting it; each failure is toasted, the lists revalidate. */
 export const useSourceCommands = (sourceId: string): SourceCommands => {
     const router = navigation.useRouter()
+    const { mutate } = useSWRConfig()
     const runGraphQL = useGraphQLWithToast()
     const { trigger: reindexSource } = useMutateReindexKnowledgeSourceSwr()
     const { trigger: updateSource } = useMutateUpdateKnowledgeSourceSwr()
@@ -52,7 +54,7 @@ export const useSourceCommands = (sourceId: string): SourceCommands => {
         void runGraphQL(run, { showSuccessToast: false }).then(async (result) => {
             setBusy(null)
             if (result === undefined) return
-            await revalidateDocuments()
+            await revalidateDocuments(mutate)
             done()
         })
     }
