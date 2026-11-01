@@ -20,7 +20,7 @@ import type {
     OfficeStaff,
     OfficeTask,
 } from "./office.types"
-import { agentAvatarOf } from "./office.words"
+import { agentAvatarOf, offDutyOf } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
 
 /** List time as Zalo draws it: "Just now", "N min", "N h", "Yesterday", "N days", then dd/MM. */
@@ -46,7 +46,7 @@ interface SortableRow {
     readonly sortAt: string | null
 }
 
-/** The preview of an agent row: its direct conversation's last line, else its role; a paused agent says so. */
+/** The preview of an agent row: its direct conversation's last line, else its role; an agent that is not on duty says why (paused, needs setup, waits for a connection). */
 const agentPreviewOf = (
     agent: OfficeAgent,
     last: OfficeAgentLine | null,
@@ -54,7 +54,7 @@ const agentPreviewOf = (
     words: OfficeWords,
     context: OfficeContext,
 ): string => {
-    if (!agent.isActive) return words.t("agentPreviewPaused")
+    if (!agent.isActive) return offDutyOf(agent, words)
     if (last === null) return role
     return officePreviewOf(
         { kind: "text", body: last.body, author: last.author, authorUserId: last.authorId },

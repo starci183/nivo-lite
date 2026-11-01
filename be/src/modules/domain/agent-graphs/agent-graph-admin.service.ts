@@ -118,12 +118,13 @@ export class AgentGraphAdminService {
         return this.running.runOf(actor.workspaceId, workItemId)
     }
 
-    /** Who can answer each ask of the draft graph. */
+    /** Who can answer each ask of the draft graph. An agent without a graph has no asks, so its coverage is empty. */
     async coverage(actor: GraphActor, agentId: string): Promise<ReadonlyArray<AskCoverage>> {
         await this.publisherOf(actor)
         const state = await this.graphs.stateOfAgent(actor.workspaceId, agentId)
-        const installation = state === null ? null : await this.installations.findById(state.installationId)
-        if (state === null || installation === null)
+        if (state === null) return []
+        const installation = await this.installations.findById(state.installationId)
+        if (installation === null)
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
         return this.context.coverageOf({ ...state, moduleKey: installation.moduleKey }, state.draft)
     }

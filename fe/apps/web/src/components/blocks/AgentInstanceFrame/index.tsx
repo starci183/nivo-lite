@@ -58,6 +58,7 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                         : { id: "agent", label: header.name === "" ? header.typeName : header.name },
                 ],
                 tabsLabel: t("tabsLabel"),
+                selectedTab: selected,
                 tabs: tabs.map((tab) => ({
                     id: tab,
                     label: t(`tab_${tab}`),

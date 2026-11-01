@@ -249,13 +249,11 @@ describe("AgentGraphAdminService the run and the coverage", () => {
         )
     })
 
-    it("refuses the coverage of an agent with no graph or no installation", async () => {
+    it("answers no coverage for an agent with no graph and refuses one with no installation", async () => {
         const none = await build({ state: null })
         const gone = await build({ installed: false })
 
-        await expect(none.service.coverage(ACTOR, "agent-1")).rejects.toEqual(
-            expect.objectContaining({ code: AgentGraphsErrorCode.GraphNotFound }),
-        )
+        await expect(none.service.coverage(ACTOR, "agent-1")).resolves.toEqual([])
         await expect(gone.service.coverage(ACTOR, "agent-1")).rejects.toBeInstanceOf(AgentGraphsError)
     })
 })

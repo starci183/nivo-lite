@@ -69,6 +69,8 @@ export interface AgentInstanceFrameBaseProps {
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
         readonly tabsLabel: string
         readonly tabs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href: string }>
+        /** The tab the route names; the line follows a soft navigation from inside the body, which the tabs alone do not see. */
+        readonly selectedTab: string
         /** The instance is not known yet: the header keeps its boxes. */
         readonly isSkeleton: boolean
         readonly view: InstanceHeaderView
@@ -180,7 +182,7 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
         meta: view.subtitle,
         ...(view.needs.lines.length === 0 ? {} : { description: <ConnectionNeeds {...view.needs} /> }),
         actions: <HeaderActions copy={copy} />,
-        tabs: { label: copy.tabsLabel, labelVisibility: "always", items: [...copy.tabs] },
+        tabs: { label: copy.tabsLabel, labelVisibility: "always", items: [...copy.tabs], selectedKey: copy.selectedTab },
     }
     if (copy.hasPanes) {
         return (
