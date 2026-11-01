@@ -1,11 +1,11 @@
 import {
+    FilterButtonGroup,
     EmptyNotice,
     Grid,
     Region,
     SearchField,
     SectionHeader,
     SurfaceListCard,
-    TagGroup,
 } from "@starci/grammar/common"
 import { AgentCatalogCard, type AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
 import { AgentTeamRow, type AgentTeamRowProps } from "@/components/composites/AgentTeamRow"
@@ -114,17 +114,12 @@ const Roles = (props: CatalogSectionProps) => (
                 />
             }
         />
-        <TagGroup
+        <FilterButtonGroup
             label={props.props.categoryLabel}
-            selectionMode="single"
-            size="sm"
             isSkeleton={props.isSkeleton}
-            items={props.props.categoryOptions.map((option) => ({ id: option.value, label: option.label }))}
-            selectedIds={[props.props.category]}
-            onSelectionChange={(ids) => {
-                const picked = ids[0]
-                if (picked !== undefined) props.on.category(picked)
-            }}
+            options={props.props.categoryOptions.map((option) => ({ value: option.value, label: option.label }))}
+            value={props.props.category}
+            onValueChange={props.on.category}
         />
         <Region labelledBy={props.props.addId}>
             {props.data.roles.length === 0 ? (

@@ -1,10 +1,10 @@
 import {
+    FilterButtonGroup,
     Badge,
     EmptyNotice,
     ListRow,
     SearchField,
     SurfaceListCard,
-    TagGroup,
     Text,
     TextAction,
 } from "@starci/grammar/common"
@@ -79,17 +79,12 @@ export const ChatbotCustomersBase = (props: ChatbotCustomersBaseProps) => {
                         onValueChange={props.on.query}
                         isSkeleton={isSkeleton}
                     />
-                    <TagGroup
+                    <FilterButtonGroup
                         label={words.filtersLabel}
-                        selectionMode="single"
-                        size="sm"
                         isSkeleton={isSkeleton}
-                        items={props.props.chips}
-                        selectedIds={[props.props.filter]}
-                        onSelectionChange={(ids) => {
-                            const picked = ids[0]
-                            if (picked !== undefined) props.on.filter(picked)
-                        }}
+                        options={props.props.chips.map((chip) => ({ value: chip.id, label: chip.label }))}
+                        value={props.props.filter}
+                        onValueChange={props.on.filter}
                     />
                     <SurfaceListCard
                         label={words.label}

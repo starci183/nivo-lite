@@ -1,4 +1,4 @@
-import { EmptyNotice, ListBox, Stack, SurfaceCard, TagGroup } from "@starci/grammar/common"
+import { EmptyNotice, FilterButtonGroup, ListBox, Stack, SurfaceCard } from "@starci/grammar/common"
 import { ContentPostFacts } from "@/components/leaves/ContentPostFacts"
 import { ContentStatusBadge } from "@/components/leaves/ContentStatusBadge"
 import type { ContentT, PostView } from "@/modules/types"
@@ -23,12 +23,11 @@ export const ContentListPanelBase = (props: ContentListPanelBaseProps) => {
     const { t } = props.props
     return (
         <Stack gap="row">
-            <TagGroup
+            <FilterButtonGroup
                 label={t("filterLabel")}
-                items={props.props.filters}
-                selectionMode="single"
-                selectedIds={[props.props.filter]}
-                onSelectionChange={(ids) => props.on.filter(ids[0] ?? "all")}
+                options={props.props.filters.map((filter) => ({ value: filter.id, label: filter.label }))}
+                value={props.props.filter}
+                onValueChange={props.on.filter}
             />
             <SurfaceCard ariaLabel={t("tabList")}>
                 {props.props.shown.length === 0 ? (
