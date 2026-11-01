@@ -28,10 +28,9 @@ import {
     SOURCES_SIDE_CLASS_NAME,
 } from "./classNames"
 
-/** What the add drawer was opened from: the topic to write about, who may read it, the tags it files under and the mode it opens on. */
+/** What the add drawer was opened from: the topic to write about, the tags it files under and the mode it opens on; who may read is always chosen by the person. */
 export interface AddPresetView {
     readonly topic: string
-    readonly visibility?: "public" | "internal"
     readonly tags?: string
     readonly mode?: "files" | "write"
 }

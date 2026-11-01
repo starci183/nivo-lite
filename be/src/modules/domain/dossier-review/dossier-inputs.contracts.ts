@@ -6,6 +6,12 @@ import type {
     ReviewStatus,
 } from "./dossier-review.contracts"
 
+/** The id of the stand-in dossier that holds the documents no dossier claims, so the rules read them on their own; its findings are filed under no dossier. */
+export const UNFILED_DOSSIER_ID = "unfiled"
+
+/** The name of the stand-in dossier; the words people read come from the message catalog (`unfiled.label`) when a finding is worded. */
+export const UNFILED_DOSSIER_NAME = "{unfiled}"
+
 /** The kinds of dossier the rule pack knows. */
 export type PackRequirement = "required" | "conditional" | "optional" | "template"
 

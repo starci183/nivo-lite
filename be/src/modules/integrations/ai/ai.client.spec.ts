@@ -150,6 +150,36 @@ describe("AiClient chat", () => {
     })
 })
 
+describe("AiClient chat budget", () => {
+    it("sends a call without a budget with no token cap and no reasoning field", async () => {
+        const { client, http } = await build()
+
+        await client.chat(ASK)
+
+        const sent = sentOf(http, 0)
+        expect(sent.text).not.toContain("max_tokens")
+        expect(sent.text).not.toContain("reasoning")
+    })
+
+    it("sends the budget of a call as the most tokens it may write and reasoning switched off", async () => {
+        const { client, http } = await build()
+
+        await client.chat({ ...ASK, budget: { effort: "off", maxTokens: 800 } })
+
+        const sent = sentOf(http, 0)
+        expect(sent.text).toContain('"max_tokens":800')
+        expect(sent.text).toContain('"reasoning":{"enabled":false}')
+    })
+
+    it("sends a reasoning effort when the budget names one", async () => {
+        const { client, http } = await build()
+
+        await client.chat({ ...ASK, budget: { effort: "low", maxTokens: 800 } })
+
+        expect(sentOf(http, 0).text).toContain('"reasoning":{"effort":"low"}')
+    })
+})
+
 describe("AiClient embed", () => {
     it("asks the embed profile for the size within the deadline and answers one vector per text", async () => {
         const { client, http } = await build()
