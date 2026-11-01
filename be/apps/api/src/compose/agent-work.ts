@@ -6,6 +6,7 @@ import {
 } from "@modules/domain/agent-schedules"
 import { AGENT_WORK_ERROR_KINDS, AGENT_WORK_MESSAGES, AgentWorkModule } from "@modules/domain/agent-work"
 import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES } from "@modules/domain/agent-graphs"
+import { INTENT_CONTRACTS_MESSAGES } from "@modules/domain/intent-contracts"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 
@@ -27,4 +28,5 @@ export const agentWorkMessages: ReadonlyArray<MessageBundle> = [
     AGENT_WORK_MESSAGES,
     AGENT_SCHEDULES_MESSAGES,
     AGENT_GRAPHS_MESSAGES,
+    INTENT_CONTRACTS_MESSAGES,
 ]
