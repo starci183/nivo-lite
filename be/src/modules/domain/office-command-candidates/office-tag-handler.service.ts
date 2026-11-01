@@ -110,6 +110,8 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
             source: "tag",
             locale: this.localeOf(turn),
             text: transcriptOf(talk.before, talk.tagged),
+            wake: turn,
+            agentName: agent.name,
         })
         await this.show(turn, agent, true)
         return {
@@ -125,17 +127,22 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
     }
 
     /** Applies what the model proposed and says its reply where the tag was written, once per wake. */
-    async settle(turn: AgentTurnView, proposal: unknown): Promise<AgentHandlerEnding> {
+    async settle(turn: AgentTurnView, proposal: unknown, signal: AbortSignal): Promise<AgentHandlerEnding> {
         const agent = await this.agents.headOf(turn.workspaceId, turn.agentId)
         if (agent === null) return endOf("skipped", "agent_gone")
         try {
             const installation = await this.installations.ofAgent(turn.workspaceId, turn.agentId)
-            const settled = await this.settler.settle(turn, proposal, {
-                module: agent.module,
-                actorName: await this.actorNameOf(turn, agent),
-                locale: this.localeOf(turn),
-                installationId: installation?.id ?? null,
-            })
+            const settled = await this.settler.settle(
+                turn,
+                proposal,
+                {
+                    module: agent.module,
+                    actorName: await this.actorNameOf(turn, agent),
+                    locale: this.localeOf(turn),
+                    installationId: installation?.id ?? null,
+                },
+                signal,
+            )
             if (settled.kind === "stale") return endOf("held", "stale")
             if (settled.reply !== "") await this.surfaceOf(turn).say(turn, agent, settled.reply, "agent")
             return endOf("done", null, {
@@ -144,6 +151,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
                 actions: settled.actions.length,
                 needsHuman: settled.needsHuman,
                 workItemId: firstWorkItemOf(settled.actions),
+                ...settled.traced,
             })
         } finally {
             await this.show(turn, agent, false)
