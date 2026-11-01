@@ -1,6 +1,5 @@
 import { Fragment } from "react"
-import { Cluster, Divider, SectionHeader, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
-import { AccountingBlock } from "@/components/branches/AccountingBlock"
+import { Cluster, Divider, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import type { GovStatusRow } from "@/hooks/overviewResults"
 import { STATUS_CELL_CLASS_NAME, STATUS_LABEL_CLASS_NAME } from "./classNames"
 
@@ -51,33 +50,33 @@ const StatusRow = (props: StatusRowProps) => (
 
 /** The results by status, each figure naming what it rests on. */
 export const OverviewGovResults = (props: OverviewGovResultsProps) => (
-    <AccountingBlock label={props.figures.title}>
-        <SectionHeader level={2} title={props.figures.title} description={props.figures.intro} />
-        <SurfaceCard ariaLabel={props.figures.title}>
-            <Stack gap="row">
-                {props.figures.rows.map((row, index) => (
-                    <Fragment key={row.id}>
-                        {index > 0 ? <Divider semantics="presentation" /> : null}
-                        <StatusRow row={row} />
-                    </Fragment>
-                ))}
-                <Text size="sm" tone="muted">
-                    {props.figures.service}
-                </Text>
-                {props.figures.goals.map((goal) => (
-                    <Cluster key={goal.id} gap="row">
-                        <Text size="sm" {...(goal.isSet ? {} : { tone: "muted" as const })}>
-                            {goal.text}
-                        </Text>
-                        {goal.isSet ? null : (
-                            <TextAction href={props.figures.goalHref}>{props.figures.goalSetLabel}</TextAction>
-                        )}
-                    </Cluster>
-                ))}
-                <Text size="xs" tone="muted">
-                    {props.figures.testNote}
-                </Text>
-            </Stack>
-        </SurfaceCard>
-    </AccountingBlock>
+    <SurfaceCard label={props.figures.title} headingLevel={2}>
+        <Stack gap="row">
+            <Text size="sm" tone="muted">
+                {props.figures.intro}
+            </Text>
+            {props.figures.rows.map((row, index) => (
+                <Fragment key={row.id}>
+                    {index > 0 ? <Divider semantics="presentation" /> : null}
+                    <StatusRow row={row} />
+                </Fragment>
+            ))}
+            <Text size="sm" tone="muted">
+                {props.figures.service}
+            </Text>
+            {props.figures.goals.map((goal) => (
+                <Cluster key={goal.id} gap="row">
+                    <Text size="sm" {...(goal.isSet ? {} : { tone: "muted" as const })}>
+                        {goal.text}
+                    </Text>
+                    {goal.isSet ? null : (
+                        <TextAction href={props.figures.goalHref}>{props.figures.goalSetLabel}</TextAction>
+                    )}
+                </Cluster>
+            ))}
+            <Text size="xs" tone="muted">
+                {props.figures.testNote}
+            </Text>
+        </Stack>
+    </SurfaceCard>
 )
