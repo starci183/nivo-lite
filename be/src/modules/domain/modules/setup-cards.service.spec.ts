@@ -23,12 +23,7 @@ import { InstallationRecordsService } from "@modules/domain/module-installations
 import { SetupMessagesService } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import { SetupWritesService } from "@modules/domain/module-setup-writes"
-import type {
-    BranchCardPayload,
-    CardRecord,
-    FactCardPayload,
-    RuleCardPayload,
-} from "@modules/domain/module-setup-writes"
+import type { BranchCardPayload, CardRecord } from "@modules/domain/module-setup-writes"
 import { InstallationChangesService } from "./installation-changes.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"

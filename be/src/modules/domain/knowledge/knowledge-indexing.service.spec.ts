@@ -11,7 +11,6 @@ import {
 import { KnowledgeChunksService, chunkPassages } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "@modules/domain/knowledge-sources"
 import { KnowledgeSourcesService, MAX_SOURCE_CHARS, StoredNote } from "@modules/domain/knowledge-sources"
-import type { EmbeddedChunk } from "@modules/domain/knowledge-chunks"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { DocumentsError, DocumentsErrorCode } from "@modules/integrations/documents"
 import { LOGGER } from "@modules/platform/logging"
