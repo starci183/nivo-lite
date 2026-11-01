@@ -9,6 +9,7 @@ import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.er
 import type { GraphDocument, GraphProposalView, LearnedProposal } from "./agent-graphs.contracts"
 import { AgentGraphProposalEntity } from "./persistence/entities"
 import { learnSignals } from "./policies/learn-signals.policy"
+import type { ConflictPatch } from "./policies/conflict-patch.policy"
 import type { LearnedPatch } from "./policies/proposal-patch.policy"
 
 /** The most proposals read to know which evidence is spent. */
@@ -138,6 +139,17 @@ export class AgentGraphProposalsService {
             branchKey: row.branchKey,
             amounts: Array.isArray(amounts) ? amounts.filter((entry) => typeof entry === "number") : [],
         }
+    }
+
+    /** An open conflict of the agent, as the swap of rules it makes; null when it is not open or is not a conflict. */
+    async conflictOf(workspaceId: string, agentId: string, proposalId: string): Promise<ConflictPatch | null> {
+        const row = await this.entityManager.findOne(AgentGraphProposalEntity, {
+            where: { id: proposalId, workspaceId, agentId, status: "open", kind: "conflict" },
+        })
+        const { oldFactId, newFactId, newValueHash } = row?.patch ?? {}
+        if (typeof oldFactId !== "string" || typeof newFactId !== "string" || typeof newValueHash !== "string")
+            return null
+        return { oldFactId, newFactId, newValueHash }
     }
 
     /** A person confirmed a proposal; the version it made is kept with it. */

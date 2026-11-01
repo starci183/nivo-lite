@@ -88,6 +88,10 @@ const leavesHole = (earlier: Interval, later: Interval): boolean =>
 export const numericFactsOf = (decide: DecidePoint, registry: FactRegistry): ReadonlyArray<string> =>
     decide.facts.filter((fact) => registry[fact]?.type === "number")
 
+/** The fact a decide point reads as an amount in dong: its own first fact counted in dong, never another decide point's, or null when it reads none. */
+export const amountFactOf = (decide: DecidePoint, registry: FactRegistry): string | null =>
+    decide.facts.find((fact) => registry[fact]?.unit === "vnd") ?? null
+
 /** The gaps and overlaps between the branches of a decide point over one numeric fact, side by side from the lowest. */
 export const boundaryFindings = (decide: DecidePoint, fact: string): ReadonlyArray<BoundaryFinding> => {
     const placed = decide.branches

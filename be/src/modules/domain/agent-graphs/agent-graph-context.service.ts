@@ -8,7 +8,7 @@ import type { DirectoryMember, MemberGrant } from "@modules/domain/member-grants
 import { ModulesService } from "@modules/domain/modules"
 import type { CeilingRule, GraphContext, GraphDocument } from "./agent-graphs.contracts"
 import { GraphFactsService } from "./graph-facts.service"
-import { intervalOf, topOf } from "./policies/interval.policy"
+import { amountFactOf, intervalOf, topOf } from "./policies/interval.policy"
 
 /** Who can answer one ask of the graph, and who was left out. */
 export interface AskCoverage {
@@ -111,6 +111,7 @@ export class AgentGraphContextService {
                               action: node.action ?? "",
                               approver: node.approver,
                               when: null,
+                              decide: undefined,
                           },
                       ]
             const branches =
@@ -126,18 +127,19 @@ export class AgentGraphContextService {
                                         action: decide.intent,
                                         approver: branch.approver,
                                         when: branch.when,
+                                        decide,
                                     },
                                 ],
                       )
             return [...own, ...branches]
         })
         const facts = this.facts.registry()
-        const amountFact = Object.values(facts).find((spec) => spec.unit === "vnd")?.key
         const directory = await this.members.directory(scope.workspaceId)
         return Promise.all(
             asks.map(async (ask) => {
+                const amountFact = ask.decide === undefined ? null : amountFactOf(ask.decide, facts)
                 const interval =
-                    amountFact === undefined || ask.when === null || ask.when === "else"
+                    amountFact === null || ask.when === null || ask.when === "else"
                         ? null
                         : intervalOf(ask.when, amountFact)
                 const top = interval === null ? null : topOf(interval)

@@ -708,7 +708,7 @@ strictest of gate and branch ──> perform, or ask the branch's approver
 ```
 
 - No graph, a `shadow` graph, or no decide point for the action: the verdict is the gate's alone, as today.
-- A fact comes from a `GraphFactReader`, a port with a registry keyed by the fact (`supplier_payment.amount_vnd`), declared by the module beside its actions and read by subject id. It only reads, with a 2 s budget, and in the agent's view (nivo-mcp.md section 5.2).
+- A fact comes from a `GraphFactReader`, a port with a registry keyed by the fact (`supplier_payment.amount_vnd`), declared by the module beside its actions and read by subject id. `WorkAmountFactReaderService` ships with the capability and declares `order.amount_vnd` and `<action>.amount_vnd` for each action that holds an amount limit: no record outside the work item holds an order or quote amount, so it reads what the gate reads (`proposal.amount_vnd`, handed to the reader as `subject.amountVnd`), and an item with no amount leaves the fact absent, so the branch falls to the `else`. A module that keeps a record of the amount declares a reader of its own. It only reads, with a 2 s budget, and in the agent's view (nivo-mcp.md section 5.2).
 - `evaluateGate` reads `proposal.amount_vnd`, which the model wrote. In `enforced` mode the decider's amount replaces it before the gate runs, so the ceiling is judged on the real figure too. A proposal whose amount differs from the record goes on by the record, and the decision keeps both, so the owner sees it in the trace.
 - A fact that cannot be read takes the `else` branch. `else` may never be `auto`, so missing data never runs alone.
 - Stricter wins: branch `auto` under a gate `ask` asks, on the rule's approvers. Branch `ask` under a gate `auto` asks, on the branch's approver. Branch `stop` is verdict `ask` with reason `not_allowed`, as a closed rule answers. `forceAsk`, the outbound access check and `max_mode` stay untouched.
@@ -739,7 +739,7 @@ A fact declares type, unit and allowed values in the registry, and `op` and `val
 
 - a cycle, a dead end, or more than 60 nodes;
 - a missing `else`, or `else` set to `auto`;
-- over one numeric fact and unit, a gap or an overlap between branches: "under 5tr" and "above 5tr" leave 5,000,000 itself open. Bounds are explicit, `lt` or `lte`. The code holds both meanings today, `limit_vnd` strictly below and `auto_max` inclusive, so the graph never assumes one;
+- over one numeric fact and unit (the decide point's own first fact counted in dong, never another decide point's), a gap or an overlap between branches: "under 5tr" and "above 5tr" leave 5,000,000 itself open. Bounds are explicit, `lt` or `lte`. The code holds both meanings today, `limit_vnd` strictly below and `auto_max` inclusive, so the graph never assumes one;
 - a `ceilingProblems` hit: a branch `auto` where the rule or `max_mode` caps it;
 - a `rightsProblems` hit (15.2);
 - an approver whose `member_grants` do not cover the top of the branch's range. `resolveApprovers` would leave them out and the card would go to nobody. The editor says "Mr Nam has no right to approve up to this amount" and links to where it is granted.
@@ -780,7 +780,7 @@ An `act` node with `pipeline` is a map entry: `AutomationEngineService` keeps ru
 
 **Routing an approval.** Today `WorkApprovalService.ask` only marks an item waiting and posts in Office, so anyone who governs can settle it; `approval_requests` serves chain steps. A branch ask takes the second road: `ApprovalOpeningService.open` takes the branch's group, policy and timeout in place of the rule's, and `chain_step_id` holds the decision id, since that column has no foreign key. This reuses verdicts, `any`, `all` and `sequential`, the sweep, the announcement and the tag. `approval_requests` gains `approver_group jsonb`, and `eligibleFor` prefers it, because that method re-reads the rule's live group. A new `approval_resolved__agent_graphs` consumer resumes the work item. While a request is open, `resumeWork` refuses anyone outside the group and the workspace owner. `onTimeout` of `backup` opens one more request; `stop` rejects the item.
 
-**A changed Brain rule never changes the graph.** `agent_graph_sources` indexes every source of every active version. Tick `agent-graph-watch`, `*/15 * * * *` in the tick list (R335), compares each `brain` source's `valueHash` with the fact in force and raises a proposal of kind `conflict`, keyed `conflict:<nodeKey>:<newFactId>`, holding the old passage, the new one and the patch. `BrainFactsService` publishes no event today, and this needs no hook there. The agent keeps running on the confirmed version until the owner chooses.
+**A changed Brain rule never changes the graph.** `agent_graph_sources` indexes every source of every active version. Tick `agent-graph-watch`, `*/15 * * * *` in the tick list (R335), compares each `brain` source's `valueHash` with the fact in force and raises a proposal of kind `conflict`, keyed `conflict:<nodeKey>:<newFactId>`, holding the old passage, the new one and the patch. `BrainFactsService` publishes no event today, and this needs no hook there. The agent keeps running on the confirmed version until the owner chooses. The owner sees the two passages side by side (the view reads the old one from the source the graph cites and the new one from the Brain) and confirms or declines. A confirm swaps every Brain source that cited the old fact for the new fact, with its passage and hash, and publishes that as a version of kind `conflict`. It moves no boundary and no person, so it never widens; the owner changes those by hand. Unpublished edits in the draft stay, with the same swap.
 
 **Learning proposes.** The same tick, in code and with no model, reads closed decisions:
 
@@ -816,7 +816,7 @@ Setup tab, `AgentSetupPanes`, on `PaneGrid`: the graph is the main pane, and the
 
 Phone: four lanes cannot be read at 390, so the phone opens on a list of branches as sentences, the graph sits behind one tab and pans, and a node's detail is a drawer. Editing a branch is a form in the pane or drawer: condition rows, approver, backup, time, with the source kept and `Self-corrected` added on save.
 
-GraphQL, `be/src/features/api/agent-graphs`: `agentGraph(installationId)` gives draft, active version, gaps, problems and open proposals; `agentGraphVersions`, `agentGraphRun(workItemId)`, `agentGraphProposals`. Mutations `saveAgentGraphDraft`, `publishAgentGraph`, `decideAgentGraphProposal`, `restoreAgentGraphVersion`, `setAgentGraphMode`. Owner or manager, within 15.8.
+GraphQL, `be/src/features/api/agent-graphs`: `agentGraph(installationId)` gives draft, active version, gaps, problems, the facts a condition may be written on (`factsJson`: key, words, type, unit, allowed values) and open proposals (a conflict carries `before` and `after`, the two passages); `agentGraphVersions`, `agentGraphRun(workItemId)`, `agentGraphProposals`. Mutations `saveAgentGraphDraft`, `publishAgentGraph`, `decideAgentGraphProposal`, `restoreAgentGraphVersion`, `setAgentGraphMode`. Owner or manager, within 15.8.
 
 ### 15.11 Migration
 

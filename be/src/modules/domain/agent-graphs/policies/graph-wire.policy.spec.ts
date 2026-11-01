@@ -25,11 +25,13 @@ const VIEW: AgentGraphView = {
     mode: "shadow",
     draft: graphOf(OWNER_EXAMPLE),
     draftRev: 3,
+    isDraftChanged: true,
     activeVersionId: "version-1",
     gaps: [{ code: "else_unset", nodeKey: "decide", branchKey: null }],
     problems: [],
     cards: [],
     proposals: [],
+    facts: [{ key: "order.amount_vnd", label: "the order amount", type: "number", unit: "vnd", allowed: [] }],
 }
 
 describe("graph-wire.policy", () => {
@@ -52,10 +54,12 @@ describe("graph-wire.policy", () => {
             installationId: "inst-1",
             mode: "shadow",
             draftRev: 3,
+            isDraftChanged: true,
             activeVersionId: "version-1",
         })
         expect(wire.draftJson).toBe(JSON.stringify(VIEW.draft))
         expect(wire.gapsJson).toBe('[{"code":"else_unset","nodeKey":"decide","branchKey":null}]')
         expect([wire.problemsJson, wire.cardsJson, wire.proposalsJson]).toEqual(["[]", "[]", "[]"])
+        expect(wire.factsJson).toBe(JSON.stringify(VIEW.facts))
     })
 })

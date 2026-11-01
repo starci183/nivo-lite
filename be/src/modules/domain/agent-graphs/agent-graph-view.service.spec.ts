@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { BrainFactsService } from "@modules/domain/brain-facts"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -30,10 +31,21 @@ const PROPOSAL = {
     createdAt: "2026-11-01T00:00:00.000Z",
 } as const
 
-const build = async (state: OptionalGraphState, installed = true) => {
+const CONFLICT = {
+    id: "p2",
+    kind: "conflict",
+    status: "open",
+    nodeKey: "decide",
+    branchKey: "small",
+    widens: false,
+    evidence: ["fact-1", "fact-2"],
+    createdAt: "2026-11-01T00:00:00.000Z",
+} as const
+
+const build = async (state: OptionalGraphState, installed = true, waiting: ReadonlyArray<object> = [PROPOSAL]) => {
     const graphs = mock<AgentGraphsService>({ stateOfAgent: jest.fn().mockResolvedValue(state) })
     const context = mock<AgentGraphContextService>({ contextOf: jest.fn().mockResolvedValue(contextOf()) })
-    const proposals = mock<AgentGraphProposalsService>({ openOf: jest.fn().mockResolvedValue([PROPOSAL]) })
+    const proposals = mock<AgentGraphProposalsService>({ openOf: jest.fn().mockResolvedValue(waiting) })
     const installations = mock<InstallationRecordsService>({
         findById: jest.fn().mockResolvedValue(installed ? { id: "inst-1", moduleKey: "accounting" } : null),
     })
@@ -43,6 +55,13 @@ const build = async (state: OptionalGraphState, installed = true) => {
             .mockResolvedValue([
                 { memberId: "dinh", name: "Dinh", role: "manager", roomId: null, status: "active", rooms: [] },
             ]),
+    })
+    const brain = mock<BrainFactsService>({
+        get: jest
+            .fn()
+            .mockImplementation((_workspaceId: string, id: string) =>
+                Promise.resolve({ id, value: id === "fact-1" ? "Under 5M" : "Under 10M" }),
+            ),
     })
     const catalog = mock<MessageCatalog>({
         get: jest.fn((key: string, params?: Record<string, string | number>) => `[${key}${params?.name ?? ""}]`),
@@ -55,6 +74,7 @@ const build = async (state: OptionalGraphState, installed = true) => {
             { provide: AgentGraphProposalsService, useValue: proposals },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: MemberGrantsService, useValue: members },
+            { provide: BrainFactsService, useValue: brain },
             { provide: MESSAGE_CATALOG, useValue: catalog },
         ],
     }).compile()
@@ -72,6 +92,7 @@ describe("AgentGraphViewService.viewOf", () => {
             installationId: "inst-1",
             mode: "enforced",
             draftRev: 1,
+            isDraftChanged: false,
             activeVersionId: "version-1",
             gaps: [],
             problems: [],
@@ -90,6 +111,15 @@ describe("AgentGraphViewService.viewOf", () => {
         expect(view.cards.find((card) => card.id === "act")?.description).toBe("")
     })
 
+    it("says the draft has something to publish when it differs from the version that decides", async () => {
+        const edited = graphOf([branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: approverOf() })])
+        const service = await build(stateOf({ draft: edited }))
+
+        const view = await service.viewOf("ws-1", "agent-1", "en")
+
+        expect(view.isDraftChanged).toBe(true)
+    })
+
     it("lists what is wrong and what is vague in the draft", async () => {
         const vague = graphOf([branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: null })])
         const service = await build(stateOf({ draft: vague }))
@@ -98,6 +128,29 @@ describe("AgentGraphViewService.viewOf", () => {
 
         expect(view.problems.map((problem) => problem.code)).toEqual(["approver_missing"])
         expect(view.gaps.map((gap) => gap.code)).toEqual(["approver_missing"])
+    })
+
+    it("offers the facts a condition may be written on, in the words of the language asked", async () => {
+        const service = await build(stateOf())
+
+        const view = await service.viewOf("ws-1", "agent-1", "vi")
+
+        expect(view.facts).toContainEqual({
+            key: "supplier_payment.kind",
+            label: "[fact.kind]",
+            type: "string",
+            unit: null,
+            allowed: ["rent", "stock"],
+        })
+        expect(view.facts.map((fact) => fact.key)).toHaveLength(3)
+    })
+
+    it("gives a conflict the rule the graph follows and the rule the Brain says now, side by side", async () => {
+        const service = await build(stateOf(), true, [CONFLICT])
+
+        const view = await service.viewOf("ws-1", "agent-1", "vi")
+
+        expect(view.proposals).toEqual([{ ...CONFLICT, before: "Under 5M", after: "Under 10M" }])
     })
 
     it("refuses an agent with no graph, and a graph whose installation is gone", async () => {

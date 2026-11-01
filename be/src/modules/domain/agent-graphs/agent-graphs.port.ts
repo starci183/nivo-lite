@@ -8,6 +8,8 @@ export interface FactSubject {
     readonly id: string
     /** The work item the decision is about, for a fact that lives in what the item proposes and not in a record of its own. */
     readonly workItemId: string
+    /** The amount in dong the work item proposes, for the facts that are the amount of the work itself (an order, a quote, a discount). */
+    readonly amountVnd?: number | null | undefined
 }
 
 /**

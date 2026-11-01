@@ -1,8 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { BrainFactsService } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
-import { stateOf } from "@tests/fixtures/builders/agent-graph.builder"
+import { OWNER_EXAMPLE, graphOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphAdminService } from "./agent-graph-admin.service"
 import { AgentGraphContextService } from "./agent-graph-context.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
@@ -12,6 +13,7 @@ import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { AgentGraphsService } from "./agent-graphs.service"
+import type { GraphDocument, GraphSource } from "./agent-graphs.contracts"
 import type { OptionalGraphState } from "./agent-graphs.service"
 
 const ACTOR = { workspaceId: "ws-1", principalId: "user-1" }
@@ -28,6 +30,8 @@ const build = async (
             readonly branchKey: string
             readonly amounts: ReadonlyArray<number>
         } | null
+        conflict?: { readonly oldFactId: string; readonly newFactId: string; readonly newValueHash: string } | null
+        brainValue?: string | null
     } = {},
 ) => {
     const role = options.role === undefined ? "manager" : options.role
@@ -50,6 +54,7 @@ const build = async (
     const publishing = mock<AgentGraphPublishService>({
         publishDraft: jest.fn().mockResolvedValue(VERSION),
         publishLearned: jest.fn().mockResolvedValue(VERSION),
+        publishConflict: jest.fn().mockResolvedValue(VERSION),
         restore: jest.fn().mockResolvedValue(VERSION),
         setMode: jest.fn().mockResolvedValue(stateOf()),
     })
@@ -62,8 +67,14 @@ const build = async (
                     ? { signal: "trust", branchKey: "middle", amounts: [7_200_000] }
                     : options.patch,
             ),
+        conflictOf: jest.fn().mockResolvedValue(options.conflict ?? null),
         confirm: jest.fn().mockResolvedValue(undefined),
         supersede: jest.fn().mockResolvedValue(undefined),
+    })
+    const brain = mock<BrainFactsService>({
+        get: jest
+            .fn()
+            .mockResolvedValue(options.brainValue === null ? null : { id: "fact-2", value: options.brainValue ?? "Under 10M" }),
     })
     const running = mock<AgentGraphRunService>({ runOf: jest.fn().mockResolvedValue({ decisionId: "decision-1" }) })
     const context = mock<AgentGraphContextService>({ coverageOf: jest.fn().mockResolvedValue([{ nodeKey: "decide" }]) })
@@ -85,6 +96,7 @@ const build = async (
             { provide: InstallationRecordsService, useValue: installations },
             { provide: AgentGraphRunService, useValue: running },
             { provide: AgentGraphContextService, useValue: context },
+            { provide: BrainFactsService, useValue: brain },
         ],
     }).compile()
     return {
@@ -96,6 +108,7 @@ const build = async (
         proposals,
         running,
         context,
+        brain,
     }
 }
 
@@ -228,6 +241,64 @@ describe("AgentGraphAdminService.confirm", () => {
         )
         await expect(fresh.service.confirm(ACTOR, "agent-1", "p1")).rejects.toBeInstanceOf(AgentGraphsError)
         expect(closed.publishing.publishLearned).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphAdminService.confirm of a Brain conflict", () => {
+    const CONFLICT = { oldFactId: "fact-1", newFactId: "fact-2", newValueHash: "hash-2" }
+    const BRAIN: GraphSource = { kind: "brain", factId: "fact-1", passage: "Under 5M", valueHash: "hash-1" }
+    const citing = (): GraphDocument => {
+        const base = graphOf(OWNER_EXAMPLE)
+        return {
+            ...base,
+            nodes: base.nodes.map((node) =>
+                node.decide === undefined
+                    ? node
+                    : {
+                          ...node,
+                          decide: {
+                              ...node.decide,
+                              branches: node.decide.branches.map((branch) =>
+                                  branch.key === "small" ? { ...branch, sources: [BRAIN] } : branch,
+                              ),
+                          },
+                      },
+            ),
+        }
+    }
+    const CITING = stateOf({ active: citing(), draft: citing() })
+
+    it("swaps the rule the running graph cites for the rule in force and publishes it as a conflict version", async () => {
+        const { service, publishing, proposals } = await build({ role: "owner", conflict: CONFLICT, state: CITING })
+
+        await expect(service.confirm(ACTOR, "agent-1", "p1")).resolves.toBe(VERSION)
+
+        const [, , document, by] = publishing.publishConflict.mock.calls[0] ?? []
+        expect(by).toEqual({ memberId: "member-1", role: "owner" })
+        expect(JSON.stringify(document)).toContain("Under 10M")
+        expect(JSON.stringify(document)).not.toContain("fact-1")
+        expect(publishing.publishLearned).not.toHaveBeenCalled()
+        expect(proposals.confirm).toHaveBeenCalledWith("ws-1", "agent-1", "p1", "member-1", "version-2")
+    })
+
+    it("overtakes a conflict whose rule no graph cites any more, and publishes nothing", async () => {
+        const { service, publishing, proposals } = await build({ conflict: CONFLICT })
+
+        await expect(service.confirm(ACTOR, "agent-1", "p1")).rejects.toEqual(
+            expect.objectContaining({ code: AgentGraphsErrorCode.ProposalNotFound }),
+        )
+
+        expect(proposals.supersede).toHaveBeenCalledWith("ws-1", "agent-1", "p1")
+        expect(publishing.publishConflict).not.toHaveBeenCalled()
+    })
+
+    it("overtakes a conflict whose new rule is gone from the Brain", async () => {
+        const { service, publishing, proposals } = await build({ conflict: CONFLICT, state: CITING, brainValue: null })
+
+        await expect(service.confirm(ACTOR, "agent-1", "p1")).rejects.toBeInstanceOf(AgentGraphsError)
+
+        expect(proposals.supersede).toHaveBeenCalled()
+        expect(publishing.publishConflict).not.toHaveBeenCalled()
     })
 })
 

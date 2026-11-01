@@ -961,8 +961,10 @@ type AgentGraphType {
   cardsJson: String!
   draftJson: String!
   draftRev: Int!
+  factsJson: String!
   gapsJson: String!
   installationId: String!
+  isDraftChanged: Boolean!
   mode: String!
   problemsJson: String!
   proposalsJson: String!

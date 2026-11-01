@@ -23,6 +23,7 @@ import { AgentGraphWatchService } from "./agent-graph-watch.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { GraphFactsService } from "./graph-facts.service"
+import { WorkAmountFactReaderService } from "./work-amount-fact-reader.service"
 
 /** A port the capability binds to one of its services. */
 interface PortBinding {
@@ -41,9 +42,18 @@ const RIGHTS_PORT: PortBinding = { provide: DATA_RIGHTS_GATE, useExisting: Agent
 /** The data rights alone: the store and the gate the gateway enforces. */
 const RIGHTS_ONLY: Part = { services: [AgentGraphsService, AgentDataRightsService], ports: [RIGHTS_PORT] }
 
+/** The reader of the amount of the work item itself, which every app that decides branches carries beside the readers of its modules. */
+const WORK_AMOUNT: Type = WorkAmountFactReaderService
+
 /** The branch decider alone: the store, the ledger, the fact readers and the port the work engine calls. */
 const DECIDER_ONLY: Part = {
-    services: [AgentGraphsService, AgentGraphDecisionsService, GraphFactsService, AgentGraphDeciderService],
+    services: [
+        AgentGraphsService,
+        AgentGraphDecisionsService,
+        GraphFactsService,
+        AgentGraphDeciderService,
+        WORK_AMOUNT,
+    ],
     ports: [{ provide: WORK_BRANCH_DECIDER, useExisting: AgentGraphDeciderService }],
 }
 
@@ -56,6 +66,7 @@ const WHOLE: Part = {
         AgentGraphBriefService,
         AgentDataRightsService,
         GraphFactsService,
+        WORK_AMOUNT,
         AgentGraphContextService,
         AgentGraphSeedService,
         AgentGraphPublishService,
@@ -104,7 +115,7 @@ export class AgentGraphsModule extends ConfigurableModuleClass {
                 {
                     provide: GRAPH_FACT_READERS,
                     useFactory: (...readers: ReadonlyArray<object>) => readers,
-                    inject: [...(options.readers ?? [])],
+                    inject: [...(options.readers ?? []), ...(options.rightsOnly === true ? [] : [WORK_AMOUNT])],
                 },
                 ...part.ports,
             ],

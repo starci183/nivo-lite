@@ -85,15 +85,13 @@ const nodesOfAction = (
     const amountLimited = action.amountLimit && rule?.unit === "vnd" && action.maxMode === null
     if (amountLimited) {
         const targets = { auto: act.key, ask: approve.key, stop: stop.key }
+        const branches = branchesFromRule(rule, factOf(action), targets)
         const decide = nodeOf(`decide:${action.action}`, "evaluate", w("decide"), w("decideDoes"), {
             sources,
-            decide: {
-                intent: action.action,
-                facts: [factOf(action)],
-                branches: branchesFromRule(rule, factOf(action), targets),
-            },
+            decide: { intent: action.action, facts: [factOf(action)], branches },
         })
-        return [decide, approve, act, stop]
+        // A stop nobody goes to is a node no trigger reaches, which publishing refuses: it is drawn only when a branch stops.
+        return [decide, approve, act, ...(branches.some((entry) => entry.next === stop.key) ? [stop] : [])]
     }
     if (rule?.mode === "never") return [stop]
     return runsAlone(rule) && action.maxMode === null ? [act] : [approve, act]

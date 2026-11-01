@@ -411,6 +411,20 @@ export interface GraphVersionView {
     readonly publishedBy: string | null
 }
 
+/** One fact a condition may be written on, in the words of the reader: what the editor offers as a row. */
+export interface FactView {
+    /** The key. */
+    readonly key: string
+    /** The words that name the fact. */
+    readonly label: string
+    /** The type: what operators and values fit it. */
+    readonly type: FactSpec["type"]
+    /** The unit: `vnd` makes it an amount of money. */
+    readonly unit: FactSpec["unit"]
+    /** The values it may hold, for a fact that is one of a few; empty for any. */
+    readonly allowed: ReadonlyArray<string>
+}
+
 /** One proposal as the owner reads it. */
 export interface GraphProposalView {
     /** The id. */
@@ -429,6 +443,10 @@ export interface GraphProposalView {
     readonly evidence: ReadonlyArray<string>
     /** The created at. */
     readonly createdAt: string
+    /** For a conflict: the passage the graph follows now, so the owner reads the two side by side; null for the other kinds. */
+    readonly before?: string | null | undefined
+    /** For a conflict: the passage the Brain says now; null for the other kinds. */
+    readonly after?: string | null | undefined
 }
 
 /** The graph of one agent as the editor opens it. */
@@ -443,6 +461,8 @@ export interface AgentGraphView {
     readonly draft: GraphDocument
     /** The draft rev. */
     readonly draftRev: number
+    /** True when the draft differs from the version that decides: there is something to publish. */
+    readonly isDraftChanged: boolean
     /** The active version id. */
     readonly activeVersionId: string | null
     /** The gaps. */
@@ -453,6 +473,8 @@ export interface AgentGraphView {
     readonly cards: ReadonlyArray<GraphNodeCard>
     /** The proposals still waiting for a person. */
     readonly proposals: ReadonlyArray<GraphProposalView>
+    /** The facts a condition may be written on. */
+    readonly facts: ReadonlyArray<FactView>
 }
 
 /** Looks a sentence of the message catalog up in the language of the reader, so a policy stays pure and holds no wording. */
