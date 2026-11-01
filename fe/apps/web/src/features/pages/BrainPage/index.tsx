@@ -69,7 +69,7 @@ const addOf = (
     }
     const idea = DOCUMENT_IDEAS.find((one) => one.key === add)
     if (idea === undefined) return { isAddOpen: true, addKey: "base", addPreset: null }
-    const preset: AddPresetView = { topic: knowledge(`suggest_${idea.key}_topic`), visibility: idea.visibility }
+    const preset: AddPresetView = { topic: knowledge(`suggest_${idea.key}_topic`) }
     return { isAddOpen: true, addKey: add, addPreset: preset }
 }
 

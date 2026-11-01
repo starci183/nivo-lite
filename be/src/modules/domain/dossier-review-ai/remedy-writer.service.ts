@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { RemedyRequest, RemedyWriter } from "@modules/domain/dossier-review"
 import { UsageMeterService } from "@modules/domain/knowledge"
 import { InjectAi } from "@modules/integrations/ai"
-import type { AiService } from "@modules/integrations/ai"
+import type { AiBudget, AiService } from "@modules/integrations/ai"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { OptionalRemedy } from "./dossier-review-ai.contracts"
@@ -13,6 +13,9 @@ import { REMEDY_SYSTEM_PROMPT, remedyPrompt } from "./remedy-prompt.policy"
 
 /** How long the model may take to write one document. */
 const DRAFT_TIMEOUT_MS = 90_000
+
+/** What one draft may spend: reasoning off and at most this many completion tokens (a body is at most 40,000 characters, about 14,000 tokens). */
+const DRAFT_BUDGET: AiBudget = { effort: "off", maxTokens: 16_000 }
 
 @Injectable()
 /**
@@ -33,6 +36,7 @@ export class RemedyWriterService extends ModelCallPolicy implements RemedyWriter
             schema: REMEDY_SCHEMA,
             timeoutMs: DRAFT_TIMEOUT_MS,
             purpose: "remedy",
+            budget: DRAFT_BUDGET,
         })
         return call === null ? null : toRemedyText(call.value, call.model)
     }

@@ -87,17 +87,53 @@ describe("DossierReviewRunsService requestForSource", () => {
         expect(sources.sourceOf).toHaveBeenCalledWith(WS, "s1")
         expect(inputs.all).not.toHaveBeenCalled()
     })
+})
 
-    it("asks nothing for a document that names no dossier of its category", async () => {
-        const { service, sources, inputs, queue } = await build(mockEntityManager())
+describe("DossierReviewRunsService requestForSource filing", () => {
+    it("reviews a document no dossier claims on its own, with a run of the whole set", async () => {
+        const { tx, inserts } = freshRun(runOf({ scope: "workspace", dossierId: null }))
+        const { service, sources, inputs, queue } = await build(tx.em)
         inputs.all.mockResolvedValue([dossierOf()])
-        sources.sourceOf.mockResolvedValueOnce(sourceOf({ topic: null }))
-        sources.sourceOf.mockResolvedValueOnce(sourceOf({ topic: "OTHER" }))
+        inputs.dossierOf.mockResolvedValue(undefined)
+        sources.sourceOf.mockResolvedValue(sourceOf({ topic: "OTHER", title: "Loose notes" }))
 
         await service.requestForSource(WS, "s1")
+
+        expect(sources.fileUnder).not.toHaveBeenCalled()
+        expect(inserts[0]?.callsOf("values")).toEqual([
+            [expect.objectContaining({ scope: "workspace", dossierId: null, trigger: "document", triggerRef: "s1" })],
+        ])
+        expect(queue.enqueueDossierReview).toHaveBeenCalledTimes(1)
+    })
+
+    it("files a document under the dossier its content points to, marks it, and reviews that dossier", async () => {
+        const { tx, inserts } = freshRun(runOf())
+        const { service, sources, inputs, queue } = await build(tx.em)
+        inputs.all.mockResolvedValue([dossierOf()])
+        inputs.dossierOf.mockResolvedValue(dossierOf())
+        sources.sourceOf.mockResolvedValue(
+            sourceOf({ topic: null, title: "Business registration", tags: ["keep", "dossier:9"] }),
+        )
+
         await service.requestForSource(WS, "s1")
 
-        expect(queue.enqueueDossierReview).not.toHaveBeenCalled()
+        expect(sources.fileUnder).toHaveBeenCalledWith(WS, "s1", "LEGAL FILES", ["keep", "dossier:1", "dossier:auto"])
+        expect(inserts[0]?.callsOf("values")).toEqual([
+            [expect.objectContaining({ scope: "dossier", dossierId: "d1" })],
+        ])
+        expect(queue.enqueueDossierReview).toHaveBeenCalledTimes(1)
+    })
+
+    it("keeps the owner's own filing: a document its number and category already name is not moved", async () => {
+        const { tx } = freshRun(runOf())
+        const { service, sources, inputs } = await build(tx.em)
+        inputs.all.mockResolvedValue([dossierOf()])
+        sources.sourceOf.mockResolvedValue(sourceOf({ topic: "legal files" }))
+
+        await service.requestForSource(WS, "s1")
+
+        expect(inputs.dossierOf).not.toHaveBeenCalled()
+        expect(sources.fileUnder).not.toHaveBeenCalled()
     })
 
     it("queues one run of the dossier with its job in one transaction", async () => {

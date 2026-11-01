@@ -41,7 +41,9 @@ const submitLabelOf = (t: Translate, add: ReturnType<typeof useAddDocuments>): s
 /** The line under the files and links that says what is missing or what is happening. */
 const filesNoteOf = (t: Translate, add: ReturnType<typeof useAddDocuments>): string | undefined => {
     if (add.queue.isReading) return t("zipReading")
-    return add.note.tried && add.mode === "files" && add.pendingCount === 0 ? t("hintNoDocs") : undefined
+    if (!add.note.tried) return undefined
+    if (add.mode === "files" && add.pendingCount === 0) return t("hintNoDocs")
+    return add.options.visibility === null ? t("hintChooseVisibility") : undefined
 }
 
 /** The notice that says the uploads of an earlier page stopped when it reloaded. */
@@ -129,12 +131,15 @@ const buildOptionsView = (
         ],
     }) as const
 
+/** The words under the choice of who may read: what each choice means, or that one is still to be made. */
+const VISIBILITY_NOTE_KEY = { none: "visChooseNote", public: "visPublicNote", internal: "visInternalNote" } as const
+
 /** Builds the choice of who may read what is added, with what each choice means for the answers. */
 const buildVisibilityView = (t: Translate, options: ReturnType<typeof useAddDocuments>["options"]) =>
     ({
         label: t("fieldVisibility"),
-        consequence: t(options.visibility === "public" ? "visPublicNote" : "visInternalNote"),
-        value: options.visibility,
+        consequence: t(VISIBILITY_NOTE_KEY[options.visibility ?? "none"]),
+        value: options.visibility ?? "",
         options: [
             { id: "public", label: t("visPublic") },
             { id: "internal", label: t("visInternal") },

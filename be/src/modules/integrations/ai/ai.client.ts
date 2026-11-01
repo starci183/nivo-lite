@@ -11,6 +11,7 @@ import { InjectHttpClient } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
 import type {
     ChainReply,
+    AiBudget,
     AiChatRequest,
     AiEmbedRequest,
     AiFetch,
@@ -44,6 +45,14 @@ class PassageRetriever extends BaseRetriever {
 
 const titleOf = (metadata: Record<string, unknown>): string | null =>
     typeof metadata.title === "string" ? metadata.title : null
+
+/** The value of `maxTokens` that leaves the cap to the provider (the client leaves `max_tokens` out of the body for it). */
+const NO_TOKEN_CAP = -1
+
+/** The `reasoning` field a budget adds to the chat body: the model's reasoning switched off, or asked for at an effort. */
+const reasoningFieldOf = (budget: AiBudget): Readonly<Record<string, unknown>> => ({
+    reasoning: budget.effort === "off" ? { enabled: false } : { effort: budget.effort },
+})
 
 const urlOf = (input: string | URL | Request): string => {
     if (typeof input === "string") return input
@@ -114,6 +123,8 @@ export class AiClient implements AiRunner {
             temperature: 0,
             maxRetries: 0,
             timeout: request.timeoutMs,
+            maxTokens: request.budget?.maxTokens ?? NO_TOKEN_CAP,
+            modelKwargs: request.budget === undefined ? {} : reasoningFieldOf(request.budget),
             configuration: { baseURL: this.endpoint.gatewayUrl, fetch: this.fetcher(request.timeoutMs) },
         })
         if (!request.json) return model

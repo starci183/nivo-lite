@@ -13,6 +13,7 @@ import {
     sizeLabelOf,
     statusCountsOf,
     useBrainDossiers,
+    useChecklistImport,
     useBrainPageHeader,
     useDossierReviewCommands,
     useDossierReviewSummary,
@@ -130,6 +131,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
     const header = useBrainPageHeader("dossiers", props.header)
     const summary = useDossierReviewSummary()
     const commands = useDossierReviewCommands()
+    const checklist = useChecklistImport(reload, member.canWrite)
     const [picked, setPicked] = useState<string | undefined>(undefined)
     const [isCategoriesOpen, setCategoriesOpen] = useState(false)
     const context: RowContext = { t, review, reviewOf: summary.reviewOf, openId: props.dossier }
@@ -163,6 +165,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
                           runningLabel: review("reviewRunning"),
                       }
                     : null,
+                checklistImport: checklist.view,
                 hasDetail: props.dossier !== undefined,
                 detailLabel: review("detailLabel"),
                 detailCloseLabel: review("detailClose"),
@@ -187,6 +190,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
                 retry: reload,
                 categoriesOpenChange: setCategoriesOpen,
                 reviewAll: () => void commands.requestReview(null),
+                ...checklist.on,
                 closeDetail: () => router.replace(brainTabHref("dossiers")),
             }}
         />

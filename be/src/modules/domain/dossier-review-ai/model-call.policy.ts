@@ -1,5 +1,5 @@
 import type { UsageMeterService } from "@modules/domain/knowledge"
-import type { AiChatAnswer, AiService } from "@modules/integrations/ai"
+import type { AiBudget, AiChatAnswer, AiService } from "@modules/integrations/ai"
 import type { Logger } from "@modules/platform/logging"
 import type { OptionalCallResult } from "./dossier-review-ai.contracts"
 import { DossierReviewAiLogEvent } from "./dossier-review-ai.log-events"
@@ -19,6 +19,8 @@ export interface ModelCallParams<T> {
     readonly timeoutMs: number
     /** What the call is for, for the log. */
     readonly purpose: string
+    /** What the model may spend on it: the reasoning effort and the most tokens it may write. */
+    readonly budget: AiBudget
 }
 
 /** What one call of the model made: the model, the tokens, and the answer when it fit the schema. */
@@ -77,6 +79,7 @@ export abstract class ModelCallPolicy {
             json: true,
             schema: params.schema,
             timeoutMs: params.timeoutMs,
+            budget: params.budget,
             context: null,
         })
         if (answer === null) return null

@@ -1,7 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import { ArrayContains, IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
+import type { DossierEntry } from "@modules/domain/brain-dossiers"
 import { DossierSourcesService } from "@modules/domain/knowledge-sources"
+import type { DossierSource } from "@modules/domain/knowledge-sources"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -9,7 +11,7 @@ import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
 import { eachInOrder } from "@modules/platform/primitives"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
-import { refOfSource } from "./document-state.policy"
+import { foldText, refOfSource } from "./document-state.policy"
 import type { OptionalText, ReviewDossierId, ReviewRunRecord } from "./dossier-review.contracts"
 import { DossierReviewError, DossierReviewErrorCode } from "./errors/dossier-review.error"
 import { toRunRecord } from "./finding-record.mapper"
@@ -18,6 +20,10 @@ import { ReviewInputsService } from "./review-inputs.service"
 
 /** Who may ask for a review. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
+
+/** The prefix of the tag that files a document under a dossier, and the mark that says the review chose the dossier. */
+const DOSSIER_TAG_PREFIX = "dossier:"
+const AUTO_FILED_TAG = "dossier:auto"
 
 /** The most dossiers a deleted document re-checks. */
 const GONE_MAX = 500
@@ -43,22 +49,40 @@ export class DossierReviewRunsService {
         private readonly queue: KnowledgeQueue,
     ) {}
 
-    /** The facts of a document were read (or given up): its dossier is reviewed; a document that names no dossier asks nothing. */
+    /** The facts of a document were read (or given up): its dossier is reviewed; a document no dossier claims is reviewed on its own with the rest of the workspace. */
     async requestForSource(workspaceId: string, sourceId: string): Promise<void> {
         const source = await this.sources.sourceOf(workspaceId, sourceId)
         if (source === null) return
-        const ref = refOfSource(source)
-        const dossier = (await this.inputs.all(workspaceId)).find(
-            (item) => item.ref === ref && item.category.normalize("NFC") === source.topic?.normalize("NFC"),
-        )
-        if (dossier === undefined) return
+        const dossier = await this.dossierFiled(workspaceId, source)
         await this.enqueue({
             workspaceId,
-            dossierId: dossier.id,
+            dossierId: dossier?.id ?? null,
             trigger: "document",
             triggerRef: sourceId,
             requestedBy: null,
         })
+    }
+
+    /**
+     * The dossier a document files under: the one its number and category name, else the one its title, category and text point to, which
+     * is then written on the document (a `dossier:<ref>` tag and the category as topic, plus the `dossier:auto` mark) so the owner can see
+     * it and move the document by changing the tag. Undefined when no dossier clearly leads.
+     */
+    private async dossierFiled(workspaceId: string, source: DossierSource): Promise<DossierEntry | undefined> {
+        const ref = refOfSource(source)
+        const named = (await this.inputs.all(workspaceId)).find(
+            (item) => item.ref === ref && foldText(item.category) === foldText(source.topic ?? ""),
+        )
+        if (named !== undefined) return named
+        const bound = await this.inputs.dossierOf(workspaceId, source)
+        if (bound === undefined) return undefined
+        const kept = source.tags.filter((tag) => !tag.startsWith(DOSSIER_TAG_PREFIX))
+        await this.sources.fileUnder(workspaceId, source.id, bound.category, [
+            ...kept,
+            `${DOSSIER_TAG_PREFIX}${bound.ref}`,
+            AUTO_FILED_TAG,
+        ])
+        return bound
     }
 
     /** A document was deleted: every dossier with a finding citing it is reviewed again, and the dossier its title named. */

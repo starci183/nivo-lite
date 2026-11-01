@@ -8,10 +8,9 @@ import type { DocumentVisibility } from "@/modules/types"
 /** The module value of the "For" select: a type, or one instance of a type. */
 const INSTANCE_PREFIX = "inst:"
 
-/** Opens the drawer with a topic (and visibility, tags) already chosen: on "Write" for a suggestion, on the files for a dossier. */
+/** Opens the drawer with a topic (and tags) already chosen: on "Write" for a suggestion, on the files for a dossier. */
 export interface AddPreset {
     readonly topic: string
-    readonly visibility?: DocumentVisibility
     /** Comma-separated tags the batch carries, e.g. the one that files a document under a dossier. */
     readonly tags?: string
     /** The mode the drawer opens on; "write" when absent. */
@@ -22,7 +21,8 @@ export interface AddPreset {
 interface Options {
     readonly topic: string
     readonly tags: string
-    readonly visibility: DocumentVisibility
+    /** Who may read: null until the person chooses; nothing is added before then. */
+    readonly visibility: DocumentVisibility | null
     readonly module: AgentModule | "all"
     readonly instanceId: string | null
 }
@@ -44,7 +44,7 @@ export const useBatchOptions = (preset: AddPreset | null, instances: ReadonlyArr
     const [options, setOptions] = useState<Options>({
         topic: preset?.topic ?? "",
         tags: preset?.tags ?? "",
-        visibility: preset?.visibility ?? "public",
+        visibility: null,
         module: "all",
         instanceId: null,
     })
@@ -70,7 +70,8 @@ export const useBatchOptions = (preset: AddPreset | null, instances: ReadonlyArr
                 .split(",")
                 .map((tag) => tag.trim())
                 .filter(Boolean),
-            visibility: options.visibility,
+            // Only reached once a choice is made (the drawer refuses to send before); the unchosen fallback never widens the audience.
+            visibility: options.visibility ?? "internal",
             module: options.module === "all" ? null : options.module,
             installationId: options.instanceId,
         }),
