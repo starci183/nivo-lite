@@ -1,4 +1,5 @@
 import type { AgentWorkGoalView, AgentWorkPreset, AgentWorkTaskView, AgentWorkTriggerView } from "@/modules/types"
+import { maskPhones } from "@/modules/utils"
 import { presetOf, relative, workItemHrefOf } from "./agentWork.wire"
 import type { AgentWorkContext, AgentWorkTranslator, GoalWire, TaskWire, TriggerWire } from "./agentWork.wire"
 
@@ -53,8 +54,8 @@ export const toGoalView = (wire: GoalWire, context: AgentWorkContext): AgentWork
     const due = relative(context, wire.dueAt)
     return {
         id: wire.id,
-        title: wire.title,
-        detail: wire.detail,
+        title: maskPhones(wire.title),
+        detail: maskPhones(wire.detail),
         statusLabel: goalStatusLabel(context.t, wire.status),
         dueLabel: due === "" ? "" : context.t("goalDue", { when: due }),
         isOpen: wire.status === "active" || wire.status === "paused",
@@ -81,8 +82,8 @@ const waitLabelOf = (wire: TaskWire, context: AgentWorkContext): string => {
 /** One task in words, with what it waits for and the way to its work item. */
 export const toTaskView = (wire: TaskWire, context: AgentWorkContext): AgentWorkTaskView => ({
     id: wire.id,
-    title: wire.title,
-    detail: wire.detail,
+    title: maskPhones(wire.title),
+    detail: maskPhones(wire.detail),
     statusLabel: wire.status === "waiting" ? context.t("taskWaiting") : context.t("taskOpen"),
     waitLabel: waitLabelOf(wire, context),
     workItemHref: workItemHrefOf(context, wire.workItemId),

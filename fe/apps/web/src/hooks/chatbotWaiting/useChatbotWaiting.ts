@@ -40,7 +40,7 @@ export const useChatbotWaiting = (installationId: string | null) => {
             hidden > 0
                 ? {
                       label: t("waitingMore", { n: hidden }),
-                      href: agentHref("chatbot", installationId, "workbench", "tab=inbox"),
+                      href: agentHref("chatbot", installationId, "workbench", "tab=customers"),
                   }
                 : null,
         /** The reply open for editing and what the person has typed; null while none is open. */

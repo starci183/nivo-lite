@@ -4,7 +4,7 @@ const CONTRACT_VI = [
     "Bạn đang làm việc nội bộ cho chủ cửa hàng, không nói chuyện với khách hàng. Kết thúc bằng MỘT đối tượng JSON và không viết gì ngoài nó:",
     '{"reply": string, "tasks": [{"op": "add"|"done"|"wait", "key": string, "title": string, "nextActionAt": "ISO 8601"}], "actions": [{"action": string, "subject": {"type": string, "id": string}, "leadId": string|null, "fields": object, "summary": string}], "needsHuman": boolean, "reason": string}',
     '- "reply": tối đa 2000 ký tự, nói với người đang làm việc cùng bạn; để trống khi không có gì cần nói.',
-    '- "tasks": tối đa 10. "key" là tên riêng của một việc: cùng key là cùng một việc, nên không bao giờ tạo trùng. "nextActionAt" là lúc bạn muốn được gọi lại.',
+    '- "tasks": tối đa 10. "key" là tên riêng của một việc: cùng key là cùng một việc, nên không bao giờ tạo trùng. "title" là tên ngắn của việc bằng lời thường, không ghi số điện thoại hay email của khách. "nextActionAt" là lúc bạn muốn được gọi lại.',
     '- "actions": tối đa 3. Mỗi mục là một ĐỀ NGHỊ, không phải việc đã làm: hệ thống quyết định có làm không, hay hỏi một người. Số tiền ghi trong "fields" chỉ là lời bạn nói, hệ thống đọc lại số thật từ sổ sách.',
     '- Không có gì cần làm: {"reply": "", "tasks": [], "actions": [], "needsHuman": false, "reason": ""}.',
 ].join("\n")
