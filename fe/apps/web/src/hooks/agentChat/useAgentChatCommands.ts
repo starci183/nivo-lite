@@ -1,10 +1,15 @@
 "use client"
 
+import type { useChatFile } from "@/hooks/chatFile"
 import type { useGraphQLWithToast } from "@/modules/toast"
 import { useState } from "react"
 import type { useTranslations } from "next-intl"
 import type { useAgentChatMessageForm, useAgentChatVisitorForm } from "@/hooks/rhf"
-import type { useMutateSendAgentChatMessageSwr, useMutateStartAgentChatConversationSwr } from "@/hooks/swr"
+import type {
+    useMutateRequestAgentChatFileUploadSwr,
+    useMutateSendAgentChatMessageSwr,
+    useMutateStartAgentChatConversationSwr,
+} from "@/hooks/swr"
 import type { AgentChatActionTarget, PendingTurn } from "./useAgentChatActions"
 
 /** A single-flight lock: acquire answers false while another command holds it. */
@@ -41,6 +46,8 @@ const createAgentChatActionsActions = ({
     workspaceId,
     sendMutation,
     setPending,
+    uploadMutation,
+    file,
 }: AgentChatCommandInput) => {
     const open = async (): Promise<string | undefined> => {
         if (target.agent === undefined) return undefined
@@ -81,14 +88,31 @@ const createAgentChatActionsActions = ({
         setTurnError(null)
         try {
             await message.handleSubmit(async ({ body }) => {
+                if (body === "" && file.file === null) {
+                    message.setError("body", { message: t("emptyMessage") })
+                    return
+                }
                 const conversationId = target.selectedId ?? (await open())
                 if (conversationId === undefined) return
-                const queued = await runGraphQL(() => sendMutation.trigger({ conversationId, body }), {
+                const sentFile = await file.upload((chosen) =>
+                    runGraphQL(
+                        () =>
+                            uploadMutation.trigger({
+                                conversationId,
+                                contentType: chosen.type,
+                                sizeBytes: chosen.size,
+                            }),
+                        { showSuccessToast: false },
+                    ),
+                )
+                if (sentFile === undefined) return
+                const queued = await runGraphQL(() => sendMutation.trigger({ conversationId, body, file: sentFile }), {
                     successMessage: t("messageQueued"),
                 })
                 if (queued === undefined) return
                 if (message.getValues("body").trim() === body) message.reset()
                 else message.clearErrors()
+                file.clear()
                 setPending({ workspaceId, id: queued.id, conversationId, delivery: target.isTakenOver })
                 await refresh(conversationId)
             })()
@@ -115,6 +139,8 @@ export const useAgentChatCommands = (input: AgentChatCommandsInput) => {
         workspaceId,
         sendMutation,
         setPending,
+        uploadMutation,
+        file,
     } = input
 
     const [lock] = useState(createCommandLock)
@@ -133,6 +159,8 @@ export const useAgentChatCommands = (input: AgentChatCommandsInput) => {
         workspaceId,
         sendMutation,
         setPending,
+        uploadMutation,
+        file,
     })
 }
 
@@ -157,4 +185,7 @@ interface AgentChatCommandsInput {
     readonly workspaceId: string | undefined
     readonly sendMutation: ReturnType<typeof useMutateSendAgentChatMessageSwr>
     readonly setPending: import("react").Dispatch<import("react").SetStateAction<PendingTurn | undefined>>
+    readonly uploadMutation: ReturnType<typeof useMutateRequestAgentChatFileUploadSwr>
+    /** The file that goes with the next message. */
+    readonly file: ReturnType<typeof useChatFile>
 }

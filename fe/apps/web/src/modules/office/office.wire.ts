@@ -12,6 +12,7 @@ interface MessageWire {
     readonly author_name: string
     readonly author_user_id?: string | null
     readonly body: string
+    readonly files: OfficeMessage["files"]
     readonly created_at: string
     readonly agent_id?: string | null
     readonly lead_id?: string | null
@@ -28,6 +29,7 @@ export const toOfficeMessage = (row: MessageWire): OfficeMessage => ({
     authorName: row.author_name,
     authorUserId: row.author_user_id ?? null,
     body: row.body,
+    files: row.files,
     createdAt: row.created_at,
     agentId: row.agent_id ?? null,
     leadId: row.lead_id ?? null,

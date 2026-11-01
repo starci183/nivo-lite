@@ -2,6 +2,7 @@
 
 import { CONSOLE_ROUTES, agentSetupHref, leadFlowHref } from "@/modules/routes"
 import { useTranslations } from "next-intl"
+import { CHAT_FILE_ACCEPT } from "@/hooks/chatFile"
 import type { useAgentChat } from "./useAgentChat"
 
 /** The prompts offered to the owner of a chat with a customer channel, and to one without. */
@@ -80,7 +81,14 @@ export const useAgentChatCopy = (chat: AgentChatState) => {
             draft: chat.draft,
             isSending: chat.isSending,
             isSkeleton: isLoading,
-            canSend: chat.draft.trim().length > 0 && !chat.isSending && !isLoading,
+            canSend: (chat.draft.trim().length > 0 || chat.file !== null) && !chat.isSending && !isLoading,
+            file: {
+                label: t("attachFile"),
+                removeLabel: t("removeFile"),
+                accept: CHAT_FILE_ACCEPT,
+                name: chat.file?.name ?? null,
+                isHidden: chat.isTakenOver,
+            },
             error: error ? { title: t(isLoading ? "loadingFailed" : "notSent"), text: error } : null,
             prompts: !isCustomer && chat.hasSelection ? prompts : [],
         },

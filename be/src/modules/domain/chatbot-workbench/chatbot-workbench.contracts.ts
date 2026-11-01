@@ -1,3 +1,4 @@
+import type { ChatFileView } from "@modules/domain/chat-files"
 import type { GapRecord } from "@modules/domain/knowledge-gaps"
 
 /** The channel a customer wrote from. */
@@ -27,6 +28,8 @@ export interface ChatbotMessage {
     readonly delivery: ChatbotDelivery
     /** Why a push failed (a stable code, e.g. zalo_window_expired). */
     readonly deliveryError: string | null
+    /** The files that came with the message. */
+    readonly files: ReadonlyArray<ChatFileView>
 }
 
 /** The customer record behind a conversation, as the list shows it: where the deal stands and what the customer needs. */

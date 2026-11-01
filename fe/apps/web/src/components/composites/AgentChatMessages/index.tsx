@@ -2,6 +2,8 @@ import { nivoIconSource } from "@/components/leaves/Icon"
 import type { ModuleIconName } from "@/modules/types"
 import { ChatBubble, ChatBubbleSkeletons, Text } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
+import { ChatMessageFiles } from "@/components/leaves/ChatMessageFiles"
+import type { ChatMessageFile } from "@/components/leaves/ChatMessageFiles"
 import { NOTICE_ROW_CLASS_NAME } from "./classNames"
 
 /** One resolved message row. */
@@ -10,6 +12,7 @@ interface AgentChatMessageRow {
     readonly role: "user" | "agent" | "system"
     readonly body: string
     readonly timeLabel: string
+    readonly files: ReadonlyArray<ChatMessageFile>
 }
 
 /** The messages of the open conversation and the words around them. */
@@ -64,6 +67,7 @@ export const AgentChatMessages = (props: AgentChatMessagesProps) => {
                             )
                         }
                         meta={message.timeLabel}
+                        footer={message.files.length === 0 ? undefined : <ChatMessageFiles files={message.files} />}
                     >
                         {message.body}
                     </ChatBubble>

@@ -71,6 +71,19 @@ export interface OfficeThreadProps {
 }
 
 /** What the pinned composer draws. */
+/** The file control of the Office composer. */
+export interface OfficeComposerFile {
+    /** The chosen file, or null. */
+    readonly file: File | null
+    /** The word key of why the chosen file cannot go, or null. */
+    readonly problem: string | null
+    /** The types the picker offers. */
+    readonly accept: string
+    readonly choose: (file: File) => void
+    readonly clear: () => void
+}
+
+/** What the composer draws and reports. */
 export interface OfficeComposerProps {
     readonly props: {
         readonly draft: string
@@ -81,6 +94,8 @@ export interface OfficeComposerProps {
         readonly isSkeleton: boolean
         /** Changes whenever the composer should take focus (a mention was added from outside). */
         readonly focusKey: number
+        /** The file that goes with the line. */
+        readonly file: OfficeComposerFile
         readonly text: OfficeText
     }
     readonly on: {

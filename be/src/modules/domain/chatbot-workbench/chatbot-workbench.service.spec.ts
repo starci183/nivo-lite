@@ -1,3 +1,5 @@
+import { ChatFilesService } from "@modules/domain/chat-files"
+import { NO_CHAT_FILES } from "@tests/fixtures/builders/chat-files.builder"
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { AgentConversationsErrorCode, AgentConversationsReadService } from "@modules/domain/agent-conversations"
@@ -82,6 +84,7 @@ const build = async (facts: Partial<Facts> = {}) => {
             { provide: AgentDirectoryService, useValue: agentDirectory },
             { provide: AgentConversationsReadService, useValue: conversationReads },
             { provide: AgentMessagesReadService, useValue: messageReads },
+            { provide: ChatFilesService, useValue: mock<ChatFilesService>(NO_CHAT_FILES) },
             { provide: CLOCK, useValue: clock },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: KnowledgeGapsService, useValue: knowledgeGaps },
@@ -182,6 +185,7 @@ const EXPECTED_THREAD = {
             createdAt: "2026-10-13T01:00:00.000Z",
             delivery: null,
             deliveryError: null,
+            files: [],
         },
         {
             id: "m-2",
@@ -192,6 +196,7 @@ const EXPECTED_THREAD = {
             createdAt: "2026-10-13T01:02:00.000Z",
             delivery: "sent",
             deliveryError: null,
+            files: [],
         },
     ],
     lead: {

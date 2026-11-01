@@ -1,6 +1,26 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql"
 
 @ObjectType()
+/** A file of a line, with a short-lived address. */
+export class OfficeMessageFileType {
+    /** The id value. */
+    @Field(() => ID)
+    id!: string
+
+    /** The name value. */
+    @Field()
+    name!: string
+
+    /** The content type value. */
+    @Field()
+    contentType!: string
+
+    /** The url value. */
+    @Field()
+    url!: string
+}
+
+@ObjectType()
 /** One line of the Office thread. */
 export class OfficeMessageType {
     /** The message id. */
@@ -62,4 +82,8 @@ export class OfficeMessageType {
     /** When it was posted, ISO 8601. */
     @Field()
     created_at!: string
+
+    /** The files that came with the line. */
+    @Field(() => [OfficeMessageFileType])
+    files!: ReadonlyArray<OfficeMessageFileType>
 }

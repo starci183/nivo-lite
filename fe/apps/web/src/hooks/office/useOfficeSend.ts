@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { useMutatePostOfficeMessageSwr } from "@/hooks/swr"
+import { CHAT_FILE_ACCEPT, useChatFile } from "@/hooks/chatFile"
+import { useMutatePostOfficeMessageSwr, useMutateRequestOfficeFileUploadSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { bodyPartsOf } from "@/modules/office"
 import type { OfficeOutboxView } from "@/modules/types"
@@ -39,6 +40,8 @@ interface OutboxRow {
 export const useOfficeSend = (knownIds: ReadonlySet<string>) => {
     const runGraphQL = useGraphQLWithToast()
     const post = useMutatePostOfficeMessageSwr()
+    const uploadAddress = useMutateRequestOfficeFileUploadSwr()
+    const file = useChatFile()
     const [outbox, setOutbox] = useState<ReadonlyArray<OutboxRow>>([])
     const [typing, setTyping] = useState<string | null>(null)
     const [reading, setReading] = useState<ReadingAgent | null>(null)
@@ -53,9 +56,17 @@ export const useOfficeSend = (knownIds: ReadonlySet<string>) => {
             ])
             setTyping(plan.callNames.length > 0 ? plan.callNames.join(", ") : null)
             setReading(plan.reading)
-            const posted = await runGraphQL(() => post.trigger({ body: plan.body, room: plan.room }), {
-                showSuccessToast: false,
-            })
+            const sentFile = await file.upload((chosen) =>
+                runGraphQL(() => uploadAddress.trigger({ contentType: chosen.type, sizeBytes: chosen.size }), {
+                    showSuccessToast: false,
+                }),
+            )
+            const posted =
+                sentFile === undefined
+                    ? undefined
+                    : await runGraphQL(() => post.trigger({ body: plan.body, room: plan.room, file: sentFile }), {
+                          showSuccessToast: false,
+                      })
             if (posted === undefined) {
                 setOutbox((current) => current.map((row) => (row.id === id ? { ...row, isFailed: true } : row)))
                 setTyping(null)
@@ -63,12 +74,13 @@ export const useOfficeSend = (knownIds: ReadonlySet<string>) => {
                 return false
             }
             setOutbox((current) => current.map((row) => (row.id === id ? { ...row, postedId: posted.id } : row)))
+            file.clear()
             await refreshOffice()
             setTyping(null)
             setReading(null)
             return true
         },
-        [runGraphQL, post, isSettled],
+        [runGraphQL, post, isSettled, file, uploadAddress],
     )
 
     const dismissFailed = useCallback(() => setOutbox((current) => current.filter((row) => !row.isFailed)), [])
@@ -79,5 +91,13 @@ export const useOfficeSend = (knownIds: ReadonlySet<string>) => {
                 .map((row) => ({ id: row.id, parts: bodyPartsOf(row.body), isFailed: row.isFailed })),
         [outbox, isSettled],
     )
-    return { send, dismissFailed, outbox: views, typing, reading, isSending: post.isMutating }
+    return {
+        send,
+        dismissFailed,
+        outbox: views,
+        typing,
+        reading,
+        isSending: post.isMutating || uploadAddress.isMutating,
+        fileControl: { ...file, accept: CHAT_FILE_ACCEPT },
+    }
 }

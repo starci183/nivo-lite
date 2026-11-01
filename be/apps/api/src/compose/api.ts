@@ -16,6 +16,8 @@ import { AgentWorkGraphqlModule } from "@features/api/agent-work"
 import { ChatMarkersGraphqlModule } from "@features/api/chatmarkers"
 import { ChattypingGraphqlModule } from "@features/api/chattyping"
 import { AGENT_CHAT_ERROR_KINDS, AGENT_CHAT_MESSAGES, AgentChatModule } from "@modules/domain/agent-chat"
+import { CHAT_FILES_ERROR_KINDS, CHAT_FILES_MESSAGES, ChatFilesModule } from "@modules/domain/chat-files"
+import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
@@ -53,6 +55,7 @@ export const apiModules = (): Array<DynamicModule> => [
     AgentWorkGraphqlModule.register({}),
     ChatMarkersGraphqlModule.register({}),
     ChattypingGraphqlModule.register({}),
+    ChatFilesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     AgentChatModule.register({ isGlobal: true }),
     KnowledgeGraphqlModule.register({}),
     DossierReviewGraphqlModule.register({}),
@@ -71,7 +74,10 @@ export const apiModules = (): Array<DynamicModule> => [
 ]
 
 /** The error kinds of the capabilities this group registers, in registration order. */
-export const apiErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [AGENT_CHAT_ERROR_KINDS]
+export const apiErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
+    AGENT_CHAT_ERROR_KINDS,
+    CHAT_FILES_ERROR_KINDS,
+]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
-export const apiMessages: ReadonlyArray<MessageBundle> = [AGENT_CHAT_MESSAGES]
+export const apiMessages: ReadonlyArray<MessageBundle> = [AGENT_CHAT_MESSAGES, CHAT_FILES_MESSAGES]

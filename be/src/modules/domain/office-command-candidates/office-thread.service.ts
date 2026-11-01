@@ -1,3 +1,4 @@
+import { ChatFilesService, filesOfMessage } from "@modules/domain/chat-files"
 import { Injectable } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { ExecutionsService } from "@modules/domain/executions"
@@ -49,6 +50,7 @@ export class OfficeThreadService {
         private readonly executions: ExecutionsService,
         private readonly steps: ResponsibilityReadService,
         private readonly agents: AgentDirectoryService,
+        private readonly files: ChatFilesService,
     ) {}
 
     /** One page of the thread, newest first; the cursor of the next, older page rides in the answer. */
@@ -59,7 +61,15 @@ export class OfficeThreadService {
             throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.PageInvalid })
         const size = clampPageSize(query.limit)
         const lines = await this.lines.page(workspaceId, { room: query.room, before, size })
-        return splitPage(await this.viewsOf(workspaceId, lines), size)
+        const files = await this.files.viewsOf(
+            workspaceId,
+            lines.map((line) => line.id),
+        )
+        const views = await this.viewsOf(workspaceId, lines)
+        return splitPage(
+            views.map((view) => ({ ...view, files: filesOfMessage(files, view.id) })),
+            size,
+        )
     }
 
     /** The executions waiting for a human decision, newest first. */

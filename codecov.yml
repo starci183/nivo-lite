@@ -78,6 +78,7 @@ component_management:
         - "be/src/modules/domain/channel-receipts/**"
         - "be/src/modules/domain/channels/**"
         - "be/src/modules/domain/chat-activity/**"
+        - "be/src/modules/domain/chat-files/**"
         - "be/src/modules/domain/chat-markers/**"
         - "be/src/modules/domain/chat-typing/**"
         - "be/src/modules/domain/chatbot-workbench/**"

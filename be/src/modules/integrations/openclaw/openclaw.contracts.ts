@@ -26,6 +26,17 @@ export interface TurnResult {
 }
 
 /** One turn to run on the gateway. */
+/** A picture sent with a turn. */
+export interface TurnAttachment {
+    /** The name of the file. */
+    readonly fileName: string
+    /** The type of the picture. */
+    readonly mimeType: string
+    /** The bytes, in base64. */
+    readonly content: string
+}
+
+/** One turn of an agent on the gateway. */
 export interface TurnRequest {
     /** Decides when an assistant text is final. Default: the JSON contract answer or a message that stopped normally. */
     readonly isFinal?: (text: string) => boolean
@@ -35,6 +46,8 @@ export interface TurnRequest {
     readonly threadKey: string
     /** The text sent to the agent. */
     readonly message: string
+    /** The pictures sent with it; absent sends none. */
+    readonly attachments?: ReadonlyArray<TurnAttachment>
     /** Makes a retried send a no-op on the gateway. */
     readonly idempotencyKey: string
     /** How long the turn may take, ms. */

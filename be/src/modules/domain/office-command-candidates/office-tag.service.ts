@@ -3,6 +3,8 @@ import type { EntityManager } from "typeorm"
 import { AgentWakeService, AgentWorkSettingsService } from "@modules/domain/agent-work"
 import type { AgentWakeContext } from "@modules/domain/agent-work"
 import { AgentDirectoryService, AgentOwnershipService } from "@modules/domain/agents"
+import { ChatFilesService } from "@modules/domain/chat-files"
+import type { ChatFileUpload, ChatFileFacts } from "@modules/domain/chat-files"
 import type { AgentHandleCard } from "@modules/domain/agents"
 import { OfficeLinesService, TeamChatService } from "@modules/domain/messages"
 import type { PostedMessage } from "@modules/domain/messages"
@@ -45,14 +47,19 @@ export class OfficeTagService {
         private readonly ownership: AgentOwnershipService,
         private readonly wakes: AgentWakeService,
         private readonly settings: AgentWorkSettingsService,
+        private readonly files: ChatFilesService,
     ) {}
 
     /** Posts the caller's line in the room, wakes each agent it tags that the caller may ask, and answers the stored line. */
     async post(principalId: string, workspaceId: string, request: OfficeTagRequest): Promise<PostedMessage> {
         const memberId = await this.members.idOf(principalId, workspaceId)
         const verdicts = await this.verdictsOf(workspaceId, memberId, request.body)
+        const scope = { workspaceId, conversationId: null }
+        const file = request.file === null ? null : await this.files.verify(scope, request.file.path, request.file.name)
+        const body = this.files.wordsOf(request.body, request.locale)
         return this.entityManager.transaction(async (tx) => {
-            const posted = await this.chat.postHuman(principalId, workspaceId, request.body, request.room, tx)
+            const posted = await this.chat.postHuman(principalId, workspaceId, body, request.room, tx)
+            if (file !== null) await this.files.attach(scope, file, posted.id, tx)
             await eachInOrder(verdicts, async (verdict) => {
                 const key = this.noteKeyOf(verdict)
                 if (key !== null) await this.note(tx, workspaceId, request, verdict.agent, key)
@@ -69,6 +76,12 @@ export class OfficeTagService {
             })
             return posted
         })
+    }
+
+    /** Issues the address a file of an Office line is uploaded to, to a member of the workspace; the bytes are checked when the line is posted. */
+    async requestFileUpload(principalId: string, workspaceId: string, file: ChatFileFacts): Promise<ChatFileUpload> {
+        await this.members.require(principalId, workspaceId)
+        return this.files.requestUpload({ workspaceId, conversationId: null }, file)
     }
 
     private async verdictsOf(workspaceId: string, memberId: string, body: string): Promise<Array<Verdict>> {

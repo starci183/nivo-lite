@@ -61,7 +61,15 @@ const urlOf = (input: string | URL | Request): string => {
 
 const messageOf = (message: AiMessage): BaseMessage => {
     if (message.role === "system") return new SystemMessage(message.content)
-    return message.role === "assistant" ? new AIMessage(message.content) : new HumanMessage(message.content)
+    if (message.role === "assistant") return new AIMessage(message.content)
+    const images = message.images ?? []
+    if (images.length === 0) return new HumanMessage(message.content)
+    return new HumanMessage({
+        content: [
+            { type: "text", text: message.content },
+            ...images.map((url) => ({ type: "image_url", image_url: { url } })),
+        ],
+    })
 }
 
 @Injectable()

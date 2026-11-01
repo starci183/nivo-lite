@@ -12,6 +12,15 @@ export type ChatbotDelivery = "sent" | "failed" | null
 /** Who wrote a message line. */
 export type ChatbotRole = "user" | "agent" | "system"
 
+/** A file that came with a line. */
+export interface ChatbotMessageFile {
+    readonly id: string
+    readonly name: string
+    readonly contentType: string
+    /** A short-lived read address. */
+    readonly url: string
+}
+
 /** One line of a conversation. */
 export interface ChatbotMessage {
     readonly id: string
@@ -24,6 +33,8 @@ export interface ChatbotMessage {
     readonly delivery: ChatbotDelivery
     /** Why a push failed (a stable code, e.g. zalo_window_expired). */
     readonly deliveryError: string | null
+    /** The files that came with the message. */
+    readonly files: ReadonlyArray<ChatbotMessageFile>
 }
 
 /** One customer conversation as the list shows it. */

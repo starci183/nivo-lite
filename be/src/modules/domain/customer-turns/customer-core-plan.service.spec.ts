@@ -1,3 +1,5 @@
+import { ChatFileReadsService } from "@modules/domain/chat-files"
+import { NO_CHAT_FILE_READS } from "@tests/fixtures/builders/chat-files.builder"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { runtimeInstallationOf, runtimeTurn } from "@tests/fixtures/builders/customer-turn-runtime.builder"
@@ -32,6 +34,7 @@ const build = async ({ installation = runtimeInstallationOf(), intents = "" }: O
             { provide: RuntimeAgentService, useValue: agents },
             { provide: AgentTurnBriefService, useValue: brief },
             { provide: TurnToolAccessService, useValue: access },
+            { provide: ChatFileReadsService, useValue: mock<ChatFileReadsService>(NO_CHAT_FILE_READS) },
         ],
     }).compile()
     return { plans: moduleRef.get(CustomerCorePlanService), runtime, agents, brief, access, logger }
@@ -48,6 +51,7 @@ describe("CustomerCorePlanService.planOf", () => {
             module: "chatbot",
             runtimeAgentId: "ws-chatbot",
             threadKey: "agent:ws-chatbot:c1",
+            attachments: [],
             timeoutMs: 25_000,
         })
         expect(message).toContain("SYSTEM KNOW\n\nINTENTS")

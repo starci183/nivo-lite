@@ -127,6 +127,9 @@ export const viewOf = ({
             }),
         start: actions.start,
         send: actions.send,
+        file: actions.file,
+        chooseFile: actions.chooseFile,
+        clearFile: actions.clearFile,
         toggleTakeover: actions.toggleTakeover,
         changeTab,
         select: (conversationId: string, kind: ChatTab) => {

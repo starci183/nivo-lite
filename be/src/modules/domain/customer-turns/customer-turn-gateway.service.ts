@@ -3,7 +3,7 @@ import type { Installation } from "@modules/domain/agents"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { InjectOpenclawAgentRegistry, InjectOpenclawGateway, threadKeyFor } from "@modules/integrations/openclaw"
-import type { AgentRegistryService, GatewayClient, TurnResult } from "@modules/integrations/openclaw"
+import type { AgentRegistryService, GatewayClient, TurnAttachment, TurnResult } from "@modules/integrations/openclaw"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 
@@ -49,12 +49,14 @@ export class CustomerTurnGatewayService {
         agentId: string,
         message: string,
         timeoutMs: number,
+        attachments: ReadonlyArray<TurnAttachment> = [],
     ): Promise<TurnResult> {
         return this.gateway.runTurn(
             {
                 agentId,
                 threadKey: threadKeyFor(agentId, conversation.id),
                 message,
+                attachments,
                 idempotencyKey: `chat-${turn.messageId}`,
                 timeoutMs,
             },

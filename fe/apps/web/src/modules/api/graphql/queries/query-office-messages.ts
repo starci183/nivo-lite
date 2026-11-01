@@ -18,6 +18,12 @@ const query1: TypedDocumentNode<QueryOfficeMessagesResponse, InputVariables<Quer
                 author_name
                 author_user_id
                 body
+                files {
+                    id
+                    name
+                    contentType
+                    url
+                }
                 card_json
                 card_state
                 created_at

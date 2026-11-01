@@ -15,6 +15,8 @@ import { useEffect, useRef } from "react"
 import type { RefObject } from "react"
 import { ChatbotChips } from "@/components/branches/ChatbotChips"
 import { ChatbotComposer } from "@/components/branches/ChatbotComposer"
+import { ChatMessageFiles } from "@/components/leaves/ChatMessageFiles"
+import type { ChatMessageFile } from "@/components/leaves/ChatMessageFiles"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { HEAD_TEXT_CLASS_NAME, PHONE_ONLY_CLASS_NAME } from "./classNames"
 
@@ -38,6 +40,7 @@ interface ChatbotThreadItem {
     readonly avatarName: string | null
     readonly deliveryText: string | null
     readonly deliveryTone: "accent" | "muted"
+    readonly files: ReadonlyArray<ChatMessageFile>
 }
 
 /** The open conversation: its words, its entries and the composer. */
@@ -161,15 +164,20 @@ const renderChatbotThreadViewEntries = (
                         )
                     }
                     footer={
-                        entry.deliveryText === null ? undefined : (
-                            <Text
-                                size="xs"
-                                weight="medium"
-                                tone={entry.deliveryTone === "accent" ? "accent" : "muted"}
-                                live="polite"
-                            >
-                                {entry.deliveryText}
-                            </Text>
+                        entry.deliveryText === null && entry.files.length === 0 ? undefined : (
+                            <>
+                                {entry.files.length === 0 ? null : <ChatMessageFiles files={entry.files} />}
+                                {entry.deliveryText === null ? null : (
+                                    <Text
+                                        size="xs"
+                                        weight="medium"
+                                        tone={entry.deliveryTone === "accent" ? "accent" : "muted"}
+                                        live="polite"
+                                    >
+                                        {entry.deliveryText}
+                                    </Text>
+                                )}
+                            </>
                         )
                     }
                 >

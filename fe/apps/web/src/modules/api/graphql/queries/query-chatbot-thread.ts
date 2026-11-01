@@ -62,6 +62,12 @@ const query1: Document = gql`
                 delivery
                 deliveryError
                 role
+                files {
+                    id
+                    name
+                    contentType
+                    url
+                }
             }
         }
     }
