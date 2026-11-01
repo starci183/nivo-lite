@@ -4,6 +4,7 @@ import { useFormatter, useTranslations } from "next-intl"
 import { EVIDENCE_TONES } from "@/hooks/sales"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { SalesActivityBase } from "./component"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** The activity surface: routine work done by policy with the evidence behind it. */
 export const SalesActivity = () => {
@@ -21,7 +22,7 @@ export const SalesActivity = () => {
                 emptyBody: t("activityEmptyBody"),
                 rows: (data?.activity ?? []).map((row) => ({
                     id: row.id,
-                    action: g(`action_${row.action}`),
+                    action: actionWordOf(g, row.action),
                     evidenceLabel: t(`evidence_${row.evidenceState}`),
                     evidenceTone: EVIDENCE_TONES[row.evidenceState],
                     when: format.dateTime(new Date(row.at), {

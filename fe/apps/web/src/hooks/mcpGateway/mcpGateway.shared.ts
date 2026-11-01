@@ -1,22 +1,14 @@
 import type { useQueryMcpConnectorsSwr } from "@/hooks/swr"
-import type { useFormatter } from "next-intl"
 import { agentsRowOf } from "@/hooks/mcpGrants"
 import type { McpToolAgentsOf, McpToolAgentsView } from "@/hooks/mcpGrants"
-import { toolTextOf } from "@/modules/mcpGateway/mcpGateway.words"
-import type { McpTranslator } from "@/modules/mcpGateway/mcpGateway.words"
 import type { McpConnectorCommands } from "./useMcpConnectorCommands"
+import { toolNameOf, toolTextOf } from "@/modules/mcpGateway"
+import type { McpBadgeView, McpFormatter, McpTone, McpTranslator } from "@/modules/mcpGateway"
+
+export type { McpBadgeView, McpFormatter, McpTone, McpTranslator } from "@/modules/mcpGateway"
 
 /** One gateway connector as the `mcpConnectors` read answers it. */
 type McpConnectorType = NonNullable<ReturnType<typeof useQueryMcpConnectorsSwr>["data"]>[number]
-
-/** The tones a gateway badge may take. */
-export type McpTone = "success" | "warning" | "accent" | "neutral" | "danger"
-
-/** One badge of a gateway row. */
-export interface McpBadgeView {
-    readonly label: string
-    readonly tone: McpTone
-}
 
 /** One command button of a connector row. */
 interface McpActionView {
@@ -45,9 +37,6 @@ interface McpConnectorRowView {
     readonly actions: ReadonlyArray<McpActionView>
     readonly tools: { readonly label: string; readonly rows: ReadonlyArray<McpToolRowView> }
 }
-
-/** The reader-locale formatter of dates and numbers. */
-export type McpFormatter = ReturnType<typeof useFormatter>
 
 const STATUS_TONE: ReadonlyMap<string, McpTone> = new Map([
     ["active", "success"],
@@ -79,7 +68,7 @@ const toolRowsOf = (
     connector.tools.map((tool) => ({
         ...agentsRowOf(agentsOf(tool.name)),
         id: tool.name,
-        title: toolTextOf(t, "toolName", tool.name, tool.name),
+        title: toolNameOf(t, tool.name, new Set(connector.kind === "native" ? [connector.key] : []), tool.description),
         description: [scopeOf(t, tool.scope), toolTextOf(t, "tool", tool.name, tool.description)]
             .filter(Boolean)
             .join(" · "),

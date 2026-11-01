@@ -6,6 +6,7 @@ import { useLeadBoard } from "@/hooks/leads"
 import { fromField } from "@/modules/authority"
 import type { AppliedRuleView } from "./agentProfile.shared"
 import { useAssignAgentWork } from "./useAssignAgentWork"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** The option that hands no structured work: the agent only reads the request. */
 const NO_TASK = "none"
@@ -36,7 +37,7 @@ export const useAssignComposer = (agentId: string, rules: ReadonlyArray<AppliedR
     const isComplete = text.trim().length > 0 && (!hasTask || leadId !== NO_TASK)
     const actions: ReadonlyArray<Choice> = [
         { id: NO_TASK, label: t("assignTaskNone") },
-        ...rules.map((rule) => ({ id: rule.action, label: g(`action_${rule.action}`) })),
+        ...rules.map((rule) => ({ id: rule.action, label: actionWordOf(g, rule.action) })),
     ]
     const customers: ReadonlyArray<Choice> = [
         { id: NO_TASK, label: t("assignLeadNone") },

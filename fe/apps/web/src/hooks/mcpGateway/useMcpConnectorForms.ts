@@ -5,7 +5,7 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
 import type { useQueryMcpConnectorsSwr } from "@/hooks/swr"
-import type { McpTranslator } from "@/modules/mcpGateway/mcpGateway.words"
+import type { McpTranslator } from "@/modules/mcpGateway"
 
 /** A text field of the register form. */
 export type McpRegisterField = "key" | "name" | "url" | "contractVersion" | "credential"

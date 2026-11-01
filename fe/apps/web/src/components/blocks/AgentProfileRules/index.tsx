@@ -5,6 +5,7 @@ import { useProfileRegion } from "@/hooks/agentProfile"
 import { mapSlot } from "@/hooks/slot"
 import type { AuthorityMode } from "@/hooks/agentProfile"
 import { AgentProfileRulesBase } from "./component"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** The agent whose rules the card lists. */
 type AgentProfileRulesProps = {
@@ -26,7 +27,7 @@ export const AgentProfileRules = (props: AgentProfileRulesProps) => {
                     slot: mapSlot(region.slot, (items) =>
                         items.map((rule) => ({
                             id: rule.action,
-                            title: g.has(`action_${rule.action}`) ? g(`action_${rule.action}`) : rule.action,
+                            title: actionWordOf(g, rule.action),
                             description: rule.note === "" ? t(`ruleHint_${rule.mode}`) : rule.note,
                             mark: null,
                             badges: [{ label: t(`mode_${rule.mode}`), tone: TONE[rule.mode] }],

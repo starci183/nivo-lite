@@ -3,6 +3,7 @@ import type { AccountingQuestionValues, AccountingQuestionCardData, FlowWorkItem
 import type { MutateDecideWorkItemRequest } from "@/modules/api/graphql/mutations/mutation-decide-work-item"
 import { digitsToNumber, moneyOf, accountingStampOf } from "./accounting"
 import type { AccountingFormat, AccountingTranslator } from "./accounting"
+import { actionWordOf } from "@/modules/authority"
 
 /** Sends the changed proposal fields in the generated decision request shape. */
 export const accountingQuestionEdits = (
@@ -108,7 +109,7 @@ export const accountingQuestionDisplay = (params: AccountingQuestionDisplayParam
     }))
     const footer = questionFooterOf(params, isOpen)
     const explanation = questionExplanationOf(item, g)
-    const action = g(`action_${item.action}`)
+    const action = actionWordOf(g, item.action)
     const textOf = (name: string) => String(item.proposal.fields?.[name] ?? "")
     return {
         id: item.id,

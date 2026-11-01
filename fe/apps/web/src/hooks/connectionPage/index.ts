@@ -1,1 +1,1 @@
-export { connectionPageOf, pollUnlessHealthy, readFailureNotice } from "./connectionPage.shared"
+export { connectionPageOf, pollConnectionPage, readFailureNotice } from "./connectionPage.shared"

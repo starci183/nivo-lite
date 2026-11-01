@@ -12,6 +12,7 @@ import {
 import { useAuthorityLimitsForm } from "@/hooks/rhf"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AuthorityLimitsBase, type LimitsView } from "./component"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** The limits section: the note and the required details are edited in a react-hook-form form and saved through the back end. */
 export const AuthorityLimits = () => {
@@ -29,7 +30,9 @@ export const AuthorityLimits = () => {
                 const key = ruleKey(group.department, action)
                 return {
                     key,
-                    label: t("requiredFor", { action: `${g("action_" + action)} · ${g("dept_" + group.department)}` }),
+                    label: t("requiredFor", {
+                        action: `${actionWordOf(g, action)} · ${g("dept_" + group.department)}`,
+                    }),
                     value: drafts[key]?.required ?? [],
                 }
             }),

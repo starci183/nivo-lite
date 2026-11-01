@@ -6,6 +6,8 @@ import type { OfficeAgent, OfficeLead, OfficeStaff } from "./office.types"
 export interface OfficeWords {
     readonly t: OfficeText
     readonly g: OfficeText
+    /** An authority action in words; one the catalog has no words for says a general phrase. */
+    readonly actionWord: (action: string) => string
     readonly time: (iso: string) => string
     readonly day: (iso: string) => string
     readonly stamp: (iso: string) => string
