@@ -66,24 +66,44 @@ const refreshEvent = (): AuthEvent => {
     return heldToken() === undefined ? "SIGNED_IN" : "TOKEN_REFRESHED"
 }
 
-const requestRefresh = async (): Promise<GraphQLResponse<string>> => {
+/** Tries a refresh makes before it gives up on a busy or unreachable back end; only a refusal (401, 403) ever ends the session. */
+const REFRESH_ATTEMPTS = 4
+const RETRY_BASE_MS = 400
+
+const pause = (ms: number): Promise<void> =>
+    new Promise((resolve) => {
+        const timer = setTimeout(() => {
+            clearTimeout(timer)
+            resolve()
+        }, ms)
+    })
+
+/** Whether an answer is a passing failure (too many requests, a server error) that a later attempt can clear. */
+const isTransient = (status: number): boolean => status === 429 || status >= 500
+
+const requestRefresh = async (attempt = 1): Promise<GraphQLResponse<string>> => {
+    const retry = async (): Promise<GraphQLResponse<string>> => {
+        await pause(RETRY_BASE_MS * attempt)
+        return requestRefresh(attempt + 1)
+    }
     try {
         const answer = await refreshDoor()
         if (answer.status < 200 || answer.status >= 300) {
             if (answer.status === 401 || answer.status === 403) clearSession()
+            else if (isTransient(answer.status) && attempt < REFRESH_ATTEMPTS) return retry()
             return failureOfStatus(answer.status, undefined)
         }
         if (!isGrant(answer.body)) return authFailure("unavailable", "grant")
         storeGrant(answer.body, refreshEvent())
         return authOk(answer.body.accessToken)
     } catch {
-        return authFailure("unavailable", "transport")
+        return attempt < REFRESH_ATTEMPTS ? retry() : authFailure("unavailable", "transport")
     }
 }
 
 /** Refreshes through the httpOnly cookie and answers the new access token (`undefined` when it cannot be refreshed). Overlapping calls share one refresh. */
 export const renewSessionToken = async (): Promise<string | undefined> => {
-    const outcome = await shareRefresh(requestRefresh)
+    const outcome = await shareRefresh(() => requestRefresh())
     return outcome.success ? outcome.data : undefined
 }
 
