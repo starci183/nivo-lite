@@ -1,11 +1,14 @@
 import { FakeClock, mock } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { JobClaimService, JobRunnerService, JobsLogEvent } from "@modules/platform/jobs"
+import { JobClaimService, JobRenewalService, JobRunnerService, JobsLogEvent } from "@modules/platform/jobs"
 import type { Logger } from "@modules/platform/logging"
 import type { QueueDelivery, QueueWorkerRegistry } from "@modules/platform/queue"
+import type { Timer } from "@modules/platform/retry"
 import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
 import type { EntityManager } from "typeorm"
 const LEASE_MS = 100
+/** Cancels a timer that never runs. */
+const NO_CANCEL = (): void => undefined
 
 /** Builds real claim/runner collaborators; claiming persists the scenario job through its public owner API. */
 export const jobsBuilder = (manager: EntityManager, key: string) => {
@@ -21,11 +24,19 @@ export const jobsBuilder = (manager: EntityManager, key: string) => {
     const claims = new JobClaimService([manager], clock)
     const successorClaims = new JobClaimService([manager], clock)
     const logger = mock<Logger>()
+    const options = {
+        connection: PRIMARY_ENTITY_MANAGER,
+        workerId: "worker-1",
+        leaseMs: LEASE_MS,
+        scheduler: { enabled: false },
+    }
+    const idle: Timer = { schedule: () => NO_CANCEL }
     const runner = new JobRunnerService(
-        { connection: PRIMARY_ENTITY_MANAGER, workerId: "worker-1", leaseMs: LEASE_MS, scheduler: { enabled: false } },
+        options,
         claims,
         mock<QueueWorkerRegistry>(),
         logger,
+        new JobRenewalService(options, claims, idle, logger),
     )
     const claim = (worker: JobClaimService, workerId: string) =>
         worker.claim({

@@ -5,7 +5,7 @@ export { AgentRegistryService } from "./agent-registry.service"
 export { GatewayAdminClient } from "./gateway-admin.client"
 export { GatewayClient } from "./gateway.client"
 export { parseOpenclawConfig } from "./openclaw.config"
-export type { RunUsage, SyncFile, TurnResult } from "./openclaw.contracts"
+export type { RunUsage, SyncFile, TurnAttachment, TurnResult } from "./openclaw.contracts"
 export {
     InjectOpenclawAgentRegistry,
     InjectOpenclawGateway,

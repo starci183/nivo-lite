@@ -18,6 +18,7 @@ import { useAuthorityScopeForm } from "@/hooks/rhf"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AuthorityScopeBase } from "./component"
 import type { ScopeGroupView } from "./component"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** The automation scope: modes and VND limits are edited in a react-hook-form form and saved rule by rule through the back end. */
 export const AuthorityScope = () => {
@@ -43,8 +44,8 @@ export const AuthorityScope = () => {
                     const mode = draft?.mode ?? "ask"
                     return {
                         key,
-                        name: g(`action_${action}`),
-                        modeLabel: t("modeLabel", { action: g(`action_${action}`) }),
+                        name: actionWordOf(g, action),
+                        modeLabel: t("modeLabel", { action: actionWordOf(g, action) }),
                         modes: modesFor(action).map((one) => ({ value: one, label: g(`mode_${one}`) })),
                         mode,
                         hasLimit: hasAmountLimit(action),

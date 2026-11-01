@@ -9,6 +9,7 @@ import {
 import { useFormatter, useTranslations } from "next-intl"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { connectorRowsOf } from "./mcpGateway.shared"
+import { argsWordsOf, constraintBadgesOf, modeWordOf, outcomeWordOf, toolNameOf } from "@/modules/mcpGateway"
 import type { McpBadgeView, McpFormatter, McpTone, McpToolRowView, McpTranslator } from "./mcpGateway.shared"
 import { useMcpConnectorCommands } from "./useMcpConnectorCommands"
 import { useMcpConnectorForms } from "./useMcpConnectorForms"
@@ -32,48 +33,53 @@ const OUTCOME_TONE: ReadonlyMap<string, McpTone> = new Map([
     ["approval", "warning"],
 ])
 
+/** The plain name a tool id shows on this screen. */
+type ToolNamer = (tool: string) => string
+
 /** The first read error of the three, typed as unknown as SWR types it `any`. */
 const firstError = (...errors: ReadonlyArray<unknown>): unknown => errors.find((error) => error !== undefined)
 
 /** A neutral badge. */
 const plain = (label: string): McpBadgeView => ({ label, tone: "neutral" })
 
-/** Each agent's grants of gateway tools: the mode, the data constraints and the money limit. */
+/** Each agent's grants of gateway tools: the mode, whether data constraints apply, and the money limit. */
 const grantRowsOf = (
     t: McpTranslator,
     format: McpFormatter,
     grants: ReadonlyArray<McpGrantType>,
+    nameOf: ToolNamer,
 ): ReadonlyArray<McpToolRowView> =>
     grants.map((grant) => ({
         id: `${grant.agentId}:${grant.tool}`,
-        title: grant.tool,
+        title: nameOf(grant.tool),
         description: grant.agentName,
         badges: [
-            { label: grant.mode, tone: MODE_TONE.get(grant.mode) ?? "neutral" },
-            ...(grant.constraintsJson === "[]" ? [] : [plain(grant.constraintsJson)]),
+            { label: modeWordOf(t, grant.mode), tone: MODE_TONE.get(grant.mode) ?? "neutral" },
+            ...constraintBadgesOf(t, grant.constraintsJson),
             ...(grant.limitVnd === null ? [] : [plain(t("limitVnd", { amount: format.number(grant.limitVnd) }))]),
         ],
     }))
 
-/** The latest audited calls: when, the masked arguments, who approved, the outcome and how long it took. */
+/** The latest audited calls: when, who approved, the outcome and how long it took. The arguments stay in the audit record. */
 const logRowsOf = (
     t: McpTranslator,
     format: McpFormatter,
     lines: ReadonlyArray<McpCallType>,
+    nameOf: ToolNamer,
 ): ReadonlyArray<McpToolRowView> =>
     lines.map((line) => ({
         id: line.id,
-        title: `${line.tool} · ${line.agentName}`,
+        title: `${nameOf(line.tool)} · ${line.agentName}`,
         description: [
             format.dateTime(new Date(line.at), { dateStyle: "short", timeStyle: "medium" }),
-            line.argsMasked,
+            argsWordsOf(t, line.argsMasked),
             line.approvedBy === null ? "" : t("approvedBy", { name: line.approvedBy }),
         ]
             .filter(Boolean)
             .join(" · "),
         badges: [
             {
-                label: line.errorCode === null ? line.outcome : `${line.outcome}: ${line.errorCode}`,
+                label: outcomeWordOf(t, line.outcome),
                 tone: OUTCOME_TONE.get(line.outcome) ?? "danger",
             },
             plain(t("duration", { ms: line.durationMs })),
@@ -98,10 +104,15 @@ export const useMcpGatewayView = (enabled: boolean) => {
     const commands = useMcpConnectorCommands(reload)
     const grantCommands = useMcpGrantCommands(grants.data ?? [], () => grants.mutate())
     const forms = useMcpConnectorForms(reload, connectors.data ?? [])
+    const nativeKeys = new Set((connectors.data ?? []).filter((c) => c.kind === "native").map((c) => c.key))
     const held = new Map((grants.data ?? []).map((grant) => [grantKeyOf(grant.agentId, grant.tool), grant.mode]))
+    const described = new Map(
+        (connectors.data ?? []).flatMap((one) => one.tools.map((tool) => [tool.name, tool.description])),
+    )
+    const nameOf: ToolNamer = (tool) => toolNameOf(t, tool, nativeKeys, described.get(tool) ?? "")
     /** Every active agent gets a switch on every tool; on means a grant exists that is not `never`. */
     const agentsOf: McpToolAgentsOf = (tool) => ({
-        label: t("toolAgents", { tool }),
+        label: t("toolAgents", { tool: nameOf(tool) }),
         switchLabel: t("grantSwitch"),
         rows: (agents.data ?? [])
             .filter((agent) => agent.status === "active")
@@ -125,13 +136,13 @@ export const useMcpGatewayView = (enabled: boolean) => {
                 label: t("grants"),
                 emptyMessage: t("grantsEmpty"),
                 emptyDescription: t("grantsEmptyHint"),
-                rows: grantRowsOf(t, format, grants.data ?? []),
+                rows: grantRowsOf(t, format, grants.data ?? [], nameOf),
             },
             {
                 label: t("log"),
                 emptyMessage: t("logEmpty"),
                 emptyDescription: t("logEmptyHint"),
-                rows: logRowsOf(t, format, log.data ?? []),
+                rows: logRowsOf(t, format, log.data ?? [], nameOf),
             },
         ],
     }

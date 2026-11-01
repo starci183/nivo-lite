@@ -55,6 +55,10 @@ export class KnowledgeSourceType {
     @Field(() => Int)
     sizeBytes!: number
 
+    /** How many parts the document is cut into when it is longer than a source may be; 1 otherwise. The list shows the parts as one document. */
+    @Field(() => Int)
+    partCount!: number
+
     /** 0 to 100 while a worker is on it. */
     @Field(() => Int)
     progress!: number

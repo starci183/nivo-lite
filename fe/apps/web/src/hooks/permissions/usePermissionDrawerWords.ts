@@ -7,6 +7,7 @@ import { SLIDER_MAX, TIMEOUT_CHOICES } from "@/modules/permissions"
 import type { PermissionDraft } from "@/modules/permissions"
 import { useBoundFormatter } from "./useBoundFormatter"
 import { usePermissionDrawerCopy } from "./usePermissionDrawerCopy"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** What the words of the drawer depend on. */
 interface WordsInput {
@@ -54,7 +55,7 @@ export const usePermissionDrawerWords = () => {
     }
 
     const viewOf = (input: WordsInput) => ({
-        title: g(`action_${input.rule.action}`),
+        title: actionWordOf(g, input.rule.action),
         copy: copyOf(input.rule, input.draft, input.isOwner),
         legend: legendOf(input.draft),
         sliderMax: SLIDER_MAX[input.draft.unit],

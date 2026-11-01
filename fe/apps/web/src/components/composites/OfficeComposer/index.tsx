@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
 import {
+    Alert,
     Button,
     Cluster,
     Fieldset,
@@ -10,6 +11,8 @@ import {
     Textarea,
     Tooltip,
 } from "@starci/grammar/common"
+import { ChatFileChosen } from "@/components/branches/ChatFileChosen"
+import { ChatFilePicker } from "@/components/branches/ChatFilePicker"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeComposerProps } from "@/modules/types"
 import { FIELD_CLASS_NAME, HINT_CLASS_NAME } from "./classNames"
@@ -50,12 +53,35 @@ const QuickPrompts = (props: QuickPromptsProps) => (
     </Fieldset>
 )
 
+/** What the line above the field reads. */
+type ComposerFileProps = { readonly view: OfficeComposerProps["props"] }
+
+/** What is said about the chosen file above the field: why it cannot go, or its name. */
+const ComposerFile = (props: ComposerFileProps) => {
+    const { view } = props
+    const { file, problem, clear } = view.file
+    return (
+        <>
+            {problem === null ? null : <Alert tone="negative" title={view.text(problem)} />}
+            {file === null ? null : (
+                <ChatFileChosen
+                    name={file.name}
+                    removeLabel={view.text("removeFile")}
+                    isDisabled={view.isSending}
+                    onRemove={clear}
+                />
+            )}
+        </>
+    )
+}
+
 /** The pinned composer as two bands of its pane: a slim row of quick questions reaching both edges, then "@", the message field and Send over the hint. */
 export const OfficeComposer = (props: OfficeComposerProps) => {
     const view = props.props
     const { text } = view
     const hostRef = useRef<HTMLDivElement | null>(null)
     const prompts = promptsOf(view)
+    const fileName = view.file.file?.name ?? null
 
     const focusField = () => hostRef.current?.querySelector("textarea")?.focus()
 
@@ -79,7 +105,14 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
                 <QuickPrompts view={view} prompts={prompts} onPrompt={onPrompt} />
             </PaneSection>
             <PaneSection gap="inline">
+                <ComposerFile view={view} />
                 <Cluster gap="inline" align="end" wrap={false}>
+                    <ChatFilePicker
+                        label={text("attachFile")}
+                        accept={view.file.accept}
+                        isDisabled={view.isSkeleton || view.isSending}
+                        onFile={view.file.choose}
+                    />
                     <Tooltip content={text("mentionButton")}>
                         <IconButton
                             intent="neutral"
@@ -105,7 +138,7 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
                     <Button
                         intent="commit"
                         isPending={view.isSending}
-                        isDisabled={view.isSkeleton || view.draft.trim().length === 0}
+                        isDisabled={view.isSkeleton || (view.draft.trim().length === 0 && fileName === null)}
                         onPress={props.on.send}
                         startContent={<Icon source={nivoIconSource("send", "leading")} usage="leading" />}
                     >

@@ -1,5 +1,6 @@
 import type { DashboardType } from "@/hooks/swr"
 import type { useFormatter, useTranslations } from "next-intl"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** The dashboard as the back end answers it. */
 type Dashboard = DashboardType
@@ -141,13 +142,24 @@ export const groupByOwner = (rows: ReadonlyArray<ResponsibilityRowModel>): Array
     return [...groups.values()].sort((a, b) => b.rows.length - a.rows.length || b.kind.localeCompare(a.kind))
 }
 
+/**
+ * The kind of event whose summary is a command key (`sales.send_follow_up`: the module it went to, then the action) and not a
+ * sentence; it is read through the authority action words.
+ */
+const COMMAND_EVENT_KIND = "command.sent"
+
 /** Resolves the events into display rows. */
-export const toActivityModels = (events: Dashboard["events"], now: Date, t: RowsTranslator): Array<ActivityModel> =>
+export const toActivityModels = (
+    events: Dashboard["events"],
+    now: Date,
+    t: RowsTranslator,
+    g: Parameters<typeof actionWordOf>[0],
+): Array<ActivityModel> =>
     events.map((e) => ({
         id: e.id,
         kind: e.kind,
         actor: e.actor,
-        summary: e.summary,
+        summary: e.kind === COMMAND_EVENT_KIND ? actionWordOf(g, e.summary) : e.summary,
         timeLabel: relativeTime(t, e.createdAt, now),
         leadId: e.leadId ?? null,
     }))

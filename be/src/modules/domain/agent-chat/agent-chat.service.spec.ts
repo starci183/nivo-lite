@@ -8,8 +8,11 @@ import {
 import { AgentMessageDeliveriesService, AgentMessagesService } from "@modules/domain/agent-messages"
 import { AgentWorkReadService } from "@modules/domain/agent-work"
 import { CustomerIntakeService } from "@modules/domain/conversations"
+import { ChatFilesService } from "@modules/domain/chat-files"
+import { NO_CHAT_FILES } from "@tests/fixtures/builders/chat-files.builder"
 import {
     CONVERSATION,
+    MEMBER_LAN,
     PROFILE,
     TARGET,
     THREAD,
@@ -19,7 +22,6 @@ import {
 import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
 import { EventsReadService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_STATUS } from "@modules/platform/queue"
@@ -34,14 +36,7 @@ const NOW = "2026-10-13T02:00:00.000Z"
 const PAGE = { workspaceId: "w1", agentId: "a1", welcome: true }
 const THREAD_REQUEST = { workspaceId: "w1", conversationId: "c1" }
 
-const MEMBER: WorkspaceMember = {
-    userId: "u1",
-    workspaceId: "w1",
-    role: "manager",
-    staffId: null,
-    displayName: "Lan",
-    status: "active",
-}
+const MEMBER = MEMBER_LAN
 
 const AGENT: ChatAgentFacts = { id: "a1", module: "chatbot", status: "active", greeting: "Welcome", avatarUrl: null }
 
@@ -81,6 +76,7 @@ const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | 
             { provide: CustomerIntakeService, useValue: intake },
             { provide: AgentWorkReadService, useValue: work },
             { provide: QUEUE_STATUS, useValue: queueStatus },
+            { provide: ChatFilesService, useValue: mock<ChatFilesService>(NO_CHAT_FILES) },
         ],
     }).compile()
     return {
@@ -183,7 +179,7 @@ describe("AgentChatService", () => {
             conversations.targetOf.mockResolvedValue({ kind: "ok", value: TARGET })
             messages.listChat.mockResolvedValue([THREAD])
 
-            await expect(service.listMessages("u1", THREAD_REQUEST)).resolves.toEqual([THREAD])
+            await expect(service.listMessages("u1", THREAD_REQUEST)).resolves.toEqual([{ ...THREAD, files: [] }])
             expect(messages.listChat).toHaveBeenCalledWith("w1", "c1")
         })
 
@@ -255,7 +251,7 @@ describe("AgentChatService", () => {
             conversations.lockChat.mockResolvedValue({ ...CONVERSATION, kind: "customer", handledBy: null })
             messages.storeCustomer.mockResolvedValue("m1")
 
-            await expect(service.send("u1", { ...THREAD_REQUEST, body: "  Hello  " })).resolves.toEqual({
+            await expect(service.send("u1", { ...THREAD_REQUEST, file: null, body: "  Hello  " })).resolves.toEqual({
                 id: "m1",
                 conversationId: "c1",
                 status: "queued",
@@ -279,7 +275,7 @@ describe("AgentChatService", () => {
             conversations.lockChat.mockResolvedValue({ ...CONVERSATION, kind: "customer", handledBy: "Lan" })
             messages.storeHuman.mockResolvedValue("m2")
 
-            await expect(service.send("u1", { ...THREAD_REQUEST, body: "On my way" })).resolves.toEqual({
+            await expect(service.send("u1", { ...THREAD_REQUEST, file: null, body: "On my way" })).resolves.toEqual({
                 id: "m2",
                 conversationId: "c1",
                 status: "queued",
@@ -294,10 +290,12 @@ describe("AgentChatService", () => {
         it("refuses an empty or oversized body before opening a transaction", async () => {
             const { service, tx, turns } = await build()
 
-            await expect(service.send("u1", { ...THREAD_REQUEST, body: "   " })).rejects.toMatchObject({
+            await expect(service.send("u1", { ...THREAD_REQUEST, file: null, body: "   " })).rejects.toMatchObject({
                 code: AgentChatErrorCode.InvalidBody,
             })
-            await expect(service.send("u1", { ...THREAD_REQUEST, body: "a".repeat(4001) })).rejects.toMatchObject({
+            await expect(
+                service.send("u1", { ...THREAD_REQUEST, file: null, body: "a".repeat(4001) }),
+            ).rejects.toMatchObject({
                 code: AgentChatErrorCode.InvalidBody,
             })
             expect(tx.commits).toBe(0)

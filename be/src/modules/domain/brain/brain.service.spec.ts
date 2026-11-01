@@ -351,12 +351,31 @@ describe("BrainService", () => {
 
     it("withdraws a deleted document's facts using its returned title", async () => {
         const { service, sources, documentFacts } = await build()
-        sources.removeSource.mockResolvedValue({ title: "Hours" })
+        sources.removeSource.mockResolvedValue({ title: "Hours", parts: [] })
 
         await expect(service.removeSource("u1", WS, "s1")).resolves.toBeUndefined()
 
         expect(sources.removeSource).toHaveBeenCalledWith("u1", WS, "s1")
         expect(documentFacts.withdraw).toHaveBeenCalledWith(WS, "s1", "Hours")
+    })
+
+    it("takes back what the later parts of a deleted long document contributed as well", async () => {
+        const { service, sources, documentFacts } = await build()
+        sources.removeSource.mockResolvedValue({
+            title: "Plan (1/3)",
+            parts: [
+                { id: "p2", title: "Plan (2/3)" },
+                { id: "p3", title: "Plan (3/3)" },
+            ],
+        })
+
+        await service.removeSource("u1", WS, "s1")
+
+        expect(documentFacts.withdraw.mock.calls).toEqual([
+            [WS, "s1", "Plan (1/3)"],
+            [WS, "p2", "Plan (2/3)"],
+            [WS, "p3", "Plan (3/3)"],
+        ])
     })
 
     it("does not withdraw a source when deleting it fails", async () => {

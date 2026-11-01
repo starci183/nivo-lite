@@ -72,7 +72,9 @@ export class KnowledgeIndexingService {
      * as failed with its stored code and the job ends; a failure worth retrying is thrown, for the queue to retry; `failSource` closes
      * the source when the retries run out. A text the source already holds whole does no work at all: a note or a file (its stored object
      * never changes) is known unchanged before it is read, a link only after, since the page can change. A text longer than a source may
-     * be is cut at line ends: the first part stays in this source, each later part becomes a source of its own.
+     * be is cut at line ends: the first part stays in this source, each later part becomes a source of its own. A new source whose text a
+     * finished document of the workspace already holds for the same readers is not worked on at all: it is closed as a duplicate, so the
+     * same text is never embedded, read for facts or reviewed twice.
      */
     async index(run: IndexRun): Promise<IndexOutcome> {
         const source = await this.sources.sourceOf(run.workspaceId, run.sourceId)
@@ -88,6 +90,7 @@ export class KnowledgeIndexingService {
             if (content === "") return await this.close(source, StoredNote.Empty)
             if (await this.unchanged.holdsWhole(source, content)) return await this.unchanged.keep(source)
             const [first = content, ...later] = partsOf(content, MAX_SOURCE_CHARS)
+            if (await this.unchanged.closeDuplicate(source, { first, later })) return "skipped"
             const named = read.value.title ?? source.title
             const title =
                 later.length === 0 ? named : await this.parts.splitLong(source.workspaceId, source.id, named, later)

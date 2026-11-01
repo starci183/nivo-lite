@@ -1,3 +1,4 @@
+import { ChatFilesService } from "@modules/domain/chat-files"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentWakeService, AgentWorkSettingsService } from "@modules/domain/agent-work"
@@ -73,6 +74,11 @@ const build = async (setup: Setup = {}) => {
         settingsOf: jest.fn().mockResolvedValue(settingsOf(setup.workspaceOn ?? true)),
         stateOf: jest.fn().mockResolvedValue(stateOf(setup.agentOn ?? true)),
     })
+    const files = mock<ChatFilesService>({
+        verify: jest.fn().mockResolvedValue(CHECKED_FILE),
+        attach: jest.fn().mockResolvedValue(undefined),
+        wordsOf: jest.fn((written: string) => (written.trim() === "" ? "sent a file" : written)),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             OfficeTagService,
@@ -85,6 +91,7 @@ const build = async (setup: Setup = {}) => {
             { provide: AgentOwnershipService, useValue: ownership },
             { provide: AgentWakeService, useValue: wakes },
             { provide: AgentWorkSettingsService, useValue: settings },
+            { provide: ChatFilesService, useValue: files },
         ],
     }).compile()
     return {
@@ -97,10 +104,34 @@ const build = async (setup: Setup = {}) => {
         ownership,
         wakes,
         settings,
+        files,
     }
 }
 
-const request = (body: string, room: string | null = null) => ({ body, room, locale: "vi" as const })
+const CHECKED_FILE = { path: "ws-1/chat/office/a.png", name: "a.png", contentType: "image/png", sizeBytes: 9 }
+
+const request = (body: string, room: string | null = null) => ({ body, room, locale: "vi" as const, file: null })
+
+describe("OfficeTagService > a line with a file", () => {
+    it("checks the file before the line and attaches it to the stored line", async () => {
+        const { service, chat, files } = await build({ found: [KE_TOAN] })
+        const file = { path: "ws-1/chat/office/a.png", name: "a.png" }
+
+        await service.post("user-1", "ws-1", { ...request("@ke-toan xem giup"), file })
+
+        expect(files.verify).toHaveBeenCalledWith({ workspaceId: "ws-1", conversationId: null }, file.path, file.name)
+        expect(chat.postHuman.mock.calls[0]?.[2]).toBe("@ke-toan xem giup")
+        expect(files.attach.mock.calls[0]?.slice(1, 3)).toEqual([CHECKED_FILE, POSTED.id])
+    })
+
+    it("stores a line of words for a file sent with none", async () => {
+        const { service, chat } = await build({})
+
+        await service.post("user-1", "ws-1", { ...request(" "), file: { path: "p", name: "a.png" } })
+
+        expect(chat.postHuman.mock.calls[0]?.[2]).toBe("sent a file")
+    })
+})
 
 describe("OfficeTagService > a line that tags", () => {
     it("wakes the one agent a member tags, in the post's transaction, keyed by the message", async () => {

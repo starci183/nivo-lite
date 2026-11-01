@@ -16,7 +16,6 @@ interface CommandsInput {
     readonly writes: ReturnType<typeof useAgentGraphWrites>
     /** Only the owner turns the mode of the graph. */
     readonly canGrant: boolean
-    readonly changes: number
     /** The checklist of the setup, applied by the same press that publishes the map. */
     readonly setup: AgentGraphSetup
 }
@@ -40,6 +39,8 @@ export const useAgentGraphCommands = (input: CommandsInput): AgentGraphCommands 
     const { read, state, writes } = input
     const facts = read?.data.facts ?? []
     const context = { facts, texts: nodeTextsOf(t) }
+    // The count the view shows for the draft, not the edits made on this screen: a draft changed by other means still counts; none, no note.
+    const noteOf = (count: number): string => (count > 0 ? t("publishNote", { count }) : "")
     return {
         select: state.select,
         sideTab: state.sideTab,
@@ -80,7 +81,7 @@ export const useAgentGraphCommands = (input: CommandsInput): AgentGraphCommands 
             if (read === undefined) return
             // Applying the checklist publishes the map with it, so one press is one version of both.
             if (input.setup.isReady && input.setup.isChanged) void input.setup.apply().then(writes.refresh)
-            else void writes.publish(read.agentId, t("publishNote", { count: input.changes }), t("published"))
+            else void writes.publish(read.agentId, noteOf(read.data.changes), t("published"))
         },
         decide: (proposalId, isConfirmed) => {
             if (read === undefined) return

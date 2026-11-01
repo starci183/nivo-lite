@@ -97,7 +97,7 @@ export const toPostOfficeMessageRequest = (
 export const toOfficeAckType = (): OfficeAckType => ({ ok: true })
 
 /** Maps the stored line to the GraphQL type. */
-export const toOfficeMessageType = (message: PostedMessage): OfficeMessageType => ({ ...message })
+export const toOfficeMessageType = (message: PostedMessage): OfficeMessageType => ({ ...message, files: [] })
 
 /** Maps the Hub rooms to the GraphQL type. */
 export const toOfficeRoomsType = (rooms: ReadonlyArray<RoomView>): Array<OfficeRoomType> =>

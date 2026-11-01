@@ -1,6 +1,7 @@
 import type { useFormatter, useTranslations } from "next-intl"
 import type { Governance, WaitingWork } from "@/hooks/overviewFigures"
 import type { ReasonCode } from "@/modules/types"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** The translator of one catalog namespace. */
 export type GovTranslator = ReturnType<typeof useTranslations>
@@ -94,7 +95,7 @@ export const departmentsOf = (
 /** The waiting items shown on the overview: the oldest few. */
 export const waitingItemsOf = (g: GovTranslator, waiting: ReadonlyArray<WaitingWork>): ReadonlyArray<GovWaitingItem> =>
     waiting.slice(0, TOP_WAITING).map((item) => {
-        const action = g(`action_${item.action}`)
+        const action = actionWordOf(g, item.action)
         const leadName = item.leadName ? ` · ${item.leadName}` : ""
         return {
             id: item.id,
@@ -142,7 +143,7 @@ export const historyRowsOf = (
         const leadName = row.leadName ? ` · ${row.leadName}` : ""
         return {
             id: row.id,
-            action: g(`action_${row.action}`),
+            action: actionWordOf(g, row.action),
             outcome: g(`outcome_${row.outcome}`),
             outcomeTone: OUTCOME_TONES[row.outcome] ?? "danger",
             when: whenOf(format, row.createdAt),

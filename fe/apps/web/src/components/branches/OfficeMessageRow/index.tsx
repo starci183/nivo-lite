@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { Badge, Button, ChatBubble, Cluster, IconButton, Text, Tooltip } from "@starci/grammar/common"
+import { ChatMessageFiles } from "@/components/leaves/ChatMessageFiles"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeBodyPart, OfficeMessageView, OfficeText } from "@/modules/types"
 import { AVATAR_SLOT_CLASS_NAME, NOTICE_CLASS_NAME } from "./classNames"
@@ -113,7 +114,16 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
                 message.side === "outgoing" ? undefined : <div className={AVATAR_SLOT_CLASS_NAME}>{props.avatar}</div>
             }
             status={message.isAi ? <Badge tone="neutral">{props.text("aiBadge")}</Badge> : undefined}
-            footer={props.status}
+            footer={
+                message.files.length === 0 ? (
+                    props.status
+                ) : (
+                    <>
+                        <ChatMessageFiles files={message.files} />
+                        {props.status}
+                    </>
+                )
+            }
             actions={
                 <MessageActions
                     message={message}

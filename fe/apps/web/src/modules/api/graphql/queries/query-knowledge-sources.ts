@@ -20,6 +20,7 @@ const query1: TypedDocumentNode<QueryKnowledgeSourcesResponse, InputVariables<Qu
             installationId
             kind
             module
+            partCount
             progress
             stage
             stageDone

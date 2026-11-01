@@ -155,7 +155,7 @@ export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {
     zalo_oa: "/logos/providers/zalo.svg",
     meta: "/logos/providers/meta.svg",
     google: "/logos/providers/googlesheets.svg",
-    google_drive: "/logos/connectors/google_drive_generic.svg",
+    google_drive: "/logos/providers/google_drive.svg",
     webhook: "/logos/providers/n8n.svg",
     // The app's own connector artwork (public/logos/connectors): the data sources have no brand of their own.
     database: "/logos/connectors/database.svg",

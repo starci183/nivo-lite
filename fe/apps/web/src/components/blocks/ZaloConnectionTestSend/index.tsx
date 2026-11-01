@@ -26,6 +26,7 @@ export const ZaloConnectionTestSend = (props: ZaloConnectionTestSendProps) => {
                 send: view,
                 slotLabels: slotLabels(t("testEmpty")),
                 recipientLabel: t("testRecipient"),
+                recipientEmpty: t("testRecipientEmpty"),
                 recipientId,
                 textLabel: t("testText"),
                 text,

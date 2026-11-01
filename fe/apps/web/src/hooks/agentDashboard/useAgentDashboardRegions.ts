@@ -9,6 +9,7 @@ import { maskPhones } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
 import { PENDING_DASHBOARD, type AgentDashboardView, type DashboardRow } from "./agentDashboard.shared"
 import { useAgentDashboardConnections } from "./useAgentDashboardConnections"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** What the regions need from the frame: the module, and whether the module brings its own gaps card. */
 interface RegionsInput {
@@ -96,7 +97,7 @@ export const useAgentDashboardRegions = (slot: DataSlot<AgentDashboardView>, inp
     const slotLabels = useSlotLabels()
     const whenOf = whenOfFormat(useFormatter())
     const connections = useAgentDashboardConnections(slot.items ?? PENDING_DASHBOARD)
-    const actionOf = (action: string): string => (g.has(`action_${action}`) ? g(`action_${action}`) : "")
+    const actionOf = (action: string): string => actionWordOf(g, action)
     const rowOf = (item: DashboardRow) => ({
         id: item.id,
         title: maskPhones(item.title),

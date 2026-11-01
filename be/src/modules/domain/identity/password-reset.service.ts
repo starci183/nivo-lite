@@ -100,6 +100,7 @@ export class IdentityPasswordResetService {
         if (user?.id !== userId || !matches) {
             throw new IdentityError({ code: IdentityErrorCode.InvalidCredentials })
         }
+        await this.attempts.clear("login", address)
         await authDoors.setPassword(this.entityManager, userId, await this.passwords.hash(next), this.clock.now())
     }
 }

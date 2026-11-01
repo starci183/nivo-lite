@@ -30,6 +30,15 @@ export interface OfficeDayView {
     readonly label: string
 }
 
+/** A file of a line of the Office. */
+export interface OfficeMessageFile {
+    readonly id: string
+    readonly name: string
+    readonly contentType: string
+    /** A short-lived read address. */
+    readonly url: string
+}
+
 /** A chat line: a bubble, or a centred notice for system lines. */
 export interface OfficeMessageView {
     readonly kind: "message"
@@ -45,6 +54,8 @@ export interface OfficeMessageView {
     readonly time: string
     readonly showTime: boolean
     readonly parts: ReadonlyArray<OfficeBodyPart>
+    /** The files that came with the line. */
+    readonly files: ReadonlyArray<OfficeMessageFile>
     readonly copyText: string
     readonly leadHref: string | null
     readonly leadLabel: string

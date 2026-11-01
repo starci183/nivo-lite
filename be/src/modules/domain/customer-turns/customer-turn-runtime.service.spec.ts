@@ -1,3 +1,5 @@
+import { ChatFileReadsService } from "@modules/domain/chat-files"
+import { NO_CHAT_FILE_READS } from "@tests/fixtures/builders/chat-files.builder"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { InstallationDirectory } from "@modules/domain/agents"
@@ -97,6 +99,7 @@ const build = async (options: RuntimeBuildOptions = {}) => {
             { provide: ModuleReadinessService, useValue: readiness },
             { provide: GatewayContextService, useValue: connectors },
             { provide: TurnToolAccessService, useValue: access },
+            { provide: ChatFileReadsService, useValue: mock<ChatFileReadsService>(NO_CHAT_FILE_READS) },
         ],
     }).compile()
     return {

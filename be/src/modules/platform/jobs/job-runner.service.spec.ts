@@ -11,6 +11,7 @@ import { JOB_CLAIMS, JOBS_OPTIONS } from "./jobs.decorators"
 import { JobsLogEvent } from "./jobs.log-events"
 import type { JobsOptions } from "./jobs.options"
 import type { JobClaims } from "./jobs.port"
+import { JobRenewalService } from "./job-renewal.service"
 import { JobRunnerService } from "./job-runner.service"
 
 const options: JobsOptions = { connection: "primary", workerId: "w-1", leaseMs: 60000, scheduler: { enabled: false } }
@@ -31,6 +32,9 @@ const build = async () => {
     claims.retryAfterSeconds.mockResolvedValue(null)
     const queues = mock<QueueWorkerRegistry>()
     const logger = mock<Logger>()
+    const renewals = mock<JobRenewalService>()
+    const stop = jest.fn()
+    renewals.keep.mockReturnValue({ stop })
     const moduleRef = await Test.createTestingModule({
         providers: [
             JobRunnerService,
@@ -38,10 +42,13 @@ const build = async () => {
             { provide: JOB_CLAIMS, useValue: claims },
             { provide: QUEUE_WORKER_REGISTRY, useValue: queues },
             { provide: LOGGER, useValue: logger },
+            { provide: JobRenewalService, useValue: renewals },
         ],
     }).compile()
     return {
         runner: moduleRef.get(JobRunnerService),
+        renewals,
+        stop,
         claims,
         queues,
         logger,
@@ -102,6 +109,19 @@ describe("JobRunnerService", () => {
             expect(processor.process).toHaveBeenCalledWith(job)
             expect(claims.complete).toHaveBeenCalledWith({ jobId: "j-1", expectedFencingToken: 2 })
             expect(claims.fail).not.toHaveBeenCalled()
+        })
+
+        it("keeps the lease of the claim while the processor runs and lets go of it when it ends, whether it succeeds or fails", async () => {
+            const { runner, claims, renewals, stop, processor } = await build()
+            claims.claim.mockResolvedValue(job)
+            processor.process.mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce(undefined)
+
+            await expect(runner.run(processor, delivery)).rejects.toThrow("boom")
+            await runner.run(processor, delivery)
+
+            expect(renewals.keep).toHaveBeenCalledTimes(2)
+            expect(renewals.keep).toHaveBeenCalledWith(job)
+            expect(stop).toHaveBeenCalledTimes(2)
         })
 
         it("claims a processor of one job under the job name as the kind", async () => {

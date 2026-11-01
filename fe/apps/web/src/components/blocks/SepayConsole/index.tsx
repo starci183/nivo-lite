@@ -6,7 +6,7 @@ import { useState } from "react"
 import { sepayStatusTone, useSepayCommands, useSepayConnection, useSepayPlaceholder } from "@/hooks/sepayConnection"
 import type { SepayConnectionView } from "@/modules/types"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
-import { useConnectionsRole, wizardQuery } from "@/hooks/connections"
+import { useConnectionRefusal, useConnectionsRole, wizardQuery } from "@/hooks/connections"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { SepayConsoleBase } from "./component"
@@ -59,7 +59,8 @@ export const SepayConsole = (props: SepayConsoleProps) => {
     const [isAsking, setAsking] = useState(false)
     const [isRailOpen, setRailOpen] = useState(false)
     const connection = slot.items
-    if (isMissing) notFound()
+    const refusal = useConnectionRefusal()
+    if (isMissing && refusal === undefined) notFound()
     const canDisconnect = role === "owner" && connection !== undefined && connection.status !== "disconnected"
     return (
         <SepayConsoleBase
@@ -75,6 +76,7 @@ export const SepayConsole = (props: SepayConsoleProps) => {
                     { id: "sepay", label: connection?.name ?? t("title") },
                 ],
                 markSrc: PROVIDER_LOGO.sepay ?? "",
+                ...(refusal === undefined ? {} : { refusal }),
                 gridLabel: t("title"),
                 mainLabel: t("mainLabel"),
                 rail: {

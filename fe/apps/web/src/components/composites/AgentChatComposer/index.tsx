@@ -1,4 +1,6 @@
 import { Alert, Button, Cluster, Form, Stack, Textarea } from "@starci/grammar/common"
+import { ChatFileChosen } from "@/components/branches/ChatFileChosen"
+import { ChatFilePicker } from "@/components/branches/ChatFilePicker"
 import { COMPOSER_INPUT_CLASS_NAME } from "./classNames"
 
 /** The words and state of the message composer. */
@@ -16,6 +18,18 @@ export interface AgentChatComposerProps {
     readonly error: { readonly title: string; readonly text: string } | null
     /** The prompts offered above the field; empty when none are. */
     readonly prompts: ReadonlyArray<string>
+    /** The file control of the composer. */
+    readonly file: {
+        readonly label: string
+        readonly removeLabel: string
+        readonly accept: string
+        /** The name of the file that goes with the message, or null. */
+        readonly name: string | null
+        /** A person who took the conversation over sends words only. */
+        readonly isHidden: boolean
+    }
+    readonly onFile: (file: File) => void
+    readonly onFileClear: () => void
     readonly onDraft: (value: string) => void
     readonly onPrompt: (prompt: string) => void
     readonly onSend: () => void
@@ -50,7 +64,23 @@ export const AgentChatComposer = (props: AgentChatComposerProps) => (
                     ))}
                 </Cluster>
             )}
+            {props.file.name === null ? null : (
+                <ChatFileChosen
+                    name={props.file.name}
+                    removeLabel={props.file.removeLabel}
+                    isDisabled={props.isSending}
+                    onRemove={props.onFileClear}
+                />
+            )}
             <Cluster gap="inline" align="end" wrap={false}>
+                {props.file.isHidden ? null : (
+                    <ChatFilePicker
+                        label={props.file.label}
+                        accept={props.file.accept}
+                        isDisabled={props.isSending || props.isSkeleton}
+                        onFile={props.onFile}
+                    />
+                )}
                 {/* The Grammar Textarea owns Enter-to-send (Shift+Enter breaks the line). */}
                 <div className={COMPOSER_INPUT_CLASS_NAME}>
                     <Textarea

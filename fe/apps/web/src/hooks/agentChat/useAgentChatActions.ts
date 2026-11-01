@@ -4,10 +4,12 @@ import { useAgentChatCommands } from "./useAgentChatCommands"
 import { useAgentChatTurnLifecycle } from "./useAgentChatTurnLifecycle"
 import { useAgentChatMessageForm, useAgentChatVisitorForm } from "@/hooks/rhf"
 import {
+    useMutateRequestAgentChatFileUploadSwr,
     useMutateSendAgentChatMessageSwr,
     useMutateStartAgentChatConversationSwr,
     useMutateTakeOverAgentChatConversationSwr,
 } from "@/hooks/swr"
+import { useChatFile } from "@/hooks/chatFile"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
@@ -35,12 +37,14 @@ export const useAgentChatActions = (target: AgentChatActionTarget) => {
     const t = useTranslations("agentChat")
     const system = useTranslations("system")
     const runGraphQL = useGraphQLWithToast()
+    const file = useChatFile()
     const message = useAgentChatMessageForm()
     const visitor = useAgentChatVisitorForm()
     const workspaceId = target.agent?.workspaceId
     const startMutation = useMutateStartAgentChatConversationSwr(workspaceId ?? "")
     const sendMutation = useMutateSendAgentChatMessageSwr(workspaceId ?? "")
     const takeoverMutation = useMutateTakeOverAgentChatConversationSwr(workspaceId ?? "")
+    const uploadMutation = useMutateRequestAgentChatFileUploadSwr(workspaceId ?? "")
 
     const [isOpening, setIsOpening] = useState(false)
     const [pendingTurn, setPendingTurn] = useState<PendingTurn>()
@@ -62,6 +66,8 @@ export const useAgentChatActions = (target: AgentChatActionTarget) => {
         workspaceId,
         sendMutation,
         setPending: setPendingTurn,
+        uploadMutation,
+        file,
     })
 
     const toggleTakeover = async () => {
@@ -87,12 +93,20 @@ export const useAgentChatActions = (target: AgentChatActionTarget) => {
         start,
         send,
         toggleTakeover,
-        isSending: sendMutation.isMutating || message.formState.isSubmitting || pending !== undefined,
+        file: file.file,
+        chooseFile: file.choose,
+        clearFile: file.clear,
+        isSending:
+            sendMutation.isMutating ||
+            uploadMutation.isMutating ||
+            message.formState.isSubmitting ||
+            pending !== undefined,
         isAwaitingReply: target.selectedId !== null && pending?.conversationId === target.selectedId,
         isStarting: isOpening || startMutation.isMutating,
         isTakingOver: takeoverMutation.isMutating,
         error:
             turnError ??
+            (file.problem === null ? null : t(file.problem)) ??
             message.formState.errors.body?.message ??
             visitor.formState.errors.visitorName?.message ??
             (status.error instanceof Error ? status.error.message : null),

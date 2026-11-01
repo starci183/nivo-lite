@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { useProfileRegion } from "@/hooks/agentProfile"
 import { mapSlot } from "@/hooks/slot"
 import { AgentProfileRecentBase } from "./component"
+import { actionWordOf } from "@/hooks/actionWord"
 
 /** The agent whose recent work the card lists. */
 type AgentProfileRecentProps = {
@@ -23,7 +24,7 @@ export const AgentProfileRecent = (props: AgentProfileRecentProps) => {
     const t = useTranslations("agentProfile")
     const g = useTranslations("governance")
     const region = useProfileRegion(props.agentId, (agent) => agent.recent)
-    const actionLabel = (action: string): string => (g.has(`action_${action}`) ? g(`action_${action}`) : action)
+    const actionLabel = (action: string): string => actionWordOf(g, action)
     return (
         <AgentProfileRecentBase
             props={{

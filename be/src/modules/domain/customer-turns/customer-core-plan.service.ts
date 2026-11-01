@@ -1,10 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { AgentTurnBriefService, RuntimeAgentService } from "@modules/domain/agent-turns"
 import { replyTimeoutSec } from "@modules/domain/agents"
+import { ChatFileReadsService } from "@modules/domain/chat-files"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { threadKeyFor } from "@modules/integrations/openclaw"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { fileTurnOf } from "./customer-turn.policy"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { turnMessageOf } from "./turn-prompt.policy"
@@ -32,6 +34,7 @@ export class CustomerCorePlanService {
         private readonly agents: RuntimeAgentService,
         private readonly brief: AgentTurnBriefService,
         private readonly access: TurnToolAccessService,
+        private readonly fileReads: ChatFileReadsService,
     ) {}
 
     /** The plan of the turn, or the reason it cannot run. */
@@ -56,6 +59,7 @@ export class CustomerCorePlanService {
                     turn.transcript,
                     turn.body,
                 ),
+                attachments: await this.fileReads.attachmentsOf(fileTurnOf(turn)),
                 timeoutMs: replyTimeoutSec(installation?.settings ?? null) * 1000,
             }
         } catch (cause) {

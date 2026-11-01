@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { callDbFunction } from "./database.client"
+import { HttpSecurityEntity } from "./persistence/entities"
 import { InjectPrimaryEntityManager } from "./primary.decorators"
 import type { RateLimitStore } from "./rate-limit-store.port"
 
@@ -17,5 +18,10 @@ export class PostgresRateLimitStoreClient implements RateLimitStore {
             [key, windowMs, limit],
         )
         return typeof row?.http_rate_limit_consume === "boolean" && row.http_rate_limit_consume
+    }
+
+    /** Deletes the one window row of the key in the primary database. */
+    async clear(key: string): Promise<void> {
+        await this.entityManager.delete(HttpSecurityEntity, { bucketKey: key })
     }
 }

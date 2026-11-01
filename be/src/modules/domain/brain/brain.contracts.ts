@@ -155,3 +155,21 @@ export interface IndexedSource {
     /** When it was indexed (epoch milliseconds): the key of this one reading. */
     readonly indexedAt: number
 }
+
+/** What applying the checked facts of one document together did. */
+export interface BulkApplied {
+    /** The batch the applied facts belong to; the id that takes them back. */
+    readonly batchId: string
+    /** How many facts were applied. */
+    readonly applied: number
+    /** How many of the document's waiting facts were left for a person to review. */
+    readonly skipped: number
+}
+
+/** What taking a batch back did. */
+export interface BulkUndone {
+    /** How many facts are waiting for review again. */
+    readonly restored: number
+    /** How many stay as they are because they were changed since (retired, replaced or decided again). */
+    readonly kept: number
+}

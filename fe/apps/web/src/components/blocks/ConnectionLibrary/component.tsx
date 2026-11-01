@@ -56,6 +56,10 @@ export interface LibraryCard {
     readonly isCurrent: boolean
     /** A planned connector: no page, only the "I want it" command. */
     readonly isSoon: boolean
+    /** The viewer may start a connection of it; otherwise the tile only opens its detail to read. */
+    readonly canConnect: boolean
+    /** The address of the only connection a workspace can have of it (Google Drive), once it has one. */
+    readonly pageHref?: string
     /** A planned connector: the state of its "I need this" command. */
     readonly want: { readonly isPending: boolean; readonly isDone: boolean; readonly note?: string }
 }
@@ -76,6 +80,8 @@ export interface ConnectionLibraryBaseProps {
         readonly wantedLabel: string
         readonly connectLabel: string
         readonly addLabel: string
+        readonly viewLabel: string
+        readonly openPageLabel: string
         readonly currentLabel: string
         readonly othersLabel: string
         /** The chips are drawn blank while the workspace reads are on their way. */
@@ -104,19 +110,32 @@ const wantOf = (props: ConnectionLibraryBaseProps, card: LibraryCard) => (
     </>
 )
 
-/** The command at the foot of a tile: Connect (emphasised for the four current providers), Add once connected, or "I need this". */
-const commandOf = (props: ConnectionLibraryBaseProps, card: LibraryCard) =>
-    card.isSoon ? (
-        wantOf(props, card)
-    ) : (
+/** The word of a tile's command: what the viewer can do with this connector now. */
+const commandLabelOf = (props: ConnectionLibraryBaseProps, card: LibraryCard): string => {
+    if (!card.canConnect) return props.props.viewLabel
+    return card.connected === 0 ? props.props.connectLabel : props.props.addLabel
+}
+
+/** The command at the foot of a tile: Connect (emphasised for the four current providers), Add once connected, the page of a single grant, View, or "I need this". */
+const commandOf = (props: ConnectionLibraryBaseProps, card: LibraryCard) => {
+    if (card.isSoon) return wantOf(props, card)
+    if (card.pageHref !== undefined) {
+        return (
+            <Button intent="neutral" size="sm" href={card.pageHref}>
+                {props.props.openPageLabel}
+            </Button>
+        )
+    }
+    return (
         <Button
-            intent={card.connected === 0 && card.isCurrent ? "alternative" : "neutral"}
+            intent={card.connected === 0 && card.isCurrent && card.canConnect ? "alternative" : "neutral"}
             size="sm"
             onPress={() => props.on.open(card.id)}
         >
-            {card.connected === 0 ? props.props.connectLabel : props.props.addLabel}
+            {commandLabelOf(props, card)}
         </Button>
     )
+}
 
 const tileOf = (props: ConnectionLibraryBaseProps, card: LibraryCard) => (
     <div key={card.id} {...(card.guide === undefined ? {} : { "data-guide": `connections.${card.guide}` })}>

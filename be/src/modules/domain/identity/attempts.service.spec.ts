@@ -22,6 +22,7 @@ const OPTIONS: IdentityAuthOptions = {
 const build = async (allowed: boolean) => {
     const limits = mock<RateLimitStore>()
     limits.consume.mockResolvedValue(allowed)
+    limits.clear.mockResolvedValue()
     const moduleRef = await Test.createTestingModule({
         providers: [
             IdentityAttemptsService,
@@ -55,5 +56,13 @@ describe("IdentityAttemptsService", () => {
         await expect(service.admit("login", "an@example.test")).rejects.toMatchObject({
             code: IdentityErrorCode.TooManyAttempts,
         })
+    })
+
+    it("clears the counter of the hashed address and kind", async () => {
+        const { service, limits } = await build(true)
+
+        await expect(service.clear("login", "an@example.test")).resolves.toBeUndefined()
+
+        expect(limits.clear.mock.calls).toEqual([[`login:${digestOf("an@example.test")}`]])
     })
 })

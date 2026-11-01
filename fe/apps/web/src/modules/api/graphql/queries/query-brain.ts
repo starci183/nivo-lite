@@ -19,6 +19,7 @@ const query1: TypedDocumentNode<QueryBrainResponse> = gql`
                 attributeLabel
                 decidedAt
                 decidedBy
+                decisionNote
                 evidence {
                     at
                     kind

@@ -9,6 +9,8 @@ import { automationsOverviewOf } from "@/modules/automations"
 export const QUERY_AUTOMATIONS_SWR_KEY = "QUERY_AUTOMATIONS_SWR"
 
 const REFRESH_MS = 3_000
+/** How often it is read with no run active: a schedule starts a run with nobody on the page, so the read never stops. */
+const IDLE_REFRESH_MS = 30_000
 const ACTIVE_RUNS: ReadonlySet<string> = new Set(["queued", "running"])
 
 /**
@@ -24,5 +26,8 @@ export const useQueryAutomationsSwr = () =>
             if (!result.data) throw new Error("automations answered no data")
             return automationsOverviewOf(result.data.automations)
         },
-        { refreshInterval: (data) => (data?.runs.some((run) => ACTIVE_RUNS.has(run.status)) ? REFRESH_MS : 0) },
+        {
+            refreshInterval: (data) =>
+                data?.runs.some((run) => ACTIVE_RUNS.has(run.status)) ? REFRESH_MS : IDLE_REFRESH_MS,
+        },
     )

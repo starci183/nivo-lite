@@ -60,6 +60,7 @@ export const useAgentChatThreadView = ({
                 role: roleOf(item.role),
                 body: item.body,
                 timeLabel: timeOf(item.createdAt),
+                files: item.files,
             })),
         [messages.data, timeOf],
     )

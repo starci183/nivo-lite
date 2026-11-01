@@ -2,6 +2,7 @@ export { brainFactsEntities } from "./persistence/entities"
 export { BRAIN_FACTS_ERROR_KINDS } from "./errors/brain-facts.error"
 export { BrainFactsModule } from "./brain-facts.module"
 export { BrainFactsService } from "./brain-facts.service"
+export { BrainFactBatchService } from "./brain-fact-batch.service"
 export { BrainFactsReadService } from "./brain-facts-read.service"
 export { isoOf } from "./fact-record.mapper"
 export { factSlugOf, foldedText, sameValue } from "./fact-key.policy"
@@ -11,3 +12,4 @@ export type { BrainSubjectType, Evidence, FactRecord, FactStatus, ProposeResult,
 export { SUBJECT_TYPES } from "./brain-facts.contracts"
 
 export type { FactInput } from "./brain-facts.contracts"
+export { batchIdOf, bulkNoteOf, isBulkSafe } from "./bulk-apply.policy"

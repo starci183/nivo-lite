@@ -5,6 +5,7 @@ import { DocumentsErrorCode, InjectDocuments } from "@modules/integrations/docum
 import type { DocumentsPort } from "@modules/integrations/documents"
 import { ok, refused } from "@modules/platform/primitives"
 import { InjectDriveAccessSource } from "./knowledge.decorators"
+import { needsOcr } from "./scanned-pdf.policy"
 import type { DriveAccessSource, ReadOutcome } from "./knowledge.contracts"
 
 /** The part of the text of a link without its scheme, lower case, for comparing a title with its address. */
@@ -49,6 +50,7 @@ export class SourceReaderService {
         if (stored === null) return refused(StoredNote.FileMissing)
         if (stored.bytes.length > MAX_UPLOAD_BYTES) return refused(StoredNote.FileTooLarge)
         const placed = await this.documents.readPlacedFile(name, stored.bytes, stored.contentType)
+        if (needsOcr(name, stored.contentType, placed.text)) return refused(StoredNote.NeedsOcr)
         const hasPlaces = placed.parts.some((part) => part.place !== null)
         return ok({ text: placed.text, title: null, ...(hasPlaces ? { parts: placed.parts } : {}) })
     }

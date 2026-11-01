@@ -8,6 +8,7 @@ import type { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { leadPath } from "@/modules/routes"
 import type { FlowDecisionRow, SalesDecision, TypedDecisionValues } from "@/modules/types"
 import { fieldKey } from "@/modules/utils"
+import { actionWordOf } from "@/hooks/actionWord"
 
 type Decision = "approved" | "rejected"
 
@@ -114,7 +115,7 @@ export const pendingSalesRow = (item: SalesDecision, input: SalesDecisionRowInpu
         isStale: isStale(item.createdAt, nowIso),
         customer: item.customer,
         leadHref: item.leadId === null ? null : leadPath(item.leadId),
-        actionLabel: item.action === "follow_up" ? g("action_send_follow_up") : g(`action_${item.action}`),
+        actionLabel: actionWordOf(g, item.action),
         summary: item.summary,
         reasonHint: item.reason && item.reason !== "routine" ? g(`reasonHint_${item.reason}`) : null,
         amountLine: amountLineOf(item, isEditing, input.format),
@@ -147,7 +148,7 @@ export const decidedSalesRow = (row: FlowDecisionRow, input: SalesDecisionsContr
     const { basis, rest } = splitBasis(row.note)
     return {
         id: row.id,
-        action: g(`action_${row.action}`),
+        action: actionWordOf(g, row.action),
         outcomeLabel: g(`outcome_${row.outcome}`),
         outcomeTone: OUTCOME_TONES[row.outcome],
         customer: row.lead_id ? (row.leadName ?? t("openCustomer")) : "",

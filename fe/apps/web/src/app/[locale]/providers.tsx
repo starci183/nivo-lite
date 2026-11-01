@@ -9,6 +9,7 @@ import { SWRConfig, useSWRConfig } from "swr"
 import type { ReactNode } from "react"
 import { SideEffectsLayout } from "@/features/layouts/SideEffectsLayout"
 import { intlTagOf, navigation } from "@/modules/i18n"
+import { pollingRestart } from "@/modules/swr-polling"
 import { bindViewerCache } from "@/modules/viewer-cache"
 import { ReduxProvider, useAppSelector } from "@/redux"
 
@@ -53,7 +54,8 @@ const GrammarRouting = (props: LayerProps) => {
 }
 
 /**
- * A focus regain revalidates at most once per interval instead of on every tab switch. Reads that want to keep their last
+ * Reads with a function `refreshInterval` start polling again when newer data makes it answer above zero after it stopped
+ * (modules/swr-polling). A focus regain revalidates at most once per interval instead of on every tab switch. Reads that want to keep their last
  * answer while a new one is in flight opt in per read (useBookingRange, useBookingBoard, useQueryAgentChatPageSwr).
  */
 const READ_DEFAULTS = { focusThrottleInterval: 30_000 } as const
@@ -70,7 +72,7 @@ const ViewerCache = (props: LayerProps) => {
     return (
         <SWRConfig
             key={viewerId === undefined ? "pending" : (viewerId ?? "signed-out")}
-            value={{ ...READ_DEFAULTS, provider: () => new Map() }}
+            value={{ ...READ_DEFAULTS, use: [pollingRestart], provider: () => new Map() }}
         >
             <ViewerCacheBinding />
             {props.children}

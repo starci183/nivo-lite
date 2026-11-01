@@ -1,7 +1,7 @@
 import type { Installation } from "@modules/domain/agents"
 import type { SubjectType } from "@modules/domain/work-items"
 import type { RunUsage } from "@modules/integrations/openclaw"
-import type { AgentWakeSource } from "@modules/domain/agent-work"
+import type { AgentTurnAttachment, AgentWakeSource } from "@modules/domain/agent-work"
 import type { Locale } from "@modules/platform/i18n"
 
 /** One turn to run on the runtime. */
@@ -18,6 +18,8 @@ export interface AgentTurnRequest {
     readonly threadKey: string
     /** The whole authoritative context and the wake's text. */
     readonly message: string
+    /** The pictures sent with it. */
+    readonly attachments?: ReadonlyArray<AgentTurnAttachment>
     /** `wake-<wakeId>:<fence>`: a retried send is a no-op on the runtime. */
     readonly runKey: string
     /** How long the turn may take. */

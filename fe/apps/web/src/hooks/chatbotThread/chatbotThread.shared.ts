@@ -36,6 +36,7 @@ export interface ChatbotThreadEntry {
     readonly avatarName: string | null
     readonly deliveryText: string | null
     readonly deliveryTone: "accent" | "muted"
+    readonly files: ChatbotMessage["files"]
 }
 
 const entryOf = (partial: Pick<ChatbotThreadEntry, "id" | "kind" | "text">): ChatbotThreadEntry => ({
@@ -46,6 +47,7 @@ const entryOf = (partial: Pick<ChatbotThreadEntry, "id" | "kind" | "text">): Cha
     avatarName: null,
     deliveryText: null,
     deliveryTone: "muted",
+    files: [],
     ...partial,
 })
 
@@ -79,6 +81,7 @@ const bubbleOf = (
         avatarName: avatarNameOf(message, human, customer),
         deliveryText: delivery?.text ?? null,
         deliveryTone: delivery?.tone ?? "muted",
+        files: message.files,
     }
 }
 

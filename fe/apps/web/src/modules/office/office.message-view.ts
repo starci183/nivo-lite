@@ -55,6 +55,7 @@ export const messageView = (
         time: words.time(message.createdAt),
         showTime: entry.isGroupEnd,
         parts: bodyPartsOf(message.body),
+        files: message.files,
         copyText: message.body,
         leadHref: message.leadId === null ? null : leadHref(message.leadId),
         leadLabel: isNotice

@@ -123,6 +123,8 @@ export class BrainService {
     async removeSource(userId: string, workspaceId: string, sourceId: string): Promise<void> {
         const deleted = await this.sources.removeSource(userId, workspaceId, sourceId)
         await this.documentFacts.withdraw(workspaceId, sourceId, deleted.title)
+        // The parts of a long document went with it: what they contributed is taken back as well.
+        await eachInOrder(deleted.parts, (part) => this.documentFacts.withdraw(workspaceId, part.id, part.title))
     }
 
     /** Keeps the brain current before it is read: scheduled values take over, ended values expire. */

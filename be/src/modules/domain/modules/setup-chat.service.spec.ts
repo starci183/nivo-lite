@@ -83,6 +83,7 @@ const build = async () => {
     const sessions = mock<SetupSessionsService>()
     sessions.latest.mockResolvedValue(sessionOf())
     sessions.find.mockResolvedValue(sessionOf())
+    sessions.change.mockImplementation((id, next) => Promise.resolve(sessionOf({ id, ...next(sessionOf()) })))
     const messages = mock<SetupMessagesService>()
     const versions = mock<ContextVersionsService>()
     const members = mock<WorkspaceMembersService>()
@@ -102,6 +103,7 @@ const build = async () => {
     const cards = mock<SetupCardsService>()
     const graph = mock<SetupGraphService>({
         requireWhole: jest.fn().mockResolvedValue(undefined),
+        checkPublish: jest.fn().mockResolvedValue(0),
         publish: jest.fn().mockResolvedValue(undefined),
     })
     const readiness = mock<ModuleReadinessService>()
@@ -267,9 +269,7 @@ describe("SetupChatService > postMessage", () => {
 
 describe("SetupChatService > setGate", () => {
     it("confirms an edited gate in the words of the owner", async () => {
-        const { service, sessions } = await build()
-        sessions.save.mockImplementation((id, change) => Promise.resolve(sessionOf({ id, ...change })))
-
+        const { service } = await build()
         const saved = await service.setGate("u1", "ws-1", "s-1", "scope", "edit", "  Invoices only  ")
 
         expect(saved.gateEvidence).toEqual({
@@ -279,7 +279,6 @@ describe("SetupChatService > setGate", () => {
 
     it("refuses an unknown gate, a gate without evidence and a draft closed meanwhile", async () => {
         const { service, sessions } = await build()
-        sessions.save.mockResolvedValue(null)
 
         await expect(service.setGate("u1", "ws-1", "s-1", "nope", "confirm", "")).rejects.toMatchObject({
             code: ModulesErrorCode.GateUnknown,
@@ -287,6 +286,7 @@ describe("SetupChatService > setGate", () => {
         await expect(service.setGate("u1", "ws-1", "s-1", "scope", "confirm", "")).rejects.toMatchObject({
             code: ModulesErrorCode.GateEmpty,
         })
+        sessions.change.mockResolvedValue(null)
         await expect(service.setGate("u1", "ws-1", "s-1", "scope", "reopen", "")).rejects.toMatchObject({
             code: ModulesErrorCode.SetupSessionClosed,
         })
@@ -443,7 +443,8 @@ describe("SetupChatService", () => {
             sessionOf({ draft: { summary: "New bakery.", facts: [] }, gateEvidence: CONFIRMED }),
         )
         versions.latest.mockResolvedValue(versionOf())
-        versions.insert.mockResolvedValue(versionOf({ id: "v-2", version: 2 }))
+        versions.insert.mockResolvedValue(versionOf({ id: "v-8", version: 8 }))
+        graph.checkPublish.mockResolvedValue(7)
         agents.profileOf.mockResolvedValue({
             id: "agent-1",
             name: "Books",
@@ -454,22 +455,22 @@ describe("SetupChatService", () => {
             knowledge: "Keep these notes.\n\n### NIVO setup v1\nOld notes\n### end NIVO setup",
         })
         const rules = ACCOUNTING_MODULE.gates.map((gate) => `- ${gate.label_en}: About ${gate.key}`).join("\n")
-
-        await expect(service.apply("u1", "ws-1", "inst-1", "en")).resolves.toBe(2)
-        expect(installations.activateVersion).toHaveBeenCalledWith("ws-1", "inst-1", "v-2", "ready")
+        await expect(service.apply("u1", "ws-1", "inst-1", "en")).resolves.toBe(8)
+        expect(installations.activateVersion).toHaveBeenCalledWith("ws-1", "inst-1", "v-8", "ready")
         expect(graph.publish).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             principalId: "u1",
             installationId: "inst-1",
-            contextVersionId: "v-2",
+            version: 8,
+            contextVersionId: "v-8",
         })
         expect(agents.profileOf).toHaveBeenCalledWith("ws-1", "agent-1")
         expect(agents.setTexts).toHaveBeenCalledWith("u1", "ws-1", "agent-1", {
             instructions:
-                "Keep these rules.\n\n### NIVO setup v2\nConfirmed by the owner. " +
+                "Keep these rules.\n\n### NIVO setup v8\nConfirmed by the owner. " +
                 "Follow these rules exactly; when something is not covered, say a team member will confirm.\n" +
                 `${rules}\n### end NIVO setup`,
-            knowledge: `Keep these notes.\n\n### NIVO setup v2\nNew bakery.\n\n${rules}\n### end NIVO setup`,
+            knowledge: `Keep these notes.\n\n### NIVO setup v8\nNew bakery.\n\n${rules}\n### end NIVO setup`,
         })
         expect(sessions.close).toHaveBeenCalledWith("s-1")
     })
@@ -484,6 +485,15 @@ describe("SetupChatService > apply with a vague flow", () => {
         await expect(service.apply("u1", "ws-1", "inst-1", "en")).rejects.toMatchObject({
             code: ModulesErrorCode.GraphGapsOpen,
         })
+        expect(versions.insert).not.toHaveBeenCalled()
+    })
+
+    it("writes nothing when the graph refuses the publish", async () => {
+        const { service, sessions, versions, graph } = await build()
+        sessions.latest.mockResolvedValue(sessionOf({ gateEvidence: CONFIRMED }))
+        versions.latest.mockResolvedValue(null)
+        graph.checkPublish.mockRejectedValue(new ModulesError({ code: ModulesErrorCode.GraphGapsOpen }))
+        await expect(service.apply("u1", "ws-1", "inst-1", "en")).rejects.toBeInstanceOf(ModulesError)
         expect(versions.insert).not.toHaveBeenCalled()
     })
 })

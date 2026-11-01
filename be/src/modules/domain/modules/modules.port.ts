@@ -24,14 +24,20 @@ export interface SetupBranchChange {
     readonly messageId: string | null
 }
 
-/** Who applies a setup, for the graph to publish under the right of the seat. */
-export interface SetupApplier {
+/** Who applies a setup to which installation, for the graph to check the publish under the right of the seat. */
+export interface SetupApplicant {
     /** The workspace. */
     readonly workspaceId: string
     /** The account applying. */
     readonly principalId: string
     /** The installation applied. */
     readonly installationId: string
+}
+
+/** Who applies a setup, for the graph to publish under the right of the seat. */
+export interface SetupApplier extends SetupApplicant {
+    /** The number both the context version and the graph version take. */
+    readonly version: number
     /** The context version the setup became. */
     readonly contextVersionId: string
 }
@@ -44,6 +50,8 @@ export interface SetupGraphPort {
     firstGap(workspaceId: string, installationId: string): Promise<string>
     /** The seat of a person the owner named, or an empty text when nobody is found. */
     seatNamed(workspaceId: string, name: string): Promise<string>
-    /** Publishes the draft of the graph with the context version the setup became. */
+    /** Refuses before the setup writes anything when the publish would be refused; answers the newest graph version number, 0 with no graph. */
+    checkPublish(applicant: SetupApplicant): Promise<number>
+    /** Publishes the draft of the graph as the version the setup became, with its context version, even when the map did not change. */
     publish(applier: SetupApplier): Promise<void>
 }

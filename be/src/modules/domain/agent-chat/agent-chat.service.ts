@@ -4,6 +4,8 @@ import { AgentConversationsReadService, AgentConversationsService } from "@modul
 import { AgentMessageDeliveriesService, AgentMessagesService } from "@modules/domain/agent-messages"
 import { AgentWorkReadService } from "@modules/domain/agent-work"
 import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
+import { ChatFilesService } from "@modules/domain/chat-files"
+import type { ChatFileUpload } from "@modules/domain/chat-files"
 import { CustomerIntakeService } from "@modules/domain/conversations"
 import { EventsReadService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -27,16 +29,21 @@ import type {
     ChatTurnFacts,
     OptionalTurnJobState,
     QueuedAgentChatTurn,
+    RequestChatFileUpload,
     SendAgentChatRequest,
     StartAgentChatRequest,
     TakeOverAgentChatRequest,
 } from "./agent-chat.contracts"
 import { AGENT_CHAT_FOUNDING_OFFER } from "./agent-chat.templates"
 import { AgentChatError, AgentChatErrorCode } from "./errors/agent-chat.error"
+import { withFiles } from "./chat-thread.mapper"
+import type { Locale } from "@modules/platform/i18n"
 
 const BODY_MAX = 4000
 const VISITOR_MAX = 80
 const LINE_MAX = 400
+/** The language of the line a message with a file and no words stands on. */
+const LOCALE: Locale = "vi"
 
 @Injectable()
 /** Agent chat orchestration: proves membership and delegates every table write to its existing capability owner. */
@@ -56,6 +63,7 @@ export class AgentChatService {
         private readonly intake: CustomerIntakeService,
         private readonly work: AgentWorkReadService,
         @InjectQueueStatusService() private readonly queueStatus: QueueStatusService,
+        private readonly files: ChatFilesService,
     ) {}
 
     /** The agent page metadata, including the conditional campaign welcome. */
@@ -92,7 +100,19 @@ export class AgentChatService {
     async listMessages(userId: string, request: AgentChatConversationRequest): Promise<AgentChatMessages> {
         await this.members.require(userId, request.workspaceId)
         await this.requireConversation(request)
-        return this.messages.listChat(request.workspaceId, request.conversationId)
+        const messages = await this.messages.listChat(request.workspaceId, request.conversationId)
+        const files = await this.files.viewsOf(
+            request.workspaceId,
+            messages.map((message) => message.id),
+        )
+        return withFiles(messages, files)
+    }
+
+    /** Issues the address a file of this conversation is uploaded to; the bytes are checked when the message is sent. */
+    async requestFileUpload(userId: string, request: RequestChatFileUpload): Promise<ChatFileUpload> {
+        await this.members.require(userId, request.workspaceId)
+        await this.requireConversation(request)
+        return this.files.requestUpload(request, request)
     }
 
     /** Opens a conversation and stores its greeting in the same transaction. */
@@ -112,8 +132,13 @@ export class AgentChatService {
     /** Stores a submission and enqueues the existing chat-turn job atomically; the mutation never waits for the engine or provider. */
     async send(userId: string, request: SendAgentChatRequest): Promise<QueuedAgentChatTurn> {
         const member = await this.members.require(userId, request.workspaceId)
-        const body = request.body.trim()
-        if (body === "" || body.length > BODY_MAX) throw new AgentChatError({ code: AgentChatErrorCode.InvalidBody })
+        const written = request.body.trim()
+        if (written.length > BODY_MAX || (written === "" && request.file === null)) {
+            throw new AgentChatError({ code: AgentChatErrorCode.InvalidBody })
+        }
+        const file =
+            request.file === null ? null : await this.files.verify(request, request.file.path, request.file.name)
+        const body = this.files.wordsOf(written, LOCALE)
         return this.entityManager.transaction(async (manager) => {
             const conversation = await this.conversations.lockChat(request.workspaceId, request.conversationId, manager)
             const kind = conversation.kind === "customer" && conversation.handledBy !== null ? "deliver" : "turn"
@@ -134,6 +159,7 @@ export class AgentChatService {
                           manager,
                           member.userId,
                       )
+            if (file !== null) await this.files.attach(request, file, id, manager)
             const queued = {
                 workspaceId: request.workspaceId,
                 conversationId: conversation.id,

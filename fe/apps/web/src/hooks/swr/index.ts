@@ -73,7 +73,13 @@ export { useMutateDraftLoyaltyCampaignSwr, useMutateDuplicateVideoProjectSwr } f
 export { useMutateEnqueueKnowledgeSourceSwr, useMutateExplainShiftsScheduleSwr } from "./api"
 export { useMutateFinishWebhookConnectionSwr, useMutateGenerateHiringAdSwr } from "./api"
 export { useMutateGrantAgentConnectionSwr, useMutateHandoffToAccountingSwr } from "./api"
-export { useMutateImportInventoryPasteSwr, useMutateInstallModuleSwr, useMutateKeepCurrentBrainFactSwr } from "./api"
+export {
+    useMutateApplyBrainFactGroupSwr,
+    useMutateImportInventoryPasteSwr,
+    useMutateInstallModuleSwr,
+    useMutateKeepCurrentBrainFactSwr,
+    useMutateUndoBrainFactBatchSwr,
+} from "./api"
 export { useMutateLinkHiringStaffSwr, useMutateMaintainBrainSwr, useMutateMarkBookingNoShowSwr } from "./api"
 export { useMutateMarkContentPublishedSwr, useMutateMarkOrderShippedSwr, useMutateMarkVideoPublishedSwr } from "./api"
 export { useMutateMoveBookingSwr, useMutateMoveContentItemSwr, useMutateMoveHiringCandidateSwr } from "./api"
@@ -90,7 +96,12 @@ export { useMutateRequestAgentSyncSwr, useMutateRenameAgentSwr } from "./api"
 export { useMutateRequestAgentAvatarUploadSwr, useMutateSetAgentAvatarSwr } from "./api"
 export { useMutateRequestMyAvatarUploadSwr, useMutateSetMyAvatarSwr, useMutateRequestChatAnswerSwr } from "./api"
 export { useMutateRequestChatReplySwr, useMutateRequestContentDraftSwr } from "./api"
-export { useMutateRequestContentMediaUploadSwr, useMutateRequestContentMonthPlanSwr } from "./api"
+export {
+    useMutateRequestAgentChatFileUploadSwr,
+    useMutateRequestContentMediaUploadSwr,
+    useMutateRequestContentMonthPlanSwr,
+    useMutateRequestOfficeFileUploadSwr,
+} from "./api"
 export { useMutateRequestContentQuickDraftSwr, useMutateRequestDataSyncSwr } from "./api"
 export { useMutateRequestHiringInterviewSwr, useMutateRequestHiringOfferSwr } from "./api"
 export { useMutateRequestInventorySendSwr, useMutateRequestLessonMiningSwr } from "./api"

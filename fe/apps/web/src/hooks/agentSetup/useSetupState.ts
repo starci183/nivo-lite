@@ -43,7 +43,7 @@ type PollShape = {
     }>
 }
 
-/** Reads again while NIVO answers; a lost turn stops the poll. */
+/** Reads again while NIVO answers; a lost turn stops the poll. A later turn starts it again through the polling restart of the viewer cache. */
 const pollOf = (latest: PollShape | undefined): number =>
     latest !== undefined && setupTurnStateAt(staleAtOf(latest), Date.now()) === "answering" ? SETUP_POLL_MS : 0
 

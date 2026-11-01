@@ -1,3 +1,4 @@
+import type { ChatFileView } from "@modules/domain/chat-files"
 import type { AgentTurnView, AgentWakeView } from "@modules/domain/agent-work"
 import type { ProposedCommand } from "@modules/domain/ai-tasks"
 import type { OptionalMessageCursor } from "@modules/domain/messages"
@@ -260,10 +261,16 @@ export interface MessageView {
     readonly created_at: string
 }
 
+/** A line of a page of the thread with the files that came with it. */
+export interface OfficePageLine extends MessageView {
+    /** The files, oldest first. */
+    readonly files: ReadonlyArray<ChatFileView>
+}
+
 /** One page of the thread, newest first. */
 export interface MessagePage {
     /** The messages of the page, newest first. */
-    readonly messages: ReadonlyArray<MessageView>
+    readonly messages: ReadonlyArray<OfficePageLine>
     /** The cursor of the next (older) page; null on the last one. */
     readonly next: OptionalMessageCursor
 }
@@ -312,6 +319,16 @@ export interface OfficeTagRequest {
     readonly room: string | null
     /** The language of the notes NIVO writes and of the answer. */
     readonly locale: Locale
+    /** The file sent with the line, or null. */
+    readonly file: OfficeTagFile | null
+}
+
+/** A file that was uploaded for a line. */
+export interface OfficeTagFile {
+    /** The object path the upload address answered. */
+    readonly path: string
+    /** The name of the file. */
+    readonly name: string
 }
 
 /** The catalog keys of the lines NIVO writes when a tag cannot be answered. */

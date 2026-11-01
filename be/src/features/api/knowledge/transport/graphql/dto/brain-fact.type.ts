@@ -91,4 +91,8 @@ export class BrainFactType {
     /** When it was decided, ISO 8601. */
     @Field(() => String, { nullable: true })
     decidedAt?: string | null
+
+    /** The reason given with the decision; a fact applied together with others starts it with the batch it belongs to. */
+    @Field(() => String, { nullable: true })
+    decisionNote?: string | null
 }

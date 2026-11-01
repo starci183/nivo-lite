@@ -14,6 +14,8 @@ export enum BrainLogEvent {
     CommandRefused = "brain.command.refused",
     /** Asking for the dossier review of a document that was read, given up or deleted failed; the facts job goes on. */
     ReviewRequestFailed = "brain.dossier_review.request_failed",
+    /** One fact of a bulk apply could not be applied (it was decided meanwhile, or the write failed); the others go on. */
+    BulkFactSkipped = "brain.bulk.fact_skipped",
     /** A job arrived with a payload of another shape and was dropped. */
     PayloadRefused = "brain.job.payload_refused",
 }

@@ -1,5 +1,6 @@
 import type { ChatConversation } from "@modules/domain/agent-conversations"
 import type { AgentThreadMessage } from "@modules/domain/agent-messages"
+import type { ChatFileFacts, ChatFileView } from "@modules/domain/chat-files"
 
 /** The workspace selected by the caller and proved by the service. */
 export interface AgentChatScope {
@@ -33,10 +34,29 @@ export interface StartAgentChatRequest extends AgentChatAgentRequest {
     readonly visitorName: string | null
 }
 
+/** A file that was uploaded for a message. */
+export interface SentChatFile {
+    /** The object path the upload address answered. */
+    readonly path: string
+    /** The name of the file. */
+    readonly name: string
+}
+
 /** The text whose work is queued atomically with its storage. */
 export interface SendAgentChatRequest extends AgentChatConversationRequest {
-    /** The message body, bounded to 4000 characters. */
+    /** The message body, bounded to 4000 characters; may be empty when a file goes with it. */
     readonly body: string
+    /** The file sent with the message, or null. */
+    readonly file: SentChatFile | null
+}
+
+/** A file about to be uploaded for a message of a conversation. */
+export type RequestChatFileUpload = AgentChatConversationRequest & ChatFileFacts
+
+/** A message of the thread with the files that came with it. */
+export interface AgentChatMessage extends AgentThreadMessage {
+    /** The files, oldest first. */
+    readonly files: ReadonlyArray<ChatFileView>
 }
 
 /** A person taking a chat over or handing it back to the agent. */
@@ -114,7 +134,7 @@ export interface AgentChatTurnStatus {
 /** The agent history list. */
 export type AgentChatConversations = ReadonlyArray<ChatConversation>
 /** The messages displayed by the thread. */
-export type AgentChatMessages = ReadonlyArray<AgentThreadMessage>
+export type AgentChatMessages = ReadonlyArray<AgentChatMessage>
 
 /** The agent facts not present in the reusable public profile. */
 export interface ChatAgentFacts {

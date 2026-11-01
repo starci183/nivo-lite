@@ -67,35 +67,17 @@ describe("SourceReaderService", () => {
             const { reader, sources, documents } = await build()
             documents.canReadFileName.mockReturnValue(true)
             sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1, 2]), contentType: "application/pdf" })
-            documents.readPlacedFile.mockResolvedValue({
-                text: "Menu text",
-                parts: [{ place: null, text: "Menu text" }],
-            })
+            const parts: ReadonlyArray<PlacedText> = [{ place: { kind: "page", label: "1" }, text: "Menu text" }]
+            documents.readPlacedFile.mockResolvedValue({ text: "Menu text", parts })
 
             await expect(reader.read(file())).resolves.toEqual({
                 kind: "ok",
-                value: { text: "Menu text", title: null },
+                value: { text: "Menu text", title: null, parts },
             })
 
             expect(documents.canReadFileName).toHaveBeenCalledWith("menu.pdf")
             expect(sources.readUpload).toHaveBeenCalledWith(`${WS}/a/menu.pdf`)
             expect(documents.readPlacedFile).toHaveBeenCalledWith("menu.pdf", new Uint8Array([1, 2]), "application/pdf")
-        })
-
-        it("hands on the page, slide or sheet of every stretch when the file names them", async () => {
-            const { reader, sources, documents } = await build()
-            documents.canReadFileName.mockReturnValue(true)
-            sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1]), contentType: "application/pdf" })
-            const parts: ReadonlyArray<PlacedText> = [
-                { place: { kind: "page", label: "1" }, text: "One" },
-                { place: { kind: "page", label: "2" }, text: "Two" },
-            ]
-            documents.readPlacedFile.mockResolvedValue({ text: "One\nTwo", parts })
-
-            await expect(reader.read(file())).resolves.toEqual({
-                kind: "ok",
-                value: { text: "One\nTwo", title: null, parts },
-            })
         })
 
         it("takes the text of a file source that has no object", async () => {
@@ -126,6 +108,15 @@ describe("SourceReaderService", () => {
                 kind: "refused",
                 code: DocumentsErrorCode.TypeUnsupported,
             })
+        })
+
+        it("closes a PDF with no text layer as needing OCR instead of reading it as empty", async () => {
+            const { reader, sources, documents } = await build()
+            documents.canReadFileName.mockReturnValue(true)
+            sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1, 2]), contentType: "application/pdf" })
+            documents.readPlacedFile.mockResolvedValue({ text: "  ", parts: [{ place: null, text: "  " }] })
+
+            await expect(reader.read(file())).resolves.toEqual({ kind: "refused", code: StoredNote.NeedsOcr })
         })
 
         it("refuses a file that is not in storage", async () => {

@@ -14,6 +14,7 @@ export type {
     AgentChatTurnStatusRequest,
     ChatTurnFacts,
     QueuedAgentChatTurn,
+    RequestChatFileUpload,
     SendAgentChatRequest,
     StartAgentChatRequest,
     TakeOverAgentChatRequest,

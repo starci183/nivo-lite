@@ -117,6 +117,14 @@ describe("AgentGraphsService reads (continued)", () => {
         )
     })
 
+    it("answers the number of the newest version, and 0 before the first", async () => {
+        const some = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow(7)] }))
+        const none = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, null] }))
+
+        await expect(some.latestVersionOf("ws-1", "agent-1")).resolves.toBe(7)
+        await expect(none.latestVersionOf("ws-1", "agent-1")).resolves.toBe(0)
+    })
+
     it("opens one version as a graph, and refuses one that is not the agent or cannot be read", async () => {
         const found = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow()] }))
         const missing = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, null] }))
@@ -290,17 +298,17 @@ describe("AgentGraphsService.setMode", () => {
     })
 })
 
-describe("AgentGraphsService.publish", () => {
-    const input = {
-        workspaceId: "ws-1",
-        agentId: "agent-1",
-        document: DOCUMENT,
-        kind: "edit",
-        note: "Raised the bound",
-        memberId: "member-1",
-        contextVersionId: null,
-    } as const
+const input = {
+    workspaceId: "ws-1",
+    agentId: "agent-1",
+    document: DOCUMENT,
+    kind: "edit",
+    note: "Raised the bound",
+    memberId: "member-1",
+    contextVersionId: null,
+} as const
 
+describe("AgentGraphsService.publish", () => {
     it("freezes the next version, indexes its sources, makes it the one that decides and keeps the draft in step", async () => {
         const em = mockEntityManager({
             findOne: [
@@ -356,6 +364,26 @@ describe("AgentGraphsService.publish", () => {
             AgentGraphsErrorCode.DocumentInvalid,
         )
         expect(await codeOf(service.publish(input))).toBe(AgentGraphsErrorCode.GraphNotFound)
+    })
+})
+
+describe("AgentGraphsService.publish with a number", () => {
+    it("takes the number it is given when that is above the newest, and refuses one that is not", async () => {
+        const em = mockEntityManager({
+            findOne: [
+                [AgentGraphEntity, graphRow()],
+                [AgentGraphVersionEntity, versionRow(5)],
+            ],
+            save: [AgentGraphVersionEntity, versionRow(7, DOCUMENT, "version-7")],
+            insert: [AgentGraphSourceEntity, {}],
+            update: [AgentGraphEntity, { affected: 1 }],
+        })
+        fakeTransaction(em)
+        const service = await build(em)
+
+        await expect(service.publish({ ...input, version: 7 })).resolves.toMatchObject({ id: "version-7", version: 7 })
+        expect(em.create).toHaveBeenCalledWith(AgentGraphVersionEntity, expect.objectContaining({ version: 7 }))
+        expect(await codeOf(service.publish({ ...input, version: 5 }))).toBe(AgentGraphsErrorCode.DraftConflict)
     })
 })
 

@@ -1,7 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
-import { KnowledgeSourcesService, StoredNote, contentHashOf } from "@modules/domain/knowledge-sources"
+import {
+    KnowledgeSourcesService,
+    SourceTwinsService,
+    StoredNote,
+    contentHashOf,
+} from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { EmbeddingService } from "./embedding.service"
 import { UnchangedSourceService } from "./unchanged-source.service"
@@ -31,6 +36,8 @@ const build = async () => {
     const sources = mock<KnowledgeSourcesService>()
     const chunks = mock<KnowledgeChunksService>()
     const embeddings = mock<EmbeddingService>()
+    const twins = mock<SourceTwinsService>()
+    twins.twinOf.mockResolvedValue(null)
     embeddings.configured.mockReturnValue(true)
     embeddings.model.mockReturnValue("m1")
     chunks.holds.mockResolvedValue(true)
@@ -39,10 +46,11 @@ const build = async () => {
             UnchangedSourceService,
             { provide: KnowledgeSourcesService, useValue: sources },
             { provide: KnowledgeChunksService, useValue: chunks },
+            { provide: SourceTwinsService, useValue: twins },
             { provide: EmbeddingService, useValue: embeddings },
         ],
     }).compile()
-    return { service: moduleRef.get(UnchangedSourceService), sources, chunks, embeddings }
+    return { service: moduleRef.get(UnchangedSourceService), sources, chunks, embeddings, twins }
 }
 
 describe("UnchangedSourceService", () => {
@@ -98,6 +106,28 @@ describe("UnchangedSourceService", () => {
             const empty = sourceOf({ content: "", contentHash: contentHashOf("") })
 
             await expect(service.holdsWhole(empty, "")).resolves.toBe(true)
+        })
+    })
+})
+
+describe("UnchangedSourceService duplicates", () => {
+    describe("closeDuplicate", () => {
+        it("closes a new source whose text a finished document already holds as ready with the duplicate note", async () => {
+            const { service, sources, twins } = await build()
+            twins.twinOf.mockResolvedValue({ id: "s0", title: "Hours" })
+
+            await expect(service.closeDuplicate(sourceOf(), { first: TEXT, later: [] })).resolves.toBe(true)
+
+            expect(twins.twinOf).toHaveBeenCalledWith(sourceOf(), { first: TEXT, later: [] })
+            expect(sources.ready).toHaveBeenCalledWith(WS, "s1", StoredNote.Duplicate)
+        })
+
+        it("leaves a source whose text no finished document holds for the work", async () => {
+            const { service, sources } = await build()
+
+            await expect(service.closeDuplicate(sourceOf(), { first: TEXT, later: [] })).resolves.toBe(false)
+
+            expect(sources.ready).not.toHaveBeenCalled()
         })
     })
 

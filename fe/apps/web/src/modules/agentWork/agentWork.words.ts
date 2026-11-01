@@ -33,7 +33,7 @@ const EVENT = group(
 )
 const TOOL = group(
     "tool_",
-    "knowledge.search lead.create_or_update approval.request handoff.to_person conversation.handOff booking.find_slots booking.request booking.cancel tool.search tool.describe tool.call tool.sequence",
+    "knowledge.search memory.read lead.create_or_update approval.request handoff.to_person conversation.handOff booking.find_slots booking.request booking.cancel tool.search tool.describe tool.call tool.sequence",
     "other",
 )
 
@@ -70,7 +70,7 @@ export const eventWord = (t: AgentWorkTranslator, event: string | null | undefin
 
 /** The families of tool ids the platform owns. */
 const FAMILIES =
-    "knowledge|lead|approval|handoff|conversation|booking|tool|work|member|drive|zalo|telegram|sepay|channel|crm|office|agent"
+    "knowledge|memory|lead|approval|handoff|conversation|booking|tool|work|member|drive|zalo|telegram|sepay|channel|crm|office|agent"
 
 /** A tool id in text a model wrote, after the verb it may have put in front ("Run knowledge.search"): the verbs come from the catalog. */
 const toolIdOf = (verbs: string): RegExp =>

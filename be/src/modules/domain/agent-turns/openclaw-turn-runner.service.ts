@@ -22,6 +22,7 @@ export class OpenClawTurnRunnerService implements AgentTurnRunner {
                 agentId: request.runtimeAgentId,
                 threadKey: request.threadKey,
                 message: request.message,
+                ...(request.attachments === undefined ? {} : { attachments: request.attachments }),
                 idempotencyKey: request.runKey,
                 timeoutMs: request.timeoutMs,
             },

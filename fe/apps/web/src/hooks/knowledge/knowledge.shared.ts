@@ -39,9 +39,7 @@ const submitLabelOf = (t: Translate, add: ReturnType<typeof useAddDocuments>): s
 /** The line under the files and links that says what is missing or what is happening. */
 const filesNoteOf = (t: Translate, add: ReturnType<typeof useAddDocuments>): string | undefined => {
     if (add.queue.isReading) return t("zipReading")
-    if (!add.note.tried) return undefined
-    if (add.mode === "files" && add.pendingCount === 0) return t("hintNoDocs")
-    return add.options.visibility === null ? t("hintChooseVisibility") : undefined
+    return add.note.tried && add.mode === "files" && add.pendingCount === 0 ? t("hintNoDocs") : undefined
 }
 
 /** The notice that says the uploads of an earlier page stopped when it reloaded. */

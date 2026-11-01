@@ -15,6 +15,7 @@ import type {
     ClaimResult,
     ClaimRetryDelay,
     FailWrite,
+    RenewWrite,
     FailedJobEffect,
     JobEffect,
     GuardedWrite,
@@ -128,6 +129,11 @@ export class JobClaimService implements JobClaims {
     /** Records a finished step under the token the caller holds. */
     advance(write: AdvanceWrite): Promise<void> {
         return this.guarded({ currentStep: write.step }, write)
+    }
+
+    /** Extends the lease of the claim under the token the caller holds. */
+    renew(write: RenewWrite): Promise<void> {
+        return this.guarded({ leaseExpiresAt: new Date(this.clock.now().getTime() + write.leaseMs) }, write)
     }
 
     /** Completes the job under the token the caller holds. */

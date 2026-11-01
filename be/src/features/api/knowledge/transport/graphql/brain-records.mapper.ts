@@ -52,6 +52,7 @@ export const toBrainFactType = (fact: FactRecord): BrainFactType => ({
     proposedAt: fact.proposedAt,
     decidedBy: fact.decidedBy,
     decidedAt: fact.decidedAt,
+    decisionNote: fact.decisionNote,
 })
 
 /** Maps a lesson to the GraphQL type. */

@@ -5,6 +5,7 @@ import { ListAgentChatConversationsResolver } from "./agent-chat-conversations.r
 import { ListAgentChatMessagesResolver } from "./agent-chat-messages.resolver"
 import { ConfigurableModuleClass } from "./agentchat-graphql.module-definition"
 import { StartAgentChatConversationResolver } from "./start-agent-chat-conversation.resolver"
+import { RequestAgentChatFileUploadResolver } from "./request-agent-chat-file-upload.resolver"
 import { SendAgentChatMessageResolver } from "./send-agent-chat-message.resolver"
 import { TakeOverAgentChatConversationResolver } from "./take-over-agent-chat-conversation.resolver"
 import { GetAgentChatTurnStatusResolver } from "./agent-chat-turn-status.resolver"
@@ -16,6 +17,7 @@ import { GetAgentChatTurnStatusResolver } from "./agent-chat-turn-status.resolve
         ListAgentChatConversationsResolver,
         ListAgentChatMessagesResolver,
         StartAgentChatConversationResolver,
+        RequestAgentChatFileUploadResolver,
         SendAgentChatMessageResolver,
         TakeOverAgentChatConversationResolver,
         GetAgentChatTurnStatusResolver,

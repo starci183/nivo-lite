@@ -9,9 +9,9 @@ import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/kno
 import { KnowledgeSourcesService, StoredNote, factsPercent } from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { InjectAi } from "@modules/integrations/ai"
-import type { AiService } from "@modules/integrations/ai"
+import type { AiBudget, AiChatAnswer, AiService } from "@modules/integrations/ai"
 import { InjectLogger } from "@modules/platform/logging"
-import { eachInOrder } from "@modules/platform/primitives"
+import { concurrencyGateOf, eachInOrder } from "@modules/platform/primitives"
 import type { Logger } from "@modules/platform/logging"
 import { DocumentReviewService } from "./document-review.service"
 import { ModelJsonService } from "./model-json.service"
@@ -26,8 +26,17 @@ import { BrainLogEvent } from "./brain.log-events"
 /** How many windows in a row may fail before the reading is given up. */
 const MAX_ATTEMPTS = 3
 
-/** How long the model may take to read one window. */
+/** How long the model may take to read one window, once its turn at the model has come. */
 const WINDOW_TIMEOUT_MS = 40_000
+
+/**
+ * What reading one window may spend: reasoning off (the default reasoning writes thousands of tokens before the first fact and a window then
+ * outlasts its timeout) and at most this many completion tokens (forty facts with their quotes are about 5,000).
+ */
+const FACTS_BUDGET: AiBudget = { effort: "off", maxTokens: 8000 }
+
+/** How many windows one process sends to the model at once: documents read together queue for a place, they do not all wait on the model and time out together. */
+const MODEL_PLACES = 3
 
 /** The fingerprint of a text, to tell whether it was read already. */
 const hashOf = (content: string): string => createHash("sha256").update(content).digest("hex").slice(0, 32)
@@ -39,6 +48,8 @@ const hashOf = (content: string): string => createHash("sha256").update(content)
  * Every model call is charged to the workspace's credits under the kind `brain`, and with no credits nothing runs.
  */
 export class DocumentFactsService {
+    private readonly modelGate = concurrencyGateOf(MODEL_PLACES)
+
     constructor(
         @InjectAi() private readonly ai: AiService,
         @InjectLogger() private readonly logger: Logger,
@@ -102,7 +113,8 @@ export class DocumentFactsService {
             changed: resume?.factsChanged ?? false,
             done: resume?.windowsDone ?? 0,
             filed: resume?.factsProposed ?? 0,
-            attempts: resume?.attempts ?? 0,
+            // A reading that was given up and is run again (the owner pressed Try again) starts with all its tries: the count it kept would end it at the first slow answer.
+            attempts: resume === null || resume.status === "failed" ? 0 : resume.attempts,
             orphans: resume?.orphanFactIds ?? [],
             model: "",
         })
@@ -152,16 +164,7 @@ export class DocumentFactsService {
         }
         const text = windows[state.done] ?? ""
         const prompt = userPrompt({ title: source.title, updatedAt: source.updatedAt, index: state.done, total, text })
-        const answer = await this.ai.chat({
-            messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: prompt },
-            ],
-            json: false,
-            schema: null,
-            timeoutMs: WINDOW_TIMEOUT_MS,
-            context: null,
-        })
+        const answer = await this.ask(prompt)
         if (answer !== null) {
             await this.usage.record({
                 workspaceId,
@@ -209,6 +212,23 @@ export class DocumentFactsService {
             progress: factsPercent(next.done, total),
         })
         return this.window(source, windows, next)
+    }
+
+    /** Asks the model to read one window, when it is this call's turn at the model; null when the model did not answer in time. */
+    private ask(prompt: string): Promise<AiChatAnswer | null> {
+        return this.modelGate.run(() =>
+            this.ai.chat({
+                messages: [
+                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "user", content: prompt },
+                ],
+                json: false,
+                schema: null,
+                timeoutMs: WINDOW_TIMEOUT_MS,
+                budget: FACTS_BUDGET,
+                context: null,
+            }),
+        )
     }
 
     /** Files the facts of one window as proposals; answers how many were filed. */

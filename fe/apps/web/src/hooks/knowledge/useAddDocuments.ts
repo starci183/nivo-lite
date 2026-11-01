@@ -81,7 +81,6 @@ export const useAddDocuments = (input: AddDocumentsInput) => {
     const submit = async () => {
         if (isDone) return close()
         if (isEmpty) return note.setTried(true)
-        if (options.visibility === null) return note.setTried(true)
         note.setTried(false)
         batch.begin()
         batch.end(await (mode === "files" ? runBatch() : runNote()))
