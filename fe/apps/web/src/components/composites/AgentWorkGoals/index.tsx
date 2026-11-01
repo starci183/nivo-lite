@@ -23,7 +23,10 @@ export const AgentWorkGoals = (props: AgentWorkGoalsProps) => (
             id: goal.id,
             title: goal.title,
             facts: [goal.detail, goal.dueLabel],
-            badges: <Badge tone={goal.isOpen ? "accent" : "neutral"}>{goal.statusLabel}</Badge>,
+            badges:
+                goal.statusLabel === "" ? undefined : (
+                    <Badge tone={goal.isOpen ? "accent" : "neutral"}>{goal.statusLabel}</Badge>
+                ),
             actions:
                 props.canEdit && goal.isOpen ? (
                     <Button intent="neutral" size="sm" isDisabled={props.isSaving} onPress={() => props.onDone(goal)}>

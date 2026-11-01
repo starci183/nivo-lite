@@ -1,5 +1,5 @@
 import { Badge } from "@starci/grammar/common"
-import { AgentWorkRowMenu } from "@/components/branches/AgentWorkRowMenu"
+import { AgentWorkRowActions } from "@/components/branches/AgentWorkRowActions"
 import { AgentWorkRows } from "@/components/branches/AgentWorkRows"
 import type { AgentWorkTaskView } from "@/modules/types"
 
@@ -27,15 +27,15 @@ export const AgentWorkTasks = (props: AgentWorkTasksProps) => (
             id: task.id,
             title: task.title,
             facts: [task.detail, task.waitLabel],
-            badges: <Badge tone="accent">{task.statusLabel}</Badge>,
+            badges: task.statusLabel === "" ? undefined : <Badge tone="accent">{task.statusLabel}</Badge>,
             actions: (
-                <AgentWorkRowMenu
-                    label={props.words.moreLabel}
-                    linkLabel={props.words.openLabel}
-                    linkHref={task.workItemHref}
-                    commandLabel={props.words.closeLabel}
-                    isDanger={false}
-                    onCommand={props.canEdit ? () => props.onClose(task.id) : null}
+                <AgentWorkRowActions
+                    menuLabel={props.words.moreLabel}
+                    isDisabled={false}
+                    link={task.workItemHref === null ? null : { label: props.words.openLabel, href: task.workItemHref }}
+                    command={
+                        props.canEdit ? { label: props.words.closeLabel, onPress: () => props.onClose(task.id) } : null
+                    }
                 />
             ),
         }))}

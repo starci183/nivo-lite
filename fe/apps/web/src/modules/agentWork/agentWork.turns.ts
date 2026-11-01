@@ -1,27 +1,8 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import type { AgentWorkTurnView, AgentWorkTurnsView } from "@/modules/types"
 import { relative, workItemHrefOf } from "./agentWork.wire"
+import { reasonWord, sourceWord } from "./agentWork.words"
 import type { AgentWorkContext, AgentWorkTranslator, TurnWire } from "./agentWork.wire"
-
-const sourceLabel = (t: AgentWorkTranslator, source: string): string => {
-    if (source === "customer") return t("sourceCustomer")
-    if (source === "tag") return t("sourceTag")
-    if (source === "schedule") return t("sourceSchedule")
-    return t("sourceInternal")
-}
-
-/** The reason a wake was skipped, held or failed, in words. */
-const reasonLabel = (t: AgentWorkTranslator, reason: string | null | undefined): string => {
-    if (reason === "quota") return t("reasonQuota")
-    if (reason === "killed") return t("reasonKilled")
-    if (reason === "breaker") return t("reasonBreaker")
-    if (reason === "daily_cap") return t("reasonDailyCap")
-    if (reason === "not_applied") return t("reasonNotApplied")
-    if (reason === "agent_paused") return t("reasonPaused")
-    if (reason === "stale") return t("reasonStale")
-    if (reason === "over_limit_vnd") return t("reasonOverLimit")
-    return t("reasonOther")
-}
 
 /** What a turn did, in words, with the tone of its badge. */
 interface Outcome {
@@ -29,17 +10,25 @@ interface Outcome {
     readonly tone: BadgeTone
 }
 
+/** A held wake with its plain reason; only the outcome when the table has none. */
+const heldLabel = (t: AgentWorkTranslator, reason: string | null | undefined): string => {
+    const why = reasonWord(t, reason)
+    return why === "" ? t("outcomeHeldPlain") : t("outcomeHeld", { why })
+}
+
+/** A skipped wake with its plain reason; only the outcome when the table has none. */
+const skippedLabel = (t: AgentWorkTranslator, reason: string | null | undefined): string => {
+    const why = reasonWord(t, reason)
+    return why === "" ? t("outcomeSkippedPlain") : t("outcomeSkipped", { why })
+}
+
 const outcomeOf = (wire: TurnWire, t: AgentWorkTranslator): Outcome => {
     if (wire.status === "running") return { label: t("outcomeRunning"), tone: "accent" }
     if (wire.wakeStatus === "failed" || wire.wakeStatus === "dead" || wire.status === "failed") {
         return { label: t("outcomeFailed"), tone: "danger" }
     }
-    if (wire.wakeStatus === "held") {
-        return { label: t("outcomeHeld", { why: reasonLabel(t, wire.reason) }), tone: "warning" }
-    }
-    if (wire.wakeStatus === "skipped") {
-        return { label: t("outcomeSkipped", { why: reasonLabel(t, wire.reason) }), tone: "neutral" }
-    }
+    if (wire.wakeStatus === "held") return { label: heldLabel(t, wire.reason), tone: "warning" }
+    if (wire.wakeStatus === "skipped") return { label: skippedLabel(t, wire.reason), tone: "neutral" }
     if (wire.workItemId !== null && wire.workItemId !== undefined)
         return { label: t("outcomeWorkItem"), tone: "success" }
     if (wire.status === "proposed") return { label: t("outcomeProposed"), tone: "accent" }
@@ -59,7 +48,7 @@ const toTurnView = (wire: TurnWire, context: AgentWorkContext): AgentWorkTurnVie
     const outcome = outcomeOf(wire, context.t)
     return {
         id: wire.id,
-        sourceLabel: sourceLabel(context.t, wire.source),
+        sourceLabel: sourceWord(context.t, wire.source),
         outcomeLabel: outcome.label,
         outcomeTone: outcome.tone,
         wokeLabel: relative(context, wire.wokeAt),

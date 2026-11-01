@@ -1,5 +1,5 @@
 import { Switch } from "@starci/grammar/common"
-import { AgentWorkRowMenu } from "@/components/branches/AgentWorkRowMenu"
+import { AgentWorkRowActions } from "@/components/branches/AgentWorkRowActions"
 import { AgentWorkRows } from "@/components/branches/AgentWorkRows"
 import type { AgentWorkTriggerView } from "@/modules/types"
 import { ROW_ACTIONS } from "./classNames"
@@ -9,7 +9,6 @@ interface AgentWorkScheduleProps {
     readonly words: {
         readonly label: string
         readonly emptyMessage: string
-        readonly moreLabel: string
         readonly switchLabel: string
         readonly removeLabel: string
     }
@@ -40,13 +39,15 @@ export const AgentWorkSchedule = (props: AgentWorkScheduleProps) => (
                         isDisabled={!props.canEdit || props.isSaving}
                         onSelectedChange={(enabled) => props.onSwitch(trigger, enabled)}
                     />
-                    <AgentWorkRowMenu
-                        label={props.words.moreLabel}
-                        linkLabel=""
-                        linkHref={null}
-                        commandLabel={props.words.removeLabel}
-                        isDanger
-                        onCommand={props.canEdit && trigger.isRemovable ? () => props.onRemove(trigger.id) : null}
+                    <AgentWorkRowActions
+                        menuLabel={props.words.removeLabel}
+                        isDisabled={props.isSaving}
+                        link={null}
+                        command={
+                            props.canEdit && trigger.isRemovable
+                                ? { label: props.words.removeLabel, onPress: () => props.onRemove(trigger.id) }
+                                : null
+                        }
                     />
                 </div>
             ),
