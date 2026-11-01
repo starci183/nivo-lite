@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next"
 import { getTranslations } from "next-intl/server"
-import { Open_Sans } from "next/font/google"
+import { Inter } from "next/font/google"
 import type { ReactNode } from "react"
 import { AppLayoutBase } from "./component"
 
-const openSans = Open_Sans({ subsets: ["latin", "vietnamese"], variable: "--font-open-sans" })
+const inter = Inter({ subsets: ["latin", "vietnamese"], variable: "--font-sans" })
 
 type AppLayoutProps = {
     readonly locale: string
@@ -22,5 +22,5 @@ export const appLayoutMetadata = async (locale: string): Promise<Metadata> => {
 
 /** The server-resolved document around the routed body. */
 export const AppLayout = (props: AppLayoutProps) => (
-    <AppLayoutBase props={{ lang: props.locale, fontClass: openSans.variable }}>{props.content}</AppLayoutBase>
+    <AppLayoutBase props={{ lang: props.locale, fontClass: inter.variable }}>{props.content}</AppLayoutBase>
 )
