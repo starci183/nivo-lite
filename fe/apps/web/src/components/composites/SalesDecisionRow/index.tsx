@@ -107,10 +107,7 @@ export const SalesDecisionRow = (props: SalesDecisionRowProps) => {
                 </Text>
             )}
             {row.draft === null ? null : (
-                <SurfaceCard ariaLabel={l.draftLabel}>
-                    <Text size="xs" tone="muted" weight="medium">
-                        {l.draftLabel}
-                    </Text>
+                <SurfaceCard label={l.draftLabel} headingLevel={4}>
                     <Text as="p" size="sm">
                         {row.draft}
                     </Text>
