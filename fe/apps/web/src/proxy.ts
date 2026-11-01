@@ -87,6 +87,9 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
         return url
     }
 
+    // A busy or unreachable back end (429, 5xx, network) says nothing about the person: never bounce them to sign-in for it.
+    if (!principal.success && principal.message === "unavailable") return response
+
     if (!principal.success) {
         if (isPublic) return response
         const url = loginUrl()

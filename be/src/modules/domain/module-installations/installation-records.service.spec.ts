@@ -383,7 +383,7 @@ describe("InstallationRecordsService > markRemoved", () => {
 })
 
 describe("InstallationRecordsService.page", () => {
-    it("reads a page of installations after an id, by id, leaving out removed ones", async () => {
+    it("reads a page of installations after an id, by id, leaving out removed ones; the first page carries no id bound (an empty text is no uuid)", async () => {
         const em = mockEntityManager({ find: [ModuleInstallationEntity, []] })
         const service = await build(em)
 
@@ -392,7 +392,7 @@ describe("InstallationRecordsService.page", () => {
 
         expect(em.find.mock.calls.map((call) => call[1])).toEqual([
             { where: { status: Not("removed"), id: MoreThan("inst-5") }, order: { id: "ASC" }, take: 200 },
-            { where: { status: Not("removed"), id: MoreThan("") }, order: { id: "ASC" }, take: 50 },
+            { where: { status: Not("removed") }, order: { id: "ASC" }, take: 50 },
         ])
     })
 })
