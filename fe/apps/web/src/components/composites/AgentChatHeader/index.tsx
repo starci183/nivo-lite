@@ -10,6 +10,8 @@ export interface AgentChatHeaderProps {
     readonly name: string
     readonly subtitle: string
     readonly glyph: ModuleIconName
+    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    readonly avatarUrl?: string | null | undefined
     readonly module: string
     /** The agent is still loading: the mark and the lines draw as waiting shapes. */
     readonly isSkeleton: boolean
@@ -30,6 +32,7 @@ interface HeaderMarkProps {
     readonly glyph: ModuleIconName
     readonly module: string
     readonly name: string
+    readonly avatarUrl: string | null | undefined
     readonly isSkeleton: boolean
 }
 
@@ -37,7 +40,13 @@ interface HeaderMarkProps {
 const HeaderMark = (props: HeaderMarkProps) => {
     if (props.isSkeleton) return <Avatar name="" size="md" isSkeleton />
     return (
-        <AgentMark glyph={nivoIconSource(props.glyph, "leading")} module={props.module} label={props.name} size="md" />
+        <AgentMark
+            glyph={nivoIconSource(props.glyph, "leading")}
+            module={props.module}
+            label={props.name}
+            src={props.avatarUrl}
+            size="md"
+        />
     )
 }
 
@@ -50,7 +59,13 @@ export const AgentChatHeader = (props: AgentChatHeaderProps) => (
                     {props.backLabel}
                 </Button>
             </div>
-            <HeaderMark glyph={props.glyph} module={props.module} name={props.name} isSkeleton={props.isSkeleton} />
+            <HeaderMark
+                glyph={props.glyph}
+                module={props.module}
+                name={props.name}
+                avatarUrl={props.avatarUrl}
+                isSkeleton={props.isSkeleton}
+            />
             <Stack gap="identity">
                 <Text weight="semibold" overflow="truncate" isSkeleton={props.isSkeleton}>
                     {props.name}

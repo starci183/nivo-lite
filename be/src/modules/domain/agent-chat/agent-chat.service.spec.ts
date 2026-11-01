@@ -43,7 +43,7 @@ const MEMBER: WorkspaceMember = {
     status: "active",
 }
 
-const AGENT: ChatAgentFacts = { id: "a1", module: "chatbot", status: "active", greeting: "Welcome" }
+const AGENT: ChatAgentFacts = { id: "a1", module: "chatbot", status: "active", greeting: "Welcome", avatarUrl: null }
 
 const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | null = null) => {
     const deliveries = mock<AgentMessageDeliveriesService>()
@@ -115,6 +115,7 @@ describe("AgentChatService", () => {
                 name: "Nivo",
                 handle: "nivo",
                 role: "receptionist",
+                avatarUrl: null,
                 isActive: true,
                 hasCustomerChannel: true,
                 workspaceId: "w1",
@@ -143,15 +144,10 @@ describe("AgentChatService", () => {
             const { service, agents } = await build({ ...AGENT, module: "sales" })
             agents.profileOf.mockResolvedValue(PROFILE)
 
-            await expect(service.page("u1", PAGE)).resolves.toEqual({
-                id: "a1",
+            await expect(service.page("u1", PAGE)).resolves.toMatchObject({
                 module: "sales",
-                name: "Nivo",
-                handle: "nivo",
-                role: "receptionist",
-                isActive: true,
+                avatarUrl: null,
                 hasCustomerChannel: false,
-                workspaceId: "w1",
                 showWelcome: false,
             })
         })

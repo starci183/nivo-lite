@@ -33,7 +33,7 @@ export type Installation = {
     readonly agentId: string | null
     /** The display name and handle of the agent (read-through, for headers and mentions). */
     readonly agentName: string
-    /** The picture the owner gave the agent; null for the generated avatar. */
+    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly agentAvatarUrl: string | null
     readonly agentHandle: string
     readonly status: InstallationStatus

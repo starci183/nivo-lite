@@ -68,7 +68,7 @@ const GOOD: ModuleDefinition = {
     connectionProviders: [],
     defaultOperatingMode: "assist",
     multiInstance: false,
-    agent: { name: "Demo Agent", handle: "demo", summary: text, capabilities: list, role: text, instructions: text },
+    agent: { label: text, handle: "demo", summary: text, capabilities: list, role: text, instructions: text },
     gates: [GATE],
     authorityActions: [ACTION],
     accepts: [COMMAND],
@@ -86,8 +86,12 @@ const INVALID_MODULES: Array<[string, ModuleDefinition, string]> = [
     ["a blank glyph", { ...GOOD, glyph: "" }, "icon, glyph and mascot"],
     ["a blank mascot", { ...GOOD, mascot: "" }, "icon, glyph and mascot"],
     ["a blank knowledge folder", { ...GOOD, knowledgeFolder: "" }, "knowledgeFolder is required"],
-    ["an agent without a name", { ...GOOD, agent: { ...GOOD.agent, name: "" } }, "agent name and handle"],
-    ["an agent without a handle", { ...GOOD, agent: { ...GOOD.agent, handle: "" } }, "agent name and handle"],
+    [
+        "an agent without a label",
+        { ...GOOD, agent: { ...GOOD.agent, label: { vi: "", en: "x" } } },
+        "agent label and handle",
+    ],
+    ["an agent without a handle", { ...GOOD, agent: { ...GOOD.agent, handle: "" } }, "agent label and handle"],
     [
         "an agent without a summary",
         { ...GOOD, agent: { ...GOOD.agent, summary: { vi: "", en: "x" } } },

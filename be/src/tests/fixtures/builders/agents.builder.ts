@@ -12,6 +12,7 @@ export const agentEntityOf = builder<AgentEntity>({
     workspaceId: "w1",
     module: "chatbot",
     name: "Bot",
+    serial: null,
     handle: "bot",
     role: "Front desk",
     instructions: "Be kind",

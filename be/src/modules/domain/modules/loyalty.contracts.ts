@@ -34,7 +34,7 @@ export const LOYALTY_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: false,
     agent: {
-        name: catalogCopy("modulesCatalog.loyalty.agent.name", "en"),
+        label: catalogText("modulesCatalog.loyalty.agent.label"),
         handle: "loyalty",
         summary: catalogText("modulesCatalog.loyalty.agent.summary"),
         capabilities: catalogList([

@@ -1,5 +1,6 @@
 import { Avatar, DataTable, IncludedMark, SurfaceCard, Text } from "@starci/grammar/common"
 import type { DataTableRow } from "@starci/grammar/common"
+import { AgentMark } from "@/components/leaves/AgentMark"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { CELL_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
@@ -81,11 +82,13 @@ const MatrixTable = (props: MatrixTableProps) => {
         const audience = matrix.audiences.find((one) => one.id === columnId)
         if (row.lane === null) {
             if (audience === undefined) return <Text tone="muted">{view.whoLabel}</Text>
-            return (
+            return audience.kind === "agent" ? (
+                <AgentMark label={audience.name} seed={audience.id} src={audience.avatarUrl} size="md" />
+            ) : (
                 <Avatar
                     name={audience.name}
                     seed={audience.id}
-                    kind={audience.kind === "agent" ? "agent" : "person"}
+                    kind="person"
                     {...(audience.avatarUrl === undefined ? {} : { src: audience.avatarUrl })}
                 />
             )

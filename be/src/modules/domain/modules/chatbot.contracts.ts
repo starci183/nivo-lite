@@ -35,7 +35,7 @@ export const CHATBOT_MODULE: ModuleDefinition = {
     defaultOperatingMode: "assist",
     multiInstance: true,
     agent: {
-        name: catalogCopy("modulesCatalog.chatbot.agent.name", "en"),
+        label: catalogText("modulesCatalog.chatbot.agent.label"),
         handle: "chatbot",
         summary: catalogText("modulesCatalog.chatbot.agent.summary"),
         capabilities: catalogList([

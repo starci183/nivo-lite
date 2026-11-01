@@ -72,6 +72,7 @@ export class AgentChatService {
             name: profile.name,
             handle: profile.handle,
             role: profile.role,
+            avatarUrl: meta.avatarUrl,
             isActive: meta.status === "active",
             hasCustomerChannel: meta.module === "chatbot",
             workspaceId: request.workspaceId,

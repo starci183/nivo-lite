@@ -142,8 +142,8 @@ export interface ModuleRoles {
 
 /** The agent a module installs with. */
 export interface ModuleAgent {
-    /** The agent's display name. */
-    readonly name: string
+    /** The role the agent carries in its default name ("Agent Chatbot #23233"), in both languages. */
+    readonly label: Bilingual
     /** The agent's mention handle. */
     readonly handle: string
     /** The one-line summary of the agent. */

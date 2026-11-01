@@ -4,6 +4,7 @@ import { OFFICE_ROOMS_AGENTS } from "@modules/domain/office-rooms"
 import { AgentsQueueModule } from "@modules/queues/agents"
 import { AgentBundleService } from "./agent-bundle.service"
 import { AgentDirectoryModule } from "./agent-directory.module"
+import { AgentCreationService } from "./agent-creation.service"
 import { AgentDirectoryService } from "./agent-directory.service"
 import { AgentIdentityService } from "./agent-identity.service"
 import { AgentLensesService } from "./agent-lenses.service"
@@ -47,6 +48,7 @@ export class AgentsModule extends ConfigurableModuleClass {
             { provide: AGENTS_CONNECTIONS, useExisting: options.ports.connections },
             PauseClient,
             AgentsService,
+            AgentCreationService,
             EngineStatusService,
             { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
             AgentIdentityService,

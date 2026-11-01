@@ -108,7 +108,7 @@ const moduleOf = (gates: ReadonlyArray<ModuleGate>): ModuleDefinition => ({
     connectionProviders: [],
     defaultOperatingMode: "assist",
     multiInstance: false,
-    agent: { name: "Demo", handle: "demo", summary: text, capabilities: list, role: text, instructions: text },
+    agent: { label: text, handle: "demo", summary: text, capabilities: list, role: text, instructions: text },
     gates,
     authorityActions: [],
     accepts: [],

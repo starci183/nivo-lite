@@ -156,6 +156,8 @@ export interface AgentChatFacts {
     readonly status: string
     /** The opening greeting. */
     readonly greeting: string
+    /** The HTTPS address of the agent's picture, or null for the default mascot. */
+    readonly avatarUrl: string | null
 }
 
 /** The agent chat facts, or null when the workspace has no such agent. */
