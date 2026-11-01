@@ -5,27 +5,40 @@ import type { FactRecord } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { SetupMessagesService } from "@modules/domain/module-setup-messages"
+import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
+import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
+import { InjectClock } from "@modules/platform/clock"
+import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { isSetupTurnPayload } from "@modules/queues/agents"
 import type { SetupTurnPayload } from "@modules/queues/agents"
+import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import { ModulesLogEvent } from "./modules.log-events"
 import { ModulesService } from "./modules.service"
 import { conflictsOf, knownLinesOf, unmentionedConflicts } from "./policies/setup-facts.policy"
+import { attemptTimeoutOf, budgetLeftMs, canAttempt, canRetry, isTransient } from "./policies/setup-turn-budget.policy"
 import { mergeSetupTurn, readSetupTurn, setupPromptOf } from "./policies/setup-turn.policy"
 import type { SetupTurnResult } from "./policies/setup-turn.policy"
 import { SetupCardsService } from "./setup-cards.service"
 import { SetupGraphService } from "./setup-graph.service"
 
 const HISTORY_TURNS = 16
-const TURN_TIMEOUT_MS = 90_000
 /** The most facts of the business one turn reads. */
 const FACTS_READ_MAX = 500
 /** The most facts that match the owner message. */
 const FACT_HITS_MAX = 30
+
+/** A turn still to answer: its draft, the owner message, the chat and where the message sits in it. */
+interface OpenTurn {
+    readonly session: SetupSessionRecord
+    readonly message: SetupMessageRecord
+    readonly chat: ReadonlyArray<SetupMessageRecord>
+    readonly at: number
+}
 
 /** What is on record for one turn: every fact in force of the view, and those that match the owner message. */
 interface OnRecord {
@@ -37,7 +50,9 @@ interface OnRecord {
 /**
  * One turn of the setup chat, worked by the setup-turn job: the owner message goes to the model once with the checklist, the draft and the
  * open customer questions; what NIVO learned is merged into the draft, the writes it implies become confirm cards and its reply is the
- * next message of the chat. The reply is written last, so a job that ran before is recognised by it and never answers twice.
+ * next message of the chat. The reply is written last, so a job that ran before is recognised by it and never answers twice. A failure
+ * that heals (the gateway, the model, an empty answer) throws, so the queue attempts the turn again by its own policy within the budget;
+ * when the attempts or the budget are used up the owner is told NIVO is busy, once.
  */
 export class SetupTurnService {
     constructor(
@@ -51,6 +66,7 @@ export class SetupTurnService {
         private readonly modules: ModulesService,
         private readonly cards: SetupCardsService,
         private readonly graph: SetupGraphService,
+        @InjectClock() private readonly clock: Clock,
     ) {}
 
     /** Answers the owner message the payload names; a payload of another shape, a closed draft or a message answered already is left alone. */
@@ -59,13 +75,29 @@ export class SetupTurnService {
         await this.answer(payload)
     }
 
-    private async answer(job: SetupTurnPayload): Promise<void> {
+    /** Runs once when the job ended as failed (the attempts are used up): the owner is told NIVO is busy unless the message was answered. */
+    async giveUp(payload: object): Promise<void> {
+        if (!isSetupTurnPayload(payload)) return
+        const open = await this.openTurn(payload)
+        if (open === null) return
+        await this.reply(payload, open.session.id, this.catalog.get("generation.busy", {}, payload.locale))
+    }
+
+    /** The draft, the owner message and the chat of a turn still to answer; null when the payload is stale, closed or answered already. */
+    private async openTurn(job: SetupTurnPayload): Promise<OpenTurn | null> {
         const session = await this.sessions.find(job.workspaceId, job.setupSessionId)
         const message = await this.messages.find(job.workspaceId, job.messageId)
-        if (session?.status !== "draft" || message === null) return
+        if (session?.status !== "draft" || message === null) return null
         const chat = await this.messages.ofSession(session.id)
         const at = chat.findIndex((line) => line.id === message.id)
-        if (at < 0 || chat.slice(at + 1).some((line) => line.role === "assistant")) return
+        if (at < 0 || chat.slice(at + 1).some((line) => line.role === "assistant")) return null
+        return { session, message, chat, at }
+    }
+
+    private async answer(job: SetupTurnPayload): Promise<void> {
+        const open = await this.openTurn(job)
+        if (open === null) return
+        const { session, message, chat, at } = open
         const installation = await this.installations.find(job.workspaceId, session.installationId)
         if (installation === null) return
         const module = await this.modules.find(installation.moduleKey)
@@ -86,11 +118,13 @@ export class SetupTurnService {
                 ownerAddress: this.catalog.get("setup.ownerAddress", {}, job.locale),
             },
         }
+        const left = budgetLeftMs(message.createdAt, this.clock.now())
+        if (!canAttempt(left)) return this.reply(job, session.id, this.catalog.get("generation.busy", {}, job.locale))
         const outcome = await this.generations.run({
             workspaceId: job.workspaceId,
             purpose: "setup_chat",
             responseFormat: "json",
-            timeoutMs: TURN_TIMEOUT_MS,
+            timeoutMs: attemptTimeoutOf(left),
             kind: "setup",
             module: "setup",
             locale: job.locale,
@@ -100,7 +134,14 @@ export class SetupTurnService {
                 { role: "user", content: input.message },
             ],
         })
-        if (!outcome.ok) return this.reply(job, session.id, outcome.message)
+        if (!outcome.ok && !isTransient(outcome.reason)) return this.reply(job, session.id, outcome.message)
+        if (!outcome.ok || outcome.output.trim() === "") {
+            const reason = outcome.ok ? "empty" : outcome.reason
+            if (!canRetry(budgetLeftMs(message.createdAt, this.clock.now()))) {
+                return this.reply(job, session.id, this.catalog.get("generation.busy", {}, job.locale))
+            }
+            throw new ModulesError({ code: ModulesErrorCode.SetupTurnTransient, params: { reason } })
+        }
         const turn = readSetupTurn(
             input,
             outcome.output,

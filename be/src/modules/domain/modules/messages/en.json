@@ -524,6 +524,7 @@
   "errors.MODULES_CARD_FACT_NOT_APPLIED": "The Second Brain kept this value for review instead of applying it.",
   "errors.MODULES_CARD_RULE_UNKNOWN_ACTION": "The action {{action}} is not in the registry.",
   "errors.MODULES_CARD_RULE_MODE_CAPPED": "The action {{action}} can never run by itself: choose ask first or never.",
+  "errors.MODULES_SETUP_TURN_TRANSIENT": "NIVO is busy, please try again in a few minutes.",
   "setup.welcome": "Hi, I am NIVO. I will set up your {{module}} with you. Tell me about your business in your own words. I will note what I understand and ask about what is missing.",
   "setup.noted": "Noted. Tell me more.",
   "setup.business": "Business",

@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock } from "@starci/jest-preset"
+import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { DirectGenerationService } from "@modules/domain/ai-generations"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
@@ -9,10 +9,12 @@ import { SetupMessagesService } from "@modules/domain/module-setup-messages"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
+import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import { CHATBOT_MODULE } from "./chatbot.contracts"
 import type { ModuleDefinition } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
@@ -105,7 +107,16 @@ const MODEL_ANSWER = JSON.stringify({
     writes: [],
 })
 
+/** The one reply a turn gives when NIVO is busy. */
+const BUSY_POST = [
+    [{ workspaceId: "ws-1", setupSessionId: "s-1", role: "assistant", author: "NIVO", body: "[generation.busy]" }],
+]
+
+/** Five seconds after the owner message of the spec. */
+const NOW = new Date("2026-10-01T00:01:05.000Z")
+
 const build = async () => {
+    const clock = new FakeClock(NOW)
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const generations = mock<DirectGenerationService>()
     generations.run.mockResolvedValue({
@@ -145,6 +156,7 @@ const build = async () => {
             { provide: BrainFactsService, useValue: facts },
             { provide: LOGGER, useValue: logger },
             { provide: SetupGraphService, useValue: graph },
+            { provide: CLOCK, useValue: clock },
         ],
     }).compile()
     return {
@@ -159,6 +171,7 @@ const build = async () => {
         catalog,
         modules,
         graph,
+        clock,
     }
 }
 
@@ -205,26 +218,6 @@ describe("SetupTurnService", () => {
         ])
     })
 
-    it("posts the failure message of the model and keeps the draft", async () => {
-        const { service, generations, sessions, messages } = await build()
-        generations.run.mockResolvedValue({ ok: false, reason: "timeout", message: "NIVO is busy, try again." })
-
-        await service.run(PAYLOAD)
-
-        expect(sessions.save).not.toHaveBeenCalled()
-        expect(messages.post.mock.calls).toEqual([
-            [
-                {
-                    workspaceId: "ws-1",
-                    setupSessionId: "s-1",
-                    role: "assistant",
-                    author: "NIVO",
-                    body: "NIVO is busy, try again.",
-                },
-            ],
-        ])
-    })
-
     it("never answers a message twice", async () => {
         const { service, messages, generations } = await build()
         messages.ofSession.mockResolvedValue([lineOf(), lineOf({ id: "m-3", role: "assistant", body: "Done" })])
@@ -233,6 +226,76 @@ describe("SetupTurnService", () => {
 
         expect(generations.run).not.toHaveBeenCalled()
         expect(messages.post.mock.calls).toEqual([])
+    })
+})
+
+describe("SetupTurnService > a failed model call", () => {
+    it.each(["quota", "not_configured", "engine_offline"] as const)(
+        "posts the own message of a %s refusal at once and keeps the draft",
+        async (reason) => {
+            const { service, generations, sessions, messages } = await build()
+            generations.run.mockResolvedValue({ ok: false, reason, message: "Own message." })
+
+            await expect(service.run(PAYLOAD)).resolves.toBeUndefined()
+
+            expect(sessions.save).not.toHaveBeenCalled()
+            expect(messages.post.mock.calls).toEqual([
+                [
+                    {
+                        workspaceId: "ws-1",
+                        setupSessionId: "s-1",
+                        role: "assistant",
+                        author: "NIVO",
+                        body: "Own message.",
+                    },
+                ],
+            ])
+        },
+    )
+
+    it.each(["error", "timeout"] as const)("throws on a %s so the queue attempts the turn again", async (reason) => {
+        const { service, generations, sessions, messages, cards } = await build()
+        generations.run.mockResolvedValue({ ok: false, reason, message: "NIVO is busy, try again." })
+
+        await expect(service.run(PAYLOAD)).rejects.toMatchObject({
+            code: ModulesErrorCode.SetupTurnTransient,
+            params: { reason },
+        })
+
+        expect(sessions.save).not.toHaveBeenCalled()
+        expect(cards.propose).not.toHaveBeenCalled()
+        expect(messages.post.mock.calls).toEqual([])
+    })
+
+    it("throws a ModulesError on an empty answer and posts nothing", async () => {
+        const { service, generations, messages } = await build()
+        generations.run.mockResolvedValue({ ok: true, output: "  ", generationId: "gen-1", timings: {}, usage: null })
+
+        await expect(service.run(PAYLOAD)).rejects.toBeInstanceOf(ModulesError)
+
+        expect(messages.post.mock.calls).toEqual([])
+    })
+
+    it("tells the owner NIVO is busy, without a model call, when under 15 s of the budget are left", async () => {
+        const { service, generations, messages, clock } = await build()
+        clock.set(new Date("2026-10-01T00:02:47.000Z"))
+
+        await service.run(PAYLOAD)
+
+        expect(generations.run).not.toHaveBeenCalled()
+        expect(messages.post.mock.calls).toEqual(BUSY_POST)
+    })
+
+    it("tells the owner NIVO is busy at once when a transient failure leaves no room for another attempt", async () => {
+        const { service, generations, messages, clock } = await build()
+        generations.run.mockImplementation(() => {
+            clock.set(new Date("2026-10-01T00:02:31.000Z"))
+            return Promise.resolve({ ok: false, reason: "error", message: "NIVO is busy, try again." })
+        })
+
+        await expect(service.run(PAYLOAD)).resolves.toBeUndefined()
+
+        expect(messages.post.mock.calls).toEqual(BUSY_POST)
     })
 })
 
@@ -391,5 +454,42 @@ describe("SetupTurnService > a vague flow", () => {
 
         expect(graph.gapOf).toHaveBeenCalledWith("ws-1", "inst-1")
         expect(generations.run.mock.calls[0]?.[0].messages[0]?.content).toContain("The agent flow has one vague place")
+    })
+})
+
+describe("SetupTurnService > giveUp", () => {
+    it("posts the busy sentence in the language of the job once the attempts are used up", async () => {
+        const { service, messages, catalog } = await build()
+
+        await service.giveUp(PAYLOAD)
+
+        expect(catalog.get).toHaveBeenCalledWith("generation.busy", {}, "en")
+        expect(messages.post.mock.calls).toEqual(BUSY_POST)
+    })
+
+    it("posts nothing when the message was answered already", async () => {
+        const { service, messages } = await build()
+        messages.ofSession.mockResolvedValue([lineOf(), lineOf({ id: "m-3", role: "assistant", body: "Done" })])
+
+        await service.giveUp(PAYLOAD)
+
+        expect(messages.post.mock.calls).toEqual([])
+    })
+
+    it("posts nothing when the draft closed", async () => {
+        const { service, sessions, messages } = await build()
+        sessions.find.mockResolvedValue(sessionOf({ status: "applied" }))
+
+        await service.giveUp(PAYLOAD)
+
+        expect(messages.post.mock.calls).toEqual([])
+    })
+
+    it("leaves a payload of another shape alone", async () => {
+        const { service, sessions } = await build()
+
+        await service.giveUp({ workspaceId: "ws-1" })
+
+        expect(sessions.find).not.toHaveBeenCalled()
     })
 })
