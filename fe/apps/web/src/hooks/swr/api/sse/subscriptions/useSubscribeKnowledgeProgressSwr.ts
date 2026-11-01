@@ -5,7 +5,9 @@ import useSWRSubscription from "swr/subscription"
 import { useViewerKeyId, useWorkspaceKey } from "@/hooks/workspaceKey"
 import { streamKnowledgeProgress } from "@/modules/api/sse/knowledge/stream-knowledge-progress"
 import type { KnowledgeProgressPush } from "@/modules/api/sse/knowledge/stream-knowledge-progress"
+import { QUERY_BRAIN_SWR_KEY } from "../../graphql/queries/useQueryBrainSwr"
 import { QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "../../graphql/queries/useQueryKnowledgeSourcesSwr"
+import { QUERY_KNOWLEDGE_USAGE_SWR_KEY } from "../../graphql/queries/useQueryKnowledgeUsageSwr"
 
 /** The SWR key of the knowledge-progress stream; the full key carries the workspace and the signed-in member, the identity of the stream. */
 export const SUBSCRIBE_KNOWLEDGE_PROGRESS_SWR_KEY = "SUBSCRIBE_KNOWLEDGE_PROGRESS_SWR"
@@ -25,7 +27,13 @@ const SETTLE_DEBOUNCE_MS = 1_000
 
 const NOT_LIVE: KnowledgeProgressState = { isLive: false, bySource: {} }
 
-/** Statuses after which a worker is no longer on the source: the stored list is read again for what only it holds (the passage count, the note). */
+/** The Second Brain is read this soon after a settle (a burst still reads it once): the settled document must not be drawn as unread meanwhile. */
+const BRAIN_DEBOUNCE_MS = 250
+
+/** The reads a settled source changes besides the Second Brain: the list and the raw data used. */
+const SETTLED_READS: ReadonlySet<unknown> = new Set([QUERY_KNOWLEDGE_SOURCES_SWR_KEY, QUERY_KNOWLEDGE_USAGE_SWR_KEY])
+
+/** Statuses after which a worker is no longer on the source: the stored list and the Second Brain are read again for what only they hold (the passage count, the note, the facts). */
 const SETTLED: ReadonlySet<string> = new Set(["ready", "failed", "blocked_credits"])
 
 /** The state with this push kept when it is newer than the one held for its source. */
@@ -54,8 +62,12 @@ export const useSubscribeKnowledgeProgressSwr = () => {
         ([, workspaceId], { next }) => {
             const controller = new AbortController()
             let pending: ReturnType<typeof setTimeout> | undefined
+            let brainPending: ReturnType<typeof setTimeout> | undefined
             const staleList = (read: unknown): boolean =>
-                Array.isArray(read) && read[1] === workspaceId && read[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY
+                Array.isArray(read) && read[1] === workspaceId && SETTLED_READS.has(read[0])
+            /** The Second Brain holds where the reading of the facts stands: it is read at once, so a document that settled is never drawn as unread. */
+            const staleBrain = (read: unknown): boolean =>
+                Array.isArray(read) && read[1] === workspaceId && read[0] === QUERY_BRAIN_SWR_KEY
             const refreshSoon = () => {
                 clearTimeout(pending)
                 pending = setTimeout(() => void mutate(staleList), SETTLE_DEBOUNCE_MS)
@@ -65,10 +77,14 @@ export const useSubscribeKnowledgeProgressSwr = () => {
                 onOpen: () => {
                     next(null, (state) => ({ ...(state ?? NOT_LIVE), isLive: true }))
                     void mutate(staleList)
+                    void mutate(staleBrain)
                 },
                 onPush: (push) => {
                     next(null, (state) => withPush(state ?? NOT_LIVE, push))
-                    if (SETTLED.has(push.status)) refreshSoon()
+                    if (!SETTLED.has(push.status)) return
+                    clearTimeout(brainPending)
+                    brainPending = setTimeout(() => void mutate(staleBrain), BRAIN_DEBOUNCE_MS)
+                    refreshSoon()
                 },
                 onDrop: () => next(null, (state) => ({ ...(state ?? NOT_LIVE), isLive: false })),
                 report: (line) => next(new Error(line)),
@@ -76,6 +92,7 @@ export const useSubscribeKnowledgeProgressSwr = () => {
             return () => {
                 controller.abort()
                 clearTimeout(pending)
+                clearTimeout(brainPending)
             }
         },
     )

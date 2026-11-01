@@ -44,7 +44,7 @@ export const useBatchOptions = (preset: AddPreset | null, instances: ReadonlyArr
     const [options, setOptions] = useState<Options>({
         topic: preset?.topic ?? "",
         tags: preset?.tags ?? "",
-        visibility: preset?.visibility ?? "internal",
+        visibility: preset?.visibility ?? "public",
         module: "all",
         instanceId: null,
     })

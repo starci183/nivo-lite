@@ -1,4 +1,4 @@
-import { Disclosure, Input, RadioGroup, Select } from "@starci/grammar/common"
+import { Disclosure, Input, Select } from "@starci/grammar/common"
 import { PANEL_CLASS_NAME } from "./classNames"
 
 /** One choice of a select or a radio group. */
@@ -15,21 +15,17 @@ type AddOptionsPanelProps = {
     readonly tagsLabel: string
     readonly tagsHint: string
     readonly moduleLabel: string
-    readonly visibilityLabel: string
     readonly topic: string
     readonly tags: string
     readonly module: string
-    readonly visibility: string
     readonly moduleOptions: ReadonlyArray<ChoiceView>
-    readonly visibilityOptions: ReadonlyArray<ChoiceView>
     readonly isBusy: boolean
     readonly onTopic: (value: string) => void
     readonly onTags: (value: string) => void
     readonly onModule: (value: string | null) => void
-    readonly onVisibility: (value: string) => void
 }
 
-/** The options that apply to the whole batch: topic, tags, the agent that uses it and who may read it. */
+/** The options that apply to the whole batch: topic, tags and the agent that uses it. */
 export const AddOptionsPanel = (props: AddOptionsPanelProps) => (
     <Disclosure title={props.title}>
         <div className={PANEL_CLASS_NAME}>
@@ -58,14 +54,6 @@ export const AddOptionsPanel = (props: AddOptionsPanelProps) => (
                 value={props.module}
                 isDisabled={props.isBusy}
                 onValueChange={props.onModule}
-            />
-            <RadioGroup
-                label={props.visibilityLabel}
-                name="visibility"
-                options={props.visibilityOptions.map((one) => ({ value: one.id, label: one.label }))}
-                value={props.visibility}
-                isDisabled={props.isBusy}
-                onValueChange={props.onVisibility}
             />
         </div>
     </Disclosure>

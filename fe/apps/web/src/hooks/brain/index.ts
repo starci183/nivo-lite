@@ -62,3 +62,5 @@ export type {
     TodoFilter,
     TodoSeverityFilter,
 } from "@/modules/brain"
+export { useKnowledgeRowOf } from "./useKnowledgeRowOf"
+export { useAddProgress } from "./useAddProgress"
