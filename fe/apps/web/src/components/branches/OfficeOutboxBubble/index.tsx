@@ -1,19 +1,19 @@
-import { ChatBubble, Text } from "@starci/grammar/common"
+import { Text, MessageBubble } from "@starci/grammar/common"
 import { Icon } from "@/components/leaves/Icon"
-import type { OfficeOutboxView, OfficeText } from "@/modules/types"
+import type { OfficeOutboxView, OfficeThreadProps } from "@/modules/types"
 
 /** What the optimistic bubble of a line being sent draws. */
 type OfficeOutboxBubbleProps = {
     readonly line: OfficeOutboxView
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["copy"]["outbox"]
 }
 
 /** The owner's bubble shown at once while the send is in flight, or marked failed. */
 export const OfficeOutboxBubble = (props: OfficeOutboxBubbleProps) => {
-    const { line, text } = props
+    const { line, copy } = props
     return (
         <div data-status={line.isFailed ? "failed" : "sending"}>
-            <ChatBubble
+            <MessageBubble
                 side="outgoing"
                 footer={
                     <Text
@@ -24,22 +24,23 @@ export const OfficeOutboxBubble = (props: OfficeOutboxBubbleProps) => {
                             line.isFailed ? undefined : <Icon props={{ name: "messageSending", usage: "chip" }} />
                         }
                     >
-                        {line.isFailed ? text("sendFailed") : text("sending")}
+                        {line.isFailed ? copy.sendFailed : copy.sending}
                     </Text>
                 }
-            >
-                <Text as="p">
-                    {line.parts.map((part) =>
-                        part.isMention ? (
-                            <Text key={part.key} as="span">
-                                {part.text}
-                            </Text>
-                        ) : (
-                            part.text
-                        ),
-                    )}
-                </Text>
-            </ChatBubble>
+                body={
+                    <Text as="p">
+                        {line.parts.map((part) =>
+                            part.isMention ? (
+                                <Text key={part.key} as="span">
+                                    {part.text}
+                                </Text>
+                            ) : (
+                                part.text
+                            ),
+                        )}
+                    </Text>
+                }
+            />
         </div>
     )
 }

@@ -4,14 +4,25 @@ import { AgentKnowledgeModule } from "@modules/domain/agent-knowledge"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./customer-turns.module-definition"
 import { CustomerCorePlanService } from "./customer-core-plan.service"
+import { CustomerDoorStepService } from "./customer-door-step.service"
+import { CustomerFinalReplyService } from "./customer-final-reply.service"
+import { CustomerIntentContextService } from "./customer-intent-context.service"
+import { CustomerIntentsService } from "./customer-intents.service"
+import { CustomerIntentSettleService } from "./customer-intent-settle.service"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
+import { ApprovalStepHandlerService } from "./approval-step-handler.service"
 import { CustomerWorkHandlerService } from "./customer-work-handler.service"
+import { FinalReplyStepHandlerService } from "./final-reply-step-handler.service"
+import { FinalReplyService } from "./final-reply.service"
+import { OutputStepHandlerService } from "./output-step-handler.service"
+import { OutputApprovalService } from "./output-approval.service"
 import { PaymentClaimsService } from "./payment-claims.service"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
 import { GatewayContextService } from "./gateway-context.service"
 import { HubNotesService } from "./hub-notes.service"
+import { TurnGatewayPipelineService } from "./turn-gateway-pipeline.service"
 import { TurnGatewayToolsService } from "./turn-gateway-tools.service"
 import { TurnHandoffService } from "./turn-handoff.service"
 import { TurnSourcesService } from "./turn-sources.service"
@@ -36,14 +47,25 @@ export class CustomerTurnsModule extends ConfigurableModuleClass {
             TurnPurchasesService,
             HubNotesService,
             GatewayContextService,
+            TurnGatewayPipelineService,
             TurnGatewayToolsService,
             TurnHandoffService,
             TurnSourcesService,
             TurnToolAccessService,
             TurnModulesService,
             CustomerTurnRuntimeService,
+            CustomerIntentContextService,
+            CustomerIntentsService,
+            CustomerIntentSettleService,
+            CustomerFinalReplyService,
+            CustomerDoorStepService,
             CustomerCorePlanService,
             CustomerWorkHandlerService,
+            FinalReplyService,
+            OutputStepHandlerService,
+            OutputApprovalService,
+            ApprovalStepHandlerService,
+            FinalReplyStepHandlerService,
         ]
         const knowledge = AgentKnowledgeModule.register({ isGlobal: false })
         return {

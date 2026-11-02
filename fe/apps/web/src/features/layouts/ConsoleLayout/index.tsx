@@ -1,6 +1,5 @@
 import { getTranslations } from "next-intl/server"
 import type { ReactNode } from "react"
-import { ConsoleSessionGate } from "@/components/blocks/ConsoleSessionGate"
 import { ConsoleLayoutBase } from "./component"
 
 /** What the console route hands the layout: the routed page. */
@@ -12,20 +11,18 @@ type ConsoleLayoutProps = {
 export const ConsoleLayout = async (props: ConsoleLayoutProps) => {
     const t = await getTranslations("shell")
     return (
-        <ConsoleSessionGate>
-            <ConsoleLayoutBase
-                props={{
-                    mainNavigationLabel: t("mainNavigation"),
-                    workspaceLabel: t("groupWorkspace"),
-                    drawer: {
-                        title: t("mainNavigation"),
-                        openLabel: t("openMenu"),
-                        closeLabel: t("closeMenu"),
-                    },
-                }}
-            >
-                {props.children}
-            </ConsoleLayoutBase>
-        </ConsoleSessionGate>
+        <ConsoleLayoutBase
+            props={{
+                mainNavigationLabel: t("mainNavigation"),
+                workspaceLabel: t("groupWorkspace"),
+                drawer: {
+                    title: t("mainNavigation"),
+                    openLabel: t("openMenu"),
+                    closeLabel: t("closeMenu"),
+                },
+            }}
+        >
+            {props.children}
+        </ConsoleLayoutBase>
     )
 }

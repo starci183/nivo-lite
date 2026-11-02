@@ -31,7 +31,7 @@ export const PasswordPair = (props: PasswordPairProps) => (
             isRequired
             isDisabled={props.isDisabled}
             value={props.password}
-            isError={props.passwordError !== undefined}
+            isInvalid={props.passwordError !== undefined}
             errorMessage={props.passwordError}
             onValueChange={props.onPassword}
         />
@@ -45,7 +45,7 @@ export const PasswordPair = (props: PasswordPairProps) => (
             isRequired
             isDisabled={props.isDisabled}
             value={props.confirm}
-            isError={props.confirmError !== undefined}
+            isInvalid={props.confirmError !== undefined}
             errorMessage={props.confirmError}
             onValueChange={props.onConfirm}
         />

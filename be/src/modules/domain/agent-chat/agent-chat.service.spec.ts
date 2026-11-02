@@ -11,6 +11,7 @@ import { CustomerIntakeService } from "@modules/domain/conversations"
 import { ChatFilesService } from "@modules/domain/chat-files"
 import { NO_CHAT_FILES } from "@tests/fixtures/builders/chat-files.builder"
 import {
+    CHAT,
     CONVERSATION,
     MEMBER_LAN,
     PROFILE,
@@ -58,6 +59,10 @@ const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | 
     const intake = mock<CustomerIntakeService>()
     const work = mock<AgentWorkReadService>({ customerWake: jest.fn().mockResolvedValue(null) })
     const queueStatus = mock<QueueStatusService>()
+    const files = mock<ChatFilesService>({
+        viewsOf: jest.fn(NO_CHAT_FILES.viewsOf),
+        wordsOf: jest.fn(NO_CHAT_FILES.wordsOf),
+    })
     members.require.mockResolvedValue(MEMBER)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -76,7 +81,7 @@ const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | 
             { provide: CustomerIntakeService, useValue: intake },
             { provide: AgentWorkReadService, useValue: work },
             { provide: QUEUE_STATUS, useValue: queueStatus },
-            { provide: ChatFilesService, useValue: mock<ChatFilesService>(NO_CHAT_FILES) },
+            { provide: ChatFilesService, useValue: files },
         ],
     }).compile()
     return {
@@ -95,6 +100,7 @@ const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | 
         directory,
         deliveries,
         conversationReads,
+        files,
     }
 }
 
@@ -105,18 +111,7 @@ describe("AgentChatService", () => {
             agents.profileOf.mockResolvedValue(PROFILE)
             events.existsOfKindBetween.mockResolvedValue(true)
 
-            await expect(service.page("u1", PAGE)).resolves.toEqual({
-                id: "a1",
-                module: "chatbot",
-                name: "Nivo",
-                handle: "nivo",
-                role: "receptionist",
-                avatarUrl: null,
-                isActive: true,
-                hasCustomerChannel: true,
-                workspaceId: "w1",
-                showWelcome: true,
-            })
+            await expect(service.page("u1", PAGE)).resolves.toEqual(CHAT.page())
             const { startsAt, endsAt } = AGENT_CHAT_FOUNDING_OFFER
             expect(events.existsOfKindBetween).toHaveBeenCalledWith(
                 "w1",
@@ -140,12 +135,7 @@ describe("AgentChatService", () => {
             const { service, agents } = await build({ ...AGENT, module: "sales" })
             agents.profileOf.mockResolvedValue(PROFILE)
 
-            await expect(service.page("u1", PAGE)).resolves.toMatchObject({
-                module: "sales",
-                avatarUrl: null,
-                hasCustomerChannel: false,
-                showWelcome: false,
-            })
+            await expect(service.page("u1", PAGE)).resolves.toMatchObject(CHAT.salesPage())
         })
 
         it.each([
@@ -201,11 +191,9 @@ describe("AgentChatService", () => {
             const { service, conversations, messages, tx } = await build(AGENT)
             conversations.openChat.mockResolvedValue(CONVERSATION)
 
-            await expect(
-                service.start("u1", { workspaceId: "w1", agentId: "a1", kind: "test", visitorName: "  " }),
-            ).resolves.toBe("c1")
+            await expect(service.start("u1", CHAT.start({ kind: "test", visitorName: "  " }))).resolves.toBe("c1")
             expect(conversations.openChat).toHaveBeenCalledWith(
-                { workspaceId: "w1", agentId: "a1", kind: "test", visitorName: "Lan" },
+                CHAT.start({ kind: "test", visitorName: "Lan" }),
                 expect.anything(),
             )
             expect(messages.storeGreeting).toHaveBeenCalledWith("w1", "c1", "Welcome", expect.anything())
@@ -216,16 +204,9 @@ describe("AgentChatService", () => {
             const { service, conversations, messages, tx } = await build({ ...AGENT, greeting: "" })
             conversations.openChat.mockResolvedValue(CONVERSATION)
 
-            await expect(
-                service.start("u1", {
-                    workspaceId: "w1",
-                    agentId: "a1",
-                    kind: "customer",
-                    visitorName: ` ${"n".repeat(90)} `,
-                }),
-            ).resolves.toBe("c1")
+            await expect(service.start("u1", CHAT.longVisitor())).resolves.toBe("c1")
             expect(conversations.openChat).toHaveBeenCalledWith(
-                { workspaceId: "w1", agentId: "a1", kind: "customer", visitorName: "n".repeat(80) },
+                CHAT.start({ visitorName: "n".repeat(80) }),
                 expect.anything(),
             )
             expect(messages.storeGreeting).not.toHaveBeenCalled()
@@ -235,9 +216,9 @@ describe("AgentChatService", () => {
         it("does not open a chat when the agent is missing", async () => {
             const { service, conversations, tx } = await build()
 
-            await expect(
-                service.start("u1", { workspaceId: "w1", agentId: "a1", kind: "customer", visitorName: null }),
-            ).rejects.toMatchObject({ code: AgentChatErrorCode.AgentNotFound })
+            await expect(service.start("u1", CHAT.start())).rejects.toMatchObject({
+                code: AgentChatErrorCode.AgentNotFound,
+            })
             expect(tx.commits).toBe(0)
             expect(conversations.openChat).not.toHaveBeenCalled()
         })
@@ -251,22 +232,9 @@ describe("AgentChatService", () => {
             conversations.lockChat.mockResolvedValue({ ...CONVERSATION, kind: "customer", handledBy: null })
             messages.storeCustomer.mockResolvedValue("m1")
 
-            await expect(service.send("u1", { ...THREAD_REQUEST, file: null, body: "  Hello  " })).resolves.toEqual({
-                id: "m1",
-                conversationId: "c1",
-                status: "queued",
-            })
+            await expect(service.send("u1", CHAT.send({ body: "  Hello  " }))).resolves.toEqual(CHAT.customerAccepted())
             expect(messages.storeCustomer).toHaveBeenCalledWith("w1", "c1", "Hello", expect.anything(), "u1")
-            expect(intake.answerChat).toHaveBeenCalledWith(
-                {
-                    workspaceId: "w1",
-                    conversationId: "c1",
-                    messageId: "m1",
-                    channelEventId: "agentchat:m1",
-                    lookupName: false,
-                },
-                expect.anything(),
-            )
+            expect(intake.answerChat).toHaveBeenCalledWith(CHAT.customerWake(), expect.anything())
             expect(tx.commits).toBe(1)
         })
 
@@ -275,11 +243,7 @@ describe("AgentChatService", () => {
             conversations.lockChat.mockResolvedValue({ ...CONVERSATION, kind: "customer", handledBy: "Lan" })
             messages.storeHuman.mockResolvedValue("m2")
 
-            await expect(service.send("u1", { ...THREAD_REQUEST, file: null, body: "On my way" })).resolves.toEqual({
-                id: "m2",
-                conversationId: "c1",
-                status: "queued",
-            })
+            await expect(service.send("u1", CHAT.send({ body: "On my way" }))).resolves.toEqual(CHAT.humanAccepted())
             expect(messages.storeHuman).toHaveBeenCalledWith("w1", "c1", "On my way", "Lan", expect.anything(), "u1")
             expect(turns.enqueueChatTurn).toHaveBeenCalledWith(
                 expect.objectContaining({ kind: "deliver", messageId: "m2", channelEventId: "agentchat:m2" }),
@@ -290,12 +254,10 @@ describe("AgentChatService", () => {
         it("refuses an empty or oversized body before opening a transaction", async () => {
             const { service, tx, turns } = await build()
 
-            await expect(service.send("u1", { ...THREAD_REQUEST, file: null, body: "   " })).rejects.toMatchObject({
+            await expect(service.send("u1", CHAT.send({ body: "   " }))).rejects.toMatchObject({
                 code: AgentChatErrorCode.InvalidBody,
             })
-            await expect(
-                service.send("u1", { ...THREAD_REQUEST, file: null, body: "a".repeat(4001) }),
-            ).rejects.toMatchObject({
+            await expect(service.send("u1", CHAT.send({ body: "a".repeat(4001) }))).rejects.toMatchObject({
                 code: AgentChatErrorCode.InvalidBody,
             })
             expect(tx.commits).toBe(0)
@@ -310,9 +272,7 @@ describe("AgentChatService", () => {
             const { service, conversations, messages, tx } = await build()
             conversations.lockChat.mockResolvedValue(CONVERSATION)
 
-            await expect(service.takeOver("u1", { ...THREAD_REQUEST, take: true, line: "Hi {user}" })).resolves.toEqual(
-                { conversationId: "c1", handledBy: "Lan" },
-            )
+            await expect(service.takeOver("u1", CHAT.take({ line: "Hi {user}" }))).resolves.toEqual(CHAT.memberHolder())
             expect(conversations.setChatHolder).toHaveBeenCalledWith("w1", "c1", "Lan", expect.anything())
             expect(messages.storeLine).toHaveBeenCalledWith("w1", "c1", "Hi Lan", expect.anything())
             expect(tx.commits).toBe(1)
@@ -323,10 +283,9 @@ describe("AgentChatService", () => {
             members.require.mockResolvedValue({ ...MEMBER, displayName: "" })
             conversations.lockChat.mockResolvedValue(CONVERSATION)
 
-            await expect(service.takeOver("u1", { ...THREAD_REQUEST, take: false, line: "   " })).resolves.toEqual({
-                conversationId: "c1",
-                handledBy: null,
-            })
+            await expect(service.takeOver("u1", CHAT.take({ take: false, line: "   " }))).resolves.toEqual(
+                CHAT.releasedHolder(),
+            )
             expect(conversations.setChatHolder).toHaveBeenCalledWith("w1", "c1", null, expect.anything())
             expect(messages.storeLine).not.toHaveBeenCalled()
         })
@@ -336,9 +295,9 @@ describe("AgentChatService", () => {
             members.require.mockResolvedValue({ ...MEMBER, displayName: "" })
             conversations.lockChat.mockResolvedValue(CONVERSATION)
 
-            await expect(
-                service.takeOver("u1", { ...THREAD_REQUEST, take: true, line: "b".repeat(401) }),
-            ).resolves.toEqual({ conversationId: "c1", handledBy: "staff" })
+            await expect(service.takeOver("u1", CHAT.take({ line: "b".repeat(401) }))).resolves.toEqual(
+                CHAT.staffHolder(),
+            )
             expect(messages.storeLine).toHaveBeenCalledWith("w1", "c1", "b".repeat(400), expect.anything())
         })
     })
@@ -350,14 +309,7 @@ describe("AgentChatService", () => {
             const { service, queueStatus } = await build(null, TURN)
             queueStatus.status.mockResolvedValue({ id: "job-1", state: "queued", attempts: 0 })
 
-            await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toEqual({
-                id: "m1",
-                jobId: "job-1",
-                conversationId: "c1",
-                status: "queued",
-                resultMessageId: "r1",
-                errorCode: null,
-            })
+            await expect(service.turnStatus("u1", CHAT.turn())).resolves.toEqual(CHAT.queuedStatus())
             expect(queueStatus.status).toHaveBeenCalledWith("w1", "chat_turn", "chat-turn.turn:m1")
         })
 
@@ -366,36 +318,16 @@ describe("AgentChatService", () => {
             queueStatus.status.mockResolvedValueOnce({ id: "job-1", state: "running", attempts: 1 })
             queueStatus.status.mockResolvedValueOnce({ id: "job-1", state: "done", attempts: 1 })
 
-            await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toMatchObject({
-                status: "running",
-                errorCode: null,
-            })
-            await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toMatchObject({
-                status: "succeeded",
-                resultMessageId: "r1",
-                errorCode: null,
-            })
+            await expect(service.turnStatus("u1", CHAT.turn())).resolves.toMatchObject(CHAT.runningStatus())
+            await expect(service.turnStatus("u1", CHAT.turn())).resolves.toMatchObject(CHAT.succeededStatus())
         })
 
         it("reports a failed delivery on a channel other than website", async () => {
-            const delivered: ChatTurnFacts = {
-                ...TURN,
-                channel: "zalo",
-                role: "agent",
-                deliveryStatus: "failed",
-                replyId: null,
-            }
+            const delivered: ChatTurnFacts = CHAT.failedDelivery()
             const { service, queueStatus } = await build(null, delivered)
             queueStatus.status.mockResolvedValue({ id: "job-2", state: "done", attempts: 1 })
 
-            await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toEqual({
-                id: "m1",
-                jobId: "job-2",
-                conversationId: "c1",
-                status: "failed",
-                resultMessageId: "m1",
-                errorCode: "CHAT_DELIVERY_FAILED",
-            })
+            await expect(service.turnStatus("u1", CHAT.turn())).resolves.toEqual(CHAT.failedDeliveryStatus())
             expect(queueStatus.status).toHaveBeenCalledWith("w1", "chat_turn", "chat-turn.deliver:m1")
         })
 
@@ -403,21 +335,18 @@ describe("AgentChatService", () => {
             const { service, queueStatus } = await build(null, TURN)
             queueStatus.status.mockResolvedValue({ id: "job-3", state: "failed", attempts: 2 })
 
-            await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toMatchObject({
-                status: "failed",
-                errorCode: "CHAT_TURN_FAILED",
-            })
+            await expect(service.turnStatus("u1", CHAT.turn())).resolves.toMatchObject(CHAT.failedQueueStatus())
         })
 
         it("refuses a message or a job the workspace does not have", async () => {
             const missing = await build()
-            await expect(missing.service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).rejects.toMatchObject({
+            await expect(missing.service.turnStatus("u1", CHAT.turn())).rejects.toMatchObject({
                 code: AgentChatErrorCode.TurnNotFound,
             })
 
             const { service, queueStatus } = await build(null, TURN)
             queueStatus.status.mockResolvedValue(null)
-            await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).rejects.toMatchObject({
+            await expect(service.turnStatus("u1", CHAT.turn())).rejects.toMatchObject({
                 code: AgentChatErrorCode.TurnNotFound,
             })
         })
@@ -428,26 +357,18 @@ it("follows the wake of a message the core road answers, since it has no chat-tu
     const { service, queueStatus, work } = await build(null, TURN)
     queueStatus.status.mockResolvedValue(null)
     work.customerWake.mockResolvedValue({ id: "wake-1", state: "failed" })
-    const status = service.turnStatus("u1", { workspaceId: "w1", id: "m1" })
+    const status = service.turnStatus("u1", CHAT.turn())
     await expect(status).resolves.toMatchObject({ jobId: "wake-1", status: "failed" })
 })
 describe("AgentChatService", () => {
-    it.each([
-        { kind: "test", visitorName: "Lan" },
-        { kind: "customer", visitorName: null },
-    ] as const)("defaults a nameless $kind chat to $visitorName", async ({ kind, visitorName }) => {
+    it.each(CHAT.namelessChats)("defaults a nameless $kind chat to $visitorName", async ({ kind, visitorName }) => {
         const { service, tx, conversations, messages } = await build(AGENT)
         conversations.openChat.mockResolvedValue(CONVERSATION)
-        await expect(service.start("u1", { workspaceId: "w1", agentId: "a1", kind, visitorName: null })).resolves.toBe(
-            "c1",
-        )
+        await expect(service.start("u1", CHAT.start({ kind }))).resolves.toBe("c1")
         const manager = conversations.openChat.mock.calls[0]?.[1]
         expect(manager).toBeDefined()
         expect(manager).not.toBe(tx.em)
-        expect(conversations.openChat).toHaveBeenCalledWith(
-            { workspaceId: "w1", agentId: "a1", kind, visitorName },
-            manager,
-        )
+        expect(conversations.openChat).toHaveBeenCalledWith(CHAT.start({ kind, visitorName }), manager)
         expect(messages.storeGreeting).toHaveBeenCalledWith("w1", "c1", "Welcome", manager)
         expect(tx.commits).toBe(1)
     })
@@ -463,32 +384,113 @@ describe("AgentChatService", () => {
         expect(messages.listChat).not.toHaveBeenCalled()
     })
 
-    it.each([
-        ["failed", "failed", "CHAT_DELIVERY_FAILED"],
-        ["sent", "succeeded", null],
-    ] as const)("reports a completed external turn whose reply delivery is %s", async (delivery, status, errorCode) => {
-        const external: ChatTurnFacts = { ...TURN, channel: "telegram", replyDeliveryStatus: delivery }
-        const { service, deliveries, members, queueStatus } = await build(null, external)
-        queueStatus.status.mockResolvedValue({ id: "job-1", state: "done", attempts: 2 })
-        await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toEqual({
-            id: "m1",
-            jobId: "job-1",
-            conversationId: "c1",
-            status,
-            resultMessageId: "r1",
-            errorCode,
-        })
-        expect(members.require).toHaveBeenCalledWith("u1", "w1")
-        expect(deliveries.turnMessageOf).toHaveBeenCalledWith("w1", "m1")
-        expect(queueStatus.status).toHaveBeenCalledWith("w1", "chat_turn", "chat-turn.turn:m1")
-    })
+    it.each(CHAT.externalDeliveries)(
+        "reports a completed external turn whose reply delivery is %s",
+        async (delivery, status, errorCode) => {
+            const external: ChatTurnFacts = { ...TURN, channel: "telegram", replyDeliveryStatus: delivery }
+            const { service, deliveries, members, queueStatus } = await build(null, external)
+            queueStatus.status.mockResolvedValue({ id: "job-1", state: "done", attempts: 2 })
+            await expect(service.turnStatus("u1", CHAT.turn())).resolves.toEqual(CHAT.externalStatus(status, errorCode))
+            expect(members.require).toHaveBeenCalledWith("u1", "w1")
+            expect(deliveries.turnMessageOf).toHaveBeenCalledWith("w1", "m1")
+            expect(queueStatus.status).toHaveBeenCalledWith("w1", "chat_turn", "chat-turn.turn:m1")
+        },
+    )
 
     it("refuses a message whose conversation channel the owner no longer holds", async () => {
         const { service, conversationReads } = await build(null, TURN)
         conversationReads.channelOf.mockResolvedValue(null)
 
-        await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).rejects.toMatchObject({
+        await expect(service.turnStatus("u1", CHAT.turn())).rejects.toMatchObject({
             code: AgentChatErrorCode.TurnNotFound,
         })
+    })
+})
+
+describe("AgentChatService > requestFileUpload", () => {
+    it("issues an upload only after membership and the conversation scope are proved", async () => {
+        const { service, members, conversations, files } = await build()
+        conversations.targetOf.mockResolvedValue({ kind: "ok", value: TARGET })
+        const request = CHAT.uploadRequest()
+        const upload = { path: "w1/chat/c1/receipt.png", signedUrl: "https://upload.invalid/receipt" }
+        files.requestUpload.mockResolvedValue(upload)
+
+        await expect(service.requestFileUpload("u1", request)).resolves.toEqual(upload)
+
+        expect(members.require).toHaveBeenCalledWith("u1", "w1")
+        expect(conversations.targetOf).toHaveBeenCalledWith("c1")
+        expect(files.requestUpload).toHaveBeenCalledWith(request, request)
+    })
+
+    it("issues no address and reads no conversation when membership is refused", async () => {
+        const { service, members, conversations, files } = await build()
+        const refusal = new Error("not a member")
+        members.require.mockRejectedValue(refusal)
+
+        await expect(service.requestFileUpload("u1", CHAT.uploadRequest())).rejects.toBe(refusal)
+
+        expect(conversations.targetOf).not.toHaveBeenCalled()
+        expect(files.requestUpload).not.toHaveBeenCalled()
+    })
+
+    it("issues no address for a conversation in another workspace", async () => {
+        const { service, conversations, files } = await build()
+        conversations.targetOf.mockResolvedValue({ kind: "ok", value: { ...TARGET, workspaceId: "w2" } })
+
+        await expect(service.requestFileUpload("u1", CHAT.uploadRequest())).rejects.toMatchObject({
+            code: AgentChatErrorCode.ConversationNotFound,
+        })
+
+        expect(files.requestUpload).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentChatService > send with a file", () => {
+    const file = { path: "w1/chat/c1/receipt.png", name: "receipt.png" }
+    const checked = { ...file, contentType: "image/png", sizeBytes: 9 }
+
+    it("attaches the verified file to a file-only submission in the message transaction", async () => {
+        const { service, files, conversations, messages, intake, tx } = await build()
+        const request = CHAT.send({ body: " ", file })
+        CHAT.arrangeFileSend({ files, conversations, messages }, checked)
+
+        await expect(service.send("u1", request)).resolves.toEqual(CHAT.fileAccepted())
+
+        const manager = messages.storeCustomer.mock.calls[0]?.[3]
+        expect(manager).toBeDefined()
+        expect(manager).not.toBe(tx.em)
+        expect(files.verify).toHaveBeenCalledWith(request, file.path, file.name)
+        expect(messages.storeCustomer).toHaveBeenCalledWith("w1", "c1", "sent a file", manager, "u1")
+        expect(files.attach).toHaveBeenCalledWith(request, checked, "m-file", manager)
+        expect(intake.answerChat).toHaveBeenCalledWith(CHAT.fileWake(), manager)
+        expect(tx.commits).toBe(1)
+    })
+
+    it("writes no message or wake when verification refuses the uploaded object", async () => {
+        const { service, files, conversations, messages, intake, tx } = await build()
+        const refusal = new Error("file is outside this conversation")
+        files.verify.mockRejectedValue(refusal)
+
+        await expect(service.send("u1", CHAT.send({ body: "receipt", file }))).rejects.toBe(refusal)
+
+        expect(conversations.lockChat).not.toHaveBeenCalled()
+        expect(messages.storeCustomer).not.toHaveBeenCalled()
+        expect(files.attach).not.toHaveBeenCalled()
+        expect(intake.answerChat).not.toHaveBeenCalled()
+        expect(tx.commits).toBe(0)
+        expect(tx.rollbacks).toBe(0)
+    })
+
+    it("rolls the message back and queues nothing when its attachment cannot be stored", async () => {
+        const { service, files, conversations, messages, intake, turns, tx } = await build()
+        const failure = new Error("attachment write failed")
+        CHAT.arrangeAttachmentFailure({ files, conversations, messages }, checked, failure)
+
+        await expect(service.send("u1", CHAT.send({ body: "receipt", file }))).rejects.toBe(failure)
+
+        expect(intake.answerChat).not.toHaveBeenCalled()
+        expect(turns.enqueueChatTurn).not.toHaveBeenCalled()
+        expect(tx.commits).toBe(0)
+        expect(tx.rollbacks).toBe(1)
     })
 })

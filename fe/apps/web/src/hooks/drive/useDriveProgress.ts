@@ -6,6 +6,7 @@ import { DOCUMENT_STATUS_KEYS, noteKeyOf, useLibraryCommands } from "@/hooks/kno
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
 import { toKnowledgeDocument } from "@/modules/documents"
+import { toast } from "@/modules/toast"
 import type { ConnectionLineView, ConnectionTone, DataSlot, KnowledgeDocument } from "@/modules/types"
 import { DRIVE_ORIGIN, DRIVE_PROGRESS_POLL_MS } from "./drive.shared"
 
@@ -27,6 +28,7 @@ const TONES: Readonly<Record<KnowledgeDocument["status"], ConnectionTone>> = {
 export const useDriveProgress = (enabled = true) => {
     const t = useTranslations("driveConnection")
     const tk = useTranslations("knowledge")
+    const feedback = useTranslations("toast")
     const format = useFormatter()
     const read = useQueryKnowledgeSourcesSwr({ origin: DRIVE_ORIGIN }, DRIVE_PROGRESS_POLL_MS, enabled)
     const commands = useLibraryCommands()
@@ -43,10 +45,23 @@ export const useDriveProgress = (enabled = true) => {
                 title: source.title,
                 description: note ?? [visibility, added].join(" · "),
                 badge: { label: tk(DOCUMENT_STATUS_KEYS[source.status]), tone: TONES[source.status] },
-                ...(source.status === "failed" ? { action: { label: t("retry"), run: () => retry(source.id) } } : {}),
+                ...(source.status === "failed"
+                    ? {
+                          action: {
+                              label: t("retry"),
+                              run: () => {
+                                  retry(source.id).catch(() => {
+                                      toast.danger(feedback("errorTitle"), {
+                                          description: feedback("defaultError"),
+                                      })
+                                  })
+                              },
+                          },
+                      }
+                    : {}),
             }
         },
-        [t, tk, format, retry],
+        [t, tk, feedback, format, retry],
     )
 
     const lines: DataSlot<ReadonlyArray<ConnectionLineView>> = mapSlot(

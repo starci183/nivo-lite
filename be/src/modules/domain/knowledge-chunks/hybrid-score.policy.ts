@@ -8,7 +8,7 @@ export interface HybridTerms {
 
 /** The vector half of the score: 0.7 of the cosine similarity, for a row whose vector comes from the query model. */
 const vectorScore = (alias: string): string =>
-    `CASE WHEN ${alias}.embedding IS NOT NULL AND ${alias}.embeddingModel = :model THEN greatest(0, 1 - (${alias}.embedding <=> CAST(:vector AS extensions.vector))) * 0.7 ELSE 0 END`
+    `CASE WHEN ${alias}.embedding IS NOT NULL AND ${alias}.embeddingModel = :model THEN greatest(0, 1 - (${alias}.embedding OPERATOR(extensions.<=>) CAST(:vector AS extensions.vector))) * 0.7 ELSE 0 END`
 
 /** The word half of the score: 0.3 of the capped text rank. */
 const textScore = (alias: string): string => `least(1, ts_rank(${alias}.fts, to_tsquery('simple', :tsquery))) * 0.3`
@@ -24,7 +24,7 @@ export const hybridHit = (alias: string, terms: HybridTerms): string => {
     const hits = [
         ...(terms.vector
             ? [
-                  `(${alias}.embedding IS NOT NULL AND ${alias}.embeddingModel = :model AND (${alias}.embedding <=> CAST(:vector AS extensions.vector)) < 0.8)`,
+                  `(${alias}.embedding IS NOT NULL AND ${alias}.embeddingModel = :model AND (${alias}.embedding OPERATOR(extensions.<=>) CAST(:vector AS extensions.vector)) < 0.8)`,
               ]
             : []),
         ...(terms.text ? [`${alias}.fts @@ to_tsquery('simple', :tsquery)`] : []),

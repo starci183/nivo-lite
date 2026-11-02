@@ -11,6 +11,9 @@ import {
 } from "@/hooks/overviewGov"
 import { useOverviewData, useOverviewGovernance } from "@/hooks/overview"
 import { goalLinesOf, statusRowsOf } from "@/hooks/overviewResults"
+import type { Governance } from "@/hooks/overviewFigures"
+import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
+import { MODULE_KEYS, MODULE_REGISTRY } from "@/modules/catalog"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { OverviewGovernanceBase } from "./component"
 import type { OverviewGovernanceFigures } from "./component"
@@ -84,34 +87,58 @@ const figuresOf = ({ t, g, format, data }: FiguresInput): OverviewGovernanceFigu
     }
 }
 
+/** The fixed dashboard anatomy: known departments and status roles, with unknown collections left to Grammar's loading rows. */
+const GOVERNANCE_PLACEHOLDER: Governance = {
+    goals: { revenueVnd: null, newCustomers: null, firstReplyMinutes: null },
+    results: {
+        confirmedVnd: 0,
+        invoicedVnd: 0,
+        collectedVnd: 0,
+        ordersConfirmed: 0,
+        newCustomers7d: 0,
+        wonCustomers: 0,
+    },
+    status: {
+        confirmedOrders: { vnd: 0, count: 0 },
+        internalInvoices: { vnd: 0, count: 0 },
+        matchedPayments: { vnd: 0, count: 0 },
+        pendingVerification: { vnd: 0, count: 0 },
+        newLeads7d: 0,
+        wonLeads: 0,
+        excludedTestRecords: 0,
+    },
+    efficiency: { autoDone7d: 0, askedHuman7d: 0, medianDecisionMinutes: null },
+    pendingDecisions: 0,
+    exceptions: { routine: 0, missing_data: 0, over_authority: 0, unclear_outcome: 0, not_allowed: 0, failed: 0 },
+    departments: MODULE_KEYS.filter((key) => MODULE_REGISTRY[key].status === "stable").map((department) => ({
+        department,
+        done7d: 0,
+        waiting: 0,
+        lastActivityAt: null,
+    })),
+    recentDecisions: [],
+}
+
 /** The five governance blocks of the overview with their copy and figures resolved in the browser. */
 export const OverviewGovernance = () => {
     const t = useTranslations("overview")
     const g = useTranslations("governance")
     const format = useFormatter()
     const data = useOverviewGovernance()
-    const { failed } = useOverviewData()
-    if (data === undefined) {
-        if (failed) return null
-        return (
-            <OverviewGovernanceBase
-                props={{
-                    unavailable: t("govUnavailable"),
-                    resultsTitle: t("resultsTitle"),
-                    figures: null,
-                    isSkeleton: true,
-                }}
-            />
-        )
-    }
+    const { failed, retry } = useOverviewData()
+    const labels = useSlotLabels()
+    const slot = mapSlot(
+        slotOfSwr({ data, isLoading: data === undefined && !failed, error: failed ? true : undefined }),
+        (ready) => figuresOf({ t, g, format, data: ready }),
+    )
     return (
         <OverviewGovernanceBase
             props={{
-                unavailable: t("govUnavailable"),
-                resultsTitle: t("resultsTitle"),
-                isSkeleton: false,
-                figures: figuresOf({ t, g, format, data }),
+                slot,
+                slotLabels: labels(t("govUnavailable")),
+                placeholder: figuresOf({ t, g, format, data: { governance: GOVERNANCE_PLACEHOLDER, waiting: [] } }),
             }}
+            on={{ retry }}
         />
     )
 }

@@ -1,5 +1,3 @@
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { ModuleIconName } from "@/modules/types"
 import { SinglePickList } from "@/components/leaves/SinglePickList"
 import { AgentMark } from "@/components/leaves/AgentMark"
 
@@ -17,14 +15,12 @@ export interface AgentChatRailRow {
 interface AgentChatRailListProps {
     readonly label: string
     readonly rows: ReadonlyArray<AgentChatRailRow>
-    readonly glyph: ModuleIconName
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly avatarUrl?: string | null | undefined
     /** The id of the agent: the one seed of its mark on every screen. */
     readonly seed: string
-    readonly module: string
     /** The rows are still loading: the list draws waiting rows. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onPick: (id: string, kind: "test" | "customer") => void
 }
 
@@ -32,7 +28,7 @@ interface AgentChatRailListProps {
 export const AgentChatRailList = (props: AgentChatRailListProps) => (
     <SinglePickList
         label={props.label}
-        isSkeleton={props.isSkeleton}
+        isLoading={props.isLoading === true}
         onPick={(id) => {
             const picked = props.rows.find((row) => row.id === id)
             if (picked) props.onPick(picked.id, picked.kind)
@@ -42,16 +38,7 @@ export const AgentChatRailList = (props: AgentChatRailListProps) => (
             label: row.title,
             description: row.description,
             isSelected: row.isSelected,
-            leading: (
-                <AgentMark
-                    glyph={nivoIconSource(props.glyph, "leading")}
-                    module={props.module}
-                    label={row.title}
-                    seed={props.seed}
-                    src={props.avatarUrl}
-                    size="md"
-                />
-            ),
+            leading: <AgentMark label={row.title} seed={props.seed} src={props.avatarUrl} size="md" />,
         }))}
     />
 )

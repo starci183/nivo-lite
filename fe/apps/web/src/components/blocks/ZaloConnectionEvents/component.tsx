@@ -1,4 +1,4 @@
-import { Badge, PaneSection, SectionHeader, Text } from "@starci/grammar/common"
+import { Badge, Cluster, Heading, PaneSection, Text } from "@starci/grammar/common"
 import { ConnectionLines } from "@/components/composites/ConnectionLines"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZaloEventLineView } from "@/modules/types"
@@ -27,15 +27,12 @@ export interface ZaloConnectionEventsBaseProps {
 export const ZaloConnectionEventsBase = (props: ZaloConnectionEventsBaseProps) => (
     <>
         <PaneSection as="header">
-            <SectionHeader
-                level={2}
-                title={props.props.title}
-                meta={
-                    <Badge isDot tone="success">
-                        {props.props.liveLabel}
-                    </Badge>
-                }
-            />
+            <Cluster gap="inline" justify="between">
+                <Heading level={2}>{props.props.title}</Heading>
+                <Badge isDot tone="success">
+                    {props.props.liveLabel}
+                </Badge>
+            </Cluster>
         </PaneSection>
         <PaneSection>
             <SlotView
@@ -43,8 +40,7 @@ export const ZaloConnectionEventsBase = (props: ZaloConnectionEventsBaseProps) =
                 placeholder={ZALO_EVENTS_PLACEHOLDER}
                 labels={props.props.slotLabels}
                 onRetry={props.on.retry}
-            >
-                {(events, isSkeleton) => (
+                render={(events, isSkeleton) => (
                     <ConnectionLines
                         label={props.props.title}
                         isSkeleton={isSkeleton}
@@ -56,7 +52,7 @@ export const ZaloConnectionEventsBase = (props: ZaloConnectionEventsBaseProps) =
                         }))}
                     />
                 )}
-            </SlotView>
+            />
         </PaneSection>
         <PaneSection as="footer">
             <Text size="xs" tone="muted">

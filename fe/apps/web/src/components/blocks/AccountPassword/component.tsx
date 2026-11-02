@@ -1,6 +1,5 @@
-import { Form, Input, SurfaceCard, Text } from "@starci/grammar/common"
+import { Form, Input, SurfaceCard, Text, Stack } from "@starci/grammar/common"
 import { FormActions } from "@/components/composites/FormActions"
-import { FORM_CLASS_NAME } from "./classNames"
 
 /** Copy, values and state the connected password card supplies. */
 export interface AccountPasswordBaseProps {
@@ -31,7 +30,7 @@ export interface AccountPasswordBaseProps {
 export const AccountPasswordBase = (props: AccountPasswordBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
-            <div className={FORM_CLASS_NAME}>
+            <Stack gap="section" measure="form">
                 <Text size="sm" tone="muted">
                     {props.props.hint}
                 </Text>
@@ -71,9 +70,9 @@ export const AccountPasswordBase = (props: AccountPasswordBaseProps) => (
                     done={props.props.done}
                     submitLabel={props.props.submitLabel}
                     isPending={props.props.isPending}
-                    isSkeleton={false}
+                    isLoading={false}
                 />
-            </div>
+            </Stack>
         </Form>
     </SurfaceCard>
 )

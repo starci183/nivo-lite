@@ -1,11 +1,12 @@
+export { GraphWorkDecisionService } from "./graph-work-decision.service"
+export { AgentRunItemVerdictsService } from "./agent-run-item-verdicts.service"
+export { DecisionLogReadService } from "./decision-log-read.service"
 export { DECISIONS_ERROR_KINDS, DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 export { DECISIONS_MESSAGES } from "./messages/decisions.messages"
 export type {
     ActionEntry,
     ModuleCommand,
     CommandResult,
-    InboundStatus,
-    ModuleEntry,
     PerformedBy,
     Performed,
     Prepared,
@@ -14,8 +15,8 @@ export type {
     WorkContext,
     WorkEdits,
     WorkItem,
+    WorkSpec,
     WorkPerformer,
-    WorkStatus,
 } from "./decisions.contracts"
 export type {
     AuthoritySheet,
@@ -44,11 +45,12 @@ export { WorkDecisionService } from "./work-decision.service"
 export { WorkDrainService } from "./work-drain.service"
 export { WorkPlacementService } from "./work-placement.service"
 export { WorkEngineService } from "./work-engine.service"
+export { WorkRecorderService } from "./work-recorder.service"
 export { formatVnd } from "./work-engine.policy"
 export { InjectWorkPerformerRegistry, WORK_PERFORMER_REGISTRY } from "./work-performer.port"
 export type { WorkPerformerRegistry } from "./work-performer.port"
 export { DecisionJobsService } from "./decision-jobs.service"
-export type { OutboundAccess, ResumeDecision } from "./work-engine.contracts"
+export type { OutboundAccess } from "./work-engine.contracts"
 export type { InboundEventStatus, LeadGenFlow, OutboundAccessGate } from "./work-engine.port"
 export type { AccountingDecisionRow } from "./decision-log.rows"
 export type { AccountingWaitingWorkRow } from "./work-item-views.rows"

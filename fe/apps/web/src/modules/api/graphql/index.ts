@@ -14,6 +14,7 @@ import type {
     BillingWorkspaceQuery,
     BookingBoardQuery,
     BrainQuery,
+    PublicDocumentsQuery,
     BrandProposalsQuery,
     MarketingWeeklyReportQuery,
     CheckConnectionMutation,
@@ -391,3 +392,5 @@ export type MentionDirectoryType = MentionDirectoryQuery["mentionDirectory"]
 export type WorkChainType = WorkChainQuery["workChain"]
 /** The `ThreadMessageType` object of the back end contract, as the operations of this app select it. */
 export type ThreadMessageType = WorkThreadQuery["workThread"]["messages"][number]
+/** The `PublicDocumentType` object of the back end contract, as the operations of this app select it. */
+export type PublicDocumentType = PublicDocumentsQuery["publicDocuments"][number]

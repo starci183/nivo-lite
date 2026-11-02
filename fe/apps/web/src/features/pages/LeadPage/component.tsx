@@ -37,25 +37,28 @@ export const LeadPageBase = (props: LeadPageBaseProps) => {
                 description: <LeadHeader leadId={leadId} part="description" />,
                 actions: <LeadHeaderActions leadId={leadId} />,
             }}
-        >
-            <LeadPageLayout
-                primary={
-                    <>
-                        <LeadExecution leadId={leadId} />
-                        <LeadWorkFlow leadId={leadId} />
-                        <LeadHistory leadId={leadId} />
-                        <PromoLeadWait leadId={leadId} />
-                    </>
-                }
-                rail={
-                    <>
-                        <LeadResponsibility leadId={leadId} />
-                        <LeadPreviousSteps leadId={leadId} />
-                        <LeadContext leadId={leadId} />
-                        <LeadOutcome leadId={leadId} />
-                    </>
-                }
-            />
-        </LeadPageHead>
+            body={
+                <>
+                    <LeadPageLayout
+                        primary={
+                            <>
+                                <LeadExecution leadId={leadId} />
+                                <LeadWorkFlow leadId={leadId} />
+                                <LeadHistory leadId={leadId} />
+                                <PromoLeadWait leadId={leadId} />
+                            </>
+                        }
+                        rail={
+                            <>
+                                <LeadResponsibility leadId={leadId} />
+                                <LeadPreviousSteps leadId={leadId} />
+                                <LeadContext leadId={leadId} />
+                                <LeadOutcome leadId={leadId} />
+                            </>
+                        }
+                    />
+                </>
+            }
+        />
     )
 }

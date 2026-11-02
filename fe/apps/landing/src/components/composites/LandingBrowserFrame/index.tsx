@@ -13,15 +13,20 @@ interface LandingBrowserFrameProps {
 
 /** A real product screenshot framed by the grammar's media frame, always captioned as demo data. */
 export const LandingBrowserFrame = (props: LandingBrowserFrameProps) => (
-    <MediaFrame treatment="framed" aspect="auto" caption={props.label}>
-        <Image
-            src={props.src}
-            alt={props.alt}
-            width={props.width}
-            height={props.height}
-            aspect="auto"
-            fit="contain"
-            loading={props.priority === true ? "eager" : "lazy"}
-        />
-    </MediaFrame>
+    <MediaFrame
+        treatment="framed"
+        aspect="auto"
+        caption={props.label}
+        media={
+            <Image
+                src={props.src}
+                alt={props.alt}
+                width={props.width}
+                height={props.height}
+                aspect="auto"
+                fit="contain"
+                loading={props.priority === true ? "eager" : "lazy"}
+            />
+        }
+    />
 )

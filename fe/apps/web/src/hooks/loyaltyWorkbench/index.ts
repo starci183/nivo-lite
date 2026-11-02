@@ -1,0 +1,1 @@
+export { useLoyaltyWorkbenchView } from "./useLoyaltyWorkbenchView"

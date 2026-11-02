@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { BrainFactsService } from "@modules/domain/brain-facts"
+import type { IntentBusiness } from "@modules/domain/intent-contracts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { OWNER_EXAMPLE, graphOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
@@ -32,6 +33,7 @@ const build = async (
         } | null
         conflict?: { readonly oldFactId: string; readonly newFactId: string; readonly newValueHash: string } | null
         brainValue?: string | null
+        contract?: IntentBusiness | null
     } = {},
 ) => {
     const role = options.role === undefined ? "manager" : options.role
@@ -55,6 +57,7 @@ const build = async (
         publishDraft: jest.fn().mockResolvedValue(VERSION),
         publishLearned: jest.fn().mockResolvedValue(VERSION),
         publishConflict: jest.fn().mockResolvedValue(VERSION),
+        publishContract: jest.fn().mockResolvedValue(VERSION),
         restore: jest.fn().mockResolvedValue(VERSION),
         setMode: jest.fn().mockResolvedValue(stateOf()),
     })
@@ -68,15 +71,21 @@ const build = async (
                     : options.patch,
             ),
         conflictOf: jest.fn().mockResolvedValue(options.conflict ?? null),
+        contractOf: jest.fn().mockResolvedValue(options.contract ?? null),
         confirm: jest.fn().mockResolvedValue(undefined),
         supersede: jest.fn().mockResolvedValue(undefined),
     })
     const brain = mock<BrainFactsService>({
         get: jest
             .fn()
-            .mockResolvedValue(options.brainValue === null ? null : { id: "fact-2", value: options.brainValue ?? "Under 10M" }),
+            .mockResolvedValue(
+                options.brainValue === null ? null : { id: "fact-2", value: options.brainValue ?? "Under 10M" },
+            ),
     })
-    const running = mock<AgentGraphRunService>({ runOf: jest.fn().mockResolvedValue({ decisionId: "decision-1" }) })
+    const running = mock<AgentGraphRunService>({
+        runOf: jest.fn().mockResolvedValue({ decisionId: "decision-1" }),
+        runsOf: jest.fn().mockResolvedValue([{ id: "decision-1" }]),
+    })
     const context = mock<AgentGraphContextService>({ coverageOf: jest.fn().mockResolvedValue([{ nodeKey: "decide" }]) })
     const installations = mock<InstallationRecordsService>({
         ofAgent: jest.fn().mockResolvedValue(options.installed === false ? null : { id: "inst-1" }),
@@ -99,17 +108,8 @@ const build = async (
             { provide: BrainFactsService, useValue: brain },
         ],
     }).compile()
-    return {
-        service: moduleRef.get(AgentGraphAdminService),
-        graphs,
-        seed,
-        view,
-        publishing,
-        proposals,
-        running,
-        context,
-        brain,
-    }
+    const service = moduleRef.get(AgentGraphAdminService)
+    return { service, graphs, seed, view, publishing, proposals, running, context, brain }
 }
 
 describe("AgentGraphAdminService access", () => {
@@ -300,6 +300,29 @@ describe("AgentGraphAdminService.confirm of a Brain conflict", () => {
         expect(proposals.supersede).toHaveBeenCalled()
         expect(publishing.publishConflict).not.toHaveBeenCalled()
     })
+
+    it("preserves unpublished edits that no longer cite the replaced fact", async () => {
+        const draft = graphOf([])
+        const { service, graphs, proposals } = await build({
+            conflict: CONFLICT,
+            state: stateOf({ active: citing(), draft }),
+        })
+
+        await expect(service.confirm(ACTOR, "agent-1", "p1")).resolves.toBe(VERSION)
+
+        expect(graphs.saveDraft).toHaveBeenCalledWith("ws-1", "agent-1", 1, draft)
+        expect(proposals.confirm).toHaveBeenCalledWith("ws-1", "agent-1", "p1", "member-1", "version-2")
+    })
+
+    it("does not recreate a draft removed after publishing the conflict", async () => {
+        const draft = graphOf([])
+        const state = stateOf({ active: citing(), draft })
+        const { service, graphs } = await build({ conflict: CONFLICT, state })
+        graphs.stateOfAgent.mockResolvedValueOnce(state).mockResolvedValueOnce(null)
+
+        await expect(service.confirm(ACTOR, "agent-1", "p1")).resolves.toBe(VERSION)
+        expect(graphs.saveDraft).not.toHaveBeenCalled()
+    })
 })
 
 describe("AgentGraphAdminService the run and the coverage", () => {
@@ -308,6 +331,27 @@ describe("AgentGraphAdminService the run and the coverage", () => {
 
         await expect(service.run(ACTOR, "item-9")).resolves.toEqual({ decisionId: "decision-1" })
         expect(running.runOf).toHaveBeenCalledWith("ws-1", "item-9")
+    })
+
+    it("lists the latest runs of the agent for a seat that may see the graph, at most a hundred and at least one", async () => {
+        const { service, running } = await build()
+
+        await expect(service.runs(ACTOR, "agent-1", 30)).resolves.toEqual([{ id: "decision-1" }])
+        await service.runs(ACTOR, "agent-1", 5000)
+        await service.runs(ACTOR, "agent-1", 0)
+
+        expect(running.runsOf.mock.calls).toEqual([
+            ["ws-1", "agent-1", 30],
+            ["ws-1", "agent-1", 100],
+            ["ws-1", "agent-1", 1],
+        ])
+    })
+
+    it("refuses the list of runs to a seat that may not see the graph", async () => {
+        const { service, running } = await build({ role: "staff" })
+
+        await expect(service.runs(ACTOR, "agent-1", 30)).rejects.toBeInstanceOf(AgentGraphsError)
+        expect(running.runsOf).not.toHaveBeenCalled()
     })
 
     it("reads who can answer each ask of the draft graph", async () => {
@@ -326,5 +370,78 @@ describe("AgentGraphAdminService the run and the coverage", () => {
 
         await expect(none.service.coverage(ACTOR, "agent-1")).resolves.toEqual([])
         await expect(gone.service.coverage(ACTOR, "agent-1")).rejects.toBeInstanceOf(AgentGraphsError)
+    })
+})
+
+describe("AgentGraphAdminService.confirm of a contract", () => {
+    const CONTRACT: IntentBusiness = {
+        intent: "pay_supplier",
+        task: "Pay from the statement.",
+        limits: [],
+        sources: [],
+    }
+
+    it("sets the contract in the graph that decides and publishes it as the seat that asked", async () => {
+        const { service, publishing, proposals, graphs } = await build({ role: "owner", contract: CONTRACT })
+
+        await expect(service.confirm(ACTOR, "agent-1", "p1")).resolves.toBe(VERSION)
+
+        const [, , document, by] = publishing.publishContract.mock.calls[0] ?? []
+        expect(by).toEqual({ memberId: "member-1", role: "owner" })
+        expect(document?.contracts).toEqual([CONTRACT])
+        expect(proposals.confirm).toHaveBeenCalledWith("ws-1", "agent-1", "p1", "member-1", "version-2")
+        expect(graphs.saveDraft).not.toHaveBeenCalled()
+        expect(publishing.publishLearned).not.toHaveBeenCalled()
+    })
+
+    it("keeps the contract in the unpublished edits of the draft", async () => {
+        const edited = graphOf([])
+        const { service, graphs } = await build({ contract: CONTRACT, state: stateOf({ draft: edited }) })
+
+        await service.confirm(ACTOR, "agent-1", "p1")
+
+        expect(graphs.saveDraft).toHaveBeenCalledWith("ws-1", "agent-1", 1, { ...edited, contracts: [CONTRACT] })
+    })
+
+    it("preserves an unpublished draft that already contains the confirmed contract", async () => {
+        const draft = { ...graphOf([]), contracts: [CONTRACT] }
+        const { service, graphs } = await build({ contract: CONTRACT, state: stateOf({ draft }) })
+
+        await expect(service.confirm(ACTOR, "agent-1", "p1")).resolves.toBe(VERSION)
+        expect(graphs.saveDraft).toHaveBeenCalledWith("ws-1", "agent-1", 1, draft)
+    })
+
+    it("overtakes a contract the graph already holds, and a graph with no version", async () => {
+        const holding: GraphDocument = { ...graphOf(OWNER_EXAMPLE), contracts: [CONTRACT] }
+        const held = stateOf({ active: holding })
+        const same = await build({ contract: CONTRACT, state: held })
+        const fresh = await build({ contract: CONTRACT, state: stateOf({ active: null, activeVersionId: null }) })
+
+        await expect(same.service.confirm(ACTOR, "agent-1", "p1")).rejects.toEqual(
+            expect.objectContaining({ code: AgentGraphsErrorCode.ProposalNotFound }),
+        )
+        await expect(fresh.service.confirm(ACTOR, "agent-1", "p1")).rejects.toBeInstanceOf(AgentGraphsError)
+        expect(same.proposals.supersede).toHaveBeenCalledWith("ws-1", "agent-1", "p1")
+        expect(same.publishing.publishContract).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphAdminService.contractFromGap", () => {
+    it("lets the owner or a manager turn a gap into a contract proposal", async () => {
+        const { service, proposals } = await build()
+        const business: IntentBusiness = { intent: "pay_supplier", task: "Pay.", limits: [], sources: [] }
+
+        await service.contractFromGap(ACTOR, "agent-1", "gap-1", business)
+
+        expect(proposals.contractFromGap).toHaveBeenCalledWith("ws-1", "agent-1", "gap-1", business)
+    })
+
+    it("refuses an account that holds no seat", async () => {
+        const { service, proposals } = await build({ role: null })
+
+        await expect(
+            service.contractFromGap(ACTOR, "agent-1", "gap-1", { intent: "x", task: "", limits: [], sources: [] }),
+        ).rejects.toBeInstanceOf(AgentGraphsError)
+        expect(proposals.contractFromGap).not.toHaveBeenCalled()
     })
 })

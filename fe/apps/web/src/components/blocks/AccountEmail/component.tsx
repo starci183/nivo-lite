@@ -1,8 +1,6 @@
-import { DescriptionList, SurfaceCard, Text } from "@starci/grammar/common"
+import { DescriptionList, SurfaceCard, Text, Stack } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { FORM_CLASS_NAME } from "./classNames"
-
 /** Copy and values the connected email card supplies. */
 export interface AccountEmailBaseProps {
     readonly props: {
@@ -20,26 +18,30 @@ export interface AccountEmailBaseProps {
 
 /** Draws the email card: the current sign-in address (changing it is not offered yet). */
 export const AccountEmailBase = (props: AccountEmailBaseProps) => (
-    <SlotView slot={props.props.slot} placeholder="" labels={props.props.labels} onRetry={props.on.retry}>
-        {(email, isSkeleton) => (
+    <SlotView
+        slot={props.props.slot}
+        placeholder=""
+        labels={props.props.labels}
+        onRetry={props.on.retry}
+        render={(email, isLoading) => (
             <SurfaceCard label={props.props.title} headingLevel={2}>
-                <div className={FORM_CLASS_NAME}>
+                <Stack gap="row" measure="form">
                     <DescriptionList
                         layout="stacked"
-                        isLoading={isSkeleton}
+                        isLoading={isLoading}
                         items={[
                             {
                                 id: "email",
                                 term: props.props.currentLabel,
-                                description: <Text weight="medium">{email}</Text>,
+                                description: <Text isStrong>{email}</Text>,
                             },
                         ]}
                     />
                     <Text size="sm" tone="muted">
                         {props.props.hint}
                     </Text>
-                </div>
+                </Stack>
             </SurfaceCard>
         )}
-    </SlotView>
+    />
 )

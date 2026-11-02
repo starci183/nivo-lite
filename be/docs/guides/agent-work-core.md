@@ -594,7 +594,7 @@ Each agent is a flow the owner can read and change, in the spirit of n8n, but bu
 | Where does the branch run?               | In `WorkEngineService.judge`, the one door every action already passes: agents, automations, module approvals              | Nothing has to be taught twice. It works on both roads of section 11                                                                                                                                                                                                               |
 | Automation templates?                    | They seed the base graph. The engine keeps running them                                                                    | A `TemplateDefinition` already has a trigger, needs, settings, guardrails and an authority action. A second executor would be a second truth (15.7)                                                                                                                                |
 | Condition language?                      | A closed JSON tree over a registry of facts, with no text form to parse                                                    | No code means nothing to escape, and the editor is rows, never a text box (15.5)                                                                                                                                                                                                   |
-| Migration?                               | Seed every agent from what it has today, run in shadow, flip per agent                                                     | Same shape as `road`: reversible per agent, no flag day (15.11)                                                                                                                                                                                                                    |
+| Migration?                               | Seed every agent from what it has today, enforced from the seed; only the owner sets one agent back to `shadow`            | The seed answers what the rule answers, so the switch changes nothing until someone edits, and a graph that only records is not a graph the agent follows (15.11, 15.14)                                                                                                           |
 | Editor?                                  | `FlowGraph` to read and select, a form to change. No dragging of wires                                                     | The owner changes a boundary or a person, not the topology. FlowGraph has no edit mode: its handles are `isConnectable={false}`                                                                                                                                                    |
 | Add W6?                                  | Yes                                                                                                                        | The store is in flight in `lane/core-w1`, and a new capability with its own tables, approval routing and an editor would make every other brief unreviewable                                                                                                                       |
 
@@ -707,11 +707,12 @@ WorkEngineService.runWork ──> judge
 strictest of gate and branch ──> perform, or ask the branch's approver
 ```
 
-- No graph, a `shadow` graph, or no decide point for the action: the verdict is the gate's alone, as today.
+- The graph is walked for every action it holds, not only at a decide point: approval, stop and act nodes count, and what leaves without a work item passes the same walk (15.14).
+- No graph, a `shadow` graph, or an action no node holds: the verdict is the gate's alone, and the run is recorded. A graph that holds the action and cannot be read or walked never leaves it to the gate: the action asks.
 - A fact comes from a `GraphFactReader`, a port with a registry keyed by the fact (`supplier_payment.amount_vnd`), declared by the module beside its actions and read by subject id. `WorkAmountFactReaderService` ships with the capability and declares `order.amount_vnd` and `<action>.amount_vnd` for each action that holds an amount limit: no record outside the work item holds an order or quote amount, so it reads what the gate reads (`proposal.amount_vnd`, handed to the reader as `subject.amountVnd`), and an item with no amount leaves the fact absent, so the branch falls to the `else`. A module that keeps a record of the amount declares a reader of its own. It only reads, with a 2 s budget, and in the agent's view (nivo-mcp.md section 5.2).
 - `evaluateGate` reads `proposal.amount_vnd`, which the model wrote. In `enforced` mode the decider's amount replaces it before the gate runs, so the ceiling is judged on the real figure too. A proposal whose amount differs from the record goes on by the record, and the decision keeps both, so the owner sees it in the trace.
 - A fact that cannot be read takes the `else` branch. `else` may never be `auto`, so missing data never runs alone.
-- Stricter wins: branch `auto` under a gate `ask` asks, on the rule's approvers. Branch `ask` under a gate `auto` asks, on the branch's approver. Branch `stop` is verdict `ask` with reason `not_allowed`, as a closed rule answers. `forceAsk`, the outbound access check and `max_mode` stay untouched.
+- Stricter wins: branch `auto` under a gate `ask` asks, on the rule's approvers. Branch `ask` under a gate `auto` asks, on the branch's approver. Branch `stop` ends the work: the item closes rejected, nobody is asked and no person can approve it through (`closed_as` `stopped`). `forceAsk`, the outbound access check and `max_mode` stay untouched.
 - A branch ask uses a new reason, `branch_ask`, so "send by itself" in `AutomationGateService`, which approves only `over_authority`, cannot wave a named approver through. `work_items_reason_check` widens for it.
 - Agents read and act through NIVO MCP tools under the same grants: the graph narrows what a turn does and widens nothing. `approval.request` stays the model's way to ask for a person, and it names nobody: the branch does.
 - The turn's prompt gets the intents its version allows, through the optional port `AgentGraphBrief`. It does not get the boundaries: the backend applies them, so they earn no tokens.
@@ -796,13 +797,13 @@ Each proposal lists its decisions as evidence, with amount, who and what they di
 
 Capability `be/src/modules/domain/agent-graphs`. Migration `db/migrations/20261110000400_agent-graphs.sql`, expand only, policy shape as section 3.
 
-| Table                   | Key                                                     | Columns                                                                                                                                                                                                                                                   |
-| ----------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `agent_graphs`          | `agent_id`                                              | `installation_id` unique, `draft` jsonb, `draft_rev` int, `active_version_id`, `mode` (`shadow`, `enforced`) default `shadow`                                                                                                                             |
-| `agent_graph_versions`  | id, unique (`agent_id`, `version`)                      | `document` jsonb, `document_hash`, `context_version_id`, `change_kind` (`seed`, `chat`, `edit`, `conflict`, `learned`, `template`, `rollback`), `note`, `published_by`, `published_at`                                                                    |
-| `agent_graph_sources`   | (`version_id`, `node_key`, `branch_key`, `kind`, `ref`) | `value_hash`                                                                                                                                                                                                                                              |
-| `agent_graph_proposals` | id, unique (`agent_id`, `dedupe_key`)                   | `kind` (`conflict`, `learned`, `template_update`), `status` (`open`, `confirmed`, `declined`, `superseded`), `base_version_id`, `node_key`, `branch_key`, `patch` jsonb, `widens` bool, `evidence` jsonb, `decided_by`, `decided_at`, `result_version_id` |
-| `agent_graph_decisions` | id, unique (`work_item_id`)                             | `agent_id`, `version_id`, `turn_id`, `wake_id`, `action`, `path` jsonb, `facts` jsonb, `branch_key`, `outcome`, `approval_request_id`, `closed_as` (`done`, `approved`, `edited`, `rejected`, `expired`), `shadow_diff` bool                              |
+| Table                   | Key                                                     | Columns                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `agent_graphs`          | `agent_id`                                              | `installation_id` unique, `draft` jsonb, `draft_rev` int, `active_version_id`, `mode` (`shadow`, `enforced`) default `enforced`, `mode_set_by`, `mode_set_at`                                                                                                                                                                                                                                                               |
+| `agent_graph_versions`  | id, unique (`agent_id`, `version`)                      | `document` jsonb, `document_hash`, `context_version_id`, `change_kind` (`seed`, `chat`, `edit`, `conflict`, `learned`, `template`, `rollback`), `note`, `published_by`, `published_at`                                                                                                                                                                                                                                      |
+| `agent_graph_sources`   | (`version_id`, `node_key`, `branch_key`, `kind`, `ref`) | `value_hash`                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `agent_graph_proposals` | id, unique (`agent_id`, `dedupe_key`)                   | `kind` (`conflict`, `learned`, `template_update`), `status` (`open`, `confirmed`, `declined`, `superseded`), `base_version_id`, `node_key`, `branch_key`, `patch` jsonb, `widens` bool, `evidence` jsonb, `decided_by`, `decided_at`, `result_version_id`                                                                                                                                                                   |
+| `agent_graph_decisions` | id, unique (`work_item_id`), unique (`dedupe_key`)      | `agent_id`, `version_id`, `turn_id`, `wake_id`, `action`, `path` jsonb, `facts` jsonb, `branch_key`, `outcome` (`auto`, `ask`, `stop`, `divert`), `approval_request_id`, `closed_as` (`done`, `approved`, `edited`, `rejected`, `expired`, `stopped`), `shadow_diff` bool, `road`, `mode`, `gate_verdict`, `unread` jsonb, `unjudged`, `subject_type`, `subject_id`. `work_item_id` is null on a run that left no work item |
 
 `turn_id` and `wake_id` carry no foreign key: turns go at 30 days (section 5.2) and a decision stays as the audit. A proposal whose branch is gone is `superseded`.
 
@@ -820,31 +821,38 @@ GraphQL, `be/src/features/api/agent-graphs`: `agentGraph(installationId)` gives 
 
 ### 15.11 Migration
 
-1. W6 lands with nothing enforced. `AgentGraphsService.ensure` seeds version 1 on install, on the first open of Setup, and by the tick in batches of 50. It is code, not SQL: it needs the catalogue.
-2. The seed reads the agent's `authority_rules` and default rules. Bands become branches, the rule's approver group becomes the branch's, and `limit_vnd` becomes `lt`. Mode `shadow`.
-3. In shadow `decide` writes its decision, `shadow_diff` marks a difference from the gate, and the verdict stays the gate's. The trace and versions work from the first day.
-4. `seed-matches-gate` proves, for every mode, band and limit case, that a seeded graph answers what `evaluateGate` answers. So the flip changes nothing until the owner edits something.
-5. A publish by the owner, or `setAgentGraphMode`, sets `enforced` for one agent. Setting `shadow` rolls it back with nothing lost. A new agent is enforced from its first apply.
+1. `AgentGraphsService.ensure` seeds version 1 on install, on the first open of Setup, and by the tick in batches of 50. It is code, not SQL: it needs the catalogue.
+2. The seed reads the agent's `authority_rules` and default rules. Bands become branches, the rule's approver group becomes the branch's, and `limit_vnd` becomes `lt`. Mode `enforced`.
+3. `seed-matches-gate` proves, for every mode, band and limit case, that a seeded graph answers what `evaluateGate` answers. So enforcing a seed changes nothing until someone edits.
+4. A seed follows the rule it came from: the tick compares the active `seed` version of each agent with what the rules derive today, and publishes a new `seed` version when they differ and the draft holds no unpublished edit. A version a person published never moves this way.
+5. The migration sets every agent to `enforced`: none was enforced on purpose before it, so no owner choice is overwritten.
 6. Nothing is dropped: the Authority page stays the ceiling, and `limit_vnd` stays.
 
 ### 15.12 Proofs
 
 Unit specs per file (BE-TEST-5, R273). Integration in `be/src/tests/integration/agent-graph/`, titled `agent-graph/<scenario>`:
 
-| Scenario                 | Proves                                                                                        |
-| ------------------------ | --------------------------------------------------------------------------------------------- |
-| `seed-matches-gate`      | A seeded graph answers as the gate does                                                       |
-| `model-amount-ignored`   | A proposal of 4.9tr on a 7.2tr record takes the 5tr branch, and the gate reads 7.2tr          |
-| `branch-routes-approver` | 7.2tr reaches Dinh, 25tr reaches Mr Nam, and neither can answer the other's request           |
-| `boundary-exact`         | Exactly 5,000,000 follows the confirmed bound                                                 |
-| `unread-fact-asks`       | A failed read takes `else` and never runs alone                                               |
-| `stricter-wins`          | Branch `auto` under a rule `ask` asks; a rule `never` beats any branch                        |
-| `timeout-backup`         | An expired request opens the backup once; `stop` rejects the item                             |
-| `send-by-itself-held`    | A pipeline with `auto_send` does not pass a branch ask                                        |
-| `version-immutable`      | `app_be` cannot update a version; a run keeps its version through a later publish             |
-| `brain-change-conflict`  | A superseded fact raises one conflict, and the next decision still takes the confirmed branch |
-| `learned-never-widens`   | Twenty approvals raise a proposal and change no version                                       |
-| `shadow-no-effect`       | In shadow the verdict is the gate's and the decision is written                               |
+| Scenario                  | Proves                                                                                        |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| `seed-matches-gate`       | A seeded graph answers as the gate does                                                       |
+| `model-amount-ignored`    | A proposal of 4.9tr on a 7.2tr record takes the 5tr branch, and the gate reads 7.2tr          |
+| `branch-routes-approver`  | 7.2tr reaches Dinh, 25tr reaches Mr Nam, and neither can answer the other's request           |
+| `boundary-exact`          | Exactly 5,000,000 follows the confirmed bound                                                 |
+| `unread-fact-asks`        | A failed read takes `else` and never runs alone                                               |
+| `stricter-wins`           | Branch `auto` under a rule `ask` asks; a rule `never` beats any branch                        |
+| `timeout-backup`          | An expired request opens the backup once; `stop` rejects the item                             |
+| `send-by-itself-held`     | A pipeline with `auto_send` does not pass a branch ask                                        |
+| `version-immutable`       | `app_be` cannot update a version; a run keeps its version through a later publish             |
+| `brain-change-conflict`   | A superseded fact raises one conflict, and the next decision still takes the confirmed branch |
+| `learned-never-widens`    | Twenty approvals raise a proposal and change no version                                       |
+| `shadow-no-effect`        | In shadow the verdict is the gate's and the decision is written                               |
+| `reply-over-condition`    | A reply whose text crosses a branch waits for the branch's approver and is not sent           |
+| `reply-stopped`           | A reply on a `stop` branch leaves nothing and says so in the workbench                        |
+| `stop-cannot-be-approved` | A work item on a `stop` branch is closed; no decision reopens it                              |
+| `unread-reply-fact`       | A reply whose fact cannot be computed takes the `else`, and the run names the fact            |
+| `tool-write-branch`       | A write tool on a `gateway_call` branch asks or stops before it reaches the connector         |
+| `handover-branch`         | A branch that leads to another action runs that action and not the one proposed               |
+| `run-recorded`            | Every road writes one run with the mode, the gate's answer and the facts                      |
 
 ### 15.13 One store, rights per agent
 
@@ -863,3 +871,79 @@ An agent has no direct road to the store. Every read is a tool on NIVO MCP; the 
 An agent that faces outsiders is always narrow, because a customer can talk it into repeating what it can read. An internal agent, with no outside channel, may read wider.
 
 Work across agents is a hand-over, not a read: Chatbot asks through a tool such as payment status and gets "paid" or "owing", and never sees the books.
+
+### 15.14 Enforcement: the agent does what its graph says
+
+Owner's bar: an agent acts exactly as its graph says. The model proposes; before anything leaves, the backend walks the published graph on the proposal and its answer stands, whatever the model chose. The prompt carries the intents, and nothing that matters depends on it. The graph narrows: `authority_rules`, the grants and the outbound access check stay ceilings, and the stricter answer wins (15.4).
+
+**The roads.** Everything an agent does leaves by one of four roads, and each passes the same walk.
+
+| Road       | What goes through it                           | Where it is judged                                                                                    | On `ask`                                              |
+| ---------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `work`     | Every work item, of every action               | `WorkBranchDecider.decide`, inside `WorkEngineService.judge`                                          | The item waits on the approver                        |
+| `reply`    | A customer reply that leaves with no work item | `WorkBranchDecider.check`, the last step of `CustomerOutcomes.settle`, on the text that really leaves | A waiting `reply_customer` item holds the draft       |
+| `tool`     | A write tool, through any door of the gateway  | `ToolGraphGate`, inside `McpGatewayService.call`                                                      | `approval_required`, the road held calls already take |
+| `handover` | `conversation.handOff`                         | `check`, in `TurnHandoffService`                                                                      | A waiting `hand_over_conversation` item               |
+
+**The walk.** `walkGraph(document, action, facts, registry)`, pure, in `be/src/modules/domain/agent-graphs/policies/graph-walk.policy.ts`. It enters at the decide point of the action, else at the approval that leads to its act, else at its act, and goes on until the graph ends the path:
+
+| The path reaches                    | Outcome  | What happens                                                                                                                                                                                 |
+| ----------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The act of the action               | `run`    | The stricter of the gate and the graph. A branch `auto` never loosens the gate                                                                                                               |
+| A branch `ask`, or an approval node | `ask`    | The approver of the branch, else of the node, for the action the agent proposed                                                                                                              |
+| A branch `stop`, or a stop node     | `stop`   | Nothing leaves and nobody is asked. The item closes rejected, `closed_as` `stopped`, and no person can approve it through                                                                    |
+| The act of another action           | `divert` | The hand-over the graph names: the proposal does not run, the backend runs that action on the same subject, and a reply is withheld. Its own target is the optional `handoverTo` of the node |
+
+A `tool` run has no work item to hand on, so a branch that leads to another action stops the call. It consults only a decide point on `gateway_call`: the seeded approval of that action is the step a held call takes after its grant, not a judgement on calls the grant lets through. With no decide point the grant decides, and the run is recorded.
+
+**Facts come from the backend, never from the model.** A condition reads the registry and nothing else, so a fact the model made up cannot exist. Beside the amount facts (15.4), `OutgoingFactReaderService` computes these from the text that would really leave and the record of the work, for any action and any agent:
+
+| Fact                                            | Computed from                                                                     |
+| ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| `outgoing.amount_vnd`                           | The largest money figure in the text, by `outgoingFactsOf`; 0 when it states none |
+| `outgoing.has_amount`                           | Whether the text states a money figure                                            |
+| `outgoing.has_link`                             | Whether the text holds a link                                                     |
+| `outgoing.has_phone`                            | Whether the text holds a phone number                                             |
+| `outgoing.length`                               | The number of characters                                                          |
+| `outgoing.says_received`                        | Whether the text tells the customer money arrived, by a fixed list of phrases     |
+| `customer.known`                                | Whether the work names a lead                                                     |
+| `money.amount_vnd`, `money.source`, `money.via` | The money of the turn, below                                                      |
+| `tool.name`, `tool.connector`, `handover.to`    | The call the road is about to make                                                |
+
+No text means the `outgoing.*` facts are absent. **A fact that cannot be computed takes the safe branch and says so**: the branch falls to the `else`, an `else` never runs alone (15.3), the run stores the fact in `unread`, and a reply adds a workbench line naming it.
+
+**The money of a turn.** A branch on money reads one fact, whatever brought the amount: `money.amount_vnd`, with `money.source` (`claimed` or `received`) and `money.via` (the road: `sepay`, `chat_text`, `chat_image`, `chat_file`, `order_record`, `invoice_paid`, open to new ones) beside it. Each is a fact like any other, so a condition can read the source too. A turn carries a flat list of `GraphEvidence { key, value, kind, via, actor? }`: the graph passes it on and never looks inside, a new source adds an entry and changes nothing else, and an entry with no value is a money event whose amount is missing.
+
+- **The trigger chooses.** `triggerSources` on a trigger node says which vias count for this agent, because a shop with no SePay rightly starts from what the customer says or sends. Unset, every via counts. The rest of the graph runs the same way for either.
+- **`claimed` is not `received`, and the record says which.** A chat message, a transfer image or file and an order are claims: an image can be forged, and an order is what was asked. A money feed and an invoice the books hold as paid are `received`. The approval note and the Office line name the via, so the owner reads "customer reported" or "SePay". Received wins when a turn holds both. What a reply says about money follows the graph, which can branch on `outgoing.says_received`; no rule is hardcoded.
+- **Unclear or conflicting money evidence waits.** A missing or conflicting amount among the received entries, or among the claims when nothing was received, leaves the fact out, so the branch falls to its `else`; the order of entries never chooses an amount. A turn with no money event reads 0, which is a reading and not a gap, so a greeting or a price question does not wait.
+- **A figure in a reply needs a source (not built yet; it belongs to the money plug-in).** Any money figure in an outgoing reply must trace to a source the turn may read, or to a record. `isKnownPrice` does the lookup and the figure parser is technical; thresholds and what counts stay graph data from the Brain. A figure with no source becomes evidence `claimed` via `chat_text` and goes through the branch: 17tr5 is no listed price, so it waits; 3tr5 is listed, so it passes as a price. No word list: order words are language logic the graph holds no opinion on, and a paraphrase would pass one.
+- **An order amount is a claim for now.** `OrderEntity.amount_vnd` holds the figure the model reported, checked against the prices written in the knowledge. `order_record` keeps the branch on one recorded figure, not on a fresh number each turn, but it is not yet quantity times price.
+
+**The safe branch.** A graph that holds the action never hands it back to the gate. A failed read, a fact past its budget, a version that does not parse, a walk that finds no path, a decide point with no `else`: the action asks, with `unjudged` naming why (`fact_unread`, `no_route`, `no_else`, `unreadable`, `failed`), and a person decides. A run needs a readable graph to name its version, so `unreadable` and `failed` are logged rather than listed.
+
+**`shadow` and `enforced`.**
+
+- `enforced` is what a graph is. Publishing, by anyone and of any kind, never touches the mode, and a new agent is enforced from its seed. Nothing has to be flipped.
+- `shadow` is one thing only: the owner chose, for one agent, to watch a graph before it decides. Every road then walks and records, `shadow_diff` marks a difference from what ran, and the verdict stays the gate's. It holds through later publishes until the owner turns it back. Only the owner role sets the mode, in either direction, because turning a graph off widens the agent; `mode_set_by` and `mode_set_at` keep who and when.
+- **Data rights start at the first publish.** A seed holds `rights: []`, no person chose that, and `graphProblems` never read it. Default deny on a seed would cut every agent off from its own Brain, so `AgentDataRightsService` governs from the first version a person published. Actions are enforced from the seed.
+
+**Rules the graph does not hold.** Prose decides nothing. A sentence of the published setup that names a figure and an approval, with no condition of the graph on that figure, is listed as `unheldRules` on the graph the owner opens. It warns and does not block a publish, and it reads figures, so a rule in words alone raises nothing.
+
+**What the owner sees.** Each walk writes one row of `agent_graph_decisions`: road, mode, version, path, facts as read, what was `unread`, why it was `unjudged`, the gate's answer, the outcome, and the `work_item_id` when there is one. A reply or tool run keys on `dedupe_key`, which holds the digest of the text or the step, so a redelivery writes no second row while a different draft for the same message is judged again. A reply that asks is recorded once, on its work item. `agentGraphRuns(installationId)` lists them newest first, with what the graph did and whether it differed from the gate. An action no node holds is listed too, as `not_in_graph`.
+
+**What a graph cannot judge.** These stay outside, and the owner should know it:
+
+| Case                                                | Why                                                                                                                                         | What holds instead                                                                                 |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| What a reply means: tone, truth, a promise, a topic | A fact is computed, and meaning cannot be computed without a model. A fact a model reports would hand the branch back to the model          | Only what the text states can be a condition. The prompt, the Brain and `needsHuman` carry meaning |
+| A sum in words or in a picture                      | `outgoing.amount_vnd` reads figures and their units in the text; "half the usual price" is no figure                                        | The order and quote amounts go through their own actions                                           |
+| An amount only the proposal holds                   | No record outside the work item holds an order or quote amount (15.4)                                                                       | A module with a record declares a reader; `isKnownPrice` checks an order against the knowledge     |
+| An action no node holds                             | The graph says nothing, so there is no branch to skip. A Sales graph holds no `reply_customer`, for one                                     | The gate decides, and the run is listed as `not_in_graph`                                          |
+| Work with no agent                                  | `resolve_installation` found none: a person's desk action, a workspace-level job                                                            | The gate decides                                                                                   |
+| A person's edit of a waiting item                   | A person decided, and the approver saw it                                                                                                   | The gate re-reads the edit; the branch is not walked again                                         |
+| A person's own reply                                | `chatreply` is a person speaking, not an agent                                                                                              | The decision log                                                                                   |
+| A total that equals a listed price                  | A listed figure passes as a price, so an order the model does not report, at a total that is also a listed price, reads 0 and can run alone | Nothing yet: it closes only when the backend reads the order itself                                |
+| What the customer tells the agent                   | A chat application, a contact or an identity records what was said; it does not act on the world                                            | The module's own validation                                                                        |
+| A model that proposes nothing                       | A graph decides what a proposal may do, not whether one is made                                                                             | `holdOver` and the trigger's own turn                                                              |
+| A branch that asks and leads to another action      | The person approves the action on the path, and its own node names the approver                                                             | The diverted work asks, on the approver of its own node                                            |

@@ -144,6 +144,8 @@ export class AgentToolsService {
                 jobId: turn.jobId,
                 workspaceId: turn.workspaceId,
                 conversationId: turn.conversationId,
+                pinnedIntent: turn.pinnedIntent ?? null,
+                wakeId: turn.wakeId,
             }
             return await this.dispatch(ctx, tool, args, turn.agentId)
         }

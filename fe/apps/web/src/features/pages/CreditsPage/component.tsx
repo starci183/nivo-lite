@@ -1,10 +1,9 @@
 import type { ReactNode } from "react"
-import { Button, Page } from "@starci/grammar/common"
+import { Button, Page, Stack } from "@starci/grammar/common"
 import type { PageHeaderContent } from "@starci/grammar/common"
 import { PayDrawer } from "@/components/blocks/PayDrawer"
 import { CreditsHistory, CreditsHistorySkeleton } from "@/components/blocks/CreditsHistory"
 import { CreditsOverview, CreditsOverviewSkeleton } from "@/components/blocks/CreditsOverview"
-import { PAGE_CLASS_NAME } from "./classNames"
 
 /** The body of the credits page: the connected slots while data is read, or the same-shape placeholders. */
 interface CreditsBodyProps {
@@ -12,7 +11,7 @@ interface CreditsBodyProps {
 }
 
 /** The regions of the credits body, one region step apart. */
-const CreditsBody = (props: CreditsBodyProps) => <div className={PAGE_CLASS_NAME}>{props.children}</div>
+const CreditsBody = (props: CreditsBodyProps) => <Stack gap="region">{props.children}</Stack>
 
 /** What the credits page is told: the link of the plan contact and the header words. */
 export interface CreditsPageBaseProps {
@@ -51,7 +50,7 @@ export interface CreditsLoadingPageBaseProps {
 
 /** Draws the same Page while the route loads: the real header words and the placeholders of the two slots. */
 export const CreditsLoadingPageBase = (props: CreditsLoadingPageBaseProps) => (
-    <Page header={headerOf(props.props)} measure="product" isSkeleton>
+    <Page header={headerOf(props.props)} measure="product" isLoading>
         <CreditsBody>
             <CreditsOverviewSkeleton />
             <CreditsHistorySkeleton />

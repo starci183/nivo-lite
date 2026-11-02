@@ -63,7 +63,6 @@ export const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => voi
         const info = {
             topic: meta.topic ?? item.topic ?? null,
             tags: meta.tags,
-            visibility: meta.visibility,
             module: meta.module,
             installationId: meta.installationId,
             origin: item.origin ?? null,

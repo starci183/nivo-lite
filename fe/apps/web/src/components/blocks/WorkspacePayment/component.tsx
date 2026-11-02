@@ -1,7 +1,18 @@
-import { Alert, Button, Image, MediaFrame, Page, SectionHeader, Stepper, SurfaceCard } from "@starci/grammar/common"
+import {
+    Alert,
+    Button,
+    Cluster,
+    Image,
+    MediaFrame,
+    Page,
+    Stack,
+    Stepper,
+    SurfaceCard,
+    Text,
+} from "@starci/grammar/common"
 import { WorkspacePaymentDetails } from "@/components/composites/WorkspacePaymentDetails"
 import type { WorkspacePaymentDetailsProps } from "@/components/composites/WorkspacePaymentDetails"
-import { ACTIONS_CLASS_NAME, CENTERED_CLASS_NAME, MASCOT_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
+import { CENTERED_CLASS_NAME, MASCOT_CLASS_NAME, MEASURE_CLASS_NAME } from "./classNames"
 
 /** Presentation of a payment step after the connected block resolves its state. */
 export interface WorkspacePaymentBaseProps {
@@ -32,25 +43,26 @@ export interface WorkspacePaymentBaseProps {
     }
 }
 
-const PaymentActions = (props: WorkspacePaymentBaseProps) => {
-    if (props.props.phase === "paid") {
-        return (
-            <Button intent="commit" href={props.props.returnTo}>
-                {props.props.openLabel}
-            </Button>
-        )
-    }
-    return (
-        <>
-            <Button intent="commit" isDisabled={!props.props.canRegenerate} onPress={props.on.regenerate}>
-                {props.props.regenerateLabel}
-            </Button>
-            <Button intent="neutral" href={props.props.allWorkspacesHref}>
-                {props.props.allWorkspacesLabel}
-            </Button>
-        </>
-    )
-}
+/** The paid outcome's one command: open what was paid for. */
+type PaymentPaidActionProps = Pick<WorkspacePaymentBaseProps, "props">
+
+const PaymentPaidAction = (props: PaymentPaidActionProps) => (
+    <Button intent="commit" href={props.props.returnTo}>
+        {props.props.openLabel}
+    </Button>
+)
+
+/** The unpaid phase's decision: regenerate is the commit, all workspaces the quiet way out. */
+const PaymentPendingActions = (props: WorkspacePaymentBaseProps) => (
+    <Cluster gap="row">
+        <Button intent="commit" isDisabled={!props.props.canRegenerate} onPress={props.on.regenerate}>
+            {props.props.regenerateLabel}
+        </Button>
+        <Button intent="neutral" href={props.props.allWorkspacesHref}>
+            {props.props.allWorkspacesLabel}
+        </Button>
+    </Cluster>
+)
 
 const PaymentSituation = (props: WorkspacePaymentBaseProps) => {
     const view = props.props
@@ -85,19 +97,21 @@ const PaymentSituation = (props: WorkspacePaymentBaseProps) => {
 export const WorkspacePaymentBase = (props: WorkspacePaymentBaseProps) => (
     <Page
         measure="product"
-        isSkeleton={props.props.phase === "loading" || props.props.phase === "creating"}
+        isLoading={props.props.phase === "loading" || props.props.phase === "creating"}
         header={{
             title: props.props.title,
             description: props.props.description === "" ? undefined : props.props.description,
         }}
     >
-        <div className={STACK_CLASS_NAME}>
-            <Stepper
-                label={props.props.title}
-                steps={props.props.steps.map((label, index) => ({ id: `step-${index + 1}`, label }))}
-                currentStepId="step-3"
-            />
-            <PaymentSituation {...props} />
+        <div className={MEASURE_CLASS_NAME}>
+            <Stack gap="section">
+                <Stepper
+                    label={props.props.title}
+                    steps={props.props.steps.map((label, index) => ({ id: `step-${index + 1}`, label }))}
+                    currentStepId="step-3"
+                />
+                <PaymentSituation {...props} />
+            </Stack>
         </div>
     </Page>
 )
@@ -110,18 +124,21 @@ const PaymentOutcome = (props: WorkspacePaymentBaseProps) => {
     const description = paid ? view.paidText : view.expiredText
     const mascot = paid ? "/images/promo/mascot-celebrate.png" : "/images/promo/mascot-night.png"
     return (
-        <SurfaceCard ariaLabel={title}>
+        <SurfaceCard label={title} headingLevel={2}>
             <div className={CENTERED_CLASS_NAME}>
-                <div className={MASCOT_CLASS_NAME}>
-                    <MediaFrame treatment="plain" aspect="portrait" fit="contain">
-                        <Image src={mascot} alt="" aspect="portrait" fit="contain" plate="none" />
-                    </MediaFrame>
-                </div>
-                <SectionHeader level={2} title={paid ? <output>{title}</output> : title} description={description} />
-                {view.error ? <Alert tone="negative" title={view.errorTitle} description={view.error} /> : null}
-                <div className={ACTIONS_CLASS_NAME}>
-                    <PaymentActions {...props} />
-                </div>
+                <Stack gap="section" align="center">
+                    <div className={MASCOT_CLASS_NAME}>
+                        <MediaFrame
+                            treatment="plain"
+                            aspect="portrait"
+                            fit="contain"
+                            media={<Image src={mascot} alt="" aspect="portrait" fit="contain" plate="none" />}
+                        />
+                    </div>
+                    <Text>{description}</Text>
+                    {view.error ? <Alert tone="negative" title={view.errorTitle} description={view.error} /> : null}
+                    {paid ? <PaymentPaidAction {...props} /> : <PaymentPendingActions {...props} />}
+                </Stack>
             </div>
         </SurfaceCard>
     )

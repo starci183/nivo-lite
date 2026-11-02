@@ -78,3 +78,25 @@ describe("OpenClawTurnRunnerService", () => {
         expect(given?.aborted).toBe(true)
     })
 })
+
+describe("OpenClawTurnRunnerService > a file in the turn", () => {
+    it("passes the exact picture bytes to the gateway without changing replay identity or the answer", async () => {
+        const { runner, gateway } = await build()
+        const attachments = [{ fileName: "receipt.png", mimeType: "image/png", content: "AQID" }]
+
+        await expect(runner.run({ ...request, attachments }, new AbortController().signal)).resolves.toEqual({
+            text: "answer",
+            usage,
+            runtimeAgentId: "ws-aaaa1111-accounting",
+        })
+
+        expect(gateway.runTurn.mock.calls[0]?.[0]).toEqual({
+            agentId: "ws-aaaa1111-accounting",
+            threadKey: "agent:ws-aaaa1111-accounting:work",
+            message: "the words",
+            attachments,
+            idempotencyKey: "wake-w1:3",
+            timeoutMs: 60_000,
+        })
+    })
+})

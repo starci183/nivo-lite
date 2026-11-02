@@ -1,5 +1,5 @@
-import { ListRow, Stepper, SurfaceListCard, Text } from "@starci/grammar/common"
-import type { StepperStep } from "@starci/grammar/common"
+import { EmptyNotice, Stepper, SurfaceCard, type StepperStep } from "@starci/grammar/common"
+
 import { STEPS_CLASS_NAME } from "./classNames"
 
 /** One document a worker is on: its name, how far it got and the stage it is in. */
@@ -24,9 +24,14 @@ export interface KnowledgeProcessingBaseProps {
 
 /** Draws each document being taken in with its four stages: the finished ones complete, the one a worker is on current. */
 export const KnowledgeProcessingBase = (props: KnowledgeProcessingBaseProps) => (
-    <SurfaceListCard label={props.props.title} empty={null}>
-        {props.props.rows.map((row) => (
-            <ListRow key={row.id} title={row.title} actions={<Text tone="muted">{row.percentLabel}</Text>}>
+    <SurfaceCard
+        kind="list"
+        label={props.props.title}
+        items={props.props.rows.map((row) => ({
+            id: row.id,
+            title: row.title,
+            badges: [{ label: row.percentLabel, tone: "neutral" as const }],
+            detail: (
                 <div className={STEPS_CLASS_NAME}>
                     <Stepper
                         label={`${props.props.stepsLabel}: ${row.title}`}
@@ -35,7 +40,8 @@ export const KnowledgeProcessingBase = (props: KnowledgeProcessingBaseProps) => 
                         size="dense"
                     />
                 </div>
-            </ListRow>
-        ))}
-    </SurfaceListCard>
+            ),
+        }))}
+        empty={<EmptyNotice message={props.props.title} />}
+    />
 )

@@ -1,8 +1,10 @@
 import { useMutateApplyContentCadencePresetsSwr } from "@/hooks/swr"
 import { useContentSave } from "./useContentSave"
+import type { ContentSaveOwner } from "./useContentSave"
 
-/** Saves configuration through GraphQL, toasts its outcome and refreshes content data. */
-export const useApplyContentCadencePresets = () => {
-    const { trigger, isMutating } = useMutateApplyContentCadencePresetsSwr()
-    return { apply: useContentSave(() => trigger()), isMutating }
+/** Saves configuration with its standard feedback, exact cache refresh and origin-owned completion. */
+export const useApplyContentCadencePresets = (owner?: ContentSaveOwner) => {
+    const { trigger } = useMutateApplyContentCadencePresetsSwr()
+    const save = useContentSave(() => trigger(), owner)
+    return { apply: () => save.exec([]), isPending: save.isPending }
 }

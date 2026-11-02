@@ -293,3 +293,16 @@ describe("ReviewInputsService dossierOf", () => {
         ).resolves.toBeUndefined()
     })
 })
+
+describe("ReviewInputsService > binding a dossier outside the pack", () => {
+    it("can bind the dossier's own title without inventing pack expectations", async () => {
+        const { service, dossiers, chunks } = await build()
+        const manual = dossierOf({ id: "d99", ref: "99", name: "Operating manual" })
+        const source = sourceOf({ id: "manual", title: "Operating manual.pdf", topic: null })
+        dossiers.all.mockResolvedValue([manual])
+
+        await expect(service.dossierOf(WS, source)).resolves.toBe(manual)
+
+        expect(chunks.passagesOfSources).toHaveBeenCalledWith(WS, ["manual"], 3)
+    })
+})

@@ -33,8 +33,8 @@ export const LeadHeader = (props: LeadHeaderProps) => {
         <LeadHeaderBase
             props={{
                 part: props.part,
-                view: slot.items,
-                isSkeleton: slot.isLoading === true,
+                view: "items" in slot ? slot.items : undefined,
+                isSkeleton: "isLoading" in slot && slot.isLoading === true,
                 fallbackTitle: t("detailEyebrow"),
             }}
         />

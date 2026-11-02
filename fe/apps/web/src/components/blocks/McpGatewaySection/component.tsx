@@ -19,7 +19,7 @@ export interface McpGatewaySectionBaseProps {
 }
 
 /** Draws one gateway card of the region, or its placeholder while the reads are on their way. */
-const renderCards = (view: GatewayView, isSkeleton: boolean) => <McpGatewayRegion view={view} isSkeleton={isSkeleton} />
+const renderCards = (view: GatewayView, isLoading: boolean) => <McpGatewayRegion view={view} isLoading={isLoading} />
 
 /** The MCP gateway cards, and the forms that register a connector once the cards are in. */
 export const McpGatewaySectionBase = (props: McpGatewaySectionBaseProps) => (
@@ -29,9 +29,8 @@ export const McpGatewaySectionBase = (props: McpGatewaySectionBaseProps) => (
             placeholder={{ cards: [{ label: props.props.label, rows: [], emptyMessage: "", emptyDescription: "" }] }}
             labels={props.props.slotLabels}
             onRetry={props.on.retry}
-        >
-            {renderCards}
-        </SlotView>
-        {props.props.slot.items === undefined ? null : <McpConnectorForms props={props.props.forms} on={props.on} />}
+            render={renderCards}
+        />
+        {"items" in props.props.slot ? <McpConnectorForms props={props.props.forms} on={props.on} /> : null}
     </>
 )

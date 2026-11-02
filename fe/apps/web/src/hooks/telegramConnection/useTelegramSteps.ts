@@ -16,11 +16,11 @@ export const useTelegramSteps = (connectionId: string) => {
     const { slot } = useTelegramPage(connectionId)
     const { lines } = useTelegramChecks(connectionId)
     const [toggled, setToggled] = useState<Readonly<Partial<Record<string, boolean>>>>({})
-    const page = slot.items
+    const page = "items" in slot ? slot.items : undefined
     const count = page?.agentIds.length ?? 0
     const done = telegramStepsDone({ healthy: page?.healthy ?? false, agentCount: count })
     const opensOn = page === undefined ? null : firstOpenTelegramStep(done)
-    const checkLines = lines.items ?? []
+    const checkLines = ("items" in lines ? lines.items : undefined) ?? []
     const handle = page === undefined || page.botUsername === "" ? "-" : `@${page.botUsername}`
     const wording = {
         bot: { title: t("stepBot"), hint: t("stepBotHint"), summary: t("stepBotDone", { handle }) },

@@ -1,7 +1,6 @@
-import { Badge, List, PaneSection, SectionHeader, Text } from "@starci/grammar/common"
+import { Badge, EmptyNotice, PaneSection, Section, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import { StatusRows } from "@/components/composites/StatusRows"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** One delivery as it is worded. */
@@ -27,46 +26,35 @@ export interface SepayEventsBaseProps {
     readonly on: { readonly retry: () => void }
 }
 
-const rowsOf = (events: ReadonlyArray<SepayEventRow>) =>
-    events.map((event) => ({
-        id: event.id,
-        title: event.title,
-        note: (
-            <Text size="xs" tone="muted">
-                {event.detail}
-            </Text>
-        ),
-        badgeLabel: event.statusLabel,
-        badgeTone: event.statusTone,
-    }))
-
-/** Draws the live rail of webhook deliveries as the bands of its pane: the heading with the live mark, the deliveries newest first, the footnote. */
+/** One unpainted collection owns the rail heading, live cue and loading rows; the source note stays in its footer band. */
 export const SepayEventsBase = (props: SepayEventsBaseProps) => (
     <>
-        <PaneSection as="header">
-            <SectionHeader
-                level={2}
-                title={props.props.title}
-                meta={
-                    <Badge isDot tone="success">
-                        {props.props.liveLabel}
-                    </Badge>
-                }
-            />
-        </PaneSection>
         <PaneSection>
             <SlotView
                 slot={props.props.slot}
                 placeholder={props.props.placeholder}
                 labels={props.props.labels}
                 onRetry={props.on.retry}
-            >
-                {(events, isSkeleton) => (
-                    <List label={props.props.title} aria-busy={isSkeleton}>
-                        <StatusRows rows={rowsOf(events)} isSkeleton={isSkeleton} />
-                    </List>
+                render={(events, isSkeleton) => (
+                    <Section
+                        kind="list"
+                        title={props.props.title}
+                        isLoading={isSkeleton}
+                        action={
+                            <Badge isDot tone="success">
+                                {props.props.liveLabel}
+                            </Badge>
+                        }
+                        items={events.map((event) => ({
+                            id: event.id,
+                            title: event.title,
+                            description: event.detail,
+                            badges: [{ label: event.statusLabel, tone: event.statusTone }] as const,
+                        }))}
+                        empty={<EmptyNotice message={props.props.labels.empty} />}
+                    />
                 )}
-            </SlotView>
+            />
         </PaneSection>
         <PaneSection as="footer">
             <Text size="xs" tone="muted">

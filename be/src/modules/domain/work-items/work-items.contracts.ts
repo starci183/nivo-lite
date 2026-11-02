@@ -52,6 +52,38 @@ export interface Proposal {
     readonly candidates?: ReadonlyArray<ProposalCandidate> | undefined
     /** The producer's execution choices, retained across a durable handoff and approval. */
     readonly execution?: WorkExecutionOptions | undefined
+    /** What the road that opened the work knows, with where it came from. */
+    readonly evidence?: ReadonlyArray<GraphEvidence> | undefined
+}
+
+/** The evidence key of an amount of money, until its plug-in owns the key. */
+export const AMOUNT_EVIDENCE = "amount_vnd"
+
+/** Who an entry of evidence came from: whoever the door saw. Plug-ins decide what an actor may do; the graph never reads this. */
+export interface EvidenceActor {
+    /** Member, agent or system. */
+    readonly kind: string
+    /** The id. */
+    readonly id: string
+    /** The role, when the actor has one. */
+    readonly role: string | null
+}
+
+/**
+ * One thing a turn knows, carried for the plug-in that reads it: the graph passes the list on and never looks inside. A new source adds an
+ * entry and changes nothing else. A `null` value is a read that failed or was unclear.
+ */
+export interface GraphEvidence {
+    /** What the entry is about. */
+    readonly key: string
+    /** The value, or null when it could not be read. */
+    readonly value: string | number | boolean | null
+    /** How far it can be trusted, in the words of the plug-in that reads it. */
+    readonly kind: string
+    /** The road it came by. A trigger of the graph may choose which roads count. */
+    readonly via: string
+    /** Who it came from, when the door knows. */
+    readonly actor?: EvidenceActor | undefined
 }
 
 /** A staff id, null when the assignment is cleared, or absent when the caller omitted it. */

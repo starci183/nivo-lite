@@ -1,13 +1,5 @@
-import { Badge, Button, Heading, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, Grid, Heading, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import {
-    ACTIONS_CLASS_NAME,
-    CARD_CLASS_NAME,
-    CHIPS_CLASS_NAME,
-    COPY_CLASS_NAME,
-    GRID_CLASS_NAME,
-    HEAD_CLASS_NAME,
-} from "./classNames"
 
 /** One workspace card, already worded for the person's language. */
 export interface WorkspaceRowView {
@@ -37,26 +29,26 @@ export interface WorkspacesListBaseProps {
 
 /** Draws the workspaces the person belongs to as a grid of cards: name, role, state, and the way in. */
 export const WorkspacesListBase = (props: WorkspacesListBaseProps) => (
-    <List className={GRID_CLASS_NAME} label={props.props.label}>
-        {props.props.rows.map((row) => (
-            <ListItem key={row.id}>
-                <SurfaceCard ariaLabel={row.name} height="fill">
-                    <div className={CARD_CLASS_NAME}>
-                        <div className={HEAD_CLASS_NAME}>
+    <Section title={props.props.label}>
+        <Grid kind="cards" columns={2}>
+            {props.props.rows.map((row) => (
+                <SurfaceCard key={row.id} ariaLabel={row.name} height="fill">
+                    <Stack gap="row">
+                        <Cluster gap="row">
                             <PersonAvatar name={row.name} size="lg" />
-                            <div className={COPY_CLASS_NAME}>
-                                <Heading level={2}>{row.name}</Heading>
+                            <Stack gap="identity">
+                                <Heading level={3}>{row.name}</Heading>
                                 <Text size="sm" tone="muted">
                                     {row.roleLabel}
                                 </Text>
-                            </div>
-                        </div>
-                        <div className={CHIPS_CLASS_NAME}>
+                            </Stack>
+                        </Cluster>
+                        <Cluster gap="inline">
                             <Badge tone={row.stateTone} isDot>
                                 {row.stateLabel}
                             </Badge>
-                        </div>
-                        <div className={ACTIONS_CLASS_NAME}>
+                        </Cluster>
+                        <Cluster gap="row">
                             <Button
                                 intent={row.isPrimary ? "alternative" : "neutral"}
                                 isDisabled={!row.canOpen}
@@ -70,10 +62,10 @@ export const WorkspacesListBase = (props: WorkspacesListBaseProps) => (
                                     {props.props.billingLabel}
                                 </Button>
                             )}
-                        </div>
-                    </div>
+                        </Cluster>
+                    </Stack>
                 </SurfaceCard>
-            </ListItem>
-        ))}
-    </List>
+            ))}
+        </Grid>
+    </Section>
 )

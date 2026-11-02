@@ -41,3 +41,32 @@ export interface OriginSource {
     /** Last change, ISO 8601. */
     readonly updatedAt: string
 }
+
+/** Where one internal document stands for a public document drafted from it: its title and the hash of the text its passages were made from. */
+export interface SourceState {
+    /** Source identity. */
+    readonly id: string
+    /** Title. */
+    readonly title: string
+    /** public or internal. */
+    readonly visibility: string
+    /** Where it stands. */
+    readonly status: string
+    /** The SHA-256 of the text whose passages are complete; null while the text is being read. */
+    readonly contentHash: string | null
+}
+
+/** One document with its text and the lane it is kept for, as a tool that serves a view reads it. */
+export interface SourceDocument extends SourceState {
+    /** The module it is kept for, or null for every module. */
+    readonly module: string | null
+    /** The agent instance it is kept for, or null for every instance. */
+    readonly installationId: string | null
+    /** The topic. */
+    readonly topic: string | null
+    /** Its text. */
+    readonly content: string
+}
+
+/** A document with its text and lane, or null when the workspace has no such document. */
+export type MaybeSourceDocument = SourceDocument | null

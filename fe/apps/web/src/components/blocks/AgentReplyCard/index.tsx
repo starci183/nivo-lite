@@ -28,8 +28,8 @@ export const AgentReplyCard = (props: AgentReplyCardProps) => {
     const [timeoutDraft, setTimeoutDraft] = useState<string | null>(null)
     const [holdingDraft, setHoldingDraft] = useState<string | null>(null)
     const { timeout: saveTimeout, holding: saveHolding, isSaving } = useSaveReply(props.installationId)
-    const savedTimeout = slot.items?.timeoutSec ?? 0
-    const savedHolding = slot.items?.holdingMessage ?? ""
+    const savedTimeout = ("items" in slot ? slot.items : undefined)?.timeoutSec ?? 0
+    const savedHolding = ("items" in slot ? slot.items : undefined)?.holdingMessage ?? ""
     const timeoutText = timeoutDraft ?? String(savedTimeout)
     const holding = holdingDraft ?? savedHolding
     const timeout = Number(timeoutText)
@@ -39,7 +39,7 @@ export const AgentReplyCard = (props: AgentReplyCardProps) => {
     const submitHolding = async () => {
         if (await saveHolding(holding)) setHoldingDraft(null)
     }
-    if (!canEdit || slot.items === undefined) return null
+    if (!canEdit || ("items" in slot ? slot.items : undefined) === undefined) return null
     return (
         <AgentReplyCardBase
             props={{

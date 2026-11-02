@@ -15,7 +15,7 @@ export const useDriveSteps = () => {
     const { slot } = useDrivePage()
     const { count } = useDriveProgress()
     const [toggled, setToggled] = useState<Readonly<Partial<Record<string, boolean>>>>({})
-    const page = slot.items
+    const page = "items" in slot ? slot.items : undefined
     const isGranted = page?.standing === "connected"
     const grantSummary = page?.standing === "lost" ? t("stepGrantLost") : t("stepTodo")
     const chooseSummary = isGranted ? t("stepTodo") : ""

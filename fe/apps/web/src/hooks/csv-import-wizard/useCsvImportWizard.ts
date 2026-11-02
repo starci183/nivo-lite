@@ -152,6 +152,7 @@ const viewOf = ({
     column,
 }: CsvImportViewInput) => {
     return {
+        reads: resume.reads,
         isLoading: resume.isLoading,
         loadError: resume.error ?? null,
         saved,

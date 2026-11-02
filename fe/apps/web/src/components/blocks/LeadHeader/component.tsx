@@ -29,10 +29,10 @@ export const LeadHeaderBase = (props: LeadHeaderBaseProps) => {
     const view = p.isSkeleton ? PLACEHOLDER : p.view
     if (p.part === "title") return <>{p.isSkeleton ? PLACEHOLDER.name : (view?.name ?? p.fallbackTitle)}</>
     if (view === undefined) return null
-    if (p.part === "mark") return <Avatar name={view.name} size="lg" isSkeleton={p.isSkeleton} />
+    if (p.part === "mark") return <Avatar name={view.name} size="lg" isLoading={p.isSkeleton} />
     if (p.part === "status") {
         return (
-            <Badge tone={view.stageTone} isDot isSkeleton={p.isSkeleton}>
+            <Badge tone={view.stageTone} isDot isLoading={p.isSkeleton}>
                 {view.stageLabel}
             </Badge>
         )

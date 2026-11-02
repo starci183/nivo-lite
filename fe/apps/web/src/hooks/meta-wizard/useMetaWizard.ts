@@ -4,6 +4,7 @@ import { metaWizardOf } from "@/hooks/connection-wire"
 import { allAgentIds, resumeNoteOf, resumeSlotOf, useAdoptOnce } from "@/hooks/connection-wizard"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
 import { useQueryMetaConnectionSwr } from "@/hooks/swr"
+import type { SlotRead } from "@/hooks/slot"
 import type { AgentOption, MetaCheck, MetaWizardConnection, WizardNote } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
@@ -41,6 +42,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
     const step = META_STEPS[index] ?? "connect"
     const watch = useFirstEvent({ connectionId: conn === null ? null : conn.id, isActive: step === "test" })
     const firstEvent = watch.event ?? (conn === null ? null : conn.firstEvent)
+    const reads: ReadonlyArray<SlotRead<unknown>> = input.resumeId === undefined ? [] : [resume]
 
     // The stored connection arrives once: adopt it while rendering (derived state), not from an effect.
     useAdoptOnce(resume.data, (data) => {
@@ -71,6 +73,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
     })
 
     return {
+        reads,
         index,
         step,
         conn,

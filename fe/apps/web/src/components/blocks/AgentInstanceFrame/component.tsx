@@ -1,11 +1,11 @@
 import type { ReactNode } from "react"
-import { Badge, Button, DropdownMenu, Icon, Page, Pane, PaneGrid } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
+import { Badge, Button, DropdownMenu, Icon, Page, Pane, PaneGrid, Cluster } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import { HEADER_ACTIONS } from "./classNames"
-
 /** What the header shows once the instance is known, every word resolved. */
 export interface InstanceHeaderView {
     readonly name: string
@@ -49,7 +49,7 @@ export interface InstanceSwitch {
 /** Copy, header view and tabs of the frame of an agent instance. */
 export interface AgentInstanceFrameBaseProps {
     /** The routed tab. */
-    readonly shape: { readonly body: ReactNode }
+    readonly children: ReactNode
     readonly props: {
         /** The routed tab's body is panes: attached flush under the tab line instead of cards on the page ground. */
         readonly hasPanes: boolean
@@ -64,13 +64,34 @@ export interface AgentInstanceFrameBaseProps {
         /** The tab the route names; the line follows a soft navigation from inside the body, which the tabs alone do not see. */
         readonly selectedTab: string
         /** The instance is not known yet: the header keeps its boxes. */
-        readonly isSkeleton: boolean
+        readonly isLoading: boolean
+        readonly read: DataSlot<boolean>
+        readonly labels: SlotLabels
         readonly view: InstanceHeaderView
         readonly switcher: InstanceSwitch
     }
+    readonly on: { readonly retry: () => void }
 }
 
 type FrameCopy = AgentInstanceFrameBaseProps["props"]
+
+interface FrameBodyProps {
+    readonly body: ReactNode
+    readonly read: DataSlot<boolean>
+    readonly labels: SlotLabels
+    readonly onRetry: () => void
+}
+
+/** The header read fails once in the Page body while its route chrome stays in place. */
+const FrameBody = (props: FrameBodyProps) => (
+    <SlotView
+        slot={props.read}
+        placeholder={false}
+        labels={props.labels}
+        onRetry={props.onRetry}
+        render={() => props.body}
+    />
+)
 
 /** What a part of the header reads: the copy and the view of the frame. */
 interface HeaderPartProps {
@@ -122,7 +143,7 @@ const Switcher = (props: SwitcherProps) => (
 const HeaderActions = (props: HeaderPartProps) => {
     const { copy } = props
     return (
-        <div className={HEADER_ACTIONS}>
+        <Cluster gap="inline">
             {copy.switcher.items.length > 1 || (copy.switcher.items.length > 0 && copy.switcher.add !== null) ? (
                 <Switcher switcher={copy.switcher} />
             ) : null}
@@ -141,7 +162,7 @@ const HeaderActions = (props: HeaderPartProps) => {
                     {copy.profileLabel}
                 </Button>
             )}
-        </div>
+        </Cluster>
     )
 }
 
@@ -171,7 +192,7 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
                 seed={view.seed}
                 src={view.avatarUrl}
                 size="control"
-                isSkeleton={copy.isSkeleton}
+                isLoading={copy.isLoading}
             />
         ),
         title: view.name,
@@ -188,18 +209,23 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
     }
     if (copy.hasPanes) {
         return (
-            <Page chrome="panes" measure="product" isSkeleton={copy.isSkeleton} minHeight="lg" header={header}>
+            <Page chrome="panes" measure="product" isLoading={copy.isLoading} minHeight="lg" header={header}>
                 <PaneGrid label={copy.ariaLabel} areas={["tab"]}>
                     <Pane area="tab" inset="flush">
-                        {props.shape.body}
+                        <FrameBody
+                            body={props.children}
+                            read={copy.read}
+                            labels={copy.labels}
+                            onRetry={props.on.retry}
+                        />
                     </Pane>
                 </PaneGrid>
             </Page>
         )
     }
     return (
-        <Page measure="product" isSkeleton={copy.isSkeleton} header={header}>
-            {props.shape.body}
+        <Page measure="product" isLoading={copy.isLoading} header={header}>
+            <FrameBody body={props.children} read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
         </Page>
     )
 }

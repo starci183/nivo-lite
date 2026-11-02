@@ -1,6 +1,8 @@
 "use client"
 
-import { useAuthoritySection, useSaveAuthorityRules } from "@/hooks/authority"
+import { useAuthoritySheet, useSaveAuthorityRules } from "@/hooks/authority"
+import { useConsoleSessionRead } from "@/hooks/console"
+import { isManager } from "@/hooks/member"
 import { useQueryAuthUserSwr, useQueryWorkspaceMembersSwr } from "@/hooks/swr"
 import type { StoredRule } from "@/modules/authority"
 import { useActiveWorkspace } from "@/hooks/workspaces"
@@ -35,11 +37,14 @@ export const useOnboardingHandover = (): OnboardingHandoverState => {
     const { activeWorkspaceId } = useActiveWorkspace()
     const user = useQueryAuthUserSwr()
     const members = useQueryWorkspaceMembersSwr(activeWorkspaceId)
-    const { slot, rules, isLocked } = useAuthoritySection()
+    const { slot } = useAuthoritySheet()
+    const session = useConsoleSessionRead()
+    const isLocked = !isManager(session?.member ?? null)
     const { save, isSaving } = useSaveAuthorityRules()
     const ownerMember = members.data?.find((row) => row.role === "owner")
-    const rule = rules.find((row) => row.department === REPLY_DEPARTMENT && row.action === REPLY_ACTION)
-    const approval = approvalOf(slot.items !== undefined, rule?.mode)
+    const rules = "items" in slot ? slot.items.rules : undefined
+    const rule = rules?.find((row) => row.department === REPLY_DEPARTMENT && row.action === REPLY_ACTION)
+    const approval = approvalOf(("items" in slot ? slot.items : undefined) !== undefined, rule?.mode)
     return {
         owner:
             ownerMember === undefined

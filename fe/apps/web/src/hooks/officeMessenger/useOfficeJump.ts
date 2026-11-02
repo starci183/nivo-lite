@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { approvalCardAnchor, exceptionCardAnchor, resultCardAnchor } from "@/modules/office"
+import type { OfficeWaiting } from "@/modules/office"
 
 const FOCUS_MS = 2400
 
@@ -25,5 +26,13 @@ export const useOfficeJump = () => {
     const jumpApproval = useCallback((id: string) => setTarget({ id, anchor: approvalCardAnchor(id) }), [])
     const jumpException = useCallback((id: string) => setTarget({ id, anchor: exceptionCardAnchor(id) }), [])
     const jumpCard = useCallback((id: string) => setTarget({ id, anchor: resultCardAnchor(id) }), [])
-    return { focusedId: target?.id ?? null, jumpApproval, jumpException, jumpCard }
+    const jumpWaiting = useCallback(
+        (waiting: OfficeWaiting | null) => {
+            if (waiting === null) return
+            if (waiting.kind === "approval") jumpApproval(waiting.id)
+            else jumpException(waiting.id)
+        },
+        [jumpApproval, jumpException],
+    )
+    return { focusedId: target?.id ?? null, jumpApproval, jumpException, jumpCard, jumpWaiting }
 }

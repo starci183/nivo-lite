@@ -4,7 +4,7 @@ import type { AgentGraphModeView } from "@/modules/types"
 /** Whether the map decides for the agent, and the switch that turns it. */
 type AgentGraphModeProps = {
     readonly view: AgentGraphModeView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onMode: (value: string) => void
 }
 
@@ -15,7 +15,7 @@ export const AgentGraphMode = (props: AgentGraphModeProps) => (
         description={props.view.hint}
         isSelected={props.view.isEnforced}
         isDisabled={props.view.isDisabled}
-        isSkeleton={props.isSkeleton}
+        isLoading={props.isLoading}
         onSelectedChange={(isEnforced) => props.onMode(isEnforced ? "enforced" : "shadow")}
     />
 )

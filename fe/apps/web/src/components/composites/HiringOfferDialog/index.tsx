@@ -1,30 +1,17 @@
-import { Alert, Dialog, Input, Textarea } from "@starci/grammar/common"
+import type { HiringViews, HiringActions } from "@/modules/types"
+
+import { Stack, Grid, Alert, Dialog, Input, Textarea } from "@starci/grammar/common"
+
 import { HiringDialogFooter } from "@/components/branches/HiringDialogFooter"
-import type { OfferValues, RequestOutcomeView } from "@/hooks/hiringCandidate"
-import type { FieldOf, HiringSay } from "@/modules/types"
-import { FORM_CLASS_NAME, GRID_CLASS_NAME } from "./classNames"
 
 /** The words, values and state of the offer request dialog. */
-export interface HiringOfferDialogProps {
-    readonly props: {
-        readonly say: HiringSay
-        readonly name: string
-        readonly values: OfferValues
-        readonly outcome: RequestOutcomeView | null
-        readonly canSend: boolean
-        readonly isBusy: boolean
-        readonly error: string | null
-    }
-    readonly on: {
-        readonly text: (name: FieldOf<OfferValues, string>, value: string) => void
-        readonly send: () => void
-        readonly close: () => void
-    }
+type HiringOfferDialogProps = HiringViews["offerFields"] & {
+    readonly on: HiringActions["offerActions"]
 }
 
 /** The dialog that asks the back end to draft an offer letter from the terms below; the letter is sent only once approved. */
 export const HiringOfferDialog = (props: HiringOfferDialogProps) => {
-    const { say, name, values, outcome, canSend, isBusy, error } = props.props
+    const { copy, values, outcome, canSend, isBusy, error } = props
     const { on } = props
     const isWaiting = outcome?.status === "waiting_decision"
     return (
@@ -34,13 +21,13 @@ export const HiringOfferDialog = (props: HiringOfferDialogProps) => {
                 if (!open) on.close()
             }}
             size="md"
-            title={say("offerTitle", { name })}
-            closeLabel={say("close")}
-            description={say("offerHint")}
+            title={props.title}
+            closeLabel={copy.close}
+            description={copy.offerHint}
             footer={
                 <HiringDialogFooter
-                    say={say}
-                    sendKey="offerSend"
+                    copy={copy}
+                    sendLabel={copy.offerSend}
                     isDone={outcome !== null}
                     canSend={canSend}
                     isBusy={isBusy}
@@ -49,69 +36,74 @@ export const HiringOfferDialog = (props: HiringOfferDialogProps) => {
                 />
             }
         >
-            {renderHiringOfferDialogFields(error, say, outcome, values, on, isWaiting)}
+            {renderHiringOfferDialogFields({ error, copy, outcome, values, on, isWaiting })}
         </Dialog>
     )
 }
 
 /** Renders the HiringOfferDialog fields section. */
-const renderHiringOfferDialogFields = (
-    error: HiringOfferDialogProps["props"]["error"],
-    say: NonNullable<HiringOfferDialogProps["props"]["say"]>,
-    outcome: HiringOfferDialogProps["props"]["outcome"],
-    values: NonNullable<HiringOfferDialogProps["props"]["values"]>,
-    on: NonNullable<HiringOfferDialogProps["on"]>,
-    isWaiting: boolean,
-) => (
-    <div className={FORM_CLASS_NAME}>
-        {error === null ? null : <Alert tone="negative" title={say("offerFailed")} description={error} />}
-        {outcome === null ? (
-            <>
-                <Input
-                    id="of-title"
-                    name="title"
-                    label={say("offerRole")}
-                    value={values.title}
-                    onValueChange={(title) => on.text("title", title)}
-                />
-                <Input
-                    id="of-pay"
-                    name="pay"
-                    label={say("offerPay")}
-                    description={say("offerPayExample")}
-                    isRequired
-                    value={values.pay}
-                    onValueChange={(pay) => on.text("pay", pay)}
-                />
-                <div className={GRID_CLASS_NAME}>
+interface OfferFieldsProps {
+    readonly error: HiringOfferDialogProps["error"]
+    readonly copy: HiringViews["workbenchCopy"]
+    readonly outcome: HiringOfferDialogProps["outcome"]
+    readonly values: HiringOfferDialogProps["values"]
+    readonly on: HiringOfferDialogProps["on"]
+    readonly isWaiting: boolean
+}
+
+const renderHiringOfferDialogFields = (props: OfferFieldsProps) => {
+    const { error, copy, outcome, values, on, isWaiting } = props
+    return (
+        <Stack gap="row">
+            {error === null ? null : <Alert tone="negative" title={copy.offerFailed} description={error} />}
+            {outcome === null ? (
+                <>
                     <Input
-                        id="of-start"
-                        name="start_date"
-                        label={say("offerStart")}
-                        value={values.startDate}
-                        onValueChange={(startDate) => on.text("startDate", startDate)}
+                        id="of-title"
+                        name="title"
+                        label={copy.offerRole}
+                        value={values.title}
+                        onValueChange={(title) => on.text("title", title)}
                     />
                     <Input
-                        id="of-prob"
-                        name="probation"
-                        label={say("offerProbation")}
-                        value={values.probation}
-                        onValueChange={(probation) => on.text("probation", probation)}
+                        id="of-pay"
+                        name="pay"
+                        label={copy.offerPay}
+                        description={copy.offerPayExample}
+                        isRequired
+                        value={values.pay}
+                        onValueChange={(pay) => on.text("pay", pay)}
                     />
-                </div>
-                <Textarea
-                    label={say("offerNote")}
-                    rows={2}
-                    value={values.note}
-                    onValueChange={(note) => on.text("note", note)}
+                    <Grid kind="form" columns={2}>
+                        <Input
+                            id="of-start"
+                            name="start_date"
+                            label={copy.offerStart}
+                            value={values.startDate}
+                            onValueChange={(startDate) => on.text("startDate", startDate)}
+                        />
+                        <Input
+                            id="of-prob"
+                            name="probation"
+                            label={copy.offerProbation}
+                            value={values.probation}
+                            onValueChange={(probation) => on.text("probation", probation)}
+                        />
+                    </Grid>
+                    <Textarea
+                        label={copy.offerNote}
+                        rows={2}
+                        value={values.note}
+                        onValueChange={(note) => on.text("note", note)}
+                    />
+                </>
+            ) : (
+                <Alert
+                    tone={isWaiting ? "cautionary" : "affirmative"}
+                    title={isWaiting ? copy.offerWaiting : copy.offerHandled}
+                    description={isWaiting ? `${outcome.summary} ${copy.offerOpenDecisions}` : outcome.summary}
                 />
-            </>
-        ) : (
-            <Alert
-                tone={isWaiting ? "cautionary" : "affirmative"}
-                title={say(isWaiting ? "offerWaiting" : "offerHandled")}
-                description={isWaiting ? `${outcome.summary} ${say("offerOpenDecisions")}` : outcome.summary}
-            />
-        )}
-    </div>
-)
+            )}
+        </Stack>
+    )
+}

@@ -1,5 +1,5 @@
-import { Input, Select } from "@starci/grammar/common"
-import { imapAccountFieldsClassNames as classNames } from "./classNames"
+import { Grid, Select } from "@starci/grammar/common"
+import { ConnectionAccountInputs } from "@/components/leaves/ConnectionAccountInputs"
 
 /** A text field of the mailbox sign-in form. */
 type ImapTextField = "name" | "email" | "host" | "port" | "user" | "password"
@@ -13,6 +13,8 @@ interface ImapSelectOption {
 /** What the sign-in fields draw: the mailbox, the provider (with host, port and security for "other") and the sign-in. */
 export interface ImapAccountFieldsProps {
     readonly props: {
+        readonly isLoading?: boolean
+
         readonly values: Readonly<Record<ImapTextField | "security", string>>
         readonly preset: string
         readonly presets: ReadonlyArray<ImapSelectOption>
@@ -48,25 +50,24 @@ export interface ImapAccountFieldsProps {
 export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
     const { props: view, on } = props
     return (
-        <div className={classNames.fields}>
-            <Input
-                id="imap-name"
-                name="name"
-                label={view.text.name}
-                description={view.text.nameHint}
+        <Grid kind="form" columns={2}>
+            <ConnectionAccountInputs
+                owner="imap"
+                fields={[
+                    {
+                        name: "name",
+                        label: view.text.name,
+                        value: view.values.name,
+                        description: view.text.nameHint,
+                        change: on.field("name"),
+                    },
+                    { name: "email", label: view.text.email, value: view.values.email, change: on.field("email") },
+                ]}
                 isDisabled={view.isDisabled}
-                value={view.values.name}
-                onValueChange={on.field("name")}
-            />
-            <Input
-                id="imap-email"
-                name="email"
-                label={view.text.email}
-                isDisabled={view.isDisabled}
-                value={view.values.email}
-                onValueChange={on.field("email")}
+                {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
             />
             <Select
+                {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
                 label={view.text.provider}
                 isDisabled={view.isDisabled}
                 value={view.preset}
@@ -74,26 +75,28 @@ export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
                 onValueChange={(value) => value && on.preset(value)}
             />
             {view.isCustom ? renderImapAccountFieldsServerFields(view, on) : null}
-            <Input
-                id="imap-user"
-                name="user"
-                label={view.text.user}
-                description={view.text.userHint}
+            <ConnectionAccountInputs
+                owner="imap"
+                fields={[
+                    {
+                        name: "user",
+                        label: view.text.user,
+                        value: view.values.user,
+                        description: view.text.userHint,
+                        change: on.field("user"),
+                    },
+                    {
+                        name: "password",
+                        label: view.text.password,
+                        value: view.values.password,
+                        description: view.passwordHint,
+                        change: on.field("password"),
+                    },
+                ]}
                 isDisabled={view.isDisabled}
-                value={view.values.user}
-                onValueChange={on.field("user")}
+                {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
             />
-            <Input
-                id="imap-password"
-                name="password"
-                kind="password"
-                label={view.text.password}
-                description={view.passwordHint}
-                isDisabled={view.isDisabled}
-                value={view.values.password}
-                onValueChange={on.field("password")}
-            />
-        </div>
+        </Grid>
     )
 }
 
@@ -103,23 +106,17 @@ const renderImapAccountFieldsServerFields = (
     on: NonNullable<ImapAccountFieldsProps["on"]>,
 ) => (
     <>
-        <Input
-            id="imap-host"
-            name="host"
-            label={view.text.host}
+        <ConnectionAccountInputs
+            owner="imap"
+            fields={[
+                { name: "host", label: view.text.host, value: view.values.host, change: on.field("host") },
+                { name: "port", label: view.text.port, value: view.values.port, change: on.field("port") },
+            ]}
             isDisabled={view.isDisabled}
-            value={view.values.host}
-            onValueChange={on.field("host")}
-        />
-        <Input
-            id="imap-port"
-            name="port"
-            label={view.text.port}
-            isDisabled={view.isDisabled}
-            value={view.values.port}
-            onValueChange={on.field("port")}
+            {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
         />
         <Select
+            {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
             label={view.text.security}
             isDisabled={view.isDisabled}
             value={view.values.security}

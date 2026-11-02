@@ -11,6 +11,7 @@ export const useSepayConnection = (connectionId: string) => {
     const query = useQuerySepayConnectionSwr(connectionId, { refreshInterval: SEPAY_POLL_MS })
     const data = useMemo(() => (query.data === undefined ? undefined : sepayConnectionOf(query.data)), [query.data])
     return {
+        read: query,
         slot: slotOfSwr({ data, error: query.error, isLoading: query.isLoading }),
         isMissing: query.error !== undefined && (isNotFoundFailure(query.error) || isInvalidFailure(query.error)),
         retry: () => {

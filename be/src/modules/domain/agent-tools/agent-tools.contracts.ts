@@ -21,6 +21,10 @@ export interface ToolContext {
     readonly workspaceId: string
     /** The conversation of the job. */
     readonly conversationId: string
+    /** The intent a split turn is pinned to, when the call comes from the bridge; absent on a per-job token. */
+    readonly pinnedIntent?: string | null
+    /** The wake of the turn on the core road, whose run holds its steps; absent on the legacy road. */
+    readonly wakeId?: string
 }
 
 /** Who a credential admits: the job and the workspace it acts for, nothing else. */
@@ -31,8 +35,8 @@ export interface ToolPrincipal {
     readonly workspaceId: string
 }
 
-/** What woke the turn a bridge call serves. */
-export type BridgeSource = "customer" | "tag" | "internal" | "schedule"
+/** What woke the turn a bridge call serves: the key of the adapter that normalized the wake. */
+export type BridgeSource = "customer" | "tag" | "internal" | "schedule" | (string & Record<never, never>)
 
 /** The running turn a bridge call belongs to: read from the turn row and never from what the model sent. */
 export interface BridgeTurn extends ToolPrincipal {
@@ -48,6 +52,8 @@ export interface BridgeTurn extends ToolPrincipal {
     readonly conversationId: string | null
     /** The account that wrote the tagging message, or null. */
     readonly authorUserId: string | null
+    /** The intent a split turn is pinned to, or null: read from the wake, never from what the model sent. */
+    readonly pinnedIntent?: string | null
 }
 
 /** A running turn, or null when the credential names none. */

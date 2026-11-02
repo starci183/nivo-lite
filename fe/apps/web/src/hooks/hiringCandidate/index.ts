@@ -1,12 +1,12 @@
 export {
     INTERVIEW_MODES,
     candidateDetailsOf,
+    candidateCvOf,
+    candidateHistoryOf,
     interviewDefaults,
     offerDefaults,
-    type CandidateDialog,
     type InterviewValues,
     type OfferValues,
-    type RequestOutcomeView,
 } from "./hiringCandidate.shared"
 export { useHiringCandidate } from "./useHiringCandidate"
 export { useHiringInterviewRequest } from "./useHiringInterviewRequest"

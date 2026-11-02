@@ -1,4 +1,4 @@
-import { Disclosure, Fieldset, LeadingNumber, PaneSection, Stepper } from "@starci/grammar/common"
+import { Disclosure, Fieldset, PaneSection, Stepper } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
 /** One numbered setup step of a connection page: its words, its body and its commands. */
@@ -41,19 +41,16 @@ export const ConnectionSteps = (props: ConnectionStepsProps) => (
             <PaneSection key={step.id}>
                 <Disclosure
                     headingLevel={2}
-                    title={
-                        <>
-                            <LeadingNumber position={index + 1} /> {step.title}
-                        </>
-                    }
+                    title={`${index + 1}. ${step.title}`}
                     summary={step.summary}
                     isExpanded={step.isOpen}
                     onExpandedChange={(isOpen) => props.onToggle(step.id, isOpen)}
-                >
-                    <Fieldset legend={step.title} isLegendHidden description={step.hint} actions={step.actions}>
-                        {step.body}
-                    </Fieldset>
-                </Disclosure>
+                    body={
+                        <Fieldset legend={step.title} isLegendHidden description={step.hint} actions={step.actions}>
+                            {step.body}
+                        </Fieldset>
+                    }
+                />
             </PaneSection>
         ))}
     </>

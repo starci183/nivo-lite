@@ -1,5 +1,12 @@
-import { BRAIN_TABS, DEFAULT_BRAIN_TAB, LEGACY_BRAIN_TABS, brainTabHref } from "@/modules/routes"
-import type { BrainTab } from "@/modules/routes"
+import {
+    BRAIN_PART_TABS,
+    BRAIN_PARTS,
+    BRAIN_TABS,
+    DEFAULT_BRAIN_TAB,
+    LEGACY_BRAIN_TABS,
+    brainTabHref,
+} from "@/modules/routes"
+import type { BrainPart, BrainTab } from "@/modules/routes"
 
 /** What the address of the Second Brain says: the tab and the parameters that open a form on one. */
 interface BrainTabAddress {
@@ -32,3 +39,13 @@ export const legacyBrainHrefOf = (address: BrainTabAddress): string | null => {
 
 /** The start of the id of the panel a tab controls; the tab strip and the panel name each other by it. */
 export const BRAIN_PANEL_PREFIX = "brain-panel-"
+
+/** The part of the Second Brain a tab sits in: it decides who can read what is added there. */
+export const brainPartOf = (tab: BrainTab): BrainPart =>
+    BRAIN_PARTS.find((part) => {
+        const tabs: ReadonlyArray<string> = BRAIN_PART_TABS[part]
+        return tabs.includes(tab)
+    }) ?? "internal"
+
+/** The tab a part opens on: its first. */
+export const firstTabOf = (part: BrainPart): BrainTab => BRAIN_PART_TABS[part][0]

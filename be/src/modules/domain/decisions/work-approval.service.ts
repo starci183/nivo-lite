@@ -19,6 +19,9 @@ import type { InboundEventStatus } from "./work-engine.port"
 /** Separates the parts of a one-line evidence text. */
 const SEPARATOR = " · "
 
+const withEvidence = (summary: string, note: string): string =>
+    note === "" ? summary : `${summary}${SEPARATOR}${note}`
+
 @Injectable()
 /** Puts an item in front of a person: the waiting state, the approval card of a follow-up, and the evidence, Office and inbound lines. */
 export class WorkApprovalService {
@@ -60,6 +63,7 @@ export class WorkApprovalService {
         const notes = [
             verdict.missing.length > 0 ? this.fieldLabels(ctx, verdict.missing) : "",
             verdict.reasons.includes("over_authority") ? this.limitNote(ctx, rule, proposal) : "",
+            this.evidenceNote(ctx, proposal),
         ].filter((note) => note !== "")
         const dept = await this.modules.nameOf(waiting.department, ctx.locale)
         await this.evidence.log(ctx, {
@@ -72,7 +76,11 @@ export class WorkApprovalService {
         })
         await this.office.post(ctx, {
             dept: waiting.department,
-            body: this.catalog.get("engine.ask", { dept, reason, summary: proposal.summary }, ctx.locale),
+            body: this.catalog.get(
+                "engine.ask",
+                { dept, reason, summary: withEvidence(proposal.summary, this.evidenceNote(ctx, proposal)) },
+                ctx.locale,
+            ),
             lead_id: waiting.lead_id,
             work_item_id: waiting.id,
             installation_id: waiting.installation_id,
@@ -119,6 +127,15 @@ export class WorkApprovalService {
         })
         await this.responsibilities.markWaitingApproval(ctx, responsibilityId)
         return card
+    }
+
+    /** Where what the work knows came from, in the reader's words ("the customer says", "SePay"); empty when the work does not say. */
+    private evidenceNote(ctx: WorkContext, proposal: Proposal): string {
+        const via = proposal.evidence?.[0]?.via
+        if (via === undefined) return ""
+        const key = `engine.evidenceVia.${via}`
+        const words = this.catalog.get(key, {}, ctx.locale)
+        return words === key ? via : words
     }
 
     /** "Auto below 20,000,000 - this one 45,000,000" when the ask is because the amount reached the limit; empty otherwise. */

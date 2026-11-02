@@ -1,5 +1,17 @@
-import { Alert, AlertDialog, Badge, Button, Input, List, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
-import { FIELD_GROW_CLASS, FORM_ROW_CLASS, STACK_CLASS } from "./classNames"
+import {
+    Alert,
+    AlertDialog,
+    Button,
+    Cluster,
+    EmptyNotice,
+    Input,
+    Stack,
+    SurfaceCard,
+    Text,
+    type Band,
+} from "@starci/grammar/common"
+
+import { FIELD_GROW_CLASS } from "./classNames"
 
 /** One key row, already in the reader's words. */
 export interface ApiKeyRowView {
@@ -56,104 +68,137 @@ export interface ApiKeysSectionBaseProps {
         readonly confirmRevoke: () => void
     }
 }
+/** The create form and the read/write notices in their existing body band. */
+const createKeyBandOf = (props: ApiKeysSectionBaseProps): Band => {
+    const view = props.props
+    return {
+        kind: "body" as const,
+        children: (
+            <Stack gap="section">
+                <Text size="sm" tone="muted">
+                    {view.body}
+                </Text>
+                <Cluster gap="row" align="end">
+                    <div className={FIELD_GROW_CLASS}>
+                        <Input
+                            id="api-key-name"
+                            name="keyName"
+                            label={view.nameLabel}
+                            placeholder={view.nameHint}
+                            isDisabled={view.isCreating}
+                            value={view.nameValue}
+                            onValueChange={props.on.changeName}
+                        />
+                    </div>
+                    <Button
+                        intent="commit"
+                        isPending={view.isCreating}
+                        isDisabled={view.isCreateDisabled}
+                        onPress={props.on.create}
+                    >
+                        {view.createLabel}
+                    </Button>
+                </Cluster>
+                {view.createError === undefined ? null : <Alert tone="negative" title={view.createError} />}
+                {view.loadError === undefined ? null : <Alert tone="negative" title={view.loadError.title} />}
+                {view.emptyLabel === undefined ? null : (
+                    <Text size="sm" tone="muted">
+                        {view.emptyLabel}
+                    </Text>
+                )}
+                {view.revokeError === undefined ? null : <Alert tone="negative" title={view.revokeError} />}
+            </Stack>
+        ),
+    }
+}
+
+/** The once-shown key and its exact copy/dismiss controls, when a key was created. */
+const freshKeyBandsOf = (props: ApiKeysSectionBaseProps): ReadonlyArray<Band> => {
+    const view = props.props
+    return view.fresh === undefined
+        ? []
+        : [
+              {
+                  kind: "body" as const,
+                  label: view.fresh.title,
+                  children: (
+                      <Stack gap="section">
+                          <Alert tone="cautionary" title={view.fresh.warning} />
+                          <Input
+                              id="api-key-fresh"
+                              name="apiKey"
+                              label={view.fresh.title}
+                              value={view.fresh.value}
+                              isReadOnly
+                              isCopyable
+                              copyLabel={view.fresh.copyLabel}
+                              copiedLabel={view.fresh.copiedLabel}
+                          />
+                          <div>
+                              <Button intent="neutral" onPress={props.on.dismissFresh}>
+                                  {view.fresh.doneLabel}
+                              </Button>
+                          </div>
+                      </Stack>
+                  ),
+              },
+          ]
+}
 
 /** Draws the API keys card: create a key (shown once), then the list with revoke confirmed through a dialog. */
-export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => (
-    <SurfaceCard label={props.props.title} headingLevel={2}>
-        <div className={STACK_CLASS}>
-            <Text size="sm" tone="muted">
-                {props.props.body}
-            </Text>
-            <div className={FORM_ROW_CLASS}>
-                <div className={FIELD_GROW_CLASS}>
-                    <Input
-                        id="api-key-name"
-                        name="keyName"
-                        label={props.props.nameLabel}
-                        placeholder={props.props.nameHint}
-                        isDisabled={props.props.isCreating}
-                        value={props.props.nameValue}
-                        onValueChange={props.on.changeName}
-                    />
-                </div>
-                <Button
-                    intent="commit"
-                    isPending={props.props.isCreating}
-                    isDisabled={props.props.isCreateDisabled}
-                    onPress={props.on.create}
-                >
-                    {props.props.createLabel}
-                </Button>
-            </div>
-            {props.props.createError === undefined ? null : <Alert tone="negative" title={props.props.createError} />}
-            {props.props.fresh === undefined ? null : (
-                <SurfaceCard label={props.props.fresh.title} headingLevel={3}>
-                    <div className={STACK_CLASS}>
-                        <Alert tone="cautionary" title={props.props.fresh.warning} />
-                        <Input
-                            id="api-key-fresh"
-                            name="apiKey"
-                            label={props.props.fresh.title}
-                            value={props.props.fresh.value}
-                            isReadOnly
-                            isCopyable
-                            copyLabel={props.props.fresh.copyLabel}
-                            copiedLabel={props.props.fresh.copiedLabel}
-                        />
-                        <div>
-                            <Button intent="neutral" onPress={props.on.dismissFresh}>
-                                {props.props.fresh.doneLabel}
-                            </Button>
-                        </div>
-                    </div>
-                </SurfaceCard>
-            )}
-            {props.props.loadError === undefined ? null : <Alert tone="negative" title={props.props.loadError.title} />}
-            {props.props.emptyLabel === undefined ? null : (
-                <Text size="sm" tone="muted">
-                    {props.props.emptyLabel}
-                </Text>
-            )}
-            {props.props.revokeError === undefined ? null : <Alert tone="negative" title={props.props.revokeError} />}
-            {props.props.items.length === 0 ? null : renderApiKeysList(props)}
-            {props.props.revoking === undefined ? null : (
+export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => {
+    const view = props.props
+    const bands: ReadonlyArray<Band> = [createKeyBandOf(props), ...freshKeyBandsOf(props)]
+    return (
+        <>
+            <SurfaceCard
+                kind="bands"
+                label={view.title}
+                headingLevel={2}
+                bands={[
+                    ...bands,
+                    {
+                        kind: "list",
+                        items: view.items.map((item) => ({
+                            id: item.id,
+                            title: item.name,
+                            description: `${item.prefixText} · ${item.datesText}`,
+                            badges: [
+                                { label: item.statusLabel, tone: item.isRevoked ? "neutral" : "success", isDot: true },
+                            ],
+                            ...(item.isRevoked
+                                ? {}
+                                : {
+                                      menu: {
+                                          label: item.name,
+                                          entries: [
+                                              {
+                                                  id: "revoke",
+                                                  label: view.revokeLabel,
+                                                  tone: "danger",
+                                                  onAction: () => props.on.askRevoke(item.id),
+                                              },
+                                          ],
+                                      },
+                                  }),
+                        })),
+                        empty: <EmptyNotice message={view.emptyLabel ?? view.title} />,
+                    },
+                ]}
+            />
+            {view.revoking === undefined ? null : (
                 <AlertDialog
                     isOpen
                     onOpenChange={props.on.cancelRevoke}
-                    title={props.props.revoking.title}
+                    title={view.revoking.title}
                     tone="negative"
-                    confirmLabel={props.props.revoking.confirmLabel}
-                    cancelLabel={props.props.revoking.cancelLabel}
-                    isConfirmPending={props.props.revoking.isPending}
+                    confirmLabel={view.revoking.confirmLabel}
+                    cancelLabel={view.revoking.cancelLabel}
+                    isConfirmPending={view.revoking.isPending}
                     onConfirm={props.on.confirmRevoke}
                     onCancel={props.on.cancelRevoke}
                 />
             )}
-        </div>
-    </SurfaceCard>
-)
-
-/** Draws the List section of the ApiKeysSection view. */
-const renderApiKeysList = (props: ApiKeysSectionBaseProps) => (
-    <List label={props.props.title}>
-        {props.props.items.map((item) => (
-            <ListRow
-                key={item.id}
-                title={item.name}
-                description={`${item.prefixText} · ${item.datesText}`}
-                badges={
-                    <Badge isDot tone={item.isRevoked ? "neutral" : "success"}>
-                        {item.statusLabel}
-                    </Badge>
-                }
-                actions={
-                    item.isRevoked ? undefined : (
-                        <Button intent="destructive" step="entry" onPress={() => props.on.askRevoke(item.id)}>
-                            {props.props.revokeLabel}
-                        </Button>
-                    )
-                }
-            />
-        ))}
-    </List>
-)
+        </>
+    )
+}

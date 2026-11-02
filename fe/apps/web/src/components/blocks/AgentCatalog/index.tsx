@@ -87,7 +87,7 @@ export const AgentCatalog = () => {
     const slotLabels = useSlotLabels()
     const installing = useInstallAgent()
     const items = roles.map((role) => roleItemOf(role, t, { canInstall: isManager(member) }))
-    const view = useCatalogView(items, categories, slot.isLoading === true)
+    const view = useCatalogView(items, categories, "isLoading" in slot)
     return (
         <AgentCatalogBase
             props={{

@@ -1,9 +1,8 @@
 export { toBrainExtraction, toBrainFact, toBrainGap, toBrainLens, toBrainLesson } from "./brain.mapper"
-export { adviceFor, proposerOf } from "./advice"
+export { adviceFor } from "./advice"
 export { appliedBatchOf, waitingFactCountOf } from "./bulk"
 export { reviewBoardOf } from "./board"
-export type { ReviewConflict, ReviewSingle } from "./board"
-export { BRAIN_PANEL_PREFIX, brainTabOf, legacyBrainHrefOf } from "./tabs"
+export { BRAIN_PANEL_PREFIX, brainPartOf, brainTabOf, firstTabOf, legacyBrainHrefOf } from "./tabs"
 export { LENS_LANES, toAgentLens } from "./lenses"
 export type { AgentLens } from "./lenses"
 export { sameValue } from "./keys"
@@ -51,3 +50,17 @@ export { MAP_ROOT_ID, MAP_STATUS_FILTERS, dossierOfFile, mapFilesOf, mapGraphOf,
 export type { MapSelection, MapStatusFilter, MapStatusOf } from "./map"
 export { confirmSidesOf, needsDocumentOf, quotesOf } from "./finding-card"
 export type { FindingCardActionView, FindingCardView } from "./finding-card"
+export {
+    PROPOSAL_PREVIEW_CHARS,
+    clippedText,
+    failureKeyOf,
+    leftOutLabelsOf,
+    listedPublicDocs,
+    proposalsOf,
+    publicBadgeOf,
+    sourceTitlesOf,
+    toPublicDocument,
+} from "./public-docs"
+export type { PublicBadge, PublicDocument } from "./public-docs"
+export { reviewRowsOf } from "./review-rows"
+export type { ReviewRowsContext } from "./review-rows"

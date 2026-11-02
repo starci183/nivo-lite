@@ -3,7 +3,7 @@ import { mock } from "@starci/jest-preset"
 import { AgentWorkReadService } from "@modules/domain/agent-work"
 import { OWNER_EXAMPLE, graphOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
-import type { DecisionRun } from "./agent-graph-decisions.service"
+import type { DecisionRun, RunEntry } from "./agent-graph-decisions.service"
 import { AgentGraphRunService } from "./agent-graph-run.service"
 import { AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -21,6 +21,7 @@ const RUN: DecisionRun = {
     shadowDiff: false,
     facts: { "supplier_payment.amount_vnd": 7_200_000 },
     approvalRequestId: "request-1",
+    path: ["decide", "middle"],
 }
 
 const build = async (run: DecisionRun | null = RUN, source: "customer" | "tag" | null = "tag") => {
@@ -37,8 +38,47 @@ const build = async (run: DecisionRun | null = RUN, source: "customer" | "tag" |
             { provide: AgentWorkReadService, useValue: work },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentGraphRunService), graphs, work }
+    return { service: moduleRef.get(AgentGraphRunService), decisions, graphs, work }
 }
+
+describe("AgentGraphRunService.runsOf", () => {
+    const ENTRY: RunEntry = {
+        id: "decision-1",
+        road: "work",
+        mode: "enforced",
+        action: "pay_supplier",
+        versionId: "version-1",
+        branchKey: "middle",
+        outcome: "ask",
+        gateVerdict: "ask",
+        closedAs: null,
+        differs: false,
+        unread: [],
+        unjudged: null,
+        facts: {},
+        path: ["decide", "middle"],
+        workItemId: "item-9",
+        subjectType: null,
+        subjectId: null,
+        createdAt: "2026-11-01T01:00:00.000Z",
+    }
+
+    it("lists the runs of the agent with the number of the version each ran on, or none when it is past the listing", async () => {
+        const { service, decisions, graphs } = await build()
+        decisions.runsOf.mockResolvedValue([ENTRY, { ...ENTRY, id: "decision-2", versionId: "version-0" }])
+        graphs.versionsOf.mockResolvedValue([
+            { id: "version-1", version: 4, changeKind: "edit", note: "", publishedAt: "", publishedBy: null },
+        ])
+
+        const runs = await service.runsOf("ws-1", "agent-1", 30)
+
+        expect(runs.map((run) => [run.id, run.version])).toEqual([
+            ["decision-1", 4],
+            ["decision-2", null],
+        ])
+        expect(decisions.runsOf).toHaveBeenCalledWith("ws-1", "agent-1", 30)
+    })
+})
 
 describe("AgentGraphRunService.runOf", () => {
     it("gives the trigger that woke the agent, the branch, the version that decided and the nodes it went through", async () => {

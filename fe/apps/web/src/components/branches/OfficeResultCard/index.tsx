@@ -1,17 +1,14 @@
-import type { ReactNode } from "react"
 import { Badge, Cluster, Stack, Text } from "@starci/grammar/common"
 import { OfficeCardActions } from "@/components/leaves/OfficeCardActions"
 import { OfficeCardBody } from "@/components/leaves/OfficeCardBody"
 import { OfficeCardDetails } from "@/components/leaves/OfficeCardDetails"
 import { OfficeCardMedia } from "@/components/leaves/OfficeCardMedia"
-import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
-import type { OfficeCardDraft, OfficeResultCardView, OfficeText } from "@/modules/types"
+import type { OfficeCardDraft, OfficeResultCardView, OfficeThreadProps } from "@/modules/types"
 
 /** What one agent result card draws. */
 type OfficeResultCardProps = {
     readonly card: OfficeResultCardView
-    readonly avatar: ReactNode
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["cardCopy"]["result"]
     /** What the owner edited on this card, kept by the thread's block. */
     readonly draft: OfficeCardDraft
     readonly onEdit: (key: string, patch: Partial<OfficeCardDraft>) => void
@@ -40,7 +37,7 @@ const TONES = {
  * with its fields, media and timed lines, and, while it waits, Approve / Edit / Decline through the existing decision flow.
  */
 export const OfficeResultCard = (props: OfficeResultCardProps) => {
-    const { card, text } = props
+    const { card, copy } = props
     const { isEditing } = props.draft
     const draft = props.draft.text ?? card.body ?? ""
     const edit = (patch: Partial<OfficeCardDraft>) => props.onEdit(card.key, patch)
@@ -51,14 +48,9 @@ export const OfficeResultCard = (props: OfficeResultCardProps) => {
         edit({ isEditing: false })
     }
     return (
-        <OfficeCardFrame
-            identity={card}
-            aiLabel={text("aiBadge")}
-            avatar={props.avatar}
-            head={card.lead === null ? <Text size="sm">{card.typeLabel}</Text> : <Text>{card.lead}</Text>}
-        >
+        <>
             <Stack gap="identity">
-                <Text weight="semibold">{card.title}</Text>
+                {card.lead === null ? <Text size="sm">{card.typeLabel}</Text> : <Text isStrong>{card.title}</Text>}
                 {card.subtitle === null ? null : (
                     <Text size="sm" tone="muted">
                         {card.subtitle}
@@ -75,22 +67,22 @@ export const OfficeResultCard = (props: OfficeResultCardProps) => {
             </Cluster>
             <OfficeCardBody
                 card={card}
-                text={text}
+                copy={copy}
                 isEditing={isEditing}
                 draft={draft}
                 setDraft={(value) => edit({ text: value })}
                 isBusy={props.isBusy}
             />
             <OfficeCardMedia card={card} />
-            <OfficeCardDetails card={card} text={text} />
+            <OfficeCardDetails card={card} copy={copy} />
             <OfficeCardActions
                 card={card}
-                text={text}
+                copy={copy}
                 isBusy={props.isBusy}
                 isEditing={isEditing}
                 setIsEditing={(value) => edit({ isEditing: value })}
                 decide={decide}
             />
-        </OfficeCardFrame>
+        </>
     )
 }

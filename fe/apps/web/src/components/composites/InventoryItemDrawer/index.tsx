@@ -1,25 +1,13 @@
+import type { InventoryItemEditorData, InventoryItemFormData } from "@/modules/types"
 import { InventorySelect } from "@/components/leaves/InventorySelect"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import type { ItemFormValues, ItemFormField } from "@/hooks/inventory"
-import { Button, Drawer, Input } from "@starci/grammar/common"
-import type { InventorySay } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME, FORM_GRID_CLASS_NAME } from "./classNames"
+import { Button, Drawer, Input, Stack, Grid, Cluster } from "@starci/grammar/common"
 
 /** The words and state of the item drawer. */
-export interface InventoryItemDrawerProps {
-    readonly props: {
-        readonly say: InventorySay
-        /** The name of the item being changed, or null when a new one is added. */
-        readonly editing: string | null
-        /** Whether the item being changed is in use; null for a new item. */
-        readonly active: boolean | null
-        readonly values: ItemFormValues
-        readonly suppliers: ReadonlyArray<{ readonly id: string; readonly label: string }>
-        readonly isPending: boolean
-        readonly error: string | null
-    }
+interface InventoryItemDrawerProps {
+    readonly props: InventoryItemEditorData
     readonly on: {
-        readonly field: (name: ItemFormField, value: string) => void
+        readonly field: (name: keyof InventoryItemFormData, value: string) => void
         readonly save: () => void
         readonly toggleActive: () => void
         readonly close: () => void
@@ -29,8 +17,8 @@ export interface InventoryItemDrawerProps {
 /** The form that adds or changes one catalogue item. */
 export const InventoryItemDrawer = (props: InventoryItemDrawerProps) => {
     const { props: p, on } = props
-    const say = p.say
-    const text = (name: ItemFormField, id: string, label: string, hint?: string) => (
+    const copy = p.copy
+    const text = (name: keyof InventoryItemFormData, id: string, label: string, hint?: string) => (
         <Input
             id={id}
             name={name}
@@ -46,48 +34,48 @@ export const InventoryItemDrawer = (props: InventoryItemDrawerProps) => {
             onOpenChange={(open) => {
                 if (!open) on.close()
             }}
-            title={p.editing === null ? say("itemAddTitle") : say("itemEditTitle", { name: p.editing })}
-            description={say("itemDrawerHint")}
-            closeLabel={say("close")}
+            title={p.editing === null ? copy.itemAddTitle : copy.itemEditTitle}
+            description={copy.itemDrawerHint}
+            closeLabel={copy.close}
             placement="right"
         >
-            <div className={FORM_CLASS_NAME}>
-                {text("name", "inv-name", say("itemName"))}
-                <div className={FORM_GRID_CLASS_NAME}>
-                    {text("sku", "inv-sku", say("itemSku"), say("itemSkuHint"))}
-                    {text("unit", "inv-unit", say("itemUnit"), say("itemUnitHint"))}
-                </div>
-                {text("units", "inv-units", say("itemUnits"), say("itemUnitsHint"))}
-                <div className={FORM_GRID_CLASS_NAME}>
-                    {text("category", "inv-cat", say("itemCategory"))}
+            <Stack gap="row">
+                {text("name", "inv-name", copy.itemName)}
+                <Grid kind="form" columns={2}>
+                    {text("sku", "inv-sku", copy.itemSku, copy.itemSkuHint)}
+                    {text("unit", "inv-unit", copy.itemUnit, copy.itemUnitHint)}
+                </Grid>
+                {text("units", "inv-units", copy.itemUnits, copy.itemUnitsHint)}
+                <Grid kind="form" columns={2}>
+                    {text("category", "inv-cat", copy.itemCategory)}
                     <InventorySelect
-                        label={say("itemSupplier")}
-                        placeholder={say("itemSupplierNone")}
+                        label={copy.itemSupplier}
+                        placeholder={copy.itemSupplierNone}
                         value={p.values.supplierId}
                         options={p.suppliers}
                         onChange={(value) => on.field("supplierId", value)}
                     />
-                </div>
-                <div className={FORM_GRID_CLASS_NAME}>
-                    {text("cost", "inv-cost", say("itemCost"))}
-                    {text("sell", "inv-sell", say("itemSell"))}
-                    {text("reorderPoint", "inv-rp", say("itemReorderPoint"), say("itemReorderPointHint"))}
-                    {text("reorderQty", "inv-rq", say("itemReorderQty"))}
-                </div>
-                {text("aliases", "inv-alias", say("itemAliases"), say("itemAliasesHint"))}
-                {p.editing === null ? text("openingQty", "inv-open", say("itemOpening")) : null}
+                </Grid>
+                <Grid kind="form" columns={2}>
+                    {text("cost", "inv-cost", copy.itemCost)}
+                    {text("sell", "inv-sell", copy.itemSell)}
+                    {text("reorderPoint", "inv-rp", copy.itemReorderPoint, copy.itemReorderPointHint)}
+                    {text("reorderQty", "inv-rq", copy.itemReorderQty)}
+                </Grid>
+                {text("aliases", "inv-alias", copy.itemAliases, copy.itemAliasesHint)}
+                {p.editing === null ? text("openingQty", "inv-open", copy.itemOpening) : null}
                 <InventoryNotices error={p.error} />
-                <div className={ACTIONS_CLASS_NAME}>
+                <Cluster gap="inline">
                     <Button intent="commit" isPending={p.isPending} onPress={on.save}>
-                        {say("save")}
+                        {copy.save}
                     </Button>
                     {p.active === null ? null : (
                         <Button intent="neutral" isDisabled={p.isPending} onPress={on.toggleActive}>
-                            {p.active ? say("itemStop") : say("itemResume")}
+                            {p.active ? copy.itemStop : copy.itemResume}
                         </Button>
                     )}
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
         </Drawer>
     )
 }

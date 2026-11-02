@@ -1,5 +1,5 @@
-import { Badge, Button, ListRow, Switch, SurfaceListCard } from "@starci/grammar/common"
-import { FirstRunCard } from "@/components/composites/FirstRunCard"
+import { Button, EmptyNotice, Stack, Switch, Text } from "@starci/grammar/common"
+import { FirstRunCard } from "@/components/frames/FirstRunCard"
 
 /** One rule the workspace starts with: its name, what it means and the value it holds; a rule with a `toggle` is changed in place. */
 export interface OnboardingRuleView {
@@ -21,6 +21,7 @@ export interface OnboardingHandoverBaseProps {
         readonly heading: string
         readonly description: string
         readonly rules: ReadonlyArray<OnboardingRuleView>
+        readonly emptyRules: string
         readonly backLabel: string
         readonly backHref: string
         readonly finishLabel: string
@@ -46,16 +47,17 @@ export const OnboardingHandoverBase = (props: OnboardingHandoverBaseProps) => {
                     </Button>
                 </>
             }
-        >
-            <SurfaceListCard ariaLabel={view.title}>
-                {view.rules.map((rule) => (
-                    <ListRow
-                        key={rule.id}
-                        title={rule.name}
-                        description={rule.description}
-                        badges={<Badge tone="accent">{rule.value}</Badge>}
-                        actions={
-                            rule.toggle === undefined ? undefined : (
+            collection={{
+                kind: "list",
+                empty: <EmptyNotice message={view.emptyRules} />,
+                items: view.rules.map((rule) => ({
+                    id: rule.id,
+                    title: rule.name,
+                    description: rule.description,
+                    detail: (
+                        <Stack gap="inline">
+                            <Text size="sm">{rule.value}</Text>
+                            {rule.toggle === undefined ? null : (
                                 <Switch
                                     name={rule.id}
                                     label={rule.name}
@@ -64,11 +66,11 @@ export const OnboardingHandoverBase = (props: OnboardingHandoverBaseProps) => {
                                     isDisabled={rule.toggle.isDisabled}
                                     onSelectedChange={(on) => props.on.toggle(rule.id, on)}
                                 />
-                            )
-                        }
-                    />
-                ))}
-            </SurfaceListCard>
-        </FirstRunCard>
+                            )}
+                        </Stack>
+                    ),
+                })),
+            }}
+        />
     )
 }

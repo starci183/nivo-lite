@@ -9,7 +9,7 @@ interface SetupMeterProps {
     readonly confirmed: number
     readonly total: number
     readonly size?: "sm"
-    readonly isSkeleton?: boolean
+    readonly isLoading?: boolean
 }
 
 const SEGMENTS: ReadonlyArray<MeterSegments> = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -29,7 +29,7 @@ export const SetupMeter = (props: SetupMeterProps) => {
             maxValue={props.total}
             tone={props.confirmed === props.total ? "affirmative" : "cautionary"}
             {...(props.size === undefined ? {} : { size: props.size })}
-            {...(props.isSkeleton === undefined ? {} : { isSkeleton: props.isSkeleton })}
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
             {...(segments === undefined ? {} : { segments })}
         />
     )

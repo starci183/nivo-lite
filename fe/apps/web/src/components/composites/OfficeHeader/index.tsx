@@ -1,6 +1,5 @@
 import { Button, Cluster, Heading, IconButton, IconTile, PaneSection, Text } from "@starci/grammar/common"
 import { Icon, nivoIconSource } from "@/components/leaves/Icon"
-import type { OfficeText } from "@/modules/types"
 import {
     HEAD_ACTIONS_CLASS_NAME,
     HEAD_AVATAR_CLASS_NAME,
@@ -13,7 +12,16 @@ import {
 /** What the Office page head draws and asks. */
 interface OfficeHeaderProps {
     readonly props: {
-        readonly text: OfficeText
+        readonly copy: {
+            readonly back: string
+            readonly tasksTitle: string
+            readonly mutedChat: string
+            readonly tasksBack: string
+            readonly unmuteChat: string
+            readonly muteChat: string
+            readonly infoClose: string
+            readonly infoOpen: string
+        }
         readonly centre: "chat" | "tasks"
         readonly title: string
         readonly subtitle: string
@@ -35,7 +43,7 @@ interface OfficeHeaderProps {
 export const OfficeHeader = (props: OfficeHeaderProps) => {
     const view = props.props
     const on = props.on
-    const { text } = view
+    const { copy } = view
     const isTasks = view.centre === "tasks"
     return (
         <PaneSection align="center">
@@ -46,7 +54,7 @@ export const OfficeHeader = (props: OfficeHeaderProps) => {
                             <IconButton
                                 intent="dismiss"
                                 source={nivoIconSource("back", "leading")}
-                                label={text("back")}
+                                label={copy.back}
                                 onPress={on.back}
                             />
                         </div>
@@ -56,9 +64,9 @@ export const OfficeHeader = (props: OfficeHeaderProps) => {
                     </Cluster>
                     <div className={HEAD_TITLE_CLASS_NAME}>
                         <Cluster gap="inline" wrap={false}>
-                            <Heading level={1}>{isTasks ? text("tasksTitle") : view.title}</Heading>
+                            <Heading level={1}>{isTasks ? copy.tasksTitle : view.title}</Heading>
                             {!isTasks && view.isMuted ? (
-                                <Icon props={{ name: "muted", usage: "leading", ariaLabel: text("mutedChat") }} />
+                                <Icon props={{ name: "muted", usage: "leading", ariaLabel: copy.mutedChat }} />
                             ) : null}
                         </Cluster>
                         {isTasks ? null : (
@@ -72,7 +80,7 @@ export const OfficeHeader = (props: OfficeHeaderProps) => {
                             {isTasks ? (
                                 <div className={WIDE_ONLY_CLASS_NAME}>
                                     <Button intent="dismiss" size="sm" onPress={on.showChat}>
-                                        {text("tasksBack")}
+                                        {copy.tasksBack}
                                     </Button>
                                 </div>
                             ) : null}
@@ -84,14 +92,14 @@ export const OfficeHeader = (props: OfficeHeaderProps) => {
                             <IconButton
                                 intent="neutral"
                                 source={nivoIconSource(view.isMuted ? "muted" : "unmuted", "leading")}
-                                label={view.isMuted ? text("unmuteChat") : text("muteChat")}
+                                label={view.isMuted ? copy.unmuteChat : copy.muteChat}
                                 isActive={view.isMuted}
                                 onPress={on.toggleMute}
                             />
                             <IconButton
                                 intent="neutral"
                                 source={nivoIconSource("sidebar", "leading")}
-                                label={view.isInfoOpen ? text("infoClose") : text("infoOpen")}
+                                label={view.isInfoOpen ? copy.infoClose : copy.infoOpen}
                                 isActive={view.isInfoOpen}
                                 onPress={on.toggleInfo}
                             />

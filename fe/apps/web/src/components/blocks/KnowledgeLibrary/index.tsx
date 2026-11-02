@@ -7,7 +7,7 @@ import { useKnowledgeRowOf } from "@/hooks/brain"
 import { loadingSlot, mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, knowledgeSourceHref } from "@/modules/routes"
-import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
+import type { KnowledgeRowView } from "@/modules/types"
 import { KnowledgeLibraryBase } from "./component"
 
 /** Props for the connected documents list. */
@@ -21,7 +21,7 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
     const t = useTranslations("knowledge")
     const router = navigation.useRouter()
     const { sources, live, slot, reload } = useKnowledgeSources()
-    const { rowOf, commands, member, board } = useKnowledgeRowOf(live)
+    const { rowOf, commands, member, dispatch } = useKnowledgeRowOf(live)
     const slotLabels = useSlotLabels()
     const shown = (sources ?? []).filter((source) => props.module === "all" || source.module === props.module)
     const filterTo = (value: string | null) => {
@@ -40,12 +40,11 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
                     label: t("listTitle"),
                     footer: t("listCount", { count: shown.length }),
                     isPending: commands.retrying.size > 0,
-                    slot:
-                        member.isLoading || board.slot.isLoading
-                            ? loadingSlot<ReadonlyArray<KnowledgeRowView>>()
-                            : mapSlot(slot, () =>
-                                  shown.map((source) => ({ ...rowOf(source), href: knowledgeSourceHref(source.id) })),
-                              ),
+                    slot: member.isLoading
+                        ? loadingSlot<ReadonlyArray<KnowledgeRowView>>()
+                        : mapSlot(slot, () =>
+                              shown.map((source) => ({ ...rowOf(source), href: knowledgeSourceHref(source.id) })),
+                          ),
                     slotLabels: slotLabels(t("emptyTitle")),
                 },
                 filterLabel: t("filterModule"),
@@ -56,7 +55,7 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
                 ],
                 filter: props.module,
             }}
-            on={{ setFilter: filterTo, retry: reload }}
+            on={{ setFilter: filterTo, retry: reload, action: dispatch }}
         />
     )
 }

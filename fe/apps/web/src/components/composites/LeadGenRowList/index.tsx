@@ -1,5 +1,4 @@
-import { Badge, EmptyNotice, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import { type ListRowData, EmptyNotice, Stack, SurfaceCard, Text, type BadgeTone } from "@starci/grammar/common"
 
 /** A small label beside a row. */
 interface LeadGenRowBadge {
@@ -18,7 +17,7 @@ interface LeadGenRow {
 }
 
 /** The words and rows of a Lead Gen list (prospects, sources or hand-offs). */
-export interface LeadGenRowListProps {
+interface LeadGenRowListProps {
     readonly label: string
     readonly emptyTitle: string
     readonly emptyBody: string
@@ -32,28 +31,13 @@ export interface LeadGenRowListProps {
 /** A list of Lead Gen rows with their badges; the name opens the lead when the row has a destination. */
 export const LeadGenRowList = (props: LeadGenRowListProps) => (
     <>
-        <SurfaceListCard
+        <SurfaceCard
+            kind="list"
             ariaLabel={props.label}
             isLoading={props.isSkeleton === true}
             empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
-        >
-            {props.rows.map((row) => (
-                <ListRow
-                    key={row.id}
-                    title={row.href === null ? row.title : <TextAction href={row.href}>{row.title}</TextAction>}
-                    description={row.description}
-                    badges={row.badges.map((badge) => (
-                        <Badge
-                            key={badge.label}
-                            tone={badge.tone}
-                            {...(badge.isDot === undefined ? {} : { isDot: badge.isDot })}
-                        >
-                            {badge.label}
-                        </Badge>
-                    ))}
-                />
-            ))}
-        </SurfaceListCard>
+            items={props.rows.map((row) => leadGenItemOf(row, props.isSkeleton === true))}
+        />
         {props.hiddenText === null ? null : (
             <Text size="sm" tone="muted">
                 {props.hiddenText}
@@ -61,3 +45,27 @@ export const LeadGenRowList = (props: LeadGenRowListProps) => (
         )}
     </>
 )
+
+/** Carries a native title destination and the row's bounded status badges. */
+const leadGenItemOf = (row: LeadGenRow, isLoading: boolean): ListRowData => {
+    const [status, exception, ...facts] = row.badges
+    let badges: ListRowData["badges"]
+    if (status !== undefined) badges = exception === undefined ? [status] : [status, exception]
+    return {
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        ...(row.href === null ? {} : { href: row.href }),
+        ...(badges === undefined ? {} : { badges }),
+        detail:
+            facts.length === 0 ? undefined : (
+                <Stack gap="identity">
+                    {facts.map((fact) => (
+                        <Text key={fact.label} size="xs" tone="muted" isLoading={isLoading}>
+                            {fact.label}
+                        </Text>
+                    ))}
+                </Stack>
+            ),
+    }
+}

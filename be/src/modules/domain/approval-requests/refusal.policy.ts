@@ -1,11 +1,11 @@
 import type { ApproverGroup } from "@modules/domain/authority-rules"
-import type { ApproverRef, DirectoryMember, ExclusionReason } from "@modules/domain/member-grants"
+import type { ApproverRef, DirectoryMember, MemberGrantExclusionReason } from "@modules/domain/member-grants"
 import type { ApprovalRequestRecord, ApproverSet, Refusal } from "./approval-requests.contracts"
 import { ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
 import { timeOfDay } from "./verdict.policy"
 
 /** The refusal each reason a grant leaves a member out raises. */
-const EXCLUSION_REFUSAL: Readonly<Record<ExclusionReason, ApprovalRequestsErrorCode>> = {
+const EXCLUSION_REFUSAL: Readonly<Record<MemberGrantExclusionReason, ApprovalRequestsErrorCode>> = {
     inactive: ApprovalRequestsErrorCode.MemberInactive,
     no_grant: ApprovalRequestsErrorCode.NoGrant,
     over_limit: ApprovalRequestsErrorCode.OverLimit,

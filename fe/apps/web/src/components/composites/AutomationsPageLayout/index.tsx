@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { TextAction } from "@starci/grammar/common"
-import { LINK_ROW_CLASS, PAGE_CLASS } from "./classNames"
+import { Link, Stack } from "@starci/grammar/common"
 
 /** The regions of the Automations page body, each already connected to its data. */
 type AutomationsPageLayoutProps = {
@@ -11,12 +10,8 @@ type AutomationsPageLayoutProps = {
 
 /** The Automations page body: the board, then the link to Advanced, in one column. */
 export const AutomationsPageLayout = (props: AutomationsPageLayoutProps) => (
-    <div className={PAGE_CLASS}>
+    <Stack gap="section">
         {props.board}
-        <div className={LINK_ROW_CLASS}>
-            <TextAction href={props.advancedHref} size="sm" appearance="muted">
-                {props.advancedLabel}
-            </TextAction>
-        </div>
-    </div>
+        <Link href={props.advancedHref}>{props.advancedLabel}</Link>
+    </Stack>
 )

@@ -11,17 +11,18 @@ import { useChatbotOverview } from "./useChatbotOverview"
 const WAITING_ROWS = 5
 
 /** One Chatbot instance as its workbench panels read it: inbox snapshot, figures, waiting conversations and who is looking. */
-export const useChatbotWorkbench = (installationId: string | null, focus: string | null) => {
+export const useChatbotWorkbench = (installationId: string | null, focus: string | null, isActive = true) => {
     const t = useTranslations("workbenchChatbot")
     const frame = useTranslations("agentDashboard")
     const { activeWorkspaceId } = useActiveWorkspace()
     const memberships = useQueryMyWorkspacesSwr()
     const member = memberships.data?.find((membership) => membership.workspace.id === activeWorkspaceId)?.member
-    const overview = useChatbotOverview(activeWorkspaceId, installationId ?? undefined)
+    const overview = useChatbotOverview(isActive ? activeWorkspaceId : undefined, installationId ?? undefined)
     const isLoading = activeWorkspaceId === undefined || overview.isLoading || memberships.isLoading
     const selected = overview.data?.conversations.find((item) => item.id === focus) ?? overview.data?.conversations[0]
     const isFailed = overview.error !== undefined || memberships.error !== undefined
     return {
+        reads: [overview, memberships],
         workspaceId: activeWorkspaceId,
         isLoading,
         isFailed,

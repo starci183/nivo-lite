@@ -1,3 +1,2 @@
-export { useLeadGenComments } from "./useLeadGenComments"
-export { useLeadGenWorkbench } from "./useLeadGenWorkbench"
-export { leadGenFiguresOf, leadGenTabOf } from "./leadgen.shared"
+export { leadGenTabOf } from "./leadgen.shared"
+export { useLeadGenWorkbenchView } from "./useLeadGenWorkbenchView"

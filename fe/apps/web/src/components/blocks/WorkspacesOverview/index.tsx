@@ -1,9 +1,8 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useSlotLabels } from "@/hooks/slot"
+import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useWorkspaceCards } from "@/hooks/workspaces"
-import type { DataSlot } from "@/modules/types"
 import { WorkspacesOverviewBase } from "./component"
 import type { WorkspacesCount } from "./component"
 
@@ -17,12 +16,8 @@ interface WorkspacesOverviewProps {
 export const WorkspacesOverview = (props: WorkspacesOverviewProps) => {
     const t = useTranslations("onboarding")
     const slotLabels = useSlotLabels()
-    const { cards, status, reload } = useWorkspaceCards()
-    const slot: DataSlot<WorkspacesCount> = {
-        isLoading: status === "loading",
-        isError: status === "error",
-        items: status === "empty" || status === "ready" ? { count: cards.length } : undefined,
-    }
+    const { cards, status, reload, read } = useWorkspaceCards()
+    const slot = mapSlot(slotOfSwr(read), (): WorkspacesCount => ({ count: cards.length }))
     return (
         <WorkspacesOverviewBase
             shape={status === "empty" ? "welcome" : "list"}

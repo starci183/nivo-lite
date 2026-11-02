@@ -39,6 +39,8 @@ export interface GraphState {
     readonly activeVersionId: string | null
     /** The graph that decides; null before the first version. */
     readonly active: GraphDocument | null
+    /** How the version that decides came to be; null before the first. A `seed` is one no person published. */
+    readonly activeKind: GraphChangeKind | null
 }
 
 /** A Brain rule behind the version that decides. */
@@ -130,8 +132,8 @@ export class AgentGraphsService {
     }
 
     /**
-     * Gives the agent its graph when it has none: the draft, and version 1 (change kind `seed`) in shadow mode, so the trace and the
-     * versions work from the first day and nothing is enforced. A second call changes nothing.
+     * Gives the agent its graph when it has none: the draft, and version 1 (change kind `seed`), enforced from the first day. A seed
+     * answers what the rules answer, so enforcing it changes nothing until someone edits. A second call changes nothing.
      */
     async ensure(
         workspaceId: string,
@@ -146,7 +148,7 @@ export class AgentGraphsService {
                 .createQueryBuilder(AgentGraphEntity, "graph")
                 .insert()
                 .into(AgentGraphEntity)
-                .values({ agentId, workspaceId, installationId, draft: seed, draftRev: 1, mode: "shadow" })
+                .values({ agentId, workspaceId, installationId, draft: seed, draftRev: 1, mode: "enforced" })
                 .orIgnore()
                 .execute()
             const made = await manager.countBy(AgentGraphVersionEntity, { agentId })
@@ -232,7 +234,7 @@ export class AgentGraphsService {
     /** The approver the branch of a decision named in the version that decided, or null when that version no longer names one. */
     async approverOf(decision: DecisionView): Promise<BranchApprover | null> {
         const document = await this.documentOf(decision.workspaceId, decision.agentId, decision.versionId)
-        return branchApproverOf(document, decision.action, decision.branchKey)
+        return branchApproverOf(document, decision.action, decision.branchKey, decision.path)
     }
 
     /** Of these agents, the ones that have no graph yet. */
@@ -277,9 +279,13 @@ export class AgentGraphsService {
         return { version: row.version, document: parsed.data }
     }
 
-    /** Sets whether the graph decides (`enforced`) or only records (`shadow`); setting `shadow` rolls back with nothing lost. */
-    async setMode(workspaceId: string, agentId: string, mode: GraphMode): Promise<GraphState> {
-        const changed = await this.entityManager.update(AgentGraphEntity, { agentId, workspaceId }, { mode })
+    /** Sets whether the graph decides (`enforced`) or only records (`shadow`), and keeps who set it; a publish never touches this. */
+    async setMode(workspaceId: string, agentId: string, mode: GraphMode, memberId: string): Promise<GraphState> {
+        const changed = await this.entityManager.update(
+            AgentGraphEntity,
+            { agentId, workspaceId },
+            { mode, modeSetBy: memberId, modeSetAt: () => "now()" },
+        )
         if (changed.affected !== 1) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
         return this.require(workspaceId, agentId)
     }
@@ -307,6 +313,7 @@ export class AgentGraphsService {
             draftRev: row.draftRev,
             activeVersionId: row.activeVersionId,
             active: active?.success === true ? active.data : null,
+            activeKind: version?.changeKind ?? null,
         }
     }
 

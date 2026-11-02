@@ -1,5 +1,15 @@
 import type { ReactElement, ReactNode } from "react"
-import { Button, List, ListRow, Pane, PaneGrid, PaneSection, SurfaceListCard, Tabs } from "@starci/grammar/common"
+import {
+    Cluster,
+    EmptyNotice,
+    Grid,
+    Pane,
+    PaneGrid,
+    PaneSection,
+    Stack,
+    SurfaceCard,
+    Tabs,
+} from "@starci/grammar/common"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import type { ConnectionsRegionProps } from "@/components/composites/ConnectionsRegion"
 import { DoneRegion } from "@/components/composites/DoneRegion"
@@ -9,16 +19,10 @@ import type { KnowledgeRegionProps } from "@/components/composites/KnowledgeRegi
 import { SlotView } from "@/components/composites/SlotView"
 import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import type { WaitingRegionProps } from "@/components/composites/WaitingRegion"
+import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWhy } from "@/components/composites/WorkbenchWhy"
 import type { WorkbenchWhyLabels } from "@/components/composites/WorkbenchWhy"
 import type { DataSlot, SlotLabels, WorkbenchSurface, WorkbenchWhyView } from "@/modules/types"
-import {
-    COMMAND_CLASS_NAME,
-    FRAME_CLASS_NAME,
-    PANEL_CLASS_NAME,
-    SIDE_COLUMN_CLASS_NAME,
-    SIDE_GRID_CLASS_NAME,
-} from "./classNames"
 
 /** One area of the module under the strip: the strip draws its label, the content is placed through the slots. */
 interface AgentDashboardTabView {
@@ -58,7 +62,7 @@ interface RegionSlot<V> {
 interface RegionProps<V> {
     readonly region: RegionSlot<V>
     readonly onRetry: () => void
-    readonly children: (view: V, isSkeleton: boolean) => ReactNode
+    readonly render: (view: V, isLoading: boolean) => ReactNode
 }
 
 /** One region drawn through SlotView: loading draws the placeholder as a skeleton, failing says so with a retry. */
@@ -68,9 +72,8 @@ const Region = <V,>(props: RegionProps<V>) => (
         placeholder={props.region.placeholder}
         labels={props.region.labels}
         onRetry={props.onRetry}
-    >
-        {props.children}
-    </SlotView>
+        render={props.render}
+    />
 )
 
 /** The why pane of one work item, beside the list. */
@@ -108,35 +111,6 @@ export interface AgentDashboardFrameBaseProps {
     }
 }
 
-/** The rows of a region as an app-owned list, for a pane: a card never stands inside a pane (pane-grid.choose.frame:cards). */
-/** The rows of a region and the words around them. */
-interface PaneRowsProps {
-    readonly label: string
-    readonly rows: WaitingRegionProps["view"]["rows"]
-    readonly openLabel: string | null
-    readonly isSkeleton: boolean
-}
-
-const PaneRows = (props: PaneRowsProps) => (
-    <List label={props.label}>
-        {props.rows.map((row) => (
-            <ListRow
-                key={row.id}
-                isSkeleton={props.isSkeleton}
-                title={row.title}
-                description={row.description}
-                actions={
-                    props.openLabel === null ? undefined : (
-                        <Button size="sm" intent="neutral" href={row.href} isSkeleton={props.isSkeleton}>
-                            {props.openLabel}
-                        </Button>
-                    )
-                }
-            />
-        ))}
-    </List>
-)
-
 /** The waiting card of the module for a surface; a module without its own draws the dashboard's. */
 const renderWaiting = (base: AgentDashboardFrameBaseProps, surface: WorkbenchSurface): ReactElement => {
     const view = base.props
@@ -146,26 +120,30 @@ const renderWaiting = (base: AgentDashboardFrameBaseProps, surface: WorkbenchSur
         return (
             <>
                 {own ?? (
-                    <Region region={view.waiting} onRetry={base.on.retry}>
-                        {(waiting, isSkeleton) => (
-                            <WaitingRegion label={view.waiting.label} view={waiting} isSkeleton={isSkeleton} />
+                    <Region
+                        region={view.waiting}
+                        onRetry={base.on.retry}
+                        render={(waiting, isLoading) => (
+                            <WaitingRegion label={view.waiting.label} view={waiting} isLoading={isLoading} />
                         )}
-                    </Region>
+                    />
                 )}
             </>
         )
     }
     return (
-        <Region region={view.waiting} onRetry={base.on.retry}>
-            {(waiting, isSkeleton) => (
-                <PaneRows
+        <Region
+            region={view.waiting}
+            onRetry={base.on.retry}
+            render={(waiting, isLoading) => (
+                <WorkbenchPaneRows
                     label={view.waiting.label}
                     rows={waiting.rows}
                     openLabel={waiting.openLabel}
-                    isSkeleton={isSkeleton}
+                    isLoading={isLoading}
                 />
             )}
-        </Region>
+        />
     )
 }
 
@@ -184,16 +162,18 @@ const renderWhyPanes = (base: AgentDashboardFrameBaseProps, why: WhyState, workI
             <Pane area="list" scroll label={why.listLabel}>
                 <PaneSection grow>
                     {renderWaiting(base, "pane")}
-                    <Region region={view.done} onRetry={base.on.retry}>
-                        {(done, isSkeleton) => (
-                            <PaneRows
+                    <Region
+                        region={view.done}
+                        onRetry={base.on.retry}
+                        render={(done, isLoading) => (
+                            <WorkbenchPaneRows
                                 label={view.done.label}
                                 rows={done.rows}
                                 openLabel={null}
-                                isSkeleton={isSkeleton}
+                                isLoading={isLoading}
                             />
                         )}
-                    </Region>
+                    />
                 </PaneSection>
             </Pane>
             <Pane
@@ -213,7 +193,7 @@ const renderWhyPanes = (base: AgentDashboardFrameBaseProps, why: WhyState, workI
                     view={why.view}
                     labels={why.labels}
                     decision={base.shape.whyDecision === null ? null : base.shape.whyDecision(workItemId)}
-                    isSkeleton={false}
+                    isLoading={false}
                 />
             </Pane>
         </PaneGrid>
@@ -230,8 +210,8 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
     const hasStrip = view.tabs.length > 1
     const active = view.tabs.find((tab) => tab.id === view.selectedTab)
     return (
-        <div className={FRAME_CLASS_NAME}>
-            {props.shape.command === null ? null : <div className={COMMAND_CLASS_NAME}>{props.shape.command}</div>}
+        <Stack gap="region">
+            {props.shape.command === null ? null : <Cluster gap="inline">{props.shape.command}</Cluster>}
 
             {renderWaiting(props, "card")}
 
@@ -248,43 +228,49 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
                     onSelect={props.on.selectTab}
                 />
             ) : null}
-            <div
-                className={PANEL_CLASS_NAME}
-                role={hasStrip ? "tabpanel" : undefined}
-                id={hasStrip ? tabPanelId(view.selectedTab) : undefined}
-            >
+            <div role={hasStrip ? "tabpanel" : undefined} id={hasStrip ? tabPanelId(view.selectedTab) : undefined}>
                 {props.shape.panel ??
                     (view.hasPlaceholder ? (
-                        <SurfaceListCard ariaLabel={active?.label ?? view.tabsLabel} isLoading />
+                        <SurfaceCard
+                            kind="list"
+                            ariaLabel={active?.label ?? view.tabsLabel}
+                            isLoading
+                            empty={<EmptyNotice message={active?.label ?? view.tabsLabel} />}
+                            items={[]}
+                        />
                     ) : null)}
             </div>
 
             {renderDashboardRegions(view, props)}
             {props.shape.gaps}
             {props.shape.overlay}
-        </div>
+        </Stack>
     )
 }
 
 /** Draws the div section of the AgentDashboardFrame view. */
 const renderDashboardRegions = (view: AgentDashboardFrameBaseProps["props"], props: AgentDashboardFrameBaseProps) => {
     return (
-        <div className={SIDE_GRID_CLASS_NAME}>
-            <Region region={view.done} onRetry={props.on.retry}>
-                {(done, isSkeleton) => <DoneRegion label={view.done.label} view={done} isSkeleton={isSkeleton} />}
-            </Region>
-            <Region region={view.connections} onRetry={props.on.retry}>
-                {(connections, isSkeleton) => (
-                    <ConnectionsRegion label={view.connections.label} view={connections} isSkeleton={isSkeleton} />
+        <Grid kind="cards" columns={3}>
+            <Region
+                region={view.done}
+                onRetry={props.on.retry}
+                render={(done, isLoading) => <DoneRegion label={view.done.label} view={done} isLoading={isLoading} />}
+            />
+            <Region
+                region={view.connections}
+                onRetry={props.on.retry}
+                render={(connections, isLoading) => (
+                    <ConnectionsRegion label={view.connections.label} view={connections} isLoading={isLoading} />
                 )}
-            </Region>
-            <div className={SIDE_COLUMN_CLASS_NAME}>
-                <Region region={view.knowledge} onRetry={props.on.retry}>
-                    {(knowledge, isSkeleton) => (
-                        <KnowledgeRegion label={view.knowledge.label} view={knowledge} isSkeleton={isSkeleton} />
-                    )}
-                </Region>
-            </div>
-        </div>
+            />
+            <Region
+                region={view.knowledge}
+                onRetry={props.on.retry}
+                render={(knowledge, isLoading) => (
+                    <KnowledgeRegion label={view.knowledge.label} view={knowledge} isLoading={isLoading} />
+                )}
+            />
+        </Grid>
     )
 }

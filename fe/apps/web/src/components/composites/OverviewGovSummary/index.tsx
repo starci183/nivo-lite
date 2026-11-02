@@ -1,9 +1,10 @@
-import { Grid, SectionHeader, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { AccountingBlock } from "@/components/branches/AccountingBlock"
+import { Grid, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { GovDepartment } from "@/hooks/overviewGov"
 
 /** The figures of the summary block. */
 export interface OverviewGovSummaryProps {
+    /** The summary's first read has no data yet; the grammar keeps its own geometry. */
+    readonly isLoading?: boolean
     readonly figures: {
         readonly title: string
         readonly motto: string
@@ -18,35 +19,39 @@ export interface OverviewGovSummaryProps {
 export const OverviewGovSummary = (props: OverviewGovSummaryProps) => {
     const tiles = props.figures.departments.map((department) => ({
         department,
+        mark: { avatar: { name: department.name, seed: department.id } },
         action: { kind: "link" as const, href: props.figures.chatHref, label: department.label },
     }))
     return (
-        <AccountingBlock label={props.figures.title}>
-            <SectionHeader level={2} title={props.figures.title} description={props.figures.motto} />
+        <Section title={props.figures.title} description={props.figures.motto} isLoading={props.isLoading === true}>
             <Stack gap="row">
                 <Stack gap="identity">
-                    <Text weight="semibold">{props.figures.sentence}</Text>
-                    <Text size="sm" tone="muted">
+                    <Text isStrong isLoading={props.isLoading === true}>
+                        {props.figures.sentence}
+                    </Text>
+                    <Text size="sm" tone="muted" isLoading={props.isLoading === true}>
                         {props.figures.median}
                     </Text>
                 </Stack>
                 <Grid kind="cards" columns={3}>
-                    {tiles.map(({ department, action }) => (
-                        <SurfaceCard key={department.id} wholeAction={action}>
-                            <Stack gap="identity">
-                                <Text weight="semibold">{department.name}</Text>
-                                <Text size="sm">{department.done}</Text>
-                                <Text size="sm" tone={department.hasWaiting ? "accent" : "muted"}>
-                                    {department.waiting}
-                                </Text>
-                                <Text size="xs" tone="muted">
+                    {tiles.map(({ department, action, mark }) => (
+                        <SurfaceCard
+                            key={department.id}
+                            kind="tile"
+                            name={department.name}
+                            mark={mark}
+                            description={`${department.done} · ${department.waiting}`}
+                            wholeAction={action}
+                            isLoading={props.isLoading === true}
+                            footer={
+                                <Text size="xs" tone="muted" isLoading={props.isLoading === true}>
                                     {department.last}
                                 </Text>
-                            </Stack>
-                        </SurfaceCard>
+                            }
+                        />
                     ))}
                 </Grid>
             </Stack>
-        </AccountingBlock>
+        </Section>
     )
 }

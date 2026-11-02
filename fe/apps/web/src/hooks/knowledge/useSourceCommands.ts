@@ -1,82 +1,103 @@
 "use client"
 
 import { useState } from "react"
-import { useSWRConfig } from "swr"
+import { useTranslations } from "next-intl"
 import {
     QUERY_KNOWLEDGE_SOURCE_SWR_KEY,
     QUERY_BRAIN_DOSSIERS_SWR_KEY,
     QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY,
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
     QUERY_KNOWLEDGE_USAGE_SWR_KEY,
+    QUERY_PUBLIC_DOCUMENTS_SWR_KEY,
+    QUERY_BRAIN_SWR_KEY,
+    QUERY_BRAIN_TODO_SWR_KEY,
     useMutateDeleteKnowledgeSourceSwr,
     useMutateReindexKnowledgeSourceSwr,
-    useMutateUpdateKnowledgeSourceSwr,
 } from "@/hooks/swr"
+import { useWorkspaceKey } from "@/hooks/workspaceKey"
+import { mutate } from "@/modules/viewer-cache"
 import { navigation } from "@/modules/i18n"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
-import { useGraphQLWithToast } from "@/modules/toast"
+import { toast, useGraphQLWithToast } from "@/modules/toast"
 
 /** What a document page can do to the document. */
-export type SourceAction = "reindex" | "visibility" | "delete"
+export type SourceAction = "reindex" | "delete"
 
 /** What the document commands give the block. */
 interface SourceCommands {
     /** The action being carried out, or null. */
     readonly busy: SourceAction | null
     readonly reindex: () => void
-    readonly setVisibility: (visibility: "public" | "internal") => void
-    readonly remove: () => void
+    readonly remove: () => Promise<void>
 }
 
 /** Reads the lists a document change touches again, through the mutate of the viewer's cache (a global one never reaches it). */
-const revalidateDocuments = (mutate: ReturnType<typeof useSWRConfig>["mutate"]) =>
+const revalidateDocuments = (workspaceId: string) =>
     mutate(
         (key) =>
             Array.isArray(key) &&
+            key[1] === workspaceId &&
             (key[0] === QUERY_KNOWLEDGE_SOURCE_SWR_KEY ||
                 key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY ||
                 key[0] === QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY ||
                 key[0] === QUERY_BRAIN_DOSSIERS_SWR_KEY ||
-                key[0] === QUERY_KNOWLEDGE_USAGE_SWR_KEY),
+                key[0] === QUERY_KNOWLEDGE_USAGE_SWR_KEY ||
+                key[0] === QUERY_PUBLIC_DOCUMENTS_SWR_KEY ||
+                key[0] === QUERY_BRAIN_SWR_KEY ||
+                key[0] === QUERY_BRAIN_TODO_SWR_KEY),
     )
 
-/** Reading a document again, changing who may read it and deleting it; each failure is toasted, the lists revalidate. */
+/** Reading a document again and deleting it; each failure is toasted, the lists revalidate. */
 export const useSourceCommands = (sourceId: string): SourceCommands => {
     const router = navigation.useRouter()
-    const { mutate } = useSWRConfig()
+    const workspaceKey = useWorkspaceKey(QUERY_KNOWLEDGE_SOURCES_SWR_KEY, [])
     const runGraphQL = useGraphQLWithToast()
+    const feedback = useTranslations("toast")
     const { trigger: reindexSource } = useMutateReindexKnowledgeSourceSwr()
-    const { trigger: updateSource } = useMutateUpdateKnowledgeSourceSwr()
     const { trigger: deleteSource } = useMutateDeleteKnowledgeSourceSwr()
     const [busy, setBusy] = useState<SourceAction | null>(null)
-    const act = (action: SourceAction, run: () => Promise<unknown>, done: () => void) => {
+    const failed = () => {
+        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+    }
+    const act = async (action: SourceAction, run: () => Promise<unknown>, done: () => void) => {
+        if (workspaceKey === null) {
+            failed()
+            return undefined
+        }
         setBusy(action)
-        void runGraphQL(run, { showSuccessToast: false }).then(async (result) => {
-            setBusy(null)
-            if (result === undefined) return
-            await revalidateDocuments(mutate)
+        try {
+            const result = await runGraphQL(run, { showSuccessToast: false })
+            if (result === undefined) return undefined
+            if (result === false) {
+                failed()
+                return undefined
+            }
+            await revalidateDocuments(workspaceKey[1])
             done()
-        })
+            return true
+        } catch {
+            failed()
+            return undefined
+        } finally {
+            setBusy(null)
+        }
     }
     return {
         busy,
-        reindex: () =>
+        reindex: () => {
             act(
                 "reindex",
                 () => reindexSource({ sourceId }),
                 () => undefined,
-            ),
-        setVisibility: (visibility) =>
-            act(
-                "visibility",
-                () => updateSource({ sourceId, visibility }),
-                () => undefined,
-            ),
-        remove: () =>
-            act(
+            ).catch(failed)
+        },
+        remove: async () => {
+            const removed = await act(
                 "delete",
                 () => deleteSource({ id: sourceId }),
                 () => router.push(KNOWLEDGE_ROUTES.library),
-            ),
+            )
+            if (removed !== true) throw new Error("knowledge source deletion did not succeed")
+        },
     }
 }

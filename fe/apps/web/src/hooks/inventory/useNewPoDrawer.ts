@@ -1,4 +1,5 @@
-"use client"
+import type { InventoryPanelScope } from "./inventory.shared"
+;("use client")
 
 import type { InventoryWorkbenchData } from "@/modules/types"
 import { changeAt } from "./inventory.shared"
@@ -25,10 +26,16 @@ interface NewPoState {
 const blankLine = (serial: number): TypedLine => ({ key: `line-${serial}`, itemId: "", qty: "", cost: "" })
 
 /** Opens, fills and saves the new purchase order form; `props` is null while the drawer is closed. */
-export const useNewPoDrawer = (data: InventoryWorkbenchData, commands: InventoryCommandSet<"createPo">) => {
+export const useNewPoDrawer = (
+    data: InventoryWorkbenchData,
+    commands: InventoryCommandSet<"createPo">,
+    lifetime?: InventoryPanelScope,
+) => {
+    const { isActive = true, scope = "" } = lifetime ?? {}
+
     const say = useSay()
-    const run = useInventoryRun()
-    const drawer = useDrawer<NewPoState>()
+    const run = useInventoryRun(isActive, scope)
+    const drawer = useDrawer<NewPoState>(isActive, scope)
     const { state, change } = drawer
     return {
         open: () => drawer.open({ supplierId: "", lines: [blankLine(0)], serial: 1 }),
@@ -36,7 +43,7 @@ export const useNewPoDrawer = (data: InventoryWorkbenchData, commands: Inventory
             state === null
                 ? null
                 : {
-                      say,
+                      copy: newPoDrawerCopy(say),
                       supplierId: state.supplierId,
                       suppliers: data.suppliers.map((supplier) => ({ id: supplier.id, label: supplier.name })),
                       items: data.items
@@ -48,7 +55,10 @@ export const useNewPoDrawer = (data: InventoryWorkbenchData, commands: Inventory
                                       item.supplierId === state.supplierId),
                           )
                           .map((item) => ({ id: item.id, label: `${item.name} (${item.unit})` })),
-                      lines: state.lines,
+                      lines: state.lines.map((line, index) => ({
+                          ...line,
+                          itemLabel: say("newPoItem", { n: index + 1 }),
+                      })),
                       isPending: run.isPending,
                       error: run.error,
                   },
@@ -89,10 +99,25 @@ export const useNewPoDrawer = (data: InventoryWorkbenchData, commands: Inventory
                                 unitCost: line.cost,
                             })),
                         }),
-                    drawer.done,
+                    (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
                 )
             },
             close: drawer.close,
         },
     }
 }
+
+/** Resolves the exact newpo drawer copy in its domain owner. */
+const newPoDrawerCopy = (say: ReturnType<typeof useSay>) =>
+    ({
+        newPoTitle: say("newPoTitle"),
+        newPoHint: say("newPoHint"),
+        close: say("close"),
+        poSupplier: say("poSupplier"),
+        poSupplierHint: say("poSupplierHint"),
+        newPoItemHint: say("newPoItemHint"),
+        poQty: say("poQty"),
+        poUnitCost: say("poUnitCost"),
+        newPoAddLine: say("newPoAddLine"),
+        newPoCreate: say("newPoCreate"),
+    }) as const

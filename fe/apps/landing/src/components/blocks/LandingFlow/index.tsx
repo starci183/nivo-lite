@@ -28,6 +28,7 @@ export const LandingFlow = async () => {
                 eyebrow: t("flowEyebrow"),
                 title: t("flowTitle"),
                 lead: t("flowLead"),
+                emptyLabel: t("flowEmpty"),
                 aiMark: t("flowAiMark"),
                 humanTag: t("flowHuman"),
                 steps: STEPS.map((step) => ({

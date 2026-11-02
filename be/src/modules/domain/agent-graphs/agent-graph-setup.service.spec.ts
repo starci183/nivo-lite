@@ -14,6 +14,7 @@ import {
     stateOf,
 } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphContextService } from "./agent-graph-context.service"
+import { AgentGraphContractSetupService } from "./agent-graph-contract-setup.service"
 import { AgentGraphPublishService } from "./agent-graph-publish.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphSetupService } from "./agent-graph-setup.service"
@@ -71,6 +72,7 @@ const build = async (options: Options = {}) => {
             .fn()
             .mockResolvedValue(options.seat === false ? null : { memberId: "boss", role: "owner" }),
     })
+    const contracts = mock<AgentGraphContractSetupService>({ proposeFor: jest.fn().mockResolvedValue(2) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentGraphSetupService,
@@ -81,9 +83,10 @@ const build = async (options: Options = {}) => {
             { provide: AgentGraphPublishService, useValue: publishing },
             { provide: MemberGrantsService, useValue: members },
             { provide: WorkspaceMemberSeatsService, useValue: seats },
+            { provide: AgentGraphContractSetupService, useValue: contracts },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentGraphSetupService), graphs, seed, publishing }
+    return { service: moduleRef.get(AgentGraphSetupService), graphs, seed, publishing, contracts }
 }
 
 describe("AgentGraphSetupService.applyBranch", () => {
@@ -205,6 +208,16 @@ describe("AgentGraphSetupService.publish", () => {
 
         expect(none.publishing.publishDraft).not.toHaveBeenCalled()
         expect(seatless.publishing.publishDraft).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphSetupService.proposeContracts", () => {
+    it("hands the applied setup to the proposals of the contracts", async () => {
+        const { service, contracts } = await build()
+
+        await expect(service.proposeContracts(APPLIER)).resolves.toBe(2)
+
+        expect(contracts.proposeFor).toHaveBeenCalledWith(APPLIER)
     })
 })
 

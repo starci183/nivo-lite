@@ -1,4 +1,5 @@
 import {
+    Stack,
     Alert,
     Button,
     Checkbox,
@@ -12,11 +13,12 @@ import {
     Text,
     Textarea,
 } from "@starci/grammar/common"
+
 import { HiringJobPost } from "@/components/composites/HiringJobPost"
 import type { HiringJobPostProps } from "@/components/composites/HiringJobPost"
 import { SlotView } from "@/components/composites/SlotView"
 import type { ApplyValues, DataSlot, FieldOf, HiringSay, PublicQuestionView, SlotLabels } from "@/modules/types"
-import { CARD_CLASS_NAME, FOOT_CLASS_NAME, HONEYPOT_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
+import { FOOT_CLASS_NAME, HONEYPOT_CLASS_NAME } from "./classNames"
 
 /** What the connected block settled for the public job page. */
 export interface HiringApplyFormBaseProps {
@@ -122,13 +124,13 @@ const ApplyBody = (props: ApplyBodyProps) => {
     const isBusy = p.isBusy || props.isSkeleton
     const isOpen = p.isOpen || props.isSkeleton
     return (
-        <div className={STACK_CLASS_NAME}>
+        <Stack gap="section">
             <HiringJobPost props={p.post} />
             <SurfaceCard ariaLabel={say(isOpen ? "applyTitle" : "applyClosed")}>
-                <div className={CARD_CLASS_NAME}>
+                <Stack gap="section">
                     {isOpen ? null : <Heading level={2}>{say("applyClosed")}</Heading>}
                     {isOpen ? (
-                        <Heading level={2} isSkeleton={props.isSkeleton}>
+                        <Heading level={2} isLoading={props.isSkeleton}>
                             {say("applyTitle")}
                         </Heading>
                     ) : null}
@@ -141,26 +143,30 @@ const ApplyBody = (props: ApplyBodyProps) => {
                             isPending={isBusy}
                             onSubmit={on.submit}
                         >
-                            <div className={CARD_CLASS_NAME}>
+                            <Stack gap="section">
                                 <ApplicantDetails {...props} />
                                 <ApplicationSubmission {...props} />{" "}
-                            </div>
+                            </Stack>
                         </Form>
                     ) : null}
-                </div>
+                </Stack>
             </SurfaceCard>
             <div className={FOOT_CLASS_NAME}>
                 <Text size="xs">{say("applyFoot", { company: p.company })}</Text>
             </div>
-        </div>
+        </Stack>
     )
 }
 
 /** Draws the public job page: the post, then the apply form (or a notice when the post takes no applications). */
 export const HiringApplyFormBase = (props: HiringApplyFormBaseProps) => (
-    <SlotView slot={props.props.slot} placeholder labels={props.props.slotLabels} onRetry={props.on.retry}>
-        {(_job, isSkeleton) => <ApplyBody {...props} isSkeleton={isSkeleton} />}
-    </SlotView>
+    <SlotView
+        slot={props.props.slot}
+        placeholder
+        labels={props.props.slotLabels}
+        onRetry={props.on.retry}
+        render={(_job, isSkeleton) => <ApplyBody {...props} isSkeleton={isSkeleton} />}
+    />
 )
 
 /** Contact details and availability supplied with an application. */

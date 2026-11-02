@@ -1,7 +1,6 @@
 import { KNOWLEDGE_ROWS_PLACEHOLDER, KnowledgeRowList } from "@/components/composites/KnowledgeRows"
-import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
+import type { KnowledgeRowView, DataSlot, SlotLabels } from "@/modules/types"
 import { SlotView } from "@/components/composites/SlotView"
-import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The rows and the copy of their status the connected base knowledge supplies. */
 export interface KnowledgeNivoBaseProps {
@@ -20,9 +19,14 @@ export const KnowledgeNivoBase = (props: KnowledgeNivoBaseProps) => (
         placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(rows, isSkeleton) => (
-            <KnowledgeRowList label={props.props.label} rows={rows} isPending={false} isSkeleton={isSkeleton} />
+        render={(rows, isSkeleton) => (
+            <KnowledgeRowList
+                label={props.props.label}
+                emptyTitle={props.props.slotLabels.empty}
+                rows={rows}
+                isPending={false}
+                isLoading={isSkeleton}
+            />
         )}
-    </SlotView>
+    />
 )

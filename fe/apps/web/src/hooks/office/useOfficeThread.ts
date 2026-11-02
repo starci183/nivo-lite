@@ -4,6 +4,7 @@ import { slotOfSwr } from "@/hooks/slot"
 import { useQueryOfficeMessagesSwr } from "@/hooks/swr"
 import { OFFICE_PAGE_SIZE, mergeMessages, toOfficeMessage } from "@/modules/office"
 import type { OfficeMessage } from "@/modules/office"
+import type { OfficeRead } from "./office.shared"
 import type { DataSlot } from "@/modules/types"
 import { useCallback, useEffect, useState } from "react"
 
@@ -29,6 +30,7 @@ export const useOfficeThread = (
     onFetched: (lastMessageId: string | null) => void,
 ): {
     readonly slot: DataSlot<ReadonlyArray<OfficeMessage>>
+    readonly read: OfficeRead<ReadonlyArray<OfficeMessage>>
     readonly reload: () => void
     readonly hasEarlier: boolean
     readonly isLoadingEarlier: boolean
@@ -57,8 +59,10 @@ export const useOfficeThread = (
     }, [next, page, room])
     const newest = latest.data?.messages.map(toOfficeMessage)
     const joined = newest === undefined ? undefined : mergeMessages([current.lines, newest])
+    const read = { data: joined, error: latest.error, isLoading: latest.isLoading, isValidating: latest.isValidating }
     return {
-        slot: slotOfSwr({ data: joined, error: latest.error, isLoading: latest.isLoading }),
+        read,
+        slot: slotOfSwr(read),
         reload: () => void latest.mutate(),
         hasEarlier: next !== null,
         isLoadingEarlier: page.isMutating,

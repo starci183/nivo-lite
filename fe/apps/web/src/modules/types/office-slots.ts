@@ -6,7 +6,6 @@ import type {
     OfficeMentionView,
     OfficeOutboxView,
     OfficeTaskView,
-    OfficeText,
     OfficeThreadItem,
     OfficeWorkDecision,
 } from "./office"
@@ -16,6 +15,8 @@ export interface OfficeReadingView {
     readonly avatar: OfficeAvatarView
     readonly ask: string
     readonly agent: string
+    readonly label: string
+    readonly gateNote: string
 }
 
 /** The product state of one thread card, lifted into the connected block: what the owner is editing and which part is open. */
@@ -35,9 +36,98 @@ export interface OfficeCardDraft {
 export interface OfficeThreadProps {
     readonly props: {
         /** The drawn thread shows skeleton lines instead of the messages. */
-        readonly isSkeleton: boolean
-        /** The draft of one card by item key (an untouched card has the empty draft), and the message whose text was just copied. */
-        readonly draftOf: (key: string) => OfficeCardDraft
+        readonly isLoading: boolean
+        /** The current thread cards and their concrete drafts. */
+        readonly cards: ReadonlyArray<{
+            readonly item: Exclude<OfficeThreadItem, { readonly kind: "day" | "message" }>
+            readonly draft: OfficeCardDraft
+            readonly label: string
+            readonly basisDescription: string | null
+        }>
+        readonly copy: {
+            readonly thread: {
+                readonly loadEarlier: string
+                readonly emptyMessage: string
+                readonly emptyMessageHint: string
+            }
+            readonly message: {
+                readonly copied: string
+                readonly copyText: string
+                readonly reply: string
+                readonly cmdOpenWork: string
+                readonly aiBadge: string
+            }
+            readonly outbox: { readonly sendFailed: string; readonly sending: string }
+        }
+        readonly basisMin: number
+        readonly cardCopy: {
+            readonly exceptionForm: {
+                readonly exceptionMissingHint: string
+                readonly basisNeeded: string
+                readonly waitingManager: string
+                readonly exceptionSaveContinue: string
+                readonly exceptionCancelEdit: string
+                readonly exceptionEditContinue: string
+                readonly exceptionReject: string
+                readonly exceptionMissing: string
+                readonly basisLabel: string
+                readonly basisPlaceholder: string
+                readonly exceptionCandidates: string
+                readonly exceptionDraft: string
+                readonly exceptionAmount: string
+                readonly exceptionApprove: string
+                readonly exceptionSendDraft: string
+            }
+            readonly command: {
+                readonly cmdRowAgent: string
+                readonly cmdRowCommand: string
+                readonly cmdPending: string
+                readonly cmdSentBadge: string
+                readonly cmdCancelledBadge: string
+                readonly cmdFailed: string
+                readonly cmdCancel: string
+                readonly cmdSend: string
+                readonly cmdOpenWork: string
+            }
+            readonly approval: {
+                readonly draftLabel: string
+                readonly showLess: string
+                readonly showMore: string
+                readonly waitingManager: string
+                readonly approveEdited: string
+                readonly approveSend: string
+                readonly cancelEdit: string
+                readonly edit: string
+                readonly reject: string
+                readonly aiBadge: string
+                readonly openLead: string
+            }
+            readonly exception: {
+                readonly reconcileCredit: string
+                readonly reconcileWarning: string
+                readonly exceptionResult: string
+                readonly exceptionOpenLead: string
+                readonly exceptionProposes: string
+                readonly exceptionErrorLabel: string
+                readonly exceptionAsked: string
+                readonly exceptionWillReply: string
+            }
+            readonly result: {
+                readonly approveEdited: string
+                readonly cardApprove: string
+                readonly cancelEdit: string
+                readonly edit: string
+                readonly cardDecline: string
+                readonly waitingManager: string
+                readonly draftLabel: string
+                readonly cardSources: string
+            }
+        }
+        readonly receipts: ReadonlyArray<{
+            readonly key: string
+            readonly overflowLabel: string
+            readonly moreLabel: string | null
+        }>
         readonly copiedKey: string | null
         readonly items: ReadonlyArray<OfficeThreadItem>
         readonly outbox: ReadonlyArray<OfficeOutboxView>
@@ -47,7 +137,6 @@ export interface OfficeThreadProps {
         readonly busyId: string | null
         readonly hasEarlier: boolean
         readonly isLoadingEarlier: boolean
-        readonly text: OfficeText
     }
     readonly on: {
         readonly decideApproval: (id: string, decision: "approved" | "rejected", editedDraft: string | null) => void
@@ -73,14 +162,12 @@ export interface OfficeThreadProps {
 /** What the pinned composer draws. */
 /** The file control of the Office composer. */
 export interface OfficeComposerFile {
-    /** The chosen file, or null. */
-    readonly file: File | null
-    /** The word key of why the chosen file cannot go, or null. */
+    /** The chosen file name, or null. */
+    readonly name: string | null
+    /** The resolved reason the chosen file cannot go, or null. */
     readonly problem: string | null
     /** The types the picker offers. */
     readonly accept: string
-    readonly choose: (file: File) => void
-    readonly clear: () => void
 }
 
 /** What the composer draws and reports. */
@@ -88,19 +175,30 @@ export interface OfficeComposerProps {
     readonly props: {
         readonly draft: string
         readonly mentions: ReadonlyArray<OfficeMentionView>
-        /** The handle of the installed Chatbot, if any: adds a quick prompt for it. */
-        readonly chatbotHandle: string | null
         readonly isSending: boolean
-        readonly isSkeleton: boolean
+        readonly isLoading: boolean
         /** Changes whenever the composer should take focus (a mention was added from outside). */
         readonly focusKey: number
         /** The file that goes with the line. */
         readonly file: OfficeComposerFile
-        readonly text: OfficeText
+        readonly prompts: ReadonlyArray<string>
+        readonly copy: {
+            readonly quickLabel: string
+            readonly removeFile: string
+            readonly attachFile: string
+            readonly mentionButton: string
+            readonly composerLabel: string
+            readonly composerPlaceholder: string
+            readonly mentionLabel: string
+            readonly send: string
+            readonly composerHint: string
+        }
     }
     readonly on: {
         readonly change: (value: string) => void
         readonly send: () => void
+        readonly chooseFile: (file: File) => void
+        readonly clearFile: () => void
     }
 }
 
@@ -108,13 +206,26 @@ export interface OfficeComposerProps {
 export interface OfficeConversationsProps {
     readonly props: {
         readonly list: OfficeListView
-        readonly isSkeleton: boolean
-        readonly text: OfficeText
+        readonly isLoading: boolean
+        readonly query: string
+        readonly filter: string
+        readonly filters: ReadonlyArray<{ readonly id: string; readonly label: string }>
+        readonly copy: {
+            readonly searchLabel: string
+            readonly searchPlaceholder: string
+            readonly clearSearch: string
+            readonly filterLabel: string
+            readonly listLabel: string
+            readonly empty: string
+        }
     }
     readonly on: {
         readonly openGroup: (id: string) => void
         readonly openAgent: (id: string) => void
         readonly openCustomer: (id: string) => void
+        readonly query: (value: string) => void
+        readonly filter: (value: string) => void
+        readonly formatMembersOverflow: (count: number) => string
     }
 }
 
@@ -129,7 +240,24 @@ export interface Arrangement {
 export interface OfficeInfoPanelProps {
     readonly props: {
         readonly info: OfficeInfoView
-        readonly text: OfficeText
+        readonly copy: {
+            readonly pendingTitle: string
+            readonly pendingNone: string
+            readonly pendingJump: string
+            readonly exceptionsTitle: string
+            readonly exceptionsNone: string
+            readonly exceptionJump: string
+            readonly tasksTitle: string
+            readonly tasksOpen: string
+            readonly membersTitle: string
+            readonly youTag: string
+            readonly mention: string
+            readonly chat11: string
+            readonly addAgent: string
+            readonly cardsTitle: string
+            readonly channelsTitle: string
+            readonly pinsTitle: string
+        }
     }
     readonly on: {
         readonly jumpApproval: (id: string) => void
@@ -143,10 +271,30 @@ export interface OfficeInfoPanelProps {
 /** What the team tasks draw. */
 export interface OfficeTasksProps {
     readonly props: {
-        readonly tasks: ReadonlyArray<OfficeTaskView>
-        readonly text: OfficeText
+        readonly tasks: ReadonlyArray<OfficeTaskView & { readonly statusLabel: string }>
+        readonly hasTasks: boolean
+        readonly owner: string
+        readonly status: string
+        readonly ownerOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
+        readonly statusOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
+        readonly meta: string
+        readonly copy: {
+            readonly title: string
+            readonly noTasks: string
+            readonly noTasksHint: string
+            readonly openLeads: string
+            readonly noTasksMatch: string
+            readonly noTasksMatchHint: string
+            readonly clearFilters: string
+            readonly openArrow: string
+            readonly filterOwner: string
+            readonly filterStatus: string
+        }
     }
     readonly on: {
         readonly openLeads: () => void
+        readonly owner: (value: string) => void
+        readonly status: (value: string) => void
+        readonly clear: () => void
     }
 }

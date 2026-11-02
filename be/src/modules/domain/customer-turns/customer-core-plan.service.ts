@@ -1,11 +1,21 @@
 import { Injectable } from "@nestjs/common"
-import { AgentTurnBriefService, RuntimeAgentService } from "@modules/domain/agent-turns"
+import {
+    AgentTurnBriefService,
+    IntentPipelineService,
+    IntentTurnService,
+    RuntimeAgentService,
+    pinnedOf,
+} from "@modules/domain/agent-turns"
+import type { IntentScope } from "@modules/domain/agent-turns"
+import type { AgentTurnPlan, AgentTurnView } from "@modules/domain/agent-work"
 import { replyTimeoutSec } from "@modules/domain/agents"
 import { ChatFileReadsService } from "@modules/domain/chat-files"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { threadKeyFor } from "@modules/integrations/openclaw"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { CustomerIntentContextService } from "./customer-intent-context.service"
+import { planFilesOf } from "./customer-intent.policy"
 import { fileTurnOf } from "./customer-turn.policy"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
@@ -26,6 +36,8 @@ const BLOCK_SEPARATOR = "\n\n"
  * authority, the PUBLIC knowledge recalled for the question, open jobs, the reply contract), adds the intents the agent's action graph
  * allows, and leaves the token block out: the agent reaches its tools through the bridge, which finds the turn by its session. The quota
  * and the breaker are the executor's gates, not these. What the turn read is kept for the cards its tool calls open, until `end`.
+ * When the published graph holds contracts for a customer's message the prompt is the five-part contract prompt instead, and the
+ * turn's run is opened; with none, the plan is exactly the one above.
  */
 export class CustomerCorePlanService {
     constructor(
@@ -34,17 +46,27 @@ export class CustomerCorePlanService {
         private readonly agents: RuntimeAgentService,
         private readonly brief: AgentTurnBriefService,
         private readonly access: TurnToolAccessService,
+        private readonly intents: IntentTurnService,
+        private readonly pipeline: IntentPipelineService,
+        private readonly context: CustomerIntentContextService,
         private readonly fileReads: ChatFileReadsService,
     ) {}
 
     /** The plan of the turn, or the reason it cannot run. */
-    async planOf(turn: CustomerTurn): Promise<TurnPlanAnswer> {
+    async planOf(turn: CustomerTurn, wake: AgentTurnView): Promise<TurnPlanAnswer> {
         const { conversation } = turn
         const workspaceId = conversation.workspaceId
         const installation = await this.runtime.installationOf(workspaceId, conversation.agent.id)
         if (typeof installation === "string") return installation
         try {
             const runtimeAgentId = await this.agents.agentFor(workspaceId, conversation.agent.module, installation)
+            const intended = await this.intentPlanOf(
+                turn,
+                wake,
+                runtimeAgentId,
+                replyTimeoutSec(installation?.settings ?? null) * 1000,
+            )
+            if (intended !== null) return intended
             const system = await this.runtime.systemOf(turn)
             this.access.keep(turn, system.sources)
             const intents = await this.brief
@@ -65,6 +87,40 @@ export class CustomerCorePlanService {
         } catch (cause) {
             this.logger.error(CustomerTurnsLogEvent.TurnFailed, cause, { conversationId: conversation.id })
             return UNAVAILABLE
+        }
+    }
+
+    /**
+     * The plan of a turn on the contract pipeline: the five-part prompt, with the customer's words as data, built from the contracts the
+     * published version holds for a customer's message. Null when it holds none, and the turn keeps the context above, unchanged.
+     */
+    private async intentPlanOf(
+        turn: CustomerTurn,
+        wake: AgentTurnView,
+        runtimeAgentId: string,
+        timeoutMs: number,
+    ): Promise<AgentTurnPlan | null> {
+        const { conversation } = turn
+        const scope: IntentScope = {
+            workspaceId: conversation.workspaceId,
+            agentId: conversation.agent.id,
+            source: "customer",
+            authorUserId: null,
+            pinned: pinnedOf(wake.context),
+        }
+        const contracts = await this.intents.planFor(scope)
+        if (contracts === null) return null
+        const context = await this.context.contextOf(turn)
+        this.access.keep(turn, context.sources)
+        const planned = this.intents.planOf(contracts, context.identity, context.input, LOCALE)
+        await this.pipeline.open(wake, planned)
+        return {
+            module: conversation.agent.module,
+            runtimeAgentId,
+            threadKey: threadKeyFor(runtimeAgentId, conversation.id),
+            message: planned.prompt,
+            ...planFilesOf(context.attachments),
+            timeoutMs,
         }
     }
 

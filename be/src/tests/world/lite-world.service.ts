@@ -18,6 +18,7 @@ import { RealtimeModule } from "@modules/platform/realtime"
 import { RetryModule } from "@modules/platform/retry"
 import { eachInOrder } from "@modules/platform/primitives"
 import { CHAT_ACTIVITY_PROOF_MODULES } from "./chat-activity-proof.module"
+import { assertProofTarget } from "./proof-target.service"
 import type { WorldDatabase, WorldSandbox } from "./test-world.contracts"
 
 /** One hex group per run (process and monotonic clock), so the ids of two runs never meet in the database a proof writes to. */
@@ -59,6 +60,22 @@ const letProofsStampRows = (source: DataSource): void => {
         })
 }
 
+/** Compiles the proof's actual capability graph with its transaction-owned local database. */
+const compileWorldModules = (manager: EntityManager, modules: ReadonlyArray<DynamicModule>): Promise<TestingModule> =>
+    Test.createTestingModule({
+        imports: [
+            LocalDatabaseModule.register(manager),
+            ClockModule.register({ isGlobal: true }),
+            EventBusModule.register({ isGlobal: true }),
+            HttpModule.register({ isGlobal: true }),
+            LoggingModule.register({ isGlobal: true }),
+            RetryModule.register({ isGlobal: true }),
+            RealtimeModule.register({ hub: "memory", isGlobal: true }),
+            ...CHAT_ACTIVITY_PROOF_MODULES,
+            ...modules,
+        ],
+    }).compile()
+
 /** Attaches only to migrated local PostgreSQL; the closure owns resources rather than injecting a DataSource into services. */
 export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?: WorldSandbox) => {
     let source: DataSource | undefined
@@ -75,7 +92,8 @@ export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?:
             return database()
         },
         async open(): Promise<void> {
-            const config = parsePrimaryDatabaseConfig(EnvSource.fromProcess())
+            const env = EnvSource.fromProcess()
+            const config = parsePrimaryDatabaseConfig(env)
             const url = sandbox === undefined ? config.url.reveal() : await sandbox.create()
             assert(["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname), "Proofs need local PostgreSQL")
             const schema: Partial<Record<"schema", string>> =
@@ -91,20 +109,9 @@ export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?:
                 connectTimeoutMS: 5000,
             })
             await source.initialize()
+            await assertProofTarget(source.manager, config, env)
             letProofsStampRows(source)
-            container = await Test.createTestingModule({
-                imports: [
-                    LocalDatabaseModule.register(database().primary),
-                    ClockModule.register({ isGlobal: true }),
-                    EventBusModule.register({ isGlobal: true }),
-                    HttpModule.register({ isGlobal: true }),
-                    LoggingModule.register({ isGlobal: true }),
-                    RetryModule.register({ isGlobal: true }),
-                    RealtimeModule.register({ hub: "memory", isGlobal: true }),
-                    ...CHAT_ACTIVITY_PROOF_MODULES,
-                    ...modules,
-                ],
-            }).compile()
+            container = await compileWorldModules(database().primary, modules)
         },
         resolve<T>(token: string | symbol | (new (...args: Array<never>) => T)): T {
             assert(container, "World modules must be open")

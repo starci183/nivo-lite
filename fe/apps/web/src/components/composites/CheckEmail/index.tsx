@@ -1,6 +1,4 @@
-import { Alert, Button, Text, TextAction } from "@starci/grammar/common"
-import { CHECK_ACTIONS_CLASS_NAME, CHECK_CENTER_CLASS_NAME } from "./classNames"
-
+import { Alert, Button, Link, Text, TextAction, Stack } from "@starci/grammar/common"
 /** Copy, state and commands of the "check your email" body. */
 export interface CheckEmailProps {
     readonly text: string
@@ -20,7 +18,7 @@ export interface CheckEmailProps {
 
 /** "Check your email" body: the message, a resend button (disabled during its cooldown) and a way back. */
 export const CheckEmail = (props: CheckEmailProps) => (
-    <div className={CHECK_ACTIONS_CLASS_NAME}>
+    <Stack gap="row">
         <Text>{props.text}</Text>
         {props.hint === undefined ? null : (
             <Text size="sm" tone="muted">
@@ -39,9 +37,9 @@ export const CheckEmail = (props: CheckEmailProps) => (
         >
             {props.resendLabel}
         </Button>
-        <div className={CHECK_CENTER_CLASS_NAME}>
+        <Stack gap="inline" align="center">
             <TextAction onPress={props.onChangeEmail}>{props.wrongEmailLabel}</TextAction>
-            <TextAction href={props.backHref}>{props.backLabel}</TextAction>
-        </div>
-    </div>
+            <Link href={props.backHref}>{props.backLabel}</Link>
+        </Stack>
+    </Stack>
 )

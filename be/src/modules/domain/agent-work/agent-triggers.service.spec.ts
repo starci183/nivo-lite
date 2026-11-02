@@ -49,12 +49,24 @@ describe("AgentTriggersService reads", () => {
         const row = eventTriggerRowOf()
         const { service, em } = await build(mockEntityManager({ find: [AgentTriggerEntity, [row]] }))
 
-        await expect(service.enabledForEvent("ws-1", "bank_credit_booked", 25)).resolves.toHaveLength(1)
+        await expect(service.enabledForSource("ws-1", "bank_credit_booked", 25, "internal")).resolves.toHaveLength(1)
         expect(em.find).toHaveBeenCalledWith(AgentTriggerEntity, {
             where: { workspaceId: "ws-1", kind: "event", eventName: "bank_credit_booked", enabled: true },
             order: { createdAt: "ASC" },
             take: 25,
         })
+    })
+
+    it("keeps only the triggers that answer to the source: the ones that name it and the ones that name none", async () => {
+        const event = { kind: "event", preset: null, atTime: null, eventName: "invoice.paid" } as const
+        const named = agentTriggerRowOf({ ...event, id: "t-named", sources: ["generic_webhook"] })
+        const other = agentTriggerRowOf({ ...event, id: "t-other", sources: ["tag"] })
+        const open = agentTriggerRowOf({ ...event, id: "t-open", sources: [] })
+        const { service } = await build(mockEntityManager({ find: [AgentTriggerEntity, [named, other, open]] }))
+
+        const found = await service.enabledForSource("ws-1", "invoice.paid", 25, "generic_webhook")
+
+        expect(found.map((trigger) => trigger.id)).toEqual(["t-named", "t-open"])
     })
 
     it("reads one trigger by id, or null", async () => {
@@ -89,6 +101,7 @@ describe("AgentTriggersService.save", () => {
             eventName: null,
             probeKey: "invoices_due",
             enabled: true,
+            sources: [],
             seedKey: null,
         })
     })

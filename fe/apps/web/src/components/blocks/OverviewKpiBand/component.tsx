@@ -1,4 +1,4 @@
-import { SectionHeader } from "@starci/grammar/common"
+import { Section } from "@starci/grammar/common"
 import { OverviewKpis } from "@/components/composites/OverviewKpis"
 
 /** One count of the KPI band. */
@@ -32,13 +32,12 @@ export const OVERVIEW_KPI_BAND_PLACEHOLDER: OverviewKpiBandView = {
 
 /** The title, the region name and the counts, and whether they are still placeholders. */
 interface OverviewKpiBandBaseProps {
-    readonly props: OverviewKpiBandView & { readonly isSkeleton: boolean }
+    readonly props: OverviewKpiBandView & { readonly isLoading: boolean }
 }
 
 /** The line that introduces the open work, then the KPI band of counts that each open a filtered list. */
 export const OverviewKpiBandBase = (props: OverviewKpiBandBaseProps) => (
-    <>
-        <SectionHeader level={2} title={props.props.title} isSkeleton={props.props.isSkeleton} />
-        <OverviewKpis label={props.props.label} kpis={props.props.kpis} isSkeleton={props.props.isSkeleton} />
-    </>
+    <Section title={props.props.title} isLoading={props.props.isLoading}>
+        <OverviewKpis label={props.props.label} kpis={props.props.kpis} isLoading={props.props.isLoading} />
+    </Section>
 )

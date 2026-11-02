@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
+import { In, IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { EntitlementsService } from "@modules/domain/billing"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -20,7 +20,7 @@ import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import type { ProgressChange } from "./knowledge-progress.contracts"
 import { KnowledgeProgressService } from "./knowledge-progress.service"
-import { KNOWLEDGE_UPLOAD_BUCKET, STORAGE_OBJECT_MISSING } from "./knowledge-sources.contracts"
+import { KNOWLEDGE_UPLOAD_BUCKET, STORAGE_OBJECT_MISSING, PUBLIC_DOCUMENT_ORIGIN } from "./knowledge-sources.contracts"
 import type {
     AddSourceInput,
     DeletedSource,
@@ -209,7 +209,10 @@ export class KnowledgeSourcesService {
         const queued = await this.entityManager.transaction(async (tx) => {
             const requeued = await tx.update(
                 KnowledgeSourceEntity,
-                { id: input.sourceId, workspaceId, status: In(IDLE_STATUSES) },
+                [
+                    { id: input.sourceId, workspaceId, status: In(IDLE_STATUSES), origin: IsNull() },
+                    { id: input.sourceId, workspaceId, status: In(IDLE_STATUSES), origin: Not(PUBLIC_DOCUMENT_ORIGIN) },
+                ],
                 {
                     status: "queued",
                     progress: 0,
@@ -221,10 +224,12 @@ export class KnowledgeSourcesService {
             )
             if (requeued.affected === 0) {
                 const busy = await tx.findOne(KnowledgeSourceEntity, {
-                    select: { id: true },
+                    select: { id: true, origin: true },
                     where: { id: input.sourceId, workspaceId },
                 })
                 if (busy === null) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+                if (busy.origin === PUBLIC_DOCUMENT_ORIGIN)
+                    throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.PublicByApproval })
                 return false
             }
             await this.queue.enqueueIndex({ sourceId: input.sourceId, workspaceId }, tx, this.clock.now().getTime())
@@ -237,13 +242,27 @@ export class KnowledgeSourcesService {
     /** Changes the metadata of a source; the database moves its passages to the new module and visibility. */
     async updateSource(userId: string, workspaceId: string, input: UpdateSourceInput): Promise<void> {
         await this.members.require(userId, workspaceId, MANAGERS)
-        const change = normalizeUpdate(input)
+        const change = unwrapOutcome(normalizeUpdate(input), KnowledgeSourcesError)
         const changed = await this.entityManager.update(
             KnowledgeSourceEntity,
-            { id: input.sourceId, workspaceId },
+            [
+                { id: input.sourceId, workspaceId, origin: IsNull() },
+                { id: input.sourceId, workspaceId, origin: Not(PUBLIC_DOCUMENT_ORIGIN) },
+            ],
             metaChanges(change),
         )
-        if (changed.affected === 0) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+        if (changed.affected === 0) {
+            const row = await this.entityManager.findOne(KnowledgeSourceEntity, {
+                select: { id: true, origin: true },
+                where: { id: input.sourceId, workspaceId },
+            })
+            throw new KnowledgeSourcesError({
+                code:
+                    row?.origin === PUBLIC_DOCUMENT_ORIGIN
+                        ? KnowledgeSourcesErrorCode.PublicByApproval
+                        : KnowledgeSourcesErrorCode.SourceNotFound,
+            })
+        }
         await this.parts.follow(workspaceId, input.sourceId, metaChanges({ ...change, title: null }))
     }
 

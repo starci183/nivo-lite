@@ -22,13 +22,12 @@ export const WorkspacesAccountBase = (props: WorkspacesAccountBaseProps) => (
         labels={props.props.labels}
         forbidden="hide"
         onRetry={props.on.retry}
-    >
-        {(email, isSkeleton) => (
+        render={(email, isLoading) => (
             <DropdownMenu
                 placement="bottom end"
                 entries={props.props.entries}
-                trigger={<AvatarButton size="control" name={email} seed={email} isDisabled={isSkeleton} />}
+                trigger={<AvatarButton size="lg" name={email} seed={email} isDisabled={isLoading} />}
             />
         )}
-    </SlotView>
+    />
 )

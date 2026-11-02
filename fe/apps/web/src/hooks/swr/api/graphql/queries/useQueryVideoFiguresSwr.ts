@@ -9,8 +9,8 @@ import { queryVideoFigures } from "@/modules/api/graphql/queries/query-video-fig
 export const QUERY_VIDEO_FIGURES_SWR_KEY = "QUERY_VIDEO_FIGURES_SWR"
 
 /** The figures the video editor offers. */
-export const useQueryVideoFiguresSwr = () =>
+export const useQueryVideoFiguresSwr = (isActive = true) =>
     useSWR(
-        useWorkspaceParamsKey(QUERY_VIDEO_FIGURES_SWR_KEY, [] as const),
+        useWorkspaceParamsKey(QUERY_VIDEO_FIGURES_SWR_KEY, isActive ? ([] as const) : null),
         async () => answeredData(await queryVideoFigures(), QUERY_VIDEO_FIGURES_SWR_KEY).videoFigures,
     )

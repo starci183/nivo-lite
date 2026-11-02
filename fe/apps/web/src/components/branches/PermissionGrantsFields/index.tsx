@@ -1,11 +1,9 @@
-import { Fragment } from "react"
-import { Checkbox, Divider, NumberField, Text } from "@starci/grammar/common"
-import { GRANT_LIST_CLASS_NAME, GRANT_ROW_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
-
+import { Checkbox, NumberField, Text, Grid, Stack, Section } from "@starci/grammar/common"
 const WHOLE = { maximumFractionDigits: 2 }
 
 /** The words and state of the approval limits. */
 export interface PermissionGrantsFieldsProps {
+    readonly isLoading?: boolean
     readonly props: {
         readonly grants: ReadonlyArray<{
             readonly memberId: string
@@ -33,38 +31,36 @@ export interface PermissionGrantsFieldsProps {
 export const PermissionGrantsFields = (props: PermissionGrantsFieldsProps) => {
     const { props: p, on } = props
     return (
-        <div className={SECTION_CLASS_NAME}>
-            <Text weight="semibold">{p.copy.grantsLabel}</Text>
-            <Text size="sm" tone="muted">
-                {p.copy.grantsNote}
-            </Text>
-            <div className={GRANT_LIST_CLASS_NAME}>
-                {p.grants.map((grant, index) => (
-                    <Fragment key={grant.memberId}>
-                        {index === 0 ? null : <Divider semantics="presentation" />}
-                        <div className={GRANT_ROW_CLASS_NAME}>
-                            <Checkbox
-                                label={grant.name}
-                                isDisabled={!p.canGrant}
-                                isSelected={grant.enabled}
-                                onSelectedChange={(enabled) => on.enabled(grant.memberId, enabled)}
-                            />
-                            <NumberField
-                                label={grant.maxLabel}
-                                isLabelHidden
-                                minValue={0}
-                                formatOptions={WHOLE}
-                                isDisabled={!p.canGrant || !grant.enabled}
-                                value={grant.max}
-                                onValueChange={(value) => on.max(grant.memberId, value)}
-                            />
-                        </div>
-                    </Fragment>
+        <Section
+            title={p.copy.grantsLabel}
+            headingLevel={3}
+            description={p.copy.grantsNote}
+            isLoading={props.isLoading === true}
+        >
+            <Stack gap="row">
+                {p.grants.map((grant) => (
+                    <Grid key={grant.memberId} kind="form" columns={2}>
+                        <Checkbox
+                            label={grant.name}
+                            isDisabled={!p.canGrant}
+                            isSelected={grant.enabled}
+                            onSelectedChange={(enabled) => on.enabled(grant.memberId, enabled)}
+                        />
+                        <NumberField
+                            label={grant.maxLabel}
+                            isLabelHidden
+                            minValue={0}
+                            formatOptions={WHOLE}
+                            isDisabled={!p.canGrant || !grant.enabled}
+                            value={grant.max}
+                            onValueChange={(value) => on.max(grant.memberId, value)}
+                        />
+                    </Grid>
                 ))}
-            </div>
+            </Stack>
             <Text size="xs" tone="muted">
                 {p.copy.ownerAlways}
             </Text>
-        </div>
+        </Section>
     )
 }

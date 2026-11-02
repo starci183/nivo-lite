@@ -1,30 +1,13 @@
+import type { InventoryNewPoEditorData } from "@/modules/types"
 import { InventoryPick } from "@/components/branches/InventoryPick"
 import { InventorySelect } from "@/components/leaves/InventorySelect"
 import { InventoryField } from "@/components/leaves/InventoryField"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import { Button, Drawer } from "@starci/grammar/common"
-import type { InventorySay } from "@/modules/types"
-import { FORM_CLASS_NAME, LINE_ROW_CLASS_NAME } from "./classNames"
-
-/** One line of the new order form. */
-interface NewPoLineView {
-    readonly key: string
-    readonly itemId: string
-    readonly qty: string
-    readonly cost: string
-}
+import { Button, Drawer, Stack, Grid } from "@starci/grammar/common"
 
 /** The words and state of the new purchase order drawer. */
-export interface InventoryNewPoDrawerProps {
-    readonly props: {
-        readonly say: InventorySay
-        readonly supplierId: string
-        readonly suppliers: ReadonlyArray<{ readonly id: string; readonly label: string }>
-        readonly items: ReadonlyArray<{ readonly id: string; readonly label: string }>
-        readonly lines: ReadonlyArray<NewPoLineView>
-        readonly isPending: boolean
-        readonly error: string | null
-    }
+interface InventoryNewPoDrawerProps {
+    readonly props: InventoryNewPoEditorData
     readonly on: {
         readonly supplier: (value: string) => void
         readonly pick: (index: number, itemId: string) => void
@@ -39,36 +22,36 @@ export interface InventoryNewPoDrawerProps {
 /** The form that creates a purchase order by hand. */
 export const InventoryNewPoDrawer = (props: InventoryNewPoDrawerProps) => {
     const { props: p, on } = props
-    const say = p.say
+    const copy = p.copy
     return (
         <Drawer
             isOpen
             onOpenChange={(open) => {
                 if (!open) on.close()
             }}
-            title={say("newPoTitle")}
-            description={say("newPoHint")}
-            closeLabel={say("close")}
+            title={copy.newPoTitle}
+            description={copy.newPoHint}
+            closeLabel={copy.close}
             placement="right"
         >
-            <div className={FORM_CLASS_NAME}>
+            <Stack gap="row">
                 <InventorySelect
-                    label={say("poSupplier")}
-                    placeholder={say("poSupplierHint")}
+                    label={copy.poSupplier}
+                    placeholder={copy.poSupplierHint}
                     value={p.supplierId}
                     options={p.suppliers}
                     onChange={(value) => on.supplier(value)}
                 />
                 {p.lines.map((line, index) => (
-                    <div key={line.key} className={LINE_ROW_CLASS_NAME}>
+                    <Grid kind="form" columns={1} key={line.key}>
                         <InventoryPick
-                            selectLabel={say("newPoItem", { n: index + 1 })}
-                            selectHint={say("newPoItemHint")}
+                            selectLabel={line.itemLabel}
+                            selectHint={copy.newPoItemHint}
                             itemId={line.itemId}
                             options={p.items}
                             qtyId={`new-q-${line.key}`}
                             qtyName={`nq-${line.key}`}
-                            qtyLabel={say("poQty")}
+                            qtyLabel={copy.poQty}
                             qty={line.qty}
                             onPick={(value) => on.pick(index, value)}
                             onQty={(value) => on.qty(index, value)}
@@ -76,24 +59,24 @@ export const InventoryNewPoDrawer = (props: InventoryNewPoDrawerProps) => {
                         <InventoryField
                             id={`new-c-${line.key}`}
                             name={`nc-${line.key}`}
-                            label={say("poUnitCost")}
+                            label={copy.poUnitCost}
                             value={line.cost}
                             onChange={(value) => on.cost(index, value)}
                         />
-                    </div>
+                    </Grid>
                 ))}
                 <div>
                     <Button intent="neutral" size="sm" onPress={on.addLine}>
-                        {say("newPoAddLine")}
+                        {copy.newPoAddLine}
                     </Button>
                 </div>
                 <InventoryNotices error={p.error} />
                 <div>
                     <Button intent="commit" isPending={p.isPending} onPress={on.create}>
-                        {say("newPoCreate")}
+                        {copy.newPoCreate}
                     </Button>
                 </div>
-            </div>
+            </Stack>
         </Drawer>
     )
 }

@@ -99,7 +99,7 @@ export class ApprovalOpeningService {
      * listed as excluded with the reason) and starts the clock. A step with a pending request answers that request again. When
      * nobody can approve, the request expires at once and goes to the owner of the agent.
      */
-    async open(params: OpenApprovalParams): Promise<OpenedApproval> {
+    async open(params: OpenApprovalParams, manager?: EntityManager): Promise<OpenedApproval> {
         const setup = withBranch(await this.setupFor(params), params)
         const [directory, grants] = await Promise.all([
             this.grants.directory(params.workspaceId),
@@ -114,7 +114,10 @@ export class ApprovalOpeningService {
         const now = this.clock.now()
         const wait = set.approvers.length === 0 ? 0 : setup.timeout_minutes * MINUTE_MS
         const write: OpenWrite = { params, setup, set, directory, now, expiresAt: new Date(now.getTime() + wait) }
-        const opened = await this.entityManager.transaction((tx) => this.write(tx, write))
+        const opened =
+            manager === undefined
+                ? await this.entityManager.transaction((tx) => this.write(tx, write))
+                : await this.write(manager, write)
         return toOpened(opened.row)
     }
 

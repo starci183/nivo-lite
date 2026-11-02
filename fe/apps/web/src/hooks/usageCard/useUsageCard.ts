@@ -2,12 +2,11 @@
 
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
-import { slotOfSwr } from "@/hooks/slot"
+import { slotOfReads } from "@/hooks/slot"
 import { useQueryCreditUsageSummarySwr } from "@/hooks/swr"
 import { MODULE_KEYS, pickCopy } from "@/modules/catalog"
 import { dayjs, productCalendarDay } from "@/modules/dayjs"
 import { navigation } from "@/modules/i18n"
-import type { DataSlot } from "@/modules/types"
 import { creditsPath } from "@/modules/routes"
 import { alertOf, dailyOf, factsOf, metersOf } from "./usageCard.shared"
 import type { UsageCardData, UsageCardView } from "./usageCard.shared"
@@ -54,15 +53,13 @@ export const useUsageCard = (workspaceId: string | undefined): UsageCardView => 
         })),
     }
     return {
-        slot: usageSlotOf(
-            workspaceId,
-            data,
-            slotOfSwr({ data: query.data, error: query.error, isLoading: query.isLoading }),
-            catalog.slot,
-        ),
-        placeholder: { ...data, meters: [], facts: [], modules: [], daily: null, alert: null },
+        slot: workspaceId === undefined ? { isForbidden: true } : slotOfReads([query, catalog.read], () => data),
+        placeholder: data,
         on: {
-            retry: () => void query.mutate(),
+            retry: () => {
+                void query.mutate()
+                catalog.reload()
+            },
             openCredits: () => router.push(creditsPath()),
             formatDay: (value) =>
                 format.dateTime(dayjs.utc(String(value)).toDate(), { day: "numeric", month: "short", timeZone: "UTC" }),
@@ -70,20 +67,4 @@ export const useUsageCard = (workspaceId: string | undefined): UsageCardView => 
             minimumBarSize: (value) => (typeof value === "number" && value > 0 ? 4 : 0),
         },
     }
-}
-
-/**
- * The usage card as one slot: no workspace to read for (not allowed, or not known yet) is forbidden, a failed read of the usage or of
- * the module catalog is an error, a read still in flight is loading, else the card.
- */
-const usageSlotOf = (
-    workspaceId: string | undefined,
-    data: UsageCardData,
-    usage: DataSlot<unknown>,
-    catalog: DataSlot<unknown>,
-): DataSlot<UsageCardData> => {
-    if (workspaceId === undefined) return { isForbidden: true }
-    if (usage.isError === true || catalog.isError === true) return { isError: true }
-    if (usage.items === undefined || catalog.isLoading === true) return { isLoading: true }
-    return { items: data }
 }

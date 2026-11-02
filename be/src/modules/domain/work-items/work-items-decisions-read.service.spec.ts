@@ -3,6 +3,7 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { contractOf, entityOf, rowOf } from "@tests/fixtures/builders/work-items.builder"
 import { WorkItemsDecisionsReadService } from "./work-items-decisions-read.service"
 import { WorkItemEntity } from "./persistence/entities"
 
@@ -63,4 +64,42 @@ describe("WorkItemsDecisionsReadService", () => {
         await expect((await build(em)).countWithKeyPrefix("ws-1", "offer:o1:", "send_offer")).resolves.toBe(2)
         expect(fake?.callsOf("andWhere")).toEqual([["w.action = :action", { action: "send_offer" }]])
     })
+})
+
+describe("WorkItemsDecisionsReadService.claimDecision", () => {
+    it("leaves a missing owner busy under the caller's row lock without reading the service manager", async () => {
+        const own = mockEntityManager()
+        const manager = mockEntityManager({ findOne: [WorkItemEntity, null] })
+        await expect((await build(own)).claimDecision(manager, "ws-1", "item-1")).resolves.toEqual({ kind: "busy" })
+        expect(manager.findOne).toHaveBeenCalledWith(WorkItemEntity, {
+            where: { workspaceId: "ws-1", id: "item-1" },
+            lock: { mode: "pessimistic_write" },
+        })
+        expect(own.findOne).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        ["queued", "busy"],
+        ["failed", "busy"],
+        ["waiting_decision", "open"],
+        ["done", "closed"],
+        ["rejected", "closed"],
+    ] as const)(
+        "classifies the locked %s owner as %s and preserves its exact approved snapshot",
+        async (status, kind) => {
+            const row = rowOf({
+                status,
+                proposal: { summary: "Edited", fields: { args_json: '{"qty":1}' }, draft: "One order" },
+            })
+            const manager = mockEntityManager({ findOne: [WorkItemEntity, entityOf(row)] })
+            const service = await build(mockEntityManager())
+            await expect(service.claimDecision(manager, "ws-1", "item-1")).resolves.toEqual(
+                kind === "closed" ? { kind, item: contractOf(row) } : { kind },
+            )
+            expect(manager.findOne).toHaveBeenCalledWith(WorkItemEntity, {
+                where: { workspaceId: "ws-1", id: "item-1" },
+                lock: { mode: "pessimistic_write" },
+            })
+        },
+    )
 })

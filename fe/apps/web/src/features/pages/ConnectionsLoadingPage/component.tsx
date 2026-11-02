@@ -1,4 +1,4 @@
-import { Page, SurfaceListCard, TextAction } from "@starci/grammar/common"
+import { Page, Link, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import { ConnectionsHeadContent } from "@/components/composites/ConnectionsHead"
 
 /** The words of the loading page: everything real except the figures. */
@@ -12,6 +12,7 @@ export interface ConnectionsLoadingPageBaseProps {
         readonly connectedLabel: string
         /** The heading of the one list of what is connected. */
         readonly inUseLabel: string
+        readonly emptyLabel: string
         readonly libraryLabel: string
         readonly automationsLink: string
         readonly automationsHref: string
@@ -44,9 +45,14 @@ export const ConnectionsLoadingPageBase = (props: ConnectionsLoadingPageBaseProp
         })}
         measure="product"
     >
-        <SurfaceListCard label={props.props.inUseLabel} headingLevel={2} isLoading />
-        <TextAction href={props.props.automationsHref} isSkeleton>
-            {props.props.automationsLink}
-        </TextAction>
+        <SurfaceCard
+            kind="list"
+            label={props.props.inUseLabel}
+            headingLevel={2}
+            isLoading
+            empty={<EmptyNotice message={props.props.emptyLabel} />}
+            items={[]}
+        />
+        <Link href={props.props.automationsHref}>{props.props.automationsLink}</Link>
     </Page>
 )

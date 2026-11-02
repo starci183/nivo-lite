@@ -1,9 +1,9 @@
 import { Alert, Button, Cluster, Grid, Input, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
+import { WizardFooter, backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
-import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
+import { frameOf, WizardFrame } from "@/components/frames/WizardFrame"
 import { WizardGuideView } from "@/components/composites/WizardGuideView"
 import { WizardVerifyStep } from "@/components/composites/WizardVerifyStep"
 import type {
@@ -129,7 +129,7 @@ const actionsOf = ({ props, on }: ZaloWizardBaseProps): ReadonlyArray<WizardActi
     return [nextAction(text.done, on.finish, { isPending: props.isPending }), back]
 }
 
-const appFieldsOf = (props: ZaloWizardBaseProps, isSkeleton: boolean) => {
+const appFieldsOf = (props: ZaloWizardBaseProps, isLoading: boolean) => {
     const { props: view, on } = props
     const locked = view.isLocked || view.isPending
     return (
@@ -140,7 +140,7 @@ const appFieldsOf = (props: ZaloWizardBaseProps, isSkeleton: boolean) => {
                 label={view.text.fieldName}
                 description={view.text.fieldNameHint}
                 isDisabled={locked}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
                 value={view.fields.name}
                 onValueChange={on.name}
             />
@@ -150,7 +150,7 @@ const appFieldsOf = (props: ZaloWizardBaseProps, isSkeleton: boolean) => {
                 label={view.text.fieldAppId}
                 description={view.text.fieldAppIdHint}
                 isDisabled={locked}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
                 value={view.fields.appId}
                 onValueChange={on.appId}
             />
@@ -160,7 +160,7 @@ const appFieldsOf = (props: ZaloWizardBaseProps, isSkeleton: boolean) => {
                 label={view.text.fieldAppSecret}
                 kind="password"
                 isDisabled={locked}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
                 value={view.fields.appSecret}
                 onValueChange={on.appSecret}
             />
@@ -171,69 +171,107 @@ const appFieldsOf = (props: ZaloWizardBaseProps, isSkeleton: boolean) => {
 /** Zalo OA in the shared wizard frame: app keys, set up the Zalo app, connect the OA, check (message the OA), attach to the agents. */
 export const ZaloWizardBase = (props: ZaloWizardBaseProps) => {
     const { props: view, on } = props
-    const providerLink = (
-        <Cluster gap="inline">
-            <Button intent="neutral" href={view.providerHref} target="_blank" rel="noreferrer">
-                {view.text.openProvider}
-            </Button>
-        </Cluster>
-    )
     return (
-        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
-            {(_resume, isSkeleton) => (
-                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} actions={actionsOf(props)}>
-                    {view.step === "app" ? (
-                        <>
-                            {providerLink}
-                            <WizardGuideView
-                                screens={view.appScreens}
-                                copy={view.copy}
-                                onEdit={() => undefined}
-                                onPaste={() => undefined}
-                            />
-                            {appFieldsOf(props, isSkeleton)}
-                            {view.isLocked ? (
-                                <Text size="xs" tone="muted">
-                                    {view.text.createdLocked}
-                                </Text>
-                            ) : null}
-                        </>
-                    ) : null}
-                    {view.step === "follow" ? (
-                        <>
-                            {providerLink}
-                            <WizardGuideView
-                                screens={view.followScreens}
-                                copy={view.copy}
-                                isDisabled={view.isPending}
-                                onEdit={() => undefined}
-                                onPaste={(_, value) => on.oaSecret(value)}
-                            />
-                            <Text size="xs" tone="muted">
-                                {view.oaSecretSaved ? view.text.oaSecretSaved : view.text.needSecret}
-                            </Text>
-                        </>
-                    ) : null}
-                    {view.step === "authorize" ? (
-                        <>
-                            <Text size="sm">{view.text.authorizeBody}</Text>
-                            {view.isAuthorized ? <Alert tone="affirmative" title={view.authorizedNote} /> : null}
-                        </>
-                    ) : null}
-                    {view.step === "verify" ? (
-                        <WizardVerifyStep
-                            help={{ intro: view.text.verifyIntro, steps: [] }}
-                            received={view.received}
-                            waiting={view.text.verifyWaiting}
-                            failed={null}
-                        />
-                    ) : null}
-                    {view.step === "agent" ? (
-                        <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
-                    ) : null}
-                    {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
+        <SlotView
+            slot={view.resume}
+            placeholder={RESUME_PLACEHOLDER}
+            labels={view.slotLabels}
+            onRetry={on.retry}
+            render={(_resume, isLoading) => (
+                <WizardFrame
+                    {...frameOf(view)}
+                    footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
+                >
+                    <ZaloStepContent {...props} isLoading={isLoading} />
                 </WizardFrame>
             )}
-        </SlotView>
+        />
+    )
+}
+
+/** The static provider destination repeated by the app and OA-secret guide steps. */
+interface ZaloProviderLinkProps {
+    readonly href: string
+    readonly label: string
+}
+const ZaloProviderLink = (props: ZaloProviderLinkProps) => (
+    <Cluster gap="inline">
+        <Button intent="neutral" href={props.href} target="_blank" rel="noreferrer">
+            {props.label}
+        </Button>
+    </Cluster>
+)
+
+/** The chosen Zalo step and the same resume-read loading atom. */
+interface ZaloStepContentProps extends ZaloWizardBaseProps {
+    readonly isLoading: boolean
+}
+
+/** Owns the unchanged app, OA-secret, authorization, event and agent step content. */
+const ZaloStepContent = (props: ZaloStepContentProps) => {
+    const { props: view, on, isLoading } = props
+    return (
+        <>
+            {view.step === "app" ? (
+                <>
+                    <ZaloProviderLink href={view.providerHref} label={view.text.openProvider} />
+                    <WizardGuideView
+                        screens={view.appScreens}
+                        copy={view.copy}
+                        onEdit={() => undefined}
+                        onPaste={() => undefined}
+                        isLoading={isLoading}
+                    />
+                    {appFieldsOf(props, isLoading)}
+                    {view.isLocked ? (
+                        <Text size="xs" tone="muted">
+                            {view.text.createdLocked}
+                        </Text>
+                    ) : null}
+                </>
+            ) : null}
+            {view.step === "follow" ? (
+                <>
+                    <ZaloProviderLink href={view.providerHref} label={view.text.openProvider} />
+                    <WizardGuideView
+                        screens={view.followScreens}
+                        copy={view.copy}
+                        isDisabled={view.isPending}
+                        onEdit={() => undefined}
+                        onPaste={(_, value) => on.oaSecret(value)}
+                        isLoading={isLoading}
+                    />
+                    <Text size="xs" tone="muted">
+                        {view.oaSecretSaved ? view.text.oaSecretSaved : view.text.needSecret}
+                    </Text>
+                </>
+            ) : null}
+            {view.step === "authorize" ? (
+                <>
+                    <Text size="sm">{view.text.authorizeBody}</Text>
+                    {view.isAuthorized ? (
+                        <Alert tone="affirmative" title={view.authorizedNote} isLoading={isLoading} />
+                    ) : null}
+                </>
+            ) : null}
+            {view.step === "verify" ? (
+                <WizardVerifyStep
+                    help={{ intro: view.text.verifyIntro, steps: [] }}
+                    received={view.received}
+                    waiting={view.text.verifyWaiting}
+                    failed={null}
+                    isLoading={isLoading}
+                />
+            ) : null}
+            {view.step === "agent" ? (
+                <WizardAgentStep
+                    {...view.agentStep}
+                    isDisabled={view.isPending}
+                    onChange={on.agents}
+                    isLoading={isLoading}
+                />
+            ) : null}
+            {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} isLoading={isLoading} />}
+        </>
     )
 }

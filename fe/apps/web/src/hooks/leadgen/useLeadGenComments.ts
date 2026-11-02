@@ -1,17 +1,22 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
+import { useEffect } from "react"
 import { commentsViewOf } from "@/hooks/leadgenView"
 import { useLeadGenCommentForm } from "@/hooks/rhf"
 import type { LeadGenComment } from "@/modules/types"
 import { useApproveLeadGenComment } from "./useApproveLeadGenComment"
 
 /** The comments tab: the editor, its validation and the approval job, as the words and the actions the tab draws. */
-export const useLeadGenComments = (rows: ReadonlyArray<LeadGenComment>) => {
+export const useLeadGenComments = (rows: ReadonlyArray<LeadGenComment>, isActive = true) => {
     const t = useTranslations("workbenchLeadGen")
     const format = useFormatter()
     const form = useLeadGenCommentForm()
-    const { approve, busyId, isApproving, statusReadError, retryStatus } = useApproveLeadGenComment()
+    const { approve, busyId, isApproving, statusReadError, retryStatus } = useApproveLeadGenComment(isActive)
+    const reset = form.reset
+    useEffect(() => {
+        if (!isActive) reset()
+    }, [isActive, reset])
     const editingId = form.watch("workItemId")
     const draft = form.watch("draft")
 

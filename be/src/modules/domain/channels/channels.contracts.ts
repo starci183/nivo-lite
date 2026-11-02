@@ -136,6 +136,8 @@ export type DeliveryNote = "qr_image_failed" | "zns_not_configured" | "zns_no_ph
 
 /** The outcome of a delivery: whether the channel accepted it and, if not, why. */
 export interface DeliveryResult {
+    /** The remote fact when known; legacy senders may omit it, which a false result treats as ambiguous. */
+    readonly outcome?: DeliveryOutcome
     /** True only when the channel accepted the message. */
     readonly delivered: boolean
     /** Why a Zalo message was not delivered; null otherwise. */
@@ -144,6 +146,15 @@ export interface DeliveryResult {
     readonly via?: DeliveryRoute
     /** A fact worth showing next to the verdict, when there is one. */
     readonly note?: DeliveryNote
+}
+
+/** Acknowledgement, a definite refusal before acceptance, or an unknown remote outcome. */
+export type DeliveryOutcome = "acknowledged" | "rejected" | "ambiguous"
+
+/** The delivery boundary always returns an explicit outcome, even for a legacy boolean sender. */
+export interface DeliveryReceipt extends DeliveryResult {
+    /** The channel's known outcome. */
+    readonly outcome: DeliveryOutcome
 }
 
 /** The parameter names a workspace's ZNS renewal template declares, per field; an empty name leaves that field out. */

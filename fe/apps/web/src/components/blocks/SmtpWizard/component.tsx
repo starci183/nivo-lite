@@ -1,14 +1,20 @@
+import type { DataSlot, SlotLabels, SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText } from "@/modules/types"
+import { SlotView } from "@/components/composites/SlotView"
 import { Alert, CheckboxGroup, Input, RadioGroup, Text } from "@starci/grammar/common"
 import { SmtpAccountStep } from "@/components/composites/SmtpAccountStep"
 import { SmtpGuideStep } from "@/components/composites/SmtpGuideStep"
 import { backAction, closeAction, nextAction, startActions, WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
-import { WizardFrame } from "@/components/composites/WizardFrame"
-import type { SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText } from "@/modules/types"
+import { WizardFrame } from "@/components/frames/WizardFrame"
+
+/** The ready drawing with its canonical first-read loading atom. */
+type RenderSmtpVerificationLoadingInput = RenderSmtpVerificationInput & { readonly isLoading: boolean }
 
 /** Copy, state and commands of the outgoing-email wizard. */
 export interface SmtpWizardBaseProps {
     readonly props: {
+        readonly boot: DataSlot<boolean>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
@@ -74,7 +80,7 @@ const actionsOf = ({ props, on }: SmtpWizardBaseProps): ReadonlyArray<WizardActi
 }
 
 /** Outgoing email in the shared wizard frame: pick where the mailbox lives, a guide, the sender details, one real test email. */
-export const SmtpWizardBase = (props: SmtpWizardBaseProps) => {
+const renderSmtpWizard = (props: SmtpWizardBaseProps, isLoading: boolean) => {
     const { props: view, on } = props
     const { text } = view
     const busy = view.isPending || view.sentNote !== null
@@ -84,7 +90,7 @@ export const SmtpWizardBase = (props: SmtpWizardBaseProps) => {
             stepLabel={view.stepLabel}
             steps={view.steps}
             index={view.index}
-            footer={<WizardFooter actions={actionsOf(props)} />}
+            footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
         >
             {view.step === "provider" ? (
                 <>
@@ -97,10 +103,11 @@ export const SmtpWizardBase = (props: SmtpWizardBaseProps) => {
                         value={view.presetId}
                         onValueChange={on.preset}
                         options={[...view.presets]}
+                        isLoading={isLoading}
                     />
                     {view.modes.length > 1 ? (
                         <>
-                            <Text size="sm" weight="semibold">
+                            <Text size="sm" isStrong>
                                 {text.modeTitle}
                             </Text>
                             <RadioGroup
@@ -109,13 +116,19 @@ export const SmtpWizardBase = (props: SmtpWizardBaseProps) => {
                                 value={view.modeId}
                                 onValueChange={on.mode}
                                 options={[...view.modes]}
+                                isLoading={isLoading}
                             />
                         </>
                     ) : null}
                 </>
             ) : null}
             {view.step === "guide" ? (
-                <SmtpGuideStep guide={view.guide} stepsTitle={text.stepsTitle} cautionTitle={text.cautionTitle} />
+                <SmtpGuideStep
+                    guide={view.guide}
+                    stepsTitle={text.stepsTitle}
+                    cautionTitle={text.cautionTitle}
+                    isLoading={isLoading}
+                />
             ) : null}
             {view.step === "account" ? (
                 <SmtpAccountStep
@@ -127,15 +140,16 @@ export const SmtpWizardBase = (props: SmtpWizardBaseProps) => {
                     onHost={on.host}
                     onPort={on.port}
                     onSecurity={on.security}
+                    isLoading={isLoading}
                 />
             ) : null}
-            {view.step === "verify" ? renderSmtpVerification({ text, busy, view, on }) : null}
-            {view.error === null ? null : <Alert tone="negative" title={view.error} />}
+            {view.step === "verify" ? renderSmtpVerification({ text, busy, view, on, isLoading }) : null}
+            {view.error === null ? null : <Alert tone="negative" title={view.error} isLoading={isLoading} />}
         </WizardFrame>
     )
 }
 
-const renderSmtpVerification = ({ text, busy, view, on }: RenderSmtpVerificationInput) => (
+const renderSmtpVerification = ({ text, busy, view, on, isLoading }: RenderSmtpVerificationLoadingInput) => (
     <>
         <Text size="sm" tone="muted">
             {text.notConnectedYet}
@@ -148,6 +162,7 @@ const renderSmtpVerification = ({ text, busy, view, on }: RenderSmtpVerification
             isDisabled={busy}
             value={view.testTo}
             onValueChange={on.testTo}
+            isLoading={isLoading}
         />
         <CheckboxGroup
             label={text.makeDefault}
@@ -156,8 +171,9 @@ const renderSmtpVerification = ({ text, busy, view, on }: RenderSmtpVerification
             options={[{ value: "default", label: text.makeDefault, description: text.makeDefaultHint }]}
             value={view.makeDefault ? ["default"] : []}
             onValueChange={(v) => on.makeDefault(v.includes("default"))}
+            isLoading={isLoading}
         />
-        {view.sentNote === null ? null : <Alert tone="affirmative" title={view.sentNote} />}
+        {view.sentNote === null ? null : <Alert tone="affirmative" title={view.sentNote} isLoading={isLoading} />}
     </>
 )
 
@@ -167,3 +183,13 @@ type RenderSmtpVerificationInput = {
     view: SmtpWizardBaseProps["props"]
     on: SmtpWizardBaseProps["on"]
 }
+
+/** Draws the selected wizard's existing ready tree from its actual dependency reads. */
+export const SmtpWizardBase = (props: SmtpWizardBaseProps) => (
+    <SlotView
+        slot={props.props.boot}
+        placeholder={true}
+        labels={props.props.slotLabels}
+        render={(_ready, isLoading) => renderSmtpWizard(props, isLoading)}
+    />
+)

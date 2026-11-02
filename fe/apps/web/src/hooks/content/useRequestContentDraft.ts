@@ -6,12 +6,17 @@ import { useTranslations } from "next-intl"
 import { useContentAiJob } from "./useContentAiJob"
 
 /** Requests a saved item draft and keeps the editor busy until its queued work finishes. */
-export const useRequestContentDraft = (onSucceeded?: (status: ContentAiStatusType) => void) => {
+export const useRequestContentDraft = (
+    onSucceeded?: (status: ContentAiStatusType) => void,
+    isActive = true,
+    scope?: string,
+) => {
     const t = useTranslations("content")
-    const { trigger, isMutating } = useMutateRequestContentDraftSwr()
+    const { trigger } = useMutateRequestContentDraftSwr()
     const job = useContentAiJob({
+        isActive,
+        ...(scope === undefined ? {} : { scope }),
         queue: trigger,
-        isMutating,
         successMessage: (status) => t("draftReady", { s: status.seconds ?? 0 }),
         onSucceeded,
     })

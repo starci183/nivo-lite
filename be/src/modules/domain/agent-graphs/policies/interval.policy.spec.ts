@@ -17,7 +17,12 @@ const SUBJECT = Symbol("interval.policy")
 /** The policy functions, read through the Nest testing module. */
 const build = async (): Promise<Subject> => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { intervalOf, topOf, isEmpty, numericFactsOf, boundaryFindings, amountFactOf } }],
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: { intervalOf, topOf, isEmpty, numericFactsOf, boundaryFindings, amountFactOf },
+            },
+        ],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }

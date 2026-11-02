@@ -1,4 +1,4 @@
-import { Button, CopyField, Fieldset, FormGrid, Input } from "@starci/grammar/common"
+import { Button, CopyField, Fieldset, Input, Grid } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZaloPasteView } from "@/modules/types"
 
@@ -52,17 +52,16 @@ export const ZaloConnectionPasteBase = (props: ZaloConnectionPasteBaseProps) => 
             placeholder={ZALO_PASTE_PLACEHOLDER}
             labels={props.props.slotLabels}
             onRetry={props.on.retry}
-        >
-            {(paste, isSkeleton) => (
+            render={(paste, isLoading) => (
                 <>
-                    <FormGrid columns={2}>
+                    <Grid kind="form" columns={2}>
                         <CopyField
                             label={props.props.callbackLabel}
                             value={paste.callbackUrl}
                             copyLabel={props.props.copyLabel}
                             copiedLabel={props.props.copiedLabel}
                             copyErrorLabel={props.props.copyErrorLabel}
-                            isSkeleton={isSkeleton}
+                            isLoading={isLoading}
                         />
                         <CopyField
                             label={props.props.webhookLabel}
@@ -70,9 +69,9 @@ export const ZaloConnectionPasteBase = (props: ZaloConnectionPasteBaseProps) => 
                             copyLabel={props.props.copyLabel}
                             copiedLabel={props.props.copiedLabel}
                             copyErrorLabel={props.props.copyErrorLabel}
-                            isSkeleton={isSkeleton}
+                            isLoading={isLoading}
                         />
-                    </FormGrid>
+                    </Grid>
                     <Fieldset
                         legend={secret.label}
                         isLegendHidden
@@ -81,7 +80,7 @@ export const ZaloConnectionPasteBase = (props: ZaloConnectionPasteBaseProps) => 
                                 <Button
                                     intent="neutral"
                                     isPending={secret.isSaving}
-                                    isDisabled={isSkeleton}
+                                    isDisabled={isLoading}
                                     onPress={props.on.saveSecret}
                                 >
                                     {secret.saveLabel}
@@ -97,14 +96,14 @@ export const ZaloConnectionPasteBase = (props: ZaloConnectionPasteBaseProps) => 
                             description={secret.description}
                             value={secret.value}
                             isDisabled={!secret.canEdit}
-                            isSkeleton={isSkeleton}
-                            isError={secret.error !== ""}
+                            isLoading={isLoading}
+                            isInvalid={secret.error !== ""}
                             errorMessage={secret.error}
                             onValueChange={props.on.changeSecret}
                         />
                     </Fieldset>
                 </>
             )}
-        </SlotView>
+        />
     )
 }

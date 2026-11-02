@@ -1,4 +1,4 @@
-import { Button, CopyField, DescriptionList, Fieldset, FormGrid, Input, Select, Text } from "@starci/grammar/common"
+import { Button, CopyField, DescriptionList, Fieldset, Input, Select, Text, Grid } from "@starci/grammar/common"
 import { SepayConfirm } from "@/components/composites/SepayConfirm"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SepayAccountForm, SlotLabels } from "@/modules/types"
@@ -68,31 +68,31 @@ export interface SepaySetupBaseProps {
 type PartProps = {
     readonly base: SepaySetupBaseProps
     readonly setup: SepaySetupView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** What to paste into SePay: the address and the key, each with copy, the new-key command, and the settings to pick. */
-const PastePart = ({ base, setup, isSkeleton }: PartProps) => (
+const PastePart = ({ base, setup, isLoading }: PartProps) => (
     <>
         <Fieldset
             legend={base.props.keyLabel}
             isLegendHidden
             actions={
                 base.props.canEdit ? (
-                    <Button intent="neutral" isDisabled={isSkeleton} onPress={base.on.askRotate}>
+                    <Button intent="neutral" isDisabled={isLoading} onPress={base.on.askRotate}>
                         {base.props.rotate.label}
                     </Button>
                 ) : undefined
             }
         >
-            <FormGrid columns={2}>
+            <Grid kind="form" columns={2}>
                 <CopyField
                     label={base.props.webhookLabel}
                     value={setup.webhookUrl}
                     copyLabel={base.props.copyLabel}
                     copiedLabel={base.props.copiedLabel}
                     copyErrorLabel={base.props.copyErrorLabel}
-                    isSkeleton={isSkeleton}
+                    isLoading={isLoading}
                 />
                 <CopyField
                     masked
@@ -104,18 +104,18 @@ const PastePart = ({ base, setup, isSkeleton }: PartProps) => (
                     copiedLabel={base.props.copiedLabel}
                     copyErrorLabel={base.props.copyErrorLabel}
                     isDisabled={!base.props.canEdit}
-                    isSkeleton={isSkeleton}
+                    isLoading={isLoading}
                 />
-            </FormGrid>
+            </Grid>
         </Fieldset>
         <Fieldset legend={base.props.settingsLabel}>
             <DescriptionList
                 layout="columns"
-                isLoading={isSkeleton}
+                isLoading={isLoading}
                 items={base.props.settings.map((setting) => ({
                     id: setting.id,
                     term: setting.label,
-                    description: <Text weight="medium">{setting.value}</Text>,
+                    description: <Text isStrong>{setting.value}</Text>,
                 }))}
             />
         </Fieldset>
@@ -123,7 +123,7 @@ const PastePart = ({ base, setup, isSkeleton }: PartProps) => (
 )
 
 /** The bank account whose full number a VietQR needs; the stored number is kept when the field is left empty. */
-const AccountPart = ({ base, setup, isSkeleton }: PartProps) => {
+const AccountPart = ({ base, setup, isLoading }: PartProps) => {
     const { props: view, on } = base
     const isLocked = !view.canEdit || view.isPending
     return (
@@ -132,13 +132,13 @@ const AccountPart = ({ base, setup, isSkeleton }: PartProps) => {
             isLegendHidden
             actions={
                 view.canEdit ? (
-                    <Button intent="neutral" isPending={view.isPending} isDisabled={isSkeleton} onPress={on.save}>
+                    <Button intent="neutral" isPending={view.isPending} isDisabled={isLoading} onPress={on.save}>
                         {view.saveLabel}
                     </Button>
                 ) : undefined
             }
         >
-            <FormGrid columns={2}>
+            <Grid kind="form" columns={2}>
                 <Select
                     label={view.bankLabel}
                     placeholder={view.bankPlaceholder}
@@ -153,7 +153,7 @@ const AccountPart = ({ base, setup, isSkeleton }: PartProps) => {
                     label={view.accountLabel}
                     description={setup.accountHint}
                     isDisabled={isLocked}
-                    isSkeleton={isSkeleton}
+                    isLoading={isLoading}
                     value={view.form.account}
                     onValueChange={on.account}
                 />
@@ -162,11 +162,11 @@ const AccountPart = ({ base, setup, isSkeleton }: PartProps) => {
                     name="holder"
                     label={view.holderLabel}
                     isDisabled={isLocked}
-                    isSkeleton={isSkeleton}
+                    isLoading={isLoading}
                     value={view.form.holder}
                     onValueChange={on.holder}
                 />
-            </FormGrid>
+            </Grid>
         </Fieldset>
     )
 }
@@ -182,15 +182,14 @@ export const SepaySetupBase = (props: SepaySetupBaseProps) => (
             placeholder={props.props.placeholder}
             labels={props.props.labels}
             onRetry={props.on.retry}
-        >
-            {(setup, isSkeleton) =>
+            render={(setup, isLoading) =>
                 props.shape === "paste" ? (
-                    <PastePart base={props} setup={setup} isSkeleton={isSkeleton} />
+                    <PastePart base={props} setup={setup} isLoading={isLoading} />
                 ) : (
-                    <AccountPart base={props} setup={setup} isSkeleton={isSkeleton} />
+                    <AccountPart base={props} setup={setup} isLoading={isLoading} />
                 )
             }
-        </SlotView>
+        />
         {props.shape === "paste" ? (
             <SepayConfirm
                 isOpen={props.props.rotate.isOpen}

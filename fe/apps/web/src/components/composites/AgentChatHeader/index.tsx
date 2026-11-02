@@ -1,6 +1,4 @@
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { ModuleIconName } from "@/modules/types"
-import { Avatar, Badge, Button, Cluster, Stack, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, Stack, Text } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { BACK_CLASS_NAME } from "./classNames"
 
@@ -9,14 +7,12 @@ export interface AgentChatHeaderProps {
     readonly backLabel: string
     readonly name: string
     readonly subtitle: string
-    readonly glyph: ModuleIconName
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly avatarUrl?: string | null | undefined
     /** The id of the agent: the one seed of its mark on every screen. */
     readonly seed: string
-    readonly module: string
     /** The agent is still loading: the mark and the lines draw as waiting shapes. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     /** The mark that says the conversation is real, or null. */
     readonly badge: string | null
     /** The takeover control, or null when the conversation cannot be taken over. */
@@ -31,25 +27,21 @@ export interface AgentChatHeaderProps {
 
 /** What the mark of the header needs. */
 interface HeaderMarkProps {
-    readonly glyph: ModuleIconName
-    readonly module: string
     readonly name: string
     readonly avatarUrl: string | null | undefined
     readonly seed: string
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** The mark of the agent, or a waiting avatar while the agent loads. */
 const HeaderMark = (props: HeaderMarkProps) => {
-    if (props.isSkeleton) return <Avatar name="" size="md" isSkeleton />
     return (
         <AgentMark
-            glyph={nivoIconSource(props.glyph, "leading")}
-            module={props.module}
             label={props.name}
             seed={props.seed}
             src={props.avatarUrl}
             size="md"
+            isLoading={props.isLoading === true}
         />
     )
 }
@@ -64,18 +56,16 @@ export const AgentChatHeader = (props: AgentChatHeaderProps) => (
                 </Button>
             </div>
             <HeaderMark
-                glyph={props.glyph}
-                module={props.module}
                 name={props.name}
                 avatarUrl={props.avatarUrl}
                 seed={props.seed}
-                isSkeleton={props.isSkeleton}
+                isLoading={props.isLoading === true}
             />
             <Stack gap="identity">
-                <Text weight="semibold" overflow="truncate" isSkeleton={props.isSkeleton}>
+                <Text isStrong overflow="truncate" isLoading={props.isLoading === true}>
                     {props.name}
                 </Text>
-                <Text size="xs" tone="muted" overflow="truncate" isSkeleton={props.isSkeleton}>
+                <Text size="xs" tone="muted" overflow="truncate" isLoading={props.isLoading === true}>
                     {props.subtitle}
                 </Text>
             </Stack>

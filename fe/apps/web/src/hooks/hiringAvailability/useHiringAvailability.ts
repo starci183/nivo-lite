@@ -1,5 +1,8 @@
 "use client"
 
+import { useFeatureReset } from "@/hooks/reuseables"
+import type { HiringOwner } from "@/hooks/hiring"
+
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useHiringRun } from "@/hooks/hiring"
@@ -8,9 +11,13 @@ import { useMutateSaveHiringAvailabilitySwr } from "@/hooks/swr"
 import { WEEKDAYS, memberTexts, parseWindows } from "./hiringAvailability.shared"
 
 /** The availability form: the member being edited, the text of each weekday, the weekdays that are not time ranges, and the save. */
-export const useHiringAvailability = (members: ReadonlyArray<HiringMemberView>, meUserId: string) => {
+export const useHiringAvailability = (
+    members: ReadonlyArray<HiringMemberView>,
+    meUserId: string,
+    owner?: HiringOwner,
+) => {
     const t = useTranslations("hiring")
-    const run = useHiringRun()
+    const run = useHiringRun(owner)
     const { trigger } = useMutateSaveHiringAvailabilitySwr()
     const [who, setWho] = useState(
         members.find((member) => member.userId === meUserId)?.userId ?? members[0]?.userId ?? "",
@@ -19,6 +26,16 @@ export const useHiringAvailability = (members: ReadonlyArray<HiringMemberView>, 
         memberTexts(members.find((member) => member.userId === who)),
     )
     const invalid = WEEKDAYS.filter((weekday) => parseWindows(weekday, texts[weekday] ?? "") === null)
+    useFeatureReset({
+        isActive: owner?.isActive ?? true,
+        isReady: true,
+        scope: owner?.scope ?? "",
+        onReset: () => {
+            const selected = members.find((member) => member.userId === meUserId)?.userId ?? members[0]?.userId ?? ""
+            setWho(selected)
+            setTexts(memberTexts(members.find((member) => member.userId === selected)))
+        },
+    })
     return {
         who,
         texts,
@@ -37,7 +54,7 @@ export const useHiringAvailability = (members: ReadonlyArray<HiringMemberView>, 
         },
         save: () => {
             const windows = WEEKDAYS.flatMap((weekday) => parseWindows(weekday, texts[weekday] ?? "") ?? [])
-            void run.exec(
+            run.dispatch(
                 () => trigger({ memberUserId: who, windows }),
                 (saved) => t("availSaved", { n: saved.saved }),
             )

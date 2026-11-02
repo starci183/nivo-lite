@@ -126,7 +126,7 @@ const LeadContactFields = (props: LeadCreateFormBaseProps) => {
                 isRequired
                 isDisabled={p.isPending}
                 value={p.values.contact_name}
-                isError={Boolean(p.errors.contact_name)}
+                isInvalid={Boolean(p.errors.contact_name)}
                 errorMessage={p.errors.contact_name}
                 onValueChange={(value) => on.change("contact_name", value)}
             />
@@ -138,7 +138,7 @@ const LeadContactFields = (props: LeadCreateFormBaseProps) => {
                 isRequired
                 isDisabled={p.isPending}
                 value={p.values.company}
-                isError={Boolean(p.errors.company)}
+                isInvalid={Boolean(p.errors.company)}
                 errorMessage={p.errors.company}
                 onValueChange={(value) => on.change("company", value)}
             />

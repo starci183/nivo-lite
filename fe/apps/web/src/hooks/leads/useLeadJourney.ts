@@ -1,6 +1,7 @@
 "use client"
 
 import { useQueryLeadJourneySwr } from "@/hooks/swr"
+import { loadingSlot, mapSlot, slotOfSwr } from "@/hooks/slot"
 import type { LeadJourneyType } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import type { DataSlot, LeadJourney } from "@/modules/types"
@@ -52,11 +53,7 @@ export const useLeadJourney = (leadId: string | undefined) => {
     const query = useQueryLeadJourneySwr(activeWorkspaceId, leadId)
     const t = useTranslations("leads")
     const detail = query.data === undefined ? null : journeyOf(query.data)
-    const slot: DataSlot<LeadJourney> = {
-        isLoading: leadId === undefined || query.isLoading,
-        isError: query.error !== undefined,
-        ...(detail === null ? {} : { items: detail }),
-    }
+    const slot: DataSlot<LeadJourney> = leadId === undefined ? loadingSlot() : mapSlot(slotOfSwr(query), journeyOf)
     const channel = detail?.lead.channel ?? ""
     const channels: Readonly<Record<string, string>> = {
         zalo: "channelZalo",

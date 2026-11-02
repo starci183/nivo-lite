@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { McpCallLogModule } from "@modules/domain/mcp-call-log"
 import { McpConnectorsModule } from "@modules/domain/mcp-connectors"
 import { McpGatewayReceiptsModule } from "@modules/domain/mcp-gateway-receipts"
 import { McpToolGrantsModule } from "@modules/domain/mcp-tool-grants"
@@ -39,7 +38,6 @@ export class McpGatewayModule extends ConfigurableModuleClass {
                 McpModule.register({ isGlobal: false, ...options.remote }),
                 McpConnectorsModule.register({}),
                 McpToolGrantsModule.register({}),
-                McpCallLogModule.register({}),
                 McpGatewayReceiptsModule.register({}),
             ],
             providers: [

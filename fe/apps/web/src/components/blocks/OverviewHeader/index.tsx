@@ -14,7 +14,7 @@ export const OverviewHeader = (props: OverviewHeaderProps) => {
     const header = useOverviewHeader()
     return (
         <OverviewHeaderBase
-            props={{ ...(header ?? OVERVIEW_HEADER_PLACEHOLDER), part: props.part, isSkeleton: header === undefined }}
+            props={{ ...(header ?? OVERVIEW_HEADER_PLACEHOLDER), part: props.part, isLoading: header === undefined }}
         />
     )
 }

@@ -12,6 +12,9 @@ import { useLoyaltyAdjustForm, useLoyaltyMemberForm } from "@/hooks/rhf"
 import type { LoyaltyMemberType } from "@/hooks/swr"
 import { useFormatter, useTranslations } from "next-intl"
 import type { useMemberActions } from "./useMemberActions"
+import type { LoyaltyPanelActivation } from "@/hooks/loyalty"
+import { useFeatureReset } from "@/hooks/reuseables"
+import { toast } from "@/modules/toast"
 
 /** What the forms of the member page need to know. */
 interface MemberDetailFormsInput {
@@ -19,11 +22,13 @@ interface MemberDetailFormsInput {
     readonly member: LoyaltyMemberType | undefined
     readonly canManage: boolean
     readonly actions: ReturnType<typeof useMemberActions>
+    readonly activation: LoyaltyPanelActivation
 }
 
 /** The details form (managers) or the read-only facts (staff), and the point adjustment form, wired to the member mutations. */
 export const useMemberDetailForms = (input: MemberDetailFormsInput) => {
     const t = useTranslations("loyalty")
+    const feedback = useTranslations("toast")
     const format = useFormatter()
     const { member, actions } = input
     const editForm = useLoyaltyMemberForm({
@@ -32,11 +37,18 @@ export const useMemberDetailForms = (input: MemberDetailFormsInput) => {
         note: member?.note ?? "",
     })
     const adjustForm = useLoyaltyAdjustForm()
-    const adjustValues = adjustForm.watch()
-    const adjustPoints = parseSigned(adjustValues.points)
-    const nameError = editForm.formState.errors.name?.message
-    const birthdayError = editForm.formState.errors.birthday?.message
-    const pointsError = adjustValues.points === "" ? undefined : adjustForm.formState.errors.points?.message
+    const reset = () => {
+        editForm.reset()
+        adjustForm.reset()
+    }
+    useFeatureReset({
+        ...input.activation,
+        scope: JSON.stringify([input.activation.scope, input.memberId]),
+        onReset: reset,
+    })
+    const failed = () => {
+        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+    }
     const edit = (value: "name" | "birthday" | "note", max: number) => (text: string) =>
         editForm.setValue(value, text.slice(0, max), { shouldValidate: true, shouldDirty: true })
     const submitEdit = editForm.handleSubmit((values) =>
@@ -51,54 +63,35 @@ export const useMemberDetailForms = (input: MemberDetailFormsInput) => {
         if (amount === null || amount === 0) return
         actions.adjust(amount, values.reason.trim(), () => adjustForm.reset())
     })
-    const editProps = {
-        label: t("editTitle"),
-        memberId: input.memberId,
-        name: editForm.watch("name"),
-        birthday: editForm.watch("birthday"),
-        note: editForm.watch("note"),
-        ...(nameError === undefined ? {} : { nameError }),
-        ...(birthdayError === undefined ? {} : { birthdayError }),
-        ...editPropsLabelsOf(t),
-        noteMax: LOYALTY_MEMBER_NOTE_MAX,
-        saveLabel: t("save"),
-        isPending: actions.isPending,
-        onName: edit("name", LOYALTY_MEMBER_NAME_MAX),
-        onBirthday: edit("birthday", 10),
-        onNote: edit("note", LOYALTY_MEMBER_NOTE_MAX),
-        onSubmit: () => void submitEdit(),
-    }
-    const adjustProps = {
-        label: t("adjustTitle"),
-        memberId: input.memberId,
-        points: adjustValues.points,
-        reason: adjustValues.reason,
-        ...(pointsError === undefined ? {} : { pointsError }),
-        ...adjustmentLabelsOf(t),
-        canSubmit: adjustPoints !== null && adjustPoints !== 0 && adjustValues.reason.trim() !== "",
-        ...(actions.adjustNote === null ? {} : { note: actions.adjustNote }),
-        isPending: actions.isPending,
-        onPoints: (text: string) =>
-            adjustForm.setValue("points", text.replace(/[^\d+\-\s]/g, "").slice(0, 8), {
-                shouldValidate: true,
-                shouldDirty: true,
-            }),
-        onReason: (text: string) =>
-            adjustForm.setValue("reason", text.slice(0, LOYALTY_ADJUST_REASON_MAX), {
-                shouldValidate: true,
-                shouldDirty: true,
-            }),
-        onSubmit: () => void submitAdjust(),
-    }
-    const readOnly = readOnlyOf(t, member, format)
+    const view = formViewOf({ input, t, format, editForm, adjustForm })
     return {
-        adjust: adjustProps,
-        edit: input.canManage ? editProps : undefined,
-        readOnly: input.canManage ? undefined : readOnly,
-        reset: () => {
-            editForm.reset()
-            adjustForm.reset()
+        ...view,
+        on: {
+            edit: {
+                onName: edit("name", LOYALTY_MEMBER_NAME_MAX),
+                onBirthday: edit("birthday", 10),
+                onNote: edit("note", LOYALTY_MEMBER_NOTE_MAX),
+                onSubmit: () => {
+                    submitEdit().catch(failed)
+                },
+            },
+            adjust: {
+                onPoints: (text: string) =>
+                    adjustForm.setValue("points", text.replace(/[^\d+\-\s]/g, "").slice(0, 8), {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                    }),
+                onReason: (text: string) =>
+                    adjustForm.setValue("reason", text.slice(0, LOYALTY_ADJUST_REASON_MAX), {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                    }),
+                onSubmit: () => {
+                    submitAdjust().catch(failed)
+                },
+            },
         },
+        reset,
     }
 }
 
@@ -113,22 +106,7 @@ const editPropsLabelsOf = (t: ReturnType<typeof useTranslations<"loyalty">>) => 
 
 const readOnlyOf = (
     t: ReturnType<typeof useTranslations<"loyalty">>,
-    member:
-        | {
-              birthday: string | null
-              email: string | null
-              id: string
-              joinedAt: string
-              lastVisitAt: string | null
-              lifetimeSpendVnd: number
-              name: string
-              note: string
-              phone: string | null
-              points: number
-              tierKey: string | null
-              visits: number
-          }
-        | undefined,
+    member: LoyaltyMemberType | undefined,
     format: ReturnType<typeof useFormatter>,
 ) => {
     return {
@@ -164,3 +142,52 @@ const adjustmentLabelsOf = (t: ReturnType<typeof useTranslations<"loyalty">>) =>
     reasonLabel: t("adjustReason"),
     submitLabel: t("adjustSubmit"),
 })
+
+interface FormViewContext {
+    readonly input: MemberDetailFormsInput
+    readonly t: ReturnType<typeof useTranslations<"loyalty">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly editForm: ReturnType<typeof useLoyaltyMemberForm>
+    readonly adjustForm: ReturnType<typeof useLoyaltyAdjustForm>
+}
+/** Projects only the two forms' atom fields and read-only facts; event functions remain with the form owner. */
+const formViewOf = ({ input, t, format, editForm, adjustForm }: FormViewContext) => {
+    const { member, actions } = input
+    const adjustValues = adjustForm.watch()
+    const adjustPoints = parseSigned(adjustValues.points)
+    const nameError = editForm.formState.errors.name?.message
+    const birthdayError = editForm.formState.errors.birthday?.message
+    const pointsError = adjustValues.points === "" ? undefined : adjustForm.formState.errors.points?.message
+
+    const editProps = {
+        label: t("editTitle"),
+        memberId: input.memberId,
+        name: editForm.watch("name"),
+        birthday: editForm.watch("birthday"),
+        note: editForm.watch("note"),
+        ...(nameError === undefined ? {} : { nameError }),
+        ...(birthdayError === undefined ? {} : { birthdayError }),
+        ...editPropsLabelsOf(t),
+        noteMax: LOYALTY_MEMBER_NOTE_MAX,
+        saveLabel: t("save"),
+        isPending: actions.isPending,
+    }
+    const adjustProps = {
+        label: t("adjustTitle"),
+        memberId: input.memberId,
+        points: adjustValues.points,
+        reason: adjustValues.reason,
+        ...(pointsError === undefined ? {} : { pointsError }),
+        ...adjustmentLabelsOf(t),
+        canSubmit: adjustPoints !== null && adjustPoints !== 0 && adjustValues.reason.trim() !== "",
+        ...(actions.adjustNote === null ? {} : { note: actions.adjustNote }),
+        isPending: actions.isPending,
+    }
+    const readOnly = readOnlyOf(t, member, format)
+
+    return {
+        adjust: adjustProps,
+        edit: input.canManage ? editProps : undefined,
+        readOnly: input.canManage ? undefined : readOnly,
+    }
+}

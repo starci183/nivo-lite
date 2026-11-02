@@ -31,7 +31,7 @@ export interface InviteOverviewBaseProps {
         /** What the invitation says and what the visitor can do with it. */
         readonly view: InviteOverviewView
         /** The invitation is still being read: its words draw as skeleton and its steps wait. */
-        readonly isSkeleton: boolean
+        readonly isLoading: boolean
         readonly acceptLabel: string
         readonly switchLabel: string
         readonly isAccepting: boolean
@@ -52,10 +52,10 @@ const Actions = (props: InviteOverviewBaseProps) => {
                 <Text size="sm" tone="muted">
                     {view.signedOutHint}
                 </Text>
-                <Button intent="commit" width="fill" href={view.signInHref}>
+                <Button intent="commit" width="fill" href={view.signInHref} isLoading={props.props.isLoading}>
                     {view.signInLabel}
                 </Button>
-                <Button intent="alternative" width="fill" href={view.signUpHref}>
+                <Button intent="alternative" width="fill" href={view.signUpHref} isLoading={props.props.isLoading}>
                     {view.signUpLabel}
                 </Button>
             </>
@@ -64,11 +64,16 @@ const Actions = (props: InviteOverviewBaseProps) => {
     if (props.shape === "mismatch") {
         return (
             <>
-                <Text weight="semibold">{view.mismatchTitle}</Text>
+                <Text isStrong>{view.mismatchTitle}</Text>
                 <Text size="sm" tone="muted">
                     {view.mismatchBody}
                 </Text>
-                <Button intent="neutral" isPending={props.props.isSwitching} onPress={props.on.switchAccount}>
+                <Button
+                    intent="neutral"
+                    isPending={props.props.isSwitching}
+                    onPress={props.on.switchAccount}
+                    isLoading={props.props.isLoading}
+                >
                     {props.props.switchLabel}
                 </Button>
             </>
@@ -79,7 +84,12 @@ const Actions = (props: InviteOverviewBaseProps) => {
             <Text size="sm" tone="muted">
                 {view.signedInAs}
             </Text>
-            <Button intent="commit" isPending={props.props.isAccepting} onPress={props.on.accept}>
+            <Button
+                intent="commit"
+                isPending={props.props.isAccepting}
+                onPress={props.on.accept}
+                isLoading={props.props.isLoading}
+            >
                 {props.props.acceptLabel}
             </Button>
         </>
@@ -104,18 +114,18 @@ const Details = (props: InviteOverviewBaseProps) => (
 /** Draws the invitation: what it is for, and the right next step for a signed-out, mismatched or matching visitor. */
 export const InviteOverviewBase = (props: InviteOverviewBaseProps) => {
     const view = props.props.view
-    const isSkeleton = props.props.isSkeleton
+    const isLoading = props.props.isLoading
     const isUsable = props.shape !== "unavailable"
     return (
         <SurfaceCard ariaLabel={view.title}>
             <div className={INVITE_STACK_CLASS_NAME}>
-                <Heading level={1} isSkeleton={isSkeleton}>
+                <Heading level={1} isLoading={isLoading}>
                     {view.title}
                 </Heading>
-                <Text isSkeleton={isSkeleton} {...(isUsable ? {} : { tone: "muted" as const })}>
+                <Text isLoading={isLoading} {...(isUsable ? {} : { tone: "muted" as const })}>
                     {view.body}
                 </Text>
-                {isSkeleton ? null : <InviteStep {...props} isUsable={isUsable} />}
+                <InviteStep {...props} isUsable={isUsable} />
             </div>
         </SurfaceCard>
     )
@@ -129,7 +139,7 @@ const InviteStep = (props: InviteStepProps) =>
     props.isUsable ? (
         <Details {...props} />
     ) : (
-        <Button intent="neutral" width="fill" href={props.props.view.loginHref}>
+        <Button intent="neutral" width="fill" href={props.props.view.loginHref} isLoading={props.props.isLoading}>
             {props.props.view.goSignInLabel}
         </Button>
     )

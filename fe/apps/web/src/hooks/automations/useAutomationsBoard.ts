@@ -2,7 +2,8 @@
 
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { useMutateAuthorizeGoogleSwr } from "@/hooks/swr"
-import { isForbiddenFailure } from "@/modules/failure"
+import { slotOfReads } from "@/hooks/slot"
+import { noData } from "@/hooks/workspaceread"
 import {
     automationBoardOf,
     automationFiltersFor,
@@ -15,7 +16,7 @@ import { pickCopy } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"
 import { automationFocusPath } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"
-import type { AutomationCardView, AutomationsBoardView } from "@/modules/types"
+import type { AutomationCardView, AutomationsBoardView, DataSlot } from "@/modules/types"
 import { useState } from "react"
 import { automationBoardActionsOf, automationBoardInputOf, CONNECTION_ROUTE } from "./automations.shared"
 import type { AutomationPatch, AutomationsBoardActions, AutomationsBoardInput } from "./automations.shared"
@@ -24,12 +25,9 @@ import { useAutomations } from "./useAutomations"
 
 /** What the board hook answers: the view model when the data is there, the actions, and how the read went. */
 export interface AutomationsBoardState {
-    readonly view: AutomationsBoardView | undefined
+    readonly slot: DataSlot<AutomationsBoardView>
     readonly on: AutomationsBoardActions
-    readonly isLoading: boolean
-    readonly error: unknown
-    /** True when the member may not manage automations (the back end refused with `forbidden`). */
-    readonly isForbidden: boolean
+    readonly retry: () => void
 }
 
 /** The board of automations: the gallery from the back end through SWR, and every change the owner can make. */
@@ -64,28 +62,28 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
     const { selected, awaiting, current, detail, select, toggle, saveBody, enable, saveSettings, setSelected } =
         useAutomationSelection({ focus: input.focus ?? null, cards, visible, change, connect })
 
-    const view =
-        automations.data === undefined || catalog.slot.items === undefined
-            ? undefined
-            : automationBoardOf(
-                  automationBoardInputOf({
-                      t,
-                      locale,
-                      moduleNames,
-                      input,
-                      isNested,
-                      cards,
-                      scoped,
-                      shown,
-                      filter,
-                      selected,
-                      data: automations.data,
-                      busyKey: automations.busyKey,
-                      current,
-                      detail,
-                      awaiting,
-                  }),
-              )
+    const slot = slotOfReads([automations.reads.overview, automations.reads.accounts, catalog.read], () => {
+        const data = automations.data ?? noData("automations")
+        return automationBoardOf(
+            automationBoardInputOf({
+                t,
+                locale,
+                moduleNames,
+                input,
+                isNested,
+                cards,
+                scoped,
+                shown,
+                filter,
+                selected,
+                data,
+                busyKey: automations.busyKey,
+                current,
+                detail,
+                awaiting,
+            }),
+        )
+    })
     const filters = automationFiltersFor(cards)
 
     const on: AutomationsBoardActions = automationBoardActionsOf({
@@ -102,10 +100,11 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
         enable,
     })
     return {
-        view,
+        slot,
         on,
-        isLoading: automations.isLoading || catalog.slot.isLoading === true,
-        error: automations.error ?? catalog.error,
-        isForbidden: isForbiddenFailure(automations.error),
+        retry: () => {
+            automations.retry()
+            catalog.reload()
+        },
     }
 }

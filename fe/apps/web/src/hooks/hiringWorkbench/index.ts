@@ -1,0 +1,1 @@
+export { useHiringWorkbenchView } from "./useHiringWorkbenchView"

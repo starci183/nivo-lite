@@ -7,10 +7,26 @@ export { InternalGatewayToolsService } from "./internal-gateway-tools.service"
 export { runtimeAgentFor } from "./runtime-agent.service"
 export { AgentTurnBriefService } from "./agent-turn-brief.service"
 export { internalTimeoutMsOf, proposalTextOf, stoppedBy } from "./agent-turn.policy"
+export { IntentPipelineService } from "./intent-pipeline.service"
+export { IntentRequestDoorService } from "./intent-request-door.service"
+export { IntentSplitService } from "./intent-split.service"
+export { IntentTurnService } from "./intent-turn.service"
+export { doorInputSchema } from "./intent-step.schema"
+export { INTENT_STEP_KIND, pinnedOf } from "./intent-turn.policy"
 export { InternalProposalSettlerService } from "./internal-proposal-settler.service"
 export { InternalTurnContextService } from "./internal-turn-context.service"
 export { RuntimeAgentService } from "./runtime-agent.service"
-export type { InternalActionResult } from "./agent-turns.contracts"
-export { AGENT_GRAPH_BRIEF } from "./agent-turns.decorators"
-export type { AgentGraphBrief } from "./agent-turns.port"
-export type { GraphIntent } from "./agent-turns.contracts"
+export type {
+    DoorInput,
+    IntentAttachment,
+    IntentDoorExtra,
+    IntentFileBundle,
+    IntentFileRef,
+    IntentMoney,
+    IntentPlan,
+    IntentPlanFiles,
+    IntentScope,
+    IntentTurnPlan,
+    InternalActionResult,
+    InternalTurnInput,
+} from "./agent-turns.contracts"

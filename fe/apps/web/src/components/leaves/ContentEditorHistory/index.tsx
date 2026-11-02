@@ -1,10 +1,10 @@
-import { SectionHeader, Text, Timeline } from "@starci/grammar/common"
-import type { ContentT, HistoryRow } from "@/modules/types"
+import { Text, Timeline, Section } from "@starci/grammar/common"
+import type { HistoryRow, ContentViews } from "@/modules/types"
 
 /** Props of {@link ContentEditorHistory}. */
 interface ContentEditorHistoryProps {
     readonly rows: ReadonlyArray<HistoryRow>
-    readonly t: ContentT
+    readonly copy: ContentViews["workbenchCopy"]
 }
 
 /** What happened to a post, newest first. */
@@ -17,15 +17,14 @@ export const ContentEditorHistory = (props: ContentEditorHistoryProps) => {
     }))
 
     return (
-        <>
-            <SectionHeader level={3} title={props.t("evidenceTitle")} />
+        <Section title={props.copy.evidenceTitle} headingLevel={3}>
             {items.length > 0 ? (
-                <Timeline label={props.t("evidenceTitle")} items={items} />
+                <Timeline label={props.copy.evidenceTitle} items={items} />
             ) : (
                 <Text size="sm" tone="muted">
-                    {props.t("evidenceEmpty")}
+                    {props.copy.evidenceEmpty}
                 </Text>
             )}
-        </>
+        </Section>
     )
 }

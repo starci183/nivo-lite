@@ -14,7 +14,7 @@ export const useOfficeWords = (): OfficeWords => {
     const format = useFormatter()
     const locale = useLocale() === "en" ? "en" : "vi"
     const { modules, slot } = useModuleCatalog()
-    const isCatalogError = slot.isError === true
+    const isCatalogError = "isError" in slot
     return useMemo<OfficeWords>(() => {
         const time = (iso: string) => format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit" })
         const day = (iso: string) => format.dateTime(new Date(iso), { day: "numeric", month: "short" })

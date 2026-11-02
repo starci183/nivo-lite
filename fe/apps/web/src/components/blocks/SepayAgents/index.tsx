@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useConnectionsRole } from "@/hooks/connections"
 import { useSepayAgents, useSepayConnection, useSepayPlaceholder } from "@/hooks/sepayConnection"
-import { useSlotLabels } from "@/hooks/slot"
+import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 import type { SepayAgentView } from "@/modules/types"
 import { SepayAgentsBase } from "./component"
 
@@ -20,17 +20,19 @@ export const SepayAgents = (props: SepayAgentsProps) => {
     const { role } = useConnectionsRole()
     const agents = useSepayAgents(
         props.connectionId,
-        connection.slot.items?.agentIds ?? connectionPlaceholder.agentIds,
-        connection.slot.items !== undefined,
+        ("items" in connection.slot ? connection.slot.items : undefined)?.agentIds ?? connectionPlaceholder.agentIds,
+        ("items" in connection.slot ? connection.slot.items : undefined) !== undefined,
     )
     return (
         <SepayAgentsBase
             props={{
                 matching: t("matchingRule"),
-                slot: connection.slot.isError === true ? { isError: true } : agents.slot,
+                slot: slotOfReads([connection.read, agents.read], () => agents.read.data),
                 placeholder,
                 labels: slotLabels(t("agentsEmpty")),
-                isDisabled: role !== "owner" || connection.slot.items?.status === "disconnected",
+                isDisabled:
+                    role !== "owner" ||
+                    ("items" in connection.slot ? connection.slot.items : undefined)?.status === "disconnected",
             }}
             on={{
                 retry: () => {

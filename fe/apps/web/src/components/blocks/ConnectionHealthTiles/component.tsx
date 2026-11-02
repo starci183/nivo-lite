@@ -1,4 +1,4 @@
-import { DescriptionList, PaneSection, Text } from "@starci/grammar/common"
+import { Section, PaneSection } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { ConnectionFactView, DataSlot, SlotLabels } from "@/modules/types"
 
@@ -12,6 +12,7 @@ const FACTS_PLACEHOLDER: ReadonlyArray<ConnectionFactView> = [
 /** Copy and slot of the health tiles of a provider page. */
 export interface ConnectionHealthTilesBaseProps {
     readonly props: {
+        readonly label: string
         readonly facts: DataSlot<ReadonlyArray<ConnectionFactView>>
         readonly slotLabels: SlotLabels
     }
@@ -26,20 +27,19 @@ export const ConnectionHealthTilesBase = (props: ConnectionHealthTilesBaseProps)
             placeholder={FACTS_PLACEHOLDER}
             labels={props.props.slotLabels}
             onRetry={props.on.retry}
-        >
-            {(facts, isSkeleton) => (
-                <DescriptionList
-                    layout="stat-strip"
-                    isDivided
-                    isLoading={isSkeleton}
+            render={(facts, isLoading) => (
+                <Section
+                    kind="figures"
+                    ariaLabel={props.props.label}
+                    isLoading={isLoading}
                     items={facts.map((fact) => ({
                         id: fact.id,
                         term: fact.label,
-                        description: fact.isText === true ? <Text weight="semibold">{fact.value}</Text> : fact.value,
+                        value: fact.value,
                         ...(fact.meta === undefined ? {} : { meta: fact.meta }),
                     }))}
                 />
             )}
-        </SlotView>
+        />
     </PaneSection>
 )

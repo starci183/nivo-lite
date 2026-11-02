@@ -1,3 +1,5 @@
+import type { GraphEvidence } from "@modules/domain/work-items"
+import type { BranchDivert } from "@modules/domain/authority-rules"
 import type {
     CommandResult,
     DecidedPath,
@@ -162,6 +164,10 @@ export interface Judgement {
     readonly proposal?: Proposal
     /** The decision the action graph recorded for a branch ask; absent when the gate decided alone or the branch did not ask. */
     readonly branchDecisionId?: string
+    /** True when the graph stopped the work: it ends here, and no person can approve it through. */
+    readonly stopped?: boolean
+    /** The action the graph leads to in place of this one, or null. */
+    readonly divert?: BranchDivert | null
 }
 
 /** A person's decision on a waiting item. */
@@ -196,6 +202,8 @@ export interface ProposalSeed {
     readonly draft?: string
     /** The money involved, VND. */
     readonly amount_vnd?: number | null
+    /** What the road that opened the work knows, with where it came from. */
+    readonly evidence?: ReadonlyArray<GraphEvidence>
     /** The structured fields. */
     readonly fields?: Readonly<Record<string, ProposalFieldValue>>
     /** How sure the agent is, 0..1. */

@@ -1,10 +1,8 @@
-import { Badge, Button, ListRow, Page, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
+import { Button, EmptyNotice, Link, Page, Section, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { APP_ROUTES } from "@/modules/routes"
-import { BODY_CLASS, STACK_CLASS } from "./classNames"
 
 /** One outgoing webhook as the list shows it. */
 export interface DevelopersWebhookRow {
@@ -48,7 +46,7 @@ const DevelopersWebhooks = (props: DevelopersWebhooksProps) => (
 /** Props for {@link DevelopersPanelBase}. */
 export interface DevelopersPanelBaseProps {
     /** The sections under the events: API keys and the quick guide, which hide themselves from staff. */
-    readonly shape: { readonly body: ReactNode }
+    readonly children: ReactNode
     readonly props: {
         /** Who may read the page: forbidden for staff, so the notice replaces the page; ready for managers. */
         readonly access: DataSlot<true>
@@ -89,21 +87,17 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
             description: props.props.description,
         }}
     >
-        <div className={BODY_CLASS}>
-            <SlotView slot={props.props.access} placeholder={true} labels={props.props.slotLabels}>
-                {() => (
-                    <>
+        <Stack gap="section">
+            <SlotView
+                slot={props.props.access}
+                placeholder={true}
+                labels={props.props.slotLabels}
+                render={() => (
+                    <Stack gap="row">
                         <div>
-                            <TextAction href={APP_ROUTES.automations} size="sm">
-                                {props.props.backLabel}
-                            </TextAction>
+                            <Link href={APP_ROUTES.automations}>{props.props.backLabel}</Link>
                         </div>
-                        <div className={STACK_CLASS}>
-                            <SectionHeader
-                                level={2}
-                                title={props.props.eventsTitle}
-                                description={props.props.eventsBody}
-                            />
+                        <Section title={props.props.eventsTitle} description={props.props.eventsBody}>
                             <DevelopersWebhooks
                                 rows={props.props.webhooks}
                                 canManage={props.props.canManageWebhooks}
@@ -111,21 +105,37 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
                                 onAdd={props.on.add}
                                 onEdit={props.on.edit}
                             />
-                        </div>
-                    </>
+                        </Section>
+                    </Stack>
                 )}
-            </SlotView>
-            {props.shape.body}
-        </div>
+            />
+            {props.children}
+        </Stack>
     </Page>
 )
 
 /** Draws the connected outgoing webhook rows and their available actions. */
 const ConnectedWebhooks = (props: DevelopersWebhooksProps) => (
-    <SurfaceListCard
+    <SurfaceCard
+        kind="list"
         label={props.view.title}
         headingLevel={3}
         fact={props.view.fact}
+        items={props.rows.map((row) => ({
+            id: row.id,
+            title: row.name,
+            badges: [{ label: row.statusLabel, tone: row.tone }],
+            ...(props.canManage
+                ? {
+                      action: {
+                          label: props.view.editLabel,
+                          intent: "neutral",
+                          press: () => props.onEdit(row.id),
+                      } as const,
+                  }
+                : {}),
+        }))}
+        empty={<EmptyNotice message={props.view.notConnected} />}
         {...(props.canManage
             ? {
                   labelEnd: (
@@ -135,44 +145,28 @@ const ConnectedWebhooks = (props: DevelopersWebhooksProps) => (
                   ),
               }
             : {})}
-    >
-        {props.rows.map((row) => (
-            <ListRow
-                key={row.id}
-                title={row.name}
-                badges={<Badge tone={row.tone}>{row.statusLabel}</Badge>}
-                {...(props.canManage
-                    ? {
-                          actions: (
-                              <Button intent="neutral" onPress={() => props.onEdit(row.id)}>
-                                  {props.view.editLabel}
-                              </Button>
-                          ),
-                      }
-                    : {})}
-            />
-        ))}
-    </SurfaceListCard>
+    />
 )
 
 /** Offers the provider connection when no outgoing webhook exists. */
 const AvailableWebhook = (props: Pick<DevelopersWebhooksProps, "canManage" | "view" | "onAdd">) => (
-    <SurfaceListCard label={props.view.notConnected} headingLevel={3}>
-        <ListRow
-            leading={
-                <ProviderLogo glyph="email" {...(props.view.logo === undefined ? {} : { src: props.view.logo })} />
-            }
-            title={props.view.title}
-            description={props.view.blurb}
-            {...(props.canManage
-                ? {
-                      actions: (
-                          <Button intent="neutral" onPress={props.onAdd}>
-                              {props.view.connectLabel}
-                          </Button>
-                      ),
-                  }
-                : {})}
-        />
-    </SurfaceListCard>
+    <SurfaceCard
+        kind="list"
+        label={props.view.notConnected}
+        headingLevel={3}
+        items={[
+            {
+                id: "provider",
+                ...(props.view.logo === undefined
+                    ? {}
+                    : { leading: { avatar: { name: props.view.title, src: props.view.logo } } as const }),
+                title: props.view.title,
+                description: props.view.blurb,
+                ...(props.canManage
+                    ? { action: { label: props.view.connectLabel, intent: "neutral", press: props.onAdd } as const }
+                    : {}),
+            },
+        ]}
+        empty={<EmptyNotice message={props.view.notConnected} />}
+    />
 )

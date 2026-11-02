@@ -1,8 +1,7 @@
-import { Progress, Text } from "@starci/grammar/common"
-import { KNOWLEDGE_PROGRESS_ROW_CLASS_NAME, KNOWLEDGE_PROGRESS_ROW_HEAD_CLASS_NAME } from "./classNames"
+import { Progress, Section, Text } from "@starci/grammar/common"
 
 /** The processing row of one document with every word resolved. */
-export interface KnowledgeProgressRowProps {
+interface KnowledgeProgressRowProps {
     /** What is going on: "Dang xu ly". */
     readonly title: string
     /** The stage a worker is on. */
@@ -17,15 +16,10 @@ export interface KnowledgeProgressRowProps {
 
 /** The live row under a document a worker is on: its title, the stage with its count, and a bar that moves as the stream pushes. */
 export const KnowledgeProgressRow = (props: KnowledgeProgressRowProps) => (
-    <div className={KNOWLEDGE_PROGRESS_ROW_CLASS_NAME}>
-        <div className={KNOWLEDGE_PROGRESS_ROW_HEAD_CLASS_NAME}>
-            <Text size="xs" weight="medium">
-                {props.title}
-            </Text>
-            <Text size="xs" tone="muted" live="polite">
-                {props.count === null ? props.stage : `${props.stage} · ${props.count}`}
-            </Text>
-        </div>
+    <Section title={props.title} headingLevel={4}>
+        <Text size="xs" tone="muted" live="polite">
+            {props.count === null ? props.stage : `${props.stage} · ${props.count}`}
+        </Text>
         <Progress label={props.label} value={props.value} valueText={`${Math.round(props.value)}%`} />
-    </div>
+    </Section>
 )

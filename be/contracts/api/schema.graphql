@@ -954,6 +954,27 @@ type AgentGraphExcludedType {
   reason: String!
 }
 
+type AgentGraphRunEntryType {
+  action: String!
+  branchKey: String!
+  closedAs: String
+  createdAt: String!
+  differs: Boolean!
+  factsJson: String!
+  gateVerdict: String
+  id: String!
+  mode: String!
+  outcome: String!
+  pathJson: String!
+  road: String!
+  subjectId: String
+  subjectType: String
+  unjudged: String
+  unreadJson: String!
+  version: Int
+  workItemId: String
+}
+
 type AgentGraphRunType {
   agentId: String!
   approvalRequestId: String
@@ -982,6 +1003,7 @@ type AgentGraphType {
   mode: String!
   problemsJson: String!
   proposalsJson: String!
+  unheldRulesJson: String!
 }
 
 type AgentGraphVersionType {
@@ -1246,6 +1268,12 @@ input ApproveLeadGenCommentInput {
 
 input ApproveMcpConnectorInput {
   key: String! @inputBounds(maxLength: 31)
+}
+
+input ApprovePublicDocumentInput {
+  expectedDraftRevision: Int! @inputBounds(min: 0, max: 2147483647)
+  id: ID! @inputBounds(maxLength: 36)
+  reviewedChanges: Boolean
 }
 
 input ApproveVideoProjectInput {
@@ -1862,6 +1890,7 @@ type BrainLessonType {
 type BrainTodoType {
   facts: Int!
   findings: Int!
+  proposals: Int!
   questions: Int!
   total: Int!
 }
@@ -3483,6 +3512,12 @@ type DraftLowStockType {
   low: Int!
 }
 
+input DraftPublicDocumentInput {
+  instructions: String @inputBounds(maxLength: 1000)
+  sourceIds: [ID!]! @inputBounds(maxItems: 5, itemMaxLength: 36)
+  title: String! @inputBounds(maxLength: 160)
+}
+
 type DriveAuthorizeUrlType {
   url: String!
 }
@@ -3538,7 +3573,7 @@ input EnqueueKnowledgeSourceInput {
   title: String! @inputBounds(maxLength: 300)
   topic: String @inputBounds(maxLength: 200)
   url: String @inputBounds(maxLength: 2048)
-  visibility: String! @inputBounds(maxLength: 40)
+  visibility: String @inputBounds(maxLength: 40)
 }
 
 type ExplainScheduleType {
@@ -4700,6 +4735,11 @@ input ListAgentGraphCoverageInput {
   agentId: String! @inputBounds(maxLength: 36)
 }
 
+input ListAgentGraphRunsInput {
+  agentId: String! @inputBounds(maxLength: 36)
+  limit: Int! = 50 @inputBounds(min: 1, max: 100)
+}
+
 input ListAgentGraphVersionsInput {
   agentId: String! @inputBounds(maxLength: 36)
 }
@@ -5483,7 +5523,9 @@ type Mutation {
   approveDossierRemedyDraft(input: DossierRemedyDraftRefInput!): DossierRemedyDraftType!
   approveLeadGenComment(input: ApproveLeadGenCommentInput!): LeadGenCommentStatusType!
   approveMcpConnector(input: ApproveMcpConnectorInput!): Int!
+  approvePublicDocument(input: ApprovePublicDocumentInput!): PublicDocumentType!
   approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
+  archivePublicDocument(input: PublicDocumentIdInput!): Boolean!
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
   askGuide(input: AskGuideInput!): GuideAskedType!
   assignAgentWork(input: AssignAgentWorkInput!): AgentAssignmentType!
@@ -5553,6 +5595,7 @@ type Mutation {
   draftInventoryLowStock: DraftLowStockType!
   draftLeadExecution(input: DraftLeadExecutionInput!): LeadActionQueuedType!
   draftLoyaltyCampaign(input: DraftCampaignInput!): DraftCampaignType!
+  draftPublicDocument(input: DraftPublicDocumentInput!): PublicDocumentType!
   duplicateVideoProject(input: DuplicateVideoProjectInput!): VideoProjectType!
   emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
   enqueueKnowledgeSource(input: EnqueueKnowledgeSourceInput!): SourceRefType!
@@ -5598,6 +5641,7 @@ type Mutation {
   recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
   recordOutcome(input: RecordOutcomeInput!): RecordOutcomeType!
   redeemLoyaltyReward(input: RedeemLoyaltyRewardInput!): RedeemLoyaltyRewardType!
+  redraftPublicDocument(input: PublicDocumentIdInput!): PublicDocumentType!
   reembedKnowledge: Boolean!
   refreshLeadContext(input: RefreshLeadContextInput!): LeadActionQueuedType!
   registerMcpConnector(input: RegisterMcpConnectorInput!): Boolean!
@@ -5775,11 +5819,13 @@ type Mutation {
   updateLoyaltyMember(input: UpdateLoyaltyMemberInput!): UpdateLoyaltyMemberType!
   updateMoneyConnection(input: UpdateMoneyConnectionInput!): WizardConnectionType!
   updateProfile(input: UpdateProfileInput!): Boolean!
+  updatePublicDocument(input: UpdatePublicDocumentInput!): PublicDocumentType!
   updateResponsibilityStatus(input: UpdateResponsibilityStatusInput!): ResponsibilityType!
   updateVideoProject(input: UpdateVideoProjectInput!): VideoProjectType!
   updateWebhookEvents(input: UpdateWebhookEventsInput!): WebhookEventsType!
   verifyLoyaltyCode(input: VerifyLoyaltyCodeInput!): VerifyLoyaltyCodeType!
   wantConnector(input: WantConnectorInput!): Boolean!
+  writePublicDocument(input: WritePublicDocumentInput!): PublicDocumentType!
 }
 
 type MyAccountType {
@@ -6280,6 +6326,37 @@ type PublicBookingTimesType {
   times: [String!]!
 }
 
+input PublicDocumentIdInput {
+  id: ID! @inputBounds(maxLength: 36)
+}
+
+type PublicDocumentSourceType {
+  changed: Boolean!
+  sourceId: ID!
+  title: String!
+}
+
+type PublicDocumentType {
+  approvedAt: String
+  approvedByName: String
+  body: String!
+  createdAt: String!
+  draftRevision: Int!
+  failureCode: String
+  gapId: ID
+  hasPendingChange: Boolean!
+  id: ID!
+  kind: String!
+  leftOut: [PublicLeftOutType!]!
+  needsReview: Boolean!
+  publishedBody: String
+  question: String
+  sources: [PublicDocumentSourceType!]!
+  status: String!
+  title: String!
+  updatedAt: String!
+}
+
 input PublicHiringJobInput {
   job: String! @inputBounds(maxLength: 120)
   ws: String! @inputBounds(maxLength: 80)
@@ -6317,6 +6394,11 @@ type PublicJobType {
   schedule: String!
   status: String!
   title: String!
+}
+
+type PublicLeftOutType {
+  label: String!
+  reason: String!
 }
 
 type PublicLoyaltyExpiringType {
@@ -6430,6 +6512,7 @@ type Query {
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
   agentGraphCoverage(input: ListAgentGraphCoverageInput!): [AgentGraphCoverageType!]!
   agentGraphRun(input: GetAgentGraphRunInput!): AgentGraphRunType!
+  agentGraphRuns(input: ListAgentGraphRunsInput!): [AgentGraphRunEntryType!]!
   agentKnowledgeLenses: [AgentKnowledgeLensType!]!
   agentPage(input: AgentIdInput!): AgentPageType!
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
@@ -6564,6 +6647,7 @@ type Query {
   promoState: PromoStateType!
   publicBookingPage(input: PublicBookingPageInput!): PublicBookingPageType!
   publicBookingTimes(input: PublicBookingTimesInput!): PublicBookingTimesType!
+  publicDocuments: [PublicDocumentType!]!
   publicHiringInterview(input: HiringTokenInput!): PublicInterviewType!
   publicHiringJob(input: PublicHiringJobInput!): PublicJobType!
   publicHiringOffer(input: HiringTokenInput!): PublicOfferType!
@@ -8948,6 +9032,12 @@ input UpdateProfileInput {
   name: String! @inputBounds(maxLength: 120)
 }
 
+input UpdatePublicDocumentInput {
+  body: String @inputBounds(maxLength: 40000)
+  id: ID! @inputBounds(maxLength: 36)
+  title: String @inputBounds(maxLength: 160)
+}
+
 input UpdateResponsibilityStatusInput {
   responsibilityId: ID! @inputBounds(maxLength: 36)
   status: String!
@@ -9330,6 +9420,11 @@ type WorkspaceType {
   name: String!
   ownerId: ID!
   status: String!
+}
+
+input WritePublicDocumentInput {
+  body: String! @inputBounds(maxLength: 40000)
+  title: String! @inputBounds(maxLength: 160)
 }
 
 type ZaloAccessType {

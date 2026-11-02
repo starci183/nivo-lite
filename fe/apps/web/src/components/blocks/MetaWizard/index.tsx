@@ -1,9 +1,11 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf } from "@/hooks/connection-wizard"
-import { useSlotLabels } from "@/hooks/slot"
+import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import { META_STEPS, metaCheckLines, useMetaWizard } from "@/hooks/meta-wizard"
 import type { AgentOption } from "@/modules/types"
 import { MetaWizardBase } from "./component"
@@ -16,6 +18,8 @@ const metaTestVerdict = (ok: boolean): MetaTestVerdict => (ok ? "ok" : "failed")
 
 /** What the board hands the Meta wizard. */
 interface MetaWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** Continue this unfinished connection instead of creating a new one. */
     readonly resumeId?: string | undefined
     /** How the Facebook login ended when the browser came back: ok, denied, failed, expired, nopages or unavailable. */
@@ -55,7 +59,9 @@ export const MetaWizard = (props: MetaWizardProps) => {
                 steps,
                 index: wizard.index,
                 step: wizard.step,
-                resume: wizard.resume,
+                resume: slotOfReads([...props.dependencyReads, ...wizard.reads], () => ({
+                    isResumed: props.resumeId !== undefined,
+                })),
                 slotLabels: slotLabelsOf(""),
                 pages: (conn === null ? [] : conn.pages).map((page) => ({
                     value: page.id,

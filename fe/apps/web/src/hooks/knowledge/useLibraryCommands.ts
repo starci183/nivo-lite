@@ -2,9 +2,10 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useSWRConfig } from "swr"
+import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import {
     QUERY_BRAIN_SWR_KEY,
+    QUERY_BRAIN_TODO_SWR_KEY,
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
     QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY,
     useMutateApplyBrainFactGroupSwr,
@@ -13,76 +14,112 @@ import {
     useMutateSetKnowledgeSuggestionStateSwr,
     useMutateUndoBrainFactBatchSwr,
 } from "@/hooks/swr"
+import { mutate } from "@/modules/viewer-cache"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import type { IdeaDecision } from "@/modules/types"
 
-/** What the library commands give the blocks. */
-interface LibraryCommands {
-    /** The document ids a retry is running for. */
-    readonly retrying: ReadonlySet<string>
-    readonly isPending: boolean
-    readonly retry: (sourceId: string) => void
-    /** Reads a ready document again so its facts are read. */
-    readonly reread: (sourceId: string) => void
-    /** Applies the checked facts a document of the owner's proposed, together, as one batch. */
-    readonly applyFacts: (sourceId: string) => void
-    /** Takes a batch of facts applied together back to review. */
-    readonly undoFacts: (batchId: string, sourceId: string) => void
-    /** Decides a suggestion; a null state brings it back. */
-    readonly decide: (key: string, state: IdeaDecision | null) => void
+/** The actual write and the reads and outcome it makes authoritative. */
+interface LibraryWrite<Result> {
+    readonly key: string
+    readonly action: string
+    readonly execute: () => Promise<Result>
+    readonly after: (result: Result) => void | Promise<unknown>
 }
 
-/** Retrying a failed document and deciding a suggestion; each outcome is toasted and the matching list is revalidated. */
-export const useLibraryCommands = (): LibraryCommands => {
-    const { mutate } = useSWRConfig()
+/** Refreshes exactly this workspace in the viewer's cache. */
+const refreshLibrary = (workspaceId: string, names: readonly string[]) =>
+    mutate(
+        (key) => Array.isArray(key) && key[1] === workspaceId && typeof key[0] === "string" && names.includes(key[0]),
+    )
+
+/** The suggestion decision's declared action identifier. */
+const suggestionActionOf = (state: IdeaDecision | null) => {
+    if (state === null) return "restore"
+    return state === "dismissed" ? "hide" : "na"
+}
+
+/** Source retry state excludes independently pending suggestion decisions. */
+const retryingSourcesOf = (pending: Readonly<Record<string, string>>): ReadonlySet<string> =>
+    new Set(Object.keys(pending).filter((key) => !key.startsWith("idea:")))
+
+/** Each caller awaits its actual command and revalidation, and row data receives only the initiating action's identity. */
+export const useLibraryCommands = () => {
+    const workspace = useWorkspaceKey(QUERY_KNOWLEDGE_SOURCES_SWR_KEY, [])
     const runGraphQL = useGraphQLWithToast()
-    const { trigger: retrySource } = useMutateRetryKnowledgeSourceSwr()
-    const { trigger: reindexSource } = useMutateReindexKnowledgeSourceSwr()
-    const { trigger: decideSuggestion, isMutating } = useMutateSetKnowledgeSuggestionStateSwr()
-    const { trigger: applyGroup } = useMutateApplyBrainFactGroupSwr()
-    const { trigger: undoBatch } = useMutateUndoBrainFactBatchSwr()
+    const retrySource = useMutateRetryKnowledgeSourceSwr()
+    const reindexSource = useMutateReindexKnowledgeSourceSwr()
+    const decideSuggestion = useMutateSetKnowledgeSuggestionStateSwr()
+    const applyGroup = useMutateApplyBrainFactGroupSwr()
+    const undoBatch = useMutateUndoBrainFactBatchSwr()
     const t = useTranslations("knowledge")
-    const [retrying, setRetrying] = useState<ReadonlySet<string>>(new Set())
-    const retry = (sourceId: string) => {
-        setRetrying((now) => new Set(now).add(sourceId))
-        void runGraphQL(() => retrySource({ id: sourceId }), { showSuccessToast: false }).then(async (done) => {
-            setRetrying((now) => new Set([...now].filter((id) => id !== sourceId)))
-            if (done !== undefined)
-                await mutate((key) => Array.isArray(key) && key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY)
-        })
+    const feedback = useTranslations("toast")
+    const [pending, setPending] = useState<Readonly<Record<string, string>>>({})
+    const refresh = (names: readonly string[]) =>
+        workspace === null ? Promise.resolve(undefined) : refreshLibrary(workspace[1], names)
+    const run = async <Result>(write: LibraryWrite<Result>) => {
+        if (workspace === null || pending[write.key] !== undefined) return undefined
+        setPending((now) => ({ ...now, [write.key]: write.action }))
+        try {
+            const result = await runGraphQL(write.execute, { showSuccessToast: false })
+            if (result === undefined) return undefined
+            await write.after(result)
+            return result
+        } catch {
+            toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+            return undefined
+        } finally {
+            setPending((now) => Object.fromEntries(Object.entries(now).filter(([key]) => key !== write.key)))
+        }
     }
-    const reread = (sourceId: string) => {
-        setRetrying((now) => new Set(now).add(sourceId))
-        void runGraphQL(() => reindexSource({ sourceId }), { showSuccessToast: false }).then(async (done) => {
-            setRetrying((now) => new Set([...now].filter((id) => id !== sourceId)))
-            if (done !== undefined)
-                await mutate((key) => Array.isArray(key) && key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY)
+    const retry = (sourceId: string) =>
+        run({
+            key: sourceId,
+            action: "retry",
+            execute: () => retrySource.trigger({ id: sourceId }),
+            after: () => refresh([QUERY_KNOWLEDGE_SOURCES_SWR_KEY]),
         })
-    }
-    const settled = (sourceId: string) => setRetrying((now) => new Set([...now].filter((id) => id !== sourceId)))
-    const applyFacts = (sourceId: string) => {
-        setRetrying((now) => new Set(now).add(sourceId))
-        void runGraphQL(() => applyGroup({ sourceId }), { showSuccessToast: false }).then(async (done) => {
-            settled(sourceId)
-            if (done === undefined) return
-            toast.success(t("bulkApplied", { applied: done.applied, skipped: done.skipped }))
-            await mutate((key) => Array.isArray(key) && key[0] === QUERY_BRAIN_SWR_KEY)
+    const reread = (sourceId: string) =>
+        run({
+            key: sourceId,
+            action: "retry-facts",
+            execute: () => reindexSource.trigger({ sourceId }),
+            after: () => refresh([QUERY_KNOWLEDGE_SOURCES_SWR_KEY]),
         })
-    }
-    const undoFacts = (batchId: string, sourceId: string) => {
-        setRetrying((now) => new Set(now).add(sourceId))
-        void runGraphQL(() => undoBatch({ batchId }), { showSuccessToast: false }).then(async (done) => {
-            settled(sourceId)
-            if (done === undefined) return
-            toast.success(t("bulkUndone", { restored: done.restored, kept: done.kept }))
-            await mutate((key) => Array.isArray(key) && key[0] === QUERY_BRAIN_SWR_KEY)
+    const applyFacts = (sourceId: string) =>
+        run({
+            key: sourceId,
+            action: "apply-facts",
+            execute: () => applyGroup.trigger({ sourceId }),
+            after: async (done) => {
+                toast.success(t("bulkApplied", { applied: done.applied, skipped: done.skipped }))
+                await refresh([QUERY_BRAIN_SWR_KEY, QUERY_BRAIN_TODO_SWR_KEY])
+            },
         })
-    }
-    const decide = (key: string, state: IdeaDecision | null) => {
-        void runGraphQL(() => decideSuggestion({ key, state }), { showSuccessToast: false }).then(async (done) => {
-            if (done !== undefined)
-                await mutate((key) => Array.isArray(key) && key[0] === QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY)
+    const undoFacts = (batchId: string, sourceId: string) =>
+        run({
+            key: sourceId,
+            action: "undo-facts",
+            execute: () => undoBatch.trigger({ batchId }),
+            after: async (done) => {
+                toast.success(t("bulkUndone", { restored: done.restored, kept: done.kept }))
+                await refresh([QUERY_BRAIN_SWR_KEY, QUERY_BRAIN_TODO_SWR_KEY])
+            },
         })
+    const decide = (key: string, state: IdeaDecision | null) =>
+        run({
+            key: `idea:${key}`,
+            action: suggestionActionOf(state),
+            execute: () => decideSuggestion.trigger({ key, state }),
+            after: () => refresh([QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY]),
+        })
+    return {
+        pending,
+        retrying: retryingSourcesOf(pending),
+        isPending: Object.keys(pending).length > 0,
+        retry,
+        reread,
+        applyFacts,
+        undoFacts,
+        decide,
     }
-    return { retrying, isPending: isMutating, retry, reread, applyFacts, undoFacts, decide }
 }

@@ -1,6 +1,14 @@
 import type { DecisionRecord } from "./decisions-views.contracts"
 import type { DeciderKind, DecisionOutcome } from "./decisions.contracts"
 
+/** The authoritative principal behind the latest decision of one work item, separate from its display label. */
+export interface DecisionActorRow {
+    /** The work item decided. */
+    readonly workItemId: string
+    /** The workspace member recorded by the decision, or null for a legacy or policy-only record. */
+    readonly memberId: string | null
+}
+
 /** A decision's lineage in the accounting book. */
 export interface AccountingDecisionRow {
     /** The decision id. */

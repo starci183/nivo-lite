@@ -28,6 +28,7 @@ import type {
 import type { InboundWorkState } from "./inbound-work-state.contracts"
 import {
     closedClaimsOf,
+    firstWorkItem,
     queuedValuesOf,
     recordsOfRaw,
     requireWorkItem,
@@ -97,7 +98,7 @@ export class WorkItemsService {
         from: ReadonlyArray<WorkItem["status"]>,
         tx: EntityManager = this.entityManager,
     ): Promise<OptionalWorkItem> {
-        return this.first(
+        return firstWorkItem(
             await this.changed(
                 tx,
                 { workspaceId, id },
@@ -122,7 +123,7 @@ export class WorkItemsService {
         manager: EntityManager = this.entityManager,
     ): Promise<OptionalWorkItem> {
         const now = this.clock.now()
-        return this.first(
+        return firstWorkItem(
             await this.changed(
                 manager,
                 { workspaceId, id },
@@ -162,7 +163,7 @@ export class WorkItemsService {
             .orIgnore()
             .returning("*")
             .execute()
-        return this.first(recordsOfRaw(result.raw))
+        return firstWorkItem(recordsOfRaw(result.raw))
     }
 
     /** The item a dedupe key stands for. */
@@ -194,7 +195,7 @@ export class WorkItemsService {
     /** Takes a queued item for processing; null when another worker holds it. The lease is CLAIM_LEASE_SECONDS. */
     async claim(workspaceId: string, id: string): Promise<OptionalWorkItem> {
         const now = this.clock.now()
-        return this.first(
+        return firstWorkItem(
             await this.changed(
                 this.entityManager,
                 { workspaceId, id },
@@ -248,7 +249,7 @@ export class WorkItemsService {
 
     /** Guarded transition of a decision: only an item that waits becomes queued again; null otherwise. */
     async reopen(workspaceId: string, id: string): Promise<OptionalWorkItem> {
-        return this.first(
+        return firstWorkItem(
             await this.changed(
                 this.entityManager,
                 { workspaceId, id },
@@ -390,12 +391,12 @@ export class WorkItemsService {
     }
 
     /** Closes an item as done. */
-    async markDone(id: string, done: DoneMark): Promise<WorkItem> {
+    async markDone(id: string, done: DoneMark, manager: EntityManager = this.entityManager): Promise<WorkItem> {
         const now = this.clock.now()
         const auto = "CAST(:path AS text) = 'auto'"
         return requireWorkItem(
             await this.changed(
-                this.entityManager,
+                manager,
                 { id },
                 null,
                 { path: done.path, leadId: done.leadId },
@@ -419,11 +420,16 @@ export class WorkItemsService {
     }
 
     /** Closes an item as rejected by a person. */
-    async markRejected(id: string, proposal: Proposal, result: WorkResult): Promise<WorkItem> {
+    async markRejected(
+        id: string,
+        proposal: Proposal,
+        result: WorkResult,
+        manager: EntityManager = this.entityManager,
+    ): Promise<WorkItem> {
         const now = this.clock.now()
         return requireWorkItem(
             await this.changed(
-                this.entityManager,
+                manager,
                 { id },
                 null,
                 {},
@@ -455,11 +461,6 @@ export class WorkItemsService {
                 leasedAt: this.clock.now(),
             },
         )
-    }
-
-    private first(rows: ReadonlyArray<WorkItemRecord>): OptionalWorkItem {
-        const row = rows[0]
-        return row === undefined ? null : toWorkItem(row)
     }
 
     /** The oldest queued chain step of the workspace that is free to take; the caller narrows it further. */

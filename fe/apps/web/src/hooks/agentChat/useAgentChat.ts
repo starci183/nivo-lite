@@ -10,6 +10,8 @@ import { useFormatter, useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
 import { useAgentChatActions } from "./useAgentChatActions"
 import { readError } from "@/hooks/workspaceread"
+import { slotOfReads } from "@/hooks/slot"
+import type { SlotRead } from "@/hooks/slot"
 
 /** Which channel the owner is looking at. */
 export type ChatTab = "test" | "customer"
@@ -88,7 +90,7 @@ export const useAgentChat = (route: AgentChatRoute) => {
     const { opened, navigate } = useAgentChatNavigation(agent, router, setSelected, setTab)
     const actions = useAgentChatActions({ agent, tab, selectedId, isTakenOver, opened })
 
-    const { rows, thread, changeTab } = useAgentChatThreadView({
+    const { rows, thread, changeTab, isLoadingList, isLoadingThread } = useAgentChatThreadView({
         hasCustomerChannel,
         setTab,
         actions,
@@ -102,20 +104,54 @@ export const useAgentChat = (route: AgentChatRoute) => {
     })
 
     const queryError = readError(history) ?? readError(messages)
-    return viewOf({
-        loaded,
-        page,
-        tab,
-        rows,
-        thread,
-        actions,
-        queryError,
-        history,
-        messages,
-        isTakenOver,
-        selectedId,
-        selectedConversation,
-        changeTab,
-        opened,
-    })
+    return {
+        ...viewOf({
+            loaded,
+            page,
+            tab,
+            rows,
+            thread,
+            actions,
+            queryError,
+            isLoadingList,
+            isLoadingThread,
+            isTakenOver,
+            selectedId,
+            selectedConversation,
+            changeTab,
+            opened,
+        }),
+        ...slotsOf({ page, loaded, history, messages, selectedId, rows }),
+    }
+}
+
+interface ChatSlotInput {
+    readonly page: ReturnType<typeof useQueryAgentChatPageSwr>
+    readonly loaded: ReturnType<typeof useQueryAgentChatPageSwr>["data"]
+    readonly history: ReturnType<typeof useQueryAgentChatConversationsSwr>
+    readonly messages: ReturnType<typeof useQueryAgentChatMessagesSwr>
+    readonly selectedId: string | null
+    readonly rows: ReturnType<typeof useAgentChatThreadView>["rows"]
+}
+
+/** Folds each chat region's actual enabled reads and scopes recovery to those same queries. */
+const slotsOf = (input: ChatSlotInput) => {
+    const pageRead = { ...input.page, data: input.loaded }
+    const reads: ReadonlyArray<SlotRead<unknown>> = input.loaded === undefined ? [pageRead] : [pageRead, input.history]
+    const hasThreadRead = input.loaded !== undefined && input.selectedId !== null
+    const retryRail = () => {
+        void input.page.mutate()
+        if (input.loaded !== undefined) void input.history.mutate()
+    }
+    return {
+        railSlot: slotOfReads(reads, () => (input.loaded === undefined ? undefined : input.rows)),
+        threadSlot: slotOfReads([...reads, ...(hasThreadRead ? [input.messages] : [])], () =>
+            input.loaded === undefined ? undefined : { hasSelection: input.selectedId !== null },
+        ),
+        retryRail,
+        retryThread: () => {
+            retryRail()
+            if (hasThreadRead) void input.messages.mutate()
+        },
+    }
 }

@@ -1,12 +1,8 @@
-import { LoyaltySettingsSection } from "@/components/leaves/LoyaltySettingsSection"
+import { Grid } from "@starci/grammar/common"
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
 import type { ProgramTextField } from "@/modules/types"
-import { FIELD_PAIR_CLASS_NAME } from "./classNames"
-
 /** What the promotion limits section of the programme settings draws and reports. */
 type LoyaltyPromoSectionProps = {
-    readonly title: string
-    readonly hint: string
     readonly maxPerMonth: string
     readonly batch: string
     readonly hourFrom: string
@@ -24,8 +20,8 @@ type LoyaltyPromoSectionProps = {
 
 /** The limits of promotion messages: how many a customer gets, how many go out a minute and between which hours. */
 export const LoyaltyPromoSection = (props: LoyaltyPromoSectionProps) => (
-    <LoyaltySettingsSection title={props.title} hint={props.hint}>
-        <div className={FIELD_PAIR_CLASS_NAME}>
+    <>
+        <Grid kind="form" columns={2}>
             <LoyaltyField
                 id="lp-max-month"
                 label={props.maxPerMonthLabel}
@@ -59,6 +55,6 @@ export const LoyaltyPromoSection = (props: LoyaltyPromoSectionProps) => (
                 isDisabled={props.isDisabled}
                 onChange={(value) => props.onChange("hourTo", value)}
             />
-        </div>
-    </LoyaltySettingsSection>
+        </Grid>
+    </>
 )

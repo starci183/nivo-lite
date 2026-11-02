@@ -1,6 +1,6 @@
 import type { useFormatter, useTranslations } from "next-intl"
 import type { ModuleKey } from "@/modules/catalog"
-import { AGENT_MODULES, batchBytesOf, queueRowOf, visibilityNoteOf } from "@/modules/documents"
+import { AGENT_MODULES, batchBytesOf, queueRowOf } from "@/modules/documents"
 import type { UsageView } from "@/modules/documents"
 import type { AddMode, useAddDocuments } from "./useAddDocuments"
 import type { useAddInstances } from "./useAddInstances"
@@ -127,18 +127,6 @@ const buildOptionsView = (
         ],
     }) as const
 
-/** Builds the choice of who may read what is added. Nothing is chosen until the owner chooses. */
-const buildVisibilityView = (t: Translate, options: ReturnType<typeof useAddDocuments>["options"]) =>
-    ({
-        label: t("fieldVisibility"),
-        consequence: visibilityNoteOf(t, options.visibility, options.suggested),
-        value: options.visibility,
-        options: [
-            { id: "public", label: t("visPublic") },
-            { id: "internal", label: t("visInternal") },
-        ],
-    }) as const
-
 /** What the view of the drawer is built from. */
 interface ViewContext {
     readonly t: Translate
@@ -158,7 +146,6 @@ export const buildAddDocumentsView = ({ t, formatter, props, add, canWrite, inst
         usage,
         title: t("addTitle"),
         submitLabel: submitLabelOf(t, add),
-        submitBlocked: add.isDone || add.options.visibility !== null ? "" : t("visNeeded"),
         failTitle: t("saveFailed"),
         readOnlyNote: canWrite ? undefined : props.readOnlyNote,
         isBusy: add.isBusy,
@@ -167,7 +154,7 @@ export const buildAddDocumentsView = ({ t, formatter, props, add, canWrite, inst
         mode: add.mode,
         files: buildDocumentFilesView(t, formatter, add),
         note: buildNoteView(t, add),
-        visibility: buildVisibilityView(t, add.options),
+        internalNote: t("addInternalNote"),
         options: buildOptionsView(t, add.options, instances),
         notice: add.queuedCount > 0 ? t("batchQueued", { count: add.queuedCount }) : undefined,
         error: add.failure === null ? undefined : t(add.failure),

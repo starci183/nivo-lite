@@ -16,7 +16,10 @@ export interface SetupVersionsView {
 /** Reads the applied context versions of an instance; `reload` reads them again. */
 export const useSetupVersions = (
     installationId: string,
-): DataSlot<SetupVersionsView> & { readonly reload: () => void } => {
+): DataSlot<SetupVersionsView> & {
+    readonly read: ReturnType<typeof useQuerySetupVersionsSwr>
+    readonly reload: () => void
+} => {
     const read = useQuerySetupVersionsSwr({ installationId })
     const view = useMemo(
         (): SetupVersionsView | undefined =>
@@ -29,7 +32,8 @@ export const useSetupVersions = (
         [read.data],
     )
     return {
-        ...slotOfSwr({ data: view, error: read.error, isLoading: read.isLoading }),
+        ...slotOfSwr({ data: view, error: read.error, isLoading: read.isLoading, isValidating: read.isValidating }),
+        read,
         reload: () => void read.mutate(),
     }
 }

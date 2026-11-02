@@ -1,9 +1,4 @@
-import { AgentDashboardFrame } from "@/components/blocks/AgentDashboardFrame"
-import { ChatbotCustomers } from "@/components/blocks/ChatbotCustomers"
-import { ChatbotFigures } from "@/components/blocks/ChatbotFigures"
-import { ChatbotGaps } from "@/components/blocks/ChatbotGaps"
-import { ChatbotInbox } from "@/components/blocks/ChatbotInbox"
-import { ChatbotWaiting } from "@/components/blocks/ChatbotWaiting"
+import { ChatbotWorkbench } from "@/components/blocks/ChatbotWorkbench"
 
 /** The instance the workbench opens for. */
 interface ChatbotWorkbenchPageBaseProps {
@@ -23,32 +18,5 @@ interface ChatbotWorkbenchPageBaseProps {
  * person and the gaps card holds the questions the Chatbot could not answer.
  */
 export const ChatbotWorkbenchPageBase = (props: ChatbotWorkbenchPageBaseProps) => {
-    const p = props.props
-    return (
-        <AgentDashboardFrame
-            module="chatbot"
-            installationId={p.installationId}
-            ribbon={<ChatbotFigures installationId={p.installationId} />}
-            waiting={<ChatbotWaiting installationId={p.installationId} />}
-            gaps={null}
-            initialTab={p.focus === null ? p.tab : "customers"}
-            tabs={[
-                {
-                    id: "customers",
-                    label: p.customersLabel,
-                    content:
-                        p.focus === null ? (
-                            <ChatbotCustomers installationId={p.installationId} />
-                        ) : (
-                            <ChatbotInbox installationId={p.installationId} focus={p.focus} />
-                        ),
-                },
-                {
-                    id: "gaps",
-                    label: p.gapsLabel,
-                    content: <ChatbotGaps installationId={p.installationId} />,
-                },
-            ]}
-        />
-    )
+    return <ChatbotWorkbench {...props.props} />
 }

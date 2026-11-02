@@ -1,5 +1,4 @@
 import { SlotView } from "@/components/composites/SlotView"
-import { nivoIconSource } from "@/components/leaves/Icon"
 import type { DataSlot, ModuleIconName, SlotLabels } from "@/modules/types"
 import { Button, Cluster, Input, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { AgentMark } from "../../leaves/AgentMark"
@@ -42,18 +41,13 @@ export interface AgentIdentityCardBaseProps {
 /** Draws the name card of an agent: its mark, the one name field and its save. */
 export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotView {...props.props.read} onRetry={props.on.retry}>
-            {(view, isSkeleton) => (
+        <SlotView
+            {...props.props.read}
+            onRetry={props.on.retry}
+            render={(view, isLoading) => (
                 <Stack gap="section">
                     <Cluster gap="row" wrap={false} align="end">
-                        <AgentMark
-                            glyph={nivoIconSource(props.props.glyph, "leading")}
-                            module={props.props.module}
-                            label={view.markLabel}
-                            seed={view.markSeed}
-                            src={view.avatarUrl}
-                            size="lg"
-                        />
+                        <AgentMark label={view.markLabel} seed={view.markSeed} src={view.avatarUrl} size="lg" />
                         <div className={GROW}>
                             <Input
                                 id="module-name"
@@ -62,19 +56,19 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                                 isLabelHidden
                                 description={view.nameHint}
                                 value={view.name}
-                                isSkeleton={isSkeleton}
+                                isLoading={isLoading}
                                 isDisabled={props.props.isDisabled}
                                 onValueChange={(value) => props.on.name(value.slice(0, view.maxLength))}
                             />
                         </div>
                     </Cluster>
-                    <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                    <Text size="sm" tone="muted" isLoading={isLoading}>
                         {view.line}
                     </Text>
                     <Cluster gap="row">
                         <Button
                             intent="neutral"
-                            isSkeleton={isSkeleton}
+                            isLoading={isLoading}
                             isPending={props.props.isPending}
                             isDisabled={!view.canSave}
                             onPress={props.on.save}
@@ -84,6 +78,6 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                     </Cluster>
                 </Stack>
             )}
-        </SlotView>
+        />
     </SurfaceCard>
 )

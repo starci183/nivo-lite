@@ -1,5 +1,6 @@
 "use client"
 
+import { slotOfReads } from "@/hooks/slot"
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
 import { ConnectionsHeadContent } from "@/components/composites/ConnectionsHead"
@@ -17,7 +18,7 @@ import { ConnectionsFrameBase } from "./component"
 /** What the route hands the frame: the tab the query string asked for, and the page body. */
 interface ConnectionsFrameProps {
     readonly tab?: string | undefined
-    readonly children: ReactNode
+    readonly body: ReactNode
 }
 
 /** The Connections `Page`: its header reads the workspace (live count, summary) and selects the Connected / Library tab. */
@@ -30,7 +31,8 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
     const live = liveConnections(data.items)
     const attention = attentionConnections(data.items)
     const showsLibrary = props.tab === "library" || (props.tab !== "connected" && live.length === 0)
-    const isReady = !(isRoleLoading || (manager && data.isLoading)) && manager && !data.failed
+    const summarySlot = slotOfReads(data.reads, () => true)
+    const isReady = !isRoleLoading && manager && "items" in summarySlot
     const summary =
         attention.length > 0
             ? t("summary", { live: live.length, attention: attention.length })
@@ -39,7 +41,7 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
     const readyView = showsLibrary ? "library" : "connected"
     return (
         <ConnectionsFrameBase
-            shape={{ body: props.children }}
+            shape={{ body: props.body }}
             props={{
                 header: ConnectionsHeadContent({
                     crumbLabel: t("crumbLabel"),

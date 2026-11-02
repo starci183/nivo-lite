@@ -1,4 +1,4 @@
-import { Grid, PageContainer, Region, SectionHeader, Stack } from "@starci/grammar/common"
+import { Grid, Section } from "@starci/grammar/common"
 import { LandingFaqColumn } from "@/components/composites/LandingFaqColumn"
 import { ANCHOR } from "./classNames"
 
@@ -25,19 +25,16 @@ interface LandingFaqBaseProps {
 
 /** Two-column FAQ with honest answers. */
 export const LandingFaqBase = (props: LandingFaqBaseProps) => (
-    <Region id="faq" label={props.props.regionLabel} className={ANCHOR}>
-        <PageContainer measure="product">
-            <Stack gap="section">
-                <SectionHeader eyebrow={props.props.eyebrow} title={props.props.title} />
-                <Grid kind="cards" columns={2}>
-                    <LandingFaqColumn
-                        label={props.props.leftLabel}
-                        entries={props.props.left}
-                        defaultOpenId={props.props.openFirstId}
-                    />
-                    <LandingFaqColumn label={props.props.rightLabel} entries={props.props.right} />
-                </Grid>
-            </Stack>
-        </PageContainer>
-    </Region>
+    <div id="faq" className={ANCHOR}>
+        <Section title={props.props.title} description={props.props.eyebrow}>
+            <Grid kind="cards" columns={2}>
+                <LandingFaqColumn
+                    label={props.props.leftLabel}
+                    entries={props.props.left}
+                    defaultOpenId={props.props.openFirstId}
+                />
+                <LandingFaqColumn label={props.props.rightLabel} entries={props.props.right} />
+            </Grid>
+        </Section>
+    </div>
 )

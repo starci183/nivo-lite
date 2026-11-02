@@ -1,8 +1,10 @@
 import { useMutateSaveContentPillarsSwr } from "@/hooks/swr"
 import { useContentSave } from "./useContentSave"
+import type { ContentSaveOwner } from "./useContentSave"
 
-/** Saves configuration through GraphQL, toasts its outcome and refreshes content data. */
-export const useSaveContentPillars = () => {
-    const { trigger, isMutating } = useMutateSaveContentPillarsSwr()
-    return { save: useContentSave(trigger), isMutating }
+/** Saves configuration with its standard feedback, exact cache refresh and origin-owned completion. */
+export const useSaveContentPillars = (owner?: ContentSaveOwner) => {
+    const { trigger } = useMutateSaveContentPillarsSwr()
+    const save = useContentSave(trigger, owner)
+    return { save: (...args: Parameters<typeof trigger>) => save.exec(args), isPending: save.isPending }
 }

@@ -30,8 +30,7 @@ export const ZaloConnectionChecksBase = (props: ZaloConnectionChecksBaseProps) =
         placeholder={ZALO_CHECKS_PLACEHOLDER}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(lines, isSkeleton) => (
+        render={(lines, isSkeleton) => (
             <ConnectionLines
                 label={props.props.title}
                 isSkeleton={isSkeleton}
@@ -43,5 +42,5 @@ export const ZaloConnectionChecksBase = (props: ZaloConnectionChecksBaseProps) =
                 }))}
             />
         )}
-    </SlotView>
+    />
 )

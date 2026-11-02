@@ -14,14 +14,16 @@ const deliveryNoteOf = (
     t: ChatbotTranslator,
     message: ChatbotMessage,
     channel: ChatbotChannel,
-): { readonly text: string; readonly tone: "accent" | "muted" } | null => {
-    if (message.delivery === null && message.authorKind === "human") return { text: t("replyQueued"), tone: "muted" }
-    if (message.delivery === "sent") return { text: t(SENT_KEYS[channel]), tone: "muted" }
+): { readonly text: string; readonly kind: "queued" | "sent" | "failed" | "unknown" } | null => {
+    if (message.delivery === null && message.authorKind === "human") return { text: t("replyQueued"), kind: "queued" }
+    if (message.delivery === "sent") return { text: t(SENT_KEYS[channel]), kind: "sent" }
     if (message.delivery !== "failed") return null
+    if (message.deliveryError === "delivery_outcome_unknown")
+        return { text: t("deliveryOutcomeUnknown"), kind: "unknown" }
     const reasonKey = message.deliveryError === null ? null : `err_${message.deliveryError}`
     const reason = reasonKey === null || !t.has(reasonKey) ? null : t(reasonKey)
     const text = t(FAILED_KEYS[channel])
-    return { text: reason === null ? text : `${text} · ${t("deliveryWhy", { reason })}`, tone: "accent" }
+    return { text: reason === null ? text : `${text} · ${t("deliveryWhy", { reason })}`, kind: "failed" }
 }
 
 /** One entry of the open thread: a day divider, a system line or a message bubble. */
@@ -35,7 +37,7 @@ export interface ChatbotThreadEntry {
     readonly aiMark: string | null
     readonly avatarName: string | null
     readonly deliveryText: string | null
-    readonly deliveryTone: "accent" | "muted"
+    readonly deliveryKind: "queued" | "sent" | "failed" | "unknown" | null
     readonly files: ChatbotMessage["files"]
 }
 
@@ -46,7 +48,7 @@ const entryOf = (partial: Pick<ChatbotThreadEntry, "id" | "kind" | "text">): Cha
     aiMark: null,
     avatarName: null,
     deliveryText: null,
-    deliveryTone: "muted",
+    deliveryKind: null,
     files: [],
     ...partial,
 })
@@ -80,7 +82,7 @@ const bubbleOf = (
         aiMark: outgoing && !human ? t("aiChip") : null,
         avatarName: avatarNameOf(message, human, customer),
         deliveryText: delivery?.text ?? null,
-        deliveryTone: delivery?.tone ?? "muted",
+        deliveryKind: delivery?.kind ?? null,
         files: message.files,
     }
 }

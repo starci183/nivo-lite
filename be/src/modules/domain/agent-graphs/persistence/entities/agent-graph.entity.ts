@@ -29,7 +29,15 @@ export class AgentGraphEntity extends AbstractEntity {
     @Column({ name: "active_version_id", type: "uuid", nullable: true })
     activeVersionId!: string | null
 
-    /** `shadow` records only, `enforced` decides. */
-    @Column({ name: "mode", type: "text", default: () => "'shadow'" })
+    /** `enforced` decides; `shadow` records only, and only the owner sets it. */
+    @Column({ name: "mode", type: "text", default: () => "'enforced'" })
     mode!: GraphMode
+
+    /** The owner who last set the mode, or null when nobody ever did. */
+    @Column({ name: "mode_set_by", type: "uuid", nullable: true })
+    modeSetBy!: string | null
+
+    /** When they did, or null. */
+    @Column({ name: "mode_set_at", type: "timestamptz", nullable: true })
+    modeSetAt!: Date | null
 }

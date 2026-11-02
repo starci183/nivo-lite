@@ -2,6 +2,8 @@ import { Alert, Select, Text } from "@starci/grammar/common"
 
 /** What the import step draws and reports. */
 interface CsvImportRunProps {
+    readonly isLoading?: boolean
+
     readonly intro: string
     /** The refresh schedule select of a Google Sheets import; null for other sources. */
     readonly schedule: {
@@ -21,6 +23,7 @@ export const CsvImportRun = (props: CsvImportRunProps) => (
         <Text size="sm">{props.intro}</Text>
         {props.schedule === null ? null : (
             <Select
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                 label={props.schedule.label}
                 isDisabled={props.isDisabled || props.done !== null}
                 value={props.schedule.value}
@@ -29,8 +32,19 @@ export const CsvImportRun = (props: CsvImportRunProps) => (
             />
         )}
         {props.done === null ? null : (
-            <Alert tone="affirmative" title={props.done.title} description={props.done.description} />
+            <Alert
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                tone="affirmative"
+                title={props.done.title}
+                description={props.done.description}
+            />
         )}
-        {props.done?.skipped ? <Alert tone="informative" title={props.done.skipped} /> : null}
+        {props.done?.skipped ? (
+            <Alert
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                tone="informative"
+                title={props.done.skipped}
+            />
+        ) : null}
     </>
 )

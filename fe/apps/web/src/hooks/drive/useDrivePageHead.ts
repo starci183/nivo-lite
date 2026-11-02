@@ -23,9 +23,10 @@ export const useDrivePageHead = (enabled: boolean) => {
     const [isRailOpen, setRailOpen] = useState(false)
     const failure = readFailureNotice(head, slotLabels(""), () => router.refresh())
     const canDisconnect = isOwner && standing !== undefined && standing !== "none"
+    const resolvedHead = "items" in head ? head.items : undefined
     const view: ConnectionPageHeadView = {
-        ...(head.items === undefined ? {} : { head: head.items }),
-        isSkeleton: head.isLoading === true,
+        ...(resolvedHead === undefined ? {} : { head: resolvedHead }),
+        isLoading: "isLoading" in head,
         icon: "apps",
         crumbLabel: t("crumbLabel"),
         crumbs: [

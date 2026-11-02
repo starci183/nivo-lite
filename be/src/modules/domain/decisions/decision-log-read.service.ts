@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { DecisionLogFilter } from "./decision-history.contracts"
-import type { DecisionLogRow } from "./decision-log.rows"
+import type { DecisionActorRow, DecisionLogRow } from "./decision-log.rows"
 import { DecisionEntity } from "./persistence/entities"
 
 /** Postgres text of the instant that sorts like the instant: fixed width, UTC, to the microsecond. */
@@ -13,6 +13,26 @@ const SORT_KEY = "YYYYMMDDHH24MISS.US"
 export class DecisionLogReadService {
     /** Captures the primary entity manager the decision log is read through. */
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /** The recorded principal for each internal work-item key, newest decision first; a display name is never substituted for a missing id. */
+    async decidersOf(
+        itemIds: ReadonlyArray<string>,
+        manager: EntityManager = this.entityManager,
+    ): Promise<ReadonlyMap<string, string | null>> {
+        if (itemIds.length === 0) return new Map()
+        const rows = await manager
+            .createQueryBuilder(DecisionEntity, "d")
+            .select("d.workItemId", "workItemId")
+            .addSelect("d.decidedByMemberId", "memberId")
+            .distinctOn(["d.workItemId"])
+            .where("d.workItemId IN (:...itemIds)", { itemIds: [...itemIds] })
+            .orderBy("d.workItemId")
+            .addOrderBy("d.createdAt", "DESC")
+            .addOrderBy("d.id", "DESC")
+            .limit(itemIds.length)
+            .getRawMany<DecisionActorRow>()
+        return new Map(rows.map((row) => [row.workItemId, row.memberId]))
+    }
 
     /** The newest `limit` lines of the decision log that pass the filter; each carries its `sort_key` at full precision. */
     lines(workspaceId: string, filter: DecisionLogFilter): Promise<Array<DecisionLogRow>> {

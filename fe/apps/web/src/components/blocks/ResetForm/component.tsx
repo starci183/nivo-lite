@@ -1,8 +1,7 @@
-import { Button, TextAction } from "@starci/grammar/common"
-import { AuthForm } from "../../composites/AuthForm"
-import { AuthPanel } from "../../composites/AuthPanel"
+import { Button, Link, Stack } from "@starci/grammar/common"
+import { AuthForm } from "@/components/frames/AuthForm"
+import { AuthPanel } from "@/components/frames/AuthPanel"
 import { PasswordPair } from "../../composites/PasswordPair"
-import { RESET_ACTIONS_CLASS_NAME, RESET_CENTER_CLASS_NAME } from "./classNames"
 
 /** The two drawn shapes of the reset-password card: the form, or the expired-link screen. */
 export type ResetFormShape = "form" | "expired"
@@ -46,14 +45,14 @@ export const ResetFormBase = (props: ResetFormBaseProps) => {
     if (props.shape === "expired") {
         return (
             <AuthPanel label={view.expiredTitle} title={view.expiredTitle} text={view.expiredText}>
-                <div className={RESET_ACTIONS_CLASS_NAME}>
+                <Stack gap="row">
                     <Button intent="commit" width="fill" href={view.newLinkHref}>
                         {view.newLinkLabel}
                     </Button>
-                    <div className={RESET_CENTER_CLASS_NAME}>
-                        <TextAction href={view.backHref}>{view.backLabel}</TextAction>
-                    </div>
-                </div>
+                    <Stack gap="inline" align="center">
+                        <Link href={view.backHref}>{view.backLabel}</Link>
+                    </Stack>
+                </Stack>
             </AuthPanel>
         )
     }

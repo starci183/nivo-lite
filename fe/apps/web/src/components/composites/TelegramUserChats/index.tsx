@@ -12,6 +12,7 @@ type TelegramChatOption = {
 
 /** What the chat step of the personal Telegram wizard draws and reports. */
 type TelegramUserChatsProps = {
+    readonly isLoading?: boolean
     readonly options: ReadonlyArray<TelegramChatOption>
     readonly value: ReadonlyArray<string>
     readonly query: string
@@ -28,10 +29,11 @@ type TelegramUserChatsProps = {
 /** Step "chats": a searchable list of recent chats with a tick each, then how far back the first sync reads. */
 export const TelegramUserChats = (props: TelegramUserChatsProps) => (
     <>
-        <Text size="sm" tone="muted">
+        <Text isLoading={props.isLoading === true} size="sm" tone="muted">
             {props.text.hint}
         </Text>
         <SearchField
+            isLoading={props.isLoading === true}
             label={props.text.search}
             placeholder={props.text.placeholder}
             isDisabled={props.isDisabled}
@@ -39,15 +41,16 @@ export const TelegramUserChats = (props: TelegramUserChatsProps) => (
             onValueChange={props.onQuery}
             onClear={() => props.onQuery("")}
         />
-        <Text size="sm" live="polite">
+        <Text isLoading={props.isLoading === true} size="sm" live="polite">
             {props.text.count}
         </Text>
         {props.options.length === 0 ? (
-            <Text size="sm" tone="muted">
+            <Text isLoading={props.isLoading === true} size="sm" tone="muted">
                 {props.text.empty}
             </Text>
         ) : (
             <CheckboxGroup
+                isLoading={props.isLoading === true}
                 label={props.text.label}
                 isLabelHidden
                 isDisabled={props.isDisabled}
@@ -57,6 +60,7 @@ export const TelegramUserChats = (props: TelegramUserChatsProps) => (
             />
         )}
         <SegmentedControl
+            isLoading={props.isLoading === true}
             label={props.text.since}
             value={props.sinceDays}
             options={[

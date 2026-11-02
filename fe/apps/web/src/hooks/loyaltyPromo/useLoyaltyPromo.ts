@@ -1,4 +1,5 @@
-"use client"
+import { useLoyaltyCommand, loyaltyReadOf, type LoyaltyPanelActivation } from "@/hooks/loyalty"
+import { mutate } from "@/modules/viewer-cache"
 
 import { useLoyaltyCampaignForm } from "@/hooks/rhf"
 import {
@@ -6,13 +7,11 @@ import {
     useMutateDraftLoyaltyCampaignSwr,
     useQueryLoyaltyCampaignSwr,
     useQueryLoyaltySegmentPreviewSwr,
+    type LoyaltyBoardType,
 } from "@/hooks/swr"
-import type { LoyaltyBoardType } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { matchesSwrKey } from "@/modules/utils"
 import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useState } from "react"
-import { useSWRConfig } from "swr"
 import {
     CAMPAIGN_BRIEF_MAX,
     CAMPAIGN_NAME_MAX,
@@ -22,9 +21,10 @@ import {
     isDrafting,
     segmentOf,
     spendText,
+    type PromoSegment,
 } from "./loyaltyPromo.shared"
-import type { PromoSegment } from "./loyaltyPromo.shared"
 import { useSegmentLabel } from "./useSegmentLabel"
+import { useFeatureReset } from "@/hooks/reuseables"
 
 /** How many members a segment reaches, and a few of them. */
 export interface PromoPreview {
@@ -32,12 +32,6 @@ export interface PromoPreview {
     readonly reachable: number
     readonly names: ReadonlyArray<string>
 }
-
-/** The live count: still counting, answered, or failed. */
-export type PreviewState =
-    | { readonly kind: "loading" }
-    | { readonly kind: "ready"; readonly preview: PromoPreview }
-    | { readonly kind: "failed" }
 
 /** The status a polled campaign reports. */
 interface PolledStatus {
@@ -47,10 +41,12 @@ interface PolledStatus {
 const LIMITS = { nameMax: CAMPAIGN_NAME_MAX, briefMax: CAMPAIGN_BRIEF_MAX }
 
 /** The promotion builder: the form, the debounced live count of the segment, and the slow message draft that is polled until it leaves `waiting`. */
-export const useLoyaltyPromo = (board: LoyaltyBoardType) => {
+export const useLoyaltyPromo = (board: LoyaltyBoardType, activation: LoyaltyPanelActivation) => {
     const t = useTranslations("loyalty")
+    const [sessionScope, setSessionScope] = useState<string | null>(null)
+    const isSessionReady = activation.isActive && activation.isReady && sessionScope === activation.scope
+    const command = useLoyaltyCommand({ ...activation, isReady: isSessionReady })
     const withToast = useGraphQLWithToast()
-    const { mutate } = useSWRConfig()
     const labelOf = useSegmentLabel(board.config)
     const form = useLoyaltyCampaignForm(LIMITS)
     const draftMutation = useMutateDraftLoyaltyCampaignSwr()
@@ -62,61 +58,75 @@ export const useLoyaltyPromo = (board: LoyaltyBoardType) => {
     )
     const [settled, setSettled] = useState<PromoSegment>(segment)
     const [campaignId, setCampaignId] = useState<string | null>(null)
-
-    useEffect(() => {
-        const timer = setTimeout(() => setSettled(segment), PREVIEW_DELAY_MS)
-        return () => clearTimeout(timer)
-    }, [segment])
-
-    const count = useQueryLoyaltySegmentPreviewSwr(board.canManage ? { segment: settled } : null)
-    let preview: PreviewState = { kind: "loading" }
-    if (count.data !== undefined)
-        preview = {
-            kind: "ready",
-            preview: {
-                total: count.data.total,
-                reachable: count.data.reachable,
-                names: count.data.sample.map((member) => member.name),
-            },
-        }
-    else if (count.error !== undefined) preview = { kind: "failed" }
-
-    const campaign = useQueryLoyaltyCampaignSwr(campaignId === null ? null : { id: campaignId }, {
-        refreshInterval: (latest: PolledStatus | undefined) =>
-            latest !== undefined && !isDrafting(latest.status) ? 0 : DRAFT_POLL_MS,
-        onSuccess: (data: PolledStatus) => {
-            if (!isDrafting(data.status)) void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
+    useFeatureReset({
+        ...activation,
+        onReset: () => {
+            setSessionScope(activation.isActive && activation.isReady ? activation.scope : null)
+            form.reset()
+            setSettled(segmentOf(form.getValues()))
+            setCampaignId(null)
         },
     })
-    const created = campaignId === null ? null : (campaign.data ?? null)
-    const isWriting = campaignId !== null && (created === null || isDrafting(created.status))
 
-    const submit = form.handleSubmit(async (values) => {
-        const next = segmentOf(values)
-        const name = values.name.trim() === "" ? labelOf(next) : values.name.trim()
-        const result = await withToast(() => draftMutation.trigger({ name, segment: next, brief: values.brief }), {
-            successMessage: t("drafting"),
+    useEffect(() => {
+        if (!isSessionReady) return
+        const timer = setTimeout(() => setSettled(segment), PREVIEW_DELAY_MS)
+        return () => clearTimeout(timer)
+    }, [segment, isSessionReady, activation.scope])
+
+    const count = useQueryLoyaltySegmentPreviewSwr(isSessionReady && board.canManage ? { segment: settled } : null)
+    const campaign = useQueryLoyaltyCampaignSwr(!isSessionReady || campaignId === null ? null : { id: campaignId }, {
+        refreshInterval: (latest: PolledStatus | undefined) =>
+            !isSessionReady || (latest !== undefined && !isDrafting(latest.status)) ? 0 : DRAFT_POLL_MS,
+        onSuccess: (data: PolledStatus) => {
+            if (!isDrafting(data.status))
+                mutate(loyaltyReadOf(activation.workspaceId, [QUERY_LOYALTY_BOARD_SWR_KEY])).catch((error: unknown) =>
+                    withToast(() => Promise.reject(error), { showSuccessToast: false }),
+                )
+        },
+    })
+    const hasCampaign = isSessionReady && campaignId !== null
+    const created = !hasCampaign ? null : (campaign.data ?? null)
+    const isWriting = hasCampaign && (created === null || isDrafting(created.status))
+
+    const submit = form.handleSubmit((values) => {
+        command.dispatch(async (isCurrent) => {
+            if (!activation.isActive) return
+            const next = segmentOf(values)
+            const name = values.name.trim() === "" ? labelOf(next) : values.name.trim()
+            const result = await withToast(() => draftMutation.trigger({ name, segment: next, brief: values.brief }), {
+                successMessage: t("drafting"),
+            })
+            if (result === undefined) return
+            if (isCurrent()) {
+                setCampaignId(result.campaignId)
+                form.setValue("brief", "")
+                form.setValue("name", "")
+            }
+            await mutate(loyaltyReadOf(activation.workspaceId, [QUERY_LOYALTY_BOARD_SWR_KEY]))
         })
-        if (result === undefined) return
-        setCampaignId(result.campaignId)
-        form.setValue("brief", "")
-        form.setValue("name", "")
-        void mutate(matchesSwrKey(QUERY_LOYALTY_BOARD_SWR_KEY))
     })
 
     return {
         form,
         segmentLabel: labelOf(segment),
-        preview,
+        previewRead: count,
+        campaignRead: campaign,
+        hasCampaign,
         created,
         isWriting,
-        isBusy: draftMutation.isMutating || isWriting,
+        isBusy: !isSessionReady || command.isPending || isWriting,
         submit,
-        setTiers: (value: ReadonlyArray<string>) => form.setValue("tiers", [...value]),
-        setInactive: (value: string) => form.setValue("inactive", inactiveText(value)),
-        setSpend: (value: string) => form.setValue("spend", spendText(value)),
-        setBirthday: (value: boolean) => form.setValue("birthday", value),
-        setName: (value: string) => form.setValue("name", value.slice(0, CAMPAIGN_NAME_MAX)),
-        setBrief: (value: string) => form.setValue("brief", value, { shouldValidate: form.formState.isSubmitted }),
+        ...campaignFieldsOf(form),
     }
 }
+
+/** Normalizes only the promotion fields; submission and its remote settlement remain with the command owner. */
+const campaignFieldsOf = (form: ReturnType<typeof useLoyaltyCampaignForm>) => ({
+    setTiers: (value: ReadonlyArray<string>) => form.setValue("tiers", [...value]),
+    setInactive: (value: string) => form.setValue("inactive", inactiveText(value)),
+    setSpend: (value: string) => form.setValue("spend", spendText(value)),
+    setBirthday: (value: boolean) => form.setValue("birthday", value),
+    setName: (value: string) => form.setValue("name", value.slice(0, CAMPAIGN_NAME_MAX)),
+    setBrief: (value: string) => form.setValue("brief", value, { shouldValidate: form.formState.isSubmitted }),
+})

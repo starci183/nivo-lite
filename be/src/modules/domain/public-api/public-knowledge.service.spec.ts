@@ -67,7 +67,7 @@ describe("PublicKnowledgeService / acceptKnowledge", () => {
                     content: "A is 1",
                     topic: "Price",
                     tags: ["a"],
-                    visibility: "public",
+                    visibility: "internal",
                     source: "api:n8n",
                 },
             }),

@@ -1,6 +1,6 @@
-import { AlertDialog, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
+import { Stack, Cluster, AlertDialog, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
+
 import type { AdminInviteRef } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, ACTION_ROW_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** One plan the select offers. */
 export interface AdminPlanOption {
@@ -72,7 +72,7 @@ const Field = (props: FieldProps) => (
         label={props.label}
         value={props.value}
         onValueChange={props.onChange}
-        isError={props.error !== undefined}
+        isInvalid={props.error !== undefined}
         errorMessage={props.error}
     />
 )
@@ -95,9 +95,9 @@ const Action = (props: ActionProps) => (
 export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
     props.props.isReady ? (
         <SurfaceCard label={props.props.title} headingLevel={2}>
-            <div className={STACK_CLASS_NAME}>
-                <div className={ACTIONS_CLASS_NAME}>
-                    <div className={ACTION_ROW_CLASS_NAME}>
+            <Stack gap="section">
+                <Stack gap="row">
+                    <Cluster gap="row" align="end">
                         <Field
                             id="extend-days"
                             name="days"
@@ -112,8 +112,8 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                             isDisabled={!props.props.isDaysValid || props.props.isPending}
                             onPress={props.on.askExtend}
                         />
-                    </div>
-                    <div className={ACTION_ROW_CLASS_NAME}>
+                    </Cluster>
+                    <Cluster gap="row" align="end">
                         <Action
                             label={props.props.markActiveLabel}
                             intent="alternative"
@@ -128,10 +128,10 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                         >
                             {props.props.markPastDueLabel}
                         </Button>
-                    </div>
+                    </Cluster>
                     {renderSupportPlanFields(props)}
                     {props.props.invites.length > 0 ? (
-                        <div className={ACTION_ROW_CLASS_NAME}>
+                        <Cluster gap="row" align="end">
                             {props.props.invites.map((invite) => (
                                 <Action
                                     key={invite.id}
@@ -141,9 +141,9 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                                     onPress={() => props.on.askInvite(invite.id)}
                                 />
                             ))}
-                        </div>
+                        </Cluster>
                     ) : null}
-                </div>
+                </Stack>
                 <Text size="sm" tone="muted">
                     {props.props.hint}
                 </Text>
@@ -160,13 +160,13 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                     onConfirm={props.on.confirm}
                     onCancel={props.on.dismiss}
                 />
-            </div>
+            </Stack>
         </SurfaceCard>
     ) : null
 
 /** Draws the div section of the AdminSupportActions view. */
 const renderSupportPlanFields = (props: AdminSupportActionsBaseProps) => (
-    <div className={ACTION_ROW_CLASS_NAME}>
+    <Cluster gap="row" align="end">
         <Select
             label={props.props.planLabel}
             options={props.props.planOptions}
@@ -187,5 +187,5 @@ const renderSupportPlanFields = (props: AdminSupportActionsBaseProps) => (
             isDisabled={props.props.plan === null || !props.props.isCreditsValid || props.props.isPending}
             onPress={props.on.askPlan}
         />
-    </div>
+    </Cluster>
 )

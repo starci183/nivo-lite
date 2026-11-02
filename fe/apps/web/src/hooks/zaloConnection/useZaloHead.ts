@@ -60,7 +60,7 @@ export const useZaloHead = (connectionId: string) => {
         router.replace(CONSOLE_ROUTES.connections)
     }, [settle, labelOf, triggerDisconnect, connectionId, t, router])
 
-    const page = slot.items
+    const page = "items" in slot ? slot.items : undefined
     const statusKind = page === undefined ? null : zaloStatusKindOf(page.healthy, page.status, page.access.state)
 
     return { head, notice, reconnect, disconnect, isDisconnecting: isMutating, isMissing, isOwner, statusKind }

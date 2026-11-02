@@ -8,7 +8,7 @@ import { ModuleCatalogService, WorkDrainService, WorkEngineService } from "@modu
 import { LeadReadService } from "@modules/domain/leads"
 import { ThreadApprovalsService, ThreadMessagesService } from "@modules/domain/thread-messages"
 import type { ThreadCardDecision, ThreadMessage, UserPost } from "@modules/domain/thread-messages"
-import type { ResumeDecision, WorkContext, WorkEdits } from "@modules/domain/decisions"
+import type { DecisionVerdict as ResumeDecision, WorkContext, WorkEdits } from "@modules/domain/decisions"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"

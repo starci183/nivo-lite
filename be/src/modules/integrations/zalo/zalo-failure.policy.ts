@@ -52,3 +52,9 @@ export const isZaloTokenRejection = (error: unknown): boolean => {
 
 /** True when Zalo answered and said no, as opposed to not answering: only a new authorization fixes a refused refresh token. */
 export const isZaloRefusal = (error: unknown): boolean => error instanceof ZaloError && error.params.path !== undefined
+
+/** True only for a message API refusal carrying Zalo's explicit numeric error; malformed gateway replies stay unknown. */
+export const isZaloMessageRefusal = (error: unknown): boolean => {
+    const code = zaloCodeOf(error)
+    return code !== null && code !== 0
+}

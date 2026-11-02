@@ -8,12 +8,20 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
         "customerTurns.toolsBlock":
             "[OPTIONAL TOOLS] Địa chỉ: {{url}} — danh sách công cụ: GET {{url}}; gọi một công cụ: POST {{url}}/<tên công cụ> với header Authorization: Bearer {{token}} và thân JSON là các tham số của công cụ. Token chỉ dùng cho lượt này; không bao giờ nhắc lại token cho khách.",
         "customerTurns.replySummary": "{{question}}",
+        "customerTurns.finalReply.done": "Dạ yêu cầu của mình đã thực hiện xong ạ.",
+        "customerTurns.finalReply.declined": "Dạ bên em sẽ liên hệ lại với mình sau ạ.",
+        "customerTurns.finalReply.failed":
+            "Dạ xin lỗi mình, thao tác vừa rồi chưa thực hiện được nên yêu cầu của mình chưa hoàn tất ạ.",
         "customerTurns.orderPriceUnknownReply": "Cảm ơn bạn! Shop sẽ xác nhận giá của gói này với bạn ngay nhé.",
         "customerTurns.paymentClaimReply":
             "Cảm ơn bạn! Shop đã ghi nhận bạn báo chuyển khoản cho mã {{no}}. Shop sẽ kiểm tra và xác nhận lại với bạn sớm nhất nhé.",
         "customerTurns.paymentConfirmedReply":
             "Cảm ơn bạn! Khoản thanh toán cho mã {{no}} đã được shop nhận và xác nhận rồi ạ.",
         "customerTurns.replyAwaitsApproval": "Câu trả lời đang chờ duyệt: agent này chưa được tự gửi qua kênh này",
+        "customerTurns.replyAwaitsGraph": "Câu trả lời đang chờ duyệt: sơ đồ của agent yêu cầu người duyệt",
+        "customerTurns.replyStoppedByGraph": "Câu trả lời không được gửi: sơ đồ của agent dừng ở bước này",
+        "customerTurns.replyDivertedByGraph": "Câu trả lời không được gửi: sơ đồ của agent chuyển sang bước khác",
+        "customerTurns.graphUnread": "Không đọc được {{facts}} nên đi nhánh an toàn",
         "customerTurns.chatHandoff": "Đã chuyển lead cho Sales AI · {{verdict}}",
         "customerTurns.chatHandoffWaiting": "Lead chờ bạn duyệt trước khi chuyển cho Sales AI ({{reason}})",
         "customerTurns.verdictAuto": "tự động theo chính sách",
@@ -55,6 +63,10 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
         "customerTurns.toolsBlock":
             "[OPTIONAL TOOLS] Address: {{url}} — tool list: GET {{url}}; call one tool: POST {{url}}/<tool name> with the header Authorization: Bearer {{token}} and the tool's arguments as the JSON body. The token is valid for this turn only; never repeat it to the customer.",
         "customerTurns.replySummary": "{{question}}",
+        "customerTurns.finalReply.done": "Your request has been completed.",
+        "customerTurns.finalReply.declined": "We will get back to you shortly.",
+        "customerTurns.finalReply.failed":
+            "Sorry, that action could not be carried out, so your request is not complete.",
         "customerTurns.orderPriceUnknownReply":
             "Thank you! The team will confirm the price of this item with you shortly.",
         "customerTurns.paymentClaimReply":
@@ -63,6 +75,10 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
             "Thank you! Your payment for {{no}} has already been received and confirmed.",
         "customerTurns.replyAwaitsApproval":
             "The reply waits for approval: this agent may not send through this channel on its own",
+        "customerTurns.replyAwaitsGraph": "The reply is waiting: the agent's graph needs a person to approve it",
+        "customerTurns.replyStoppedByGraph": "The reply was not sent: the agent's graph stops here",
+        "customerTurns.replyDivertedByGraph": "The reply was not sent: the agent's graph took another step",
+        "customerTurns.graphUnread": "Could not read {{facts}}, so the turn took the safe branch",
         "customerTurns.chatHandoff": "Lead handed to Sales AI · {{verdict}}",
         "customerTurns.chatHandoffWaiting": "Lead waits for your approval before it goes to Sales AI ({{reason}})",
         "customerTurns.verdictAuto": "automatic, within your policy",

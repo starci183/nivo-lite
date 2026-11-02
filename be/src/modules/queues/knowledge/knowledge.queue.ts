@@ -7,6 +7,7 @@ import type {
     DossierRemedyPayload,
     DossierReviewPayload,
     KnowledgeReembedPayload,
+    PublicDraftPayload,
     KnowledgeSourcePayload,
 } from "./knowledge.contracts"
 
@@ -67,6 +68,18 @@ export class KnowledgeQueue {
         return this.outbox.write(tx, KNOWLEDGE_QUEUE, payload, {
             job: KnowledgeJob.DossierRemedy,
             dedupeKey: knowledgeDedupeKey(KnowledgeJob.DossierRemedy, payload.draftId),
+        })
+    }
+
+    /** Enqueues one document revision in the caller's transaction; a repeated enqueue is the same durable job. */
+    enqueuePublicDraft(payload: PublicDraftPayload, tx: EntityManager): Promise<void> {
+        return this.outbox.write(tx, KNOWLEDGE_QUEUE, payload, {
+            job: KnowledgeJob.PublicDraft,
+            dedupeKey: knowledgeDedupeKey(
+                KnowledgeJob.PublicDraft,
+                payload.documentId,
+                `revision:${payload.draftRevision}`,
+            ),
         })
     }
 }

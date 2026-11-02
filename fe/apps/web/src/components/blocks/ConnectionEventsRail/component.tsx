@@ -1,4 +1,4 @@
-import { Badge, PaneSection, SectionHeader, Text } from "@starci/grammar/common"
+import { Badge, Cluster, PaneSection, Text } from "@starci/grammar/common"
 import { CONNECTION_LINES_PLACEHOLDER, ConnectionLines } from "@/components/composites/ConnectionLines"
 import { SlotView } from "@/components/composites/SlotView"
 import type { ConnectionLineView, DataSlot, SlotLabels } from "@/modules/types"
@@ -19,33 +19,26 @@ export interface ConnectionEventsRailBaseProps {
 /** Draws the live rail of a provider page as the bands of its pane: the heading with the live mark, the lines newest first, the footnote. */
 export const ConnectionEventsRailBase = (props: ConnectionEventsRailBaseProps) => (
     <>
-        <PaneSection as="header">
-            <SectionHeader
-                level={2}
-                title={props.props.title}
-                meta={
-                    <Badge isDot tone="success">
-                        {props.props.liveLabel}
-                    </Badge>
-                }
-            />
-        </PaneSection>
         <PaneSection>
             <SlotView
                 slot={props.props.lines}
                 placeholder={CONNECTION_LINES_PLACEHOLDER}
                 labels={props.props.slotLabels}
                 onRetry={props.on.retry}
-            >
-                {(lines, isSkeleton) => (
+                render={(lines, isSkeleton) => (
                     <ConnectionLines label={props.props.title} isSkeleton={isSkeleton} lines={lines} />
                 )}
-            </SlotView>
+            />
         </PaneSection>
         <PaneSection as="footer">
-            <Text size="xs" tone="muted">
-                {props.props.footnote}
-            </Text>
+            <Cluster gap="inline">
+                <Badge isDot tone="success">
+                    {props.props.liveLabel}
+                </Badge>
+                <Text size="xs" tone="muted">
+                    {props.props.footnote}
+                </Text>
+            </Cluster>
         </PaneSection>
     </>
 )

@@ -9,7 +9,6 @@ import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { DataSlot, ExecutionRecord, LeadJourney } from "@/modules/types"
 import { LeadExecutionBase } from "./component"
 import type { DraftItem, ExecutionView } from "./component"
-import { buildExecutionDraftView } from "./draftView"
 
 /** The lead the panel acts on; null while it loads. */
 interface LeadExecutionProps {
@@ -149,3 +148,44 @@ const buildExecutionPanelView = ({
             },
         },
     }) as const
+
+/** Inputs for the private draft projection resolved by this connected world owner. */
+interface BuildExecutionDraftViewContext {
+    readonly draft: ExecutionRecord
+    readonly loaded: LeadJourney
+    readonly t: ReturnType<typeof useTranslations<"lead">>
+    readonly a: ReturnType<typeof useTranslations<"approval">>
+    readonly agent: DraftItem["view"]["agent"]
+    readonly isWaiting: boolean
+    readonly approval: ReturnType<typeof useApprovalDecision>
+    readonly decidedAt: string
+}
+
+/** Resolves the same approval draft data beside its actual connected caller. */
+const buildExecutionDraftView = (context: BuildExecutionDraftViewContext): DraftItem => {
+    const { draft, loaded, t, a, agent, isWaiting, approval, decidedAt } = context
+    const statusWord = draft.status === "approved" ? a("approved") : a("rejected")
+    const isEditing = isWaiting && approval.isEditing
+    return {
+        id: draft.id,
+        view: {
+            nextAction:
+                loaded.responsibilities.find((step) => step.id === draft.responsibility_id)?.next_action ??
+                t("defaultNextAction"),
+            willSend: a("willSend", { lead: loaded.lead.contact_name, channel: loaded.lead.channel }),
+            agent,
+            status: isWaiting
+                ? { label: a("needsApproval"), tone: "warning" }
+                : { label: statusWord, tone: draft.status === "approved" ? "success" : "danger" },
+            draft: draft.draft,
+            characters: a("characters", { count: (isEditing ? approval.editText : draft.draft).length }),
+            settledLabel: `${a("decidedBy", { status: statusWord, who: draft.decided_by ?? a("teammate") })}${decidedAt}`,
+            isWaiting,
+            canDecide: approval.canDecide,
+            isEditing,
+            editText: approval.editText,
+            pendingDecision: isWaiting ? approval.pendingDecision : null,
+            error: isWaiting ? approval.error : null,
+        },
+    }
+}

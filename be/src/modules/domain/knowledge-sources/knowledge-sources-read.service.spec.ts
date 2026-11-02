@@ -167,3 +167,55 @@ describe("KnowledgeSourcesReadService ofOrigin", () => {
         })
     })
 })
+
+describe("KnowledgeSourcesReadService statesOf", () => {
+    it("answers the title, visibility, status and text hash of the sources of the workspace", async () => {
+        const em = mockEntityManager({ find: [KnowledgeSourceEntity, [{ ...row, contentHash: "h1" }]] })
+
+        await expect((await build(em)).statesOf("ws-1", ["s1"])).resolves.toEqual([
+            { id: row.id, title: row.title, visibility: row.visibility, status: row.status, contentHash: "h1" },
+        ])
+        expect(em.find).toHaveBeenCalledWith(KnowledgeSourceEntity, {
+            select: { id: true, title: true, visibility: true, status: true, contentHash: true },
+            where: { workspaceId: "ws-1", id: In(["s1"]) },
+            take: 1,
+        })
+    })
+
+    it("reads nothing for no ids", async () => {
+        const em = mockEntityManager()
+
+        await expect((await build(em)).statesOf("ws-1", [])).resolves.toEqual([])
+        expect(em.find).not.toHaveBeenCalled()
+    })
+})
+
+describe("KnowledgeSourcesReadService textOf", () => {
+    it("answers one document with its text and lane", async () => {
+        const em = mockEntityManager({
+            findOne: [KnowledgeSourceEntity, { ...row, contentHash: "h1", content: "Text" }],
+        })
+
+        await expect((await build(em)).textOf("ws-1", "s1")).resolves.toEqual({
+            id: row.id,
+            title: row.title,
+            visibility: row.visibility,
+            status: row.status,
+            contentHash: "h1",
+            module: row.module,
+            installationId: row.installationId,
+            topic: row.topic,
+            content: "Text",
+        })
+        expect(em.findOne).toHaveBeenCalledWith(
+            KnowledgeSourceEntity,
+            expect.objectContaining({ where: { workspaceId: "ws-1", id: "s1" } }),
+        )
+    })
+
+    it("answers null for a document the workspace does not have", async () => {
+        const em = mockEntityManager({ findOne: [KnowledgeSourceEntity, null] })
+
+        await expect((await build(em)).textOf("ws-1", "s1")).resolves.toBeNull()
+    })
+})

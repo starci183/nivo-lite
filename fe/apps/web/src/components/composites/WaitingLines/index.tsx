@@ -9,14 +9,14 @@ export interface WaitingLine {
 /** The lines and the skeleton flag the waiting card draws. */
 type WaitingLinesProps = {
     readonly rows: ReadonlyArray<WaitingLine>
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** Draws waiting lines while a redirect target is found. */
 export const WaitingLines = (props: WaitingLinesProps) => (
     <>
         {props.rows.map((row) => (
-            <Text key={row.id} isSkeleton={props.isSkeleton}>
+            <Text key={row.id} isLoading={props.isLoading}>
                 {row.text}
             </Text>
         ))}

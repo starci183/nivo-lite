@@ -31,7 +31,6 @@ export interface QueueItem {
 export interface BatchMeta {
     readonly topic: string | null
     readonly tags: ReadonlyArray<string>
-    readonly visibility: string
     readonly module: string | null
     readonly installationId: string | null
 }

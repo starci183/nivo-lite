@@ -128,7 +128,9 @@
     "chFormText": "Form submissions arrive in the same lead list.",
     "connectNote": "Only the Chatbot is available today. Other channels are on the roadmap and have no date yet.",
     "connectCta": "Try NIVO OS",
-    "flowAiMark": "AI"
+    "flowAiMark": "AI",
+    "connectEmpty": "No connections to show yet.",
+    "flowEmpty": "No steps to show yet."
   },
   "landingBottom": {
     "offerAria": "Start with NIVO OS",

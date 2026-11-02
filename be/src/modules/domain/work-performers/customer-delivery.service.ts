@@ -2,10 +2,10 @@ import { Injectable } from "@nestjs/common"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelDeliveryService } from "@modules/domain/channels"
-import type { DeliveryRequest, DeliveryResult, RenewalNotification } from "@modules/domain/channels"
+import type { DeliveryOutcome, DeliveryRequest, DeliveryResult, RenewalNotification } from "@modules/domain/channels"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Performed, PerformedBy, WorkContext, WorkItem } from "@modules/domain/decisions"
-import type { CustomerDelivery, DeliveryContact, DeliveryCustomer } from "./work-performers.contracts"
+import type { CustomerDelivery, DeliveryContact, DeliveryCustomer, OptionalContact } from "./work-performers.contracts"
 import { PerformerKitService } from "./performer-kit.service"
 import { leadHref } from "./performer.policy"
 
@@ -34,7 +34,7 @@ export class CustomerDeliveryService {
     ) {}
 
     /** How the owner reaches the customer on the card: the phone, else the email, else "website" when they chat on the site. */
-    async contactOf(workspaceId: string, lead: DeliveryContact): Promise<string | null> {
+    async contactOf(workspaceId: string, lead: DeliveryContact): Promise<OptionalContact> {
         if (lead.phone !== null) return lead.phone
         if (lead.email !== null) return lead.email
         return (await this.conversations.latestOfLead(workspaceId, lead.id, null)) === null ? null : WEBSITE_CHANNEL
@@ -119,10 +119,36 @@ export class CustomerDeliveryService {
             undefined,
             workItemId,
         )
+        return this.pushOnce(target.value.channel, conversationId, messageId, text, notification)
+    }
+
+    /** Stores the output's reply once and returns its acknowledged, refused or unresolved delivery fact. */
+    async finalInConversation(
+        workspaceId: string,
+        conversationId: string,
+        text: string,
+        workItemId: string,
+    ): Promise<DeliveryOutcome> {
+        const target = await this.conversations.targetOf(conversationId)
+        if (target.kind !== "ok" || target.value.workspaceId !== workspaceId) return "rejected"
+        const messageId = await this.messages.storeFinalReply(workspaceId, conversationId, text, workItemId)
         const message = await this.messages.find(messageId, conversationId)
-        if (message.kind === "ok" && message.value.deliveryStatus === "sent")
-            return target.value.channel !== WEBSITE_CHANNEL
-        if (target.value.channel === WEBSITE_CHANNEL) {
+        if (message.kind !== "ok") return "rejected"
+        if (message.value.deliveryStatus === "sent") return "acknowledged"
+        return (await this.channels.deliver({ conversationId, messageId, text: message.value.body })).outcome
+    }
+
+    /** Pushes a stored message to its channel unless an earlier attempt already did; a website chat reads it itself. */
+    private async pushOnce(
+        channel: string,
+        conversationId: string,
+        messageId: string,
+        text: string,
+        notification: RenewalNotification | undefined,
+    ): Promise<boolean> {
+        const message = await this.messages.find(messageId, conversationId)
+        if (message.kind === "ok" && message.value.deliveryStatus === "sent") return channel !== WEBSITE_CHANNEL
+        if (channel === WEBSITE_CHANNEL) {
             await this.messages.markDelivery(messageId, true)
             return false
         }

@@ -8,8 +8,8 @@ import { queryHiringWorkbench } from "@/modules/api/graphql/queries/query-hiring
 export const QUERY_HIRING_WORKBENCH_SWR_KEY = "QUERY_HIRING_WORKBENCH_SWR"
 
 /** The `hiringWorkbench` query through SWR. */
-export const useQueryHiringWorkbenchSwr = () =>
-    useSWR(useWorkspaceKey(QUERY_HIRING_WORKBENCH_SWR_KEY, []), async () => {
+export const useQueryHiringWorkbenchSwr = (isActive = true) =>
+    useSWR(useWorkspaceKey(QUERY_HIRING_WORKBENCH_SWR_KEY, [], isActive), async () => {
         const result = await queryHiringWorkbench()
         if (!result.data) throw new Error("hiringWorkbench answered no data")
         return result.data.hiringWorkbench

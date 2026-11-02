@@ -56,7 +56,7 @@ export const ConnectionPageHeadBase = (props: ConnectionPageHeadBaseProps) => {
             <Page
                 chrome="panes"
                 measure="product"
-                isSkeleton={props.props.isSkeleton}
+                isLoading={props.props.isLoading}
                 header={{
                     breadcrumbs: { label: props.props.crumbLabel, items: props.props.crumbs },
                     mark: <ProviderLogo glyph={props.props.icon} src={props.props.markSrc} />,
@@ -82,7 +82,7 @@ export const ConnectionPageHeadBase = (props: ConnectionPageHeadBaseProps) => {
                 >
                     <Pane area="main" surface scroll label={props.props.mainLabel}>
                         <NoticesBand props={props.props} on={props.on} />
-                        {head === undefined && !props.props.isSkeleton ? null : props.shape.main}
+                        {props.shape.main}
                         {disconnect === undefined ? null : (
                             <ConnectionDisconnectBand {...disconnect} onPress={props.on.askDisconnect} />
                         )}

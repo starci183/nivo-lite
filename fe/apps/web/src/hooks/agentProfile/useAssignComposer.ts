@@ -41,7 +41,10 @@ export const useAssignComposer = (agentId: string, rules: ReadonlyArray<AppliedR
     ]
     const customers: ReadonlyArray<Choice> = [
         { id: NO_TASK, label: t("assignLeadNone") },
-        ...(leads.items ?? []).map((lead) => ({ id: lead.id, label: lead.contact_name })),
+        ...(("items" in leads ? leads.items : undefined) ?? []).map((lead) => ({
+            id: lead.id,
+            label: lead.contact_name,
+        })),
     ]
     const submit = async () => {
         const task = hasTask ? { action, amount: fromField(amount), amountVnd: fromField(amountVnd), leadId } : null

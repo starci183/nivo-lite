@@ -5,12 +5,13 @@ import { QUERY_SHIFTS_MINE_SWR_KEY, QUERY_SHIFTS_WORKBENCH_SWR_KEY } from "@/hoo
 
 const SHIFTS_KEYS: ReadonlySet<string> = new Set([QUERY_SHIFTS_WORKBENCH_SWR_KEY, QUERY_SHIFTS_MINE_SWR_KEY])
 
-const isShiftsKey = (key: unknown): boolean => {
+const isShiftsKey = (key: unknown, workspaceId: string): boolean => {
     const name: unknown = Array.isArray(key) ? key[0] : key
-    return typeof name === "string" && SHIFTS_KEYS.has(name)
+    return Array.isArray(key) && key[1] === workspaceId && typeof name === "string" && SHIFTS_KEYS.has(name)
 }
 
 /** Revalidates the workbench and the "my schedule" reads after a change to the schedule, the roster or a request. */
-export const refreshShifts = async (): Promise<void> => {
-    await mutate(isShiftsKey)
+export const refreshShifts = async (workspaceId: string | undefined): Promise<void> => {
+    if (workspaceId === undefined) return
+    await mutate((key) => isShiftsKey(key, workspaceId))
 }

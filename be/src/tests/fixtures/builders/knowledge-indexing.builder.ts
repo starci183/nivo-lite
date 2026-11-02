@@ -1,7 +1,7 @@
 import { builder } from "@starci/jest-preset"
 import { passageHashOf } from "@modules/domain/knowledge-chunks"
 import type { EmbeddedChunk } from "@modules/domain/knowledge-chunks"
-import type { SourceRecord } from "@modules/domain/knowledge-sources"
+import { StoredNote, type SourceRecord } from "@modules/domain/knowledge-sources"
 
 /** The workspace of the indexing specs. */
 export const INDEXING_WS = "11111111-1111-4111-8111-111111111111"
@@ -45,3 +45,50 @@ export const sourceOf = builder<SourceRecord>({
     contentHash: null,
     updatedAt: "2026-10-12T10:00:00.000Z",
 })
+
+/** Stored passage variants, in their original table order. */
+export const INDEXING_STALE_PASSAGES: Array<[string, Array<EmbeddedChunk>]> = [
+    ["another text", [legacy("Other", 0)]],
+    ["another model", [legacy("Open 8 to 21", 0, "m0")]],
+    ["another order", [legacy("Open 8 to 21", 1)]],
+    ["another count", []],
+]
+
+/** Unindexable text answers and their exact stored note codes. */
+export const INDEXING_EMPTY_TEXTS: Array<[string, string, string]> = [
+    ["no text", "   ", StoredNote.Empty],
+    ["text that makes no passage", TABLE_WITHOUT_ROWS, StoredNote.NoPassages],
+]
+
+/** Whole-source kinds and the same number of allowed reader calls. */
+export const INDEXING_WHOLE_SOURCE_KINDS: Array<[SourceRecord["kind"], number]> = [
+    ["file", 0],
+    ["url", 1],
+]
+
+/** The exact persisted passage write expected for the default text source. */
+export const INDEXING_TEXT_WRITE = {
+    workspaceId: INDEXING_WS,
+    sourceId: "s1",
+    module: "chatbot",
+    visibility: "internal",
+    installationId: null,
+    model: "m1",
+    drafts: [{ text: "Open 8 to 21", vector: "[0.5,1]", order: 0 }],
+}
+
+/** The exact embed progress snapshot of the default text source. */
+export const INDEXING_EMBED_STAGE = {
+    stage: "embed",
+    done: 0,
+    total: 1,
+    progress: 25,
+}
+
+/** The exact store progress snapshot of the default text source. */
+export const INDEXING_STORE_STAGE = {
+    stage: "store",
+    done: 1,
+    total: 1,
+    progress: 80,
+}

@@ -16,9 +16,9 @@ export interface AgentTypeRedirectBaseProps {
 
 /** Draws waiting lines while the redirect of an old tab url is decided. */
 export const AgentTypeRedirectBase = (props: AgentTypeRedirectBaseProps) => (
-    <Page isSkeleton measure="reading">
+    <Page isLoading measure="reading">
         <SurfaceCard ariaLabel={props.props.label}>
-            <WaitingLines rows={props.props.lines} isSkeleton />
+            <WaitingLines rows={props.props.lines} isLoading />
         </SurfaceCard>
     </Page>
 )

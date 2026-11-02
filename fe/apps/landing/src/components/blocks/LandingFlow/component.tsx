@@ -1,15 +1,4 @@
-import {
-    Badge,
-    Cluster,
-    Grid,
-    Heading,
-    PageContainer,
-    Region,
-    SectionHeader,
-    Stack,
-    SurfaceCard,
-    Text,
-} from "@starci/grammar/common"
+import { Badge, Cluster, EmptyNotice, SurfaceCard, Text, type ListRowData } from "@starci/grammar/common"
 import { IconGlyph } from "@/components/leaves/Icon"
 import type { IconGlyphName } from "@/components/leaves/Icon"
 import { ANCHOR } from "./classNames"
@@ -33,6 +22,7 @@ interface LandingFlowBaseProps {
         readonly eyebrow: string
         readonly title: string
         readonly lead: string
+        readonly emptyLabel: string
         readonly aiMark: string
         readonly humanTag: string
         readonly steps: ReadonlyArray<LandingFlowStep>
@@ -41,39 +31,28 @@ interface LandingFlowBaseProps {
 
 /** Chatbot, Sales Agent, owner approval, Accounting Agent, as an ordered list of cards. */
 export const LandingFlowBase = (props: LandingFlowBaseProps) => (
-    <Region id="how" labelledBy={props.props.headingId} className={ANCHOR}>
-        <PageContainer measure="product">
-            <Stack gap="section">
-                <SectionHeader
-                    id={props.props.headingId}
-                    eyebrow={props.props.eyebrow}
-                    title={props.props.title}
-                    description={props.props.lead}
-                />
-                <Grid kind="cards" columns={4}>
-                    {props.props.steps.map((step) => (
-                        <SurfaceCard key={step.id} height="fill" isHighlight={step.isHumanStep}>
-                            <Stack gap="row">
-                                <Cluster gap="inline" justify="between">
-                                    <Text size="xs">{step.stepLabel}</Text>
-                                    {step.isHumanStep ? <Badge tone="neutral">{props.props.humanTag}</Badge> : null}
-                                </Cluster>
-                                <IconGlyph name={step.icon} isTile />
-                                <Cluster gap="inline">
-                                    <Text size="sm" weight="medium">
-                                        {step.agentName}
-                                    </Text>
-                                    {step.hasAiMark ? <Badge tone="neutral">{props.props.aiMark}</Badge> : null}
-                                </Cluster>
-                                <Heading level={3}>{step.title}</Heading>
-                                <Text size="sm" tone="muted">
-                                    {step.text}
-                                </Text>
-                            </Stack>
-                        </SurfaceCard>
-                    ))}
-                </Grid>
-            </Stack>
-        </PageContainer>
-    </Region>
+    <div id="how" className={ANCHOR}>
+        <SurfaceCard
+            kind="list"
+            label={props.props.title}
+            fact={props.props.eyebrow}
+            headingLevel={2}
+            footer={props.props.lead}
+            items={props.props.steps.map((step, index): ListRowData => ({
+                id: step.id,
+                title: step.title,
+                leading: { position: index + 1 },
+                description: step.text,
+                ...(step.isHumanStep ? { badges: [{ label: props.props.humanTag, tone: "neutral" }] } : {}),
+                detail: (
+                    <Cluster gap="inline">
+                        <IconGlyph name={step.icon} isTile />
+                        <Text size="sm" isStrong>{`${step.stepLabel} · ${step.agentName}`}</Text>
+                        {step.hasAiMark ? <Badge tone="neutral">{props.props.aiMark}</Badge> : null}
+                    </Cluster>
+                ),
+            }))}
+            empty={<EmptyNotice message={props.props.emptyLabel} />}
+        />
+    </div>
 )

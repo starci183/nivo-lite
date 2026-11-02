@@ -22,11 +22,11 @@ export const AgentRemoveCard = (props: AgentRemoveCardProps) => {
                 title: t("removeTitle"),
                 hint: t("removeHint"),
                 actionLabel: t("removeAction"),
-                dialogTitle: t("removeDialogTitle", { name: slot.items?.name ?? "" }),
+                dialogTitle: t("removeDialogTitle", { name: ("items" in slot ? slot.items : undefined)?.name ?? "" }),
                 lines: [t("removeBody1"), t("removeBody2"), t("removeBody3")],
                 cancelLabel: t("removeCancel"),
                 confirmLabel: t("removeConfirm"),
-                canRemove: canEdit && slot.items !== undefined,
+                canRemove: canEdit && ("items" in slot ? slot.items : undefined) !== undefined,
                 isRemoving,
             }}
             on={{ remove: () => void remove() }}

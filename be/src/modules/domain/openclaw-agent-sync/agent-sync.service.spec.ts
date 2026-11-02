@@ -91,6 +91,8 @@ interface Setup {
     internalRegistered?: boolean
     sibling?: boolean
     recordFails?: boolean
+    gatewayEnabled?: boolean
+    unregistered?: boolean
 }
 
 const build = async (setup: Setup = {}) => {
@@ -124,6 +126,7 @@ const build = async (setup: Setup = {}) => {
         isCurrent: jest.fn(() => setup.current === true || setup.internalCurrent === true),
         register: jest.fn(() => setup.registered === true || setup.internalRegistered === true),
         managesAgents: true,
+        unregister: jest.fn(() => setup.unregistered === true),
     })
     const writer = mock<WorkspaceWriterService>({
         contentHash: jest.fn(() => "hash-1"),
@@ -136,7 +139,8 @@ const build = async (setup: Setup = {}) => {
     const pause = mock<PauseClient>({ wait: jest.fn(() => Promise.resolve()) })
     const members = mock<WorkspaceMembersService>()
     const logger = mock<Logger>()
-    const gatewayAdmin = mock<GatewayAdminClient>({ enabled: true, removeAgent: jest.fn(() => Promise.resolve([])) })
+    const gatewayAdmin = mock<GatewayAdminClient>({ enabled: setup.gatewayEnabled !== false })
+    gatewayAdmin.removeAgent.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentSyncService,
@@ -466,6 +470,21 @@ describe("AgentSyncService ensureInternalAgent", () => {
 })
 
 describe("AgentSyncService syncInstallation of a removed installation", () => {
+    it.each([false, true])(
+        "settles a local removal only when the registry actually changed: %p",
+        async (unregistered) => {
+            const { service, registry, pause, gatewayAdmin } = await build({
+                installation: installationOf({ removed: true }),
+                gatewayEnabled: false,
+                unregistered,
+            })
+            await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
+            expect(registry.unregister).toHaveBeenCalledWith("ws-12345678aaaabbbb-chatbot")
+            expect(gatewayAdmin.removeAgent).not.toHaveBeenCalled()
+            expect(pause.wait.mock.calls).toEqual(unregistered ? [[2000]] : [])
+        },
+    )
+
     it("takes a removed installation out of OpenClaw unless another instance of the module is left", async () => {
         const removed = installationOf({ removed: true })
         const alone = await build({ installation: removed })

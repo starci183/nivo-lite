@@ -43,7 +43,7 @@ export const useAgentChatCopy = (chat: AgentChatState) => {
         crumbs: [
             { id: "home", label: shell("crumbHome"), href: CONSOLE_ROUTES.dashboard },
             { id: "modules", label: modules("catalogTitle"), href: "/agents" },
-            isLoading ? { id: "agent", label: "", isSkeleton: true as const } : { id: "agent", label: name },
+            isLoading ? { id: "agent", label: "", isLoading: true as const } : { id: "agent", label: name },
         ],
         header: headerOf(t, name, subtitleOf, isLoading, isCustomer, chat, agent),
         channelTabs:
@@ -80,7 +80,7 @@ export const useAgentChatCopy = (chat: AgentChatState) => {
             sendLabel: t("send"),
             draft: chat.draft,
             isSending: chat.isSending,
-            isSkeleton: isLoading,
+            isLoading: isLoading,
             canSend: (chat.draft.trim().length > 0 || chat.file !== null) && !chat.isSending && !isLoading,
             file: {
                 label: t("attachFile"),
@@ -143,7 +143,7 @@ const headerOf = (
         backLabel: t("backModules"),
         name,
         subtitle: subtitleOf(),
-        isSkeleton: isLoading,
+        isLoading: isLoading,
         badge: isCustomer ? t("realAiBadge") : null,
         takeover:
             isCustomer && chat.hasSelection

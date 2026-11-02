@@ -1,11 +1,7 @@
 import type { useAgentChatThreadView } from "./useAgentChatThreadView"
 import type { useAgentChatNavigation } from "./useAgentChatNavigation"
 import type { useTranslations } from "next-intl"
-import type {
-    useQueryAgentChatPageSwr,
-    useQueryAgentChatConversationsSwr,
-    useQueryAgentChatMessagesSwr,
-} from "@/hooks/swr"
+import type { useQueryAgentChatPageSwr, useQueryAgentChatConversationsSwr } from "@/hooks/swr"
 import type { useAgentChatActions } from "./useAgentChatActions"
 import type { ChatTab } from "./useAgentChat"
 
@@ -65,8 +61,8 @@ interface AgentChatViewInput {
     readonly thread: ReturnType<typeof useAgentChatThreadView>["thread"]
     readonly actions: ReturnType<typeof useAgentChatActions>
     readonly queryError: unknown
-    readonly history: ReturnType<typeof useQueryAgentChatConversationsSwr>
-    readonly messages: ReturnType<typeof useQueryAgentChatMessagesSwr>
+    readonly isLoadingList: boolean
+    readonly isLoadingThread: boolean
     readonly isTakenOver: boolean
     readonly selectedId: string | null
     readonly selectedConversation:
@@ -93,8 +89,8 @@ export const viewOf = ({
     thread,
     actions,
     queryError,
-    history,
-    messages,
+    isLoadingList,
+    isLoadingThread,
     isTakenOver,
     selectedId,
     selectedConversation,
@@ -110,8 +106,8 @@ export const viewOf = ({
         draft: actions.message.watch("body"),
         visitorName: actions.visitor.watch("visitorName"),
         error: actions.error ?? (queryError instanceof Error ? queryError.message : null),
-        isLoadingList: history.isLoading,
-        isLoadingThread: messages.isLoading,
+        isLoadingList,
+        isLoadingThread,
         isSending: actions.isSending,
         isAwaitingReply: actions.isAwaitingReply,
         isStarting: actions.isStarting,

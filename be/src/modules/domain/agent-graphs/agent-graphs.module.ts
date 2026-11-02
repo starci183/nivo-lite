@@ -1,28 +1,43 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule, Type } from "@nestjs/common"
-import { AGENT_GRAPH_BRIEF } from "@modules/domain/agent-turns"
 import { SETUP_GRAPH } from "@modules/domain/modules"
-import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
-import { DATA_RIGHTS_GATE } from "@modules/domain/mcp-gateway"
+import { OUTPUT_NODE_READER, WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
+import { DATA_RIGHTS_GATE, TOOL_GRAPH_GATE } from "@modules/domain/mcp-gateway"
 import { AgentDataRightsService } from "./agent-data-rights.service"
 import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
+import { AGENT_RUN_WAIT_TIMEOUT } from "@modules/domain/agent-runs"
+import { AgentGraphWaitTimeoutService } from "./agent-graph-wait-timeout.service"
 import { AgentGraphAsksService } from "./agent-graph-asks.service"
 import { AgentGraphBriefService } from "./agent-graph-brief.service"
+import { AgentGraphContractSetupService } from "./agent-graph-contract-setup.service"
+import { AgentGraphContractsService } from "./agent-graph-contracts.service"
+import { AgentGraphChecksService } from "./agent-graph-checks.service"
 import { AgentGraphDeciderService } from "./agent-graph-decider.service"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
-import { AGENT_GRAPH_APPROVALS, AGENT_GRAPHS_OPTIONS, GRAPH_FACT_READERS } from "./agent-graphs.decorators"
+import {
+    AGENT_GRAPH_APPROVALS,
+    AGENT_GRAPH_BRIEF,
+    AGENT_GRAPHS_OPTIONS,
+    GRAPH_FACT_READERS,
+    GRAPH_WORK_DECISIONS,
+} from "./agent-graphs.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-graphs.module-definition"
 import { AgentGraphAdminService } from "./agent-graph-admin.service"
 import { AgentGraphContextService } from "./agent-graph-context.service"
+import { AgentGraphOutputNodesService } from "./agent-graph-output-nodes.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
 import { AgentGraphPublishService } from "./agent-graph-publish.service"
 import { AgentGraphRunService } from "./agent-graph-run.service"
 import { AgentGraphSetupService } from "./agent-graph-setup.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
+import { AgentGraphToolGateService } from "./agent-graph-tool-gate.service"
 import { AgentGraphWatchService } from "./agent-graph-watch.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { GraphFactsService } from "./graph-facts.service"
+import { GraphFactReadersService } from "./graph-fact-readers.service"
+import type { GraphFactReader } from "./agent-graphs.port"
+import { OutgoingFactReaderService } from "./outgoing-fact-reader.service"
 import { WorkAmountFactReaderService } from "./work-amount-fact-reader.service"
 
 /** A port the capability binds to one of its services. */
@@ -39,11 +54,35 @@ interface Part {
 
 const RIGHTS_PORT: PortBinding = { provide: DATA_RIGHTS_GATE, useExisting: AgentDataRightsService }
 
-/** The data rights alone: the store and the gate the gateway enforces. */
-const RIGHTS_ONLY: Part = { services: [AgentGraphsService, AgentDataRightsService], ports: [RIGHTS_PORT] }
+/** The graph's gate on a write tool, which the gateway consults on every door. */
+const TOOL_PORT: PortBinding = { provide: TOOL_GRAPH_GATE, useExisting: AgentGraphToolGateService }
+
+/** The nodes an output runs on, which the steps of a run name. */
+const OUTPUT_NODES_PORT: PortBinding = { provide: OUTPUT_NODE_READER, useExisting: AgentGraphOutputNodesService }
+
+/** The reader of what the agent proposes, which every app that walks a graph carries. */
+const OUTGOING_FACTS: Type = OutgoingFactReaderService
+
+/** The data rights alone, with the gate on write tools: what the gateway enforces. */
+const RIGHTS_ONLY: Part = {
+    services: [
+        AgentGraphsService,
+        AgentDataRightsService,
+        AgentGraphDecisionsService,
+        GraphFactsService,
+        OUTGOING_FACTS,
+        AgentGraphChecksService,
+        AgentGraphToolGateService,
+        AgentGraphOutputNodesService,
+    ],
+    ports: [RIGHTS_PORT, TOOL_PORT, OUTPUT_NODES_PORT],
+}
 
 /** The reader of the amount of the work item itself, which every app that decides branches carries beside the readers of its modules. */
 const WORK_AMOUNT: Type = WorkAmountFactReaderService
+
+/** Registers configured readers after their graph-gated connectors can construct; nothing serves until the module compiles. */
+const FACT_READERS_READY: unique symbol = Symbol("domain.agent-graphs.fact-readers-ready")
 
 /** The branch decider alone: the store, the ledger, the fact readers and the port the work engine calls. */
 const DECIDER_ONLY: Part = {
@@ -51,10 +90,13 @@ const DECIDER_ONLY: Part = {
         AgentGraphsService,
         AgentGraphDecisionsService,
         GraphFactsService,
+        AgentGraphChecksService,
+        AgentGraphToolGateService,
         AgentGraphDeciderService,
         WORK_AMOUNT,
+        OUTGOING_FACTS,
     ],
-    ports: [{ provide: WORK_BRANCH_DECIDER, useExisting: AgentGraphDeciderService }],
+    ports: [{ provide: WORK_BRANCH_DECIDER, useExisting: AgentGraphDeciderService }, TOOL_PORT],
 }
 
 /** The whole capability. */
@@ -62,11 +104,15 @@ const WHOLE: Part = {
     services: [
         AgentGraphsService,
         AgentGraphDecisionsService,
+        AgentGraphChecksService,
+        AgentGraphToolGateService,
         AgentGraphDeciderService,
         AgentGraphBriefService,
+        AgentGraphContractsService,
         AgentDataRightsService,
         GraphFactsService,
         WORK_AMOUNT,
+        OUTGOING_FACTS,
         AgentGraphContextService,
         AgentGraphSeedService,
         AgentGraphPublishService,
@@ -75,16 +121,22 @@ const WHOLE: Part = {
         AgentGraphAdminService,
         AgentGraphApprovalsService,
         AgentGraphAsksService,
+        AgentGraphOutputNodesService,
         AgentGraphRunService,
         AgentGraphWatchService,
         AgentGraphSetupService,
+        AgentGraphContractSetupService,
+        AgentGraphWaitTimeoutService,
     ],
     ports: [
         { provide: WORK_BRANCH_DECIDER, useExisting: AgentGraphDeciderService },
         { provide: AGENT_GRAPH_APPROVALS, useExisting: AgentGraphApprovalsService },
         { provide: AGENT_GRAPH_BRIEF, useExisting: AgentGraphBriefService },
         RIGHTS_PORT,
+        TOOL_PORT,
+        OUTPUT_NODES_PORT,
         { provide: SETUP_GRAPH, useExisting: AgentGraphSetupService },
+        { provide: AGENT_RUN_WAIT_TIMEOUT, useExisting: AgentGraphWaitTimeoutService },
     ],
 }
 
@@ -97,9 +149,9 @@ const partOf = (options: typeof OPTIONS_TYPE): Part => {
 @Module({})
 /**
  * Each agent as a flow the owner can read and change: the store of its draft and immutable versions, the branch that runs in the
- * work engine, the brief a turn is given, and the data rights the gateway enforces. It binds the three ports the capabilities below it
- * leave open (the branch decider, the turn brief, the data rights), so with no graph they behave exactly as before. An app that serves
- * only the gateway asks for `rightsOnly`, and one that judges branches with no approval road for `deciderOnly`.
+ * work engine, the brief a turn is given, and the data rights and the gate on write tools the gateway enforces. It binds the ports the
+ * capabilities below it leave open, so with no graph they behave exactly as before. An app that serves only the gateway asks for
+ * `rightsOnly`, and one that judges branches with no approval road for `deciderOnly`.
  */
 export class AgentGraphsModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
@@ -111,11 +163,26 @@ export class AgentGraphsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 ...part.services,
+                GraphFactReadersService,
                 { provide: AGENT_GRAPHS_OPTIONS, useValue: options },
+                ...(options.workDecisions === undefined
+                    ? []
+                    : [{ provide: GRAPH_WORK_DECISIONS, useExisting: options.workDecisions }]),
                 {
                     provide: GRAPH_FACT_READERS,
-                    useFactory: (...readers: ReadonlyArray<object>) => readers,
-                    inject: [...(options.readers ?? []), ...(options.rightsOnly === true ? [] : [WORK_AMOUNT])],
+                    useFactory: (registry: GraphFactReadersService) => registry.all(),
+                    inject: [GraphFactReadersService],
+                },
+                {
+                    provide: FACT_READERS_READY,
+                    useFactory: (registry: GraphFactReadersService, ...readers: ReadonlyArray<GraphFactReader>) =>
+                        registry.register(readers),
+                    inject: [
+                        GraphFactReadersService,
+                        ...(options.readers ?? []),
+                        OUTGOING_FACTS,
+                        ...(options.rightsOnly === true ? [] : [WORK_AMOUNT]),
+                    ],
                 },
                 ...part.ports,
             ],

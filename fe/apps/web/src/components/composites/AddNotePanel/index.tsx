@@ -1,5 +1,4 @@
-import { Alert, Button, Input, Textarea } from "@starci/grammar/common"
-import { PAIR_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
+import { Alert, Button, Input, Textarea, Stack } from "@starci/grammar/common"
 
 /** One question and its answer. */
 export interface PairView {
@@ -35,7 +34,7 @@ type AddNotePanelProps = {
 
 /** The name of a note and either its text or a list of questions with answers. */
 export const AddNotePanel = (props: AddNotePanelProps) => (
-    <div className={PANEL_CLASS_NAME}>
+    <Stack gap="section">
         <Input
             id="knowledge-add-title"
             name="title"
@@ -43,7 +42,7 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
             description={props.titleHint}
             value={props.title}
             errorMessage={props.titleError}
-            isError={props.titleError !== undefined}
+            isInvalid={props.titleError !== undefined}
             isDisabled={props.isBusy}
             onValueChange={props.onTitle}
         />
@@ -64,7 +63,7 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
         ) : (
             <>
                 {props.pairs.map((pair) => (
-                    <div key={pair.id} className={PAIR_CLASS_NAME}>
+                    <Stack gap="inline" key={pair.id}>
                         <Input
                             id={`knowledge-add-q-${pair.id}`}
                             name={`q-${pair.id}`}
@@ -92,7 +91,7 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
                                 {props.removeLabel}
                             </Button>
                         ) : null}
-                    </div>
+                    </Stack>
                 ))}
                 <Button intent="neutral" isDisabled={props.isBusy} onPress={props.onAddPair}>
                     {props.addLabel}
@@ -100,5 +99,5 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
                 {props.contentError === undefined ? null : <Alert tone="negative" title={props.contentError} />}
             </>
         )}
-    </div>
+    </Stack>
 )

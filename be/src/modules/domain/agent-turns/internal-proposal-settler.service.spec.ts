@@ -9,9 +9,17 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentWriteRightService } from "./agent-write-right.service"
 import { AgentTurnsLogEvent } from "./agent-turns.log-events"
+import { IntentPipelineService } from "./intent-pipeline.service"
+import { IntentTurnService } from "./intent-turn.service"
 import { InternalProposalSettlerService } from "./internal-proposal-settler.service"
 import type { StoredProposal } from "./agent-turn.policy"
-import type { InternalAction, InternalProposal, InternalSettleInput } from "./agent-turns.contracts"
+import type {
+    IntentPlan,
+    IntentRead,
+    InternalAction,
+    InternalProposal,
+    InternalSettleInput,
+} from "./agent-turns.contracts"
 
 const input: InternalSettleInput = {
     module: "accounting",
@@ -53,6 +61,30 @@ const full = (over: Partial<WrittenProposal>): WrittenProposal => ({
     ...over,
 })
 
+const PLAN: IntentPlan = {
+    versionId: "v-1",
+    trigger: "tag",
+    trust: "manager",
+    pinned: null,
+    contracts: [],
+}
+
+const READ: IntentRead = {
+    reading: { kind: "safe", cause: "no_intent", detail: "none", intent: null, gap: null, draft: "" },
+    trace: {
+        versionId: "v-1",
+        trigger: "tag",
+        trust: "manager",
+        offered: [],
+        intent: null,
+        result: "no_intent",
+        detail: "none",
+        dropped: [],
+    },
+}
+
+const DOOR_SETTLED = { reply: "On it.", needsHuman: false, reason: "", tasks: 0, actions: [] }
+
 const item = (id: string): WorkItem => mock<WorkItem>({ id })
 
 const build = async (
@@ -60,9 +92,10 @@ const build = async (
         readonly live?: boolean
         readonly mayWrite?: boolean
         readonly actions?: Record<string, ActionEntry | null>
+        readonly plan?: IntentPlan | null
     } = {},
 ) => {
-    const { live = true, mayWrite = true, actions = { send_invoice: entry("accounting") } } = options
+    const { live = true, mayWrite = true, actions = { send_invoice: entry("accounting") }, plan = null } = options
     const turns = mock<AgentTurnsService>({ touch: jest.fn(() => Promise.resolve(live)) })
     const tasks = mock<AgentTasksService>({ apply: jest.fn(() => Promise.resolve()) })
     let issued = 0
@@ -78,6 +111,11 @@ const build = async (
     const events = mock<EventsService>({ record: jest.fn(() => Promise.resolve()) })
     const right = mock<AgentWriteRightService>({ mayWrite: jest.fn(() => Promise.resolve(mayWrite)) })
     const logger = mock<Logger>()
+    const intents = mock<IntentTurnService>({ planFor: jest.fn().mockResolvedValue(plan) })
+    const pipeline = mock<IntentPipelineService>({
+        read: jest.fn().mockResolvedValue(READ),
+        door: jest.fn().mockResolvedValue({ split: false, settled: DOOR_SETTLED }),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             InternalProposalSettlerService,
@@ -88,6 +126,8 @@ const build = async (
             { provide: ModuleCatalogService, useValue: catalog },
             { provide: EventsService, useValue: events },
             { provide: AgentWriteRightService, useValue: right },
+            { provide: IntentTurnService, useValue: intents },
+            { provide: IntentPipelineService, useValue: pipeline },
         ],
     }).compile()
     return {
@@ -99,6 +139,8 @@ const build = async (
         events,
         logger,
         right,
+        intents,
+        pipeline,
     }
 }
 
@@ -347,5 +389,110 @@ describe("InternalProposalSettlerService > actions that never reach the engine",
             tasks: 0,
             actions: [],
         })
+    })
+})
+
+describe("InternalProposalSettlerService > a wake named by its ids", () => {
+    const wake = {
+        workspaceId: "ws-1",
+        agentId: "agent-1",
+        wakeId: "wake-1",
+        turnId: "turn-1",
+        source: "tag",
+        authorUserId: "user-1",
+    } as const
+
+    it("applies the text of a proposal for a wake without asking for its lease, so a step can settle from its row", async () => {
+        const { settler, tasks, engine, right } = await build()
+
+        const settled = await settler.apply(wake, proposal({ actions: [action()] }).text, input)
+
+        expect(settled).toMatchObject({ kind: "settled", reply: "On it.", actions: [{ outcome: "requested" }] })
+        expect(tasks.apply).toHaveBeenCalledWith("ws-1", "agent-1", [])
+        expect(right.mayWrite).toHaveBeenCalledWith("tag", "user-1", "ws-1")
+        expect(engine.runWork).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                dedupeKey: "agentturn:wake-1:0",
+                origin: { turnId: "turn-1", wakeId: "wake-1" },
+            }),
+        )
+    })
+
+    it("reads a text that is no proposal as a plain reply", async () => {
+        const { settler, engine } = await build()
+
+        await expect(settler.apply(wake, "Just a line.", input)).resolves.toMatchObject({
+            reply: "Just a line.",
+            actions: [],
+        })
+        expect(engine.runWork).not.toHaveBeenCalled()
+    })
+
+    it("says whether the worker still holds the lease of the turn", async () => {
+        const live = await build({ live: true })
+        const lost = await build({ live: false })
+        const turn = agentTurnViewOf({})
+
+        await expect(live.settler.live(turn)).resolves.toBe(true)
+        await expect(lost.settler.live(turn)).resolves.toBe(false)
+    })
+})
+
+describe("InternalProposalSettlerService > a turn on the contract pipeline", () => {
+    const SIGNAL = new AbortController().signal
+
+    it("keeps the text on the run, reads it and runs the tag door with the settle input, and answers what the door applied with the trace", async () => {
+        const { settler, pipeline, intents, tasks } = await build({ plan: PLAN })
+        const turn = agentTurnViewOf({ source: "tag", context: { authorUserId: "user-1", intent: "pay" } })
+
+        const settled = await settler.settle(turn, { text: "envelope" }, input, SIGNAL)
+
+        expect(settled).toEqual({ kind: "settled", ...DOOR_SETTLED, traced: { intent: READ.trace } })
+        expect(intents.planFor).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            source: "tag",
+            authorUserId: "user-1",
+            pinned: "pay",
+        })
+        expect(pipeline.read).toHaveBeenCalledWith(turn, PLAN, "envelope", SIGNAL)
+        expect(pipeline.door).toHaveBeenCalledWith(turn, "tag_door", READ, SIGNAL, { settle: input })
+        expect(tasks.apply).not.toHaveBeenCalled()
+    })
+
+    it("settles nothing when the door split the turn", async () => {
+        const { settler, pipeline } = await build({ plan: PLAN })
+        pipeline.door.mockResolvedValue({ split: true, fired: true })
+
+        await expect(settler.settle(agentTurnViewOf({ source: "tag" }), {}, input)).resolves.toEqual({
+            kind: "settled",
+            reply: "",
+            needsHuman: false,
+            reason: "",
+            tasks: 0,
+            actions: [],
+            traced: { intent: READ.trace },
+        })
+    })
+
+    it("settles nothing when the door answers what no door answers", async () => {
+        const { settler, pipeline } = await build({ plan: PLAN })
+        pipeline.door.mockResolvedValue({ junk: true })
+
+        await expect(settler.settle(agentTurnViewOf({ source: "tag" }), {}, input)).resolves.toMatchObject({
+            kind: "settled",
+            actions: [],
+        })
+    })
+
+    it("reads a turn the graph holds no contracts for as it always did, with no run", async () => {
+        const { settler, pipeline } = await build()
+
+        await expect(settler.settle(agentTurnViewOf({ source: "tag" }), proposal(), input)).resolves.toMatchObject({
+            kind: "settled",
+            reply: "On it.",
+        })
+        expect(pipeline.read).not.toHaveBeenCalled()
     })
 })

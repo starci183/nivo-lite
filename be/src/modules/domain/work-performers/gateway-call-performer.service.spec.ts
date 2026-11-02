@@ -1,5 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { AgentRunsService } from "@modules/domain/agent-runs"
+import type { StepLink } from "@modules/domain/agent-runs"
 import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import { CustomerDeliveryService } from "./customer-delivery.service"
@@ -24,19 +26,36 @@ const itemOf = (proposal: Proposal): WorkItem => {
     return item
 }
 
-const build = async () => {
+const build = async (waits = false, includeRuns = true) => {
     const gateway = mock<McpGatewayService>({
         call: jest.fn().mockResolvedValue({ ok: true, value: { bookingId: "B-1" } }),
     })
     const delivery = mock<CustomerDeliveryService>({ approvedInConversation: jest.fn().mockResolvedValue(true) })
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            GatewayCallPerformerService,
-            { provide: McpGatewayService, useValue: gateway },
-            { provide: CustomerDeliveryService, useValue: delivery },
-        ],
-    }).compile()
-    return { performer: moduleRef.get(GatewayCallPerformerService), gateway, delivery }
+    const wait = mock<StepLink>({
+        kind: "approval",
+        agentId: "sales",
+        status: "running",
+        waitItemId: "w1",
+        input: { workItemId: "w1", scope: { conversationId: "c1" } },
+    })
+    const runs = mock<AgentRunsService>({ linksFor: jest.fn().mockResolvedValue(waits ? [wait] : []) })
+    const moduleRef = includeRuns
+        ? await Test.createTestingModule({
+              providers: [
+                  GatewayCallPerformerService,
+                  { provide: McpGatewayService, useValue: gateway },
+                  { provide: CustomerDeliveryService, useValue: delivery },
+                  { provide: AgentRunsService, useValue: runs },
+              ],
+          }).compile()
+        : await Test.createTestingModule({
+              providers: [
+                  GatewayCallPerformerService,
+                  { provide: McpGatewayService, useValue: gateway },
+                  { provide: CustomerDeliveryService, useValue: delivery },
+              ],
+          }).compile()
+    return { performer: moduleRef.get(GatewayCallPerformerService), gateway, delivery, runs }
 }
 
 describe("GatewayCallPerformerService", () => {
@@ -110,6 +129,43 @@ describe("GatewayCallPerformerService", () => {
     })
 })
 
+describe("GatewayCallPerformerService on a run", () => {
+    it("leaves a call held in a run to the steps of that run", async () => {
+        const { performer, gateway, delivery, runs } = await build(true)
+        const held = { ...PROPOSAL, fields: { ...PROPOSAL.fields, in_run: "true" } }
+        await expect(performer.perform(CTX, itemOf(held), held, { name: "Manager" })).resolves.toEqual({
+            summary: "booking.confirm for Lan",
+            evidence: "captured",
+            lead_id: "l1",
+        })
+        expect(gateway.call).not.toHaveBeenCalled()
+        expect(delivery.approvedInConversation).not.toHaveBeenCalled()
+        expect(runs.linksFor).toHaveBeenCalledWith("ws", "approval", "workItemId", "w1")
+    })
+
+    it.each([true, false])(
+        "refuses a claimed run with no active persisted wait, with run support %s",
+        async (includeRuns) => {
+            const { performer, gateway } = await build(false, includeRuns)
+            const forged = { ...PROPOSAL, fields: { ...PROPOSAL.fields, in_run: "true" } }
+            await expect(performer.perform(CTX, itemOf(forged), forged, { name: "Manager" })).rejects.toMatchObject({
+                code: WorkPerformersErrorCode.ApprovalInvalid,
+            })
+            expect(gateway.call).not.toHaveBeenCalled()
+        },
+    )
+
+    it("rejects malformed edits before deferring a call to its real run", async () => {
+        const { performer, runs, gateway } = await build(true)
+        const invalid = { ...PROPOSAL, fields: { ...PROPOSAL.fields, in_run: "true", args_json: "[]" } }
+        await expect(performer.perform(CTX, itemOf(invalid), invalid, { name: "Manager" })).rejects.toMatchObject({
+            code: WorkPerformersErrorCode.ApprovalInvalid,
+        })
+        expect(runs.linksFor).not.toHaveBeenCalled()
+        expect(gateway.call).not.toHaveBeenCalled()
+    })
+})
+
 describe("GatewayCallPerformerService sequence", () => {
     const STEPS = [
         { name: "crm.stay.checkIn", arguments: { stayId: "s1" } },
@@ -166,4 +222,52 @@ describe("GatewayCallPerformerService sequence", () => {
         })
         expect(gateway.call).not.toHaveBeenCalled()
     })
+})
+
+describe("GatewayCallPerformerService durable wait scope", () => {
+    it.each([
+        { kind: "other", agentId: "sales", input: { workItemId: "w1", scope: { conversationId: "c1" } } },
+        { kind: "approval", agentId: "other-agent", input: { workItemId: "w1", scope: { conversationId: "c1" } } },
+        { kind: "approval", agentId: "sales", input: { workItemId: "other-item", scope: { conversationId: "c1" } } },
+        { kind: "approval", agentId: "sales", input: { workItemId: "w1", scope: { conversationId: "other-chat" } } },
+    ])("refuses an existing wait outside its approval identity: %p", async (link) => {
+        const { performer, runs, gateway } = await build(true)
+        runs.linksFor.mockResolvedValue([mock<StepLink>({ status: "running", waitItemId: "w1", ...link })])
+        const proposal = { ...PROPOSAL, fields: { ...PROPOSAL.fields, in_run: "true" } }
+        await expect(
+            performer.perform(CTX, itemOf(proposal), proposal, { name: "Manager", kind: "owner" }),
+        ).rejects.toMatchObject({ code: WorkPerformersErrorCode.ApprovalInvalid })
+        expect(gateway.call).not.toHaveBeenCalled()
+    })
+})
+
+describe("GatewayCallPerformerService immutable run ownership", () => {
+    it("defers an active linked approval even when the editable marker was removed", async () => {
+        const { performer, gateway } = await build(true)
+        await expect(performer.perform(CTX, itemOf(PROPOSAL), PROPOSAL, { name: "Manager" })).resolves.toMatchObject({
+            evidence: "captured",
+        })
+        expect(gateway.call).not.toHaveBeenCalled()
+    })
+
+    it.each(["done", "failed"] as const)(
+        "refuses a %s linked approval after the marker was edited away",
+        async (status) => {
+            const { performer, gateway, runs } = await build(true)
+            runs.linksFor.mockResolvedValue([
+                mock<StepLink>({
+                    kind: "approval",
+                    agentId: "sales",
+                    status,
+                    waitItemId: null,
+                    input: { workItemId: "w1", scope: { conversationId: "c1" } },
+                }),
+            ])
+            const edited = { ...PROPOSAL, fields: { ...PROPOSAL.fields, in_run: "false" } }
+            await expect(performer.perform(CTX, itemOf(edited), edited, { name: "Manager" })).rejects.toMatchObject({
+                code: WorkPerformersErrorCode.ApprovalInvalid,
+            })
+            expect(gateway.call).not.toHaveBeenCalled()
+        },
+    )
 })

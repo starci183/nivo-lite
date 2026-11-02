@@ -1,7 +1,18 @@
-import { Badge, Button, Disclosure, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
-import { DossierStaticRows } from "@/components/leaves/DossierStaticRows"
+import {
+    Badge,
+    Button,
+    DescriptionList,
+    Disclosure,
+    EmptyNotice,
+    Link,
+    Section,
+    Text,
+    Stack,
+    Cluster,
+    FilterButtonGroup,
+} from "@starci/grammar/common"
+import type { ListRowData } from "@starci/grammar/common"
 import type { FindingAction, FindingRowView } from "@/hooks/brain"
-import { ACTIONS_CLASS_NAME, DETAIL_CLASS_NAME, EVIDENCE_CLASS_NAME, SOURCES_CLASS_NAME } from "./classNames"
 
 export type { FindingAction, FindingRowView } from "@/hooks/brain"
 
@@ -11,22 +22,37 @@ interface DossierFindingRowsProps {
     readonly rows: ReadonlyArray<FindingRowView>
     readonly isSkeleton: boolean
     readonly onAction: (findingId: string, action: FindingAction) => void
+    readonly filterLabel: string
+    readonly filters: ReadonlyArray<{ readonly value: string; readonly label: string }>
+    readonly filter: string
+    readonly onFilterChange: (value: string) => void
 }
 
 /** The evidence of a finding as static rows, with a link to each document it comes from. */
 const Evidence = (props: Pick<FindingRowView, "id" | "evidenceTitle" | "evidence" | "sources">) => (
-    <Disclosure title={props.evidenceTitle} headingLevel={4}>
-        <div className={EVIDENCE_CLASS_NAME}>
-            <DossierStaticRows label={props.evidenceTitle} items={props.evidence} />
-            <div className={SOURCES_CLASS_NAME}>
-                {props.sources.map((source) => (
-                    <TextAction key={source.id} href={source.href}>
-                        {source.label}
-                    </TextAction>
-                ))}
-            </div>
-        </div>
-    </Disclosure>
+    <Disclosure
+        title={props.evidenceTitle}
+        headingLevel={4}
+        body={
+            <Stack gap="row">
+                <DescriptionList
+                    layout="stacked"
+                    items={props.evidence.map((item) => ({
+                        id: item.id,
+                        term: item.label,
+                        description: item.description ?? "",
+                    }))}
+                />
+                <Cluster gap="row">
+                    {props.sources.map((source) => (
+                        <Link key={source.id} href={source.href}>
+                            {source.label}
+                        </Link>
+                    ))}
+                </Cluster>
+            </Stack>
+        }
+    />
 )
 
 /** One row and what its actions call. */
@@ -37,11 +63,20 @@ interface RowDetailProps {
 
 /** The meta line, the evidence and the actions that belong to one row. */
 const RowDetail = (props: RowDetailProps) => (
-    <div className={DETAIL_CLASS_NAME}>
+    <Stack gap="row">
+        {props.row.badges.length <= 2 ? null : (
+            <Cluster gap="inline">
+                {props.row.badges.slice(2).map((badge) => (
+                    <Badge key={badge.id} tone={badge.tone}>
+                        {badge.label}
+                    </Badge>
+                ))}
+            </Cluster>
+        )}
         {props.row.meta === null ? null : <Text tone="muted">{props.row.meta}</Text>}
         {props.row.evidence.length === 0 ? null : <Evidence {...props.row} />}
         {props.row.actions.length === 0 ? null : (
-            <div className={ACTIONS_CLASS_NAME}>
+            <Cluster gap="inline">
                 {props.row.actions.map((action) =>
                     action.href === null ? (
                         <Button
@@ -58,10 +93,28 @@ const RowDetail = (props: RowDetailProps) => (
                         </Button>
                     ),
                 )}
-            </div>
+            </Cluster>
         )}
-    </div>
+    </Stack>
 )
+
+/** The badges a row carries, capped at the two a list row draws; the rest follow in the detail. */
+const badgesOf = (badges: FindingRowView["badges"]): Pick<ListRowData, "badges"> => {
+    const [first, second] = badges.map((badge) => ({ label: badge.label, tone: badge.tone }))
+    if (first === undefined) return {}
+    return second === undefined ? { badges: [first] } : { badges: [first, second] }
+}
+
+/** One finding as row data: the title leads to its dossier where the address has one. */
+const itemOf = (row: FindingRowView, onAction: DossierFindingRowsProps["onAction"]): ListRowData => ({
+    id: row.id,
+    title: row.title,
+    description: row.detail,
+    state: row.isFocused ? "informative" : "neutral",
+    ...badgesOf(row.badges),
+    ...(row.titleHref === null ? {} : { href: row.titleHref }),
+    detail: <RowDetail row={row} onAction={onAction} />,
+})
 
 /**
  * The findings of the dossier review as rows of one list: severity, kind and AI badges, the title (a link where the row leads
@@ -69,29 +122,19 @@ const RowDetail = (props: RowDetailProps) => (
  * pane of one dossier and the list of what needs doing.
  */
 export const DossierFindingRows = (props: DossierFindingRowsProps) => (
-    <SurfaceListCard ariaLabel={props.label} isLoading={props.isSkeleton}>
-        {props.isSkeleton
-            ? null
-            : props.rows.map((row) => (
-                  <ListRow
-                      key={row.id}
-                      title={
-                          row.titleHref === null ? row.title : <TextAction href={row.titleHref}>{row.title}</TextAction>
-                      }
-                      description={row.detail}
-                      state={row.isFocused ? "informative" : "neutral"}
-                      badges={
-                          <>
-                              {row.badges.map((badge) => (
-                                  <Badge key={badge.id} tone={badge.tone}>
-                                      {badge.label}
-                                  </Badge>
-                              ))}
-                          </>
-                      }
-                  >
-                      <RowDetail row={row} onAction={props.onAction} />
-                  </ListRow>
-              ))}
-    </SurfaceListCard>
+    <Section
+        kind="list"
+        title={props.label}
+        filter={
+            <FilterButtonGroup
+                label={props.filterLabel}
+                options={props.filters}
+                value={props.filter}
+                onValueChange={props.onFilterChange}
+            />
+        }
+        isLoading={props.isSkeleton}
+        empty={<EmptyNotice message={props.label} />}
+        items={props.rows.map((row) => itemOf(row, props.onAction))}
+    />
 )

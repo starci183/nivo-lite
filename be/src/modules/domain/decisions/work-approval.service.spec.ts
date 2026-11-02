@@ -71,7 +71,7 @@ const proposalOf = builder<Proposal>({ summary: "Quote", fields: {}, amount_vnd:
 const catalogDouble = mock<MessageCatalog>({
     get: jest.fn((key: string, params: Readonly<Record<string, string | number>>) => {
         if (key === "engine.field.need") return "Need"
-        if (key.startsWith("engine.field.")) return key
+        if (key.startsWith("engine.field.") || key === "engine.evidenceVia.new_road") return key
         return `${key}(${Object.entries(params)
             .map(([name, value]) => `${name}=${value}`)
             .join(",")})`
@@ -192,7 +192,74 @@ describe("WorkApprovalService", () => {
 
             expect(evidence).toHaveBeenCalledWith(ctx, expect.objectContaining({ evidence: null }))
         })
+    })
+})
 
+describe("WorkApprovalService", () => {
+    describe("ask where the amount came from", () => {
+        it("says where the evidence came from in the evidence log and in the Office line", async () => {
+            const { service, evidence, office } = await build()
+            const proposal = proposalOf({
+                evidence: [{ key: "amount_vnd", value: 5000, kind: "received", via: "sepay" }],
+            })
+
+            await service.ask(
+                ctx,
+                itemOf(),
+                proposal,
+                askOf({ reason: "unclear_outcome", reasons: ["unclear_outcome"] }),
+            )
+
+            expect(evidence).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({ evidence: "engine.evidenceVia.sepay()" }),
+            )
+            expect(office).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    body: "engine.ask(dept=Sales AI,reason=engine.reason.unclear_outcome(),summary=Quote · engine.evidenceVia.sepay())",
+                }),
+            )
+        })
+
+        it("puts the evidence note after the limit note, and shows a road the catalog does not know as it is", async () => {
+            const { service, evidence } = await build()
+            const proposal = proposalOf({
+                evidence: [{ key: "amount_vnd", value: 5000, kind: "claimed", via: "new_road" }],
+            })
+
+            await service.ask(ctx, itemOf(), proposal, askOf())
+
+            expect(evidence).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    evidence: "engine.limitReached(limit=₫1,000,amount=₫5,000) · new_road",
+                }),
+            )
+        })
+
+        it("writes no evidence note when the work carries no evidence", async () => {
+            const { service, office } = await build()
+
+            await service.ask(
+                ctx,
+                itemOf(),
+                proposalOf({ evidence: [] }),
+                askOf({ reason: "unclear_outcome", reasons: ["unclear_outcome"] }),
+            )
+
+            expect(office).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    body: "engine.ask(dept=Sales AI,reason=engine.reason.unclear_outcome(),summary=Quote)",
+                }),
+            )
+        })
+    })
+})
+
+describe("WorkApprovalService", () => {
+    describe("ask and the limit note", () => {
         it.each([
             ["there is no rule", null, proposalOf()],
             ["the rule has no limit", ruleOf({ limit_vnd: null }), proposalOf()],

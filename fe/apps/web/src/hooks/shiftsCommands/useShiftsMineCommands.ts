@@ -1,4 +1,5 @@
-"use client"
+import { useActiveWorkspace } from "@/hooks/workspaces"
+;("use client")
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
@@ -32,6 +33,7 @@ interface ShiftsMineCommands {
 
 /** The "my schedule" commands of the Shifts workbench through the back end GraphQL API, toasted, with the reads revalidated. */
 export const useShiftsMineCommands = (): ShiftsMineCommands => {
+    const { activeWorkspaceId } = useActiveWorkspace()
     const t = useTranslations("shifts")
     const tToast = useTranslations("toast")
     const run = useGraphQLWithToast()
@@ -43,17 +45,17 @@ export const useShiftsMineCommands = (): ShiftsMineCommands => {
     const tell = useCallback(
         async (status: string, done: string, sent: string): Promise<void> => {
             toast.success(tToast("successTitle"), { description: status === "done" ? done : sent })
-            await refreshShifts()
+            await refreshShifts(activeWorkspaceId)
         },
-        [tToast],
+        [tToast, activeWorkspaceId],
     )
     const checkIn = useCallback(
         async (shiftId: string): Promise<boolean> => {
             const result = await run(() => checking.trigger({ shiftId }), { successMessage: t("checkedInOk") })
-            await refreshShifts()
+            await refreshShifts(activeWorkspaceId)
             return result !== undefined
         },
-        [run, checking, t],
+        [run, checking, t, activeWorkspaceId],
     )
     const requestSwap = useCallback(
         async (shiftId: string, toStaffId: string, reason: string): Promise<boolean> => {
@@ -91,10 +93,10 @@ export const useShiftsMineCommands = (): ShiftsMineCommands => {
     const sendAvailability = useCallback(
         async (input: ShiftsOwnAvailabilityInput): Promise<boolean> => {
             const result = await run(() => availability.trigger(input), { successMessage: t("availSent") })
-            await refreshShifts()
+            await refreshShifts(activeWorkspaceId)
             return result !== undefined
         },
-        [run, availability, t],
+        [run, availability, t, activeWorkspaceId],
     )
     return { checkIn, requestSwap, claimShift, requestLeave, sendAvailability }
 }

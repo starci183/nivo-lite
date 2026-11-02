@@ -1,6 +1,4 @@
-import { Button } from "@starci/grammar/common"
-import { ACTIONS_CLASS_NAME } from "./classNames"
-
+import { Button, Cluster } from "@starci/grammar/common"
 /** The words and links of the overview heading. */
 export interface OverviewHeaderView {
     readonly title: string
@@ -28,7 +26,7 @@ export const OVERVIEW_HEADER_PLACEHOLDER: OverviewHeaderView = {
 
 /** One slot of the heading and whether its words are still placeholders. */
 interface OverviewHeaderBaseProps {
-    readonly props: OverviewHeaderView & { readonly part: OverviewHeaderPart; readonly isSkeleton: boolean }
+    readonly props: OverviewHeaderView & { readonly part: OverviewHeaderPart; readonly isLoading: boolean }
 }
 
 /** One slot of the overview page head: the greeting, the time of the reading, or the two actions (open the Office, and add a lead, the primary one when nothing waits for the owner). */
@@ -37,13 +35,13 @@ export const OverviewHeaderBase = (props: OverviewHeaderBaseProps) => {
     if (p.part === "title") return <>{p.title}</>
     if (p.part === "description") return <>{p.description}</>
     return (
-        <div className={ACTIONS_CLASS_NAME}>
-            <Button intent="neutral" href={p.openOfficeHref} isSkeleton={p.isSkeleton}>
+        <Cluster gap="row" align="center">
+            <Button intent="neutral" href={p.openOfficeHref} isLoading={p.isLoading}>
                 {p.openOfficeLabel}
             </Button>
-            <Button intent={p.newLeadIsPrimary ? "commit" : "neutral"} href={p.newLeadHref} isSkeleton={p.isSkeleton}>
+            <Button intent={p.newLeadIsPrimary ? "commit" : "neutral"} href={p.newLeadHref} isLoading={p.isLoading}>
                 {p.newLeadLabel}
             </Button>
-        </div>
+        </Cluster>
     )
 }

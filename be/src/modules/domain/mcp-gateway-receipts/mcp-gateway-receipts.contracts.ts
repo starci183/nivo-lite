@@ -5,7 +5,8 @@ export interface GatewayJson {
 }
 
 /** Why a gateway operation needs a person's approval. */
-export type GatewayApprovalReason = "ask_mode" | "over_constraint" | "over_limit_vnd" | "no_rule" | "tainted_input"
+export type GatewayApprovalReason =
+    "ask_mode" | "over_constraint" | "over_limit_vnd" | "no_rule" | "tainted_input" | "graph_ask"
 
 /** Why a gateway operation did not produce a result. */
 export type GatewayFailure =
@@ -23,7 +24,7 @@ export type GatewayFailure =
 
 /** The completed or pending outcome a gateway receipt keeps sealed. */
 export type GatewayCallResult =
-    | { readonly ok: true; readonly value: GatewayJson }
+    | { readonly ok: true; readonly value: GatewayJson; readonly summary?: string }
     | { readonly ok: false; readonly code: "approval_required"; readonly reason: GatewayApprovalReason }
     | { readonly ok: false; readonly code: GatewayFailure; readonly detail: string }
 

@@ -5,7 +5,6 @@ import { EVIDENCE } from "./classNames"
 /** One gate of the checklist, whether it is being edited, and the words and commands of its body. */
 type SetupGateBodyProps = Pick<
     SetupGatesCardProps,
-    | "isSkeleton"
     | "isGating"
     | "editText"
     | "evidencePlaceholder"
@@ -17,6 +16,7 @@ type SetupGateBodyProps = Pick<
     | "onGate"
     | "onStopEdit"
 > & {
+    readonly isLoading: boolean
     readonly gate: SetupSideGate
     readonly isEditing: boolean
 }
@@ -28,7 +28,7 @@ export const SetupGateBody = (props: SetupGateBodyProps) => (
 
 /** The evidence of the gate (its hint while waiting or before evidence is supplied) and confirm or reopen. */
 const renderEvidence = ({ gate, ...props }: SetupGateBodyProps) => {
-    const isHint = props.isSkeleton || gate.evidence === ""
+    const isHint = props.isLoading || gate.evidence === ""
     return (
         <>
             <div className={EVIDENCE}>
@@ -41,7 +41,7 @@ const renderEvidence = ({ gate, ...props }: SetupGateBodyProps) => {
                     <Button
                         intent="neutral"
                         size="sm"
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isLoading === true}
                         isPending={props.isGating}
                         onPress={() => props.onGate(gate.key, "confirm")}
                     >

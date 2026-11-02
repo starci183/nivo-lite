@@ -84,6 +84,7 @@ const profileOf = (id: string): AgentProfile => ({
     instructions: "Be warm",
     knowledge: "",
     approval_rule: "",
+    module: "chatbot",
 })
 
 const proposalOf = (fields: Proposal["fields"], draft?: string): Proposal => ({ summary: "Follow Lan", draft, fields })

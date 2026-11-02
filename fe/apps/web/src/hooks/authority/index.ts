@@ -12,6 +12,7 @@ export {
 } from "@/modules/authority"
 export type { AuthorityProfile, RuleDraft, StoredRule } from "@/modules/authority"
 export { useAuthoritySection } from "./useAuthoritySection"
+export { useAuthoritySheet } from "./useAuthoritySheet"
 export { useAuthorityStaff } from "./useAuthorityStaff"
 export type { StaffRow } from "./useAuthorityStaff"
 export { useInstanceNames } from "./useInstanceNames"

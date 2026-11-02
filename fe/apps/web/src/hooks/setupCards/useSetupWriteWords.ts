@@ -52,7 +52,7 @@ export const useSetupWriteWords = (): SetupWriteWords => {
         actionLabel: (action: string) => {
             if (!isActionKey(action)) return action
             const copy = actionCopies.find((entry) => entry.action === action)
-            const fallbackLabel = slot.isError === true ? action : ""
+            const fallbackLabel = "isError" in slot ? action : ""
             return copy === undefined ? fallbackLabel : pickCopy(copy.label, locale)
         },
         actionRules: (action: string) =>

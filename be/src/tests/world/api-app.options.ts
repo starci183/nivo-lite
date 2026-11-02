@@ -1,4 +1,5 @@
 import { EnvSource, Secret } from "@modules/platform/config"
+import type { DynamicModule } from "@nestjs/common"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
 import { HttpError, HttpErrorCode } from "@modules/platform/http"
 import { AppModule } from "../../../apps/api/src/app.module"
@@ -172,5 +173,18 @@ const localApiOptions = (): ApiOptions => ({
     knowledge: { indexChunkDelayMs: 0 },
 })
 
+/** The optional external model configuration of a proof; every domain binding remains the production binding. */
+export interface ApiProofOptions {
+    readonly aiTasks?: ApiOptions["aiTasks"]
+}
+
+/** The real API graph with an optional network-edge model endpoint and the same keyless default. */
+export const apiAppModules = (options: ApiProofOptions = {}): Array<DynamicModule> => [
+    AppModule.register({
+        ...localApiOptions(),
+        ...(options.aiTasks === undefined ? {} : { aiTasks: options.aiTasks }),
+    }),
+]
+
 /** The api's own composition as one module of the world. */
-export const API_APP_MODULES = [AppModule.register(localApiOptions())]
+export const API_APP_MODULES = apiAppModules()

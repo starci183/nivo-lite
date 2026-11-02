@@ -1,4 +1,4 @@
-import { EmptyNotice, Region, SectionHeader, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { EmptyNotice, Stack, Text, Section } from "@starci/grammar/common"
 import { AccountingQuestionCard } from "@/components/branches/AccountingQuestionCard"
 import type { AccountingQuestionCardView, AccountingQuestionsView } from "@/modules/types"
 
@@ -13,9 +13,13 @@ export const AccountingQuestions = (props: AccountingQuestionsProps) => {
     if (props.props.groups.length === 0)
         return (
             <Stack gap="region">
-                <SurfaceCard ariaLabel={props.props.empty}>
-                    <EmptyNotice message={props.props.empty} description={props.props.emptyBody} />
-                </SurfaceCard>
+                <Section
+                    kind="list"
+                    title={props.props.empty}
+                    isLoading={props.isSkeleton}
+                    items={[]}
+                    empty={<EmptyNotice message={props.props.empty} description={props.props.emptyBody} />}
+                />
             </Stack>
         )
     const groups = props.props.groups.map((group) => ({
@@ -36,31 +40,25 @@ export const AccountingQuestions = (props: AccountingQuestionsProps) => {
     }))
     return (
         <Stack gap="region">
-            <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
+            <Text size="sm" tone="muted" isLoading={props.isSkeleton}>
                 {props.props.intro}
             </Text>
             {groups.map((group) => (
-                <Region key={group.id} label={group.title}>
-                    <Stack gap="row">
-                        <SectionHeader
-                            level={2}
-                            title={group.title}
-                            count={group.items.length}
-                            description={group.hint}
-                            isSkeleton={props.isSkeleton}
-                        />
-                        <Stack gap="section">
-                            {group.rows.map((row) => (
-                                <AccountingQuestionCard
-                                    key={row.props.id}
-                                    props={row.props}
-                                    on={row.on}
-                                    isSkeleton={props.isSkeleton}
-                                />
-                            ))}
-                        </Stack>
-                    </Stack>
-                </Region>
+                <Section
+                    key={group.id}
+                    kind="list"
+                    title={group.title}
+                    count={group.items.length}
+                    description={group.hint}
+                    isLoading={props.isSkeleton}
+                    items={group.rows.map((row) => ({
+                        id: row.props.id,
+                        title: row.props.title,
+                        badges: [{ label: row.props.status, tone: row.props.statusTone, isDot: true }],
+                        detail: <AccountingQuestionCard {...row} isLoading={props.isSkeleton} />,
+                    }))}
+                    empty={<EmptyNotice message={props.props.empty} description={props.props.emptyBody} />}
+                />
             ))}
         </Stack>
     )

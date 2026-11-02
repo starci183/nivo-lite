@@ -1,7 +1,8 @@
 import type { ProjectStatus } from "./video.types"
+import type { VideoWorkbenchViews } from "@/modules/types"
 
 /** The steps of the video wizard, in order. The step lives in the address (the `tab` of the workbench). */
-export type EditorStep = "goal" | "inputs" | "script" | "preview" | "result"
+export type EditorStep = VideoWorkbenchViews["editorStep"]
 
 /** Where an existing project continues: what is next to do with it. */
 export const stepFor = (status: ProjectStatus, scenes: number): EditorStep => {

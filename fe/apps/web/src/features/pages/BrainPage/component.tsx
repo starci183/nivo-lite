@@ -1,5 +1,5 @@
-import { Text, TextAction } from "@starci/grammar/common"
-import type { PageHeaderContent } from "@starci/grammar/common"
+import { Text, Link } from "@starci/grammar/common"
+import type { BrainPageHeading } from "@/modules/types"
 import { BrainDossiers } from "@/components/blocks/BrainDossiers"
 import { BrainAgentView } from "@/components/blocks/BrainAgentView"
 import { BrainFactForm } from "@/components/blocks/BrainFactForm"
@@ -7,14 +7,19 @@ import { BrainFacts } from "@/components/blocks/BrainFacts"
 import { BrainGaps } from "@/components/blocks/BrainGaps"
 import { BrainLessons } from "@/components/blocks/BrainLessons"
 import { BrainMap } from "@/components/blocks/BrainMap"
-import { BrainReview } from "@/components/blocks/BrainReview"
 import { BrainTodo } from "@/components/blocks/BrainTodo"
 import { DossierFindings } from "@/components/blocks/DossierFindings"
+import { DossierFindingsDrawer } from "@/components/blocks/DossierFindingsDrawer"
 import { DossierRemedyDraft } from "@/components/blocks/DossierRemedyDraft"
 import { BrainPageFrame } from "@/components/blocks/BrainPageFrame"
 import { KnowledgeAdd } from "@/components/blocks/KnowledgeAdd"
 import { KnowledgeAsk } from "@/components/blocks/KnowledgeAsk"
 import { KnowledgeLibrary } from "@/components/blocks/KnowledgeLibrary"
+import { PublicDocDraft } from "@/components/blocks/PublicDocDraft"
+import { PublicDocs } from "@/components/blocks/PublicDocs"
+import { PublicDraftPicker } from "@/components/blocks/PublicDraftPicker"
+import { PublicWriteForm } from "@/components/blocks/PublicWriteForm"
+import { BrainNextReview } from "@/components/blocks/BrainNextReview"
 import { KnowledgeProcessing } from "@/components/blocks/KnowledgeProcessing"
 import { KnowledgeSuggestions } from "@/components/blocks/KnowledgeSuggestions"
 import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
@@ -22,10 +27,9 @@ import type { ModuleKey } from "@/modules/catalog"
 import type { BrainTab } from "@/modules/routes"
 import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
-/** What the add form was opened from: the topic to write about, who NIVO suggests may read it, the tags it files under and the mode it opens on. */
+/** What the add form was opened from: the topic to write about, the tags it files under and the mode it opens on. */
 export interface AddPresetView {
     readonly topic: string
-    readonly visibility?: "public" | "internal"
     readonly tags?: string
     readonly mode?: "files" | "write"
 }
@@ -34,7 +38,7 @@ export interface AddPresetView {
 export interface BrainPageBaseProps {
     readonly props: {
         /** The header without its tabs: the frame adds them. */
-        readonly header: PageHeaderContent
+        readonly header: BrainPageHeading
         readonly nivoLabel: string
         readonly nivoHref: string
         readonly readOnlyNote: string
@@ -55,6 +59,12 @@ export interface BrainPageBaseProps {
         /** What the add form was opened from. */
         readonly addKey: string
         readonly addPreset: AddPresetView | null
+        /** The public document form the address asks for. */
+        readonly compose: "pick" | "write" | undefined
+        /** The title the written form starts with: the customer question being answered. */
+        readonly composeTitle: string
+        /** The public document open as a draft. */
+        readonly publicDoc: string | undefined
     }
 }
 
@@ -64,24 +74,20 @@ const Panel = (props: BrainPageBaseProps) => {
     if (page.tab === "todo") {
         return (
             <>
-                <BrainTodo facts={<BrainReview />} questions={<BrainGaps />} />
+                <BrainTodo />
                 <BrainFactForm tab="todo" fact={page.fact} edit={page.edit} answer={page.answer} />
             </>
         )
     }
     if (page.tab === "dossiers") {
         return (
-            <BrainDossiers
-                dossier={page.dossier}
-                detail={
-                    page.dossier === undefined ? null : (
-                        <DossierFindings dossierId={page.dossier} findingId={page.finding} />
-                    )
-                }
-                draftDrawer={
-                    <DossierRemedyDraft draftId={page.draft} dossierId={page.dossier} findingId={page.finding} />
-                }
-            />
+            <>
+                <BrainDossiers dossier={page.dossier} />
+                {page.dossier === undefined ? null : (
+                    <DossierFindingsDrawer dossierId={page.dossier} findingId={page.finding} />
+                )}
+                <DossierRemedyDraft draftId={page.draft} dossierId={page.dossier} findingId={page.finding} />
+            </>
         )
     }
     if (page.tab === "facts") {
@@ -93,6 +99,22 @@ const Panel = (props: BrainPageBaseProps) => {
         )
     }
     if (page.tab === "lessons") return <BrainLessons />
+    if (page.tab === "publicDocs") {
+        return (
+            <>
+                <PublicDocs />
+                <PublicDraftPicker isOpen={page.compose === "pick"} />
+                <PublicWriteForm
+                    key={`write:${page.composeTitle}`}
+                    isOpen={page.compose === "write"}
+                    initialTitle={page.composeTitle}
+                />
+                <PublicDocDraft key={page.publicDoc} docId={page.publicDoc} />
+            </>
+        )
+    }
+    if (page.tab === "publicAsks") return <BrainGaps answer="public" />
+    if (page.tab === "publicTry") return <KnowledgeAsk fixedAudience="customer" />
     if (page.tab === "agents") {
         return (
             <>
@@ -110,10 +132,11 @@ const Panel = (props: BrainPageBaseProps) => {
                 preset={page.addPreset}
             />
             <KnowledgeProcessing />
+            <BrainNextReview />
             <KnowledgeLibrary module={page.module} />
             <KnowledgeSuggestions />
             <Text>
-                <TextAction href={page.nivoHref}>{page.nivoLabel}</TextAction>
+                <Link href={page.nivoHref}>{page.nivoLabel}</Link>
             </Text>
         </>
     )
@@ -127,13 +150,9 @@ export const BrainPageBase = (props: BrainPageBaseProps) => {
     const page = props.props
     if (page.tab === "map") {
         return (
-            <BrainMap
-                header={page.header}
-                node={page.node}
-                findings={
-                    page.node === undefined ? null : <DossierFindings dossierId={page.node} findingId={undefined} />
-                }
-            />
+            <BrainMap header={page.header} node={page.node}>
+                <DossierFindings selection={{ kind: "map", nodeId: page.node }} />
+            </BrainMap>
         )
     }
     return (

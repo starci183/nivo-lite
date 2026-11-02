@@ -1,3 +1,4 @@
+import type { usePoCopy } from "./usePoCopy"
 import type { InventoryFormat } from "@/hooks/inventory"
 import type { InventorySay, PoView, SupplierChannel, SupplierView } from "@/modules/types"
 
@@ -24,6 +25,7 @@ type PoMode = "edit" | "receive" | "read"
 
 /** What the drawer props need besides the state. */
 export interface PoDrawerContext {
+    readonly copy: ReturnType<typeof usePoCopy>
     readonly say: InventorySay
     readonly format: InventoryFormat
     readonly suppliers: ReadonlyArray<SupplierView>
@@ -99,7 +101,7 @@ export const poDrawerProps = (open: PoDrawerState, context: PoDrawerContext) => 
     const { po } = open
     const facts = poFacts(po)
     return {
-        say,
+        copy: context.copy,
         title: say("poTitle", { no: po.poNo }),
         description: say("poDescription", {
             supplier: po.supplierName === "" ? say("poNoSupplier") : po.supplierName,

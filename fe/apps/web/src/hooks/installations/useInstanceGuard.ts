@@ -11,8 +11,8 @@ import { useInstallations } from "./useInstallations"
 interface InstanceGuard {
     readonly installation: Installation | undefined
     readonly installations: ReadonlyArray<Installation>
-    /** The installed agents are not known yet, or the person is being sent to the right url. */
-    readonly isLoading: boolean
+    /** The resolved instance URL belongs elsewhere; the owning slot waits for navigation. */
+    readonly isLeaving: boolean
 }
 
 /**
@@ -34,6 +34,6 @@ export const useInstanceGuard = (module: ModuleKey, installationId: string): Ins
     return {
         installation: target === null ? installation : undefined,
         installations: installations ?? [],
-        isLoading: installations === undefined || target !== null,
+        isLeaving: target !== null,
     }
 }

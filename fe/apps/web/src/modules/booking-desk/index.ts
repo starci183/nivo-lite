@@ -40,3 +40,65 @@ export const isNextAction = (action: BookingAction): boolean => action === "conf
 /** A row of the agenda is a collection item: its next step is an alternative, never a commit. */
 export const rowIntent = (action: BookingAction): "alternative" | "neutral" =>
     isNextAction(action) ? "alternative" : "neutral"
+
+/** The option that asks the booking writer to select an available resource instead of naming one. */
+export const AUTO_RESOURCE = "auto"
+
+/** The fields of the service form. */
+export interface ServiceFields {
+    readonly name: string
+    readonly durationMin: number
+    readonly bufferMin: number
+    readonly price: string
+    readonly resourceKind: string
+    readonly followup: string
+    readonly description: string
+    readonly active: boolean
+}
+
+/** The initial values of a new booking service. */
+export const BLANK_SERVICE_FIELDS: ServiceFields = {
+    name: "",
+    durationMin: 30,
+    bufferMin: 0,
+    price: "",
+    resourceKind: "",
+    followup: "",
+    description: "",
+    active: true,
+}
+
+/** Reads a whole VND or day count from its editable text. */
+export const bookingServiceDigits = (value: string): number | null => {
+    const only = value.replace(/[^\d]/gu, "")
+    return only === "" ? null : Number(only)
+}
+
+/** Stored service values whose amounts are converted to editable text. */
+interface StoredServiceFields extends Omit<ServiceFields, "price" | "followup" | "resourceKind"> {
+    readonly priceVnd: number | null
+    readonly followupDays: number | null
+    readonly resourceKind: string | null
+}
+
+/** Converts stored numeric amounts to the text fields owned by this form. */
+export const serviceFieldsOf = (service: StoredServiceFields): ServiceFields => ({
+    name: service.name,
+    durationMin: service.durationMin,
+    bufferMin: service.bufferMin,
+    price: service.priceVnd === null ? "" : String(service.priceVnd),
+    resourceKind: service.resourceKind ?? "",
+    followup: service.followupDays === null ? "" : String(service.followupDays),
+    description: service.description,
+    active: service.active,
+})
+
+/** The fields of the exception form. */
+export interface ExceptionFields {
+    readonly resourceId: string
+    readonly date: string
+    readonly closed: boolean
+    readonly start: string
+    readonly end: string
+    readonly note: string
+}

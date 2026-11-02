@@ -1,3 +1,4 @@
+import type { ChatbotSidePanelView } from "@/modules/types"
 import {
     Avatar,
     Button,
@@ -6,71 +7,22 @@ import {
     Heading,
     IconButton,
     PaneSection,
-    Region,
-    SectionHeader,
     Stack,
     Text,
+    Section,
 } from "@starci/grammar/common"
 import { ChatbotEscalationForm } from "@/components/branches/ChatbotEscalationForm"
-import { ChatbotStageSteps, type ChatbotStageStepsProps } from "@/components/branches/ChatbotStageSteps"
+import { ChatbotStageSteps } from "@/components/branches/ChatbotStageSteps"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import { HEAD_TEXT_CLASS_NAME, UNTIL_DOCKED_CLASS_NAME } from "./classNames"
-
-/** The waiting question the AI handed to a person, with the draft answer. */
-interface ChatbotSideEscalation {
-    readonly title: string
-    readonly askedLabel: string
-    readonly question: string
-    readonly assigned: string | null
-    readonly draftLabel: string
-    readonly draftHint: string
-    readonly draft: string
-    readonly sendLabel: string
-    readonly declineLabel: string
-    readonly isAnswering: boolean
-    readonly noticeTone: "negative" | "affirmative" | null
-    readonly noticeTitle: string
-    readonly noticeText: string | null
-}
-
-/** Who is replying and the command that changes it. */
-interface ChatbotSideHandling {
-    readonly title: string
-    readonly text: string
-    readonly buttonLabel: string
-    readonly hint: string | null
-    readonly isBusy: boolean
-}
-
-/** The lead behind the conversation. */
-interface ChatbotSideLead {
-    readonly name: string
-    readonly facts: ReadonlyArray<{ readonly id: string; readonly term: string; readonly description: string }>
-    readonly openLabel: string
-    readonly openHref: string
-}
-
+import { UNTIL_DOCKED_CLASS_NAME } from "./classNames"
 /** The customer pane: who the customer is, the waiting question, who replies and the lead. */
-export interface ChatbotSidePanelProps {
-    readonly title: string
-    readonly closeLabel: string
-    readonly hasThread: boolean
-    readonly customerName: string
-    readonly channelLine: string
-    readonly escalation: ChatbotSideEscalation | null
-    readonly handling: ChatbotSideHandling
-    /** The stage of the customer's deal; null while the customer was not captured. */
-    readonly stage: ChatbotStageStepsProps | null
-    readonly leadTitle: string
-    readonly leadNone: string
-    readonly lead: ChatbotSideLead | null
+interface ChatbotSidePanelProps extends ChatbotSidePanelView {
     readonly onClose: () => void
     readonly onToggleHandling: () => void
     readonly onEscalationDraft: (draft: string) => void
     readonly onSendAnswer: () => void
     readonly onDeclineAnswer: () => void
 }
-
 /** The right pane of the inbox: customer, who is replying (take over / hand back), the waiting escalation and the lead. */
 export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
     const closeButton = (
@@ -96,23 +48,23 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
         <>
             <PaneSection align="center">
                 <Cluster gap="row" wrap={false}>
-                    <div className={HEAD_TEXT_CLASS_NAME}>
+                    <Stack gap="identity" measure="full">
                         <Heading level={2}>{props.title}</Heading>
-                    </div>
+                    </Stack>
                     <div className={UNTIL_DOCKED_CLASS_NAME}>{closeButton}</div>
                 </Cluster>
             </PaneSection>
             <PaneSection>
                 <Cluster gap="row" wrap={false}>
                     <Avatar name={props.customerName} size="lg" isDecorative />
-                    <div className={HEAD_TEXT_CLASS_NAME}>
-                        <Text weight="semibold" overflow="truncate">
+                    <Stack gap="identity" measure="full">
+                        <Text isStrong overflow="truncate">
                             {props.customerName}
                         </Text>
                         <Text size="sm" tone="muted">
                             {props.channelLine}
                         </Text>
-                    </div>
+                    </Stack>
                 </Cluster>
             </PaneSection>
             {escalation === null ? null : (
@@ -135,20 +87,18 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
         </>
     )
 }
-
 /** Renders the ChatbotSidePanel lead section: the person this chat became, or that there is none yet. */
 const renderChatbotSidePanelLead = (props: Pick<ChatbotSidePanelProps, "leadTitle" | "leadNone" | "lead">) => (
     <PaneSection>
-        <Region label={props.leadTitle}>
+        <Section title={props.leadTitle}>
             <Stack gap="row">
-                <SectionHeader level={3} title={props.leadTitle} />
                 {props.lead === null ? (
                     <Text size="sm" tone="muted">
                         {props.leadNone}
                     </Text>
                 ) : (
                     <>
-                        <Text weight="semibold">{props.lead.name}</Text>
+                        <Text>{props.lead.name}</Text>
                         <DescriptionList layout="columns" items={props.lead.facts} />
                         <Cluster gap="inline">
                             <Button intent="neutral" size="sm" href={props.lead.openHref}>
@@ -158,19 +108,17 @@ const renderChatbotSidePanelLead = (props: Pick<ChatbotSidePanelProps, "leadTitl
                     </>
                 )}
             </Stack>
-        </Region>
+        </Section>
     </PaneSection>
 )
-
 /** Renders the ChatbotSidePanel handling section. */
 const renderChatbotSidePanelHandling = (
     handling: NonNullable<ChatbotSidePanelProps["handling"]>,
     props: ChatbotSidePanelProps,
 ) => (
     <PaneSection>
-        <Region label={handling.title}>
+        <Section title={handling.title}>
             <Stack gap="row">
-                <SectionHeader level={3} title={handling.title} />
                 <Text size="sm">{handling.text}</Text>
                 <Cluster gap="inline">
                     <Button
@@ -188,6 +136,6 @@ const renderChatbotSidePanelHandling = (
                     </Text>
                 )}
             </Stack>
-        </Region>
+        </Section>
     </PaneSection>
 )

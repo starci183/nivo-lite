@@ -1,4 +1,5 @@
-"use client"
+import { useActiveWorkspace } from "@/hooks/workspaces"
+;("use client")
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
@@ -26,6 +27,7 @@ interface ShiftsWeekCommands {
 
 /** The week commands of the Shifts workbench through the back end GraphQL API, toasted, with the reads revalidated on success. */
 export const useShiftsWeekCommands = (): ShiftsWeekCommands => {
+    const { activeWorkspaceId } = useActiveWorkspace()
     const t = useTranslations("shifts")
     const tToast = useTranslations("toast")
     const run = useGraphQLWithToast()
@@ -39,18 +41,18 @@ export const useShiftsWeekCommands = (): ShiftsWeekCommands => {
         async (week: string): Promise<string | undefined> => {
             const result = await run(() => proposing.trigger({ week }), { showSuccessToast: false })
             if (result === undefined) return undefined
-            await refreshShifts()
+            await refreshShifts(activeWorkspaceId)
             return result.scheduleId
         },
-        [run, proposing],
+        [run, proposing, activeWorkspaceId],
     )
     const explain = useCallback(
         async (scheduleId: string): Promise<boolean> => {
             const result = await run(() => explaining.trigger({ scheduleId }))
-            await refreshShifts()
+            await refreshShifts(activeWorkspaceId)
             return result !== undefined
         },
-        [run, explaining],
+        [run, explaining, activeWorkspaceId],
     )
     const reassign = useCallback(
         (shiftId: string, staffId: string | null): Promise<boolean> =>
@@ -64,10 +66,10 @@ export const useShiftsWeekCommands = (): ShiftsWeekCommands => {
             toast.success(tToast("successTitle"), {
                 description: t(result.status === "done" ? "publishedNow" : "publishAsked"),
             })
-            await refreshShifts()
+            await refreshShifts(activeWorkspaceId)
             return true
         },
-        [run, publishing, t, tToast],
+        [run, publishing, t, tToast, activeWorkspaceId],
     )
     return { propose, explain, reassign, publish }
 }

@@ -1,6 +1,5 @@
 import { Time } from "@internationalized/date"
-import { Button, Divider, Input, NumberField, Region, Switch, Text, TimeField } from "@starci/grammar/common"
-import { ACTIONS_CLASS, FIELDS_CLASS, SECTION_CLASS } from "./classNames"
+import { Button, Cluster, Input, NumberField, Section, Stack, Switch, Text, TimeField } from "@starci/grammar/common"
 
 /** What every setting field carries. */
 type FieldBase = {
@@ -103,22 +102,23 @@ const FieldView = (props: FieldViewProps) => {
 /** The settings of a template (numbers, text, a time, a yes/no), straight from its definition; nothing when it has none. */
 export const AutomationSettings = (props: AutomationSettingsProps) =>
     props.fields.length === 0 ? null : (
-        <Region className={SECTION_CLASS} label={props.sectionLabel}>
-            <Divider semantics="presentation" />
-            <div className={FIELDS_CLASS}>
-                {props.fields.map((field) => (
-                    <FieldView key={field.key} field={field} isBusy={props.isBusy} onChange={props.onChange} />
-                ))}
-            </div>
-            <div className={ACTIONS_CLASS}>
-                <Button intent="neutral" isPending={props.isBusy} onPress={props.onSave}>
-                    {props.saveLabel}
-                </Button>
-                {props.savedText === undefined ? null : (
-                    <Text size="sm" live="polite">
-                        {props.savedText}
-                    </Text>
-                )}
-            </div>
-        </Region>
+        <Section title={props.sectionLabel} headingLevel={3}>
+            <Stack gap="row">
+                <Stack gap="row">
+                    {props.fields.map((field) => (
+                        <FieldView key={field.key} field={field} isBusy={props.isBusy} onChange={props.onChange} />
+                    ))}
+                </Stack>
+                <Cluster gap="inline">
+                    <Button intent="neutral" isPending={props.isBusy} onPress={props.onSave}>
+                        {props.saveLabel}
+                    </Button>
+                    {props.savedText === undefined ? null : (
+                        <Text size="sm" live="polite">
+                            {props.savedText}
+                        </Text>
+                    )}
+                </Cluster>
+            </Stack>
+        </Section>
     )

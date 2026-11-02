@@ -10,6 +10,7 @@ import {
 import type { MutateCreateVideoProjectRequest, MutateUpdateVideoProjectRequest } from "@/hooks/swr"
 import type { ProjectInputs, ScriptScene } from "@/modules/video"
 import { useVideoRefresh } from "./useVideoRefresh"
+import type { VideoOwner } from "./useVideoRefresh"
 
 /** The edits one update sends: the inputs and the scenes arrive as the editor holds them, read-only. */
 interface VideoProjectPatch extends Omit<MutateUpdateVideoProjectRequest, "projectId" | "inputs" | "script"> {
@@ -18,16 +19,22 @@ interface VideoProjectPatch extends Omit<MutateUpdateVideoProjectRequest, "proje
 }
 
 /** Creates, edits, duplicates and archives video projects, reports every outcome, and reads the video data again. */
-export const useVideoActions = () => {
+export const useVideoActions = (owner?: VideoOwner) => {
     const t = useTranslations("video")
-    const { complete } = useVideoRefresh()
+    const { complete, isPending } = useVideoRefresh(owner)
     const createMutation = useMutateCreateVideoProjectSwr()
     const updateMutation = useMutateUpdateVideoProjectSwr()
     const duplicateMutation = useMutateDuplicateVideoProjectSwr()
     const archiveMutation = useMutateArchiveVideoProjectSwr()
-    const create = (request: MutateCreateVideoProjectRequest) =>
-        complete(() => createMutation.trigger(request), t("saved"))
-    const update = async (projectId: string, patch: VideoProjectPatch) => {
+    const create = (
+        request: MutateCreateVideoProjectRequest,
+        onResult?: (result: Awaited<ReturnType<typeof createMutation.trigger>> | undefined) => void,
+    ) => complete(() => createMutation.trigger(request), t("saved"), onResult)
+    const update = (
+        projectId: string,
+        patch: VideoProjectPatch,
+        onResult?: (result: Awaited<ReturnType<typeof updateMutation.trigger>> | undefined) => void,
+    ) => {
         const request: MutateUpdateVideoProjectRequest = {
             ...patch,
             projectId,
@@ -36,10 +43,15 @@ export const useVideoActions = () => {
                 : undefined,
             script: patch.script?.map((scene) => ({ ...scene })),
         }
-        return complete(() => updateMutation.trigger(request), t("saved"))
+        return complete(() => updateMutation.trigger(request), t("saved"), onResult)
     }
-    const duplicate = (projectId: string) => complete(() => duplicateMutation.trigger({ projectId }), t("saved"))
-    const archive = (projectId: string) =>
-        complete(() => archiveMutation.trigger({ projectId, archived: true }), t("status_archived"))
-    return { create, update, duplicate, archive }
+    const duplicate = (
+        projectId: string,
+        onResult?: (result: Awaited<ReturnType<typeof duplicateMutation.trigger>> | undefined) => void,
+    ) => complete(() => duplicateMutation.trigger({ projectId }), t("saved"), onResult)
+    const archive = (
+        projectId: string,
+        onResult?: (result: Awaited<ReturnType<typeof archiveMutation.trigger>> | undefined) => void,
+    ) => complete(() => archiveMutation.trigger({ projectId, archived: true }), t("status_archived"), onResult)
+    return { create, update, duplicate, archive, isPending }
 }

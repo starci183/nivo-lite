@@ -170,3 +170,213 @@ export interface SalesWorkbenchData {
     /** Customers a contract can be linked to. */
     readonly leadOptions: ReadonlyArray<{ readonly id: string; readonly name: string }>
 }
+
+import type { BadgeTone } from "@starci/grammar/common"
+
+/** One data field NIVO is missing and the person fills in. */
+interface MissingFieldView {
+    readonly name: string
+    readonly label: string
+    readonly value: string
+}
+
+/** One pending decision, every word and flag already resolved. */
+export interface DecisionRowView {
+    readonly id: string
+    readonly anchor: string
+    readonly isFocused: boolean
+    readonly badge: string
+    readonly age: string
+    readonly isStale: boolean
+    readonly customer: string
+    readonly leadHref: string | null
+    readonly actionLabel: string
+    readonly summary: string
+    readonly reasonHint: string | null
+    readonly amountLine: string | null
+    readonly draft: string | null
+    readonly canAct: boolean
+    readonly assignedTo: string | null
+    readonly missing: ReadonlyArray<MissingFieldView>
+    readonly isEditing: boolean
+    readonly draftValue: string
+    readonly showDraftField: boolean
+    readonly amountValue: string
+    readonly showAmountField: boolean
+    readonly canEdit: boolean
+    /** True while a decision is in flight: every command waits. */
+    readonly isBusy: boolean
+    readonly isApproveBusy: boolean
+    readonly isRejectBusy: boolean
+    readonly isApproveDisabled: boolean
+    readonly editLabel: string
+    readonly error: string | null
+}
+
+/** The words every pending decision shares. */
+export interface DecisionRowLabels {
+    readonly draftLabel: string
+    readonly waitingManager: string
+    readonly amountLabel: string
+    readonly approveLabel: string
+    readonly rejectLabel: string
+}
+
+/** What a person can do with one pending decision; every argument is an atom. */
+export interface DecisionRowActions {
+    readonly field: (id: string, name: string, value: string) => void
+    readonly draft: (id: string, value: string) => void
+    readonly amount: (id: string, value: string) => void
+    readonly toggleEdit: (id: string) => void
+    readonly decide: (id: string, decision: "approved" | "rejected") => void
+}
+
+/** One opportunity that needs a person, every word already resolved. */
+export interface AttentionItemView {
+    readonly key: string
+    readonly kind: "decision" | "clarify" | "failed" | "overdue" | "awaiting_reply"
+    readonly kindLabel: string
+    readonly kindTone: BadgeTone
+    readonly stage: {
+        readonly label: string
+        readonly tone: BadgeTone
+    } | null
+    readonly age: string
+    readonly isStale: boolean
+    readonly customer: string
+    readonly leadHref: string | null
+    readonly title: string | null
+    readonly need: string
+    readonly owner: string
+    /** Where the decision of this row is made: the Decisions tab opened on it. */
+    readonly decisionHref: string | null
+    readonly workItemId: string | null
+    readonly error: string | null
+    readonly isRetryBusy: boolean
+    readonly isStopBusy: boolean
+}
+
+/** One thing NIVO did by policy, every word already resolved. */
+export interface ActivityItemView {
+    readonly id: string
+    readonly action: string
+    readonly evidenceLabel: string
+    readonly evidenceTone: BadgeTone
+    readonly when: string
+    readonly customer: string
+    readonly href: string
+    readonly summary: string
+    readonly evidence: string | null
+}
+
+/** One deal card, every word already resolved. */
+export interface DealView {
+    readonly leadId: string
+    readonly href: string
+    readonly customer: string
+    readonly company: string
+    readonly value: string
+    readonly source: string | null
+    readonly nextLine: string
+    readonly isClosed: boolean
+    readonly facts: string
+}
+
+/** One stage lane. */
+export interface LaneView {
+    readonly stage: string
+    readonly title: string
+    readonly fact: string
+    readonly hiddenText: string | null
+    readonly deals: ReadonlyArray<DealView>
+}
+
+/** The dialog that moves a deal to another stage. */
+export interface MoveDialogView {
+    readonly title: string
+    readonly description: string | undefined
+    readonly options: ReadonlyArray<{
+        readonly value: string
+        readonly label: string
+    }>
+    readonly target: string
+    readonly isDanger: boolean
+    readonly reasonLabel: string | null
+    readonly reasonHint: string | undefined
+    readonly reasonRequired: boolean
+    readonly reason: string
+    readonly wonNote: string | null
+    readonly error: string | null
+    readonly isIncomplete: boolean
+}
+
+/** One order or won deal and where its invoice stands, every word already resolved. */
+export interface HandoffItemView {
+    readonly key: string
+    readonly orderId: string | null
+    readonly orderLabel: string
+    readonly orderTone: BadgeTone
+    readonly invoiceLabel: string
+    readonly invoiceTone: BadgeTone
+    readonly confirmed: string | null
+    readonly customer: string
+    readonly leadHref: string | null
+    readonly detail: string
+    readonly amount: string
+    readonly invoiceLine: string | null
+    readonly shippedLine: string | null
+    readonly workText: string | null
+    readonly errorText: string | null
+    readonly hint: string | null
+    readonly note: string | null
+    readonly error: string | null
+    readonly canRun: boolean
+    readonly runLabel: string
+    readonly canShip: boolean
+    readonly isRunBusy: boolean
+}
+
+/** The confirmed order the shipping drawer is open for. */
+export interface SalesShipping {
+    readonly key: string
+    readonly orderId: string
+    readonly orderNo: string | null
+    readonly customer: string
+}
+
+/** One order in the history with its display text resolved. */
+export interface SalesOrderRowView {
+    readonly id: string
+    readonly number: string
+    readonly items: string
+    readonly leadHref: string | null
+    readonly status: string
+    readonly amount: string
+    readonly createdAt: string
+}
+
+/** One recurring contract, every word already resolved. */
+export interface ContractItemView {
+    readonly id: string
+    readonly title: string
+    readonly description: string
+    readonly statusLabel: string
+    readonly statusTone: BadgeTone
+    readonly when: {
+        readonly text: string
+        readonly tone: BadgeTone
+    } | null
+}
+
+/** One decision already made, every word already resolved. */
+export interface DecidedView {
+    readonly id: string
+    readonly action: string
+    readonly outcomeLabel: string
+    readonly outcomeTone: BadgeTone
+    readonly customer: string
+    readonly href: string | null
+    readonly byline: string
+    readonly basis: string | null
+    readonly rest: string | null
+}

@@ -20,7 +20,7 @@ interface KnowledgeSourcePanelProps {
     readonly sourceId: string | undefined
 }
 
-/** The connected document: indexes it again, changes who may read it, deletes it. */
+/** The connected internal document: indexes it again or deletes it. */
 export const KnowledgeSourcePanel = (props: KnowledgeSourcePanelProps) => {
     const t = useTranslations("knowledge")
     const format = useFormatter()
@@ -54,7 +54,6 @@ export const KnowledgeSourcePanel = (props: KnowledgeSourcePanelProps) => {
                             isDocumentActive(status) && found.source.progress > 0 ? found.source.progress : undefined,
                         canWrite: member.canWrite,
                         reindexLabel: commands.busy === "reindex" ? t("reindexing") : t("reindex"),
-                        visibilityActionLabel: t(isPublic ? "makeInternal" : "makePublic"),
                         deleteLabel: commands.busy === "delete" ? t("deleting") : t("delete"),
                         deleteQuestion: t("delete"),
                         deleteConfirm: t("deleteConfirm"),
@@ -85,7 +84,6 @@ export const KnowledgeSourcePanel = (props: KnowledgeSourcePanelProps) => {
             }}
             on={{
                 reindex: commands.reindex,
-                toggleVisibility: () => commands.setVisibility(isPublic ? "internal" : "public"),
                 remove: commands.remove,
                 retry: reload,
             }}

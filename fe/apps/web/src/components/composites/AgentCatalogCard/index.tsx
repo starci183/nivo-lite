@@ -1,5 +1,4 @@
-import { Badge, Button, IconTile, Image, ListRow, SurfaceListCard } from "@starci/grammar/common"
-import { nivoIconSource } from "@/components/leaves/Icon"
+import { SurfaceCard, type ItemAction } from "@starci/grammar/common"
 
 /** What one role card of the catalogue shows, already in the reader language. */
 export type AgentCatalogCardProps = {
@@ -12,7 +11,7 @@ export type AgentCatalogCardProps = {
     readonly stateLabel: string
     readonly isInstalled: boolean
     /** The data is not known yet: the row is a skeleton. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     /** The person may set an agent up. */
     readonly canInstall: boolean
     readonly installLabel: string
@@ -23,43 +22,31 @@ export type AgentCatalogCardProps = {
 }
 
 /**
- * One role of the catalogue as a compact card: the small mascot, the name with its state, one line of what it does and the
- * create action on the card itself (pane-free list card: the row owns its inset, the card its edge).
+ * One role of the catalogue as a tile in the roles grid: the mascot and the name inside, the install state and the
+ * create action at the bottom of the card.
  */
 export const AgentCatalogCard = (props: AgentCatalogCardProps) => (
-    <SurfaceListCard ariaLabel={props.name}>
-        <ListRow
-            isSkeleton={props.isSkeleton}
-            leading={
-                <IconTile
-                    source={nivoIconSource("apps", "leading")}
-                    artwork={<Image src={props.mascot} alt="" aspect="square" fit="contain" />}
-                    size="md"
-                />
-            }
-            title={props.name}
-            description={props.description}
-            badges={
-                <>
-                    {props.isEarly ? <Badge tone="accent">{props.earlyLabel}</Badge> : null}
-                    <Badge isDot tone={props.isInstalled ? "success" : "neutral"}>
-                        {props.stateLabel}
-                    </Badge>
-                </>
-            }
-            actions={
-                props.canInstall ? (
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isPending={props.isInstalling}
-                        isDisabled={props.isBlocked}
-                        onPress={props.onInstall}
-                    >
-                        {props.installLabel}
-                    </Button>
-                ) : undefined
-            }
-        />
-    </SurfaceListCard>
+    <SurfaceCard
+        kind="tile"
+        name={props.name}
+        mark={{ logo: { src: props.mascot, alt: "" } }}
+        description={props.description}
+        badge={{
+            label: props.isEarly ? `${props.stateLabel} · ${props.earlyLabel}` : props.stateLabel,
+            tone: props.isInstalled ? "success" : "neutral",
+            isDot: true,
+        }}
+        isLoading={props.isLoading === true}
+        {...(props.canInstall
+            ? {
+                  action: {
+                      label: props.installLabel,
+                      intent: "neutral",
+                      isPending: props.isInstalling,
+                      isDisabled: props.isBlocked || props.isInstalling,
+                      press: props.onInstall,
+                  } satisfies ItemAction,
+              }
+            : {})}
+    />
 )

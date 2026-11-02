@@ -59,6 +59,7 @@ export const LeadHistory = (props: LeadHistoryProps) => {
         <LeadHistoryBase
             props={{
                 slot,
+                entriesSlot: mapSlot(slot, (view) => view.entries),
                 labels: {
                     title: t("history"),
                     timelineLabel: t("historyLabel"),
@@ -69,7 +70,10 @@ export const LeadHistory = (props: LeadHistoryProps) => {
                     slot: slotLabels(t("noHistory")),
                 },
             }}
-            on={{ toggle: (entryId, isOpen) => setOpen((previous) => ({ ...previous, [entryId]: isOpen })) }}
+            on={{
+                retry: () => void query.mutate(),
+                toggle: (entryId, isOpen) => setOpen((previous) => ({ ...previous, [entryId]: isOpen })),
+            }}
         />
     )
 }

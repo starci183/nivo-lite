@@ -1,16 +1,16 @@
 import {
     Button,
-    ChatBubble,
     Cluster,
     Divider,
     Drawer,
     Form,
     IconButton,
     Input,
-    List,
-    ListItem,
+    EmptyNotice,
+    Section,
     Stack,
     Text,
+    MessageBubble,
 } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { ASK_INPUT_CLASS, BUBBLE_CLASS, FOOT_CLASS, MESSAGES_CLASS, SUGGEST_CLASS } from "./classNames"
@@ -89,16 +89,17 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
         >
             <div className={MESSAGES_CLASS} aria-live="polite">
                 <Stack gap="row">
-                    <ChatBubble side="incoming">
-                        <Text size="sm">{props.props.greeting}</Text>
-                    </ChatBubble>
+                    <MessageBubble side="incoming" body={<Text size="sm">{props.props.greeting}</Text>} />
                     <GuideMessages {...props} />{" "}
                     {props.props.isThinking ? (
-                        <ChatBubble side="incoming">
-                            <Text size="sm" tone="muted">
-                                {props.props.thinking}
-                            </Text>
-                        </ChatBubble>
+                        <MessageBubble
+                            side="incoming"
+                            body={
+                                <Text size="sm" tone="muted">
+                                    {props.props.thinking}
+                                </Text>
+                            }
+                        />
                     ) : null}
                 </Stack>
             </div>
@@ -175,11 +176,9 @@ const GuideMessages = (props: GuideBubbleBaseProps) => {
         <>
             {props.props.messages.map((message) =>
                 message.isUser ? (
-                    <ChatBubble key={message.id} side="outgoing">
-                        <Text size="sm">{message.text}</Text>
-                    </ChatBubble>
+                    <MessageBubble key={message.id} side="outgoing" body={<Text size="sm">{message.text}</Text>} />
                 ) : (
-                    <ChatBubble
+                    <MessageBubble
                         key={message.id}
                         side="incoming"
                         footer={
@@ -189,39 +188,41 @@ const GuideMessages = (props: GuideBubbleBaseProps) => {
                                 </Text>
                             )
                         }
-                    >
-                        <Stack gap="inline">
-                            <Text size="sm">{message.text}</Text>
-                            {message.steps.length === 0 ? null : (
-                                <>
-                                    <Text size="xs" tone="muted">
-                                        {props.props.stepsLabel}
-                                    </Text>
-                                    <List as="ol" label={props.props.stepsLabel}>
-                                        {message.steps.map((step, position) => (
-                                            <ListItem key={step}>
-                                                <Text size="sm">{`${position + 1}. ${step}`}</Text>
-                                            </ListItem>
+                        body={
+                            <Stack gap="inline">
+                                <Text size="sm">{message.text}</Text>
+                                {message.steps.length === 0 ? null : (
+                                    <>
+                                        <Section
+                                            kind="list"
+                                            title={props.props.stepsLabel}
+                                            headingLevel={3}
+                                            items={message.steps.map((step, position) => ({
+                                                id: `${message.id}-${position}`,
+                                                title: step,
+                                                leading: { position: position + 1 },
+                                            }))}
+                                            empty={<EmptyNotice message={props.props.greeting} />}
+                                        />
+                                    </>
+                                )}
+                                {message.links.length === 0 ? null : (
+                                    <Cluster gap="inline">
+                                        {message.links.map((link) => (
+                                            <Button
+                                                key={link.id}
+                                                intent="neutral"
+                                                size="sm"
+                                                onPress={() => props.on.go(message.id, link.id)}
+                                            >
+                                                {link.label}
+                                            </Button>
                                         ))}
-                                    </List>
-                                </>
-                            )}
-                            {message.links.length === 0 ? null : (
-                                <Cluster gap="inline">
-                                    {message.links.map((link) => (
-                                        <Button
-                                            key={link.id}
-                                            intent="neutral"
-                                            size="sm"
-                                            onPress={() => props.on.go(message.id, link.id)}
-                                        >
-                                            {link.label}
-                                        </Button>
-                                    ))}
-                                </Cluster>
-                            )}
-                        </Stack>
-                    </ChatBubble>
+                                    </Cluster>
+                                )}
+                            </Stack>
+                        }
+                    />
                 ),
             )}
         </>

@@ -1,4 +1,4 @@
-import { Button, CloseButton, Divider, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Divider, SurfaceCard, Text, IconButton } from "@starci/grammar/common"
 import { PROMO_ACTIONS, PROMO_BLOCK, PROMO_COPY, PROMO_ROW } from "./classNames"
 
 /** Copy and handlers of the Chatbot promo. */
@@ -22,7 +22,7 @@ export const PromoChatbotCardBase = (props: PromoChatbotCardBaseProps) => {
         <div className={PROMO_ROW}>
             <div className={PROMO_COPY}>
                 {props.props.tag === null ? null : <Text size="xs">{props.props.tag}</Text>}
-                <Text weight="medium">{props.props.title}</Text>
+                <Text isStrong>{props.props.title}</Text>
                 {props.props.body === null ? null : (
                     <Text size="sm" tone="muted">
                         {props.props.body}
@@ -33,7 +33,7 @@ export const PromoChatbotCardBase = (props: PromoChatbotCardBaseProps) => {
                 <Button intent="neutral" size="sm" href={props.props.actionHref}>
                     {props.props.actionLabel}
                 </Button>
-                <CloseButton label={props.props.dismissLabel} size="sm" onPress={props.on.dismiss} />
+                <IconButton intent="dismiss" label={props.props.dismissLabel} size="sm" onPress={props.on.dismiss} />
             </div>
         </div>
     )

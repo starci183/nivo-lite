@@ -11,6 +11,7 @@ type LoyaltyFieldProps = {
     readonly error?: string | undefined
     readonly isRequired?: boolean
     readonly isDisabled: boolean
+    readonly isLoading?: boolean
     readonly onChange: (value: string) => void
 }
 
@@ -23,6 +24,7 @@ export const LoyaltyField = (props: LoyaltyFieldProps) => (
         value={props.value}
         isRequired={props.isRequired === true}
         isDisabled={props.isDisabled}
+        isLoading={props.isLoading ?? false}
         {...(props.hint === undefined ? {} : { hint: props.hint })}
         {...(props.placeholder === undefined ? {} : { placeholder: props.placeholder })}
         {...(props.error === undefined ? {} : { isError: true, errorMessage: props.error })}

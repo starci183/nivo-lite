@@ -1,11 +1,11 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useBrainBoard, useLessonDesk } from "@/hooks/brain"
-import type { MineOutcome } from "@/hooks/brain"
+import { useState } from "react"
+import { useBrainBoard, useLessonDesk, type MineOutcome } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import type { KnowledgeRowView, RowActionView } from "@/components/composites/KnowledgeRows"
-import type { BrainLesson, SlotLabels } from "@/modules/types"
+import type { KnowledgeRowView, RowActionView, BrainLesson, SlotLabels } from "@/modules/types"
+import { toast } from "@/modules/toast"
 import { BrainLessonsBase } from "./component"
 
 /** Proposed lessons first: they wait for a decision. */
@@ -30,16 +30,14 @@ const STATUS_KEY: Readonly<Record<BrainLesson["status"], "statusActive" | "statu
 const lessonActionsOf = (
     lesson: BrainLesson,
     t: ReturnType<typeof useTranslations<"brain">>,
-    desk: ReturnType<typeof useLessonDesk>,
 ): ReadonlyArray<RowActionView> => {
     if (lesson.status === "proposed") {
         return [
-            { id: "apply", label: t("apply"), intent: "commit", onPress: () => desk.decide(lesson.id, "active") },
+            { id: "apply", label: t("apply"), intent: "neutral" },
             {
                 id: "skip",
                 label: t("skipLesson"),
                 intent: "dismiss",
-                onPress: () => desk.decide(lesson.id, "rejected"),
             },
         ]
     }
@@ -49,7 +47,6 @@ const lessonActionsOf = (
                   id: "retire",
                   label: t("retireLesson"),
                   intent: "neutral",
-                  onPress: () => desk.decide(lesson.id, "retired"),
               },
           ]
         : []
@@ -57,11 +54,15 @@ const lessonActionsOf = (
 
 /** The connected lessons: how each agent should work, the proposals to approve and the form that writes one. */
 /** Connects the state and commands used by BrainLessons. */
-const buildBrainLessonsState = (
-    t: ReturnType<typeof useTranslations<"brain">>,
-    board: ReturnType<typeof useBrainBoard>,
-    desk: ReturnType<typeof useLessonDesk>,
-) => {
+interface LessonsStateInput {
+    readonly t: ReturnType<typeof useTranslations<"brain">>
+    readonly board: ReturnType<typeof useBrainBoard>
+    readonly desk: ReturnType<typeof useLessonDesk>
+    readonly pending: string | undefined
+}
+
+const buildBrainLessonsState = (input: LessonsStateInput) => {
+    const { t, board, desk, pending } = input
     const agentName = (module: string | null): string =>
         module === null ? t("lessonsAll") : (board.lenses.find((lens) => lens.module === module)?.name ?? module)
     const noticeOf = (mined: MineOutcome): string => {
@@ -70,7 +71,7 @@ const buildBrainLessonsState = (
         return t("mineDone", { n: mined.proposed, c: mined.corrections, k: mined.newCases })
     }
     const rowOf = (lesson: BrainLesson): KnowledgeRowView => {
-        const decisions: ReadonlyArray<RowActionView> = lessonActionsOf(lesson, t, desk)
+        const decisions: ReadonlyArray<RowActionView> = lessonActionsOf(lesson, t)
         return {
             id: lesson.id,
             title: lesson.title,
@@ -79,7 +80,14 @@ const buildBrainLessonsState = (
                 { label: agentName(lesson.module), tone: "neutral" },
                 { label: t(STATUS_KEY[lesson.status]), tone: STATUS_TONE[lesson.status] },
             ],
-            actions: board.canWrite ? decisions : [],
+            actions: board.canWrite
+                ? decisions.map((action) => ({
+                      ...action,
+                      isPending: pending === `${lesson.id}:${action.id}`,
+                      isDisabled: pending !== undefined && pending !== `${lesson.id}:${action.id}`,
+                      disabledReason: t("actionBusy"),
+                  }))
+                : [],
         }
     }
     return { desk, t, noticeOf, board, rowOf }
@@ -88,11 +96,33 @@ const buildBrainLessonsState = (
 /** Draws the connected view from its current state. */
 export const BrainLessons = () => {
     const t = useTranslations("brain")
+    const feedback = useTranslations("toast")
     const board = useBrainBoard()
     const slotLabels = useSlotLabels()
     const desk = useLessonDesk(board.lenses[0]?.module ?? "")
+    const [pending, setPending] = useState<string | undefined>()
+    const failed = () => {
+        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+    }
 
-    const connected = buildBrainLessonsState(t, board, desk)
+    const connected = buildBrainLessonsState({ t, board, desk, pending })
+    const decide = async (rowId: string, actionId: string) => {
+        if (!board.canWrite || !board.lessons.some((lesson) => lesson.id === rowId)) return
+        const state = lessonStateOf(actionId)
+        if (state === undefined) return
+        setPending(`${rowId}:${actionId}`)
+        try {
+            return await desk.decide(rowId, state)
+        } catch {
+            failed()
+            return undefined
+        } finally {
+            setPending(undefined)
+        }
+    }
+    const action = (rowId: string, actionId: string) => {
+        decide(rowId, actionId).catch(failed)
+    }
 
     return (
         <BrainLessonsBase
@@ -102,12 +132,22 @@ export const BrainLessons = () => {
                 setLessonTitle: desk.setTitle,
                 setLessonBody: desk.setBody,
                 setLessonWhen: desk.setWhen,
-                mine: desk.mine,
+                mine: () => {
+                    desk.mine().catch(failed)
+                },
                 save: desk.save,
                 retry: board.reload,
+                action,
             }}
         />
     )
+}
+
+/** Maps only the declared row decisions to their backend state. */
+const lessonStateOf = (action: string) => {
+    if (action === "apply") return "active"
+    if (action === "skip") return "rejected"
+    return action === "retire" ? "retired" : undefined
 }
 
 /** Builds the props supplied to BrainLessonsBase. */
@@ -127,7 +167,7 @@ const brainLessonsProps = (
             label: t("lessonsTitle"),
             footer: t("lessonsFooter"),
             isPending: desk.isPending,
-            slot: mapSlot(board.slot, () => [...board.lessons].sort(proposedFirst).map(rowOf)),
+            slot: mapSlot(board.slot, (brain) => [...brain.lessons].sort(proposedFirst).map(rowOf)),
             slotLabels,
         },
         write: board.canWrite

@@ -6,6 +6,7 @@ import { allAgentIds, resumeNoteOf, resumeSlotOf, useAdoptOnce } from "@/hooks/c
 import { zaloWizardOf } from "@/hooks/connection-wire"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
 import { useQueryZaloConnectionSwr } from "@/hooks/swr"
+import type { SlotRead } from "@/hooks/slot"
 import type { AgentOption, WizardNote, ZaloWizardConnection } from "@/modules/types"
 import { canSaveOaSecret, ZALO_STEPS, zaloFailureOf, zaloStartStepOf, type ZaloFields } from "./zalo-wizard.shared"
 
@@ -51,6 +52,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
     const step = ZALO_STEPS[index] ?? "app"
     const watch = useFirstEvent({ connectionId: conn === null ? null : conn.id, isActive: step === "verify" })
     const firstEvent = watch.event ?? (conn === null ? null : conn.firstEvent)
+    const reads: ReadonlyArray<SlotRead<unknown>> = input.resumeId === undefined ? [] : [resume]
 
     const { saveSecret, authorize, go, create, finish } = createZaloWizardActions({
         conn,
@@ -67,6 +69,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
     })
 
     return {
+        reads,
         index,
         step,
         fields,

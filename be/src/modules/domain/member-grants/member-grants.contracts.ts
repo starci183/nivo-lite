@@ -48,7 +48,7 @@ export interface MemberGrantChange {
 }
 
 /** Why a member of an approver group cannot approve this request. */
-export type ExclusionReason = "inactive" | "no_grant" | "over_limit"
+export type MemberGrantExclusionReason = "inactive" | "no_grant" | "over_limit"
 
 /** What a request needs of an approver: the unit of its action and the amount, when it has one. */
 export interface GrantNeed {
@@ -59,4 +59,5 @@ export interface GrantNeed {
 }
 
 /** Whether a member's grants cover a request. */
-export type Coverage = { readonly covered: true } | { readonly covered: false; readonly reason: ExclusionReason }
+export type Coverage =
+    { readonly covered: true } | { readonly covered: false; readonly reason: MemberGrantExclusionReason }

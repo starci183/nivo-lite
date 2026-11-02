@@ -12,7 +12,7 @@ export const PermissionRules = () => {
     const board = usePermissionBoard()
     const drawer = usePermissionDrawer(board)
     const open = (id: string) => {
-        const row = (board.slot.items ?? []).find((one) => one.id === id)
+        const row = ("items" in board.slot ? board.slot.items : []).find((one) => one.id === id)
         if (row !== undefined) drawer.open(row.rule)
     }
     return (
@@ -26,8 +26,14 @@ export const PermissionRules = () => {
                 placeholder: board.placeholder,
                 slotLabels: slotLabels(t("loadFailTitle")),
                 drawer: drawer.props,
+                grantsSlot: drawer.grantsSlot,
+                grantsPlaceholder: drawer.props === null ? [] : drawer.props.grants,
+                grantsLabels:
+                    drawer.props === null
+                        ? drawer.grantsLabels
+                        : { ...drawer.grantsLabels, empty: drawer.props.copy.ownerAlways },
             }}
-            on={{ ...drawer.on, open, retry: board.reload }}
+            on={{ ...drawer.on, open, retry: board.reload, retryGrants: drawer.retryGrants }}
         />
     )
 }

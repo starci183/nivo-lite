@@ -1,26 +1,41 @@
-import { Button, ChatBubbleSkeletons, Divider, EmptyNotice, Stack, Text } from "@starci/grammar/common"
-import { OfficeApprovalCard } from "@/components/branches/OfficeApprovalCard"
+import type { ReactElement, ReactNode } from "react"
+import type { MessageStatusProps } from "@starci/grammar/common"
+import { Button, Divider, EmptyNotice, Stack, Text, MessageBubble } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
-import { OfficeCommandCard } from "@/components/branches/OfficeCommandCard"
-import { OfficeExceptionCard } from "@/components/branches/OfficeExceptionCard"
-import { OfficeExceptionForm } from "@/components/branches/OfficeExceptionForm"
-import { OfficeMessageStatus } from "@/components/branches/OfficeMessageStatus"
 import { OfficeMessageRow } from "@/components/branches/OfficeMessageRow"
 import { OfficeOutboxBubble } from "@/components/branches/OfficeOutboxBubble"
-import { OfficeResultCard } from "@/components/branches/OfficeResultCard"
-import type { OfficeCommandView, OfficeThreadProps } from "@/modules/types"
+import type { OfficeThreadProps as OfficeThreadDataProps, OfficeMessageStatusView } from "@/modules/types"
 import { TYPING_CLASS_NAME } from "./classNames"
 
 /** A thread item that sits in an inset band: every kind but the day divider. */
-type OfficeThreadBandItem = Exclude<OfficeThreadProps["props"]["items"][number], { readonly kind: "day" }>
+type OfficeThreadBandItem = Exclude<OfficeThreadDataProps["props"]["items"][number], { readonly kind: "day" }>
 
 /** A day divider, or a run of entries by one author: a message continues the run before it, anything else starts one. */
 type OfficeThreadGroup =
     | { readonly kind: "day"; readonly key: string; readonly label: string }
     | { readonly kind: "run"; readonly key: string; readonly items: ReadonlyArray<OfficeThreadBandItem> }
 
+/** Presentation-only slots are local to this thread; shared Office data contains no React nodes. */
+interface OfficeThreadProps {
+    readonly props: Pick<
+        OfficeThreadDataProps["props"],
+        | "isLoading"
+        | "copiedKey"
+        | "items"
+        | "outbox"
+        | "typing"
+        | "hasEarlier"
+        | "isLoadingEarlier"
+        | "copy"
+        | "receipts"
+    >
+    readonly on: Pick<OfficeThreadDataProps["on"], "loadEarlier" | "reply" | "copy">
+    readonly cardNodes: ReadonlyMap<string, ReactElement>
+    readonly readingCard: ReactNode
+}
+
 /** Folds the thread's items into day dividers and runs of continued messages. */
-const groupsOf = (items: OfficeThreadProps["props"]["items"]): ReadonlyArray<OfficeThreadGroup> =>
+const groupsOf = (items: OfficeThreadDataProps["props"]["items"]): ReadonlyArray<OfficeThreadGroup> =>
     items.reduce<ReadonlyArray<OfficeThreadGroup>>((groups, item) => {
         if (item.kind === "day") return [...groups, { kind: "day", key: item.key, label: item.label }]
         const last = groups.at(-1)
@@ -36,27 +51,27 @@ const groupsOf = (items: OfficeThreadProps["props"]["items"]): ReadonlyArray<Off
  */
 export const OfficeThread = (props: OfficeThreadProps) => {
     const view = props.props
-    const { text } = view
+    const { copy } = view
     return (
         <Stack gap="row" measure="reading">
-            {view.isSkeleton ? <ChatBubbleSkeletons count={3} hasAvatar /> : null}
-            {!view.isSkeleton && view.hasEarlier ? (
+            {view.isLoading ? <MessageBubble isLoading hasAvatar /> : null}
+            {!view.isLoading && view.hasEarlier ? (
                 <Button intent="neutral" size="sm" isPending={view.isLoadingEarlier} onPress={props.on.loadEarlier}>
-                    {text("loadEarlier")}
+                    {copy.thread.loadEarlier}
                 </Button>
             ) : null}
-            {!view.isSkeleton && view.items.length === 0 ? (
-                <EmptyNotice message={text("emptyMessage")} description={text("emptyMessageHint")} />
+            {!view.isLoading && view.items.length === 0 ? (
+                <EmptyNotice message={copy.thread.emptyMessage} description={copy.thread.emptyMessageHint} />
             ) : null}
             {renderOfficeThreadItems(props)}
             {view.outbox.length === 0 ? null : (
                 <Stack gap="identity">
                     {view.outbox.map((line) => (
-                        <OfficeOutboxBubble key={line.id} line={line} text={text} />
+                        <OfficeOutboxBubble key={line.id} line={line} copy={copy.outbox} />
                     ))}
                 </Stack>
             )}
-            {view.reading === null ? null : renderOfficeThreadCommand(null, view.reading, props)}
+            {props.readingCard}
             <div className={TYPING_CLASS_NAME}>
                 {view.typing === "" ? null : (
                     <Text size="sm" tone="muted" live="polite">
@@ -70,7 +85,7 @@ export const OfficeThread = (props: OfficeThreadProps) => {
 
 /** Renders settled thread items: a day divider spans the column, every other item sits in an inset band. */
 const renderOfficeThreadItems = (props: OfficeThreadProps) =>
-    props.props.isSkeleton
+    props.props.isLoading
         ? null
         : groupsOf(props.props.items).map((group) =>
               group.kind === "day" ? (
@@ -84,59 +99,19 @@ const renderOfficeThreadItems = (props: OfficeThreadProps) =>
 
 /** Renders one settled, non-day thread item or its decision card. */
 const renderOfficeThreadItem = (item: OfficeThreadBandItem, props: OfficeThreadProps) => {
+    if (item.kind !== "message") return props.cardNodes.get(item.key)
     const { props: view, on } = props
-    const { text } = view
+    const { copy } = view
     const avatar = item.avatar === null ? null : <OfficeAvatar avatar={item.avatar} size="sm" />
-    if (item.kind === "approval") {
-        return (
-            <OfficeApprovalCard
-                key={item.key}
-                approval={item}
-                avatar={avatar}
-                text={text}
-                draft={view.draftOf(item.key)}
-                onEdit={on.editCard}
-                isBusy={view.busyId === item.id}
-                onDecide={on.decideApproval}
-            />
-        )
-    }
-    if (item.kind === "exception") {
-        const form = (
-            <OfficeExceptionForm
-                item={item}
-                text={text}
-                draft={view.draftOf(item.key)}
-                onEdit={on.editCard}
-                isBusy={view.busyId === item.id}
-                onDecide={on.decideWork}
-            />
-        )
-        return <OfficeExceptionCard key={item.key} item={item} avatar={avatar} text={text} form={form} />
-    }
-    if (item.kind === "command") return renderOfficeThreadCommand(item, item, props)
-    if (item.kind === "card") {
-        return (
-            <OfficeResultCard
-                key={item.key}
-                card={item}
-                avatar={avatar}
-                text={text}
-                draft={view.draftOf(item.key)}
-                onEdit={on.editCard}
-                isBusy={item.refId !== null && view.busyId === item.refId}
-                onDecide={on.decideCard}
-            />
-        )
-    }
-    const status = item.status === null ? null : <OfficeMessageStatus status={item.status} text={text} />
+    const labels = view.receipts.find((entry) => entry.key === item.key)
+    const receipt = item.status === null ? undefined : officeMessageReceiptOf(item.status, labels)
     return (
         <OfficeMessageRow
             key={item.key}
             message={item}
             avatar={avatar}
-            text={text}
-            status={status}
+            copy={copy.message}
+            {...(receipt === undefined ? {} : { receipt })}
             isCopied={view.copiedKey === item.key}
             onReply={on.reply}
             onCopy={on.copy}
@@ -144,21 +119,32 @@ const renderOfficeThreadItem = (item: OfficeThreadBandItem, props: OfficeThreadP
     )
 }
 
-/** Renders a command card: the settled command item, or the one being prepared while NIVO reads the line (no command yet). */
-const renderOfficeThreadCommand = (
-    command: OfficeCommandView | null,
-    from: Pick<NonNullable<OfficeThreadProps["props"]["reading"]>, "ask" | "agent" | "avatar">,
-    props: OfficeThreadProps,
-) => (
-    <OfficeCommandCard
-        key={command?.key}
-        command={command}
-        ask={from.ask}
-        agent={from.agent}
-        avatar={<OfficeAvatar avatar={from.avatar} size="sm" />}
-        text={props.props.text}
-        isBusy={command !== null && props.props.busyId === command.id}
-        onSend={props.on.sendCommand}
-        onCancel={props.on.cancelCommand}
-    />
-)
+/** The receipt that belongs under an Office message, rendered by the native footer status owner. */
+type OfficeMessageReceiptProps = Extract<MessageStatusProps, { readonly kind: "receipt" }>
+
+/** The native receipt shows the same first three readers as the approved Office status. */
+/** Preserves the authority state, reader order, avatar fallbacks and both localized overflow counts. */
+const officeMessageReceiptOf = (
+    status: OfficeMessageStatusView,
+    labels: OfficeThreadDataProps["props"]["receipts"][number] | undefined,
+): OfficeMessageReceiptProps => {
+    if (status.kind !== "seen") return { kind: "receipt", state: status.kind, label: status.label }
+    return {
+        kind: "receipt",
+        state: "seen",
+        label: status.label,
+        ...((status.readers.length === 0 && status.moreReaders === 0) || labels === undefined
+            ? {}
+            : {
+                  readers: {
+                      items: status.readers.map((reader) => ({
+                          id: reader.id,
+                          name: reader.name,
+                          ...(reader.avatarUrl === null ? {} : { src: reader.avatarUrl }),
+                      })),
+                      overflowLabel: labels.overflowLabel,
+                      ...(labels.moreLabel !== null ? { moreLabel: labels.moreLabel } : {}),
+                  },
+              }),
+    }
+}

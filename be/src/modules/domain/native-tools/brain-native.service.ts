@@ -2,11 +2,14 @@ import { Injectable } from "@nestjs/common"
 import { BrainFactsReadService, factSlugOf, inForce, visibleTo } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
+import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import type { Passage } from "@modules/domain/knowledge"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import {
+    BRAIN_DOCUMENTS_READ_INPUT_SCHEMA,
+    BRAIN_DOCUMENTS_READ_SCHEMA,
     BRAIN_FACTS_GET_INPUT_SCHEMA,
     BRAIN_FACTS_GET_SCHEMA,
     BRAIN_FACTS_LIST_INPUT_SCHEMA,
@@ -14,7 +17,12 @@ import {
     BRAIN_SEARCH_INPUT_SCHEMA,
     BRAIN_SEARCH_SCHEMA,
 } from "./brain-native.schema"
-import type { BrainFactsGetInput, BrainFactsListInput, BrainSearchInput } from "./brain-native.schema"
+import type {
+    BrainDocumentsReadInput,
+    BrainFactsGetInput,
+    BrainFactsListInput,
+    BrainSearchInput,
+} from "./brain-native.schema"
 import { clipped } from "./native-masking.policy"
 import { scrubbed } from "./native-scrub.policy"
 import { argumentsOf, nativeRefusal, unknownTool } from "./native-refusal.policy"
@@ -27,6 +35,9 @@ const EMBED_BUDGET_MS = 2500
 
 /** The longest passage a tool answers, in characters. */
 const PASSAGE_CHARS = 400
+
+/** The most characters of one internal document the drafting read serves; the rest is cut and the answer says so. */
+const DOCUMENT_CHARS = 12_000
 
 /** How many facts one read looks across in the view. */
 const FACTS_WINDOW = 500
@@ -79,6 +90,18 @@ export const BRAIN_MANIFEST: NativeConnectorManifest = {
             secretFields: ["notice", "subject", "attribute", "value", "label"],
             taints: true,
         },
+        {
+            name: "documents.read",
+            description:
+                "One internal document of the business, read whole, to draft a separate public text from it. Never in a customer turn.",
+            scope: "read",
+            defaultMode: "auto",
+            inputSchema: BRAIN_DOCUMENTS_READ_INPUT_SCHEMA,
+            argumentSchema: BRAIN_DOCUMENTS_READ_SCHEMA,
+            secretFields: ["notice", "title", "topic", "text"],
+            internalOnly: true,
+            taints: true,
+        },
     ],
 }
 
@@ -96,6 +119,7 @@ export class BrainNativeService implements NativeAdapter {
         private readonly views: NativeViewService,
         private readonly facts: BrainFactsReadService,
         private readonly knowledge: KnowledgeSearchService,
+        private readonly documents: KnowledgeSourcesReadService,
     ) {}
 
     /** Runs one Brain tool. */
@@ -105,7 +129,43 @@ export class BrainNativeService implements NativeAdapter {
             return this.list(workspaceId, argumentsOf(tool, BRAIN_FACTS_LIST_SCHEMA, args), caller)
         }
         if (tool === "facts.get") return this.get(workspaceId, argumentsOf(tool, BRAIN_FACTS_GET_SCHEMA, args), caller)
+        if (tool === "documents.read") {
+            return this.readDocument(workspaceId, argumentsOf(tool, BRAIN_DOCUMENTS_READ_SCHEMA, args), caller)
+        }
         throw unknownTool(tool)
+    }
+
+    /**
+     * One internal document for a drafting agent: only to an internal view with no customer conversation, only a document of the
+     * workspace that is internal, fully read and kept for the agent's lane. Phone numbers, emails and long numbers are scrubbed.
+     */
+    private async readDocument(
+        workspaceId: string,
+        input: BrainDocumentsReadInput,
+        caller: NativeCaller,
+    ): Promise<GatewayJson> {
+        const view = await this.views.internalOf(workspaceId, caller)
+        const source = await this.documents.textOf(view.workspaceId, input.sourceId)
+        const inLane =
+            source !== null &&
+            (source.module === null || source.module === view.module) &&
+            (source.installationId === null || source.installationId === view.installationId)
+        if (source === null || !inLane || source.visibility !== "internal" || source.status !== "ready") {
+            throw nativeRefusal("not_found")
+        }
+        if (source.contentHash === null) throw nativeRefusal("not_found")
+        const text = scrubbed(source.content)
+        return {
+            notice: BRAIN_NOTICE,
+            document: {
+                id: source.id,
+                title: scrubbed(source.title),
+                topic: source.topic === null ? null : scrubbed(source.topic),
+                contentHash: source.contentHash,
+                text: clipped(text, DOCUMENT_CHARS),
+                clipped: text.length > DOCUMENT_CHARS,
+            },
+        }
     }
 
     /** The facts that match the question, and the passages of the business documents, concurrently. */

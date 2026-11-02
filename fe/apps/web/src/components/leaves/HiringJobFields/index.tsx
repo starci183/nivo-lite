@@ -1,6 +1,6 @@
-import { Input, NumberField, SegmentedControl, Select } from "@starci/grammar/common"
-import type { HiringJobFieldCommands, HiringJobValues, HiringSay } from "@/modules/types"
-import { GRID_CLASS_NAME } from "./classNames"
+import { Grid, Input, NumberField, SegmentedControl, Select } from "@starci/grammar/common"
+
+import type { HiringJobFieldCommands, HiringViews } from "@/modules/types"
 
 /** One employment or payment unit choice. */
 interface Option {
@@ -9,10 +9,10 @@ interface Option {
 }
 
 /** The basic job fields and commands used to edit them. */
-export interface HiringJobFieldsProps extends HiringJobFieldCommands {
-    readonly say: HiringSay
+interface HiringJobFieldsProps extends HiringJobFieldCommands {
+    readonly copy: HiringViews["workbenchCopy"]
     readonly values: Pick<
-        HiringJobValues,
+        HiringViews["jobFormValues"],
         | "title"
         | "position"
         | "employmentType"
@@ -29,8 +29,8 @@ export interface HiringJobFieldsProps extends HiringJobFieldCommands {
 
 /** Pay amounts and their unit share the same change commands. */
 interface PayFieldsProps {
-    readonly say: HiringSay
-    readonly values: Pick<HiringJobValues, "payMin" | "payMax" | "payUnit">
+    readonly copy: HiringViews["workbenchCopy"]
+    readonly values: Pick<HiringViews["jobFormValues"], "payMin" | "payMax" | "payUnit">
     readonly options: ReadonlyArray<Option>
     readonly onText: HiringJobFieldsProps["onText"]
     readonly onNumber: HiringJobFieldsProps["onNumber"]
@@ -38,22 +38,22 @@ interface PayFieldsProps {
 
 /** The place and number of available positions. */
 interface PlacementFieldsProps {
-    readonly say: HiringSay
-    readonly values: Pick<HiringJobValues, "location" | "headcount">
+    readonly copy: HiringViews["workbenchCopy"]
+    readonly values: Pick<HiringViews["jobFormValues"], "location" | "headcount">
     readonly onText: HiringJobFieldsProps["onText"]
     readonly onNumber: HiringJobFieldsProps["onNumber"]
 }
 
 /** Draws job title, employment, schedule, pay and staffing fields in their original order. */
 export const HiringJobFields = (props: HiringJobFieldsProps) => {
-    const { say, values, onText, onNumber } = props
+    const { copy, values, onText, onNumber } = props
     return (
-        <div className={GRID_CLASS_NAME}>
+        <Grid kind="form" columns={2}>
             <Input
                 id="job-title"
                 name="title"
-                label={say("jobTitleLabel")}
-                placeholder={say("jobTitlePlaceholder")}
+                label={copy.jobTitleLabel}
+                placeholder={copy.jobTitlePlaceholder}
                 isRequired
                 value={values.title}
                 onValueChange={(title) => onText("title", title)}
@@ -61,12 +61,12 @@ export const HiringJobFields = (props: HiringJobFieldsProps) => {
             <Input
                 id="job-position"
                 name="position"
-                label={say("jobPosition")}
+                label={copy.jobPosition}
                 value={values.position}
                 onValueChange={(position) => onText("position", position)}
             />
             <SegmentedControl
-                label={say("jobEmployment")}
+                label={copy.jobEmployment}
                 options={props.employmentOptions.map((option) => ({ value: option.id, label: option.label }))}
                 value={values.employmentType}
                 onValueChange={(type) => onText("employmentType", type)}
@@ -74,14 +74,14 @@ export const HiringJobFields = (props: HiringJobFieldsProps) => {
             <Input
                 id="job-schedule"
                 name="schedule"
-                label={say("jobSchedule")}
-                placeholder={say("jobSchedulePlaceholder")}
+                label={copy.jobSchedule}
+                placeholder={copy.jobSchedulePlaceholder}
                 value={values.schedule}
                 onValueChange={(schedule) => onText("schedule", schedule)}
             />
-            {renderPayFields({ say, values, options: props.payUnitOptions, onText, onNumber })}
-            {renderPlacementFields({ say, values, onText, onNumber })}
-        </div>
+            {renderPayFields({ copy, values, options: props.payUnitOptions, onText, onNumber })}
+            {renderPlacementFields({ copy, values, onText, onNumber })}
+        </Grid>
     )
 }
 
@@ -89,10 +89,10 @@ export const HiringJobFields = (props: HiringJobFieldsProps) => {
 const numberValueOf = (amount: number | null): { readonly value?: number } => (amount === null ? {} : { value: amount })
 
 /** Draws the pay interval and its unit. */
-const renderPayFields = ({ say, values, options, onText, onNumber }: PayFieldsProps) => (
+const renderPayFields = ({ copy, values, options, onText, onNumber }: PayFieldsProps) => (
     <>
         <NumberField
-            label={say("jobPayMin")}
+            label={copy.jobPayMin}
             minValue={0}
             step={500000}
             formatOptions={{ maximumFractionDigits: 0 }}
@@ -100,7 +100,7 @@ const renderPayFields = ({ say, values, options, onText, onNumber }: PayFieldsPr
             onValueChange={(value) => onNumber("payMin", Number.isFinite(value) ? value : null)}
         />
         <NumberField
-            label={say("jobPayMax")}
+            label={copy.jobPayMax}
             minValue={0}
             step={500000}
             formatOptions={{ maximumFractionDigits: 0 }}
@@ -108,7 +108,7 @@ const renderPayFields = ({ say, values, options, onText, onNumber }: PayFieldsPr
             onValueChange={(value) => onNumber("payMax", Number.isFinite(value) ? value : null)}
         />
         <Select
-            label={say("jobPayUnit")}
+            label={copy.jobPayUnit}
             options={options}
             value={values.payUnit}
             onValueChange={(unit) => onText("payUnit", unit ?? "month")}
@@ -117,17 +117,17 @@ const renderPayFields = ({ say, values, options, onText, onNumber }: PayFieldsPr
 )
 
 /** Draws the location and headcount. */
-const renderPlacementFields = ({ say, values, onText, onNumber }: PlacementFieldsProps) => (
+const renderPlacementFields = ({ copy, values, onText, onNumber }: PlacementFieldsProps) => (
     <>
         <Input
             id="job-location"
             name="location"
-            label={say("jobLocation")}
+            label={copy.jobLocation}
             value={values.location}
             onValueChange={(location) => onText("location", location)}
         />
         <NumberField
-            label={say("jobHeadcount")}
+            label={copy.jobHeadcount}
             minValue={1}
             maxValue={500}
             step={1}

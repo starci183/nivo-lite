@@ -1,7 +1,6 @@
-import { Button, Form, Input, Text } from "@starci/grammar/common"
+import { Button, Form, Heading, Input, Stack, Cluster } from "@starci/grammar/common"
 import { SinglePickList } from "@/components/leaves/SinglePickList"
 import type { ThreadRailForm, ThreadRowView } from "@/modules/types"
-import { FORM_ACTIONS_CLASS_NAME, FORM_CLASS_NAME, HEAD_CLASS_NAME, RAIL_CLASS_NAME } from "./classNames"
 
 /** What the rail draws and asks. */
 type ThreadRailProps = {
@@ -9,7 +8,7 @@ type ThreadRailProps = {
     readonly listLabel: string
     readonly rows: ReadonlyArray<ThreadRowView>
     /** The threads are still loading: the list draws waiting rows. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly newLabel: string
     readonly isFormOpen: boolean
     readonly titleDraft: string
@@ -34,7 +33,7 @@ const NewThreadForm = (
             props.onCreate()
         }}
     >
-        <div className={FORM_CLASS_NAME}>
+        <Stack gap="inline">
             <Input
                 id="thread-title"
                 name="title"
@@ -44,7 +43,7 @@ const NewThreadForm = (
                 value={props.titleDraft}
                 onValueChange={props.onTitle}
             />
-            <div className={FORM_ACTIONS_CLASS_NAME}>
+            <Cluster gap="inline">
                 <Button
                     type="submit"
                     intent="commit"
@@ -57,20 +56,20 @@ const NewThreadForm = (
                 <Button intent="neutral" size="sm" onPress={props.onCancelForm}>
                     {props.form.cancelLabel}
                 </Button>
-            </div>
-        </div>
+            </Cluster>
+        </Stack>
     </Form>
 )
 
 /** The list of threads with the button that opens a new one. */
 export const ThreadRail = (props: ThreadRailProps) => (
-    <div className={RAIL_CLASS_NAME}>
-        <div className={HEAD_CLASS_NAME}>
-            <Text weight="semibold">{props.title}</Text>
-            <Button intent="neutral" size="sm" isDisabled={props.isSkeleton} onPress={props.onOpenForm}>
+    <Stack gap="row">
+        <Cluster gap="inline" justify="between">
+            <Heading level={3}>{props.title}</Heading>
+            <Button intent="neutral" size="sm" isDisabled={props.isLoading} onPress={props.onOpenForm}>
                 {props.newLabel}
             </Button>
-        </div>
+        </Cluster>
         {props.isFormOpen ? (
             <NewThreadForm
                 form={props.form}
@@ -83,7 +82,7 @@ export const ThreadRail = (props: ThreadRailProps) => (
         ) : null}
         <SinglePickList
             label={props.listLabel}
-            isSkeleton={props.isSkeleton}
+            isLoading={props.isLoading}
             onPick={props.onPick}
             rows={props.rows.map((row) => ({
                 id: row.id,
@@ -92,5 +91,5 @@ export const ThreadRail = (props: ThreadRailProps) => (
                 isSelected: row.isSelected,
             }))}
         />
-    </div>
+    </Stack>
 )

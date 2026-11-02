@@ -1,10 +1,19 @@
-import { builder } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
+import type { MockOf } from "@starci/jest-preset"
+import type { MessageCatalog } from "@modules/platform/i18n"
 import type { WorkItemsService } from "@modules/domain/work-items"
-import type { AuthorityRulesService } from "@modules/domain/authority-rules"
+import type {
+    AuthorityRulesService,
+    BranchDivert,
+    GateVerdict,
+    GraphAnswer,
+    GraphCheck,
+} from "@modules/domain/authority-rules"
 import type {
     WorkContext,
     ActionEntry,
     OutboundAccess,
+    OutboundAccessGate,
     WorkPerformer,
     Proposal,
     WorkItem,
@@ -13,6 +22,7 @@ import type {
     ModuleCatalogService,
     WorkEngineService,
 } from "@modules/domain/decisions"
+import { DecisionsErrorCode } from "@modules/domain/decisions"
 
 /** The workspace and actor shared by work-engine scenarios. */
 export const ctx: WorkContext = { workspaceId: "ws-1", actor: "An", locale: "en" }
@@ -88,6 +98,12 @@ export const specOf = builder<Parameters<WorkEngineService["runWork"]>[1]>({
 /** Builds the captured evidence returned by a successful performer. */
 export const performedOf = builder<Performed>({ summary: "Sent the quote", evidence: "captured" })
 
+/** One controlled refusal after work has already committed. */
+export interface WorkEngineNotificationFailure {
+    readonly target: "finished" | "continueChain" | "rejected"
+    readonly cause: Error
+}
+
 /** Scenario choices for the work engine and its injected collaborators. */
 export interface WorkEngineFixtureOptions {
     readonly performer?: WorkPerformer | null
@@ -96,6 +112,7 @@ export interface WorkEngineFixtureOptions {
     readonly action?: ActionEntry | null
     readonly created?: boolean
     readonly items?: Partial<WorkItemsService>
+    readonly notificationFailure?: WorkEngineNotificationFailure
 }
 
 /** An order awaiting approval whose catalog successor would run without its durable noChain choice. */
@@ -160,6 +177,8 @@ export const preparedAddress = {
 }
 /** The exact source text used by the inbound reply scenario. */
 export const replySeed = { summary: "Hi" }
+/** The exact inbound identity passed to the engine's source methods. */
+export const inboundEvent: Parameters<WorkEngineService["startInboundWork"]>[1] = { id: "event-1" }
 /** Expected work identity and source for a customer's inbound reply. */
 export const inboundReply = {
     action: "reply_customer",
@@ -194,3 +213,249 @@ export const inboundBatches = [0, 1, 4].map((limit) => {
         claims,
     }
 })
+
+/** What the gate answers when the graph asked, so the branch alone is the reason. */
+export const BRANCH_ASKING: GateVerdict = { verdict: "ask", reason: "branch_ask", reasons: ["branch_ask"], missing: [] }
+
+/** The hand-over a branch names in place of the proposal, with a person to decide it. */
+export const HAND_OVER: BranchDivert = { action: "hand_over_conversation", handoverTo: "support", asks: true }
+
+/** What the graph carries to the engine with its verdict. */
+export interface GraphCarried {
+    readonly proposal: Proposal
+    readonly stopped: boolean
+    readonly divert: BranchDivert | null
+}
+
+/** What the branching service answers for the work. */
+export interface GraphOutcome {
+    readonly proposal: Proposal
+    readonly verdict: GateVerdict
+    readonly carried: GraphCarried
+}
+
+/** What the branching service answers when the graph stopped the work. */
+export const stoppedByGraph = (): GraphOutcome => ({
+    proposal: quote,
+    verdict: BRANCH_ASKING,
+    carried: { proposal: quote, stopped: true, divert: null },
+})
+/** The same, for the branch that leads to another action. */
+export const divertedByGraph = (): GraphOutcome => ({
+    proposal: quote,
+    verdict: BRANCH_ASKING,
+    carried: { proposal: quote, stopped: false, divert: HAND_OVER },
+})
+
+/** The work the divert above starts: the same subject, preset, with no chain, and a person asked. */
+export const divertedWork = {
+    action: "hand_over_conversation",
+    subject_type: "lead",
+    subject_id: "lead-1",
+    lead_id: "lead-1",
+    dedupeKey: "graph:item-1:hand_over_conversation",
+    preset: true,
+    noChain: true,
+    forceAsk: "branch_ask",
+    seed: { ...quote, fields: { ...quote.fields, to: "support" } },
+}
+
+/** A reply of a conversation put to the graph, and the answer that stops it. */
+export const replyCheck: GraphCheck = {
+    workspaceId: "ws-1",
+    installationId: null,
+    action: "reply_customer",
+    road: "reply",
+    key: "reply:abc",
+    subjectType: "conversation",
+    subjectId: "c1",
+    leadId: null,
+    text: "Hi",
+    evidence: null,
+    attributes: {},
+    turnId: null,
+    wakeId: null,
+    askOpensWork: true,
+}
+/** The answer of the graph that stops a reply. */
+export const stopAnswer: GraphAnswer = { outcome: "stop", unread: [], unjudged: null, divert: null }
+
+/** The source a diverted action takes its subject from, and the work it starts when the node names no target and nobody asks. */
+export const replySource: Parameters<WorkEngineService["runDiverted"]>[2] = {
+    key: "m1",
+    subjectType: "conversation",
+    subjectId: "c1",
+    leadId: null,
+    installationId: "inst-1",
+    origin: { turnId: "turn-1", wakeId: "wake-1" },
+    proposal: { summary: "Reply", draft: "Hi", fields: {} },
+}
+
+/** The doubles of the engine whose owners export them, arranged with the answers every scenario starts from. */
+export interface EngineDoubles {
+    readonly catalog: MockOf<MessageCatalog>
+    readonly modules: MockOf<ModuleCatalogService>
+    readonly items: MockOf<WorkItemsService>
+    readonly access: MockOf<OutboundAccessGate>
+    readonly rules: MockOf<AuthorityRulesService>
+}
+
+/** Gives the doubles their default answers, then the answers the scenario names for the queue. */
+export const arrangeEngineDoubles = (options: WorkEngineFixtureOptions, doubles: EngineDoubles): void => {
+    const { catalog, modules, items, access, rules } = doubles
+    catalog.get.mockImplementation((key, params) => `${key}(${Object.values(params ?? {}).join(",")})`)
+    modules.actionOf.mockResolvedValue(options.action === undefined ? actionEntry() : options.action)
+    items.claim.mockResolvedValue(itemOf())
+    items.nextQueued.mockResolvedValue(null)
+    items.nextInboundQueued.mockResolvedValue(null)
+    items.reopen.mockResolvedValue(itemOf({ status: "queued", reason: "over_authority" }))
+    items.savePrepared.mockResolvedValue(itemOf())
+    items.markDone.mockResolvedValue(itemOf({ status: "done" }))
+    items.markFailed.mockResolvedValue(itemOf({ status: "failed" }))
+    items.markRejected.mockResolvedValue(itemOf({ status: "rejected" }))
+    Object.assign(items, options.items)
+    access.accessOf.mockResolvedValue(options.access ?? "auto")
+    rules.ruleFor.mockResolvedValue(options.rule === undefined ? ruleOf() : options.rule)
+}
+
+/** What the engine spec reads of a finished scenario without the driver. */
+export const autoPlan = { path: "auto", by: { name: "NIVO", kind: "policy" }, outcome: "auto_done" }
+
+/** The stored result and address shared by successful execution scenarios. */
+export const autoResult = { path: "auto", result: { summary: "Sent the quote" }, evidence: "captured", leadId: null }
+/** The saved address when preparation corrects no subject or customer. */
+export const blankPatch = { proposal: quote, subjectType: null, subjectId: null, leadId: null }
+/** The retained link and customer of a delivered quote. */
+export const linkedQuoteResult = {
+    result: { summary: "Sent the quote", href: "/quotes/1" },
+    leadId: "lead-9",
+}
+/** The system identity recorded when a graph rejects work. */
+export const graphDecider = { name: "NIVO", kind: "staff" }
+/** Both graph outcomes retain their exact close note and insertion count. */
+export const graphClosures = [
+    ["stopped", stoppedByGraph, "engine.graphStopped()", 1],
+    ["diverted", divertedByGraph, "engine.graphDiverted()", 2],
+] as const
+/** A diverted reply keeps its original conversation without adding an approval. */
+export const unaskedDivertedWork = {
+    subject_id: "c1",
+    dedupeKey: "graph:m1:hand_over_conversation",
+    origin: replySource.origin,
+    seed: { summary: "Reply", draft: "Hi", fields: { conversation_id: "c1" } },
+}
+/** The queued addresses of a successful claim followed by a contended one. */
+export const queuedContentionReads = [
+    ["ws-1", "a"],
+    ["ws-1", "b"],
+]
+/** The durable waiting state when a reviewed proposal still lacks a field. */
+export const stillMissingData = {
+    proposal: quote,
+    missing: ["need"],
+    reason: "missing_data",
+    reasons: ["missing_data"],
+}
+/** The existing approval whose final state remains closed after notification failure. */
+export const doneState = { status: "done" }
+/** The authority answer when a producer forces work to ask. */
+export const unclearGate = {
+    verdict: { verdict: "ask", reason: "unclear_outcome", reasons: ["unclear_outcome"], missing: [] },
+    rule: ruleOf(),
+}
+const durablePrepared: Proposal = { summary: "Prepared", fields: { items: "coffee" } }
+/** The input, preparation and exact saved durable execution choices. */
+export const durablePreparation = {
+    proposal: { ...quote, execution: { noChain: true } },
+    prepared: durablePrepared,
+    saved: {
+        ...blankPatch,
+        proposal: { ...durablePrepared, execution: { preset: undefined, noChain: true, forceAsk: undefined } },
+    },
+}
+
+/** Arranges a queued preset that is returned and claimed with the same proposal. */
+export const queuedPresetOptions = (proposal: Proposal): WorkEngineFixtureOptions => {
+    const items = mock<Pick<WorkItemsService, "nextQueued" | "claim">>()
+    items.nextQueued.mockResolvedValue(itemOf({ proposal }))
+    items.claim.mockResolvedValue(itemOf({ proposal }))
+    return { items: { nextQueued: items.nextQueued, claim: items.claim } }
+}
+/** Arranges classification work whose outbound-access reader must remain unused. */
+export const classificationOptions = (): WorkEngineFixtureOptions => {
+    const items = mock<Pick<WorkItemsService, "claim">>()
+    items.claim.mockResolvedValue(itemOf({ action: "classify_lead" }))
+    return { action: actionEntry({ action: "classify_lead" }), items: { claim: items.claim } }
+}
+/** The preset classification request paired with its catalog action. */
+export const classificationSpec = { action: "classify_lead", preset: true }
+/** Arranges the queue losing its second claim to another worker. */
+export const arrangeQueuedContention = (items: MockOf<WorkItemsService>): void => {
+    items.claim.mockResolvedValueOnce(itemOf({ id: "a" })).mockResolvedValueOnce(null)
+    items.nextQueued.mockResolvedValueOnce(itemOf({ id: "a" })).mockResolvedValueOnce(itemOf({ id: "b" }))
+}
+/** The ambiguous payment shared by candidate-decision scenarios. */
+export const candidateProposal: Proposal = { summary: "Pay", fields: {}, candidates }
+/** Arranges the ambiguous payment before a person has selected a candidate. */
+export const ambiguousCandidateOptions = (): WorkEngineFixtureOptions => {
+    const items = mock<Pick<WorkItemsService, "reopen">>()
+    items.reopen.mockResolvedValue(itemOf({ proposal: candidateProposal, reason: "unclear_outcome" }))
+    return { items: { reopen: items.reopen } }
+}
+/** Arranges the candidate approval with the existing waiting payment and ask rule. */
+export const chosenCandidateOptions = (): WorkEngineFixtureOptions => {
+    const items = mock<Pick<WorkItemsService, "reopen">>()
+    items.reopen.mockResolvedValue(itemOf({ proposal: candidateProposal }))
+    return { rule: ruleOf({ mode: "ask" }), items: { reopen: items.reopen } }
+}
+
+/** Exact event arguments for automatic completion scenarios. */
+export const autoFinishArgsOf = (item: unknown, done: unknown, proposal: unknown) =>
+    [ctx, item, done, proposal, autoPlan, performedOf()] as const
+/** Exact event arguments for a completion already recorded in the decision transaction. */
+export const recordedFinishArgsOf = (
+    item: unknown,
+    done: unknown,
+    proposal: unknown,
+    plan: unknown,
+    result: unknown = performedOf(),
+) => [ctx, item, done, proposal, plan, result, true] as const
+/** Exact graph-rejection event data, with the scenario's item matcher and close note. */
+export const graphRejectionArgsOf = (item: unknown, note: unknown) =>
+    [ctx, item, quote, graphDecider, note, true] as const
+/** Exact stored rejection of the edited draft, with the transaction-manager matcher supplied by the spec. */
+export const rejectionMarkArgsOf = (manager: unknown) =>
+    ["item-1", { ...quote, draft: "x" }, { summary: "engine.rejectedResult()" }, manager] as const
+/** Exact authoritative completion data before its post-commit notifications. */
+export const authoritativeFinishArgsOf = (
+    manager: unknown,
+    item: unknown,
+    done: unknown,
+    proposal: unknown,
+    plan: unknown,
+) => [manager, ctx, item, done, proposal, plan, performedOf()] as const
+/** Both automatic notification boundaries must surface their own failure. */
+export const autoNotificationFailures = [
+    { target: "finished", cause: new Error("office-unavailable") },
+    { target: "continueChain", cause: new Error("chain-unavailable") },
+] satisfies ReadonlyArray<NonNullable<WorkEngineFixtureOptions["notificationFailure"]>>
+/** A rejected human decision whose Office notification fails after commit. */
+export const rejectedNotificationFailure = {
+    target: "rejected",
+    cause: new Error("rejection-office-unavailable"),
+} satisfies NonNullable<WorkEngineFixtureOptions["notificationFailure"]>
+/** Selects one controlled post-close notification refusal. */
+export const notificationOptions = (
+    failure: NonNullable<WorkEngineFixtureOptions["notificationFailure"]>,
+): WorkEngineFixtureOptions => ({ notificationFailure: failure })
+
+/** The unchanged authority and refusal facts asserted by engine scenarios. */
+export const overAuthorityVerdict = { verdict: "ask", reason: "over_authority" }
+export const missingFieldsError = { code: DecisionsErrorCode.StillMissing, params: { fields: "Need" } }
+export const chooseCandidateError = { code: DecisionsErrorCode.ChooseCandidate }
+/** Expected ask data; matchers remain owned and created by the spec. */
+export const durableAskArgsOf = (item: unknown, proposal: Proposal, gate: unknown) =>
+    [ctx, item, proposal, gate] as const
+/** Expected atomic rejection data, retaining the exact manager and owner principal. */
+export const authoritativeRejectionArgsOf = (manager: unknown, item: unknown) =>
+    [manager, ctx, item, quote, owner, null] as const

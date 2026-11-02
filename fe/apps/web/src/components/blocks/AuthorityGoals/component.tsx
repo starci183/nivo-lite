@@ -1,9 +1,8 @@
-import { NumberField, Textarea } from "@starci/grammar/common"
-import { AuthoritySection } from "@/components/composites/AuthoritySection"
-import type { AuthoritySectionView } from "@/components/composites/AuthoritySection"
+import { Button, NumberField, Textarea, Grid } from "@starci/grammar/common"
+import { AuthoritySection } from "@/components/frames/AuthoritySection"
+import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { GOALS_GRID_CLASS } from "./classNames"
 
 /** Copy, values and state of the goals section. */
 export interface AuthorityGoalsBaseProps {
@@ -38,12 +37,28 @@ const WHOLE = { maximumFractionDigits: 0 }
 export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
     const view = props.props
     return (
-        <SlotView slot={view.slot} placeholder={false} labels={view.slotLabels} onRetry={props.on.retry}>
-            {(_, isSkeleton) => (
-                <AuthoritySection section={view.section} isSkeleton={isSkeleton} onSave={props.on.save}>
-                    <div className={GOALS_GRID_CLASS}>
+        <SlotView
+            slot={view.slot}
+            placeholder={false}
+            labels={view.slotLabels}
+            onRetry={props.on.retry}
+            render={(_, isSkeleton) => (
+                <AuthoritySection
+                    section={view.section}
+                    footer={
+                        <Button
+                            intent="commit"
+                            isPending={view.section.isPending}
+                            isLoading={isSkeleton}
+                            onPress={props.on.save}
+                        >
+                            {view.section.saveLabel}
+                        </Button>
+                    }
+                >
+                    <Grid kind="form" columns={2}>
                         <NumberField
-                            isSkeleton={isSkeleton}
+                            isLoading={isSkeleton}
                             label={view.revenueLabel}
                             description={view.revenueHint}
                             minValue={0}
@@ -53,7 +68,7 @@ export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
                             onValueChange={props.on.revenue}
                         />
                         <NumberField
-                            isSkeleton={isSkeleton}
+                            isLoading={isSkeleton}
                             label={view.customersLabel}
                             minValue={0}
                             step={1}
@@ -62,7 +77,7 @@ export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
                             onValueChange={props.on.customers}
                         />
                         <NumberField
-                            isSkeleton={isSkeleton}
+                            isLoading={isSkeleton}
                             label={view.replyLabel}
                             minValue={1}
                             step={1}
@@ -70,9 +85,9 @@ export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
                             value={view.reply}
                             onValueChange={props.on.reply}
                         />
-                    </div>
+                    </Grid>
                     <Textarea
-                        isSkeleton={isSkeleton}
+                        isLoading={isSkeleton}
                         label={view.noteLabel}
                         description={view.noteHint}
                         rows={2}
@@ -81,6 +96,6 @@ export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
                     />
                 </AuthoritySection>
             )}
-        </SlotView>
+        />
     )
 }

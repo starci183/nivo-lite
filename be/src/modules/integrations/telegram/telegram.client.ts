@@ -27,10 +27,13 @@ export class TelegramClient {
             .catch((cause: unknown) => {
                 throw new TelegramError({ code: TelegramErrorCode.Unavailable, cause })
             })
-        if (!isRecord(answer.body) || answer.body.ok !== true) {
+        if (!isRecord(answer.body) || answer.body.ok !== true || answer.status < 200 || answer.status >= 300) {
             const description = isRecord(answer.body) ? answer.body.description : undefined
             throw new TelegramError({
-                code: TelegramErrorCode.Rejected,
+                code:
+                    isRecord(answer.body) && answer.body.ok === false
+                        ? TelegramErrorCode.Rejected
+                        : TelegramErrorCode.Unavailable,
                 params: { method, reason: typeof description === "string" ? description : String(answer.status) },
             })
         }

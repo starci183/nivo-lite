@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { loadingSlot, slotOfReads } from "@/hooks/slot"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import { agentLifecycleOf, agentLifecycleTone, agentSubtitleOf, installationPersonName } from "@/modules/installations"
@@ -18,19 +19,19 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string) => 
     const t = useTranslations("modulesCore")
     const locale = useLocale() === "en" ? "en" : "vi"
     const guard = useInstanceGuard(module, installationId)
-    const isFailed = useInstallations().slot.isError === true
+    const { read } = useInstallations()
+    const isFailed = read.data === undefined && read.error !== undefined
     const installation = guard.installation
     const def = MODULE_REGISTRY[module]
     const catalog = useModuleCatalog()
     const copy = catalog.modules[module]
     const channelsOf = useInstanceChannels()
-    const fallbackName = catalog.slot.isError === true ? module : ""
+    const fallbackName = catalog.read.data === undefined && catalog.read.error !== undefined ? module : ""
     const lifecycle = agentLifecycleOf(installation)
     const channels = channelsOf(installation?.agentId ?? null)
     const typeName = copy === undefined ? fallbackName : pickCopy(copy.name, locale)
     const unknownName = isFailed ? typeName : ""
-    return {
-        isLoading: (installation === undefined && !isFailed) || catalog.slot.isLoading === true,
+    const view = {
         name: installation === undefined ? unknownName : installationPersonName(installation),
         handle: installation?.agentHandle ?? "",
         seed: installation?.agentId ?? installation?.id ?? "",
@@ -48,5 +49,13 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string) => 
         connectionNeeds: installation?.connectionNeeds ?? [],
         chatHref: installation?.agentId == null ? null : agentChatHref(installation.agentId),
         profileHref: installation?.agentId == null ? null : agentProfileHref(installation.agentId),
+    }
+    return {
+        ...view,
+        retry: () => {
+            void read.mutate()
+            catalog.reload()
+        },
+        slot: guard.isLeaving ? loadingSlot<typeof view>() : slotOfReads([read, catalog.read], () => view),
     }
 }

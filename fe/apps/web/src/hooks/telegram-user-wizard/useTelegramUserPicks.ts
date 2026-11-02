@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { useQueryListTelegramChatsSwr } from "@/hooks/swr"
+import type { SlotRead } from "@/hooks/slot"
 import { chatKindOf, MAX_CHATS } from "./telegram-user-wizard.shared"
 import type { ChatChoice, PickedChat, SinceDays, TelegramInitial } from "./telegram-user-wizard.shared"
 
@@ -16,6 +17,7 @@ export const useTelegramUserPicks = () => {
     const [every, setEvery] = useState("0")
     const [query, setQuery] = useState("")
     const list = useQueryListTelegramChatsSwr(chatsFor, FRESH)
+    const reads: ReadonlyArray<SlotRead<unknown>> = chatsFor === undefined ? [] : [list]
     const chats = useMemo<ReadonlyArray<ChatChoice>>(
         () =>
             (list.data ?? []).map((chat) => ({
@@ -59,6 +61,7 @@ export const useTelegramUserPicks = () => {
     }, [])
 
     return {
+        reads,
         loading: chatsFor !== undefined && list.isLoading,
         failed: list.error !== undefined,
         failure: list.error instanceof Error ? list.error.message : null,

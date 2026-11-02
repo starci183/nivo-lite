@@ -27,6 +27,7 @@ export const LandingConnect = async () => {
                 liveLabel: t("connectAvailable"),
                 roadmapLabel: t("connectRoadmap"),
                 note: t("connectNote"),
+                emptyLabel: t("connectEmpty"),
                 channels: CHANNELS.map((channel) => ({
                     id: channel.id,
                     name: t(channel.name),

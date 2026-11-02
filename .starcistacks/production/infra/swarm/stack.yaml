@@ -407,3 +407,4 @@ secrets:
   ready-owner-password: { external: true, name: nivo-custody-ready-owner-password-v1 }
   ready-staff-email: { external: true, name: nivo-custody-ready-staff-email-v1 }
   ready-staff-password: { external: true, name: nivo-custody-ready-staff-password-v1 }
+  workspace-seed-input: { external: true, name: nivo-custody-workspace-seed-input-v1 }

@@ -1,34 +1,12 @@
+import type { InventoryAdjustmentEditorData } from "@/modules/types"
 import { InventorySelect } from "@/components/leaves/InventorySelect"
 import { InventoryField } from "@/components/leaves/InventoryField"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import { Button, Drawer, Input, SegmentedControl, Text } from "@starci/grammar/common"
-import type { InventorySay } from "@/modules/types"
-import { FORM_CLASS_NAME } from "./classNames"
+import { Button, Drawer, Input, SegmentedControl, Text, Stack } from "@starci/grammar/common"
 
 /** The words and state of the quantity drawer. */
-export interface InventoryAdjustDrawerProps {
-    readonly props: {
-        readonly say: InventorySay
-        readonly itemName: string
-        readonly unit: string
-        readonly summary: string
-        readonly modes: ReadonlyArray<{ readonly value: string; readonly label: string }>
-        readonly mode: string
-        readonly isMove: boolean
-        readonly showPlaces: boolean
-        readonly places: ReadonlyArray<{ readonly id: string; readonly label: string }>
-        readonly targets: ReadonlyArray<{ readonly id: string; readonly label: string }>
-        readonly from: string
-        readonly to: string
-        readonly value: string
-        readonly reason: string
-        readonly preview: string | null
-        readonly submitLabel: string
-        readonly canSubmit: boolean
-        readonly isPending: boolean
-        readonly error: string | null
-        readonly notice: string | null
-    }
+interface InventoryAdjustDrawerProps {
+    readonly props: InventoryAdjustmentEditorData
     readonly on: {
         readonly mode: (value: string) => void
         readonly from: (value: string) => void
@@ -43,23 +21,23 @@ export interface InventoryAdjustDrawerProps {
 /** The form that sets, changes or moves the quantity of one item. */
 export const InventoryAdjustDrawer = (props: InventoryAdjustDrawerProps) => {
     const { props: p, on } = props
-    const say = p.say
+    const copy = p.copy
     return (
         <Drawer
             isOpen
             onOpenChange={(open) => {
                 if (!open) on.close()
             }}
-            title={say("adjustTitle", { name: p.itemName })}
+            title={copy.adjustTitle}
             description={p.summary}
-            closeLabel={say("close")}
+            closeLabel={copy.close}
             placement="right"
         >
-            <div className={FORM_CLASS_NAME}>
-                <SegmentedControl label={say("adjustMode")} options={p.modes} value={p.mode} onValueChange={on.mode} />
+            <Stack gap="row">
+                <SegmentedControl label={copy.adjustMode} options={p.modes} value={p.mode} onValueChange={on.mode} />
                 {p.showPlaces ? (
                     <InventorySelect
-                        label={p.isMove ? say("adjustFrom") : say("adjustAt")}
+                        label={p.isMove ? copy.adjustFrom : copy.adjustAt}
                         value={p.from}
                         options={p.places}
                         onChange={(value) => on.from(value)}
@@ -67,8 +45,8 @@ export const InventoryAdjustDrawer = (props: InventoryAdjustDrawerProps) => {
                 ) : null}
                 {p.isMove ? (
                     <InventorySelect
-                        label={say("adjustTo")}
-                        placeholder={say("adjustToHint")}
+                        label={copy.adjustTo}
+                        placeholder={copy.adjustToHint}
                         value={p.to}
                         options={p.targets}
                         onChange={(value) => on.to(value)}
@@ -77,15 +55,15 @@ export const InventoryAdjustDrawer = (props: InventoryAdjustDrawerProps) => {
                 <InventoryField
                     id="adj-value"
                     name="value"
-                    label={say(`adjustValue_${p.mode}`, { unit: p.unit })}
+                    label={copy.valueLabel}
                     value={p.value}
                     onChange={on.value}
                 />
                 <Input
                     id="adj-reason"
                     name="reason"
-                    label={p.isMove ? say("adjustNote") : say("adjustReason")}
-                    {...(p.isMove ? {} : { hint: say("adjustReasonHint") })}
+                    label={p.isMove ? copy.adjustNote : copy.adjustReason}
+                    {...(p.isMove ? {} : { hint: copy.adjustReasonHint })}
                     value={p.reason}
                     onValueChange={on.reason}
                 />
@@ -100,7 +78,7 @@ export const InventoryAdjustDrawer = (props: InventoryAdjustDrawerProps) => {
                         {p.submitLabel}
                     </Button>
                 </div>
-            </div>
+            </Stack>
         </Drawer>
     )
 }

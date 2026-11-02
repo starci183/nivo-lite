@@ -36,7 +36,7 @@ export const LeadHeaderActions = (props: LeadHeaderActionsProps) => {
                 primary: detail === null ? { kind: "none" } : primaryActionOf(detail),
                 notice: notice ?? actions.error,
                 isPending: actions.isPending,
-                isSkeleton: query.slot.isLoading === true,
+                isLoading: "isLoading" in query.slot,
                 labels: {
                     reviewLabel: t("reviewApproval"),
                     draftLabel: t("draftFollowUp"),

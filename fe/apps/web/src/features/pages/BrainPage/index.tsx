@@ -1,9 +1,7 @@
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
-import { pageHeadingOf } from "@/modules/page-header"
-import { brainTabOf, legacyBrainHrefOf } from "@/modules/brain"
+import { brainPartOf, brainTabOf, legacyBrainHrefOf } from "@/modules/brain"
 import { DOCUMENT_IDEAS, moduleFilterOf } from "@/modules/documents"
-import { BrainPageActions } from "@/components/blocks/BrainPageActions"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
 import type { BrainTab } from "@/modules/routes"
@@ -30,6 +28,9 @@ interface BrainPageProps {
     readonly draft: string | undefined
     readonly node: string | undefined
     readonly module: string | undefined
+    readonly compose: string | undefined
+    readonly title: string | undefined
+    readonly doc: string | undefined
 }
 
 type Translate = Awaited<ReturnType<typeof getTranslations<"brain">>>
@@ -41,16 +42,17 @@ type Copy = Pick<BrainPageBaseProps["props"], "header" | "nivoLabel" | "nivoHref
 
 /** The words of the page that do not depend on its data. */
 const copyOf = (t: Translate, brain: SecondBrainTranslate, knowledge: KnowledgeTranslate, tab: BrainTab): Copy => ({
-    header: pageHeadingOf({
-        crumbLabel: t("crumbLabel"),
-        crumbs: [
-            { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
-            { id: "brain", label: t("title") },
-        ],
+    header: {
+        breadcrumbs: {
+            label: t("crumbLabel"),
+            items: [
+                { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
+                { id: "brain", label: t("title") },
+            ],
+        },
         title: t("title"),
-        description: brain("intro"),
-        actions: <BrainPageActions tab={tab} />,
-    }),
+        description: brain(brainPartOf(tab) === "public" ? "introPublic" : "intro"),
+    },
     nivoLabel: knowledge("nivoLink"),
     nivoHref: KNOWLEDGE_ROUTES.nivo,
     readOnlyNote: knowledge("readOnlyNote"),
@@ -75,16 +77,20 @@ const addOf = (
     if (idea === undefined) return { addKey: "base", addPreset: null }
     const preset: AddPresetView = {
         topic: knowledge(`suggest_${idea.key}_topic`),
-        visibility: idea.visibility,
     }
     return { addKey: add, addPreset: preset }
+}
+
+/** The public document form the address asks for: the picker of internal documents, the written form, or none. */
+const composeOf = (value: string | undefined): "pick" | "write" | undefined => {
+    if (value === "pick") return "pick"
+    return value === "write" ? "write" : undefined
 }
 
 /** The Second Brain page shell: translates and lays out the page; the connected blocks read their data through GraphQL. */
 export const BrainPage = async (props: BrainPageProps) => {
     const legacy = legacyBrainHrefOf(props)
-    if (legacy !== null)
-        return navigation.redirect({ href: legacy, locale: (await getLocale()) === "en" ? "en" : "vi" })
+    if (legacy !== null) navigation.redirect({ href: legacy, locale: (await getLocale()) === "en" ? "en" : "vi" })
     const tab = brainTabOf(props)
     const [t, brain, knowledge] = await Promise.all([
         getTranslations("brain"),
@@ -105,6 +111,9 @@ export const BrainPage = async (props: BrainPageProps) => {
                 draft: props.draft,
                 node: props.node,
                 module: moduleFilterOf(props.module),
+                compose: composeOf(props.compose),
+                composeTitle: props.title ?? "",
+                publicDoc: props.doc,
             }}
         />
     )
@@ -132,6 +141,9 @@ export const BrainLoadingPage = async () => {
                 draft: undefined,
                 node: undefined,
                 module: "all",
+                compose: undefined,
+                composeTitle: "",
+                publicDoc: undefined,
             }}
         />
     )

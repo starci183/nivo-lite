@@ -1,4 +1,4 @@
-import { Button, Cluster, Text } from "@starci/grammar/common"
+import { Button, Cluster, Heading } from "@starci/grammar/common"
 
 /** The words and state of the head of the conversation rail. */
 interface AgentChatRailHeadProps {
@@ -12,7 +12,7 @@ interface AgentChatRailHeadProps {
 /** The head of the conversation rail: its title and the way to start another conversation. */
 export const AgentChatRailHead = (props: AgentChatRailHeadProps) => (
     <Cluster gap="inline" justify="between">
-        <Text weight="semibold">{props.title}</Text>
+        <Heading level={3}>{props.title}</Heading>
         <Button
             intent="neutral"
             size="sm"

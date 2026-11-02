@@ -24,7 +24,7 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
     const overlays = useConnectionOverlays()
     return (
         <DevelopersPanelBase
-            shape={{ body: props.children }}
+            children={props.children}
             props={{
                 access: isManager(member) ? { items: true } : { isForbidden: true },
                 webhooks: sortRows(webhooks).map((connection) => ({

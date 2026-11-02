@@ -44,13 +44,16 @@ export const AgentGraphProblems = (props: AgentGraphProblemsProps) => {
                 <Stack gap="row">
                     <ProblemLine {...props} item={first} />
                     {rest.length === 0 ? null : (
-                        <Disclosure title={props.view.moreLabel}>
-                            <Stack gap="row">
-                                {rest.map((item) => (
-                                    <ProblemLine key={item.id} {...props} item={item} />
-                                ))}
-                            </Stack>
-                        </Disclosure>
+                        <Disclosure
+                            title={props.view.moreLabel}
+                            body={
+                                <Stack gap="row">
+                                    {rest.map((item) => (
+                                        <ProblemLine key={item.id} {...props} item={item} />
+                                    ))}
+                                </Stack>
+                            }
+                        />
                     )}
                 </Stack>
             }

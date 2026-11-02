@@ -18,31 +18,18 @@ type ProviderLogoProps = {
 export const ProviderLogo = (props: ProviderLogoProps) => {
     if (props.isWordmark === true && props.src !== undefined) {
         return (
-            <Image
-                src={props.src}
-                alt=""
-                aspect="auto"
-                fit="contain"
-                plate="none"
-                width={64}
-                height={26}
-                className={providerLogoClassNames.wordmark}
-            />
+            <div className={providerLogoClassNames.wordmark}>
+                <Image src={props.src} alt="" aspect="auto" fit="contain" plate="none" width={64} height={26} />
+            </div>
         )
     }
     if (props.size === "lg") {
         return props.src === undefined ? (
             <IconTile source={nivoIconSource(props.glyph, "leading")} tone="neutral" size="md" />
         ) : (
-            <Image
-                src={props.src}
-                alt=""
-                aspect="square"
-                fit="contain"
-                width={48}
-                height={48}
-                className={providerLogoClassNames.largeMark}
-            />
+            <div className={providerLogoClassNames.largeMark}>
+                <Image src={props.src} alt="" aspect="square" fit="contain" width={48} height={48} />
+            </div>
         )
     }
     return (
@@ -52,15 +39,9 @@ export const ProviderLogo = (props: ProviderLogoProps) => {
             size="md"
             artwork={
                 props.src === undefined ? undefined : (
-                    <Image
-                        src={props.src}
-                        alt=""
-                        aspect="square"
-                        fit="contain"
-                        width={28}
-                        height={28}
-                        className={providerLogoClassNames.mark}
-                    />
+                    <div className={providerLogoClassNames.mark}>
+                        <Image src={props.src} alt="" aspect="square" fit="contain" width={28} height={28} />
+                    </div>
                 )
             }
         />

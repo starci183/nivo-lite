@@ -1,5 +1,17 @@
-/** The tabs of the Second Brain page, in the order they are drawn. */
-export const BRAIN_TABS = ["todo", "dossiers", "sources", "map", "facts", "lessons", "agents"] as const
+/** The two parts of the Second Brain: what only the team and the internal agents read, and what the chatbot may tell customers. */
+export const BRAIN_PARTS = ["internal", "public"] as const
+
+/** One part of the Second Brain. */
+export type BrainPart = (typeof BRAIN_PARTS)[number]
+
+/** The tabs of each part, in the order they are drawn. The part a tab sits in decides who can read what is added there. */
+export const BRAIN_PART_TABS = {
+    internal: ["todo", "dossiers", "sources", "map", "facts", "lessons", "agents"],
+    public: ["publicDocs", "publicAsks", "publicTry"],
+} as const
+
+/** The tabs of the Second Brain page, in the order they are drawn: the internal part first. */
+export const BRAIN_TABS = [...BRAIN_PART_TABS.internal, ...BRAIN_PART_TABS.public] as const
 
 /** One tab of the Second Brain page. */
 export type BrainTab = (typeof BRAIN_TABS)[number]

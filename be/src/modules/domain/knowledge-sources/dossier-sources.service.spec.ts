@@ -77,6 +77,42 @@ describe("DossierSourcesService sourcesOfTopics", () => {
     })
 })
 
+describe("DossierSourcesService readySources and fileUnder", () => {
+    it("reads only ready documents in stable order within the caller's and service's bounds", async () => {
+        const em = mockEntityManager({ find: [KnowledgeSourceEntity, [{ ...stored, status: "ready" }]] })
+        const service = await build(em)
+
+        await expect(service.readySources(WS, 5)).resolves.toEqual([{ ...VIEW, status: "ready" }])
+        await service.readySources(WS, 5000)
+
+        expect(em.find).toHaveBeenNthCalledWith(1, KnowledgeSourceEntity, {
+            select: COLUMNS,
+            where: { workspaceId: WS, status: "ready" },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 5,
+        })
+        expect(em.find).toHaveBeenNthCalledWith(2, KnowledgeSourceEntity, {
+            select: COLUMNS,
+            where: { workspaceId: WS, status: "ready" },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 2000,
+        })
+    })
+
+    it("files only the workspace's selected source under the supplied category and tags", async () => {
+        const em = mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] })
+        const service = await build(em)
+
+        await expect(service.fileUnder(WS, "s1", "LEGAL FILES", ["dossier:2"])).resolves.toBeUndefined()
+
+        expect(em.update).toHaveBeenCalledWith(
+            KnowledgeSourceEntity,
+            { id: "s1", workspaceId: WS },
+            { topic: "LEGAL FILES", tags: ["dossier:2"] },
+        )
+    })
+})
+
 describe("DossierSourcesService byTag and sourceOf", () => {
     it("answers the first document carrying a tag, or null", async () => {
         const em = mockEntityManager({

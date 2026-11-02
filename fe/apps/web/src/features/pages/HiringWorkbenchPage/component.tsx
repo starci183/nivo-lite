@@ -1,15 +1,6 @@
-import { AgentDashboardFrame } from "@/components/blocks/AgentDashboardFrame"
-import { HiringAvailability } from "@/components/blocks/HiringAvailability"
-import { HiringCandidate } from "@/components/blocks/HiringCandidate"
-import { HiringFigures } from "@/components/blocks/HiringFigures"
-import { HiringInterviews } from "@/components/blocks/HiringInterviews"
-import { HiringJobs } from "@/components/blocks/HiringJobs"
-import { HiringOffers } from "@/components/blocks/HiringOffers"
-import { HiringOnboarding } from "@/components/blocks/HiringOnboarding"
-import { HiringPipeline } from "@/components/blocks/HiringPipeline"
-import { HiringSettings } from "@/components/blocks/HiringSettings"
+import { HiringWorkbench } from "@/components/blocks/HiringWorkbench"
 
-/** The words of the page: the tab names (the figures block words its own figures). */
+/** The existing server-resolved Hiring strip labels. */
 interface HiringWorkbenchLabels {
     readonly jobs: string
     readonly candidates: string
@@ -18,8 +9,7 @@ interface HiringWorkbenchLabels {
     readonly onboarding: string
     readonly settings: string
 }
-
-/** Props for {@link HiringWorkbenchPageBase}. */
+/** Route identity and words only; the module block owns its reads and controllers. */
 export interface HiringWorkbenchPageBaseProps {
     readonly props: {
         readonly installationId: string | null
@@ -29,41 +19,22 @@ export interface HiringWorkbenchPageBaseProps {
     }
 }
 
-/**
- * Draws the Hiring workbench: the agent dashboard frame around the six Hiring surfaces. Every surface is a self-connected block that
- * reads the board itself; the connected figures block fills the frame ribbon.
- */
+/** Composes the one Hiring world instead of passing connected panels through another block. */
 export const HiringWorkbenchPageBase = (props: HiringWorkbenchPageBaseProps) => {
     const { installationId, tab, focus, labels } = props.props
     return (
-        <AgentDashboardFrame
-            module="hiring"
+        <HiringWorkbench
             installationId={installationId}
             initialTab={tab}
-            ribbon={<HiringFigures />}
-            tabs={[
-                {
-                    id: "jobs",
-                    label: labels.jobs,
-                    content: <HiringJobs />,
-                },
-                { id: "candidates", label: labels.candidates, content: <HiringPipeline /> },
-                { id: "interviews", label: labels.interviewsTab, content: <HiringInterviews /> },
-                { id: "offers", label: labels.offersTab, content: <HiringOffers /> },
-                { id: "onboarding", label: labels.onboarding, content: <HiringOnboarding /> },
-                {
-                    id: "settings",
-                    label: labels.settings,
-                    content: (
-                        <>
-                            <HiringSettings />
-                            <HiringAvailability />
-                        </>
-                    ),
-                },
-            ]}
-        >
-            <HiringCandidate focus={focus} />
-        </AgentDashboardFrame>
+            focus={focus}
+            tabs={{
+                jobs: labels.jobs,
+                candidates: labels.candidates,
+                interviews: labels.interviewsTab,
+                offers: labels.offersTab,
+                onboarding: labels.onboarding,
+                settings: labels.settings,
+            }}
+        />
     )
 }

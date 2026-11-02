@@ -5,8 +5,15 @@ import { useMutateStartFirstWorkspaceSwr, useQueryMyWorkspacesSwr } from "@/hook
 import { useSyncActiveWorkspace } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { workspacePaymentPath, workspacesPath } from "@/modules/routes"
+import type { ConsoleSession } from "@/modules/types"
 import { UNPAID_WORKSPACE_STATES } from "./console.shared"
-import { useConsoleSession } from "./useConsoleSession"
+import { useConsoleSessionRead } from "./useConsoleSessionRead"
+
+/** The SWR session and whether the console may mount its readers. */
+interface ConsoleGate {
+    readonly session: ConsoleSession | undefined
+    readonly isReady: boolean
+}
 
 /**
  * Whether the console frame may render: the session is read. A person with no membership at all first gets their first workspace
@@ -14,9 +21,9 @@ import { useConsoleSession } from "./useConsoleSession"
  * workspaces page, as is a disabled member. An unpaid workspace sends them to its payment step, and the GraphQL client is kept on the
  * session's workspace.
  */
-export const useConsoleGate = (): boolean => {
+export const useConsoleGate = (): ConsoleGate => {
     const memberships = useQueryMyWorkspacesSwr()
-    const session = useConsoleSession()
+    const session = useConsoleSessionRead()
     const router = navigation.useRouter()
     useSyncActiveWorkspace(session?.currentWorkspaceId)
     const isEmpty = memberships.data?.length === 0
@@ -32,5 +39,5 @@ export const useConsoleGate = (): boolean => {
     useEffect(() => {
         if (exit !== undefined) router.replace(exit)
     }, [exit, router])
-    return session !== undefined && exit === undefined
+    return { session, isReady: session !== undefined && exit === undefined }
 }

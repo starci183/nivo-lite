@@ -20,6 +20,11 @@ import { BRAIN_FACTS_ERROR_KINDS, BRAIN_FACTS_MESSAGES, BrainFactsModule } from 
 import { BRAIN_LESSONS_ERROR_KINDS, BRAIN_LESSONS_MESSAGES, BrainLessonsModule } from "@modules/domain/brain-lessons"
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
 import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
+import {
+    PUBLIC_DOCUMENTS_ERROR_KINDS,
+    PUBLIC_DOCUMENTS_MESSAGES,
+    PublicDocumentsModule,
+} from "@modules/domain/public-documents"
 import { KnowledgeSuggestionStateModule } from "@modules/domain/knowledge-suggestion-state"
 import { KNOWLEDGE_ERROR_KINDS, KNOWLEDGE_MESSAGES, KnowledgeModule } from "@modules/domain/knowledge"
 import {
@@ -67,6 +72,7 @@ export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
         writer: RemedyWriterService,
     }),
     KnowledgeGapsModule.register({ isGlobal: true }),
+    PublicDocumentsModule.register({ isGlobal: true }),
     BrainLessonsModule.register({ isGlobal: true }),
     BrainExtractionsModule.register({ isGlobal: true }),
     BrainCommandsModule.register({ isGlobal: true }),
@@ -84,6 +90,7 @@ export const knowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     KNOWLEDGE_ERROR_KINDS,
     KNOWLEDGE_SOURCES_ERROR_KINDS,
     NIVO_KNOWLEDGE_ERROR_KINDS,
+    PUBLIC_DOCUMENTS_ERROR_KINDS,
 ]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
@@ -96,4 +103,5 @@ export const knowledgeMessages: ReadonlyArray<MessageBundle> = [
     KNOWLEDGE_MESSAGES,
     KNOWLEDGE_SOURCES_MESSAGES,
     NIVO_KNOWLEDGE_MESSAGES,
+    PUBLIC_DOCUMENTS_MESSAGES,
 ]

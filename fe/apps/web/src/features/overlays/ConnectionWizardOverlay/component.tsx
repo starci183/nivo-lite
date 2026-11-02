@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { Drawer } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import { WizardFrame } from "@/components/composites/WizardFrame"
+import type { SlotRead, AgentOption, DataSlot, Provider, ProviderKind, SlotLabels } from "@/modules/types"
 import { CsvImportWizard } from "@/components/blocks/CsvImportWizard"
 import { DatabaseWizard } from "@/components/blocks/DatabaseWizard"
 import { DriveWizard } from "@/components/blocks/DriveWizard"
@@ -15,7 +15,6 @@ import { TelegramUserWizard } from "@/components/blocks/TelegramUserWizard"
 import { TelegramWizard } from "@/components/blocks/TelegramWizard"
 import { WebhookWizard } from "@/components/blocks/WebhookWizard"
 import { ZaloWizard } from "@/components/blocks/ZaloWizard"
-import type { AgentOption, DataSlot, Provider, ProviderKind, SlotLabels } from "@/modules/types"
 
 /** The wizard the URL asks for. */
 export interface WizardTargetView {
@@ -50,6 +49,7 @@ export interface ConnectionWizardOverlayBaseProps {
         readonly ownerEmail: string
         readonly target: WizardTargetView | null
         /** The agents and sender the wizards are offered, read from the workspace. */
+        readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
         readonly board: DataSlot<WizardBoard>
         readonly slotLabels: SlotLabels
     }
@@ -62,6 +62,7 @@ export interface ConnectionWizardOverlayBaseProps {
 
 /** What every data-connector wizard takes. */
 interface DataWizardProps {
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     readonly agents: ReadonlyArray<AgentOption>
     readonly resumeId?: string
     readonly onClose: (changed: boolean) => void
@@ -89,6 +90,7 @@ const DataWizard = (props: DataWizardSwitchProps) => {
         <Wizard
             agents={props.agents}
             onClose={props.onClose}
+            dependencyReads={props.dependencyReads}
             {...(props.resumeId === undefined ? {} : { resumeId: props.resumeId })}
         />
     )
@@ -96,6 +98,7 @@ const DataWizard = (props: DataWizardSwitchProps) => {
 
 /** What the wizard of one kind is handed: the open target, the board and the way out. */
 interface KindWizardProps {
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     readonly target: WizardTargetView
     readonly board: WizardBoard
     readonly ownerEmail: string
@@ -104,7 +107,7 @@ interface KindWizardProps {
 
 /** The wizard of each kind of provider; the key keeps a resumed connection apart from a new one. */
 const KIND_WIZARDS: Readonly<Record<ProviderKind, (props: KindWizardProps) => ReactNode>> = {
-    money: ({ target, board, onClose }) =>
+    money: ({ target, board, onClose, dependencyReads }) =>
         target.money === null ? null : (
             <MoneyWizard
                 key={target.resumeId ?? "new"}
@@ -112,62 +115,61 @@ const KIND_WIZARDS: Readonly<Record<ProviderKind, (props: KindWizardProps) => Re
                 resumeId={target.resumeId}
                 agents={board.eligible}
                 onClose={onClose}
+                dependencyReads={dependencyReads}
             />
         ),
-    telegram: ({ board, onClose }) => <TelegramWizard agents={board.eligible} onClose={onClose} />,
-    data: ({ target, board, onClose }) => (
+    telegram: ({ board, onClose, dependencyReads }) => (
+        <TelegramWizard agents={board.eligible} onClose={onClose} dependencyReads={dependencyReads} />
+    ),
+    data: ({ target, board, onClose, dependencyReads }) => (
         <DataWizard
             key={target.resumeId ?? "new"}
             provider={target.provider}
             agents={board.agents}
             {...(target.resumeId === undefined ? {} : { resumeId: target.resumeId })}
             onClose={onClose}
+            dependencyReads={dependencyReads}
         />
     ),
-    zalo: ({ target, board, onClose }) => (
+    zalo: ({ target, board, onClose, dependencyReads }) => (
         <ZaloWizard
             key={target.resumeId ?? "new"}
             resumeId={target.resumeId}
             returned={target.returned}
             agents={board.eligible}
             onClose={onClose}
+            dependencyReads={dependencyReads}
         />
     ),
-    meta: ({ target, board, onClose }) => (
+    meta: ({ target, board, onClose, dependencyReads }) => (
         <MetaWizard
             key={target.resumeId ?? "new"}
             resumeId={target.resumeId}
             returned={target.returned}
             agents={board.eligible}
             onClose={onClose}
+            dependencyReads={dependencyReads}
         />
     ),
-    webhook: ({ onClose }) => <WebhookWizard onClose={onClose} />,
-    google: ({ onClose }) => <GoogleWizard onClose={onClose} />,
-    drive: ({ onClose }) => <DriveWizard onClose={onClose} />,
-    email: ({ board, ownerEmail, onClose }) => (
-        <SmtpWizard ownerEmail={ownerEmail} hasDefault={board.hasDefaultSender} onClose={onClose} />
+    webhook: ({ onClose, dependencyReads }) => <WebhookWizard onClose={onClose} dependencyReads={dependencyReads} />,
+    google: ({ onClose, dependencyReads }) => <GoogleWizard onClose={onClose} dependencyReads={dependencyReads} />,
+    drive: ({ onClose, dependencyReads }) => <DriveWizard onClose={onClose} dependencyReads={dependencyReads} />,
+    email: ({ board, ownerEmail, onClose, dependencyReads }) => (
+        <SmtpWizard
+            ownerEmail={ownerEmail}
+            hasDefault={board.hasDefaultSender}
+            onClose={onClose}
+            dependencyReads={dependencyReads}
+        />
     ),
 }
 
-/** What the drawer body draws: the open wizard, and whether the workspace reads are still on their way. */
+/** The actual selected wizard joins its dependencies with its own read and draws its ready tree. */
 interface WizardBodyProps {
-    readonly isSkeleton: boolean
     readonly wizard: KindWizardProps | null
 }
-
-/** The wizard of the open target, or a placeholder frame while the workspace reads are on their way. */
-const WizardBody = (props: WizardBodyProps) => {
-    if (props.isSkeleton) {
-        return (
-            <WizardFrame title="" stepLabel="" steps={[""]} index={0} isSkeleton footer={null}>
-                {null}
-            </WizardFrame>
-        )
-    }
-    if (props.wizard === null) return null
-    return <>{KIND_WIZARDS[props.wizard.target.kind](props.wizard)}</>
-}
+const WizardBody = (props: WizardBodyProps) =>
+    props.wizard === null ? null : <>{KIND_WIZARDS[props.wizard.target.kind](props.wizard)}</>
 
 /** The wizard drawer of every provider: one Drawer, one wizard chosen by the provider's kind. */
 export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBaseProps) => {
@@ -189,14 +191,22 @@ export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBasePr
                 placeholder={BOARD_PLACEHOLDER}
                 labels={wizard.slotLabels}
                 onRetry={props.on.retry}
-            >
-                {(board, isSkeleton) => (
+                render={(board) => (
                     <WizardBody
-                        isSkeleton={isSkeleton}
-                        wizard={target === null ? null : { target, board, ownerEmail: wizard.ownerEmail, onClose }}
+                        wizard={
+                            target === null
+                                ? null
+                                : {
+                                      target,
+                                      board,
+                                      dependencyReads: wizard.dependencyReads,
+                                      ownerEmail: wizard.ownerEmail,
+                                      onClose,
+                                  }
+                        }
                     />
                 )}
-            </SlotView>
+            />
         </Drawer>
     )
 }

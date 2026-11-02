@@ -1,9 +1,9 @@
-import { Alert, Button, Divider, Input, Text, TextAction } from "@starci/grammar/common"
-import { AuthForm } from "../../composites/AuthForm"
-import { AuthPanel } from "../../composites/AuthPanel"
-import { EmailField } from "../../composites/EmailField"
+import { Alert, Button, Cluster, Divider, Input, Link, Stack, Text } from "@starci/grammar/common"
+import { AuthForm } from "@/components/frames/AuthForm"
+import { AuthPanel } from "@/components/frames/AuthPanel"
+import { EmailField } from "@/components/composites/EmailField"
 import { Icon } from "@/components/leaves/Icon"
-import { LOGIN_ACTIONS_CLASS_NAME, LOGIN_CENTER_CLASS_NAME, LOGIN_ROW_CLASS_NAME } from "./classNames"
+import { LOGIN_CENTER_CLASS_NAME } from "./classNames"
 
 /** The words and state of the sign-in card, resolved by the connected block. */
 export interface LoginFormBaseProps {
@@ -61,7 +61,7 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
                     {...(view.canResend && { action: { label: view.resendLabel, onAction: props.on.resend } })}
                 />
             )}
-            <div className={LOGIN_ACTIONS_CLASS_NAME}>
+            <Stack gap="row">
                 <Button
                     intent="neutral"
                     width="fill"
@@ -73,7 +73,7 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
                     {view.googleLabel}
                 </Button>
                 <Divider label={view.orLabel} />
-            </div>
+            </Stack>
             <AuthForm label={view.title} isPending={view.isPasswordPending} onSubmit={props.on.submit}>
                 <EmailField
                     id="login-email"
@@ -94,22 +94,24 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
                     isRequired
                     isDisabled={busy}
                     value={view.password}
-                    isError={view.passwordError !== undefined}
+                    isInvalid={view.passwordError !== undefined}
                     errorMessage={view.passwordError}
                     onValueChange={props.on.setPassword}
                 />
-                <div className={LOGIN_ROW_CLASS_NAME}>
-                    <TextAction href={view.forgotHref}>{view.forgotLabel}</TextAction>
-                </div>
+                <Cluster gap="inline" justify="end">
+                    <Link href={view.forgotHref}>{view.forgotLabel}</Link>
+                </Cluster>
                 <Button intent="commit" width="fill" type="submit" isPending={view.isPasswordPending}>
                     {view.submitLabel}
                 </Button>
             </AuthForm>
             <div className={LOGIN_CENTER_CLASS_NAME}>
-                <Text size="sm" tone="muted">
-                    {view.noAccountLabel}
-                </Text>
-                <TextAction href={view.signUpHref}>{view.signUpLabel}</TextAction>
+                <Cluster gap="inline">
+                    <Text size="sm" tone="muted">
+                        {view.noAccountLabel}
+                    </Text>
+                    <Link href={view.signUpHref}>{view.signUpLabel}</Link>
+                </Cluster>
             </div>
         </AuthPanel>
     )

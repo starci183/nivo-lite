@@ -40,7 +40,7 @@ export const AgentIdentityCard = (props: AgentIdentityCardProps) => {
     const slotLabels = useSlotLabels()
     const { canEdit } = useAgentRights()
     const { slot, reload } = useAgentInstallation(props.installationId, props.module)
-    const agent = slot.items
+    const agent = "items" in slot ? slot.items : undefined
     const saved = agent?.name ?? ""
     const [draft, setDraft] = useState<string | null>(null)
     const name = draft ?? saved

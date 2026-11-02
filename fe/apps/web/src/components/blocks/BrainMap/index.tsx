@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { useFormatter, useTranslations } from "next-intl"
-import type { PageHeaderContent } from "@starci/grammar/common"
 import {
     BRAIN_PANEL_PREFIX,
     DOSSIER_STATUS_TONE,
@@ -32,6 +31,7 @@ import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
 import { brainDossierHref, brainTabHref } from "@/modules/routes"
+import type { BrainPageHeading } from "@/modules/types"
 import { BrainMapBase } from "./component"
 import type { MapContent, MapDetailView } from "./component"
 
@@ -39,10 +39,10 @@ type Translate = ReturnType<typeof useTranslations<"secondBrain">>
 
 /** What the page hands the map tab: the header without its tabs, and the node the address selects. */
 interface BrainMapProps {
-    readonly header: PageHeaderContent
+    readonly header: BrainPageHeading
     readonly node: string | undefined
     /** The findings of the dossier the node selects, drawn by the page in the side pane. */
-    readonly findings: ReactNode
+    readonly children: ReactNode
 }
 
 /** A map of the same shape as a ready one, drawn as geometry while the categories and dossiers are read. */
@@ -164,9 +164,9 @@ export const BrainMap = (props: BrainMapProps) => {
     }
     return (
         <BrainMapBase
-            shape={{ findings: selection.kind === "dossier" ? props.findings : null }}
+            children={props.children}
             props={{
-                header,
+                header: header.props,
                 panelId: `${BRAIN_PANEL_PREFIX}map`,
                 gridLabel: t("mapGridLabel"),
                 mapLabel: t("mapLabel"),
@@ -187,6 +187,7 @@ export const BrainMap = (props: BrainMapProps) => {
                 detail: detailOf(t, format, all, selection, statusOf),
             }}
             on={{
+                ...header.on,
                 select,
                 setFilter: (value) => setFilter(MAP_STATUS_FILTERS.find((one) => one === value) ?? "all"),
                 retry: reload,

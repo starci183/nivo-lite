@@ -26,7 +26,7 @@ interface ApprovalProgress {
 }
 
 /** Approves a public reply, follows its job, and refreshes the affected workspace views. */
-export const useApproveLeadGenComment = () => {
+export const useApproveLeadGenComment = (isActive = true) => {
     const t = useTranslations("workbenchLeadGen")
     const runGraphQL = useGraphQLWithToast()
     const { activeWorkspaceId } = useActiveWorkspace()
@@ -35,7 +35,7 @@ export const useApproveLeadGenComment = () => {
     const { mutate } = useSWRConfig()
     const { trigger, isMutating } = useMutateApproveLeadGenCommentSwr()
     const approval = useLeadGenApprovalStore((state) => (scopeId ? state.approvals[scopeId] : undefined))
-    const workItemId = approval?.requesting ? undefined : approval?.jobId
+    const workItemId = !isActive || approval?.requesting ? undefined : approval?.jobId
 
     const settle = (progress: ApprovalProgress) => {
         if (!activeWorkspaceId || !scopeId || !workItemId) return

@@ -1,19 +1,18 @@
 import {
-    Badge,
     EmptyNotice,
-    ListRow,
     Page,
-    SurfaceListCard,
-    Tabs,
+    Section,
+    Stack,
+    FilterButtonGroup,
     Text,
-    TextAction,
     type BadgeTone,
     type BreadcrumbItem,
+    type ListRowData,
+    Link,
 } from "@starci/grammar/common"
 
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { PAGE } from "./classNames"
 
 /** One filter tab. */
 export interface FilterTabView {
@@ -76,7 +75,7 @@ export interface DecisionsBoardBaseProps {
     }
 }
 
-/** Draws the decision history: filters over a list that reads on a phone, of who decided what, when and with what result. */
+/** The historical decisions and both peer filters belong to their collection section. */
 export const DecisionsBoardBase = (props: DecisionsBoardBaseProps) => {
     const view = props.props
     return (
@@ -86,77 +85,66 @@ export const DecisionsBoardBase = (props: DecisionsBoardBaseProps) => {
                 breadcrumbs: { label: view.crumbLabel, items: view.crumbs },
                 title: view.title,
                 description: view.description,
-                tabs: {
-                    label: view.kindLabel,
-                    selectedKey: view.kindKey,
-                    labelVisibility: "always",
-                    items: view.kinds,
-                    onSelect: props.on.kind,
-                },
             }}
         >
-            <div className={PAGE}>
-                <Tabs
-                    label={view.deptLabel}
-                    selectedKey={view.deptKey}
-                    inset="none"
-                    labelVisibility="always"
-                    items={view.depts}
-                    onSelect={props.on.dept}
-                />
-                <SlotView
-                    slot={view.slot}
-                    placeholder={view.placeholder}
-                    labels={view.slotLabels}
-                    onRetry={props.on.retry}
-                >
-                    {(list, isSkeleton) => (
-                        <>
-                            <Text size="xs" tone="muted">
-                                {list.count}
-                            </Text>
-                            <SurfaceListCard
-                                ariaLabel={view.listAria}
-                                isLoading={isSkeleton}
-                                empty={
-                                    list.isFiltered ? (
-                                        <EmptyNotice
-                                            message={view.noMatchTitle}
-                                            description={view.noMatchBody}
-                                            actionLabel={view.clearFilters}
-                                            actionVariant="secondary"
-                                            onAction={props.on.clear}
-                                        />
-                                    ) : (
-                                        <EmptyNotice message={view.emptyTitle} description={view.emptyBody} />
-                                    )
-                                }
-                            >
-                                {list.rows.map((row) => (
-                                    <DecisionRow key={row.id} row={row} />
-                                ))}
-                            </SurfaceListCard>
-                        </>
-                    )}
-                </SlotView>
-            </div>
+            <SlotView
+                slot={view.slot}
+                placeholder={view.placeholder}
+                labels={view.slotLabels}
+                onRetry={props.on.retry}
+                render={(list, isLoading) => (
+                    <Section
+                        kind="list"
+                        title={view.listAria}
+                        meta={list.count}
+                        isLoading={isLoading}
+                        filter={
+                            <Stack gap="row">
+                                <FilterButtonGroup
+                                    label={view.kindLabel}
+                                    value={view.kindKey}
+                                    options={view.kinds.map((kind) => ({ value: kind.id, label: kind.label }))}
+                                    onValueChange={props.on.kind}
+                                />
+                                <FilterButtonGroup
+                                    label={view.deptLabel}
+                                    value={view.deptKey}
+                                    options={view.depts.map((dept) => ({ value: dept.id, label: dept.label }))}
+                                    onValueChange={props.on.dept}
+                                />
+                            </Stack>
+                        }
+                        items={list.rows.map(decisionItemOf)}
+                        empty={
+                            list.isFiltered ? (
+                                <EmptyNotice
+                                    message={view.noMatchTitle}
+                                    description={view.noMatchBody}
+                                    actionLabel={view.clearFilters}
+                                    onAction={props.on.clear}
+                                />
+                            ) : (
+                                <EmptyNotice message={view.emptyTitle} description={view.emptyBody} />
+                            )
+                        }
+                    />
+                )}
+            />
         </Page>
     )
 }
 
-/** One decision and its supporting explanation and lead link. */
-const DecisionRow = (props: DecisionRowProps) => {
-    const { row } = props
-    return (
-        <ListRow
-            key={row.id}
-            title={row.actionLabel}
-            description={`${row.departmentLabel} · ${row.decider} · ${row.when}`}
-            badges={<Badge tone={row.outcomeTone}>{row.outcomeLabel}</Badge>}
-        >
+/** A historical decision retains all its explanations and its lead destination under the shared row. */
+const decisionItemOf = (row: DecisionsBoardRowView): ListRowData => ({
+    id: row.id,
+    title: row.actionLabel,
+    description: [row.departmentLabel, row.decider, row.when].join(" · "),
+    badges: [{ label: row.outcomeLabel, tone: row.outcomeTone }],
+    detail: (
+        <Stack gap="row">
             {row.reason === null ? null : <Text size="sm">{row.reason}</Text>}
             {row.basis === null ? null : (
-                <Text size="sm" weight="medium">
+                <Text size="sm" isStrong>
                     {row.basis}
                 </Text>
             )}
@@ -170,13 +158,8 @@ const DecisionRow = (props: DecisionRowProps) => {
                     {row.noLead}
                 </Text>
             ) : (
-                <TextAction href={row.leadHref} size="sm">
-                    {row.leadLabel}
-                </TextAction>
+                <Link href={row.leadHref}>{row.leadLabel}</Link>
             )}
-        </ListRow>
-    )
-}
-
-/** Inputs of the extracted list section. */
-type DecisionRowProps = { readonly row: DecisionsBoardRowView }
+        </Stack>
+    ),
+})

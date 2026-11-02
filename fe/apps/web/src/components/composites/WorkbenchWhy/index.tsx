@@ -1,3 +1,5 @@
+import type { WorkbenchWhyLabels, WorkbenchWhyView } from "@/modules/types"
+export type { WorkbenchWhyLabels } from "@/modules/types"
 import type { ReactNode } from "react"
 import {
     Avatar,
@@ -9,66 +11,47 @@ import {
     Progress,
     Quote,
     Text,
-    TextAction,
+    Link,
     Timeline,
 } from "@starci/grammar/common"
-import type { WorkbenchWhyView } from "@/modules/types"
-
-/** The words of the why pane that are not the decision's own. */
-export interface WorkbenchWhyLabels {
-    readonly pathLabel: string
-    readonly factsLabel: string
-    readonly sourcesLabel: string
-    readonly approverLabel: string
-    readonly timeLabel: string
-    readonly openOnMap: string
-    readonly missingTitle: string
-    readonly missingBody: string
-}
-
 /** What the why pane of one work item shows; a null view says the decision has no recorded path. */
 interface WorkbenchWhyProps {
     readonly view: WorkbenchWhyView | null
     readonly labels: WorkbenchWhyLabels
     /** The row's decision with `intent="commit"`; null draws no buttons (an item already closed, or no right). */
     readonly decision: ReactNode
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
-
 /** A recorded why, with the words of its bands. */
 interface WhyEvidenceProps {
     readonly view: WorkbenchWhyView
     readonly labels: WorkbenchWhyLabels
 }
-
 /** The same, for the bands that draw while the facts are still being read. */
 interface WhyBandsProps extends WhyEvidenceProps {
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
-
 /** The part of the time the approver has used before the bar warns, then turns to danger (workbench section 5). */
 const WARN_AT_PERCENT = 50
 const DANGER_AT_PERCENT = 90
-
 /** The tone of the time bar: quiet until half the time is used, a warning past it, danger past nine tenths. */
 const timeToneOf = (usedPercent: number): "accent" | "warning" | "danger" => {
     if (usedPercent > DANGER_AT_PERCENT) return "danger"
     return usedPercent > WARN_AT_PERCENT ? "warning" : "accent"
 }
-
 /** The head of the pane: the branch, and the reason in one sentence. */
 const WhyHead = (props: WhyBandsProps) => (
     <>
         <PaneSection as="header">
-            <Heading level={3} isSkeleton={props.isSkeleton}>
+            <Heading level={3} isLoading={props.isLoading}>
                 {props.view.heading}
             </Heading>
-            <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
+            <Text size="sm" tone="muted" isLoading={props.isLoading}>
                 {props.view.branch}
             </Text>
         </PaneSection>
         <PaneSection>
-            <Text size="md" isSkeleton={props.isSkeleton}>
+            <Text size="md" isLoading={props.isLoading}>
                 {props.view.reason}
             </Text>
         </PaneSection>
@@ -82,12 +65,11 @@ const WhyHead = (props: WhyBandsProps) => (
                     isCurrent: step.isCurrent,
                     isAttention: step.isCurrent,
                 }))}
-                isLoading={props.isSkeleton}
+                isLoading={props.isLoading}
             />
         </PaneSection>
     </>
 )
-
 /** The numbers read and the rule it leaned on, each band drawn only when it holds something. */
 const WhyEvidence = (props: WhyEvidenceProps) => (
     <>
@@ -105,15 +87,12 @@ const WhyEvidence = (props: WhyEvidenceProps) => (
             <PaneSection>
                 <Heading level={4}>{props.labels.sourcesLabel}</Heading>
                 {props.view.sources.map((source) => (
-                    <Quote key={source.id} source={source.kind} byline={source.byline}>
-                        {source.text}
-                    </Quote>
+                    <Quote key={source.id} source={source.kind} byline={source.byline} text={source.text} />
                 ))}
             </PaneSection>
         )}
     </>
 )
-
 /** Who approves, the limit they hold and how much of the time is used. */
 const WhyApprover = (props: WhyEvidenceProps) =>
     props.view.approver === null ? null : (
@@ -121,7 +100,7 @@ const WhyApprover = (props: WhyEvidenceProps) =>
             <Heading level={4}>{props.labels.approverLabel}</Heading>
             <Cluster gap="inline">
                 <Avatar name={props.view.approver.name} seed={props.view.approver.seed} size="sm" />
-                <Text size="sm" weight="semibold">
+                <Text size="sm" isStrong>
                     {props.view.approver.name}
                 </Text>
             </Cluster>
@@ -139,7 +118,6 @@ const WhyApprover = (props: WhyEvidenceProps) =>
             </Text>
         </PaneSection>
     )
-
 /**
  * Why the agent did what it did, in bands of one pane: the branch, the reason in one sentence, the path walked, the numbers read,
  * the rule it leaned on, who approves and how much of the time is used, and the decision in the footer. Every word is code or a
@@ -156,15 +134,13 @@ export const WorkbenchWhy = (props: WorkbenchWhyProps) => {
     }
     return (
         <>
-            <WhyHead view={view} labels={props.labels} isSkeleton={props.isSkeleton} />
+            <WhyHead view={view} labels={props.labels} isLoading={props.isLoading} />
             <WhyEvidence view={view} labels={props.labels} />
             <WhyApprover view={view} labels={props.labels} />
             <PaneSection as="footer">
                 <Cluster gap="row">
                     {view.isClosed ? null : props.decision}
-                    <TextAction size="sm" href={view.mapHref}>
-                        {props.labels.openOnMap}
-                    </TextAction>
+                    <Link href={view.mapHref}>{props.labels.openOnMap}</Link>
                 </Cluster>
             </PaneSection>
         </>

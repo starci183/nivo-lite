@@ -3,8 +3,8 @@ import {
     Badge,
     Button,
     Cluster,
+    ColorSwatch,
     DescriptionList,
-    DragItem,
     Input,
     Stack,
     SurfaceCard,
@@ -76,22 +76,17 @@ const Waiting = (props: BrandProposalViewProps) => {
     const card = props.props
     const { on } = props
     return (
-        <SurfaceCard ariaLabel={card.head}>
+        <SurfaceCard label={card.head} labelEnd={<Badge tone="warning">{card.waitingLabel}</Badge>}>
             <Stack gap="row">
-                <Cluster gap="inline" justify="between">
-                    <Text weight="semibold" size="sm">
-                        {card.head}
-                    </Text>
-                    <Badge tone="warning">{card.waitingLabel}</Badge>
-                </Cluster>
                 <Text size="xs" tone="muted">
                     {card.colorsLabel}
                 </Text>
                 <Cluster gap="inline">
                     {card.colors.map((color) => (
-                        <DragItem key={`${color.name}-${color.hex}`} isDisabled leadingColor={color.hex}>
+                        <Cluster key={`${color.name}-${color.hex}`} gap="inline">
+                            <ColorSwatch color={color.hex} label={`${color.name} · ${color.hex}`} />
                             <Text size="sm">{`${color.name} · ${color.hex}`}</Text>
-                        </DragItem>
+                        </Cluster>
                     ))}
                 </Cluster>
                 <DescriptionList layout="stacked" items={card.items} />

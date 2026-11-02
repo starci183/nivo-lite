@@ -5,7 +5,7 @@ import { BillingPlans } from "@/components/blocks/BillingPlans"
 import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/components/blocks/LocaleSwitch"
 import { WorkspacesAccount } from "@/components/blocks/WorkspacesAccount"
-import { WorkspacesFrame } from "@/components/composites/WorkspacesFrame"
+import { WorkspacesFrame } from "@/components/frames/WorkspacesFrame"
 
 /** What the billing page is told: the workspace it bills, its words and the two links. */
 export interface BillingPageBaseProps {
@@ -23,9 +23,8 @@ export interface BillingPageBaseProps {
 /** Draws the billing screen: the overview, the plans and the credit packs inside the workspaces frame. */
 export const BillingPageBase = (props: BillingPageBaseProps) => (
     <WorkspacesFrame
-        homeHref={props.props.homeHref}
         mainLabel={props.props.mainLabel}
-        logo={<BrandLogo variant="full" height={40} />}
+        logo={<BrandLogo variant="full" height={40} href={props.props.homeHref} />}
         localeSwitch={<LocaleSwitch />}
         account={<WorkspacesAccount />}
     >

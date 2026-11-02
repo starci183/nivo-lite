@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { useInstallations } from "@/hooks/installations"
+import { slotOfSwr } from "@/hooks/slot"
 import type { Installation } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
 import { toAgentInstallationView } from "./agentSettings.shared"
@@ -20,14 +21,19 @@ export const useAgentInstallation = (
     readonly installation: Installation | undefined
     readonly reload: () => void
 } => {
-    const { slot, reload } = useInstallations()
+    const { installations, read, reload } = useInstallations()
     const found = useMemo(() => {
-        const one = slot.items?.find((installation) => installation.id === installationId)
+        const one = installations?.find((installation) => installation.id === installationId)
         return one?.moduleKey === moduleKey ? one : undefined
-    }, [slot, installationId, moduleKey])
-    const slotOfOne = useMemo((): DataSlot<AgentInstallationView> => {
-        if (found !== undefined) return { items: toAgentInstallationView(found) }
-        return slot.isLoading === true ? { isLoading: true } : { isError: true }
-    }, [found, slot])
+    }, [installations, installationId, moduleKey])
+    const slotOfOne = slotOfSwr({
+        data: found === undefined ? undefined : toAgentInstallationView(found),
+        error:
+            installations !== undefined && found === undefined
+                ? new Error("Requested agent installation does not exist")
+                : read.error,
+        isLoading: read.isLoading,
+        isValidating: read.isValidating,
+    })
     return { slot: slotOfOne, installation: found, reload }
 }

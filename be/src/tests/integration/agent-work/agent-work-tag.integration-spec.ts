@@ -71,9 +71,12 @@ afterEach(() => settleAgentWork(em(), WS))
 
 describe("agent-work/tag: a line that tags an agent", () => {
     it("agent-work/tag-to-reply: a member's line ends as the agent's line in the room, with one turn and one wake", async () => {
-        const posted = await world
-            .resolve(OfficeTagService)
-            .post(identity.users.van, WS, { body: "@accounting-proof how much is due?", room: null, locale: "en" })
+        const posted = await world.resolve(OfficeTagService).post(identity.users.van, WS, {
+            body: "@accounting-proof how much is due?",
+            room: null,
+            locale: "en",
+            file: null,
+        })
 
         const wake = await wakeOfFact(em(), ACCOUNTING, "tag", posted.id)
         assert.equal(wake.status, "pending")
@@ -90,22 +93,30 @@ describe("agent-work/tag: a line that tags an agent", () => {
     })
 
     it("agent-work/tag-to-reply: the reply is posted once when the settle is retried", async () => {
-        const posted = await world
-            .resolve(OfficeTagService)
-            .post(identity.users.van, WS, { body: "@accounting-proof and the second one?", room: null, locale: "en" })
+        const posted = await world.resolve(OfficeTagService).post(identity.users.van, WS, {
+            body: "@accounting-proof and the second one?",
+            room: null,
+            locale: "en",
+            file: null,
+        })
         const wake = await wakeOfFact(em(), ACCOUNTING, "tag", posted.id)
 
         await sayReply({ workspaceId: WS, agentId: ACCOUNTING, wakeCreatedAt: wake.createdAt })
         await sayReply({ workspaceId: WS, agentId: ACCOUNTING, wakeCreatedAt: wake.createdAt })
 
-        const replies = (await linesOfRoom()).filter((line) => line.agentId === ACCOUNTING && line.body === REPLY)
+        const replies = (await linesOfRoom()).filter(
+            (line) => line.agentId === ACCOUNTING && line.body === REPLY && line.createdAt >= wake.createdAt,
+        )
         expect(replies.length).toBe(1)
     })
 
     it("agent-work/tag-to-reply: a staff member without the right gets one NIVO line and writes no wake", async () => {
-        const posted = await world
-            .resolve(OfficeTagService)
-            .post(identity.users.lan, WS, { body: "@accounting-proof please book this", room: null, locale: "en" })
+        const posted = await world.resolve(OfficeTagService).post(identity.users.lan, WS, {
+            body: "@accounting-proof please book this",
+            room: null,
+            locale: "en",
+            file: null,
+        })
 
         expect(await wakesOfFact(em(), ACCOUNTING, posted.id)).toBe(0)
         const notes = (await linesOfRoom()).filter(

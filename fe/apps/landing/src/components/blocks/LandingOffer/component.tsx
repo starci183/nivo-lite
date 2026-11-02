@@ -1,16 +1,4 @@
-import {
-    Badge,
-    Button,
-    Cluster,
-    DescriptionList,
-    Grid,
-    PageContainer,
-    Region,
-    SectionHeader,
-    Stack,
-    SurfaceCard,
-    Text,
-} from "@starci/grammar/common"
+import { Badge, Button, DescriptionList, Grid, Stack, SurfaceCard, Text, Section } from "@starci/grammar/common"
 import { LandingFact } from "@/components/composites/LandingFact"
 import type { IconGlyphName } from "@/components/leaves/Icon"
 import { ANCHOR } from "./classNames"
@@ -68,26 +56,28 @@ interface LandingOfferBaseProps {
 export const LandingOfferBase = (props: LandingOfferBaseProps) => {
     const campaign = props.props.campaign
     return (
-        <Region id="founding" label={props.props.regionLabel} className={ANCHOR}>
-            <PageContainer measure="product">
-                <Stack gap="section">
-                    <SectionHeader eyebrow={props.props.eyebrow} title={props.props.title} />
-                    <Grid kind="cards" columns={3}>
+        <div id="founding" className={ANCHOR}>
+            <Section title={props.props.title} description={props.props.eyebrow}>
+                <Grid
+                    kind="featured"
+                    leading={
                         <Stack gap="section">
                             {props.props.leftFacts.map((fact) => (
                                 <LandingFact key={fact.id} icon={fact.icon} title={fact.title} text={fact.text} />
                             ))}
                         </Stack>
-                        {renderLandingOfferPrice(props, campaign)}
+                    }
+                    featured={renderLandingOfferPrice(props, campaign)}
+                    trailing={
                         <Stack gap="section">
                             {props.props.rightFacts.map((fact) => (
                                 <LandingFact key={fact.id} icon={fact.icon} title={fact.title} text={fact.text} />
                             ))}
                         </Stack>
-                    </Grid>
-                </Stack>
-            </PageContainer>
-        </Region>
+                    }
+                />
+            </Section>
+        </div>
     )
 }
 
@@ -97,61 +87,60 @@ const renderLandingOfferPrice = (
     campaign: LandingOfferBaseProps["props"]["campaign"],
 ) => (
     <SurfaceCard
+        kind="bands"
         label={props.props.priceLabel}
         headingLevel={3}
         labelEnd={campaign === null ? undefined : <Badge tone="accent">{campaign.tag}</Badge>}
         isHighlight
         height="fill"
-    >
-        <Stack gap="section">
-            <Stack gap="identity">
-                <Text size="sm" tone="muted" weight="medium">
-                    {props.props.planName}
-                </Text>
-                {campaign === null ? null : (
-                    <Text tone="muted" isSuperseded>
-                        {campaign.basePrice}
-                    </Text>
-                )}
-                <Cluster gap="inline" align="baseline">
-                    <Text size="metric-lead" weight="semibold">
-                        {props.props.price}
-                    </Text>
-                    <Text size="sm" tone="muted">
-                        {props.props.perMonth}
-                    </Text>
-                </Cluster>
-                <Text size="sm" tone="muted">
-                    {props.props.priceNote}
-                </Text>
-                {campaign === null ? null : (
-                    <Text tone="accent" weight="semibold">
-                        {campaign.saving}
-                    </Text>
-                )}
-            </Stack>
-            <Stack gap="row">
-                {campaign === null ? null : (
-                    <>
-                        <div role="timer" aria-label={campaign.countdownLabel}>
-                            <DescriptionList
-                                layout="stat-strip"
-                                isDivided
-                                items={campaign.countdown.map((unit) => ({
-                                    id: unit.id,
-                                    term: unit.term,
-                                    description: unit.value,
-                                }))}
-                            />
-                        </div>
-                        <Text size="xs">{campaign.endsText}</Text>
-                    </>
-                )}
-                <Button intent="commit" size="lg" width="fill" href={props.props.ctaHref}>
-                    {props.props.ctaLabel}
-                </Button>
-                <Text size="xs">{props.props.fine}</Text>
-            </Stack>
-        </Stack>
-    </SurfaceCard>
+        bands={[
+            {
+                kind: "figures",
+                items: [
+                    {
+                        id: "price",
+                        term: props.props.planName,
+                        value: props.props.price,
+                        unit: props.props.perMonth,
+                        meta: props.props.priceNote,
+                    },
+                ],
+            },
+            {
+                kind: "body",
+                children: (
+                    <Stack gap="row">
+                        {campaign === null ? null : (
+                            <Stack gap="identity">
+                                <Text size="sm" tone="muted" isSuperseded>
+                                    {campaign.basePrice}
+                                </Text>
+                                <Text isStrong>{campaign.saving}</Text>
+                            </Stack>
+                        )}
+                        {campaign === null ? null : (
+                            <>
+                                <div role="timer" aria-label={campaign.countdownLabel}>
+                                    <DescriptionList
+                                        layout="columns"
+                                        isDivided
+                                        items={campaign.countdown.map((unit) => ({
+                                            id: unit.id,
+                                            term: unit.term,
+                                            description: unit.value,
+                                        }))}
+                                    />
+                                </div>
+                                <Text size="xs">{campaign.endsText}</Text>
+                            </>
+                        )}
+                        <Button intent="commit" size="lg" width="fill" href={props.props.ctaHref}>
+                            {props.props.ctaLabel}
+                        </Button>
+                        <Text size="xs">{props.props.fine}</Text>
+                    </Stack>
+                ),
+            },
+        ]}
+    />
 )

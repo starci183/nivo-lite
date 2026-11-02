@@ -30,6 +30,20 @@ describe("AgentDataRightsService.rightsOf", () => {
         await expect(service.rightsOf("ws-1", "agent-1")).resolves.toEqual([])
     })
 
+    it("does not govern an agent that is still on its seed, which holds no rights because no person chose any", async () => {
+        const seeded = await build(
+            stateOf({ mode: "enforced", activeKind: "seed", active: { ...graphOf(OWNER_EXAMPLE), rights: [] } }),
+        )
+
+        await expect(seeded.rightsOf("ws-1", "agent-1")).resolves.toBeNull()
+    })
+
+    it("governs an agent from the first version a person published, even an empty one", async () => {
+        const chat = await build(stateOf({ mode: "enforced", activeKind: "chat" }))
+
+        await expect(chat.rightsOf("ws-1", "agent-1")).resolves.toEqual([])
+    })
+
     it("does not govern an agent whose graph is in shadow, has no version or does not exist", async () => {
         const shadow = await build(stateOf({ active: { ...graphOf(OWNER_EXAMPLE), rights: RIGHTS } }))
         const noVersion = await build(stateOf({ mode: "enforced", active: null }))

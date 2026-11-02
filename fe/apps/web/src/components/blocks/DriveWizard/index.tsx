@@ -1,5 +1,9 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
+import { slotOfReads, useSlotLabels } from "@/hooks/slot"
+
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import { providerKey } from "@/hooks/connection-providers"
@@ -15,6 +19,8 @@ const wizardIndexOf = (added: number, isGranted: boolean): number => {
 
 /** What the board hands the Google Drive wizard. */
 interface DriveWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
@@ -24,20 +30,24 @@ interface DriveWizardProps {
  * `?drive=ok|error&reason=`, which opens it on the step the answer leads to.
  */
 export const DriveWizard = (props: DriveWizardProps) => {
+    const slotLabels = useSlotLabels()
     const t = useTranslations("driveWizard")
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const params = useSearchParams()
     const drive = useDriveGrant()
-    const { slot } = useDrivePage()
+    const { slot, reads, reload } = useDrivePage()
     const chooser = useDriveChooserView()
+    const page = "items" in slot ? slot.items : undefined
     const failed = params.get("drive") === "error"
-    const isGranted = slot.items?.standing === "connected" || params.get("drive") === "ok"
+    const isGranted = page?.standing === "connected" || params.get("drive") === "ok"
     const index = wizardIndexOf(chooser.added, isGranted)
     const steps = [t("stepGrant"), t("stepChoose"), t("stepDone")]
     return (
         <DriveWizardBase
             props={{
+                boot: slotOfReads([...props.dependencyReads, ...reads], () => true),
+                slotLabels: slotLabels(""),
                 title: tw("title", { provider: tc(providerKey("google_drive", "title")) }),
                 stepLabel: tw("stepOf", { n: index + 1, total: steps.length }),
                 steps,
@@ -51,8 +61,8 @@ export const DriveWizard = (props: DriveWizardProps) => {
                     allowRead: t("allowRead"),
                     allowFiles: t("allowFiles"),
                     allowRevoke: t("allowRevoke"),
-                    connected: slot.items?.email ? t("connected", { email: slot.items.email }) : t("connectedNoEmail"),
-                    grant: failed || slot.items?.standing === "lost" ? t("regrant") : t("grant"),
+                    connected: page?.email ? t("connected", { email: page.email }) : t("connectedNoEmail"),
+                    grant: failed || page?.standing === "lost" ? t("regrant") : t("grant"),
                     close: tw("close"),
                     later: t("later"),
                     done: tw("done"),
@@ -61,7 +71,7 @@ export const DriveWizard = (props: DriveWizardProps) => {
                     failTitle: t("failTitle"),
                 },
             }}
-            on={{ ...chooser.on, grant: () => drive.grant(DRIVE_WIZARD_PATH), close: props.onClose }}
+            on={{ retryRead: reload, ...chooser.on, grant: () => drive.grant(DRIVE_WIZARD_PATH), close: props.onClose }}
         />
     )
 }

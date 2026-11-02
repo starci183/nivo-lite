@@ -7,14 +7,13 @@ import {
     EmptyNotice,
     Grid,
     Heading,
-    List,
-    ListItem,
     Quote,
+    Section,
     Stack,
     Text,
 } from "@starci/grammar/common"
-import { LeadMark } from "@/components/composites/LeadMark"
-import { LeadPanel } from "@/components/composites/LeadPanel"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import { LeadPanel } from "@/components/frames/LeadPanel"
 import { SlotView } from "@/components/composites/SlotView"
 import type { LeadIcon, DataSlot, SlotLabels } from "@/modules/types"
 
@@ -95,9 +94,12 @@ export const LeadContextBase = (props: LeadContextBaseProps) => {
     const l = p.labels
     return (
         <LeadPanel anchor="context" label={l.title}>
-            <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
-                {(view, isSkeleton) => renderContextBody({ view, l, on, p, isSkeleton })}
-            </SlotView>
+            <SlotView
+                slot={p.slot}
+                placeholder={PLACEHOLDER}
+                labels={l.slot}
+                render={(view, isLoading) => renderContextBody({ view, l, on, p, isLoading })}
+            />
         </LeadPanel>
     )
 }
@@ -111,17 +113,22 @@ interface RenderBriefAndSignalsContext {
 const renderBriefAndSignals = ({ l, view }: RenderBriefAndSignalsContext) => (
     <>
         <Stack gap="row">
-            <Heading level={3}>{l.briefLabel}</Heading>
             {view.briefLines.length > 0 ? (
-                <List label={l.briefLabel}>
-                    {view.briefLines.map((line) => (
-                        <ListItem key={line.id}>
-                            <Text startContent={<LeadMark icon={line.icon} />}>{line.text}</Text>
-                        </ListItem>
-                    ))}
-                </List>
+                <Section
+                    kind="list"
+                    title={l.briefLabel}
+                    headingLevel={3}
+                    items={view.briefLines.map((line) => ({
+                        id: line.id,
+                        title: line.text,
+                        leading: { icon: nivoIconSource(line.icon, "chip") },
+                    }))}
+                    empty={<EmptyNotice message={l.noBriefTitle} description={l.noBriefHint} />}
+                />
             ) : (
-                <Text>{view.briefText}</Text>
+                <Section title={l.briefLabel} headingLevel={3}>
+                    <Text>{view.briefText}</Text>
+                </Section>
             )}
         </Stack>
         {view.signals.length > 0 ? (
@@ -145,10 +152,10 @@ interface RenderContextBodyContext {
     readonly l: ContextLabels
     readonly on: LeadContextBaseProps["on"]
     readonly p: LeadContextBaseProps["props"]
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 /** Builds the Stack section from the current view. */
-const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyContext) => (
+const renderContextBody = ({ view, l, on, p, isLoading }: RenderContextBodyContext) => (
     <Stack gap="region">
         {view.hasBrief ? (
             <Cluster gap="row" justify="between">
@@ -177,7 +184,7 @@ const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyCont
             <DescriptionList
                 layout="stacked"
                 isDivided
-                isLoading={isSkeleton}
+                isLoading={isLoading}
                 items={[
                     { id: "contact", term: l.factContact, description: view.contact },
                     { id: "company", term: l.factCompany, description: view.company },
@@ -186,7 +193,7 @@ const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyCont
             <DescriptionList
                 layout="stacked"
                 isDivided
-                isLoading={isSkeleton}
+                isLoading={isLoading}
                 items={[
                     { id: "channel", term: l.factChannel, description: view.channel },
                     { id: "captured", term: l.factCaptured, description: view.captured },
@@ -195,7 +202,7 @@ const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyCont
         </Grid>
         <Stack gap="row">
             <Heading level={3}>{l.customerWords}</Heading>
-            <Quote isSkeleton={isSkeleton}>{view.need}</Quote>
+            <Quote isLoading={isLoading} text={view.need} />
         </Stack>
         {view.hasBrief ? (
             renderBriefAndSignals({ l, view })
@@ -204,7 +211,6 @@ const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyCont
                 message={l.noBriefTitle}
                 description={l.noBriefHint}
                 actionLabel={l.prepare}
-                actionVariant="secondary"
                 isActionPending={p.isPending}
                 onAction={on.refresh}
             />

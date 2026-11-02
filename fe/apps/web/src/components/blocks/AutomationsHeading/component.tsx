@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 /** Props for {@link AutomationsHeadingBase}. */
 export interface AutomationsHeadingBaseProps {
     /** The page body, drawn under the header band. */
-    readonly shape: { readonly body: ReactNode }
+    readonly children: ReactNode
     readonly props: {
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href?: string }>
@@ -16,7 +16,7 @@ export interface AutomationsHeadingBaseProps {
         readonly leadHref: string
         readonly leadAfter: string
         /** True while the workspace name is unresolved: the header is drawn as its measured placeholder. */
-        readonly isSkeleton: boolean
+        readonly isLoading: boolean
     }
 }
 
@@ -26,7 +26,7 @@ export const AutomationsHeadingBase = (props: AutomationsHeadingBaseProps) => {
     return (
         <Page
             measure="product"
-            isSkeleton={p.isSkeleton}
+            isLoading={p.isLoading}
             header={{
                 breadcrumbs: { label: p.crumbLabel, items: p.crumbs },
                 title: p.title,
@@ -40,7 +40,7 @@ export const AutomationsHeadingBase = (props: AutomationsHeadingBaseProps) => {
                 ),
             }}
         >
-            {props.shape.body}
+            {props.children}
         </Page>
     )
 }

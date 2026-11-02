@@ -1,5 +1,6 @@
 "use client"
 
+import { useFeatureReset } from "@/hooks/reuseables"
 import { useState } from "react"
 
 /** The open/closed state of one drawer: `state` is null while it is closed. */
@@ -16,9 +17,10 @@ export interface DrawerControl<State> {
 }
 
 /** Holds the state of one drawer with the four moves every drawer makes. */
-export const useDrawer = <State>(): DrawerControl<State> => {
+export const useDrawer = <State>(isActive = true, scope = ""): DrawerControl<State> => {
     const [state, setState] = useState<State | null>(null)
     const close = () => setState(null)
+    useFeatureReset({ isActive, isReady: true, scope, onReset: close })
     return {
         state,
         open: setState,

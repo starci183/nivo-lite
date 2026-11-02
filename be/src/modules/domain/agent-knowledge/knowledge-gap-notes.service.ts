@@ -2,6 +2,8 @@ import { Injectable } from "@nestjs/common"
 import { factSlugOf } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import { FACT_ANSWERS, KnowledgeGapsService, answers, keywordsOf } from "@modules/domain/knowledge-gaps"
+import type { MaybeGapRecorded } from "@modules/domain/knowledge-gaps"
+import { GapProposalsService } from "@modules/domain/public-documents"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentKnowledgeLogEvent } from "./agent-knowledge.log-events"
@@ -17,8 +19,9 @@ const COVER_LIMIT = 5
  *  1. the reply itself says so (`knowledge_gap` in the reply contract: the model knew it lacked the information);
  *  2. the reply asked for a person with no answer to propose AND nothing the view can read (a fact, or a passage found by words only,
  *     no embedding) covers the question's significant words.
- * A reply that asked for a person for another reason (an order, a payment claim, an application) is not a gap. Learning must never
- * break a customer's reply, so noting a gap never throws.
+ * A reply that asked for a person for another reason (an order, a payment claim, an application) is not a gap. A new or reopened gap
+ * also starts a background look, with no customer in it, for an answer in the internal documents: it only ever makes a proposal for
+ * the owner. Learning must never break a customer's reply, so noting a gap never throws.
  */
 export class KnowledgeGapNotesService {
     constructor(
@@ -26,6 +29,7 @@ export class KnowledgeGapNotesService {
         private readonly gaps: KnowledgeGapsService,
         private readonly recall: KnowledgeRecallService,
         private readonly search: KnowledgeSearchService,
+        private readonly proposals: GapProposalsService,
     ) {}
 
     /** Records the gap of this turn when there is one. */
@@ -34,26 +38,38 @@ export class KnowledgeGapNotesService {
             const { signals, view } = note
             const claimed = signals.knowledgeGap
             if (claimed !== null && claimed.question.trim() !== "") {
-                await this.gaps.record(view.workspaceId, {
-                    module: view.module,
-                    question: claimed.question,
-                    topic: claimed.topic,
-                    conversationId: note.conversationId,
-                    source: "model",
-                })
+                await this.propose(
+                    view.workspaceId,
+                    await this.gaps.record(view.workspaceId, {
+                        module: view.module,
+                        question: claimed.question,
+                        topic: claimed.topic,
+                        conversationId: note.conversationId,
+                        source: "model",
+                    }),
+                )
                 return
             }
             if (!signals.needsHuman || signals.proposedAnswer !== null || signals.isTransaction) return
             if (!(await this.isUncovered(view, note.question))) return
-            await this.gaps.record(view.workspaceId, {
-                module: view.module,
-                question: note.question,
-                conversationId: note.conversationId,
-                source: "retrieval",
-            })
+            await this.propose(
+                view.workspaceId,
+                await this.gaps.record(view.workspaceId, {
+                    module: view.module,
+                    question: note.question,
+                    conversationId: note.conversationId,
+                    source: "retrieval",
+                }),
+            )
         } catch (cause) {
             this.logger.error(AgentKnowledgeLogEvent.GapNoteFailed, cause, { conversationId: note.conversationId })
         }
+    }
+
+    /** A gap that is new, or asked again after it was answered, is looked up in the internal documents in the background. */
+    private async propose(workspaceId: string, recorded: MaybeGapRecorded): Promise<void> {
+        if (recorded === null || !(recorded.isNew || recorded.reopened)) return
+        await this.proposals.open(workspaceId, recorded.gap)
     }
 
     /** True when nothing the view may read covers the question's words. */

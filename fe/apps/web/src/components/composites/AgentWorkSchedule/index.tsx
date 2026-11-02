@@ -1,9 +1,7 @@
-import { Switch } from "@starci/grammar/common"
+import { Switch, Cluster } from "@starci/grammar/common"
 import { AgentWorkRowActions } from "@/components/branches/AgentWorkRowActions"
 import { AgentWorkRows } from "@/components/branches/AgentWorkRows"
 import type { AgentWorkTriggerView } from "@/modules/types"
-import { ROW_ACTIONS } from "./classNames"
-
 /** The triggers of the agent as sentences, each with its switch. */
 interface AgentWorkScheduleProps {
     readonly words: {
@@ -15,7 +13,7 @@ interface AgentWorkScheduleProps {
     readonly triggers: ReadonlyArray<AgentWorkTriggerView>
     readonly canEdit: boolean
     readonly isSaving: boolean
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onSwitch: (trigger: AgentWorkTriggerView, enabled: boolean) => void
     readonly onRemove: (id: string) => void
 }
@@ -24,13 +22,13 @@ interface AgentWorkScheduleProps {
 export const AgentWorkSchedule = (props: AgentWorkScheduleProps) => (
     <AgentWorkRows
         words={props.words}
-        isSkeleton={props.isSkeleton}
+        isLoading={props.isLoading === true}
         rows={props.triggers.map((trigger) => ({
             id: trigger.id,
             title: trigger.sentence,
             facts: [trigger.nextRunLabel],
             actions: (
-                <div className={ROW_ACTIONS}>
+                <Cluster gap="inline">
                     <Switch
                         name={`trigger-${trigger.id}`}
                         label={props.words.switchLabel}
@@ -49,7 +47,7 @@ export const AgentWorkSchedule = (props: AgentWorkScheduleProps) => (
                                 : null
                         }
                     />
-                </div>
+                </Cluster>
             ),
         }))}
     />

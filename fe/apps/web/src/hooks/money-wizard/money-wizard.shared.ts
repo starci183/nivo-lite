@@ -4,6 +4,7 @@ import type { PROVIDERS } from "@/hooks/connection-providers"
 import { resumeNoteOf, resumeSlotOf } from "@/hooks/connection-wizard"
 import type { useFirstEvent } from "@/hooks/connections"
 import type { useQueryMoneyConnectionSwr } from "@/hooks/swr"
+import type { SlotRead } from "@/hooks/slot"
 import type { Environment, MoneyProvider, WizardConnection, WizardNote } from "@/modules/types"
 import type { MoneyWizardInput, NavInput1 } from "./useMoneyWizard"
 
@@ -149,7 +150,9 @@ export const viewOf = ({
     setFollow,
     setAgentIds,
 }: MoneyWizardViewInput) => {
+    const reads: ReadonlyArray<SlotRead<unknown>> = input.resumeId === undefined ? [] : [resume]
     return {
+        reads,
         index: nav.index,
         step,
         resume: resumeSlotOf(input.resumeId, resume),

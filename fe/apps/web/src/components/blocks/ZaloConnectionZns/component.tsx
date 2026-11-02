@@ -1,4 +1,4 @@
-import { Alert, Button, Disclosure, Fieldset, FormGrid, Input, PaneSection } from "@starci/grammar/common"
+import { Alert, Button, Disclosure, Fieldset, Input, PaneSection, Grid } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZnsRenewalForm } from "@/modules/types"
 
@@ -64,50 +64,52 @@ export const ZaloConnectionZnsBase = (props: ZaloConnectionZnsBaseProps) => {
                 summary={view.summary}
                 isExpanded={view.isOpen}
                 onExpandedChange={props.on.toggle}
-            >
-                <SlotView
-                    slot={view.slot}
-                    placeholder={ZNS_PLACEHOLDER}
-                    labels={view.slotLabels}
-                    onRetry={props.on.retry}
-                >
-                    {(_stored, isSkeleton) => (
-                        <Fieldset
-                            legend={view.title}
-                            isLegendHidden
-                            description={view.hint}
-                            actions={
-                                view.canEdit ? (
-                                    <Button
-                                        intent="neutral"
-                                        isPending={view.isPending}
-                                        isDisabled={isSkeleton}
-                                        onPress={props.on.save}
-                                    >
-                                        {view.saveLabel}
-                                    </Button>
-                                ) : undefined
-                            }
-                        >
-                            <FormGrid columns={2}>
-                                {ZNS_FIELDS.map((field) => (
-                                    <Input
-                                        key={field}
-                                        id={`zns-${field}`}
-                                        name={field}
-                                        label={view.labels[field]}
-                                        isDisabled={isLocked}
-                                        isSkeleton={isSkeleton}
-                                        value={view.form[field]}
-                                        onValueChange={(value) => props.on.change({ [field]: value })}
-                                    />
-                                ))}
-                            </FormGrid>
-                            {view.note === "" ? null : <Alert tone="negative" appearance="soft" title={view.note} />}
-                        </Fieldset>
-                    )}
-                </SlotView>
-            </Disclosure>
+                body={
+                    <SlotView
+                        slot={view.slot}
+                        placeholder={ZNS_PLACEHOLDER}
+                        labels={view.slotLabels}
+                        onRetry={props.on.retry}
+                        render={(_stored, isLoading) => (
+                            <Fieldset
+                                legend={view.title}
+                                isLegendHidden
+                                description={view.hint}
+                                actions={
+                                    view.canEdit ? (
+                                        <Button
+                                            intent="neutral"
+                                            isPending={view.isPending}
+                                            isDisabled={isLoading}
+                                            onPress={props.on.save}
+                                        >
+                                            {view.saveLabel}
+                                        </Button>
+                                    ) : undefined
+                                }
+                            >
+                                <Grid kind="form" columns={2}>
+                                    {ZNS_FIELDS.map((field) => (
+                                        <Input
+                                            key={field}
+                                            id={`zns-${field}`}
+                                            name={field}
+                                            label={view.labels[field]}
+                                            isDisabled={isLocked}
+                                            isLoading={isLoading}
+                                            value={view.form[field]}
+                                            onValueChange={(value) => props.on.change({ [field]: value })}
+                                        />
+                                    ))}
+                                </Grid>
+                                {view.note === "" ? null : (
+                                    <Alert tone="negative" appearance="soft" title={view.note} />
+                                )}
+                            </Fieldset>
+                        )}
+                    />
+                }
+            />
         </PaneSection>
     )
 }

@@ -1,11 +1,11 @@
-import { Input, Text, TextAction } from "@starci/grammar/common"
-import { AuthForm } from "../../composites/AuthForm"
-import { AuthPanel } from "../../composites/AuthPanel"
+import { Input, Text, Link, Cluster } from "@starci/grammar/common"
+import { SIGNUP_CENTER_CLASS_NAME } from "./classNames"
+import { AuthForm } from "@/components/frames/AuthForm"
+import { AuthPanel } from "@/components/frames/AuthPanel"
 import { CheckEmail } from "../../composites/CheckEmail"
 import type { CheckEmailProps } from "../../composites/CheckEmail"
 import { EmailField } from "../../composites/EmailField"
 import { PasswordPair } from "../../composites/PasswordPair"
-import { SIGNUP_CENTER_CLASS_NAME } from "./classNames"
 
 /** The two drawn shapes of the sign-up card: the form, or the "check your email" screen once the account exists. */
 export type SignupFormShape = "form" | "sent"
@@ -70,10 +70,12 @@ export const SignupFormBase = (props: SignupFormBaseProps) => {
                 submitLabel={view.submitLabel}
                 footer={
                     <div className={SIGNUP_CENTER_CLASS_NAME}>
-                        <Text size="sm" tone="muted">
-                            {view.haveAccountLabel}
-                        </Text>
-                        <TextAction href={view.loginHref}>{view.signInLabel}</TextAction>
+                        <Cluster gap="inline">
+                            <Text size="sm" tone="muted">
+                                {view.haveAccountLabel}
+                            </Text>
+                            <Link href={view.loginHref}>{view.signInLabel}</Link>
+                        </Cluster>
                     </div>
                 }
                 onSubmit={props.on.submit}
@@ -85,7 +87,7 @@ export const SignupFormBase = (props: SignupFormBaseProps) => {
                     isRequired
                     isDisabled={view.isPending}
                     value={view.name}
-                    isError={view.nameError !== undefined}
+                    isInvalid={view.nameError !== undefined}
                     errorMessage={view.nameError}
                     onValueChange={props.on.setName}
                 />

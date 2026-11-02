@@ -1,11 +1,10 @@
-import { Badge, Button, ListRow, Page, SurfaceListCard } from "@starci/grammar/common"
+import { Button, EmptyNotice, Page, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { AddInstanceDialog } from "@/components/composites/AddInstanceDialog"
 import type { AddInstanceDialogProps } from "@/components/composites/AddInstanceDialog"
-import { PAGE_CLASS_NAME } from "./classNames"
 
 /** One instance as the list draws it. */
 export interface InstanceRowView {
@@ -54,45 +53,43 @@ export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
             }}
             measure="product"
         >
-            <div className={PAGE_CLASS_NAME}>
-                <SurfaceListCard
-                    label={view.listLabel}
-                    headingLevel={2}
-                    labelEnd={
-                        view.addLabel === null ? undefined : (
-                            <Button intent="commit" size="sm" isDisabled={view.isAddDisabled} onPress={props.on.add}>
-                                {view.addLabel}
-                            </Button>
-                        )
-                    }
-                >
-                    <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels}>
-                        {(rows, isSkeleton) =>
-                            rows.map((row) => (
-                                <ListRow
-                                    key={row.id}
-                                    title={row.title}
-                                    description={row.description}
-                                    isSkeleton={isSkeleton}
-                                    badges={
-                                        <Badge isDot tone={row.statusTone} isSkeleton={isSkeleton}>
-                                            {row.statusLabel}
-                                        </Badge>
-                                    }
-                                    actions={
-                                        <Button size="sm" intent="neutral" href={row.openHref} isSkeleton={isSkeleton}>
-                                            {view.openLabel}
-                                        </Button>
-                                    }
-                                >
-                                    <ConnectionNeeds {...row.needs} />
-                                </ListRow>
-                            ))
-                        }
-                    </SlotView>
-                </SurfaceListCard>
+            <Stack gap="row">
+                <SlotView
+                    slot={view.slot}
+                    placeholder={view.placeholder}
+                    labels={view.slotLabels}
+                    render={(rows, isLoading) => (
+                        <SurfaceCard
+                            kind="list"
+                            isLoading={isLoading}
+                            empty={<EmptyNotice message={view.slotLabels.empty} />}
+                            label={view.listLabel}
+                            headingLevel={2}
+                            labelEnd={
+                                view.addLabel === null ? undefined : (
+                                    <Button
+                                        intent="commit"
+                                        size="sm"
+                                        isDisabled={view.isAddDisabled}
+                                        onPress={props.on.add}
+                                    >
+                                        {view.addLabel}
+                                    </Button>
+                                )
+                            }
+                            items={rows.map((row) => ({
+                                id: row.id,
+                                title: row.title,
+                                description: row.description,
+                                badges: [{ label: row.statusLabel, tone: row.statusTone, isDot: true }],
+                                action: { label: view.openLabel, href: row.openHref },
+                                detail: <ConnectionNeeds {...row.needs} />,
+                            }))}
+                        />
+                    )}
+                />
                 {view.dialog === null ? null : <AddInstanceDialog props={view.dialog.props} on={view.dialog.on} />}
-            </div>
+            </Stack>
         </Page>
     )
 }

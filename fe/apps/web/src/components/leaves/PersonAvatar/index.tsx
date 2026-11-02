@@ -4,6 +4,7 @@ import { withoutParentheses } from "@/modules/i18n"
 
 /** What the avatar draws for one person. */
 type PersonAvatarProps = {
+    readonly isLoading?: boolean
     readonly name: string
     readonly src?: string | null | undefined
     /** A stable seed (the person's id): without a picture the avatar draws the generated mark of this seed instead of initials. */
@@ -22,6 +23,7 @@ const AVATAR_SIZE: Record<NonNullable<PersonAvatarProps["size"]>, AvatarSize> = 
 /** A person's avatar: the picture, else Grammar's generated initials of the name (a bracketed note is not part of the name). */
 export const PersonAvatar = (props: PersonAvatarProps) => (
     <Avatar
+        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
         name={withoutParentheses(props.name).trim()}
         {...(props.src ? { src: props.src } : {})}
         {...(props.seed === undefined ? {} : { seed: props.seed })}

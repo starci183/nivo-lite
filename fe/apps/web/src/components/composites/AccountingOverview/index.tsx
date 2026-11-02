@@ -47,7 +47,7 @@ interface AccountingOverviewProps {
         readonly selectPeriod: (key: string) => void
     }
     /** The panel is drawn from placeholders: its leaves draw as skeleton. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** A titled card of gauges, one per row, with an optional line saying where the figures come from. */
@@ -65,14 +65,14 @@ interface MeterBlockProps {
     }>
     readonly max: number
     readonly source?: string
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** One region of gauges: the ageing buckets or the weeks of income. With nothing to measure it is one line until there is data. */
 const MeterBlock = (props: MeterBlockProps) => {
     if (props.max === 0) {
         return (
-            <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
+            <Text size="sm" tone="muted" isLoading={props.isLoading}>
                 {`${props.title}: ${props.empty}`}
             </Text>
         )
@@ -80,7 +80,7 @@ const MeterBlock = (props: MeterBlockProps) => {
     return (
         <SurfaceCard label={props.title} headingLevel={2}>
             <Stack gap="section">
-                <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
+                <Text size="sm" tone="muted" isLoading={props.isLoading}>
                     {props.intro}
                 </Text>
                 {props.rows.map((row) => (
@@ -91,11 +91,11 @@ const MeterBlock = (props: MeterBlockProps) => {
                         maxValue={props.max}
                         valueLabel={row.reading}
                         {...(row.tone === undefined ? {} : { tone: row.tone })}
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isLoading}
                     />
                 ))}
                 {props.source === undefined ? null : (
-                    <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
+                    <Text size="xs" tone="muted" isLoading={props.isLoading}>
                         {props.source}
                     </Text>
                 )}
@@ -109,7 +109,7 @@ const MeterBlock = (props: MeterBlockProps) => {
  * ribbon above every tab: this tab never draws them a second time.
  */
 export const AccountingOverview = (props: AccountingOverviewProps) => {
-    const isSkeleton = props.isSkeleton
+    const isLoading = props.isLoading
     return (
         <Stack gap="section">
             <AccountingSectionHead
@@ -119,21 +119,22 @@ export const AccountingOverview = (props: AccountingOverviewProps) => {
                 choices={props.props.periodItems}
                 selectedChoice={props.props.selectedPeriod}
                 onChoose={props.on.selectPeriod}
-                isSkeleton={isSkeleton}
-            >
-                {props.props.excludedNote === null ? null : (
-                    <Text size="xs" tone="muted" isSkeleton={isSkeleton}>
-                        {props.props.excludedNote}
-                    </Text>
-                )}
-            </AccountingSectionHead>
+                isLoading={isLoading}
+                body={
+                    props.props.excludedNote === null ? null : (
+                        <Text size="xs" tone="muted" isLoading={isLoading}>
+                            {props.props.excludedNote}
+                        </Text>
+                    )
+                }
+            />
             <MeterBlock
                 title={props.props.ageingTitle}
                 intro={props.props.ageingIntro}
                 empty={props.props.ageingEmpty}
                 rows={props.props.ageing}
                 max={props.props.ageingMax}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
             />
             <MeterBlock
                 title={props.props.trendTitle}
@@ -142,14 +143,8 @@ export const AccountingOverview = (props: AccountingOverviewProps) => {
                 rows={props.props.weeks}
                 max={props.props.weekMax}
                 source={props.props.trendSource}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
             />
         </Stack>
     )
 }
-
-/** The settled atoms of the AccountingOverview surface. */
-export type AccountingOverviewView = AccountingOverviewProps["props"]
-
-/** What the overview does, handed in by its panel. */
-export type AccountingOverviewOn = AccountingOverviewProps["on"]

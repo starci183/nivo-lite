@@ -1,6 +1,18 @@
-import { Alert, CheckboxGroup, Drawer, Form, Input, RadioGroup, Select, Text, Textarea } from "@starci/grammar/common"
+import {
+    Stack,
+    Grid,
+    Alert,
+    CheckboxGroup,
+    Drawer,
+    Form,
+    Input,
+    RadioGroup,
+    Select,
+    Text,
+    Textarea,
+} from "@starci/grammar/common"
+
 import { DrawerFooter } from "@/components/composites/DrawerFooter"
-import { DAYS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** One choice of a select, a radio group or a check group. */
 interface ChoiceView {
@@ -82,8 +94,8 @@ export const BrainFactFormBase = (props: BrainFactFormBaseProps) => (
         }
     >
         <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
-            <div className={FORM_CLASS_NAME}>
-                {props.props.question === undefined ? null : <Text weight="semibold">{props.props.question}</Text>}
+            <Stack gap="section">
+                {props.props.question === undefined ? null : <Text isStrong>{props.props.question}</Text>}
                 {renderFactSubjectFields(props)}
                 <RadioGroup
                     label={props.props.scopeLabel}
@@ -116,14 +128,14 @@ export const BrainFactFormBase = (props: BrainFactFormBaseProps) => (
                 {props.props.error === undefined ? null : (
                     <Alert tone="negative" title={props.props.failTitle} description={props.props.error} />
                 )}
-            </div>
+            </Stack>
         </Form>
     </Drawer>
 )
 
 /** Draws the div section of the BrainFactForm view. */
 const renderFactValidityFields = (props: BrainFactFormBaseProps) => (
-    <div className={DAYS_CLASS_NAME}>
+    <Grid kind="form" columns={2}>
         <Input
             id="brain-fact-from"
             name="validFrom"
@@ -142,7 +154,7 @@ const renderFactValidityFields = (props: BrainFactFormBaseProps) => (
             isDisabled={props.props.isPending}
             onValueChange={props.on.setTo}
         />
-    </div>
+    </Grid>
 )
 
 /** Draws the subject, attribute and value being recorded. */

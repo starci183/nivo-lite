@@ -128,6 +128,7 @@ export const parsePublicApiBody = (kind: string, payload: unknown, needSupplied:
             return { kind, body: messageOf(row, textOf(row.source, "source")) }
         case "knowledge": {
             const visibility = row.visibility
+            // A row stored as public by an older version is read as internal: an API key never adds a public document.
             if (visibility !== "internal" && visibility !== "public") return invalid("visibility")
             return {
                 kind,
@@ -136,7 +137,7 @@ export const parsePublicApiBody = (kind: string, payload: unknown, needSupplied:
                     content: textOf(row.content, "content"),
                     topic: nullableTextOf(row.topic, "topic"),
                     tags: stringsOf(row.tags, "tags"),
-                    visibility,
+                    visibility: "internal",
                     source: textOf(row.source, "source"),
                 },
             }

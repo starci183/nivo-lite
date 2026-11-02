@@ -1,18 +1,14 @@
-import type { ReactNode } from "react"
 import { Alert, Badge, Button, Cluster, DescriptionList, Text } from "@starci/grammar/common"
-import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
-import type { OfficeCommandView, OfficeText } from "@/modules/types"
+import type { OfficeCommandView, OfficeThreadProps } from "@/modules/types"
 
 /** What the confirm card of a command draws. */
 type OfficeCommandCardProps = {
     /** The card; null while NIVO is still reading the message (the card is a skeleton). */
     readonly command: OfficeCommandView | null
-    /** The line of the bubble: the question, or "NIVO is reading..." for the skeleton. */
-    readonly ask: string
     /** The agent the command is for, for the card's name. */
     readonly agent: string
-    readonly avatar: ReactNode
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["cardCopy"]["command"]
+    readonly gateNote: string
     readonly isBusy: boolean
     readonly onSend: (id: string) => void
     readonly onCancel: (id: string) => void
@@ -27,76 +23,66 @@ const STATUS_KEYS = { pending: "cmdPending", sent: "cmdSentBadge", cancelled: "c
  * buttons. Sending hands the command to the receiving agent, which still applies its own approval rule.
  */
 export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
-    const { command, text } = props
-    const isSkeleton = command === null
+    const { command, copy } = props
+    const isLoading = command === null
     const status = command?.status ?? "pending"
     const rows = [
-        { id: "agent", term: text("cmdRowAgent"), description: <Text weight="medium">{props.agent}</Text> },
+        { id: "agent", term: copy.cmdRowAgent, description: <Text isStrong>{props.agent}</Text> },
         {
             id: "command",
-            term: text("cmdRowCommand"),
-            description: <Text weight="medium">{command?.what ?? ""}</Text>,
+            term: copy.cmdRowCommand,
+            description: <Text isStrong>{command?.what ?? ""}</Text>,
         },
         ...(command?.rows ?? []).map((row) => ({
             id: row.key,
             term: row.label,
-            description: <Text weight="medium">{row.value}</Text>,
+            description: <Text isStrong>{row.value}</Text>,
         })),
     ]
     return (
-        <OfficeCardFrame
-            id={command?.anchor}
-            author={text("nivoCore")}
-            avatar={props.avatar}
-            label={text("cmdCardLabel", { agent: props.agent })}
-            head={
-                <Text as="p" isSkeleton={isSkeleton}>
-                    {props.ask}
-                </Text>
-            }
-        >
+        <>
             <div>
-                <Badge tone={STATUS_TONES[status]} isDot isSkeleton={isSkeleton}>
-                    {text(STATUS_KEYS[status])}
+                <Badge tone={STATUS_TONES[status]} isDot isLoading={isLoading}>
+                    {copy[STATUS_KEYS[status]]}
                 </Badge>
             </div>
-            <DescriptionList layout="columns" isDivided isLoading={isSkeleton} items={rows} />
-            <Text size="xs" tone="muted" isSkeleton={isSkeleton} live="polite">
-                {command?.note ?? text("cmdGateNote", { agent: props.agent })}
+            <DescriptionList layout="columns" isDivided isLoading={isLoading} items={rows} />
+            <Text size="xs" tone="muted" isLoading={isLoading} live="polite">
+                {command?.note ?? props.gateNote}
             </Text>
             {command?.detail === undefined || command.detail === null ? null : (
-                <Alert tone="negative" title={text("cmdFailed")} description={command.detail} />
+                <Alert tone="negative" title={copy.cmdFailed} description={command.detail} />
             )}
-            {isSkeleton || status === "pending" ? (
+            {isLoading || status === "pending" ? (
                 <Cluster gap="inline">
                     <Button
                         intent="neutral"
                         size="sm"
-                        isSkeleton={isSkeleton}
-                        isDisabled={isSkeleton || props.isBusy}
+                        isLoading={isLoading}
+                        isDisabled={isLoading || props.isBusy}
                         onPress={() => command !== null && props.onCancel(command.id)}
                     >
-                        {text("cmdCancel")}
+                        {copy.cmdCancel}
                     </Button>
                     <Button
                         intent="commit"
                         size="sm"
-                        isSkeleton={isSkeleton}
+                        isLoading={isLoading}
                         isPending={props.isBusy}
-                        isDisabled={isSkeleton || props.isBusy}
+                        isDisabled={isLoading || props.isBusy}
                         onPress={() => command !== null && props.onSend(command.id)}
                     >
-                        {text("cmdSend")}
+                        {copy.cmdSend}
                     </Button>
                 </Cluster>
             ) : null}
             {command?.workHref === undefined || command.workHref === null ? null : (
                 <Cluster gap="inline">
                     <Button intent="neutral" size="sm" href={command.workHref}>
-                        {text("cmdOpenWork")}
+                        {copy.cmdOpenWork}
                     </Button>
                 </Cluster>
             )}
-        </OfficeCardFrame>
+        </>
     )
 }

@@ -1,4 +1,4 @@
-import { SectionHeader, Text, TextAction } from "@starci/grammar/common"
+import { Text, Link, Section } from "@starci/grammar/common"
 
 /** Copy the connected notice supplies. */
 export interface TeamIndividualNoticeBaseProps {
@@ -12,10 +12,9 @@ export interface TeamIndividualNoticeBaseProps {
 
 /** Draws why an individual plan takes no invitations and where the Team plan is. */
 export const TeamIndividualNoticeBase = (props: TeamIndividualNoticeBaseProps) => (
-    <>
-        <SectionHeader level={2} title={props.props.title} description={props.props.body} />
+    <Section title={props.props.title} description={props.props.body}>
         <Text>
-            <TextAction href={props.props.ctaHref}>{props.props.ctaLabel}</TextAction>
+            <Link href={props.props.ctaHref}>{props.props.ctaLabel}</Link>
         </Text>
-    </>
+    </Section>
 )

@@ -36,7 +36,7 @@ export const SepaySetup = (props: SepaySetupProps) => {
     const placeholder = useSepayPlaceholder()
     const { role } = useConnectionsRole()
     const rotate = useSepayRotate(commands.rotateKey)
-    const connection = slot.items
+    const connection = "items" in slot ? slot.items : undefined
     const account = useSepayAccountForm(connection, commands.saveAccount)
     const settings = useSepaySettings(connection)
     const viewOf = (items: SepayConnectionView): SepaySetupView => ({

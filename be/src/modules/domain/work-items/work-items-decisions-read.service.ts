@@ -1,13 +1,31 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { WaitingDecision } from "./work-items-decisions-read.contracts"
+import type { WaitingDecision, WorkDecisionClaim } from "./work-items-decisions-read.contracts"
+import type { OptionalWorkItem } from "./work-items.contracts"
+import { toWorkItem, toWorkItemRecord } from "./work-items.mapper"
 import { WorkItemEntity } from "./persistence/entities"
 
 @Injectable()
 /** Request-time reads of the work items a department asks the owner to decide, always scoped to the workspace and bounded by the caller. */
 export class WorkItemsDecisionsReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /** Locks the decision owner row so a deadline and a human reopen cannot decide it concurrently. */
+    async lockForDecision(manager: EntityManager, workspaceId: string, id: string): Promise<OptionalWorkItem> {
+        const row = await manager.findOne(WorkItemEntity, {
+            where: { workspaceId, id },
+            lock: { mode: "pessimistic_write" },
+        })
+        return row === null ? null : toWorkItem(toWorkItemRecord(row))
+    }
+
+    /** Classifies the locked owner once for human reconciliation and timeout writers; queued or failed work is busy. */
+    async claimDecision(manager: EntityManager, workspaceId: string, id: string): Promise<WorkDecisionClaim> {
+        const item = await this.lockForDecision(manager, workspaceId, id)
+        if (item === null || item.status === "queued" || item.status === "failed") return { kind: "busy" }
+        return item.status === "waiting_decision" ? { kind: "open" } : { kind: "closed", item }
+    }
 
     /** The work items of the department waiting for a decision, oldest first, at most `limit`. */
     waiting(workspaceId: string, department: string, limit: number): Promise<Array<WaitingDecision>> {

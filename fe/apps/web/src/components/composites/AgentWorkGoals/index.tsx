@@ -10,7 +10,7 @@ interface AgentWorkGoalsProps {
     readonly goals: ReadonlyArray<AgentWorkGoalView>
     readonly canEdit: boolean
     readonly isSaving: boolean
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onDone: (goal: AgentWorkGoalView) => void
 }
 
@@ -18,7 +18,7 @@ interface AgentWorkGoalsProps {
 export const AgentWorkGoals = (props: AgentWorkGoalsProps) => (
     <AgentWorkRows
         words={{ label: props.label, emptyMessage: props.emptyMessage }}
-        isSkeleton={props.isSkeleton}
+        isLoading={props.isLoading}
         rows={props.goals.map((goal) => ({
             id: goal.id,
             title: goal.title,

@@ -17,7 +17,6 @@ export const LandingHero = async () => {
     return (
         <LandingHeroBase
             props={{
-                regionLabel: `${t("heroLine1")} ${t("heroLine2")}`,
                 offerBadge: t("heroOffer", { percent: FOUNDING_OFFER.percentOff }),
                 titleLines: [t("heroLine1"), t("heroLine2")],
                 lead: t("heroLead"),

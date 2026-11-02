@@ -25,7 +25,7 @@ describe("AgentWriteRightService", () => {
         await expect(right.mayWrite("tag", "user-1", "ws-1")).resolves.toBe(false)
     })
 
-    it.each(["customer", "internal", "schedule"] as const)(
+    it.each(["customer", "internal", "schedule", "generic_webhook", "plugin_unknown"] as const)(
         "refuses a %s turn without asking for a role",
         async (source) => {
             const { right, members } = await build(PresentedRole.Owner)

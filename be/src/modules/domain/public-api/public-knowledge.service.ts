@@ -29,7 +29,7 @@ export class PublicKnowledgeService {
             content: content.value,
             topic: topic === "" ? null : topic,
             tags: cleanTags(params.tags ?? []),
-            visibility: visibilityOf(params),
+            visibility: visibilityOf(),
             source: `api:${who.name}`,
         }
         return this.entityManager.transaction(async (tx) => {

@@ -1,11 +1,11 @@
-import { Input, Select } from "@starci/grammar/common"
-import { openApiAuthStepClassNames as classNames } from "./classNames"
-
+import { Input, Select, Stack } from "@starci/grammar/common"
 /** A text field of the address and sign-in step. */
 type OpenApiAuthField = "baseUrl" | "authName" | "authValue" | "authUser" | "authPassword"
 
 /** What the address and sign-in step of the OpenAPI wizard draws and reports. */
 type OpenApiAuthStepProps = {
+    readonly isLoading?: boolean
+
     readonly values: Readonly<Record<OpenApiAuthField | "authType", string>>
     readonly options: ReadonlyArray<{ readonly id: string; readonly label: string }>
     readonly isDisabled: boolean
@@ -33,8 +33,9 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
     const { values, text, isDisabled, onField } = props
     const keyed = values.authType === "header" || values.authType === "query"
     return (
-        <div className={classNames.column}>
+        <Stack gap="section">
             <Input
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                 id="oa-base"
                 name="baseUrl"
                 label={text.baseUrl}
@@ -44,6 +45,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                 onValueChange={(value) => onField("baseUrl", value)}
             />
             <Select
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                 label={text.auth}
                 options={props.options}
                 value={values.authType}
@@ -51,6 +53,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
             />
             {keyed ? (
                 <Input
+                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                     id="oa-auth-name"
                     name="authName"
                     label={text.authName}
@@ -62,6 +65,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
             ) : null}
             {keyed || values.authType === "bearer" ? (
                 <Input
+                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                     id="oa-auth-value"
                     name="authValue"
                     label={text.authValue}
@@ -75,6 +79,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
             {values.authType === "basic" ? (
                 <>
                     <Input
+                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                         id="oa-auth-user"
                         name="authUser"
                         label={text.user}
@@ -83,6 +88,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                         onValueChange={(value) => onField("authUser", value)}
                     />
                     <Input
+                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                         id="oa-auth-pass"
                         name="authPass"
                         label={text.password}
@@ -94,6 +100,6 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                     />
                 </>
             ) : null}
-        </div>
+        </Stack>
     )
 }

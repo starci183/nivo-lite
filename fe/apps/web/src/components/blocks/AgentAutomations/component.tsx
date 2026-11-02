@@ -1,4 +1,4 @@
-import { AgentAutomationsFrame } from "@/components/composites/AgentAutomationsFrame"
+import { AgentAutomationsFrame } from "@/components/frames/AgentAutomationsFrame"
 
 /** Copy of the automations card of an agent. */
 export interface AgentAutomationsBaseProps {

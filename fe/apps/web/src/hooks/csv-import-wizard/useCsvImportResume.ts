@@ -2,12 +2,14 @@
 
 import { useCallback, useMemo } from "react"
 import { useQueryLoadCsvImportSwr } from "@/hooks/swr"
+import type { SlotRead } from "@/hooks/slot"
 import { parseConfig } from "./csv-import-wizard.shared"
 import type { CsvSavedImport } from "./csv-import-wizard.shared"
 import { readError } from "@/hooks/workspaceread"
 
 /** What loading the saved import of a resume answers: the import, still loading, or the reason it failed. */
 export interface CsvImportResume {
+    readonly reads: ReadonlyArray<SlotRead<unknown>>
     readonly saved: CsvSavedImport | null
     readonly isLoading: boolean
     readonly error: string | undefined
@@ -22,25 +24,30 @@ export const useCsvImportResume = (resumeId: string | undefined): CsvImportResum
     const error = readError(swrRead)
     const { mutate } = swrRead
     const reload = useCallback(() => void mutate(), [mutate])
-    return useMemo(() => {
-        if (resumeId === undefined) return { saved: null, isLoading: false, error: undefined, reload }
-        if (error instanceof Error) return { saved: null, isLoading: false, error: error.message, reload }
-        if (data === undefined) return { saved: null, isLoading, error: undefined, reload }
-        const config = parseConfig(data.config)
-        if (config === null)
-            return { saved: null, isLoading: false, error: "loadCsvImport answered an unreadable config", reload }
+    const read = useMemo<SlotRead<CsvSavedImport>>(() => {
+        const config = data === undefined ? undefined : parseConfig(data.config)
         return {
-            saved: {
-                name: data.name,
-                config,
-                file: data.file,
-                summary: data.summary,
-                agentIds: data.agentIds,
-                scheduleMinutes: data.scheduleMinutes ?? null,
-            },
-            isLoading: false,
-            error: undefined,
-            reload,
+            data:
+                data === undefined || config === undefined || config === null
+                    ? undefined
+                    : {
+                          name: data.name,
+                          config,
+                          file: data.file,
+                          summary: data.summary,
+                          agentIds: data.agentIds,
+                          scheduleMinutes: data.scheduleMinutes ?? null,
+                      },
+            isLoading,
+            isValidating: swrRead.isValidating,
+            error: config === null ? new Error("loadCsvImport answered an unreadable config") : error,
         }
-    }, [resumeId, data, error, isLoading, reload])
+    }, [data, error, isLoading, swrRead.isValidating])
+    return {
+        reads: resumeId === undefined ? [] : [read],
+        saved: resumeId === undefined ? null : (read.data ?? null),
+        isLoading: resumeId !== undefined && read.data === undefined && read.isLoading,
+        error: read.error instanceof Error ? read.error.message : undefined,
+        reload,
+    }
 }

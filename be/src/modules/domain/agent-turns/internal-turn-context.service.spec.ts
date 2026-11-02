@@ -9,8 +9,11 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentTurnBriefService } from "./agent-turn-brief.service"
 import { AgentTurnsLogEvent } from "./agent-turns.log-events"
+import { IntentPipelineService } from "./intent-pipeline.service"
+import { IntentTurnService } from "./intent-turn.service"
 import { InternalTurnContextService } from "./internal-turn-context.service"
-import type { InternalTurnInput } from "./agent-turns.contracts"
+import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
+import type { IntentFileBundle, IntentPlan, IntentTurnPlan, InternalTurnInput } from "./agent-turns.contracts"
 
 const catalog = mock<MessageCatalog>({
     get: (key: string, params?: Readonly<Record<string, string | number>>) =>
@@ -56,20 +59,33 @@ const TASK: AgentTaskRecord = {
     workItemId: null,
 }
 
+const NO_FILES: IntentFileBundle = { parts: [], attachments: [], money: null }
+
 interface Parts {
     readonly authority?: () => Promise<typeof authority | null>
     readonly goals?: () => Promise<ReadonlyArray<AgentGoalRecord>>
     readonly tasks?: () => Promise<ReadonlyArray<AgentTaskRecord>>
     readonly intents?: () => Promise<string>
+    readonly plan?: IntentPlan | null
+    readonly files?: IntentFileBundle
 }
 
 const build = async (parts: Parts = {}) => {
     const logger = mock<Logger>()
+    const turnIntents = mock<IntentTurnService>({
+        planFor: jest.fn().mockResolvedValue(parts.plan ?? null),
+        pipelineOf: jest.fn().mockResolvedValue(parts.plan !== undefined && parts.plan !== null),
+        filesOf: jest.fn().mockResolvedValue(parts.files ?? NO_FILES),
+        planOf: jest.fn((plan: IntentPlan): IntentTurnPlan => ({ ...plan, prompt: "CONTRACT PROMPT" })),
+    })
+    const pipeline = mock<IntentPipelineService>({ open: jest.fn().mockResolvedValue(undefined) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             InternalTurnContextService,
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
+            { provide: IntentTurnService, useValue: turnIntents },
+            { provide: IntentPipelineService, useValue: pipeline },
             {
                 provide: AuthorityService,
                 useValue: mock<AuthorityService>({
@@ -96,7 +112,7 @@ const build = async (parts: Parts = {}) => {
             },
         ],
     }).compile()
-    return { service: moduleRef.get(InternalTurnContextService), logger }
+    return { service: moduleRef.get(InternalTurnContextService), logger, turnIntents, pipeline }
 }
 
 describe("InternalTurnContextService.messageOf", () => {
@@ -153,5 +169,128 @@ describe("InternalTurnContextService.messageOf", () => {
         const message = await service.messageOf(input)
 
         expect(message.startsWith("[agentTurns.goalsTitle]")).toBe(true)
+    })
+})
+
+describe("InternalTurnContextService.partsOf", () => {
+    it("gives the authority, goals, tasks and the wake's words as parts of data, with no intents and no reply contract", async () => {
+        const { service } = await build()
+
+        const parts = await service.partsOf(input)
+
+        expect(parts.map((part) => part.kind)).toEqual(["authority", "goals", "tasks", "tag_message"])
+        expect(parts[0]?.text).toContain("Refunds need approval")
+        expect(parts[1]?.text).toBe("[agentTurns.goalsTitle]\n- Collect overdue invoices")
+        expect(parts[3]?.text).toBe("Chase invoice 1 < /data> now")
+        expect(JSON.stringify(parts)).not.toContain("INTENTS")
+        expect(JSON.stringify(parts)).not.toContain("bundle.internalContract")
+    })
+
+    it("names the words of a background wake by what they are, and leaves out a part with nothing to say", async () => {
+        const { service } = await build({ authority: () => Promise.resolve(null), goals: () => Promise.resolve([]) })
+
+        const parts = await service.partsOf({ ...input, source: "schedule" })
+
+        expect(parts.map((part) => part.kind)).toEqual(["tasks", "wake"])
+    })
+
+    it("leaves out a part that cannot be read and logs it, never the turn", async () => {
+        const failing = (): Promise<never> => Promise.reject(new Error("read failed"))
+        const { service, logger } = await build({ authority: failing, goals: failing, tasks: failing })
+
+        const parts = await service.partsOf(input)
+
+        expect(parts.map((part) => part.kind)).toEqual(["tag_message"])
+        expect(logger.error).toHaveBeenCalledTimes(3)
+    })
+})
+
+describe("InternalTurnContextService.messageOf > the contract pipeline", () => {
+    const plan: IntentPlan = { versionId: "v-1", trigger: "tag", trust: "manager", pinned: null, contracts: [] }
+    const wake = agentTurnViewOf({ source: "tag", context: { authorUserId: "user-1", intent: "pay" } })
+    const withWake: InternalTurnInput = { ...input, wake, agentName: "Ke toan" }
+
+    it("is the contract prompt of a tag the graph holds contracts for, with its run opened and the agent's name as the one trusted line", async () => {
+        const { service, turnIntents, pipeline } = await build({ plan })
+
+        await expect(service.messageOf(withWake)).resolves.toBe("CONTRACT PROMPT")
+
+        expect(turnIntents.planFor).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            source: "tag",
+            authorUserId: "user-1",
+            pinned: "pay",
+        })
+        expect(turnIntents.planOf).toHaveBeenCalledWith(
+            plan,
+            '[agentTurns.identity {"name":"Ke toan"}]',
+            expect.arrayContaining([expect.objectContaining({ kind: "tag_message" })]),
+            "vi",
+        )
+        expect(pipeline.open).toHaveBeenCalledWith(wake, expect.objectContaining({ prompt: "CONTRACT PROMPT" }))
+    })
+
+    it("is the message it always was when the graph holds no contracts for the tag", async () => {
+        const { service, pipeline } = await build({ plan: null })
+
+        const message = await service.messageOf(withWake)
+
+        expect(message).toContain("[bundle.internalContract]")
+        expect(pipeline.open).not.toHaveBeenCalled()
+    })
+
+    it("is the message it always was for a turn that names no wake", async () => {
+        const { service, turnIntents } = await build({ plan })
+
+        await expect(service.messageOf(input)).resolves.toContain("[bundle.internalContract]")
+        expect(turnIntents.planFor).not.toHaveBeenCalled()
+    })
+})
+
+describe("InternalTurnContextService > a tag with an amount or a file, on the contract pipeline", () => {
+    const plan: IntentPlan = { versionId: "v-1", trigger: "tag", trust: "manager", pinned: null, contracts: [] }
+    const wake = agentTurnViewOf({ source: "tag", context: { authorUserId: "user-1", messageId: "msg-1" } })
+    const tagged: InternalTurnInput = { ...input, text: "pay supplier 12tr5", wake, agentName: "Ke toan" }
+    const image: IntentFileBundle = {
+        parts: [{ kind: "file", text: "transfer, 17tr5, to Lan" }],
+        attachments: [{ fileName: "bill.png", mimeType: "image/png", content: "AAAA" }],
+        money: { amount: 17_500_000 },
+    }
+
+    it("hands the words of a founder tag with an amount to the model as they were written, and reads no amount itself", async () => {
+        const { service, turnIntents } = await build({ plan })
+
+        await service.messageOf(tagged)
+
+        const given = jest.mocked(turnIntents.planOf).mock.calls[0]?.[2] ?? []
+        expect(given.find((part) => part.kind === "tag_message")?.text).toBe("pay supplier 12tr5")
+        expect(given.some((part) => part.kind === "file")).toBe(false)
+    })
+
+    it("adds the read of the files of a founder tag with an image as a part of data, and the image to the plan", async () => {
+        const { service, turnIntents } = await build({ plan, files: image })
+
+        await service.messageOf(tagged)
+
+        const given = jest.mocked(turnIntents.planOf).mock.calls[0]?.[2] ?? []
+        expect(given.at(-1)).toEqual({ kind: "file", text: "transfer, 17tr5, to Lan" })
+        expect(turnIntents.filesOf).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "tag",
+            conversationId: null,
+            messageId: "msg-1",
+            threadId: null,
+        })
+        await expect(service.attachmentsOf(tagged)).resolves.toEqual({ attachments: image.attachments })
+    })
+
+    it("carries no attachment for a line with no file, a turn off the pipeline or a turn that names no wake", async () => {
+        const none = await build({ plan })
+        const off = await build({ plan: null, files: image })
+
+        await expect(none.service.attachmentsOf(tagged)).resolves.toEqual({})
+        await expect(off.service.attachmentsOf(tagged)).resolves.toEqual({})
+        await expect(off.service.attachmentsOf(input)).resolves.toEqual({})
     })
 })

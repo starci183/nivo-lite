@@ -14,7 +14,7 @@ interface SiteShellProps {
     /** The controls at the end of the bar. */
     readonly actions: ReactNode
     /** The page content. */
-    readonly children: ReactNode
+    readonly body: ReactNode
 }
 
 /** The public site chrome: a sticky top bar over a flowing page, no sidebar and no console shell. */
@@ -24,6 +24,6 @@ export const SiteShell = (props: SiteShellProps) => (
         header={<TopBar position="sticky" brand={props.brand} navigation={props.navigation} actions={props.actions} />}
         primaryLabel={props.mainLabel}
         {...(props.mainId === undefined ? {} : { primaryId: props.mainId })}
-        primary={props.children}
+        primary={props.body}
     />
 )

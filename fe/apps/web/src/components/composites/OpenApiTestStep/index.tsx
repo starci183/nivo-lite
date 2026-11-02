@@ -1,9 +1,10 @@
-import { Alert, Input, Select, Text } from "@starci/grammar/common"
+import { Alert, Input, Select, Text, Stack } from "@starci/grammar/common"
 import type { WizardNote } from "@/modules/types"
-import { openApiTestStepClassNames as classNames } from "./classNames"
 
 /** What the test step of the OpenAPI wizard draws and reports. */
 type OpenApiTestStepProps = {
+    readonly isLoading?: boolean
+
     /** The GET operations that can be tried; empty shows the "no GET" line. */
     readonly options: ReadonlyArray<{ readonly id: string; readonly label: string }>
     readonly value: string | null
@@ -22,22 +23,20 @@ type OpenApiTestStepProps = {
 
 /** Step "test" of the OpenAPI wizard: calls one GET with the typed settings and shows what came back. */
 export const OpenApiTestStep = (props: OpenApiTestStepProps) => (
-    <div className={classNames.column}>
+    <Stack gap="section">
         <Text size="sm" tone="muted">
             {props.text.hint}
         </Text>
-        {props.options.length === 0 ? (
-            <Text size="sm">{props.text.empty}</Text>
-        ) : (
-            <Select
-                label={props.text.operation}
-                options={props.options}
-                value={props.value}
-                onValueChange={props.onOperation}
-            />
-        )}
+        <TestOperation
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            options={props.options}
+            value={props.value}
+            text={props.text}
+            onOperation={props.onOperation}
+        />
         {props.showQuery ? (
             <Input
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                 id="oa-test-q"
                 name="testQuery"
                 label={props.text.query}
@@ -50,11 +49,36 @@ export const OpenApiTestStep = (props: OpenApiTestStepProps) => (
                 {props.text.testing}
             </Text>
         ) : null}
-        {props.note === null ? null : <Alert tone={props.note.tone} title={props.note.text} />}
+        {props.note === null ? null : (
+            <Alert
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                tone={props.note.tone}
+                title={props.note.text}
+            />
+        )}
         {props.fields === null ? null : (
-            <Text size="sm" tone="muted">
+            <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="sm" tone="muted">
                 {props.fields}
             </Text>
         )}
-    </div>
+    </Stack>
 )
+
+/** Known capability copy stays real while unresolved options use their native control anatomy. */
+const TestOperation = (
+    props: Pick<OpenApiTestStepProps, "isLoading" | "options" | "value" | "text" | "onOperation">,
+) => {
+    if (props.options.length === 0) {
+        if (props.isLoading === true) return null
+        return <Text size="sm">{props.text.empty}</Text>
+    }
+    return (
+        <Select
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            label={props.text.operation}
+            options={props.options}
+            value={props.value}
+            onValueChange={props.onOperation}
+        />
+    )
+}

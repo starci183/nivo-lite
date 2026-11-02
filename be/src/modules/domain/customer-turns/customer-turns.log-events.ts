@@ -8,4 +8,6 @@ export enum CustomerTurnsLogEvent {
     EscalationFailed = "customer-turns.escalation.failed",
     /** Draining the follow-up chain after a turn failed; the queued steps wait for the next drain. */
     DrainFailed = "customer-turns.drain.failed",
+    /** The model turn of a final reply failed; the customer gets the fixed line. */
+    FinalReplyFailed = "customer-turns.final-reply.failed",
 }

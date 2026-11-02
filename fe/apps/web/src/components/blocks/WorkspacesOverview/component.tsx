@@ -1,8 +1,7 @@
-import { Alert, Button, Heading, Mascot, Stepper, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Heading, Mascot, Stepper, SurfaceCard, Text, Stack } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { APP_ROUTES } from "@/modules/routes"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { STACK_CLASS_NAME, WELCOME_COPY_CLASS_NAME } from "./classNames"
 
 /** The workspaces overview shapes, in the order the owner approved them. */
 export const WORKSPACES_OVERVIEW_SHAPES = ["welcome", "list"] as const
@@ -53,11 +52,11 @@ const Welcome = (props: WelcomeProps) => (
             />
         }
     >
-        <div className={WELCOME_COPY_CLASS_NAME}>
-            <Heading level={2} isSkeleton={props.isSkeleton}>
+        <Stack gap="section" align="start">
+            <Heading level={2} isLoading={props.isSkeleton}>
                 {props.props.welcomeTitle}
             </Heading>
-            <Text tone="muted" isSkeleton={props.isSkeleton}>
+            <Text tone="muted" isLoading={props.isSkeleton}>
                 {props.props.welcomeText}
             </Text>
             <Stepper
@@ -67,26 +66,25 @@ const Welcome = (props: WelcomeProps) => (
                 isLoading={props.isSkeleton}
                 steps={props.props.welcomeSteps.map((label, index) => ({ id: `s${index}`, label }))}
             />
-            <Button intent="commit" href={APP_ROUTES.workspaceNew} isSkeleton={props.isSkeleton}>
+            <Button intent="commit" href={APP_ROUTES.workspaceNew} isLoading={props.isSkeleton}>
                 {props.props.createFirstLabel}
             </Button>
-        </div>
+        </Stack>
     </SurfaceCard>
 )
 
 /** Draws the workspaces overview body: the reason notice, and the first-run welcome when there is no workspace. */
 export const WorkspacesOverviewBase = (props: WorkspacesOverviewBaseProps) => (
-    <div className={STACK_CLASS_NAME}>
+    <Stack gap="region">
         {props.props.reason === undefined ? null : <Alert tone="cautionary" title={props.props.reason} />}
         <SlotView
             slot={props.props.slot}
             placeholder={COUNT_PLACEHOLDER}
             labels={props.props.slotLabels}
             onRetry={props.on.retry}
-        >
-            {(_, isSkeleton) =>
+            render={(_, isSkeleton) =>
                 props.shape === "welcome" || isSkeleton ? <Welcome props={props.props} isSkeleton={isSkeleton} /> : null
             }
-        </SlotView>
-    </div>
+        />
+    </Stack>
 )

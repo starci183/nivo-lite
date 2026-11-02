@@ -1,19 +1,10 @@
+import type { InventorySupplierEditorData, SupplierFormField } from "@/modules/types"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import { Button, Drawer, Input, SegmentedControl, Textarea } from "@starci/grammar/common"
-import type { InventorySay, SupplierFormField, SupplierFormValues } from "@/modules/types"
-import { FORM_CLASS_NAME, FORM_GRID_CLASS_NAME } from "./classNames"
+import { Button, Drawer, Input, SegmentedControl, Textarea, Stack, Grid } from "@starci/grammar/common"
 
 /** The words and state of the supplier drawer. */
-export interface InventorySupplierDrawerProps {
-    readonly props: {
-        readonly say: InventorySay
-        /** The name of the supplier being changed, or null when a new one is added. */
-        readonly editing: string | null
-        readonly values: SupplierFormValues
-        readonly channels: ReadonlyArray<{ readonly value: string; readonly label: string }>
-        readonly isPending: boolean
-        readonly error: string | null
-    }
+interface InventorySupplierDrawerProps {
+    readonly props: InventorySupplierEditorData
     readonly on: {
         readonly field: (name: SupplierFormField, value: string) => void
         readonly save: () => void
@@ -24,7 +15,7 @@ export interface InventorySupplierDrawerProps {
 /** The form that adds or changes one supplier. */
 export const InventorySupplierDrawer = (props: InventorySupplierDrawerProps) => {
     const { props: p, on } = props
-    const say = p.say
+    const copy = p.copy
     const text = (name: SupplierFormField, id: string, label: string, kind?: "email") => (
         <Input
             id={id}
@@ -41,29 +32,29 @@ export const InventorySupplierDrawer = (props: InventorySupplierDrawerProps) => 
             onOpenChange={(open) => {
                 if (!open) on.close()
             }}
-            title={p.editing === null ? say("supplierAddTitle") : say("supplierEditTitle", { name: p.editing })}
-            description={say("supplierDrawerHint")}
-            closeLabel={say("close")}
+            title={p.editing === null ? copy.supplierAddTitle : copy.supplierEditTitle}
+            description={copy.supplierDrawerHint}
+            closeLabel={copy.close}
             placement="right"
         >
-            <div className={FORM_CLASS_NAME}>
-                {text("name", "sup-name", say("supplierName"))}
-                {text("contactName", "sup-contact", say("supplierContact"))}
+            <Stack gap="row">
+                {text("name", "sup-name", copy.supplierName)}
+                {text("contactName", "sup-contact", copy.supplierContact)}
                 <SegmentedControl
-                    label={say("supplierChannel")}
+                    label={copy.supplierChannel}
                     options={p.channels}
                     value={p.values.channel}
                     onValueChange={(value) => on.field("channel", value)}
                 />
-                <div className={FORM_GRID_CLASS_NAME}>
-                    {text("email", "sup-email", say("supplierEmail"), "email")}
-                    {text("phone", "sup-phone", say("supplierPhone"))}
-                    {text("zalo", "sup-zalo", say("supplierZalo"))}
-                    {text("leadTime", "sup-lead", say("supplierLead"))}
-                </div>
-                {text("terms", "sup-terms", say("supplierTerms"))}
+                <Grid kind="form" columns={2}>
+                    {text("email", "sup-email", copy.supplierEmail, "email")}
+                    {text("phone", "sup-phone", copy.supplierPhone)}
+                    {text("zalo", "sup-zalo", copy.supplierZalo)}
+                    {text("leadTime", "sup-lead", copy.supplierLead)}
+                </Grid>
+                {text("terms", "sup-terms", copy.supplierTerms)}
                 <Textarea
-                    label={say("supplierNote")}
+                    label={copy.supplierNote}
                     rows={2}
                     value={p.values.note}
                     onValueChange={(value) => on.field("note", value)}
@@ -71,10 +62,10 @@ export const InventorySupplierDrawer = (props: InventorySupplierDrawerProps) => 
                 <InventoryNotices error={p.error} />
                 <div>
                     <Button intent="commit" isPending={p.isPending} onPress={on.save}>
-                        {say("save")}
+                        {copy.save}
                     </Button>
                 </div>
-            </div>
+            </Stack>
         </Drawer>
     )
 }

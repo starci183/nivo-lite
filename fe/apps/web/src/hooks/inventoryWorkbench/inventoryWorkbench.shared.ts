@@ -16,7 +16,7 @@ import type {
     StockStatus,
     SupplierChannel,
 } from "@/modules/types"
-import type { DescriptionListStatItem } from "@starci/grammar/common"
+import type { Figure } from "@starci/grammar/common"
 
 const STOCK_STATUSES: ReadonlyArray<StockStatus> = ["out", "low", "ok", "over"]
 
@@ -151,10 +151,7 @@ export interface InventoryFiguresWords {
 }
 
 /** The ribbon: items under their reorder level, orders waiting, stock value and the stock-outs of the week. */
-export const inventoryFigures = (
-    data: InventoryWorkbenchData,
-    words: InventoryFiguresWords,
-): ReadonlyArray<DescriptionListStatItem> => {
+export const inventoryFigures = (data: InventoryWorkbenchData, words: InventoryFiguresWords): ReadonlyArray<Figure> => {
     const active = data.items.filter((item) => item.active)
     const below = active.filter((item) => item.reorderPoint > 0 && item.total <= item.reorderPoint).length
     const awaiting = data.pos.filter((po) => po.status === "waiting_approval").length
@@ -162,26 +159,33 @@ export const inventoryFigures = (
         {
             id: "reorder",
             term: words.t("metricReorder"),
-            description: String(below),
+            value: String(below),
             meta: words.t("metricReorderBasis", { n: active.length }),
         },
         {
             id: "awaiting",
             term: words.t("metricAwaiting"),
-            description: String(awaiting),
+            value: String(awaiting),
             meta: words.t("metricAwaitingBasis"),
         },
         {
             id: "value",
             term: words.t("metricValue"),
-            description: words.money(data.metrics.valueVnd),
+            value: words.money(data.metrics.valueVnd),
             meta: words.t("metricValueBasis"),
         },
         {
             id: "stockouts",
             term: words.t("metricStockOuts"),
-            description: data.stockOuts7d === null ? "-" : String(data.stockOuts7d),
+            value: data.stockOuts7d === null ? "-" : String(data.stockOuts7d),
             meta: words.t(data.stockOuts7d === null ? "metricStockOutsUnknown" : "metricStockOutsBasis"),
         },
     ]
+}
+
+/** A ready inventory panel receives real board data and its actual display lifetime. */
+export interface InventoryPanelInput {
+    readonly board: InventoryWorkbenchData
+    readonly isActive: boolean
+    readonly scope: string
 }

@@ -1,6 +1,6 @@
 import { Mascot, Page } from "@starci/grammar/common"
 import { OnboardingHandover } from "@/components/blocks/OnboardingHandover"
-import { FirstRunStep } from "@/components/composites/FirstRunStep"
+import { FirstRunStep } from "@/components/frames/FirstRunStep"
 
 /** Copy the /workspaces/new/ai page supplies. */
 export interface WorkspaceHandoverPageBaseProps {

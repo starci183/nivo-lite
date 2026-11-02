@@ -13,3 +13,12 @@ export interface MemberRowView extends DataTableRow {
     /** The actions the person may take on this member; none draws no menu. */
     readonly entries: ReadonlyArray<DropdownMenuEntry>
 }
+
+/** Server-resolved heading data for the team's two Page roots; the native header is drawn inside its Base. */
+export interface TeamPageHeading {
+    readonly crumbLabel: string
+    readonly crumbHome: string
+    readonly title: string
+    readonly description: string
+    readonly eyebrow?: string
+}

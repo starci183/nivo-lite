@@ -1,4 +1,4 @@
-import { Cluster, Text, TextAction } from "@starci/grammar/common"
+import { Cluster, Link, Text } from "@starci/grammar/common"
 import type { WorkbenchTraceView } from "@/modules/types"
 
 /** The trace line of a row and the words of its link. */
@@ -13,10 +13,6 @@ export const WorkbenchTraceLine = (props: WorkbenchTraceLineProps) => (
         <Text size="xs" tone="muted">
             {props.trace.line}
         </Text>
-        {props.trace.whyHref === null ? null : (
-            <TextAction size="sm" href={props.trace.whyHref}>
-                {props.seeWhyLabel}
-            </TextAction>
-        )}
+        {props.trace.whyHref === null ? null : <Link href={props.trace.whyHref}>{props.seeWhyLabel}</Link>}
     </Cluster>
 )

@@ -2,7 +2,7 @@
 
 import { useCallback } from "react"
 import { purposeFor } from "@/hooks/connection-access"
-import { slotOfSwr } from "@/hooks/slot"
+import { slotOfReads } from "@/hooks/slot"
 import { useQueryConnectionAgentsSwr } from "@/hooks/swr"
 import type { ConnectionAgentRowView, DataSlot, Provider } from "@/modules/types"
 import { useConnectionsRole } from "./useConnectionsRole"
@@ -11,6 +11,13 @@ import { useSetConnectionAgents } from "./useSetConnectionAgents"
 /** The part of a connection page the agent rows read: the agents on the connection, the state of that read, and how to read it again. */
 interface ConnectionPageRead {
     readonly slot: DataSlot<{ readonly agentIds: ReadonlyArray<string> }>
+    /** The raw page read, kept alongside its slot by connectionPageOf. */
+    readonly read: {
+        readonly data: { readonly agentIds: ReadonlyArray<string> } | undefined
+        readonly isLoading: boolean
+        readonly error: unknown
+        readonly isValidating?: boolean
+    }
     readonly reload: () => void
 }
 
@@ -19,28 +26,20 @@ interface ConnectionPageRead {
  * toggle that saves the set; only the owner may toggle, since the back end refuses everyone else.
  */
 export const useConnectionAgentRows = (connectionId: string, provider: Provider, page: ConnectionPageRead) => {
-    const agentIds = page.slot.items?.agentIds
+    const agentIds = page.read.data?.agentIds
     const { reload } = page
     const agentsRead = useQueryConnectionAgentsSwr()
     const setAgents = useSetConnectionAgents()
     const { role } = useConnectionsRole()
-    const agents = slotOfSwr(agentsRead)
     const on = new Set(agentIds ?? [])
-    const slot: DataSlot<ReadonlyArray<ConnectionAgentRowView>> = {
-        isLoading: agents.isLoading === true || page.slot.isLoading === true,
-        isForbidden: agents.isForbidden,
-        isError: agents.isError === true || page.slot.isError === true,
-        items:
-            agents.items === undefined || agentIds === undefined
-                ? undefined
-                : agents.items
-                      .filter(
-                          (agent) =>
-                              on.has(agent.id) ||
-                              (agent.status === "active" && purposeFor(agent.module, provider) !== null),
-                      )
-                      .map((agent) => ({ id: agent.id, name: agent.name, isOn: on.has(agent.id) })),
-    }
+    const slot = slotOfReads([agentsRead, page.read], (): ReadonlyArray<ConnectionAgentRowView> =>
+        (agentsRead.data ?? [])
+            .filter(
+                (agent) =>
+                    on.has(agent.id) || (agent.status === "active" && purposeFor(agent.module, provider) !== null),
+            )
+            .map((agent) => ({ id: agent.id, name: agent.name, isOn: on.has(agent.id) })),
+    )
     const toggle = useCallback(
         async (agentId: string, isOn: boolean): Promise<void> => {
             const wanted = new Set(agentIds ?? [])

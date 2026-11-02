@@ -19,7 +19,10 @@ export const useOfficeMarkers = (keys: RoomKeys) => {
     const runGraphQL = useGraphQLWithToast()
     const { mutate } = states
     const markers: ReadonlyMap<string, ChatMarkerWire | undefined> = useMemo(
-        () => new Map((states.data ?? []).map((answer) => [answer.request.room ?? "", answer.state])),
+        () =>
+            states.data === undefined
+                ? new Map<string, ChatMarkerWire | undefined>()
+                : new Map(states.data.map((answer) => [answer.request.room ?? "", answer.state])),
         [states.data],
     )
     const setMute = useCallback(
@@ -29,5 +32,6 @@ export const useOfficeMarkers = (keys: RoomKeys) => {
         },
         [runGraphQL, trigger, mutate],
     )
-    return { markers, setMute }
+    const error: unknown = states.error
+    return { read: states, markers, setMute, isLoading: states.isLoading, error }
 }

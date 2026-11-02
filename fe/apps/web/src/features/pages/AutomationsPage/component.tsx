@@ -15,15 +15,17 @@ export interface AutomationsPageBaseProps {
 /** Draws the automations page: the heading, and the board with the link to Advanced as its body. */
 export const AutomationsPageBase = (props: AutomationsPageBaseProps) => (
     <AutomationsHeading>
-        <AutomationsPageLayout
-            board={
-                <AutomationsBoard
-                    layout="page"
-                    {...(props.props.focus === undefined ? {} : { focus: props.props.focus })}
-                />
-            }
-            advancedLabel={props.props.advancedLabel}
-            advancedHref={props.props.advancedHref}
-        />
+        <>
+            <AutomationsPageLayout
+                board={
+                    <AutomationsBoard
+                        layout="page"
+                        {...(props.props.focus === undefined ? {} : { focus: props.props.focus })}
+                    />
+                }
+                advancedLabel={props.props.advancedLabel}
+                advancedHref={props.props.advancedHref}
+            />
+        </>
     </AutomationsHeading>
 )

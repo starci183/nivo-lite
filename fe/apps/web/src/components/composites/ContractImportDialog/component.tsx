@@ -4,14 +4,17 @@ import {
     Button,
     Dialog,
     FileDropzone,
-    ListRow,
+    Cluster,
+    EmptyNotice,
+    Grid,
+    Section,
+    Stack,
     RadioGroup,
     Select,
-    SurfaceListCard,
     Text,
     Textarea,
 } from "@starci/grammar/common"
-import { contractImportDialogClassNames as classNames } from "./classNames"
+import type { ListRowData } from "@starci/grammar/common"
 import type { ContractImportDialogProps } from "./index"
 
 type FileSourceProps = ContractImportDialogProps
@@ -35,7 +38,9 @@ const FileSource = (props: FileSourceProps) => {
                     isDisabled={p.isPreviewing || p.isImporting}
                     value={p.sheet}
                     options={p.sheets}
-                    onValueChange={on.sheet}
+                    onValueChange={(value) => {
+                        if (value !== null) on.sheet(value)
+                    }}
                 />
             )}
         </>
@@ -56,7 +61,7 @@ const PasteSource = (props: PasteSourceProps) => {
                 value={p.paste}
                 onValueChange={on.paste}
             />
-            <div className={classNames.actions}>
+            <Cluster gap="inline">
                 <Button
                     intent="neutral"
                     size="sm"
@@ -66,7 +71,7 @@ const PasteSource = (props: PasteSourceProps) => {
                 >
                     {p.text.preview}
                 </Button>
-            </div>
+            </Cluster>
         </>
     )
 }
@@ -76,11 +81,8 @@ type ColumnPickersProps = ContractImportDialogProps
 const ColumnPickers = (props: ColumnPickersProps) => {
     const { props: p, on } = props
     return (
-        <>
-            <Text size="sm" weight="semibold">
-                {p.text.mapping}
-            </Text>
-            <div className={classNames.columns}>
+        <Section title={p.text.mapping} headingLevel={3}>
+            <Grid kind="form" columns={1}>
                 {(p.columns ?? []).map((column) => (
                     <Select
                         key={column.field}
@@ -88,45 +90,48 @@ const ColumnPickers = (props: ColumnPickersProps) => {
                         isDisabled={p.isPreviewing || p.isImporting}
                         value={column.column}
                         options={p.columnOptions}
-                        onValueChange={(value) => on.column(column.field, value)}
+                        onValueChange={(value) => {
+                            if (value !== null) on.column(column.field, value)
+                        }}
                     />
                 ))}
-            </div>
-        </>
+            </Grid>
+        </Section>
     )
 }
 
-type PreviewRowsProps = Pick<ContractImportDialogProps, "props">
-/** The preview: the summary line and each previewed row with its status and problems. */
+type PreviewRowsProps = { readonly props: ContractImportDialogProps["props"] & { readonly summary: string } }
+/** A non-raised preview collection inside the dialog; every problem stays visible beside its original status. */
 const PreviewRows = (props: PreviewRowsProps) => {
-    const { props: p } = props
+    const p = props.props
     return (
-        <>
-            <Text size="sm" weight="medium" live="polite">
+        <Stack gap="row">
+            <Text size="sm" live="polite">
                 {p.summary}
             </Text>
-            <SurfaceListCard ariaLabel={p.text.preview}>
-                {p.rows.map((row) => (
-                    <ListRow
-                        key={row.id}
-                        title={row.title}
-                        description={row.description}
-                        badges={
-                            <>
-                                <Badge tone={row.statusTone} isDot>
-                                    {row.statusLabel}
-                                </Badge>
+            <Section
+                kind="list"
+                title={p.text.preview}
+                headingLevel={3}
+                items={p.rows.map((row): ListRowData => ({
+                    id: row.id,
+                    title: row.title,
+                    description: row.description,
+                    badges: [{ label: row.statusLabel, tone: row.statusTone, isDot: true }],
+                    detail:
+                        row.problems.length === 0 ? undefined : (
+                            <Cluster gap="inline">
                                 {row.problems.map((problem) => (
                                     <Badge key={problem.label} tone={problem.tone}>
                                         {problem.label}
                                     </Badge>
                                 ))}
-                            </>
-                        }
-                    />
-                ))}
-            </SurfaceListCard>
-        </>
+                            </Cluster>
+                        ),
+                }))}
+                empty={<EmptyNotice message={p.summary} />}
+            />
+        </Stack>
     )
 }
 
@@ -146,7 +151,7 @@ export const ContractImportDialog = (props: ContractImportDialogProps) => {
             description={p.text.intro}
             footer={<ContractImportDialogFooter {...props} />}
         >
-            <div className={classNames.body}>
+            <Stack gap="row">
                 <RadioGroup
                     label={p.text.source}
                     isDisabled={isBusy}
@@ -157,8 +162,8 @@ export const ContractImportDialog = (props: ContractImportDialogProps) => {
                 {p.source === "paste" ? <PasteSource {...props} /> : <FileSource {...props} />}
                 {p.error === null ? null : <Alert tone="negative" title={p.error} />}
                 {p.columns === null ? null : <ColumnPickers {...props} />}
-                {p.summary === null ? null : <PreviewRows props={p} />}
-            </div>
+                {p.summary === null ? null : <PreviewRows props={{ ...p, summary: p.summary }} />}
+            </Stack>
         </Dialog>
     )
 }

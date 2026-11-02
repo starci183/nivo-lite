@@ -9,8 +9,8 @@ import { queryVideoMedia } from "@/modules/api/graphql/queries/query-video-media
 export const QUERY_VIDEO_MEDIA_SWR_KEY = "QUERY_VIDEO_MEDIA_SWR"
 
 /** The media library of the video editor. */
-export const useQueryVideoMediaSwr = () =>
+export const useQueryVideoMediaSwr = (isActive = true) =>
     useSWR(
-        useWorkspaceParamsKey(QUERY_VIDEO_MEDIA_SWR_KEY, [] as const),
+        useWorkspaceParamsKey(QUERY_VIDEO_MEDIA_SWR_KEY, isActive ? ([] as const) : null),
         async () => answeredData(await queryVideoMedia(), QUERY_VIDEO_MEDIA_SWR_KEY).videoMedia,
     )

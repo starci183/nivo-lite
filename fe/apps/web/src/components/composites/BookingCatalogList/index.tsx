@@ -1,8 +1,8 @@
-import { Button, List, ListRow, Text } from "@starci/grammar/common"
-import { ACTIONS_CLASS } from "./classNames"
+import { EmptyNotice, Section, type ListRowData } from "@starci/grammar/common"
 
 /** What the list of a setup region draws and reports. */
 type BookingCatalogListProps = {
+    readonly isLoading: boolean
     readonly label: string
     readonly emptyText: string
     readonly rows: ReadonlyArray<{ readonly id: string; readonly title: string; readonly detail: string }>
@@ -13,43 +13,38 @@ type BookingCatalogListProps = {
     readonly onRemove: (id: string) => void
 }
 
-/** The rows of a setup region: each one says what it is and offers to edit or remove it; a line says so when there is none. */
-export const BookingCatalogList = (props: BookingCatalogListProps) =>
-    props.rows.length === 0 ? (
-        <Text size="sm" tone="muted">
-            {props.emptyText}
-        </Text>
-    ) : (
-        <List label={props.label}>
-            {props.rows.map((row) => (
-                <ListRow
-                    key={row.id}
-                    title={row.title}
-                    description={row.detail}
-                    actions={
-                        <div className={ACTIONS_CLASS}>
-                            {props.editLabel === undefined ? null : (
-                                <Button
-                                    size="sm"
-                                    intent="neutral"
-                                    isDisabled={props.isPending}
-                                    onPress={() => props.onEdit(row.id)}
-                                >
-                                    {props.editLabel}
-                                </Button>
-                            )}
-                            <Button
-                                size="sm"
-                                intent="destructive"
-                                step="entry"
-                                isDisabled={props.isPending}
-                                onPress={() => props.onRemove(row.id)}
-                            >
-                                {props.removeLabel}
-                            </Button>
-                        </div>
-                    }
-                />
-            ))}
-        </List>
-    )
+/** The rows of a setup region with their edit action and removal menu. */
+export const BookingCatalogList = (props: BookingCatalogListProps) => (
+    <Section
+        kind="list"
+        title={props.label}
+        isLoading={props.isLoading}
+        empty={<EmptyNotice message={props.emptyText} />}
+        items={props.rows.map((row): ListRowData => ({
+            id: row.id,
+            title: row.title,
+            description: row.detail,
+            ...(props.editLabel === undefined
+                ? {}
+                : {
+                      action: {
+                          label: props.editLabel,
+                          isDisabled: props.isPending,
+                          press: () => props.onEdit(row.id),
+                      },
+                  }),
+            menu: {
+                label: `${props.removeLabel} ${row.title}`,
+                entries: [
+                    {
+                        id: "remove",
+                        label: props.removeLabel,
+                        tone: "danger",
+                        isDisabled: props.isPending,
+                        onAction: () => props.onRemove(row.id),
+                    },
+                ],
+            },
+        }))}
+    />
+)

@@ -1,8 +1,6 @@
-import { Button, SurfaceCard } from "@starci/grammar/common"
+import { Button, SurfaceCard, Stack, Grid } from "@starci/grammar/common"
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
 import type { CategoryTextField, CategoryValues } from "@/modules/types"
-import { FIELD_TRIPLE_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
-
 /** What one category rule card of the programme settings draws and reports. */
 type LoyaltyCategoryCardProps = {
     readonly category: CategoryValues
@@ -23,8 +21,8 @@ export const LoyaltyCategoryCard = (props: LoyaltyCategoryCardProps) => {
     const { category } = props
     return (
         <SurfaceCard ariaLabel={props.ariaLabel}>
-            <div className={FORM_CLASS_NAME}>
-                <div className={FIELD_TRIPLE_CLASS_NAME}>
+            <Stack gap="row">
+                <Grid kind="form" columns={2}>
                     <LoyaltyField
                         id={`lp-cat-match-${category.uid}`}
                         label={props.matchLabel}
@@ -46,7 +44,7 @@ export const LoyaltyCategoryCard = (props: LoyaltyCategoryCardProps) => {
                         isDisabled={props.isDisabled}
                         onChange={(value) => props.onChange(category.uid, "label", value)}
                     />
-                </div>
+                </Grid>
                 {props.canRemove ? (
                     <div>
                         <Button
@@ -60,7 +58,7 @@ export const LoyaltyCategoryCard = (props: LoyaltyCategoryCardProps) => {
                         </Button>
                     </div>
                 ) : null}
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 }

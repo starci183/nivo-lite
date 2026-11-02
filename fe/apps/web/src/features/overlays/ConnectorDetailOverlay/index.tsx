@@ -26,7 +26,7 @@ import {
     boardSlotOf,
 } from "@/hooks/connections"
 import { webSiteOrigin } from "@/modules/config"
-import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
+import { slotOfReads, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import type { AgentOption, Connection } from "@/modules/types"
 import { ConnectorDetailOverlayBase, detailRowsOf } from "./component"
 import type { DetailEntry } from "./component"
@@ -59,7 +59,8 @@ interface ConnectionsOverlayHostProps {
 export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
     const t = useTranslations("connections")
     const slotLabelsOf = useSlotLabels()
-    const { role, isLoading: isRoleLoading } = useConnectionsRole()
+    const access = useConnectionsRole()
+    const { role } = access
     // The signed-in person only prefills the SMTP test recipient: the board never waits on it.
     const user = slotOfSwr(useQueryAuthUserSwr())
     const data = useConnectionsData()
@@ -71,7 +72,7 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
         connection.agentIds.map((id) => data.agentNames[id]).filter((name): name is string => name !== undefined)
     const board: ConnectionsBoard = {
         view: showsLibrary ? "library" : "connected",
-        ownerEmail: user.items?.email ?? "",
+        ownerEmail: ("items" in user ? user.items?.email : undefined) ?? "",
         canManage: role === "owner",
         localOnly: isLocalOnly(webSiteOrigin()),
         items: data.items,
@@ -81,15 +82,17 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
         attentions: attention.map((connection) => ({ connection, agentNames: namesOf(connection) })),
         rows: sortRows(live).map((connection) => ({ connection, agentNames: namesOf(connection) })),
     }
-    const slot = boardSlotOf(
-        {
-            isLoading: isRoleLoading || (manager && data.isLoading),
-            isManager: manager,
-            isFailed: data.failed,
-        },
-        board,
-    )
-    const isReady = slot.items !== undefined
+    const readSlot = slotOfReads([access.read, ...data.reads], () => board)
+    // Read status is already settled before the access-only decision is folded.
+    const slot =
+        "items" in readSlot
+            ? boardSlotOf({ isLoading: false, isManager: manager, isFailed: false }, readSlot.items)
+            : readSlot
+    const isReady = "items" in slot
+    const retry = () => {
+        access.retry()
+        data.retry()
+    }
     return (
         <>
             <ConnectionsOverview
@@ -110,7 +113,7 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
                     placeholderView: props.tab === "library" ? "library" : "connected",
                     gateway: <RenderGateway isEnabled={isReady && manager} />,
                 }}
-                on={{ retry: data.retry }}
+                on={{ retry }}
                 renderAttention={renderAttention}
                 renderLibrary={renderLibrary}
                 renderRow={renderRow}

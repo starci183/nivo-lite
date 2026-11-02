@@ -57,6 +57,14 @@ describe("SetupGraphService with a graph", () => {
         await expect(found.service.seatNamed("ws-1", "Nam")).resolves.toBe("nam")
         await expect(lost.service.seatNamed("ws-1", "Nobody")).resolves.toBeNull()
     })
+
+    it("asks the graph for the contracts the applied setup calls for", async () => {
+        const { service, graph } = await build({ proposeContracts: jest.fn().mockResolvedValue(3) })
+
+        await expect(service.proposeContracts(APPLIER)).resolves.toBe(3)
+
+        expect(graph.proposeContracts).toHaveBeenCalledWith(APPLIER)
+    })
 })
 
 describe("SetupGraphService checkPublish", () => {
@@ -82,6 +90,7 @@ describe("SetupGraphService with no graph", () => {
         await expect(service.requireWhole("ws-1", "inst-1")).resolves.toBeUndefined()
         await expect(service.checkPublish(APPLICANT)).resolves.toBe(0)
         await expect(service.publish(APPLIER)).resolves.toBeUndefined()
+        await expect(service.proposeContracts(APPLIER)).resolves.toBe(0)
         await expect(service.seatNamed("ws-1", "Nam")).resolves.toBeNull()
     })
 })

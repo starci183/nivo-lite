@@ -15,7 +15,7 @@ export const QUERY_LESSON_MINING_STATUS_SWR_KEY = "QUERY_LESSON_MINING_STATUS_SW
  */
 export const useQueryLessonMiningStatusSwr = (
     id: string | undefined,
-    onStatus?: (status: LessonMiningStatusType) => void,
+    onStatus?: (status: LessonMiningStatusType) => void | Promise<void>,
 ) => {
     const key = useWorkspaceKey(QUERY_LESSON_MINING_STATUS_SWR_KEY, [id ?? ""], id !== undefined)
     return useSWR(

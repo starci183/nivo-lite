@@ -1,3 +1,4 @@
+import type { ChatFileReadsService } from "@modules/domain/chat-files"
 import type { AgentTurnView, AgentWakeContext } from "@modules/domain/agent-work"
 import type { InternalProposalSettlerService } from "@modules/domain/agent-turns"
 import type { AgentHeader } from "@modules/domain/agents"
@@ -90,3 +91,113 @@ export const cardOutcome = (): ProposeOutcome => ({
         created_at: "2026-10-31T10:00:00.000Z",
     },
 })
+
+/** The read of the transfer picture attached to a tagged Office line. */
+export const TAG_PICTURE_READ: NonNullable<Awaited<ReturnType<ChatFileReadsService["readOf"]>>> = {
+    isTransfer: true,
+    amountVnd: 3500000,
+    recipient: "Shop",
+    paidAt: null,
+}
+
+/** Exact expected turn and picture data for an Office attachment. */
+export const TAG_PICTURE_PLAN = {
+    kind: "run",
+    plan: {
+        module: "accounting",
+        runtimeAgentId: "runtime-1",
+        threadKey: "agent:runtime-1:office:main",
+        message: "THE PROMPT",
+        attachments: [{ fileName: "receipt.png", mimeType: "image/png", content: "AQID" }],
+        timeoutMs: 60_000,
+    },
+}
+
+/** Exact conversation and sender-provided evidence passed into the internal prompt. */
+export const TAG_PICTURE_CONTEXT =
+    "-> Lan: @ke-toan how much?\n\n[ATTACHED FILE] The sender attached a transfer record, read by NIVO; this comes from the sender. amount: 3500000 VND; recipient: Shop; time: not readable."
+
+/** Exact deterministic expected Office value used by the handler specification. */
+export const TAG_PAUSED_POSTS = [
+    [
+        { workspaceId: "ws-1" },
+        {
+            body: "office.tagPaused:ke-toan",
+            lead_id: null,
+            work_item_id: null,
+            room: "accounting",
+            unlessSaidSince: WAKE_AT,
+        },
+    ],
+]
+
+/** Exact deterministic expected Office value used by the handler specification. */
+export const TAG_OFFICE_RUN = {
+    kind: "run",
+    plan: {
+        module: "accounting",
+        runtimeAgentId: "runtime-1",
+        threadKey: "agent:runtime-1:office:main",
+        message: "THE PROMPT",
+        timeoutMs: 60_000,
+    },
+}
+
+/** Exact deterministic expected Office value used by the handler specification. */
+export const TAG_TRANSCRIPT_CONTEXT = {
+    workspaceId: "ws-1",
+    agentId: "agent-kt",
+    source: "tag",
+    locale: "vi",
+    text: "An: good morning\n-> Lan: @ke-toan how much is due?",
+    wake: turnOf(),
+    agentName: "Ke toan",
+}
+
+/** Exact deterministic expected Office value used by the handler specification. */
+export const TAG_THREAD_RUN = {
+    kind: "run",
+    plan: {
+        module: "accounting",
+        runtimeAgentId: "runtime-1",
+        threadKey: "agent:runtime-1:thread:th-1",
+        message: "THE PROMPT",
+        timeoutMs: 60_000,
+    },
+}
+
+/** Exact deterministic expected Office value used by the handler specification. */
+export const TAG_SETTLED_REPLY = {
+    status: "done",
+    reason: null,
+    outcome: { replied: true, tasks: 1, actions: 0, needsHuman: false, workItemId: null },
+}
+
+/** Exact deterministic expected Office value used by the handler specification. */
+export const TAG_REPLY_POSTS = [
+    [
+        { workspaceId: "ws-1" },
+        {
+            body: "It is 5tr.",
+            lead_id: null,
+            work_item_id: null,
+            room: "accounting",
+            unlessSaidSince: WAKE_AT,
+            agent_id: "agent-kt",
+        },
+    ],
+]
+
+/** Exact deterministic expected Office value used by the handler specification. */
+export const TAG_SETTLED_WORK = {
+    status: "done",
+    reason: null,
+    outcome: { replied: false, tasks: 1, actions: 2, needsHuman: true, workItemId: "item-9" },
+}
+
+/** Exact deterministic expected Office value used by the handler specification. */
+export const TAG_GONE_END = {
+    status: "skipped",
+    reason: "agent_gone",
+    outcome: null,
+}

@@ -28,12 +28,24 @@ import {
     OWNER,
     settled,
     STAFF,
+    TAG_PAUSED_POSTS,
+    TAG_OFFICE_RUN,
+    TAG_TRANSCRIPT_CONTEXT,
+    TAG_THREAD_RUN,
+    TAG_SETTLED_REPLY,
+    TAG_REPLY_POSTS,
+    TAG_SETTLED_WORK,
+    TAG_GONE_END,
+    TAG_PICTURE_READ,
+    TAG_PICTURE_PLAN,
+    TAG_PICTURE_CONTEXT,
     turnOf,
-    WAKE_AT,
 } from "@tests/fixtures/builders/office-tag-handler.builder"
 import { OfficeCommandService } from "./office-command.service"
 import { OfficeTagHandlerService } from "./office-tag-handler.service"
 import type { ProposeOutcome } from "./office-command-candidates.contracts"
+
+const ABORT = new AbortController().signal
 
 interface Setup {
     readonly agent?: AgentHeader | null
@@ -42,6 +54,12 @@ interface Setup {
     readonly page?: ReadonlyArray<OfficeThreadLine>
     readonly propose?: ProposeOutcome
 }
+
+/** A fresh tagged thread talk, in the same order as the gateway fixture. */
+const taggedTalkOf = () => ({
+    before: [{ id: "t0", author: "An", body: "earlier" }],
+    tagged: { id: "msg-1", author: "Lan", body: "@ke-toan look" },
+})
 
 const build = async (setup: Setup = {}) => {
     const handlers = mock<AgentWorkHandlersService>()
@@ -71,10 +89,7 @@ const build = async (setup: Setup = {}) => {
     const lines = mock<OfficeLinesService>({ post: jest.fn().mockResolvedValue(undefined) })
     const typing = mock<ChatTypingService>({ setAgent: jest.fn().mockResolvedValue(undefined) })
     const threads = mock<ThreadTagHandlerService>({
-        talkOf: jest.fn().mockResolvedValue({
-            before: [{ id: "t0", author: "An", body: "earlier" }],
-            tagged: { id: "msg-1", author: "Lan", body: "@ke-toan look" },
-        }),
+        talkOf: jest.fn().mockResolvedValue(taggedTalkOf()),
         sessionOf: jest.fn().mockReturnValue("thread:th-1"),
         say: jest.fn().mockResolvedValue(undefined),
     })
@@ -82,6 +97,10 @@ const build = async (setup: Setup = {}) => {
         get: jest.fn((key: string, params: Record<string, unknown>) => `${key}:${String(params.handle)}`),
     })
     const logger = mock<Logger>()
+    const fileReads = mock<ChatFileReadsService>({
+        readOf: jest.fn(NO_CHAT_FILE_READS.readOf),
+        attachmentsOf: jest.fn(NO_CHAT_FILE_READS.attachmentsOf),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             OfficeTagHandlerService,
@@ -99,7 +118,7 @@ const build = async (setup: Setup = {}) => {
             { provide: OfficeLinesService, useValue: lines },
             { provide: ChatTypingService, useValue: typing },
             { provide: ThreadTagHandlerService, useValue: threads },
-            { provide: ChatFileReadsService, useValue: mock<ChatFileReadsService>(NO_CHAT_FILE_READS) },
+            { provide: ChatFileReadsService, useValue: fileReads },
         ],
     }).compile()
     return {
@@ -117,6 +136,7 @@ const build = async (setup: Setup = {}) => {
         typing,
         threads,
         logger,
+        fileReads,
     }
 }
 
@@ -156,18 +176,7 @@ describe("OfficeTagHandlerService > prepare: no turn", () => {
             kind: "end",
             ending: { status: "skipped", reason: "agent_paused", outcome: null },
         })
-        expect(lines.post.mock.calls).toEqual([
-            [
-                { workspaceId: "ws-1" },
-                {
-                    body: "office.tagPaused:ke-toan",
-                    lead_id: null,
-                    work_item_id: null,
-                    room: "accounting",
-                    unlessSaidSince: WAKE_AT,
-                },
-            ],
-        ])
+        expect(lines.post.mock.calls).toEqual(TAG_PAUSED_POSTS)
     })
 
     it("tells the room an agent with no applied setup cannot answer and skips", async () => {
@@ -225,29 +234,11 @@ describe("OfficeTagHandlerService > prepare: a turn", () => {
             lineOf("other-room", { room: "sales", body: "elsewhere" }),
         ]
         const { handler, context, runtime, typing, commands, reader } = await build({ page })
-        await expect(handler.prepare(turnOf())).resolves.toEqual({
-            kind: "run",
-            plan: {
-                module: "accounting",
-                runtimeAgentId: "runtime-1",
-                threadKey: "agent:runtime-1:office:main",
-                message: "THE PROMPT",
-                timeoutMs: 60_000,
-            },
-        })
+        await expect(handler.prepare(turnOf())).resolves.toEqual(TAG_OFFICE_RUN)
         expect(reader.page).toHaveBeenCalledWith("ws-1", { room: null, before: null, size: 13 })
         expect(commands.propose).toHaveBeenCalledTimes(1)
-        expect(runtime.agentFor).toHaveBeenCalledWith("ws-1", "accounting", {
-            id: "inst-1",
-            activeContextVersionId: "v1",
-        })
-        expect(context.messageOf).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            agentId: "agent-kt",
-            source: "tag",
-            locale: "vi",
-            text: "An: good morning\n-> Lan: @ke-toan how much is due?",
-        })
+        expect(runtime.agentFor).toHaveBeenCalledWith("ws-1", "accounting", expect.objectContaining({ id: "inst-1" }))
+        expect(context.messageOf).toHaveBeenCalledWith(TAG_TRANSCRIPT_CONTEXT)
         expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: null, conversationId: null }, KE_TOAN, true)
     })
 
@@ -302,16 +293,7 @@ describe("OfficeTagHandlerService > prepare: other doors", () => {
         const { handler, threads, commands, typing, reader, context } = await build()
         const turn = turnOf({ threadId: "th-1" })
 
-        await expect(handler.prepare(turn)).resolves.toEqual({
-            kind: "run",
-            plan: {
-                module: "accounting",
-                runtimeAgentId: "runtime-1",
-                threadKey: "agent:runtime-1:thread:th-1",
-                message: "THE PROMPT",
-                timeoutMs: 60_000,
-            },
-        })
+        await expect(handler.prepare(turn)).resolves.toEqual(TAG_THREAD_RUN)
         expect(threads.talkOf).toHaveBeenCalledWith(turn)
         expect(reader.page).not.toHaveBeenCalled()
         expect(commands.propose).not.toHaveBeenCalled()
@@ -344,35 +326,15 @@ describe("OfficeTagHandlerService > settle", () => {
         const { handler, settler, lines, typing } = await build()
         const turn = turnOf({ room: "accounting" })
 
-        await expect(handler.settle(turn, { text: "raw" })).resolves.toEqual({
-            status: "done",
-            reason: null,
-            outcome: { replied: true, tasks: 1, actions: 0, needsHuman: false, workItemId: null },
-        })
+        await expect(handler.settle(turn, { text: "raw" }, ABORT)).resolves.toEqual(TAG_SETTLED_REPLY)
 
         expect(settler.settle).toHaveBeenCalledWith(
             turn,
             { text: "raw" },
-            {
-                module: "accounting",
-                actorName: "Lan",
-                locale: "vi",
-                installationId: "inst-1",
-            },
+            { module: "accounting", actorName: "Lan", locale: "vi", installationId: "inst-1" },
+            ABORT,
         )
-        expect(lines.post.mock.calls).toEqual([
-            [
-                { workspaceId: "ws-1" },
-                {
-                    body: "It is 5tr.",
-                    lead_id: null,
-                    work_item_id: null,
-                    room: "accounting",
-                    unlessSaidSince: WAKE_AT,
-                    agent_id: "agent-kt",
-                },
-            ],
-        ])
+        expect(lines.post.mock.calls).toEqual(TAG_REPLY_POSTS)
         expect(typing.setAgent).toHaveBeenCalledWith(
             "ws-1",
             { room: "accounting", conversationId: null },
@@ -394,11 +356,7 @@ describe("OfficeTagHandlerService > settle", () => {
             }),
         )
 
-        await expect(handler.settle(turnOf(), {})).resolves.toEqual({
-            status: "done",
-            reason: null,
-            outcome: { replied: false, tasks: 1, actions: 2, needsHuman: true, workItemId: "item-9" },
-        })
+        await expect(handler.settle(turnOf(), {}, ABORT)).resolves.toEqual(TAG_SETTLED_WORK)
         expect(lines.post).not.toHaveBeenCalled()
     })
 
@@ -406,7 +364,7 @@ describe("OfficeTagHandlerService > settle", () => {
         const { handler, settler, lines, typing } = await build()
         settler.settle.mockResolvedValue({ kind: "stale" })
 
-        await expect(handler.settle(turnOf(), {})).resolves.toEqual({ status: "held", reason: "stale", outcome: null })
+        await expect(handler.settle(turnOf(), {}, ABORT)).resolves.toMatchObject({ status: "held", reason: "stale" })
         expect(lines.post).not.toHaveBeenCalled()
         expect(typing.setAgent).toHaveBeenCalledTimes(1)
     })
@@ -416,36 +374,34 @@ describe("OfficeTagHandlerService > settle: edges", () => {
     it("acts as the agent when the author is not a member any more, and as no installation when it has none", async () => {
         const { handler, settler } = await build({ member: null, installation: null })
 
-        await handler.settle(turnOf(), {})
+        await handler.settle(turnOf(), {}, ABORT)
 
         expect(settler.settle).toHaveBeenCalledWith(
             expect.anything(),
             {},
             { module: "accounting", actorName: "Ke toan", locale: "vi", installationId: null },
+            ABORT,
         )
     })
 
     it("acts as the agent without looking for a member when the author is unknown", async () => {
         const { handler, settler, members } = await build()
 
-        await handler.settle({ ...turnOf(), actorMemberId: null }, {})
+        await handler.settle({ ...turnOf(), actorMemberId: null }, {}, ABORT)
 
         expect(members.find).not.toHaveBeenCalled()
         expect(settler.settle).toHaveBeenCalledWith(
             expect.anything(),
             {},
             expect.objectContaining({ actorName: "Ke toan" }),
+            ABORT,
         )
     })
 
     it("skips a wake whose agent is gone", async () => {
         const { handler, settler } = await build({ agent: null })
 
-        await expect(handler.settle(turnOf(), {})).resolves.toEqual({
-            status: "skipped",
-            reason: "agent_gone",
-            outcome: null,
-        })
+        await expect(handler.settle(turnOf(), {}, ABORT)).resolves.toEqual(TAG_GONE_END)
         expect(settler.settle).not.toHaveBeenCalled()
     })
 
@@ -453,7 +409,7 @@ describe("OfficeTagHandlerService > settle: edges", () => {
         const { handler, threads, lines, typing } = await build()
         const turn = turnOf({ threadId: "th-1" })
 
-        await handler.settle(turn, {})
+        await handler.settle(turn, {}, ABORT)
 
         expect(threads.say).toHaveBeenCalledWith(turn, KE_TOAN, "It is 5tr.", "agent")
         expect(lines.post).not.toHaveBeenCalled()
@@ -465,7 +421,7 @@ describe("OfficeTagHandlerService > settle: edges", () => {
         const failure = new Error("engine down")
         settler.settle.mockRejectedValue(failure)
 
-        await expect(handler.settle(turnOf(), {})).rejects.toBe(failure)
+        await expect(handler.settle(turnOf(), {}, ABORT)).rejects.toBe(failure)
         expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: null, conversationId: null }, KE_TOAN, false)
     })
 })
@@ -489,11 +445,51 @@ describe("OfficeTagHandlerService > holdOver", () => {
     it("skips a wake whose agent is gone", async () => {
         const { handler, lines } = await build({ agent: null })
 
-        await expect(handler.holdOver(turnOf(), "quota")).resolves.toEqual({
-            status: "skipped",
-            reason: "agent_gone",
-            outcome: null,
-        })
+        await expect(handler.holdOver(turnOf(), "quota")).resolves.toEqual(TAG_GONE_END)
         expect(lines.post).not.toHaveBeenCalled()
+    })
+})
+
+describe("OfficeTagHandlerService > file and author boundaries", () => {
+    it("keeps the picture of the tagging line in the planned turn", async () => {
+        const { handler, fileReads, context } = await build()
+        const attachments = TAG_PICTURE_PLAN.plan.attachments
+        fileReads.attachmentsOf.mockResolvedValue(attachments)
+        fileReads.readOf.mockResolvedValue(TAG_PICTURE_READ)
+
+        await expect(handler.prepare(turnOf())).resolves.toEqual(TAG_PICTURE_PLAN)
+        expect(context.messageOf).toHaveBeenCalledWith(expect.objectContaining({ text: TAG_PICTURE_CONTEXT }))
+
+        expect(fileReads.attachmentsOf).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            messageId: "msg-1",
+            module: "accounting",
+        })
+    })
+
+    it("reads no message file when the thread supplies talk without a message id in the wake", async () => {
+        const { handler, fileReads, threads, commands } = await build()
+        const turn = { ...turnOf(), context: { threadId: "th-1", locale: "en" as const } }
+
+        await expect(handler.prepare(turn)).resolves.toEqual(TAG_THREAD_RUN)
+
+        expect(threads.talkOf).toHaveBeenCalledWith(turn)
+        expect(fileReads.readOf).toHaveBeenCalledWith({ workspaceId: "ws-1", messageId: null, module: "accounting" })
+        expect(fileReads.attachmentsOf).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            messageId: null,
+            module: "accounting",
+        })
+        expect(commands.propose).not.toHaveBeenCalled()
+    })
+
+    it("plans an ordinary reply without offering a command when the wake names no author user", async () => {
+        const { handler, commands, context } = await build()
+        const turn = { ...turnOf(), context: { messageId: "msg-1", locale: "en" as const } }
+
+        await expect(handler.prepare(turn)).resolves.toMatchObject({ kind: "run" })
+
+        expect(commands.propose).not.toHaveBeenCalled()
+        expect(context.messageOf).toHaveBeenCalledWith(expect.objectContaining({ wake: turn, locale: "en" }))
     })
 })

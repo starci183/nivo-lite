@@ -11,6 +11,7 @@ import {
 import { useOpenApiWizardCommands } from "./useOpenApiWizardCommands"
 import { useConnectionsRefresh, useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
 import { useOpenApiAuthForm, type OpenApiAuthValues } from "@/hooks/rhf"
+import type { SlotRead } from "@/hooks/slot"
 
 import { useState } from "react"
 import { useOpenApiCommands } from "./useOpenApiCommands"
@@ -45,7 +46,11 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
 
     const steps = editing ? OPEN_API_EDIT_STEPS : OPEN_API_STEPS
     const step = steps[index] ?? "source"
-    const loadError = useOpenApiResume({
+    const {
+        error: loadError,
+        reads,
+        retry: retryReads,
+    } = useOpenApiResume({
         resumeId,
         authForm,
         restoreSource: source.restore,
@@ -90,6 +95,8 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         editing,
         error,
         loadError,
+        reads,
+        retryReads,
         isPending,
         auth: authForm.watch(),
         authForm,
@@ -112,7 +119,9 @@ type OpenApiWizardViewInput = {
     readonly step: OpenApiStep
     readonly editing: boolean
     readonly error: string | null
-    readonly loadError: ReturnType<typeof useOpenApiResume>
+    readonly loadError: string | null
+    readonly reads: ReadonlyArray<SlotRead<unknown>>
+    readonly retryReads: () => void
     readonly isPending: boolean
     readonly auth: OpenApiAuthValues
     readonly authForm: ReturnType<typeof useOpenApiAuthForm>
@@ -135,6 +144,8 @@ const viewOf = ({
     editing,
     error,
     loadError,
+    reads,
+    retryReads,
     isPending,
     auth,
     authForm,
@@ -150,6 +161,8 @@ const viewOf = ({
     onClose,
 }: OpenApiWizardViewInput) => {
     return {
+        reads,
+        retryReads,
         index,
         steps,
         step,

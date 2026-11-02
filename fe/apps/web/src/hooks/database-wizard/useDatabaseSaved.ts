@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { useQueryLoadDatabaseConnectionSwr } from "@/hooks/swr"
+import type { SlotRead } from "@/hooks/slot"
 import type { DbSavedConnection } from "@/modules/types"
 import { dbSavedOf } from "./database-wizard.shared"
 import { readError } from "@/hooks/workspaceread"
@@ -15,7 +16,9 @@ export const useDatabaseSaved = (connectionId: string | undefined) => {
     const { data, isLoading } = swrRead
     const error = readError(swrRead)
     const saved = useMemo<DbSavedConnection | null>(() => (data === undefined ? null : dbSavedOf(data)), [data])
+    const reads: ReadonlyArray<SlotRead<unknown>> = connectionId === undefined ? [] : [swrRead]
     return {
+        reads,
         saved,
         isLoading,
         error: error instanceof Error ? error.message : undefined,

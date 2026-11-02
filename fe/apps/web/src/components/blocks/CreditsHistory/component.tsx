@@ -1,4 +1,4 @@
-import { Badge, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { CreditsHistoryRow, DataSlot, SlotLabels } from "@/modules/types"
 
@@ -24,37 +24,27 @@ export const CreditsHistoryBase = (props: CreditsHistoryBaseProps) => {
     }))
     return (
         <div id="payments">
-            <SurfaceListCard label={props.props.title} headingLevel={2}>
-                <SlotView
-                    slot={props.props.slot}
-                    placeholder={placeholder}
-                    labels={props.props.labels}
-                    onRetry={props.on.retry}
-                >
-                    {(rows, isSkeleton) => (
-                        <>
-                            {rows.map((row) => (
-                                <ListRow
-                                    key={row.id}
-                                    title={<Text isSkeleton={isSkeleton}>{row.title}</Text>}
-                                    description={
-                                        <Text size="sm" isSkeleton={isSkeleton}>
-                                            {row.description}
-                                        </Text>
-                                    }
-                                    badges={
-                                        row.status ? (
-                                            <Badge tone={row.tone} isSkeleton={isSkeleton}>
-                                                {row.status}
-                                            </Badge>
-                                        ) : undefined
-                                    }
-                                />
-                            ))}
-                        </>
-                    )}
-                </SlotView>
-            </SurfaceListCard>
+            <SlotView
+                slot={props.props.slot}
+                placeholder={placeholder}
+                labels={props.props.labels}
+                onRetry={props.on.retry}
+                render={(rows, isLoading) => (
+                    <SurfaceCard
+                        kind="list"
+                        label={props.props.title}
+                        headingLevel={2}
+                        isLoading={isLoading}
+                        items={rows.map((row) => ({
+                            id: row.id,
+                            title: row.title,
+                            description: row.description,
+                            ...(row.status === "" ? {} : { badges: [{ label: row.status, tone: row.tone }] as const }),
+                        }))}
+                        empty={<EmptyNotice message={props.props.labels.empty} />}
+                    />
+                )}
+            />
         </div>
     )
 }

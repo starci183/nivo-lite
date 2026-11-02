@@ -18,7 +18,7 @@ type LandingProvidersProps = {
 export const LandingProviders = (props: LandingProvidersProps) => (
     <NextIntlClientProvider locale={props.locale} messages={props.messages} timeZone={props.timeZone}>
         <I18nProvider locale={intlTagOf(props.locale)}>
-            <GrammarRoot theme="light">{props.children}</GrammarRoot>
+            <GrammarRoot>{props.children}</GrammarRoot>
         </I18nProvider>
     </NextIntlClientProvider>
 )

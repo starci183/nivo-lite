@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server"
-import { isUuid } from "@/hooks/video"
+import { isUuid } from "@/modules/video"
 import { VideoWorkbenchPageBase } from "./component"
 
 /** Route selections and installation of the video workbench. */

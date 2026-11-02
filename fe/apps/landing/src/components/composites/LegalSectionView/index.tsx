@@ -1,4 +1,4 @@
-import { Heading, List, ListItem, Region, Stack, Text, TextAction } from "@starci/grammar/common"
+import { EmptyNotice, Link, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 
 /** The Google Limited Use statement, quoted verbatim, with its link and a note. */
 interface LegalSectionLimitedUse {
@@ -19,20 +19,18 @@ interface LegalSectionViewProps {
 
 /** A titled section: paragraphs, a list, closing paragraphs and, for Google data, the Limited Use statement. */
 export const LegalSectionView = (props: LegalSectionViewProps) => (
-    <Region id={props.id} label={props.title}>
+    <Section id={props.id} title={props.title}>
         <Stack gap="row">
-            <Heading level={2}>{props.title}</Heading>
             {props.paragraphs.map((paragraph) => (
                 <Text key={paragraph}>{paragraph}</Text>
             ))}
             {props.items.length === 0 ? null : (
-                <List label={props.title}>
-                    {props.items.map((item) => (
-                        <ListItem key={item}>
-                            <Text>{item}</Text>
-                        </ListItem>
-                    ))}
-                </List>
+                <SurfaceCard
+                    kind="list"
+                    ariaLabel={props.title}
+                    items={props.items.map((item, index) => ({ id: `${props.id}-${index}`, title: item }))}
+                    empty={<EmptyNotice message={props.title} />}
+                />
             )}
             {props.afterItems.map((paragraph) => (
                 <Text key={paragraph}>{paragraph}</Text>
@@ -41,13 +39,13 @@ export const LegalSectionView = (props: LegalSectionViewProps) => (
                 <>
                     <Text>{props.limitedUse.sentence}</Text>
                     <Text size="sm">
-                        <TextAction href={props.limitedUse.policyUrl} target="_blank" rel="noopener noreferrer">
+                        <Link kind="external" href={props.limitedUse.policyUrl}>
                             {props.limitedUse.policyUrl}
-                        </TextAction>
+                        </Link>
                     </Text>
                     {props.limitedUse.note === "" ? null : <Text tone="muted">{props.limitedUse.note}</Text>}
                 </>
             )}
         </Stack>
-    </Region>
+    </Section>
 )

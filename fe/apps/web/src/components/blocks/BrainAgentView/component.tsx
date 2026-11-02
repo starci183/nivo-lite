@@ -1,10 +1,9 @@
-import { Avatar, DataTable, IncludedMark, SectionHeader, Stack, Text } from "@starci/grammar/common"
+import { Avatar, Cluster, DataTable, EmptyNotice, Section, Text } from "@starci/grammar/common"
 import type { DataTableRow } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
+import { Icon } from "@/components/leaves/Icon"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { CELL_CLASS_NAME } from "./classNames"
-
 /** One audience of the matrix: the customer, or an installed agent by its human name. */
 export interface AudienceView {
     readonly id: string
@@ -47,6 +46,8 @@ export interface BrainAgentViewBaseProps {
     readonly props: {
         readonly title: string
         readonly hint: string
+        /** Where the audience of a document is decided: never by flipping an internal document. */
+        readonly footer: string
         readonly tableLabel: string
         readonly laneLabel: string
         readonly whoLabel: string
@@ -68,7 +69,7 @@ const IDENTITY_ROW_ID = "identity"
 interface MatrixTableProps {
     readonly view: BrainAgentViewBaseProps["props"]
     readonly matrix: MatrixView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** Draws the table of one matrix: the identities of the audiences, then a mark or a dash per cell. */
@@ -97,10 +98,10 @@ const MatrixTable = (props: MatrixTableProps) => {
         const cell = row.lane.cells[audience.id]
         if (!cell?.isOpen) return <Text tone="muted">–</Text>
         return (
-            <div className={CELL_CLASS_NAME}>
-                <IncludedMark label={view.openLabel} />
+            <Cluster gap="inline">
+                <Icon props={{ name: "copied", usage: "leading", ariaLabel: view.openLabel }} />
                 {cell.count === null ? null : <Text>{String(cell.count)}</Text>}
-            </div>
+            </Cluster>
         )
     }
     return (
@@ -112,27 +113,24 @@ const MatrixTable = (props: MatrixTableProps) => {
             ]}
             rows={rows}
             renderCell={renderCell}
-            isLoading={props.isSkeleton}
-            loadingRows={rows.length}
-            emptyContent={null}
+            isLoading={props.isLoading}
+            emptyContent={<EmptyNotice message={view.slotLabels.empty} />}
         />
     )
 }
 
 /** Draws what each audience (the customer and every installed agent) reads of the shared knowledge: a mark or a dash per cell, a comparison, so the table stands in the section with no card. */
 export const BrainAgentViewBase = (props: BrainAgentViewBaseProps) => (
-    <Stack gap="row">
-        <SectionHeader level={2} title={props.props.title} />
+    <Section title={props.props.title} description={props.props.hint}>
         <SlotView
             slot={props.props.matrix}
             placeholder={MATRIX_PLACEHOLDER}
             labels={props.props.slotLabels}
             onRetry={props.on.retry}
-        >
-            {(matrix, isSkeleton) => <MatrixTable view={props.props} matrix={matrix} isSkeleton={isSkeleton} />}
-        </SlotView>
+            render={(matrix, isLoading) => <MatrixTable view={props.props} matrix={matrix} isLoading={isLoading} />}
+        />
         <Text size="sm" tone="muted">
-            {props.props.hint}
+            {props.props.footer}
         </Text>
-    </Stack>
+    </Section>
 )

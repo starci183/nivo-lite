@@ -1,10 +1,10 @@
-import { Alert } from "@starci/grammar/common"
+import { Stack, Grid, Alert } from "@starci/grammar/common"
+
 import { CreditsBalance } from "@/components/composites/CreditsBalance"
 import { CreditsCatalogue } from "@/components/composites/CreditsCatalogue"
 import { CreditsUpgrade } from "@/components/composites/CreditsUpgrade"
 import { SlotView } from "@/components/composites/SlotView"
 import type { CreditsOverviewView, DataSlot, PayTarget, SlotLabels } from "@/modules/types"
-import { COLUMNS_CLASS_NAME, PAGE_CLASS_NAME } from "./classNames"
 
 /** The resolved words of the overview. */
 interface CreditsOverviewLabels {
@@ -36,13 +36,17 @@ type CreditsOverviewBaseProps = {
 export const CreditsOverviewBase = (props: CreditsOverviewBaseProps) => {
     const copy = props.props
     return (
-        <div className={PAGE_CLASS_NAME}>
-            <SlotView slot={copy.slot} placeholder={copy.view} labels={copy.slotLabels} onRetry={props.on.retry}>
-                {(view, isSkeleton) => (
+        <Stack gap="section">
+            <SlotView
+                slot={copy.slot}
+                placeholder={copy.view}
+                labels={copy.slotLabels}
+                onRetry={props.on.retry}
+                render={(view, isLoading) => (
                     <>
-                        {view.canBuy || isSkeleton ? null : <Alert tone="informative" title={view.staffNote} />}
-                        <CreditsBalance props={{ balance: view.balance, label: copy.labels.balance, isSkeleton }} />
-                        <div className={COLUMNS_CLASS_NAME}>
+                        {view.canBuy ? null : <Alert tone="informative" title={view.staffNote} isLoading={isLoading} />}
+                        <CreditsBalance props={{ balance: view.balance, label: copy.labels.balance, isLoading }} />
+                        <Grid kind="cards" columns={2}>
                             <CreditsCatalogue
                                 props={{
                                     packs: view.packs,
@@ -51,8 +55,7 @@ export const CreditsOverviewBase = (props: CreditsOverviewBaseProps) => {
                                     fact: copy.labels.topupFact,
                                     buy: copy.labels.buy,
                                     empty: copy.labels.emptyPacks,
-                                    loading: copy.labels.loading,
-                                    isSkeleton,
+                                    isLoading,
                                 }}
                                 on={{ buy: props.on.buy }}
                             />
@@ -65,14 +68,14 @@ export const CreditsOverviewBase = (props: CreditsOverviewBaseProps) => {
                                     plansCta: copy.labels.plansCta,
                                     plansHref: copy.labels.plansHref,
                                     loading: copy.labels.loading,
-                                    isSkeleton,
+                                    isLoading: isLoading,
                                 }}
                                 on={{ upgrade: props.on.buy }}
                             />
-                        </div>
+                        </Grid>
                     </>
                 )}
-            </SlotView>
-        </div>
+            />
+        </Stack>
     )
 }

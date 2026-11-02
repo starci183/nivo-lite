@@ -30,8 +30,8 @@ export const AgentLiveCard = (props: AgentLiveCardProps) => {
     const { slot, reload } = useAgentInstallation(props.installationId, props.module)
     const [chosen, setChosen] = useState<boolean | null>(null)
     const { choose, isSaving } = useChooseLive(props.installationId)
-    const isLive = chosen ?? slot.items?.isLive ?? false
-    const hasVersion = slot.items?.hasVersion === true
+    const isLive = chosen ?? ("items" in slot ? slot.items : undefined)?.isLive ?? false
+    const hasVersion = ("items" in slot ? slot.items : undefined)?.hasVersion === true
     const change = async (next: boolean) => {
         setChosen(next)
         await choose(next)

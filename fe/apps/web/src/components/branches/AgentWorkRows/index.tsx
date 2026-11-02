@@ -1,4 +1,4 @@
-import { List, ListRow, Text } from "@starci/grammar/common"
+import { Cluster, EmptyNotice, Section } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
 /** One row of a list of the Work tab: a title, one supporting line, a badge and the commands at its end. */
@@ -15,30 +15,30 @@ interface AgentWorkRow {
 interface AgentWorkRowsProps {
     readonly words: { readonly label: string; readonly emptyMessage: string }
     readonly rows: ReadonlyArray<AgentWorkRow>
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** Draws one list of the Work tab (goals, tasks, triggers, turns): its rows, or one line saying it is empty. */
 export const AgentWorkRows = (props: AgentWorkRowsProps) => {
-    if (props.rows.length === 0) {
-        return (
-            <Text size="sm" tone="muted">
-                {props.words.emptyMessage}
-            </Text>
-        )
-    }
     return (
-        <List label={props.words.label}>
-            {props.rows.map((row) => (
-                <ListRow
-                    key={row.id}
-                    isSkeleton={props.isSkeleton}
-                    title={row.title}
-                    description={row.facts.filter((fact) => fact !== "").join(" · ")}
-                    badges={row.badges}
-                    actions={row.actions}
-                />
-            ))}
-        </List>
+        <Section
+            kind="list"
+            title={props.words.label}
+            count={props.rows.length}
+            isLoading={props.isLoading}
+            empty={<EmptyNotice message={props.words.emptyMessage} />}
+            items={props.rows.map((row) => ({
+                id: row.id,
+                title: row.title,
+                description: row.facts.filter((fact) => fact !== "").join(" · "),
+                detail:
+                    row.badges === undefined && row.actions === undefined ? null : (
+                        <Cluster gap="inline" justify="between">
+                            {row.badges}
+                            {row.actions}
+                        </Cluster>
+                    ),
+            }))}
+        />
     )
 }

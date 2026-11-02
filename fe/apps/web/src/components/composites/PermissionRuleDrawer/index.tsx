@@ -1,11 +1,10 @@
-import { Button, CheckboxGroup, Drawer, SegmentedControl } from "@starci/grammar/common"
+import { Button, CheckboxGroup, Cluster, Drawer, SegmentedControl, Stack } from "@starci/grammar/common"
+import type { ReactNode } from "react"
 import { PermissionBandsFields } from "@/components/branches/PermissionBandsFields"
 import type { PermissionBandsFieldsProps } from "@/components/branches/PermissionBandsFields"
-import { PermissionGrantsFields } from "@/components/branches/PermissionGrantsFields"
 import type { PermissionGrantsFieldsProps } from "@/components/branches/PermissionGrantsFields"
 import { PermissionGroupFields } from "@/components/branches/PermissionGroupFields"
 import type { PermissionGroupFieldsProps } from "@/components/branches/PermissionGroupFields"
-import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** One choice of a list, already worded. */
 interface ChoiceView {
@@ -42,11 +41,11 @@ type DrawerCopy = PermissionBandsFieldsProps["props"]["copy"] &
 
 /** The words and state of the rule drawer. */
 export interface PermissionRuleDrawerProps {
+    readonly shape: { readonly grants: ReactNode }
     readonly props: {
         /** The rule being changed, already worded: the action and the department. */
         readonly title: string
         readonly draft: DraftView
-        readonly grants: PermissionGrantsFieldsProps["props"]["grants"]
         /** Only the owner hands out approval limits. */
         readonly canGrant: boolean
         readonly canSave: boolean
@@ -100,10 +99,7 @@ const AskedFields = (props: PermissionRuleDrawerProps) => {
                 }}
                 on={on}
             />
-            <PermissionGrantsFields
-                props={{ grants: p.grants, canGrant: p.canGrant, copy: p.copy }}
-                on={{ enabled: on.grantEnabled, max: on.grantMax }}
-            />
+            {props.shape.grants}
         </>
     )
 }
@@ -123,8 +119,18 @@ export const PermissionRuleDrawer = (props: PermissionRuleDrawerProps) => {
             description={p.copy.drawerDesc}
             closeLabel={p.copy.close}
             placement="right"
+            footer={
+                <Cluster gap="inline">
+                    <Button intent="dismiss" isDisabled={p.isPending} onPress={on.close}>
+                        {p.copy.cancel}
+                    </Button>
+                    <Button intent="commit" isPending={p.isPending} isDisabled={!p.canSave} onPress={on.save}>
+                        {p.copy.save}
+                    </Button>
+                </Cluster>
+            }
         >
-            <div className={FORM_CLASS_NAME}>
+            <Stack gap="row">
                 <CheckboxGroup
                     label={p.copy.agentsLabel}
                     description={p.copy.agentsHint}
@@ -155,15 +161,7 @@ export const PermissionRuleDrawer = (props: PermissionRuleDrawerProps) => {
                     />
                 ) : null}
                 {asks ? <AskedFields {...props} /> : null}
-                <div className={ACTIONS_CLASS_NAME}>
-                    <Button intent="commit" isPending={p.isPending} isDisabled={!p.canSave} onPress={on.save}>
-                        {p.copy.save}
-                    </Button>
-                    <Button intent="neutral" isDisabled={p.isPending} onPress={on.close}>
-                        {p.copy.cancel}
-                    </Button>
-                </div>
-            </div>
+            </Stack>
         </Drawer>
     )
 }

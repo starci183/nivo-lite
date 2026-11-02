@@ -1,11 +1,10 @@
-import { Button } from "@starci/grammar/common"
-import type { InventorySay } from "@/modules/types"
-import { ACTIONS_CLASS_NAME } from "./classNames"
+import type { InventoryPoEditorData } from "@/modules/types"
+import { Cluster, Button } from "@starci/grammar/common"
 
 /** The words and flags of the order drawer buttons. */
 interface InventoryPoActionsProps {
     readonly props: {
-        readonly say: InventorySay
+        readonly copy: InventoryPoEditorData["copy"]
         readonly supplierChosen: boolean
         readonly canEdit: boolean
         readonly canApprove: boolean
@@ -71,14 +70,14 @@ const ActionPair = (props: ActionPairProps) => (
 const EditActions = (props: InventoryPoActionsProps) => (
     <ActionPair
         first={{
-            label: props.props.say("poSendForApproval"),
+            label: props.props.copy.poSendForApproval,
             intent: "commit",
             isPending: props.props.isPending,
             isDisabled: !props.props.supplierChosen,
             onPress: props.on.sendForApproval,
         }}
         second={{
-            label: props.props.say("poSaveDraft"),
+            label: props.props.copy.poSaveDraft,
             intent: "alternative",
             isDisabled: props.props.isPending,
             onPress: props.on.saveDraft,
@@ -90,13 +89,13 @@ const EditActions = (props: InventoryPoActionsProps) => (
 const ApproveActions = (props: InventoryPoActionsProps) => (
     <ActionPair
         first={{
-            label: props.props.say("approveAndSend"),
+            label: props.props.copy.approveAndSend,
             intent: "commit",
             isPending: props.props.isPending,
             onPress: props.on.approve,
         }}
         second={{
-            label: props.props.say("reject"),
+            label: props.props.copy.reject,
             intent: "alternative",
             isDisabled: props.props.isPending,
             onPress: props.on.reject,
@@ -108,13 +107,13 @@ const ApproveActions = (props: InventoryPoActionsProps) => (
 const ReceiveActions = (props: InventoryPoActionsProps) => (
     <ActionPair
         first={{
-            label: props.props.say("poReceive"),
+            label: props.props.copy.poReceive,
             intent: "commit",
             isPending: props.props.isPending,
             onPress: props.on.receive,
         }}
         second={{
-            label: props.props.say("poRemind"),
+            label: props.props.copy.poRemind,
             intent: "alternative",
             isDisabled: props.props.isPending,
             onPress: props.on.remind,
@@ -125,22 +124,22 @@ const ReceiveActions = (props: InventoryPoActionsProps) => (
 /** The buttons of one purchase order: send, save, approve, receive, remind, copy and cancel, each shown only when allowed. */
 export const InventoryPoActions = (props: InventoryPoActionsProps) => {
     const { props: p, on } = props
-    const say = p.say
+    const copy = p.copy
     return (
-        <div className={ACTIONS_CLASS_NAME}>
+        <Cluster gap="inline">
             {p.canEdit ? <EditActions {...props} /> : null}
             {p.canApprove ? <ApproveActions {...props} /> : null}
             {p.canReceive ? <ReceiveActions {...props} /> : null}
             {p.canCopy ? (
                 <Button intent="neutral" onPress={on.copy}>
-                    {p.copied ? say("poCopied") : say("poCopy")}
+                    {p.copied ? copy.poCopied : copy.poCopy}
                 </Button>
             ) : null}
             {p.canCancel ? (
                 <Button intent="destructive" step="entry" isDisabled={p.isPending} onPress={on.cancel}>
-                    {say("poCancel")}
+                    {copy.poCancel}
                 </Button>
             ) : null}
-        </div>
+        </Cluster>
     )
 }

@@ -1,10 +1,11 @@
-import { Input, Label, Region, Select, SurfaceCard, Switch, Text } from "@starci/grammar/common"
+import { Input, Select, Stack, Switch, Text, Section } from "@starci/grammar/common"
 import { WizardCopyGlyphs } from "@/components/branches/WizardCopyGlyphs"
 import type { CopyLabels, GuideField, GuideScreen } from "@/modules/types"
-import { wizardGuideViewClassNames as classNames } from "./classNames"
 
 /** What the provider screens draw and report. */
 type WizardGuideViewProps = {
+    readonly isLoading?: boolean
+
     readonly screens: ReadonlyArray<GuideScreen>
     readonly copy: CopyLabels
     readonly isDisabled?: boolean
@@ -15,34 +16,11 @@ type WizardGuideViewProps = {
 }
 
 const fieldOf = (field: GuideField, props: WizardGuideViewProps) => {
-    if (field.kind === "copy") {
-        return (
-            <Input
-                key={field.id}
-                id={`guide-${field.token}`}
-                name={field.token}
-                label={field.label}
-                description={field.hint}
-                kind={field.isSecret ? "password" : "text"}
-                value={field.value}
-                isReadOnly={!field.isEditable}
-                {...(props.isDisabled === undefined ? {} : { isDisabled: props.isDisabled })}
-                isCopyable
-                copyLabel={props.copy.copy}
-                copiedLabel={props.copy.copied}
-                copyIcon={WizardCopyGlyphs.copy}
-                copiedIcon={WizardCopyGlyphs.copied}
-                revealLabel={props.copy.reveal}
-                hideLabel={props.copy.hide}
-                revealIcon={WizardCopyGlyphs.reveal}
-                hideIcon={WizardCopyGlyphs.hide}
-                {...(field.isEditable ? { onValueChange: (value: string) => props.onEdit(field.token, value) } : {})}
-            />
-        )
-    }
+    if (field.kind === "copy") return <GuideCopyField field={field} guide={props} />
     if (field.kind === "paste") {
         return (
             <Input
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                 key={field.id}
                 id={`guide-${field.field}`}
                 name={field.field}
@@ -58,6 +36,7 @@ const fieldOf = (field: GuideField, props: WizardGuideViewProps) => {
     if (field.kind === "choose") {
         return (
             <Select
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                 key={field.id}
                 name={field.id}
                 label={field.label}
@@ -69,7 +48,16 @@ const fieldOf = (field: GuideField, props: WizardGuideViewProps) => {
         )
     }
     if (field.kind === "switch")
-        return <Switch key={field.id} label={field.label} description={field.hint} isSelected isReadOnly />
+        return (
+            <Switch
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                key={field.id}
+                label={field.label}
+                description={field.hint}
+                isSelected
+                isReadOnly
+            />
+        )
     return (
         <Text key={field.id} size="sm" tone="muted">
             {field.text}
@@ -78,23 +66,49 @@ const fieldOf = (field: GuideField, props: WizardGuideViewProps) => {
 }
 
 /**
- * The provider's own screens, one per block: the screen's name as a `Label` outside a nested `SurfaceCard`, and inside it each
+ * The provider's own screens, one named section each, with every
  * field drawn as the control the provider shows - values to copy (in-field copy), the choice to make as a read-only `Select`
  * already set to the right option, a setting to turn on as a read-only `Switch`, and the boxes to paste provider values into.
  */
 export const WizardGuideView = (props: WizardGuideViewProps) => (
-    <div className={classNames.screens}>
+    <Stack gap="section">
         {props.screens.map((screen) => (
-            <Region key={screen.id} labelledBy={`guide-screen-${screen.id}`}>
-                <div className={classNames.screen}>
-                    <Label as="h4" id={`guide-screen-${screen.id}`}>
-                        {screen.heading}
-                    </Label>
-                    <SurfaceCard>
-                        <div className={classNames.fields}>{screen.fields.map((field) => fieldOf(field, props))}</div>
-                    </SurfaceCard>
-                </div>
-            </Region>
+            <Section key={screen.id} title={screen.heading} headingLevel={4}>
+                <Stack gap="row">{screen.fields.map((field) => fieldOf(field, props))}</Stack>
+            </Section>
         ))}
-    </div>
+    </Stack>
 )
+
+interface GuideCopyFieldProps {
+    readonly field: Extract<GuideField, { readonly kind: "copy" }>
+    readonly guide: WizardGuideViewProps
+}
+/** The copy/reveal field keeps the exact native copy and reveal controls. */
+const GuideCopyField = (props: GuideCopyFieldProps) => {
+    const { field, guide } = props
+    return (
+        <Input
+            {...(guide.isLoading === undefined ? {} : { isLoading: guide.isLoading })}
+            key={field.id}
+            id={`guide-${field.token}`}
+            name={field.token}
+            label={field.label}
+            description={field.hint}
+            kind={field.isSecret ? "password" : "text"}
+            value={field.value}
+            isReadOnly={!field.isEditable}
+            {...(guide.isDisabled === undefined ? {} : { isDisabled: guide.isDisabled })}
+            isCopyable
+            copyLabel={guide.copy.copy}
+            copiedLabel={guide.copy.copied}
+            copyIcon={WizardCopyGlyphs.copy}
+            copiedIcon={WizardCopyGlyphs.copied}
+            revealLabel={guide.copy.reveal}
+            hideLabel={guide.copy.hide}
+            revealIcon={WizardCopyGlyphs.reveal}
+            hideIcon={WizardCopyGlyphs.hide}
+            {...(field.isEditable ? { onValueChange: (value: string) => guide.onEdit(field.token, value) } : {})}
+        />
+    )
+}

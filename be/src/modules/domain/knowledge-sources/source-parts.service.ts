@@ -1,12 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { EntityManager } from "typeorm"
+import { IsNull, Not } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { eachInOrder } from "@modules/platform/primitives"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { KnowledgeProgressService } from "./knowledge-progress.service"
 import type { DeletedSource } from "./knowledge-sources.contracts"
+import { PUBLIC_DOCUMENT_ORIGIN } from "./knowledge-sources.contracts"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import { removedTitle } from "./persistence/knowledge-source.projection"
 import { partOriginOf, partTitleOf } from "./source-parts.policy"
@@ -78,11 +80,25 @@ export class SourcePartsService {
             const removed = await tx
                 .createQueryBuilder(KnowledgeSourceEntity, "ks")
                 .delete()
-                .where({ id: sourceId, workspaceId })
+                .where([
+                    { id: sourceId, workspaceId, origin: IsNull() },
+                    { id: sourceId, workspaceId, origin: Not(PUBLIC_DOCUMENT_ORIGIN) },
+                ])
                 .returning("title")
                 .execute()
             const title = removedTitle(removed.raw)
-            if (title === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+            if (title === undefined) {
+                const existing = await tx.findOne(KnowledgeSourceEntity, {
+                    select: { id: true, origin: true },
+                    where: { id: sourceId, workspaceId },
+                })
+                throw new KnowledgeSourcesError({
+                    code:
+                        existing?.origin === PUBLIC_DOCUMENT_ORIGIN
+                            ? KnowledgeSourcesErrorCode.PublicByApproval
+                            : KnowledgeSourcesErrorCode.SourceNotFound,
+                })
+            }
             await tx.delete(KnowledgeSourceEntity, { workspaceId, origin: partOriginOf(sourceId) })
             return { title, parts: later.map((part) => ({ id: part.id, title: part.title })) }
         })

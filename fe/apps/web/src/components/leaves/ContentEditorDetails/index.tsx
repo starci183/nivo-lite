@@ -1,5 +1,5 @@
-import { Alert, Button, CheckboxGroup, Input, List, ListItem, Select, Text, Textarea } from "@starci/grammar/common"
-import type { ContentT, Pillar } from "@/modules/types"
+import { Alert, Button, CheckboxGroup, Input, Select, Stack, Text, Textarea } from "@starci/grammar/common"
+import type { Pillar, ContentViews } from "@/modules/types"
 
 /** Props of {@link ContentEditorDetails}. */
 interface ContentEditorDetailsProps {
@@ -18,7 +18,7 @@ interface ContentEditorDetailsProps {
     readonly isPending: boolean
     readonly isDrafting: boolean
     readonly hasDraftText: boolean
-    readonly t: ContentT
+    readonly copy: ContentViews["workbenchCopy"]
     readonly onTitle: (v: string) => void
     readonly onBrief: (v: string) => void
     readonly onPillar: (id: string | null) => void
@@ -31,34 +31,34 @@ interface ContentEditorDetailsProps {
 
 /** The details of a post in one column: title, idea, theme, channels, date and time, the AI draft request and the findings to check. */
 export const ContentEditorDetails = (props: ContentEditorDetailsProps) => {
-    const { t } = props
+    const { copy } = props
     const locked = !props.isEditable || props.isPending
     return (
         <>
             <Input
                 id="ce-title"
                 name="title"
-                label={t("fieldTitle")}
+                label={copy.fieldTitle}
                 value={props.title}
                 isDisabled={locked}
                 onValueChange={props.onTitle}
             />
             <Textarea
-                label={t("fieldBrief")}
+                label={copy.fieldBrief}
                 rows={3}
                 value={props.brief}
                 isDisabled={locked}
                 onValueChange={props.onBrief}
             />
             <Select
-                label={t("fieldPillar")}
-                options={[{ id: "", label: t("noPillar") }, ...props.pillars.map((p) => ({ id: p.id, label: p.name }))]}
+                label={copy.fieldPillar}
+                options={[{ id: "", label: copy.noPillar }, ...props.pillars.map((p) => ({ id: p.id, label: p.name }))]}
                 value={props.pillarId ?? ""}
                 isDisabled={locked}
                 onValueChange={(v) => props.onPillar(v || null)}
             />
             <CheckboxGroup
-                label={t("fieldChannels")}
+                label={copy.fieldChannels}
                 orientation="horizontal"
                 options={props.channelOptions}
                 value={props.channels}
@@ -68,37 +68,37 @@ export const ContentEditorDetails = (props: ContentEditorDetailsProps) => {
             <Input
                 id="ce-date"
                 name="date"
-                label={t("fieldDate")}
+                label={copy.fieldDate}
                 value={props.date}
-                description={t("addDateHint")}
+                description={copy.addDateHint}
                 isDisabled={props.isDateLocked}
                 onValueChange={props.onDate}
             />
             <Input
                 id="ce-time"
                 name="time"
-                label={t("fieldTime")}
+                label={copy.fieldTime}
                 value={props.time}
-                description={t("addTimeHint")}
+                description={copy.addTimeHint}
                 isDisabled={props.isDateLocked}
                 onValueChange={props.onTime}
             />
-            {props.isEditable ? renderContentEditorDetailsHintFields(t, props) : null}
-            {props.warnings.length > 0 ? renderContentEditorDetailsDraftWarning(t, props) : null}
+            {props.isEditable ? renderContentEditorDetailsHintFields(copy, props) : null}
+            {props.warnings.length > 0 ? renderContentEditorDetailsDraftWarning(copy, props) : null}
         </>
     )
 }
 
 /** Renders the ContentEditorDetails hint fields section. */
 const renderContentEditorDetailsHintFields = (
-    t: NonNullable<ContentEditorDetailsProps["t"]>,
+    copy: ContentEditorDetailsProps["copy"],
     props: ContentEditorDetailsProps,
 ) => (
     <>
         <Input
             id="ce-hint"
             name="hint"
-            label={t("draftHint")}
+            label={copy.draftHint}
             value={props.hint}
             isDisabled={props.isPending}
             onValueChange={props.onHint}
@@ -110,7 +110,7 @@ const renderContentEditorDetailsHintFields = (
                 isDisabled={props.isPending || props.channels.length === 0}
                 onPress={props.onDraft}
             >
-                {props.hasDraftText ? t("redraft") : t("draftWithAi")}
+                {props.hasDraftText ? copy.redraft : copy.draftWithAi}
             </Button>
         </div>
     </>
@@ -118,22 +118,20 @@ const renderContentEditorDetailsHintFields = (
 
 /** Renders the ContentEditorDetails draft warning section. */
 const renderContentEditorDetailsDraftWarning = (
-    t: NonNullable<ContentEditorDetailsProps["t"]>,
+    copy: ContentEditorDetailsProps["copy"],
     props: ContentEditorDetailsProps,
 ) => (
     <Alert
         tone="cautionary"
-        title={t("draftWarnTitle")}
+        title={copy.draftWarnTitle}
         description={
-            <List label={t("draftWarnTitle")}>
-                {props.warnings.map((w) => (
-                    <ListItem key={w}>
-                        <Text as="span" size="sm">
-                            {w}
-                        </Text>
-                    </ListItem>
+            <Stack gap="identity">
+                {props.warnings.map((warning) => (
+                    <Text key={warning} size="sm">
+                        {warning}
+                    </Text>
                 ))}
-            </List>
+            </Stack>
         }
     />
 )

@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Drawer, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, Cluster, Drawer, EmptyNotice, Section, Stack, Text } from "@starci/grammar/common"
 import { ConnectionInterestButton } from "@/components/blocks/ConnectionInterestButton"
 import { ConnectionRow } from "@/components/blocks/ConnectionRow"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
@@ -90,20 +90,22 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
     return (
         <>
             <Text size="sm">
-                <Text as="span" size="sm" weight="semibold">
+                <Text as="span" size="sm" isStrong>
                     {detail.words.needs}:{" "}
                 </Text>
                 {entry.needs}
             </Text>
-            {detail.rows.length === 0 ? (
-                <Text size="sm" tone="muted">
-                    {detail.words.none}
-                </Text>
-            ) : (
-                <SurfaceListCard label={detail.words.yours} headingLevel={3} fact={detail.words.yoursFact}>
-                    {detail.rows.map((row) => (
+            <Section
+                kind="list"
+                title={detail.words.yours}
+                headingLevel={3}
+                meta={detail.words.yoursFact}
+                empty={<EmptyNotice message={detail.words.none} />}
+                items={detail.rows.map((row) => ({
+                    id: row.connection.id,
+                    title: row.connection.name,
+                    detail: (
                         <ConnectionRow
-                            key={row.connection.id}
                             connection={row.connection}
                             agentNames={row.agentNames}
                             localOnly={detail.localOnly}
@@ -111,9 +113,9 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
                             agents={detail.agents}
                             canManage={detail.canManage}
                         />
-                    ))}
-                </SurfaceListCard>
-            )}
+                    ),
+                }))}
+            />
             {detail.canConnect ? (
                 <div>
                     <Button intent="commit" onPress={() => props.on.add(provider)}>
@@ -144,32 +146,37 @@ export const ConnectorDetailOverlayBase = (props: ConnectorDetailOverlayBaseProp
             placement="right"
         >
             {entry === null ? null : (
-                <div className={classNames.detail}>
-                    <ListRow
-                        leading={
-                            <ProviderLogo
-                                glyph={entry.glyph}
-                                {...(entry.logo === undefined ? {} : { src: entry.logo })}
-                            />
-                        }
-                        title={entry.category}
-                        badges={<Badge tone={entry.isOfficial ? "success" : "neutral"}>{entry.statusLabel}</Badge>}
-                        description={entry.blurb}
-                    />
+                <Stack gap="section">
+                    <Cluster gap="inline" align="start">
+                        <ProviderLogo glyph={entry.glyph} {...(entry.logo === undefined ? {} : { src: entry.logo })} />
+                        <div className={classNames.lead}>
+                            <Stack gap="identity">
+                                <Cluster gap="inline" align="center" justify="between">
+                                    <Text size="sm" isStrong>
+                                        {entry.category}
+                                    </Text>
+                                    <Badge tone={entry.isOfficial ? "success" : "neutral"}>{entry.statusLabel}</Badge>
+                                </Cluster>
+                                <Text size="sm" tone="muted">
+                                    {entry.blurb}
+                                </Text>
+                            </Stack>
+                        </div>
+                    </Cluster>
                     <Text size="sm">
-                        <Text as="span" size="sm" weight="semibold">
+                        <Text as="span" size="sm" isStrong>
                             {props.props.words.brings}:{" "}
                         </Text>
                         {entry.brings}
                     </Text>
                     <Text size="sm">
-                        <Text as="span" size="sm" weight="semibold">
+                        <Text as="span" size="sm" isStrong>
                             {props.props.words.audience}:{" "}
                         </Text>
                         {entry.audience}
                     </Text>
                     {bodyOf(props, entry)}
-                </div>
+                </Stack>
             )}
         </Drawer>
     )

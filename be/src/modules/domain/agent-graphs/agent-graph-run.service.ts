@@ -4,7 +4,8 @@ import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { runTraceOf, triggerStepOf } from "./policies/run-trace.policy"
-import type { AgentGraphRunWire } from "./policies/graph-wire.policy"
+import { runEntryWireOf } from "./policies/graph-wire.policy"
+import type { AgentGraphRunEntryWire, AgentGraphRunWire } from "./policies/graph-wire.policy"
 
 @Injectable()
 /**
@@ -18,6 +19,15 @@ export class AgentGraphRunService {
         private readonly graphs: AgentGraphsService,
         private readonly work: AgentWorkReadService,
     ) {}
+
+    /** The latest runs of the agent, newest first, each with the number of the version it ran on. */
+    async runsOf(workspaceId: string, agentId: string, limit: number): Promise<ReadonlyArray<AgentGraphRunEntryWire>> {
+        const runs = await this.decisions.runsOf(workspaceId, agentId, limit)
+        const versions = await this.graphs.versionsOf(workspaceId, agentId)
+        return runs.map((run) =>
+            runEntryWireOf(run, versions.find((entry) => entry.id === run.versionId)?.version ?? null),
+        )
+    }
 
     /** The run of a work item; refused when the graph never decided it. */
     async runOf(workspaceId: string, workItemId: string): Promise<AgentGraphRunWire> {
@@ -41,7 +51,7 @@ export class AgentGraphRunService {
             approvalRequestId: run.approvalRequestId,
             factsJson: JSON.stringify(run.facts),
             traceJson: JSON.stringify(
-                runTraceOf(drawn.document, { action: run.action, branchKey: run.branchKey, trigger }),
+                runTraceOf(drawn.document, { action: run.action, branchKey: run.branchKey, trigger, path: run.path }),
             ),
         }
     }

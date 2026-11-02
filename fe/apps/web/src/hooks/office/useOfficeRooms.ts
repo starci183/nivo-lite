@@ -34,7 +34,8 @@ const agentConversationsOf = (entries: ReadonlyArray<{ readonly id: string } & O
 export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionViewer) => {
     const rooms = useQueryOfficeRoomsSwr()
     const unread = useQueryOfficeConversationUnreadSwr()
-    const { markers, setMute } = useOfficeMarkers((rooms.data ?? []).map((room) => room.key ?? null))
+    const markerState = useOfficeMarkers((rooms.data ?? []).map((room) => room.key ?? null))
+    const { markers, setMute } = markerState
     const peers = useOfficeTyping(selected)
     const connections = useQueryConnectionsSwr()
     const markConversation = useMutateMarkOfficeConversationReadSwr()
@@ -42,6 +43,7 @@ export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionVie
     const { trigger: triggerConversation } = markConversation
     const { mutate } = rooms
     const { mutate: mutateUnread } = unread
+    const { mutate: mutateMarkers } = markerState.read
     const list: ReadonlyArray<OfficeRoom> = (
         rooms.data?.map((row) =>
             toOfficeRoom(row, markers.get(row.key ?? ""), (peers.byRoom.get(row.key ?? "")?.length ?? 0) > 0, viewer),
@@ -54,6 +56,9 @@ export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionVie
     const refreshRooms = useCallback(() => {
         void mutate()
     }, [mutate])
+    const reloadMarkers = useCallback(() => {
+        mutateMarkers().catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
+    }, [runGraphQL, mutateMarkers])
     const markConversationRead = useCallback(
         async (kind: "agent" | "lead", id: string) => {
             const done = await runGraphQL(() => triggerConversation({ kind, id }), { showSuccessToast: false })
@@ -68,12 +73,25 @@ export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionVie
         status: connection.status,
         agentIds: connection.agentIds,
     }))
+    const error: unknown = rooms.error ?? unread.error ?? connections.error ?? markerState.error
     return {
         rooms: list,
+        roomRead: rooms,
+        markerRead: markerState.read,
+        listReads: [rooms, unread, connections, markerState.read],
+        reload: () => {
+            void rooms.mutate()
+            void unread.mutate()
+            void connections.mutate()
+            reloadMarkers()
+        },
+        isLoading: rooms.isLoading || unread.isLoading || connections.isLoading || markerState.isLoading,
+        error,
         channels,
         unread: conversationUnread,
         markers,
         refreshRooms,
+        reloadMarkers,
         markConversationRead,
         setMute,
         peers,

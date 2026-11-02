@@ -43,23 +43,26 @@ export const LegalPageBase = (props: LegalPageBaseProps) => (
         brand={<LandingNavBrand />}
         navigation={<LandingNavLinks anchorBase="/" />}
         actions={<LandingNavActions />}
-    >
-        <Page measure="reading" header={{ title: props.props.title, description: props.props.intro }}>
-            <Stack gap="section">
-                <Alert tone="cautionary" title={props.props.draft} />
-                {props.props.sections.map((section) => (
-                    <LegalSectionView
-                        key={section.id}
-                        id={section.id}
-                        title={section.title}
-                        paragraphs={section.paragraphs}
-                        items={section.items}
-                        afterItems={section.afterItems}
-                        limitedUse={section.hasLimitedUse ? props.props.limitedUse : null}
-                    />
-                ))}
-            </Stack>
-            <LandingFooter anchorBase="/" />
-        </Page>
-    </SiteShell>
+        body={
+            <>
+                <Page measure="reading" header={{ title: props.props.title, description: props.props.intro }}>
+                    <Stack gap="section">
+                        <Alert tone="cautionary" title={props.props.draft} />
+                        {props.props.sections.map((section) => (
+                            <LegalSectionView
+                                key={section.id}
+                                id={section.id}
+                                title={section.title}
+                                paragraphs={section.paragraphs}
+                                items={section.items}
+                                afterItems={section.afterItems}
+                                limitedUse={section.hasLimitedUse ? props.props.limitedUse : null}
+                            />
+                        ))}
+                    </Stack>
+                    <LandingFooter anchorBase="/" />
+                </Page>
+            </>
+        }
+    />
 )

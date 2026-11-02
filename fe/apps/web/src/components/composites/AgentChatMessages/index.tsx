@@ -1,6 +1,4 @@
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { ModuleIconName } from "@/modules/types"
-import { ChatBubble, ChatBubbleSkeletons, Text } from "@starci/grammar/common"
+import { Text, MessageBubble } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { ChatMessageFiles } from "@/components/leaves/ChatMessageFiles"
 import type { ChatMessageFile } from "@/components/leaves/ChatMessageFiles"
@@ -21,21 +19,19 @@ export interface AgentChatMessagesProps {
     /** Who the own messages of the person are from: "you" in the test channel, the visitor in the customer channel. */
     readonly userAuthor: string
     readonly agentName: string
-    readonly glyph: ModuleIconName
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly avatarUrl?: string | null | undefined
     /** The id of the agent: the one seed of its mark on every screen. */
     readonly seed: string
-    readonly module: string
     /** The line that says the agent is writing, or null when it is not. */
     readonly typing: string | null
     /** The messages are still loading: the thread draws waiting bubbles. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** The thread of one conversation: bubbles on both sides, centred system lines and the typing line. */
 export const AgentChatMessages = (props: AgentChatMessagesProps) => {
-    if (props.isSkeleton) return <ChatBubbleSkeletons count={4} hasAvatar />
+    if (props.isLoading) return <MessageBubble isLoading hasAvatar />
     return (
         <>
             {props.messages.map((message) => {
@@ -50,27 +46,19 @@ export const AgentChatMessages = (props: AgentChatMessagesProps) => {
                 }
                 const isUser = message.role === "user"
                 return (
-                    <ChatBubble
+                    <MessageBubble
                         key={message.id}
                         side={isUser ? "outgoing" : "incoming"}
                         author={isUser ? props.userAuthor : props.agentName}
                         avatar={
                             isUser ? undefined : (
-                                <AgentMark
-                                    glyph={nivoIconSource(props.glyph, "leading")}
-                                    module={props.module}
-                                    label={props.agentName}
-                                    seed={props.seed}
-                                    src={props.avatarUrl}
-                                    size="sm"
-                                />
+                                <AgentMark label={props.agentName} seed={props.seed} src={props.avatarUrl} size="sm" />
                             )
                         }
                         meta={message.timeLabel}
                         footer={message.files.length === 0 ? undefined : <ChatMessageFiles files={message.files} />}
-                    >
-                        {message.body}
-                    </ChatBubble>
+                        body={message.body}
+                    />
                 )
             })}
             {props.typing === null ? null : (

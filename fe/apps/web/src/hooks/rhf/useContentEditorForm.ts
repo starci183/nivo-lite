@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useEffect, useMemo, useRef } from "react"
+import { useFeatureReset } from "@/hooks/reuseables"
 import { useForm, useWatch } from "react-hook-form"
 import { editorSchema, emptyVariant, initialForm, toEditorSave } from "@/modules/content"
 import type { ContentChannel, ContentItem, EditorForm, EditorSave, Variant } from "@/modules/content"
@@ -41,18 +42,45 @@ const messageOf = (first: { readonly message?: unknown } | undefined, fallback: 
 }
 
 /** Manages and validates the editor, including fields returned by a completed AI draft. */
-export const useContentEditorForm = (item: ContentItem): ContentEditorFormState => {
+interface ContentEditorOwner {
+    readonly isActive: boolean
+    readonly scope: string
+}
+
+/** Owns real selected-post form state while preserving dirty values on same-post refreshes. */
+export const useContentEditorForm = (item: ContentItem | null, owner?: ContentEditorOwner): ContentEditorFormState => {
     const t = useTranslations("content")
     const schema = useMemo(() => editorSchema(t), [t])
     const controller = useForm<EditorForm>({ resolver: zodResolver(schema), defaultValues: initialForm(item) })
     const { reset } = controller
     const { dirtyFields } = controller.formState
-    const loaded = useRef({ id: item.id, updatedAt: item.updated_at, draftedAt: item.drafted_at })
+    const loaded = useRef<{
+        readonly id: string
+        readonly updatedAt: string
+        readonly draftedAt: string | null
+    } | null>(item === null ? null : { id: item.id, updatedAt: item.updated_at, draftedAt: item.drafted_at })
+    useFeatureReset({
+        isActive: owner?.isActive ?? true,
+        isReady: item !== null,
+        scope: owner?.scope ?? JSON.stringify([item?.id ?? null]),
+        onReset: () => {
+            reset(initialForm(item))
+            loaded.current =
+                item === null ? null : { id: item.id, updatedAt: item.updated_at, draftedAt: item.drafted_at }
+        },
+    })
     useEffect(() => {
-        if (loaded.current.id === item.id && loaded.current.updatedAt === item.updated_at) return
+        if (item === null) {
+            if (loaded.current !== null) {
+                loaded.current = null
+                reset(initialForm(null))
+            }
+            return
+        }
+        if (loaded.current?.id === item.id && loaded.current?.updatedAt === item.updated_at) return
         const keepDirtyValues =
-            loaded.current.id === item.id &&
-            loaded.current.draftedAt === item.drafted_at &&
+            loaded.current?.id === item.id &&
+            loaded.current?.draftedAt === item.drafted_at &&
             Object.keys(dirtyFields).length > 0
         loaded.current = { id: item.id, updatedAt: item.updated_at, draftedAt: item.drafted_at }
         reset(initialForm(item), { keepDirtyValues })

@@ -34,7 +34,7 @@ interface AgentDashboardFrameProps {
     readonly gaps?: ReactNode
     readonly tabs: ReadonlyArray<AgentDashboardTab>
     /** Layers the module opens over the workbench (an editor, a drawer); drawn inside the page body. */
-    readonly children?: ReactNode
+    readonly overlay?: ReactNode
     /** The tab whose label carries the number of decisions waiting for a person. */
     readonly waitingTab?: string
     /** The tab id from ?tab=; unknown ids open the first tab. A new value (a link to another tab) selects it. */
@@ -78,7 +78,7 @@ export const AgentDashboardFrame = (props: AgentDashboardFrameProps) => {
                 waiting: props.waiting ?? null,
                 whyDecision: props.whyDecision ?? null,
                 gaps: props.gaps ?? null,
-                overlay: props.children ?? null,
+                overlay: props.overlay ?? null,
                 panel: props.tabs.find((tab) => tab.id === selected)?.content ?? null,
             }}
             props={{

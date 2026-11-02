@@ -1,7 +1,4 @@
-/** The pulled-data step: the column, the operation list that scrolls inside the drawer, one row, and the settings indented under it. */
+/** The endpoint list's bounded viewport; the grammar Stack inside owns the relation between rows. */
 export const openApiPullsStepClassNames = {
-    column: "flex min-w-0 flex-col gap-4",
-    list: "flex min-w-0 max-h-96 flex-col gap-3 overflow-y-auto",
-    row: "flex min-w-0 flex-col gap-3",
-    nested: "flex min-w-0 flex-col gap-3 ps-6",
+    list: "min-w-0 max-h-96 overflow-y-auto",
 } as const

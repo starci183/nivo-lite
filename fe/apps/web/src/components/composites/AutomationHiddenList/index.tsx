@@ -1,4 +1,4 @@
-import { Button, Disclosure, List, ListRow } from "@starci/grammar/common"
+import { Disclosure, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 
 /** One automation the owner hid. */
 type AutomationHiddenItem = {
@@ -18,24 +18,24 @@ type AutomationHiddenListProps = {
 /** The automations the owner marked "not for me", each with its restore action; nothing when none is hidden. */
 export const AutomationHiddenList = (props: AutomationHiddenListProps) =>
     props.items.length === 0 ? null : (
-        <Disclosure title={props.title}>
-            <List label={props.title}>
-                {props.items.map((item) => (
-                    <ListRow
-                        key={item.key}
-                        title={item.name}
-                        actions={
-                            <Button
-                                intent="neutral"
-                                size="sm"
-                                isDisabled={item.isBusy}
-                                onPress={() => props.onRestore(item.key)}
-                            >
-                                {props.restoreLabel}
-                            </Button>
-                        }
-                    />
-                ))}
-            </List>
-        </Disclosure>
+        <Disclosure
+            title={props.title}
+            body={
+                <SurfaceCard
+                    kind="list"
+                    ariaLabel={props.title}
+                    items={props.items.map((item) => ({
+                        id: item.key,
+                        title: item.name,
+                        action: {
+                            label: props.restoreLabel,
+                            intent: "neutral",
+                            isDisabled: item.isBusy,
+                            press: () => props.onRestore(item.key),
+                        },
+                    }))}
+                    empty={<EmptyNotice message={props.title} />}
+                />
+            }
+        />
     )

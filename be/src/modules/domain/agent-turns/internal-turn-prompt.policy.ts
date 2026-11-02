@@ -1,5 +1,5 @@
 import type { AgentGoalRecord, AgentTaskRecord } from "@modules/domain/agent-work"
-import type { GraphIntent } from "./agent-turns.contracts"
+import type { GraphIntent } from "@modules/domain/agent-graphs"
 
 /** The closing mark of the data block, which a wake's words must not be able to write themselves. */
 const DATA_END = "</data>"

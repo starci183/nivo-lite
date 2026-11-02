@@ -1,9 +1,8 @@
-import { Form, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
+import { Form, Input, Select, SurfaceCard, Text, Stack, Grid } from "@starci/grammar/common"
 import { FormActions } from "@/components/composites/FormActions"
-import { InviteLink } from "@/components/composites/InviteLink"
+import { InviteLink } from "@/components/branches/InviteLink"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { FORM_GRID_CLASS_NAME, SENT_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** One choice of a select. */
 interface ChoiceView {
@@ -63,14 +62,13 @@ export const TeamInviteBase = (props: TeamInviteBaseProps) => (
                 placeholder={props.props.placeholder}
                 labels={props.props.slotLabels}
                 onRetry={props.on.retry}
-            >
-                {(staffOptions, isSkeleton) => (
+                render={(staffOptions, isSkeleton) => (
                     <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
-                        <div className={STACK_CLASS_NAME}>
+                        <Stack gap="section">
                             <Text size="sm" tone="muted">
                                 {props.props.description}
                             </Text>
-                            <div className={FORM_GRID_CLASS_NAME}>
+                            <Grid kind="form" columns={2}>
                                 <Input
                                     id="invite-email"
                                     name="email"
@@ -78,7 +76,7 @@ export const TeamInviteBase = (props: TeamInviteBaseProps) => (
                                     label={props.props.emailLabel}
                                     isRequired
                                     isDisabled={props.props.isPending}
-                                    isSkeleton={isSkeleton}
+                                    isLoading={isSkeleton}
                                     value={props.props.email}
                                     onValueChange={props.on.setEmail}
                                 />
@@ -87,7 +85,7 @@ export const TeamInviteBase = (props: TeamInviteBaseProps) => (
                                     name="role"
                                     options={props.props.roleOptions}
                                     value={props.props.role}
-                                    isSkeleton={isSkeleton}
+                                    isLoading={isSkeleton}
                                     isDisabled={props.props.isPending}
                                     onValueChange={props.on.setRole}
                                 />
@@ -96,16 +94,16 @@ export const TeamInviteBase = (props: TeamInviteBaseProps) => (
                                     name="staff"
                                     options={staffOptions}
                                     value={props.props.staffId}
-                                    isSkeleton={isSkeleton}
+                                    isLoading={isSkeleton}
                                     isDisabled={props.props.isPending}
                                     onValueChange={props.on.setStaffId}
                                 />
-                            </div>
+                            </Grid>
                             <Text size="xs" tone="muted">
                                 {props.props.staffHint}
                             </Text>
                             {props.props.sent === undefined ? null : (
-                                <div className={SENT_CLASS_NAME}>
+                                <Stack gap="inline">
                                     <Text size="sm" live="polite">
                                         {props.props.sent.text}
                                     </Text>
@@ -119,19 +117,19 @@ export const TeamInviteBase = (props: TeamInviteBaseProps) => (
                                         isCopied={props.props.sent.isCopied}
                                         onCopy={props.on.copied}
                                     />
-                                </div>
+                                </Stack>
                             )}
                             <FormActions
                                 failTitle={props.props.failTitle}
                                 error={props.props.error}
                                 submitLabel={props.props.submitLabel}
                                 isPending={props.props.isPending}
-                                isSkeleton={isSkeleton}
+                                isLoading={isSkeleton}
                             />
-                        </div>
+                        </Stack>
                     </Form>
                 )}
-            </SlotView>
+            />
         </SurfaceCard>
     </div>
 )

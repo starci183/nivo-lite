@@ -6,6 +6,10 @@ namespaces:
     - key: "failTitle"
       reason: 'Read as the string "failTitle" in components/blocks/AccountEmail/index.tsx, components/blocks/AccountPassword/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   agentChat:
+    - key: "fileTypeRefused"
+      reason: "Read by t(file.problem) in hooks/agentChat/useAgentChatActions.ts; hooks/chatFile/chatFile.shared.ts produces this exact closed ChatFileProblem member for a refused MIME type."
+    - key: "fileTooLarge"
+      reason: "Read by t(file.problem) in hooks/agentChat/useAgentChatActions.ts; hooks/chatFile/chatFile.shared.ts produces this exact closed ChatFileProblem member for an oversized chosen file."
     - key: "testIntro"
       reason: 'Read as the string "testIntro" in components/blocks/MetaWizard/component.tsx, components/blocks/MetaWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   agentWork:
@@ -145,6 +149,8 @@ namespaces:
     - key: "suggestTitle"
       reason: 'Read as the string "suggestTitle" in components/blocks/KnowledgeSuggestions/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   modulesCore:
+    - key: "syncReasonWorkspaceUnavailable"
+      reason: "Read by t(reasonKeyOf(status.error)) in components/blocks/AgentSyncCard/index.tsx; its exact SYNC_REASON_KEYS mapping returns this key for the WORKSPACE_UNAVAILABLE error suffix."
     - key: "installing"
       reason: 'Read as the string "installing" in hooks/installations/installations.shared.ts, modules/documents/knowledge.mapper.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   onboarding:

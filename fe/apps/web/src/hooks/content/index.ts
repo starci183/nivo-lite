@@ -28,7 +28,7 @@ export {
     toContentDraftWarnings,
     warningMessage,
 } from "./content.shared"
-export type { ChannelWarning, ContentChannel, EditorForm, ItemTransition, MediaRef } from "./content.shared"
+export type { ChannelWarning, ContentChannel, EditorForm, MediaRef } from "./content.shared"
 export { useContentCommand } from "./useContentCommand"
 export type { ContentNote } from "./useContentCommand"
 export { useContentEditorCommands } from "./useContentEditorCommands"
@@ -46,8 +46,5 @@ export { useSaveContentBrand } from "./useSaveContentBrand"
 export { useSaveContentCadence } from "./useSaveContentCadence"
 export { useSaveContentPillars } from "./useSaveContentPillars"
 export { useSetContentAutomation } from "./useSetContentAutomation"
-export { useContentData } from "./useContentData"
-export { useContentFocusedItem } from "./useContentFocusedItem"
-export { useContentGate } from "./useContentGate"
 export { useMarketingReport } from "./useMarketingReport"
 export type { BrandKitText, BrandProposalCardView } from "@/modules/content"

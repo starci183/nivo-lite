@@ -27,7 +27,7 @@ export const InviteOverview = (props: InviteOverviewProps) => {
             shape={view.state === "loading" ? "ready" : view.state}
             props={{
                 view,
-                isSkeleton: view.state === "loading",
+                isLoading: view.state === "loading",
                 acceptLabel: t("accept"),
                 switchLabel: t("switchAccount"),
                 isAccepting,

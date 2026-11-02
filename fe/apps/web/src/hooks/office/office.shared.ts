@@ -23,7 +23,15 @@ import type {
     OfficeWork,
 } from "@/modules/office"
 
-/** Everything around the thread: approvals, exceptions, command cards, the team and the tasks. A read that fails reads as empty. */
+/** An authoritative SWR read retained by the hook that owns it; status is folded only by shared slot builders. */
+export interface OfficeRead<T = unknown> {
+    readonly data: T | undefined
+    readonly error: unknown
+    readonly isLoading: boolean
+    readonly isValidating?: boolean
+}
+
+/** The board's ready projections, with each authoritative read retained for the region that draws it. */
 export interface OfficeBoard {
     readonly pending: ReadonlyArray<OfficeApproval>
     readonly decided: ReadonlyArray<OfficeApproval>
@@ -37,6 +45,12 @@ export interface OfficeBoard {
     readonly staff: ReadonlyArray<OfficeStaff>
     readonly leads: ReadonlyArray<OfficeLead>
     readonly tasks: ReadonlyArray<OfficeTask>
+    readonly teamReads: ReadonlyArray<OfficeRead>
+    readonly composerReads: ReadonlyArray<OfficeRead>
+    readonly approvalReads: ReadonlyArray<OfficeRead>
+    readonly workReads: ReadonlyArray<OfficeRead>
+    readonly reload: () => void
+    readonly reloadTeam: () => void
 }
 
 const OFFICE_KEYS: ReadonlySet<string> = new Set([

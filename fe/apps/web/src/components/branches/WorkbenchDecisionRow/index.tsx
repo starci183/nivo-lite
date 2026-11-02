@@ -1,28 +1,29 @@
 import type { ReactNode } from "react"
-import { Badge, Button, Cluster, DropdownMenu, ListRow, Stack, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, DropdownMenu, Stack, Text } from "@starci/grammar/common"
 import { WorkbenchTraceLine } from "@/components/leaves/WorkbenchTraceLine"
-import type { WorkbenchRowView } from "@/modules/types"
+import type { WorkbenchRowData } from "@/modules/types"
 
 /** One row of a waiting list and the words that are not the row's own. */
 interface WorkbenchDecisionRowProps {
-    readonly row: WorkbenchRowView
+    readonly row: WorkbenchRowData
     /** The editor of the proposal (a draft, the fields, the basis), open when the row is. */
     readonly editor?: ReactNode
     readonly seeWhyLabel: string
     /** The name of the menu at the end of the row. */
     readonly moreLabel: string
-    readonly isSkeleton: boolean
+    readonly onCommand: (rowId: string, commandId: string) => void
 }
 
 /** The words of the row's commands. */
 interface RowActionsProps {
-    readonly row: WorkbenchRowView
+    readonly row: WorkbenchRowData
     readonly moreLabel: string
+    readonly onCommand: (rowId: string, commandId: string) => void
 }
 
 /** The row whose waiting line is drawn. */
 interface WaitingForProps {
-    readonly row: WorkbenchRowView
+    readonly row: WorkbenchRowData
 }
 
 /** What stands at the end of a row when it has no command to press: who it waits for, or nothing. */
@@ -40,7 +41,7 @@ const RowActions = (props: RowActionsProps) => {
     const menu = row.menu.map((command) => ({
         id: command.id,
         label: command.label,
-        onAction: command.onPress,
+        onAction: () => props.onCommand(row.id, command.id),
         ...(command.isDisabled === true ? { isDisabled: true } : {}),
         ...(command.isDanger === true ? { tone: "danger" as const } : {}),
     }))
@@ -54,12 +55,17 @@ const RowActions = (props: RowActionsProps) => {
                 isPending={primary.isPending === true}
                 isDisabled={primary.isDisabled === true}
                 {...(primary.disabledReason === undefined ? {} : { disabledReason: primary.disabledReason })}
-                onPress={primary.onPress}
+                onPress={() => props.onCommand(row.id, primary.id)}
             >
                 {primary.label}
             </Button>
             {edit === null ? null : (
-                <Button intent="neutral" size="sm" isDisabled={edit.isDisabled === true} onPress={edit.onPress}>
+                <Button
+                    intent="neutral"
+                    size="sm"
+                    isDisabled={edit.isDisabled === true}
+                    onPress={() => props.onCommand(row.id, edit.id)}
+                >
                     {edit.label}
                 </Button>
             )}
@@ -79,50 +85,43 @@ const RowActions = (props: RowActionsProps) => {
 }
 
 /**
- * One decision waiting for a person, or the agent's finished work, on `ListRow`: the customer or supplier, one line, state and age,
+ * One decision waiting for a person, or the agent's finished work, as typed collection data: the customer or supplier, one line, state and age,
  * a named command, a neutral edit and a menu for the rest. The amount, the proposal, the editor, the trace and the expiry stand under the copy in
  * that order. The named command is an alternative button, never a commit (the commit lives in the why pane footer).
  */
 export const WorkbenchDecisionRow = (props: WorkbenchDecisionRowProps) => {
     const row = props.row
+
     return (
-        <ListRow
-            isSkeleton={props.isSkeleton}
-            title={row.title}
-            description={row.description}
-            badges={
-                row.badges.length === 0 ? undefined : (
-                    <>
-                        {row.badges.map((badge) => (
-                            <Badge key={badge.label} tone={badge.tone}>
-                                {badge.label}
-                            </Badge>
-                        ))}
-                    </>
-                )
-            }
-            actions={<RowActions row={row} moreLabel={props.moreLabel} />}
-        >
-            <Stack gap="identity">
-                {row.reason === null ? null : (
-                    <Text size="sm" tone="muted">
-                        {row.reason}
-                    </Text>
-                )}
-                {row.amount === null ? null : (
-                    <Text size="md" weight="semibold" tabular>
-                        {row.amount}
-                    </Text>
-                )}
-                <Text size="sm">{row.proposal}</Text>
-                {props.editor}
-                {row.trace === null ? null : <WorkbenchTraceLine trace={row.trace} seeWhyLabel={props.seeWhyLabel} />}
-                {row.expiry === null ? null : (
-                    <Text size="xs" tone="muted">
-                        {row.expiry}
-                    </Text>
-                )}
-            </Stack>
-        </ListRow>
+        <Stack gap="identity">
+            {row.badges.length < 3 ? null : (
+                <Cluster gap="inline">
+                    {row.badges.slice(2).map((badge) => (
+                        <Badge key={badge.label} tone={badge.tone}>
+                            {badge.label}
+                        </Badge>
+                    ))}
+                </Cluster>
+            )}
+            {row.reason === null ? null : (
+                <Text size="sm" tone="muted">
+                    {row.reason}
+                </Text>
+            )}
+            {row.amount === null ? null : (
+                <Text size="md" isStrong tabular>
+                    {row.amount}
+                </Text>
+            )}
+            <Text size="sm">{row.proposal}</Text>
+            {props.editor}
+            {row.trace === null ? null : <WorkbenchTraceLine trace={row.trace} seeWhyLabel={props.seeWhyLabel} />}
+            {row.expiry === null ? null : (
+                <Text size="xs" tone="muted">
+                    {row.expiry}
+                </Text>
+            )}
+            <RowActions row={row} moreLabel={props.moreLabel} onCommand={props.onCommand} />
+        </Stack>
     )
 }

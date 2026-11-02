@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import { HA_REF, IN_30_MINUTES, MINH_REF, openOf } from "@tests/fixtures/builders/approval-requests.builder"
 import { ApprovalDecidingService } from "./approval-deciding.service"
 import { ApprovalOpeningService } from "./approval-opening.service"
@@ -63,5 +63,16 @@ describe("ApprovalRequestsService", () => {
         const { service } = await build()
 
         await expect(service.sweep()).resolves.toEqual({ expired: 2, reminded: 1 })
+    })
+})
+
+describe("ApprovalRequestsService caller-owned transaction", () => {
+    it("forwards the exact caller manager and request to the opening owner", async () => {
+        const { service, opening } = await build()
+        const manager = mockEntityManager()
+        const params = openOf()
+        await expect(service.open(params, manager)).resolves.toEqual(OPENED)
+        expect(opening.open.mock.calls).toEqual([[params, manager]])
+        expect(manager.transaction).not.toHaveBeenCalled()
     })
 })

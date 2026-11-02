@@ -1,23 +1,4 @@
-import { AgentDashboardFrame } from "@/components/blocks/AgentDashboardFrame"
-import { ShiftsAvailability } from "@/components/blocks/ShiftsAvailability"
-import { ShiftsCoverage } from "@/components/blocks/ShiftsCoverage"
-import { ShiftsDemand } from "@/components/blocks/ShiftsDemand"
-import { ShiftsFigures } from "@/components/blocks/ShiftsFigures"
-import { ShiftsGrid } from "@/components/blocks/ShiftsGrid"
-import { ShiftsLeave } from "@/components/blocks/ShiftsLeave"
-import { ShiftsMyAvailability } from "@/components/blocks/ShiftsMyAvailability"
-import { ShiftsMyShifts } from "@/components/blocks/ShiftsMyShifts"
-import { ShiftsMySwaps } from "@/components/blocks/ShiftsMySwaps"
-import { ShiftsOpenShifts } from "@/components/blocks/ShiftsOpenShifts"
-import { ShiftsPositions } from "@/components/blocks/ShiftsPositions"
-import { ShiftsQuickImport } from "@/components/blocks/ShiftsQuickImport"
-import { ShiftsRequests } from "@/components/blocks/ShiftsRequests"
-import { ShiftsRules } from "@/components/blocks/ShiftsRules"
-import { ShiftsStaff } from "@/components/blocks/ShiftsStaff"
-import { ShiftsWeekBar } from "@/components/blocks/ShiftsWeekBar"
-import { ShiftsWeekStats } from "@/components/blocks/ShiftsWeekStats"
-import { PANEL_CLASS_NAME } from "./classNames"
-
+import { ShiftsWorkbench } from "@/components/blocks/ShiftsWorkbench"
 /** Copy the server shell supplies: the route's tab and installation, the tab names and the four ribbon terms. */
 export interface ShiftsWorkbenchPageBaseProps {
     readonly props: {
@@ -33,57 +14,5 @@ export interface ShiftsWorkbenchPageBaseProps {
     }
 }
 
-/**
- * Draws the Shifts workbench: the agent dashboard frame around the week, requests, setup, quick import and my-schedule tabs. Every
- * tab block reads its own data; the connected figures block fills the frame ribbon.
- */
-export const ShiftsWorkbenchPageBase = (props: ShiftsWorkbenchPageBaseProps) => (
-    <AgentDashboardFrame
-        module="shifts"
-        installationId={props.props.installationId}
-        initialTab={props.props.initialTab}
-        ribbon={<ShiftsFigures />}
-        tabs={[
-            {
-                id: "week",
-                label: props.props.tabs.week,
-                content: (
-                    <div className={PANEL_CLASS_NAME}>
-                        <ShiftsWeekBar />
-                        <ShiftsWeekStats />
-                        <ShiftsCoverage />
-                        <ShiftsGrid />
-                    </div>
-                ),
-            },
-            { id: "requests", label: props.props.tabs.requests, content: <ShiftsRequests /> },
-            {
-                id: "setup",
-                label: props.props.tabs.setup,
-                content: (
-                    <div className={PANEL_CLASS_NAME}>
-                        <ShiftsPositions />
-                        <ShiftsStaff />
-                        <ShiftsDemand />
-                        <ShiftsAvailability />
-                        <ShiftsRules />
-                    </div>
-                ),
-            },
-            { id: "quick", label: props.props.tabs.quick, content: <ShiftsQuickImport /> },
-            {
-                id: "mine",
-                label: props.props.tabs.mine,
-                content: (
-                    <div className={PANEL_CLASS_NAME}>
-                        <ShiftsMyShifts />
-                        <ShiftsOpenShifts />
-                        <ShiftsLeave />
-                        <ShiftsMyAvailability />
-                        <ShiftsMySwaps />
-                    </div>
-                ),
-            },
-        ]}
-    />
-)
+/** Composes the sole connected Shifts workbench from server-resolved route atoms. */
+export const ShiftsWorkbenchPageBase = (props: ShiftsWorkbenchPageBaseProps) => <ShiftsWorkbench {...props.props} />

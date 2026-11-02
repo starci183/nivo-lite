@@ -249,7 +249,7 @@ export class ZaloClient {
             })
         if (!isRecord(answer.body)) {
             throw new ZaloError({
-                code: ZaloErrorCode.Rejected,
+                code: ZaloErrorCode.Unavailable,
                 params: { path, reason: `HTTP ${answer.status}` },
             })
         }
@@ -259,6 +259,9 @@ export class ZaloClient {
                 code: zaloErrorCodeOf(failure),
                 params: { path, reason: this.reasonOf(answer.body, answer.status), zaloCode: failure },
             })
+        }
+        if (((path === CS_PATH || path === ZNS_PATH) && failure !== 0) || answer.status < 200 || answer.status >= 300) {
+            throw new ZaloError({ code: ZaloErrorCode.Unavailable, params: { path, reason: `HTTP ${answer.status}` } })
         }
         return isRecord(answer.body.data) ? answer.body.data : {}
     }

@@ -9,7 +9,7 @@ import type {
     ResponsibilityRecord,
     StepStatus,
 } from "@/modules/types"
-import type { BadgeTone } from "@starci/grammar/common"
+import { type BadgeTone } from "@starci/grammar/common"
 import type { useTranslations } from "next-intl"
 
 /** The owner value of the next-step form that stands for the person, beside the agent ids. */

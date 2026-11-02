@@ -3,6 +3,7 @@
 import { useLocale } from "next-intl"
 import { useEffect } from "react"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { loadingSlot, slotOfReads } from "@/hooks/slot"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import { agentHref, agentLifecycleOf, agentLifecycleTone, nextInstanceName } from "@/modules/installations"
@@ -19,7 +20,7 @@ export const useInstanceList = (module: ModuleKey, query: string, mode: TypeRout
     const catalog = useModuleCatalog()
     const copy = catalog.modules[module]
     const typeShort = copy === undefined ? "" : pickCopy(copy.shortName, locale)
-    const instances = route.slot.items ?? []
+    const instances = route.instances
     const names = instances.map((instance) => instance.name)
     useEffect(() => {
         if (copy === undefined) return
@@ -31,12 +32,9 @@ export const useInstanceList = (module: ModuleKey, query: string, mode: TypeRout
         }
     }, [copy, locale])
     return {
-        slot: {
-            isLoading: route.slot.isLoading === true || catalog.slot.isLoading === true,
-            isError: route.slot.isError === true || catalog.slot.isError === true,
-            isForbidden: route.slot.isForbidden === true || catalog.slot.isForbidden === true,
-            items: catalog.slot.items === undefined ? undefined : route.slot.items,
-        },
+        slot: route.isLeaving
+            ? loadingSlot<typeof instances>()
+            : slotOfReads([route.read, catalog.read], () => instances),
         typeName: copy === undefined ? "" : pickCopy(copy.name, locale),
         typeShort,
         typeDescription: copy === undefined ? "" : pickCopy(copy.description, locale),

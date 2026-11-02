@@ -6,87 +6,73 @@ import { McpConnectorsService } from "@modules/domain/mcp-connectors"
 import { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import { MCP_REMOTE, McpError, McpErrorCode } from "@modules/integrations/mcp"
-import type { McpRemote } from "@modules/integrations/mcp"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
 import type { QueueTimeout } from "@modules/platform/queue"
 import { SEPAY_MANIFEST } from "./adapters/sepay-native.service"
-import type { DataRightsGate, GatewayCaller, NativeAdapter, NativeConnectorManifest } from "./mcp-gateway.contracts"
+import type { GatewayCaller, NativeAdapter, NativeConnectorManifest } from "./mcp-gateway.contracts"
 import { DATA_RIGHTS_GATE, MCP_GATEWAY_OPTIONS, NATIVE_ADAPTERS } from "./mcp-gateway.decorators"
+import { TOOL_GRAPH_GATE } from "./tool-graph.decorators"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import { McpGatewayService } from "./mcp-gateway.service"
 import { NativeRunnerService } from "./native-runner.service"
+import { GATEWAY_CALLER as CALLER, toolGrantRowOf as grantOf } from "@tests/fixtures/builders/mcp-gateway.builder"
+import * as gw from "@tests/fixtures/builders/mcp-gateway.builder"
 import {
-    GATEWAY_CALLER as CALLER,
-    GATEWAY_CATALOG as CATALOG,
-    answerOf,
-    openedEndpointOf,
-    refusalOf,
-    refusedReadLineOf,
-    remoteConnectorRowOf as connectorOf,
-    toolGrantRowOf as grantOf,
-} from "@tests/fixtures/builders/mcp-gateway.builder"
-import type { GatewaySpecSetup } from "@tests/fixtures/builders/mcp-gateway.builder"
-import {
-    arrangeGatewayScenario,
-    GATEWAY_DESCRIPTIONS,
-    GATEWAY_ROLE_RESOLUTIONS,
-    GATEWAY_READINESS,
-    UNAVAILABLE_GATEWAY_ROLES,
-    INVALID_GATEWAY_TOOLS,
-    INVALID_GATEWAY_ARGUMENTS,
-    openRemoteGatewayBreaker,
-    pendingRemoteReplyOf,
-    WRITE_NATIVE_MANIFEST,
     gatewayScenarioOf,
     gatewayLinesOf as linesOf,
     GATEWAY_SCENARIO_EXPECTED as EXPECTED,
-    MISSING_WRITE_IDENTITIES,
-    REPLAY_SCHEMA_CHANGES,
-    reroutedCallerOf,
-    TIMED_OUT_WRITES,
-    VALID_WRITE_IDENTITIES,
 } from "@tests/fixtures/builders/mcp-gateway-scenario.builder"
-import {
-    INTERNAL_SEPAY_MANIFEST,
-    OPEN_SEPAY_MANIFEST,
-    TAINTING_MANIFEST,
-    taintedTurnExpected,
-    taintedTurnOf,
-} from "@tests/fixtures/builders/mcp-gateway-taint.builder"
+import * as gws from "@tests/fixtures/builders/mcp-gateway-scenario.builder"
+import * as gwt from "@tests/fixtures/builders/mcp-gateway-taint.builder"
+
+const SAFE_REPLY = { ...EXPECTED.reply, summary: '{"holdId":"h1","code":"***"}' }
+type Dependencies = ConstructorParameters<typeof McpGatewayService>
 
 const build = async (
-    setup: GatewaySpecSetup = {},
-    manifest = OPEN_SEPAY_MANIFEST,
+    setup: gw.GatewaySpecSetup = {},
+    manifest = gwt.OPEN_SEPAY_MANIFEST,
     added: ReadonlyArray<NativeConnectorManifest> = [],
 ) => {
     const clock = new FakeClock("2026-10-20T02:00:00.000Z")
-    const logger = mock<Logger>()
-    const remote = mock<McpRemote>()
+    const logger = mock<Dependencies[3]>()
+    const remote = mock<Dependencies[4]>()
     const native = mock<NativeAdapter>({ manifest })
-    native.invoke.mockResolvedValue({ transactions: [] })
     const timeout = mock<QueueTimeout>()
-    const connectors = mock<McpConnectorsService>()
-    const grants = mock<McpToolGrantsService>()
-    const callLog = mock<McpCallLogService>()
-    const credentials = mock<McpConnectorCredentialService>({ endpointOf: openedEndpointOf })
-    const receipts = mock<GatewayReceiptsService>()
-    const dataRights = mock<DataRightsGate>({ rightsOf: jest.fn().mockResolvedValue(setup.rights ?? null) })
-    const cancel = jest.fn()
-    const runner = mock<NativeRunnerService>({
-        run: (...call) => new NativeRunnerService(timeout).run(...call),
-    })
-    arrangeGatewayScenario(setup, { remote, timeout, cancel, connectors, grants, receipts })
+    const connectors = mock<Dependencies[5]>()
+    const grants = mock<Dependencies[6]>()
+    const callLog = mock<Dependencies[7]>()
+    const credentials = mock<Dependencies[8]>()
+    const receipts = mock<Dependencies[9]>()
+    const runner = mock<Dependencies[10]>()
+    const dataRights = mock<NonNullable<Dependencies[12]>>()
+    const graph = mock<NonNullable<Dependencies[11]>>()
+    const cancel = mock<gw.GatewayCancellation>().cancel
+    const adapters = [native, ...added.map((extra) => mock<NativeAdapter>({ manifest: extra }))]
+    const doubles = {
+        clock,
+        logger,
+        remote,
+        native,
+        timeout,
+        connectors,
+        grants,
+        callLog,
+        credentials,
+        receipts,
+        dataRights,
+        graph,
+        cancel,
+    }
+    gw.arrangeGatewayDoubles(setup, doubles)
+    runner.run.mockImplementation((...call) => new NativeRunnerService(timeout).run(...call))
+    gws.arrangeGatewayScenario(setup, doubles)
     const moduleRef = await Test.createTestingModule({
         providers: [
             McpGatewayService,
             { provide: MCP_GATEWAY_OPTIONS, useValue: { defaultTimeoutMs: setup.timeoutMs ?? 4000 } },
-            {
-                provide: NATIVE_ADAPTERS,
-                useValue: [native, ...added.map((extra) => mock<NativeAdapter>({ manifest: extra }))],
-            },
+            { provide: NATIVE_ADAPTERS, useValue: adapters },
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
             { provide: MCP_REMOTE, useValue: remote },
@@ -97,10 +83,10 @@ const build = async (
             { provide: GatewayReceiptsService, useValue: receipts },
             { provide: NativeRunnerService, useValue: runner },
             { provide: DATA_RIGHTS_GATE, useValue: dataRights },
+            { provide: TOOL_GRAPH_GATE, useValue: graph },
         ],
     }).compile()
-    const gateway = moduleRef.get(McpGatewayService)
-    return { gateway, clock, logger, remote, native, timeout, cancel, connectors, grants, callLog, receipts }
+    return { gateway: moduleRef.get(McpGatewayService), ...doubles }
 }
 
 describe("McpGatewayService registry and discovery", () => {
@@ -111,7 +97,7 @@ describe("McpGatewayService registry and discovery", () => {
             EXPECTED.connectorStates,
         )
         expect(connectors[0]?.approvedTools).toBeNull()
-        expect(connectors[1]?.approvedTools?.size).toBe(CATALOG.length)
+        expect(connectors[1]?.approvedTools?.size).toBe(gw.GATEWAY_CATALOG.length)
     })
 
     it("finds an adapter an app added beside the first, with the same time limit", async () => {
@@ -140,33 +126,33 @@ describe("McpGatewayService registry and discovery", () => {
         expect(found[0]?.name).toBe("hakuen.spa.hold")
     })
 
-    it.each(GATEWAY_DESCRIPTIONS)("describes $name under its schema and grant", async ({ name, answer }) => {
+    it.each(gws.GATEWAY_DESCRIPTIONS)("describes $name under its schema and grant", async ({ name, answer }) => {
         const { gateway } = await build(gatewayScenarioOf("description"))
         await expect(gateway.describe(CALLER, name)).resolves.toEqual(answer)
     })
 })
 
 describe("McpGatewayService.toolForRole", () => {
-    it.each(GATEWAY_ROLE_RESOLUTIONS)("resolves $role with native priority", async ({ role, answer }) => {
+    it.each(gws.GATEWAY_ROLE_RESOLUTIONS)("resolves $role with native priority", async ({ role, answer }) => {
         const { gateway } = await build(gatewayScenarioOf("roles"))
         await expect(gateway.toolForRole("ws-1", role)).resolves.toEqual(answer)
     })
 
-    it.each(UNAVAILABLE_GATEWAY_ROLES)("refuses an unavailable %s provider", async (role) => {
+    it.each(gws.UNAVAILABLE_GATEWAY_ROLES)("refuses an unavailable %s provider", async (role) => {
         const { gateway } = await build(gatewayScenarioOf("unavailable-roles"))
         await expect(gateway.toolForRole("ws-1", role)).resolves.toMatchObject({ code: "no_capability" })
     })
 })
 
 describe("McpGatewayService.readiness", () => {
-    it.each(GATEWAY_READINESS)("reports readiness and providers with $label", async ({ roles, answer }) => {
+    it.each(gws.GATEWAY_READINESS)("reports readiness and providers with $label", async ({ roles, answer }) => {
         const { gateway } = await build(gatewayScenarioOf("readiness"))
         await expect(gateway.readiness("ws-1", roles)).resolves.toEqual(answer)
     })
 })
 
 describe("McpGatewayService.call refusals", () => {
-    it.each(INVALID_GATEWAY_TOOLS)("refuses $name before grants or audit", async ({ name, answer }) => {
+    it.each(gws.INVALID_GATEWAY_TOOLS)("refuses $name before grants or audit", async ({ name, answer }) => {
         const { gateway, grants, callLog } = await build(gatewayScenarioOf("invalid-tools"))
         await expect(gateway.call(CALLER, name, {})).resolves.toEqual(answer)
         expect(grants.listOfAgent).not.toHaveBeenCalled()
@@ -176,7 +162,7 @@ describe("McpGatewayService.call refusals", () => {
     it("refuses a remote tool whose live schema is not the approved one, and audits it", async () => {
         const { gateway, remote, callLog } = await build(gatewayScenarioOf("schema-refusal"))
         await expect(gateway.call(CALLER, "hakuen.booking.hold", { roomType: "deluxe" })).resolves.toEqual(
-            refusalOf("schema_unapproved", "hakuen.booking.hold"),
+            gw.refusalOf("schema_unapproved", "hakuen.booking.hold"),
         )
         await expect(gateway.call(CALLER, "shop.stay.current", {})).resolves.toMatchObject({
             code: "schema_unapproved",
@@ -190,10 +176,10 @@ describe("McpGatewayService.call refusals", () => {
     it("refuses a read the agent is not granted and audits it", async () => {
         const { gateway, callLog, native } = await build()
         await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 5 })).resolves.toEqual(
-            refusalOf("not_granted", "sepay.transactions.list"),
+            gw.refusalOf("not_granted", "sepay.transactions.list"),
         )
         expect(native.invoke).not.toHaveBeenCalled()
-        expect(linesOf(callLog)).toEqual([refusedReadLineOf()])
+        expect(linesOf(callLog)).toEqual([gw.refusedReadLineOf()])
     })
 
     it("asks a person in ask mode or over a constraint, and audits the approval", async () => {
@@ -210,17 +196,17 @@ describe("McpGatewayService.call refusals", () => {
 })
 
 describe("McpGatewayService write identities", () => {
-    it.each(MISSING_WRITE_IDENTITIES)("refuses $label before acting", async ({ caller, native: isNative }) => {
+    it.each(gws.MISSING_WRITE_IDENTITIES)("refuses $label before acting", async ({ caller, native: isNative }) => {
         const { gateway, remote, native, receipts, callLog } = await build(
             gatewayScenarioOf("missing-identity"),
-            WRITE_NATIVE_MANIFEST,
+            gws.WRITE_NATIVE_MANIFEST,
         )
         const role = await gateway.toolForRole(caller.workspaceId, "receivable.find")
         assert(role.ok)
         const tool = isNative ? "sepay.transactions.list" : role.tool.name
         const first = await gateway.call(caller, tool, {})
         const retried = await gateway.call(caller, tool, {})
-        const refused = refusalOf("idempotency_key_required", tool)
+        const refused = gw.refusalOf("idempotency_key_required", tool)
         expect([first, retried]).toEqual([refused, refused])
         expect(remote.call).not.toHaveBeenCalled()
         expect(native.invoke).not.toHaveBeenCalled()
@@ -229,9 +215,9 @@ describe("McpGatewayService write identities", () => {
         expect(linesOf(callLog)[0]).toMatchObject({ outcome: "refused", errorCode: "idempotency_key_required" })
     })
 
-    it.each(VALID_WRITE_IDENTITIES)("claims a write with identity %j", async (caller) => {
+    it.each(gws.VALID_WRITE_IDENTITIES)("claims a write with identity %j", async (caller) => {
         const { gateway, remote, receipts } = await build()
-        await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(EXPECTED.reply)
+        await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(SAFE_REPLY)
         expect(receipts.run).toHaveBeenCalledTimes(1)
         expect(remote.call).toHaveBeenCalledTimes(1)
     })
@@ -242,18 +228,18 @@ describe("McpGatewayService.call remote connectors", () => {
         const { gateway, remote, callLog } = await build()
         await expect(
             gateway.call({ ...CALLER, opKey: "reveal-1" }, "hakuen.keycode.reveal", { stayId: "s1" }),
-        ).resolves.toEqual(EXPECTED.reply)
+        ).resolves.toEqual(SAFE_REPLY)
         expect(remote.call).toHaveBeenCalledWith(EXPECTED.revealRequest)
         expect(linesOf(callLog)[0]).toMatchObject(EXPECTED.revealedAudit)
     })
 
-    it.each(REPLAY_SCHEMA_CHANGES)("replays when the approved schema $label", async (scenario) => {
+    it.each(gws.REPLAY_SCHEMA_CHANGES)("replays when the approved schema $label", async (scenario) => {
         const { gateway, remote, receipts, grants, connectors } = await build()
         const { caller, args, before, after, firstHasReplayKey } = scenario
         connectors.list.mockResolvedValueOnce([before]).mockResolvedValueOnce([after])
         const first = await gateway.call(caller, "hakuen.booking.confirm", args)
         const retried = await gateway.call(caller, "hakuen.booking.confirm", args)
-        expect([first, retried]).toEqual(EXPECTED.retriedAnswers)
+        expect([first, retried]).toEqual([SAFE_REPLY, SAFE_REPLY])
         expect(remote.call).toHaveBeenCalledTimes(1)
         expect(receipts.run).toHaveBeenCalledTimes(2)
         expect(receipts.run.mock.calls[1]?.[1]).toBe(receipts.run.mock.calls[0]?.[1])
@@ -265,13 +251,7 @@ describe("McpGatewayService.call remote connectors", () => {
 
     it("sends the same replay key for every run of the same step, and another for another step", async () => {
         const { gateway, remote } = await build()
-        const step: GatewayCaller = { ...CALLER, workItemId: "item-1" }
-        const hold = { roomType: "deluxe", checkIn: "2026-10-24", nights: 2, guests: 2, guestId: "g1" }
-        await gateway.call(step, "hakuen.booking.hold", hold)
-        await gateway.call(step, "hakuen.booking.hold", hold)
-        await gateway.call({ ...step, opKey: "item-1:rehold" }, "hakuen.booking.hold", hold)
-        await gateway.call(step, "hakuen.booking.hold", { ...hold, idempotencyKey: "mine" })
-        const keys = remote.call.mock.calls.map(([request]) => request.args.idempotencyKey)
+        const keys = await gwt.replayedHoldKeysOf(gateway, remote, CALLER)
         expect(keys[0]).toMatch(/^nivo:[0-9a-f]{64}$/u)
         expect(keys[1]).toMatch(/^nivo:[0-9a-f]{64}$/u)
         expect(keys[1]).not.toBe(keys[0])
@@ -280,15 +260,12 @@ describe("McpGatewayService.call remote connectors", () => {
 
     it("replays a retried HAKUEN write's result without calling HAKUEN twice, even without a remote replay argument", async () => {
         const { gateway, remote, receipts, grants } = await build()
-        const caller = { ...CALLER, opKey: "customer-message:confirm" }
-        const args = { holdId: "hold-1", discountPct: 0 }
-        const first = await gateway.call(caller, "hakuen.booking.confirm", args)
-        const retried = await gateway.call(caller, "hakuen.booking.confirm", { discountPct: 0, holdId: "hold-1" })
-        expect([first, retried]).toEqual(EXPECTED.retriedAnswers)
+        const { caller, args, first, retried } = await gwt.replayedConfirmationOf(gateway, CALLER)
+        expect([first, retried]).toEqual([SAFE_REPLY, SAFE_REPLY])
         expect(remote.call).toHaveBeenCalledTimes(1)
         expect(receipts.run).toHaveBeenCalledTimes(2)
         expect(grants.listOfAgent).toHaveBeenCalledTimes(2)
-        await expect(gateway.call(reroutedCallerOf(caller), "hakuen.booking.confirm", args)).resolves.toEqual(first)
+        await expect(gateway.call(gws.reroutedCallerOf(caller), "hakuen.booking.confirm", args)).resolves.toEqual(first)
         expect(remote.call).toHaveBeenCalledTimes(1)
         await gateway.call({ ...caller, opKey: "next-message:confirm" }, "hakuen.booking.confirm", args)
         await gateway.call({ ...caller, workspaceId: "ws-2" }, "hakuen.booking.confirm", args)
@@ -301,11 +278,8 @@ describe("McpGatewayService.call remote connectors", () => {
         await expect(gateway.call(CALLER, "hakuen.rooms.searchAvailability", {})).resolves.toEqual(EXPECTED.toolRefusal)
         expect(linesOf(callLog)[0]).toMatchObject({ outcome: "error", errorCode: "tool_error" })
     })
-})
-
-describe("McpGatewayService.call remote connectors", () => {
     it("answers unavailable on a timeout or a failure, logs it, and reaches a server without a URL as empty", async () => {
-        const { gateway, remote, callLog, logger } = await build({ rows: [connectorOf({ url: null })] })
+        const { gateway, remote, callLog, logger } = await build({ rows: [gw.remoteConnectorRowOf({ url: null })] })
         const timeout = new McpError({ code: McpErrorCode.Timeout, params: { url: "" } })
         remote.call.mockRejectedValueOnce(timeout).mockRejectedValueOnce(new Error("boom"))
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toEqual(EXPECTED.readTimeout)
@@ -332,14 +306,14 @@ describe("McpGatewayService.call writes that time out", () => {
         const { gateway, remote, callLog } = await build()
         remote.call.mockRejectedValueOnce(timeout()).mockResolvedValueOnce({ isError: false, value: { holdId: "h1" } })
         const step: GatewayCaller = { ...CALLER, workItemId: "item-1" }
-        await expect(gateway.call(step, "hakuen.booking.hold", { roomType: "deluxe" })).resolves.toEqual(EXPECTED.held)
+        await expect(gateway.call(step, "hakuen.booking.hold", { roomType: "deluxe" })).resolves.toEqual(gwt.HELD_REPLY)
         const [first, second] = remote.call.mock.calls.map(([request]) => request.args)
         expect(second).toEqual(first)
         expect(first?.idempotencyKey).toMatch(/^nivo:[0-9a-f]{64}$/u)
         expect(linesOf(callLog).map((line) => line.outcome)).toEqual(["ok"])
     })
 
-    it.each(TIMED_OUT_WRITES)("keeps the unknown outcome for $label", async ({ tool, args, attempts }) => {
+    it.each(gws.TIMED_OUT_WRITES)("keeps the unknown outcome for $label", async ({ tool, args, attempts }) => {
         const { gateway, remote, callLog, receipts } = await build()
         const caller = { ...CALLER, opKey: "timed-out-write" }
         remote.call.mockRejectedValue(timeout())
@@ -364,13 +338,13 @@ describe("McpGatewayService.call writes that time out", () => {
 describe("McpGatewayService breaker", () => {
     it("does not consume a write's operation key while its connector's breaker is open", async () => {
         const { gateway, remote, receipts, clock } = await build()
-        await openRemoteGatewayBreaker(gateway, remote)
+        await gws.openRemoteGatewayBreaker(gateway, remote)
         const caller = { ...CALLER, opKey: "confirm-after-recovery" }
         await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(EXPECTED.circuitOpen)
         expect(receipts.run).not.toHaveBeenCalled()
         clock.advance(120_000)
         remote.call.mockResolvedValue({ isError: false, value: { bookingId: "b1" } })
-        await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(answerOf({ bookingId: "b1" }))
+        await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(gwt.CONFIRMED_REPLY)
         expect(receipts.run).toHaveBeenCalledTimes(1)
         expect(remote.call).toHaveBeenCalledTimes(6)
     })
@@ -379,17 +353,17 @@ describe("McpGatewayService breaker", () => {
         const { gateway, remote, clock } = await build()
         const caller = { ...CALLER, opKey: "already-confirmed" }
         await gateway.call(caller, "hakuen.booking.confirm", {})
-        await openRemoteGatewayBreaker(gateway, remote)
+        await gws.openRemoteGatewayBreaker(gateway, remote)
         clock.advance(120_000)
-        await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(EXPECTED.reply)
+        await expect(gateway.call(caller, "hakuen.booking.confirm", {})).resolves.toEqual(SAFE_REPLY)
         remote.call.mockResolvedValue({ isError: false, value: { stay: null } })
-        await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toEqual(answerOf({ stay: null }))
+        await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toEqual(gwt.CURRENT_STAY_REPLY)
         expect(remote.call).toHaveBeenCalledTimes(7)
     })
 
     it("opens after five failures of a connector, refuses it meanwhile and audits it, while another connector runs", async () => {
         const { gateway, remote, native, callLog } = await build({ grants: [grantOf(), grantOf({ tool: "sepay.*" })] })
-        await openRemoteGatewayBreaker(gateway, remote)
+        await gws.openRemoteGatewayBreaker(gateway, remote)
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toEqual(EXPECTED.circuitOpen)
         await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toMatchObject({ ok: true })
         await expect(
@@ -402,20 +376,20 @@ describe("McpGatewayService breaker", () => {
 
     it("lets one probe through after the pause, refuses the others while it runs, and closes when it succeeds", async () => {
         const { gateway, remote, clock } = await build()
-        await openRemoteGatewayBreaker(gateway, remote)
+        await gws.openRemoteGatewayBreaker(gateway, remote)
         clock.advance(120_000)
-        const answer = pendingRemoteReplyOf(remote)
+        const answer = gws.pendingRemoteReplyOf(remote)
         const probe = gateway.call(CALLER, "hakuen.stay.current", {})
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toMatchObject({ detail: "circuit_open" })
         answer({ isError: false, value: { stay: null } })
-        await expect(probe).resolves.toEqual({ ok: true, value: { stay: null } })
+        await expect(probe).resolves.toEqual({ ok: true, value: { stay: null }, summary: '{"stay":null}' })
         remote.call.mockResolvedValue({ isError: false, value: { stay: null } })
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toMatchObject({ ok: true })
     })
 })
 
 describe("McpGatewayService.call native connectors", () => {
-    it.each(INVALID_GATEWAY_ARGUMENTS)("rejects $label before grants or execution", async (scenario) => {
+    it.each(gws.INVALID_GATEWAY_ARGUMENTS)("rejects $label before grants or execution", async (scenario) => {
         const { gateway, connectors, native, remote, grants, timeout, callLog } = await build(scenario.setup)
         await expect(gateway.call(CALLER, scenario.tool, scenario.args)).resolves.toEqual(EXPECTED.invalidArguments)
         expect(connectors.list).toHaveBeenCalledTimes(scenario.connectorReads)
@@ -432,7 +406,7 @@ describe("McpGatewayService.call native connectors", () => {
         const { gateway, native, callLog, logger } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
         for (let attempt = 0; attempt < 6; attempt += 1) {
             await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 51 })).resolves.toEqual(
-                refusalOf("invalid_arguments", "Invalid tool arguments"),
+                gw.refusalOf("invalid_arguments", "Invalid tool arguments"),
             )
         }
         await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 1 })).resolves.toMatchObject({ ok: true })
@@ -443,9 +417,7 @@ describe("McpGatewayService.call native connectors", () => {
 
     it("lets a valid probe run after an invalid native call during breaker recovery", async () => {
         const { gateway, native, clock } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
-        native.invoke.mockRejectedValue(new Error("down"))
-        for (let attempt = 0; attempt < 5; attempt += 1) await gateway.call(CALLER, "sepay.transactions.list", {})
-        clock.advance(120_000)
+        await gwt.openNativeGatewayBreaker(gateway, native, clock, CALLER)
         await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 51 })).resolves.toMatchObject({
             code: "invalid_arguments",
         })
@@ -460,9 +432,9 @@ describe("McpGatewayService internal-only tools", () => {
         const name = "sepay.transactions.list"
         const { gateway, native, callLog } = await build(
             { grants: [grantOf({ tool: "sepay.*" })] },
-            INTERNAL_SEPAY_MANIFEST,
+            gwt.INTERNAL_SEPAY_MANIFEST,
         )
-        await expect(gateway.call(CALLER, name, {})).resolves.toEqual(refusalOf("internal_only", name))
+        await expect(gateway.call(CALLER, name, {})).resolves.toEqual(gw.refusalOf("internal_only", name))
         await expect(gateway.search(CALLER, "bank transactions", 5)).resolves.toEqual([])
         await expect(gateway.describe(CALLER, name)).resolves.toBeNull()
         expect(native.invoke).not.toHaveBeenCalled()
@@ -475,26 +447,54 @@ describe("McpGatewayService internal-only tools", () => {
 
 describe("McpGatewayService tainted turns", () => {
     it("asks a person for a write of a turn that read tainted text, until one approves it or the window ends", async () => {
-        const { gateway, callLog, clock } = await build({ grants: [grantOf({ tool: "sepay.*" })] }, TAINTING_MANIFEST)
-        await expect(taintedTurnOf(gateway, clock, CALLER)).resolves.toEqual(taintedTurnExpected)
+        const { gateway, callLog, clock } = await build(
+            { grants: [grantOf({ tool: "sepay.*" })] },
+            gwt.TAINTING_MANIFEST,
+        )
+        await expect(gwt.taintedTurnOf(gateway, clock, CALLER)).resolves.toEqual(gwt.taintedTurnExpected)
         expect(linesOf(callLog).map((line) => line.errorCode)).toContain("tainted_input")
     })
 })
 
 describe("McpGatewayService data rights", () => {
-    const right = { kind: "payments", scope: "workspace", hide: ["account"], mask: [] } as const
-
     it("refuses a native read with no data right and audits it, and shows the read without the fields a right hides", async () => {
         const refused = await build({ grants: [grantOf({ tool: "sepay.*" })], rights: [] })
-        const narrowed = await build({ grants: [grantOf({ tool: "sepay.*" })], rights: [right] })
+        const narrowed = await build({ grants: [grantOf({ tool: "sepay.*" })], rights: [gwt.PAYMENT_RIGHT] })
         narrowed.native.invoke.mockResolvedValue({ transactions: [{ id: "t1", account: "0123" }] })
         await expect(refused.gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(
-            refusalOf("not_granted", "no_data_right"),
+            gw.refusalOf("not_granted", "no_data_right"),
         )
         expect(refused.native.invoke).not.toHaveBeenCalled()
         expect(linesOf(refused.callLog)[0]).toMatchObject({ outcome: "refused", errorCode: "no_data_right" })
-        await expect(narrowed.gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(
-            answerOf({ transactions: [{ id: "t1" }] }),
-        )
+        await expect(narrowed.gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(gwt.HIDDEN_REPLY)
+    })
+})
+
+describe("McpGatewayService the graph of the agent on writes", () => {
+    it.each(gwt.GRAPH_HOLDS)("holds %j, returns %j and audits", async (verdict, answer, outcome, code) => {
+        const { gateway, remote, callLog, graph } = await build()
+        graph.judge.mockResolvedValue(verdict)
+
+        await expect(gateway.call(gwt.GRAPH_CALLER, "hakuen.booking.confirm", {})).resolves.toEqual(answer)
+
+        expect(remote.call).not.toHaveBeenCalled()
+        expect(graph.judge).toHaveBeenCalledWith(expect.objectContaining({ agentId: "sales", key: "item-1" }))
+        expect(linesOf(callLog).map((line) => [line.outcome, line.errorCode])).toEqual([[outcome, code]])
+    })
+
+    it("runs a write the graph lets through, and never asks the graph about a call a person approved", async () => {
+        const run = await build()
+        const approved = await build({ grants: [] })
+        approved.graph.judge.mockResolvedValue({ kind: "stop" })
+
+        await expect(run.gateway.call(gwt.GRAPH_CALLER, "hakuen.booking.confirm", {})).resolves.toEqual(SAFE_REPLY)
+        await expect(
+            approved.gateway.call({ ...gwt.GRAPH_CALLER, approvedBy: "manager-1" }, "hakuen.booking.cancel", {
+                bookingId: "b1",
+            }),
+        ).resolves.toMatchObject({ ok: true })
+
+        expect(run.remote.call).toHaveBeenCalledTimes(1)
+        expect(approved.graph.judge).not.toHaveBeenCalled()
     })
 })

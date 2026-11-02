@@ -69,7 +69,7 @@ const build = async () => {
     messages.storeAgentMessage.mockResolvedValue("msg-1")
     messages.storeHumanMessage.mockResolvedValue("msg-1")
     const channels = mock<ChannelDeliveryService>()
-    channels.deliver.mockResolvedValue({ delivered: true, failure: null })
+    channels.deliver.mockResolvedValue({ delivered: true, outcome: "acknowledged", failure: null })
     const evidence = mock<EvidenceService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -147,7 +147,7 @@ describe("CustomerDeliveryService toCustomer", () => {
         const { service, conversations, channels } = await build()
         conversations.latestOfLead.mockResolvedValue(conversationOf("telegram"))
         conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram") })
-        channels.deliver.mockResolvedValue({ delivered: false, failure: null })
+        channels.deliver.mockResolvedValue({ delivered: false, outcome: "rejected", failure: null })
 
         await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
             summary: "telegramFailed|Lan",
@@ -164,6 +164,38 @@ describe("CustomerDeliveryService inConversation", () => {
         await expect(service.inConversation("ws-1", "conv-1", "Hello")).resolves.toBe(false)
         expect(messages.storeAgentMessage).toHaveBeenCalledWith("ws-1", "conv-1", "Hello")
         expect(channels.deliver).not.toHaveBeenCalled()
+    })
+})
+
+describe("CustomerDeliveryService finalInConversation", () => {
+    it("stores the agent's reply once under its work item and marks a website chat delivered", async () => {
+        const { service, conversations, messages, channels } = await build()
+        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("website") })
+        messages.storeFinalReply.mockResolvedValue("item-1")
+        messages.find.mockResolvedValue(storedOf(null))
+
+        await expect(service.finalInConversation("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("acknowledged")
+        expect(messages.storeFinalReply).toHaveBeenCalledWith("ws-1", "conv-1", "Done", "item-1")
+        expect(messages.storeHumanMessage).not.toHaveBeenCalled()
+        expect(channels.deliver).toHaveBeenCalledWith({ conversationId: "conv-1", messageId: "item-1", text: "Hello" })
+    })
+
+    it("does not push a reply already sent, so a retry sends nothing twice", async () => {
+        const { service, conversations, messages, channels } = await build()
+        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram") })
+        messages.storeFinalReply.mockResolvedValue("item-1")
+        messages.find.mockResolvedValue(storedOf("sent"))
+
+        await expect(service.finalInConversation("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("acknowledged")
+        expect(channels.deliver).not.toHaveBeenCalled()
+    })
+
+    it("stores nothing for a conversation of another workspace", async () => {
+        const { service, conversations, messages } = await build()
+        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram", "ws-2") })
+
+        await expect(service.finalInConversation("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("rejected")
+        expect(messages.storeFinalReply).not.toHaveBeenCalled()
     })
 })
 
@@ -206,7 +238,7 @@ describe("CustomerDeliveryService approvedInConversation", () => {
         const { service, conversations, messages, channels } = await build()
         conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram") })
         messages.find.mockResolvedValue({ kind: "refused", code: AgentMessagesErrorCode.NotFound })
-        channels.deliver.mockResolvedValue({ delivered: false, failure: null })
+        channels.deliver.mockResolvedValue({ delivered: false, outcome: "rejected", failure: null })
 
         await expect(service.approvedInConversation("ws-1", "conv-1", "Hello", "Mai", "item-1")).resolves.toBe(false)
         expect(channels.deliver).toHaveBeenCalledWith({
@@ -263,7 +295,12 @@ const onZalo = async () => {
 describe("CustomerDeliveryService toCustomer on Zalo", () => {
     it("passes the notice to the channel and reports a consultation message", async () => {
         const { service, channels } = await onZalo()
-        channels.deliver.mockResolvedValue({ delivered: true, failure: null, via: "consultation" })
+        channels.deliver.mockResolvedValue({
+            delivered: true,
+            outcome: "acknowledged",
+            failure: null,
+            via: "consultation",
+        })
 
         await expect(service.toCustomer(ctx, customer, "Hello", renewal)).resolves.toEqual({
             summary: "deliveredZalo|Lan",
@@ -279,7 +316,7 @@ describe("CustomerDeliveryService toCustomer on Zalo", () => {
 
     it("reports a ZNS notification outside the window", async () => {
         const { service, channels } = await onZalo()
-        channels.deliver.mockResolvedValue({ delivered: true, failure: null, via: "zns" })
+        channels.deliver.mockResolvedValue({ delivered: true, outcome: "acknowledged", failure: null, via: "zns" })
 
         await expect(service.toCustomer(ctx, customer, "Hello", renewal)).resolves.toEqual({
             summary: "deliveredZaloZns|Lan",
@@ -291,6 +328,7 @@ describe("CustomerDeliveryService toCustomer on Zalo", () => {
         const { service, channels } = await onZalo()
         channels.deliver.mockResolvedValue({
             delivered: true,
+            outcome: "acknowledged",
             failure: null,
             via: "consultation",
             note: "qr_image_failed",
@@ -306,6 +344,7 @@ describe("CustomerDeliveryService toCustomer on Zalo", () => {
         const { service, channels } = await onZalo()
         channels.deliver.mockResolvedValue({
             delivered: false,
+            outcome: "rejected",
             failure: "zalo_window_expired",
             note: "zns_not_configured",
         })
@@ -318,7 +357,7 @@ describe("CustomerDeliveryService toCustomer on Zalo", () => {
 
     it("names a generic failure when the channel gave no reason or the conversation could not be read", async () => {
         const { service, channels, conversations } = await onZalo()
-        channels.deliver.mockResolvedValue({ delivered: false, failure: null })
+        channels.deliver.mockResolvedValue({ delivered: false, outcome: "rejected", failure: null })
 
         await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
             summary: "zaloFailed|Lan|zaloFailure.zalo_error",
@@ -359,5 +398,16 @@ describe("CustomerDeliveryService notices in a conversation", () => {
             text: "Hello",
             notification: renewal,
         })
+    })
+})
+
+describe("CustomerDeliveryService absent stored final reply", () => {
+    it("rejects delivery when the stored final reply cannot be read and sends nothing", async () => {
+        const { service, conversations, messages, channels } = await build()
+        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram") })
+        messages.storeFinalReply.mockResolvedValue("item-1")
+        messages.find.mockResolvedValue({ kind: "refused", code: AgentMessagesErrorCode.NotFound })
+        await expect(service.finalInConversation("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("rejected")
+        expect(channels.deliver).not.toHaveBeenCalled()
     })
 })

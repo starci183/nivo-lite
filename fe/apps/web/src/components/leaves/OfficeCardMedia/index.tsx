@@ -14,14 +14,19 @@ export const OfficeCardMedia = (props: OfficeCardMediaProps) =>
                 media.kind === "image" ? (
                     <Image key={media.url} src={media.url} alt={media.caption ?? props.card.title} aspect="landscape" />
                 ) : (
-                    <MediaFrame key={media.url} aspect="landscape" caption={media.caption ?? undefined}>
-                        <Video
-                            src={media.url}
-                            title={props.card.title}
-                            captions={media.captions}
-                            {...(media.captions !== null && { crossOrigin: "anonymous" as const })}
-                        />
-                    </MediaFrame>
+                    <MediaFrame
+                        key={media.url}
+                        aspect="landscape"
+                        caption={media.caption ?? undefined}
+                        media={
+                            <Video
+                                src={media.url}
+                                title={props.card.title}
+                                captions={media.captions}
+                                {...(media.captions !== null && { crossOrigin: "anonymous" as const })}
+                            />
+                        }
+                    />
                 ),
             )}
         </Grid>

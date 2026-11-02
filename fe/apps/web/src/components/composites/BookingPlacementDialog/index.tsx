@@ -1,6 +1,6 @@
+import { AUTO_RESOURCE } from "@/modules/booking-desk"
 import { BookingCustomerFields } from "@/components/leaves/BookingCustomerFields"
 import type { BookingPlacementDialogProps } from "@/components/leaves/BookingCustomerFields"
-export type { BookingPlacementDialogProps } from "@/components/leaves/BookingCustomerFields"
 import { parseDate, parseTime } from "@internationalized/date"
 import {
     Alert,
@@ -13,11 +13,9 @@ import {
     NumberField,
     Select,
     TimeField,
+    Stack,
+    Grid,
 } from "@starci/grammar/common"
-import { GRID_CLASS, STACK_CLASS } from "./classNames"
-
-/** The option that lets the database pick a free place; the field holds an empty id for it. */
-export const AUTO_RESOURCE = "auto"
 
 /** The dialog of "add booking" and "move booking": the fields, the reason of a refusal and the choice to stack anyway. */
 export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
@@ -35,8 +33,8 @@ export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
             footer={renderBookingPlacementDialogFooter(props, labels, adding, fields)}
         >
             <Form label={props.title} isPending={props.isPending} onSubmit={props.onSubmit}>
-                <div className={STACK_CLASS}>
-                    <div className={GRID_CLASS}>
+                <Stack gap="row">
+                    <Grid kind="form" columns={2}>
                         {adding ? <BookingCustomerFields {...props} /> : null}
                         <DateField
                             label={labels.date}
@@ -66,7 +64,7 @@ export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
                             }
                         />
                         {adding ? renderBookingPlacementDialogPartyFields(labels, fields, props) : null}
-                    </div>
+                    </Grid>
                     {props.refusal === undefined ? null : <Alert tone="negative" title={props.refusal} />}
                     {props.canForce || fields.force ? (
                         <Checkbox
@@ -75,7 +73,7 @@ export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
                             onSelectedChange={(force) => props.onChange({ force })}
                         />
                     ) : null}
-                </div>
+                </Stack>
             </Form>
         </Dialog>
     )

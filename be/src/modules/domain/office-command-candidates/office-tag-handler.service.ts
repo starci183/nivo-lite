@@ -17,7 +17,7 @@ import {
     RuntimeAgentService,
     internalTimeoutMsOf,
 } from "@modules/domain/agent-turns"
-import type { InternalActionResult } from "@modules/domain/agent-turns"
+import type { InternalActionResult, InternalTurnInput } from "@modules/domain/agent-turns"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentHeader } from "@modules/domain/agents"
 import { ChatTypingService } from "@modules/domain/chat-typing"
@@ -107,13 +107,16 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
         const answered = await this.commandCardOf(turn)
         if (answered !== null) return { kind: "end", ending: endOf("done", null, { command: answered }) }
         const runtimeAgentId = await this.runtime.agentFor(turn.workspaceId, agent.module, installation)
-        const message = await this.context.messageOf({
+        const input: InternalTurnInput = {
             workspaceId: turn.workspaceId,
             agentId: turn.agentId,
             source: "tag",
             locale: this.localeOf(turn),
             text: await this.textOf(turn, agent.module, transcriptOf(talk.before, talk.tagged)),
-        })
+            wake: turn,
+            agentName: agent.name,
+        }
+        const message = await this.context.messageOf(input)
         const attachments = await this.fileReads.attachmentsOf(this.fileTurnOf(turn, agent.module))
         await this.show(turn, agent, true)
         return {
@@ -140,17 +143,22 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
     }
 
     /** Applies what the model proposed and says its reply where the tag was written, once per wake. */
-    async settle(turn: AgentTurnView, proposal: unknown): Promise<AgentHandlerEnding> {
+    async settle(turn: AgentTurnView, proposal: unknown, signal: AbortSignal): Promise<AgentHandlerEnding> {
         const agent = await this.agents.headOf(turn.workspaceId, turn.agentId)
         if (agent === null) return endOf("skipped", "agent_gone")
         try {
             const installation = await this.installations.ofAgent(turn.workspaceId, turn.agentId)
-            const settled = await this.settler.settle(turn, proposal, {
-                module: agent.module,
-                actorName: await this.actorNameOf(turn, agent),
-                locale: this.localeOf(turn),
-                installationId: installation?.id ?? null,
-            })
+            const settled = await this.settler.settle(
+                turn,
+                proposal,
+                {
+                    module: agent.module,
+                    actorName: await this.actorNameOf(turn, agent),
+                    locale: this.localeOf(turn),
+                    installationId: installation?.id ?? null,
+                },
+                signal,
+            )
             if (settled.kind === "stale") return endOf("held", "stale")
             if (settled.reply !== "") await this.surfaceOf(turn).say(turn, agent, settled.reply, "agent")
             return endOf("done", null, {
@@ -159,6 +167,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
                 actions: settled.actions.length,
                 needsHuman: settled.needsHuman,
                 workItemId: firstWorkItemOf(settled.actions),
+                ...settled.traced,
             })
         } finally {
             await this.show(turn, agent, false)

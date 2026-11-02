@@ -1,9 +1,10 @@
-import { Alert, Button, Heading, Page, SurfaceCard, Text, WorkspaceShell } from "@starci/grammar/common"
+import { Stack, Alert, Button, Heading, Page, SurfaceCard, Text, WorkspaceShell } from "@starci/grammar/common"
+
 import { PublicBookingForm } from "@/components/composites/PublicBookingForm"
 import type { PublicBookingFormProps } from "@/components/composites/PublicBookingForm"
 import { APP_ROUTES } from "@/modules/routes"
 import type { PublicBookingPageData } from "@/modules/types"
-import { HEAD_CLASS_NAME, MAIN_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
+import { MAIN_CLASS_NAME } from "./classNames"
 
 /** Props for {@link PublicBookingContentBase}. */
 interface PublicBookingContentView {
@@ -30,9 +31,8 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
     const { title, page } = props.props
     if (page === null) {
         return (
-            <Page measure="reading">
-                <SurfaceCard ariaLabel={props.props.notFoundTitle}>
-                    <Heading level={1}>{props.props.notFoundTitle}</Heading>
+            <Page measure="reading" header={{ title: props.props.notFoundTitle }}>
+                <SurfaceCard>
                     <Text tone="muted">{props.props.notFoundText}</Text>
                     <Button intent="neutral" href={APP_ROUTES.dashboard}>
                         {props.props.homeLabel}
@@ -61,8 +61,8 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
             primary={
                 <Page measure="reading">
                     <div className={MAIN_CLASS_NAME}>
-                        <div className={STACK_CLASS_NAME}>
-                            <div className={HEAD_CLASS_NAME}>
+                        <Stack gap="section">
+                            <Stack gap="identity">
                                 <Heading level={1}>{title}</Heading>
                                 <Text tone="muted">{page.shop}</Text>
                                 {page.address === "" ? null : (
@@ -71,9 +71,9 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
                                     </Text>
                                 )}
                                 {page.note === "" ? null : <Text size="sm">{page.note}</Text>}
-                            </div>
+                            </Stack>
                             <PublicBookingForm key={page.slug} props={props.props.form} on={props.on} />
-                        </div>
+                        </Stack>
                     </div>
                 </Page>
             }

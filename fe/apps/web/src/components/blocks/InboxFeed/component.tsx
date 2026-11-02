@@ -1,7 +1,7 @@
-import { Badge, Button, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import { Button, Cluster, EmptyNotice, Section, Stack, Text, Link } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { FEED_BODY_CLASS, FEED_FOOT_CLASS, FEED_META_CLASS } from "./classNames"
+import type { ListRowData } from "@starci/grammar/common"
 
 /** One received input with every word already in the reader's language. */
 export interface InboxFeedRow {
@@ -44,73 +44,67 @@ const PLACEHOLDER: ReadonlyArray<InboxFeedRow> = ["a", "b", "c"].map((id) => ({
     office: null,
 }))
 
-/** Feed of received inputs, newest first, each with where it stands. */
+/** Feed of received inputs, newest first, with the list owning its status and row anatomy. */
 export const InboxFeedBase = (props: InboxFeedBaseProps) => {
     const view = props.props
     return (
-        <SurfaceListCard
-            label={view.title}
-            headingLevel={2}
-            isLoading={view.slot.isLoading === true}
-            labelEnd={
-                <Button intent="neutral" onPress={props.on.refresh}>
-                    {view.refreshLabel}
-                </Button>
-            }
-            footer={
-                <Text size="sm" tone="muted">
-                    {view.description}
-                </Text>
-            }
-        >
-            <SlotView slot={view.slot} placeholder={PLACEHOLDER} labels={view.labels} onRetry={props.on.refresh}>
-                {(rows, isSkeleton) =>
-                    rows.map((row) => (
-                        <ListRow
-                            key={row.id}
-                            isSkeleton={isSkeleton}
-                            title={row.source}
-                            description={`${row.kind} · ${row.ago}`}
-                            badges={
-                                <Badge tone={row.status.tone} isSkeleton={isSkeleton}>
-                                    {row.status.label}
-                                </Badge>
-                            }
-                        >
-                            <div className={FEED_BODY_CLASS}>
-                                {row.body === "" ? null : <Text overflow="clamp-2">{row.body}</Text>}
-                                <div className={FEED_META_CLASS}>
-                                    {row.meta.map((line) => (
-                                        <Text
-                                            key={line.key}
-                                            size="sm"
-                                            {...(line.strong ? {} : { tone: "muted" as const })}
-                                            {...(line.strong ? { weight: "medium" as const } : {})}
-                                        >
-                                            {line.text}
+        <SlotView
+            slot={view.slot}
+            placeholder={PLACEHOLDER}
+            labels={view.labels}
+            onRetry={props.on.refresh}
+            render={(rows, isLoading) => {
+                const items: ListRowData[] = rows.map((row) => ({
+                    id: row.id,
+                    title: row.source,
+                    description: [row.kind, row.ago].join(" · "),
+                    badges: [{ label: row.status.label, tone: row.status.tone }],
+                    detail: (
+                        <Stack gap="row">
+                            {row.body === "" ? null : <Text overflow="clamp-2">{row.body}</Text>}
+                            <Cluster gap="inline">
+                                {row.meta.map((line) => (
+                                    <Text
+                                        key={line.key}
+                                        size="sm"
+                                        {...(line.strong ? { isStrong: true } : { tone: "muted" as const })}
+                                    >
+                                        {line.text}
+                                    </Text>
+                                ))}
+                            </Cluster>
+                            {row.duplicates === null && row.lead === null && row.office === null ? null : (
+                                <Cluster gap="inline" justify="between">
+                                    {row.duplicates === null ? null : (
+                                        <Text size="sm" tone="muted">
+                                            {row.duplicates}
                                         </Text>
-                                    ))}
-                                </div>
-                                {row.duplicates === null && row.lead === null && row.office === null ? null : (
-                                    <div className={FEED_FOOT_CLASS}>
-                                        {row.duplicates === null ? null : (
-                                            <Text size="sm" tone="muted">
-                                                {row.duplicates}
-                                            </Text>
-                                        )}
-                                        {row.lead === null ? null : (
-                                            <TextAction href={row.lead.href}>{row.lead.label}</TextAction>
-                                        )}
-                                        {row.office === null ? null : (
-                                            <TextAction href={row.office.href}>{row.office.label}</TextAction>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </ListRow>
-                    ))
-                }
-            </SlotView>
-        </SurfaceListCard>
+                                    )}
+                                    {row.lead === null ? null : <Link href={row.lead.href}>{row.lead.label}</Link>}
+                                    {row.office === null ? null : (
+                                        <Link href={row.office.href}>{row.office.label}</Link>
+                                    )}
+                                </Cluster>
+                            )}
+                        </Stack>
+                    ),
+                }))
+                return (
+                    <Section
+                        kind="list"
+                        title={view.title}
+                        description={view.description}
+                        isLoading={isLoading}
+                        action={
+                            <Button intent="neutral" onPress={props.on.refresh}>
+                                {view.refreshLabel}
+                            </Button>
+                        }
+                        items={items}
+                        empty={<EmptyNotice message={view.labels.empty} />}
+                    />
+                )
+            }}
+        />
     )
 }

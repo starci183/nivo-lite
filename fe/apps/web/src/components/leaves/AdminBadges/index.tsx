@@ -5,7 +5,7 @@ import type { AdminBadgeView } from "@/hooks/admin"
 type AdminBadgesProps = {
     readonly badges: ReadonlyArray<AdminBadgeView>
     /** Draws the badges as skeletons while the read is on its way. */
-    readonly isSkeleton?: boolean | undefined
+    readonly isLoading?: boolean | undefined
 }
 
 /** Draws a run of badges, each in the tone of its status. */
@@ -15,7 +15,7 @@ export const AdminBadges = (props: AdminBadgesProps) => (
             <Badge
                 key={entry.id}
                 tone={entry.tone}
-                isSkeleton={props.isSkeleton === true}
+                isLoading={props.isLoading === true}
                 {...(entry.isDot === undefined ? {} : { isDot: entry.isDot })}
             >
                 {entry.label}

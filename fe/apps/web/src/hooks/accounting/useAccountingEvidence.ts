@@ -2,32 +2,44 @@
 
 import { creditRecordsOf, invoiceRecordsOf, orderRecordsOf } from "@/hooks/accountingRecords"
 import { useAccountingEvidenceForm } from "@/hooks/rhf"
+import { useFeatureLifetime } from "@/hooks/reuseables"
+import { useGraphQLWithToast } from "@/modules/toast"
 import type { AccountingEvidenceValues } from "@/hooks/rhf"
 import type { AccountingWorkbenchData } from "@/modules/types"
 import { digitsToNumber, moneyOf, vietnamToday } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useWatch } from "react-hook-form"
 import { supplierNeedOf } from "@/hooks/accountingUpcoming"
 import { useRecordManualEvidence } from "./useRecordManualEvidence"
 
 /** The Evidence tab: credits, invoices and orders without an invoice, plus the manual evidence form. */
-export const useAccountingEvidence = (data: AccountingWorkbenchData) => {
+export const useAccountingEvidence = (data: AccountingWorkbenchData, isActive: boolean, scope: string) => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [isDuplicate, setIsDuplicate] = useState(false)
+    const [operation, setOperation] = useState<EvidenceOperation | null>(null)
+    const lifetime = useFeatureLifetime(isActive, scope)
     const form = useAccountingEvidenceForm()
+    const reset = form.reset
+    useEffect(() => {
+        setIsFormOpen(false)
+        setIsDuplicate(false)
+        setOperation(null)
+        reset()
+    }, [isActive, reset, scope])
     const fields = useWatch({ control: form.control })
-    const { record, isRecording } = useRecordManualEvidence()
-    const isSaving = isRecording || form.formState.isSubmitting
+    const { record } = useRecordManualEvidence()
+    const runGraphQL = useGraphQLWithToast()
+    const isSaving = isActive && operation?.identity === lifetime.identity
     const today = vietnamToday()
     const closeForm = () => {
         setIsFormOpen(false)
         form.reset()
         setIsDuplicate(false)
     }
-    const submitForm = form.handleSubmit(async (values) => {
+    const recordValues = async (values: AccountingEvidenceValues, isCurrent: () => boolean) => {
         setIsDuplicate(false)
         const recorded = await record({
             amount: digitsToNumber(values.amount) ?? 0,
@@ -36,10 +48,10 @@ export const useAccountingEvidence = (data: AccountingWorkbenchData) => {
             note: values.note,
             payer: values.payer,
         })
-        if (recorded === undefined) return
+        if (recorded === undefined || !isCurrent()) return
         if (recorded.duplicate) return setIsDuplicate(true)
         closeForm()
-    })
+    }
     const error = Object.values(form.formState.errors).find((failure) => failure.message)?.message ?? null
 
     const actions = {
@@ -48,48 +60,97 @@ export const useAccountingEvidence = (data: AccountingWorkbenchData) => {
         changeField: (name: keyof AccountingEvidenceValues, value: string) =>
             form.setValue(name, value, { shouldDirty: true, shouldValidate: form.formState.isSubmitted }),
         submitForm: () => {
-            void submitForm()
+            const pending = { identity: lifetime.identity, isCurrent: lifetime.capture() }
+            setOperation(pending)
+            const finish = () => setOperation((current) => (current === pending ? null : current))
+            form.handleSubmit((values) => {
+                if (!pending.isCurrent()) return finish()
+                recordValues(values, pending.isCurrent)
+                    .catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
+                    .finally(finish)
+            }, finish)().catch((error: unknown) =>
+                runGraphQL(() => Promise.reject(error), { showSuccessToast: false }).finally(finish),
+            )
         },
     }
+    const records = evidenceRecordsOf({ t, format, data })
     return {
         props: {
-            creditsTitle: t("creditsTitle"),
-            creditsIntro: t("creditsIntro"),
-            creditsEmpty: t(data.creditsSource === null ? "creditsNotConnected" : "creditsEmpty"),
-            creditsEmptyBody: t(data.creditsSource === null ? "notConnectedHint" : "creditsEmptyBody"),
-            credits: creditRecordsOf(t, format, data.credits, data.creditsSource),
-            invoicesTitle: t("invoicesTitle"),
-            invoicesIntro: t("invoicesIntro"),
-            invoicesEmpty: t("invoicesEmpty"),
-            invoicesEmptyBody: t("invoicesEmptyBody"),
-            internalNote: t("internalNote"),
-            invoices: invoiceRecordsOf(t, format, data.invoices),
-            ordersTitle: t("ordersTitle"),
-            ordersIntro: t("ordersIntro"),
-            ordersEmpty: t("ordersEmpty"),
-            ordersEmptyBody: t("ordersEmptyBody"),
-            orders: orderRecordsOf(t, format, data.ordersWithoutInvoice),
-            supplierNeed: supplierNeedOf(t, data.payablesSource),
+            ...records,
+            lists: evidenceListsOf(records),
             isFormOpen,
             formOpenLabel: t("manualOpen"),
-            form: {
-                title: t("manualTitle"),
-                intro: t("manualIntro"),
-                amountLabel: t("fAmount"),
-                amountHint: !fields.amount ? null : moneyOf(format, digitsToNumber(fields.amount)),
-                ...evidenceFormLabelsOf(t),
-                amount: fields.amount ?? "",
-                date: fields.date || today,
-                maxDate: today,
-                content: fields.content ?? "",
-                payer: fields.payer ?? "",
-                note: fields.note ?? "",
-                isSaving,
-                error,
-                notice: isDuplicate ? t("manualDuplicate") : null,
-            },
+            form: evidenceFormOf({ t, format, fields, today, isSaving, error, isDuplicate }),
         },
         on: actions,
+    }
+}
+
+/** Only the operation started in this active editor may hold its busy state. */
+interface EvidenceOperation {
+    readonly identity: ReturnType<typeof useFeatureLifetime>["identity"]
+    readonly isCurrent: () => boolean
+}
+
+/** Resolved input values and facts of the manual-evidence form. */
+interface EvidenceFormInput {
+    readonly t: ReturnType<typeof useTranslations<"workbenchAccounting">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly fields: Partial<AccountingEvidenceValues>
+    readonly today: string
+    readonly isSaving: boolean
+    readonly error: string | null
+    readonly isDuplicate: boolean
+}
+
+/** The form's own words and current values, independent of its command lifecycle. */
+const evidenceFormOf = (input: EvidenceFormInput) => {
+    const { t, format, fields, today, isSaving, error, isDuplicate } = input
+    return {
+        title: t("manualTitle"),
+        intro: t("manualIntro"),
+        amountLabel: t("fAmount"),
+        amountHint: !fields.amount ? null : moneyOf(format, digitsToNumber(fields.amount)),
+        ...evidenceFormLabelsOf(t),
+        amount: fields.amount ?? "",
+        date: fields.date || today,
+        maxDate: today,
+        content: fields.content ?? "",
+        payer: fields.payer ?? "",
+        note: fields.note ?? "",
+        isSaving,
+        error,
+        notice: isDuplicate ? t("manualDuplicate") : null,
+    }
+}
+
+interface EvidenceRecordsInput {
+    readonly t: ReturnType<typeof useTranslations<"workbenchAccounting">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly data: AccountingWorkbenchData
+}
+
+/** Resolves the three evidence lists from the same workbench snapshot. */
+const evidenceRecordsOf = (input: EvidenceRecordsInput) => {
+    const { t, format, data } = input
+    return {
+        creditsTitle: t("creditsTitle"),
+        creditsIntro: t("creditsIntro"),
+        creditsEmpty: t(data.creditsSource === null ? "creditsNotConnected" : "creditsEmpty"),
+        creditsEmptyBody: t(data.creditsSource === null ? "notConnectedHint" : "creditsEmptyBody"),
+        credits: creditRecordsOf(t, format, data.credits, data.creditsSource),
+        invoicesTitle: t("invoicesTitle"),
+        invoicesIntro: t("invoicesIntro"),
+        invoicesEmpty: t("invoicesEmpty"),
+        invoicesEmptyBody: t("invoicesEmptyBody"),
+        internalNote: t("internalNote"),
+        invoices: invoiceRecordsOf(t, format, data.invoices),
+        ordersTitle: t("ordersTitle"),
+        ordersIntro: t("ordersIntro"),
+        ordersEmpty: t("ordersEmpty"),
+        ordersEmptyBody: t("ordersEmptyBody"),
+        orders: orderRecordsOf(t, format, data.ordersWithoutInvoice),
+        supplierNeed: supplierNeedOf(t, data.payablesSource),
     }
 }
 
@@ -103,4 +164,21 @@ const evidenceFormLabelsOf = (t: ReturnType<typeof useTranslations<"workbenchAcc
     saveLabel: t("manualSave"),
     cancelLabel: t("cancel"),
     foot: t("manualFoot"),
+})
+
+/** The same resolved labels and rows grouped for the three actual native record lists. */
+const evidenceListsOf = (view: ReturnType<typeof evidenceRecordsOf>) => ({
+    credits: {
+        label: view.creditsTitle,
+        empty: view.creditsEmpty,
+        emptyBody: view.creditsEmptyBody,
+        records: view.credits,
+    },
+    invoices: {
+        label: view.invoicesTitle,
+        empty: view.invoicesEmpty,
+        emptyBody: view.invoicesEmptyBody,
+        records: view.invoices,
+    },
+    orders: { label: view.ordersTitle, empty: view.ordersEmpty, emptyBody: view.ordersEmptyBody, records: view.orders },
 })

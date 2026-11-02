@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { AMOUNT_EVIDENCE, WorkItemsService } from "@modules/domain/work-items"
 import type { EntityManager } from "typeorm"
 import { DecisionsError, DecisionsErrorCode, EvidenceService } from "@modules/domain/decisions"
 import type {
@@ -18,7 +19,6 @@ import type { InvoiceRow } from "@modules/domain/invoices"
 import { OrdersService } from "@modules/domain/orders"
 import { TransactionsService } from "@modules/domain/transactions"
 import type { OptionalTransaction } from "@modules/domain/transactions"
-import { WorkItemsService } from "@modules/domain/work-items"
 import { PaymentReconciledEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
@@ -41,6 +41,10 @@ interface PaymentParties {
     readonly channel: string | null
     readonly orderNo: string | null
 }
+
+/** A credit the bank feed reports is money received, not a claim. */
+const SEPAY = "sepay"
+const RECEIVED = "received"
 
 @Injectable()
 /**
@@ -97,6 +101,9 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
                 amount_vnd: amount,
                 outcome: match.clear ? "clear" : "unclear",
                 candidates: match.pool.map((invoice) => candidateOf(invoice, this.labelOf(ctx, invoice))),
+                ...(bank === null
+                    ? {}
+                    : { evidence: [{ key: AMOUNT_EVIDENCE, value: amount, kind: RECEIVED, via: SEPAY }] }),
                 fields: {
                     amount_vnd: amount,
                     reference: transaction.reference,

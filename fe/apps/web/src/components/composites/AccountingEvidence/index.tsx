@@ -1,9 +1,9 @@
+import type { ReactNode } from "react"
 import { AccountingEvidenceFields } from "@/components/leaves/AccountingEvidenceFields"
 import type { AccountingEvidenceFieldName } from "@/components/leaves/AccountingEvidenceFields"
 
 import { Alert, Badge, Button, Form, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { AccountingFormActions } from "@/components/branches/AccountingFormActions"
-import { AccountingRecordSection } from "@/components/branches/AccountingRecordSection"
 import type { AccountingRecordView } from "@/hooks/accountingRecords"
 
 /** The words and entered values of the manual evidence form. */
@@ -43,6 +43,9 @@ interface EvidenceNeed {
 
 /** The resolved words and rows of the Evidence tab. */
 interface AccountingEvidenceProps {
+    readonly credits: ReactNode
+    readonly invoices: ReactNode
+    readonly orders: ReactNode
     readonly props: {
         readonly creditsTitle: string
         readonly creditsIntro: string
@@ -66,24 +69,25 @@ interface AccountingEvidenceProps {
         readonly formOpenLabel: string
         readonly form: EvidenceForm
     }
-    readonly on: {
-        readonly openForm: () => void
-        readonly closeForm: () => void
-        readonly changeField: (name: AccountingEvidenceFieldName, value: string) => void
-        readonly submitForm: () => void
-    }
     /** The panel is drawn from placeholders: its leaves draw as skeleton. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
+}
+
+/** The commands used by the evidence form. */
+interface AccountingEvidenceFormActions {
+    readonly closeForm: () => void
+    readonly changeField: (name: AccountingEvidenceFieldName, value: string) => void
+    readonly submitForm: () => void
 }
 
 /** The form's words and values, and what it does. */
-interface ManualEvidenceFormProps {
+interface AccountingEvidenceFormProps {
     readonly form: EvidenceForm
-    readonly on: AccountingEvidenceProps["on"]
+    readonly on: AccountingEvidenceFormActions
 }
 
 /** The "add manual evidence" form: the owner states money that arrived and NIVO tries to match it to an invoice. */
-const ManualEvidenceForm = (props: ManualEvidenceFormProps) => {
+export const AccountingEvidenceForm = (props: AccountingEvidenceFormProps) => {
     const form = props.form
     return (
         <SurfaceCard label={form.title}>
@@ -112,55 +116,24 @@ const ManualEvidenceForm = (props: ManualEvidenceFormProps) => {
 
 /** Bank credits with match state, invoices with status, orders still without an invoice, and the manual evidence form. */
 export const AccountingEvidence = (props: AccountingEvidenceProps) => {
-    const { props: data, on } = props
-    const isSkeleton = props.isSkeleton
+    const { props: data } = props
+    const isLoading = props.isLoading
     return (
         <Stack gap="region">
-            <AccountingRecordSection
-                title={data.creditsTitle}
-                intro={data.creditsIntro}
-                empty={data.creditsEmpty}
-                emptyBody={data.creditsEmptyBody}
-                records={data.credits}
-                isSkeleton={isSkeleton}
-                action={
-                    data.isFormOpen ? undefined : (
-                        <Button intent="neutral" isSkeleton={isSkeleton} onPress={on.openForm}>
-                            {data.formOpenLabel}
-                        </Button>
-                    )
-                }
-            >
-                {data.isFormOpen ? <ManualEvidenceForm form={data.form} on={on} /> : null}
-            </AccountingRecordSection>
-            <AccountingRecordSection
-                title={data.invoicesTitle}
-                intro={data.invoicesIntro}
-                empty={data.invoicesEmpty}
-                emptyBody={data.invoicesEmptyBody}
-                records={data.invoices}
-                isSkeleton={isSkeleton}
-                note={data.internalNote}
-            />
-            <AccountingRecordSection
-                title={data.ordersTitle}
-                intro={data.ordersIntro}
-                empty={data.ordersEmpty}
-                emptyBody={data.ordersEmptyBody}
-                records={data.orders}
-                isSkeleton={isSkeleton}
-            />
+            {props.credits}
+            {props.invoices}
+            {props.orders}
             {data.supplierNeed === null ? null : (
                 <SurfaceCard label={data.supplierNeed.title}>
                     <Stack gap="row" align="start">
-                        <Badge tone="warning" isSkeleton={isSkeleton}>
+                        <Badge tone="warning" isLoading={isLoading}>
                             {data.supplierNeed.badge}
                         </Badge>
-                        <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                        <Text size="sm" tone="muted" isLoading={isLoading}>
                             {data.supplierNeed.body}
                         </Text>
                         <div>
-                            <Button intent="neutral" href={data.supplierNeed.actionHref} isSkeleton={isSkeleton}>
+                            <Button intent="neutral" href={data.supplierNeed.actionHref} isLoading={isLoading}>
                                 {data.supplierNeed.actionLabel}
                             </Button>
                         </div>
@@ -170,9 +143,3 @@ export const AccountingEvidence = (props: AccountingEvidenceProps) => {
         </Stack>
     )
 }
-
-/** The settled atoms of the AccountingEvidence surface. */
-export type AccountingEvidenceView = AccountingEvidenceProps["props"]
-
-/** What the evidence does, handed in by its panel. */
-export type AccountingEvidenceOn = AccountingEvidenceProps["on"]

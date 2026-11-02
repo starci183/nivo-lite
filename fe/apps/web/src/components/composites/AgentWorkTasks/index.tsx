@@ -14,7 +14,7 @@ interface AgentWorkTasksProps {
     }
     readonly tasks: ReadonlyArray<AgentWorkTaskView>
     readonly canEdit: boolean
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onClose: (id: string) => void
 }
 
@@ -22,7 +22,7 @@ interface AgentWorkTasksProps {
 export const AgentWorkTasks = (props: AgentWorkTasksProps) => (
     <AgentWorkRows
         words={props.words}
-        isSkeleton={props.isSkeleton}
+        isLoading={props.isLoading}
         rows={props.tasks.map((task) => ({
             id: task.id,
             title: task.title,

@@ -10,9 +10,9 @@ import { queryVideoProjects } from "@/modules/api/graphql/queries/query-video-pr
 export const QUERY_VIDEO_PROJECTS_SWR_KEY = "QUERY_VIDEO_PROJECTS_SWR"
 
 /** The video projects, read again while one is scripting or rendering. */
-export const useQueryVideoProjectsSwr = (includeArchived = false) =>
+export const useQueryVideoProjectsSwr = (includeArchived = false, isActive = true) =>
     useSWR(
-        useWorkspaceParamsKey(QUERY_VIDEO_PROJECTS_SWR_KEY, [includeArchived] as const),
+        useWorkspaceParamsKey(QUERY_VIDEO_PROJECTS_SWR_KEY, isActive ? ([includeArchived] as const) : null),
         async ([, , ...input]: WorkspaceReadKey<NonNullable<typeof includeArchived>>) =>
             answeredData(
                 await queryVideoProjects({ request: { includeArchived: input[0] } }),

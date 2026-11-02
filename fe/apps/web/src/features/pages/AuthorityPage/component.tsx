@@ -8,10 +8,12 @@ import { AuthorityStaff } from "@/components/blocks/AuthorityStaff"
 /** Draws the authority page: the heading, then the four sections in the order of the operating flow, then the optional staff. */
 export const AuthorityPageBase = () => (
     <AuthorityHead>
-        <AuthorityGoals />
-        <AuthorityPolicies />
-        <AuthorityScope />
-        <AuthorityLimits />
-        <AuthorityStaff />
+        <>
+            <AuthorityGoals />
+            <AuthorityPolicies />
+            <AuthorityScope />
+            <AuthorityLimits />
+            <AuthorityStaff />
+        </>
     </AuthorityHead>
 )

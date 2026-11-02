@@ -1,4 +1,5 @@
-import { Alert, Badge, Button, LeadingNumber, ListRow, SurfaceListCard } from "@starci/grammar/common"
+import { Alert, Button, EmptyNotice, Stack, SurfaceCard } from "@starci/grammar/common"
+import type { ListRowData } from "@starci/grammar/common"
 import { SetupGateBody } from "@/components/branches/SetupGateBody"
 import type { SetupSideGate, SetupSideView } from "@/modules/types"
 
@@ -6,6 +7,8 @@ import type { SetupSideGate, SetupSideView } from "@/modules/types"
 interface AgentSetupChecklistCopy {
     /** "NIVO is asking in the chat", under the current item. */
     readonly askingLabel: string
+    /** The shared status copy for a checklist without any gate. */
+    readonly emptyLabel: string
 }
 
 /** What the checklist can do: confirm, reopen or edit an item, and follow the link of the unmet notice. */
@@ -20,7 +23,7 @@ interface AgentSetupChecklistCommands {
 /** View, copy and commands of the checklist. */
 interface AgentSetupChecklistProps {
     readonly view: SetupSideView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly copy: AgentSetupChecklistCopy
     readonly on: AgentSetupChecklistCommands
 }
@@ -56,25 +59,21 @@ const descriptionOf = (gate: SetupSideGate, isCurrent: boolean, askingLabel: str
 }
 
 /** One item of the checklist: its number, title and state, "Edit", and the body: the editor while edited, else the value with confirm or reopen. */
-const GateRow = (props: GateRowProps) => {
+const gateRowOf = (props: GateRowProps): ListRowData => {
     const { gate } = props
     const gates = props.view.gates
     const isEditing = gates.editing === gate.key
     const description = descriptionOf(gate, props.isCurrent, props.copy.askingLabel)
-    return (
-        <ListRow
-            isSkeleton={props.isSkeleton}
-            state={rowStateOf(gate, props.isCurrent)}
-            leading={<LeadingNumber position={props.position} />}
-            title={gate.label}
-            {...(description === undefined ? {} : { description })}
-            badges={
-                <Badge isDot tone={gate.statusTone}>
-                    {gate.statusLabel}
-                </Badge>
-            }
-            actions={
-                isEditing ? undefined : (
+    return {
+        id: gate.key,
+        state: rowStateOf(gate, props.isCurrent),
+        leading: { position: props.position },
+        title: gate.label,
+        ...(description === undefined ? {} : { description }),
+        badges: [{ label: gate.statusLabel, tone: gate.statusTone, isDot: true }],
+        detail: (
+            <Stack gap="row">
+                {isEditing ? null : (
                     <Button
                         intent="neutral"
                         size="sm"
@@ -83,22 +82,21 @@ const GateRow = (props: GateRowProps) => {
                     >
                         {gates.editLabel}
                     </Button>
-                )
-            }
-        >
-            {isEditing || (hasBodyOf(gate) && !props.isSkeleton) ? (
-                <SetupGateBody
-                    {...gates}
-                    isSkeleton={props.isSkeleton}
-                    gate={gate}
-                    isEditing={isEditing}
-                    onEditText={props.on.editText}
-                    onGate={props.on.gate}
-                    onStopEdit={props.on.stopEdit}
-                />
-            ) : null}
-        </ListRow>
-    )
+                )}
+                {isEditing || (hasBodyOf(gate) && !props.isLoading) ? (
+                    <SetupGateBody
+                        {...gates}
+                        isLoading={props.isLoading}
+                        gate={gate}
+                        isEditing={isEditing}
+                        onEditText={props.on.editText}
+                        onGate={props.on.gate}
+                        onStopEdit={props.on.stopEdit}
+                    />
+                ) : null}
+            </Stack>
+        ),
+    }
 }
 
 /** The unmet notice and the checklist items, each with its value, in the one scrolling band of the pane. */
@@ -118,17 +116,15 @@ export const AgentSetupChecklist = (props: AgentSetupChecklistProps) => {
                     }}
                 />
             )}
-            <SurfaceListCard ariaLabel={props.view.gates.title}>
-                {props.view.gates.gates.map((gate, index) => (
-                    <GateRow
-                        key={gate.key}
-                        {...props}
-                        gate={gate}
-                        position={index + 1}
-                        isCurrent={gate.key === current}
-                    />
-                ))}
-            </SurfaceListCard>
+            <SurfaceCard
+                kind="list"
+                ariaLabel={props.view.gates.title}
+                isLoading={props.isLoading}
+                empty={<EmptyNotice message={props.copy.emptyLabel} />}
+                items={props.view.gates.gates.map((gate, index) =>
+                    gateRowOf({ ...props, gate, position: index + 1, isCurrent: gate.key === current }),
+                )}
+            />
         </>
     )
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { slotOfSwr } from "@/hooks/slot"
+import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQuerySalesWorkbenchSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { salesWorkbenchViewOf } from "./salesworkbench.shared"
@@ -10,11 +10,11 @@ import { salesWorkbenchViewOf } from "./salesworkbench.shared"
 const NOT_READ_ISO = new Date(0).toISOString()
 
 /** The Sales workbench of the active workspace, read once through the shared SWR cache and mapped to the display model. */
-export const useSalesWorkbench = () => {
+export const useSalesWorkbench = (isActive = true) => {
     const { activeWorkspaceId } = useActiveWorkspace()
-    const query = useQuerySalesWorkbenchSwr(activeWorkspaceId)
+    const query = useQuerySalesWorkbenchSwr(isActive ? activeWorkspaceId : undefined)
     const data = useMemo(() => (query.data === undefined ? null : salesWorkbenchViewOf(query.data)), [query.data])
-    const slot = slotOfSwr({ data: data ?? undefined, error: query.error, isLoading: query.isLoading })
+    const slot = mapSlot(slotOfSwr(query), salesWorkbenchViewOf)
     return {
         /** The workbench as one data slot: loading, failed, or its items. */
         slot,

@@ -17,7 +17,7 @@ const sourceOf = builder<ApiTextSourceInput>({
     content: " # Rooms ",
     topic: " Rooms ",
     tags: [" room ", "room"],
-    visibility: "public",
+    visibility: "internal",
     origin: "api:Website",
 })
 
@@ -47,7 +47,7 @@ describe("ApiKnowledgeSourcesService addText", () => {
             kind: "text",
             topic: "Rooms",
             tags: ["room"],
-            visibility: "public",
+            visibility: "internal",
             title: "Rooms",
             content: "# Rooms",
             status: "queued",

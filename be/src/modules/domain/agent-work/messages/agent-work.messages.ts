@@ -12,6 +12,8 @@ export const AGENT_WORK_MESSAGES: MessageBundle = {
         "errors.AGENT_WORK_TRIGGER_SHAPE_INVALID": "Lịch cần chọn giờ chạy hoặc sự kiện.",
         "errors.AGENT_WORK_TIME_INVALID": "Giờ phải có dạng HH:MM.",
         "errors.AGENT_WORK_HANDLER_DUPLICATE": "Nguồn {{source}} đã có bộ xử lý.",
+        "errors.AGENT_WORK_SOURCE_UNKNOWN": "Nguồn {{source}} chưa được đăng ký.",
+        "errors.AGENT_WORK_SOURCE_INVALID": "Nguồn {{source}} không hợp lệ hoặc đã đăng ký với đặc tính khác.",
     },
     en: {
         "errors.AGENT_WORK_RESULT_REJECTED": "The result of the work turn could not be read.",
@@ -23,5 +25,7 @@ export const AGENT_WORK_MESSAGES: MessageBundle = {
         "errors.AGENT_WORK_TRIGGER_SHAPE_INVALID": "A schedule needs a time to run or an event.",
         "errors.AGENT_WORK_TIME_INVALID": "The time must look like HH:MM.",
         "errors.AGENT_WORK_HANDLER_DUPLICATE": "The source {{source}} already has a handler.",
+        "errors.AGENT_WORK_SOURCE_UNKNOWN": "The source {{source}} is not registered.",
+        "errors.AGENT_WORK_SOURCE_INVALID": "The source {{source}} is not valid or is registered with other traits.",
     },
 }

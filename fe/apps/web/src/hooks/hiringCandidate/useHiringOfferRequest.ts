@@ -1,31 +1,55 @@
 "use client"
+import { useGraphQLWithToast } from "@/modules/toast"
+
+import { useFeatureReset, useFeatureLifetime } from "@/hooks/reuseables"
 
 import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
-import { useHiringRun } from "@/hooks/hiring"
-import type { FieldOf } from "@/modules/types"
+import { useHiringRun, type HiringOwner } from "@/hooks/hiring"
+import type { FieldOf, HiringViews } from "@/modules/types"
 import { useMutateRequestHiringOfferSwr } from "@/hooks/swr"
-import type { OfferValues, RequestOutcomeView } from "./hiringCandidate.shared"
+import type { OfferValues } from "./hiringCandidate.shared"
 
 /** The offer request of one candidate: the form values, the send that shows what the request came to, and the reset on close. */
-export const useHiringOfferRequest = (form: UseFormReturn<OfferValues>, candidateId: string) => {
-    const run = useHiringRun()
+export const useHiringOfferRequest = (form: UseFormReturn<OfferValues>, candidateId: string, owner?: HiringOwner) => {
+    const run = useHiringRun(owner)
+    const runGraphQL = useGraphQLWithToast()
+    const lifetime = useFeatureLifetime(owner?.isActive ?? true, owner?.scope ?? "")
     const { trigger } = useMutateRequestHiringOfferSwr()
-    const [outcome, setOutcome] = useState<RequestOutcomeView | null>(null)
+    const [outcome, setOutcome] = useState<HiringViews["requestOutcome"] | null>(null)
     const values = form.watch()
-    const submit = form.handleSubmit(async (submitted) => {
-        const sent = await run.exec(() => trigger({ candidateId, ...submitted }))
-        if (sent !== undefined) setOutcome({ status: sent.status, summary: sent.summary })
+    const submit = (isCurrent: () => boolean) =>
+        form.handleSubmit((submitted) => {
+            if (!isCurrent()) return
+            run.dispatch(
+                () => trigger({ candidateId, ...submitted }),
+                undefined,
+                (sent) => {
+                    if (isCurrent()) setOutcome({ status: sent.status, summary: sent.summary })
+                },
+            )
+        })
+    useFeatureReset({
+        isActive: owner?.isActive ?? true,
+        isReady: true,
+        scope: owner?.scope ?? "",
+        onReset: () => {
+            setOutcome(null)
+        },
     })
     return {
         values,
         outcome,
-        isPending: run.isPending,
+        isPending: run.isPending || form.formState.isSubmitting,
         error: run.error,
         canSend: values.pay.trim() !== "",
         setText: (name: FieldOf<OfferValues, string>, value: string) =>
             form.setValue(name, value, { shouldValidate: true }),
-        send: () => void submit(),
+        send: () => {
+            const isCurrent = lifetime.capture()
+            if (!isCurrent()) return
+            submit(isCurrent)().catch((error) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
+        },
         reset: () => {
             form.reset()
             setOutcome(null)

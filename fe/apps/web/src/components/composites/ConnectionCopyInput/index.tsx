@@ -4,6 +4,8 @@ import type { RowCopyLabels } from "@/modules/types"
 
 /** A read-only value the owner copies in place; a secret also shows or hides. */
 type ConnectionCopyInputProps = {
+    readonly isLoading?: boolean
+
     readonly id: string
     readonly name: string
     readonly label: string
@@ -15,6 +17,7 @@ type ConnectionCopyInputProps = {
 /** One copyable read-only field (a webhook URL, an API key) with the copy glyph inside the field. */
 export const ConnectionCopyInput = (props: ConnectionCopyInputProps) => (
     <Input
+        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
         id={props.id}
         name={props.name}
         label={props.label}

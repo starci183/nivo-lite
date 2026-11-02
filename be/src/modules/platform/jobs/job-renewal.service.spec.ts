@@ -54,6 +54,25 @@ const build = async (leaseMs = 60_000) => {
 }
 
 describe("JobRenewalService keep", () => {
+    it("never schedules another beat when an in-flight renewal resolves after the hold was stopped", async () => {
+        const { service, claims, beats, fire } = await build()
+        let complete: (() => void) | undefined
+        claims.renew.mockImplementation(
+            () =>
+                new Promise<void>((resolve) => {
+                    complete = resolve
+                }),
+        )
+        const hold = service.keep(job)
+        const pending = fire()
+        hold.stop()
+        complete?.()
+        await pending
+        expect(claims.renew).toHaveBeenCalledTimes(1)
+        expect(beats).toHaveLength(1)
+        expect(beats.filter((one) => !one.cancelled && !one.fired)).toEqual([])
+    })
+
     it("renews the lease under the claim's token every third of a lease until stopped", async () => {
         const { service, claims, beats, fire } = await build()
         claims.renew.mockResolvedValue(undefined)

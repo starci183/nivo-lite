@@ -1,4 +1,4 @@
-import { Pane, PaneGrid, PaneSection, SectionHeader, Text } from "@starci/grammar/common"
+import { Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
 import type { PaneGridProps } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { AgentWorkClockForm } from "@/components/composites/AgentWorkClockForm"
@@ -95,7 +95,7 @@ const ROWS: PaneGridProps["rows"] = {
 interface FooterProps {
     readonly base: AgentWorkPanesBaseProps
     readonly canEdit: boolean
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 const GoalFooter = (props: FooterProps) => {
@@ -115,7 +115,7 @@ const GoalFooter = (props: FooterProps) => {
             value={draft.goalTitle}
             canAdd={draft.canAddGoal}
             isSaving={isSaving}
-            isSkeleton={props.isSkeleton}
+            isLoading={props.isLoading}
             onChange={props.base.on.goalTitle}
             onAdd={props.base.on.addGoal}
         />
@@ -140,7 +140,7 @@ const ScheduleFooter = (props: FooterProps) => {
             addLabel={copy.scheduleAdd}
             canAdd={draft.canAddClock}
             isSaving={isSaving}
-            isSkeleton={props.isSkeleton}
+            isLoading={props.isLoading}
             onPreset={props.base.on.preset}
             onTime={props.base.on.atTime}
             onAdd={props.base.on.addClock}
@@ -149,7 +149,7 @@ const ScheduleFooter = (props: FooterProps) => {
 }
 
 /** What a part of the read draws: the view and whether it is the placeholder. */
-type PartRender = (view: AgentWorkView, isSkeleton: boolean) => ReactNode
+type PartRender = (view: AgentWorkView, isLoading: boolean) => ReactNode
 
 /** A part of the read through the one recipe of a slot's status. */
 const partOf = (base: AgentWorkPanesBaseProps, render: PartRender) => (
@@ -158,28 +158,21 @@ const partOf = (base: AgentWorkPanesBaseProps, render: PartRender) => (
         placeholder={base.props.placeholder}
         labels={base.props.slotLabels}
         onRetry={base.on.retry}
-    >
-        {render}
-    </SlotView>
+        render={render}
+    />
 )
 
 /** The field under the goals, through the one recipe of a slot's status. */
 const goalFooterOf = (base: AgentWorkPanesBaseProps) =>
-    partOf(base, (view, isSkeleton) => <GoalFooter base={base} canEdit={view.canEdit} isSkeleton={isSkeleton} />)
+    partOf(base, (view, isLoading) => <GoalFooter base={base} canEdit={view.canEdit} isLoading={isLoading} />)
 
 /** The form under the schedule, through the one recipe of a slot's status. */
 const scheduleFooterOf = (base: AgentWorkPanesBaseProps) =>
-    partOf(base, (view, isSkeleton) => <ScheduleFooter base={base} canEdit={view.canEdit} isSkeleton={isSkeleton} />)
-
-/** The title of a pane with how many rows it holds. */
-const titleOf = (base: AgentWorkPanesBaseProps, title: string, count: (view: AgentWorkView) => number) =>
-    partOf(base, (view, isSkeleton) => (
-        <SectionHeader level={2} title={title} count={count(view)} isSkeleton={isSkeleton} />
-    ))
+    partOf(base, (view, isLoading) => <ScheduleFooter base={base} canEdit={view.canEdit} isLoading={isLoading} />)
 
 /** The goals read, with the command that finishes one. */
 const goalsOf = (base: AgentWorkPanesBaseProps) =>
-    partOf(base, (view, isSkeleton) => (
+    partOf(base, (view, isLoading) => (
         <AgentWorkGoals
             label={base.props.copy.goalsTitle}
             emptyMessage={base.props.copy.goalsEmpty}
@@ -187,14 +180,14 @@ const goalsOf = (base: AgentWorkPanesBaseProps) =>
             goals={view.goals}
             canEdit={view.canEdit}
             isSaving={base.props.isSaving}
-            isSkeleton={isSkeleton}
+            isLoading={isLoading}
             onDone={base.on.closeGoal}
         />
     ))
 
 /** The open tasks read, with the menu that opens or closes one. */
 const tasksOf = (base: AgentWorkPanesBaseProps) =>
-    partOf(base, (view, isSkeleton) => (
+    partOf(base, (view, isLoading) => (
         <AgentWorkTasks
             words={{
                 label: base.props.copy.tasksTitle,
@@ -205,14 +198,14 @@ const tasksOf = (base: AgentWorkPanesBaseProps) =>
             }}
             tasks={view.tasks}
             canEdit={view.canEdit}
-            isSkeleton={isSkeleton}
+            isLoading={isLoading}
             onClose={base.on.closeTask}
         />
     ))
 
 /** The triggers read, each a sentence with its switch. */
 const scheduleOf = (base: AgentWorkPanesBaseProps) =>
-    partOf(base, (view, isSkeleton) => (
+    partOf(base, (view, isLoading) => (
         <AgentWorkSchedule
             words={{
                 label: base.props.copy.scheduleTitle,
@@ -223,7 +216,7 @@ const scheduleOf = (base: AgentWorkPanesBaseProps) =>
             triggers={view.triggers}
             canEdit={view.canEdit}
             isSaving={base.props.isSaving}
-            isSkeleton={isSkeleton}
+            isLoading={isLoading}
             onSwitch={base.on.switchTrigger}
             onRemove={base.on.removeTrigger}
         />
@@ -231,13 +224,13 @@ const scheduleOf = (base: AgentWorkPanesBaseProps) =>
 
 /** The recent turns read. */
 const turnsOf = (base: AgentWorkPanesBaseProps) =>
-    partOf(base, (view, isSkeleton) => (
+    partOf(base, (view, isLoading) => (
         <AgentWorkTurns
             label={base.props.copy.turnsTitle}
             emptyMessage={base.props.copy.turnsEmpty}
             openLabel={base.props.copy.turnOpenItem}
             turns={view.turns}
-            isSkeleton={isSkeleton}
+            isLoading={isLoading}
         />
     ))
 
@@ -251,27 +244,23 @@ export const AgentWorkPanesBase = (props: AgentWorkPanesBaseProps) => {
         <PaneGrid label={copy.paneLabel} areas={AREAS} columns={COLUMNS} rows={ROWS}>
             <Pane area="status" surface>
                 <PaneSection align="center" gap="inline">
-                    {partOf(props, (view, isSkeleton) => (
-                        <AgentWorkStatus status={view.status} isSkeleton={isSkeleton} />
+                    {partOf(props, (view, isLoading) => (
+                        <AgentWorkStatus status={view.status} isLoading={isLoading} />
                     ))}
                 </PaneSection>
             </Pane>
             <Pane area="goals" surface>
-                <PaneSection>{titleOf(props, copy.goalsTitle, (view) => view.goals.length)}</PaneSection>
                 <PaneSection>{goalsOf(props)}</PaneSection>
                 <PaneSection>{goalFooterOf(props)}</PaneSection>
             </Pane>
             <Pane area="schedule" surface>
-                <PaneSection>{titleOf(props, copy.scheduleTitle, (view) => view.triggers.length)}</PaneSection>
                 <PaneSection>{scheduleOf(props)}</PaneSection>
                 <PaneSection>{scheduleFooterOf(props)}</PaneSection>
             </Pane>
             <Pane area="tasks" surface>
-                <PaneSection>{titleOf(props, copy.tasksTitle, (view) => view.tasks.length)}</PaneSection>
                 <PaneSection scroll={{ label: copy.tasksTitle }}>{tasksOf(props)}</PaneSection>
             </Pane>
             <Pane area="turns" surface>
-                <PaneSection>{titleOf(props, copy.turnsTitle, (view) => view.turns.rows.length)}</PaneSection>
                 <PaneSection scroll={{ label: copy.turnsTitle }}>{turnsOf(props)}</PaneSection>
             </Pane>
         </PaneGrid>

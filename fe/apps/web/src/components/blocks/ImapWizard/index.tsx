@@ -1,9 +1,11 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
 import { useFormatter, useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
-import { agentChoicesOf, resumeSlotOfLoading } from "@/hooks/connection-wizard"
-import { useSlotLabels } from "@/hooks/slot"
+import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import type { AgentOption, SlotLabels } from "@/modules/types"
 import {
     IMAP_EVERY,
@@ -14,11 +16,14 @@ import {
     IMAP_SINCE_KEY,
     IMAP_STEPS,
     useImapWizard,
+    useImapCopy,
 } from "@/hooks/imap-wizard"
 import { ImapWizardBase } from "./component"
 
 /** What the board hands the mailbox wizard. */
 interface ImapWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** Workspace agents (any module): every agent may be given read access to the mailbox. */
     readonly agents: ReadonlyArray<AgentOption>
     /** Continue or edit this existing mailbox instead of creating a new one. */
@@ -29,6 +34,7 @@ interface ImapWizardProps {
 
 /** Inputs needed to build the ImapWizardContent section. */
 interface BuildMailboxAccountViewContext {
+    readonly copy: ReturnType<typeof useImapCopy>
     readonly values: ReturnType<typeof useImapWizard>["values"]
     readonly savedId: ReturnType<typeof useImapWizard>["savedId"]
     readonly preset: ReturnType<typeof useImapWizard>["preset"]
@@ -59,9 +65,24 @@ export const ImapWizard = (props: ImapWizardProps) => {
     const format = useFormatter()
     const slotLabelsOf = useSlotLabels()
     const wizard = useImapWizard({ resumeId: props.resumeId, onClose: props.onClose })
+    const copy = useImapCopy(wizard.isPending)
     const { values, preset, savedId, isPending } = wizard
     const isCustom = preset === "other"
-    const context = { wizard, t, tc, tw, values, savedId, preset, isCustom, isPending, format, props, slotLabelsOf }
+    const context = {
+        copy,
+        wizard,
+        t,
+        tc,
+        tw,
+        values,
+        savedId,
+        preset,
+        isCustom,
+        isPending,
+        format,
+        props,
+        slotLabelsOf,
+    }
     return (
         <ImapWizardBase
             props={buildImapWizardView(context)}
@@ -82,6 +103,7 @@ export const ImapWizard = (props: ImapWizardProps) => {
 }
 /** Builds the ImapWizardContent section from the current view. */
 const buildMailboxAccountView = ({
+    copy,
     values,
     savedId,
     preset,
@@ -104,18 +126,7 @@ const buildMailboxAccountView = ({
                 isCustom,
                 passwordHint: savedId === null ? t("passwordHint") : t("passwordKeep"),
                 isDisabled: isPending,
-                text: {
-                    name: t("fieldName"),
-                    nameHint: t("fieldNameHint"),
-                    email: t("fieldEmail"),
-                    provider: t("fieldProvider"),
-                    host: t("fieldHost"),
-                    port: t("fieldPort"),
-                    security: t("fieldSecurity"),
-                    user: t("fieldUser"),
-                    userHint: t("fieldUserHint"),
-                    password: t("fieldPassword"),
-                },
+                text: copy.fields,
             },
             on: { field: wizard.setField, preset: wizard.pickPreset, security: wizard.pickSecurity },
         },
@@ -128,6 +139,7 @@ const buildMailboxAccountView = ({
     }) as const
 /** Builds the ImapWizardContent section from the current view. */
 const buildImapWizardView = ({
+    copy,
     wizard,
     t,
     tc,
@@ -142,14 +154,16 @@ const buildImapWizardView = ({
     slotLabelsOf,
 }: BuildImapWizardViewContext) =>
     ({
-        resume: resumeSlotOfLoading(wizard.loading, wizard.loadError),
+        resume: slotOfReads([...props.dependencyReads, ...wizard.reads], () => ({
+            isResumed: props.resumeId !== undefined,
+        })),
         slotLabels: { ...slotLabelsOf(""), ...(wizard.loadError === null ? {} : { error: wizard.loadError }) },
         title: tc(providerKey("imap", "title")),
         stepLabel: tw("stepOf", { n: wizard.index + 1, total: IMAP_STEPS.length }),
         steps: [t("stepAccount"), t("stepFolders"), t("stepSchedule"), t("stepAgent")],
         index: wizard.index,
         step: wizard.step,
-        account: buildMailboxAccountView({ values, savedId, preset, t, isCustom, isPending, wizard, format }),
+        account: buildMailboxAccountView({ copy, values, savedId, preset, t, isCustom, isPending, wizard, format }),
         folders: {
             options: wizard.folderList.map((path) => ({ value: path, label: path })),
             value: wizard.folders,
@@ -175,21 +189,5 @@ const buildImapWizardView = ({
         error: wizard.error,
         isPending,
         isTested: wizard.isTested,
-        text: {
-            back: t("back"),
-            next: t("next"),
-            close: t("close"),
-            done: t("done"),
-            save: isPending ? t("saving") : t("save"),
-            test: isPending ? t("testing") : t("test"),
-            intro: t("intro"),
-            imapOn: t("imapOn"),
-            foldersTitle: t("foldersTitle"),
-            foldersHint: t("foldersHint"),
-            sinceTitle: t("sinceTitle"),
-            sinceHint: t("sinceHint"),
-            scheduleHint: t("scheduleHint"),
-            scheduleLabel: t("stepSchedule"),
-            saved: t("agentSaved"),
-        },
+        text: copy.text,
     }) as const

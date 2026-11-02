@@ -1,6 +1,5 @@
-import { Button, Cluster, IconButton, ListRow, Meter, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
-import { Icon, nivoIconSource } from "@/components/leaves/Icon"
-import { ALL_SET } from "./classNames"
+import { Cluster, IconButton, Meter, SurfaceCard, Text, type ListRowData } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** One onboarding step as the checklist draws it; `done` comes from real rows and events only. */
 export type OnboardingChecklistStep = {
@@ -22,8 +21,6 @@ export const ONBOARDING_CHECKLIST_PLACEHOLDER: ReadonlyArray<OnboardingChecklist
     cta: "-",
 }))
 
-const PENDING_ICON = { name: "pending", usage: "leading" } as const
-
 /** Resolved copy and state supplied by the connected checklist block. */
 export interface OnboardingChecklistBaseProps {
     readonly props: {
@@ -37,7 +34,7 @@ export interface OnboardingChecklistBaseProps {
         readonly toggleLabel: string
         readonly doneLabel: string
         /** The steps are placeholders: the card draws its lines as skeleton. */
-        readonly isSkeleton: boolean
+        readonly isLoading: boolean
     }
     readonly on: { readonly toggle: () => void }
 }
@@ -50,42 +47,20 @@ const stateOf = (isDone: boolean, isNext: boolean): "affirmative" | "informative
 
 type StepsProps = Pick<OnboardingChecklistBaseProps, "props">
 
-const Steps = ({ props }: StepsProps) => {
+const stepsOf = ({ props }: StepsProps): ReadonlyArray<ListRowData> => {
     const nextKey = props.steps.find((step) => !step.done)?.key
-    const doneIcon = { name: "complete", usage: "leading", ariaLabel: props.doneLabel } as const
-    return (
-        <>
-            {props.steps.map((step) => {
-                const isNext = step.key === nextKey
-                return (
-                    <ListRow
-                        key={step.key}
-                        state={stateOf(step.done, isNext)}
-                        title={
-                            <Text
-                                size="sm"
-                                weight={step.done ? "normal" : "medium"}
-                                tone={step.done ? "muted" : "default"}
-                                isSuperseded={step.done}
-                                isSkeleton={props.isSkeleton}
-                                startContent={<Icon props={step.done ? doneIcon : PENDING_ICON} />}
-                            >
-                                {step.label}
-                            </Text>
-                        }
-                        description={isNext ? step.hint : null}
-                        actions={
-                            isNext ? (
-                                <Button intent="neutral" size="sm" href={step.href} isSkeleton={props.isSkeleton}>
-                                    {step.cta}
-                                </Button>
-                            ) : null
-                        }
-                    />
-                )
-            })}
-        </>
-    )
+    return props.steps.map((step): ListRowData => {
+        const isNext = step.key === nextKey
+        return {
+            id: step.key,
+            title: step.label,
+            state: stateOf(step.done, isNext),
+            ...(isNext ? { description: step.hint } : {}),
+            leading: { icon: nivoIconSource(step.done ? "complete" : "pending", "leading") },
+            ...(step.done ? { badges: [{ label: props.doneLabel, tone: "success" }] as const } : {}),
+            ...(isNext ? { action: { label: step.cta, href: step.href } as const } : {}),
+        }
+    })
 }
 
 const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
@@ -94,9 +69,9 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
     if (doneCount === props.steps.length) {
         return (
             <SurfaceCard>
-                <output className={ALL_SET}>
+                <output>
                     <Cluster gap="row" justify="between">
-                        <Text as="span" weight="medium">
+                        <Text as="span" isStrong>
                             {props.allSet}
                         </Text>
                         <Text as="span" size="xs">
@@ -108,34 +83,42 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
         )
     }
     return (
-        <SurfaceListCard
+        <SurfaceCard
+            {...(props.isOpen
+                ? ({ kind: "list", items: stepsOf({ props }), empty: <Text>{props.allSet}</Text> } as const)
+                : ({
+                      kind: "body",
+                      children: (
+                          <Meter
+                              label={props.progressLabel}
+                              value={doneCount}
+                              minValue={0}
+                              maxValue={props.steps.length}
+                              valueLabel={props.progressValue}
+                              tone="informative"
+                              isLoading={props.isLoading}
+                          />
+                      ),
+                  } as const))}
             label={props.title}
             headingLevel={2}
-            fact={props.progressValue}
+            isLoading={props.isLoading}
             labelEnd={
-                <IconButton
-                    intent="neutral"
-                    source={nivoIconSource("disclosure", "leading")}
-                    label={props.toggleLabel}
-                    aria-expanded={props.isOpen}
-                    onPress={on.toggle}
-                    isSkeleton={props.isSkeleton}
-                />
+                <Cluster gap="inline">
+                    <Text size="xs" tone="muted" isLoading={props.isLoading}>
+                        {props.progressValue}
+                    </Text>
+                    <IconButton
+                        intent="neutral"
+                        source={nivoIconSource("disclosure", "leading")}
+                        label={props.toggleLabel}
+                        aria-expanded={props.isOpen}
+                        onPress={on.toggle}
+                        isLoading={props.isLoading}
+                    />
+                </Cluster>
             }
-            empty={
-                <Meter
-                    label={props.progressLabel}
-                    value={doneCount}
-                    minValue={0}
-                    maxValue={props.steps.length}
-                    valueLabel={props.progressValue}
-                    tone="informative"
-                    isSkeleton={props.isSkeleton}
-                />
-            }
-        >
-            {props.isOpen ? <Steps props={props} /> : null}
-        </SurfaceListCard>
+        />
     )
 }
 

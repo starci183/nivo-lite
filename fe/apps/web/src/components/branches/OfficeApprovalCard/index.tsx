@@ -1,14 +1,11 @@
-import type { ReactNode } from "react"
-import { Badge, Button, Cluster, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
-import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
-import type { OfficeApprovalView, OfficeCardDraft, OfficeText } from "@/modules/types"
+import { Badge, Button, Cluster, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import type { OfficeApprovalView, OfficeCardDraft, OfficeThreadProps } from "@/modules/types"
 import { QUOTE_CLASS_NAME } from "./classNames"
 
 /** What one approval request draws. */
 type OfficeApprovalCardProps = {
     readonly approval: OfficeApprovalView
-    readonly avatar: ReactNode
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["cardCopy"]["approval"]
     /** What the owner edited on this card, kept by the thread's block. */
     readonly draft: OfficeCardDraft
     readonly onEdit: (key: string, patch: Partial<OfficeCardDraft>) => void
@@ -26,7 +23,7 @@ const TONES = { waiting: "warning", approved: "success", rejected: "danger" } as
  * Reject". A decided request shows who decided and when.
  */
 export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
-    const { approval, text } = props
+    const { approval, copy } = props
     const { isEditing, isExpanded } = props.draft
     const editText = props.draft.text ?? approval.draft
     const edit = (patch: Partial<OfficeCardDraft>) => props.onEdit(approval.key, patch)
@@ -44,33 +41,18 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
     const onToggleEdit = () => edit({ text: null, isEditing: !isEditing })
 
     return (
-        <OfficeCardFrame
-            id={approval.anchor}
-            author={approval.author}
-            avatar={props.avatar}
-            meta={approval.time}
-            label={approval.title}
-            isHighlight={approval.isFocused}
-            head={
-                <Stack gap="identity">
-                    {approval.title === "" ? null : <Text weight="semibold">{approval.title}</Text>}
-                    <Text size="sm" tone="muted">
-                        {approval.target}
-                    </Text>
-                </Stack>
-            }
-        >
-            {renderOfficeApprovalCardStatus(approval, text)}
+        <>
+            {renderOfficeApprovalCardStatus(approval, copy)}
             {isWaiting && isEditing ? (
                 <Textarea
-                    label={text("draftLabel")}
+                    label={copy.draftLabel}
                     rows={6}
                     value={editText}
                     isDisabled={props.isBusy}
                     onValueChange={(value) => edit({ text: value })}
                 />
             ) : (
-                <SurfaceCard ariaLabel={approval.title === "" ? text("draftLabel") : approval.title}>
+                <SurfaceCard ariaLabel={approval.title === "" ? copy.draftLabel : approval.title}>
                     <div className={QUOTE_CLASS_NAME}>
                         <Text as="p" size="sm">
                             {shown}
@@ -81,7 +63,7 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
             {!isWaiting && isLong ? (
                 <div>
                     <Button intent="neutral" size="sm" onPress={() => edit({ isExpanded: !isExpanded })}>
-                        {isExpanded ? text("showLess") : text("showMore")}
+                        {isExpanded ? copy.showLess : copy.showMore}
                     </Button>
                 </div>
             ) : null}
@@ -89,14 +71,14 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
                 {approval.settled}
             </Text>
             {isWaiting && !approval.canAct ? (
-                <Text size="sm" weight="medium" live="polite">
-                    {text("waitingManager")}
+                <Text size="sm" isStrong live="polite">
+                    {copy.waitingManager}
                 </Text>
             ) : null}
             {isWaiting && approval.canAct
-                ? renderOfficeApprovalCardActions(props, isEditing, trimmed, onApprove, text, onToggleEdit, approval)
+                ? renderOfficeApprovalCardActions(props, isEditing, trimmed, onApprove, copy, onToggleEdit, approval)
                 : null}
-        </OfficeCardFrame>
+        </>
     )
 }
 
@@ -106,7 +88,7 @@ const renderOfficeApprovalCardActions = (
     isEditing: boolean,
     trimmed: string,
     onApprove: () => void,
-    text: NonNullable<OfficeApprovalCardProps["text"]>,
+    copy: NonNullable<OfficeApprovalCardProps["copy"]>,
     onToggleEdit: () => void,
     approval: NonNullable<OfficeApprovalCardProps["approval"]>,
 ) => (
@@ -118,10 +100,10 @@ const renderOfficeApprovalCardActions = (
             isDisabled={props.isBusy || (isEditing && trimmed.length === 0)}
             onPress={onApprove}
         >
-            {isEditing ? text("approveEdited") : text("approveSend")}
+            {isEditing ? copy.approveEdited : copy.approveSend}
         </Button>
         <Button intent="neutral" size="sm" isDisabled={props.isBusy} onPress={onToggleEdit}>
-            {isEditing ? text("cancelEdit") : text("edit")}
+            {isEditing ? copy.cancelEdit : copy.edit}
         </Button>
         <Button
             intent="alternative"
@@ -129,7 +111,7 @@ const renderOfficeApprovalCardActions = (
             isDisabled={props.isBusy}
             onPress={() => props.onDecide(approval.id, "rejected", null)}
         >
-            {text("reject")}
+            {copy.reject}
         </Button>
     </Cluster>
 )
@@ -137,18 +119,18 @@ const renderOfficeApprovalCardActions = (
 /** Renders the OfficeApprovalCard status section. */
 const renderOfficeApprovalCardStatus = (
     approval: NonNullable<OfficeApprovalCardProps["approval"]>,
-    text: NonNullable<OfficeApprovalCardProps["text"]>,
+    copy: NonNullable<OfficeApprovalCardProps["copy"]>,
 ) => (
     <Cluster gap="inline" justify="between">
         <Cluster gap="inline">
             <Badge tone={TONES[approval.status]} isDot>
                 {approval.statusLabel}
             </Badge>
-            <Badge tone="neutral">{text("aiBadge")}</Badge>
+            <Badge tone="neutral">{copy.aiBadge}</Badge>
         </Cluster>
         {approval.leadHref === null ? null : (
             <Button intent="neutral" size="sm" href={approval.leadHref}>
-                {text("openLead")}
+                {copy.openLead}
             </Button>
         )}
     </Cluster>

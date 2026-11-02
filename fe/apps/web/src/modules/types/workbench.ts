@@ -10,13 +10,17 @@ export interface WorkbenchTraceView {
     readonly whyHref: string | null
 }
 
-/** One command of a row. */
-export interface WorkbenchCommandView {
+/** Atomic words and capability state of a row command, with no operation callback. */
+export interface WorkbenchCommandData {
     readonly id: string
     readonly label: string
     readonly isPending?: boolean
     readonly isDisabled?: boolean
     readonly disabledReason?: string
+}
+
+/** The existing domain command binding; a connected owner separates this action from its atomic view data. */
+export interface WorkbenchCommandView extends WorkbenchCommandData {
     readonly onPress: () => void
 }
 
@@ -27,7 +31,7 @@ export interface WorkbenchBadgeView {
 }
 
 /** One decision waiting for a person, or done by the agent, as a row draws it. */
-export interface WorkbenchRowView {
+export interface WorkbenchRowData {
     /** The work item id; the why pane opens on it. */
     readonly id: string
     readonly title: string
@@ -43,12 +47,19 @@ export interface WorkbenchRowView {
     readonly trace: WorkbenchTraceView | null
     readonly expiry: string | null
     /** The one visible command; null for a person with no right, who sees `waitingFor` instead. */
-    readonly primary: WorkbenchCommandView | null
+    readonly primary: WorkbenchCommandData | null
     /** The neutral command beside it that changes the proposal before it goes; null when the row cannot be edited. */
-    readonly edit: WorkbenchCommandView | null
-    readonly menu: ReadonlyArray<WorkbenchCommandView & { readonly isDanger?: boolean }>
+    readonly edit: WorkbenchCommandData | null
+    readonly menu: ReadonlyArray<WorkbenchCommandData & { readonly isDanger?: boolean }>
     /** "Waiting for Dinh"; null when the viewer may press. */
     readonly waitingFor: string | null
+}
+
+/** Existing world-owner command bindings override only the three command fields; pure inputs use WorkbenchRowData. */
+export interface WorkbenchRowView extends WorkbenchRowData {
+    readonly primary: WorkbenchCommandView | null
+    readonly edit: WorkbenchCommandView | null
+    readonly menu: ReadonlyArray<WorkbenchCommandView & { readonly isDanger?: boolean }>
 }
 
 /** One step of the path a run walked. */

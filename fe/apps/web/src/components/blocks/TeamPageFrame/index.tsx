@@ -2,21 +2,20 @@
 
 import type { ReactNode } from "react"
 import { useTranslations } from "next-intl"
-import type { PageHeaderContent } from "@starci/grammar/common"
 import { isManager, useMember } from "@/hooks/member"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES } from "@/modules/routes"
+import type { TeamPageHeading } from "@/modules/types"
 import { TeamPageFrameBase } from "./component"
 
-/** Which of the two views the page shows, its header and its body. */
+/** Which of the team's two pages is selected, its resolved heading and its routed owner content. */
 interface TeamPageFrameProps {
     readonly selected: "members" | "permissions"
-    /** The header without its tabs. */
-    readonly header: PageHeaderContent
+    readonly heading: TeamPageHeading
     readonly children: ReactNode
 }
 
-/** The page of the team: the tabs on its header band; only owner and manager see them (both pages are theirs). */
+/** The team Page world owner keeps the same member capability and router actions; its Base draws the native tabs. */
 export const TeamPageFrame = (props: TeamPageFrameProps) => {
     const t = useTranslations("permissions")
     const member = useMember()
@@ -25,20 +24,18 @@ export const TeamPageFrame = (props: TeamPageFrameProps) => {
         if (id === "members") router.push(CONSOLE_ROUTES.team)
         if (id === "permissions") router.push(CONSOLE_ROUTES.permissions)
     }
-    const header: PageHeaderContent = isManager(member)
-        ? {
-              ...props.header,
-              tabs: {
-                  label: t("tabsLabel"),
-                  selectedKey: props.selected,
-                  labelVisibility: "always",
-                  items: [
-                      { id: "members", label: t("tabMembers") },
-                      { id: "permissions", label: t("tabPermissions") },
-                  ],
-                  onSelect: open,
-              },
-          }
-        : props.header
-    return <TeamPageFrameBase shape={{ body: props.children }} props={{ header }} />
+    return (
+        <TeamPageFrameBase
+            children={props.children}
+            props={{
+                heading: props.heading,
+                selected: props.selected,
+                canManage: isManager(member),
+                tabsLabel: t("tabsLabel"),
+                membersLabel: t("tabMembers"),
+                permissionsLabel: t("tabPermissions"),
+            }}
+            on={{ select: open }}
+        />
+    )
 }

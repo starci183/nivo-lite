@@ -1,12 +1,12 @@
 import {
     DescriptionList,
-    LeadingNumber,
+    EmptyNotice,
     Page,
     Pane,
     PaneGrid,
     PaneSection,
-    SectionHeader,
-    Skeleton,
+    Section,
+    Stepper,
 } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 
@@ -22,7 +22,7 @@ export interface ConnectionPageLoadingProps {
     }
 }
 
-const TILES = ["token", "followers", "agents"].map((id) => ({ id, term: "-", description: "-", meta: "-" }))
+const TILES = ["token", "followers", "agents"].map((id) => ({ id, term: "-", description: "-" }))
 
 /**
  * STATE-8: a provider connection page with no data yet, in its own frame - the header band over the main pane and the rail; the
@@ -32,11 +32,10 @@ export const ConnectionPageLoading = (props: ConnectionPageLoadingProps) => (
     <Page
         chrome="panes"
         measure="product"
-        isSkeleton
+        isLoading
         header={{
             breadcrumbs: { label: props.props.crumbLabel, items: [...props.props.crumbs] },
             title: props.props.title,
-            meta: <Skeleton shape="text" />,
         }}
     >
         <PaneGrid
@@ -46,27 +45,25 @@ export const ConnectionPageLoading = (props: ConnectionPageLoadingProps) => (
         >
             <Pane area="main" surface scroll label={props.props.mainLabel}>
                 <PaneSection>
-                    <DescriptionList layout="stat-strip" isDivided isLoading items={TILES} />
+                    <DescriptionList layout="columns" isDivided isLoading items={TILES} />
                 </PaneSection>
-                {props.props.steps.map((step, index) => (
-                    <PaneSection key={step.id}>
-                        <SectionHeader
-                            level={2}
-                            title={
-                                <>
-                                    <LeadingNumber position={index + 1} /> {step.title}
-                                </>
-                            }
-                        />
-                    </PaneSection>
-                ))}
+                <PaneSection isLoading>
+                    <Stepper
+                        label={props.props.mainLabel}
+                        orientation="vertical"
+                        currentStepId=""
+                        steps={props.props.steps.map((step) => ({ id: step.id, label: step.title }))}
+                    />
+                </PaneSection>
             </Pane>
             <Pane area="rail" surface scroll label={props.props.railLabel}>
-                <PaneSection as="header">
-                    <SectionHeader level={2} title={props.props.railLabel} />
-                </PaneSection>
-                <PaneSection>
-                    <Skeleton shape="text" lines={3} />
+                <PaneSection isLoading>
+                    <Section
+                        title={props.props.railLabel}
+                        kind="list"
+                        items={[]}
+                        empty={<EmptyNotice message={props.props.railLabel} />}
+                    />
                 </PaneSection>
             </Pane>
         </PaneGrid>

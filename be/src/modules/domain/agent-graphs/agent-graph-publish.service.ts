@@ -34,8 +34,8 @@ export class AgentGraphPublishService {
     ) {}
 
     /**
-     * Publishes the draft of the agent as the next version (or as the number given, when the setup numbers both of its rows alike). A
-     * publish by the owner, from the map or from the setup chat, makes the graph decide for the agent; a manager leaves the mode as it is.
+     * Publishes the draft of the agent as the next version, or as the number given when the setup numbers both of its rows. The mode stays
+     * as it is: a graph is enforced unless the owner set it to shadow.
      */
     async publishDraft(
         workspaceId: string,
@@ -47,10 +47,7 @@ export class AgentGraphPublishService {
         versionNumber?: number,
     ): Promise<GraphVersionView> {
         const state = await this.requireState(workspaceId, agentId)
-        const version = await this.publishDocument(state, state.draft, by, note, kind, contextVersionId, versionNumber)
-        if (by.role === "owner" && (kind === "edit" || kind === "chat"))
-            await this.graphs.setMode(workspaceId, agentId, "enforced")
-        return version
+        return this.publishDocument(state, state.draft, by, note, kind, contextVersionId, versionNumber)
     }
 
     /** Refuses, writing nothing, when publishing the draft would be refused: a problem in the graph, or a widening by someone who is not the owner. */
@@ -67,6 +64,16 @@ export class AgentGraphPublishService {
         by: Publisher,
     ): Promise<GraphVersionView> {
         return this.publishDocument(await this.requireState(workspaceId, agentId), document, by, "", "learned")
+    }
+
+    /** Publishes the graph a confirmed contract proposal made as the next version (a change made in the setup chat), under the same checks as any change. */
+    async publishContract(
+        workspaceId: string,
+        agentId: string,
+        document: GraphDocument,
+        by: Publisher,
+    ): Promise<GraphVersionView> {
+        return this.publishDocument(await this.requireState(workspaceId, agentId), document, by, "", "chat")
     }
 
     /** Publishes the graph a confirmed Brain conflict made as the next version, under the same checks as any change. */
@@ -86,11 +93,11 @@ export class AgentGraphPublishService {
         return this.publishDocument(state, document, by, "", "rollback")
     }
 
-    /** Sets whether the graph decides or only records. Only an owner turns it to `enforced`; anyone who may edit turns it back to `shadow`. */
+    /** Sets whether the graph decides or only records. Only the owner does, either way: turning a graph off widens what the agent may do. */
     setMode(workspaceId: string, agentId: string, mode: GraphMode, by: Publisher): Promise<GraphState> {
-        if (mode === "enforced" && by.role !== "owner")
+        if (by.role !== "owner")
             return Promise.reject(new AgentGraphsError({ code: AgentGraphsErrorCode.WidensNeedsOwner }))
-        return this.graphs.setMode(workspaceId, agentId, mode)
+        return this.graphs.setMode(workspaceId, agentId, mode, by.memberId)
     }
 
     private async requireState(workspaceId: string, agentId: string): Promise<GraphState> {

@@ -52,8 +52,10 @@ const stepsOf = (steps: ReadonlyArray<SepayChecklistStep>, waiting: Waiting): Re
 
 /** Draws the test steps inside the fourth setup step: a vertical stepper, each step true only when the webhook door really saw it. */
 export const SepayChecklistBase = (props: SepayChecklistBaseProps) => (
-    <SlotView {...props.props} onRetry={props.on.retry}>
-        {(steps, isSkeleton) => {
+    <SlotView
+        {...props.props}
+        onRetry={props.on.retry}
+        render={(steps, isSkeleton) => {
             const current = steps.find((step) => step.state === "current") ?? steps[steps.length - 1]
             return (
                 <Stepper
@@ -73,5 +75,5 @@ export const SepayChecklistBase = (props: SepayChecklistBaseProps) => (
                 />
             )
         }}
-    </SlotView>
+    />
 )

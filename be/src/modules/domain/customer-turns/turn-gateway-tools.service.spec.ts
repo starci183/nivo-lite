@@ -1,93 +1,79 @@
+import {
+    CTX,
+    CONVERSATION,
+    CALLER,
+    DESCRIBED,
+    READ,
+    PRICE_LIST,
+    ORDER_SOURCE,
+    SEQUENCE_STEPS,
+    arrangeTurnGateway,
+    APPROVAL_SPEC,
+    SEQUENCE_ARGUMENT_CASES,
+    INVALID_SEQUENCES,
+    SEQUENCE_APPROVAL_SEED,
+    roadOutputOf,
+} from "@tests/fixtures/builders/turn-gateway-harness.builder"
+
+import { AgentConversationsErrorCode } from "@modules/domain/agent-conversations"
+
+import type { GatewayToolName } from "@modules/domain/agent-tools"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AgentConversationsService, AgentConversationsErrorCode } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
-import type { GatewayToolName, ToolContext } from "@modules/domain/agent-tools"
-import { WorkEngineService } from "@modules/domain/decisions"
-import type { WorkItem } from "@modules/domain/decisions"
+import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { AgentRunsService } from "@modules/domain/agent-runs"
+import { OUTPUT_NODE_READER } from "@modules/domain/authority-rules"
+import type { OutputNodeReader } from "@modules/domain/authority-rules"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { HubNotesService } from "./hub-notes.service"
+import { OutputApprovalService } from "./output-approval.service"
+import { TurnGatewayPipelineService } from "./turn-gateway-pipeline.service"
 import { TurnGatewayToolsService } from "./turn-gateway-tools.service"
 import { TurnSourcesService } from "./turn-sources.service"
 
-const CTX: ToolContext = { jobId: "m1", workspaceId: "ws", conversationId: "c1" }
-const CONVERSATION: TurnConversation = {
-    id: "c1",
-    workspaceId: "ws",
-    channel: "zalo",
-    externalId: "z1",
-    connectionId: "conn",
-    leadId: "l1",
-    handledBy: null,
-    visitorName: "Lan",
-    installationId: null,
-    agent: {
-        id: "sales",
-        name: "AI Sales",
-        handle: "ai-sales",
-        role: "",
-        module: "chatbot",
-        instructions: "",
-        knowledge: "",
-        approvalRule: "",
-        greeting: "",
-    },
-    speaksAs: null,
-}
-const CALLER = { workspaceId: "ws", agentId: "sales", conversationId: "c1", workItemId: null }
-const DESCRIBED = {
-    name: "crm.order.place",
-    description: "Place an order",
-    scope: "write" as const,
-    mode: "auto" as const,
-    inputSchema: { type: "object" },
-    constraints: [],
-    limitVnd: null,
-}
-const READ = { ...DESCRIBED, name: "crm.stock.read", description: "Read stock", scope: "read" as const }
-const PRICE_LIST = [{ layer: 2 as const, kind: "brain_document", ref: "src-1", label: "Price list" }]
-const ORDER_SOURCE = { layer: 1, kind: "mcp_tool", ref: "crm.order.place", label: "crm.order.place" }
-
-const SEQUENCE_STEPS = JSON.stringify([
-    { name: "crm.stock.read", arguments: { sku: "a" } },
-    { name: "crm.order.place", arguments: { sku: "a" } },
-])
-
-const catalog = mock<MessageCatalog>({
-    get: (key: string, params?: Readonly<Record<string, string | number>>) => `${key} ${JSON.stringify(params ?? {})}`,
-})
-
-const build = async () => {
-    const gateway = mock<McpGatewayService>({
-        search: jest
-            .fn()
-            .mockResolvedValue([{ name: "crm.order.place", description: "", scope: "write", mode: "auto" }]),
-        describe: jest.fn().mockResolvedValue(DESCRIBED),
-        call: jest.fn().mockResolvedValue({ ok: true, value: { orderId: "o1" } }),
-    })
-    const conversations = mock<AgentConversationsService>({
-        turnOf: jest.fn().mockResolvedValue({ kind: "ok", value: CONVERSATION }),
-        isTestChat: jest.fn().mockResolvedValue(false),
-    })
-    const item = mock<WorkItem>()
-    Object.assign(item, { id: "w1" })
-    const engine = mock<WorkEngineService>({ runWork: jest.fn().mockResolvedValue(item) })
-    const notes = mock<HubNotesService>({ postOnce: jest.fn().mockResolvedValue(undefined) })
-    const sources = mock<TurnSourcesService>({ of: jest.fn().mockReturnValue(PRICE_LIST) })
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            TurnGatewayToolsService,
-            { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: McpGatewayService, useValue: gateway },
-            { provide: AgentConversationsService, useValue: conversations },
-            { provide: WorkEngineService, useValue: engine },
-            { provide: HubNotesService, useValue: notes },
-            { provide: TurnSourcesService, useValue: sources },
-        ],
-    }).compile()
-    return { service: moduleRef.get(TurnGatewayToolsService), gateway, conversations, engine, notes, sources }
+const build = async (refuses = false, includeNodes = true) => {
+    const gateway = mock<McpGatewayService>()
+    const conversations = mock<AgentConversationsService>()
+    const approvals = mock<OutputApprovalService>()
+    const notes = mock<HubNotesService>()
+    const sources = mock<TurnSourcesService>()
+    const pipeline = mock<TurnGatewayPipelineService>()
+    const runs = mock<AgentRunsService>()
+    const nodes = mock<OutputNodeReader>()
+    const catalog = mock<MessageCatalog>({ get: (key, params) => key + " " + JSON.stringify(params ?? {}) })
+    const doubles = { gateway, conversations, approvals, notes, sources, pipeline, runs, nodes, catalog }
+    arrangeTurnGateway(doubles, refuses)
+    const moduleRef = includeNodes
+        ? await Test.createTestingModule({
+              providers: [
+                  TurnGatewayToolsService,
+                  { provide: AgentRunsService, useValue: runs },
+                  { provide: OUTPUT_NODE_READER, useValue: nodes },
+                  { provide: TurnGatewayPipelineService, useValue: pipeline },
+                  { provide: MESSAGE_CATALOG, useValue: catalog },
+                  { provide: McpGatewayService, useValue: gateway },
+                  { provide: AgentConversationsService, useValue: conversations },
+                  { provide: OutputApprovalService, useValue: approvals },
+                  { provide: HubNotesService, useValue: notes },
+                  { provide: TurnSourcesService, useValue: sources },
+              ],
+          }).compile()
+        : await Test.createTestingModule({
+              providers: [
+                  TurnGatewayToolsService,
+                  { provide: AgentRunsService, useValue: runs },
+                  { provide: TurnGatewayPipelineService, useValue: pipeline },
+                  { provide: MESSAGE_CATALOG, useValue: catalog },
+                  { provide: McpGatewayService, useValue: gateway },
+                  { provide: AgentConversationsService, useValue: conversations },
+                  { provide: OutputApprovalService, useValue: approvals },
+                  { provide: HubNotesService, useValue: notes },
+                  { provide: TurnSourcesService, useValue: sources },
+              ],
+          }).compile()
+    return { service: moduleRef.get(TurnGatewayToolsService), ...doubles }
 }
 
 describe("TurnGatewayToolsService discovery", () => {
@@ -149,12 +135,12 @@ describe("TurnGatewayToolsService argument validation", () => {
     it.each(INVALID)(
         "refuses invalid $tool arguments before reaching the gateway or opening an approval",
         async ({ tool, args }) => {
-            const { service, gateway, engine } = await build()
+            const { service, gateway, approvals } = await build()
             await expect(service.run(CTX, tool, args)).resolves.toEqual({ error: "invalid_arguments" })
             expect(gateway.search).not.toHaveBeenCalled()
             expect(gateway.describe).not.toHaveBeenCalled()
             expect(gateway.call).not.toHaveBeenCalled()
-            expect(engine.runWork).not.toHaveBeenCalled()
+            expect(approvals.ask).not.toHaveBeenCalled()
         },
     )
 })
@@ -276,83 +262,57 @@ describe("TurnGatewayToolsService call arguments and refusals", () => {
     })
 
     it("answers a failed call as it is and opens no approval", async () => {
-        const { service, gateway, engine, notes } = await build()
+        const { service, gateway, approvals, notes } = await build()
         gateway.call.mockResolvedValueOnce({ ok: false, code: "tool_error", detail: "out of stock" })
         await expect(service.run(CTX, "tool.call", { name: "crm.order.place" })).resolves.toEqual({
             error: "tool_error",
             detail: "out of stock",
         })
-        expect(engine.runWork).not.toHaveBeenCalled()
+        expect(approvals.ask).not.toHaveBeenCalled()
         expect(notes.postOnce).not.toHaveBeenCalled()
     })
 })
 
 describe("TurnGatewayToolsService approvals", () => {
     it("opens the gateway_call approval with the exact call and the turn's sources when a person must decide", async () => {
-        const { service, gateway, engine } = await build()
+        const { service, gateway, approvals } = await build()
         gateway.call.mockResolvedValueOnce({ ok: false, code: "approval_required", reason: "over_limit_vnd" })
         await expect(
             service.run(CTX, "tool.call", { name: "crm.order.place", arguments_json: '{"sku":"a"}' }),
         ).resolves.toEqual({ status: "approval_requested", reason: "over_limit_vnd", work_item_id: "w1" })
-        const [ctx, spec] = engine.runWork.mock.calls[0] ?? []
+        const [ctx, request] = approvals.ask.mock.calls[0] ?? []
+        const spec = request?.spec
         expect(ctx).toEqual({ workspaceId: "ws", actor: "OpenClaw", locale: "vi" })
-        expect(spec).toMatchObject({
-            action: "gateway_call",
-            subject_type: "conversation",
-            subject_id: "c1",
-            lead_id: "l1",
-            forceAsk: "over_authority",
-            seed: {
-                summary:
-                    'gatewayTurns.approvalSummary {"tool":"crm.order.place","name":"Lan","reason":"over_limit_vnd"}',
-                draft: "gatewayTurns.approvedDone {}",
-                fields: {
-                    tool: "crm.order.place",
-                    args_json: '{"sku":"a"}',
-                    customer: "Lan",
-                    conversation_id: "c1",
-                    agent_id: "sales",
-                    reason: "over_limit_vnd",
-                    sources: JSON.stringify([ORDER_SOURCE, ...PRICE_LIST]),
-                },
-            },
-        })
+        expect(spec).toMatchObject(APPROVAL_SPEC)
         expect(spec?.dedupeKey).toBe(`gateway_call:${String(gateway.call.mock.calls[0]?.[0].opKey)}`)
     })
 
     it("names an unnamed customer with a dash on the approval", async () => {
-        const { service, gateway, engine, conversations } = await build()
+        const { service, gateway, approvals, conversations } = await build()
         conversations.turnOf.mockResolvedValueOnce({ kind: "ok", value: { ...CONVERSATION, visitorName: null } })
         gateway.call.mockResolvedValueOnce({ ok: false, code: "approval_required", reason: "ask_mode" })
         await service.run(CTX, "tool.call", { name: "crm.order.place" })
-        expect(engine.runWork.mock.calls[0]?.[1].seed?.summary).toContain('"name":"-"')
-        expect(engine.runWork.mock.calls[0]?.[1].seed?.fields?.customer).toBe("")
+        expect(approvals.ask.mock.calls[0]?.[1].spec.seed?.summary).toContain('"name":"-"')
+        expect(approvals.ask.mock.calls[0]?.[1].spec.seed?.fields?.customer).toBe("")
     })
 })
 
 describe("TurnGatewayToolsService sequence", () => {
     it("keeps the same approval identity for reordered argument keys and a distinct identity for reordered steps", async () => {
-        const { service, engine } = await build()
-        const first = [
-            { name: "crm.stock.read", arguments: { sku: "a", filter: { qty: 2, active: true } } },
-            { name: "crm.order.place", arguments: { sku: "a", qty: 2 } },
-        ]
-        const reordered = [
-            { name: "crm.stock.read", arguments: { filter: { active: true, qty: 2 }, sku: "a" } },
-            { name: "crm.order.place", arguments: { qty: 2, sku: "a" } },
-        ]
+        const { service, approvals } = await build()
+        const { first, reordered } = SEQUENCE_ARGUMENT_CASES
 
         await service.run(CTX, "tool.sequence", { steps_json: JSON.stringify(first) })
         await service.run(CTX, "tool.sequence", { steps_json: JSON.stringify(reordered) })
         await service.run(CTX, "tool.sequence", { steps_json: JSON.stringify(reordered.toReversed()) })
 
-        const keys = engine.runWork.mock.calls.map((call) => call[1].dedupeKey)
+        const keys = approvals.ask.mock.calls.map((call) => call[1].spec.dedupeKey)
         expect(keys[0]).toBe(keys[1])
         expect(keys[0]).not.toBe(keys[2])
     })
 
     it("holds a playbook's steps for one approval with the reply, the steps and the turn's sources, and calls nothing", async () => {
-        const { service, gateway, engine } = await build()
+        const { service, gateway, approvals } = await build()
         gateway.describe.mockResolvedValueOnce(READ).mockResolvedValueOnce(DESCRIBED)
         await expect(
             service.run(CTX, "tool.sequence", { steps_json: SEQUENCE_STEPS, reply: " Done for you " }),
@@ -362,34 +322,21 @@ describe("TurnGatewayToolsService sequence", () => {
             work_item_id: "w1",
         })
         expect(gateway.call).not.toHaveBeenCalled()
-        const spec = engine.runWork.mock.calls[0]?.[1]
+        const spec = approvals.ask.mock.calls[0]?.[1].spec
         expect(spec?.dedupeKey).toMatch(/^gateway_call:m1:sequence:[0-9a-f]{16}$/u)
-        expect(spec?.seed).toMatchObject({
-            summary:
-                'gatewayTurns.approvalSummary {"tool":"crm.stock.read > crm.order.place","name":"Lan","reason":"playbook"}',
-            draft: "Done for you",
-            fields: {
-                steps_json: SEQUENCE_STEPS,
-                reason: "playbook",
-                sources: JSON.stringify([
-                    { layer: 1, kind: "mcp_tool", ref: "crm.stock.read", label: "crm.stock.read" },
-                    ORDER_SOURCE,
-                    ...PRICE_LIST,
-                ]),
-            },
-        })
+        expect(spec?.seed).toMatchObject(SEQUENCE_APPROVAL_SEED)
     })
 
     it("tells the customer the approved line when the agent gave no reply", async () => {
-        const { service, engine } = await build()
+        const { service, approvals } = await build()
         await service.run(CTX, "tool.sequence", { steps_json: SEQUENCE_STEPS })
-        expect(engine.runWork.mock.calls[0]?.[1].seed?.draft).toBe("gatewayTurns.approvedDone {}")
+        expect(approvals.ask.mock.calls[0]?.[1].spec.seed?.draft).toBe("gatewayTurns.approvedDone {}")
     })
 })
 
 describe("TurnGatewayToolsService sequence validation", () => {
     it("refuses steps that are no valid list, or name a tool the agent may not use", async () => {
-        const { service, gateway, engine } = await build()
+        const { service, gateway, approvals } = await build()
         await expect(service.run(CTX, "tool.sequence", { steps_json: "[]" })).resolves.toEqual({
             error: "invalid_steps",
             detail: "steps_json is a list of 1 to 10 bounded calls",
@@ -399,18 +346,12 @@ describe("TurnGatewayToolsService sequence validation", () => {
             error: "not_granted_or_unknown",
             detail: "crm.order.place",
         })
-        expect(engine.runWork).not.toHaveBeenCalled()
+        expect(approvals.ask).not.toHaveBeenCalled()
     })
 
     it("refuses malformed JSON, too many steps, and invalid step fields before describing or approving", async () => {
-        const { service, gateway, engine } = await build()
-        const invalid = [
-            "not json",
-            JSON.stringify(Array.from({ length: 11 }, () => ({ name: "crm.stock.read" }))),
-            JSON.stringify([{ name: "n".repeat(114) }]),
-            JSON.stringify([{ name: "crm.stock.read", arguments: [1] }]),
-            JSON.stringify([{ name: "crm.stock.read", arguments: { text: "x".repeat(8193) } }]),
-        ]
+        const { service, gateway, approvals } = await build()
+        const invalid = INVALID_SEQUENCES
         for (const steps of invalid) {
             await expect(service.run(CTX, "tool.sequence", { steps_json: steps })).resolves.toEqual({
                 error: "invalid_steps",
@@ -418,7 +359,7 @@ describe("TurnGatewayToolsService sequence validation", () => {
             })
         }
         expect(gateway.describe).not.toHaveBeenCalled()
-        expect(engine.runWork).not.toHaveBeenCalled()
+        expect(approvals.ask).not.toHaveBeenCalled()
     })
 })
 
@@ -434,7 +375,7 @@ describe("TurnGatewayToolsService test chat", () => {
     })
 
     it("refuses a write, an unknown call or a writing sequence of a test chat with a simulation answer", async () => {
-        const { service, gateway, engine, conversations, notes } = await build()
+        const { service, gateway, approvals, conversations, notes } = await build()
         conversations.isTestChat.mockResolvedValue(true)
         const simulation = { error: "simulation", detail: "a test chat runs connector tools read-only" }
         await expect(service.run(CTX, "tool.call", { name: "crm.order.place" })).resolves.toEqual(simulation)
@@ -445,17 +386,110 @@ describe("TurnGatewayToolsService test chat", () => {
         ).resolves.toEqual(simulation)
         expect(conversations.isTestChat).toHaveBeenCalledWith("c1")
         expect(gateway.call).not.toHaveBeenCalled()
-        expect(engine.runWork).not.toHaveBeenCalled()
+        expect(approvals.ask).not.toHaveBeenCalled()
         expect(notes.postOnce).not.toHaveBeenCalled()
     })
 
     it("holds a read-only sequence of a test chat like any other, since nothing runs before approval", async () => {
-        const { service, gateway, conversations, engine } = await build()
+        const { service, gateway, conversations, approvals } = await build()
         conversations.isTestChat.mockResolvedValue(true)
         gateway.describe.mockResolvedValue(READ)
         await expect(
             service.run(CTX, "tool.sequence", { steps_json: JSON.stringify([{ name: "crm.stock.read" }]) }),
         ).resolves.toMatchObject({ status: "approval_requested" })
-        expect(engine.runWork).toHaveBeenCalledTimes(1)
+        expect(approvals.ask).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("TurnGatewayToolsService on the contract pipeline", () => {
+    it("refuses a write of a turn that is not pinned and calls nothing", async () => {
+        const { service, gateway } = await build(true)
+
+        await expect(service.run(CTX, "tool.call", { name: "crm.order.place" })).resolves.toEqual({
+            error: "needs_own_turn",
+        })
+        expect(gateway.call).not.toHaveBeenCalled()
+    })
+
+    it("refuses a playbook sequence of a turn that is not pinned", async () => {
+        const { service, approvals } = await build(true)
+
+        await expect(service.run(CTX, "tool.sequence", { steps_json: SEQUENCE_STEPS })).resolves.toEqual({
+            error: "needs_own_turn",
+        })
+        expect(approvals.ask).not.toHaveBeenCalled()
+    })
+
+    it("leaves a tool that is not granted to the gateway to answer", async () => {
+        const { service, gateway } = await build(true)
+        gateway.describe.mockResolvedValue(null)
+        gateway.call.mockResolvedValue({ ok: false, code: "not_granted", detail: "no" })
+
+        await expect(service.run(CTX, "tool.call", { name: "crm.secret" })).resolves.toMatchObject({
+            error: "not_granted",
+        })
+    })
+})
+
+const CORE_CTX = { ...CTX, wakeId: "wake-1" }
+const CORE_CALL = { name: "crm.order.place", arguments_json: '{"sku":"a"}' }
+
+describe("TurnGatewayToolsService on a run of the core road", () => {
+    it("runs a write as an output step on the graph's node and answers the stored result", async () => {
+        const { service, runs, gateway, notes } = await build()
+        await expect(service.run(CORE_CTX, "tool.call", CORE_CALL)).resolves.toEqual({ result: { summary: "ORD-1" } })
+        expect(runs.runInline).toHaveBeenCalledWith(
+            "wake-1",
+            expect.objectContaining({ kind: "output", nodeKey: "act:gateway_call" }),
+            expect.any(AbortSignal),
+        )
+        expect(gateway.call).not.toHaveBeenCalled()
+        expect(notes.postOnce).toHaveBeenCalledTimes(1)
+    })
+
+    it("answers a failed output as it came to", async () => {
+        const { service, runs, notes } = await build()
+        runs.runInline.mockResolvedValue(roadOutputOf("failed"))
+        await expect(service.run(CORE_CTX, "tool.call", CORE_CALL)).resolves.toEqual({ error: "ask_mode", detail: "" })
+        expect(notes.postOnce).not.toHaveBeenCalled()
+    })
+
+    it("holds a call a person must decide on a wait step that keeps the exact call", async () => {
+        const { service, runs, approvals } = await build()
+        runs.runInline.mockResolvedValueOnce(roadOutputOf("held"))
+        await expect(service.run(CORE_CTX, "tool.call", CORE_CALL)).resolves.toMatchObject({
+            status: "approval_requested",
+        })
+        expect(approvals.ask.mock.calls[0]?.[1]?.spec.seed?.fields).toMatchObject({ in_run: "true", message_id: "m1" })
+        expect(approvals.ask.mock.calls[0]?.[1]?.wait).toMatchObject({
+            wakeId: "wake-1",
+            calls: [{ tool: "crm.order.place", argsJson: '{"sku":"a"}' }],
+            scope: { approvalNode: "ask:gateway_call", messageId: "m1" },
+        })
+        expect(runs.runInline).toHaveBeenCalledTimes(1)
+    })
+
+    it("leaves a read to the gateway: it changes nothing a retry could repeat", async () => {
+        const { service, runs, gateway } = await build()
+        gateway.describe.mockResolvedValue(READ)
+        await service.run(CORE_CTX, "tool.call", { name: "crm.stock.read" })
+        expect(runs.runInline).not.toHaveBeenCalled()
+    })
+})
+
+describe("TurnGatewayToolsService incomplete stored outcomes without graph bindings", () => {
+    it("keeps an unread outcome and absent refusal reasons explicit while using empty optional graph nodes", async () => {
+        const { service, runs, approvals } = await build(false, false)
+        runs.runInline.mockResolvedValueOnce({})
+        await expect(service.run(CORE_CTX, "tool.call", CORE_CALL)).resolves.toEqual({ error: "unknown_outcome" })
+        runs.runInline.mockResolvedValueOnce(roadOutputOf("failed", null))
+        await expect(service.run(CORE_CTX, "tool.call", CORE_CALL)).resolves.toEqual({ error: "failed", detail: "" })
+        runs.runInline.mockResolvedValueOnce(roadOutputOf("held", null))
+        await expect(service.run(CORE_CTX, "tool.call", CORE_CALL)).resolves.toMatchObject({
+            status: "approval_requested",
+            reason: "",
+        })
+        expect(approvals.ask.mock.calls[0]?.[1].spec.seed?.fields?.reason).toBe("")
+        expect(runs.runInline.mock.calls[0]?.[1].nodeKey).toBe("")
     })
 })

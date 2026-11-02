@@ -16,7 +16,7 @@ interface SinglePickListProps {
     readonly label: string
     readonly rows: ReadonlyArray<SinglePickRow>
     /** The rows are still loading: the list draws waiting rows. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onPick: (id: string) => void
 }
 
@@ -25,8 +25,7 @@ export const SinglePickList = (props: SinglePickListProps) => (
     <ListBox
         label={props.label}
         selectionMode="single"
-        isLoading={props.isSkeleton}
-        loadingRows={3}
+        isLoading={props.isLoading}
         selectedIds={props.rows.filter((row) => row.isSelected).map((row) => row.id)}
         onSelectionChange={(ids) => {
             const picked = props.rows.find((row) => row.id === ids[0])

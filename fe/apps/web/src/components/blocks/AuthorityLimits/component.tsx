@@ -1,7 +1,7 @@
 import { Fragment } from "react"
-import { CheckboxGroup, Divider, Heading, Stack, Text, Textarea } from "@starci/grammar/common"
-import { AuthoritySection } from "@/components/composites/AuthoritySection"
-import type { AuthoritySectionView } from "@/components/composites/AuthoritySection"
+import { Button, CheckboxGroup, Divider, Heading, Stack, Text, Textarea } from "@starci/grammar/common"
+import { AuthoritySection } from "@/components/frames/AuthoritySection"
+import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
@@ -49,11 +49,27 @@ export interface AuthorityLimitsBaseProps {
 export const AuthorityLimitsBase = (props: AuthorityLimitsBaseProps) => {
     const view = props.props
     return (
-        <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
-            {(limits, isSkeleton) => (
-                <AuthoritySection section={view.section} isSkeleton={isSkeleton} onSave={props.on.save}>
+        <SlotView
+            slot={view.slot}
+            placeholder={view.placeholder}
+            labels={view.slotLabels}
+            onRetry={props.on.retry}
+            render={(limits, isLoading) => (
+                <AuthoritySection
+                    section={view.section}
+                    footer={
+                        <Button
+                            intent="commit"
+                            isPending={view.section.isPending}
+                            isLoading={isLoading}
+                            onPress={props.on.save}
+                        >
+                            {view.section.saveLabel}
+                        </Button>
+                    }
+                >
                     <Textarea
-                        isSkeleton={isSkeleton}
+                        isLoading={isLoading}
                         label={view.noteLabel}
                         description={view.noteHint}
                         rows={3}
@@ -73,7 +89,7 @@ export const AuthorityLimitsBase = (props: AuthorityLimitsBaseProps) => {
                                 <CheckboxGroup
                                     label={row.label}
                                     orientation="horizontal"
-                                    isSkeleton={isSkeleton}
+                                    isLoading={isLoading}
                                     options={view.fields}
                                     value={row.value}
                                     onValueChange={(value) => props.on.required(row.key, value)}
@@ -83,6 +99,6 @@ export const AuthorityLimitsBase = (props: AuthorityLimitsBaseProps) => {
                     </Stack>
                 </AuthoritySection>
             )}
-        </SlotView>
+        />
     )
 }

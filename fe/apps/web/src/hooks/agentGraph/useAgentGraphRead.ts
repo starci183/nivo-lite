@@ -3,8 +3,9 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import { useMemo } from "react"
-import { useInstallations } from "@/hooks/installations"
+import { slotOfReads } from "@/hooks/slot"
 import {
+    useQueryModuleInstallationsSwr,
     useQueryAgentGraphCoverageSwr,
     useQueryAgentGraphRunSwr,
     useQueryAgentGraphSwr,
@@ -13,7 +14,7 @@ import {
 } from "@/hooks/swr"
 import { agentGraphOfWire, parseAgentGraphTrace, parseAgentGraphWire } from "@/modules/agent-graph"
 import type { AgentGraphWire } from "@/modules/agent-graph"
-import type { AgentGraphData, AgentGraphMemberData, DataSlot } from "@/modules/types"
+import type { AgentGraphData, AgentGraphMemberData, DataSlot, SlotRead } from "@/modules/types"
 import { useAgentGraphWords } from "./useAgentGraphWords"
 
 /** The graph, as the back end carries it and as the panes draw it. */
@@ -22,12 +23,6 @@ export interface AgentGraphRead {
     readonly draftRev: number
     readonly wire: AgentGraphWire
     readonly data: AgentGraphData
-}
-
-/** The status of the read: failed, still waiting, or the graph. */
-const slotOf = (isFailed: boolean, isWaiting: boolean, data: AgentGraphData | undefined): DataSlot<AgentGraphData> => {
-    if (isFailed) return { isError: true }
-    return data === undefined ? { isLoading: isWaiting } : { items: data }
 }
 
 /**
@@ -40,8 +35,8 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
     const format = useFormatter()
     const locale = useLocale()
     const words = useAgentGraphWords(t)
-    const { installations } = useInstallations()
-    const agentId = installations?.find((installation) => installation.id === installationId)?.agentId ?? null
+    const installations = useQueryModuleInstallationsSwr()
+    const agentId = installations.data?.find((installation) => installation.id === installationId)?.agentId ?? null
     const graph = useQueryAgentGraphSwr(agentId === null ? null : { agentId, locale })
     const versions = useQueryAgentGraphVersionsSwr(agentId === null ? null : { agentId })
     const directory = useQueryApproverDirectorySwr()
@@ -60,9 +55,9 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
               }
     const wire = useMemo(() => (graph.data === undefined ? undefined : parseAgentGraphWire(graph.data)), [graph.data])
     const members = useMemo(
-        (): ReadonlyArray<AgentGraphMemberData> =>
-            (directory.data ?? [])
-                .filter((member) => member.status !== "disabled")
+        (): ReadonlyArray<AgentGraphMemberData> | undefined =>
+            directory.data
+                ?.filter((member) => member.status !== "disabled")
                 .map((member) => ({ id: member.memberId, name: member.name, upToVnd: null })),
         [directory.data],
     )
@@ -71,7 +66,10 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
         graph.data === undefined ||
         wire === undefined ||
         wire === null ||
-        versions.data === undefined
+        versions.data === undefined ||
+        directory.data === undefined ||
+        members === undefined ||
+        coverage.data === undefined
             ? undefined
             : {
                   agentId,
@@ -84,7 +82,7 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
                           activeVersionId: graph.data.activeVersionId ?? null,
                           versions: versions.data,
                           members,
-                          coverage: coverage.data ?? [],
+                          coverage: coverage.data,
                           run,
                           changes,
                           isDraftChanged: graph.data.isDraftChanged,
@@ -97,8 +95,36 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
                       },
                   ),
               }
-    const isFailed = graph.error !== undefined || versions.error !== undefined || wire === null
-    const isWaiting = graph.isLoading || versions.isLoading || installations === undefined
-    const slot: DataSlot<AgentGraphData> = slotOf(isFailed, isWaiting, read?.data)
-    return { slot, runId: run?.id ?? "", read, reload: () => void Promise.all([graph.mutate(), versions.mutate()]) }
+    const parsedGraphRead: SlotRead<typeof graph.data> = {
+        data: wire === null ? undefined : graph.data,
+        error: graph.error ?? (wire === null ? new Error("The agent graph payload is invalid") : undefined),
+        isLoading: graph.isLoading,
+        isValidating: graph.isValidating,
+    }
+    const reads = [
+        installations,
+        parsedGraphRead,
+        versions,
+        directory,
+        coverage,
+        ...(workItemId === "" ? [] : [runRead]),
+    ]
+    const slot: DataSlot<AgentGraphData> = slotOfReads(reads, () => {
+        if (read === undefined)
+            throw new Error("A ready action graph requires its parsed graph and settled supporting reads")
+        return read.data
+    })
+    return {
+        slot,
+        runId: run?.id ?? "",
+        read,
+        reload: () => {
+            void installations.mutate()
+            void graph.mutate()
+            void versions.mutate()
+            void directory.mutate()
+            void coverage.mutate()
+            if (workItemId !== "") void runRead.mutate()
+        },
+    }
 }

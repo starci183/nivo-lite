@@ -27,6 +27,7 @@ import {
 } from "@/modules/office"
 import type { OfficeRoom, OfficeWaiting } from "@/modules/office"
 import { useOfficePanels } from "./useOfficePanels"
+import { officeReadSlots } from "./officeMessenger.slots"
 import { useOfficeThreadView } from "./useOfficeThreadView"
 
 /** Where the header chip jumps: the oldest thing that waits for a person's decision; none when nothing waits. */
@@ -68,6 +69,45 @@ const useSendLine = (
     )
 }
 
+/** Resolves the room-scoped panel read and the waiting targets from the same board. */
+const usePanelBundle = (
+    messages: ReturnType<typeof withReceipt> | undefined,
+    board: OfficeBoard,
+    words: ReturnType<typeof useOfficeWords>,
+    current: OfficeRoom | null,
+    roomKey: string | null,
+    hub: ReturnType<typeof useOfficeRooms>,
+    roomAgents: OfficeBoard["agents"],
+) => {
+    const waiting = useMemo(() => waitingOf(board.pending, board.exceptions), [board.pending, board.exceptions])
+    const panelRoom = useMemo(
+        () => ({
+            current,
+            key: roomKey,
+            rooms: hub.rooms,
+            channels: hub.channels,
+            agents: roomAgents,
+            unread: hub.unread,
+        }),
+        [current, roomKey, hub.rooms, hub.channels, roomAgents, hub.unread],
+    )
+    const panels = useOfficePanels(messages ?? [], board, words, waiting.length, panelRoom)
+    return { waiting, panels }
+}
+
+/** Resolves the loading command's name and note from its actual target. */
+const readingOf = (reading: ReturnType<typeof useOfficeSend>["reading"], words: ReturnType<typeof useOfficeWords>) => {
+    if (reading === null) return null
+    const agent = words.moduleName(reading.module)
+    return {
+        avatar: NIVO_AVATAR,
+        ask: words.t("cmdAskReading", { handle: reading.handle }),
+        agent,
+        label: words.t("cmdCardLabel", { agent }),
+        gateNote: words.t("cmdGateNote", { agent }),
+    }
+}
+
 /** The whole Office messenger for one Hub room (null = the Office room): its data, its words and its commands. */
 export const useOfficeMessenger = (focusedId: string | null, roomKey: string | null, isThreadVisible: boolean) => {
     const me = useMember()
@@ -84,40 +124,26 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
     })
     const receipts = useOfficeReceipts(roomKey, isThreadVisible, hub.refreshRooms)
     const thread = useOfficeThread(roomKey, receipts.onFetched)
-    const knownIds = useMemo(() => new Set((thread.slot.items ?? []).map((line) => line.id)), [thread.slot.items])
+    const knownIds = useMemo(() => new Set(thread.read.data?.map((line) => line.id)), [thread.read.data])
     const sender = useOfficeSend(knownIds)
     const decisions = useOfficeDecisions()
     const current = roomOf(hub.rooms, roomKey)
     const roomAgents = roomAgentsOf(current, fullBoard.agents)
     const board = useMemo(() => scopedBoard(fullBoard, current), [fullBoard, current])
     const marker = hub.markers.get(roomKey ?? "")
-    const fetched = thread.slot.items
+    const fetched = thread.read.data
     const messages = useMemo(
         () => (fetched === undefined ? undefined : withReceipt(fetched, marker)),
         [fetched, marker],
     )
-    // One definition for the header chip and the "Needs your approval" column: approval cards and work items waiting for a decision.
-    // A pending result card names one of them, so it is not counted again; a failed item is an exception, not a decision.
-    const waiting = useMemo(() => waitingOf(board.pending, board.exceptions), [board.pending, board.exceptions])
+    const { waiting, panels } = usePanelBundle(messages, board, words, current, roomKey, hub, roomAgents)
     const waitingCount = waiting.length
     const items = useOfficeThreadView(messages, board, words, focusedId, decisions.alreadyIds, sender.outbox.length > 0)
-    const panelRoom = useMemo(
-        () => ({
-            current,
-            key: roomKey,
-            rooms: hub.rooms,
-            channels: hub.channels,
-            agents: roomAgents,
-            unread: hub.unread,
-        }),
-        [current, roomKey, hub.rooms, hub.channels, roomAgents, hub.unread],
-    )
-    const panels = useOfficePanels(messages ?? [], board, words, waitingCount, panelRoom)
 
     const send = useSendLine(board.agents, sender, roomKey)
 
     return {
-        slot: thread.slot,
+        ...officeReadSlots({ board: fullBoard, hub, thread, list: panels.list }),
         items,
         thread,
         sender,
@@ -134,14 +160,7 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         peersTyping: hub.peers.names,
         onDraft: hub.peers.onDraft,
         onDutyCount: roomAgents.filter((agent) => agent.isActive).length,
-        reading:
-            sender.reading === null
-                ? null
-                : {
-                      avatar: NIVO_AVATAR,
-                      ask: words.t("cmdAskReading", { handle: sender.reading.handle }),
-                      agent: words.moduleName(sender.reading.module),
-                  },
+        reading: readingOf(sender.reading, words),
         chatbotHandle: board.agents.find((agent) => agent.module === "chatbot" && agent.isActive)?.handle ?? null,
         text: words.t,
         send,

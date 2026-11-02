@@ -90,7 +90,7 @@ const raised = (state: GraphState): GraphDocument => ({
 })
 
 describe("AgentGraphPublishService.publishDraft", () => {
-    it("publishes a draft that is whole and does not widen, and an owner's publish makes the graph decide", async () => {
+    it("publishes a draft that is whole and does not widen, and an owner's publish leaves the mode alone", async () => {
         const state = stateOf()
         const { service, graphs, context } = await build(state)
 
@@ -109,7 +109,7 @@ describe("AgentGraphPublishService.publishDraft", () => {
             memberId: "boss",
             contextVersionId: null,
         })
-        expect(graphs.setMode).toHaveBeenCalledWith("ws-1", "agent-1", "enforced")
+        expect(graphs.setMode).not.toHaveBeenCalled()
     })
 
     it("lets a manager publish what does not widen, without changing the mode", async () => {
@@ -169,11 +169,11 @@ describe("AgentGraphPublishService.publishDraft", () => {
 })
 
 describe("AgentGraphPublishService.publishDraft from the setup chat", () => {
-    it("makes the graph decide when the owner publishes from the setup chat, as from the map, and numbers the version as asked", async () => {
-        const state = stateOf()
+    it("preserves the owner's shadow mode when publishing from the setup chat and numbers the version as asked", async () => {
+        const state = stateOf({ mode: "shadow" })
         const { service, graphs } = await build(state)
 
-        await service.publishDraft("ws-1", "agent-1", OWNER, "", "chat", "cv-7", 7)
+        await expect(service.publishDraft("ws-1", "agent-1", OWNER, "", "chat", "cv-7", 7)).resolves.toBe(VERSION)
 
         expect(graphs.publish).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -185,7 +185,7 @@ describe("AgentGraphPublishService.publishDraft from the setup chat", () => {
             contextVersionId: "cv-7",
             version: 7,
         })
-        expect(graphs.setMode).toHaveBeenCalledWith("ws-1", "agent-1", "enforced")
+        expect(graphs.setMode).not.toHaveBeenCalled()
     })
 
     it("leaves the mode as it was when a manager publishes from the setup chat, and when the owner restores", async () => {
@@ -257,6 +257,24 @@ describe("AgentGraphPublishService.publishLearned", () => {
     })
 })
 
+describe("AgentGraphPublishService.publishConflict", () => {
+    it("publishes the replacement graph as a conflict version and retains the approver identity", async () => {
+        const document = stateOf().draft
+        const { service, graphs } = await build(stateOf())
+
+        await expect(service.publishConflict("ws-1", "agent-1", document, OWNER)).resolves.toBe(VERSION)
+        expect(graphs.publish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                kind: "conflict",
+                document,
+                memberId: "boss",
+                note: "",
+            }),
+        )
+        expect(graphs.setMode).not.toHaveBeenCalled()
+    })
+})
+
 describe("AgentGraphPublishService.restore", () => {
     it("publishes an older version again as a new one, under the same checks", async () => {
         const { service, graphs } = await build(stateOf())
@@ -269,24 +287,70 @@ describe("AgentGraphPublishService.restore", () => {
 })
 
 describe("AgentGraphPublishService.setMode", () => {
-    it("lets the owner make the graph decide, and any editor put it back to recording", async () => {
+    it("lets the owner set the mode either way, and keeps who did", async () => {
         const { service, graphs } = await build(stateOf())
 
         await service.setMode("ws-1", "agent-1", "enforced", OWNER)
-        await service.setMode("ws-1", "agent-1", "shadow", MANAGER)
+        await service.setMode("ws-1", "agent-1", "shadow", OWNER)
 
         expect(graphs.setMode.mock.calls).toEqual([
-            ["ws-1", "agent-1", "enforced"],
-            ["ws-1", "agent-1", "shadow"],
+            ["ws-1", "agent-1", "enforced", "boss"],
+            ["ws-1", "agent-1", "shadow", "boss"],
         ])
     })
 
-    it("refuses a manager who would make the graph decide", async () => {
+    it("refuses a manager either way, because turning a graph off widens the agent", async () => {
         const { service, graphs } = await build(stateOf())
 
         expect(await codeOf(service.setMode("ws-1", "agent-1", "enforced", MANAGER))).toBe(
             AgentGraphsErrorCode.WidensNeedsOwner,
         )
+        expect(await codeOf(service.setMode("ws-1", "agent-1", "shadow", MANAGER))).toBe(
+            AgentGraphsErrorCode.WidensNeedsOwner,
+        )
         expect(graphs.setMode).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphPublishService.publishContract", () => {
+    it("publishes the graph a confirmed contract made as a chat version, under the same checks", async () => {
+        const { service, graphs } = await build(stateOf())
+        const document = {
+            ...stateOf().draft,
+            contracts: [{ intent: "pay_supplier", task: "Pay.", limits: [], sources: [] }],
+        }
+
+        await expect(service.publishContract("ws-1", "agent-1", document, MANAGER)).resolves.toBe(VERSION)
+
+        expect(graphs.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ kind: "chat", document, memberId: "dinh" }),
+        )
+    })
+})
+
+describe("AgentGraphPublishService the contracts of a graph", () => {
+    const FRAMED = (intent: string): boolean => intent === "pay_supplier"
+
+    it("refuses a graph whose intent has no frame in the catalogue of the module", async () => {
+        const context = { ...contextOf(), hasFrame: (intent: string) => intent === "send_quote" }
+        const { service, graphs } = await build(stateOf(), { context })
+
+        expect(await codeOf(service.publishDraft("ws-1", "agent-1", OWNER, "Edit"))).toBe(
+            AgentGraphsErrorCode.PublishRefused,
+        )
+        expect(graphs.publish).not.toHaveBeenCalled()
+    })
+
+    it("publishes a graph with no contracts block, and a contract that only warns", async () => {
+        const warned = {
+            ...stateOf().draft,
+            contracts: [{ intent: "give_discount", task: "", limits: [], sources: [] }],
+        }
+        const context = { ...contextOf(), hasFrame: FRAMED }
+        const shipped = await build(stateOf(), { context })
+        const warning = await build(stateOf({ draft: warned }), { context })
+
+        await expect(shipped.service.publishDraft("ws-1", "agent-1", OWNER, "Edit")).resolves.toBe(VERSION)
+        await expect(warning.service.publishDraft("ws-1", "agent-1", OWNER, "Edit")).resolves.toBe(VERSION)
     })
 })

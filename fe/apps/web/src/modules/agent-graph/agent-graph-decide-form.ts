@@ -121,7 +121,13 @@ const rowsWithChange = (
         return replaceAt(rows, change.row, (row) =>
             row.isElse || row.isLocked || row.terms.length >= MAX_TERMS
                 ? row
-                : { ...row, terms: [...row.terms, newTermAfter(factOf(row.terms[0]?.fact ?? "") ?? facts[0], row.terms.at(-1))] },
+                : {
+                      ...row,
+                      terms: [
+                          ...row.terms,
+                          newTermAfter(factOf(row.terms[0]?.fact ?? "") ?? facts[0], row.terms.at(-1)),
+                      ],
+                  },
         )
     if (change.kind === "removeTerm")
         return replaceAt(rows, change.row, (row) =>

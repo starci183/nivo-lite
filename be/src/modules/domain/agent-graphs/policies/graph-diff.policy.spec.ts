@@ -123,6 +123,12 @@ describe("graph-diff.policy (continued)", () => {
 })
 
 describe("graph-diff.policy tools and rights", () => {
+    it("compares a decide point that has no registered amount fact without inventing a boundary", async () => {
+        const subject = await build()
+
+        expect(subject.graphDiff(BASE, BASE, { ...BY, facts: {} })).toEqual({ widens: false, changes: [] })
+    })
+
     it("counts a tool that was not there before, once", async () => {
         const subject = await build()
         const tool = { provider: "sepay", tool: "sepay.status", scope: "read", label: "SePay" } as const

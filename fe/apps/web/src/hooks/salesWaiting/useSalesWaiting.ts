@@ -2,27 +2,31 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { decisionHref, useSalesActions } from "@/hooks/sales"
-import { slotOfSwr } from "@/hooks/slot"
+import { mapSlot } from "@/hooks/slot"
+import { useActiveWorkspace } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { agentHref } from "@/modules/installations"
 import type { SalesDecision } from "@/modules/types"
+import { useGraphQLWithToast } from "@/modules/toast"
 import { SALES_WAITING_SHOWN, salesWaitingRowOf } from "./salesWaiting.shared"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 
 /** The pending decisions of the Sales desk, each decided in place: the oldest three, then a link to the Decisions tab. */
-export const useSalesWaiting = () => {
+export const useSalesWaiting = (isActive = true, scope?: string) => {
     const t = useTranslations("workbenchSales")
     const format = useFormatter()
     const router = navigation.useRouter()
-    const actions = useSalesActions()
-    const workbench = useSalesWorkbench()
+    const { activeWorkspaceId } = useActiveWorkspace()
+    const actions = useSalesActions({ isActive, scope: scope ?? activeWorkspaceId ?? "" })
+    const runGraphQL = useGraphQLWithToast()
+    const workbench = useSalesWorkbench(isActive)
     const pending = workbench.data?.decisions
     const decide = (decision: SalesDecision, outcome: "approved" | "rejected") => {
-        if (decision.source === "execution" && decision.executionId !== null) {
-            void actions.decideDraft({ id: decision.executionId, decision: outcome, editedDraft: undefined })
-            return
-        }
-        void actions.decideWorkItem({ id: decision.id, decision: outcome, edits: undefined })
+        const command =
+            decision.source === "execution" && decision.executionId !== null
+                ? actions.decideDraft({ id: decision.executionId, decision: outcome, editedDraft: undefined })
+                : actions.decideWorkItem({ id: decision.id, decision: outcome, edits: undefined })
+        command.catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
     }
     const commands = {
         isBusy: actions.isMutating,
@@ -40,27 +44,24 @@ export const useSalesWaiting = () => {
         reasonReady: t("waitingReason"),
         unknownCustomer: t("waitingUnknownCustomer"),
     }
-    const rows = pending?.slice(0, SALES_WAITING_SHOWN).map((decision) =>
-        salesWaitingRowOf(
-            words,
-            decision,
-            commands,
-            decision.amountVnd === null
-                ? null
-                : format.number(decision.amountVnd, {
-                      style: "currency",
-                      currency: "VND",
-                      maximumFractionDigits: 0,
-                  }),
-        ),
-    )
+    const rowsOf = (decisions: ReadonlyArray<SalesDecision>) =>
+        decisions.slice(0, SALES_WAITING_SHOWN).map((decision) =>
+            salesWaitingRowOf(
+                words,
+                decision,
+                commands,
+                decision.amountVnd === null
+                    ? null
+                    : format.number(decision.amountVnd, {
+                          style: "currency",
+                          currency: "VND",
+                          maximumFractionDigits: 0,
+                      }),
+            ),
+        )
     const hidden = (pending?.length ?? 0) - SALES_WAITING_SHOWN
     return {
-        slot: slotOfSwr({
-            data: rows,
-            error: workbench.isFailed ? t("loadFailedBody") : undefined,
-            isLoading: workbench.isLoading,
-        }),
+        slot: mapSlot(workbench.slot, (data) => rowsOf(data.decisions)),
         count: pending === undefined || pending.length === 0 ? null : String(pending.length),
         more:
             hidden > 0

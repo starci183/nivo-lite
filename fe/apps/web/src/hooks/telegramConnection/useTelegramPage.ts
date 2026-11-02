@@ -14,4 +14,4 @@ export const useTelegramPage = (connectionId: string | undefined) =>
     )
 
 /** What one read of the page answers. */
-export type TelegramPageData = NonNullable<ReturnType<typeof useTelegramPage>["slot"]["items"]>
+export type TelegramPageData = NonNullable<ReturnType<typeof useTelegramPage>["read"]["data"]>

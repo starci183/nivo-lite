@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 /** Copy and state of the authority page frame, and the sections it frames. */
 export interface AuthorityHeadBaseProps {
     /** The sections of the page, drawn under the motto. */
-    readonly shape: { readonly body: ReactNode }
+    readonly children: ReactNode
     readonly props: {
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
@@ -32,11 +32,11 @@ export const AuthorityHeadBase = (props: AuthorityHeadBaseProps) => {
             }}
         >
             <Stack gap="region">
-                <Text weight="medium">{view.motto}</Text>
+                <Text isStrong>{view.motto}</Text>
                 {view.isReadOnly ? (
                     <Alert tone="cautionary" title={view.readOnlyTitle} description={view.readOnlyBody} />
                 ) : null}
-                {props.shape.body}
+                {props.children}
             </Stack>
         </Page>
     )

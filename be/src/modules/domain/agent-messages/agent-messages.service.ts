@@ -8,17 +8,20 @@ import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import type {
     AgentThreadMessage,
+    DeliveryClaim,
     ApprovedMessageId,
     AuthorUserId,
     ConversationDayCount,
     CustomerMessagesDay,
     StoredMessage,
     StoredReply,
+    StoredReplyBody,
     TranscriptLine,
 } from "./agent-messages.contracts"
 import type { ConversationMessage, ConversationMessagesQuery } from "./conversation-messages.contracts"
 import { AgentMessagesError, AgentMessagesErrorCode } from "./errors/agent-messages.error"
 import { AgentMessageEntity } from "./persistence/entities"
+import { DELIVERY_OUTCOME_UNKNOWN } from "./agent-messages.policy"
 
 /** The most messages of a thread one read answers. */
 const CHAT_MESSAGES_MAX = 300
@@ -200,6 +203,15 @@ export class AgentMessagesService {
         return this.entityManager.exists(AgentMessageEntity, { where: { conversationId, inReplyTo, role: "agent" } })
     }
 
+    /** The final reply already stored, under its work item or as the reply to the customer message; null before it is. */
+    async storedReply(conversationId: string, inReplyTo: string, itemId: ApprovedMessageId): Promise<StoredReplyBody> {
+        const row = await this.entityManager.findOne(AgentMessageEntity, {
+            select: { body: true },
+            where: itemId === null ? { conversationId, inReplyTo, role: "agent" } : { id: itemId, conversationId },
+        })
+        return row?.body ?? null
+    }
+
     /** Stores a message the company sends on its own (not a reply to a customer message) and answers its id. */
     async storeAgentMessage(workspaceId: string, conversationId: string, body: string): Promise<string> {
         const id = this.required(
@@ -207,6 +219,17 @@ export class AgentMessagesService {
         )
         await this.announce(workspaceId, conversationId, null, this.entityManager)
         return id
+    }
+
+    /** Stores the agent's reply to a finished output under the id of its work item: a retry finds the same message. */
+    async storeFinalReply(workspaceId: string, conversationId: string, body: string, itemId: string): Promise<string> {
+        const ids = await this.insert(
+            this.entityManager,
+            { id: itemId, workspaceId, conversationId, role: "agent", body },
+            true,
+        )
+        if (ids[0] !== undefined) await this.announce(workspaceId, conversationId, null, this.entityManager)
+        return itemId
     }
 
     /** Stores a member reply in the transaction of the caller; the stable id of an approval reuses the same message on retry. */
@@ -284,6 +307,28 @@ export class AgentMessagesService {
             order: { createdAt: "DESC" },
         })
         return row === null ? refused(AgentMessagesErrorCode.NotFound) : ok(row.createdAt)
+    }
+
+    /** Fences an external send before it starts; a killed or concurrent attempt remains unknown until reconciled. */
+    async claimDelivery(messageId: string, conversationId: string): Promise<DeliveryClaim> {
+        const claimed = await this.entityManager
+            .createQueryBuilder(AgentMessageEntity, "am")
+            .update()
+            .set({ deliveryStatus: "failed", deliveryError: DELIVERY_OUTCOME_UNKNOWN })
+            .where("id = :messageId AND conversation_id = :conversationId", { messageId, conversationId })
+            .andWhere("delivery_status IS DISTINCT FROM 'sent'")
+            .andWhere("(delivery_error IS NULL OR delivery_error NOT IN (:...uncertain))", {
+                uncertain: [DELIVERY_OUTCOME_UNKNOWN, "delivery_failed", "zalo_error"],
+            })
+            .returning("id")
+            .execute()
+        if (returnedIds(claimed.raw).length !== 0) return "send"
+        const row = await this.entityManager.findOne(AgentMessageEntity, {
+            select: { deliveryStatus: true },
+            where: { id: messageId, conversationId },
+        })
+        if (row === null) return "missing"
+        return row.deliveryStatus === "sent" ? "acknowledged" : "ambiguous"
     }
 
     /** Writes the verdict of a delivery on the stored message so the workbench can show why a reply did not leave. */

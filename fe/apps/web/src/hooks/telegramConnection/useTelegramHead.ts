@@ -20,6 +20,7 @@ export const useTelegramHead = (connectionId: string | undefined) => {
     const router = navigation.useRouter()
     const { trigger, isMutating } = useDisconnectConnection("telegram")
     const { slot, isMissing } = useTelegramPage(connectionId)
+    const page = "items" in slot ? slot.items : undefined
     const { role } = useConnectionsRole()
     const [notice, setNotice] = useState("")
 
@@ -47,6 +48,6 @@ export const useTelegramHead = (connectionId: string | undefined) => {
         isDisconnecting: isMutating,
         isMissing,
         isOwner: role === "owner",
-        isLive: slot.items !== undefined && slot.items.status !== "disconnected",
+        isLive: page !== undefined && page.status !== "disconnected",
     }
 }

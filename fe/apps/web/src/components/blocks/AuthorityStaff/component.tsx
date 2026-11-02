@@ -1,4 +1,4 @@
-import { Badge, Button, ListRow, SurfaceListCard } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
@@ -33,27 +33,34 @@ export interface AuthorityStaffBaseProps {
 export const AuthorityStaffBase = (props: AuthorityStaffBaseProps) => {
     const view = props.props
     return (
-        <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
-            {(rows, isSkeleton) => (
-                <SurfaceListCard label={view.title} headingLevel={2} footer={`${view.description} ${view.note}`}>
-                    {rows.map((row) => (
-                        <ListRow
-                            key={row.id}
-                            isSkeleton={isSkeleton}
-                            title={row.name}
-                            description={row.role}
-                            badges={row.hasAccount ? <Badge tone="accent">{view.hasAccountLabel}</Badge> : null}
-                            actions={
-                                row.inviteHref === null ? null : (
-                                    <Button intent="neutral" href={row.inviteHref}>
-                                        {view.inviteLabel}
-                                    </Button>
-                                )
-                            }
-                        />
-                    ))}
-                </SurfaceListCard>
+        <SlotView
+            slot={view.slot}
+            placeholder={view.placeholder}
+            labels={view.slotLabels}
+            onRetry={props.on.retry}
+            render={(rows, isLoading) => (
+                <SurfaceCard
+                    kind="list"
+                    label={view.title}
+                    headingLevel={2}
+                    isLoading={isLoading}
+                    items={rows.map((row) => ({
+                        id: row.id,
+                        title: row.name,
+                        description: row.role,
+                        ...(row.hasAccount
+                            ? { badges: [{ label: view.hasAccountLabel, tone: "accent" as const }] as const }
+                            : {}),
+                        ...(row.inviteHref === null
+                            ? {}
+                            : {
+                                  action: { label: view.inviteLabel, intent: "neutral", href: row.inviteHref } as const,
+                              }),
+                    }))}
+                    empty={<EmptyNotice message={view.slotLabels.empty} />}
+                    footer={`${view.description} ${view.note}`}
+                />
             )}
-        </SlotView>
+        />
     )
 }

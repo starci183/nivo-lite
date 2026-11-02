@@ -18,7 +18,7 @@ export const AuthorityHead = (props: AuthorityHeadProps) => {
     const member = useMember()
     return (
         <AuthorityHeadBase
-            shape={{ body: props.children }}
+            children={props.children}
             props={{
                 crumbLabel: t("crumbLabel"),
                 crumbs: [

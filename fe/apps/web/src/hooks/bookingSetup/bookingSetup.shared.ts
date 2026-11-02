@@ -1,7 +1,13 @@
-import type { Dispatch, SetStateAction, useTransition } from "react"
+import type { Dispatch, SetStateAction } from "react"
+
 import type { useFormatter, useTranslations } from "next-intl"
+
+import type { useBookingTransition } from "@/hooks/bookingDesk"
+
 import type { useBookingBoard } from "@/hooks/bookingBoard"
+
 import type { BookingHoursView, ResourceFields } from "@/modules/types"
+
 import type { useBookingResourceCommands } from "./useBookingResourceCommands"
 
 /** One weekly opening window as the database writer takes it. */
@@ -12,6 +18,7 @@ export interface HoursWindow {
 }
 
 const WINDOW = /^(\d{1,2}):?(\d{2})?\s*-\s*(\d{1,2}):?(\d{2})?$/u
+
 const OFF_WORDS: ReadonlySet<string> = new Set(["off", "closed"])
 
 /** The seven days of a week, Monday first. */
@@ -118,7 +125,7 @@ export interface ResourceContext {
     readonly removeId: string | null
     readonly format: ReturnType<typeof useFormatter>
     readonly draft: ResourceDraft | null
-    readonly startTransition: ReturnType<typeof useTransition>[1]
+    readonly startTransition: ReturnType<typeof useBookingTransition>["run"]
     readonly commands: ReturnType<typeof useBookingResourceCommands>
     readonly setDraft: Dispatch<SetStateAction<ResourceDraft | null>>
     readonly setNotice: Dispatch<SetStateAction<ResourceNotice | null>>
@@ -138,8 +145,9 @@ export const buildBookingResourcesState = (context: ResourceContext) => {
         if (draft === null) return
         const { fields } = draft
         const input = { ...fields, id: draft.id, staffId: fields.staffId === "none" ? null : fields.staffId }
-        startTransition(async () => {
-            if ((await commands.saveResource(input)) !== undefined) setDraft(null)
+        startTransition(async (isCurrent) => {
+            const answer = await commands.saveResource(input)
+            if (answer !== undefined && isCurrent()) setDraft(null)
         })
     }
     const saveHours = () => {

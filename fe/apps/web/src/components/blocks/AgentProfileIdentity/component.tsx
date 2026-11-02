@@ -52,8 +52,12 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
     const view = props.props
     return (
         <SurfaceCard label={view.title} headingLevel={2}>
-            <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
-                {(identity, isSkeleton) => (
+            <SlotView
+                slot={view.slot}
+                placeholder={view.placeholder}
+                labels={view.slotLabels}
+                onRetry={props.on.retry}
+                render={(identity, isLoading) => (
                     <Stack gap="region">
                         <AvatarEditor
                             id="agent-avatar"
@@ -73,8 +77,8 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
                                     description={identity.nameHint}
                                     isRequired
                                     isDisabled={view.isSaving}
-                                    isSkeleton={isSkeleton}
-                                    isError={view.nameError !== undefined}
+                                    isLoading={isLoading}
+                                    isInvalid={view.nameError !== undefined}
                                     errorMessage={view.nameError}
                                     value={identity.name}
                                     onValueChange={props.on.setName}
@@ -83,13 +87,13 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
                                     failTitle={view.failTitle}
                                     submitLabel={view.saveLabel}
                                     isPending={view.isSaving}
-                                    isSkeleton={isSkeleton}
+                                    isLoading={isLoading}
                                 />
                             </Stack>
                         </Form>
                     </Stack>
                 )}
-            </SlotView>
+            />
         </SurfaceCard>
     )
 }

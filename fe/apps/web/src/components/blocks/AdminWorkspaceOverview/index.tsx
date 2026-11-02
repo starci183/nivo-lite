@@ -2,7 +2,7 @@
 
 import { notFound } from "next/navigation"
 import { useAdminDetailFacts, useAdminFormat, useAdminWorkspaceDetail } from "@/hooks/admin"
-import { useSlotLabels } from "@/hooks/slot"
+import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import type { DataSlot } from "@/modules/types"
 import { AdminWorkspaceOverviewBase } from "./component"
 import type { AdminWorkspaceOverviewData } from "./component"
@@ -16,27 +16,29 @@ interface AdminWorkspaceOverviewProps {
 export const AdminWorkspaceOverview = (props: AdminWorkspaceOverviewProps) => {
     const { text: t, format } = useAdminFormat()
     const slotLabels = useSlotLabels()
-    const { detail, isLoading, failure, reload } = useAdminWorkspaceDetail(props.workspaceId)
+    const { detail, read, failure, reload } = useAdminWorkspaceDetail(props.workspaceId)
     const facts = useAdminDetailFacts(detail)
     if (failure.isMissing) notFound()
-    const slot: DataSlot<AdminWorkspaceOverviewData> = {
-        isLoading,
-        isError: failure.message !== undefined,
-        items:
-            detail === undefined || facts === undefined
-                ? undefined
-                : {
-                      eyebrow: t("workspaceEyebrow"),
-                      title: detail.workspace.name,
-                      description: t("workspaceDescription", {
-                          owner: detail.workspace.ownerEmail ?? t("empty"),
-                          created: format.date(detail.workspace.createdAt),
-                          id: detail.workspace.id,
-                      }),
-                      billing: facts.billing,
-                      activity: facts.activity,
-                  },
-    }
+    const data =
+        detail === undefined || facts === undefined
+            ? undefined
+            : {
+                  eyebrow: t("workspaceEyebrow"),
+                  title: detail.workspace.name,
+                  description: t("workspaceDescription", {
+                      owner: detail.workspace.ownerEmail ?? t("empty"),
+                      created: format.date(detail.workspace.createdAt),
+                      id: detail.workspace.id,
+                  }),
+                  billing: facts.billing,
+                  activity: facts.activity,
+              }
+    const slot: DataSlot<AdminWorkspaceOverviewData> = slotOfSwr({
+        data,
+        error: read.error,
+        isLoading: read.isLoading,
+        isValidating: read.isValidating,
+    })
     return (
         <AdminWorkspaceOverviewBase
             props={{

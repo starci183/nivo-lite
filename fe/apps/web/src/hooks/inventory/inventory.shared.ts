@@ -1,6 +1,6 @@
 import type { useTranslations } from "next-intl"
 import type { useInventoryFormat } from "./useInventoryFormat"
-import type { InventoryWorkbenchData, ItemView, PoStatus, StockStatus } from "@/modules/types"
+import type { InventoryWorkbenchData, ItemView, PoStatus, StockStatus, InventorySay } from "@/modules/types"
 
 /** The stock filter of the item list. */
 export type StockFilter = "all" | "low" | "out" | "over"
@@ -154,3 +154,40 @@ export const stockDetailOf = (item: ItemView, { board, format, t }: StockDetailI
         .filter((part) => part !== "")
         .join(" · ")
 }
+
+/** The actual activation and identity of a formerly conditional inventory panel. */
+export interface InventoryPanelScope {
+    readonly isActive?: boolean
+    readonly scope?: string
+}
+
+/** Resolves the inactive catalogue toggle only when it is available. */
+export const stockToggleLabel = (
+    t: ReturnType<typeof useTranslations<"workbenchInventory">>,
+    isAvailable: boolean,
+    showInactive: boolean,
+) => {
+    if (!isAvailable) return null
+    return t(showInactive ? "stockShowActive" : "stockShowInactive")
+}
+/** Resolved facts needed to word a quantity adjustment, without a hook or drawer dependency. */
+interface AdjustmentCopyFacts {
+    readonly mode: AdjustMode
+    readonly item: { readonly name: string; readonly unit: string }
+}
+
+/** Resolves the exact adjust drawer copy in its domain owner. */
+export const adjustmentCopyOf = (say: InventorySay, owner: AdjustmentCopyFacts) =>
+    ({
+        adjustTitle: say("adjustTitle", { name: owner.item.name }),
+        close: say("close"),
+        adjustMode: say("adjustMode"),
+        adjustFrom: say("adjustFrom"),
+        adjustAt: say("adjustAt"),
+        adjustTo: say("adjustTo"),
+        adjustToHint: say("adjustToHint"),
+        adjustNote: say("adjustNote"),
+        adjustReason: say("adjustReason"),
+        adjustReasonHint: say("adjustReasonHint"),
+        valueLabel: say(`adjustValue_${owner.mode}`, { unit: owner.item.unit }),
+    }) as const

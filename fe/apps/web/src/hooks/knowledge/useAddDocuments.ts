@@ -161,7 +161,7 @@ const createItemRetry =
     ) =>
     async (id: string) => {
         const item = queue.items.find((one) => one.id === id)
-        if (isBusy || item === undefined || !canRetry(item) || options.visibility === null) return
+        if (isBusy || item === undefined || !canRetry(item)) return
         batch.begin()
         batch.end(await queue.sendAll([item], options.meta()))
     }
@@ -179,7 +179,8 @@ const createDocumentBatchRunner =
         const added = queue.addLinks(typedLinks(linkRows.links, queue.items))
         if (added.length > 0) linkRows.clear()
         const waiting = [...retryable, ...added.filter((item) => item.status === "waiting")]
-        return waiting.length === 0 ? 0 : queue.sendAll(waiting, options.meta())
+        const meta = options.meta()
+        return waiting.length === 0 ? 0 : queue.sendAll(waiting, meta)
     }
 
 /** Whether every submitted document has completed and no draft remains. */

@@ -26,11 +26,11 @@ export interface AgentWorkSwitchCardBaseProps {
 const switchOf = (
     base: AgentWorkSwitchCardBaseProps,
     view: AgentWorkSwitchView,
-    isSkeleton: boolean,
+    isLoading: boolean,
 ): SwitchStatusProps => ({
     label: base.props.switchLabel,
     isSelected: view.isOn,
-    isSkeleton,
+    isLoading,
     isDisabled: base.props.isDisabled || !view.canChange,
     onChange: base.on.change,
     tone: view.tone,
@@ -44,8 +44,10 @@ const switchOf = (
 /** Draws the kill switch of one agent: its label stays readable beside the switch, and the card says who may move it. */
 export const AgentWorkSwitchCardBase = (props: AgentWorkSwitchCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotView {...props.props.read} onRetry={props.on.retry}>
-            {(view, isSkeleton) => <SwitchStatus {...switchOf(props, view, isSkeleton)} />}
-        </SlotView>
+        <SlotView
+            {...props.props.read}
+            onRetry={props.on.retry}
+            render={(view, isLoading) => <SwitchStatus {...switchOf(props, view, isLoading)} />}
+        />
     </SurfaceCard>
 )

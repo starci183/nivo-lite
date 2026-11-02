@@ -2,7 +2,8 @@ import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
 import type { AgentGraphsOptions } from "./agent-graphs.options"
-import type { GraphFactReader } from "./agent-graphs.port"
+import type { AgentGraphBrief, GraphFactReader } from "./agent-graphs.port"
+import type { GraphWorkDecisions } from "./graph-work-decisions.port"
 
 /** Token of the agent-graphs options. */
 export const AGENT_GRAPHS_OPTIONS: unique symbol = Symbol("domain.agent-graphs.options")
@@ -21,6 +22,20 @@ export const InjectGraphFactReaders = (): TypedParameterDecorator<ReadonlyArray<
 /** Token of the approval road of the graph; an app that judges branches with no road behind them binds none. */
 export const AGENT_GRAPH_APPROVALS: unique symbol = Symbol("domain.agent-graphs.approvals")
 
+/** The work owner's decision road, bound by the app root. */
+export const GRAPH_WORK_DECISIONS: unique symbol = Symbol("domain.agent-graphs.work-decisions")
+
+/** Injects the transaction-owning work decision road. Parameter type: GraphWorkDecisions. */
+export const InjectGraphWorkDecisions = (): TypedParameterDecorator<GraphWorkDecisions> =>
+    injector<GraphWorkDecisions>(GRAPH_WORK_DECISIONS)
+
 /** Injects the approval road. Parameter type: AgentGraphApprovalsService. */
 export const InjectAgentGraphApprovals = (): TypedParameterDecorator<AgentGraphApprovalsService> =>
     injector<AgentGraphApprovalsService>(AGENT_GRAPH_APPROVALS)
+
+/** Token of the action graph brief port: absent until the action graph binds one, and then a turn lists no intents. */
+export const AGENT_GRAPH_BRIEF: unique symbol = Symbol("domain.agent-graphs.graph-brief")
+
+/** Injects the action graph brief port. Parameter type: AgentGraphBrief. */
+export const InjectAgentGraphBrief = (): TypedParameterDecorator<AgentGraphBrief> =>
+    injector<AgentGraphBrief>(AGENT_GRAPH_BRIEF)

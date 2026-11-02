@@ -1,5 +1,9 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
+import { slotOfReads, useSlotLabels } from "@/hooks/slot"
+
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import { useState, useTransition } from "react"
@@ -35,12 +39,15 @@ const googleFailureMessage = (reason: string): GoogleFailureMessage =>
 
 /** What the board hands the Google wizard. */
 interface GoogleWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
 
 /** Google in the shared wizard frame: what NIVO will be allowed (only files it creates), then Connect Google (OAuth), then Done; also the landing of `?google=ok|error`. */
 export const GoogleWizard = (props: GoogleWizardProps) => {
+    const slotLabels = useSlotLabels()
     const t = useTranslations("googleWizard")
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
@@ -63,6 +70,8 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
     return (
         <GoogleWizardBase
             props={{
+                boot: slotOfReads(props.dependencyReads, () => true),
+                slotLabels: slotLabels(""),
                 title: tw("title", { provider: tc(providerKey("google", "title")) }),
                 stepLabel: tw("stepOf", { n: index + 1, total: steps.length }),
                 steps,

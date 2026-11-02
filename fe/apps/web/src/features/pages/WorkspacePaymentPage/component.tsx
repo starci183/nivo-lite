@@ -2,7 +2,7 @@ import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/components/blocks/LocaleSwitch"
 import { WorkspacesAccount } from "@/components/blocks/WorkspacesAccount"
 import { WorkspacePayment } from "@/components/blocks/WorkspacePayment"
-import { WorkspacesFrame } from "@/components/composites/WorkspacesFrame"
+import { WorkspacesFrame } from "@/components/frames/WorkspacesFrame"
 import { AUTH_ROUTES } from "@/modules/routes"
 
 /** Static copy and URL selectors supplied by the payment shell. */
@@ -18,9 +18,8 @@ export interface WorkspacePaymentPageBaseProps {
 /** The payment step in the shared workspaces frame. */
 export const WorkspacePaymentPageBase = (props: WorkspacePaymentPageBaseProps) => (
     <WorkspacesFrame
-        homeHref={AUTH_ROUTES.workspaces}
         mainLabel={props.props.title}
-        logo={<BrandLogo variant="full" height={40} />}
+        logo={<BrandLogo variant="full" height={40} href={AUTH_ROUTES.workspaces} />}
         localeSwitch={<LocaleSwitch />}
         account={<WorkspacesAccount />}
     >

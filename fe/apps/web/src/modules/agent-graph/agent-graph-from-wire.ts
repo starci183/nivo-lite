@@ -133,7 +133,8 @@ const sourceOf = (
     if (source.kind === "learned") return { kind: "learned", quote: t("srcLearned"), place: "" }
     if (source.kind === "owner")
         return { kind: "owner", quote: t("srcOwner", { name: nameOf(members, source.memberId ?? "") }), place: "" }
-    if (source.kind === "rule") return { kind: "rule", quote: t("srcRule", { action: actionTitleOf(input, source.action ?? "") }), place: "" }
+    if (source.kind === "rule")
+        return { kind: "rule", quote: t("srcRule", { action: actionTitleOf(input, source.action ?? "") }), place: "" }
     return {
         kind: source.kind,
         quote: source.kind === "brain" ? (source.passage ?? "") : (source.quote ?? ""),

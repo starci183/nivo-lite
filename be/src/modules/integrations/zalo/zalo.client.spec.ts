@@ -159,7 +159,7 @@ describe("ZaloClient / sendCsText", () => {
         http.request.mockResolvedValue({ status: 500, body: undefined })
 
         await expect(client.sendCsText("access", "user-1", "Hello")).rejects.toMatchObject({
-            code: ZaloErrorCode.Rejected,
+            code: ZaloErrorCode.Unavailable,
             params: { path: "/v3.0/oa/message/cs", reason: "HTTP 500" },
         })
     })
@@ -457,5 +457,18 @@ describe("ZaloClient / sendZns", () => {
         http.request.mockRejectedValue(new Error("down"))
 
         await expect(client.sendZns("access", message)).rejects.toMatchObject({ code: ZaloErrorCode.Unavailable })
+    })
+})
+
+describe("ZaloClient message acknowledgement", () => {
+    it.each([
+        { status: 200, body: {} },
+        { status: 502, body: { error: 0 } },
+    ])("keeps a malformed or gateway response unknown: %p", async (answer) => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue(answer)
+        await expect(client.sendCsText("synthetic-access", "user-1", "Hello")).rejects.toMatchObject({
+            code: ZaloErrorCode.Unavailable,
+        })
     })
 })

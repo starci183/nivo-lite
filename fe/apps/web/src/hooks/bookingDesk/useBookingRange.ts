@@ -1,5 +1,7 @@
 "use client"
 
+import { useFeatureReset } from "@/hooks/reuseables"
+
 import { useState } from "react"
 import { useQueryBookingBoardSwr } from "@/hooks/swr"
 import { shiftDate, weekStartOf } from "@/modules/i18n"
@@ -13,14 +15,24 @@ interface Week {
 }
 
 /** The board of the week the owner is looking at, and the moves between weeks; SWR owns caching and keeps the last week while the next loads. */
-export const useBookingRange = () => {
+export const useBookingRange = (isActive = true, scope = "") => {
     const [week, setWeek] = useState<Week | null>(null)
     const [anchor, setAnchor] = useState<string | null>(null)
-    const swrRead = useQueryBookingBoardSwr(week ?? {}, { keepPreviousData: true })
+    const swrRead = useQueryBookingBoardSwr(week ?? {}, { keepPreviousData: true }, isActive)
+    useFeatureReset({
+        isActive: isActive,
+        isReady: true,
+        scope: scope,
+        onReset: () => {
+            setWeek(null)
+            setAnchor(null)
+        },
+    })
     const { data, isValidating, mutate } = swrRead
     const error = readError(swrRead)
     const board = data === undefined ? undefined : toBookingBoard(data)
     return {
+        read: swrRead,
         board,
         anchor: anchor ?? board?.today ?? "",
         failed: error !== undefined,

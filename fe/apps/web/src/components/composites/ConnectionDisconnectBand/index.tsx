@@ -1,4 +1,4 @@
-import { Button, PaneSection, SectionHeader } from "@starci/grammar/common"
+import { Button, PaneSection, Section } from "@starci/grammar/common"
 
 /** Props for {@link ConnectionDisconnectBand}. */
 type ConnectionDisconnectBandProps = {
@@ -11,8 +11,8 @@ type ConnectionDisconnectBandProps = {
 /** The last band of a provider page's main pane: what disconnecting does, and the destructive entry that asks first. */
 export const ConnectionDisconnectBand = (props: ConnectionDisconnectBandProps) => (
     <PaneSection>
-        <SectionHeader
-            level={2}
+        <Section
+            headingLevel={2}
             title={props.title}
             description={props.description}
             action={
@@ -20,6 +20,8 @@ export const ConnectionDisconnectBand = (props: ConnectionDisconnectBandProps) =
                     {props.label}
                 </Button>
             }
-        />
+        >
+            {null}
+        </Section>
     </PaneSection>
 )

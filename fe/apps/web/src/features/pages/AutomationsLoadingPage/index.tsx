@@ -9,11 +9,13 @@ export const AutomationsLoadingPage = async () => {
     const t = await getTranslations("automations")
     return (
         <AutomationsHeading>
-            <AutomationsPageLayout
-                board={<AutomationsBoard layout="page" />}
-                advancedLabel={t("advanced")}
-                advancedHref={AUTOMATION_ROUTES.developers}
-            />
+            <>
+                <AutomationsPageLayout
+                    board={<AutomationsBoard layout="page" />}
+                    advancedLabel={t("advanced")}
+                    advancedHref={AUTOMATION_ROUTES.developers}
+                />
+            </>
         </AutomationsHeading>
     )
 }

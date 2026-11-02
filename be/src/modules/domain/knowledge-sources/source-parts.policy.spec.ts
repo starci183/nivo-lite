@@ -74,6 +74,19 @@ describe("partTitleOf and partOriginOf", () => {
 })
 
 describe("part places and titles", () => {
+    it("sorts unnumbered parts at the start while retaining their relative input order", async () => {
+        const subject = await buildMore()
+
+        expect(
+            subject.partTextsInOrder([
+                { title: "Plan (3/3)", content: "three" },
+                { title: "Notes", content: "alpha" },
+                { title: "Appendix", content: "beta" },
+                { title: "Plan (2/3)", content: "two" },
+            ]),
+        ).toEqual(["alpha", "beta", "two", "three"])
+    })
+
     it("reads the place of a part from its title and the whole title without it", async () => {
         const subject = await buildMore()
 

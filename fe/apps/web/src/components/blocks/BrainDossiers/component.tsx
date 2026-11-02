@@ -1,14 +1,46 @@
-import type { ReactNode } from "react"
-import { Cluster, DescriptionList, Drawer, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { Button, Cluster, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { ChecklistImportDialog } from "@/components/composites/ChecklistImportDialog"
+import type { ChecklistImportDialogProps } from "@/components/composites/ChecklistImportDialog"
 import { DossierRowsCard } from "@/components/composites/DossierRowsCard"
 import type { DossierRowView } from "@/components/composites/DossierRowsCard"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { ChecklistImportEntry } from "./ChecklistImportEntry"
-import type { ChecklistImportEntryEvents, ChecklistImportEntryView } from "./ChecklistImportEntry"
 import { DOSSIERS_CLASS_NAME } from "./classNames"
 
 export type { DossierRowView } from "@/components/composites/DossierRowsCard"
+
+/** The entry that loads a checklist workbook and its dialog while open. */
+interface ChecklistImportEntryView {
+    readonly label: string
+    readonly dialog: ChecklistImportDialogProps["props"] | null
+}
+
+interface ChecklistImportEntryEvents {
+    readonly openImport: () => void
+    readonly pickImport: (files: Array<File>) => void
+    readonly confirmImport: () => void
+    readonly closeImport: () => void
+}
+
+interface ChecklistImportEntryProps {
+    readonly view: ChecklistImportEntryView
+    readonly on: ChecklistImportEntryEvents
+}
+
+/** The unchanged checklist entry and the focused import task it opens. */
+const ChecklistImportEntry = (props: ChecklistImportEntryProps) => (
+    <>
+        <Button intent="neutral" onPress={props.on.openImport}>
+            {props.view.label}
+        </Button>
+        {props.view.dialog === null ? null : (
+            <ChecklistImportDialog
+                props={props.view.dialog}
+                on={{ pick: props.on.pickImport, confirm: props.on.confirmImport, close: props.on.closeImport }}
+            />
+        )}
+    </>
+)
 
 /** One category of the documents, already worded. */
 export interface CategoryRowView {
@@ -33,8 +65,6 @@ export interface DossiersContent {
 
 /** Copy and values the dossiers block supplies. */
 export interface BrainDossiersBaseProps {
-    /** The findings of the open dossier and its draft drawer. */
-    readonly shape: { readonly detail: ReactNode; readonly draftDrawer: ReactNode }
     readonly props: {
         readonly figuresLabel: string
         readonly listFooter: string
@@ -42,15 +72,11 @@ export interface BrainDossiersBaseProps {
         readonly emptyAll: string
         /** Loads the dossiers of a checklist workbook: the entry above the cards and its dialog; null for a member who may only read. */
         readonly checklistImport: ChecklistImportEntryView | null
-        /** A dossier is open: its findings show in a drawer. */
-        readonly hasDetail: boolean
-        readonly detailLabel: string
-        readonly detailCloseLabel: string
         readonly slot: DataSlot<DossiersContent>
         readonly placeholder: DossiersContent
         readonly slotLabels: SlotLabels
     }
-    readonly on: ChecklistImportEntryEvents & { readonly retry: () => void; readonly closeDetail: () => void }
+    readonly on: ChecklistImportEntryEvents & { readonly retry: () => void }
 }
 
 /**
@@ -66,20 +92,23 @@ export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
                     <ChecklistImportEntry view={view.checklistImport} on={props.on} />
                 </Cluster>
             )}
-            <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
-                {(content, isSkeleton) => (
+            <SlotView
+                slot={view.slot}
+                placeholder={view.placeholder}
+                labels={view.slotLabels}
+                onRetry={props.on.retry}
+                render={(content, isLoading) => (
                     <>
-                        <SurfaceCard ariaLabel={view.figuresLabel}>
-                            <DescriptionList
-                                layout="stat-strip"
-                                isLoading={isSkeleton}
-                                items={content.figures.map((figure) => ({
-                                    id: figure.id,
-                                    term: figure.label,
-                                    description: figure.value,
-                                }))}
-                            />
-                        </SurfaceCard>
+                        <SurfaceCard
+                            kind="figures"
+                            ariaLabel={view.figuresLabel}
+                            isLoading={isLoading}
+                            items={content.figures.map((figure) => ({
+                                id: figure.id,
+                                term: figure.label,
+                                value: figure.value,
+                            }))}
+                        />
                         {content.categories.length === 0 ? (
                             <EmptyNotice message={view.emptyAll} />
                         ) : (
@@ -90,27 +119,13 @@ export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
                                     emptyLabel={view.emptyCategory}
                                     rows={category.dossiers}
                                     footer={index === content.categories.length - 1 ? view.listFooter : undefined}
-                                    isSkeleton={isSkeleton}
+                                    isLoading={isLoading}
                                 />
                             ))
                         )}
                     </>
                 )}
-            </SlotView>
-            {view.hasDetail ? (
-                <Drawer
-                    isOpen
-                    onOpenChange={(isOpen) => {
-                        if (!isOpen) props.on.closeDetail()
-                    }}
-                    title={view.detailLabel}
-                    closeLabel={view.detailCloseLabel}
-                    placement="right"
-                >
-                    {props.shape.detail}
-                </Drawer>
-            ) : null}
-            {props.shape.draftDrawer}
+            />
         </div>
     )
 }

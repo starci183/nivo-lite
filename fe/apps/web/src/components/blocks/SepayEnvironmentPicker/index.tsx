@@ -4,36 +4,40 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useConnectionsRole } from "@/hooks/connections"
 import { useSepayCommands, useSepayConnection } from "@/hooks/sepayConnection"
-import { SepayEnvironmentPickerBase } from "./component"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { SepayEnvironmentPickerBase, type SepayEnvironmentView } from "./component"
 
-/** What the page hands the step body: the connection of the url. */
+/** The connection addressed by this environment field. */
 type SepayEnvironmentPickerProps = { readonly connectionId: string }
 
-/** The connected environment switch of a SePay connection: test books nothing, live books every credit; only the owner switches. */
+/** Only an owner can switch environments, after the connection's own read resolves. */
 export const SepayEnvironmentPicker = (props: SepayEnvironmentPickerProps) => {
     const t = useTranslations("sepayConnection")
-    const { slot } = useSepayConnection(props.connectionId)
+    const connection = useSepayConnection(props.connectionId)
     const commands = useSepayCommands(props.connectionId)
     const { role } = useConnectionsRole()
+    const slotLabels = useSlotLabels()
     const [isPending, setPending] = useState(false)
-    const value = slot.items?.environment ?? "test"
+    const slot = mapSlot(connection.slot, (view): SepayEnvironmentView => ({
+        value: view.environment,
+        description: t(view.environment === "test" ? "environmentTestNote" : "environmentLiveNote"),
+        isDisabled: role !== "owner" || view.status === "disconnected" || isPending,
+    }))
     return (
         <SepayEnvironmentPickerBase
             props={{
                 label: t("stepEnvironment"),
-                description: t(value === "test" ? "environmentTestNote" : "environmentLiveNote"),
-                value,
                 options: [
                     { value: "test", label: t("envTestShort") },
                     { value: "live", label: t("envLive") },
                 ],
-                isDisabled:
-                    role !== "owner" || slot.items === undefined || slot.items.status === "disconnected" || isPending,
-                isSkeleton: slot.items === undefined,
+                slot,
+                placeholder: { value: "test", description: t("environmentTestNote"), isDisabled: true },
+                slotLabels: slotLabels(t("stepEnvironment")),
             }}
             on={{
+                retry: connection.retry,
                 change: (environment) => {
-                    if (environment === value) return
                     setPending(true)
                     void commands.setEnvironment(environment).then(() => setPending(false))
                 },

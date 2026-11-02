@@ -1,3 +1,5 @@
+import { builder } from "@starci/jest-preset"
+import type { EventsService } from "@modules/domain/events"
 import type { EntityManager } from "typeorm"
 import { brainFactsEntities } from "@modules/domain/brain-facts"
 import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
@@ -105,4 +107,87 @@ export const storedCallsOf = async (
         argsMasked: JSON.stringify(row.argsMasked),
         resultSummary: row.resultSummary,
     }))
+}
+
+/** Exact evidence records expected for conversation-scoped and admitted internal native-tool calls. */
+export const TOOL_AUDITS = {
+    knowledgeSearch: builder<Parameters<EventsService["record"]>[0]>({
+        workspaceId: "ws-1",
+        kind: "engine.tool.knowledge.search",
+        actor: "NIVO engine",
+        summary: "Knowledge search: hours",
+        leadId: "lead-9",
+        evidence: "job-1",
+    }),
+    boundedQuery: builder<Parameters<EventsService["record"]>[0]>({
+        workspaceId: "ws-1",
+        kind: "engine.tool.knowledge.search",
+        actor: "NIVO engine",
+        summary: `Knowledge search: ${"q".repeat(100)}`,
+        leadId: "lead-9",
+        evidence: "job-1",
+    }),
+    leadWrite: builder<Parameters<EventsService["record"]>[0]>({
+        workspaceId: "ws-1",
+        kind: "engine.tool.lead.create_or_update",
+        actor: "NIVO engine",
+        summary: "Lead handed to Sales through the gate (done)",
+        leadId: "lead-1",
+        evidence: "job-1",
+    }),
+    approval: builder<Parameters<EventsService["record"]>[0]>({
+        workspaceId: "ws-1",
+        kind: "engine.tool.approval.request",
+        actor: "NIVO engine",
+        summary: "Approval requested from the owner (waiting_decision)",
+        leadId: "lead-9",
+        evidence: "wi-1",
+    }),
+    handoffReason: builder<Parameters<EventsService["record"]>[0]>({
+        workspaceId: "ws-1",
+        kind: "engine.tool.handoff.to_person",
+        actor: "NIVO engine",
+        summary: "Conversation handed to a person",
+        leadId: "lead-9",
+        evidence: "angry customer",
+    }),
+    handoffJob: builder<Parameters<EventsService["record"]>[0]>({
+        workspaceId: "ws-1",
+        kind: "engine.tool.handoff.to_person",
+        actor: "NIVO engine",
+        summary: "Conversation handed to a person",
+        leadId: "lead-9",
+        evidence: "job-1",
+    }),
+    connectorCall: builder<Parameters<EventsService["record"]>[0]>({
+        workspaceId: "ws-1",
+        kind: "engine.tool.tool.call",
+        actor: "NIVO engine",
+        summary: "Connector tool.call: crm.order.place",
+        leadId: "lead-9",
+        evidence: "job-1",
+    }),
+    agentHandoff: builder<Parameters<EventsService["record"]>[0]>({
+        workspaceId: "ws-1",
+        kind: "engine.tool.conversation.handOff",
+        actor: "NIVO engine",
+        summary: "Conversation handed to care",
+        leadId: "lead-9",
+        evidence: "booking confirmed",
+    }),
+    conversationMemory: builder<Parameters<EventsService["record"]>[0]>({
+        workspaceId: "ws-1",
+        kind: "engine.tool.memory.read",
+        actor: "NIVO engine",
+        summary: "Memory read",
+        leadId: "lead-9",
+        evidence: "job-1",
+    }),
+    turnMemory: builder<Parameters<EventsService["record"]>[0]>({
+        workspaceId: "ws-1",
+        kind: "engine.tool.memory.read",
+        actor: "NIVO engine",
+        summary: "Read memory.read in a tag turn",
+        evidence: "wake-2",
+    }),
 }

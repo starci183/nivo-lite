@@ -1,6 +1,8 @@
+import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { Secret } from "@modules/platform/config"
+import { parseJsonText } from "@modules/platform/primitives"
 import { HTTP_CLIENT } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
 import { AiClient } from "./ai.client"
@@ -72,7 +74,42 @@ const ASK: AiChatRequest = {
     context: null,
 }
 
+const registerMultimodalChatCase = () => {
+    it("sends the user's text and ordered image URLs together as one multimodal message", async () => {
+        const { client, http } = await build()
+        await expect(
+            client.chat({
+                ...ASK,
+                messages: [
+                    {
+                        role: "user",
+                        content: "Describe these",
+                        images: ["https://images.test/a.png", "https://images.test/b.png"],
+                    },
+                ],
+            }),
+        ).resolves.toMatchObject({ content: "hello" })
+        const read = parseJsonText(sentOf(http, 0).text)
+        assert.ok(read.ok, "AI request body was not valid JSON")
+        const sent = read.value
+        expect(sent).toMatchObject({
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        { type: "text", text: "Describe these" },
+                        { type: "image_url", image_url: { url: "https://images.test/a.png" } },
+                        { type: "image_url", image_url: { url: "https://images.test/b.png" } },
+                    ],
+                },
+            ],
+        })
+    })
+}
+
 describe("AiClient chat", () => {
+    registerMultimodalChatCase()
+
     it("calls the gateway profile with the virtual key at temperature 0 within the deadline and reads the message metadata", async () => {
         const { client, http } = await build()
 

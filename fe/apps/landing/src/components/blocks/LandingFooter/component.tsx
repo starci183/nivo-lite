@@ -1,4 +1,4 @@
-import { Footer, Image, Stack, Text, TextAction } from "@starci/grammar/common"
+import { Footer, Link, Stack, Text } from "@starci/grammar/common"
 
 /** One link of a footer directory. */
 interface LandingFooterLink {
@@ -40,21 +40,23 @@ export const LandingFooterBase = (props: LandingFooterBaseProps) => (
         label={props.props.label}
         brand={
             <Stack gap="section">
-                <TextAction href={props.props.homeHref}>
-                    <Image
-                        src={props.props.logoSrc}
-                        alt={props.props.homeLabel}
-                        width={LOGO_WIDTH}
-                        height={LOGO_HEIGHT}
-                        aspect="auto"
-                        fit="contain"
-                        plate="none"
-                    />
-                </TextAction>
+                <Link
+                    href={props.props.homeHref}
+                    label={props.props.homeLabel}
+                    media={{
+                        src: props.props.logoSrc,
+                        alt: props.props.homeLabel,
+                        width: LOGO_WIDTH,
+                        height: LOGO_HEIGHT,
+                        aspect: "auto",
+                        fit: "contain",
+                        plate: "none",
+                    }}
+                />
                 <Text size="sm" tone="muted">
                     {props.props.about}
                 </Text>
-                <Text size="sm" weight="medium">
+                <Text size="sm" isStrong>
                     {props.props.tagline}
                 </Text>
             </Stack>

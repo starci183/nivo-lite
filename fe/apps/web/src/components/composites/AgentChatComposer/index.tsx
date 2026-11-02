@@ -12,7 +12,7 @@ export interface AgentChatComposerProps {
     readonly draft: string
     readonly isSending: boolean
     /** The agent is still loading: the field draws as a waiting shape. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly canSend: boolean
     /** Why the last message was not sent, or null. */
     readonly error: { readonly title: string; readonly text: string } | null
@@ -77,7 +77,7 @@ export const AgentChatComposer = (props: AgentChatComposerProps) => (
                     <ChatFilePicker
                         label={props.file.label}
                         accept={props.file.accept}
-                        isDisabled={props.isSending || props.isSkeleton}
+                        isDisabled={props.isSending || props.isLoading}
                         onFile={props.onFile}
                     />
                 )}
@@ -89,7 +89,7 @@ export const AgentChatComposer = (props: AgentChatComposerProps) => (
                         label={props.messageLabel}
                         isLabelHidden
                         rows={1}
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isLoading}
                         placeholder={props.placeholder}
                         value={props.draft}
                         onValueChange={props.onDraft}

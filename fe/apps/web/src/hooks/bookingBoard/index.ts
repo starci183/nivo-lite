@@ -1,2 +1,2 @@
 export { useBookingBoard } from "./useBookingBoard"
-export { toBookingBoard } from "./bookingBoard.shared"
+export { toBookingBoard, EMPTY_BOOKING_BOARD } from "./bookingBoard.shared"

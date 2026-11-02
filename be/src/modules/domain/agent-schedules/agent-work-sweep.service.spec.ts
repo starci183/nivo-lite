@@ -8,6 +8,7 @@ import {
     AgentWakeService,
 } from "@modules/domain/agent-work"
 import type { AgentTriggerRecord, AgentWorkDue } from "@modules/domain/agent-work"
+import { AgentRunSweepService } from "@modules/domain/agent-runs"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -61,6 +62,9 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
     const retention = mock<AgentWakeRetentionService>({ sweep: jest.fn().mockResolvedValue(3) })
     const sync = mock<AgentTriggerSyncService>({ reconcile: jest.fn().mockResolvedValue(NEXT) })
     const logger = mock<Logger>()
+    const runSweep = mock<AgentRunSweepService>({
+        sweep: jest.fn().mockResolvedValue({ expired: 0, ready: 0, compensating: 0, unspoken: 0, recovered: 0 }),
+    })
     const container = await Test.createTestingModule({
         providers: [
             AgentWorkSweepService,
@@ -74,6 +78,7 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
             { provide: AgentTriggersService, useValue: triggers },
             { provide: AgentWakeRetentionService, useValue: retention },
             { provide: AgentTriggerSyncService, useValue: sync },
+            { provide: AgentRunSweepService, useValue: runSweep },
         ],
     }).compile()
     return {
@@ -84,6 +89,7 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
         triggers,
         retention,
         sync,
+        runSweep,
         queue,
         logger,
         tx,
@@ -246,5 +252,20 @@ describe("AgentWorkSweepService.sweep, retention and failures", () => {
             subjectId: "task-1",
         })
         expect(wakes.wake).toHaveBeenCalledTimes(2)
+    })
+})
+
+describe("AgentWorkSweepService.sweep, durable runs", () => {
+    it("sweeps the steps of the runs in the same pass, and a failing run sweep does not stop the work sweep", async () => {
+        const { service, runSweep, logger } = await build([])
+
+        await service.sweep()
+        runSweep.sweep.mockRejectedValueOnce(new Error("db down"))
+        await expect(service.sweep()).resolves.toMatchObject({ drains: 0 })
+
+        expect(runSweep.sweep).toHaveBeenCalledTimes(2)
+        expect(logger.error).toHaveBeenCalledWith(AgentSchedulesLogEvent.SweepItemFailed, expect.any(Error), {
+            kind: "runs",
+        })
     })
 })

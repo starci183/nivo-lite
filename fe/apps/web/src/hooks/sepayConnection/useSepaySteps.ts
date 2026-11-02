@@ -22,7 +22,7 @@ export const useSepaySteps = (connectionId: string) => {
     const t = useTranslations("sepayConnection")
     const { slot } = useSepayConnection(connectionId)
     const [toggled, setToggled] = useState<Readonly<Partial<Record<SepayStepId, boolean>>>>({})
-    const view = slot.items
+    const view = "items" in slot ? slot.items : undefined
     const summaryOf = (id: SepayStepId, isDone: boolean, connection: SepayConnectionView): string => {
         switch (id) {
             case "environment":

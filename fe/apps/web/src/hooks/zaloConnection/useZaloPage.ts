@@ -11,4 +11,4 @@ export const useZaloPage = (connectionId: string) =>
     )
 
 /** What one read of the page answers. */
-export type ZaloPageData = NonNullable<ReturnType<typeof useZaloPage>["slot"]["items"]>
+export type ZaloPageData = NonNullable<ReturnType<typeof useZaloPage>["read"]["data"]>

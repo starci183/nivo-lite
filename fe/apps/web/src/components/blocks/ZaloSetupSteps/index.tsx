@@ -52,7 +52,7 @@ export const ZaloSetupSteps = (props: ZaloSetupStepsProps) => {
                 authorizeNotice: notice,
                 commands: {
                     openZalo: { label: t("openZalo"), href: PROVIDERS.zalo_oa.dashboard.live ?? "" },
-                    ...(isOwner && slot.items !== undefined
+                    ...(isOwner && ("items" in slot ? slot.items : undefined) !== undefined
                         ? {
                               authorize: {
                                   label: isAuthorized ? t("reconnect") : t("authorize"),

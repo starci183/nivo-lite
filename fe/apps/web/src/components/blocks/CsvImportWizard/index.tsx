@@ -1,14 +1,24 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
 import { useFormatter, useTranslations } from "next-intl"
-import { agentChoicesOf, resumeSlotOfLoading } from "@/hooks/connection-wizard"
-import { MAX_GRID_ROWS, NO_COLUMN, useCsvImportCopy, useCsvImportWizard } from "@/hooks/csv-import-wizard"
-import { useSlotLabels } from "@/hooks/slot"
+import { agentChoicesOf } from "@/hooks/connection-wizard"
+import {
+    MAX_GRID_ROWS,
+    NO_COLUMN,
+    columnKindSummaryOf,
+    useCsvImportCopy,
+    useCsvImportWizard,
+} from "@/hooks/csv-import-wizard"
+import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import type { AgentOption, SlotLabels } from "@/modules/types"
 import { CsvImportWizardBase } from "./component"
 
 /** What the board hands the import wizard. */
 interface CsvImportWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** Workspace agents (any module): every agent may be given read access to a data source. */
     readonly agents: ReadonlyArray<AgentOption>
     /** Add more data to this existing import instead of creating a new one. */
@@ -17,8 +27,16 @@ interface CsvImportWizardProps {
     readonly onClose: (changed: boolean) => void
 }
 
-/** The column kinds read automatically, in the order the mapping step lists them. */
-const KIND_ORDER = ["phone", "email", "number", "date"] as const
+/** The connected import inputs: its read/controller, resolved copy, locale and board dependencies. */
+interface CsvImportContext {
+    readonly wizard: ReturnType<typeof useCsvImportWizard>
+    readonly copy: ReturnType<typeof useCsvImportCopy>
+    readonly t: ReturnType<typeof useTranslations<"connectorCsv">>
+    readonly tw: ReturnType<typeof useTranslations<"connectionWizard">>
+    readonly props: CsvImportWizardProps
+    readonly format: ReturnType<typeof useFormatter>
+    readonly slotLabelsOf: (empty: string) => SlotLabels
+}
 
 /**
  * Setup of a csv_import data connection (owner only): name and kind of rows, the source (file, Google Sheets link, typed or pasted
@@ -26,44 +44,14 @@ const KIND_ORDER = ["phone", "email", "number", "date"] as const
  * the back end over GraphQL. With `resumeId` it loads the saved import first, then adds more data to it with the saved mapping.
  */
 /** Connects the state and commands used by CsvImportWizard. */
-const buildCsvImportWizardState = (
-    wizard: ReturnType<typeof useCsvImportWizard>,
-    copy: ReturnType<typeof useCsvImportCopy>,
-    t: ReturnType<typeof useTranslations<"connectorCsv">>,
-    tw: ReturnType<typeof useTranslations<"connectionWizard">>,
-    props: CsvImportWizardProps,
-    format: ReturnType<typeof useFormatter>,
-    slotLabelsOf: (empty: string) => SlotLabels,
-) => {
+const buildCsvImportWizardState = (context: CsvImportContext) => {
+    const { wizard, copy } = context
     const { preview, mapping, result, grid, saved, form } = wizard
     const headerOptions = (preview?.headers ?? []).map((header) => ({ id: header, label: header }))
-    const kindList = KIND_ORDER.map((kind) => {
-        const columns = Object.entries(mapping?.kinds ?? {}).filter(([, value]) => value === kind)
-        return columns.length ? `${columns.map(([header]) => header).join(", ")} (${copy.kinds[kind]})` : ""
-    })
-        .filter(Boolean)
-        .join("; ")
+    const kindList = columnKindSummaryOf(mapping, copy.kinds)
     const linkCount = form.link.trim() ? 1 : 0
     const sheets = preview?.sheets ?? []
-    return {
-        wizard,
-        t,
-        tw,
-        copy,
-        saved,
-        props,
-        form,
-        linkCount,
-        grid,
-        format,
-        preview,
-        mapping,
-        sheets,
-        headerOptions,
-        kindList,
-        result,
-        slotLabelsOf,
-    }
+    return { ...context, saved, form, linkCount, grid, preview, mapping, sheets, headerOptions, kindList, result }
 }
 
 /** Draws the connected view from its current state. */
@@ -75,7 +63,7 @@ export const CsvImportWizard = (props: CsvImportWizardProps) => {
     const slotLabelsOf = useSlotLabels()
     const wizard = useCsvImportWizard(props)
 
-    const connected = buildCsvImportWizardState(wizard, copy, t, tw, props, format, slotLabelsOf)
+    const connected = buildCsvImportWizardState({ wizard, copy, t, tw, props, format, slotLabelsOf })
 
     return <CsvImportWizardBase props={csvImportWizardProps(connected)} on={wizard.on} />
 }
@@ -86,7 +74,9 @@ const csvImportWizardProps = (
 ): Parameters<typeof CsvImportWizardBase>[0]["props"] => {
     const { wizard, t, tw, copy, saved, props, form, linkCount, format, preview, result, slotLabelsOf } = connected
     return {
-        resume: resumeSlotOfLoading(wizard.isLoading, wizard.loadError),
+        resume: slotOfReads([...props.dependencyReads, ...wizard.reads], () => ({
+            isResumed: props.resumeId !== undefined,
+        })),
         slotLabels: { ...slotLabelsOf(""), ...(wizard.loadError === null ? {} : { error: wizard.loadError }) },
         title: t("title"),
         stepLabel: tw("stepOf", { n: wizard.index + 1, total: wizard.steps.length }),

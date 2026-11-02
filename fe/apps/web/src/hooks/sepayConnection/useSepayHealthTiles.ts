@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import type { DescriptionListStatItem } from "@starci/grammar/common"
+import type { Figure } from "@starci/grammar/common"
 import { mapSlot } from "@/hooks/slot"
 import type { SepayConnectionView } from "@/modules/types"
 import { useSepayConnection } from "./useSepayConnection"
@@ -13,20 +13,20 @@ export const useSepayHealthTiles = (connectionId: string) => {
     const format = useFormatter()
     const placeholder = useSepayPlaceholder()
     const { slot, retry } = useSepayConnection(connectionId)
-    const tilesOf = (connection: SepayConnectionView): ReadonlyArray<DescriptionListStatItem> => {
+    const tilesOf = (connection: SepayConnectionView): ReadonlyArray<Figure> => {
         const last = connection.health.lastWebhookAt
         return [
             {
                 id: "last",
                 term: t("tileLast"),
-                description: last === null ? t("tileNever") : format.relativeTime(new Date(last), new Date()),
+                value: last === null ? t("tileNever") : format.relativeTime(new Date(last), new Date()),
             },
             {
                 id: "valid",
                 term: t("tileValid"),
-                description: `${connection.health.validCount}/${connection.health.totalCount}`,
+                value: `${connection.health.validCount}/${connection.health.totalCount}`,
             },
-            { id: "duplicates", term: t("tileDuplicates"), description: String(connection.health.duplicateCount) },
+            { id: "duplicates", term: t("tileDuplicates"), value: String(connection.health.duplicateCount) },
         ]
     }
     return { slot: mapSlot(slot, tilesOf), placeholder: tilesOf(placeholder), retry }

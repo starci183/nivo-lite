@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { PrimaryRailLayout, Stack } from "@starci/grammar/common"
+import { Stack, Grid } from "@starci/grammar/common"
 
 /** The regions of the lead page body, each already connected to its data. */
 type LeadPageLayoutProps = {
@@ -9,7 +9,8 @@ type LeadPageLayoutProps = {
 
 /** The lead journey body: the primary panels beside the rail panels. */
 export const LeadPageLayout = (props: LeadPageLayoutProps) => (
-    <PrimaryRailLayout
+    <Grid
+        kind="main-rail"
         railWidth="standard"
         align="start"
         primary={<Stack gap="region">{props.primary}</Stack>}

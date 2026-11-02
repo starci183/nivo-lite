@@ -1,34 +1,29 @@
-import { Button, DataTable, type DataTableCellInteraction, EmptyNotice, Stack, Text } from "@starci/grammar/common"
+import type { ContentViews } from "@/modules/types"
+import { parseDate } from "@internationalized/date"
+import {
+    Button,
+    CalendarDay,
+    DataTable,
+    type DataTableCellInteraction,
+    EmptyNotice,
+    Stack,
+} from "@starci/grammar/common"
 import { ContentPostChip } from "@/components/leaves/ContentPostChip"
-import type { ContentT, PostView } from "@/modules/types"
+
 import { CELL_CLASS_NAME } from "./classNames"
-
-/** The most chips one day shows before "+n more". */
-const MAX_CHIPS = 3
-
-/** One cell of the month grid; a null day is outside the month. */
-export interface GridCell {
-    /** A stable key of the cell. */
-    readonly key: string
-    readonly day: number | null
-    /** The yyyy-mm-dd key of the day, empty outside the month. */
-    readonly dateKey: string
-}
 
 /** Props of {@link ContentMonthGrid}. */
 interface ContentMonthGridProps {
     /** The month title, already formatted. */
     readonly title: string
-    readonly cells: ReadonlyArray<GridCell>
-    /** Posts by yyyy-mm-dd key. */
-    readonly byDay: ReadonlyMap<string, ReadonlyArray<PostView>>
+    readonly cells: ReadonlyArray<ContentViews["calendarCell"]>
     readonly todayKey: string
     readonly pickedId: string | null
     readonly overKey: string | null
-    readonly expandedKey: string | null
     readonly canManage: boolean
     readonly weekdays: ReadonlyArray<string>
-    readonly t: ContentT
+    readonly copy: ContentViews["workbenchCopy"]
+    readonly isLoading: boolean
     readonly onOpen: (id: string) => void
     readonly onDragStart: (id: string) => void
     readonly onDragEnd: () => void
@@ -47,10 +42,11 @@ export const ContentMonthGrid = (props: ContentMonthGridProps) => {
     }))
     return (
         <DataTable
+            isLoading={props.isLoading}
             label={props.title}
             columns={props.weekdays.map((label, index) => ({ id: String(index), label }))}
             rows={rows}
-            emptyContent={<EmptyNotice message={props.t("emptyMonthTitle")} />}
+            emptyContent={<EmptyNotice message={props.copy.emptyMonthTitle} />}
             getCellInteraction={(row, columnId) => monthCellInteraction(props, row.cells[Number(columnId)])}
             renderCell={(row, columnId) => {
                 const cell = row.cells[Number(columnId)]
@@ -62,7 +58,7 @@ export const ContentMonthGrid = (props: ContentMonthGridProps) => {
 
 const monthCellInteraction = (
     props: ContentMonthGridProps,
-    cell: GridCell | undefined,
+    cell: ContentViews["calendarCell"] | undefined,
 ): DataTableCellInteraction | undefined => {
     if (cell?.day == null) return undefined
     const day = cell.day
@@ -84,22 +80,18 @@ const monthCellInteraction = (
 
 type MonthDayCellProps = {
     readonly props: ContentMonthGridProps
-    readonly cell: GridCell
+    readonly cell: ContentViews["calendarCell"]
 }
 
 /** The posts and explicit toggle used to pick a post without dragging. */
 const MonthDayCell = ({ props, cell }: MonthDayCellProps) => {
     const key = cell.dateKey
-    const list = props.byDay.get(key) ?? []
-    const shown = props.expandedKey === key ? list : list.slice(0, MAX_CHIPS)
     const today = key === props.todayKey
     return (
         <div className={CELL_CLASS_NAME}>
             <Stack gap="identity">
-                <Text as="span" size="xs" weight={today ? "semibold" : "normal"} tone={today ? "accent" : "muted"}>
-                    {cell.day}
-                </Text>
-                {shown.map((post) => (
+                <CalendarDay value={parseDate(cell.dateKey)} label={cell.label} isToday={today} />
+                {cell.posts.map((post) => (
                     <Stack key={post.id} gap="identity">
                         <ContentPostChip
                             post={post}
@@ -110,19 +102,20 @@ const MonthDayCell = ({ props, cell }: MonthDayCellProps) => {
                         />
                         {props.canManage && post.canMove ? (
                             <Button
+                                isLoading={props.isLoading}
                                 intent="neutral"
                                 size="sm"
                                 aria-pressed={props.pickedId === post.id}
                                 onPress={() => props.onPick(post.id)}
                             >
-                                {props.t("calendarPickMove")}: {post.title}
+                                {post.pickLabel}
                             </Button>
                         ) : null}
                     </Stack>
                 ))}
-                {list.length > MAX_CHIPS && props.expandedKey !== key ? (
+                {cell.moreLabel !== null ? (
                     <Button intent="neutral" size="sm" onPress={() => props.onExpand(key)}>
-                        {props.t("moreItems", { n: list.length - MAX_CHIPS })}
+                        {cell.moreLabel}
                     </Button>
                 ) : null}
             </Stack>

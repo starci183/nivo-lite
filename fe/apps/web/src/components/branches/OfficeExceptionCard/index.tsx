@@ -1,15 +1,13 @@
 import type { ReactNode } from "react"
 import { Badge, Button, Cluster, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
-import type { OfficeExceptionView, OfficeText } from "@/modules/types"
+import type { OfficeExceptionView, OfficeThreadProps } from "@/modules/types"
 import { QUOTE_CLASS_NAME } from "./classNames"
 
 /** What one exception draws; the owner's controls come in as `form`. */
 type OfficeExceptionCardProps = {
     readonly item: OfficeExceptionView
-    readonly avatar: ReactNode
     readonly form: ReactNode
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["cardCopy"]["exception"]
 }
 
 const BADGE_TONES = { open: "warning", failed: "danger", done: "success", rejected: "danger" } as const
@@ -19,23 +17,9 @@ const BADGE_TONES = { open: "warning", failed: "danger", done: "success", reject
  * decided, the result. It stays in the thread as a record.
  */
 export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
-    const { item, text } = props
+    const { item, copy } = props
     return (
-        <OfficeCardFrame
-            identity={item}
-            aiLabel={text("aiBadge")}
-            avatar={props.avatar}
-            head={
-                <Stack gap="identity">
-                    <Text weight="semibold">{item.title}</Text>
-                    {item.hint === null ? null : (
-                        <Text size="sm" tone="muted">
-                            {item.hint}
-                        </Text>
-                    )}
-                </Stack>
-            }
-        >
+        <>
             <Cluster gap="inline">
                 <Badge tone={BADGE_TONES[item.status]} isDot>
                     {item.badge}
@@ -43,19 +27,19 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
                 <Badge tone="neutral">{item.department}</Badge>
                 {item.reasonBadge === null ? null : <Badge tone="neutral">{item.reasonBadge}</Badge>}
             </Cluster>
-            {renderOfficeExceptionCardProposal(item, text)}
+            {renderOfficeExceptionCardProposal(item, copy)}
             {item.creditLine === null ? null : (
-                <SurfaceCard ariaLabel={text("reconcileCredit")}>
+                <SurfaceCard ariaLabel={copy.reconcileCredit}>
                     <div className={QUOTE_CLASS_NAME}>
                         <Stack gap="identity">
-                            <Text size="xs" tone="muted" weight="medium">
-                                {text("reconcileCredit")}
+                            <Text size="xs" tone="muted" isStrong>
+                                {copy.reconcileCredit}
                             </Text>
                             <Text as="p" size="sm">
                                 {item.creditLine}
                             </Text>
                             <Text as="p" size="sm" tone="muted">
-                                {text("reconcileWarning")}
+                                {copy.reconcileWarning}
                             </Text>
                         </Stack>
                     </div>
@@ -69,14 +53,14 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
             )}
             {item.result === null ? null : (
                 <div>
-                    <Text size="xs" tone="muted" weight="medium">
-                        {text("exceptionResult")}
+                    <Text size="xs" tone="muted" isStrong>
+                        {copy.exceptionResult}
                     </Text>
                     <Text as="p" size="sm">
                         {item.result}
                     </Text>
                     {item.decidedBasis === null ? null : (
-                        <Text as="p" size="sm" weight="medium">
+                        <Text as="p" size="sm" isStrong>
                             {item.decidedBasis}
                         </Text>
                     )}
@@ -90,11 +74,11 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
             {item.leadHref === null ? null : (
                 <div>
                     <Button intent="neutral" href={item.leadHref}>
-                        {text("exceptionOpenLead")}
+                        {copy.exceptionOpenLead}
                     </Button>
                 </div>
             )}
-        </OfficeCardFrame>
+        </>
     )
 }
 
@@ -104,7 +88,7 @@ type ProposalPartProps = { readonly label: string; readonly body: string; readon
 /** Draws one labelled block. */
 const ProposalPart = (props: ProposalPartProps) => (
     <>
-        <Text size="xs" tone="muted" weight="medium">
+        <Text size="xs" tone="muted" isStrong>
             {props.label}
         </Text>
         {props.isMuted ? (
@@ -122,18 +106,18 @@ const ProposalPart = (props: ProposalPartProps) => (
 /** Renders the OfficeExceptionCard proposal section: a drafted reply shows what the customer asked, then what NIVO would answer. */
 const renderOfficeExceptionCardProposal = (
     item: NonNullable<OfficeExceptionCardProps["item"]>,
-    text: NonNullable<OfficeExceptionCardProps["text"]>,
+    copy: NonNullable<OfficeExceptionCardProps["copy"]>,
 ) => {
     const isReply = item.errorText === null && item.draft !== null
-    const label = item.errorText === null ? text("exceptionProposes") : text("exceptionErrorLabel")
+    const label = item.errorText === null ? copy.exceptionProposes : copy.exceptionErrorLabel
     return (
         <SurfaceCard ariaLabel={label}>
             <div className={QUOTE_CLASS_NAME}>
                 <Stack gap="identity">
                     {isReply ? (
                         <>
-                            <ProposalPart label={text("exceptionAsked")} body={item.summary} isMuted />
-                            <ProposalPart label={text("exceptionWillReply")} body={item.draft ?? ""} isMuted={false} />
+                            <ProposalPart label={copy.exceptionAsked} body={item.summary} isMuted />
+                            <ProposalPart label={copy.exceptionWillReply} body={item.draft ?? ""} isMuted={false} />
                         </>
                     ) : (
                         <ProposalPart label={label} body={item.errorText ?? item.summary} isMuted={false} />

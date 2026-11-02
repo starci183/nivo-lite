@@ -81,6 +81,11 @@ const stored = (store: Map<string, string>): Stored => {
 }
 
 describe("AgentRegistryService", () => {
+    it.each([false, true])("reports the configured agent-management ownership as %p", async (manageAgents) => {
+        const { registry } = await build({ manageAgents })
+        expect(registry.managesAgents).toBe(manageAgents)
+    })
+
     describe("workspaceDirs", () => {
         it("answers the local and the gateway view of the workspace", async () => {
             const { registry } = await build()

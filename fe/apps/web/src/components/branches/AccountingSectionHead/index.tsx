@@ -1,7 +1,5 @@
-import { Tabs } from "@starci/grammar/common"
+import { Tabs, Section } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { AccountingBlock } from "@/components/leaves/AccountingBlock"
-import { AccountingHeadLine } from "@/components/leaves/AccountingHeadLine"
 
 /** One choice of the section's peer selector. */
 interface AccountingSectionChoice {
@@ -17,15 +15,19 @@ interface AccountingSectionHeadProps {
     readonly choices: ReadonlyArray<AccountingSectionChoice>
     readonly selectedChoice: string
     readonly onChoose: (id: string) => void
-    readonly children: ReactNode
+    readonly body: ReactNode
     /** The section is a placeholder: its heading draws as skeleton. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** The heading line of a section: title and intro, with the choice that changes what the section shows, then its content. */
 export const AccountingSectionHead = (props: AccountingSectionHeadProps) => (
-    <AccountingBlock label={props.title}>
-        <AccountingHeadLine title={props.title} intro={props.intro} isSkeleton={props.isSkeleton}>
+    <Section
+        title={props.title}
+        description={props.intro}
+        headingLevel={2}
+        isLoading={props.isLoading}
+        action={
             <Tabs
                 label={props.choiceLabel}
                 selectedKey={props.selectedChoice}
@@ -34,7 +36,8 @@ export const AccountingSectionHead = (props: AccountingSectionHeadProps) => (
                 items={props.choices}
                 onSelect={props.onChoose}
             />
-        </AccountingHeadLine>
-        {props.children}
-    </AccountingBlock>
+        }
+    >
+        {props.body}
+    </Section>
 )

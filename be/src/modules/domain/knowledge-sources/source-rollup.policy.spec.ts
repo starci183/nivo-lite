@@ -36,6 +36,26 @@ const build = async () => {
 }
 
 describe("withPartsRolledUp", () => {
+    it("keeps a note from another part when the busiest part has no error of its own", async () => {
+        const subject = await build()
+        const rows = subject.withPartsRolledUp([
+            { summary: summaryOf({ error: "KNOWLEDGE_NOTE_KEYWORD_ONLY" }), origin: null },
+            { summary: summaryOf({ id: "s2", status: "indexing", error: null, progress: 40 }), origin: "part:s1" },
+        ])
+
+        expect(rows).toEqual([
+            summaryOf({
+                title: "Plan",
+                status: "indexing",
+                error: "KNOWLEDGE_NOTE_KEYWORD_ONLY",
+                progress: 40,
+                chunkCount: 20,
+                sizeBytes: 2000,
+                partCount: 2,
+            }),
+        ])
+    })
+
     it("lists a document cut into parts as one row: the whole title, the totals summed and the number of parts", async () => {
         const subject = await build()
 

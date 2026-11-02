@@ -53,12 +53,13 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
     const slotLabels = useSlotLabels()
     const { slot, reload } = useResponsibilities()
     const pictureOf = useAgentPictures()
-    const rows = slot.items ?? []
+    const rows = ("items" in slot ? slot.items : undefined) ?? []
     const filters = useResponsibilityFilters(rows, props.initial)
     const groups = useOwnerGroups()
     const verified = format.dateTime(new Date(), { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })
     const emptyMessage = filters.isFiltered ? t("emptyFiltered") : t(EMPTY_KEYS[filters.status])
-    const countOf = (key: RowStatus | "all"): string => (slot.isLoading ? "" : ` (${filters.counts[key]})`)
+    const hasCounts = "items" in slot || "isEmpty" in slot
+    const countOf = (key: RowStatus | "all"): string => (hasCounts ? ` (${filters.counts[key]})` : "")
     return (
         <ResponsibilitiesBoardBase
             props={{
@@ -94,7 +95,7 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
                 sorts: responsibilitySorts(t),
                 sort: filters.sort,
                 listTitle: t("byOwner"),
-                count: slot.isLoading ? "" : String(filters.visibleCount),
+                count: hasCounts ? String(filters.visibleCount) : "",
                 verifiedLabel: t("verified", { time: verified }),
                 slot: mapSlot(slot, () =>
                     filters.groups.map((group) => ({

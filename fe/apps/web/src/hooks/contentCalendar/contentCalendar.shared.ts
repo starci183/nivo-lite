@@ -1,13 +1,6 @@
 import type { useTranslations } from "next-intl"
-import {
-    daysInMonth,
-    isoWeekdayOf,
-    pad2,
-    postView,
-    vietnamClock,
-    vnDateKey,
-    type useContentData,
-} from "@/hooks/content"
+import { daysInMonth, isoWeekdayOf, pad2, postView, vietnamClock, vnDateKey } from "@/hooks/content"
+import type { ContentWorkbenchData } from "@/modules/content"
 import type { PostView } from "@/modules/types"
 
 const inMonth = (iso: string | null, y: number, m: number): boolean => {
@@ -20,7 +13,7 @@ const WEEK = 7
 
 /** Groups a month's scheduled posts and constructs its complete week cells. */
 export const calendarMonthView = (
-    data: ReturnType<typeof useContentData>,
+    data: ContentWorkbenchData,
     t: ReturnType<typeof useTranslations<"content">>,
     y: number,
     m: number,

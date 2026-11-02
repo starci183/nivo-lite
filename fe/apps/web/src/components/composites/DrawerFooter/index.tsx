@@ -1,6 +1,4 @@
-import { Button, Text } from "@starci/grammar/common"
-import { FOOTER_CLASS_NAME } from "./classNames"
-
+import { Button, Text, Cluster } from "@starci/grammar/common"
 /** What the footer of a drawer says and calls. */
 type DrawerFooterProps = {
     readonly cancelLabel: string
@@ -15,7 +13,7 @@ type DrawerFooterProps = {
 
 /** The cancel and the main action at the foot of a drawer. */
 export const DrawerFooter = (props: DrawerFooterProps) => (
-    <div className={FOOTER_CLASS_NAME}>
+    <Cluster gap="inline" justify="end">
         {props.submitBlocked === undefined || props.submitBlocked === "" ? null : (
             <Text size="xs" tone="muted">
                 {props.submitBlocked}
@@ -35,5 +33,5 @@ export const DrawerFooter = (props: DrawerFooterProps) => (
         >
             {props.submitLabel}
         </Button>
-    </div>
+    </Cluster>
 )

@@ -9,7 +9,7 @@ import type {
     LeadFlowTransactionType as Transaction,
     LeadFlowWorkItemType as WorkItemView,
 } from "@/hooks/swr"
-import type { BadgeTone } from "@starci/grammar/common"
+import { type BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { flowViewMapper } from "./leads.shared"
 import { actionWordOf } from "@/hooks/actionWord"

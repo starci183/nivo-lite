@@ -9,9 +9,9 @@ import { queryContentConfiguration } from "@/modules/api/graphql/queries/query-c
 export const QUERY_CONTENT_CONFIGURATION_SWR_KEY = "QUERY_CONTENT_CONFIGURATION_SWR"
 
 /** The content configuration of the workspace. */
-export const useQueryContentConfigurationSwr = () =>
+export const useQueryContentConfigurationSwr = (isActive = true) =>
     useSWR(
-        useWorkspaceParamsKey(QUERY_CONTENT_CONFIGURATION_SWR_KEY, [] as const),
+        useWorkspaceParamsKey(QUERY_CONTENT_CONFIGURATION_SWR_KEY, isActive ? ([] as const) : null),
         async () =>
             answeredData(await queryContentConfiguration(), QUERY_CONTENT_CONFIGURATION_SWR_KEY).contentConfiguration,
     )

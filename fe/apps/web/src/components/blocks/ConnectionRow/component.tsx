@@ -3,12 +3,12 @@ import {
     AlertDialog,
     Badge,
     Button,
+    Cluster,
     DropdownMenu,
     IconButton,
-    ListRow,
+    Link,
     Stack,
     Text,
-    TextAction,
 } from "@starci/grammar/common"
 import type { DropdownMenuEntry } from "@starci/grammar/common"
 import { ConnectionAccessMenu } from "@/components/composites/ConnectionAccessMenu"
@@ -54,13 +54,6 @@ const plainFactsOf = (view: RowView): string | undefined => {
     const text = [view.facts, view.usedBy].filter(Boolean).join(" · ")
     return text === "" ? undefined : text
 }
-
-const telegramFactsOf = (view: RowView, handle: string) => (
-    <>
-        <TextAction href={`https://t.me/${handle}`} target="_blank">{`@${handle}`}</TextAction>
-        {view.usedBy === "" ? "" : ` · ${view.usedBy}`}
-    </>
-)
 
 const dialogOf = (kind: "disconnect" | "remove", dialog: RowDialog, on: RowHandlers) => (
     <AlertDialog
@@ -124,65 +117,70 @@ const detailsOf = (view: RowView, on: RowHandlers) => (
     </>
 )
 
-/** One connection as a list row: name and status, one facts line, an alert only when something needs acting on, one visible action, the rest in its menu. */
+/** A connection's detail body; its collection owner carries the id and name while this block keeps its own state and commands. */
 export const ConnectionRowBase = (props: ConnectionRowBaseProps) => {
     const view = props.props
     const on = props.on
     const entries = entriesOf(view, on.menu)
     const primary = view.primary
+    const factsLine = view.telegramHandle === null ? plainFactsOf(view) : view.usedBy
     const hasDetails =
         view.alerts.length + view.notes.length > 0 || view.smtp !== null || view.keys !== null || view.note !== null
     return (
-        <ListRow
-            leading={<ProviderLogo {...view.logo} glyph="email" />}
-            title={view.title}
-            badges={
-                <>
+        <Stack gap="row">
+            <Cluster gap="inline" align="center">
+                {primary === null ? null : (
+                    <Button
+                        intent={primary.intent}
+                        isPending={primary.isPending}
+                        onPress={() => on.primary(primary.id)}
+                    >
+                        {primary.label}
+                    </Button>
+                )}
+                {view.page === null ? null : (
+                    <Button intent="neutral" href={view.page.href}>
+                        {view.page.label}
+                    </Button>
+                )}
+                {view.access === null ? null : <ConnectionAccessMenu {...view.access} onPick={on.pick} />}
+                {entries.length === 0 ? null : (
+                    <DropdownMenu
+                        placement="bottom end"
+                        trigger={
+                            <IconButton
+                                source={nivoIconSource("more", "leading")}
+                                label={view.menuLabel}
+                                intent="neutral"
+                                isDisabled={view.menuIsDisabled}
+                            />
+                        }
+                        entries={entries}
+                    />
+                )}
+            </Cluster>
+            <Stack gap="row">
+                <Cluster gap="inline" align="center">
+                    <ProviderLogo {...view.logo} glyph="email" />
                     <Badge isDot tone={view.statusTone}>
                         {view.statusLabel}
                     </Badge>
                     {view.envLabel === null ? null : <Badge tone="neutral">{view.envLabel}</Badge>}
-                </>
-            }
-            description={view.telegramHandle === null ? plainFactsOf(view) : telegramFactsOf(view, view.telegramHandle)}
-            state={view.state}
-            actions={
-                <>
-                    {primary === null ? null : (
-                        <Button
-                            intent={primary.intent}
-                            isPending={primary.isPending}
-                            onPress={() => on.primary(primary.id)}
-                        >
-                            {primary.label}
-                        </Button>
+                    {view.telegramHandle === null ? null : (
+                        <Link kind="external" href={`https://t.me/${view.telegramHandle}`}>
+                            {`@${view.telegramHandle}`}
+                        </Link>
                     )}
-                    {view.page === null ? null : (
-                        <Button intent="neutral" href={view.page.href}>
-                            {view.page.label}
-                        </Button>
-                    )}
-                    {view.access === null ? null : <ConnectionAccessMenu {...view.access} onPick={on.pick} />}
-                    {entries.length === 0 ? null : (
-                        <DropdownMenu
-                            placement="bottom end"
-                            trigger={
-                                <IconButton
-                                    source={nivoIconSource("more", "leading")}
-                                    label={view.menuLabel}
-                                    intent="neutral"
-                                    isDisabled={view.menuIsDisabled}
-                                />
-                            }
-                            entries={entries}
-                        />
-                    )}
-                    {dialogOf("disconnect", view.disconnect, on)}
-                    {dialogOf("remove", view.remove, on)}
-                </>
-            }
-        >
-            {hasDetails ? detailsOf(view, on) : undefined}
-        </ListRow>
+                </Cluster>
+                {factsLine ? (
+                    <Text size="sm" tone="muted">
+                        {factsLine}
+                    </Text>
+                ) : null}
+                {hasDetails ? detailsOf(view, on) : null}
+            </Stack>
+            {dialogOf("disconnect", view.disconnect, on)}
+            {dialogOf("remove", view.remove, on)}
+        </Stack>
     )
 }

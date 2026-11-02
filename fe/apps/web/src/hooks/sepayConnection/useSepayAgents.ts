@@ -2,11 +2,11 @@
 
 import { useMemo } from "react"
 import { useSetConnectionAgents } from "@/hooks/connections"
-import { slotOfSwr } from "@/hooks/slot"
+import { loadingSlot, slotOfSwr } from "@/hooks/slot"
 import { QUERY_SEPAY_CONNECTION_SWR_KEY, useQueryConnectionAgentsSwr } from "@/hooks/swr"
 import { mutate } from "@/modules/viewer-cache"
 import { matchesSwrKey } from "@/modules/utils"
-import type { SepayAgentView } from "@/modules/types"
+import type { SepayAgentView, SlotRead } from "@/modules/types"
 
 /** The accounting agents of the workspace and which of them work through this SePay connection. */
 export const useSepayAgents = (connectionId: string, agentIds: ReadonlyArray<string>, isReady: boolean) => {
@@ -23,8 +23,15 @@ export const useSepayAgents = (connectionId: string, agentIds: ReadonlyArray<str
                 })),
         [query.data, agentIds],
     )
+    const read: SlotRead<typeof rows> = {
+        data: rows,
+        error: query.error,
+        isLoading: query.isLoading,
+        isValidating: query.isValidating,
+    }
     return {
-        slot: isReady ? slotOfSwr({ data: rows, error: query.error, isLoading: query.isLoading }) : { isLoading: true },
+        read,
+        slot: isReady ? slotOfSwr(read) : loadingSlot<ReadonlyArray<SepayAgentView>>(),
         retry: () => {
             void query.mutate()
         },

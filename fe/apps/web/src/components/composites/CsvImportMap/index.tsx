@@ -1,5 +1,4 @@
-import { Alert, DataTable, Select, Text } from "@starci/grammar/common"
-import { csvImportMapClassNames as classNames } from "./classNames"
+import { Grid, Alert, DataTable, Select, Text } from "@starci/grammar/common"
 
 /** One option of a select. */
 interface CsvImportOption {
@@ -31,6 +30,8 @@ export interface CsvImportMapView {
 
 /** What the mapping step draws and reports. */
 interface CsvImportMapProps extends CsvImportMapView {
+    readonly isLoading?: boolean
+
     readonly isDisabled: boolean
     readonly on: {
         readonly sheet: (sheet: string) => void
@@ -41,12 +42,19 @@ interface CsvImportMapProps extends CsvImportMapView {
 /** The mapping step: which column is the id, the title and the date, what is read automatically, and the first rows. */
 export const CsvImportMap = (props: CsvImportMapProps) => (
     <>
-        {props.missing === null ? null : <Alert tone="cautionary" title={props.missing} />}
+        {props.missing === null ? null : (
+            <Alert
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                tone="cautionary"
+                title={props.missing}
+            />
+        )}
         <Text size="sm" tone="muted">
             {props.intro}
         </Text>
         {props.sheet === null ? null : (
             <Select
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                 label={props.text.sheetLabel}
                 isDisabled={props.isDisabled}
                 value={props.sheet.value}
@@ -56,38 +64,29 @@ export const CsvImportMap = (props: CsvImportMapProps) => (
                 }}
             />
         )}
-        <div className={classNames.fields}>
-            <Select
-                label={props.text.mapId}
-                isDisabled={props.isDisabled}
-                value={props.values.idColumn}
-                options={[...props.idOptions]}
-                onValueChange={(value) => props.on.column("idColumn", value)}
-            />
-            <Select
-                label={props.text.mapTitle}
-                isDisabled={props.isDisabled}
-                value={props.values.titleColumn}
-                options={[...props.optionalOptions]}
-                onValueChange={(value) => props.on.column("titleColumn", value)}
-            />
-            <Select
-                label={props.text.mapDate}
-                isDisabled={props.isDisabled}
-                value={props.values.dateColumn}
-                options={[...props.optionalOptions]}
-                onValueChange={(value) => props.on.column("dateColumn", value)}
-            />
-        </div>
+        <Grid kind="form" columns={2}>
+            {csvColumnsOf(props).map((column) => (
+                <Select
+                    key={column.name}
+                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                    label={column.label}
+                    isDisabled={props.isDisabled}
+                    value={props.values[column.name]}
+                    options={column.options}
+                    onValueChange={(value) => props.on.column(column.name, value)}
+                />
+            ))}
+        </Grid>
         <Text size="xs" tone="muted">
             {props.text.mapIdHint}
         </Text>
         {props.kinds === null ? null : (
-            <Text size="xs" tone="muted">
+            <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="xs" tone="muted">
                 {props.kinds}
             </Text>
         )}
         <DataTable
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
             label={props.text.previewLabel}
             columns={props.headers.map((header, at) => ({ id: String(at), label: header, isRowHeader: at === 0 }))}
             rows={props.sample.map((cells, at) => ({ id: String(at), cells }))}
@@ -101,3 +100,15 @@ export const CsvImportMap = (props: CsvImportMapProps) => (
         />
     </>
 )
+
+interface CsvColumnChoice {
+    readonly name: CsvMapColumn
+    readonly label: string
+    readonly options: ReadonlyArray<CsvImportOption>
+}
+/** Resolves the three distinct mapping choices while the same native picker draws each one. */
+const csvColumnsOf = (props: CsvImportMapProps): ReadonlyArray<CsvColumnChoice> => [
+    { name: "idColumn", label: props.text.mapId, options: props.idOptions },
+    { name: "titleColumn", label: props.text.mapTitle, options: props.optionalOptions },
+    { name: "dateColumn", label: props.text.mapDate, options: props.optionalOptions },
+]

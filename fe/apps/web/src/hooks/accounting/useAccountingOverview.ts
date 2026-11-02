@@ -2,7 +2,7 @@
 
 import type { AccountingWorkbenchData, AccountingPeriodKey } from "@/modules/types"
 import { useFormatter, useTranslations } from "next-intl"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { dayOf, moneyOf, monthOf } from "@/modules/utils"
 
 /** The three ageing buckets as gauges: how much is owed at each age, the oldest drawn as the most serious. */
@@ -16,10 +16,13 @@ const AGEING_BUCKETS = [
  * The Period overview tab: the period choice lives here, the drawing in the pure half. The figures of the period are the ribbon of
  * the desk, so this tab holds only what the ribbon does not: the ageing and the weeks of income.
  */
-export const useAccountingOverview = (data: AccountingWorkbenchData) => {
+export const useAccountingOverview = (data: AccountingWorkbenchData, isActive: boolean, scope: string) => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const [periodKey, setPeriodKey] = useState<AccountingPeriodKey>("this")
+    useEffect(() => {
+        setPeriodKey("this")
+    }, [isActive, scope])
     const actions = { selectPeriod: (key: string) => setPeriodKey(key === "last" ? "last" : "this") }
     const period = data.periods[periodKey]
     const month = monthOf(format, period.fromIso)

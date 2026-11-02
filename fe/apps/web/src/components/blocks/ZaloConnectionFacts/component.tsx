@@ -1,4 +1,4 @@
-import { DescriptionList, PaneSection, Text } from "@starci/grammar/common"
+import { DescriptionList, PaneSection, Section, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZaloFactView } from "@/modules/types"
 
@@ -14,6 +14,7 @@ export interface ZaloConnectionFactsBaseProps {
     /** `tiles`: the health band of the page, its own pane band; `saved`: the saved values inside the first setup step. */
     readonly shape: "tiles" | "saved"
     readonly props: {
+        readonly label: string
         readonly facts: DataSlot<ReadonlyArray<ZaloFactView>>
         readonly slotLabels: SlotLabels
     }
@@ -28,19 +29,18 @@ const SavedFacts = (props: ZaloFactsBandProps) => (
         placeholder={ZALO_FACTS_PLACEHOLDER}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(facts, isSkeleton) => (
+        render={(facts, isLoading) => (
             <DescriptionList
                 layout="columns"
-                isLoading={isSkeleton}
+                isLoading={isLoading}
                 items={facts.map((fact) => ({
                     id: fact.id,
                     term: fact.label,
-                    description: <Text weight="medium">{fact.value}</Text>,
+                    description: <Text isStrong>{fact.value}</Text>,
                 }))}
             />
         )}
-    </SlotView>
+    />
 )
 
 /**
@@ -57,20 +57,19 @@ export const ZaloConnectionFactsBase = (props: ZaloConnectionFactsBaseProps) =>
                 placeholder={ZALO_FACTS_PLACEHOLDER}
                 labels={props.props.slotLabels}
                 onRetry={props.on.retry}
-            >
-                {(facts, isSkeleton) => (
-                    <DescriptionList
-                        layout="stat-strip"
-                        isDivided
-                        isLoading={isSkeleton}
+                render={(facts, isLoading) => (
+                    <Section
+                        kind="figures"
+                        ariaLabel={props.props.label}
+                        isLoading={isLoading}
                         items={facts.map((fact) => ({
                             id: fact.id,
                             term: fact.label,
-                            description: fact.value,
+                            value: fact.value,
                             ...(fact.meta === undefined ? {} : { meta: fact.meta }),
                         }))}
                     />
                 )}
-            </SlotView>
+            />
         </PaneSection>
     )

@@ -1,4 +1,4 @@
-import { ChatBubble, ChatBubbleSkeletons, Divider, EmptyNotice, Text } from "@starci/grammar/common"
+import { Divider, EmptyNotice, Text, MessageBubble } from "@starci/grammar/common"
 import { Fragment, type ComponentProps, type ReactNode } from "react"
 import { SetupWriteCard } from "@/components/branches/SetupWriteCard"
 import { SetupProposals } from "@/components/leaves/SetupProposals"
@@ -60,6 +60,7 @@ export interface AgentSetupThreadContent {
 /** The words of the proposals under NIVO's latest reply. */
 interface AgentSetupThreadCopy {
     readonly proposalsLabel: string
+    readonly proposalsEmpty: string
     readonly confirmLabel: string
     readonly proposalEditLabel: string
 }
@@ -78,7 +79,7 @@ interface AgentSetupThreadCommands {
 /** Content, copy and commands of the thread. */
 interface AgentSetupThreadProps {
     readonly content: AgentSetupThreadContent
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly copy: AgentSetupThreadCopy
     readonly on: AgentSetupThreadCommands
 }
@@ -113,6 +114,7 @@ const bubbleFooterOf = (props: FooterInput): ReactNode => {
                 <SetupProposals
                     proposals={props.content.proposals}
                     label={props.copy.proposalsLabel}
+                    emptyLabel={props.copy.proposalsEmpty}
                     confirmLabel={props.copy.confirmLabel}
                     editLabel={props.copy.proposalEditLabel}
                     onConfirm={(key) => props.on.gate(key, "confirm")}
@@ -158,21 +160,20 @@ export const AgentSetupThread = (props: AgentSetupThreadProps) => {
     }
     return (
         <>
-            {props.isSkeleton ? <ChatBubbleSkeletons count={3} /> : null}
-            {props.content.hasMessages || props.isSkeleton ? null : (
+            {props.isLoading ? <MessageBubble isLoading /> : null}
+            {props.content.hasMessages || props.isLoading ? null : (
                 <EmptyNotice message={props.content.emptyTitle} description={props.content.emptyBody} />
             )}
             {props.content.groups.map((group) => (
                 <Fragment key={group.id}>
                     {group.messages.map((message) => (
-                        <ChatBubble
+                        <MessageBubble
                             key={message.id}
                             side={message.isOwner ? "outgoing" : "incoming"}
                             author={message.author}
                             footer={bubbleFooterOf({ ...props, message, isLatestReply: message.id === latest })}
-                        >
-                            {message.body}
-                        </ChatBubble>
+                            body={message.body}
+                        />
                     ))}
                     {group.divider === "" ? null : <Divider label={group.divider} />}
                 </Fragment>

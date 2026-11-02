@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Cluster, Region, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Quote, Stack, Text, Textarea, Section } from "@starci/grammar/common"
 
 /** The waiting question the AI handed to a person, with the draft answer and how the last attempt went. */
 interface ChatbotEscalationFormProps {
@@ -22,20 +22,10 @@ interface ChatbotEscalationFormProps {
 
 /** The recessed band of the customer pane where a person answers a question the AI could not. */
 export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
-    <Region label={props.title}>
+    <Section title={props.title}>
         <Stack gap="row">
-            <Cluster gap="inline">
-                <Badge tone="warning" isDot>
-                    {props.title}
-                </Badge>
-            </Cluster>
             <Stack gap="identity">
-                <Text size="xs" tone="muted">
-                    {props.askedLabel}
-                </Text>
-                <SurfaceCard ariaLabel={props.askedLabel}>
-                    <Text size="sm">{props.question}</Text>
-                </SurfaceCard>
+                <Quote source={props.askedLabel} text={props.question} />
                 {props.assigned === null ? null : (
                     <Text size="xs" tone="muted">
                         {props.assigned}
@@ -67,5 +57,5 @@ export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
                 </Button>
             </Cluster>
         </Stack>
-    </Region>
+    </Section>
 )

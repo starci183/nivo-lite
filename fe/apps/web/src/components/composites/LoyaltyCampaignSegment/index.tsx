@@ -1,50 +1,36 @@
-import { Checkbox, CheckboxGroup, Input } from "@starci/grammar/common"
-import { CHECKS_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
+import type { LoyaltyViews, LoyaltyActions } from "@/modules/types"
+import { Checkbox, CheckboxGroup, Input, Stack, Grid, Cluster } from "@starci/grammar/common"
 /** Inputs and commands for the LoyaltyCampaignSegment presentation. */
+type PromotionData = LoyaltyViews["promotion"]
 interface LoyaltyCampaignSegmentProps {
-    readonly props: {
-        readonly copy: {
-            readonly tiers: string
-            readonly tiersHint: string
-            readonly inactive: string
-            readonly inactiveHint: string
-            readonly spend: string
-            readonly spendHint: string
-            readonly birthday: string
-        }
-        readonly tierOptions: ReadonlyArray<{ readonly value: string; readonly label: string }>
-        readonly values: {
-            readonly tiers: ReadonlyArray<string>
-            readonly inactive: string
-            readonly spend: string
-            readonly birthday: boolean
-        }
-        readonly isBusy: boolean
-    }
-    readonly on: {
-        readonly setTiers: (value: ReadonlyArray<string>) => void
-        readonly setInactive: (value: string) => void
-        readonly setSpend: (value: string) => void
-        readonly setBirthday: (value: boolean) => void
-    }
+    readonly isLoading?: boolean
+    readonly copy: Pick<
+        PromotionData["copy"],
+        "tiers" | "tiersHint" | "inactive" | "inactiveHint" | "spend" | "spendHint" | "birthday"
+    >
+    readonly tierOptions: PromotionData["tierOptions"]
+    readonly values: Pick<PromotionData["values"], "tiers" | "inactive" | "spend" | "birthday">
+    readonly isBusy: boolean
+    readonly on: Pick<LoyaltyActions["promotion"], "setTiers" | "setInactive" | "setSpend" | "setBirthday">
 }
 
 /** Audience filters for a loyalty promotion. */
 export const LoyaltyCampaignSegment = (props: LoyaltyCampaignSegmentProps) => {
-    const { copy, values } = props.props
+    const { copy, values } = props
     const on = props.on
     return (
-        <div className={FORM_CLASS_NAME}>
+        <Stack gap="row">
             <CheckboxGroup
                 label={copy.tiers}
                 description={copy.tiersHint}
                 orientation="horizontal"
-                options={[...props.props.tierOptions]}
+                options={[...props.tierOptions]}
                 value={[...values.tiers]}
-                isDisabled={props.props.isBusy}
+                isDisabled={props.isBusy}
+                isLoading={props.isLoading ?? false}
                 onValueChange={on.setTiers}
             />
-            <div className={FIELD_PAIR_CLASS_NAME}>
+            <Grid kind="form" columns={2}>
                 <Input
                     id="seg-inactive"
                     name="inactive"
@@ -52,7 +38,8 @@ export const LoyaltyCampaignSegment = (props: LoyaltyCampaignSegmentProps) => {
                     description={copy.inactiveHint}
                     placeholder="45"
                     value={values.inactive}
-                    isDisabled={props.props.isBusy}
+                    isDisabled={props.isBusy}
+                    isLoading={props.isLoading ?? false}
                     onValueChange={on.setInactive}
                 />
                 <Input
@@ -62,18 +49,20 @@ export const LoyaltyCampaignSegment = (props: LoyaltyCampaignSegmentProps) => {
                     description={copy.spendHint}
                     placeholder="1000000"
                     value={values.spend}
-                    isDisabled={props.props.isBusy}
+                    isDisabled={props.isBusy}
+                    isLoading={props.isLoading ?? false}
                     onValueChange={on.setSpend}
                 />
-            </div>
-            <div className={CHECKS_CLASS_NAME}>
+            </Grid>
+            <Cluster gap="row">
                 <Checkbox
+                    isLoading={props.isLoading ?? false}
                     label={copy.birthday}
                     isSelected={values.birthday}
-                    isDisabled={props.props.isBusy}
+                    isDisabled={props.isBusy}
                     onSelectedChange={on.setBirthday}
                 />
-            </div>
-        </div>
+            </Cluster>
+        </Stack>
     )
 }

@@ -12,6 +12,8 @@ export enum KnowledgeJob {
     DossierReview = "dossier.review",
     /** Writes the remedy draft of a row of dossier_remedy_drafts through the model. */
     DossierRemedy = "dossier.remedy",
+    /** Writes the text of a row of public_documents in the status drafting, from internal documents read through NIVO MCP, or looks for the internal answer to a customer question. */
+    PublicDraft = "public.draft",
 }
 
 /** The payload of the index and facts jobs: the source to work on, ids only (the handler re-reads the current state). */
@@ -54,6 +56,16 @@ export interface DossierRemedyPayload {
     readonly workspaceId: string
 }
 
+/** The payload of the public draft job: the document row to write, ids only. */
+export interface PublicDraftPayload {
+    /** The public_documents row. */
+    readonly documentId: string
+    /** The workspace it belongs to. */
+    readonly workspaceId: string
+    /** The exact drafting revision this job may finish; the row increments it for every redraft. */
+    readonly draftRevision: number
+}
+
 /** The failure reason recorded when a workspace has no credits left: the job fails WITHOUT retrying and the owner tops up, then retries. */
 export const KNOWLEDGE_BLOCKED_CREDITS = "blocked_credits"
 
@@ -74,6 +86,15 @@ export const isDossierReviewPayload = (value: unknown): value is DossierReviewPa
 /** True when a job payload is the payload of a dossier remedy job. */
 export const isDossierRemedyPayload = (value: unknown): value is DossierRemedyPayload =>
     isRecord(value) && typeof value.draftId === "string" && typeof value.workspaceId === "string"
+
+/** True when a job payload is the payload of a public draft job. */
+export const isPublicDraftPayload = (value: unknown): value is PublicDraftPayload =>
+    isRecord(value) &&
+    typeof value.documentId === "string" &&
+    typeof value.workspaceId === "string" &&
+    typeof value.draftRevision === "number" &&
+    Number.isSafeInteger(value.draftRevision) &&
+    value.draftRevision >= 0
 
 /** True when a job payload is the payload of a reembed job. */
 export const isKnowledgeReembedPayload = (value: unknown): value is KnowledgeReembedPayload =>

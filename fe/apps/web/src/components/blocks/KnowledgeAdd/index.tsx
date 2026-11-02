@@ -19,8 +19,7 @@ interface KnowledgeAddProps {
 }
 
 /**
- * The connected way in for documents: files and links, a written note or questions with answers, and who may read them. The
- * owner chooses who reads before the add button works; NIVO only suggests. Once every document of the batch has been read, one
+ * The connected way in for documents: files and links, a written note or questions with answers. Documents added here are internal: the part of the Second Brain decides who reads. Once every document of the batch has been read, one
  * line says how many questions NIVO now has for the owner.
  */
 export const KnowledgeAdd = (props: KnowledgeAddProps) => {
@@ -37,6 +36,7 @@ export const KnowledgeAdd = (props: KnowledgeAddProps) => {
         <KnowledgeAddBase
             props={{
                 ...view,
+                emptyQueueLabel: t("hintNoDocs"),
                 drive: { label: drive?.label, note: view.zone.driveNote, trouble: view.zone.driveFailure },
                 summary:
                     isRead && todo > 0
@@ -63,7 +63,6 @@ export const KnowledgeAdd = (props: KnowledgeAddProps) => {
                 setTopic: options.setTopic,
                 setTags: options.setTags,
                 setModule: options.pickModule,
-                setVisibility: (value) => options.setVisibility(value === "public" ? "public" : "internal"),
                 submit: add.submit,
             }}
         />

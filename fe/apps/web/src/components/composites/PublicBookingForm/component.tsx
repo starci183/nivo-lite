@@ -9,10 +9,11 @@ import {
     SurfaceCard,
     Text,
     TextAction,
+    Cluster,
+    Stack,
 } from "@starci/grammar/common"
 import { PublicBookingContact } from "@/components/branches/PublicBookingContact"
 import type { PublicBookingContactProps } from "@/components/branches/PublicBookingContact"
-import { FORM_CLASS, ROW_CLASS, STACK_CLASS } from "./classNames"
 
 import type { PublicBookingFormProps } from "./index"
 
@@ -29,7 +30,7 @@ const PublicBookingAlternatives = ({ alternatives, label, onPick }: PublicBookin
             <Text size="sm" tone="muted">
                 {label}
             </Text>
-            <div className={ROW_CLASS}>
+            <Cluster gap="inline">
                 {alternatives.map((alternative) => (
                     <Button
                         key={alternative.value}
@@ -40,7 +41,7 @@ const PublicBookingAlternatives = ({ alternatives, label, onPick }: PublicBookin
                         {alternative.label}
                     </Button>
                 ))}
-            </div>
+            </Cluster>
         </>
     )
 }
@@ -74,7 +75,7 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
     if (p.done !== undefined) {
         return (
             <SurfaceCard ariaLabel={p.done.title}>
-                <div className={STACK_CLASS}>
+                <Stack gap="row">
                     <Heading level={2}>{p.done.title}</Heading>
                     <Text live="polite">{p.done.message}</Text>
                     <PublicBookingAlternatives
@@ -82,12 +83,12 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
                         label={p.labels.alternatives}
                         onPick={on.pickAlternative}
                     />
-                    <div className={ROW_CLASS}>
+                    <Cluster gap="inline">
                         <TextAction size="sm" onPress={on.again}>
                             {p.labels.again}
                         </TextAction>
-                    </div>
-                </div>
+                    </Cluster>
+                </Stack>
             </SurfaceCard>
         )
     }
@@ -95,11 +96,11 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
     const ready = start !== "" && name.trim() !== "" && phone.trim() !== "" && serviceId !== ""
     return (
         <Form label={p.formLabel} isPending={p.isBusy} validationBehavior="aria" onSubmit={on.submit}>
-            <div className={FORM_CLASS}>
+            <Stack gap="section">
                 <BookingServiceFields {...props} />
 
                 <SurfaceCard ariaLabel={p.labels.step2}>
-                    <div className={STACK_CLASS}>
+                    <Stack gap="row">
                         <HorizontalScrollRegion overflow="needed" isFocusable={false}>
                             <SegmentedControl
                                 label={p.labels.step2}
@@ -109,20 +110,20 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
                             />
                         </HorizontalScrollRegion>
                         <PublicBookingTimes times={p.times} labels={p.labels} fields={p.fields} on={on} />
-                    </div>
+                    </Stack>
                 </SurfaceCard>
 
                 <PublicBookingContact {...contactPropsOf(props)} />
 
                 {p.refusal === undefined ? null : (
-                    <div className={STACK_CLASS}>
+                    <Stack gap="row">
                         <Alert tone="negative" title={p.refusal.message} />
                         <PublicBookingAlternatives
                             alternatives={p.refusal.alternatives}
                             label={p.labels.alternatives}
                             onPick={on.pickAlternative}
                         />
-                    </div>
+                    </Stack>
                 )}
 
                 <Button type="submit" intent="commit" width="fill" isPending={p.isBusy} isDisabled={p.isBusy || !ready}>
@@ -131,7 +132,7 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
                 <Text size="xs" tone="muted">
                     {p.labels.footnote}
                 </Text>
-            </div>
+            </Stack>
         </Form>
     )
 }
@@ -142,12 +143,12 @@ const BookingServiceFields = (props: PublicBookingFormProps) => {
     return (
         <SurfaceCard ariaLabel={p.labels.step1}>
             {p.services.length === 0 ? (
-                <div className={STACK_CLASS}>
+                <Stack gap="row">
                     <Heading level={2}>{p.labels.step1}</Heading>
                     <Text size="sm" tone="muted">
                         {p.noServicesText}
                     </Text>
-                </div>
+                </Stack>
             ) : (
                 <RadioGroup
                     label={p.labels.step1}

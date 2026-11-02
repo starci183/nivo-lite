@@ -2,7 +2,7 @@ import type { ApprovalPolicy, ApprovalSetup, ApproverGroup, RuleUnit } from "@mo
 import type {
     ApproverRef,
     DirectoryMember,
-    ExclusionReason,
+    MemberGrantExclusionReason,
     GrantNeed,
     MemberGrant,
 } from "@modules/domain/member-grants"
@@ -52,7 +52,7 @@ export interface ApprovalExclusion {
     /** The member. */
     readonly memberId: string
     /** Why: disabled, no grant for the action, or the amount is over their limit. */
-    readonly reason: ExclusionReason
+    readonly reason: MemberGrantExclusionReason
 }
 
 /** What opening a request answers: the request, the people tagged, the people left out and when it runs out. */

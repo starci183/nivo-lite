@@ -2,6 +2,7 @@
 
 import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { slotOfReads } from "@/hooks/slot"
 import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import type { AgentLifecycle, SetupProgress } from "@/modules/installations"
@@ -63,7 +64,7 @@ const categoriesOf = (
     catalog: ModuleCatalog,
     locale: "vi" | "en",
 ): ReadonlyArray<{ readonly key: string; readonly label: string }> =>
-    catalog.slot.isLoading === true
+    catalog.read.data === undefined && catalog.read.isLoading
         ? Array.from(new Set(MODULE_KEYS.map((key) => MODULE_REGISTRY[key].category))).map((key) => ({
               key,
               label: "",
@@ -82,7 +83,7 @@ export const useCatalogEntries = (): {
     readonly reload: () => void
 } => {
     const locale = useLocale() === "en" ? "en" : "vi"
-    const { slot: installationsSlot, installations, reload: reloadInstallations } = useInstallations()
+    const { read: installationsRead, installations, reload: reloadInstallations } = useInstallations()
     const catalog = useModuleCatalog()
     const channelsOf = useInstanceChannels()
     const roles = MODULE_KEYS.flatMap((key): ReadonlyArray<CatalogRole> => {
@@ -139,12 +140,7 @@ export const useCatalogEntries = (): {
         }
     })
     const categories = categoriesOf(catalog, locale)
-    const slot: DataSlot<boolean> = {
-        isLoading: installationsSlot.isLoading === true || catalog.slot.isLoading === true,
-        isError: installationsSlot.isError === true || catalog.slot.isError === true,
-        isForbidden: installationsSlot.isForbidden === true || catalog.slot.isForbidden === true,
-        items: catalog.slot.items === undefined || installationsSlot.items === undefined ? undefined : true,
-    }
+    const slot = slotOfReads([installationsRead, catalog.read], () => true)
     return {
         agents,
         roles,

@@ -8,6 +8,7 @@ export type WorkspacesStatus = "loading" | "error" | "empty" | "ready"
 
 /** What the workspaces list readers get. */
 interface WorkspaceCards {
+    readonly read: ReturnType<typeof useQueryMyWorkspacesSwr>
     readonly cards: ReadonlyArray<WorkspaceCardView>
     readonly status: WorkspacesStatus
     /** The failure text (localized by the back end) when the status is `error`. */
@@ -31,7 +32,7 @@ export const useWorkspaceCards = (): WorkspaceCards => {
         }))
     const reload = () => void read.mutate()
     const failure = error instanceof Error ? error.message : undefined
-    if (isLoading) return { cards, status: "loading", error: undefined, reload }
-    if (error !== undefined) return { cards, status: "error", error: failure ?? "", reload }
-    return { cards, status: cards.length === 0 ? "empty" : "ready", error: undefined, reload }
+    if (isLoading) return { read, cards, status: "loading", error: undefined, reload }
+    if (error !== undefined) return { read, cards, status: "error", error: failure ?? "", reload }
+    return { read, cards, status: cards.length === 0 ? "empty" : "ready", error: undefined, reload }
 }

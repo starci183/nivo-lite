@@ -1,4 +1,3 @@
-import { useState } from "react"
 import type { ReactNode } from "react"
 import {
     AvatarGroup,
@@ -14,34 +13,8 @@ import {
 import type { AvatarGroupItem, ListBoxItem } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { Icon } from "@/components/leaves/Icon"
-import type {
-    OfficeConversationRowView,
-    OfficeConversationsProps,
-    OfficeText,
-    OfficeUnreadBadgeView,
-} from "@/modules/types"
+import type { OfficeConversationRowView, OfficeConversationsProps, OfficeUnreadBadgeView } from "@/modules/types"
 import { TRAILING_CLASS_NAME } from "./classNames"
-
-const contains = (value: string, query: string): boolean => value.toLowerCase().includes(query.toLowerCase())
-
-const FILTER_IDS = ["all", "groups", "customers", "unread"] as const
-type FilterId = (typeof FILTER_IDS)[number]
-
-const FILTER_KEYS: Record<FilterId, string> = {
-    all: "filterAll",
-    groups: "filterGroups",
-    customers: "filterCustomers",
-    unread: "filterUnread",
-}
-
-const isFilterId = (key: string): key is FilterId => key in FILTER_KEYS
-
-const inFilter = (row: OfficeConversationRowView, filter: FilterId): boolean => {
-    if (filter === "all") return true
-    if (filter === "groups") return row.kind === "group"
-    if (filter === "customers") return row.kind === "customer"
-    return row.unread > 0
-}
 
 /** Silent placeholders for the members the preview does not name; the grid counts them but never draws them. */
 const padItems = (rowId: string, n: number): ReadonlyArray<AvatarGroupItem> =>
@@ -62,15 +35,13 @@ const memberItemsOf = (row: Extract<OfficeConversationRowView, { kind: "group" }
 }
 
 /** A group row leads with its member composite and nothing else; a direct row with its mark. */
-const leadingOf = (row: OfficeConversationRowView, text: OfficeText): ListBoxItem["leading"] => {
+const leadingOf = (
+    row: OfficeConversationRowView,
+    formatMembersOverflow: OfficeConversationsProps["on"]["formatMembersOverflow"],
+): ListBoxItem["leading"] => {
     if (row.kind !== "group") return <OfficeAvatar avatar={row.avatar} />
     return (
-        <AvatarGroup
-            label={row.label}
-            layout="grid"
-            items={memberItemsOf(row)}
-            overflowLabel={(n) => text("membersOverflow", { n })}
-        />
+        <AvatarGroup label={row.label} layout="grid" items={memberItemsOf(row)} overflowLabel={formatMembersOverflow} />
     )
 }
 
@@ -80,7 +51,7 @@ const badgeOf = (badge: OfficeUnreadBadgeView): ReactNode => {
     return (
         <>
             {badge.hasMention ? (
-                <Text as="span" size="xs" tone="accent" weight="semibold">
+                <Text as="span" size="xs" isStrong>
                     @
                 </Text>
             ) : null}
@@ -103,7 +74,7 @@ const trailingOf = (row: OfficeConversationRowView): ListBoxItem["trailing"] => 
                     <Text
                         as="span"
                         size="sm"
-                        tone="accent"
+                        isStrong
                         startContent={
                             <>
                                 <Icon props={{ name: "messageSeen", usage: "chip" }} />
@@ -118,21 +89,17 @@ const trailingOf = (row: OfficeConversationRowView): ListBoxItem["trailing"] => 
     </div>
 )
 
-/** What the list draws when the search or the filter leaves no row. */
-const emptyContentOf = (q: string, filter: FilterId, text: OfficeText): ReactNode => (
-    <Text size="sm" tone="muted">
-        {q !== "" ? text("noMatches", { q }) : text(filter === "unread" ? "emptyUnread" : "emptyList")}
-    </Text>
-)
-
 /** The rows of the one conversation list. */
-const itemsOf = (rows: ReadonlyArray<OfficeConversationRowView>, text: OfficeText): ReadonlyArray<ListBoxItem> =>
+const itemsOf = (
+    rows: ReadonlyArray<OfficeConversationRowView>,
+    formatMembersOverflow: OfficeConversationsProps["on"]["formatMembersOverflow"],
+): ReadonlyArray<ListBoxItem> =>
     rows.map((row) => ({
         id: row.id,
         label: row.label,
         description: row.description,
         ...(row.isUnread ? { emphasis: "unread" as const } : {}),
-        leading: leadingOf(row, text),
+        leading: leadingOf(row, formatMembersOverflow),
         trailing: trailingOf(row),
     }))
 
@@ -141,11 +108,8 @@ const itemsOf = (rows: ReadonlyArray<OfficeConversationRowView>, text: OfficeTex
  * first), which scrolls alone under them.
  */
 export const OfficeConversations = (props: OfficeConversationsProps) => {
-    const { list, text, isSkeleton } = props.props
-    const [query, setQuery] = useState("")
-    const [filter, setFilter] = useState<FilterId>("all")
-    const q = query.trim()
-    const rows = list.conversations.filter((row) => inFilter(row, filter) && (q === "" || contains(row.label, q)))
+    const { list, isLoading, query, filter, filters, copy } = props.props
+    const rows = list.conversations
 
     const open = (id: string) => {
         const row = list.conversations.find((entry) => entry.id === id)
@@ -159,28 +123,21 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
         <>
             <PaneSection>
                 <SearchField
-                    label={text("searchLabel")}
+                    label={copy.searchLabel}
                     isLabelHidden
-                    placeholder={text("searchPlaceholder")}
-                    clearLabel={text("clearSearch")}
+                    placeholder={copy.searchPlaceholder}
+                    clearLabel={copy.clearSearch}
                     value={query}
-                    onValueChange={setQuery}
-                    onClear={() => setQuery("")}
+                    onValueChange={props.on.query}
+                    onClear={() => props.on.query("")}
                 />
             </PaneSection>
             <PaneSection>
-                <Tabs
-                    label={text("filterLabel")}
-                    selectedKey={filter}
-                    onSelect={(key) => {
-                        if (isFilterId(key)) setFilter(key)
-                    }}
-                    items={FILTER_IDS.map((id) => ({ id, label: text(FILTER_KEYS[id]) }))}
-                />
+                <Tabs label={copy.filterLabel} selectedKey={filter} onSelect={props.on.filter} items={filters} />
             </PaneSection>
-            <PaneSection scroll={{ label: text("listLabel") }}>
+            <PaneSection scroll={{ label: copy.listLabel }}>
                 <ListBox
-                    label={text("listLabel")}
+                    label={copy.listLabel}
                     selectionMode="single"
                     selectionIndicator="none"
                     selectedIds={[list.selectedRoom]}
@@ -189,10 +146,13 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
                         const id = ids[0]
                         if (id !== undefined) open(id)
                     }}
-                    isLoading={isSkeleton}
-                    loadingRows={6}
-                    emptyContent={emptyContentOf(q, filter, text)}
-                    items={itemsOf(rows, text)}
+                    isLoading={isLoading}
+                    emptyContent={
+                        <Text size="sm" tone="muted">
+                            {copy.empty}
+                        </Text>
+                    }
+                    items={itemsOf(rows, props.on.formatMembersOverflow)}
                 />
             </PaneSection>
         </>

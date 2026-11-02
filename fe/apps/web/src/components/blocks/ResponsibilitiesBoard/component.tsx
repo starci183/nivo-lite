@@ -1,20 +1,10 @@
-import { Button, Page, SearchField, Select, Tabs, Text, TextAction } from "@starci/grammar/common"
+import { Button, Cluster, Page, SearchField, Section, Select, Stack, Tabs, TextAction } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { OwnerGroupList } from "@/components/composites/OwnerGroupList"
 import type { OwnerGroupListLabels } from "@/components/composites/OwnerGroupList"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, OwnerGroupView, ResponsibilityRowView, SlotLabels } from "@/modules/types"
-import {
-    BOARD_CLASS,
-    FILTERS_CLASS,
-    LIST_HEAD_CLASS,
-    LIST_TITLE_CLASS,
-    PAGE_CLASS,
-    SEARCH_CLASS,
-    SORT_CLASS,
-    TOOLBAR_CLASS,
-    TOOLBAR_END_CLASS,
-} from "./classNames"
+import { SEARCH_CLASS, SORT_CLASS } from "./classNames"
 
 /** One choice of a select or one tab. */
 export interface ResponsibilityChoiceView {
@@ -107,9 +97,13 @@ const OWNER_GROUPS_PLACEHOLDER: ReadonlyArray<OwnerGroupView> = [
     },
 ]
 
+/** The section's count is a worded number while the read is settled, and stays hidden while it loads. */
+const countOf = (count: string): number | undefined => (count === "" ? undefined : Number(count))
+
 /** Draws the responsibility board: filter cards, status tabs with counts, search and sort over the owner-grouped rows. */
 export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps) => {
     const view = props.props
+    const count = countOf(view.count)
     return (
         <Page
             measure="product"
@@ -124,50 +118,36 @@ export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps)
                 ),
             }}
         >
-            <div className={PAGE_CLASS}>
-                <div className={BOARD_CLASS}>
-                    {view.showFilters ? (
-                        <div className={FILTERS_CLASS}>
-                            <Select
-                                label={view.ownerLabel}
-                                options={view.owners}
-                                value={view.owner}
-                                onValueChange={props.on.owner}
-                            />
-                            <Select
-                                label={view.dueLabel}
-                                options={view.dues}
-                                value={view.due}
-                                onValueChange={props.on.due}
-                            />
-                            <div>
-                                <TextAction onPress={props.on.clear} isDisabled={!view.isFiltered}>
-                                    {view.clearLabel}
-                                </TextAction>
-                            </div>
-                        </div>
-                    ) : null}
-                    <ResponsibilityToolbar {...props} />
-                    <div className={LIST_HEAD_CLASS}>
-                        <div className={LIST_TITLE_CLASS}>
-                            <Text weight="semibold">{view.listTitle}</Text>
-                            <Text size="sm" tone="muted">
-                                {view.count}
-                            </Text>
-                        </div>
-                        <Text size="xs" tone="muted">
-                            {view.verifiedLabel}
-                        </Text>
-                    </div>
+            <Stack gap="section">
+                {view.showFilters ? (
+                    <Cluster gap="row" align="end">
+                        <Select
+                            label={view.ownerLabel}
+                            options={view.owners}
+                            value={view.owner}
+                            onValueChange={props.on.owner}
+                        />
+                        <Select
+                            label={view.dueLabel}
+                            options={view.dues}
+                            value={view.due}
+                            onValueChange={props.on.due}
+                        />
+                        <TextAction onPress={props.on.clear} isDisabled={!view.isFiltered}>
+                            {view.clearLabel}
+                        </TextAction>
+                    </Cluster>
+                ) : null}
+                <ResponsibilityToolbar {...props} />
+                <Section title={view.listTitle} {...(count === undefined ? {} : { count })} meta={view.verifiedLabel}>
                     <SlotView
                         slot={view.slot}
                         placeholder={OWNER_GROUPS_PLACEHOLDER}
                         labels={view.slotLabels}
                         onRetry={props.on.retry}
-                    >
-                        {(groups, isSkeleton) => (
+                        render={(groups, isLoading) => (
                             <OwnerGroupList
-                                isSkeleton={isSkeleton}
+                                isLoading={isLoading}
                                 groups={groups}
                                 labels={view.groupLabels}
                                 draftingId={view.draftingId}
@@ -176,9 +156,9 @@ export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps)
                                 onCopy={props.on.copy}
                             />
                         )}
-                    </SlotView>
-                </div>
-            </div>
+                    />
+                </Section>
+            </Stack>
         </Page>
     )
 }
@@ -187,9 +167,8 @@ export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps)
 const ResponsibilityToolbar = (props: ResponsibilitiesBoardBaseProps) => {
     const view = props.props
     return (
-        <div className={TOOLBAR_CLASS}>
+        <Cluster gap="row" justify="between" align="end">
             <Tabs
-                variant="primary"
                 label={view.tabsLabel}
                 selectedKey={view.status}
                 inset="none"
@@ -197,7 +176,7 @@ const ResponsibilityToolbar = (props: ResponsibilitiesBoardBaseProps) => {
                 items={view.tabs}
                 onSelect={props.on.status}
             />
-            <div className={TOOLBAR_END_CLASS}>
+            <Cluster gap="row" align="end">
                 <div className={SEARCH_CLASS}>
                     <SearchField
                         label={view.searchLabel}
@@ -220,7 +199,7 @@ const ResponsibilityToolbar = (props: ResponsibilitiesBoardBaseProps) => {
                         onValueChange={props.on.sort}
                     />
                 </div>
-            </div>
-        </div>
+            </Cluster>
+        </Cluster>
     )
 }

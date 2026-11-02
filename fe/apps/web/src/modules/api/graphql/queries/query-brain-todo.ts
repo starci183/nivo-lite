@@ -15,6 +15,7 @@ const query1: Document = gql`
             findings
             facts
             questions
+            proposals
             total
         }
     }

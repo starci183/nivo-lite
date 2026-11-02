@@ -34,10 +34,10 @@ export interface AgentLiveCardBaseProps {
 }
 
 /** The switch, its status and what it needs, from the read installation. */
-const switchOf = (base: AgentLiveCardBaseProps, view: LiveView, isSkeleton: boolean): SwitchStatusProps => ({
+const switchOf = (base: AgentLiveCardBaseProps, view: LiveView, isLoading: boolean): SwitchStatusProps => ({
     label: base.props.switchLabel,
     isSelected: view.isLive,
-    isSkeleton,
+    isLoading,
     isDisabled: base.props.isDisabled,
     onChange: base.on.live,
     tone: view.statusTone,
@@ -51,8 +51,10 @@ const switchOf = (base: AgentLiveCardBaseProps, view: LiveView, isSkeleton: bool
 /** Draws the live card: the switch with its label kept readable beside it even while the switch is off-limits, the status badge and what it needs before it can go live. */
 export const AgentLiveCardBase = (props: AgentLiveCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotView {...props.props.read} onRetry={props.on.retry}>
-            {(view, isSkeleton) => <SwitchStatus {...switchOf(props, view, isSkeleton)} />}
-        </SlotView>
+        <SlotView
+            {...props.props.read}
+            onRetry={props.on.retry}
+            render={(view, isLoading) => <SwitchStatus {...switchOf(props, view, isLoading)} />}
+        />
     </SurfaceCard>
 )

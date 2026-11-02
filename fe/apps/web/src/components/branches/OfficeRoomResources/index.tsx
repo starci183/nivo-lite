@@ -1,7 +1,5 @@
-import type { ReactNode } from "react"
-import { Badge, Button, Cluster, Region, Stack, Text } from "@starci/grammar/common"
-import type { OfficeChannelRowView, OfficeJumpRowView, OfficePinRowView, OfficeText } from "@/modules/types"
-import { TEXT_CLASS_NAME } from "./classNames"
+import { EmptyNotice, Section, type ListRowData } from "@starci/grammar/common"
+import type { OfficeChannelRowView, OfficeJumpRowView, OfficePinRowView, OfficeInfoPanelProps } from "@/modules/types"
 
 /** What the room resources draw: the channels of the room and its pinned documents. */
 type OfficeRoomResourcesProps = {
@@ -10,91 +8,64 @@ type OfficeRoomResourcesProps = {
     readonly onJump: (id: string) => void
     readonly channels: ReadonlyArray<OfficeChannelRowView>
     readonly pins: ReadonlyArray<OfficePinRowView>
-    readonly text: OfficeText
+    readonly copy: OfficeInfoPanelProps["props"]["copy"]
 }
 
-type SectionProps = {
-    readonly title: string
-    readonly count: string | null
-    readonly children: ReactNode
-}
-
-/** One titled section of the room panel. */
-const Section = (props: SectionProps) => (
-    <Region label={props.title}>
-        <Stack gap="inline">
-            <Cluster gap="inline" justify="between">
-                <Text weight="semibold">{props.title}</Text>
-                {props.count === null ? null : (
-                    <Text size="sm" tone="muted">
-                        {props.count}
-                    </Text>
-                )}
-            </Cluster>
-            {props.children}
-        </Stack>
-    </Region>
-)
-
-/** The room's pending result cards, the channels its agents answer on and its pinned documents; empty parts are not drawn. */
+/** Result cards, channel state and pinned documents are unpainted sections of the room's existing pane. */
 export const OfficeRoomResources = (props: OfficeRoomResourcesProps) => (
     <>
         {props.cards.length === 0 ? null : (
-            <Section title={props.text("cardsTitle")} count={`${props.cards.length}`}>
-                {props.cards.map((card) => (
-                    <div key={card.id} className={TEXT_CLASS_NAME}>
-                        <Button intent="neutral" size="sm" onPress={() => props.onJump(card.id)}>
-                            {card.title}
-                        </Button>
-                        <Text size="xs" tone="muted" overflow="truncate">
-                            {card.subtitle}
-                        </Text>
-                    </div>
-                ))}
-            </Section>
+            <ResourceList
+                title={props.copy.cardsTitle}
+                count={props.cards.length}
+                items={props.cards.map((card) => ({
+                    id: card.id,
+                    title: card.title,
+                    description: card.subtitle,
+                    action: { label: card.title, press: () => props.onJump(card.id) },
+                }))}
+            />
         )}
         {props.channels.length === 0 ? null : (
-            <Section title={props.text("channelsTitle")} count={`${props.channels.length}`}>
-                {props.channels.map((channel) => (
-                    <Cluster key={channel.id} gap="row" align="start" wrap={false}>
-                        <div className={TEXT_CLASS_NAME}>
-                            <Text weight="medium" overflow="truncate">
-                                {channel.name}
-                            </Text>
-                            {channel.detail === "" ? null : (
-                                <Text size="sm" tone="muted" overflow="truncate">
-                                    {channel.detail}
-                                </Text>
-                            )}
-                        </div>
-                        <Badge tone={channel.isConnected ? "success" : "warning"} isDot>
-                            {channel.statusLabel}
-                        </Badge>
-                    </Cluster>
-                ))}
-            </Section>
+            <ResourceList
+                title={props.copy.channelsTitle}
+                count={props.channels.length}
+                items={props.channels.map((channel) => ({
+                    id: channel.id,
+                    title: channel.name,
+                    ...(channel.detail === "" ? {} : { description: channel.detail }),
+                    badges: [
+                        { label: channel.statusLabel, tone: channel.isConnected ? "success" : "warning", isDot: true },
+                    ] as const,
+                }))}
+            />
         )}
         {props.pins.length === 0 ? null : (
-            <Section title={props.text("pinsTitle")} count={null}>
-                {props.pins.map((pin) => (
-                    <div key={pin.id} className={TEXT_CLASS_NAME}>
-                        {pin.href === null ? (
-                            <Text weight="medium" overflow="truncate">
-                                {pin.title}
-                            </Text>
-                        ) : (
-                            <Button intent="neutral" size="sm" href={pin.href}>
-                                {pin.title}
-                            </Button>
-                        )}
-                        {pin.note === "" ? null : (
-                            <Text size="xs" tone="muted">
-                                {pin.note}
-                            </Text>
-                        )}
-                    </div>
-                ))}
-            </Section>
+            <ResourceList
+                title={props.copy.pinsTitle}
+                items={props.pins.map((pin) => ({
+                    id: pin.id,
+                    title: pin.title,
+                    ...(pin.note === "" ? {} : { description: pin.note }),
+                    ...(pin.href === null ? {} : { href: pin.href }),
+                }))}
+            />
         )}
     </>
+)
+
+interface ResourceListProps {
+    readonly title: string
+    readonly count?: number
+    readonly items: ReadonlyArray<ListRowData>
+}
+/** Every resource collection uses the existing unpainted pane and its own real empty sentence. */
+const ResourceList = (props: ResourceListProps) => (
+    <Section
+        kind="list"
+        title={props.title}
+        {...(props.count === undefined ? {} : { count: props.count })}
+        items={props.items}
+        empty={<EmptyNotice message={props.title} />}
+    />
 )

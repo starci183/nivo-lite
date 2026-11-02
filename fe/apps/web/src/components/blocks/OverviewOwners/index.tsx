@@ -48,7 +48,7 @@ export const OverviewOwners = () => {
                     draftLabel: t("menuDraft"),
                     isDrafting: false,
                     groups: [],
-                    isSkeleton: true,
+                    isLoading: true,
                 }}
                 on={{ openEmptyAction: () => undefined, draft: () => undefined }}
             />
@@ -69,7 +69,7 @@ export const OverviewOwners = () => {
                 emptyActionLabel: data.emptyActionLabel,
                 draftLabel: isDrafting ? t("drafting") : t("menuDraft"),
                 isDrafting,
-                isSkeleton: false,
+                isLoading: false,
                 groups: data.groups.map((group) => ({
                     key: group.key,
                     name: group.name,
@@ -93,7 +93,6 @@ export const OverviewOwners = () => {
                         nextText: row.status === "done" ? null : t("next", { action: row.nextAction }),
                         openLabel: t("open"),
                         openHref: leadHref(row.leadId),
-                        leadId: row.leadId,
                         canDraft: row.status === "open",
                     })),
                 })),

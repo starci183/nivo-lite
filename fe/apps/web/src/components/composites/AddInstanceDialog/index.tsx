@@ -1,5 +1,4 @@
-import { Button, Dialog, Input } from "@starci/grammar/common"
-import { FORM_CLASS_NAME } from "./classNames"
+import { Button, Dialog, Input, Stack } from "@starci/grammar/common"
 
 /** Copy and state of the dialog that names a new instance of an agent type. */
 export interface AddInstanceDialogProps {
@@ -50,7 +49,7 @@ export const AddInstanceDialog = (props: AddInstanceDialogProps) => (
             </>
         }
     >
-        <div className={FORM_CLASS_NAME}>
+        <Stack gap="row">
             <Input
                 id="agent-instance-name"
                 name="name"
@@ -60,9 +59,9 @@ export const AddInstanceDialog = (props: AddInstanceDialogProps) => (
                 isDisabled={props.props.isPending}
                 value={props.props.name}
                 onValueChange={props.on.setName}
-                isError={props.props.error !== undefined}
+                isInvalid={props.props.error !== undefined}
                 errorMessage={props.props.error}
             />
-        </div>
+        </Stack>
     </Dialog>
 )

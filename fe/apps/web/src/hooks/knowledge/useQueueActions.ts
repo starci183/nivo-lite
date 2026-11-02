@@ -52,7 +52,6 @@ export const useQueueActions = (): QueueActions => {
                         content: meta.content ?? undefined,
                         topic: meta.topic ?? undefined,
                         tags: [...meta.tags],
-                        visibility: meta.visibility,
                         module: meta.module ?? undefined,
                         installationId: meta.installationId ?? undefined,
                         origin: meta.origin ?? undefined,

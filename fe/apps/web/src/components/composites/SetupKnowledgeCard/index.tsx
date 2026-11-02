@@ -1,4 +1,4 @@
-import { Cluster, Heading, List, ListItem, Region, Stack, Text, TextAction } from "@starci/grammar/common"
+import { Cluster, Link, Stack, Text, Section } from "@starci/grammar/common"
 
 /** The knowledge this module runs on, in the reader language. */
 type SetupKnowledgeCardProps = {
@@ -11,40 +11,31 @@ type SetupKnowledgeCardProps = {
     readonly nivoHref: string
     readonly nivoLabel: string
     /** The counts are skeletons until the sources are read. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** Draws the knowledge this module runs on: the sources of the business, and where to add more. */
 export const SetupKnowledgeCard = (props: SetupKnowledgeCardProps) => (
-    <Region label={props.title}>
+    <Section title={props.title}>
         <Stack gap="row">
-            <Heading level={2}>{props.title}</Heading>
-            <List label={props.title}>
-                <ListItem>
-                    <Text size="sm" isSkeleton={props.isSkeleton}>
-                        {props.businessLine}
-                        {props.publicLine === "" ? null : (
-                            <Text as="span" size="sm" tone="muted">
-                                {" "}
-                                ({props.publicLine})
-                            </Text>
-                        )}
+            <Text size="sm" isLoading={props.isLoading}>
+                {props.businessLine}
+                {props.publicLine === "" ? null : (
+                    <Text as="span" size="sm" tone="muted">
+                        {" "}
+                        ({props.publicLine})
                     </Text>
-                </ListItem>
-            </List>
+                )}
+            </Text>
             {props.emptyHint === "" ? null : (
                 <Text size="xs" tone="muted">
                     {props.emptyHint}
                 </Text>
             )}
             <Cluster gap="row">
-                <TextAction href={props.knowledgeHref} size="sm" appearance="inline">
-                    {props.knowledgeLabel}
-                </TextAction>
-                <TextAction href={props.nivoHref} size="sm" appearance="muted">
-                    {props.nivoLabel}
-                </TextAction>
+                <Link href={props.knowledgeHref}>{props.knowledgeLabel}</Link>
+                <Link href={props.nivoHref}>{props.nivoLabel}</Link>
             </Cluster>
         </Stack>
-    </Region>
+    </Section>
 )

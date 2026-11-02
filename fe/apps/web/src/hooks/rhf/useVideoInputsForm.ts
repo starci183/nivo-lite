@@ -20,7 +20,7 @@ export interface VideoInputsValues {
 }
 
 /** Validates the material step with localized messages before it is saved. */
-export const useVideoInputsForm = (initial: ProjectInputs) => {
+export const useVideoInputsForm = (initial: ProjectInputs | null) => {
     const t = useTranslations("video")
     const schema = useMemo(() => {
         const error = t("err_default")
@@ -33,7 +33,10 @@ export const useVideoInputsForm = (initial: ProjectInputs) => {
     }, [t])
     return useForm<VideoInputsValues>({
         resolver: zodResolver(schema),
-        defaultValues: { ...initial, sourceIds: [...initial.sourceIds], media: [...initial.media] },
+        defaultValues:
+            initial === null
+                ? { sourceIds: [], notes: "", media: [], auto: false }
+                : { ...initial, sourceIds: [...initial.sourceIds], media: [...initial.media] },
         mode: "onSubmit",
     })
 }

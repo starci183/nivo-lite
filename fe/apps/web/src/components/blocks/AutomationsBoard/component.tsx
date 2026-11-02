@@ -1,8 +1,7 @@
-import { Alert, EmptyNotice, PrimaryRailLayout } from "@starci/grammar/common"
-import { AutomationsForbidden } from "@/components/composites/AutomationsForbidden"
+import { Alert, Button, EmptyNotice, Grid, Section, Stack } from "@starci/grammar/common"
 import { AutomationAccountPicker } from "@/components/composites/AutomationAccountPicker"
-import { AutomationCard } from "@/components/composites/AutomationCard"
-import { AutomationDetailFrame } from "@/components/composites/AutomationDetailFrame"
+import { AutomationCard } from "@/components/frames/AutomationCard"
+import { AutomationDetailFrame } from "@/components/frames/AutomationDetailFrame"
 import { AutomationFilters } from "@/components/composites/AutomationFilters"
 import { AutomationGate } from "@/components/composites/AutomationGate"
 import { AutomationHiddenList } from "@/components/composites/AutomationHiddenList"
@@ -11,28 +10,18 @@ import { AutomationRuns } from "@/components/composites/AutomationRuns"
 import { AutomationSettings } from "@/components/composites/AutomationSettings"
 import { SlotView } from "@/components/composites/SlotView"
 import type { AutomationsBoardView, CardView, DataSlot, SlotLabels } from "@/modules/types"
-import { SECTIONS_CLASS, SOLO_CLASS, collectionClass } from "./classNames"
 
 /** The words that belong to no data. */
 export interface AutomationsBoardLabels {
     readonly slot: SlotLabels
+    readonly forbiddenDescription: string
+    readonly backLabel: string
+    readonly backHref: string
+    readonly collection: string
     readonly loading: string
     readonly status: string
     readonly select: string
 }
-
-/** Why the board shows a notice instead of the cards. */
-export type AutomationsBoardNotice =
-    | {
-          readonly kind: "forbidden"
-          readonly title: string
-          readonly body: string
-          readonly backLabel: string
-          readonly backHref: string
-          /** True when the board is the whole page (the notice then carries its back link). */
-          readonly isPage: boolean
-      }
-    | { readonly kind: "failed"; readonly title: string }
 
 /** Props for {@link AutomationsBoardBase}. */
 export interface AutomationsBoardBaseProps {
@@ -40,10 +29,10 @@ export interface AutomationsBoardBaseProps {
         readonly slot: DataSlot<AutomationsBoardView>
         /** "page": filters and a grid with the detail beside it. "module": one module's cards as a compact list, detail below. */
         readonly layout: "page" | "module"
-        readonly notice?: AutomationsBoardNotice | undefined
         readonly labels: AutomationsBoardLabels
     }
     readonly on: {
+        readonly retry: () => void
         readonly select: (key: string) => void
         readonly toggle: (key: string, next: boolean) => void
         readonly setFilter: (id: string) => void
@@ -89,43 +78,41 @@ const placeholderOf = (labels: AutomationsBoardLabels): AutomationsBoardView => 
 
 /** The cards, their filters, the detail and the hidden list. Shared by the automations page and the module settings card. */
 export const AutomationsBoardBase = (props: AutomationsBoardBaseProps) => {
-    const { labels, slot, notice } = props.props
-
-    if (notice?.kind === "forbidden")
-        return notice.isPage ? (
-            <AutomationsForbidden
-                title={notice.title}
-                body={notice.body}
-                backLabel={notice.backLabel}
-                backHref={notice.backHref}
-            />
-        ) : (
-            <Alert tone="negative" title={notice.title} />
-        )
-    if (notice?.kind === "failed") return <Alert tone="negative" title={notice.title} />
+    const { labels, slot, layout } = props.props
     return (
-        <SlotView slot={slot} placeholder={placeholderOf(labels)} labels={labels.slot}>
-            {(view, isSkeleton) => renderAutomationsBoardView(view, isSkeleton, props)}
-        </SlotView>
+        <SlotView
+            slot={slot}
+            placeholder={placeholderOf(labels)}
+            labels={labels.slot}
+            onRetry={props.on.retry}
+            {...(layout === "page" ? { forbiddenDescription: labels.forbiddenDescription } : {})}
+            forbiddenAction={
+                layout === "page" ? (
+                    <Button intent="neutral" href={labels.backHref}>
+                        {labels.backLabel}
+                    </Button>
+                ) : undefined
+            }
+            render={(view, isLoading) => renderAutomationsBoardView(view, isLoading, props)}
+        />
     )
 }
 
 /** Draws the available cards, selected detail and hidden automations. */
 const renderAutomationsBoardView = (
     view: AutomationsBoardView,
-    isSkeleton: boolean,
+    isLoading: boolean,
     props: AutomationsBoardBaseProps,
 ) => {
     const { layout } = props.props
     const { on } = props
     const isNested = layout === "module"
 
-    const collection = renderAutomationCards(isNested, view, isSkeleton, on)
+    const collection = renderAutomationCards(isNested, view, isLoading, props)
     const { detail: open } = view
     const detail = renderAutomationDetail(open, on)
     return (
         <>
-            {isNested ? null : <AutomationFilters {...view.filters} onChange={on.setFilter} />}
             {view.errorAlert === undefined ? null : (
                 <Alert
                     title={view.errorAlert.title}
@@ -140,11 +127,7 @@ const renderAutomationsBoardView = (
                     {detail}
                 </>
             ) : (
-                <PrimaryRailLayout
-                    primary={<div className={SOLO_CLASS}>{collection}</div>}
-                    rail={detail}
-                    railWidth="wide"
-                />
+                <Grid kind="main-rail" primary={collection} rail={detail} railWidth="wide" />
             )}
             <AutomationHiddenList
                 title={view.hidden.title}
@@ -156,32 +139,40 @@ const renderAutomationsBoardView = (
     )
 }
 
-/** Draws the div section of the AutomationsBoard view. */
+/** Native collection rows own each name; the normal child frame retains all disjoint commands in its detail. */
 const renderAutomationCards = (
     isNested: boolean,
     view: AutomationsBoardView,
-    isSkeleton: boolean,
-    on: AutomationsBoardBaseProps["on"],
-) => {
-    return (
-        <div className={collectionClass(isNested, view.detail !== undefined)} aria-busy={isSkeleton || undefined}>
-            {view.emptyText === undefined ? null : <EmptyNotice message={view.emptyText} />}
-            {view.cards.map((card) => (
+    isLoading: boolean,
+    props: AutomationsBoardBaseProps,
+) => (
+    <Section
+        kind="list"
+        title={props.props.labels.collection}
+        isLoading={isLoading}
+        filter={isNested ? undefined : <AutomationFilters {...view.filters} onChange={props.on.setFilter} />}
+        items={view.cards.map((card) => ({
+            id: card.dataKey,
+            title: card.name,
+            state: card.isSelected ? "informative" : "neutral",
+            detail: (
                 <AutomationCard
-                    key={card.dataKey}
                     {...card}
-                    isSkeleton={isSkeleton}
-                    onSelect={() => on.select(card.dataKey)}
-                    onToggle={(next) => on.toggle(card.dataKey, next)}
+                    onSelect={() => props.on.select(card.dataKey)}
+                    onToggle={(next) => props.on.toggle(card.dataKey, next)}
                 >
                     {card.accounts === undefined ? null : (
-                        <AutomationAccountPicker {...card.accounts} onPick={(id) => on.pickAccount(card.dataKey, id)} />
+                        <AutomationAccountPicker
+                            {...card.accounts}
+                            onPick={(id) => props.on.pickAccount(card.dataKey, id)}
+                        />
                     )}
                 </AutomationCard>
-            ))}
-        </div>
-    )
-}
+            ),
+        }))}
+        empty={<EmptyNotice message={view.emptyText ?? props.props.labels.slot.empty} />}
+    />
+)
 
 /** Draws the selected automation settings, message and gate. */
 const renderAutomationDetail = (open: AutomationsBoardView["detail"], on: AutomationsBoardBaseProps["on"]) => {
@@ -195,7 +186,7 @@ const renderAutomationDetail = (open: AutomationsBoardView["detail"], on: Automa
             onClose={on.close}
             onDismiss={on.dismiss}
         >
-            <div className={SECTIONS_CLASS}>
+            <Stack gap="section">
                 <AutomationSettings {...open.settings} onChange={on.changeSetting} onSave={on.saveSettings} />
                 {open.message === undefined ? null : (
                     <AutomationMessage
@@ -208,7 +199,7 @@ const renderAutomationDetail = (open: AutomationsBoardView["detail"], on: Automa
                 )}
                 {open.gate === undefined ? null : <AutomationGate {...open.gate} {...trustProps} />}
                 <AutomationRuns {...open.runs} />
-            </div>
+            </Stack>
         </AutomationDetailFrame>
     )
 }

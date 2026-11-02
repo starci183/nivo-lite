@@ -1,4 +1,4 @@
-import { AlertDialog, Button, ListRow, Stack, SurfaceListCard, Text } from "@starci/grammar/common"
+import { AlertDialog, Button, EmptyNotice, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 
 /** Copy and state of the danger section that removes an agent. */
 export interface AgentRemoveCardBaseProps {
@@ -19,32 +19,38 @@ export interface AgentRemoveCardBaseProps {
 
 /** Draws the removal of an agent as one row at the foot of the settings: what removing does, and the entry to the confirmation. */
 export const AgentRemoveCardBase = (props: AgentRemoveCardBaseProps) => (
-    <SurfaceListCard ariaLabel={props.props.title}>
-        <ListRow
-            title={props.props.hint}
-            actions={
-                <AlertDialog
-                    title={props.props.dialogTitle}
-                    tone="negative"
-                    cancelLabel={props.props.cancelLabel}
-                    confirmLabel={props.props.confirmLabel}
-                    isConfirmPending={props.props.isRemoving}
-                    onConfirm={props.on.remove}
-                    trigger={
-                        <Button intent="destructive" size="sm" isDisabled={!props.props.canRemove}>
-                            {props.props.actionLabel}
-                        </Button>
-                    }
-                >
-                    <Stack gap="inline">
-                        {props.props.lines.map((line) => (
-                            <Text key={line} size="sm">
-                                {line}
-                            </Text>
-                        ))}
-                    </Stack>
-                </AlertDialog>
-            }
-        />
-    </SurfaceListCard>
+    <SurfaceCard
+        kind="list"
+        ariaLabel={props.props.title}
+        empty={<EmptyNotice message={props.props.title} />}
+        items={[
+            {
+                id: "remove",
+                title: props.props.hint,
+                detail: (
+                    <AlertDialog
+                        title={props.props.dialogTitle}
+                        tone="negative"
+                        cancelLabel={props.props.cancelLabel}
+                        confirmLabel={props.props.confirmLabel}
+                        isConfirmPending={props.props.isRemoving}
+                        onConfirm={props.on.remove}
+                        trigger={
+                            <Button intent="destructive" step="entry" size="sm" isDisabled={!props.props.canRemove}>
+                                {props.props.actionLabel}
+                            </Button>
+                        }
+                    >
+                        <Stack gap="inline">
+                            {props.props.lines.map((line) => (
+                                <Text key={line} size="sm">
+                                    {line}
+                                </Text>
+                            ))}
+                        </Stack>
+                    </AlertDialog>
+                ),
+            },
+        ]}
+    />
 )

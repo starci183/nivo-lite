@@ -1,3 +1,5 @@
+import type { BadgeTone } from "@starci/grammar/common"
+
 /**
  * Plain data of the booking module: the calendar, its rules and its statistics, as the screens read them. No behaviour.
  */
@@ -203,4 +205,25 @@ export interface ResourceFields {
     readonly capacity: number
     readonly active: boolean
     readonly staffId: string
+}
+
+/** One badge of a row. */
+type BookingAgendaBadgeView = { readonly text: string; readonly tone: BadgeTone }
+
+/** One quick action of a row. */
+type BookingAgendaActionView = {
+    readonly id: string
+    readonly label: string
+    readonly intent: "alternative" | "neutral"
+}
+
+/** One booking as the agenda draws it, already in the reader's words. */
+export type BookingAgendaRowView = {
+    readonly id: string
+    readonly time: string
+    readonly status: BookingAgendaBadgeView
+    readonly flags: ReadonlyArray<BookingAgendaBadgeView>
+    readonly who: string
+    readonly where: string
+    readonly actions: ReadonlyArray<BookingAgendaActionView>
 }

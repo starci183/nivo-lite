@@ -1,4 +1,5 @@
-import { Page } from "@starci/grammar/common"
+import { Stack, Page } from "@starci/grammar/common"
+
 import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/components/blocks/LocaleSwitch"
 import { WorkspaceJoin } from "@/components/blocks/WorkspaceJoin"
@@ -6,9 +7,8 @@ import { WorkspacesAccount } from "@/components/blocks/WorkspacesAccount"
 import { WorkspacesCreate } from "@/components/blocks/WorkspacesCreate"
 import { WorkspacesList } from "@/components/blocks/WorkspacesList"
 import { WorkspacesOverview } from "@/components/blocks/WorkspacesOverview"
-import { WorkspacesFrame } from "@/components/composites/WorkspacesFrame"
+import { WorkspacesFrame } from "@/components/frames/WorkspacesFrame"
 import { AUTH_ROUTES } from "@/modules/routes"
-import { STACK_CLASS_NAME } from "./classNames"
 
 /** Copy and values the workspaces page supplies. */
 export interface WorkspacesPageBaseProps {
@@ -23,9 +23,8 @@ export interface WorkspacesPageBaseProps {
 /** Draws the workspaces screen: the frame and the connected overview of the person's workspaces. */
 export const WorkspacesPageBase = (props: WorkspacesPageBaseProps) => (
     <WorkspacesFrame
-        homeHref={AUTH_ROUTES.workspaces}
         mainLabel={props.props.title}
-        logo={<BrandLogo variant="full" height={40} />}
+        logo={<BrandLogo href={AUTH_ROUTES.workspaces} variant="full" height={40} />}
         localeSwitch={<LocaleSwitch />}
         account={<WorkspacesAccount />}
     >
@@ -33,11 +32,11 @@ export const WorkspacesPageBase = (props: WorkspacesPageBaseProps) => (
             measure="product"
             header={{ title: props.props.title, description: props.props.description, actions: <WorkspacesCreate /> }}
         >
-            <div className={STACK_CLASS_NAME}>
+            <Stack gap="section">
                 <WorkspacesOverview reason={props.props.reason} />
                 <WorkspacesList />
                 <WorkspaceJoin />
-            </div>
+            </Stack>
         </Page>
     </WorkspacesFrame>
 )

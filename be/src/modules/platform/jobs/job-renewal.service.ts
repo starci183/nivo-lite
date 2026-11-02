@@ -29,18 +29,16 @@ export class JobRenewalService {
 
     /** Starts renewing the lease of the job; the answer stops it when the job ends, however it ends. */
     keep(job: ClaimedJob): LeaseHold {
-        const state: LeaseState = { cancel: () => undefined, stopped: false }
-        const beat = (): void => {
-            state.cancel = this.timer.schedule(
+        const beat = (): LeaseState["cancel"] =>
+            this.timer.schedule(
                 () => {
                     void this.renew(job).then((alive) => {
-                        if (alive && !state.stopped) beat()
+                        if (alive && !state.stopped) state.cancel = beat()
                     })
                 },
                 Math.max(MIN_BEAT_MS, Math.floor(this.options.leaseMs / 3)),
             )
-        }
-        beat()
+        const state: LeaseState = { cancel: beat(), stopped: false }
         return {
             stop: () => {
                 state.stopped = true

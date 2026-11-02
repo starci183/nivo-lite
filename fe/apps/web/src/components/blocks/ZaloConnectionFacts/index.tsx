@@ -22,7 +22,11 @@ export const ZaloConnectionFacts = (props: ZaloConnectionFactsProps) => {
     return (
         <ZaloConnectionFactsBase
             shape={props.kind}
-            props={{ facts: props.kind === "tiles" ? tiles : saved, slotLabels: slotLabels(t("factsEmpty")) }}
+            props={{
+                label: t("mainLabel"),
+                facts: props.kind === "tiles" ? tiles : saved,
+                slotLabels: slotLabels(t("factsEmpty")),
+            }}
             on={{ retry: reload }}
         />
     )

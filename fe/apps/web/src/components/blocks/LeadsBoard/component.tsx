@@ -1,21 +1,18 @@
 import type { useTranslations, useFormatter } from "next-intl"
 import {
-    Badge,
     Button,
     Cluster,
     EmptyNotice,
-    ListRow,
+    FilterButtonGroup,
     SearchField,
     Stack,
-    SurfaceListCard,
-    Tabs,
+    Section,
     Text,
     TextAction,
 } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { LeadRowMenu } from "@/components/composites/LeadRowMenu"
-import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { SEARCH_CLASS_NAME } from "./classNames"
 
@@ -108,34 +105,8 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
                 placeholder={{ ...PLACEHOLDER, tabs: l.loadingTabs }}
                 labels={l.slot}
                 onRetry={on.retry}
-            >
-                {(view, isSkeleton) => (
-                    <>
-                        <Cluster gap="section" align="end">
-                            <div className={SEARCH_CLASS_NAME}>
-                                <SearchField
-                                    label={l.searchLabel}
-                                    placeholder={l.searchPlaceholder}
-                                    value={p.query}
-                                    onValueChange={on.query}
-                                    onClear={on.clear}
-                                />
-                            </div>
-                            {view.isFiltered ? <TextAction onPress={on.clear}>{l.clearLabel}</TextAction> : null}
-                        </Cluster>
-                        <Tabs
-                            variant="primary"
-                            label={l.tabsLabel}
-                            selectedKey={p.selectedTab}
-                            inset="none"
-                            labelVisibility="always"
-                            items={view.tabs}
-                            onSelect={on.select}
-                        />
-                        {renderLeadRows({ view, isSkeleton, l, on, p })}
-                    </>
-                )}
-            </SlotView>
+                render={(view, isSkeleton) => renderLeadRows({ view, isSkeleton, l, on, p })}
+            />
             {p.pagination.loadedHint === null ? null : (
                 <Text size="sm" tone="muted">
                     {p.pagination.loadedHint}
@@ -161,7 +132,7 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
     )
 }
 
-/** Inputs needed to build the SurfaceListCard section. */
+/** Inputs needed to build the searchable lead section. */
 interface RenderLeadRowsContext {
     readonly view: BoardView
     readonly isSkeleton: boolean
@@ -169,18 +140,40 @@ interface RenderLeadRowsContext {
     readonly on: LeadsBoardBaseProps["on"]
     readonly p: LeadsBoardBaseProps["props"]
 }
-/** Builds the SurfaceListCard section from the current view. */
+/** Keeps the search, stage filters and typed lead rows under one collection owner. */
 const renderLeadRows = ({ view, isSkeleton, l, on, p }: RenderLeadRowsContext) => (
-    <SurfaceListCard
-        ariaLabel={view.rows.length === 0 && !isSkeleton ? l.emptyAria : l.listAria}
+    <Section
+        kind="list"
+        title={view.rows.length === 0 && !isSkeleton ? l.emptyAria : l.listAria}
         isLoading={isSkeleton}
+        filter={
+            <Stack gap="row">
+                <Cluster gap="section" align="end">
+                    <div className={SEARCH_CLASS_NAME}>
+                        <SearchField
+                            label={l.searchLabel}
+                            placeholder={l.searchPlaceholder}
+                            value={p.query}
+                            onValueChange={on.query}
+                            onClear={on.clear}
+                        />
+                    </div>
+                    {view.isFiltered ? <TextAction onPress={on.clear}>{l.clearLabel}</TextAction> : null}
+                </Cluster>
+                <FilterButtonGroup
+                    label={l.tabsLabel}
+                    value={p.selectedTab}
+                    onValueChange={on.select}
+                    options={view.tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
+                />
+            </Stack>
+        }
         empty={
             view.hasLeads ? (
                 <EmptyNotice
                     message={l.noMatchTitle}
                     description={l.noMatchBody}
                     actionLabel={l.clearLabel}
-                    actionVariant="secondary"
                     onAction={on.clear}
                 />
             ) : (
@@ -188,29 +181,19 @@ const renderLeadRows = ({ view, isSkeleton, l, on, p }: RenderLeadRowsContext) =
                     message={l.emptyTitle}
                     description={l.emptyBody}
                     actionLabel={l.newLeadLabel}
-                    actionVariant="secondary"
                     onAction={on.openForm}
                 />
             )
         }
-    >
-        {view.rows.map((row) => (
-            <ListRow
-                key={row.id}
-                leading={<PersonAvatar name={row.name} size="md" />}
-                title={<TextAction href={row.href}>{row.name}</TextAction>}
-                description={row.subtitle}
-                badges={
-                    <>
-                        <Badge tone={row.stageTone} isDot>
-                            {row.stageLabel}
-                        </Badge>
-                        <Text as="span" size="xs" tone="muted">
-                            {row.ago}
-                        </Text>
-                    </>
-                }
-                actions={
+        items={view.rows.map((row) => ({
+            id: row.id,
+            leading: { avatar: { name: row.name } },
+            title: row.name,
+            description: [row.subtitle, row.ago].filter((part) => part !== "").join(" · "),
+            badges: [{ label: row.stageLabel, tone: row.stageTone, isDot: true }],
+            action: { label: l.openLabel, href: row.href, intent: "neutral" },
+            detail: (
+                <Stack gap="identity">
                     <LeadRowMenu
                         leadId={row.id}
                         href={row.href}
@@ -223,19 +206,18 @@ const renderLeadRows = ({ view, isSkeleton, l, on, p }: RenderLeadRowsContext) =
                         moreLabel={l.moreLabel}
                         onPropose={on.propose}
                     />
-                }
-            >
-                <Text size="xs" tone="muted" overflow="truncate">
-                    {row.who}
-                </Text>
-                {row.actionError === null ? null : (
-                    <Text size="xs" live="polite">
-                        {row.actionError}
+                    <Text size="xs" tone="muted" overflow="truncate">
+                        {row.who}
                     </Text>
-                )}
-            </ListRow>
-        ))}
-    </SurfaceListCard>
+                    {row.actionError === null ? null : (
+                        <Text size="xs" live="polite">
+                            {row.actionError}
+                        </Text>
+                    )}
+                </Stack>
+            ),
+        }))}
+    />
 )
 
 /** Formatting context for a lead capture timestamp. */

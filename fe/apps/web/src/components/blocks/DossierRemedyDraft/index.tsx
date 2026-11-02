@@ -53,9 +53,10 @@ export const DossierRemedyDraft = (props: DossierRemedyDraftProps) => {
     const findings = useDossierFindings(queryOfDossier(props.dossierId), props.draftId !== undefined)
     const { rowOf } = useFindingRows()
     const [edit, setEdit] = useState<DraftEdit | null>(null)
-    const current = draft.slot.items
+    const current = "items" in draft.slot ? draft.slot.items : undefined
     const edited = edit !== null && edit.draftId === props.draftId ? edit : null
-    const finding = findings.slot.items?.find((one) => one.id === current?.findingId)
+    const finding =
+        "items" in findings.slot ? findings.slot.items.find((one) => one.id === current?.findingId) : undefined
     const row =
         finding === undefined
             ? undefined

@@ -78,11 +78,13 @@ export class EnqueueKnowledgeSourceInput {
     @MaxLength(36)
     installationId?: string
 
-    /** `public` or `internal`, as the owner chose; there is no default. */
-    @Field(() => String)
+    /** `public` or `internal`; internal when omitted. */
+    @Field(() => String, { nullable: true })
+    @NullAsAbsent()
+    @IsOptional()
     @IsIn(["public", "internal"])
     @MaxLength(40)
-    visibility!: string
+    visibility?: string
 
     /** Where it came from: a folder, a ZIP or the Google Picker. */
     @Field(() => String, { nullable: true })

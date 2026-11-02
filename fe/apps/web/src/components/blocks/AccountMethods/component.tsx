@@ -1,4 +1,4 @@
-import { Badge, ListRow, SurfaceListCard } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, MethodView, SlotLabels } from "@/modules/types"
 
@@ -25,22 +25,24 @@ export const AccountMethodsBase = (props: AccountMethodsBaseProps) => (
         placeholder={props.props.placeholder}
         labels={props.props.labels}
         onRetry={props.on.retry}
-    >
-        {(methods, isSkeleton) => (
-            <SurfaceListCard label={props.props.title} headingLevel={2}>
-                {methods.map((method) => (
-                    <ListRow
-                        key={method.id}
-                        isSkeleton={isSkeleton}
-                        title={method.label}
-                        badges={
-                            <Badge tone={method.isLinked ? "success" : "neutral"} isSkeleton={isSkeleton}>
-                                {method.isLinked ? props.props.linkedLabel : props.props.notLinkedLabel}
-                            </Badge>
-                        }
-                    />
-                ))}
-            </SurfaceListCard>
+        render={(methods, isSkeleton) => (
+            <SurfaceCard
+                kind="list"
+                label={props.props.title}
+                headingLevel={2}
+                isLoading={isSkeleton}
+                empty={<EmptyNotice message={props.props.labels.empty} />}
+                items={methods.map((method): ListRowData => ({
+                    id: method.id,
+                    title: method.label,
+                    badges: [
+                        {
+                            label: method.isLinked ? props.props.linkedLabel : props.props.notLinkedLabel,
+                            tone: method.isLinked ? "success" : "neutral",
+                        },
+                    ],
+                }))}
+            />
         )}
-    </SlotView>
+    />
 )

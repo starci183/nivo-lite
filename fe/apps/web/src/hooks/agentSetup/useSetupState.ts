@@ -53,7 +53,11 @@ const staleAtOf = (data: PollShape): number | null => setupTurnStaleAt(data.turn
 /** Reads the setup of an instance; while NIVO answers it reads again every couple of seconds until the reply is in or the turn is lost. */
 export const useSetupState = (
     installationId: string,
-): { readonly slot: DataSlot<SetupStateView>; readonly reload: () => void } => {
+): {
+    readonly read: ReturnType<typeof useQuerySetupStateSwr>
+    readonly slot: DataSlot<SetupStateView>
+    readonly reload: () => void
+} => {
     const read = useQuerySetupStateSwr({ installationId }, { refreshInterval: pollOf })
     const { data, mutate } = read
     const staleAt = data === undefined ? null : staleAtOf(data)
@@ -77,7 +81,8 @@ export const useSetupState = (
         [data, staleAt, nowMs],
     )
     return {
-        slot: slotOfSwr({ data: view, error: read.error, isLoading: read.isLoading }),
+        read,
+        slot: slotOfSwr({ data: view, error: read.error, isLoading: read.isLoading, isValidating: read.isValidating }),
         reload: () => void mutate(),
     }
 }

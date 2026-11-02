@@ -6,11 +6,16 @@ import type { AuthoritySheet } from "@/modules/authority"
 
 /** The goals, policies, limits note and rules of the active workspace, read from the back end through SWR (with a reload). */
 export const useAuthoritySheet = (): {
+    readonly read: ReturnType<typeof useQueryAuthoritySwr>
     readonly slot: DataSlot<AuthoritySheet>
     readonly reload: () => void
 } => {
     const read = useQueryAuthoritySwr()
     const sheet: AuthoritySheet | undefined = read.data === undefined ? undefined : toAuthoritySheet(read.data)
     const reload = () => void read.mutate()
-    return { slot: slotOfSwr({ data: sheet, error: read.error, isLoading: read.isLoading }), reload }
+    return {
+        read,
+        slot: slotOfSwr({ data: sheet, error: read.error, isLoading: read.isLoading, isValidating: read.isValidating }),
+        reload,
+    }
 }

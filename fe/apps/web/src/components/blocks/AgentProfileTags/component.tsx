@@ -8,9 +8,17 @@ export type AgentProfileTagsBaseProps = ProfileRegionBaseProps<ListRegionProps["
 
 /** Draws the agents this agent may pass work to, each with its mark and the AI chip. */
 export const AgentProfileTagsBase = (props: AgentProfileTagsBaseProps) => (
-    <SlotView {...props.props.read} onRetry={props.on.retry}>
-        {(rows, isSkeleton) => (
-            <ListRegion label={props.props.label} rows={rows} footer={props.props.footer} isSkeleton={isSkeleton} />
+    <SlotView
+        {...props.props.read}
+        onRetry={props.on.retry}
+        render={(rows, isSkeleton) => (
+            <ListRegion
+                label={props.props.label}
+                rows={rows}
+                footer={props.props.footer}
+                empty={props.props.read.labels.empty}
+                isLoading={isSkeleton}
+            />
         )}
-    </SlotView>
+    />
 )

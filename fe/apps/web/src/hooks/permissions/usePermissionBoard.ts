@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useAuthoritySection, visibleGroups } from "@/hooks/authority"
 import { useQueryAgentsSwr, useQueryApproverDirectorySwr, useQueryOfficeRoomsSwr } from "@/hooks/swr"
-import { mapSlot } from "@/hooks/slot"
+import { slotOfReads } from "@/hooks/slot"
 import type { StoredRule } from "@/hooks/authority"
 import { asksPerson, defaultRule, modeKindOf } from "@/modules/permissions"
 import type { Approver, ModeKind } from "@/modules/permissions"
@@ -40,7 +40,8 @@ const TONES: Readonly<Record<ModeKind, ModeTone>> = {
 export const usePermissionBoard = () => {
     const g = useTranslations("governance")
     const format = useFormatter()
-    const { slot, reload, rules, isLocked } = useAuthoritySection()
+    const authority = useAuthoritySection()
+    const { read, rules, isLocked } = authority
     const agents = useQueryAgentsSwr({})
     const directory = useQueryApproverDirectorySwr()
     const rooms = useQueryOfficeRoomsSwr()
@@ -80,6 +81,12 @@ export const usePermissionBoard = () => {
     const rowsOf = (): ReadonlyArray<PermissionBoardRow> =>
         visibleGroups(rules).flatMap((group) => group.actions.map((action) => rowOf(group.department, action)))
 
-    const rowsSlot: DataSlot<ReadonlyArray<PermissionBoardRow>> = mapSlot(slot, rowsOf)
+    const rowsSlot: DataSlot<ReadonlyArray<PermissionBoardRow>> = slotOfReads([read, agents, directory, rooms], rowsOf)
+    const reload = () => {
+        authority.reload()
+        void agents.mutate()
+        void directory.mutate()
+        void rooms.mutate()
+    }
     return { slot: rowsSlot, placeholder: rowsOf(), reload, isLocked, agentOptions, roomOptions, members }
 }

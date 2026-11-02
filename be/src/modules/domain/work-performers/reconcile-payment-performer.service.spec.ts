@@ -86,6 +86,16 @@ const build = async () => {
 }
 
 describe("ReconcilePaymentPerformerService prepare", () => {
+    it("keeps a recorded zero bank amount as exact evidence instead of substituting another transaction amount", async () => {
+        const { service, inbound, transactions } = await build()
+        inbound.find.mockResolvedValue(eventOf({ amount_vnd: 0 }))
+        const item = itemOf({ subject_type: "inbound", subject_id: "ev-1", inbound_event_id: "ev-1" })
+        const prepared = await service.prepare(ctx, item)
+        expect(prepared.proposal.amount_vnd).toBe(0)
+        expect(prepared.proposal.evidence).toEqual([{ key: "amount_vnd", value: 0, kind: "received", via: "sepay" }])
+        expect(transactions.open.mock.calls[0]?.[0].amountVnd).toBe(0)
+    })
+
     it("clears a payment whose transfer content names one invoice of the same amount", async () => {
         const { service, invoices, transactions } = await build()
 
@@ -103,7 +113,7 @@ describe("ReconcilePaymentPerformerService prepare", () => {
         expect(transactions.open).not.toHaveBeenCalled()
     })
 
-    it("records a bank credit as a new transaction and offers the invoices of the same amount", async () => {
+    it("records a bank credit as a new transaction, as money received through SePay, and offers the invoices of the same amount", async () => {
         const { service, inbound, transactions } = await build()
         inbound.find.mockResolvedValue(eventOf())
         const item = itemOf({ subject_type: "inbound", subject_id: "ev-1", inbound_event_id: "ev-1" })
@@ -114,6 +124,7 @@ describe("ReconcilePaymentPerformerService prepare", () => {
                 amount_vnd: 300000,
                 outcome: "unclear",
                 candidates: [{ id: "inv-2", label: "candidateLabel|INV-2|—|300000 VND", amount_vnd: 300000 }],
+                evidence: [{ key: "amount_vnd", value: 300000, kind: "received", via: "sepay" }],
                 fields: { amount_vnd: 300000, reference: null, payer: null, bank: "SePay" },
             },
             patch: { subject_type: "transaction", subject_id: "tx-2" },

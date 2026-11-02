@@ -1,3 +1,4 @@
+export type { ChatbotFormat, ChatbotTranslator, InboxFilter } from "./chatbot.shared"
 export {
     FAILED_KEYS,
     INBOX_FILTERS,
@@ -15,10 +16,8 @@ export {
     leadFactsOf,
     listTimeOf,
     matchesInboxFilter,
-    type ChatbotFormat,
-    type ChatbotTranslator,
-    type InboxFilter,
 } from "./chatbot.shared"
+export { CHATBOT_GAPS_PLACEHOLDER } from "./chatbot.shared"
 export { useChatbotActions } from "./useChatbotActions"
 export { useChatbotGaps } from "./useChatbotGaps"
 export { useChatbotThread } from "./useChatbotThread"

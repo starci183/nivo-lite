@@ -17,9 +17,9 @@ import { useSetupSide } from "@/hooks/setupSide"
 import { useSetupWriteWords } from "@/hooks/setupCards"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import type { SetupSideGate } from "@/modules/types"
+import type { AgentSetupCopy, SetupSideGate } from "@/modules/types"
 import { AgentSetupPanesBase } from "./component"
-import type { AgentSetupChatContent, AgentSetupCopy } from "./component"
+import type { AgentSetupChatContent } from "./component"
 
 /** What the Setup page hands the panes: the instance and catalogue key of the url. */
 type AgentSetupPanesProps = {
@@ -39,7 +39,7 @@ type SetupCopy = ReturnType<typeof useTranslations<"moduleSetup">>
 /** What the chat content is made of: the state of the setup, the thread, the typing, the gates and the brand flow. */
 interface ChatInput {
     readonly t: SetupCopy
-    readonly state: ReturnType<typeof useSetupState>["slot"]["items"]
+    readonly state: Extract<ReturnType<typeof useSetupState>["slot"], { readonly items: unknown }>["items"] | undefined
     readonly groups: ReturnType<typeof setupThreadOf>
     readonly chat: ReturnType<typeof useSetupChat>
     readonly gates: ReadonlyArray<SetupSideGate>
@@ -109,6 +109,7 @@ const copyOf = (t: SetupCopy): AgentSetupCopy => ({
     chatLabel: t("chatLabel"),
     chatTitle: t("chatTitle"),
     proposalsLabel: t("proposalsLabel"),
+    proposalsEmpty: t("proposalsEmpty"),
     confirmLabel: t("confirm"),
     proposalEditLabel: t("proposalEdit"),
     suggestionsLabel: t("suggestionsLabel"),
@@ -131,8 +132,9 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
     const { slot, reload } = useSetupState(props.installationId)
     const side = useSetupSide(props.module, props.installationId)
     const graph = useAgentGraphPanel(props.installationId, side.setup)
-    const versions = useSetupVersions(props.installationId).items?.versions ?? NO_VERSIONS
-    const state = slot.items
+    const versionsSlot = useSetupVersions(props.installationId)
+    const versions = ("items" in versionsSlot ? versionsSlot.items : undefined)?.versions ?? NO_VERSIONS
+    const state = "items" in slot ? slot.items : undefined
     const sessionId = state?.session.id ?? ""
     const chat = useSetupChat(sessionId, state?.turnPending === true)
     const brand = useSetupBrandCards(props.installationId, sessionId, props.module === "content" && canEdit, reload)
@@ -155,7 +157,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
             appliedPlain: (version) => t("revisionAppliedPlain", { version }),
         },
     )
-    const gates = side.slot.items?.gates.gates ?? NO_GATES
+    const gates = ("items" in side.slot ? side.slot.items : undefined)?.gates.gates ?? NO_GATES
     const content = chatContentOf({ t, state, groups, chat, gates, words, typeName, brand })
     return (
         <AgentSetupPanesBase

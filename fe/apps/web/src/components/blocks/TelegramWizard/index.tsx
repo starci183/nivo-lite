@@ -1,5 +1,9 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
+import { slotOfReads, useSlotLabels } from "@/hooks/slot"
+
 import { useTranslations } from "next-intl"
 import { GUIDES } from "@/hooks/connection-guides"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
@@ -10,6 +14,8 @@ import { TelegramWizardBase } from "./component"
 
 /** What the board hands the Telegram wizard. */
 interface TelegramWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** The workspace agents that can work through Telegram. */
     readonly agents: ReadonlyArray<AgentOption>
     /** `changed` is true when something was saved, so the list should refresh. */
@@ -18,6 +24,7 @@ interface TelegramWizardProps {
 
 /** Telegram in the shared wizard frame: BotFather steps, paste the token, check the bot, attach it to the agents. */
 export const TelegramWizard = (props: TelegramWizardProps) => {
+    const slotLabels = useSlotLabels()
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const copy = useCopyLabels()
@@ -41,6 +48,8 @@ export const TelegramWizard = (props: TelegramWizardProps) => {
     return (
         <TelegramWizardBase
             props={{
+                boot: slotOfReads(props.dependencyReads, () => true),
+                slotLabels: slotLabels(""),
                 title: tw("title", { provider: tc(providerKey("telegram", "title")) }),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: TELEGRAM_STEPS.length }),
                 steps: [tw("stepBot"), tw("stepToken"), tw("stepVerify"), tw("stepAgent")],

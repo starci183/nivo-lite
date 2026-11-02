@@ -30,17 +30,16 @@ export const TelegramConnectionAgentsBase = (props: TelegramConnectionAgentsBase
         labels={props.props.slotLabels}
         forbidden="notice"
         onRetry={props.on.retry}
-    >
-        {(agents, isSkeleton) => (
+        render={(agents, isSkeleton) => (
             <ConnectionAgentSwitches
                 title={props.props.title}
                 agents={agents}
-                isSkeleton={isSkeleton}
+                isLoading={isSkeleton}
                 switchLabel={props.props.switchLabel}
                 onLabel={props.props.onLabel}
                 canToggle={props.props.canToggle}
                 onToggle={props.on.toggle}
             />
         )}
-    </SlotView>
+    />
 )

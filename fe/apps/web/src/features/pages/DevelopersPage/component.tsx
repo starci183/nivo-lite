@@ -10,7 +10,9 @@ export interface DevelopersPageBaseProps {
 /** Draws the "Advanced" page: the head and outgoing events (or the 403), API keys and the quick guide; each connected block hides itself from staff. */
 export const DevelopersPageBase = (props: DevelopersPageBaseProps) => (
     <DevelopersPanel>
-        <ApiKeysSection />
-        <ApiQuickStart base={props.props.apiBase} />
+        <>
+            <ApiKeysSection />
+            <ApiQuickStart base={props.props.apiBase} />
+        </>
     </DevelopersPanel>
 )

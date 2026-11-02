@@ -1,11 +1,5 @@
 export { PLAN_CODES, isAdminWorkspaceFilter, parseCredits, parseDays } from "./admin.shared"
-export type {
-    AdminBadgeView,
-    AdminCardView,
-    AdminRowView,
-    AdminWorkspaceFilter,
-    AdminWorkspaceRowView,
-} from "./admin.shared"
+export type { AdminBadgeView, AdminCardView, AdminWorkspaceFilter, AdminWorkspaceRowView } from "./admin.shared"
 export { useAdminCommands } from "./useAdminCommands"
 export { useAdminDetailCards } from "./useAdminDetailCards"
 export { useAdminDetailFacts } from "./useAdminDetailFacts"

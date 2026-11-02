@@ -1,5 +1,4 @@
-import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard, type BadgeTone, type ListRowData } from "@starci/grammar/common"
 
 /** One badge of a dossier row. */
 interface RowBadgeView {
@@ -58,42 +57,32 @@ interface DossierRowsCardProps {
     readonly emptyLabel: string
     readonly rows: ReadonlyArray<DossierRowView>
     readonly footer?: string | undefined
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** The dossiers of one category as the rows of one card: the badges say where each stands, the button what to do next. */
 export const DossierRowsCard = (props: DossierRowsCardProps) => (
-    <SurfaceListCard
+    <SurfaceCard
+        kind="list"
         label={props.label}
-        isLoading={props.isSkeleton}
+        isLoading={props.isLoading === true}
         footer={props.footer}
         empty={<EmptyNotice message={props.emptyLabel} />}
-    >
-        {props.isSkeleton
-            ? null
-            : props.rows.map((dossier) => (
-                  <ListRow
-                      key={dossier.id}
-                      title={dossier.name}
-                      description={dossier.note}
-                      state={dossier.isSelected ? "informative" : "neutral"}
-                      badges={
-                          <>
-                              {dossier.badges.map((badge) => (
-                                  <Badge key={badge.id} tone={badge.tone}>
-                                      {badge.label}
-                                  </Badge>
-                              ))}
-                          </>
-                      }
-                      actions={
-                          dossier.action === null ? undefined : (
-                              <Button intent="neutral" href={dossier.action.href}>
-                                  {dossier.action.label}
-                              </Button>
-                          )
-                      }
-                  />
-              ))}
-    </SurfaceListCard>
+        items={props.rows.map(dossierItemOf)}
+    />
 )
+
+/** The category's row contract carries its two badges and its one destination as data. */
+const dossierItemOf = (dossier: DossierRowView): ListRowData => {
+    const [status, count] = dossier.badges
+    let badges: ListRowData["badges"]
+    if (status !== undefined) badges = count === undefined ? [status] : [status, count]
+    return {
+        id: dossier.id,
+        title: dossier.name,
+        ...(dossier.note == null ? {} : { description: dossier.note }),
+        state: dossier.isSelected ? "informative" : "neutral",
+        ...(badges === undefined ? {} : { badges }),
+        ...(dossier.action === null ? {} : { action: { label: dossier.action.label, href: dossier.action.href } }),
+    }
+}

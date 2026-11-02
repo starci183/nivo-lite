@@ -60,7 +60,7 @@ describe("TelegramClient call", () => {
         http.request.mockResolvedValue({ status: 502, body: undefined })
 
         await expect(client.call("123:abc", "getMe")).rejects.toMatchObject({
-            code: TelegramErrorCode.Rejected,
+            code: TelegramErrorCode.Unavailable,
             params: { method: "getMe", reason: "502" },
         })
     })

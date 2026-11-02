@@ -19,7 +19,7 @@ type ConnectionRowProps = {
     readonly canManage?: boolean
 }
 
-/** One connection as a list row with its commands: check, edit, reveal keys, disconnect, remove, and who may use it. */
+/** A connection's stateful detail body: its collection owner supplies the id and title. */
 export const ConnectionRow = (props: ConnectionRowProps) => {
     const { connection } = props
     const { view, on } = useConnectionRowView({

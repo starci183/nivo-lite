@@ -5,27 +5,18 @@ import {
     EmptyNotice,
     Form,
     Input,
-    List,
-    ListItem,
+    Link,
     Page,
-    Region,
-    SectionHeader,
+    Section,
     Text,
-    TextAction,
     type DataTableColumn,
+    Stack,
+    Cluster,
 } from "@starci/grammar/common"
 
 import { AdminBadges } from "@/components/leaves/AdminBadges"
 import { ADMIN_ROUTES } from "@/modules/routes"
-import {
-    BADGE_WRAP_CLASS_NAME,
-    CELL_STACK_CLASS_NAME,
-    CHIPS_CLASS_NAME,
-    FILTERS_CLASS_NAME,
-    PAGE_CLASS_NAME,
-    SEARCH_FORM_CLASS_NAME,
-    STACK_CLASS_NAME,
-} from "./classNames"
+
 import { SlotView } from "@/components/composites/SlotView"
 import type { AdminWorkspaceRowView, DataSlot, SlotLabels } from "@/modules/types"
 
@@ -76,7 +67,7 @@ export interface AdminWorkspacesViewProps {
 }
 
 /** The workspaces page with the skeleton flag the slot hands down. */
-type AdminWorkspacesDrawProps = AdminWorkspacesViewProps & { readonly isSkeleton: boolean }
+type AdminWorkspacesDrawProps = AdminWorkspacesViewProps & { readonly isLoading: boolean }
 
 /** Draws the workspace list: search, filter chips and one table row per customer business. */
 const AdminWorkspacesView = (props: AdminWorkspacesDrawProps) => {
@@ -96,18 +87,12 @@ const AdminWorkspacesView = (props: AdminWorkspacesDrawProps) => {
     ]
 
     const renderCell = (row: AdminWorkspaceRowView, columnId: string) =>
-        renderWorkspaceCell(row, columnId, props, props.isSkeleton)
+        renderWorkspaceCell(row, columnId, props, props.isLoading)
 
     return (
-        <div className={PAGE_CLASS_NAME}>
-            {renderWorkspaceFilters(props, props.isSkeleton)}
-            <Region labelledBy="admin-workspaces-shown" className={STACK_CLASS_NAME}>
-                <SectionHeader
-                    id="admin-workspaces-shown"
-                    level={2}
-                    title={props.props.shownTitle}
-                    isSkeleton={props.isSkeleton}
-                />
+        <Stack gap="section">
+            {renderWorkspaceFilters(props, props.isLoading)}
+            <Section title={props.props.shownTitle} headingLevel={2} isLoading={props.isLoading}>
                 <DataTable
                     label={props.props.tableLabel}
                     columns={columnList}
@@ -115,8 +100,8 @@ const AdminWorkspacesView = (props: AdminWorkspacesDrawProps) => {
                     renderCell={renderCell}
                     emptyContent={<EmptyNotice message={props.props.emptyTitle} description={props.props.emptyHint} />}
                 />
-            </Region>
-        </div>
+            </Section>
+        </Stack>
     )
 }
 
@@ -134,54 +119,51 @@ export interface AdminWorkspacesBaseProps {
 
 /** Draws the workspaces page: its header band from the words, over the finished list, or the same list as a skeleton, the failure with its retry, or the empty notice. */
 export const AdminWorkspacesBase = (props: AdminWorkspacesBaseProps) => {
-    const words = props.props.slot.items ?? props.props.placeholder
+    const words = props.props.placeholder
     return (
-        <Page
-            measure="full"
-            isSkeleton={props.props.slot.isLoading === true}
-            header={{ meta: words.eyebrow, title: words.title, description: words.description }}
-        >
-            <SlotView {...props.props} onRetry={props.on.retry}>
-                {(view, isSkeleton) => <AdminWorkspacesView props={view} isSkeleton={isSkeleton} />}
-            </SlotView>
+        <Page measure="full" header={{ meta: words.eyebrow, title: words.title, description: words.description }}>
+            <SlotView
+                {...props.props}
+                onRetry={props.on.retry}
+                render={(view, isLoading) => <AdminWorkspacesView props={view} isLoading={isLoading} />}
+            />
         </Page>
     )
 }
 
 /** Draws the div section of the AdminWorkspaces view. */
-const renderWorkspaceFilters = (props: AdminWorkspacesViewProps, isSkeleton: boolean) => (
-    <div className={FILTERS_CLASS_NAME}>
+const renderWorkspaceFilters = (props: AdminWorkspacesViewProps, isLoading: boolean) => (
+    <Cluster gap="row" align="end">
         <Form label={props.props.searchLabel} action={ADMIN_ROUTES.workspaces} method="get">
-            <div className={SEARCH_FORM_CLASS_NAME}>
+            <Cluster gap="row" align="end">
                 <Input
                     id="admin-search"
                     name="q"
                     label={props.props.searchField}
                     placeholder={props.props.searchPlaceholder}
                     defaultValue={props.props.query}
-                    isSkeleton={isSkeleton}
+                    isLoading={isLoading}
                 />
-                <Button type="submit" intent="neutral" isSkeleton={isSkeleton}>
+                <Button type="submit" intent="neutral" isLoading={isLoading}>
                     {props.props.searchSubmit}
                 </Button>
-            </div>
+            </Cluster>
         </Form>
-        <List className={CHIPS_CLASS_NAME} label={props.props.filtersLabel}>
-            {props.props.filters.map((filter) => (
-                <ListItem key={filter.id}>
-                    <TextAction
-                        appearance="choice"
-                        size="sm"
+        <div role="group" aria-label={props.props.filtersLabel}>
+            <Cluster gap="inline">
+                {props.props.filters.map((filter) => (
+                    <Link
+                        key={filter.id}
                         isCurrent={props.props.filter === filter.id}
-                        isSkeleton={isSkeleton}
+                        visited="uniform"
                         href={filter.href}
                     >
                         {filter.label}
-                    </TextAction>
-                </ListItem>
-            ))}
-        </List>
-    </div>
+                    </Link>
+                ))}
+            </Cluster>
+        </div>
+    </Cluster>
 )
 
 /** The columns that draw one plain value, by column identity. */
@@ -199,10 +181,10 @@ const renderWorkspaceCell = (
     row: AdminWorkspaceRowView,
     columnId: string,
     props: AdminWorkspacesViewProps,
-    isSkeleton: boolean,
+    isLoading: boolean,
 ) => {
     const none = (
-        <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+        <Text size="sm" tone="muted" isLoading={isLoading}>
             {props.props.noneLabel}
         </Text>
     )
@@ -210,7 +192,7 @@ const renderWorkspaceCell = (
     const text = TEXT_CELLS[columnId]
     if (text !== undefined) {
         return (
-            <Text size="sm" isSkeleton={isSkeleton}>
+            <Text size="sm" isLoading={isLoading}>
                 {text(row)}
             </Text>
         )
@@ -219,56 +201,56 @@ const renderWorkspaceCell = (
     switch (columnId) {
         case "workspace":
             return (
-                <div className={CELL_STACK_CLASS_NAME}>
-                    <Button size="sm" intent="neutral" href={row.href} isSkeleton={isSkeleton}>
+                <Stack gap="identity" align="start">
+                    <Button size="sm" intent="neutral" href={row.href} isLoading={isLoading}>
                         {row.name}
                     </Button>
                     {row.needsAttention ? (
-                        <Badge tone="warning" isSkeleton={isSkeleton}>
+                        <Badge tone="warning" isLoading={isLoading}>
                             {props.props.attentionLabel}
                         </Badge>
                     ) : null}
-                </div>
+                </Stack>
             )
         case "billing":
             return (
-                <div className={CELL_STACK_CLASS_NAME}>
-                    <Badge tone={row.statusTone} isSkeleton={isSkeleton}>
+                <Stack gap="identity" align="start">
+                    <Badge tone={row.statusTone} isLoading={isLoading}>
                         {row.status}
                     </Badge>
                     {row.paidUntil === null ? null : (
-                        <Text size="xs" tone="muted" isSkeleton={isSkeleton}>
+                        <Text size="xs" tone="muted" isLoading={isLoading}>
                             {row.paidUntil}
                         </Text>
                     )}
-                </div>
+                </Stack>
             )
         case "modules":
             return row.modules.length === 0 ? (
                 none
             ) : (
-                <div className={BADGE_WRAP_CLASS_NAME}>
-                    <AdminBadges badges={row.modules} isSkeleton={isSkeleton} />
-                </div>
+                <Cluster gap="identity">
+                    <AdminBadges badges={row.modules} isLoading={isLoading} />
+                </Cluster>
             )
         case "connections":
             return row.connections.length === 0 ? (
                 none
             ) : (
-                <div className={CELL_STACK_CLASS_NAME}>
-                    <div className={BADGE_WRAP_CLASS_NAME}>
-                        <AdminBadges badges={row.connections} isSkeleton={isSkeleton} />
-                    </div>
-                    <AdminBadges badges={row.connectionWarnings} isSkeleton={isSkeleton} />
-                </div>
+                <Stack gap="identity" align="start">
+                    <Cluster gap="identity">
+                        <AdminBadges badges={row.connections} isLoading={isLoading} />
+                    </Cluster>
+                    <AdminBadges badges={row.connectionWarnings} isLoading={isLoading} />
+                </Stack>
             )
         default:
             return row.openDecisions > 0 ? (
-                <Badge tone="warning" isSkeleton={isSkeleton}>
-                    {row.openDecisions}
+                <Badge tone="warning" isLoading={isLoading}>
+                    {String(row.openDecisions)}
                 </Badge>
             ) : (
-                <Text size="sm" isSkeleton={isSkeleton}>
+                <Text size="sm" isLoading={isLoading}>
                     {0}
                 </Text>
             )

@@ -1,9 +1,10 @@
-import { Alert, LeadingNumber, List, ListItem, Text } from "@starci/grammar/common"
+import { Alert, Section, Stack, Text } from "@starci/grammar/common"
 import type { VerifyHelpView } from "@/modules/types"
-import { wizardVerifyStepClassNames as classNames } from "./classNames"
 
 /** What the first-event wait draws. */
 type WizardVerifyStepProps = {
+    readonly isLoading?: boolean
+
     /** What the owner does meanwhile; undefined when the provider has no help. */
     readonly help: VerifyHelpView | undefined
     /** The sentence for the event that arrived; null while it has not. */
@@ -17,27 +18,34 @@ type WizardVerifyStepProps = {
 export const WizardVerifyStep = (props: WizardVerifyStepProps) => (
     <>
         {props.help === undefined ? null : (
-            <div className={classNames.copy}>
-                <Text size="sm">{props.help.intro}</Text>
-                {props.help.steps.length === 0 ? null : (
-                    <List as="ol" className={classNames.numbered}>
-                        {props.help.steps.map((step, index) => (
-                            <ListItem key={step}>
-                                <Text size="sm" startContent={<LeadingNumber position={index + 1} />}>
-                                    {step}
-                                </Text>
-                            </ListItem>
-                        ))}
-                    </List>
+            <Stack gap="inline">
+                {props.help.steps.length === 0 ? (
+                    <Text size="sm">{props.help.intro}</Text>
+                ) : (
+                    <Section
+                        kind="list"
+                        title={props.help.intro}
+                        headingLevel={4}
+                        empty={<Text>{props.waiting}</Text>}
+                        items={props.help.steps.map((step, index) => ({
+                            id: String(index),
+                            title: step,
+                            leading: { position: index + 1 },
+                        }))}
+                    />
                 )}
-            </div>
+            </Stack>
         )}
         {props.received === null ? (
-            <Text size="sm" weight="medium" live="polite">
+            <Text size="sm" isStrong live="polite">
                 {props.waiting}
             </Text>
         ) : (
-            <Alert tone="affirmative" title={props.received} />
+            <Alert
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                tone="affirmative"
+                title={props.received}
+            />
         )}
         {props.failed !== null && props.received === null ? (
             <Text size="xs" tone="muted">

@@ -8,6 +8,9 @@ export const OverviewLoadingPage = async () => {
         <OverviewLoadingPageBase
             props={{
                 eyebrow: t("eyebrow"),
+                description: t("description"),
+                actionLabel: t("openOffice"),
+                emptyMessage: t("emptyMessage"),
                 blocks: [
                     { id: "sum", title: t("sumTitle"), description: t("motto"), lines: 3 },
                     { id: "results", title: t("resultsTitle"), description: t("resultsIntro"), lines: 6 },

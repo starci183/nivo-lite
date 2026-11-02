@@ -54,6 +54,20 @@ describe("chat file paths", () => {
         expect((await build()).isChatFilePath(SCOPE, chatFilePathOf(SCOPE, OBJECT_ID, "image/png"))).toBe(true)
     })
 
+    it("uses the separate Office folder when no conversation owns the file", async () => {
+        const policy = await build()
+        const office = { workspaceId: "ws-1", conversationId: null }
+        expect(policy.chatFilePathOf(office, OBJECT_ID, "image/png")).toBe(`ws-1/chat/office/${OBJECT_ID}.png`)
+        expect(policy.isChatFilePath(office, `ws-1/chat/office/${OBJECT_ID}.png`)).toBe(true)
+        expect(policy.isChatFilePath(SCOPE, `ws-1/chat/office/${OBJECT_ID}.png`)).toBe(false)
+    })
+
+    it("issues no recognized extension for an unsupported content type", async () => {
+        expect((await build()).chatFilePathOf(SCOPE, OBJECT_ID, "application/zip")).toBe(
+            `ws-1/chat/conv-1/${OBJECT_ID}.`,
+        )
+    })
+
     it.each([
         ["another workspace", `ws-2/chat/conv-1/${OBJECT_ID}.png`],
         ["another conversation", `ws-1/chat/conv-2/${OBJECT_ID}.png`],
@@ -86,5 +100,13 @@ describe("chatFileNameOf", () => {
 
     it("falls back to the object name when nothing is left", async () => {
         expect((await build()).chatFileNameOf("   ", "x/y.pdf")).toBe("y.pdf")
+    })
+
+    it("keeps only the final 255 characters of the cleaned name", async () => {
+        expect((await build()).chatFileNameOf(`discard-${"A".repeat(255)}`, "x/y.pdf")).toBe("A".repeat(255))
+    })
+
+    it("retains the empty object name when both supplied names are empty", async () => {
+        expect((await build()).chatFileNameOf("", "")).toBe("")
     })
 })

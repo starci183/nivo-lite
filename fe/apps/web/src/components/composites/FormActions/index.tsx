@@ -1,5 +1,4 @@
-import { Alert, Button } from "@starci/grammar/common"
-import { ACTIONS_CLASS_NAME } from "./classNames"
+import { Alert, Button, Cluster } from "@starci/grammar/common"
 
 /** What the foot of a form draws. */
 type FormActionsProps = {
@@ -10,7 +9,7 @@ type FormActionsProps = {
     readonly submitLabel: string
     readonly isPending: boolean
     /** True while the form's data loads: the button keeps its place as a skeleton. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** The foot of a form: the one failure or success alert over the submit button. */
@@ -18,10 +17,10 @@ export const FormActions = (props: FormActionsProps) => (
     <>
         {props.error === undefined ? null : <Alert tone="negative" title={props.failTitle} description={props.error} />}
         {props.done === undefined ? null : <Alert tone="affirmative" title={props.done} />}
-        <div className={ACTIONS_CLASS_NAME}>
-            <Button type="submit" intent="commit" isPending={props.isPending} isSkeleton={props.isSkeleton}>
+        <Cluster gap="row">
+            <Button type="submit" intent="commit" isPending={props.isPending} isLoading={props.isLoading}>
                 {props.submitLabel}
             </Button>
-        </div>
+        </Cluster>
     </>
 )

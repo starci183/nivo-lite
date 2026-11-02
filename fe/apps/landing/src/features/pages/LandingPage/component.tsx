@@ -29,20 +29,23 @@ export const LandingPageBase = (props: LandingPageBaseProps) => (
         brand={<LandingNavBrand />}
         navigation={<LandingNavLinks anchorBase="" />}
         actions={<LandingNavActions />}
-    >
-        <Page measure="product">
-            <Stack gap="region">
-                <LandingHero />
-                <LandingTrustStrip />
-                <LandingProduct />
-                <LandingFlow />
-                <LandingConnect />
-                <LandingOffer />
-                <LandingCommitment />
-                <LandingFinalCta />
-                <LandingFaq />
-                <LandingFooter anchorBase="" />
-            </Stack>
-        </Page>
-    </SiteShell>
+        body={
+            <>
+                <Page measure="product">
+                    <Stack gap="region">
+                        <LandingHero />
+                        <LandingTrustStrip />
+                        <LandingProduct />
+                        <LandingFlow />
+                        <LandingConnect />
+                        <LandingOffer />
+                        <LandingCommitment />
+                        <LandingFinalCta />
+                        <LandingFaq />
+                        <LandingFooter anchorBase="" />
+                    </Stack>
+                </Page>
+            </>
+        }
+    />
 )

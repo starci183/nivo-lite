@@ -82,7 +82,10 @@ export const newTermOf = (fact: AgentGraphFactData | undefined): AgentGraphTermF
  * times as far; after an upper bound ("under 20 million") comes the lower bound that starts where it ended, so branches added one by
  * one leave no gap. Anything else starts from the fact's own first term.
  */
-export const newTermAfter = (fact: AgentGraphFactData | undefined, previous: AgentGraphTermForm | undefined): AgentGraphTermForm => {
+export const newTermAfter = (
+    fact: AgentGraphFactData | undefined,
+    previous: AgentGraphTermForm | undefined,
+): AgentGraphTermForm => {
     const fresh = newTermOf(fact)
     if (fact?.type !== "number" || previous?.fact !== fact.key) return fresh
     if (previous.op === "gte" || previous.op === "gt") return { ...fresh, op: "lt", amount: previous.amount * 4 }

@@ -1,4 +1,5 @@
-"use client"
+import type { InventoryPanelScope } from "./inventory.shared"
+;("use client")
 
 import { useTranslations } from "next-intl"
 import type { SupplierFormField, SupplierFormValues, SupplierView } from "@/modules/types"
@@ -33,11 +34,13 @@ const startSupplierState = (supplier: SupplierView | null): SupplierDrawerState 
 })
 
 /** Opens, fills and saves the supplier form; `props` is null while the drawer is closed. */
-export const useSupplierDrawer = (commands: InventoryCommandSet<"saveSupplier">) => {
+export const useSupplierDrawer = (commands: InventoryCommandSet<"saveSupplier">, lifetime?: InventoryPanelScope) => {
+    const { isActive = true, scope = "" } = lifetime ?? {}
+
     const t = useTranslations("workbenchInventory")
     const say = useSay()
-    const run = useInventoryRun()
-    const drawer = useDrawer<SupplierDrawerState>()
+    const run = useInventoryRun(isActive, scope)
+    const drawer = useDrawer<SupplierDrawerState>(isActive, scope)
     const { state } = drawer
     return {
         open: (target: SupplierView | null) => drawer.open(startSupplierState(target)),
@@ -45,7 +48,7 @@ export const useSupplierDrawer = (commands: InventoryCommandSet<"saveSupplier">)
             state === null
                 ? null
                 : {
-                      say,
+                      copy: supplierDrawerCopy(say, state.supplier),
                       editing: state.supplier === null ? null : state.supplier.name,
                       values: state.values,
                       channels: CHANNELS.map((value) => ({ value, label: t(`channel_${value}`) })),
@@ -64,10 +67,29 @@ export const useSupplierDrawer = (commands: InventoryCommandSet<"saveSupplier">)
                             ...(target === null ? {} : { id: target.id }),
                             ...state.values,
                         }),
-                    drawer.done,
+                    (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
                 )
             },
             close: drawer.close,
         },
     }
 }
+
+/** Resolves the exact supplier drawer copy in its domain owner. */
+const supplierDrawerCopy = (say: ReturnType<typeof useSay>, owner: SupplierView | null) =>
+    ({
+        supplierAddTitle: say("supplierAddTitle"),
+        supplierEditTitle: say("supplierEditTitle", { name: owner?.name ?? "" }),
+        supplierDrawerHint: say("supplierDrawerHint"),
+        close: say("close"),
+        supplierName: say("supplierName"),
+        supplierContact: say("supplierContact"),
+        supplierChannel: say("supplierChannel"),
+        supplierEmail: say("supplierEmail"),
+        supplierPhone: say("supplierPhone"),
+        supplierZalo: say("supplierZalo"),
+        supplierLead: say("supplierLead"),
+        supplierTerms: say("supplierTerms"),
+        supplierNote: say("supplierNote"),
+        save: say("save"),
+    }) as const

@@ -1,6 +1,5 @@
-import { Button, Form, Heading, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Form, Heading, Input, Select, SurfaceCard, Text, Stack, Cluster } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
-import { ACTIONS_CLASS_NAME, HEAD_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** Copy, values and state the connected create form supplies. */
 export interface WorkspaceCreateBaseProps {
@@ -43,11 +42,11 @@ export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => {
     return (
         <SurfaceCard ariaLabel={form.title} measure="form">
             <Form label={form.title} onSubmit={on.submit} isPending={form.isPending}>
-                <div className={STACK_CLASS_NAME}>
-                    <div className={HEAD_CLASS_NAME}>
+                <Stack gap="section">
+                    <Stack gap="identity">
                         <Heading level={1}>{form.heading}</Heading>
                         <Text tone="muted">{form.description}</Text>
-                    </div>
+                    </Stack>
                     <Input
                         id="workspace-name"
                         name="name"
@@ -74,21 +73,21 @@ export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => {
                             isRequired
                             isDisabled={form.isPending}
                             value={form.otherIndustry}
-                            isError={form.otherIndustryError !== undefined}
+                            isInvalid={form.otherIndustryError !== undefined}
                             errorMessage={form.otherIndustryError}
                             onValueChange={on.setOtherIndustry}
                         />
                     ) : null}
                     <FormNotice failTitle={form.failTitle} error={form.error} />
-                    <div className={ACTIONS_CLASS_NAME}>
+                    <Cluster gap="row" justify="between">
                         <Button intent="neutral" href={form.cancelHref} isDisabled={form.isPending}>
                             {form.cancelLabel}
                         </Button>
                         <Button type="submit" intent="commit" isPending={form.isPending}>
                             {form.submitLabel}
                         </Button>
-                    </div>
-                </div>
+                    </Cluster>
+                </Stack>
             </Form>
         </SurfaceCard>
     )

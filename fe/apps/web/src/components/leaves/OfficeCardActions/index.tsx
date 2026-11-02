@@ -1,10 +1,10 @@
 import { Button, Cluster, Text } from "@starci/grammar/common"
-import type { OfficeResultCardView, OfficeText } from "@/modules/types"
+import type { OfficeResultCardView, OfficeThreadProps } from "@/modules/types"
 
 /** What the actions of a result card draw and do. */
 type OfficeCardActionsProps = {
     readonly card: OfficeResultCardView
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["cardCopy"]["result"]
     readonly isBusy: boolean
     readonly isEditing: boolean
     readonly setIsEditing: (value: boolean) => void
@@ -13,7 +13,7 @@ type OfficeCardActionsProps = {
 
 /** Approve / Edit / Decline while a result card waits, and the link at its foot. */
 export const OfficeCardActions = (props: OfficeCardActionsProps) => {
-    const { card, text, isBusy, isEditing } = props
+    const { card, copy, isBusy, isEditing } = props
     return (
         <Cluster gap="inline">
             {card.canApprove ? (
@@ -24,17 +24,17 @@ export const OfficeCardActions = (props: OfficeCardActionsProps) => {
                     isDisabled={isBusy}
                     onPress={() => props.decide("approved")}
                 >
-                    {isEditing ? text("approveEdited") : text("cardApprove")}
+                    {isEditing ? copy.approveEdited : copy.cardApprove}
                 </Button>
             ) : null}
             {card.canEdit ? (
                 <Button intent="neutral" size="sm" isDisabled={isBusy} onPress={() => props.setIsEditing(!isEditing)}>
-                    {isEditing ? text("cancelEdit") : text("edit")}
+                    {isEditing ? copy.cancelEdit : copy.edit}
                 </Button>
             ) : null}
             {card.canDecline ? (
                 <Button intent="alternative" size="sm" isDisabled={isBusy} onPress={() => props.decide("rejected")}>
-                    {text("cardDecline")}
+                    {copy.cardDecline}
                 </Button>
             ) : null}
             {card.link === null ? null : (
@@ -43,8 +43,8 @@ export const OfficeCardActions = (props: OfficeCardActionsProps) => {
                 </Button>
             )}
             {card.state === "pending" && !card.canApprove && card.refId !== null ? (
-                <Text size="sm" weight="medium" live="polite">
-                    {text("waitingManager")}
+                <Text size="sm" isStrong live="polite">
+                    {copy.waitingManager}
                 </Text>
             ) : null}
         </Cluster>

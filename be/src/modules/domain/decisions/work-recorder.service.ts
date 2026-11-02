@@ -12,6 +12,7 @@ import type {
     Decider,
     DecisionEntry,
     InboundStatus,
+    OptionalRejectionNote,
     Performed,
     Proposal,
     WorkContext,
@@ -50,6 +51,7 @@ export class WorkRecorderService {
         proposal: Proposal,
         plan: FinishPlan,
         res: Performed,
+        decisionRecorded: boolean = false,
     ): Promise<void> {
         const dept = await this.modules.nameOf(done.department, ctx.locale)
         const decision = {
@@ -86,22 +88,11 @@ export class WorkRecorderService {
                 body: this.catalog.get("engine.auto", { dept, summary: res.summary }, ctx.locale),
             })
         } else {
-            await this.decide(
-                ctx,
-                done,
-                {
-                    ...decision,
-                    decided_by: plan.by.name,
-                    decider_kind: plan.by.kind,
-                    decided_by_member_id: plan.by.memberId ?? null,
-                    outcome: plan.outcome,
-                    reason: item.reason,
-                    note: plan.note ?? res.summary,
-                    before: plan.before ?? null,
-                    after: proposal,
-                },
-                res.summary,
-            )
+            if (!decisionRecorded) {
+                await this.entityManager.transaction((manager) =>
+                    this.recordFinished(manager, ctx, item, done, proposal, plan, res),
+                )
+            }
             await this.evidence.log(ctx, {
                 lead_id: done.lead_id,
                 work_item_id: done.id,
@@ -124,9 +115,73 @@ export class WorkRecorderService {
         item: WorkItem,
         merged: Proposal,
         by: Decider,
-        note: string | null,
+        note: OptionalRejectionNote,
+        decisionRecorded: boolean = false,
     ): Promise<void> {
-        await this.decide(
+        if (!decisionRecorded)
+            await this.entityManager.transaction((manager) => this.recordRejected(manager, ctx, item, merged, by, note))
+        const body = this.catalog.get("engine.rejected", { user: by.name, summary: item.proposal.summary }, ctx.locale)
+        await this.evidence.log(ctx, {
+            lead_id: item.lead_id,
+            work_item_id: item.id,
+            kind: "work.rejected",
+            actor: by.name,
+            summary: body,
+            evidence: note,
+        })
+        await this.office.post(ctx, {
+            dept: item.department,
+            body,
+            lead_id: item.lead_id,
+            work_item_id: item.id,
+            installation_id: item.installation_id,
+        })
+        await this.markInbound(ctx, item, "processed", null)
+    }
+
+    /** Writes the approved snapshot, principal and decision event in the item's closing transaction. */
+    recordFinished(
+        manager: EntityManager,
+        ctx: WorkContext,
+        item: WorkItem,
+        done: WorkItem,
+        proposal: Proposal,
+        plan: FinishPlan,
+        res: Performed,
+    ): Promise<void> {
+        return this.decideIn(
+            manager,
+            ctx,
+            done,
+            {
+                work_item_id: done.id,
+                lead_id: done.lead_id,
+                department: done.department,
+                action: done.action,
+                decided_by: plan.by.name,
+                decider_kind: plan.by.kind,
+                decided_by_member_id: plan.by.memberId ?? null,
+                outcome: plan.outcome,
+                reason: item.reason,
+                note: plan.note ?? res.summary,
+                before: plan.before ?? null,
+                after: proposal,
+            },
+            res.summary,
+        )
+    }
+
+    /** Writes a rejection and its principal in the item's closing transaction. */
+    recordRejected(
+        manager: EntityManager,
+        ctx: WorkContext,
+        item: WorkItem,
+        merged: Proposal,
+        by: Decider,
+        note: OptionalRejectionNote,
+    ): Promise<void> {
+        return this.decideIn(
+            manager,
             ctx,
             item,
             {
@@ -145,23 +200,6 @@ export class WorkRecorderService {
             },
             item.proposal.summary,
         )
-        const body = this.catalog.get("engine.rejected", { user: by.name, summary: item.proposal.summary }, ctx.locale)
-        await this.evidence.log(ctx, {
-            lead_id: item.lead_id,
-            work_item_id: item.id,
-            kind: "work.rejected",
-            actor: by.name,
-            summary: body,
-            evidence: note,
-        })
-        await this.office.post(ctx, {
-            dept: item.department,
-            body,
-            lead_id: item.lead_id,
-            work_item_id: item.id,
-            installation_id: item.installation_id,
-        })
-        await this.markInbound(ctx, item, "processed", null)
     }
 
     /**
@@ -212,24 +250,28 @@ export class WorkRecorderService {
      * Writes a person's decision and announces `decision_made` in the same transaction, so the decision and its fact stand or fall
      * together; the event bus hears it only once the decision has committed.
      */
-    private decide(ctx: WorkContext, item: WorkItem, entry: DecisionEntry, summary: string): Promise<void> {
-        return this.entityManager.transaction(async (manager) => {
-            await this.evidence.decide(ctx, entry, manager)
-            await this.eventBus.publish(
-                DecisionMadeEvent.create({
-                    workspaceId: ctx.workspaceId,
-                    workItemId: item.id,
-                    action: item.action,
-                    department: item.department,
-                    outcome: entry.outcome,
-                    decidedBy: entry.decided_by,
-                    ...whenPresent("leadId", item.lead_id),
-                    summary,
-                }),
-                manager,
-                `decision-made:${item.id}:${entry.outcome}`,
-            )
-        })
+    private async decideIn(
+        manager: EntityManager,
+        ctx: WorkContext,
+        item: WorkItem,
+        entry: DecisionEntry,
+        summary: string,
+    ): Promise<void> {
+        await this.evidence.decide(ctx, entry, manager)
+        await this.eventBus.publish(
+            DecisionMadeEvent.create({
+                workspaceId: ctx.workspaceId,
+                workItemId: item.id,
+                action: item.action,
+                department: item.department,
+                outcome: entry.outcome,
+                decidedBy: entry.decided_by,
+                ...whenPresent("leadId", item.lead_id),
+                summary,
+            }),
+            manager,
+            `decision-made:${item.id}:${entry.outcome}`,
+        )
     }
 
     private async safely(run: () => Promise<void>, event: WorkEngineLogEvent): Promise<void> {

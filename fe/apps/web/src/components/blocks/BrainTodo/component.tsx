@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import { Alert, Button } from "@starci/grammar/common"
 import { DossierFindingDialogs } from "@/components/composites/DossierFindingDialogs"
 import type { FindingDialogValues, FindingDialogView } from "@/components/composites/DossierFindingDialogs"
@@ -7,14 +6,21 @@ import type { FindingCardActionView, FindingCardView } from "@/components/compos
 import { SlotView } from "@/components/composites/SlotView"
 import { FilterButtons } from "@/components/leaves/FilterButtons"
 import type { FilterButtonView } from "@/components/leaves/FilterButtons"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, SlotLabels, KnowledgeListView } from "@/modules/types"
+import {
+    KNOWLEDGE_ROWS_PLACEHOLDER,
+    KnowledgeRowList,
+    KnowledgeRowsSection,
+    rowListPropsOf,
+} from "@/components/composites/KnowledgeRows"
 import { TODO_CLASS_NAME } from "./classNames"
 
 /** Copy and values the queue of what needs doing supplies. */
 export interface BrainTodoBaseProps {
-    /** The lists of facts waiting and customer questions, drawn by their own blocks; null where the filter or the queue leaves them out. */
-    readonly shape: { readonly facts: ReactNode; readonly questions: ReactNode }
     readonly props: {
+        readonly review: KnowledgeListView | null
+        readonly proposals: KnowledgeListView | null
+        readonly gaps: KnowledgeListView | null
         readonly filterLabel: string
         readonly filters: ReadonlyArray<FilterButtonView>
         readonly filter: string
@@ -36,6 +42,12 @@ export interface BrainTodoBaseProps {
         readonly retry: () => void
         readonly submitDialog: (values: FindingDialogValues) => void
         readonly closeDialog: () => void
+        readonly reviewAction: (rowId: string, actionId: string, partId?: string) => void
+        readonly gapAction: (rowId: string, actionId: string) => void
+        readonly proposalAction: (rowId: string, actionId: string) => void
+        readonly retryReview: () => void
+        readonly retryGaps: () => void
+        readonly retryProposals: () => void
     }
 }
 
@@ -66,10 +78,16 @@ const More = (props: MoreProps) => {
 
 /**
  * Draws the one queue of what needs the owner: a row of filters, the findings of the dossiers as cards (worst first), then the
- * facts waiting for a decision and the questions customers asked that nobody answered.
+ * facts waiting for a decision, the answers NIVO found in the internal documents for customers' questions and the questions
+ * customers asked that nobody answered.
  */
 export const BrainTodoBase = (props: BrainTodoBaseProps) => {
     const view = props.props
+    const regions = [
+        { id: "review", list: view.review, action: props.on.reviewAction, retry: props.on.retryReview },
+        { id: "proposals", list: view.proposals, action: props.on.proposalAction, retry: props.on.retryProposals },
+        { id: "gaps", list: view.gaps, action: props.on.gapAction, retry: props.on.retryGaps },
+    ]
     return (
         <div className={TODO_CLASS_NAME}>
             {view.filters.length > 1 ? (
@@ -81,20 +99,51 @@ export const BrainTodoBase = (props: BrainTodoBaseProps) => {
                 />
             ) : null}
             {view.cards === null ? null : (
-                <SlotView slot={view.cards} placeholder={[]} labels={view.slotLabels} onRetry={props.on.retry}>
-                    {(cards, isSkeleton) => (
+                <SlotView
+                    slot={view.cards}
+                    placeholder={[]}
+                    labels={view.slotLabels}
+                    onRetry={props.on.retry}
+                    render={(cards, isLoading) => (
                         <FindingCards
                             label={view.cardsLabel}
                             cards={cards}
-                            isSkeleton={isSkeleton}
+                            isLoading={isLoading}
                             onAction={props.on.action}
                         />
                     )}
-                </SlotView>
+                />
             )}
             {view.cards === null ? null : <More props={view} on={props.on} />}
-            {props.shape.facts}
-            {props.shape.questions}
+            {regions.map((region) => {
+                const list = region.list
+                return list === null ? null : (
+                    <SlotView
+                        key={region.id}
+                        slot={list.slot}
+                        placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
+                        labels={list.slotLabels}
+                        empty="collapse"
+                        onRetry={region.retry}
+                        render={(rows, isLoading) => (
+                            <KnowledgeRowsSection
+                                isHeadingInCard
+                                section={list.section}
+                                isPending={list.isPending}
+                                isLoading={isLoading}
+                                body={
+                                    <KnowledgeRowList
+                                        {...rowListPropsOf(list)}
+                                        rows={rows}
+                                        isLoading={isLoading}
+                                        onAction={region.action}
+                                    />
+                                }
+                            />
+                        )}
+                    />
+                )
+            })}
             {view.dialog === null ? null : (
                 <DossierFindingDialogs
                     props={view.dialog}

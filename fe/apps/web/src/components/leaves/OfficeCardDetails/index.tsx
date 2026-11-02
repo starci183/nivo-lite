@@ -1,10 +1,10 @@
 import { Cluster, DescriptionList, Text } from "@starci/grammar/common"
-import type { OfficeResultCardView, OfficeText } from "@/modules/types"
+import type { OfficeResultCardView, OfficeThreadProps } from "@/modules/types"
 
 /** What the details of a result card draw. */
 type OfficeCardDetailsProps = {
     readonly card: OfficeResultCardView
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["cardCopy"]["result"]
 }
 
 /** The labelled rows, the timed lines and the sources the agent used, under a result card. */
@@ -16,7 +16,7 @@ export const OfficeCardDetails = (props: OfficeCardDetailsProps) => (
                 items={props.card.fields.map((field) => ({
                     id: field.label,
                     term: field.label,
-                    description: <Text weight="medium">{field.value}</Text>,
+                    description: <Text isStrong>{field.value}</Text>,
                 }))}
             />
         )}
@@ -32,8 +32,8 @@ export const OfficeCardDetails = (props: OfficeCardDetailsProps) => (
         )}
         {props.card.sources.length === 0 ? null : (
             <Cluster gap="inline">
-                <Text size="xs" tone="muted" weight="medium">
-                    {props.text("cardSources")}
+                <Text size="xs" tone="muted" isStrong>
+                    {props.copy.cardSources}
                 </Text>
                 <Text size="xs" tone="muted">
                     {props.card.sources.map((source) => source.label).join(" · ")}

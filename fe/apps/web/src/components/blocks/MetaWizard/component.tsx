@@ -9,9 +9,15 @@ import {
     type WizardAction,
 } from "@/components/branches/WizardFooter"
 
-import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
+import { frameOf, WizardFrame } from "@/components/frames/WizardFrame"
 import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
 import { metaWizardClassNames as classNames } from "./classNames"
+
+/** The ready drawing with its canonical first-read loading atom. */
+type MetaWizardDrawLoadingProps = MetaWizardBaseProps & { readonly isLoading: boolean }
+
+/** The ready drawing with its canonical first-read loading atom. */
+type ButtonRowLoadingProps = ButtonRowProps & { readonly isLoading: boolean }
 
 /** One option of the Page list. */
 export interface MetaPageChoice {
@@ -113,7 +119,7 @@ const pickStepActions = (
 }
 
 /** The Page step body: the list, the chosen Page, or the empty sentence. */
-const PickStepBody = (props: MetaWizardBaseProps) => {
+const PickStepBody = (props: MetaWizardDrawLoadingProps) => {
     const view = props.props
     const text = view.text
     if (view.pages.length > 0) {
@@ -125,10 +131,11 @@ const PickStepBody = (props: MetaWizardBaseProps) => {
                 value={view.pageId === "" ? null : view.pageId}
                 onValueChange={props.on.page}
                 options={[...view.pages]}
+                isLoading={props.isLoading}
             />
         )
     }
-    if (view.chosen !== null) return <Alert tone="affirmative" title={view.chosen} />
+    if (view.chosen !== null) return <Alert tone="affirmative" title={view.chosen} isLoading={props.isLoading} />
     return (
         <Text size="sm" tone="muted">
             {text.pickNone}
@@ -162,35 +169,48 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
         test: [nextAction(text.done, on.done), back],
     }[view.step]
     return (
-        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
-            {(_resume, isSkeleton) => (
-                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} actions={actions}>
+        <SlotView
+            slot={view.resume}
+            placeholder={RESUME_PLACEHOLDER}
+            labels={view.slotLabels}
+            onRetry={on.retry}
+            render={(_resume, isLoading) => (
+                <WizardFrame {...frameOf(view)} footer={<WizardFooter actions={actions} isLoading={isLoading} />}>
                     {view.step === "connect" ? (
                         <div className={classNames.copy}>
                             <Text size="sm">{text.connectBody}</Text>
                             <Text size="sm" tone="muted">
                                 {text.connectScopes}
                             </Text>
-                            <Alert tone="informative" title={text.devNote} />
+                            <Alert tone="informative" title={text.devNote} isLoading={isLoading} />
                         </div>
                     ) : null}
                     {view.step === "pick" ? (
                         <>
                             <Text size="sm">{text.pickBody}</Text>
-                            <PickStepBody props={view} on={on} />
+                            <PickStepBody props={view} on={on} isLoading={isLoading} />
                         </>
                     ) : null}
                     {view.step === "agent" ? (
                         <>
-                            {view.chosen === null ? null : <Alert tone="affirmative" title={text.pickSaved} />}
-                            <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
+                            {view.chosen === null ? null : (
+                                <Alert tone="affirmative" title={text.pickSaved} isLoading={isLoading} />
+                            )}
+                            <WizardAgentStep
+                                {...view.agentStep}
+                                isDisabled={view.isPending}
+                                onChange={on.agents}
+                                isLoading={isLoading}
+                            />
                         </>
                     ) : null}
-                    {view.step === "test" ? <MetaTestStep {...props} /> : null}
-                    {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
+                    {view.step === "test" ? <MetaTestStep {...props} isLoading={isLoading} /> : null}
+                    {view.note === null ? null : (
+                        <Alert tone={view.note.tone} title={view.note.text} isLoading={isLoading} />
+                    )}
                 </WizardFrame>
             )}
-        </SlotView>
+        />
     )
 }
 
@@ -205,7 +225,7 @@ interface ButtonRowProps {
 }
 
 /** The run and repair buttons of the test step. */
-const ButtonRow = (props: ButtonRowProps) => (
+const ButtonRow = (props: ButtonRowLoadingProps) => (
     <WizardFooter
         actions={[
             { id: "run", label: props.run, intent: "alternative", onPress: props.onRun, isDisabled: props.isDisabled },
@@ -221,11 +241,12 @@ const ButtonRow = (props: ButtonRowProps) => (
                   ]
                 : []),
         ]}
+        isLoading={props.isLoading}
     />
 )
 
 /** Renders the MetaTestStep section. */
-const MetaTestStep = (props: MetaWizardBaseProps) => {
+const MetaTestStep = (props: MetaWizardDrawLoadingProps) => {
     const view = props.props
     const text = view.text
     const on = props.on
@@ -234,20 +255,22 @@ const MetaTestStep = (props: MetaWizardBaseProps) => {
             <Text size="sm">{text.testIntro}</Text>
             {view.checked === null ? null : (
                 <div className={classNames.copy}>
-                    <Text size="sm" weight="semibold">
+                    <Text size="sm" isStrong>
                         {view.checked.page}
                     </Text>
                     <Text size="xs" tone="muted">
                         {view.checked.instagram}
                     </Text>
                     {view.lines.map((line) => (
-                        <Alert key={line.key} tone={line.tone} title={line.text} />
+                        <Alert key={line.key} tone={line.tone} title={line.text} isLoading={props.isLoading} />
                     ))}
-                    {view.checked.verdict === "ok" ? <Alert tone="affirmative" title={text.testAllGood} /> : null}
+                    {view.checked.verdict === "ok" ? (
+                        <Alert tone="affirmative" title={text.testAllGood} isLoading={props.isLoading} />
+                    ) : null}
                 </div>
             )}
             {view.isChecking ? (
-                <Text size="sm" weight="medium" live="polite">
+                <Text size="sm" isStrong live="polite">
                     {text.testWorking}
                 </Text>
             ) : null}
@@ -259,11 +282,12 @@ const MetaTestStep = (props: MetaWizardBaseProps) => {
                     isDisabled={view.isChecking}
                     onRun={() => on.runCheck(false)}
                     onRepair={() => on.runCheck(true)}
+                    isLoading={props.isLoading}
                 />
             </div>
             {view.received === null ? (
                 <>
-                    <Text size="sm" weight="medium" live="polite">
+                    <Text size="sm" isStrong live="polite">
                         {text.testWaiting}
                     </Text>
                     <Text size="xs" tone="muted">
@@ -271,7 +295,7 @@ const MetaTestStep = (props: MetaWizardBaseProps) => {
                     </Text>
                 </>
             ) : (
-                <Alert tone="affirmative" title={view.received} />
+                <Alert tone="affirmative" title={view.received} isLoading={props.isLoading} />
             )}
         </>
     )

@@ -1,9 +1,9 @@
-import { flowGraphDiameter } from "@starci/grammar/common"
+import { bubbleDiameter } from "@starci/grammar/common"
 import type {
-    FlowGraphEdge,
-    FlowGraphFill,
-    FlowGraphNode,
-    FlowGraphRingPart,
+    BubbleMapEdge,
+    BubbleMapFill,
+    BubbleMapNode,
+    BubbleMapRingPart,
     FlowGraphTone,
 } from "@starci/grammar/common"
 import { DOSSIER_STATUS_ORDER } from "./dossiers"
@@ -61,8 +61,8 @@ export interface MapWords {
 
 /** The nodes and edges of the map. */
 export interface MapGraph {
-    readonly nodes: ReadonlyArray<FlowGraphNode>
-    readonly edges: ReadonlyArray<FlowGraphEdge>
+    readonly nodes: ReadonlyArray<BubbleMapNode>
+    readonly edges: ReadonlyArray<BubbleMapEdge>
 }
 
 /** The status a dossier stands at: the review's own once it has looked, else the checklist's. */
@@ -97,7 +97,7 @@ export const dossierOfFile = (
 }
 
 /** How a dossier is painted besides its tone, so a status never rests on colour alone. */
-export const MAP_STATUS_FILL: Readonly<Record<DossierStatus, FlowGraphFill>> = {
+export const MAP_STATUS_FILL: Readonly<Record<DossierStatus, BubbleMapFill>> = {
     present: "solid",
     partial: "half",
     drafted: "soft",
@@ -139,7 +139,7 @@ const CATEGORY_RANGE = { min: 66, max: 106 } as const
 const DOSSIER_RANGE = { min: 30, max: 92 } as const
 const FILE_DIAMETER = 28
 
-const ringOf = (category: CategoryView, statusOf: MapStatusOf): ReadonlyArray<FlowGraphRingPart> =>
+const ringOf = (category: CategoryView, statusOf: MapStatusOf): ReadonlyArray<BubbleMapRingPart> =>
     DOSSIER_STATUS_ORDER.map((status) => ({
         tone: MAP_STATUS_TONE[status],
         value: category.dossiers.filter((one) => statusOf(one) === status).length,
@@ -162,7 +162,7 @@ export const mapGraphOf = (
     const dossiers = categories.flatMap((category) => category.dossiers)
     const maxCategory = Math.max(1, ...categories.map((category) => category.documentCount))
     const maxDossier = Math.max(1, ...dossiers.map((dossier) => dossier.documentCount))
-    const nodes: FlowGraphNode[] = [
+    const nodes: BubbleMapNode[] = [
         {
             id: MAP_ROOT_ID,
             label: words.root,
@@ -176,10 +176,10 @@ export const mapGraphOf = (
             fill: "solid",
         },
     ]
-    const edges: FlowGraphEdge[] = []
+    const edges: BubbleMapEdge[] = []
     categories.forEach((category, index) => {
         const categoryId = mapCategoryId(category.id)
-        const categoryDiameter = flowGraphDiameter(category.documentCount, maxCategory, CATEGORY_RANGE)
+        const categoryDiameter = bubbleDiameter(category.documentCount, maxCategory, CATEGORY_RANGE)
         nodes.push({
             id: categoryId,
             label: categoryShortOf(category),
@@ -198,7 +198,7 @@ export const mapGraphOf = (
         for (const dossier of category.dossiers) {
             const status = statusOf(dossier)
             const isDimmed = !isShown(dossier, filter, statusOf)
-            const dossierDiameter = flowGraphDiameter(dossier.documentCount, maxDossier, DOSSIER_RANGE)
+            const dossierDiameter = bubbleDiameter(dossier.documentCount, maxDossier, DOSSIER_RANGE)
             nodes.push({
                 id: dossier.id,
                 label: dossier.name,

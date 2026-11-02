@@ -3,26 +3,28 @@ import {
     Badge,
     Button,
     Cluster,
-    FlowGraph,
-    ListRow,
+    EmptyNotice,
     Page,
     Pane,
     PaneGrid,
     PaneSection,
-    SectionHeader,
     Select,
-    SurfaceListCard,
     Text,
-    TextAction,
+    Section,
+    BubbleMap,
+    type BadgeTone,
+    type BubbleMapEdge,
+    type BubbleMapNode,
 } from "@starci/grammar/common"
-import type { BadgeTone, FlowGraphEdge, FlowGraphNode, PageHeaderContent } from "@starci/grammar/common"
+
 import { SlotView } from "@/components/composites/SlotView"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import { BrainPageActions } from "@/components/composites/BrainPageActions"
+import type { BrainPageHeaderView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** The nodes and edges the map draws. */
 export interface MapContent {
-    readonly nodes: ReadonlyArray<FlowGraphNode>
-    readonly edges: ReadonlyArray<FlowGraphEdge>
+    readonly nodes: ReadonlyArray<BubbleMapNode>
+    readonly edges: ReadonlyArray<BubbleMapEdge>
 }
 
 /** One row of the selected node's list: a dossier of the category, or a status with its count. */
@@ -49,10 +51,10 @@ export interface MapDetailView {
 /** Copy and values the map supplies. */
 export interface BrainMapBaseProps {
     /** The findings of the selected dossier, when a dossier is selected. */
-    readonly shape: { readonly findings: ReactNode }
+    readonly children: ReactNode
     readonly props: {
         /** The Second Brain header with its tabs: the grid attaches flush under the tab line. */
-        readonly header: PageHeaderContent
+        readonly header: BrainPageHeaderView
         /** The id of the map tab panel, which the grid is. */
         readonly panelId: string
         readonly gridLabel: string
@@ -71,6 +73,9 @@ export interface BrainMapBaseProps {
         readonly detail: MapDetailView
     }
     readonly on: {
+        readonly reviewAll: () => void
+        readonly setPart: (id: string) => void
+        readonly selectTab: (id: string) => void
         readonly select: (id: string | null) => void
         readonly setFilter: (value: string | null) => void
         readonly retry: () => void
@@ -84,21 +89,20 @@ interface GraphProps {
     readonly emptyLabel: string
     readonly content: MapContent
     readonly selectedId: string | null
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onSelect: (id: string | null) => void
 }
 
 /** The graph in the map pane: the orbit layout, its centre the workspace, selection reported through the address. */
 const Graph = (props: GraphProps) => (
-    <FlowGraph
+    <BubbleMap
         label={props.label}
         nodes={props.content.nodes}
         edges={props.content.edges}
-        layout="orbit"
         selectedId={props.selectedId}
         onSelect={props.onSelect}
         emptyLabel={props.emptyLabel}
-        isLoading={props.isSkeleton}
+        isLoading={props.isLoading}
         height="lg"
     />
 )
@@ -106,16 +110,24 @@ const Graph = (props: GraphProps) => (
 /** The rows of the selected node: the dossiers of a category, or the dossiers at each status. */
 const Rows = (props: Pick<MapDetailView, "rows" | "rowsLabel">) =>
     props.rows.length === 0 ? null : (
-        <SurfaceListCard ariaLabel={props.rowsLabel}>
-            {props.rows.map((row) => (
-                <ListRow
-                    key={row.id}
-                    title={row.href === null ? row.label : <TextAction href={row.href}>{row.label}</TextAction>}
-                    description={row.description}
-                    badges={row.badge === null ? undefined : <Badge tone={row.badge.tone}>{row.badge.label}</Badge>}
-                />
-            ))}
-        </SurfaceListCard>
+        <Section
+            kind="list"
+            title={props.rowsLabel}
+            headingLevel={3}
+            items={props.rows.map((row) => {
+                const description = row.description ?? undefined
+                return {
+                    id: row.id,
+                    title: row.label,
+                    ...(description === undefined ? {} : { description }),
+                    ...(row.badge === null
+                        ? {}
+                        : { badges: [{ label: row.badge.label, tone: row.badge.tone }] as const }),
+                    ...(row.href === null ? {} : { action: { label: row.label, href: row.href } }),
+                }
+            })}
+            empty={<EmptyNotice message={props.rowsLabel} />}
+        />
     )
 
 /** The selected node and the findings of its dossier. */
@@ -128,8 +140,7 @@ interface DetailProps {
 const Detail = (props: DetailProps) => {
     const detail = props.detail
     return (
-        <>
-            <SectionHeader level={2} title={detail.title} />
+        <Section title={detail.title}>
             {detail.badges.length === 0 ? null : (
                 <Cluster gap="inline">
                     {detail.badges.map((badge) => (
@@ -151,7 +162,7 @@ const Detail = (props: DetailProps) => {
             )}
             <Rows rows={detail.rows} rowsLabel={detail.rowsLabel} />
             {props.findings}
-        </>
+        </Section>
     )
 }
 
@@ -164,7 +175,28 @@ const Detail = (props: DetailProps) => {
 export const BrainMapBase = (props: BrainMapBaseProps) => {
     const view = props.props
     return (
-        <Page chrome="panes" header={view.header} measure="product">
+        <Page
+            chrome="panes"
+            header={{
+                ...view.header.heading,
+                actions: (
+                    <BrainPageActions
+                        {...view.header.actions}
+                        onReview={props.on.reviewAll}
+                        onSetPart={props.on.setPart}
+                    />
+                ),
+                tabs: {
+                    label: view.header.tabs.label,
+                    items: view.header.tabs.items,
+                    selectedKey: view.header.tabs.selectedKey,
+                    labelVisibility: "always",
+                    panelId: (key) => `${view.header.tabs.panelPrefix}${key}`,
+                    onSelect: props.on.selectTab,
+                },
+            }}
+            measure="product"
+        >
             <PaneGrid
                 label={view.gridLabel}
                 role="tabpanel"
@@ -186,18 +218,17 @@ export const BrainMapBase = (props: BrainMapBaseProps) => {
                             placeholder={view.placeholder}
                             labels={view.slotLabels}
                             onRetry={props.on.retry}
-                        >
-                            {(content, isSkeleton) => (
+                            render={(content, isLoading) => (
                                 <Graph
                                     label={view.mapLabel}
                                     emptyLabel={view.emptyLabel}
                                     content={content}
                                     selectedId={view.selectedId}
-                                    isSkeleton={isSkeleton}
+                                    isLoading={isLoading}
                                     onSelect={props.on.select}
                                 />
                             )}
-                        </SlotView>
+                        />
                     </PaneSection>
                 </Pane>
                 <Pane
@@ -213,7 +244,7 @@ export const BrainMapBase = (props: BrainMapBaseProps) => {
                     onOpenChange={props.on.detailOpenChange}
                 >
                     <PaneSection gap="section">
-                        <Detail detail={view.detail} findings={props.shape.findings} />
+                        <Detail detail={view.detail} findings={props.children} />
                     </PaneSection>
                 </Pane>
             </PaneGrid>

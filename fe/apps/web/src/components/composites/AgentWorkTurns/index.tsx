@@ -8,7 +8,7 @@ interface AgentWorkTurnsProps {
     readonly emptyMessage: string
     readonly openLabel: string
     readonly turns: AgentWorkTurnsView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** The turns that did something, newest first, and the wakes that found nothing to do as one count under them. */
@@ -16,7 +16,7 @@ export const AgentWorkTurns = (props: AgentWorkTurnsProps) => (
     <>
         <AgentWorkRows
             words={{ label: props.label, emptyMessage: props.emptyMessage }}
-            isSkeleton={props.isSkeleton}
+            isLoading={props.isLoading}
             rows={props.turns.rows.map((turn) => ({
                 id: turn.id,
                 title: turn.sourceLabel,

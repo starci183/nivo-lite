@@ -1,4 +1,16 @@
-import { Button, Divider, EmptyNotice, Page, SurfaceCard, Text } from "@starci/grammar/common"
+import {
+    Button,
+    Divider,
+    EmptyNotice,
+    Heading,
+    Page,
+    Pane,
+    PaneGrid,
+    PaneSection,
+    Stack,
+    SurfaceCard,
+    Text,
+} from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { ThreadChainPanel } from "@/components/composites/ThreadChainPanel"
 import { ThreadComposer } from "@/components/composites/ThreadComposer"
@@ -11,13 +23,7 @@ import type {
     WorkThreadBoardHandlers,
     WorkThreadBoardView,
 } from "@/modules/types"
-import {
-    PAGE_CLASS_NAME,
-    PANELS_CLASS_NAME,
-    PAGINATION_CLASS_NAME,
-    THREAD_CLASS_NAME,
-    THREAD_HEAD_CLASS_NAME,
-} from "./classNames"
+import { THREAD_CLASS_NAME } from "./classNames"
 
 /** The words, values and state of the work threads board, and what it asks. */
 export interface WorkThreadBoardBaseProps {
@@ -40,13 +46,17 @@ const Rail = (props: WorkThreadBoardBaseProps) => {
     const rail = props.props.rail
     return (
         <SurfaceCard label={rail.title}>
-            <SlotView slot={rail.slot} placeholder={NO_ROWS} labels={rail.slotLabels} onRetry={props.on.retry}>
-                {(rows, isSkeleton) => (
+            <SlotView
+                slot={rail.slot}
+                placeholder={NO_ROWS}
+                labels={rail.slotLabels}
+                onRetry={props.on.retry}
+                render={(rows, isLoading) => (
                     <ThreadRail
                         title={rail.title}
                         listLabel={rail.listLabel}
                         rows={rows}
-                        isSkeleton={isSkeleton}
+                        isLoading={isLoading}
                         newLabel={rail.newLabel}
                         isFormOpen={rail.isFormOpen}
                         titleDraft={rail.titleDraft}
@@ -59,9 +69,9 @@ const Rail = (props: WorkThreadBoardBaseProps) => {
                         onCreate={props.on.create}
                     />
                 )}
-            </SlotView>
+            />
             {rail.hasNextPage || rail.paginationFailure !== null ? (
-                <div className={PAGINATION_CLASS_NAME}>
+                <Stack gap="inline">
                     {rail.paginationFailure === null ? null : (
                         <Text size="sm" live="polite">
                             {rail.paginationFailure}
@@ -76,7 +86,7 @@ const Rail = (props: WorkThreadBoardBaseProps) => {
                     >
                         {rail.paginationFailure === null ? rail.loadMoreLabel : rail.retryPageLabel}
                     </Button>
-                </div>
+                </Stack>
             ) : null}
         </SurfaceCard>
     )
@@ -93,20 +103,21 @@ const Thread = (props: WorkThreadBoardBaseProps) => {
                     placeholder={SKELETON_FEED}
                     labels={thread.slotLabels}
                     onRetry={props.on.retry}
-                >
-                    {(feed, isSkeleton) => (
+                    render={(feed, isLoading) => (
                         <>
-                            <div className={THREAD_HEAD_CLASS_NAME}>
-                                <Text weight="semibold">{feed.title}</Text>
+                            <Stack gap="identity">
+                                <Heading level={3} isLoading={isLoading}>
+                                    {feed.title}
+                                </Heading>
                                 <Text size="sm" tone="muted">
                                     {feed.subtitle}
                                 </Text>
-                            </div>
+                            </Stack>
                             <Divider semantics="presentation" />
                             <ThreadFeed
                                 label={thread.feedLabel}
                                 messages={feed.messages}
-                                isSkeleton={isSkeleton}
+                                isLoading={isLoading}
                                 emptyMessage={thread.feedEmpty}
                                 aiLabel={thread.aiLabel}
                                 quotedLabel={thread.quotedLabel}
@@ -117,7 +128,7 @@ const Thread = (props: WorkThreadBoardBaseProps) => {
                             />
                         </>
                     )}
-                </SlotView>
+                />
                 <ThreadComposer
                     label={thread.composerLabel}
                     placeholder={thread.composerPlaceholder}
@@ -142,9 +153,15 @@ const Chain = (props: WorkThreadBoardBaseProps) => {
     const chain = props.props.chain
     return (
         <SurfaceCard label={chain.title}>
-            <SlotView slot={chain.slot} placeholder={SKELETON_CHAIN} labels={chain.slotLabels} onRetry={props.on.retry}>
-                {(view, isSkeleton) => <ThreadChainPanel view={view} labels={chain.labels} isSkeleton={isSkeleton} />}
-            </SlotView>
+            <SlotView
+                slot={chain.slot}
+                placeholder={SKELETON_CHAIN}
+                labels={chain.slotLabels}
+                onRetry={props.on.retry}
+                render={(view, isLoading) => (
+                    <ThreadChainPanel view={view} labels={chain.labels} isLoading={isLoading} />
+                )}
+            />
         </SurfaceCard>
     )
 }
@@ -165,22 +182,38 @@ const NoThread = (props: NoThreadProps) => (
 export const WorkThreadBoardBase = (props: WorkThreadBoardBaseProps) => (
     <Page
         measure="product"
+        chrome="panes"
+        minHeight="lg"
         header={{
             breadcrumbs: { label: props.props.crumbLabel, items: props.props.crumbs },
             title: props.props.title,
             description: props.props.subtitle,
         }}
     >
-        <div className={PAGE_CLASS_NAME}>
-            <div className={PANELS_CLASS_NAME}>
-                <Rail {...props} />
-                {props.props.thread.hasThread ? (
-                    <Thread {...props} />
-                ) : (
-                    <NoThread title={props.props.title} message={props.props.thread.noSelection} />
-                )}
-                <Chain {...props} />
-            </div>
-        </div>
+        <PaneGrid
+            label={props.props.title}
+            areas={{ base: ["rail", "thread", "chain"], wide: ["rail thread chain"] }}
+            columns={{ base: ["fill"], wide: ["compact", "fill", "wide"] }}
+        >
+            <Pane area="rail" scroll label={props.props.rail.title}>
+                <PaneSection grow>
+                    <Rail {...props} />
+                </PaneSection>
+            </Pane>
+            <Pane area="thread" scroll label={props.props.title}>
+                <PaneSection grow>
+                    {props.props.thread.hasThread ? (
+                        <Thread {...props} />
+                    ) : (
+                        <NoThread title={props.props.title} message={props.props.thread.noSelection} />
+                    )}
+                </PaneSection>
+            </Pane>
+            <Pane area="chain" scroll label={props.props.chain.title}>
+                <PaneSection grow>
+                    <Chain {...props} />
+                </PaneSection>
+            </Pane>
+        </PaneGrid>
     </Page>
 )

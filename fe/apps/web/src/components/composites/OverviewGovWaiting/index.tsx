@@ -1,8 +1,7 @@
-import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard, TextAction } from "@starci/grammar/common"
-import { AccountingBlock } from "@/components/branches/AccountingBlock"
+import { EmptyNotice, Link, SurfaceCard, Text, type ListRowData } from "@starci/grammar/common"
 import type { GovWaitingItem } from "@/hooks/overviewGov"
 
-/** The figures of the waiting block. */
+/** The settled waiting rows, with one unresolved drawing flag for the containing overview. */
 export interface OverviewGovWaitingProps {
     readonly figures: {
         readonly title: string
@@ -14,47 +13,44 @@ export interface OverviewGovWaitingProps {
         readonly more: string | null
         readonly source: string
     }
+    readonly isLoading?: boolean
 }
 
-/** The decisions waiting for the owner: the oldest few, each opening Office, in one list with the count and the source. */
+/** Keeps the oldest decisions, their count and source in one bounded collection with one heading. */
 export const OverviewGovWaiting = (props: OverviewGovWaitingProps) => {
     const { figures } = props
     return (
-        <AccountingBlock label={figures.title}>
-            <SurfaceListCard
-                label={figures.title}
-                labelEnd={
-                    figures.openLabel === null ? undefined : (
-                        <TextAction href={figures.chatHref} appearance="section">
-                            {figures.openLabel}
-                        </TextAction>
-                    )
-                }
-                {...(figures.items.length === 0 ? {} : { fact: figures.count })}
-                empty={<EmptyNotice message={figures.none} />}
-                footer={[figures.more ?? "", figures.source].filter((line) => line !== "").join(" · ")}
-            >
-                {figures.items.map((item) => (
-                    <ListRow
-                        key={item.id}
-                        title={item.title}
-                        {...(item.summary === null ? {} : { description: item.summary })}
-                        badges={
-                            <>
-                                <Badge tone="neutral">{item.department}</Badge>
-                                {item.reason === null ? null : <Badge tone="warning">{item.reason}</Badge>}
-                            </>
-                        }
-                        actions={
-                            figures.openLabel === null ? undefined : (
-                                <Button size="sm" intent="neutral" href={figures.chatHref}>
-                                    {figures.openLabel}
-                                </Button>
-                            )
-                        }
-                    />
-                ))}
-            </SurfaceListCard>
-        </AccountingBlock>
+        <SurfaceCard
+            kind="list"
+            label={figures.title}
+            isLoading={props.isLoading === true}
+            {...(figures.items.length === 0 ? {} : { fact: figures.count })}
+            labelEnd={figures.openLabel === null ? undefined : <Link href={figures.chatHref}>{figures.openLabel}</Link>}
+            empty={<EmptyNotice message={figures.none} />}
+            footer={
+                <Text size="xs" tone="muted" isLoading={props.isLoading === true}>
+                    {[
+                        figures.openLabel !== null && figures.items.length > 0 ? figures.count : "",
+                        figures.more ?? "",
+                        figures.source,
+                    ]
+                        .filter((line) => line !== "")
+                        .join(" · ")}
+                </Text>
+            }
+            items={figures.items.map((item): ListRowData => ({
+                id: item.id,
+                title: item.title,
+                ...(item.summary == null ? {} : { description: item.summary }),
+                badges:
+                    item.reason === null
+                        ? [{ label: item.department, tone: "neutral" }]
+                        : [
+                              { label: item.department, tone: "neutral" },
+                              { label: item.reason, tone: "warning" },
+                          ],
+                ...(figures.openLabel === null ? {} : { action: { label: figures.openLabel, href: figures.chatHref } }),
+            }))}
+        />
     )
 }

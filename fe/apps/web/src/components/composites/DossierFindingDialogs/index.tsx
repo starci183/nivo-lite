@@ -1,5 +1,6 @@
+import { Stack, Button, DateField, Dialog, Form, Select, Textarea } from "@starci/grammar/common"
 import { parseDate } from "@internationalized/date"
-import { Button, DateField, Dialog, Form, Select, Textarea } from "@starci/grammar/common"
+
 import { NO_ASSIGNEE } from "@/hooks/brain"
 import type {
     FindingAssignFieldsView,
@@ -7,7 +8,6 @@ import type {
     FindingDialogView,
     FindingTextFieldView,
 } from "@/hooks/brain"
-import { FORM_CLASS_NAME } from "./classNames"
 
 export type { FindingDialogValues, FindingDialogView } from "@/hooks/brain"
 
@@ -115,14 +115,14 @@ export const DossierFindingDialogs = (props: DossierFindingDialogsProps) => (
                 })
             }
         >
-            <div className={FORM_CLASS_NAME}>
+            <Stack gap="section">
                 {props.props.text === null ? null : (
                     <TextField field={props.props.text} isPending={props.props.isPending} />
                 )}
                 {props.props.assign === null ? null : (
                     <AssignFields fields={props.props.assign} isPending={props.props.isPending} />
                 )}
-            </div>
+            </Stack>
         </Form>
     </Dialog>
 )

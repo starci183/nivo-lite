@@ -1,6 +1,6 @@
-import { Badge, Button, FileDropzone, Input, ListRow, Progress, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Button, Cluster, FileDropzone, Input, Progress, Stack, Text } from "@starci/grammar/common"
+import type { ListRowData } from "@starci/grammar/common"
 import type { BatchBytesView, LinkRowView, QueueRowView, StoppedUploadsView } from "@/modules/types"
-import { LINK_FIELD_CLASS_NAME, LINK_ROW_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** The words, values and state of the files and links panel. */
 type AddFilesPanelProps = {
@@ -11,10 +11,7 @@ type AddFilesPanelProps = {
     readonly linkPlaceholder: string
     readonly linkRemoveLabel: string
     readonly addLinkLabel: string
-    readonly queueTitle: string
-    readonly removeLabel: string
     readonly links: ReadonlyArray<LinkRowView>
-    readonly queue: ReadonlyArray<QueueRowView>
     readonly note?: string | undefined
     readonly batch?: BatchBytesView | undefined
     readonly stopped?: StoppedUploadsView | undefined
@@ -24,8 +21,6 @@ type AddFilesPanelProps = {
     readonly onCheckLink: (id: string) => void
     readonly onAddLink: () => void
     readonly onRemoveLink: (id: string) => void
-    readonly onRemoveItem: (id: string) => void
-    readonly onRetryItem: (id: string) => void
     readonly onDismissStopped: () => void
 }
 
@@ -36,23 +31,21 @@ type LinkRowsProps = Pick<
 >
 
 const LinkRows = (props: LinkRowsProps) => (
-    <>
+    <Stack gap="inline">
         {props.links.map((link) => (
-            <div key={link.id} className={LINK_ROW_CLASS_NAME}>
-                <div className={LINK_FIELD_CLASS_NAME}>
-                    <Input
-                        id={`knowledge-add-${link.id}`}
-                        name={link.id}
-                        label={link.label}
-                        placeholder={props.linkPlaceholder}
-                        value={link.value}
-                        errorMessage={link.error}
-                        isError={link.error !== undefined}
-                        isDisabled={props.isBusy}
-                        onValueChange={(value) => props.onLink(link.id, value)}
-                        onBlur={() => props.onCheckLink(link.id)}
-                    />
-                </div>
+            <Cluster key={link.id} gap="inline" align="end">
+                <Input
+                    id={`knowledge-add-${link.id}`}
+                    name={link.id}
+                    label={link.label}
+                    placeholder={props.linkPlaceholder}
+                    value={link.value}
+                    errorMessage={link.error}
+                    isInvalid={link.error !== undefined}
+                    isDisabled={props.isBusy}
+                    onValueChange={(value) => props.onLink(link.id, value)}
+                    onBlur={() => props.onCheckLink(link.id)}
+                />
                 <Button
                     intent="destructive"
                     step="entry"
@@ -61,9 +54,9 @@ const LinkRows = (props: LinkRowsProps) => (
                 >
                     {props.linkRemoveLabel}
                 </Button>
-            </div>
+            </Cluster>
         ))}
-    </>
+    </Stack>
 )
 
 /** The notice that an earlier page's uploads stopped, with the ways to go on. */
@@ -91,47 +84,41 @@ const StoppedNotice = (props: StoppedNoticeProps) => (
     </>
 )
 
-/** The queue of files and links waiting to be added. */
-type QueueCardProps = Pick<AddFilesPanelProps, "queue" | "queueTitle" | "removeLabel" | "onRetryItem" | "onRemoveItem">
+/** The file queue's item data and actions, consumed by the containing card's final collection band. */
+interface KnowledgeUploadRowsProps {
+    readonly queue: ReadonlyArray<QueueRowView>
+    readonly removeLabel: string
+    readonly onRetryItem: (id: string) => void
+    readonly onRemoveItem: (id: string) => void
+}
 
-const QueueCard = (props: QueueCardProps) => (
-    <>
-        {props.queue.length === 0 ? null : (
-            <SurfaceListCard ariaLabel={props.queueTitle} empty={null}>
-                {props.queue.map((item) => (
-                    <ListRow
-                        key={item.id}
-                        title={item.name}
-                        description={item.error ?? item.detail}
-                        badges={<Badge tone={item.statusTone}>{item.statusLabel}</Badge>}
-                        actions={
-                            <>
-                                {item.retryLabel === undefined ? null : (
-                                    <Button intent="alternative" onPress={() => props.onRetryItem(item.id)}>
-                                        {item.retryLabel}
-                                    </Button>
-                                )}
-                                {item.canRemove ? (
-                                    <Button
-                                        intent="destructive"
-                                        step="entry"
-                                        onPress={() => props.onRemoveItem(item.id)}
-                                    >
-                                        {props.removeLabel}
-                                    </Button>
-                                ) : null}
-                            </>
-                        }
-                    />
-                ))}
-            </SurfaceListCard>
-        )}
-    </>
-)
+/** Preserves each file's status, retry and cancel controls without drawing a second raised surface. */
+export const knowledgeUploadRowsOf = (props: KnowledgeUploadRowsProps): ReadonlyArray<ListRowData> =>
+    props.queue.map((item) => ({
+        id: item.id,
+        title: item.name,
+        description: item.error ?? item.detail,
+        badges: [{ label: item.statusLabel, tone: item.statusTone }],
+        detail:
+            item.retryLabel === undefined && !item.canRemove ? undefined : (
+                <Cluster gap="inline">
+                    {item.retryLabel === undefined ? null : (
+                        <Button intent="alternative" onPress={() => props.onRetryItem(item.id)}>
+                            {item.retryLabel}
+                        </Button>
+                    )}
+                    {item.canRemove ? (
+                        <Button intent="destructive" step="entry" onPress={() => props.onRemoveItem(item.id)}>
+                            {props.removeLabel}
+                        </Button>
+                    ) : null}
+                </Cluster>
+            ),
+    }))
 
 /** The files, the links and what is waiting to be added. */
 export const AddFilesPanel = (props: AddFilesPanelProps) => (
-    <div className={PANEL_CLASS_NAME}>
+    <Stack gap="row">
         <FileDropzone
             id="knowledge-add-files"
             name="files"
@@ -144,7 +131,7 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
             isDisabled={props.isBusy}
             onFilesChange={props.onFiles}
         />
-        <Text weight="semibold">{props.linksLabel}</Text>
+        <Text isStrong>{props.linksLabel}</Text>
         <Text size="sm" tone="muted">
             {props.linksHint}
         </Text>
@@ -169,12 +156,5 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
         {props.batch === undefined ? null : (
             <Progress label={props.batch.label} value={props.batch.value} valueText={props.batch.valueText} />
         )}
-        <QueueCard
-            queue={props.queue}
-            queueTitle={props.queueTitle}
-            removeLabel={props.removeLabel}
-            onRetryItem={props.onRetryItem}
-            onRemoveItem={props.onRemoveItem}
-        />
-    </div>
+    </Stack>
 )

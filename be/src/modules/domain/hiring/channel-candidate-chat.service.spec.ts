@@ -40,7 +40,7 @@ describe("ChannelCandidateChatService", () => {
     it("stores the message in the conversation and delivers it on its channel", async () => {
         const { chat, conversations, messages, delivery } = await build()
         conversations.targetOf.mockResolvedValue(ok(TARGET))
-        delivery.deliver.mockResolvedValue({ delivered: true, failure: null })
+        delivery.deliver.mockResolvedValue({ delivered: true, outcome: "acknowledged", failure: null })
 
         await expect(chat.deliver("ws-1", "conv-1", "Interview at 10:00")).resolves.toBe(true)
 
@@ -55,7 +55,7 @@ describe("ChannelCandidateChatService", () => {
     it("answers false when the channel did not take it", async () => {
         const { chat, conversations, delivery } = await build()
         conversations.targetOf.mockResolvedValue(ok(TARGET))
-        delivery.deliver.mockResolvedValue({ delivered: false, failure: "zalo_window_expired" })
+        delivery.deliver.mockResolvedValue({ delivered: false, outcome: "rejected", failure: "zalo_window_expired" })
 
         await expect(chat.deliver("ws-1", "conv-1", "x")).resolves.toBe(false)
     })

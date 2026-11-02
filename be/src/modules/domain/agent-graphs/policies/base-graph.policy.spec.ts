@@ -87,9 +87,22 @@ describe("base-graph.policy", () => {
     it("draws no stop for a rule whose branches never stop, so no node is left that no trigger reaches", async () => {
         const subject = await build()
 
-        const graph = subject.baseGraphOf(moduleOf(), [], [ruleOf({ auto_max: null, ask_max: null, limit_vnd: 5_000_000 })], VOICE)
+        const graph = subject.baseGraphOf(
+            moduleOf(),
+            [],
+            [ruleOf({ auto_max: null, ask_max: null, limit_vnd: 5_000_000 })],
+            VOICE,
+        )
 
-        expect(keysOf(graph)).toEqual(["start", "tag", "understand", "decide:pay_supplier", "ask:pay_supplier", "act:pay_supplier", "end"])
+        expect(keysOf(graph)).toEqual([
+            "start",
+            "tag",
+            "understand",
+            "decide:pay_supplier",
+            "ask:pay_supplier",
+            "act:pay_supplier",
+            "end",
+        ])
         expect(graphProblems(graph, contextOf({ facts: FACTS }))).toEqual([])
     })
 

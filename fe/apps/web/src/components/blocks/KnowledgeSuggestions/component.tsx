@@ -5,7 +5,7 @@ import {
     KnowledgeRowsSection,
     rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
-import type { KnowledgeListView, KnowledgeRowListProps } from "@/components/composites/KnowledgeRows"
+import type { KnowledgeListView, KnowledgeRowView } from "@/modules/types"
 import { SlotView } from "@/components/composites/SlotView"
 
 /** The lists the connected suggestions supply. */
@@ -15,27 +15,54 @@ export interface KnowledgeSuggestionsBaseProps {
         /** The control that shows the rest of the ideas; nothing is drawn while undefined. */
         readonly more?: { readonly label: string } | undefined
         /** The ideas that were set aside; nothing is drawn for them while undefined. */
-        readonly skipped?: KnowledgeRowListProps | undefined
+        readonly skipped?:
+            | {
+                  readonly label: string
+                  readonly rows: readonly KnowledgeRowView[]
+                  readonly isPending: boolean
+                  readonly emptyTitle: string
+              }
+            | undefined
     }
-    readonly on: { readonly toggleMore: () => void }
+    readonly on: {
+        readonly toggleMore: () => void
+        readonly action: (rowId: string, actionId: string) => void
+    }
 }
 
 /** Draws the ideas for what to add, none of them required: the most relevant few, a way to see the rest, and the ones that were set aside. */
 export const KnowledgeSuggestionsBase = (props: KnowledgeSuggestionsBaseProps) => {
     const list = props.props.list
     return (
-        <KnowledgeRowsSection isHeadingInCard section={list.section} isPending={list.isPending}>
-            <SlotView slot={list.slot} placeholder={KNOWLEDGE_ROWS_PLACEHOLDER} labels={list.slotLabels}>
-                {(rows, isSkeleton) => (
-                    <KnowledgeRowList {...rowListPropsOf(list)} rows={rows} isSkeleton={isSkeleton} />
-                )}
-            </SlotView>
-            {props.props.more === undefined ? null : (
-                <Button intent="neutral" onPress={props.on.toggleMore}>
-                    {props.props.more.label}
-                </Button>
-            )}
-            {props.props.skipped === undefined ? null : <KnowledgeRowList {...props.props.skipped} />}
-        </KnowledgeRowsSection>
+        <KnowledgeRowsSection
+            isHeadingInCard
+            section={list.section}
+            isPending={list.isPending}
+            body={
+                <>
+                    <SlotView
+                        slot={list.slot}
+                        placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
+                        labels={list.slotLabels}
+                        render={(rows, isSkeleton) => (
+                            <KnowledgeRowList
+                                {...rowListPropsOf(list)}
+                                rows={rows}
+                                isLoading={isSkeleton}
+                                onAction={props.on.action}
+                            />
+                        )}
+                    />
+                    {props.props.more === undefined ? null : (
+                        <Button intent="neutral" onPress={props.on.toggleMore}>
+                            {props.props.more.label}
+                        </Button>
+                    )}
+                    {props.props.skipped === undefined ? null : (
+                        <KnowledgeRowList {...props.props.skipped} onAction={props.on.action} />
+                    )}
+                </>
+            }
+        />
     )
 }

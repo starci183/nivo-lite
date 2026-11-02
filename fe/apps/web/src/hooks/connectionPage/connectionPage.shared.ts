@@ -25,6 +25,7 @@ const isMissingPageRead = (error: unknown): boolean =>
  * answers `notFound()` once), and the two ways to ask again.
  */
 export const connectionPageOf = <T>(read: SWRResponse<T, unknown>) => ({
+    read,
     slot: slotOfSwr(read),
     isMissing: isMissingPageRead(read.error),
     reload: () => void read.mutate(),
@@ -37,7 +38,7 @@ export const readFailureNotice = (
     labels: SlotLabels,
     retry: () => void,
 ): ConnectionNotice | undefined => {
-    if (slot.isForbidden === true) return { id: "failure", tone: "negative", title: labels.forbidden }
-    if (slot.isError !== true) return undefined
+    if ("isForbidden" in slot) return { id: "failure", tone: "negative", title: labels.forbidden }
+    if (!("isError" in slot)) return undefined
     return { id: "failure", tone: "negative", title: labels.error, action: { label: labels.retry, run: retry } }
 }

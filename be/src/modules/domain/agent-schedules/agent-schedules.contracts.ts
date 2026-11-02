@@ -102,3 +102,11 @@ export interface InstallationChange {
     /** The installation that changed; none when the change touches the whole workspace. */
     readonly installationId?: string
 }
+
+/** An agent an event wakes, and the probe of the trigger that matched. */
+export interface EventTarget {
+    /** The agent. */
+    readonly agentId: string
+    /** The probe of the trigger, or null. */
+    readonly probeKey: string | null
+}

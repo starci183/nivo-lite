@@ -64,5 +64,5 @@ export const useAgentChatThreadView = ({
             })),
         [messages.data, timeOf],
     )
-    return { rows, thread, changeTab }
+    return { rows, thread, changeTab, isLoadingList: history.isLoading, isLoadingThread: messages.isLoading }
 }

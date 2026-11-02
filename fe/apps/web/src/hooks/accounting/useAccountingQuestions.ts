@@ -3,12 +3,14 @@
 import { useAccountingDecisionLock } from "./useAccountingDecisionLock"
 import { createAccountingQuestionsActions, propsOf } from "./accounting.shared"
 import { useAccountingQuestionsForm } from "@/hooks/rhf"
+import { useFeatureLifetime } from "@/hooks/reuseables"
+import { useGraphQLWithToast } from "@/modules/toast"
 import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import type { AccountingQuestion, AccountingQuestionsView } from "@/modules/types"
 import { accountingQuestionDefaults } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useWatch } from "react-hook-form"
 import { useDecideAccountingQuestion } from "./useDecideAccountingQuestion"
 import { readError } from "@/hooks/workspaceread"
@@ -17,6 +19,8 @@ import { readError } from "@/hooks/workspaceread"
 export const useAccountingQuestions = (
     questions: ReadonlyArray<AccountingQuestion>,
     ownerName: string,
+    isActive: boolean,
+    scope: string,
 ): AccountingQuestionsView => {
     const t = useTranslations("office")
     const g = useTranslations("governance")
@@ -25,10 +29,11 @@ export const useAccountingQuestions = (
     const items = useMemo(() => questions.map((question) => question.item), [questions])
     const form = useAccountingQuestionsForm(items)
     const values = useWatch({ control: form.control })
-    const { getValues, setValue } = form
+    const { getValues, setValue, reset } = form
     const [editing, setEditing] = useState<Record<string, boolean>>({})
-    const lock = useAccountingDecisionLock()
-    const { decide, isDeciding } = useDecideAccountingQuestion()
+    const lock = useAccountingDecisionLock(isActive, scope)
+    const { decide } = useDecideAccountingQuestion()
+    const operation = useQuestionOperation(isActive, scope)
     const { activeWorkspaceId } = useActiveWorkspace()
     const swrRead = useQueryMyWorkspacesSwr()
     const { data: workspaces } = swrRead
@@ -42,14 +47,19 @@ export const useAccountingQuestions = (
         return membership.staffId != null && membership.staffId === item.assigned_staff_id
     }
     useEffect(() => {
+        reset({ items: {} })
+        setEditing({})
+    }, [isActive, reset, scope])
+    useEffect(() => {
+        if (!isActive) return
         for (const item of items)
             if (!getValues(`items.${item.id}`)) setValue(`items.${item.id}`, accountingQuestionDefaults(item))
-    }, [getValues, items, setValue])
+    }, [getValues, isActive, items, scope, setValue])
     const { cards, approve, reject, change } = createAccountingQuestionsActions({
         items,
         canAct,
         lock,
-        isDeciding,
+        isDeciding: operation.isDeciding,
         form,
         getValues,
         decide,
@@ -65,8 +75,8 @@ export const useAccountingQuestions = (
     return {
         props: propsOf(accounting, cards),
         on: {
-            approve: (id) => void approve(id),
-            reject: (id) => void reject(id),
+            approve: (id) => operation.run(() => approve(id)),
+            reject: (id) => operation.run(() => reject(id)),
             toggleEdit: (id) => {
                 const item = items.find((candidate) => candidate.id === id)
                 if (!item) return
@@ -81,6 +91,33 @@ export const useAccountingQuestions = (
             changeBasis: (id, value) => change(id, "basis", value),
             changeCandidate: (id, value) => change(id, "candidateId", value ?? ""),
             changeField: (id, name, value) => setValue(`items.${id}.fields.${name}`, value, { shouldDirty: true }),
+        },
+    }
+}
+/** The pending state contains only immutable render ownership; event liveness stays outside render. */
+interface QuestionPending {
+    readonly identity: ReturnType<typeof useFeatureLifetime>["identity"]
+}
+/** Busy uses immutable identity; duplicate dispatch and settlement read the captured event lease only. */
+const useQuestionOperation = (isActive: boolean, scope: string) => {
+    const lifetime = useFeatureLifetime(isActive, scope)
+    const runGraphQL = useGraphQLWithToast()
+    const [operation, setOperation] = useState<QuestionPending | null>(null)
+    const inFlight = useRef<{ readonly pending: QuestionPending; readonly isCurrent: () => boolean } | null>(null)
+    return {
+        isDeciding: isActive && operation?.identity === lifetime.identity,
+        run: (action: () => Promise<void>) => {
+            const isCurrent = lifetime.capture()
+            if (!isCurrent() || inFlight.current?.isCurrent()) return
+            const pending: QuestionPending = { identity: lifetime.identity }
+            inFlight.current = { pending, isCurrent }
+            setOperation(pending)
+            action()
+                .catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
+                .finally(() => {
+                    if (inFlight.current?.pending === pending) inFlight.current = null
+                    setOperation((current) => (current === pending ? null : current))
+                })
         },
     }
 }

@@ -1,18 +1,30 @@
 "use client"
 
+import { useFeatureReset } from "@/hooks/reuseables"
+import type { HiringOwner } from "@/hooks/hiring"
+
 import { useState } from "react"
 import { useHiringCopy, useHiringRun } from "@/hooks/hiring"
 import type { HiringWorkbenchData, JobView } from "@/hooks/hiringWire"
 import { useHiringJobCommands } from "./useHiringJobCommands"
 
 /** The jobs tab: the job being edited and the one whose ad is open, the status commands and the copied link. */
-export const useHiringJobs = (data: HiringWorkbenchData) => {
-    const run = useHiringRun()
+export const useHiringJobs = (data: HiringWorkbenchData, owner?: HiringOwner) => {
+    const run = useHiringRun(owner)
     const commands = useHiringJobCommands()
-    const { copiedId, copy } = useHiringCopy()
+    const { copiedId, copy } = useHiringCopy(owner)
     const [editing, setEditing] = useState<JobView | "new" | null>(null)
     const [adJobId, setAdJobId] = useState<string | null>(null)
     const linkOf = (id: string): string => data.jobs.find((job) => job.id === id)?.publicUrl ?? ""
+    useFeatureReset({
+        isActive: owner?.isActive ?? true,
+        isReady: true,
+        scope: owner?.scope ?? "",
+        onReset: () => {
+            setEditing(null)
+            setAdJobId(null)
+        },
+    })
     return {
         copiedId,
         isPending: run.isPending,
@@ -25,7 +37,7 @@ export const useHiringJobs = (data: HiringWorkbenchData) => {
         closeEditor: () => setEditing(null),
         openAd: setAdJobId,
         closeAd: () => setAdJobId(null),
-        copyLink: (id: string) => void copy(id, linkOf(id)),
-        transition: (id: string, to: string) => void run.exec(() => commands.setStatus(id, to)),
+        copyLink: (id: string) => copy(id, linkOf(id)),
+        transition: (id: string, to: string) => run.dispatch(() => commands.setStatus(id, to)),
     }
 }

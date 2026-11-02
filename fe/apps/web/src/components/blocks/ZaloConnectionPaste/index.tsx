@@ -20,7 +20,7 @@ export const ZaloConnectionPaste = (props: ZaloConnectionPasteProps) => {
     const { slot, reload } = useZaloPage(props.connectionId)
     const { isOwner } = useZaloHead(props.connectionId)
     const secret = useZaloOaSecret(props.connectionId)
-    const mask = slot.items?.oaSecretMask ?? null
+    const mask = ("items" in slot ? slot.items : undefined)?.oaSecretMask ?? null
     return (
         <ZaloConnectionPasteBase
             props={{

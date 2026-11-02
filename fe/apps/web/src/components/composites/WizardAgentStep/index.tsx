@@ -3,6 +3,7 @@ import type { AgentStepView } from "@/modules/types"
 
 /** What the last step draws and reports. */
 type WizardAgentStepProps = AgentStepView & {
+    readonly isLoading?: boolean
     readonly isDisabled?: boolean
     readonly onChange: (ids: ReadonlyArray<string>) => void
 }
@@ -11,17 +12,20 @@ type WizardAgentStepProps = AgentStepView & {
 export const WizardAgentStep = (props: WizardAgentStepProps) => (
     <>
         {props.notice === null ? null : <Alert tone="informative" title={props.notice} />}
-        <Text size="sm" weight="semibold">
+        <Text isLoading={props.isLoading === true} size="sm" isStrong>
             {props.title}
         </Text>
         {props.agents.length === 0 ? (
-            <Text size="sm">{props.none}</Text>
+            <Text isLoading={props.isLoading === true} size="sm">
+                {props.none}
+            </Text>
         ) : (
             <>
-                <Text size="sm" tone="muted">
+                <Text isLoading={props.isLoading === true} size="sm" tone="muted">
                     {props.hint}
                 </Text>
                 <CheckboxGroup
+                    isLoading={props.isLoading === true}
                     label={props.hint}
                     isLabelHidden
                     {...(props.isDisabled !== undefined && { isDisabled: props.isDisabled })}

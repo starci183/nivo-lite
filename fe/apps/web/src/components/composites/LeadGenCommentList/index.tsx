@@ -1,14 +1,4 @@
-import {
-    Badge,
-    Button,
-    Cluster,
-    EmptyNotice,
-    ListRow,
-    Stack,
-    SurfaceListCard,
-    Text,
-    Textarea,
-} from "@starci/grammar/common"
+import { Button, Cluster, EmptyNotice, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 
 /** One public comment waiting for a decision, every word already resolved. */
 interface LeadGenCommentView {
@@ -24,7 +14,7 @@ interface LeadGenCommentView {
 }
 
 /** The words and data of the comments tab. */
-export interface LeadGenCommentListData {
+interface LeadGenCommentListData {
     readonly label: string
     readonly emptyTitle: string
     readonly emptyBody: string
@@ -54,21 +44,21 @@ interface LeadGenCommentListProps extends LeadGenCommentListData {
 /** Public replies that wait for a person (ask mode). Approve posts the drafted reply, Edit changes it first. */
 export const LeadGenCommentList = (props: LeadGenCommentListProps) => {
     return (
-        <SurfaceListCard
+        <SurfaceCard
+            kind="list"
             ariaLabel={props.label}
             isLoading={props.isSkeleton === true}
             empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
-        >
-            {props.rows.map((row) => {
+            items={props.rows.map((row) => {
                 const isBusy = props.busyId === row.id
-                return (
-                    <ListRow
-                        key={row.id}
-                        title={row.title}
-                        description={row.description}
-                        badges={<Badge tone="neutral">{row.sourceLabel}</Badge>}
-                        actions={
-                            row.isEditing ? null : (
+                return {
+                    id: row.id,
+                    title: row.title,
+                    description: row.description,
+                    badges: [{ label: row.sourceLabel, tone: "neutral" }],
+                    detail: (
+                        <Stack gap="row">
+                            {row.isEditing ? null : (
                                 <Cluster gap="inline">
                                     <Button
                                         intent="neutral"
@@ -88,14 +78,13 @@ export const LeadGenCommentList = (props: LeadGenCommentListProps) => {
                                         {props.approveLabel}
                                     </Button>
                                 </Cluster>
-                            )
-                        }
-                    >
-                        {renderLeadGenCommentListComment(row, props, isBusy)}
-                    </ListRow>
-                )
+                            )}
+                            {renderLeadGenCommentListComment(row, props, isBusy)}
+                        </Stack>
+                    ),
+                } satisfies import("@starci/grammar/common").ListRowData
             })}
-        </SurfaceListCard>
+        />
     )
 }
 
@@ -128,7 +117,7 @@ const renderLeadGenCommentListComment = (
                         {props.cancelLabel}
                     </Button>
                     <Button
-                        intent="commit"
+                        intent="alternative"
                         size="sm"
                         isPending={isBusy}
                         isDisabled={props.isApproving || !row.draftValue.trim()}

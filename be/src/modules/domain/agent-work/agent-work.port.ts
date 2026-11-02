@@ -69,3 +69,15 @@ export interface AgentWorkHandler {
     /** Answers when no turn can run (quota, breaker, a runtime that is down, a wake too old, a switch that is off, a wake dead past its attempts); the wake may have no turn. */
     holdOver(wake: AgentWakeView, reason: string): Promise<AgentHandlerEnding>
 }
+
+/** Told when the runtime that was answering a wake goes down, so the durable run of the wake retries its step and reaches a person when the tries are spent. */
+export interface WakeInterruptions {
+    /** The runtime went down while the wake's turn ran; `code` says why. */
+    interrupted(wakeId: string, code: string, signal: AbortSignal): Promise<void>
+}
+
+/** The handler of every source no handler answers by name: an inbound adapter with nothing of its own. It names the sources it takes. */
+export interface AgentWorkFallback extends AgentWorkHandler {
+    /** True for a source this fallback takes when no handler registered for it. */
+    answers(source: AgentWakeSource): boolean
+}

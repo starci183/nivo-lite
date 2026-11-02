@@ -1,27 +1,16 @@
-import { Badge, EmptyNotice, SurfaceCard, Text, Timeline } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
-import { CHIPS_CLASS_NAME } from "./classNames"
+import type { LoyaltyViews } from "@/modules/types"
+import { Badge, EmptyNotice, SurfaceCard, Text, Timeline, Cluster } from "@starci/grammar/common"
 
 /** What the points history draws. */
-export interface LoyaltyLedgerProps {
-    readonly title: string
-    readonly emptyText: string
-    readonly rows: ReadonlyArray<{
-        readonly id: string
-        readonly kind: string
-        readonly tone: BadgeTone
-        readonly points: string
-        readonly amount?: string
-        readonly dateTime: string
-        readonly timeLabel: string
-        readonly ref?: string
-        readonly evidence?: string
-    }>
+type MemberLedgerData = LoyaltyViews["memberLedger"]
+/** The existing native presentation contract, with pure fields and actions owned separately. */
+interface LoyaltyLedgerProps extends MemberLedgerData {
+    readonly isLoading: boolean
 }
 
 /** The points history of a member as a timeline: what moved, how much, when and by whom. */
 export const LoyaltyLedger = (props: LoyaltyLedgerProps) => (
-    <SurfaceCard label={props.title} headingLevel={3}>
+    <SurfaceCard label={props.title} headingLevel={3} isLoading={props.isLoading}>
         {props.rows.length === 0 ? (
             <EmptyNotice message={props.emptyText} />
         ) : (
@@ -30,9 +19,9 @@ export const LoyaltyLedger = (props: LoyaltyLedgerProps) => (
                 items={props.rows.map((row) => ({
                     id: row.id,
                     title: (
-                        <div className={CHIPS_CLASS_NAME}>
+                        <Cluster gap="inline">
                             <Badge tone={row.tone}>{row.kind}</Badge>
-                            <Text as="span" weight="semibold">
+                            <Text as="span" isStrong>
                                 {row.points}
                             </Text>
                             {row.amount === undefined ? null : (
@@ -40,7 +29,7 @@ export const LoyaltyLedger = (props: LoyaltyLedgerProps) => (
                                     {row.amount}
                                 </Text>
                             )}
-                        </div>
+                        </Cluster>
                     ),
                     dateTime: row.dateTime,
                     timeLabel: row.timeLabel,

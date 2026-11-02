@@ -1,38 +1,57 @@
-import { Page, Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
+import { PaneSection } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
-import { OfficeHeader } from "@/components/composites/OfficeHeader"
-import { OfficeInfoHead, OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
 import { OfficeTasks } from "@/components/composites/OfficeTasks"
-import { OfficeThread } from "@/components/composites/OfficeThread"
-import { OfficeThreadScroll } from "@/components/composites/OfficeThreadScroll"
+import { OfficeMessengerThread } from "@/components/frames/OfficeMessengerThread"
+import { OfficeMessengerFrame } from "@/components/frames/OfficeMessengerFrame"
+import { OfficeThreadScroll } from "@/components/frames/OfficeThreadScroll"
 import type {
     Arrangement,
     DataSlot,
     OfficeInfoView,
-    OfficeListView,
-    OfficeTaskView,
-    OfficeText,
+    OfficeInfoPanelProps,
+    OfficeConversationsProps,
+    OfficeTasksProps,
     OfficeComposerProps,
     OfficeThreadProps,
     SlotLabels,
 } from "@/modules/types"
 
 /** What the thread draws once its messages are in. */
-export type OfficeMessengerThread = Omit<OfficeThreadProps["props"], "isSkeleton">
+export type OfficeMessengerThread = Omit<OfficeThreadProps["props"], "isLoading">
 
 /** What the composer draws once the room is in. */
-export type OfficeMessengerComposer = Omit<OfficeComposerProps["props"], "isSkeleton">
+export type OfficeMessengerComposer = Omit<OfficeComposerProps["props"], "isLoading">
 
 /** What the messenger frame draws: the frame state and the data of each column. */
 export interface OfficeMessengerBaseProps {
     readonly props: {
-        readonly text: OfficeText
+        readonly headerCopy: {
+            readonly back: string
+            readonly tasksTitle: string
+            readonly mutedChat: string
+            readonly tasksBack: string
+            readonly unmuteChat: string
+            readonly muteChat: string
+            readonly infoClose: string
+            readonly infoOpen: string
+        }
+        readonly infoCopy: OfficeInfoPanelProps["props"]["copy"]
+        readonly labels: {
+            readonly messenger: string
+            readonly list: string
+            readonly info: string
+            readonly infoOpen: string
+            readonly infoClose: string
+            readonly tasks: string
+            readonly conversation: string
+            readonly nivoCore: string
+            readonly aiBadge: string
+        }
         readonly phoneView: "list" | "thread"
         readonly centre: "chat" | "tasks"
         readonly isInfoOpen: boolean
-        readonly isInfoDocked: boolean
         /** Narrower than the side-by-side breakpoint: the info panel opens as the workspace drawer. */
         readonly isCompact: boolean
         /** The pane areas and tracks for the frame. */
@@ -45,19 +64,21 @@ export interface OfficeMessengerBaseProps {
         /** The words of the "needs approval" chip, or none when nothing waits. */
         readonly chip: string | null
         /** The list, the thread and the composer are three slots: all wait for the room, only the thread can fail. */
-        readonly listSlot: DataSlot<OfficeListView>
-        readonly listPlaceholder: OfficeListView
+        readonly listSlot: DataSlot<Omit<OfficeConversationsProps["props"], "isLoading">>
+        readonly listPlaceholder: Omit<OfficeConversationsProps["props"], "isLoading" | "text">
         readonly threadSlot: DataSlot<OfficeMessengerThread>
         readonly threadPlaceholder: OfficeMessengerThread
         readonly composerSlot: DataSlot<OfficeMessengerComposer>
         readonly composerPlaceholder: OfficeMessengerComposer
         readonly slotLabels: SlotLabels
-        readonly tasks: ReadonlyArray<OfficeTaskView>
+        readonly tasks: OfficeTasksProps["props"]
         readonly info: OfficeInfoView
     }
     readonly on: OfficeThreadProps["on"] &
         OfficeComposerProps["on"] & {
-            readonly retry: () => void
+            readonly retryList: () => void
+            readonly retryThread: () => void
+            readonly retryComposer: () => void
             readonly back: () => void
             readonly chip: () => void
             readonly toggleInfo: () => void
@@ -67,6 +88,9 @@ export interface OfficeMessengerBaseProps {
             readonly openGroup: (id: string) => void
             readonly openAgent: (id: string) => void
             readonly openCustomer: (id: string) => void
+            readonly conversationQuery: OfficeConversationsProps["on"]["query"]
+            readonly conversationFilter: OfficeConversationsProps["on"]["filter"]
+            readonly formatMembersOverflow: OfficeConversationsProps["on"]["formatMembersOverflow"]
             readonly jumpApproval: (id: string) => void
             readonly jumpException: (id: string) => void
             readonly jumpCard: (id: string) => void
@@ -74,200 +98,124 @@ export interface OfficeMessengerBaseProps {
             readonly openTasks: () => void
             readonly closeInfo: () => void
             readonly openLeads: () => void
+            readonly taskOwner: OfficeTasksProps["on"]["owner"]
+            readonly taskStatus: OfficeTasksProps["on"]["status"]
+            readonly clearTasks: OfficeTasksProps["on"]["clear"]
         }
 }
 
-/**
- * Office as a messenger: a panes page whose PaneGrid fills the region to the viewport bottom, with the conversation list,
- * the Office column (head band, thread, composer pinned at the bottom) and the group info column, flush with a divider
- * between. Every band is a PaneSection, so all of them start at the pane inset. Below the compact boundary the grid is one
- * column: the list is its own screen on a phone, and the info column opens as a drawer.
- */
+/** Keeps each independent read in the block and hands only rendered regions to the messenger frame. */
 export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
-    const { text } = view
-    const arrangement = view.arrangement
-    const isTasks = view.centre === "tasks"
-    const isListScreen = view.isCompact && view.phoneView === "list"
-    const hasList = isListScreen || !view.isCompact
-    const hasCentre = !isListScreen
-    const hasDockedInfo = !view.isCompact && view.isInfoOpen
-    const hasDrawerInfo = view.isCompact && !isListScreen
-
     return (
-        <Page chrome="panes">
-            <PaneGrid
-                label={text("messengerLabel")}
-                areas={arrangement.areas}
-                columns={arrangement.columns}
-                rows={arrangement.rows}
-            >
-                {hasList ? (
-                    <Pane area="listHead" surface>
-                        <PaneSection align="center">
-                            <Text weight="semibold">{text("listTitle")}</Text>
-                        </PaneSection>
-                    </Pane>
-                ) : null}
-                {hasList ? (
-                    <Pane area="list" surface>
-                        <MessengerList {...props} />
-                    </Pane>
-                ) : null}
-                {hasCentre ? (
-                    <Pane area="head" surface>
-                        <MessengerHeader {...props} />
-                    </Pane>
-                ) : null}
-                {hasCentre ? (
-                    <Pane area="thread">
-                        <MessengerCentre {...props} />
-                    </Pane>
-                ) : null}
-                {hasCentre && !isTasks ? (
-                    <Pane area="composer" surface>
-                        <MessengerComposer {...props} />
-                    </Pane>
-                ) : null}
-                {hasDockedInfo ? (
-                    <Pane area="infoHead" surface>
-                        <OfficeInfoHead props={{ text }} on={{ close: on.closeInfo }} />
-                    </Pane>
-                ) : null}
-                {hasDockedInfo ? (
-                    <Pane area="info" surface scroll label={text("infoTitle")}>
-                        <MessengerInfoPanel {...props} />
-                    </Pane>
-                ) : null}
-                {hasDrawerInfo ? (
-                    <Pane
-                        area="info"
-                        surface
-                        collapse="drawer"
-                        collapseLabel={text("infoTitle")}
-                        openLabel={text("infoOpen")}
-                        closeLabel={text("infoClose")}
-                        isOpen={view.isInfoOpen}
-                        onOpenChange={on.infoOpenChange}
-                    >
-                        <MessengerInfoPanel {...props} />
-                    </Pane>
-                ) : null}
-            </PaneGrid>
-        </Page>
-    )
-}
-
-/** The bands of the list pane: the search, the filter and the conversation list. */
-const MessengerList = (props: OfficeMessengerBaseProps) => {
-    const view = props.props
-    const on = props.on
-    const { text } = view
-    return (
-        <SlotView slot={view.listSlot} placeholder={view.listPlaceholder} labels={view.slotLabels}>
-            {(list, isSkeleton) => (
-                <OfficeConversations
-                    props={{ list, isSkeleton, text }}
-                    on={{ openGroup: on.openGroup, openAgent: on.openAgent, openCustomer: on.openCustomer }}
-                />
-            )}
-        </SlotView>
-    )
-}
-
-/** The Office header row: the room, its member line and the controls. */
-const MessengerHeader = (props: OfficeMessengerBaseProps) => {
-    const view = props.props
-    const on = props.on
-    return (
-        <OfficeHeader
-            props={{
-                text: view.text,
-                centre: view.centre,
-                title: view.title,
-                subtitle: view.subtitle,
-                chip: view.chip,
-                isMuted: view.isMuted,
-                isInfoOpen: view.isInfoOpen,
-            }}
-            on={{
-                back: on.back,
-                chip: on.chip,
-                toggleMute: on.toggleMute,
-                toggleInfo: on.toggleInfo,
-                showChat: on.showChat,
-            }}
+        <OfficeMessengerFrame
+            arrangement={view.arrangement}
+            phoneView={view.phoneView}
+            centre={view.centre}
+            isCompact={view.isCompact}
+            isInfoOpen={view.isInfoOpen}
+            isMuted={view.isMuted}
+            title={view.title}
+            subtitle={view.subtitle}
+            chip={view.chip}
+            headerCopy={view.headerCopy}
+            infoCopy={view.infoCopy}
+            info={view.info}
+            label={view.labels.messenger}
+            listTitle={view.labels.list}
+            infoTitle={view.labels.info}
+            infoOpenLabel={view.labels.infoOpen}
+            infoCloseLabel={view.labels.infoClose}
+            list={<MessengerList {...props} />}
+            thread={<MessengerCentre {...props} />}
+            composer={<MessengerComposer {...props} />}
+            onBack={on.back}
+            onChip={on.chip}
+            onToggleMute={on.toggleMute}
+            onToggleInfo={on.toggleInfo}
+            onShowChat={on.showChat}
+            onInfoOpenChange={on.infoOpenChange}
+            onCloseInfo={on.closeInfo}
+            onJumpApproval={on.jumpApproval}
+            onJumpException={on.jumpException}
+            onJumpCard={on.jumpCard}
+            onMention={on.mention}
+            onOpenTasks={on.openTasks}
         />
     )
 }
 
-/** The scroll band of the conversation pane: the tasks view, or the thread pinned to the newest. */
+/** The list waits independently of the conversation and composer. */
+const MessengerList = (props: OfficeMessengerBaseProps) => (
+    <SlotView
+        slot={props.props.listSlot}
+        placeholder={props.props.listPlaceholder}
+        labels={props.props.slotLabels}
+        onRetry={props.on.retryList}
+        render={(list, isLoading) => (
+            <OfficeConversations
+                props={{ ...list, isLoading }}
+                on={{
+                    openGroup: props.on.openGroup,
+                    openAgent: props.on.openAgent,
+                    openCustomer: props.on.openCustomer,
+                    query: props.on.conversationQuery,
+                    filter: props.on.conversationFilter,
+                    formatMembersOverflow: props.on.formatMembersOverflow,
+                }}
+            />
+        )}
+    />
+)
+
+/** The conversation keeps its own scroll owner; switching to tasks keeps the original task scroll band. */
 const MessengerCentre = (props: OfficeMessengerBaseProps) => {
     const view = props.props
-    const on = props.on
-    const { text } = view
     return view.centre === "tasks" ? (
-        <PaneSection scroll={{ label: text("tasksTitle") }}>
-            <OfficeTasks props={{ tasks: view.tasks, text }} on={{ openLeads: on.openLeads }} />
+        <PaneSection scroll={{ label: view.labels.tasks }}>
+            <OfficeTasks
+                props={view.tasks}
+                on={{
+                    openLeads: props.on.openLeads,
+                    owner: props.on.taskOwner,
+                    status: props.on.taskStatus,
+                    clear: props.on.clearTasks,
+                }}
+            />
         </PaneSection>
     ) : (
-        <OfficeThreadScroll label={text("conversationLabel")}>
+        <OfficeThreadScroll label={view.labels.conversation}>
             <SlotView
                 slot={view.threadSlot}
                 placeholder={view.threadPlaceholder}
                 labels={view.slotLabels}
-                onRetry={on.retry}
-            >
-                {(thread, isSkeleton) => (
-                    <OfficeThread
-                        props={{ ...thread, isSkeleton }}
-                        on={{
-                            decideApproval: on.decideApproval,
-                            decideWork: on.decideWork,
-                            decideCard: on.decideCard,
-                            sendCommand: on.sendCommand,
-                            cancelCommand: on.cancelCommand,
-                            reply: on.reply,
-                            loadEarlier: on.loadEarlier,
-                            editCard: on.editCard,
-                            copy: on.copy,
-                        }}
-                    />
+                onRetry={props.on.retryThread}
+                render={(thread, isLoading) => (
+                    <OfficeMessengerThread thread={thread} isLoading={isLoading} labels={view.labels} on={props.on} />
                 )}
-            </SlotView>
+            />
         </OfficeThreadScroll>
     )
 }
 
-/** The composer pinned under the thread. */
-const MessengerComposer = (props: OfficeMessengerBaseProps) => {
-    const view = props.props
-    const on = props.on
-    return (
-        <SlotView slot={view.composerSlot} placeholder={view.composerPlaceholder} labels={view.slotLabels}>
-            {(composer, isSkeleton) => (
-                <OfficeComposer props={{ ...composer, isSkeleton }} on={{ change: on.change, send: on.send }} />
-            )}
-        </SlotView>
-    )
-}
-
-/** Connects the shared info panel used by the docked column and the drawer. */
-const MessengerInfoPanel = (props: OfficeMessengerBaseProps) => {
-    const view = props.props
-    const on = props.on
-    const { text } = view
-    return (
-        <OfficeInfoPanel
-            props={{ info: view.info, text }}
-            on={{
-                jumpApproval: on.jumpApproval,
-                jumpException: on.jumpException,
-                jumpCard: on.jumpCard,
-                mention: on.mention,
-                openTasks: on.openTasks,
-            }}
-        />
-    )
-}
+/** The composer is pinned below the thread and keeps its independent read/retry. */
+const MessengerComposer = (props: OfficeMessengerBaseProps) => (
+    <SlotView
+        slot={props.props.composerSlot}
+        placeholder={props.props.composerPlaceholder}
+        labels={props.props.slotLabels}
+        onRetry={props.on.retryComposer}
+        render={(composer, isLoading) => (
+            <OfficeComposer
+                props={{ ...composer, isLoading }}
+                on={{
+                    change: props.on.change,
+                    send: props.on.send,
+                    chooseFile: props.on.chooseFile,
+                    clearFile: props.on.clearFile,
+                }}
+            />
+        )}
+    />
+)

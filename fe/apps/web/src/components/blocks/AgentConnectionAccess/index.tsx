@@ -33,10 +33,11 @@ export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
     const t = useTranslations("modulesCore")
     const slotLabels = useSlotLabels()
     const { canGrant } = useAgentRights()
-    const installation = useAgentInstallation(props.installationId, props.module).slot.items
+    const installationSlot = useAgentInstallation(props.installationId, props.module).slot
+    const installation = "items" in installationSlot ? installationSlot.items : undefined
     const { slot, pick, isSaving } = useAgentConnectionAccess(installation?.agentId ?? null, props.module)
     const [local, setLocal] = useState<Readonly<Record<string, string>>>({})
-    const connections = slot.items ?? []
+    const connections = "items" in slot ? slot.items : []
     const levelOf = (connection: AgentConnectionView): string =>
         connection.id in local ? (local[connection.id] ?? NONE) : connection.access || NONE
     const rowsOf = (items: ReadonlyArray<AgentConnectionView>): ReadonlyArray<AgentConnectionAccessRow> =>
@@ -54,7 +55,10 @@ export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
         await pick(connection, level)
         setLocal((current) => Object.fromEntries(Object.entries(current).filter(([id]) => id !== connection.id)))
     }
-    const isUnbound = props.module === SHIFTS && slot.items !== undefined && !hasBoundConnection(connections)
+    const isUnbound =
+        props.module === SHIFTS &&
+        ("items" in slot || ("isEmpty" in slot && slot.isEmpty)) &&
+        !hasBoundConnection(connections)
     return (
         <AgentConnectionAccessBase
             props={{

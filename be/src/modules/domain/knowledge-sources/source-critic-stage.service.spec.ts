@@ -28,6 +28,15 @@ const build = async (em: MockEntityManager) => {
 }
 
 describe("SourceCriticStageService enter", () => {
+    it("announces nothing when the write supplies no affected count", async () => {
+        const em = mockEntityManager({ update: [KnowledgeSourceEntity, {}] })
+        const { service, progress } = await build(em)
+
+        await expect(service.enter(WS, "s1")).resolves.toBeUndefined()
+
+        expect(progress.announce).not.toHaveBeenCalled()
+    })
+
     it("gives a ready document with no stage the stage critic and tells every member", async () => {
         const em = mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] })
         const { service, progress } = await build(em)
@@ -82,6 +91,19 @@ describe("SourceCriticStageService leave", () => {
 })
 
 describe("SourceCriticStageService leaveAll", () => {
+    it("logs a failed workspace lookup and leaves the calling run alive without writes or announcements", async () => {
+        const em = mockEntityManager()
+        const failure = new Error("lookup unavailable")
+        em.find.mockRejectedValue(failure)
+        const { service, progress, logger } = await build(em)
+
+        await expect(service.leaveAll(WS)).resolves.toBeUndefined()
+
+        expect(logger.error).toHaveBeenCalledWith(KnowledgeSourcesLogEvent.ProgressFailed, failure, { workspaceId: WS })
+        expect(em.update).not.toHaveBeenCalled()
+        expect(progress.announce).not.toHaveBeenCalled()
+    })
+
     it("lets every document still wearing the stage go, each announced", async () => {
         const em = mockEntityManager({
             find: [

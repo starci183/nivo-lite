@@ -8,6 +8,9 @@ import {
     runInState,
     storedFindingOf as storedOf,
     workspaceRunOf,
+    reasonedFindingOf as findingOf,
+    reasonedReviewOf as reviewOf,
+    RESOLVED_FINDING_PATCH as RESOLVED,
 } from "@tests/fixtures/builders/dossier-review-runner.builder"
 import { builder, FakeClock, fakeTransaction, mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -20,10 +23,11 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { isRecord } from "@modules/platform/primitives"
+import { UNFILED_DOSSIER_ID, UNFILED_DOSSIER_NAME } from "./dossier-inputs.contracts"
 import type { DocumentInput, DossierInputs, PackEntry, ReviewContext } from "./dossier-inputs.contracts"
 import { DOSSIER_REASONER } from "./dossier-review.decorators"
 import { DossierReviewLogEvent } from "./dossier-review.log-events"
-import type { DossierBundle, DossierReasoner, ReasonedFinding, ReasonedReview } from "./dossier-review.port"
+import type { DossierBundle, DossierReasoner, ReasonedReview } from "./dossier-review.port"
 import { DossierReviewRunnerService, stateOf } from "./dossier-review-runner.service"
 import { DossierFindingEntity, DossierReviewEntity, DossierReviewRunEntity } from "./persistence/entities"
 import { ReviewCriticService } from "./review-critic.service"
@@ -83,25 +87,6 @@ const contextOf = (dossiers: ReadonlyArray<DossierInputs>): ReviewContext => ({
     activeFacts: [],
 })
 
-const findingOf = builder<ReasonedFinding>({
-    kind: "unsigned",
-    severity: "medium",
-    title: "Thieu chu ky",
-    detail: "Chua ky",
-    evidence: [{ key: "S1.P1", quote: "thang 10 nam 2026" }],
-    relatedRefs: [],
-    remedyAction: "upload",
-    documentType: null,
-})
-
-const reviewOf = builder<ReasonedReview>({
-    findings: [],
-    stillOpen: [],
-    model: "m1",
-    promptTokens: 100,
-    completionTokens: 10,
-})
-
 /** What one spec's run sees. */
 interface Setup {
     readonly run?: DossierReviewRunEntity | null
@@ -155,7 +140,7 @@ const build = async (setup: Setup) => {
             { provide: ReviewCriticService, useValue: mock<ReviewCriticService>() },
         ],
     }).compile()
-    return { service: moduleRef.get(DossierReviewRunnerService), em, daily, inputs, usage, reasoner, logger }
+    return { service: moduleRef.get(DossierReviewRunnerService), em, daily, inputs, usage, reasoner, logger, catalog }
 }
 
 /** The run update that ended the run. */
@@ -293,14 +278,6 @@ const registerFindings = () => {
         expect(em.update.mock.calls.filter((call) => call[0] === DossierFindingEntity)).toEqual([])
         expect(endOf(em)).toMatchObject({ aiState: "skipped_unchanged" })
     })
-}
-
-const RESOLVED = {
-    lastSeenRunId: "r1",
-    lastSeenAt: new Date(NOW),
-    status: "resolved",
-    resolution: "document",
-    resolvedAt: new Date(NOW),
 }
 
 const registerResolutions = () => {
@@ -477,5 +454,42 @@ describe("stateOf", () => {
         expect(stateOf({ ...tally, credits: true })).toBe("skipped_credits")
         expect(stateOf({ ...tally, budget: true })).toBe("skipped_budget")
         expect(stateOf({ ...tally, failed: 2 })).toBe("failed")
+    })
+})
+
+describe("DossierReviewRunnerService > documents outside a dossier", () => {
+    it("files loose-document findings under null and renders their stand-in name through the catalog", async () => {
+        const standIn = dossierOf(UNFILED_DOSSIER_ID, 0, [docOf()])
+        const unfiled = { ...standIn, dossier: { ...standIn.dossier, ref: "", name: UNFILED_DOSSIER_NAME } }
+        const { service, em, reasoner, catalog } = await build({
+            run: workspaceRunOf(),
+            context: contextOf([unfiled]),
+            targetIds: [],
+        })
+
+        await expect(service.run(PAYLOAD)).resolves.toBe("done")
+
+        expect(em.insert.mock.calls[0]?.[1]).toMatchObject([
+            {
+                dossierId: null,
+                relatedDossierIds: [],
+                ruleKey: "signatures.placeholders",
+                title: "findings.signatures_placeholders.title",
+                sourceIds: ["s1"],
+            },
+        ])
+        expect(catalog.get).toHaveBeenCalledWith("unfiled.label", {}, "vi")
+        expect(catalog.get).toHaveBeenCalledWith(
+            "findings.signatures_placeholders.title",
+            {
+                dossier: "unfiled.label",
+                count: "1",
+                quote: PASSAGE,
+            },
+            "vi",
+        )
+        expect(reasoner.review).not.toHaveBeenCalled()
+        expect(em.upsert).not.toHaveBeenCalled()
+        expect(endOf(em)).toMatchObject({ status: "done", stats: { opened: 1, evaluated: 0, aiCalls: 0 } })
     })
 })

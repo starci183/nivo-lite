@@ -96,6 +96,8 @@ export interface CustomerTurn {
     readonly channelEventId: string
     /** The conversation so far, oldest first, the customer's message last. */
     readonly transcript: ReadonlyArray<TranscriptLine>
+    /** True when an output of the turn came to something: the final reply step answers, and the model's own text does not leave. */
+    readonly finalOwed?: boolean
     /** The turn and wake that run it on the core road; absent on the legacy road. Work it opens carries it. */
     readonly origin?: TurnOrigin
 }
@@ -150,6 +152,8 @@ export interface CustomerOutcomes {
     settle(turn: CustomerTurn, proposal: ChatTurnProposal): Promise<TurnVerdict>
     /** The AI could not answer: hands the question to a person and answers the lines to show. */
     holdOver(turn: CustomerTurn, reason: string): Promise<ReadonlyArray<string>>
+    /** Puts a reply written after the turn through the same gate, keyed by what it answers. */
+    settleLate(turn: CustomerTurn, reply: string, key: string): Promise<TurnVerdict>
 }
 
 /** A registered AI step, or none. */

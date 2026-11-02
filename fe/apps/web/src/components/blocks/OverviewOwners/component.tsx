@@ -1,25 +1,9 @@
+import { Button, Cluster, EmptyNotice, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import type { BadgeTone, ListRowData } from "@starci/grammar/common"
 import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
-import { useMemo } from "react"
-import type { ComponentProps } from "react"
-import {
-    Badge,
-    Button,
-    Cluster,
-    EmptyNotice,
-    ListRow,
-    Region,
-    SectionHeader,
-    Stack,
-    SurfaceCard,
-    SurfaceListCard,
-    Text,
-} from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
-import { TileIcon } from "@/components/composites/TileIcon"
 import type { ModuleIconName } from "@/modules/types"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import { OWNER_MARK_CLASS_NAME, OWNER_TEXT_CLASS_NAME } from "./classNames"
 
 /** One responsibility row, already in the reader's words. */
 export interface OverviewOwnersRow {
@@ -35,7 +19,6 @@ export interface OverviewOwnersRow {
     readonly nextText: string | null
     readonly openLabel: string
     readonly openHref: string
-    readonly leadId: string
     readonly canDraft: boolean
 }
 
@@ -48,7 +31,6 @@ export interface OverviewOwnersGroup {
     readonly ariaLabel: string
     readonly cardsLabel: string
     readonly glyph: ModuleIconName | null
-    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly avatarUrl: string | null
     readonly module: string
     readonly rows: ReadonlyArray<OverviewOwnersRow>
@@ -66,8 +48,7 @@ interface OverviewOwnersBaseProps {
         readonly emptyActionLabel: string
         readonly draftLabel: string
         readonly isDrafting: boolean
-        /** The dashboard is still read: the heading and one card of rows draw as skeleton. */
-        readonly isSkeleton: boolean
+        readonly isLoading: boolean
     }
     readonly on: {
         readonly openEmptyAction: () => void
@@ -75,150 +56,100 @@ interface OverviewOwnersBaseProps {
     }
 }
 
-const tilePropsOf = (row: OverviewOwnersRow): ComponentProps<typeof TileIcon>["props"] => ({
-    icon: row.icon,
-    signal: row.isOverdue ? "attention" : "none",
+const emptyOf = (props: OverviewOwnersBaseProps) => (
+    <EmptyNotice
+        message={props.props.emptyMessage}
+        description={props.props.emptyDescription}
+        actionLabel={props.props.emptyActionLabel}
+        onAction={props.on.openEmptyAction}
+    />
+)
+
+/** Draws a responsibility as typed list data with its optional drafting command. */
+const rowOf = (row: OverviewOwnersRow, props: OverviewOwnersBaseProps): ListRowData => ({
+    id: row.id,
+    title: row.title,
+    leading: { icon: nivoIconSource(row.icon, "leading") },
+    description: row.customer,
+    badges: [{ label: row.statusLabel, tone: row.statusTone, isDot: true }],
+    action: { label: row.openLabel, href: row.openHref },
+    detail: (
+        <Stack gap="row">
+            <Cluster gap="inline">
+                <Text size="xs" tone="muted">
+                    {row.ownerText}
+                </Text>
+                {row.dueText === null ? null : (
+                    <Text size="xs" tone={row.isOverdue ? "default" : "muted"} isStrong={row.isOverdue}>
+                        {row.dueText}
+                    </Text>
+                )}
+            </Cluster>
+            {row.nextText === null ? null : <Text size="sm">{row.nextText}</Text>}
+            {row.canDraft ? (
+                <Button
+                    intent="neutral"
+                    size="sm"
+                    isPending={props.props.isDrafting}
+                    onPress={() => props.on.draft(row.id)}
+                >
+                    {props.props.draftLabel}
+                </Button>
+            ) : null}
+        </Stack>
+    ),
 })
 
-/** The open work grouped by owner: a header per owner, then one row per responsibility, or an empty notice. */
-export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => {
-    const groups = useMemo(
-        () =>
-            props.props.groups.map((group) => ({
-                ...group,
-                rows: group.rows.map((row) => ({ ...row, tileProps: tilePropsOf(row) })),
-            })),
-        [props.props.groups],
-    )
-    return (
-        <Stack gap="section">
-            <SectionHeader
-                level={2}
-                title={props.props.title}
-                description={props.props.description}
-                isSkeleton={props.props.isSkeleton}
-            />
-            <OwnersBody {...props} groups={groups} />
-        </Stack>
-    )
-}
-
-type OwnersBodyProps = OverviewOwnersBaseProps & {
-    readonly groups: ReadonlyArray<Omit<OverviewOwnersGroup, "rows"> & { readonly rows: ReadonlyArray<OwnersTiledRow> }>
-}
-
-/** The rows of an owner section with the tile each one draws. */
-type OwnersTiledRow = OverviewOwnersRow & { readonly tileProps: ComponentProps<typeof TileIcon>["props"] }
-
-/** The placeholder card, the empty notice, or one section per owner. */
-const OwnersBody = ({ groups, ...props }: OwnersBodyProps) => {
-    if (props.props.isSkeleton) return <SurfaceListCard ariaLabel={props.props.listLabel} isLoading />
-    if (groups.length === 0) {
-        return (
-            <SurfaceCard ariaLabel={props.props.listLabel}>
-                <EmptyNotice
-                    message={props.props.emptyMessage}
-                    description={props.props.emptyDescription}
-                    actionLabel={props.props.emptyActionLabel}
-                    actionVariant="secondary"
-                    onAction={props.on.openEmptyAction}
-                />
-            </SurfaceCard>
-        )
-    }
-    return (
-        <Stack gap="region">
-            {groups.map((group) => (
-                <Region key={group.key} label={group.ariaLabel}>
-                    <Stack gap="row">
-                        <Cluster gap="row" justify="between" wrap={false}>
-                            <div className={OWNER_MARK_CLASS_NAME}>
-                                <Cluster gap="row" wrap={false}>
-                                    {group.glyph === null ? (
-                                        <PersonAvatar name={group.name} size="md" />
-                                    ) : (
-                                        <AgentMark
-                                            glyph={nivoIconSource(group.glyph, "leading")}
-                                            label={group.name}
-                                            seed={group.key}
-                                            src={group.avatarUrl}
-                                            module={group.module}
-                                            size="md"
-                                        />
-                                    )}
-                                    <div className={OWNER_TEXT_CLASS_NAME}>
-                                        <Text weight="semibold" overflow="truncate">
-                                            {group.name}
-                                        </Text>
-                                        <Text size="sm" tone="muted" overflow="truncate">
-                                            {group.roleText}
-                                        </Text>
-                                    </div>
-                                </Cluster>
-                            </div>
-                            <Text size="sm" tone="muted">
-                                {group.countText}
-                            </Text>
-                        </Cluster>
-                        <SurfaceListCard ariaLabel={group.cardsLabel}>
-                            {group.rows.map((row) => (
-                                <OverviewOwnerRow key={row.id} row={row} props={props.props} on={props.on} />
-                            ))}
-                        </SurfaceListCard>
-                    </Stack>
-                </Region>
-            ))}
-        </Stack>
-    )
-}
-
-type OverviewOwnerRowProps = OverviewOwnersBaseProps & {
-    readonly row: OverviewOwnersRow & { readonly tileProps: ComponentProps<typeof TileIcon>["props"] }
-}
-
-/** Renders one responsibility and its available actions. */
-const OverviewOwnerRow = ({ row, ...props }: OverviewOwnerRowProps) => (
-    <ListRow
-        leading={<TileIcon props={row.tileProps} />}
-        title={row.title}
-        badges={
-            <Badge tone={row.statusTone} isDot>
-                {row.statusLabel}
-            </Badge>
-        }
-        description={row.customer}
-        actions={
-            <>
-                {row.canDraft ? (
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isPending={props.props.isDrafting}
-                        onPress={() => props.on.draft(row.id)}
-                    >
-                        {props.props.draftLabel}
-                    </Button>
-                ) : null}
-                <Button intent="neutral" href={row.openHref}>
-                    {row.openLabel}
-                </Button>
-            </>
-        }
+/** The open work grouped by owner, each list carrying its own label and empty state. */
+export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => (
+    <Section
+        title={props.props.title}
+        description={props.props.description}
+        headingLevel={2}
+        isLoading={props.props.isLoading}
     >
-        <Cluster gap="inline">
-            <Text size="xs" tone="muted">
-                {row.ownerText}
-            </Text>
-            {row.dueText === null ? null : (
-                <Text
-                    size="xs"
-                    tone={row.isOverdue ? "accent" : "muted"}
-                    weight={row.isOverdue ? "semibold" : "normal"}
-                >
-                    {row.dueText}
-                </Text>
+        <Stack gap="row">
+            {props.props.groups.length === 0 ? (
+                <SurfaceCard
+                    kind="list"
+                    ariaLabel={props.props.listLabel}
+                    isLoading={props.props.isLoading}
+                    items={[]}
+                    empty={emptyOf(props)}
+                />
+            ) : (
+                props.props.groups.map((group) => (
+                    <SurfaceCard
+                        key={group.key}
+                        kind="list"
+                        label={group.name}
+                        isLoading={props.props.isLoading}
+                        labelEnd={
+                            <Cluster gap="inline">
+                                {group.glyph === null ? (
+                                    <PersonAvatar name={group.name} size="md" isLoading={props.props.isLoading} />
+                                ) : (
+                                    <AgentMark
+                                        label={group.name}
+                                        seed={group.key}
+                                        src={group.avatarUrl}
+                                        size="md"
+                                        isLoading={props.props.isLoading}
+                                    />
+                                )}
+                                <Text size="sm" tone="muted">
+                                    {group.roleText}
+                                </Text>
+                                <Text size="sm" tone="muted">
+                                    {group.countText}
+                                </Text>
+                            </Cluster>
+                        }
+                        items={group.rows.map((row) => rowOf(row, props))}
+                        empty={emptyOf(props)}
+                    />
+                ))
             )}
-        </Cluster>
-        {row.nextText === null ? null : <Text size="sm">{row.nextText}</Text>}
-    </ListRow>
+        </Stack>
+    </Section>
 )

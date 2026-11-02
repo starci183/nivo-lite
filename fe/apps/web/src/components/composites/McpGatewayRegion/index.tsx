@@ -1,5 +1,16 @@
-import { Badge, Button, ButtonGroup, EmptyNotice, List, ListRow, SurfaceListCard, Switch } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import {
+    ButtonGroup,
+    Cluster,
+    EmptyNotice,
+    Section,
+    Stack,
+    SurfaceCard,
+    Switch,
+    Text,
+    type ListRowData,
+    type BadgeTone,
+    type ButtonGroupAction,
+} from "@starci/grammar/common"
 
 /** One badge of a gateway row. */
 interface McpGatewayBadge {
@@ -56,110 +67,102 @@ interface McpGatewayView {
     readonly cards: ReadonlyArray<McpGatewayCard>
 }
 
-/** The cards of the MCP gateway region; `isSkeleton` draws them as placeholders. */
+/** The cards of the MCP gateway region; `isLoading` draws them as placeholders. */
 interface McpGatewayRegionProps {
     readonly view: McpGatewayView
-    readonly isSkeleton: boolean
-}
-
-/** The badges a row draws. */
-interface RowBadgesProps {
-    readonly badges: ReadonlyArray<McpGatewayBadge>
+    readonly isLoading: boolean
 }
 
 /** The commands a row draws, named by the row. */
 interface RowActionsProps {
     readonly label: string
     readonly actions: ReadonlyArray<McpGatewayAction>
+    readonly isLoading: boolean
 }
 
-/** The row a gateway list draws. */
-interface GatewayRowProps {
-    readonly row: McpGatewayRow
-}
-
-/** The badges of one row. */
-const RowBadges = (props: RowBadgesProps) => (
-    <>
-        {props.badges.map((badge) => (
-            <Badge key={badge.label} tone={badge.tone}>
-                {badge.label}
-            </Badge>
-        ))}
-    </>
-)
-
-/** The commands of one row, joined in one group; nothing when the row has none. */
+/** Pending commands retain their own busy state rather than becoming plain navigation data. */
 const RowActions = (props: RowActionsProps) =>
     props.actions.length === 0 ? null : (
-        <ButtonGroup label={props.label}>
-            {props.actions.map((action) => (
-                <Button
-                    key={action.id}
-                    size="sm"
-                    intent="neutral"
-                    isPending={action.isPending}
-                    isDisabled={action.isDisabled}
-                    onPress={action.onPress}
-                >
-                    {action.label}
-                </Button>
-            ))}
-        </ButtonGroup>
+        <ButtonGroup
+            label={props.label}
+            size="sm"
+            isLoading={props.isLoading}
+            actions={props.actions.map((action): ButtonGroupAction => ({
+                id: action.id,
+                label: action.label,
+                intent: "neutral",
+                isPending: action.isPending,
+                isDisabled: action.isDisabled,
+                onPress: action.onPress,
+            }))}
+        />
     )
 
-/** The agent switches of one tool, as a list under its row. */
-interface AgentSwitchesProps {
-    readonly agents: McpGatewayAgents
+/** Unpainted tool detail preserves every grant switch inside its containing row. */
+const agentsOf = (agents: McpGatewayAgents, isLoading: boolean) =>
+    agents.rows.length === 0 ? null : (
+        <Section
+            kind="list"
+            title={agents.label}
+            headingLevel={4}
+            isLoading={isLoading}
+            empty={<EmptyNotice message={agents.label} />}
+            items={agents.rows.map((agent) => ({
+                id: agent.id,
+                title: agent.name,
+                detail: (
+                    <Switch
+                        name={"grant-" + agent.id}
+                        label={agents.switchLabel + " " + agent.name}
+                        isLabelHidden
+                        isSelected={agent.isOn}
+                        isDisabled={agent.isDisabled}
+                        isLoading={isLoading}
+                        onSelectedChange={agent.onToggle}
+                    />
+                ),
+            }))}
+        />
+    )
+
+/** Keep the tool's operational badges bounded while preserving its remaining facts under the row. */
+const gatewayItemOf = (row: McpGatewayRow, isLoading: boolean): ListRowData => {
+    const [status, exception, ...facts] = row.badges
+    let badges: ListRowData["badges"]
+    if (status !== undefined) badges = exception === undefined ? [status] : [status, exception]
+    const tools = row.tools
+    return {
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        ...(badges === undefined ? {} : { badges }),
+        detail: (
+            <Stack gap="row">
+                {facts.length === 0 ? null : (
+                    <Cluster gap="inline">
+                        {facts.map((fact) => (
+                            <Text key={fact.label} size="xs" tone="muted" isLoading={isLoading}>
+                                {fact.label}
+                            </Text>
+                        ))}
+                    </Cluster>
+                )}
+                <RowActions label={row.title} actions={row.actions ?? []} isLoading={isLoading} />
+                {row.agents === undefined ? null : agentsOf(row.agents, isLoading)}
+                {tools === undefined || tools.rows.length === 0 ? null : (
+                    <Section
+                        kind="list"
+                        title={tools.label}
+                        headingLevel={3}
+                        isLoading={isLoading}
+                        empty={<EmptyNotice message={tools.label} />}
+                        items={tools.rows.map((tool) => gatewayItemOf(tool, isLoading))}
+                    />
+                )}
+            </Stack>
+        ),
+    }
 }
-
-/** The agents that may call a tool, each with a switch; nothing when no agent can be switched. */
-const AgentSwitches = (props: AgentSwitchesProps) =>
-    props.agents.rows.length === 0 ? null : (
-        <List label={props.agents.label}>
-            {props.agents.rows.map((agent) => (
-                <ListRow
-                    key={agent.id}
-                    title={agent.name}
-                    actions={
-                        <Switch
-                            name={`grant-${agent.id}`}
-                            label={`${props.agents.switchLabel} ${agent.name}`}
-                            isLabelHidden
-                            isSelected={agent.isOn}
-                            isDisabled={agent.isDisabled}
-                            onSelectedChange={agent.onToggle}
-                        />
-                    }
-                />
-            ))}
-        </List>
-    )
-
-/** One gateway row with its commands and, under it, the rows it holds. */
-const GatewayRow = (props: GatewayRowProps) => (
-    <ListRow
-        title={props.row.title}
-        description={props.row.description}
-        badges={<RowBadges badges={props.row.badges} />}
-        actions={<RowActions label={props.row.title} actions={props.row.actions ?? []} />}
-    >
-        {props.row.tools === undefined || props.row.tools.rows.length === 0 ? null : (
-            <List label={props.row.tools.label}>
-                {props.row.tools.rows.map((tool) => (
-                    <ListRow
-                        key={tool.id}
-                        title={tool.title}
-                        description={tool.description}
-                        badges={<RowBadges badges={tool.badges} />}
-                    >
-                        {tool.agents === undefined ? null : <AgentSwitches agents={tool.agents} />}
-                    </ListRow>
-                ))}
-            </List>
-        )}
-    </ListRow>
-)
 
 /**
  * The workspace's MCP gateway: its connectors with their pinned tools and the approve and check commands, each agent's grants,
@@ -168,16 +171,14 @@ const GatewayRow = (props: GatewayRowProps) => (
 export const McpGatewayRegion = (props: McpGatewayRegionProps) => (
     <>
         {props.view.cards.map((card) => (
-            <SurfaceListCard
+            <SurfaceCard
+                kind="list"
                 key={card.label}
                 label={card.label}
-                isLoading={props.isSkeleton}
+                isLoading={props.isLoading}
                 empty={<EmptyNotice message={card.emptyMessage} description={card.emptyDescription} />}
-            >
-                {card.rows.map((row) => (
-                    <GatewayRow key={row.id} row={row} />
-                ))}
-            </SurfaceListCard>
+                items={card.rows.map((row) => gatewayItemOf(row, props.isLoading))}
+            />
         ))}
     </>
 )

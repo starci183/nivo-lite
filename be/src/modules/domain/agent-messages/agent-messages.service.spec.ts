@@ -1,34 +1,21 @@
+import {
+    stored,
+    withStatements,
+    HUMAN_MESSAGE_VALUES as humanValues,
+    AGENT_LIST_ROWS,
+    LIST_CHAT_ROWS,
+    TRANSCRIPT_LINES,
+    FINAL_REPLY_VALUES,
+} from "@tests/fixtures/builders/agent-messages-harness.builder"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { In, MoreThanOrEqual, Not } from "typeorm"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { ChatActivityService } from "@modules/domain/chat-activity"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentMessagesService } from "./agent-messages.service"
-import { AgentMessagesErrorCode } from "./errors/agent-messages.error"
-import { AgentMessageEntity } from "./persistence/entities"
-import {
-    agentWelcomeReply,
-    customerMessageInLocalOffset,
-    customerPriceQuestion,
-    deliveredMessage,
-    failedEarlierReply,
-    handoverSystemMessage,
-    humanWelcomeMessage,
-    messageOf,
-    sentEarlierReply,
-} from "@tests/fixtures/builders/agent-messages.builder"
 
-/** The answer of an insert that stored these ids. */
-const stored = (...ids: Array<string>): QueryBuilderAnswers => ({ execute: { raw: ids.map((id) => ({ id })) } })
-
-/** A manager whose inserts and reads answer these, one fake statement each, in order. */
-const withStatements = (em: MockEntityManager, ...answers: Array<QueryBuilderAnswers>) => {
-    return { em, fakes: queueQueryBuilders(em, answers) }
-}
+import { In, MoreThanOrEqual, Not } from "typeorm"
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
     const activity = mock<ChatActivityService>()
@@ -44,6 +31,20 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
     return { service: moduleRef.get(AgentMessagesService), em, activity, conversations }
 }
 
+import { AgentMessagesErrorCode } from "./errors/agent-messages.error"
+import { AgentMessageEntity } from "./persistence/entities"
+import {
+    agentWelcomeReply,
+    customerMessageInLocalOffset,
+    customerPriceQuestion,
+    deliveredMessage,
+    failedEarlierReply,
+    handoverSystemMessage,
+    humanWelcomeMessage,
+    messageOf,
+    sentEarlierReply,
+} from "@tests/fixtures/builders/agent-messages.builder"
+
 describe("AgentMessagesService listForConversations", () => {
     it("does not query when no conversations were selected", async () => {
         const { service, em } = await build()
@@ -54,9 +55,7 @@ describe("AgentMessagesService listForConversations", () => {
     })
 
     it("scopes the conversation list and supplies optional filters and ordering", async () => {
-        const rows = [
-            { conversation_id: "conv-1", role: "user", body: "Hello", created_at: "2026-10-12T10:00:00.000Z" },
-        ]
+        const rows = AGENT_LIST_ROWS
         const em = mockEntityManager({ find: [AgentMessageEntity, [messageOf()]] })
         const { service } = await build(em)
 
@@ -97,11 +96,7 @@ describe("AgentMessagesService listChat", () => {
         })
         const { service } = await build(em)
 
-        await expect(service.listChat("ws-1", "conv-1")).resolves.toEqual([
-            { id: "m-1", role: "user", body: "Hello", createdAt: "2026-10-12T10:00:00.000Z" },
-            { id: "m-2", role: "system", body: "Handed over", createdAt: "2026-10-12T10:01:00.000Z" },
-            { id: "m-3", role: "agent", body: "Welcome", createdAt: "2026-10-12T10:02:00.000Z" },
-        ])
+        await expect(service.listChat("ws-1", "conv-1")).resolves.toEqual(LIST_CHAT_ROWS)
         expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, {
             select: { id: true, role: true, body: true, createdAt: true },
             where: { workspaceId: "ws-1", conversationId: "conv-1" },
@@ -111,15 +106,6 @@ describe("AgentMessagesService listChat", () => {
     })
 })
 describe("AgentMessagesService storeHuman and storeHumanMessage", () => {
-    const humanValues = {
-        workspaceId: "ws-1",
-        conversationId: "conv-1",
-        role: "agent",
-        body: "Welcome",
-        authorKind: "human",
-        authorName: "Mai",
-    }
-
     it("leaves automated human-labelled replies without an account identity", async () => {
         const { service, activity } = await build()
         const { em: inside, fakes } = withStatements(mockEntityManager(), stored("human-1"))
@@ -289,6 +275,19 @@ describe("AgentMessagesService storeReply without returned rows", () => {
         })
     })
 })
+describe("AgentMessagesService storedReply", () => {
+    it("finds the reply to a message, or the one stored under a work item", async () => {
+        const em = mockEntityManager()
+        em.findOne.mockResolvedValueOnce({ body: "Reply" }).mockResolvedValueOnce(null)
+        const { service } = await build(em)
+
+        await expect(service.storedReply("conv-1", "msg-1", null)).resolves.toBe("Reply")
+        await expect(service.storedReply("conv-1", "msg-1", "item-1")).resolves.toBeNull()
+        expect(em.findOne.mock.calls[0]?.[1]).toMatchObject({ where: { conversationId: "conv-1", inReplyTo: "msg-1" } })
+        expect(em.findOne.mock.calls[1]?.[1]).toMatchObject({ where: { id: "item-1", conversationId: "conv-1" } })
+    })
+})
+
 describe("AgentMessagesService replyExists", () => {
     it("tells whether a reply to the customer message is already stored", async () => {
         const stored1 = await build(mockEntityManager({ exists: [AgentMessageEntity, true] }))
@@ -364,10 +363,7 @@ describe("AgentMessagesService transcript", () => {
         const em = mockEntityManager({ find: [AgentMessageEntity, recent] })
         const { service } = await build(em)
 
-        await expect(service.transcript("conv-1")).resolves.toEqual([
-            { role: "agent", body: "Welcome" },
-            { role: "user", body: "Price?" },
-        ])
+        await expect(service.transcript("conv-1")).resolves.toEqual(TRANSCRIPT_LINES)
         expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, {
             select: { role: true, body: true, createdAt: true },
             where: { conversationId: "conv-1", role: Not("system") },
@@ -452,5 +448,51 @@ describe("AgentMessagesService customerMessagesPerDay", () => {
             { to: "2026-10-19" },
         ])
         expect(fakes[0]?.callsOf("limit")).toEqual([[5000]])
+    })
+})
+
+describe("AgentMessagesService claimDelivery", () => {
+    it("stores the unknown-outcome fence before granting one outbound attempt", async () => {
+        const em = mockEntityManager()
+        const { fakes } = withStatements(em, stored("msg-1"))
+        const { service } = await build(em)
+        await expect(service.claimDelivery("msg-1", "conv-1")).resolves.toBe("send")
+        expect(fakes[0]?.callsOf("set")[0]).toEqual([
+            { deliveryStatus: "failed", deliveryError: "delivery_outcome_unknown" },
+        ])
+        expect(fakes[0]?.callsOf("where")[0]).toEqual([
+            "id = :messageId AND conversation_id = :conversationId",
+            {
+                messageId: "msg-1",
+                conversationId: "conv-1",
+            },
+        ])
+    })
+
+    it.each([
+        { row: messageOf({ deliveryStatus: "sent" }), expected: "acknowledged" },
+        {
+            row: messageOf({ deliveryStatus: "failed", deliveryError: "delivery_outcome_unknown" }),
+            expected: "ambiguous",
+        },
+        { row: null, expected: "missing" },
+    ])("does not grant another send for $expected", async ({ row, expected }) => {
+        const em = mockEntityManager({ findOne: [AgentMessageEntity, row] })
+        withStatements(em, stored())
+        const { service } = await build(em)
+        await expect(service.claimDelivery("msg-1", "conv-1")).resolves.toBe(expected)
+    })
+})
+
+describe("AgentMessagesService storeFinalReply", () => {
+    it("stores the final reply under its item once and reuses the id without another announcement", async () => {
+        const stub = withStatements(mockEntityManager(), stored("item-1"), stored())
+        const { service, activity, em } = await build(stub.em)
+        await expect(service.storeFinalReply("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("item-1")
+        await expect(service.storeFinalReply("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("item-1")
+        expect(stub.fakes[0]?.callsOf("values")).toEqual([[FINAL_REPLY_VALUES]])
+        expect(stub.fakes[1]?.callsOf("values")).toEqual([[FINAL_REPLY_VALUES]])
+        expect(stub.fakes[0]?.callsOf("orIgnore")).toEqual([[]])
+        expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", null, em]])
     })
 })

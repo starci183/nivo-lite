@@ -1,4 +1,4 @@
-import { Button, List, ListRow, Stack, Text, TextAction } from "@starci/grammar/common"
+import { Button, Section, Stack, Text } from "@starci/grammar/common"
 import type { ConsolePending } from "@/modules/types"
 import { PANEL } from "./classNames"
 
@@ -28,19 +28,23 @@ export const ConsoleNotificationsPanel = (props: ConsoleNotificationsPanelProps)
                     {props.copy.nothingWaiting}
                 </Text>
             ) : (
-                <List label={props.copy.title}>
-                    {props.pending.slice(0, 5).map((item) => (
-                        <ListRow
-                            key={item.id}
-                            title={
-                                <TextAction href={item.href} appearance="inline" onFollow={props.onClose}>
-                                    {item.leadName}
-                                </TextAction>
-                            }
-                            description={item.summary}
-                        />
-                    ))}
-                </List>
+                <Section
+                    kind="list"
+                    title={props.copy.title}
+                    headingLevel={3}
+                    items={props.pending.slice(0, 5).map((item) => ({
+                        id: item.id,
+                        title: item.leadName,
+                        description: item.summary,
+                        href: item.href,
+                        onFollow: props.onClose,
+                    }))}
+                    empty={
+                        <Text size="sm" tone="muted">
+                            {props.copy.nothingWaiting}
+                        </Text>
+                    }
+                />
             )}
             <Button intent="neutral" size="sm" width="fill" onPress={props.onOpenOffice}>
                 {props.copy.openOffice}

@@ -31,9 +31,11 @@ export const AgentProfileAssignableBase = (props: AgentProfileAssignableBaseProp
             <Text size="sm" tone="muted">
                 {props.props.description}
             </Text>
-            <SlotView {...props.props.read} onRetry={props.on.retry}>
-                {(rows, isSkeleton) => <DescriptionList layout="stacked" isLoading={isSkeleton} items={rows} />}
-            </SlotView>
+            <SlotView
+                {...props.props.read}
+                onRetry={props.on.retry}
+                render={(rows, isSkeleton) => <DescriptionList layout="stacked" isLoading={isSkeleton} items={rows} />}
+            />
         </Stack>
     </SurfaceCard>
 )

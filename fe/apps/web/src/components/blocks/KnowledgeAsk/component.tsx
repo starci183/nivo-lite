@@ -1,11 +1,19 @@
-import { Form, SegmentedControl, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import {
+    Form,
+    SegmentedControl,
+    Select,
+    SurfaceCard,
+    Text,
+    Textarea,
+    Cluster,
+    Stack,
+    Grid,
+} from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { FormActions } from "@/components/composites/FormActions"
 import { KNOWLEDGE_ROWS_PLACEHOLDER, KnowledgeRowList } from "@/components/composites/KnowledgeRows"
-import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
+import type { KnowledgeRowView, DataSlot, SlotLabels } from "@/modules/types"
 import { SlotView } from "@/components/composites/SlotView"
-import type { DataSlot, SlotLabels } from "@/modules/types"
-import { CHOICES_CLASS_NAME, IDENTITY_CLASS_NAME, IDENTITY_COPY_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** The agent the question is asked as. */
 interface IdentityView {
@@ -85,24 +93,33 @@ interface IdentityProps {
 
 /** The passages found for the question, as one slot of rows. */
 const Results = (props: ResultsProps) => (
-    <SlotView slot={props.results.slot} placeholder={KNOWLEDGE_ROWS_PLACEHOLDER} labels={props.results.slotLabels}>
-        {(rows, isSkeleton) => (
-            <KnowledgeRowList label={props.results.label} rows={rows} isPending={false} isSkeleton={isSkeleton} />
+    <SlotView
+        slot={props.results.slot}
+        placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
+        labels={props.results.slotLabels}
+        render={(rows, isSkeleton) => (
+            <KnowledgeRowList
+                label={props.results.label}
+                emptyTitle={props.results.slotLabels.empty}
+                rows={rows}
+                isPending={false}
+                isLoading={isSkeleton}
+            />
         )}
-    </SlotView>
+    />
 )
 
 /** The agent the question is asked as, and for whom. */
 const Identity = (props: IdentityProps) => (
-    <div className={IDENTITY_CLASS_NAME}>
+    <Cluster gap="inline">
         <AgentMark label={props.agent.name} seed={props.agent.id} src={props.agent.avatarUrl} size="md" />
-        <div className={IDENTITY_COPY_CLASS_NAME}>
-            <Text weight="semibold">{props.agent.name}</Text>
+        <Stack gap="identity">
+            <Text isStrong>{props.agent.name}</Text>
             <Text size="xs" tone="muted">
                 {props.agent.caption}
             </Text>
-        </div>
-    </div>
+        </Stack>
+    </Cluster>
 )
 
 /** The form that asks the question: the agent and the audience, the question and the action, then the passages found. */
@@ -110,18 +127,18 @@ const AskForm = (props: AskFormProps) => {
     const { panel, on, isSkeleton } = props
     return (
         <Form label={panel.title} onSubmit={on.ask} isPending={panel.isPending}>
-            <div className={STACK_CLASS_NAME}>
+            <Stack gap="section">
                 <Text size="sm" tone="muted">
                     {panel.hint}
                 </Text>
-                <div className={CHOICES_CLASS_NAME}>
+                <Grid kind="form" columns={2}>
                     <Select
                         label={panel.agentLabel}
                         name="agent"
                         options={props.agents}
                         placeholder={panel.selectPlaceholder}
                         value={panel.agent?.id ?? null}
-                        isSkeleton={isSkeleton}
+                        isLoading={isSkeleton}
                         isDisabled={panel.isPending}
                         onValueChange={on.setAgent}
                     />
@@ -130,11 +147,11 @@ const AskForm = (props: AskFormProps) => {
                         name="audience"
                         options={panel.audienceOptions.map((one) => ({ value: one.id, label: one.label }))}
                         value={panel.audience}
-                        isSkeleton={isSkeleton}
+                        isLoading={isSkeleton}
                         isDisabled={panel.isPending || !panel.canPickAudience}
                         onValueChange={on.setAudience}
                     />
-                </div>
+                </Grid>
                 {panel.agent === undefined ? null : <Identity agent={panel.agent} />}
                 <Textarea
                     id="knowledge-ask-question"
@@ -145,7 +162,7 @@ const AskForm = (props: AskFormProps) => {
                     placeholder={panel.placeholder}
                     value={panel.question}
                     isDisabled={panel.isPending}
-                    isSkeleton={isSkeleton}
+                    isLoading={isSkeleton}
                     onValueChange={on.setQuestion}
                 />
                 <FormActions
@@ -153,10 +170,10 @@ const AskForm = (props: AskFormProps) => {
                     error={panel.error}
                     submitLabel={panel.submitLabel}
                     isPending={panel.isPending}
-                    isSkeleton={isSkeleton}
+                    isLoading={isSkeleton}
                 />
                 {panel.results === undefined ? null : <Results results={panel.results} />}
-            </div>
+            </Stack>
         </Form>
     )
 }
@@ -169,10 +186,9 @@ export const KnowledgeAskBase = (props: KnowledgeAskBaseProps) => (
             placeholder={AGENTS_PLACEHOLDER}
             labels={props.props.agentsLabels}
             onRetry={props.on.retry}
-        >
-            {(agents, isSkeleton) => (
+            render={(agents, isSkeleton) => (
                 <AskForm panel={props.props} on={props.on} agents={agents} isSkeleton={isSkeleton} />
             )}
-        </SlotView>
+        />
     </SurfaceCard>
 )

@@ -256,3 +256,22 @@ describe("ApprovalOpeningService > open, refusals", () => {
         expect(transaction.commits).toBe(0)
     })
 })
+
+describe("ApprovalOpeningService > open in an existing transaction", () => {
+    it("writes through the caller's manager without opening or committing a separate transaction", async () => {
+        const caller = inserting(approvalRequestEntityOf())
+        const owner = mockEntityManager()
+        const { service, transaction } = await build(owner)
+        await expect(service.open(openOf(), caller.em)).resolves.toEqual({
+            requestId: "request-1",
+            approvers: [MINH_REF],
+            excluded: [],
+            policy: "any",
+            expiresAt: IN_30_MINUTES,
+        })
+        expect(caller.values()).toMatchObject({ workspaceId: "ws-1", chainStepId: "step-1", policy: "any" })
+        expect(owner.transaction).not.toHaveBeenCalled()
+        expect(owner.createQueryBuilder).not.toHaveBeenCalled()
+        expect(transaction.commits).toBe(0)
+    })
+})

@@ -1,15 +1,4 @@
-import {
-    Badge,
-    Button,
-    PageContainer,
-    Region,
-    Grid,
-    SectionHeader,
-    ListRow,
-    Stack,
-    SurfaceListCard,
-    Text,
-} from "@starci/grammar/common"
+import { Button, EmptyNotice, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 
 /** One channel of the list: its words and whether it works today. */
 interface LandingConnectChannel {
@@ -31,6 +20,7 @@ interface LandingConnectBaseProps {
         readonly liveLabel: string
         readonly roadmapLabel: string
         readonly note: string
+        readonly emptyLabel: string
         readonly channels: ReadonlyArray<LandingConnectChannel>
     }
 }
@@ -40,51 +30,42 @@ interface LandingConnectBaseProps {
  * only the live channel takes a status tone.
  */
 export const LandingConnectBase = (props: LandingConnectBaseProps) => (
-    <Region labelledBy={props.props.headingId}>
-        <PageContainer measure="product">
-            <Grid
-                kind="main-rail"
-                railWidth="wide"
-                align="start"
-                primary={
-                    <Stack gap="section" align="start">
-                        <SectionHeader
-                            id={props.props.headingId}
-                            eyebrow={props.props.eyebrow}
-                            title={props.props.title}
-                            description={props.props.lead}
-                        />
-                        <Button intent="commit" size="lg" href={props.props.ctaHref}>
-                            {props.props.ctaLabel}
-                        </Button>
-                    </Stack>
-                }
-                rail={
-                    <Stack gap="section">
-                        <SurfaceListCard ariaLabel={props.props.title}>
-                            {props.props.channels.map((channel) => (
-                                <ListRow
-                                    key={channel.id}
-                                    title={channel.name}
-                                    description={channel.text}
-                                    badges={
-                                        channel.isLive ? (
-                                            <Badge tone="success" isDot>
-                                                {props.props.liveLabel}
-                                            </Badge>
-                                        ) : (
-                                            <Badge tone="neutral">{props.props.roadmapLabel}</Badge>
-                                        )
-                                    }
-                                />
-                            ))}
-                        </SurfaceListCard>
-                        <Text size="sm" tone="muted">
-                            {props.props.note}
-                        </Text>
-                    </Stack>
-                }
-            />
-        </PageContainer>
-    </Region>
+    <div id={props.props.headingId}>
+        <SurfaceCard
+            kind="bands"
+            label={props.props.title}
+            fact={props.props.eyebrow}
+            headingLevel={2}
+            footer={props.props.note}
+            bands={[
+                {
+                    kind: "body",
+                    children: (
+                        <Stack gap="row" align="start">
+                            <Text>{props.props.lead}</Text>
+                            <Button intent="commit" size="lg" href={props.props.ctaHref}>
+                                {props.props.ctaLabel}
+                            </Button>
+                        </Stack>
+                    ),
+                },
+                {
+                    kind: "list",
+                    items: props.props.channels.map((channel) => ({
+                        id: channel.id,
+                        title: channel.name,
+                        description: channel.text,
+                        badges: [
+                            {
+                                label: channel.isLive ? props.props.liveLabel : props.props.roadmapLabel,
+                                tone: channel.isLive ? "success" : "neutral",
+                                isDot: channel.isLive,
+                            },
+                        ],
+                    })),
+                    empty: <EmptyNotice message={props.props.emptyLabel} />,
+                },
+            ]}
+        />
+    </div>
 )

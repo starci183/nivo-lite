@@ -54,4 +54,6 @@ export interface SetupGraphPort {
     checkPublish(applicant: SetupApplicant): Promise<number>
     /** Publishes the draft of the graph as the version the setup became, with its context version, even when the map did not change. */
     publish(applier: SetupApplier): Promise<void>
+    /** Proposes the contracts and gaps the Second Brain and the setup text call for, for the owner to approve; answers how many were new. */
+    proposeContracts(applier: SetupApplier): Promise<number>
 }

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useLeadFlow, useLeadFlowView } from "@/hooks/leads"
-import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { loadingSlot, mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { LeadWorkFlowBase } from "./component"
 import type { DataSlot, FlowView } from "@/modules/types"
 
@@ -17,14 +17,8 @@ export const LeadWorkFlow = (props: LeadWorkFlowProps) => {
     const slotLabels = useSlotLabels()
     const query = useLeadFlow(props.leadId)
     const viewOf = useLeadFlowView()
-    const slot: DataSlot<FlowView> = mapSlot(
-        {
-            isLoading: props.leadId === undefined || query.isLoading,
-            isError: query.error !== undefined,
-            items: query.data,
-        },
-        viewOf,
-    )
+    const slot: DataSlot<FlowView> =
+        props.leadId === undefined ? loadingSlot<FlowView>() : mapSlot(slotOfSwr(query), viewOf)
     return (
         <LeadWorkFlowBase
             props={{

@@ -1,6 +1,8 @@
 "use client"
 
 import { useCreditsData, useCreditsOrder, useCreditsView } from "@/hooks/credits"
+import { loadingSlot } from "@/hooks/slot"
+import type { CreditsOverviewView, DataSlot } from "@/modules/types"
 import { CreditsOverviewBase } from "./component"
 
 interface CreditsOverviewProps {
@@ -14,11 +16,13 @@ export const CreditsOverview = (props: CreditsOverviewProps) => {
     const error: unknown = credits.error
     const checkout = useCreditsOrder(data?.workspaceId)
     const copy = useCreditsView(data, checkout.busy)
+    let slot: DataSlot<CreditsOverviewView> = { items: copy.view }
+    if (data === null) slot = error ? { isError: true } : loadingSlot()
     return (
         <CreditsOverviewBase
             props={{
                 ...copy,
-                slot: { isLoading: !data && !error, isError: Boolean(error), items: data ? copy.view : undefined },
+                slot,
             }}
             on={{
                 buy: (target) => {
@@ -35,7 +39,7 @@ export const CreditsOverviewSkeleton = () => {
     const copy = useCreditsView(null, null)
     return (
         <CreditsOverviewBase
-            props={{ ...copy, slot: { isLoading: true } }}
+            props={{ ...copy, slot: loadingSlot() }}
             on={{ buy: () => undefined, retry: () => undefined }}
         />
     )

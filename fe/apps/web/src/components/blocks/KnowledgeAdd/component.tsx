@@ -1,14 +1,11 @@
-import { Alert, Button, Meter, SegmentedControl, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, EmptyNotice, Meter, Tabs, SurfaceCard, Text, Stack, Cluster } from "@starci/grammar/common"
 import type { BatchBytesView, LinkRowView, QueueRowView, StoppedUploadsView } from "@/modules/types"
-import { AddFilesPanel } from "@/components/composites/AddFilesPanel"
+import { AddFilesPanel, knowledgeUploadRowsOf } from "@/components/composites/AddFilesPanel"
 
 import { AddNotePanel, type PairView } from "@/components/composites/AddNotePanel"
 
 import { FormNotice } from "@/components/composites/FormNotice"
 import { AddOptionsPanel, type ChoiceView } from "@/components/composites/AddOptionsPanel"
-import { AddVisibilityPanel, type AddVisibilityView } from "@/components/composites/AddVisibilityPanel"
-
-import { BODY_CLASS_NAME, DRIVE_CLASS_NAME } from "./classNames"
 
 /** The words and values of the files and links panel. */
 interface FilesView {
@@ -89,8 +86,7 @@ export interface KnowledgeAddBaseProps {
         readonly drive: DriveView
         readonly title: string
         readonly submitLabel: string
-        /** Why the add is off (nobody chose who reads it yet); empty when it is on. */
-        readonly submitBlocked: string
+        readonly emptyQueueLabel: string
         readonly failTitle: string
         readonly isBusy: boolean
         readonly modeLabel: string
@@ -98,7 +94,8 @@ export interface KnowledgeAddBaseProps {
         readonly mode: string
         readonly files: FilesView
         readonly note: NoteView
-        readonly visibility: AddVisibilityView
+        /** Says that what is added here is internal: customers and the chatbot cannot read it. */
+        readonly internalNote: string
         readonly summary: SummaryView | null
         /** How much of the raw document allowance is used; nothing is drawn for it while undefined. */
         readonly usage: UsageView | undefined
@@ -126,85 +123,105 @@ export interface KnowledgeAddBaseProps {
         readonly setTopic: (value: string) => void
         readonly setTags: (value: string) => void
         readonly setModule: (value: string | null) => void
-        readonly setVisibility: (value: string) => void
         readonly submit: () => void
     }
 }
 
-/** Draws the form that adds documents: files and links, a written note, or questions with answers, then who may read them. */
+/** The card owns the upload queue as its final collection, never as a second raised surface. */
 export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) =>
     props.props.readOnlyNote !== undefined ? (
         <Text size="sm" tone="muted">
             {props.props.readOnlyNote}
         </Text>
     ) : (
-        <SurfaceCard label={props.props.title} headingLevel={2}>
-            <div className={BODY_CLASS_NAME}>
-                <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.notice} />
-                <SegmentedControl
-                    label={props.props.modeLabel}
-                    isLabelHidden
-                    options={props.props.modeOptions.map((one) => ({ value: one.id, label: one.label }))}
-                    value={props.props.mode}
-                    isDisabled={props.props.isBusy}
-                    onValueChange={props.on.setMode}
-                />
-                {props.props.mode === "files" ? (
-                    <FilesPart {...props} />
-                ) : (
-                    <AddNotePanel
-                        {...props.props.note}
-                        isBusy={props.props.isBusy}
-                        onTitle={props.on.setTitle}
-                        onContent={props.on.setContent}
-                        onPair={props.on.setPair}
-                        onAddPair={props.on.addPair}
-                        onRemovePair={props.on.removePair}
-                    />
-                )}
-                <AddVisibilityPanel
-                    {...props.props.visibility}
-                    isBusy={props.props.isBusy}
-                    onChange={props.on.setVisibility}
-                />
-                <AddOptionsPanel
-                    {...props.props.options}
-                    isBusy={props.props.isBusy}
-                    onTopic={props.on.setTopic}
-                    onTags={props.on.setTags}
-                    onModule={props.on.setModule}
-                />
-                <div>
-                    <Button
-                        intent="commit"
-                        isPending={props.props.isBusy}
-                        isDisabled={props.props.submitBlocked !== ""}
-                        {...(props.props.submitBlocked === "" ? {} : { disabledReason: props.props.submitBlocked })}
-                        onPress={props.on.submit}
-                    >
-                        {props.props.submitLabel}
-                    </Button>
-                </div>
-                {props.props.usage === undefined ? null : (
-                    <Meter
-                        label={props.props.usage.label}
-                        value={props.props.usage.value}
-                        minValue={0}
-                        maxValue={props.props.usage.max}
-                        valueLabel={props.props.usage.valueLabel}
-                        tone={props.props.usage.tone}
-                    />
-                )}
-                {props.props.summary === null ? null : (
-                    <Alert
-                        tone="informative"
-                        title={props.props.summary.title}
-                        action={{ label: props.props.summary.actionLabel, onAction: props.on.seeQuestions }}
-                    />
-                )}
-            </div>
-        </SurfaceCard>
+        <SurfaceCard
+            kind="bands"
+            label={props.props.title}
+            headingLevel={2}
+            bands={
+                props.props.mode === "files" && props.props.files.queue.length > 0
+                    ? [
+                          { kind: "body", children: <AddBody {...props} /> },
+                          {
+                              kind: "list",
+                              items: knowledgeUploadRowsOf({
+                                  queue: props.props.files.queue,
+                                  removeLabel: props.props.files.removeLabel,
+                                  onRetryItem: props.on.retryItem,
+                                  onRemoveItem: props.on.removeItem,
+                              }),
+                              empty: <EmptyNotice message={props.props.emptyQueueLabel} />,
+                          },
+                      ]
+                    : [{ kind: "body", children: <AddBody {...props} /> }]
+            }
+        />
     )
+
+/** Upload, copy and form controls remain the body of the same subject. */
+const AddBody = (props: KnowledgeAddBaseProps) => (
+    <Stack gap="row">
+        <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.notice} />
+        <Tabs
+            label={props.props.modeLabel}
+            selectedKey={props.props.mode}
+            panelId="knowledge-add-mode"
+            items={props.props.modeOptions.map((one) => ({
+                id: one.id,
+                label: one.label,
+                isDisabled: props.props.isBusy,
+            }))}
+            onSelect={props.on.setMode}
+        />
+        <div id="knowledge-add-mode" role="tabpanel">
+            {props.props.mode === "files" ? (
+                <FilesPart {...props} />
+            ) : (
+                <AddNotePanel
+                    {...props.props.note}
+                    isBusy={props.props.isBusy}
+                    onTitle={props.on.setTitle}
+                    onContent={props.on.setContent}
+                    onPair={props.on.setPair}
+                    onAddPair={props.on.addPair}
+                    onRemovePair={props.on.removePair}
+                />
+            )}
+        </div>
+        <Text size="sm" tone="muted">
+            {props.props.internalNote}
+        </Text>
+        <AddOptionsPanel
+            {...props.props.options}
+            isBusy={props.props.isBusy}
+            onTopic={props.on.setTopic}
+            onTags={props.on.setTags}
+            onModule={props.on.setModule}
+        />
+        <div>
+            <Button intent="commit" isPending={props.props.isBusy} onPress={props.on.submit}>
+                {props.props.submitLabel}
+            </Button>
+        </div>
+        {props.props.usage === undefined ? null : (
+            <Meter
+                label={props.props.usage.label}
+                value={props.props.usage.value}
+                minValue={0}
+                maxValue={props.props.usage.max}
+                valueLabel={props.props.usage.valueLabel}
+                tone={props.props.usage.tone}
+            />
+        )}
+        {props.props.summary === null ? null : (
+            <Alert
+                tone="informative"
+                title={props.props.summary.title}
+                action={{ label: props.props.summary.actionLabel, onAction: props.on.seeQuestions }}
+            />
+        )}
+    </Stack>
+)
 
 /** The files and links a person adds, with the Google Drive way in under them. */
 const FilesPart = (props: KnowledgeAddBaseProps) => (
@@ -217,11 +234,9 @@ const FilesPart = (props: KnowledgeAddBaseProps) => (
             onCheckLink={props.on.checkLink}
             onAddLink={props.on.addLink}
             onRemoveLink={props.on.removeLink}
-            onRemoveItem={props.on.removeItem}
-            onRetryItem={props.on.retryItem}
             onDismissStopped={props.on.dismissStopped}
         />
-        <div className={DRIVE_CLASS_NAME}>
+        <Cluster gap="inline" align="center">
             {props.props.drive.label === undefined ? null : (
                 <Button intent="neutral" isDisabled={props.props.isBusy} onPress={props.on.connectDrive}>
                     {props.props.drive.label}
@@ -235,6 +250,6 @@ const FilesPart = (props: KnowledgeAddBaseProps) => (
             {props.props.drive.trouble === undefined ? null : (
                 <Alert tone="negative" title={props.props.drive.trouble} />
             )}
-        </div>
+        </Cluster>
     </>
 )

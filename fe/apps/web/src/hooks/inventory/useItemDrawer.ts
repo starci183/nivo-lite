@@ -1,4 +1,5 @@
-"use client"
+import type { InventoryPanelScope } from "./inventory.shared"
+;("use client")
 
 import type { ItemView, SupplierView } from "@/modules/types"
 import { unitsText, type ItemFormField, type ItemFormValues } from "./inventory.shared"
@@ -36,10 +37,13 @@ const startItemState = (item: ItemView | null): ItemDrawerState => ({
 export const useItemDrawer = (
     suppliers: ReadonlyArray<SupplierView>,
     commands: InventoryCommandSet<"saveItem" | "setItemActive">,
+    lifetime?: InventoryPanelScope,
 ) => {
+    const { isActive = true, scope = "" } = lifetime ?? {}
+
     const say = useSay()
-    const run = useInventoryRun()
-    const drawer = useDrawer<ItemDrawerState>()
+    const run = useInventoryRun(isActive, scope)
+    const drawer = useDrawer<ItemDrawerState>(isActive, scope)
     const { state } = drawer
     const item = state?.item ?? null
     return {
@@ -48,7 +52,7 @@ export const useItemDrawer = (
             state === null
                 ? null
                 : {
-                      say,
+                      copy: itemDrawerCopy(say, item),
                       editing: item === null ? null : item.name,
                       active: item === null ? null : item.active,
                       values: state.values,
@@ -63,13 +67,47 @@ export const useItemDrawer = (
                 if (state === null) return
                 run.exec(
                     () => commands.saveItem({ ...(item === null ? {} : { id: item.id }), ...state.values }),
-                    drawer.done,
+                    (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
                 )
             },
             toggleActive: () => {
-                if (item !== null) run.exec(() => commands.setItemActive(item.id, !item.active), drawer.done)
+                if (item !== null)
+                    run.exec(
+                        () => commands.setItemActive(item.id, !item.active),
+                        (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
+                    )
             },
             close: drawer.close,
         },
     }
 }
+
+/** Resolves the exact item drawer copy in its domain owner. */
+const itemDrawerCopy = (say: ReturnType<typeof useSay>, owner: ItemView | null) =>
+    ({
+        itemAddTitle: say("itemAddTitle"),
+        itemEditTitle: say("itemEditTitle", { name: owner?.name ?? "" }),
+        itemDrawerHint: say("itemDrawerHint"),
+        close: say("close"),
+        itemName: say("itemName"),
+        itemSku: say("itemSku"),
+        itemSkuHint: say("itemSkuHint"),
+        itemUnit: say("itemUnit"),
+        itemUnitHint: say("itemUnitHint"),
+        itemUnits: say("itemUnits"),
+        itemUnitsHint: say("itemUnitsHint"),
+        itemCategory: say("itemCategory"),
+        itemSupplier: say("itemSupplier"),
+        itemSupplierNone: say("itemSupplierNone"),
+        itemCost: say("itemCost"),
+        itemSell: say("itemSell"),
+        itemReorderPoint: say("itemReorderPoint"),
+        itemReorderPointHint: say("itemReorderPointHint"),
+        itemReorderQty: say("itemReorderQty"),
+        itemAliases: say("itemAliases"),
+        itemAliasesHint: say("itemAliasesHint"),
+        itemOpening: say("itemOpening"),
+        save: say("save"),
+        itemStop: say("itemStop"),
+        itemResume: say("itemResume"),
+    }) as const

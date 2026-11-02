@@ -17,7 +17,7 @@ export const ZaloConnectionZns = (props: ZaloConnectionZnsProps) => {
     const slotLabels = useSlotLabels()
     const zns = useZnsRenewal(props.connectionId)
     const [isOpen, setOpen] = useState(false)
-    const templateId = zns.slot.items?.templateId ?? ""
+    const templateId = ("items" in zns.slot ? zns.slot.items : undefined)?.templateId ?? ""
     return (
         <ZaloConnectionZnsBase
             props={{

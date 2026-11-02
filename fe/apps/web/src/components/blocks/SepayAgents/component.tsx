@@ -24,20 +24,19 @@ export const SepayAgentsBase = (props: SepayAgentsBaseProps) => (
             placeholder={props.props.placeholder}
             labels={props.props.labels}
             onRetry={props.on.retry}
-        >
-            {(agents, isSkeleton) =>
+            render={(agents, isLoading) =>
                 agents.map((agent) => (
                     <Switch
                         key={agent.id}
                         name={`agent-${agent.id}`}
                         label={agent.name}
                         isSelected={agent.isOn}
-                        isSkeleton={isSkeleton}
-                        isDisabled={props.props.isDisabled || isSkeleton}
+                        isLoading={isLoading}
+                        isDisabled={props.props.isDisabled || isLoading}
                         onSelectedChange={(isOn) => props.on.toggle(agent.id, isOn)}
                     />
                 ))
             }
-        </SlotView>
+        />
     </>
 )

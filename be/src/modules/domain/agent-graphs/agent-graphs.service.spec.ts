@@ -16,6 +16,12 @@ import { AgentGraphEntity, AgentGraphSourceEntity, AgentGraphVersionEntity } fro
 
 const DOCUMENT = graphOf(OWNER_EXAMPLE)
 
+/** The stamp of a moment as the database writes it: a function the query runs, answering the call of its own clock. */
+const DATABASE_NOW = {
+    asymmetricMatch: (value: unknown): boolean =>
+        typeof value === "function" && Reflect.apply(value, undefined, []) === "now()",
+}
+
 const build = async (em = mockEntityManager()) => {
     const moduleRef = await Test.createTestingModule({
         providers: [AgentGraphsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
@@ -54,6 +60,7 @@ describe("AgentGraphsService reads", () => {
             draftRev: 3,
             activeVersionId: "version-1",
             active: DOCUMENT,
+            activeKind: "edit",
         })
         expect(byAgent?.agentId).toBe("agent-1")
         expect(em.findOne).toHaveBeenCalledWith(AgentGraphEntity, { where: { installationId: "inst-1" } })
@@ -81,6 +88,7 @@ describe("AgentGraphsService reads", () => {
             active: null,
             activeVersionId: null,
         })
+        await expect(fresh.stateOfAgent("ws-1", "agent-1")).resolves.toMatchObject({ activeKind: null })
         await expect(broken.stateOfAgent("ws-1", "agent-1")).resolves.toMatchObject({ active: null })
     })
 })
@@ -151,6 +159,7 @@ describe("AgentGraphsService.approverOf", () => {
         versionId: "version-1",
         action: "pay_supplier",
         branchKey: "middle",
+        path: ["decide", "middle"],
         amount: 7_200_000,
         approvalRequestId: null,
         closed: false,
@@ -268,25 +277,29 @@ describe("AgentGraphsService.saveDraft", () => {
 })
 
 describe("AgentGraphsService.setMode", () => {
-    it("sets whether the graph decides or only records", async () => {
+    it("sets whether the graph decides or only records, and keeps who set it", async () => {
         const em = mockEntityManager({
             update: [AgentGraphEntity, { affected: 1 }],
             findOne: [AgentGraphEntity, graphRow("enforced", null)],
         })
         const service = await build(em)
 
-        await expect(service.setMode("ws-1", "agent-1", "enforced")).resolves.toMatchObject({ mode: "enforced" })
+        await expect(service.setMode("ws-1", "agent-1", "enforced", "member-1")).resolves.toMatchObject({
+            mode: "enforced",
+        })
         expect(em.update).toHaveBeenCalledWith(
             AgentGraphEntity,
             { agentId: "agent-1", workspaceId: "ws-1" },
-            { mode: "enforced" },
+            { mode: "enforced", modeSetBy: "member-1", modeSetAt: DATABASE_NOW },
         )
     })
 
     it("refuses an agent with no graph", async () => {
         const service = await build(mockEntityManager({ update: [AgentGraphEntity, { affected: 0 }] }))
 
-        expect(await codeOf(service.setMode("ws-1", "agent-1", "shadow"))).toBe(AgentGraphsErrorCode.GraphNotFound)
+        expect(await codeOf(service.setMode("ws-1", "agent-1", "shadow", "member-1"))).toBe(
+            AgentGraphsErrorCode.GraphNotFound,
+        )
     })
 
     it("refuses when the graph was there at the update but cannot be read after", async () => {
@@ -294,7 +307,9 @@ describe("AgentGraphsService.setMode", () => {
             mockEntityManager({ update: [AgentGraphEntity, { affected: 1 }], findOne: [AgentGraphEntity, null] }),
         )
 
-        expect(await codeOf(service.setMode("ws-1", "agent-1", "shadow"))).toBe(AgentGraphsErrorCode.GraphNotFound)
+        expect(await codeOf(service.setMode("ws-1", "agent-1", "shadow", "member-1"))).toBe(
+            AgentGraphsErrorCode.GraphNotFound,
+        )
     })
 })
 
@@ -403,7 +418,7 @@ describe("AgentGraphsService.ensure", () => {
         expect(em.transaction).not.toHaveBeenCalled()
     })
 
-    it("writes the draft and version 1 as the seed, in shadow, for an agent with none", async () => {
+    it("writes the draft and version 1 as the seed, enforced from the start, for an agent with none", async () => {
         const em = mockEntityManager({
             findOne: [
                 [AgentGraphEntity, null],
@@ -429,7 +444,7 @@ describe("AgentGraphsService.ensure", () => {
                     installationId: "inst-1",
                     draft: DOCUMENT,
                     draftRev: 1,
-                    mode: "shadow",
+                    mode: "enforced",
                 },
             ],
         ])

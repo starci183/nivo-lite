@@ -1,13 +1,23 @@
+import type { SlotRead } from "@/modules/types"
+import { slotOfSwr } from "@/hooks/slot"
 import { useQueryModuleInstallationsSwr } from "@/hooks/swr"
 import { displayNameOf } from "@/modules/installations"
 
-/** Departments with several agent instances (one Chatbot per branch): their names; the rules are shared by every instance of a type. */
-export const useInstanceNames = (): Readonly<Record<string, ReadonlyArray<string>>> => {
+/** Instance names preserve the installation read's loading, failure and settled empty states. */
+export const useInstanceNames = () => {
     const read = useQueryModuleInstallationsSwr()
-    const names: Record<string, Array<string>> = {}
-    for (const installation of read.data ?? []) {
-        if (installation.isMulti)
-            names[installation.moduleKey] = [...(names[installation.moduleKey] ?? []), displayNameOf(installation)]
+    const names: Record<string, Array<string>> | undefined = read.data === undefined ? undefined : {}
+    if (names !== undefined && read.data !== undefined) {
+        for (const installation of read.data) {
+            if (installation.isMulti)
+                names[installation.moduleKey] = [...(names[installation.moduleKey] ?? []), displayNameOf(installation)]
+        }
     }
-    return names
+    const namesRead: SlotRead<typeof names> = {
+        data: names,
+        error: read.error,
+        isLoading: read.isLoading,
+        isValidating: read.isValidating,
+    }
+    return { read: namesRead, slot: slotOfSwr(namesRead), reload: () => void read.mutate() }
 }

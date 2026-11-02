@@ -164,3 +164,18 @@ export const uploadedFileOf = (file: File): Promise<UploadedFile> =>
         }
         reader.readAsDataURL(file)
     })
+
+/** The auto-read column kinds in the order the mapping summary lists them; ordinary text is omitted. */
+const COLUMN_KIND_ORDER = ["phone", "email", "number", "date"] as const
+
+/** Describes the actual mapped columns using the already resolved kind labels. */
+export const columnKindSummaryOf = (
+    mapping: CsvMapping | null,
+    labels: Readonly<Record<Exclude<ColumnKind, "text">, string>>,
+): string =>
+    COLUMN_KIND_ORDER.map((kind) => {
+        const columns = Object.entries(mapping?.kinds ?? {}).filter(([, value]) => value === kind)
+        return columns.length ? `${columns.map(([header]) => header).join(", ")} (${labels[kind]})` : ""
+    })
+        .filter(Boolean)
+        .join("; ")

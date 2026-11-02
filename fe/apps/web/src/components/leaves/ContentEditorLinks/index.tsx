@@ -1,8 +1,9 @@
-import { Button, Cluster, Input, SectionHeader, Stack } from "@starci/grammar/common"
-import type { ContentT } from "@/modules/types"
+import type { ContentViews } from "@/modules/types"
+
+import { Button, Cluster, Input, Stack, Section } from "@starci/grammar/common"
 
 /** One link row of the editor. */
-export interface LinkRow {
+interface LinkRow {
     /** A stable key of the row. */
     readonly key: string
     readonly url: string
@@ -13,7 +14,7 @@ export interface LinkRow {
 interface ContentEditorLinksProps {
     readonly links: ReadonlyArray<LinkRow>
     readonly isEditable: boolean
-    readonly t: ContentT
+    readonly copy: ContentViews["workbenchCopy"]
     readonly onChange: (key: string, change: { readonly url?: string; readonly label?: string }) => void
     readonly onAdd: () => void
     readonly onRemove: (key: string) => void
@@ -32,8 +33,7 @@ const LINK_FIELDS: ReadonlyArray<LinkField> = [
 
 /** The links of a post: a list of rows with add and remove. */
 export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
-    <>
-        <SectionHeader level={3} title={props.t("linksTitle")} />
+    <Section title={props.copy.linksTitle} headingLevel={3}>
         <Stack gap="row">
             {props.links.map((link) => (
                 <Cluster key={link.key} gap="inline" align="end">
@@ -42,7 +42,7 @@ export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
                             key={field.key}
                             id={`ce-${field.name}-${link.key}`}
                             name={`${field.name}-${link.key}`}
-                            label={props.t(field.labelKey)}
+                            label={props.copy[field.labelKey]}
                             value={link[field.key]}
                             isDisabled={!props.isEditable}
                             onValueChange={(v) => props.onChange(link.key, { [field.key]: v })}
@@ -50,7 +50,7 @@ export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
                     ))}
                     {props.isEditable ? (
                         <Button intent="destructive" step="entry" size="sm" onPress={() => props.onRemove(link.key)}>
-                            {props.t("linkRemove")}
+                            {props.copy.linkRemove}
                         </Button>
                     ) : null}
                 </Cluster>
@@ -58,10 +58,10 @@ export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
             {props.isEditable ? (
                 <div>
                     <Button intent="neutral" size="sm" onPress={props.onAdd}>
-                        {props.t("linkAdd")}
+                        {props.copy.linkAdd}
                     </Button>
                 </div>
             ) : null}
         </Stack>
-    </>
+    </Section>
 )

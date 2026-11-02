@@ -9,8 +9,8 @@ import { queryVideoSources } from "@/modules/api/graphql/queries/query-video-sou
 export const QUERY_VIDEO_SOURCES_SWR_KEY = "QUERY_VIDEO_SOURCES_SWR"
 
 /** The sources a video can draw from. */
-export const useQueryVideoSourcesSwr = () =>
+export const useQueryVideoSourcesSwr = (isActive = true) =>
     useSWR(
-        useWorkspaceParamsKey(QUERY_VIDEO_SOURCES_SWR_KEY, [] as const),
+        useWorkspaceParamsKey(QUERY_VIDEO_SOURCES_SWR_KEY, isActive ? ([] as const) : null),
         async () => answeredData(await queryVideoSources(), QUERY_VIDEO_SOURCES_SWR_KEY).videoSources,
     )

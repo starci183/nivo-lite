@@ -1,15 +1,19 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
 import { TelegramUserWizardBase, type TelegramUserWizardBaseProps } from "./component"
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf } from "@/hooks/connection-wizard"
-import { useSlotLabels } from "@/hooks/slot"
+import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import type { AgentOption, SlotLabels } from "@/modules/types"
-import { chatsSlotOf, MAX_CHATS, useTelegramUserWizard } from "@/hooks/telegram-user-wizard"
+import { MAX_CHATS, useTelegramUserWizard } from "@/hooks/telegram-user-wizard"
 
 /** What the board hands the personal Telegram wizard. */
 interface TelegramUserWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** Workspace agents (any module): every agent may be given read access to a data source. */
     readonly agents: ReadonlyArray<AgentOption>
     /** Continue or edit this existing connection instead of creating a new one. */
@@ -55,9 +59,10 @@ const createTelegramChats = ({
     t,
     picks,
     kindName,
-}: ReturnType<typeof createTelegramUserWizardController>): NonNullable<
-    TelegramUserWizardBaseProps["props"]["chats"]["items"]
-> => ({
+}: ReturnType<typeof createTelegramUserWizardController>): Extract<
+    TelegramUserWizardBaseProps["props"]["chats"],
+    { readonly items: unknown }
+>["items"] => ({
     options: picks.visible.map((chat) => ({
         value: chat.id,
         label: chat.title,
@@ -123,7 +128,7 @@ const createTelegramUserWizardView = (
             stepLabel: tw("stepOf", { n: wizard.index + 1, total: steps.length }),
             steps,
             index: wizard.index,
-            boot: wizard.boot,
+            boot: slotOfReads([...props.dependencyReads, ...wizard.reads], () => wizard.bootData),
             bootLabels: { ...slotLabelsOf(""), ...(wizard.bootError === null ? {} : { error: wizard.bootError }) },
             isPending: wizard.isPending,
             error: wizard.error,
@@ -143,7 +148,9 @@ const createTelegramUserWizardView = (
                     passwordHint: t("passwordHint"),
                 },
             },
-            chats: chatsSlotOf(picks, createTelegramChats(context)),
+            chats: slotOfReads([...props.dependencyReads, ...wizard.reads, ...picks.reads], () =>
+                createTelegramChats(context),
+            ),
             chatsLabels: slotLabelsOf(""),
             canGoOn: picks.picked.length > 0 && !picks.loading,
             canRetryChats: picks.failed,

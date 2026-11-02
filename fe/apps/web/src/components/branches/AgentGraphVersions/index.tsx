@@ -1,41 +1,30 @@
-import { Badge, Button, EmptyNotice, List, ListRow, SectionHeader } from "@starci/grammar/common"
+import { EmptyNotice, Section, type ListRowData } from "@starci/grammar/common"
 import type { AgentGraphVersionsView } from "@/modules/types"
 
 /** The history of the graph and the command that goes back to a saved version. */
 type AgentGraphVersionsProps = {
     readonly view: AgentGraphVersionsView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onRestore: (versionId: string) => void
 }
 
 /** Every save is a version nobody can change: what changed, where it came from and when. */
 export const AgentGraphVersions = (props: AgentGraphVersionsProps) => (
-    <>
-        <SectionHeader level={3} title={props.view.title} description={props.view.hint} isSkeleton={props.isSkeleton} />
-        <List label={props.view.title}>
-            {props.view.items.map((item) => (
-                <ListRow
-                    key={item.id}
-                    isSkeleton={props.isSkeleton}
-                    title={item.title}
-                    description={[item.note, item.byLine].filter((part) => part !== "").join(" · ")}
-                    badges={
-                        item.badge === null ? undefined : (
-                            <Badge isDot tone={item.badge.tone}>
-                                {item.badge.text}
-                            </Badge>
-                        )
-                    }
-                    actions={
-                        item.canRestore ? (
-                            <Button intent="neutral" size="sm" onPress={() => props.onRestore(item.id)}>
-                                {item.restoreLabel}
-                            </Button>
-                        ) : undefined
-                    }
-                />
-            ))}
-        </List>
-        {props.view.items.length === 0 ? <EmptyNotice message={props.view.title} /> : null}
-    </>
+    <Section
+        kind="list"
+        title={props.view.title}
+        description={props.view.hint}
+        isLoading={props.isLoading}
+        headingLevel={3}
+        items={props.view.items.map((item): ListRowData => ({
+            id: item.id,
+            title: item.title,
+            description: [item.note, item.byLine].filter((part) => part !== "").join(" · "),
+            ...(item.badge === null
+                ? {}
+                : { badges: [{ label: item.badge.text, tone: item.badge.tone, isDot: true }] }),
+            ...(item.canRestore ? { action: { label: item.restoreLabel, press: () => props.onRestore(item.id) } } : {}),
+        }))}
+        empty={<EmptyNotice message={props.view.title} />}
+    />
 )

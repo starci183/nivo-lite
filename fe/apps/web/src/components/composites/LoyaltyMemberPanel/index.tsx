@@ -1,133 +1,162 @@
-import { Alert, Badge, Button, DescriptionList, SurfaceCard, Text } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import type { LoyaltyViews, LoyaltyActions } from "@/modules/types"
+import { Badge, Button, DescriptionList, SurfaceCard, Text, Stack, Cluster } from "@starci/grammar/common"
+
 import { LoyaltyLedger } from "@/components/branches/LoyaltyLedger"
-import type { LoyaltyLedgerProps } from "@/components/branches/LoyaltyLedger"
+
 import { LoyaltyMemberAdjustForm } from "@/components/branches/LoyaltyMemberAdjustForm"
-import type { LoyaltyMemberAdjustFormProps } from "@/components/branches/LoyaltyMemberAdjustForm"
+
 import { LoyaltyMemberEditForm } from "@/components/branches/LoyaltyMemberEditForm"
-import type { LoyaltyMemberEditFormProps } from "@/components/branches/LoyaltyMemberEditForm"
+
 import { LoyaltyRewardOptions } from "@/components/branches/LoyaltyRewardOptions"
-import type { LoyaltyRewardOptionsProps } from "@/components/branches/LoyaltyRewardOptions"
-import { BODY_CLASS_NAME, CHIPS_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
-/** One member as the panel draws it. */
-interface LoyaltyMemberPanelView {
-    readonly name: string
-    readonly closeLabel: string
-    readonly tier?: { readonly name: string; readonly tone: BadgeTone }
-    readonly points: string
-    readonly contact: string
-    readonly spentLine: string
-    readonly joinedLine: string
-    readonly nextTierLine: string
-    readonly expiringLine?: string
-    readonly editTitle: string
-    readonly edit?: LoyaltyMemberEditFormProps
-    readonly readOnly?: {
-        readonly items: ReadonlyArray<{ readonly id: string; readonly term: string; readonly description: string }>
-        readonly note: string
-    }
-    readonly adjustTitle: string
-    readonly adjustBody: string
-    readonly adjust: LoyaltyMemberAdjustFormProps
-    readonly rewards: LoyaltyRewardOptionsProps
-    readonly ledger: LoyaltyLedgerProps
-    readonly asOf: string
-}
+type EditActions = LoyaltyActions["memberEdit"]
+type AdjustActions = LoyaltyActions["memberAdjust"]
 
-/** What the member panel draws: a loading line, a failure, or the member. */
-export interface LoyaltyMemberPanelProps {
-    readonly loading?: { readonly text: string }
-    readonly failed?: { readonly title: string; readonly text: string }
-    readonly view?: LoyaltyMemberPanelView
+/** A member's ready atoms; form and redemption callbacks have a separate action carrier. */
+type LoyaltyMemberPanelView = LoyaltyViews["member"]
+
+/** The ready member panel, its actual loading geometry and its separately resolved actions. */
+interface LoyaltyMemberPanelProps extends LoyaltyMemberPanelView {
+    readonly isLoading: boolean
     readonly onClose: () => void
+    readonly onEdit: EditActions
+    readonly onAdjust: AdjustActions
+    readonly onRedeem: (id: string) => void
 }
 
-/** One member: header, details, point adjustment, rewards they can redeem now and the points history. */
-export const LoyaltyMemberPanel = (props: LoyaltyMemberPanelProps) => {
-    const { loading, failed, view } = props
-    if (failed !== undefined) {
-        return (
-            <SurfaceCard ariaLabel={failed.title}>
-                <Alert title={failed.title} description={failed.text} tone="negative" />
-            </SurfaceCard>
-        )
-    }
-    if (view === undefined) {
-        const text = loading === undefined ? "" : loading.text
-        return (
-            <SurfaceCard ariaLabel={text}>
-                <Text size="sm" tone="muted" live="polite">
-                    {text}
-                </Text>
-            </SurfaceCard>
-        )
-    }
-    return renderLoyaltyMemberPanelMember(view, props)
-}
+type IdentityProps = Pick<
+    LoyaltyMemberPanelProps,
+    | "name"
+    | "closeLabel"
+    | "tier"
+    | "points"
+    | "contact"
+    | "spentLine"
+    | "joinedLine"
+    | "nextTierLine"
+    | "expiringLine"
+    | "isLoading"
+    | "onClose"
+>
 
-/** Renders the LoyaltyMemberPanel member section. */
-const renderLoyaltyMemberPanelMember = (
-    view: NonNullable<LoyaltyMemberPanelProps["view"]>,
-    props: LoyaltyMemberPanelProps,
-) => (
-    <div className={STACK_CLASS_NAME}>
-        <SurfaceCard
-            label={view.name}
-            headingLevel={2}
-            labelEnd={
-                <Button intent="neutral" size="sm" onPress={props.onClose}>
-                    {view.closeLabel}
-                </Button>
-            }
-        >
-            <div className={BODY_CLASS_NAME}>
-                <div className={CHIPS_CLASS_NAME}>
-                    {view.tier === undefined ? null : <Badge tone={view.tier.tone}>{view.tier.name}</Badge>}
-                    <Text as="span" size="md" weight="semibold">
-                        {view.points}
-                    </Text>
-                </div>
-                <Text size="sm" tone="muted">
-                    {view.contact}
-                </Text>
-                <Text size="sm">{view.spentLine}</Text>
-                <Text size="sm" tone="muted">
-                    {view.joinedLine}
-                </Text>
-                <Text size="sm">{view.nextTierLine}</Text>
-                {view.expiringLine === undefined ? null : (
-                    <Text size="sm" weight="medium">
-                        {view.expiringLine}
-                    </Text>
+/** The member's identity and balance retain their original card and reading order. */
+const Identity = (props: IdentityProps) => (
+    <SurfaceCard
+        label={props.name}
+        headingLevel={2}
+        isLoading={props.isLoading}
+        labelEnd={
+            <Button intent="neutral" size="sm" onPress={props.onClose} isLoading={props.isLoading}>
+                {props.closeLabel}
+            </Button>
+        }
+    >
+        <Stack gap="row">
+            <Cluster gap="inline">
+                {props.tier === undefined ? null : (
+                    <Badge tone={props.tier.tone} isLoading={props.isLoading}>
+                        {props.tier.name}
+                    </Badge>
                 )}
-            </div>
-        </SurfaceCard>
-        <SurfaceCard label={view.editTitle} headingLevel={3}>
-            <div className={BODY_CLASS_NAME}>
-                {view.edit === undefined ? null : <LoyaltyMemberEditForm {...view.edit} />}
-                {view.readOnly === undefined ? null : (
+                <Text as="span" size="md" isStrong isLoading={props.isLoading}>
+                    {props.points}
+                </Text>
+            </Cluster>
+            <Text size="sm" tone="muted" isLoading={props.isLoading}>
+                {props.contact}
+            </Text>
+            <Text size="sm" isLoading={props.isLoading}>
+                {props.spentLine}
+            </Text>
+            <Text size="sm" tone="muted" isLoading={props.isLoading}>
+                {props.joinedLine}
+            </Text>
+            <Text size="sm" isLoading={props.isLoading}>
+                {props.nextTierLine}
+            </Text>
+            {props.expiringLine === undefined ? null : (
+                <Text size="sm" isStrong isLoading={props.isLoading}>
+                    {props.expiringLine}
+                </Text>
+            )}
+        </Stack>
+    </SurfaceCard>
+)
+
+type MemberFormsProps = Pick<
+    LoyaltyMemberPanelProps,
+    "editTitle" | "edit" | "readOnly" | "adjustTitle" | "adjustBody" | "adjust" | "isLoading" | "onEdit" | "onAdjust"
+>
+
+/** The manager edit form or staff facts, followed by the unchanged points adjustment task. */
+const MemberForms = (props: MemberFormsProps) => (
+    <>
+        <SurfaceCard label={props.editTitle} headingLevel={3} isLoading={props.isLoading}>
+            <Stack gap="row">
+                {props.edit === undefined ? null : (
+                    <LoyaltyMemberEditForm {...props.edit} {...props.onEdit} isLoading={props.isLoading} />
+                )}
+                {props.readOnly === undefined ? null : (
                     <>
-                        <DescriptionList layout="columns" items={[...view.readOnly.items]} />
-                        <Text size="xs" tone="muted">
-                            {view.readOnly.note}
+                        <DescriptionList
+                            layout="columns"
+                            items={[...props.readOnly.items]}
+                            isLoading={props.isLoading}
+                        />
+                        <Text size="xs" tone="muted" isLoading={props.isLoading}>
+                            {props.readOnly.note}
                         </Text>
                     </>
                 )}
-            </div>
+            </Stack>
         </SurfaceCard>
-        <SurfaceCard label={view.adjustTitle} headingLevel={3}>
-            <div className={BODY_CLASS_NAME}>
-                <Text size="sm" tone="muted">
-                    {view.adjustBody}
+        <SurfaceCard label={props.adjustTitle} headingLevel={3} isLoading={props.isLoading}>
+            <Stack gap="row">
+                <Text size="sm" tone="muted" isLoading={props.isLoading}>
+                    {props.adjustBody}
                 </Text>
-                <LoyaltyMemberAdjustForm {...view.adjust} />
-            </div>
+                <LoyaltyMemberAdjustForm {...props.adjust} {...props.onAdjust} isLoading={props.isLoading} />
+            </Stack>
         </SurfaceCard>
-        <LoyaltyRewardOptions {...view.rewards} />
-        <LoyaltyLedger {...view.ledger} />
-        <Text size="xs" tone="muted">
-            {view.asOf}
-        </Text>
-    </div>
+    </>
 )
+
+/** Ready and pending member geometry is drawn once; read statuses and retries stay with the connected owner. */
+export const LoyaltyMemberPanel = (props: LoyaltyMemberPanelProps) => {
+    const {
+        edit,
+        readOnly,
+        adjust,
+        rewards,
+        ledger,
+        editTitle,
+        adjustTitle,
+        adjustBody,
+        asOf,
+        onEdit,
+        onAdjust,
+        onRedeem,
+        ...identity
+    } = props
+    return (
+        <Stack gap="row">
+            <Identity {...identity} />
+            <MemberForms
+                editTitle={editTitle}
+                {...(edit === undefined ? {} : { edit })}
+                {...(readOnly === undefined ? {} : { readOnly })}
+                adjustTitle={adjustTitle}
+                adjustBody={adjustBody}
+                adjust={adjust}
+                isLoading={props.isLoading}
+                onEdit={onEdit}
+                onAdjust={onAdjust}
+            />
+            <LoyaltyRewardOptions {...rewards} onRedeem={onRedeem} isLoading={props.isLoading} />
+            <LoyaltyLedger {...ledger} isLoading={props.isLoading} />
+            <Text size="xs" tone="muted" isLoading={props.isLoading}>
+                {asOf}
+            </Text>
+        </Stack>
+    )
+}

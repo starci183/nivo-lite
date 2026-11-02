@@ -22,7 +22,7 @@ export const EmailField = (props: EmailFieldProps) => (
         isRequired
         isDisabled={props.isDisabled}
         value={props.value}
-        isError={props.error !== undefined}
+        isInvalid={props.error !== undefined}
         errorMessage={props.error}
         onValueChange={props.onChange}
     />

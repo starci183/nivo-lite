@@ -26,8 +26,7 @@ export const TelegramConnectionWebhookBase = (props: TelegramConnectionWebhookBa
         placeholder={WEBHOOK_PLACEHOLDER}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(url, isSkeleton) => (
+        render={(url, isLoading) => (
             <CopyField
                 label={props.props.label}
                 description={props.props.description}
@@ -35,8 +34,8 @@ export const TelegramConnectionWebhookBase = (props: TelegramConnectionWebhookBa
                 copyLabel={props.props.copyLabel}
                 copiedLabel={props.props.copiedLabel}
                 copyErrorLabel={props.props.copyErrorLabel}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
             />
         )}
-    </SlotView>
+    />
 )

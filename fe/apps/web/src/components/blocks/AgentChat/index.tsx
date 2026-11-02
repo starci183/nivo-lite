@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useAgentChat, useAgentChatCopy } from "@/hooks/agentChat"
 import { useSlotLabels } from "@/hooks/slot"
-import { moduleGlyphOf } from "@/hooks/installations"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
 import { AgentChatBase } from "./component"
@@ -31,8 +30,6 @@ export const AgentChat = (props: AgentChatProps) => {
     const copy = useAgentChatCopy(chat)
     const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
     const agent = chat.agent
-    const moduleKey = agent?.module ?? "chatbot"
-    const glyph = moduleGlyphOf(moduleKey)
     const agentId = agent?.id ?? ""
     const closeWelcome = () => {
         setIsWelcomeOpen(false)
@@ -45,8 +42,6 @@ export const AgentChat = (props: AgentChatProps) => {
                 crumbs: copy.crumbs,
                 pageLabel: t("pageLabel"),
                 isStartDisabled: agent === undefined,
-                glyph,
-                module: moduleKey,
                 avatarUrl: agent?.avatarUrl ?? null,
                 seed: agentId,
                 railTitle: t("railTitle"),
@@ -54,14 +49,11 @@ export const AgentChat = (props: AgentChatProps) => {
                 historyCloseLabel: t("historyClose"),
                 newLabel: t(chat.tab === "customer" ? "newVisitor" : "newTest"),
                 isStarting: chat.isStarting,
-                railSlot: { isLoading: agent === undefined || chat.isLoadingList, items: chat.rows },
+                railSlot: chat.railSlot,
                 railLabels: slotLabels(t("railEmptyHelp")),
                 header: copy.header,
                 channelTabs: copy.channelTabs,
-                threadSlot: {
-                    isLoading: agent === undefined || chat.isLoadingThread,
-                    items: { hasSelection: chat.hasSelection },
-                },
+                threadSlot: chat.threadSlot,
                 threadLabels: slotLabels(t("railEmptyHelp")),
                 thread: copy.thread,
                 welcome:
@@ -82,6 +74,8 @@ export const AgentChat = (props: AgentChatProps) => {
                 composer: copy.composer,
             }}
             on={{
+                retryRail: chat.retryRail,
+                retryThread: chat.retryThread,
                 toggleTakeover: () => void chat.toggleTakeover(),
                 back: () => router.push(CONSOLE_ROUTES.modules),
                 tab: chat.changeTab,

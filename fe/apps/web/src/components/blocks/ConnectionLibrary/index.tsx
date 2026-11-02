@@ -25,15 +25,14 @@ import {
     useConnectionsRole,
     useWantConnector,
 } from "@/hooks/connections"
-import type { Connection, ConnectorCategory, Provider } from "@/modules/types"
+import type { Connection, ConnectorCategory, Provider, LibraryCard, LibraryCategory } from "@/modules/types"
 import { ConnectionLibraryBase } from "./component"
-import type { LibraryCard, LibraryCategory } from "./component"
 
 /** What the page hands the library. */
 type ConnectionLibraryProps = {
     readonly items: ReadonlyArray<Connection>
     /** The workspace reads are not in yet: the tiles keep their shape with blank chips. */
-    readonly isSkeleton?: boolean
+    readonly isLoading?: boolean
 }
 
 type Translate = ReturnType<typeof useTranslations<"connections">>
@@ -174,7 +173,7 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
                 currentLabel: t("libCurrent"),
                 othersLabel: t("libOthers"),
                 cards,
-                isSkeleton: props.isSkeleton ?? false,
+                isLoading: props.isLoading ?? false,
             }}
             on={{
                 text: setText,

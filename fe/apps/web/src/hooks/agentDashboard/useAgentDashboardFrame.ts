@@ -18,17 +18,19 @@ interface AgentDashboardFrameInput {
     readonly installationId: string | null
     /** The module brings its own gaps card: the built-in one is not offered. */
     readonly hasOwnGaps: boolean
+    /** False while this workbench is replaced by its separate editor route. */
+    readonly isActive?: boolean
 }
 
 /** The words and figures of the shared anatomy of an agent workbench: the dashboard of the module read in the browser, worded for the frame. */
 export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
     const t = useTranslations("agentDashboard")
-    const { slot, reload } = useAgentDashboard(input.module, input.installationId ?? null)
+    const { slot, reload } = useAgentDashboard(input.module, input.installationId ?? null, input.isActive ?? true)
     const regions = useAgentDashboardRegions(slot, input)
 
     const whyKey = useWorkbenchWhyKey()
     const why = useWorkbenchWhy()
-    const waitingTotal = slot.items?.waiting.total ?? 0
+    const waitingTotal = ("items" in slot ? slot.items : undefined)?.waiting.total ?? 0
     /** The label of a tab; the waiting tab carries the number of decisions waiting once there are any. */
     const tabLabel = (tab: FrameTab, waitingTab: string | undefined): string =>
         tab.id === waitingTab && waitingTotal > 0 ? `${tab.label} (${waitingTotal})` : tab.label

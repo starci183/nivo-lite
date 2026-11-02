@@ -1,10 +1,9 @@
-import { Alert, Button, Drawer, Form, Input, SectionHeader, Text, Textarea } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Drawer, Form, Input, Section, Stack, Text, Textarea } from "@starci/grammar/common"
 import type { PresentationState } from "@starci/grammar/common"
 import { DossierStaticRows } from "@/components/leaves/DossierStaticRows"
 import type { EvidenceItemView } from "@/components/leaves/DossierStaticRows"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { BODY_CLASS_NAME, FOOTER_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** The draft as the drawer draws it. */
 interface DraftContent {
@@ -69,7 +68,7 @@ export interface DossierRemedyDraftBaseProps {
 const Decision = (props: DossierRemedyDraftBaseProps) => {
     const view = props.props
     return (
-        <div className={FOOTER_CLASS_NAME}>
+        <Cluster gap="inline" align="center" justify="end">
             <Button size="sm" intent="neutral" isDisabled={view.isPending} onPress={props.on.reject}>
                 {view.rejectLabel}
             </Button>
@@ -79,14 +78,14 @@ const Decision = (props: DossierRemedyDraftBaseProps) => {
             <Button size="sm" intent="commit" type="submit" form={FORM_ID} isPending={view.isPending}>
                 {view.approveLabel}
             </Button>
-        </div>
+        </Cluster>
     )
 }
 
 /** The base props, the draft that is shown and whether it is drawn as geometry. */
 interface DraftProps extends DossierRemedyDraftBaseProps {
     readonly draft: DraftContent
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** The fields of the draft, the places left to fill, and the evidence it answers. */
@@ -94,13 +93,17 @@ const Draft = (props: DraftProps) => {
     const view = props.props
     const isReadOnly = !view.canDecide
     return (
-        <div className={BODY_CLASS_NAME}>
+        <Stack gap="section">
             {view.notice === null ? null : (
-                <Alert tone={view.notice.tone} title={view.notice.title} description={view.notice.description} />
+                <Alert
+                    tone={view.notice.tone}
+                    title={view.notice.title}
+                    {...(view.notice.description === undefined ? {} : { description: view.notice.description })}
+                />
             )}
             <Text tone="muted">{view.note}</Text>
             <Form id={FORM_ID} label={view.title} isPending={view.isPending} onSubmit={props.on.approve}>
-                <div className={FORM_CLASS_NAME}>
+                <Stack gap="row">
                     <Input
                         id="dossier-remedy-title"
                         name="title"
@@ -108,7 +111,7 @@ const Draft = (props: DraftProps) => {
                         value={view.draftTitle}
                         isReadOnly={isReadOnly}
                         isRequired
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isLoading}
                         onValueChange={props.on.setTitle}
                     />
                     <Textarea
@@ -120,24 +123,26 @@ const Draft = (props: DraftProps) => {
                         maxLength={40000}
                         isReadOnly={isReadOnly}
                         isRequired
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isLoading}
                         onValueChange={props.on.setBody}
                     />
-                </div>
+                </Stack>
             </Form>
             {props.draft.placeholders.length === 0 ? null : (
-                <div className={FORM_CLASS_NAME}>
-                    <SectionHeader level={3} title={view.placeholdersTitle} />
+                <Section title={view.placeholdersTitle} headingLevel={3}>
                     <DossierStaticRows label={view.placeholdersTitle} items={props.draft.placeholders} />
-                </div>
+                </Section>
             )}
             {view.evidence.length === 0 ? null : (
-                <div className={FORM_CLASS_NAME}>
-                    <SectionHeader level={3} title={view.evidenceTitle} description={view.findingTitle ?? undefined} />
+                <Section
+                    title={view.evidenceTitle}
+                    headingLevel={3}
+                    {...(view.findingTitle === null ? {} : { description: view.findingTitle })}
+                >
                     <DossierStaticRows label={view.evidenceTitle} items={view.evidence} />
-                </div>
+                </Section>
             )}
-        </div>
+        </Stack>
     )
 }
 
@@ -159,9 +164,13 @@ export const DossierRemedyDraftBase = (props: DossierRemedyDraftBaseProps) => {
             placement="right"
             footer={view.canDecide ? <Decision {...props} /> : undefined}
         >
-            <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
-                {(draft, isSkeleton) => <Draft {...props} draft={draft} isSkeleton={isSkeleton} />}
-            </SlotView>
+            <SlotView
+                slot={view.slot}
+                placeholder={view.placeholder}
+                labels={view.slotLabels}
+                onRetry={props.on.retry}
+                render={(draft, isLoading) => <Draft {...props} draft={draft} isLoading={isLoading} />}
+            />
         </Drawer>
     )
 }

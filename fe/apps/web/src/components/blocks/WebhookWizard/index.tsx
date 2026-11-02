@@ -1,5 +1,9 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
+import { slotOfReads, useSlotLabels } from "@/hooks/slot"
+
 import { useTranslations } from "next-intl"
 import { useCopyLabels } from "@/hooks/connection-wizard"
 import { useWebhookWizard, WEBHOOK_EVENTS, WEBHOOK_STEPS } from "@/hooks/webhook-wizard"
@@ -9,12 +13,15 @@ import { WebhookWizardBase } from "./component"
 
 /** What the board hands the webhook wizard. */
 interface WebhookWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
 
 /** n8n / Make / Zapier webhook in the shared wizard frame: address and events, signing key, a test send, done. */
 export const WebhookWizard = (props: WebhookWizardProps) => {
+    const slotLabels = useSlotLabels()
     const t = useTranslations("webhookWizard")
     const tw = useTranslations("connectionWizard")
     const copy = useCopyLabels()
@@ -39,6 +46,8 @@ export const WebhookWizard = (props: WebhookWizardProps) => {
     return (
         <WebhookWizardBase
             props={{
+                boot: slotOfReads(props.dependencyReads, () => true),
+                slotLabels: slotLabels(""),
                 title: t("title"),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: WEBHOOK_STEPS.length }),
                 steps: [t("stepAddress"), t("stepSecret"), t("stepTest"), t("stepDone")],
@@ -72,6 +81,7 @@ export const WebhookWizard = (props: WebhookWizardProps) => {
                     secretOnce: t("secretOnce"),
                     n8nTitle: t("n8nTitle"),
                     n8nNote: t("n8nNote"),
+                    n8nEmpty: t("n8nEmpty"),
                     codeLabel: t("codeLabel"),
                     testIntro: t("testIntro"),
                     testWarn: t("testWarn"),

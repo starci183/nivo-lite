@@ -96,7 +96,7 @@ export const AdminSupportActions = (props: AdminSupportActionsProps) => {
     const t = useTranslations("admin")
     const commands = useAdminCommands(props.workspaceId)
     const workspace = slotOfSwr(useQueryAdminWorkspaceSwr({ workspaceId: props.workspaceId }))
-    const data = workspace.items
+    const data = "items" in workspace ? workspace.items : undefined
     const [days, setDays] = useState("30")
     const [typedPlan, setTypedPlan] = useState<string | null>()
     const [typedCredits, setTypedCredits] = useState<string>()

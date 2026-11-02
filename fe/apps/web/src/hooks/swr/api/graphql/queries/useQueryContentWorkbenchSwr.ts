@@ -9,8 +9,8 @@ import { queryContentWorkbench } from "@/modules/api/graphql/queries/query-conte
 export const QUERY_CONTENT_WORKBENCH_SWR_KEY = "QUERY_CONTENT_WORKBENCH_SWR"
 
 /** Everything the content workbench shows about the workspace. */
-export const useQueryContentWorkbenchSwr = () =>
+export const useQueryContentWorkbenchSwr = (isActive = true) =>
     useSWR(
-        useWorkspaceParamsKey(QUERY_CONTENT_WORKBENCH_SWR_KEY, [] as const),
+        useWorkspaceParamsKey(QUERY_CONTENT_WORKBENCH_SWR_KEY, isActive ? ([] as const) : null),
         async () => answeredData(await queryContentWorkbench(), QUERY_CONTENT_WORKBENCH_SWR_KEY).contentWorkbench,
     )

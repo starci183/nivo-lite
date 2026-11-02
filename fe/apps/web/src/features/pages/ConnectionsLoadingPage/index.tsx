@@ -15,6 +15,7 @@ export const ConnectionsLoadingPage = async () => {
                 homeHref: CONNECTION_ROUTES.dashboard,
                 connectedLabel: t("tabConnected"),
                 inUseLabel: t("inUseTitle"),
+                emptyLabel: t("connectedEmpty"),
                 libraryLabel: t("tabLibrary"),
                 automationsLink: t("automationsLink"),
                 automationsHref: CONNECTION_ROUTES.automations,

@@ -1,39 +1,17 @@
-import { Alert, Dialog, Input, NumberField, SegmentedControl, Select } from "@starci/grammar/common"
-import { HiringDialogFooter } from "@/components/branches/HiringDialogFooter"
-import type { InterviewValues, RequestOutcomeView } from "@/hooks/hiringCandidate"
-import type { FieldOf, HiringSay } from "@/modules/types"
-import { FORM_CLASS_NAME } from "./classNames"
+import type { HiringViews, HiringActions } from "@/modules/types"
 
-/** One option of a choice field. */
-interface Option {
-    readonly id: string
-    readonly label: string
-}
+import { Stack, Alert, Dialog, Input, NumberField, SegmentedControl, Select } from "@starci/grammar/common"
+
+import { HiringDialogFooter } from "@/components/branches/HiringDialogFooter"
 
 /** The words, values and state of the interview request dialog. */
-export interface HiringInterviewDialogProps {
-    readonly props: {
-        readonly say: HiringSay
-        readonly name: string
-        readonly members: ReadonlyArray<Option>
-        readonly modes: ReadonlyArray<Option>
-        readonly values: InterviewValues
-        readonly outcome: RequestOutcomeView | null
-        readonly canSend: boolean
-        readonly isBusy: boolean
-        readonly error: string | null
-    }
-    readonly on: {
-        readonly text: (name: FieldOf<InterviewValues, string>, value: string) => void
-        readonly number: (name: FieldOf<InterviewValues, number>, value: number) => void
-        readonly send: () => void
-        readonly close: () => void
-    }
+type HiringInterviewDialogProps = HiringViews["interviewFields"] & {
+    readonly on: HiringActions["interviewActions"]
 }
 
 /** The dialog that asks the back end to propose three interview times to a candidate. */
 export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
-    const { say, name, members, modes, values, outcome, canSend, isBusy, error } = props.props
+    const { copy, members, modes, values, outcome, canSend, isBusy, error } = props
     const { on } = props
     return (
         <Dialog
@@ -42,13 +20,13 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
                 if (!open) on.close()
             }}
             size="md"
-            title={say("ivTitle", { name })}
-            closeLabel={say("close")}
-            description={say("ivHint")}
+            title={props.title}
+            closeLabel={copy.close}
+            description={copy.ivHint}
             footer={
                 <HiringDialogFooter
-                    say={say}
-                    sendKey="ivSend"
+                    copy={copy}
+                    sendLabel={copy.ivSend}
                     isDone={outcome !== null}
                     canSend={canSend}
                     isBusy={isBusy}
@@ -57,18 +35,18 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
                 />
             }
         >
-            <div className={FORM_CLASS_NAME}>
-                {error === null ? null : <Alert tone="negative" title={say("ivFailed")} description={error} />}
+            <Stack gap="row">
+                {error === null ? null : <Alert tone="negative" title={copy.ivFailed} description={error} />}
                 {outcome === null ? (
                     <>
                         <Select
-                            label={say("ivInterviewer")}
+                            label={copy.ivInterviewer}
                             options={members}
                             value={values.interviewerUserId}
                             onValueChange={(id) => on.text("interviewerUserId", id ?? "")}
                         />
                         <SegmentedControl
-                            label={say("ivModeLabel")}
+                            label={copy.ivModeLabel}
                             options={modes.map((mode) => ({ value: mode.id, label: mode.label }))}
                             value={values.mode}
                             onValueChange={(mode) => on.text("mode", mode)}
@@ -76,12 +54,12 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
                         <Input
                             id="iv-loc"
                             name="location"
-                            label={say(values.mode === "online" ? "ivLink" : "ivPlace")}
+                            label={values.mode === "online" ? copy.ivLink : copy.ivPlace}
                             value={values.location}
                             onValueChange={(location) => on.text("location", location)}
                         />
                         <NumberField
-                            label={say("ivDuration")}
+                            label={copy.ivDuration}
                             minValue={15}
                             maxValue={180}
                             step={15}
@@ -92,11 +70,11 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
                 ) : (
                     <Alert
                         tone={outcome.status === "done" ? "affirmative" : "informative"}
-                        title={say(outcome.status === "done" ? "ivDone" : "ivWaiting")}
+                        title={outcome.status === "done" ? copy.ivDone : copy.ivWaiting}
                         description={outcome.summary}
                     />
                 )}
-            </div>
+            </Stack>
         </Dialog>
     )
 }

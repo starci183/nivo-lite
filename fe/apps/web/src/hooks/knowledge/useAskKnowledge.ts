@@ -29,8 +29,11 @@ interface AskKnowledge {
     readonly ask: () => void
 }
 
-/** The "ask as an agent" panel: asks the back end what an agent would retrieve, through that agent's own view. Reads only. */
-export const useAskKnowledge = (agents: ReadonlyArray<AgentLens>): AskKnowledge => {
+/**
+ * The "ask as an agent" panel: asks the back end what an agent would retrieve, through that agent's own view. Reads only. A fixed audience
+ * is the one every question is asked for, with no choice offered (the public part asks as a customer).
+ */
+export const useAskKnowledge = (agents: ReadonlyArray<AgentLens>, fixedAudience?: AskAudience): AskKnowledge => {
     const { trigger } = useQueryAskKnowledgeSwr()
     const [question, setQuestion] = useState("")
     const [chosen, setChosen] = useState<string | undefined>()
@@ -39,8 +42,8 @@ export const useAskKnowledge = (agents: ReadonlyArray<AgentLens>): AskKnowledge 
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
     const agent = agents.find((one) => one.id === chosen) ?? agents[0]
-    const canPickAudience = agent?.audience === "internal"
-    const audience: AskAudience = canPickAudience ? (picked ?? "internal") : "customer"
+    const canPickAudience = fixedAudience === undefined && agent?.audience === "internal"
+    const audience: AskAudience = fixedAudience ?? (canPickAudience ? (picked ?? "internal") : "customer")
     const ask = () => {
         const text = question.trim().slice(0, 500)
         if (text === "" || agent === undefined) return

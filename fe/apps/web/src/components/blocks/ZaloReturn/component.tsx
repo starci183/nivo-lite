@@ -25,15 +25,14 @@ export const ZaloReturnBase = (props: ZaloReturnBaseProps) => (
                 placeholder=""
                 labels={props.props.slotLabels}
                 onRetry={props.on.retry}
-            >
-                {() => (
+                render={() => (
                     <output>
                         <Text as="span" tone="muted">
                             {props.props.waiting}
                         </Text>
                     </output>
                 )}
-            </SlotView>
+            />
         </div>
     </Page>
 )

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/components/blocks/LocaleSwitch"
-import { AuthFrame } from "@/components/composites/AuthFrame"
+import { AuthFrame } from "@/components/frames/AuthFrame"
 
 /** The words of the brand side, resolved by the layout. */
 export interface AuthLayoutBaseProps {

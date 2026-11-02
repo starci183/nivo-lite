@@ -45,7 +45,7 @@ export const useVideoJobReport = ({ doneStates, successKey, failureFallback }: V
                         : Promise.resolve(status),
                 { successMessage: t(successKey) },
             )
-            await refresh()
+            await runGraphQL(refresh, { showSuccessToast: false })
         },
         [activeWorkspaceId, doneStates, failure, failureFallback, refresh, runGraphQL, successKey, t],
     )

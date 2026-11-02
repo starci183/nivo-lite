@@ -1,6 +1,4 @@
-import { Button, Form, Input, SurfaceCard, Text } from "@starci/grammar/common"
-import { ACTIONS_CLASS_NAME, FIELDS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
-
+import { Button, Form, Input, SurfaceCard, Text, Stack, Cluster, Grid } from "@starci/grammar/common"
 /** A text field of the register form. */
 type RegisterField = "key" | "name" | "url" | "contractVersion" | "credential"
 
@@ -59,7 +57,7 @@ interface CredentialCardProps {
 const CredentialCard = (props: CredentialCardProps) => (
     <SurfaceCard label={props.view.text.title} headingLevel={3}>
         <Form label={props.view.text.title} onSubmit={props.on.credentialSubmit} isPending={props.view.isPending}>
-            <div className={FORM_CLASS_NAME}>
+            <Stack gap="section">
                 <Text size="sm" tone="muted">
                     {props.view.text.hint}
                 </Text>
@@ -73,15 +71,15 @@ const CredentialCard = (props: CredentialCardProps) => (
                     value={props.view.value}
                     onValueChange={props.on.credentialChange}
                 />
-                <div className={ACTIONS_CLASS_NAME}>
+                <Cluster gap="row">
                     <Button type="submit" intent="commit" isPending={props.view.isPending}>
                         {props.view.text.submit}
                     </Button>
                     <Button intent="alternative" isDisabled={props.view.isPending} onPress={props.on.credentialClose}>
                         {props.view.text.cancel}
                     </Button>
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
         </Form>
     </SurfaceCard>
 )
@@ -97,11 +95,11 @@ export const McpConnectorForms = (props: McpConnectorFormsProps) => {
             {props.props.credential === null ? null : <CredentialCard view={props.props.credential} on={props.on} />}
             <SurfaceCard label={view.text.title} headingLevel={3}>
                 <Form label={view.text.title} onSubmit={props.on.register} isPending={view.isPending}>
-                    <div className={FORM_CLASS_NAME}>
+                    <Stack gap="section">
                         <Text size="sm" tone="muted">
                             {view.text.hint}
                         </Text>
-                        <div className={FIELDS_CLASS_NAME}>
+                        <Grid kind="form" columns={2}>
                             <Input
                                 id="mcp-register-key"
                                 name="key"
@@ -150,13 +148,13 @@ export const McpConnectorForms = (props: McpConnectorFormsProps) => {
                                 value={view.values.credential}
                                 onValueChange={props.on.registerField("credential")}
                             />
-                        </div>
-                        <div className={ACTIONS_CLASS_NAME}>
+                        </Grid>
+                        <Cluster gap="row">
                             <Button type="submit" intent="commit" isPending={view.isPending}>
                                 {view.text.submit}
                             </Button>
-                        </div>
-                    </div>
+                        </Cluster>
+                    </Stack>
                 </Form>
             </SurfaceCard>
         </>

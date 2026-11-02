@@ -52,11 +52,11 @@ const termsOf = (facts: ReadonlyArray<AdminWorkspaceFact>, isSkeleton: boolean) 
         term: fact.term,
         description:
             fact.tone === undefined ? (
-                <Text weight="medium" isSkeleton={isSkeleton}>
+                <Text isStrong isLoading={isSkeleton}>
                     {fact.value}
                 </Text>
             ) : (
-                <Badge tone={fact.tone} isSkeleton={isSkeleton}>
+                <Badge tone={fact.tone} isLoading={isSkeleton}>
                     {fact.value}
                 </Badge>
             ),
@@ -69,8 +69,7 @@ export const AdminWorkspaceOverviewBase = (props: AdminWorkspaceOverviewBaseProp
         placeholder={OVERVIEW_PLACEHOLDER}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(view, isSkeleton) => (
+        render={(view, isSkeleton) => (
             <SurfaceCard label={props.props.overviewTitle} headingLevel={2}>
                 <div className={FACTS_CLASS_NAME}>
                     <DescriptionList layout="columns" isDivided items={termsOf(view.billing, isSkeleton)} />
@@ -78,5 +77,5 @@ export const AdminWorkspaceOverviewBase = (props: AdminWorkspaceOverviewBaseProp
                 </div>
             </SurfaceCard>
         )}
-    </SlotView>
+    />
 )

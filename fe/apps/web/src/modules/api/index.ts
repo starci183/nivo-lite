@@ -103,6 +103,7 @@ export type {
     BrainGapType,
     BrainLensType,
     BrainLessonType,
+    PublicDocumentType,
     CreditPackPurchaseType,
     CreditPackType,
     CreditQuotaStatusType,
@@ -175,3 +176,4 @@ export type {
     ZaloWizardConnectionType,
 } from "./graphql/index"
 export type { MentionDirectoryType, ThreadMessageType, WorkChainType } from "./graphql/index"
+export { INPUT_BOUNDS, inputBoundsIssues } from "./graphql/__generated__/input-bounds"

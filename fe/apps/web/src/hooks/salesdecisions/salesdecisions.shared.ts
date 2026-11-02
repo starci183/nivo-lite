@@ -66,6 +66,7 @@ const textOrNull = (text: string | undefined): string | null => (text === undefi
 
 /** Values and callbacks already read by the connected decision surface. */
 export type SalesDecisionsControllerInput = {
+    readonly capture: () => () => boolean
     readonly props: { readonly focusId: string | null }
     readonly t: ReturnType<typeof useTranslations<"workbenchSales">>
     readonly g: ReturnType<typeof useTranslations<"governance">>

@@ -1,10 +1,10 @@
-"use client"
+import { adjustmentCopyOf, type InventoryPanelScope, num, type AdjustMode } from "./inventory.shared"
+("use client")
 
 import { useAdjustmentPreview } from "./useAdjustmentPreview"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
 import type { ItemView, LocationView } from "@/modules/types"
 import { useTranslations } from "next-intl"
-import { num, type AdjustMode } from "./inventory.shared"
 import { useDrawer, type DrawerControl } from "./useDrawer"
 import { useInventoryFormat } from "./useInventoryFormat"
 import { useInventoryRun } from "./useInventoryRun"
@@ -27,11 +27,14 @@ export const useAdjustDrawer = (
     locations: ReadonlyArray<LocationView>,
     defaultLocationId: string | null,
     commands: InventoryCommandSet<"adjustStock" | "transferStock">,
+    lifetime?: InventoryPanelScope,
 ) => {
+    const { isActive = true, scope = "" } = lifetime ?? {}
+
     const t = useTranslations("workbenchInventory")
     const say = useSay()
-    const run = useInventoryRun()
-    const drawer = useDrawer<AdjustState>()
+    const run = useInventoryRun(isActive, scope)
+    const drawer = useDrawer<AdjustState>(isActive, scope)
     const { state } = drawer
     const patch = (next: Partial<AdjustState>) => drawer.change((current) => ({ ...current, ...next }))
     const several = locations.length > 1
@@ -48,7 +51,7 @@ export const useAdjustDrawer = (
                         qty: num(open.value),
                         note: open.reason,
                     }),
-                drawer.done,
+                (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
             )
             return
         }
@@ -61,7 +64,11 @@ export const useAdjustDrawer = (
                     ...amount,
                     reason: open.reason,
                 }),
-            (result) => (result.state === "applied" ? drawer.done() : t("adjustWaiting")),
+            (result, isCurrent) => {
+                if (result.state !== "applied") return t("adjustWaiting")
+                if (isCurrent()) drawer.done()
+                return undefined
+            },
         )
     }
     const { format, effect } = useAdjustmentPreview(state, several)
@@ -130,7 +137,7 @@ const viewOf = ({
             state === null || effect === null
                 ? null
                 : {
-                      say,
+                      copy: adjustmentCopyOf(say, state),
                       itemName: state.item.name,
                       unit: state.item.unit,
                       summary: t("adjustSummary", {

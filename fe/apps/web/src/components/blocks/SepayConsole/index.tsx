@@ -58,7 +58,7 @@ export const SepayConsole = (props: SepayConsoleProps) => {
     const [isPending, setPending] = useState(false)
     const [isAsking, setAsking] = useState(false)
     const [isRailOpen, setRailOpen] = useState(false)
-    const connection = slot.items
+    const connection = "items" in slot ? slot.items : undefined
     const refusal = useConnectionRefusal()
     if (isMissing && refusal === undefined) notFound()
     const canDisconnect = role === "owner" && connection !== undefined && connection.status !== "disconnected"

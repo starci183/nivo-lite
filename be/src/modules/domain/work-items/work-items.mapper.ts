@@ -3,6 +3,7 @@ import { isRecord } from "@modules/platform/primitives"
 import type {
     ClosedClaim,
     NewWorkItem,
+    OptionalWorkItem,
     Proposal,
     StoredProposal,
     WorkItem,
@@ -116,3 +117,9 @@ export const queuedValuesOf = (item: NewWorkItem, id: string): QueryDeepPartialE
     proposal: item.proposal,
     installationId: item.installationId,
 })
+
+/** The first returned work item, or no item when the guarded statement matched none. */
+export const firstWorkItem = (rows: ReadonlyArray<WorkItemRecord>): OptionalWorkItem => {
+    const row = rows[0]
+    return row === undefined ? null : toWorkItem(row)
+}

@@ -57,10 +57,6 @@ export class ScriptedAgentWork implements AgentWorkHandler, AgentTurnExecutor {
 
     private readonly waiters: Array<{ readonly count: number; readonly wake: () => void }> = []
 
-    constructor(registry: AgentWorkHandlersService) {
-        registry.add(this)
-    }
-
     prepare(turn: AgentTurnView): Promise<AgentTurnPrep> {
         const plan: AgentTurnPlan = {
             module: "chatbot",
@@ -122,6 +118,14 @@ export class ScriptedAgentWork implements AgentWorkHandler, AgentTurnExecutor {
     }
 }
 
+@Injectable()
+/** Registers the scripted handler after the registry and its shared executor have both been constructed. */
+class ScriptedAgentWorkRegistration {
+    constructor(registry: AgentWorkHandlersService, handler: ScriptedAgentWork) {
+        registry.add(handler)
+    }
+}
+
 @Module({})
 class ScriptedAgentWorkModule {
     /** Binds the scripted handler and executor the way the capabilities that own them bind theirs. */
@@ -129,7 +133,11 @@ class ScriptedAgentWorkModule {
         return {
             module: ScriptedAgentWorkModule,
             global: true,
-            providers: [ScriptedAgentWork, { provide: AGENT_TURN_EXECUTOR, useExisting: ScriptedAgentWork }],
+            providers: [
+                ScriptedAgentWork,
+                ScriptedAgentWorkRegistration,
+                { provide: AGENT_TURN_EXECUTOR, useExisting: ScriptedAgentWork },
+            ],
             exports: [ScriptedAgentWork, AGENT_TURN_EXECUTOR],
         }
     }

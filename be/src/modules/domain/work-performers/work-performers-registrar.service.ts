@@ -1,3 +1,5 @@
+import { HANDOVER_ACTION } from "@modules/domain/authority-rules"
+import { HandOverConversationPerformerService } from "./hand-over-conversation-performer.service"
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
@@ -36,6 +38,7 @@ export class WorkPerformersRegistrarService implements OnModuleInit {
         private readonly remind: BookingRemindPerformerService,
         private readonly redeem: RedeemRewardPerformerService,
         private readonly gatewayCall: GatewayCallPerformerService,
+        private readonly handOver: HandOverConversationPerformerService,
     ) {}
 
     /** Adds the performers to the registry: the sales chain, the booking actions, the reward redemption and the gateway calls. */
@@ -54,5 +57,6 @@ export class WorkPerformersRegistrarService implements OnModuleInit {
         this.registry.add("remind_booking", this.remind)
         this.registry.add("redeem_reward", this.redeem)
         this.registry.add("gateway_call", this.gatewayCall)
+        this.registry.add(HANDOVER_ACTION, this.handOver)
     }
 }

@@ -1,5 +1,5 @@
-import { Button, Input } from "@starci/grammar/common"
-import { FORM_GROW, FORM_ROW } from "./classNames"
+import { Button, Input, Cluster } from "@starci/grammar/common"
+import { FORM_GROW } from "./classNames"
 
 /** The field and command that add a goal. */
 interface AgentWorkGoalFormProps {
@@ -9,14 +9,14 @@ interface AgentWorkGoalFormProps {
     readonly value: string
     readonly canAdd: boolean
     readonly isSaving: boolean
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onChange: (value: string) => void
     readonly onAdd: () => void
 }
 
 /** The new goal field with its command. */
 export const AgentWorkGoalForm = (props: AgentWorkGoalFormProps) => (
-    <div className={FORM_ROW}>
+    <Cluster gap="inline" align="end">
         <div className={FORM_GROW}>
             <Input
                 id="agent-work-goal"
@@ -24,19 +24,19 @@ export const AgentWorkGoalForm = (props: AgentWorkGoalFormProps) => (
                 label={props.label}
                 placeholder={props.placeholder}
                 value={props.value}
-                isSkeleton={props.isSkeleton}
+                isLoading={props.isLoading}
                 isDisabled={props.isSaving}
                 onValueChange={props.onChange}
             />
         </div>
         <Button
             intent="neutral"
-            isSkeleton={props.isSkeleton}
+            isLoading={props.isLoading}
             isPending={props.isSaving}
             isDisabled={!props.canAdd}
             onPress={props.onAdd}
         >
             {props.addLabel}
         </Button>
-    </div>
+    </Cluster>
 )

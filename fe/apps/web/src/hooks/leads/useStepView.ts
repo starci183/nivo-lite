@@ -1,7 +1,7 @@
 "use client"
 
 import type { ModuleIconName, AgentRecord, ResponsibilityRecord } from "@/modules/types"
-import type { BadgeTone } from "@starci/grammar/common"
+import { type BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { useAgentPictures } from "@/hooks/installations"
 import { MODULE_REGISTRY } from "@/modules/catalog"

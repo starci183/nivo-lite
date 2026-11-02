@@ -1,4 +1,7 @@
-"use client"
+import { usePoCopy } from "./usePoCopy"
+import { useFeatureLifetime } from "@/hooks/reuseables"
+import type { InventoryPanelScope } from "@/hooks/inventory"
+;("use client")
 
 import {
     useDrawer,
@@ -26,25 +29,31 @@ export const usePoDrawer = (
     canManage: boolean,
     commands: InventoryCommandSet<"updatePoDraft" | "requestSend" | "cancelPo" | "receivePo">,
     decisions: InventoryDecisions,
+    lifetime?: InventoryPanelScope,
 ) => {
+    const { isActive = true, scope = "" } = lifetime ?? {}
+
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()
-    const run = useInventoryRun()
-    const drawer = useDrawer<PoDrawerState>()
+    const run = useInventoryRun(isActive, scope)
+    const drawer = useDrawer<PoDrawerState>(isActive, scope)
     const { state, change, done } = drawer
     const say = useSay()
+    const copyWords = usePoCopy()
     const receivedText = (status: string, changes: ReadonlyArray<string>, accounting: boolean): string =>
         t("poReceivedDone", {
             state: t(status === "received" ? "poFull" : "poPartial"),
             changes: changes.length > 0 ? t("poPriceChanges", { list: changes.join("; ") }) : "",
             accounting: accounting ? t("poHandedToAccounting") : ".",
         })
+    const clipboardLifetime = useFeatureLifetime(isActive, scope)
     const copy = async (text: string) => {
+        const isCurrent = clipboardLifetime.capture()
         try {
             await navigator.clipboard.writeText(text)
-            change((current) => ({ ...current, copied: true }))
+            if (isCurrent()) change((current) => ({ ...current, copied: true }))
         } catch {
-            change((current) => ({ ...current, copied: false }))
+            if (isCurrent()) change((current) => ({ ...current, copied: false }))
         }
     }
     const whenOpen = (act: (open: PoDrawerState) => void) => () => {
@@ -57,6 +66,7 @@ export const usePoDrawer = (
                 ? null
                 : poDrawerProps(state, {
                       say,
+                      copy: copyWords,
                       format,
                       suppliers,
                       canManage,
@@ -134,11 +144,18 @@ const actionsOf = ({
             const workItemId = open.po.workItemId
             if (workItemId === null) return
             const edited = open.message.trim() === open.po.message.trim() ? null : open.message
-            run.exec(() => decisions.approve(workItemId, edited), done)
+            run.exec(
+                () => decisions.approve(workItemId, edited),
+                (_value, isCurrent) => (isCurrent() ? done() : undefined),
+            )
         }),
         reject: whenOpen((open) => {
             const workItemId = open.po.workItemId
-            if (workItemId !== null) run.exec(() => decisions.reject(workItemId, t("rejectNote")), done)
+            if (workItemId !== null)
+                run.exec(
+                    () => decisions.reject(workItemId, t("rejectNote")),
+                    (_value, isCurrent) => (isCurrent() ? done() : undefined),
+                )
         }),
         receive: whenOpen((open) =>
             run.exec(
@@ -153,9 +170,14 @@ const actionsOf = ({
             ),
         ),
         copy: whenOpen((open) => {
-            void copy(open.po.message)
+            copy(open.po.message)
         }),
-        cancel: whenOpen((open) => run.exec(() => commands.cancelPo(open.po.id), done)),
+        cancel: whenOpen((open) =>
+            run.exec(
+                () => commands.cancelPo(open.po.id),
+                (_value, isCurrent) => (isCurrent() ? done() : undefined),
+            ),
+        ),
         close: drawer.close,
     }
 }

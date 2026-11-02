@@ -1,10 +1,10 @@
-/** The data status of one slot: loading, forbidden, failed, or its items (an empty list or an absent value reads as empty). */
-export type DataSlot<T> = {
-    readonly isLoading?: boolean | undefined
-    readonly isForbidden?: boolean | undefined
-    readonly isError?: boolean | undefined
-    readonly items?: T | undefined
-}
+/** One read's exclusive status; only a settled ready slot carries items, and revalidation keeps its settled drawing. */
+export type DataSlot<T> =
+    | { readonly isLoading: true }
+    | { readonly isForbidden: true }
+    | { readonly isError: true }
+    | { readonly isEmpty: true; readonly isValidating?: boolean }
+    | { readonly items: T; readonly isValidating?: boolean }
 
 /** Resolved copy of the data-status recipe for one slot. */
 export type SlotLabels = {
@@ -19,4 +19,12 @@ export type SlotPanelProps<T> = {
     readonly slot: DataSlot<T>
     readonly placeholder: T
     readonly labels: SlotLabels
+}
+
+/** A read folded into a region; errors remain unknown at the boundary. */
+export interface SlotRead<T> {
+    readonly data: T | undefined
+    readonly error: unknown
+    readonly isLoading: boolean
+    readonly isValidating?: boolean
 }

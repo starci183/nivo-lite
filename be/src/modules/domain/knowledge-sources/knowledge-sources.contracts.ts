@@ -11,6 +11,17 @@ export type SourceStatus =
 /** public: customer-facing agents may answer from it. internal: internal agents and staff only. */
 export type Visibility = "public" | "internal"
 
+/** The origin of a source written for an approved public document. */
+export const PUBLIC_DOCUMENT_ORIGIN = "public_document"
+
+/** The text of an approved public document, as it is written to its public source. */
+export interface PublishedSourceInput {
+    /** The title customers see in a citation. */
+    readonly title: string
+    /** The approved text. */
+    readonly content: string
+}
+
 /** The most characters one source may hold; a longer text is split into several sources by its owner. */
 export const MAX_SOURCE_CHARS = 120_000
 
@@ -52,8 +63,6 @@ export enum StoredNote {
     Unreadable = "KNOWLEDGE_NOTE_UNREADABLE",
     /** The source has no text. */
     Empty = "KNOWLEDGE_NOTE_EMPTY",
-    /** The text is longer than a source may hold. */
-    TooLong = "KNOWLEDGE_NOTE_TOO_LONG",
     /** The source has no passage to store. */
     NoPassages = "KNOWLEDGE_NOTE_NO_PASSAGES",
     /** The PDF has no text layer (a scan or photographs of pages): nothing was read, and it needs OCR before it can teach the agents. */

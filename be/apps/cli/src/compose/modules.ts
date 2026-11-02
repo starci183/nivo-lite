@@ -19,6 +19,7 @@ import { ProfileSourcesService } from "@modules/domain/knowledge-sources"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import { McpGatewayAdminService, McpGatewayModule } from "@modules/domain/mcp-gateway"
+import { McpCallLogModule } from "@modules/domain/mcp-call-log"
 import { TransactionsModule } from "@modules/domain/transactions"
 import { WorkspaceSeedModule } from "@modules/domain/workspace-seed"
 import { WorkspaceCleanupModule } from "@modules/domain/workspace-cleanup"
@@ -108,6 +109,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     InboundEventsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
     DataRecordsModule.register({ isGlobal: true }),
+    McpCallLogModule.register({ isGlobal: true }),
     McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true }),
     WorkspaceSeedModule.register({
         isGlobal: true,

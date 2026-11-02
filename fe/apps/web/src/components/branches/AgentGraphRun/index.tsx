@@ -1,10 +1,10 @@
-import { Alert, Badge, Button, SectionHeader, Text, Timeline } from "@starci/grammar/common"
+import { Alert, Badge, Button, Text, Timeline, Section } from "@starci/grammar/common"
 import type { AgentGraphRunView } from "@/modules/types"
 
 /** A run traced on the version that decided it, and the way back to the map. */
 type AgentGraphRunProps = {
     readonly view: AgentGraphRunView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onBack: () => void
 }
 
@@ -13,22 +13,21 @@ type AgentGraphRunProps = {
  * graph paints the path it took while this is open.
  */
 export const AgentGraphRun = (props: AgentGraphRunProps) => (
-    <>
-        <SectionHeader
-            level={3}
-            title={props.view.title}
-            description={props.view.summary}
-            isSkeleton={props.isSkeleton}
-            meta={
-                <Badge tone="success" isSkeleton={props.isSkeleton}>
-                    {props.view.outcome}
-                </Badge>
-            }
-        />
+    <Section
+        title={props.view.title}
+        description={props.view.summary}
+        isLoading={props.isLoading}
+        action={
+            <Badge tone="success" isLoading={props.isLoading}>
+                {props.view.outcome}
+            </Badge>
+        }
+        headingLevel={3}
+    >
         {props.view.mismatch === "" ? null : <Alert title={props.view.mismatch} tone="cautionary" appearance="soft" />}
         <Timeline
             label={props.view.stepsLabel}
-            isLoading={props.isSkeleton}
+            isLoading={props.isLoading}
             items={props.view.steps.map((step) => ({
                 id: step.id,
                 title: step.text,
@@ -36,11 +35,11 @@ export const AgentGraphRun = (props: AgentGraphRunProps) => (
                 ...(step.note === "" ? {} : { description: step.note }),
             }))}
         />
-        <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
+        <Text size="xs" tone="muted" isLoading={props.isLoading}>
             {props.view.skipped}
         </Text>
-        <Button intent="neutral" size="sm" isSkeleton={props.isSkeleton} onPress={props.onBack}>
+        <Button intent="neutral" size="sm" isLoading={props.isLoading} onPress={props.onBack}>
             {props.view.backLabel}
         </Button>
-    </>
+    </Section>
 )

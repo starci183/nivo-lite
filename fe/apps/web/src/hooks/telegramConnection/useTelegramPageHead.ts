@@ -26,14 +26,15 @@ export const useTelegramPageHead = (connectionId: string | undefined) => {
     const failure = readFailureNotice(head, slotLabels(""), () => router.refresh())
     const [isAsking, setIsAsking] = useState(false)
     const [isRailOpen, setRailOpen] = useState(false)
+    const resolvedHead = "items" in head ? head.items : undefined
     const view: ConnectionPageHeadView = {
-        ...(head.items === undefined ? {} : { head: head.items }),
-        isSkeleton: head.isLoading === true,
+        ...(resolvedHead === undefined ? {} : { head: resolvedHead }),
+        isLoading: "isLoading" in head,
         icon: "chat",
         crumbLabel: t("crumbLabel"),
         crumbs: [
             { id: "connections", label: t("crumbConnections"), href: CONSOLE_ROUTES.connections },
-            { id: "telegram", label: head.items?.name ?? t("crumbTelegram") },
+            { id: "telegram", label: resolvedHead?.name ?? t("crumbTelegram") },
         ],
         gridLabel: t("title"),
         mainLabel: t("mainLabel"),

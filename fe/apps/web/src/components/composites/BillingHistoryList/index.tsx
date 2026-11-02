@@ -1,4 +1,4 @@
-import { Badge, EmptyNotice, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard, Text, type ListRowData } from "@starci/grammar/common"
 
 /** A formatted payment or transfer-review row. */
 export interface BillingHistoryRow {
@@ -21,7 +21,8 @@ interface BillingHistoryListProps {
 
 /** Draws formatted payment history or transfer reviews with one row recipe. */
 export const BillingHistoryList = (props: BillingHistoryListProps) => (
-    <SurfaceListCard
+    <SurfaceCard
+        kind="list"
         label={props.props.title}
         headingLevel={2}
         empty={<EmptyNotice message={props.props.empty} />}
@@ -34,20 +35,16 @@ export const BillingHistoryList = (props: BillingHistoryListProps) => (
                       </Text>
                   ),
               })}
-    >
-        {props.props.rows.map((row) => (
-            <ListRow
-                key={row.id}
-                title={row.title}
-                description={row.detail}
-                badges={row.status ? <Badge tone={row.status.tone}>{row.status.label}</Badge> : undefined}
-            >
-                {row.content ? (
-                    <Text size="sm">
-                        <code>{row.content}</code>
-                    </Text>
-                ) : null}
-            </ListRow>
-        ))}
-    </SurfaceListCard>
+        items={props.props.rows.map((row): ListRowData => ({
+            id: row.id,
+            title: row.title,
+            description: row.detail,
+            ...(row.status ? { badges: [row.status] } : {}),
+            detail: row.content ? (
+                <Text size="sm">
+                    <code>{row.content}</code>
+                </Text>
+            ) : null,
+        }))}
+    />
 )

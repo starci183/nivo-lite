@@ -110,7 +110,7 @@ jobs:
       - name: production dependency audit
         run: npm audit --omit=dev --audit-level=high
       - name: format
-        run: npx --no-install starci app check --format
+        run: npx --no-install starci app check --gate format
       - name: typecheck
         run: npm run typecheck
         env:

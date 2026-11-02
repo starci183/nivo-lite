@@ -1,5 +1,4 @@
-import { Button, Heading, PageContainer, Region, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { CTA_COPY } from "./classNames"
+import { Button, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 
 /** The resolved words the final call to action draws. */
 interface LandingFinalCtaBaseProps {
@@ -14,27 +13,16 @@ interface LandingFinalCtaBaseProps {
 }
 
 /**
- * Final call to action on the grammar's ink band.
- *
- * Grammar gap: the ink band paints the accent colour, which is also what a primary button fills with, so a
- * primary action would be accent on accent. The band's one action takes the secondary variant until the
- * grammar ships an on-ink primary action treatment.
+ * The final destination and its reassurance on the grammar's ink band, inside the landing Page's measure.
  */
 export const LandingFinalCtaBase = (props: LandingFinalCtaBaseProps) => (
-    <Region label={props.props.regionLabel}>
-        <PageContainer measure="product">
-            <SurfaceCard treatment="ink">
-                <div className={CTA_COPY}>
-                    <Stack gap="section" align="start">
-                        <Heading level={2}>{props.props.title}</Heading>
-                        <Text>{props.props.text}</Text>
-                        <Button intent="neutral" size="lg" href={props.props.buttonHref}>
-                            {props.props.buttonLabel}
-                        </Button>
-                        <Text size="xs">{props.props.note}</Text>
-                    </Stack>
-                </div>
-            </SurfaceCard>
-        </PageContainer>
-    </Region>
+    <SurfaceCard label={props.props.title} ariaLabel={props.props.regionLabel} headingLevel={2} treatment="ink">
+        <Stack gap="section" align="start" measure="reading">
+            <Text>{props.props.text}</Text>
+            <Button intent="neutral" href={props.props.buttonHref}>
+                {props.props.buttonLabel}
+            </Button>
+            <Text size="xs">{props.props.note}</Text>
+        </Stack>
+    </SurfaceCard>
 )

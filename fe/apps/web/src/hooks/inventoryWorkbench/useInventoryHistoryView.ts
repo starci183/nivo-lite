@@ -1,0 +1,69 @@
+"use client"
+
+import { useFeatureReset } from "@/hooks/reuseables"
+import type { InventoryPanelInput } from "./inventoryWorkbench.shared"
+
+import { useTranslations } from "next-intl"
+import { useState } from "react"
+import { MOVE_KINDS, MOVE_TONES, includesText, useInventoryFormat } from "@/hooks/inventory"
+
+const ALL = "all"
+
+/** The history tab: the search text and the movement kind live here, the drawing in the pure half. */
+export const useInventoryHistoryView = (input: InventoryPanelInput) => {
+    const board = input.board
+    const t = useTranslations("workbenchInventory")
+    const format = useInventoryFormat()
+    const [query, setQuery] = useState("")
+    const [kind, setKind] = useState(ALL)
+    useFeatureReset({
+        isActive: input.isActive,
+        isReady: true,
+        scope: input.scope,
+        onReset: () => {
+            setQuery("")
+            setKind(ALL)
+        },
+    })
+    const kindName = (value: string): string => (MOVE_KINDS.includes(value) ? t(`move_${value}`) : value)
+    const rows = board.movements.filter(
+        (movement) =>
+            (kind === ALL || movement.kind === kind) &&
+            includesText(`${movement.itemName} ${movement.reason} ${movement.refLabel ?? ""}`, query),
+    )
+    return {
+        props: {
+            searchLabel: t("historySearch"),
+            searchPlaceholder: t("historySearchHint"),
+            clearLabel: t("clearSearch"),
+            kindLabel: t("historyKind"),
+            kinds: [
+                { value: ALL, label: t("filterAll") },
+                { value: "in", label: t("move_in") },
+                { value: "out", label: t("move_out") },
+                { value: "adjust", label: t("move_adjust") },
+            ],
+            listLabel: t("historyList"),
+            emptyTitle: t("historyEmptyTitle"),
+            emptyBody: t("historyEmptyBody"),
+            query,
+            kind,
+            rows: rows.map((movement) => ({
+                id: movement.id,
+                kindLabel: kindName(movement.kind),
+                kindTone: MOVE_TONES[movement.kind] ?? "neutral",
+                itemName: movement.itemName === "" ? t("itemGone") : movement.itemName,
+                quantity: `${movement.qty > 0 ? "+" : ""}${format.qty(movement.qty)} ${movement.unit}`,
+                detail: t("historyDetail", {
+                    reason: movement.reason,
+                    ref: movement.refLabel === null ? "" : ` · ${movement.refLabel}`,
+                    left: format.qty(movement.qtyAfter),
+                    by: movement.byName,
+                }),
+                evidence: movement.evidence,
+                stamp: format.stamp(movement.createdAt),
+            })),
+        },
+        on: { onQuery: (value: string) => setQuery(value), onKind: (value: string) => setKind(value) },
+    } as const
+}

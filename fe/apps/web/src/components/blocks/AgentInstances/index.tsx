@@ -92,7 +92,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
                 slot: mapSlot(list.slot, () => list.rows.map((row) => toRowView(row, t, needs))),
                 placeholder: PLACEHOLDER,
                 slotLabels: { ...slotLabels(t("yoursEmptyTitle")), error: t("loadFailed") },
-                isAddDisabled: list.slot.isLoading === true,
+                isAddDisabled: "isLoading" in list.slot,
                 dialog: isOpen
                     ? {
                           props: {

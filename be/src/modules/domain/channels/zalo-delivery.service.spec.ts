@@ -31,8 +31,8 @@ const target: ConversationTarget = {
 
 const request: DeliveryRequest = { conversationId: "conv-1", messageId: "msg-1", text: "Hello" }
 const withQr: DeliveryRequest = { ...request, text: `Hoa don INV-202610-0001\nQR: ${QR}` }
-const byConsultation = { delivered: true, failure: null, via: "consultation" }
-const byZns = { delivered: true, failure: null, via: "zns" }
+const byConsultation = { delivered: true, outcome: "acknowledged", failure: null, via: "consultation" }
+const byZns = { delivered: true, outcome: "acknowledged", failure: null, via: "zns" }
 
 const renewal: RenewalNotification = {
     kind: "renewal",
@@ -168,6 +168,7 @@ describe("ZaloDeliveryService", () => {
 
             await expect(service.send(target, "user-1", withQr)).resolves.toEqual({
                 delivered: false,
+                outcome: "rejected",
                 failure: "zalo_unfollowed",
             })
             expect(zalo.sendCsImage).not.toHaveBeenCalled()
@@ -182,6 +183,7 @@ describe("ZaloDeliveryService", () => {
 
             await expect(service.send({ ...target, connectionId: null }, "user-1", notice)).resolves.toEqual({
                 delivered: false,
+                outcome: "rejected",
                 failure: "zalo_not_connected",
             })
             expect(zalo.sendZns).not.toHaveBeenCalled()
@@ -192,10 +194,12 @@ describe("ZaloDeliveryService", () => {
 
             await expect(service.send(target, "user-1", request)).resolves.toEqual({
                 delivered: false,
+                outcome: "rejected",
                 failure: "zalo_window_expired",
             })
             await expect(service.send(target, null, request)).resolves.toEqual({
                 delivered: false,
+                outcome: "rejected",
                 failure: "zalo_not_connected",
             })
             expect(connections.find).not.toHaveBeenCalled()
@@ -261,7 +265,11 @@ describe("ZaloDeliveryService", () => {
             const { service, zalo, logger } = await build(OUTSIDE)
             zalo.sendZns.mockRejectedValue(refusal(zaloCode, "/message/template"))
 
-            await expect(service.send(target, "user-1", notice)).resolves.toEqual({ delivered: false, failure })
+            await expect(service.send(target, "user-1", notice)).resolves.toEqual({
+                delivered: false,
+                failure,
+                outcome: "rejected",
+            })
             expect(logger.error).toHaveBeenCalledWith("channels.delivery.failed", expect.anything(), {
                 conversationId: "conv-1",
                 channel: "zalo",
@@ -286,6 +294,7 @@ describe("ZaloDeliveryService", () => {
 
             await expect(service.send(target, "user-1", notice)).resolves.toEqual({
                 delivered: false,
+                outcome: "rejected",
                 failure: "zalo_window_expired",
                 note: "zns_not_configured",
             })
@@ -303,6 +312,7 @@ describe("ZaloDeliveryService", () => {
 
             await expect(service.send(target, "user-1", notice)).resolves.toEqual({
                 delivered: false,
+                outcome: "rejected",
                 failure: "zalo_window_expired",
                 note: "zns_not_configured",
             })
@@ -318,6 +328,7 @@ describe("ZaloDeliveryService", () => {
                 service.send(target, "user-1", { ...request, notification: { ...renewal, phone } }),
             ).resolves.toEqual({
                 delivered: false,
+                outcome: "rejected",
                 failure: "zalo_window_expired",
                 note: "zns_no_phone",
             })
@@ -366,6 +377,7 @@ describe("ZaloDeliveryService", () => {
 
             await expect(service.send(target, "user-1", request)).resolves.toEqual({
                 delivered: false,
+                outcome: "rejected",
                 failure: "zalo_night_hours",
             })
             expect(logger.error).toHaveBeenCalledWith("channels.delivery.failed", expect.anything(), {
@@ -380,6 +392,7 @@ describe("ZaloDeliveryService", () => {
 
             await expect(service.send(target, "user-1", request)).resolves.toEqual({
                 delivered: false,
+                outcome: "rejected",
                 failure: "zalo_error",
             })
         })
@@ -389,9 +402,47 @@ describe("ZaloDeliveryService", () => {
 
             await expect(service.send(target, "user-1", request)).resolves.toEqual({
                 delivered: false,
+                outcome: "rejected",
                 failure: "zalo_window_expired",
             })
             expect(zalo.sendCsText).not.toHaveBeenCalled()
         })
+    })
+})
+
+describe("ZaloDeliveryService unknown acknowledgements", () => {
+    it("distinguishes a numeric provider refusal from a network or malformed reply", async () => {
+        const { service, zalo } = await build()
+        zalo.sendCsText.mockRejectedValueOnce(new ZaloError({ code: ZaloErrorCode.Unavailable }))
+        await expect(service.send(target, "user-1", request)).resolves.toMatchObject({
+            delivered: false,
+            outcome: "ambiguous",
+        })
+        zalo.sendCsText.mockRejectedValueOnce(
+            new ZaloError({ code: ZaloErrorCode.Rejected, params: { path: "/message", reason: "HTTP 502" } }),
+        )
+        await expect(service.send(target, "user-1", request)).resolves.toMatchObject({
+            delivered: false,
+            outcome: "ambiguous",
+        })
+        zalo.sendCsText.mockRejectedValueOnce(refusal(-213))
+        await expect(service.send(target, "user-1", request)).resolves.toMatchObject({
+            delivered: false,
+            outcome: "rejected",
+        })
+    })
+})
+
+describe("ZaloDeliveryService ZNS ambiguous receipts", () => {
+    it("keeps a lost ZNS acknowledgement ambiguous rather than declaring rejection or acceptance", async () => {
+        const { service, zalo } = await build(OUTSIDE)
+        zalo.sendZns.mockRejectedValue(new ZaloError({ code: ZaloErrorCode.Unavailable }))
+        await expect(service.send(target, "user-1", notice)).resolves.toEqual({
+            delivered: false,
+            failure: "zalo_error",
+            outcome: "ambiguous",
+        })
+        expect(zalo.sendZns.mock.calls).toEqual([["access-1", znsMessage]])
+        expect(zalo.sendCsText).not.toHaveBeenCalled()
     })
 })

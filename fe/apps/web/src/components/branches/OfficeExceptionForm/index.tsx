@@ -1,11 +1,13 @@
-import { OfficeExceptionFields, BASIS_MIN_CHARS } from "@/components/leaves/OfficeExceptionFields"
+import { OfficeExceptionFields } from "@/components/leaves/OfficeExceptionFields"
 import { Button, Cluster, Text } from "@starci/grammar/common"
-import type { OfficeCardDraft, OfficeExceptionView, OfficeText, OfficeWorkDecision } from "@/modules/types"
+import type { OfficeCardDraft, OfficeExceptionView, OfficeThreadProps, OfficeWorkDecision } from "@/modules/types"
 
 /** What the owner's controls of an exception draw. */
 type OfficeExceptionFormProps = {
     readonly item: OfficeExceptionView
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["cardCopy"]["exceptionForm"]
+    readonly basisMin: number
+    readonly basisDescription: string | null
     /** What the owner typed on this exception, kept by the thread's block. */
     readonly draft: OfficeCardDraft
     readonly onEdit: (key: string, patch: Partial<OfficeCardDraft>) => void
@@ -39,14 +41,14 @@ const amountOf = (item: OfficeExceptionView, isEditing: boolean, amount: string,
 
 /** The owner's controls on an open exception: the missing inputs, the choice, the basis, and approve / edit / reject. */
 export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
-    const { item, text } = props
+    const { item, copy } = props
     const { isEditing, values, candidateId, basis } = props.draft
     const draft = props.draft.text ?? item.draft ?? ""
     const amount = props.draft.amount ?? (item.amount === null ? "" : String(item.amount))
     const edit = (patch: Partial<OfficeCardDraft>) => props.onEdit(item.key, patch)
     const setIsEditing = (value: boolean) => edit({ isEditing: value })
     const basisLength = basis.trim().replace(/\s+/g, " ").length
-    const isBasisMissing = item.isReconcile && basisLength < BASIS_MIN_CHARS
+    const isBasisMissing = item.isReconcile && basisLength < props.basisMin
     const isOtherIncomplete =
         item.missing.some((field) => (values[field.name] ?? "").trim() === "") ||
         (item.choices.length > 0 && candidateId === null)
@@ -69,7 +71,8 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
         <>
             <OfficeExceptionFields
                 item={item}
-                text={text}
+                copy={copy}
+                basisDescription={props.basisDescription}
                 draft={draft}
                 amount={amount}
                 isEditing={isEditing}
@@ -77,8 +80,6 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
                 values={values}
                 candidateId={candidateId}
                 basis={basis}
-                basisLength={basisLength}
-                isBasisMissing={isBasisMissing}
                 onDraft={(value) => edit({ text: value })}
                 onAmount={(value) => edit({ amount: value })}
                 onValues={(update) => edit({ values: update(values) })}
@@ -87,12 +88,12 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
             />
             {isOtherIncomplete || isBasisMissing ? (
                 <Text size="xs" tone="muted">
-                    {isOtherIncomplete ? text("exceptionMissingHint") : text("basisNeeded")}
+                    {isOtherIncomplete ? copy.exceptionMissingHint : copy.basisNeeded}
                 </Text>
             ) : null}
             {item.canAct ? null : (
-                <Text size="sm" weight="medium" live="polite">
-                    {text("waitingManager")}
+                <Text size="sm" isStrong live="polite">
+                    {copy.waitingManager}
                 </Text>
             )}
             {item.canAct
@@ -103,7 +104,7 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
                       isBasisMissing,
                       onApprove,
                       isEditing,
-                      text,
+                      copy,
                       item,
                       setIsEditing,
                   })
@@ -120,7 +121,7 @@ type OfficeExceptionActionsInput = {
     readonly isBasisMissing: boolean
     readonly onApprove: () => void
     readonly isEditing: boolean
-    readonly text: NonNullable<OfficeExceptionFormProps["text"]>
+    readonly copy: NonNullable<OfficeExceptionFormProps["copy"]>
     readonly item: NonNullable<OfficeExceptionFormProps["item"]>
     readonly setIsEditing: (value: boolean) => void
 }
@@ -132,7 +133,7 @@ const renderOfficeExceptionFormActions = ({
     isBasisMissing,
     onApprove,
     isEditing,
-    text,
+    copy,
     item,
     setIsEditing,
 }: OfficeExceptionActionsInput) => (
@@ -145,13 +146,15 @@ const renderOfficeExceptionFormActions = ({
                 onPress={onApprove}
             >
                 {isEditing
-                    ? text("exceptionSaveContinue")
-                    : text(item.draft === null ? "exceptionApprove" : "exceptionSendDraft")}
+                    ? copy.exceptionSaveContinue
+                    : item.draft === null
+                      ? copy.exceptionApprove
+                      : copy.exceptionSendDraft}
             </Button>
         )}
         {item.status === "failed" || item.isReconcile || (item.draft === null && item.amount === null) ? null : (
             <Button intent="neutral" isDisabled={isLocked} onPress={() => setIsEditing(!isEditing)}>
-                {isEditing ? text("exceptionCancelEdit") : text("exceptionEditContinue")}
+                {isEditing ? copy.exceptionCancelEdit : copy.exceptionEditContinue}
             </Button>
         )}
         <Button
@@ -159,7 +162,7 @@ const renderOfficeExceptionFormActions = ({
             isDisabled={isLocked}
             onPress={() => props.onDecide(item.id, { ...REJECTION, decision: "rejected" })}
         >
-            {text("exceptionReject")}
+            {copy.exceptionReject}
         </Button>
     </Cluster>
 )

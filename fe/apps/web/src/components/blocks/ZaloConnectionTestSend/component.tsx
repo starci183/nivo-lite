@@ -41,15 +41,14 @@ export const ZaloConnectionTestSendBase = (props: ZaloConnectionTestSendBaseProp
         placeholder={ZALO_SEND_PLACEHOLDER}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(view, isSkeleton) => (
+        render={(view, isLoading) => (
             <Fieldset
                 legend={props.props.title}
                 description={props.props.hint}
                 actions={
                     <Button
                         intent="neutral"
-                        isSkeleton={isSkeleton}
+                        isLoading={isLoading}
                         isPending={props.props.isSending}
                         isDisabled={
                             view.blocked !== "" || props.props.recipientId === "" || props.props.text.trim() === ""
@@ -66,7 +65,7 @@ export const ZaloConnectionTestSendBase = (props: ZaloConnectionTestSendBaseProp
                     options={view.options.map((option) => ({ id: option.id, label: option.label }))}
                     value={props.props.recipientId}
                     isDisabled={view.options.length === 0}
-                    isSkeleton={isSkeleton}
+                    isLoading={isLoading}
                     onValueChange={(value) => props.on.pickRecipient(value ?? "")}
                 />
                 <Input
@@ -74,7 +73,7 @@ export const ZaloConnectionTestSendBase = (props: ZaloConnectionTestSendBaseProp
                     name="text"
                     label={props.props.textLabel}
                     value={props.props.text}
-                    isSkeleton={isSkeleton}
+                    isLoading={isLoading}
                     onValueChange={props.on.changeText}
                 />
                 {view.blocked === "" ? null : (
@@ -87,5 +86,5 @@ export const ZaloConnectionTestSendBase = (props: ZaloConnectionTestSendBaseProp
                 )}
             </Fieldset>
         )}
-    </SlotView>
+    />
 )

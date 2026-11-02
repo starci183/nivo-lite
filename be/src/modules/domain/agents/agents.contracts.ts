@@ -401,6 +401,8 @@ export type OptionalSettings = AgentSettingsBag | null | undefined
 export interface AgentProfile {
     /** The agent. */
     readonly id: string
+    /** The department it speaks for. */
+    readonly module: string
     /** The display name. */
     readonly name: string
     /** The @handle. */

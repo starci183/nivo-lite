@@ -1,16 +1,25 @@
-import { Badge, ChatBubble, ChatBubbleSkeletons, EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
+import {
+    Badge,
+    Cluster,
+    EmptyNotice,
+    Quote,
+    Stack,
+    Text,
+    MessageBubble,
+    VerticalScrollRegion,
+} from "@starci/grammar/common"
 import { ThreadApprovalCard } from "@/components/branches/ThreadApprovalCard"
 import { ThreadAuthorMark } from "@/components/branches/ThreadAuthorMark"
 import { ThreadMentionChip } from "@/components/leaves/ThreadMentionChip"
 import type { ThreadMessageView, ThreadApprovalLabels } from "@/modules/types"
-import { BODY_CLASS_NAME, FEED_CLASS_NAME, QUOTE_BODY_CLASS_NAME, QUOTE_CLASS_NAME } from "./classNames"
+import { FEED_CLASS_NAME } from "./classNames"
 
 /** What the thread draws and asks. */
 type ThreadFeedProps = {
     readonly label: string
     readonly messages: ReadonlyArray<ThreadMessageView>
     /** The messages are still loading: waiting bubbles take their place. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly emptyMessage: string
     readonly aiLabel: string
     readonly quotedLabel: string
@@ -23,12 +32,12 @@ type ThreadFeedProps = {
 
 /** The messages of the open thread, oldest first, each with its chips, the customer words quoted as plain text and its approval card. */
 const Messages = (props: Omit<ThreadFeedProps, "label">) => {
-    if (props.isSkeleton) return <ChatBubbleSkeletons count={3} hasAvatar />
+    if (props.isLoading) return <MessageBubble isLoading hasAvatar />
     if (props.messages.length === 0) return <EmptyNotice message={props.emptyMessage} />
     return (
         <>
             {props.messages.map((message) => (
-                <ChatBubble
+                <MessageBubble
                     key={message.id}
                     side="incoming"
                     author={message.authorName}
@@ -52,28 +61,25 @@ const Messages = (props: Omit<ThreadFeedProps, "label">) => {
                             />
                         )
                     }
-                >
-                    <div className={BODY_CLASS_NAME}>
-                        {message.segments.map((segment) =>
-                            segment.kind === "mention" ? (
-                                <ThreadMentionChip key={segment.offset} name={segment.name} />
-                            ) : (
-                                <Text key={segment.offset} as="span">
-                                    {segment.text}
-                                </Text>
-                            ),
-                        )}
-                    </div>
-                    {message.quoted.map((quote) => (
-                        <div key={quote} className={QUOTE_CLASS_NAME}>
-                            <SurfaceCard label={props.quotedLabel} headingLevel={4}>
-                                <div className={QUOTE_BODY_CLASS_NAME}>
-                                    <Text size="sm">{quote}</Text>
-                                </div>
-                            </SurfaceCard>
-                        </div>
-                    ))}
-                </ChatBubble>
+                    body={
+                        <Stack gap="inline">
+                            <Cluster gap="identity">
+                                {message.segments.map((segment) =>
+                                    segment.kind === "mention" ? (
+                                        <ThreadMentionChip key={segment.offset} name={segment.name} />
+                                    ) : (
+                                        <Text key={segment.offset} as="span">
+                                            {segment.text}
+                                        </Text>
+                                    ),
+                                )}
+                            </Cluster>
+                            {message.quoted.map((quote) => (
+                                <Quote key={quote} source={props.quotedLabel} text={quote} />
+                            ))}
+                        </Stack>
+                    }
+                />
             ))}
         </>
     )
@@ -81,17 +87,21 @@ const Messages = (props: Omit<ThreadFeedProps, "label">) => {
 
 /** The scrolling thread: the messages of the open thread, or waiting bubbles, or the empty notice. */
 export const ThreadFeed = (props: ThreadFeedProps) => (
-    <div className={FEED_CLASS_NAME} role="log" aria-label={props.label}>
-        <Messages
-            messages={props.messages}
-            isSkeleton={props.isSkeleton}
-            emptyMessage={props.emptyMessage}
-            aiLabel={props.aiLabel}
-            quotedLabel={props.quotedLabel}
-            approvalLabels={props.approvalLabels}
-            decidingId={props.decidingId}
-            onApprove={props.onApprove}
-            onReject={props.onReject}
-        />
+    <div className={FEED_CLASS_NAME}>
+        <VerticalScrollRegion isScrollable role="log" aria-label={props.label}>
+            <Stack gap="section">
+                <Messages
+                    messages={props.messages}
+                    isLoading={props.isLoading}
+                    emptyMessage={props.emptyMessage}
+                    aiLabel={props.aiLabel}
+                    quotedLabel={props.quotedLabel}
+                    approvalLabels={props.approvalLabels}
+                    decidingId={props.decidingId}
+                    onApprove={props.onApprove}
+                    onReject={props.onReject}
+                />
+            </Stack>
+        </VerticalScrollRegion>
     </div>
 )

@@ -1,5 +1,14 @@
-import { Alert, Button, CheckboxGroup, Select, SurfaceCard, Text } from "@starci/grammar/common"
-import { databaseTableMapperClassNames as classNames } from "./classNames"
+import {
+    Alert,
+    Button,
+    CheckboxGroup,
+    EmptyNotice,
+    Section,
+    Select,
+    Text,
+    Stack,
+    Cluster,
+} from "@starci/grammar/common"
 
 /** One option of a column or entity select. */
 interface DatabaseSelectOption {
@@ -10,6 +19,8 @@ interface DatabaseSelectOption {
 /** What one picked table draws: its mapping, the column choices and the preview. */
 export interface DatabaseTableMapperProps {
     readonly props: {
+        readonly isLoading?: boolean
+
         /** Element id of the preview region. */
         readonly id: string
         readonly title: string
@@ -65,6 +76,7 @@ interface DatabasePreviewLine {
 
 /** What the preview region draws. */
 interface DatabaseTablePreviewProps {
+    readonly isLoading?: boolean
     readonly id: string
     readonly title: string
     /** The sentence shown when the table has no rows. */
@@ -76,42 +88,15 @@ interface DatabaseTablePreviewProps {
 export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
     const { props: view, on } = props
     return (
-        <SurfaceCard>
-            <div className={classNames.fields}>
-                <Text size="sm" weight="semibold">
-                    {view.title}
-                </Text>
-                <Select
-                    label={view.text.entity}
-                    isDisabled={view.isDisabled}
-                    value={view.entity}
-                    options={view.entities}
-                    onValueChange={on.entity}
-                />
-                <Select
-                    label={view.text.id}
-                    description={view.text.idHint}
-                    isDisabled={view.isDisabled}
-                    value={view.idColumn}
-                    options={view.names}
-                    onValueChange={on.id}
-                />
-                <Select
-                    label={view.text.titleColumn}
-                    isDisabled={view.isDisabled}
-                    value={view.titleColumn}
-                    options={[view.noneColumn, ...view.names]}
-                    onValueChange={on.title}
-                />
-                <Select
-                    label={view.text.updated}
-                    description={view.text.updatedHint}
-                    isDisabled={view.isDisabled}
-                    value={view.updatedColumn}
-                    options={[view.noneColumn, ...view.names]}
-                    onValueChange={on.updated}
-                />
+        <Section
+            {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
+            title={view.title}
+            headingLevel={4}
+        >
+            <Stack gap="section">
+                <DatabaseMappingColumns {...props} />
                 <CheckboxGroup
+                    {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
                     label={view.text.columns}
                     isDisabled={view.isDisabled}
                     options={view.names.map((name) => ({ value: name.id, label: name.label }))}
@@ -123,8 +108,9 @@ export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
                         {view.cap}
                     </Text>
                 )}
-                <div className={classNames.buttons}>
+                <Cluster gap="inline">
                     <Button
+                        {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
                         intent="neutral"
                         isPending={view.isPreviewing}
                         isDisabled={!view.canPreview}
@@ -132,36 +118,82 @@ export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
                     >
                         {view.text.preview}
                     </Button>
-                </div>
-                {view.error === null ? null : <Alert tone="negative" title={view.error} />}
+                </Cluster>
+                {view.error === null ? null : (
+                    <Alert
+                        {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
+                        tone="negative"
+                        title={view.error}
+                    />
+                )}
                 {view.lines === null ? null : (
                     <DatabaseTablePreviewView
+                        {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
                         id={view.id}
                         title={view.previewTitle}
                         empty={view.text.previewEmpty}
                         lines={view.lines}
                     />
                 )}
-            </div>
-        </SurfaceCard>
+            </Stack>
+        </Section>
     )
 }
 
 /** The first rows of the table, read out politely when they arrive. */
 const DatabaseTablePreviewView = (props: DatabaseTablePreviewProps) => (
     <div id={props.id} aria-live="polite">
-        <Text size="xs" weight="semibold">
-            {props.title}
-        </Text>
-        {props.lines.length === 0 ? (
-            <Text size="xs" tone="muted">
-                {props.empty}
-            </Text>
-        ) : null}
-        {props.lines.map((line) => (
-            <Text key={line.id} size="xs" tone="muted">
-                {line.text}
-            </Text>
-        ))}
+        <Section
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            kind="list"
+            title={props.title}
+            headingLevel={3}
+            items={props.lines.map((line) => ({ id: line.id, title: line.text }))}
+            empty={<EmptyNotice message={props.empty} />}
+        />
     </div>
 )
+
+/** Entity and identity columns remain one mapping responsibility above the preview. */
+const DatabaseMappingColumns = (props: DatabaseTableMapperProps) => {
+    const { props: view, on } = props
+    return (
+        <>
+            {" "}
+            <Select
+                {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
+                label={view.text.entity}
+                isDisabled={view.isDisabled}
+                value={view.entity}
+                options={view.entities}
+                onValueChange={on.entity}
+            />
+            <Select
+                {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
+                label={view.text.id}
+                description={view.text.idHint}
+                isDisabled={view.isDisabled}
+                value={view.idColumn}
+                options={view.names}
+                onValueChange={on.id}
+            />
+            <Select
+                {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
+                label={view.text.titleColumn}
+                isDisabled={view.isDisabled}
+                value={view.titleColumn}
+                options={[view.noneColumn, ...view.names]}
+                onValueChange={on.title}
+            />
+            <Select
+                {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
+                label={view.text.updated}
+                description={view.text.updatedHint}
+                isDisabled={view.isDisabled}
+                value={view.updatedColumn}
+                options={[view.noneColumn, ...view.names]}
+                onValueChange={on.updated}
+            />
+        </>
+    )
+}

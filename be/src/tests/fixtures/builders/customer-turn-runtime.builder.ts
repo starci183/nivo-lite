@@ -1,3 +1,4 @@
+import type { ChatFileReadsService } from "@modules/domain/chat-files"
 import type { Installation } from "@modules/domain/agents"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import type { Passage } from "@modules/domain/knowledge"
@@ -79,4 +80,43 @@ export interface RuntimeBuildOptions {
     readonly token?: string
     /** Whether the agent holds connector grants. */
     readonly serves?: boolean
+}
+
+/** Exact runtime booking refusals scenarios exercised by the runtime owner spec. */
+export const RUNTIME_BOOKING_REFUSALS = [
+    { label: "missing", value: undefined },
+    { label: "null", value: null },
+    { label: "array", value: [] },
+    { label: "plain text", value: "book" },
+    { label: "missing intent", value: {} },
+    { label: "unknown intent", value: { intent: "confirm" } },
+] as const
+
+/** Exact runtime party size cases scenarios exercised by the runtime owner spec. */
+export const RUNTIME_PARTY_SIZE_CASES = [
+    { label: "missing", value: undefined, partySize: 1 },
+    { label: "nonfinite", value: "Infinity", partySize: 1 },
+    { label: "invalid", value: "several", partySize: 1 },
+    { label: "zero", value: 0, partySize: 1 },
+    { label: "negative", value: -2, partySize: 1 },
+    { label: "fraction below one", value: 0.9, partySize: 1 },
+    { label: "numeric string", value: "2.5", partySize: 3 },
+    { label: "above the limit", value: 201, partySize: 200 },
+] as const
+
+/** Exact runtime readiness cases scenarios exercised by the runtime owner spec. */
+export const RUNTIME_READINESS_CASES = [
+    ["live" as const, { reply: "50k" }, 1],
+    ["ready" as const, "installation_not_running", 0],
+    ["removed" as const, "installation_not_running", 0],
+    ["needs_connection" as const, "needs_connection", 0],
+    ["setup" as const, "installation_not_running", 0],
+] as const
+
+/** The customer-provided transfer evidence read into one runtime context. */
+export const RUNTIME_ATTACHMENT_READ: NonNullable<Awaited<ReturnType<ChatFileReadsService["readOf"]>>> = {
+    isTransfer: true,
+    amountVnd: 3500000,
+    recipient: "Shop",
+    paidAt: null,
 }

@@ -1,31 +1,13 @@
-import {
-    Alert,
-    DescriptionList,
-    Divider,
-    Heading,
-    List,
-    ListItem,
-    Meter,
-    SurfaceCard,
-    Text,
-} from "@starci/grammar/common"
+import { Alert, DescriptionList, EmptyNotice, Section, Meter, SurfaceCard, Text, Stack } from "@starci/grammar/common"
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import type { UsageCardData, UsageCardView } from "@/hooks/usageCard"
-import {
-    CHART_AXIS_CLASS_NAME,
-    CHART_CLASS_NAME,
-    MODULE_LINE_CLASS_NAME,
-    MODULE_LIST_CLASS_NAME,
-    MODULE_ROW_CLASS_NAME,
-    STACK_CLASS_NAME,
-    USAGE_BLOCK_CLASS_NAME,
-} from "./classNames"
+import { CHART_AXIS_CLASS_NAME, CHART_CLASS_NAME } from "./classNames"
 
 /** The usage figures (or their placeholder while the read is on its way), the waiting flag and the interaction callbacks. */
 interface UsageCardProps {
     readonly view: UsageCardData
     /** True while the usage is read: the card keeps its title and rests as a line of skeleton text. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly on: UsageCardView["on"]
 }
 
@@ -33,10 +15,10 @@ interface UsageCardProps {
 export const UsageCard = (props: UsageCardProps) => {
     const { view } = props
     return (
-        <SurfaceCard label={view.title} headingLevel={2}>
-            <div className={STACK_CLASS_NAME}>
-                <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
-                    {props.isSkeleton ? view.loading : view.description}
+        <SurfaceCard label={view.title} headingLevel={2} isLoading={props.isLoading === true}>
+            <Stack gap="section">
+                <Text size="sm" tone="muted" isLoading={props.isLoading === true}>
+                    {view.description}
                 </Text>
                 {view.alert ? (
                     <Alert
@@ -46,7 +28,7 @@ export const UsageCard = (props: UsageCardProps) => {
                     />
                 ) : null}
                 {view.meters.length > 0 ? (
-                    <div className={USAGE_BLOCK_CLASS_NAME}>
+                    <Stack gap="row">
                         {view.meters.map((meter) => (
                             <Meter
                                 key={meter.id}
@@ -58,7 +40,7 @@ export const UsageCard = (props: UsageCardProps) => {
                                 tone={meter.tone}
                             />
                         ))}
-                    </div>
+                    </Stack>
                 ) : null}
                 {view.facts.length > 0 ? (
                     <DescriptionList
@@ -67,13 +49,13 @@ export const UsageCard = (props: UsageCardProps) => {
                         items={view.facts.map((fact) => ({
                             id: fact.id,
                             term: fact.term,
-                            description: <Text weight="semibold">{fact.value}</Text>,
+                            description: <Text isStrong>{fact.value}</Text>,
                         }))}
                     />
                 ) : null}
-                {props.isSkeleton ? null : <UsageCardModules view={view} />}
+                <UsageCardModules view={view} />
                 {view.daily ? renderUsageCardDailyUsage(view.daily, props) : null}
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 }
@@ -84,33 +66,19 @@ type UsageCardModulesProps = { readonly view: UsageCardData }
 const UsageCardModules = (props: UsageCardModulesProps) => {
     const { view } = props
     return (
-        <div className={USAGE_BLOCK_CLASS_NAME}>
-            <Heading level={3}>{view.modulesTitle}</Heading>
-            {view.modules.length > 0 ? (
-                <List className={MODULE_LIST_CLASS_NAME} label={view.modulesTitle}>
-                    {view.modules.map((module, index) => (
-                        <ListItem key={module.id} className={MODULE_ROW_CLASS_NAME}>
-                            {index > 0 ? <Divider semantics="presentation" /> : null}
-                            <div className={MODULE_LINE_CLASS_NAME}>
-                                <Text weight="medium">{module.label}</Text>
-                                <Text size="sm" tone="muted">
-                                    {module.reading}
-                                </Text>
-                            </div>
-                        </ListItem>
-                    ))}
-                </List>
-            ) : (
-                <Text tone="muted">{view.empty}</Text>
-            )}
-        </div>
+        <Section
+            kind="list"
+            title={view.modulesTitle}
+            headingLevel={3}
+            items={view.modules.map((module) => ({ id: module.id, title: module.label, description: module.reading }))}
+            empty={<EmptyNotice message={view.empty} />}
+        />
     )
 }
 
 /** Renders the UsageCard daily usage section. */
 const renderUsageCardDailyUsage = (daily: NonNullable<UsageCardData["daily"]>, props: UsageCardProps) => (
-    <div className={USAGE_BLOCK_CLASS_NAME}>
-        <Heading level={3}>{daily.title}</Heading>
+    <Section title={daily.title} headingLevel={3}>
         <div className={CHART_CLASS_NAME} role="img" aria-label={daily.accessibleLabel}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={daily.series} accessibilityLayer={false}>
@@ -135,5 +103,5 @@ const renderUsageCardDailyUsage = (daily: NonNullable<UsageCardData["daily"]>, p
                 {daily.lastDay}
             </Text>
         </div>
-    </div>
+    </Section>
 )

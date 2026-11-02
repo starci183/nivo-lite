@@ -1,7 +1,7 @@
 import { Alert, Button, Drawer, Form, Stack } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
-/** The words, the state and the handlers of a drawer that holds one form, with its fields as children. */
+/** The words, the state and the handlers of a drawer that holds one form, with its fields as fields. */
 interface FormDrawerProps {
     readonly isOpen: boolean
     readonly title: string
@@ -13,7 +13,7 @@ interface FormDrawerProps {
     readonly canSave: boolean
     readonly onSubmit: () => void
     readonly onClose: () => void
-    readonly children: ReactNode
+    readonly fields: ReactNode
 }
 
 /** A side drawer with one form: the failure alert over the fields, a save button that waits for the fields and a cancel. */
@@ -31,7 +31,7 @@ export const FormDrawer = (props: FormDrawerProps) => (
         <Form label={props.title} onSubmit={props.onSubmit} isPending={props.isPending}>
             <Stack gap="row">
                 {props.error === null ? null : <Alert tone="negative" title={props.error} />}
-                {props.children}
+                {props.fields}
             </Stack>
         </Form>
     </Drawer>

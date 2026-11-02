@@ -193,8 +193,14 @@ describe("public-api-job policy / ledger bodies", () => {
             kind: "knowledge",
             body: KNOWLEDGE,
         })
-        const body = { ...KNOWLEDGE, topic: "Support", tags: [], visibility: "public" }
+        const body = { ...KNOWLEDGE, topic: "Support", tags: [] }
         expect(subject.parsePublicApiBody("knowledge", body, null)).toEqual({ kind: "knowledge", body })
+    })
+
+    it("reads a knowledge row an older version stored as public as internal", async () => {
+        const subject = await build()
+        const parsed = subject.parsePublicApiBody("knowledge", { ...KNOWLEDGE, visibility: "public" }, null)
+        expect(parsed).toEqual({ kind: "knowledge", body: { ...KNOWLEDGE, visibility: "internal" } })
     })
 
     it.each([

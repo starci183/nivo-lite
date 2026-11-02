@@ -1,10 +1,14 @@
+import type { DataSlot, SlotLabels } from "@/modules/types"
+import { SlotView } from "@/components/composites/SlotView"
 import { Alert, Button } from "@starci/grammar/common"
 import { WizardConsentCopy } from "@/components/composites/WizardConsentCopy"
-import { WizardFrame } from "@/components/composites/WizardFrame"
+import { WizardFrame } from "@/components/frames/WizardFrame"
 
 /** Copy, state and commands of the Google wizard. */
 export interface GoogleWizardBaseProps {
     readonly props: {
+        readonly boot: DataSlot<boolean>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
@@ -37,21 +41,26 @@ export interface GoogleWizardBaseProps {
 }
 
 /** Draws Google in the shared wizard frame: what NIVO is allowed, then Connect, then Done. */
-export const GoogleWizardBase = (props: GoogleWizardBaseProps) => {
+const renderGoogleWizard = (props: GoogleWizardBaseProps, isLoading: boolean) => {
     const view = props.props
     const text = view.text
     const footer =
         view.index === 0 ? (
             <>
-                <Button intent="commit" isPending={view.isPending} onPress={props.on.connect}>
+                <Button intent="commit" isPending={view.isPending} onPress={props.on.connect} isLoading={isLoading}>
                     {text.connect}
                 </Button>
-                <Button intent="neutral" isDisabled={view.isPending} onPress={() => props.on.close(false)}>
+                <Button
+                    intent="neutral"
+                    isDisabled={view.isPending}
+                    onPress={() => props.on.close(false)}
+                    isLoading={isLoading}
+                >
                     {text.close}
                 </Button>
             </>
         ) : (
-            <Button intent="commit" onPress={() => props.on.close(true)}>
+            <Button intent="commit" onPress={() => props.on.close(true)} isLoading={isLoading}>
                 {text.done}
             </Button>
         )
@@ -71,9 +80,19 @@ export const GoogleWizardBase = (props: GoogleWizardBaseProps) => {
                     failTitle={text.failTitle}
                 />
             ) : (
-                <Alert tone="affirmative" title={`${text.doneTitle}. ${text.doneBody}`} />
+                <Alert tone="affirmative" title={`${text.doneTitle}. ${text.doneBody}`} isLoading={isLoading} />
             )}
-            {view.error === null ? null : <Alert tone="negative" title={view.error} />}
+            {view.error === null ? null : <Alert tone="negative" title={view.error} isLoading={isLoading} />}
         </WizardFrame>
     )
 }
+
+/** Draws the selected wizard's existing ready tree from its actual dependency reads. */
+export const GoogleWizardBase = (props: GoogleWizardBaseProps) => (
+    <SlotView
+        slot={props.props.boot}
+        placeholder={true}
+        labels={props.props.slotLabels}
+        render={(_ready, isLoading) => renderGoogleWizard(props, isLoading)}
+    />
+)

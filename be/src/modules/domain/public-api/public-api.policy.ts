@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { PublicApiErrorCode } from "./errors/public-api.error"
-import type { AcceptKnowledgeParams, AcceptLeadParams, LeadFacts, RequestKind } from "./public-api.contracts"
+import type { AcceptLeadParams, LeadFacts, RequestKind } from "./public-api.contracts"
 
 /** Characters of the text of one knowledge source. */
 export const SOURCE_CHARS_MAX = 120_000
@@ -79,9 +79,8 @@ export const leadFacts = (params: AcceptLeadParams): LeadFacts => ({
     stage: params.stage || null,
 })
 
-/** The visibility of a knowledge source: public only when the caller said so. */
-export const visibilityOf = (params: AcceptKnowledgeParams): "internal" | "public" =>
-    params.visibility === "public" ? "public" : "internal"
+/** The visibility of a knowledge source an API key adds: always internal. A document becomes public only as a separate public document an owner approved. */
+export const visibilityOf = (): "internal" => "internal"
 
 /** Trims a string value and reads a number as its digits, as the public API always did; anything else is left alone. */
 export const trimmedField = (value: unknown): unknown => {

@@ -1,5 +1,4 @@
-import { CheckboxGroup, RadioGroup, Select, Text } from "@starci/grammar/common"
-import { SECTION_CLASS_NAME } from "./classNames"
+import { CheckboxGroup, Fieldset, RadioGroup, Select } from "@starci/grammar/common"
 
 /** One choice of a list, already worded. */
 interface ChoiceView {
@@ -48,8 +47,7 @@ export const PermissionGroupFields = (props: PermissionGroupFieldsProps) => {
     const { props: p, on } = props
     return (
         <>
-            <div className={SECTION_CLASS_NAME}>
-                <Text weight="semibold">{p.copy.groupLabel}</Text>
+            <Fieldset legend={p.copy.groupLabel}>
                 <CheckboxGroup
                     label={p.copy.rolesLabel}
                     options={optionsOf(p.roleOptions)}
@@ -70,7 +68,7 @@ export const PermissionGroupFields = (props: PermissionGroupFieldsProps) => {
                     value={p.members}
                     onValueChange={on.members}
                 />
-            </div>
+            </Fieldset>
             <RadioGroup
                 label={p.copy.policyLabel}
                 options={optionsOf(p.policyOptions)}

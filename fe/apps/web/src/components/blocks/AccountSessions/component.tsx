@@ -1,8 +1,8 @@
-import { Badge, Button, ListRow, Region, Stack, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Button, EmptyNotice, Stack, Text, Section } from "@starci/grammar/common"
+import type { ListRowData } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SessionRowView, SlotLabels } from "@/modules/types"
-import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** Copy, rows and state the connected sessions section supplies. */
 export interface AccountSessionsBaseProps {
@@ -44,7 +44,7 @@ type OthersActionProps = {
 const OthersAction = (props: OthersActionProps) =>
     props.hasOthers ? (
         <Button
-            isSkeleton={props.isSkeleton}
+            isLoading={props.isSkeleton}
             intent="destructive"
             step="entry"
             isPending={props.base.props.busy === "others"}
@@ -63,77 +63,65 @@ const OthersAction = (props: OthersActionProps) =>
 export const AccountSessionsBase = (props: AccountSessionsBaseProps) => {
     const isBusy = props.props.busy !== undefined
     return (
-        <Region label={props.props.title}>
+        <>
             <SlotView
                 slot={props.props.slot}
                 placeholder={props.props.placeholder}
                 labels={props.props.labels}
                 onRetry={props.on.retry}
-            >
-                {(rows, isSkeleton) => (
-                    <Stack gap="row">
-                        <SurfaceListCard
-                            label={props.props.title}
-                            headingLevel={2}
-                            isLoading={isSkeleton}
-                            footer={
-                                <Text size="sm" tone="muted">
-                                    {props.props.hint}
-                                </Text>
-                            }
-                        >
-                            {rows.map((row) => (
-                                <ListRow
-                                    key={row.id}
-                                    title={row.device}
-                                    description={row.facts}
-                                    badges={
-                                        row.isCurrent ? (
-                                            <Badge tone="accent" isDot>
-                                                {props.props.currentLabel}
-                                            </Badge>
-                                        ) : null
-                                    }
-                                    actions={
-                                        row.isCurrent ? (
-                                            <Button
-                                                intent="neutral"
-                                                isPending={props.props.busy === "this"}
-                                                isDisabled={isBusy}
-                                                onPress={props.on.signOutThis}
-                                            >
-                                                {props.props.signOutThisLabel}
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                intent="destructive"
-                                                step="entry"
-                                                isPending={props.props.busy === row.id}
-                                                isDisabled={isBusy}
-                                                onPress={() => props.on.revoke(row.id)}
-                                            >
-                                                {props.props.signOutLabel}
-                                            </Button>
-                                        )
-                                    }
-                                />
-                            ))}
-                        </SurfaceListCard>
-                        <FormNotice
-                            failTitle={props.props.failTitle}
-                            error={props.props.error}
-                            done={props.props.done}
-                        />
-                        <div className={ACTIONS_CLASS_NAME}>
+                render={(rows, isSkeleton) => {
+                    const items: ListRowData[] = rows.map((row) => ({
+                        id: row.id,
+                        title: row.device,
+                        description: row.facts,
+                        ...(row.isCurrent
+                            ? { badges: [{ label: props.props.currentLabel, tone: "accent", isDot: true }] as const }
+                            : {}),
+                        detail: row.isCurrent ? (
+                            <Button
+                                intent="neutral"
+                                isPending={props.props.busy === "this"}
+                                isDisabled={isBusy}
+                                onPress={props.on.signOutThis}
+                            >
+                                {props.props.signOutThisLabel}
+                            </Button>
+                        ) : (
+                            <Button
+                                intent="destructive"
+                                step="entry"
+                                isPending={props.props.busy === row.id}
+                                isDisabled={isBusy}
+                                onPress={() => props.on.revoke(row.id)}
+                            >
+                                {props.props.signOutLabel}
+                            </Button>
+                        ),
+                    }))
+                    return (
+                        <Stack gap="row">
+                            <Section
+                                kind="list"
+                                title={props.props.title}
+                                description={props.props.hint}
+                                isLoading={isSkeleton}
+                                items={items}
+                                empty={<EmptyNotice message={props.props.labels.empty} />}
+                            />
+                            <FormNotice
+                                failTitle={props.props.failTitle}
+                                error={props.props.error}
+                                done={props.props.done}
+                            />
                             <OthersAction
                                 base={props}
                                 hasOthers={rows.some((row) => !row.isCurrent)}
                                 isSkeleton={isSkeleton}
                             />
-                        </div>
-                    </Stack>
-                )}
-            </SlotView>
-        </Region>
+                        </Stack>
+                    )
+                }}
+            />
+        </>
     )
 }

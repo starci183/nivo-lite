@@ -13,6 +13,7 @@ export {
     gatewaySearchSchema,
     gatewayToolNameSchema,
 } from "./gateway-tools.schema"
+export { outputStepOf } from "./output-step.policy"
 export type {
     CapabilityRole,
     CallLogView,
@@ -20,6 +21,7 @@ export type {
     McpCredentialInput,
     GatewayCaller,
     GatewayCallResult,
+    OptionalDescribedTool,
     GatewayJson,
     GrantInput,
     GrantView,
@@ -35,4 +37,12 @@ export type {
 } from "./mcp-gateway.contracts"
 export { dataKindOfTool } from "./data-rights.policy"
 export { DATA_RIGHTS_GATE } from "./mcp-gateway.decorators"
-export type { DataRight, DataRightsGate, OptionalDataRights } from "./mcp-gateway.contracts"
+export { TOOL_GRAPH_GATE } from "./tool-graph.decorators"
+export type {
+    DataRight,
+    DataRightsGate,
+    OptionalDataRights,
+    ToolGraphCall,
+    ToolGraphGate,
+    ToolGraphVerdict,
+} from "./mcp-gateway.contracts"

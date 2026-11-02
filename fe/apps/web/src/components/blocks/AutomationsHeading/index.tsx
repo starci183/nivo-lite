@@ -19,7 +19,7 @@ export const AutomationsHeading = (props: AutomationsHeadingProps) => {
     const workspaceName = cards.find((card) => card.id === activeWorkspaceId)?.name
     return (
         <AutomationsHeadingBase
-            shape={{ body: props.children }}
+            children={props.children}
             props={{
                 crumbLabel: t("crumbLabel"),
                 crumbs: [
@@ -32,7 +32,7 @@ export const AutomationsHeading = (props: AutomationsHeadingProps) => {
                 leadLink: t("leadLink"),
                 leadHref: CONSOLE_ROUTES.authority,
                 leadAfter: t("leadAfter"),
-                isSkeleton: status === "loading",
+                isLoading: status === "loading",
             }}
         />
     )

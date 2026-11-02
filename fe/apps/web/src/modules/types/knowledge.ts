@@ -1,3 +1,5 @@
+import type { DataSlot, SlotLabels } from "./slot"
+
 /** Where a document stands: the job queue moves it queued, reading, indexing, extracting_facts, then ready (or failed or blocked_credits). */
 export type DocumentStatus =
     "pending" | "queued" | "reading" | "indexing" | "extracting_facts" | "ready" | "failed" | "blocked_credits"
@@ -6,7 +8,7 @@ export type DocumentStatus =
 export type DocumentKind = "text" | "faq" | "file" | "url"
 
 /** public: customer-facing agents may answer from it. internal: internal agents and staff only. */
-export type DocumentVisibility = "public" | "internal"
+type DocumentVisibility = "public" | "internal"
 
 /** The decision an owner took on a suggestion. */
 export type IdeaDecision = "dismissed" | "not_applicable"
@@ -103,4 +105,75 @@ export interface StoppedUploadsView {
     readonly dismissLabel: string
     /** Reopens the file picker: a browser cannot resume a file after a reload. */
     readonly pickLabel: string
+}
+
+/** One row command is data; its owner dispatches its identifier through `on`. */
+export type RowActionView = {
+    readonly id: string
+    readonly label: string
+    readonly href?: string
+    readonly isPending?: boolean
+    readonly isDisabled?: boolean
+    readonly disabledReason?: string
+} & (
+    | {
+          readonly intent: "destructive"
+          readonly href?: never
+          readonly confirmation: {
+              readonly title: string
+              readonly description: string
+              readonly confirmLabel: string
+              readonly cancelLabel: string
+          }
+      }
+    | { readonly intent?: "commit" | "alternative" | "neutral" | "dismiss"; readonly confirmation?: never }
+)
+
+/** One separately reviewable value within a row. */
+export interface RowPartView {
+    readonly id: string
+    readonly title: string
+    readonly lines?: readonly string[]
+    readonly actions?: readonly RowActionView[]
+}
+
+/** A resolved knowledge row, including action descriptors and progress atoms. */
+export interface KnowledgeRowView {
+    readonly id: string
+    readonly title: string
+    readonly lines?: readonly string[]
+    readonly badges?: readonly {
+        readonly label: string
+        readonly tone: "neutral" | "warning" | "success" | "danger" | "accent"
+    }[]
+    readonly actions?: readonly RowActionView[]
+    readonly parts?: readonly RowPartView[]
+    readonly progress?:
+        | {
+              readonly title: string
+              readonly stage: string
+              readonly count: string | null
+              readonly value: number
+              readonly label: string
+          }
+        | undefined
+    readonly href?: string
+}
+
+/** One independently read list; no callback or rendering node crosses the pure block's data contract. */
+export interface KnowledgeListView {
+    readonly section: {
+        readonly id: string
+        readonly title: string
+        readonly description?: string
+        readonly failTitle: string
+        readonly error?: string | undefined
+        readonly notice?: string | undefined
+        readonly action?: RowActionView | undefined
+    }
+    readonly label: string
+    readonly isPending: boolean
+    readonly slot: DataSlot<readonly KnowledgeRowView[]>
+    readonly slotLabels: SlotLabels
+    readonly footer?: string | undefined
 }

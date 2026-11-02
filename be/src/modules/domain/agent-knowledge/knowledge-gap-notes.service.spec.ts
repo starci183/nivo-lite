@@ -5,6 +5,8 @@ import type { Logger } from "@modules/platform/logging"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import type { Passage } from "@modules/domain/knowledge"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
+import type { GapRecord, MaybeGapRecorded } from "@modules/domain/knowledge-gaps"
+import { GapProposalsService } from "@modules/domain/public-documents"
 import { LOGGER } from "@modules/platform/logging"
 import type { GapNote } from "./agent-knowledge.contracts"
 import { AgentKnowledgeLogEvent } from "./agent-knowledge.log-events"
@@ -72,16 +74,18 @@ const build = async () => {
     const recall = mock<KnowledgeRecallService>({ factsMatching: jest.fn().mockResolvedValue([]) })
     const search = mock<KnowledgeSearchService>({ passagesText: jest.fn().mockResolvedValue([]) })
     const logger = mock<Logger>({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })
+    const proposals = mock<GapProposalsService>({ open: jest.fn().mockResolvedValue(undefined) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             KnowledgeGapNotesService,
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: KnowledgeRecallService, useValue: recall },
             { provide: KnowledgeSearchService, useValue: search },
+            { provide: GapProposalsService, useValue: proposals },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { notes: moduleRef.get(KnowledgeGapNotesService), gaps, recall, search, logger }
+    return { notes: moduleRef.get(KnowledgeGapNotesService), gaps, recall, search, logger, proposals }
 }
 
 describe("KnowledgeGapNotesService", () => {
@@ -262,5 +266,62 @@ describe("KnowledgeGapNotesService", () => {
         expect(logger.error).toHaveBeenCalledWith(AgentKnowledgeLogEvent.GapNoteFailed, cause, {
             conversationId: "c1",
         })
+    })
+})
+
+describe("KnowledgeGapNotesService proposals", () => {
+    const gap: GapRecord = {
+        id: "g1",
+        module: "chatbot",
+        question: "Sunday delivery?",
+        topic: null,
+        attributeGuess: null,
+        count: 1,
+        firstSeenAt: "2026-11-01T00:00:00.000Z",
+        lastSeenAt: "2026-11-01T00:00:00.000Z",
+        exampleConversationId: "c1",
+        status: "open",
+        reopenedCount: 0,
+    }
+    const recorded = (flags: Pick<NonNullable<MaybeGapRecorded>, "isNew" | "reopened">) => ({ gap, ...flags })
+
+    it("starts the look for an internal answer when a gap is new, whoever noticed it", async () => {
+        const { notes, gaps, proposals } = await build()
+        gaps.record.mockResolvedValue(recorded({ isNew: true, reopened: false }))
+
+        await notes.note(noteOf({ knowledgeGap: { question: "Sunday delivery?", topic: "Delivery | Days" } }))
+        await notes.note(noteOf({ needsHuman: true }))
+
+        expect(proposals.open).toHaveBeenCalledTimes(2)
+        expect(proposals.open).toHaveBeenCalledWith(WS, gap)
+    })
+
+    it("starts it again for a gap that was answered and asked again", async () => {
+        const { notes, gaps, proposals } = await build()
+        gaps.record.mockResolvedValue(recorded({ isNew: false, reopened: true }))
+
+        await notes.note(noteOf({ needsHuman: true }))
+
+        expect(proposals.open).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not start it for a gap that only counted once more, or a question with no gap", async () => {
+        const { notes, gaps, proposals } = await build()
+        gaps.record.mockResolvedValueOnce(recorded({ isNew: false, reopened: false }))
+        gaps.record.mockResolvedValueOnce(null)
+
+        await notes.note(noteOf({ needsHuman: true }))
+        await notes.note(noteOf({ needsHuman: true }))
+
+        expect(proposals.open).not.toHaveBeenCalled()
+    })
+
+    it("never throws when the look cannot be started", async () => {
+        const { notes, gaps, proposals, logger } = await build()
+        gaps.record.mockResolvedValue(recorded({ isNew: true, reopened: false }))
+        proposals.open.mockRejectedValue(new Error("queue down"))
+
+        await expect(notes.note(noteOf({ needsHuman: true }))).resolves.toBeUndefined()
+        expect(logger.error).toHaveBeenCalled()
     })
 })

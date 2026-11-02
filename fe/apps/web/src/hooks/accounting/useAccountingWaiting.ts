@@ -16,7 +16,7 @@ const BASIS_MIN_CHARS = 10
  * The "waiting for you" card of the Accounting workbench: the oldest waiting questions, each decided in place. Approve stays off
  * until the basis a question asks for is written; a member who may not decide sees the proposal and who is waited for, no buttons.
  */
-export const useAccountingWaiting = (data: AccountingWorkbenchData) => {
+export const useAccountingWaiting = (data: AccountingWorkbenchData, isActive: boolean, scope: string) => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const oldest = useMemo(
@@ -26,7 +26,7 @@ export const useAccountingWaiting = (data: AccountingWorkbenchData) => {
                 .slice(0, WAITING_ROWS),
         [data.questions],
     )
-    const questions = useAccountingQuestions(oldest, data.ownerName)
+    const questions = useAccountingQuestions(oldest, data.ownerName, isActive, scope)
     const cards = questions.props.groups.flatMap((group) => group.items)
     const rows = oldest.flatMap((question) => {
         const card = cards.find((candidate) => candidate.id === question.item.id)

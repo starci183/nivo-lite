@@ -71,20 +71,18 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
             labels={props.props.planSlotLabels}
             forbidden="notice"
             onRetry={props.on.retryPlan}
-        >
-            {(plan) => renderCurrentBillingPlan(props, plan)}
-        </SlotView>
+            render={(plan) => renderCurrentBillingPlan(props, plan)}
+        />
         <SlotView
             slot={props.props.usage}
             placeholder={props.props.usagePlaceholder}
             labels={props.props.usageSlotLabels}
             forbidden="hide"
             onRetry={props.on.retryUsage}
-        >
-            {(view, isSkeleton) => (
+            render={(view, isLoading) => (
                 <UsageCard
                     view={view}
-                    isSkeleton={isSkeleton}
+                    isLoading={isLoading}
                     on={{
                         retry: props.on.retryUsage,
                         openCredits: props.on.openCredits,
@@ -94,28 +92,26 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
                     }}
                 />
             )}
-        </SlotView>
+        />
         <SlotView
             slot={props.props.orders}
             placeholder={ROWS_PLACEHOLDER}
             labels={props.props.ordersSlotLabels}
             forbidden="hide"
             onRetry={props.on.retryOrders}
-        >
-            {(orders) => (
+            render={(orders) => (
                 <BillingHistoryList
                     props={{ title: props.props.historyTitle, empty: props.props.historyEmpty, rows: orders }}
                 />
             )}
-        </SlotView>
+        />
         <SlotView
             slot={props.props.review}
             placeholder={ROWS_PLACEHOLDER}
             labels={props.props.reviewSlotLabels}
             forbidden="hide"
             onRetry={props.on.retryReview}
-        >
-            {(review) => (
+            render={(review) => (
                 <BillingHistoryList
                     props={{
                         title: props.props.reviewTitle,
@@ -125,7 +121,7 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
                     }}
                 />
             )}
-        </SlotView>
+        />
     </Stack>
 )
 
@@ -140,7 +136,7 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: Billing
                     {
                         id: "plan",
                         term: props.props.planLabel,
-                        description: <Text weight="semibold">{plan.planName}</Text>,
+                        description: <Text isStrong>{plan.planName}</Text>,
                     },
                     {
                         id: "status",
@@ -154,7 +150,7 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: Billing
                     {
                         id: "paidUntil",
                         term: props.props.paidUntilLabel,
-                        description: <Text weight="semibold">{plan.paidUntil}</Text>,
+                        description: <Text isStrong>{plan.paidUntil}</Text>,
                     },
                 ]}
             />

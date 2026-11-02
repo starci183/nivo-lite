@@ -1,5 +1,9 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
+import { slotOfReads, useSlotLabels } from "@/hooks/slot"
+
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf } from "@/hooks/connection-wizard"
@@ -9,6 +13,8 @@ import { OpenApiWizardBase } from "./component"
 
 /** What the board hands the OpenAPI wizard. */
 interface OpenApiWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** Workspace agents (any module): every agent may be given read access to a data source. */
     readonly agents: ReadonlyArray<AgentOption>
     /** Continue or edit this existing connection instead of creating a new one. */
@@ -19,6 +25,7 @@ interface OpenApiWizardProps {
 
 /** Swagger / OpenAPI in the shared wizard frame: spec, auth, pulled operations, agent tools, schedule, test, agents. */
 export const OpenApiWizard = (props: OpenApiWizardProps) => {
+    const slotLabels = useSlotLabels()
     const t = useTranslations("connectorOpenapi")
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
@@ -29,6 +36,8 @@ export const OpenApiWizard = (props: OpenApiWizardProps) => {
     return (
         <OpenApiWizardBase
             props={{
+                boot: slotOfReads([...props.dependencyReads, ...wizard.reads], () => true),
+                slotLabels: slotLabels(""),
                 title: tw("title", { provider: tc(providerKey("openapi", "title")) }),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: wizard.steps.length }),
                 steps: view.steps,
@@ -83,7 +92,7 @@ export const OpenApiWizard = (props: OpenApiWizardProps) => {
                     scheduleHint: hasPulls ? t("scheduleHint") : t("scheduleNone"),
                 },
             }}
-            on={openApiCommands(wizard)}
+            on={{ ...openApiCommands(wizard), retryRead: wizard.retryReads }}
         />
     )
 }
@@ -124,7 +133,7 @@ const openApiPulls = (
     rows: view.pullRows,
     entityOptions: view.entityOptions,
     query: picks.pullQuery,
-    isEmpty: picks.noGets,
+    unavailableReason: picks.noGets ? t("noGets") : null,
     tooMany: view.tooMany,
     text: {
         hint: t("pullsHint"),

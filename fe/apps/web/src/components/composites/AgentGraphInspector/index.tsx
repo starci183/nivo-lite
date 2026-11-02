@@ -10,7 +10,7 @@ import type { AgentGraphAction, AgentGraphPanelView, AgentGraphSideTab } from "@
 interface AgentGraphInspectorProps {
     readonly view: AgentGraphPanelView
     readonly sideTab: AgentGraphSideTab
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onAction: (action: AgentGraphAction) => void
 }
 
@@ -24,7 +24,7 @@ export const AgentGraphInspector = (props: AgentGraphInspectorProps) => {
         return (
             <AgentGraphProposals
                 view={view.proposals}
-                isSkeleton={props.isSkeleton}
+                isLoading={props.isLoading}
                 onDecide={(value, isConfirmed) => onAction({ kind: "decide", value, isConfirmed })}
             />
         )
@@ -33,7 +33,7 @@ export const AgentGraphInspector = (props: AgentGraphInspectorProps) => {
         return (
             <AgentGraphVersions
                 view={view.versions}
-                isSkeleton={props.isSkeleton}
+                isLoading={props.isLoading}
                 onRestore={(value) => onAction({ kind: "restore", value })}
             />
         )
@@ -42,7 +42,7 @@ export const AgentGraphInspector = (props: AgentGraphInspectorProps) => {
         return (
             <AgentGraphDecideEditor
                 view={view.editor}
-                isSkeleton={props.isSkeleton}
+                isLoading={props.isLoading}
                 onChange={(change) => onAction({ kind: "form", change })}
                 onSave={() => onAction({ kind: "save" })}
                 onCancel={() => onAction({ kind: "cancel" })}
@@ -51,20 +51,20 @@ export const AgentGraphInspector = (props: AgentGraphInspectorProps) => {
     }
     if (view.inspector === "run" && view.run !== null) {
         return (
-            <AgentGraphRun view={view.run} isSkeleton={props.isSkeleton} onBack={() => onAction({ kind: "untrace" })} />
+            <AgentGraphRun view={view.run} isLoading={props.isLoading} onBack={() => onAction({ kind: "untrace" })} />
         )
     }
     return (
         <>
             <AgentGraphDetail
                 view={view.detail}
-                isSkeleton={props.isSkeleton}
+                isLoading={props.isLoading}
                 onEdit={(value) => onAction({ kind: "edit", value })}
                 onRuns={() => onAction({ kind: "trace" })}
             />
             <AgentGraphAdder
                 view={view.adder}
-                isSkeleton={props.isSkeleton}
+                isLoading={props.isLoading}
                 onPick={(field, value) => onAction({ kind: "adderPick", field, value })}
                 onAdd={(action, fact) => onAction({ kind: "addDecide", action, fact })}
             />

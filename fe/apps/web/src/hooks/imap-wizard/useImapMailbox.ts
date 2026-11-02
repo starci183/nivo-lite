@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { useQueryLoadImapConnectionSwr } from "@/hooks/swr"
+import type { SlotRead } from "@/hooks/slot"
 import { securityOf } from "./imap-wizard.shared"
 import type { ImapMailbox } from "./imap-wizard.shared"
 
@@ -28,7 +29,9 @@ export const useImapMailbox = (resumeId: string | undefined) => {
                   },
         [data],
     )
+    const reads: ReadonlyArray<SlotRead<unknown>> = resumeId === undefined ? [] : [saved]
     return {
+        reads,
         loading: resumeId !== undefined && saved.isLoading,
         view,
         error: saved.error instanceof Error ? saved.error.message : null,

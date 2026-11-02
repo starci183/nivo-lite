@@ -11,7 +11,7 @@ export interface AgentChatThreadProps {
     readonly handoff: { readonly label: string; readonly href: string } | null
     /** The line that says a human took the conversation over, or null. */
     readonly takenOverNotice: string | null
-    readonly children: ReactNode
+    readonly messages: ReactNode
 }
 
 /**
@@ -25,7 +25,7 @@ export const AgentChatThread = (props: AgentChatThreadProps) => {
     }, [props.scrollKey])
     return (
         <>
-            {props.children}
+            {props.messages}
             {props.handoff === null ? null : (
                 <div className={NOTICE_ROW_CLASS_NAME} data-testid="handoff-notice">
                     <Text size="xs" tone="muted">

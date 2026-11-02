@@ -4,7 +4,10 @@ import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import type { DirectoryMember, MemberGrant } from "@modules/domain/member-grants"
+import { IntentRegistryService } from "@modules/domain/intent-contracts"
+import type { FrameAction } from "@modules/domain/intent-contracts"
 import { ModulesService } from "@modules/domain/modules"
+import { testRegistry } from "@tests/fixtures/builders/intent-domain.builder"
 import { AMOUNT_FACT, FACTS, graphOf, OWNER_EXAMPLE } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphContextService } from "./agent-graph-context.service"
 import { GraphFactsService } from "./graph-facts.service"
@@ -33,6 +36,14 @@ const grant = (memberId: string, maxAmount: number | null): MemberGrant => ({
     unit: "vnd",
     max_amount: maxAmount,
     updated_at: "2026-11-01T00:00:00.000Z",
+})
+
+const real = testRegistry()
+const registry = mock<IntentRegistryService>({
+    frameOf: jest.fn((intent: string, actions: ReadonlyArray<FrameAction>, trigger: string) =>
+        real.frameOf(intent, actions, trigger),
+    ),
+    needsAnswer: jest.fn((trigger: string) => real.needsAnswer(trigger)),
 })
 
 const build = async (options: { audience?: "customer" | "internal"; rule?: "none"; unlisted?: true } = {}) => {
@@ -90,6 +101,7 @@ const build = async (options: { audience?: "customer" | "internal"; rule?: "none
             { provide: McpGatewayService, useValue: gateway },
             { provide: MemberGrantsService, useValue: members },
             { provide: ModulesService, useValue: modules },
+            { provide: IntentRegistryService, useValue: registry },
         ],
     }).compile()
     return { service: moduleRef.get(AgentGraphContextService), rules, gateway, members, modules }
@@ -228,5 +240,16 @@ describe("AgentGraphContextService.coverageOf", () => {
 
         expect(lost.every((entry) => entry.approvers.length === 0 && entry.excluded.length === 0)).toBe(true)
         await expect(service.coverageOf(SCOPE, { nodes: [], rights: [] })).resolves.toEqual([])
+    })
+})
+
+describe("AgentGraphContextService.contextOf the frames of the catalogue", () => {
+    it("says an intent has a frame when the module lists the action, and not otherwise", async () => {
+        const { service } = await build()
+
+        const context = await service.contextOf(SCOPE, DOCUMENT)
+
+        expect(context.hasFrame?.("pay_supplier")).toBe(true)
+        expect(context.hasFrame?.("invent_work")).toBe(false)
     })
 })

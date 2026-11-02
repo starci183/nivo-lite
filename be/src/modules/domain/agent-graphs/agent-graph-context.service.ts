@@ -5,10 +5,14 @@ import type { ApproverGroup } from "@modules/domain/authority-rules"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import type { DirectoryMember, MemberGrant } from "@modules/domain/member-grants"
+import { IntentRegistryService } from "@modules/domain/intent-contracts"
 import { ModulesService } from "@modules/domain/modules"
 import type { CeilingRule, GraphContext, GraphDocument } from "./agent-graphs.contracts"
 import { GraphFactsService } from "./graph-facts.service"
 import { amountFactOf, intervalOf, topOf } from "./policies/interval.policy"
+
+/** The event type every action of the catalogue has a frame for: the generic request. */
+const UNIVERSAL_EVENT = "tag"
 
 /** Who can answer one ask of the graph, and who was left out. */
 export interface AskCoverage {
@@ -52,6 +56,7 @@ export class AgentGraphContextService {
         private readonly gateway: McpGatewayService,
         private readonly members: MemberGrantsService,
         private readonly modules: ModulesService,
+        private readonly intents: IntentRegistryService,
     ) {}
 
     /** The context of one agent for the graph about to be checked. */
@@ -82,6 +87,10 @@ export class AgentGraphContextService {
                 }
             }),
         )
+        const framed = catalog.authorityActions.map((entry) => ({
+            action: entry.action,
+            amountLimit: entry.amountLimit,
+        }))
         const granted = new Set(grants.filter((grant) => grant.mode !== "never").map((grant) => grant.tool))
         return {
             facts: this.facts.registry(),
@@ -94,6 +103,7 @@ export class AgentGraphContextService {
                 return set.approvers.length + set.excluded.filter((entry) => entry.reason !== "inactive").length > 0
             },
             facesCustomers: catalog.audience === "customer",
+            hasFrame: (intent) => this.intents.frameOf(intent, framed, UNIVERSAL_EVENT) !== null,
         }
     }
 

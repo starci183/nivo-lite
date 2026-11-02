@@ -10,6 +10,7 @@ export const useOwnerGroups = () => {
     const { draft, draftingId } = useDraftExecution()
     const { copiedId, copy } = useCopyLeadLink()
     const labels = {
+        empty: t("emptyAll"),
         groupAria: t("groupAria"),
         groupOwnedBy: (name: string) => t("groupOwnedBy", { name }),
         groupCards: (name: string) => t("groupCards", { name }),

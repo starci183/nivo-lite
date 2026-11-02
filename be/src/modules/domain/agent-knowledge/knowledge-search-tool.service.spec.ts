@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock } from "@starci/jest-preset"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { builder, FakeClock, mock } from "@starci/jest-preset"
+import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
+import type { TurnConversation } from "@modules/domain/agent-conversations"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { McpCallLogService } from "@modules/domain/mcp-call-log"
 import { CLOCK } from "@modules/platform/clock"
@@ -10,13 +11,37 @@ import { KnowledgeSearchToolService } from "./knowledge-search-tool.service"
 const WS = "11111111-1111-4111-8111-111111111111"
 const ctx = { workspaceId: WS, conversationId: "c1", agentId: null }
 
+const turnOf = builder<TurnConversation>({
+    id: "c1",
+    workspaceId: WS,
+    channel: "website",
+    externalId: null,
+    connectionId: null,
+    leadId: null,
+    handledBy: null,
+    visitorName: null,
+    installationId: "i1",
+    speaksAs: null,
+    agent: {
+        id: "a-booking",
+        name: "Booking",
+        handle: "booking",
+        role: "booking",
+        module: "booking",
+        instructions: "",
+        knowledge: "",
+        approvalRule: "",
+        greeting: "",
+    },
+})
+
 const build = async (workspaceId: string) => {
-    const conversations = {
+    const conversations = mock<AgentConversationsService>({
         turnOf: jest.fn().mockResolvedValue({
             kind: "ok",
-            value: { workspaceId, installationId: "i1", agent: { module: "booking" } },
+            value: turnOf({ workspaceId }),
         }),
-    }
+    })
     const recall = {
         standingMemory: jest.fn().mockResolvedValue("### Delivery\n- Days: Sunday"),
         recall: jest.fn().mockResolvedValue({ brief: "BRIEF", passages: [{ title: "Menu", topic: null }], facts: [] }),
@@ -26,14 +51,14 @@ const build = async (workspaceId: string) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             KnowledgeSearchToolService,
-            { provide: AgentConversationsService, useValue: mock<AgentConversationsService>(conversations) },
+            { provide: AgentConversationsService, useValue: conversations },
             { provide: KnowledgeRecallService, useValue: mock<KnowledgeRecallService>(recall) },
             { provide: AgentDirectoryService, useValue: agents },
             { provide: McpCallLogService, useValue: callLog },
             { provide: CLOCK, useValue: new FakeClock("2026-11-01T00:00:00.000Z") },
         ],
     }).compile()
-    return { tool: moduleRef.get(KnowledgeSearchToolService), recall, callLog, agents }
+    return { tool: moduleRef.get(KnowledgeSearchToolService), conversations, recall, callLog, agents }
 }
 
 describe("KnowledgeSearchToolService", () => {
@@ -101,5 +126,107 @@ describe("KnowledgeSearchToolService", () => {
             "price",
             expect.any(Object),
         )
+    })
+})
+
+describe("KnowledgeSearchToolService > read failure audit", () => {
+    it("audits a failed search without recording the query and rethrows the actual failure", async () => {
+        const { tool, recall, callLog } = await build(WS)
+        const failure = new Error("recall unavailable")
+        recall.recall.mockRejectedValue(failure)
+
+        await expect(tool.search(ctx, "price")).rejects.toBe(failure)
+
+        expect(callLog.append).toHaveBeenCalledTimes(1)
+        expect(callLog.append).toHaveBeenCalledWith({
+            workspaceId: WS,
+            connector: "nivo",
+            tool: "knowledge.search",
+            agentId: "a-booking",
+            conversationId: "c1",
+            workItemId: null,
+            argsMaskedJson: '{"query_chars":5}',
+            argsHash: "683b531f41ec88a2f345b727afe59757b73162a340a65c86bba62866f8fe556c",
+            outcome: "error",
+            errorCode: "read_failed",
+            resultSummary: "",
+            durationMs: 0,
+            approvedBy: null,
+        })
+    })
+
+    it("fails closed when the audit of a failed read also cannot be written", async () => {
+        const { tool, recall, callLog } = await build(WS)
+        const auditFailure = new Error("audit unavailable")
+        recall.standingMemory.mockRejectedValue(new Error("memory unavailable"))
+        callLog.append.mockRejectedValue(auditFailure)
+
+        await expect(tool.memory(ctx)).rejects.toBe(auditFailure)
+
+        expect(callLog.append).toHaveBeenCalledTimes(1)
+        expect(callLog.append).toHaveBeenCalledWith(
+            expect.objectContaining({
+                tool: "memory.read",
+                outcome: "error",
+                errorCode: "read_failed",
+                resultSummary: "",
+            }),
+        )
+    })
+})
+
+describe("KnowledgeSearchToolService > missing read identities", () => {
+    it("uses the customer default view without looking up an absent agent or conversation", async () => {
+        const { tool, recall, agents, conversations, callLog } = await build(WS)
+
+        await expect(tool.memory({ workspaceId: WS, conversationId: null, agentId: null })).resolves.toBe(
+            "### Delivery\n- Days: Sunday",
+        )
+
+        expect(recall.standingMemory).toHaveBeenCalledWith({
+            workspaceId: WS,
+            module: "chatbot",
+            audience: "customer",
+            installationId: null,
+        })
+        expect(agents.turnFactsOf).not.toHaveBeenCalled()
+        expect(conversations.turnOf).not.toHaveBeenCalled()
+        expect(callLog.append).toHaveBeenCalledWith(expect.objectContaining({ agentId: null, conversationId: null }))
+    })
+
+    it("never widens a search without caller identities to internal knowledge", async () => {
+        const { tool, recall, agents, conversations, callLog } = await build(WS)
+        await expect(tool.search({ workspaceId: WS, conversationId: null, agentId: null }, "price")).resolves.toEqual({
+            passages: "BRIEF",
+            citations: [{ title: "Menu", topic: "" }],
+        })
+        expect(recall.recall).toHaveBeenCalledWith(
+            { workspaceId: WS, module: "chatbot", audience: "customer", installationId: null },
+            "price",
+            { facts: 6, passages: 6, budget: 3000 },
+        )
+        expect(recall.recall).not.toHaveBeenCalledWith(
+            expect.objectContaining({ audience: "internal" }),
+            "price",
+            expect.anything(),
+        )
+        expect(agents.turnFactsOf).not.toHaveBeenCalled()
+        expect(conversations.turnOf).not.toHaveBeenCalled()
+        expect(callLog.append).toHaveBeenCalledWith(expect.objectContaining({ agentId: null, conversationId: null }))
+    })
+
+    it("uses no installation or agent identity when the conversation owner refuses it", async () => {
+        const { tool, recall, conversations, callLog } = await build(WS)
+        conversations.turnOf.mockResolvedValue({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
+
+        await expect(tool.memory(ctx)).resolves.toBe("### Delivery\n- Days: Sunday")
+
+        expect(recall.standingMemory).toHaveBeenCalledWith({
+            workspaceId: WS,
+            module: "chatbot",
+            audience: "customer",
+            installationId: null,
+        })
+        expect(callLog.append).toHaveBeenCalledWith(expect.objectContaining({ agentId: null, conversationId: "c1" }))
     })
 })

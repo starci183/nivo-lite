@@ -1,3 +1,4 @@
+import type { ReasonedFinding, ReasonedReview } from "@modules/domain/dossier-review"
 import { builder } from "@starci/jest-preset"
 import { dossierReviewEntities } from "@modules/domain/dossier-review"
 
@@ -109,3 +110,33 @@ export const mixedStoredFindings = (): ReadonlyArray<DossierFindingEntity> => [
     storedFindingOf({ id: "f3", fingerprint: "fp-gone", status: "dismissed", dismissReason: "no" }),
     storedFindingOf({ id: "f4", fingerprint: "fp-rule", origin: "rule", ruleKey: "presence.expected" }),
 ]
+
+/** Deterministic reasoner finding defaults shared by the runner scenarios. */
+export const reasonedFindingOf = builder<ReasonedFinding>({
+    kind: "unsigned",
+    severity: "medium",
+    title: "Thieu chu ky",
+    detail: "Chua ky",
+    evidence: [{ key: "S1.P1", quote: "thang 10 nam 2026" }],
+    relatedRefs: [],
+    remedyAction: "upload",
+    documentType: null,
+})
+
+/** Deterministic reasoner review defaults shared by the runner scenarios. */
+export const reasonedReviewOf = builder<ReasonedReview>({
+    findings: [],
+    stillOpen: [],
+    model: "m1",
+    promptTokens: 100,
+    completionTokens: 10,
+})
+
+/** Expected persisted patch resolving an existing finding with current-run evidence. */
+export const RESOLVED_FINDING_PATCH = {
+    lastSeenRunId: "r1",
+    lastSeenAt: new Date(REVIEW_NOW),
+    status: "resolved",
+    resolution: "document",
+    resolvedAt: new Date(REVIEW_NOW),
+}

@@ -15,7 +15,7 @@ export type AppGlobalErrorPageBaseProps = {
 export const AppGlobalErrorPageBase = (props: AppGlobalErrorPageBaseProps) => (
     <html lang={props.props.lang}>
         <body>
-            <GrammarRoot theme="system" className="min-h-dvh">
+            <GrammarRoot>
                 <Page measure="reading">
                     <Alert
                         tone="negative"

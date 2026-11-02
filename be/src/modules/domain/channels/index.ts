@@ -16,6 +16,7 @@ export type {
     ChannelSender,
     ChannelSenderRegistry,
     DeliveryRequest,
+    DeliveryOutcome,
     DeliveryResult,
     RenewalNotification,
     ZaloAuthorization,

@@ -5,7 +5,7 @@ import {
     KnowledgeRowsSection,
     rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
-import type { KnowledgeListView } from "@/components/composites/KnowledgeRows"
+import type { KnowledgeListView } from "@/modules/types"
 import { SlotView } from "@/components/composites/SlotView"
 import { FILTER_CLASS_NAME } from "./classNames"
 
@@ -21,6 +21,7 @@ export interface KnowledgeLibraryBaseProps {
     readonly on: {
         readonly setFilter: (value: string | null) => void
         readonly retry: () => void
+        readonly action: (rowId: string, actionId: string) => void
     }
 }
 
@@ -44,17 +45,22 @@ export const KnowledgeLibraryBase = (props: KnowledgeLibraryBaseProps) => {
                     />
                 </div>
             }
-        >
-            <SlotView
-                slot={list.slot}
-                placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
-                labels={list.slotLabels}
-                onRetry={props.on.retry}
-            >
-                {(rows, isSkeleton) => (
-                    <KnowledgeRowList {...rowListPropsOf(list)} rows={rows} isSkeleton={isSkeleton} />
-                )}
-            </SlotView>
-        </KnowledgeRowsSection>
+            body={
+                <SlotView
+                    slot={list.slot}
+                    placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
+                    labels={list.slotLabels}
+                    onRetry={props.on.retry}
+                    render={(rows, isSkeleton) => (
+                        <KnowledgeRowList
+                            {...rowListPropsOf(list)}
+                            rows={rows}
+                            isLoading={isSkeleton}
+                            onAction={props.on.action}
+                        />
+                    )}
+                />
+            }
+        />
     )
 }

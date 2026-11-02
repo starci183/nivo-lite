@@ -1,5 +1,5 @@
-import { Button, CloseButton, Heading, Mascot, SurfaceCard, Text } from "@starci/grammar/common"
-import { WELCOME_ACTIONS, WELCOME_COPY, WELCOME_HEAD } from "./classNames"
+import { Button, Cluster, Heading, Mascot, Stack, SurfaceCard, Text, IconButton } from "@starci/grammar/common"
+import { WELCOME_COPY } from "./classNames"
 
 /** Copy, links and handler of the welcome band. */
 export interface PromoWelcomeBandProps {
@@ -33,19 +33,21 @@ export const PromoWelcomeBand = (props: PromoWelcomeBandProps) => (
         }
     >
         <div className={WELCOME_COPY}>
-            <div className={WELCOME_HEAD}>
-                <Heading level={2}>{props.title}</Heading>
-                <CloseButton label={props.closeLabel} size="sm" onPress={props.onClose} />
-            </div>
-            <Text>{props.text}</Text>
-            <div className={WELCOME_ACTIONS}>
-                <Button intent="neutral" href={props.testHref}>
-                    {props.testLabel}
-                </Button>
-                <Button intent="neutral" href={props.officeHref}>
-                    {props.officeLabel}
-                </Button>
-            </div>
+            <Stack gap="section" align="start">
+                <Cluster gap="row" align="start" justify="between" wrap={false}>
+                    <Heading level={2}>{props.title}</Heading>
+                    <IconButton intent="dismiss" label={props.closeLabel} size="sm" onPress={props.onClose} />
+                </Cluster>
+                <Text>{props.text}</Text>
+                <Cluster gap="row">
+                    <Button intent="neutral" href={props.testHref}>
+                        {props.testLabel}
+                    </Button>
+                    <Button intent="neutral" href={props.officeHref}>
+                        {props.officeLabel}
+                    </Button>
+                </Cluster>
+            </Stack>
         </div>
     </SurfaceCard>
 )

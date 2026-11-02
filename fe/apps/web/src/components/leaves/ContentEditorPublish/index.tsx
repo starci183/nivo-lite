@@ -1,60 +1,37 @@
-import { Button, Cluster, Input, SectionHeader, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import type { ContentT, DownloadFile, PublishStep } from "@/modules/types"
-import { QUOTE_CLASS_NAME } from "./classNames"
-
-/** The proof typed for one channel. */
-export interface PublishProof {
-    readonly url: string
-    readonly how: string
-}
+import { Button, Cluster, Input, Quote, Stack, Text, Section } from "@starci/grammar/common"
+import type { DownloadFile, PublishStep, ContentViews } from "@/modules/types"
 
 /** Props of {@link ContentEditorPublish}. */
 interface ContentEditorPublishProps {
     readonly steps: ReadonlyArray<PublishStep>
     readonly files: ReadonlyArray<DownloadFile>
-    readonly proof: Readonly<Record<string, PublishProof | undefined>>
+    readonly proof: Readonly<Record<string, ContentViews["publishProof"] | undefined>>
     readonly canManage: boolean
     readonly isPending: boolean
     readonly busy: string | null
-    readonly t: ContentT
-    readonly onProof: (channel: string, change: Partial<PublishProof>) => void
+    readonly copy: ContentViews["workbenchCopy"]
+    readonly onProof: (channel: string, change: Partial<ContentViews["publishProof"]>) => void
     readonly onCopy: (channel: string) => void
     readonly onMark: (channel: string) => void
 }
 
 /** The step of an approved post: copy-ready text and downloads per channel, then "mark posted" with a link or a note as proof. */
 export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
-    <>
-        <SectionHeader level={3} title={props.t("postedTitle")} description={props.t("postedBody")} />
+    <Section title={props.copy.postedTitle} description={props.copy.postedBody} headingLevel={3}>
         {props.steps.map((step) => {
             const proof = props.proof[step.channel]
             return (
-                <SurfaceCard
-                    key={step.channel}
-                    label={step.label}
-                    headingLevel={4}
-                    labelEnd={
-                        <Text as="span" size="xs" tone="muted">
-                            {props.t("comingSoon")}
-                        </Text>
-                    }
-                >
+                <Section key={step.channel} title={step.label} headingLevel={4} meta={props.copy.comingSoon}>
                     <Stack gap="row">
                         {step.isZalo ? (
                             <Text size="xs" tone="muted">
-                                {props.t("zaloNote")}
+                                {props.copy.zaloNote}
                             </Text>
                         ) : null}
-                        <SurfaceCard>
-                            <div className={QUOTE_CLASS_NAME}>
-                                <Text as="p" size="sm">
-                                    {step.text}
-                                </Text>
-                            </div>
-                        </SurfaceCard>
+                        <Quote source={step.label} text={step.text} />
                         <Cluster gap="inline">
                             <Button intent="neutral" size="sm" onPress={() => props.onCopy(step.channel)}>
-                                {props.t("copy")}
+                                {props.copy.copy}
                             </Button>
                             {props.files.map((file) => (
                                 <Button
@@ -65,12 +42,12 @@ export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
                                     target="_blank"
                                     rel="noreferrer"
                                 >
-                                    {`${props.t("download")}: ${file.name}`}
+                                    {`${props.copy.download}: ${file.name}`}
                                 </Button>
                             ))}
                         </Cluster>
                         {step.doneText === null ? null : (
-                            <Text size="sm" weight="medium" live="polite">
+                            <Text size="sm" isStrong live="polite">
                                 {step.doneText}
                             </Text>
                         )}
@@ -78,45 +55,45 @@ export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
                             ? renderContentEditorPublishProofFields(step, props, proof)
                             : null}
                     </Stack>
-                </SurfaceCard>
+                </Section>
             )
         })}
-    </>
+    </Section>
 )
 
 /** Renders the ContentEditorPublish proof fields section. */
 const renderContentEditorPublishProofFields = (
     step: Pick<PublishStep, "channel">,
     props: ContentEditorPublishProps,
-    proof: PublishProof | undefined,
+    proof: ContentViews["publishProof"] | undefined,
 ) => (
     <>
         <Input
             id={`ce-url-${step.channel}`}
             name={`url-${step.channel}`}
-            label={props.t("postedLink")}
+            label={props.copy.postedLink}
             value={proof?.url ?? ""}
-            description={props.t("postedLinkHint")}
+            description={props.copy.postedLinkHint}
             isDisabled={props.isPending}
             onValueChange={(v) => props.onProof(step.channel, { url: v })}
         />
         <Input
             id={`ce-how-${step.channel}`}
             name={`how-${step.channel}`}
-            label={props.t("postedHow")}
+            label={props.copy.postedHow}
             value={proof?.how ?? ""}
             isDisabled={props.isPending}
             onValueChange={(v) => props.onProof(step.channel, { how: v })}
         />
         <div>
             <Button
-                intent="commit"
+                intent="neutral"
                 size="sm"
                 isPending={props.busy === `posted-${step.channel}`}
                 isDisabled={props.isPending}
                 onPress={() => props.onMark(step.channel)}
             >
-                {props.t("markPosted")}
+                {props.copy.markPosted}
             </Button>
         </div>
     </>

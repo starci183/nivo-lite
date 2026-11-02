@@ -1,5 +1,4 @@
-import { Alert, Badge, NumberField, Select, Slider } from "@starci/grammar/common"
-import { BAND_FIELDS_CLASS_NAME, LEGEND_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
+import { Stack, Grid, Cluster, Alert, Badge, NumberField, Select, Slider } from "@starci/grammar/common"
 
 const WHOLE = { maximumFractionDigits: 2 }
 
@@ -38,9 +37,9 @@ export interface PermissionBandsFieldsProps {
 export const PermissionBandsFields = (props: PermissionBandsFieldsProps) => {
     const { props: p, on } = props
     return (
-        <div className={SECTION_CLASS_NAME}>
+        <Stack gap="inline">
             <Select label={p.copy.unitLabel} options={p.unitOptions} value={p.unit} onValueChange={on.unit} />
-            <div className={BAND_FIELDS_CLASS_NAME}>
+            <Grid kind="form" columns={2}>
                 <NumberField
                     label={p.copy.autoMaxLabel}
                     minValue={0}
@@ -55,7 +54,7 @@ export const PermissionBandsFields = (props: PermissionBandsFieldsProps) => {
                     value={p.askMax}
                     onValueChange={on.askMax}
                 />
-            </div>
+            </Grid>
             {p.sliderMax > 0 ? (
                 <Slider
                     label={p.copy.sliderLabel}
@@ -71,7 +70,7 @@ export const PermissionBandsFields = (props: PermissionBandsFieldsProps) => {
                     onValueChange={(values) => on.slider(typeof values === "number" ? [values] : values)}
                 />
             ) : null}
-            <div className={LEGEND_CLASS_NAME}>
+            <Cluster gap="inline">
                 <Badge tone="success" isDot>
                     {p.legend.auto}
                 </Badge>
@@ -81,8 +80,8 @@ export const PermissionBandsFields = (props: PermissionBandsFieldsProps) => {
                 <Badge tone="danger" isDot>
                     {p.legend.never}
                 </Badge>
-            </div>
+            </Cluster>
             {p.isInvalid ? <Alert tone="negative" title={p.copy.bandsInvalid} /> : null}
-        </div>
+        </Stack>
     )
 }

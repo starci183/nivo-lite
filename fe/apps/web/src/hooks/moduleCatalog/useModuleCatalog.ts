@@ -23,6 +23,7 @@ export const useModuleCatalog = () => {
         [copies],
     )
     return {
+        read,
         modules,
         categories: read.data?.categories ?? [],
         error: readError(read),

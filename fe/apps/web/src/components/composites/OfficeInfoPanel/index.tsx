@@ -1,39 +1,28 @@
-import { Button, Cluster, IconButton, PaneSection, Region, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import {
+    Button,
+    Cluster,
+    EmptyNotice,
+    Heading,
+    IconButton,
+    PaneSection,
+    Stack,
+    Section,
+    Text,
+} from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { OfficeMemberRow } from "@/components/branches/OfficeMemberRow"
 import { OfficeRoomResources } from "@/components/branches/OfficeRoomResources"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { OfficeInfoPanelProps, OfficeJumpRowView, OfficeText, OfficeWaitingRowView } from "@/modules/types"
-import { HEAD_TEXT_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
+import type { OfficeAvatarView, OfficeInfoPanelProps, OfficeJumpRowView, OfficeWaitingRowView } from "@/modules/types"
+import { HEAD_TEXT_CLASS_NAME } from "./classNames"
+import type { AvatarData } from "@starci/grammar/common"
 
-type JumpRowProps<Row extends OfficeJumpRowView> = {
-    readonly row: Row
-    readonly jumpLabel: string
-    readonly onJump: (row: Row) => void
-}
-
-/** One waiting thing as a compact card whose whole face jumps to it in the thread. */
-const JumpRow = <Row extends OfficeJumpRowView>(props: JumpRowProps<Row>) => (
-    <SurfaceCard
-        wholeAction={{
-            kind: "button",
-            press: () => props.onJump(props.row),
-            label: `${props.jumpLabel}: ${props.row.title}`,
-        }}
-    >
-        <Cluster gap="row" align="start" wrap={false}>
-            <OfficeAvatar avatar={props.row.avatar} size="xs" />
-            <div className={TEXT_CLASS_NAME}>
-                <Text size="sm" weight="medium" overflow="clamp-2">
-                    {props.row.title}
-                </Text>
-                <Text size="xs" tone="muted" overflow="truncate">
-                    {props.row.subtitle}
-                </Text>
-            </div>
-        </Cluster>
-    </SurfaceCard>
-)
+/** The same person/agent identity passed to the collection's native leading slot. */
+const avatarDataOf = (avatar: OfficeAvatarView): AvatarData => ({
+    name: avatar.kind === "agent" ? avatar.label : avatar.name,
+    ...(avatar.kind === "agent" ? { seed: avatar.seed, kind: "agent" as const } : {}),
+    ...(avatar.src === null || avatar.src === undefined ? {} : { src: avatar.src }),
+})
 
 type JumpListProps<Row extends OfficeJumpRowView> = {
     readonly title: string
@@ -43,46 +32,42 @@ type JumpListProps<Row extends OfficeJumpRowView> = {
     readonly onJump: (row: Row) => void
 }
 
-/** A list of waiting things; each row jumps to its card in the thread. */
+/** Waiting things share one collection; the destination remains an explicit row command. */
 const JumpList = <Row extends OfficeJumpRowView>(props: JumpListProps<Row>) => (
-    <Region label={props.title}>
-        <Stack gap="inline">
-            <Cluster gap="inline" justify="between">
-                <Text weight="semibold">{props.title}</Text>
-                <Text size="sm" tone="muted">{`${props.rows.length}`}</Text>
-            </Cluster>
-            {props.rows.length === 0 ? (
-                <Text size="sm" tone="muted">
-                    {props.none}
-                </Text>
-            ) : (
-                props.rows.map((row) => (
-                    <JumpRow key={row.id} row={row} jumpLabel={props.jumpLabel} onJump={props.onJump} />
-                ))
-            )}
-        </Stack>
-    </Region>
+    <Section
+        kind="list"
+        title={props.title}
+        count={props.rows.length}
+        items={props.rows.map((row) => ({
+            id: row.id,
+            title: row.title,
+            description: row.subtitle,
+            leading: { avatar: avatarDataOf(row.avatar) },
+            action: { label: props.jumpLabel, press: () => props.onJump(row) },
+        }))}
+        empty={<EmptyNotice message={props.none} />}
+    />
 )
 
 /** What the info column head draws and asks. */
 interface OfficeInfoHeadProps {
-    readonly props: { readonly text: OfficeText }
+    readonly props: { readonly title: string; readonly closeLabel: string }
     readonly on: { readonly close: () => void }
 }
 
 /** The head band of the docked info column, centred in the shared head row: its title and the close control. */
 export const OfficeInfoHead = (props: OfficeInfoHeadProps) => {
-    const { text } = props.props
+    const { title, closeLabel } = props.props
     return (
         <PaneSection align="center">
             <Cluster gap="row" wrap={false}>
                 <div className={HEAD_TEXT_CLASS_NAME}>
-                    <Text weight="semibold">{text("infoTitle")}</Text>
+                    <Heading level={2}>{title}</Heading>
                 </div>
                 <IconButton
                     intent="dismiss"
                     source={nivoIconSource("close", "leading")}
-                    label={text("infoClose")}
+                    label={closeLabel}
                     onPress={props.on.close}
                 />
             </Cluster>
@@ -92,74 +77,69 @@ export const OfficeInfoHead = (props: OfficeInfoHeadProps) => {
 
 /** The right column body as one band of its pane (docked or in the drawer), its blocks a section step apart: what waits for approval, who is in the chat and the team's tasks. */
 export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
-    const { info, text } = props.props
+    const { info, copy } = props.props
     return (
         <PaneSection gap="section">
             <JumpList
-                title={text("pendingTitle")}
-                none={text("pendingNone")}
-                jumpLabel={text("pendingJump")}
+                title={copy.pendingTitle}
+                none={copy.pendingNone}
+                jumpLabel={copy.pendingJump}
                 rows={info.approvals}
                 onJump={(row: OfficeWaitingRowView) =>
                     row.target === "approval" ? props.on.jumpApproval(row.id) : props.on.jumpException(row.id)
                 }
             />
             <JumpList
-                title={text("exceptionsTitle")}
-                none={text("exceptionsNone")}
-                jumpLabel={text("exceptionJump")}
+                title={copy.exceptionsTitle}
+                none={copy.exceptionsNone}
+                jumpLabel={copy.exceptionJump}
                 rows={info.exceptions}
                 onJump={(row) => props.on.jumpException(row.id)}
             />
-            {renderOfficeInfoPanelMembers(text, info, props)}
+            {renderOfficeInfoPanelMembers(copy, info, props)}
             <OfficeRoomResources
                 cards={info.cards}
                 channels={info.channels}
                 pins={info.pins}
-                text={text}
+                copy={copy}
                 onJump={props.on.jumpCard}
             />
-            <Region label={text("tasksTitle")}>
+            <Section title={copy.tasksTitle}>
                 <Stack gap="inline">
-                    <Text weight="semibold">{text("tasksTitle")}</Text>
                     <Text size="sm" tone="muted">
                         {info.tasksSummary}
                     </Text>
                     <Button intent="neutral" size="sm" width="fill" onPress={props.on.openTasks}>
-                        {text("tasksOpen")}
+                        {copy.tasksOpen}
                     </Button>
                 </Stack>
-            </Region>
+            </Section>
         </PaneSection>
     )
 }
 
 /** Renders the OfficeInfoPanel members section. */
 const renderOfficeInfoPanelMembers = (
-    text: NonNullable<OfficeInfoPanelProps["props"]["text"]>,
+    copy: OfficeInfoPanelProps["props"]["copy"],
     info: NonNullable<OfficeInfoPanelProps["props"]["info"]>,
     props: OfficeInfoPanelProps,
 ) => (
-    <Region label={text("membersTitle")}>
+    <Section title={copy.membersTitle} count={info.members.length}>
         <Stack gap="inline">
-            <Cluster gap="inline" justify="between">
-                <Text weight="semibold">{text("membersTitle")}</Text>
-                <Text size="sm" tone="muted">{`${info.members.length}`}</Text>
-            </Cluster>
             {info.members.map((member) => (
                 <OfficeMemberRow
                     key={member.id}
                     avatar={<OfficeAvatar avatar={member.avatar} />}
                     member={member}
-                    youLabel={text("youTag")}
-                    mentionLabel={text("mention")}
-                    chatLabel={text("chat11")}
+                    youLabel={copy.youTag}
+                    mentionLabel={copy.mention}
+                    chatLabel={copy.chat11}
                     onMention={props.on.mention}
                 />
             ))}
             <Button intent="neutral" size="sm" width="fill" href={info.addAgentHref}>
-                {text("addAgent")}
+                {copy.addAgent}
             </Button>
         </Stack>
-    </Region>
+    </Section>
 )

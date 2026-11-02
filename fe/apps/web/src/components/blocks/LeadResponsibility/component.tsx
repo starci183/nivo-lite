@@ -1,5 +1,3 @@
-import { nivoIconSource } from "@/components/leaves/Icon"
-
 import type * as React from "react"
 import type { DateValue } from "@internationalized/date"
 import {
@@ -9,9 +7,11 @@ import {
     Cluster,
     DescriptionList,
     EmptyNotice,
+    Section,
     Stack,
     SurfaceCard,
     Text,
+    type BadgeTone,
 } from "@starci/grammar/common"
 
 import { SlotView } from "@/components/composites/SlotView"
@@ -19,7 +19,7 @@ import { StepForm, type StepFormLabels } from "@/components/composites/StepForm"
 
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import type { BadgeTone } from "@starci/grammar/common"
+
 import type { DataSlot, ModuleIconName, SlotLabels, StepFormView } from "@/modules/types"
 import { PANEL_CLASS_NAME } from "./classNames"
 
@@ -110,8 +110,11 @@ export const LeadResponsibilityBase = (props: LeadResponsibilityBaseProps) => {
         <div id="responsibility" className={PANEL_CLASS_NAME}>
             <Stack gap="section">
                 <SurfaceCard label={l.cardLabel} headingLevel={2}>
-                    <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
-                        {(view, isSkeleton) => {
+                    <SlotView
+                        slot={p.slot}
+                        placeholder={PLACEHOLDER}
+                        labels={l.slot}
+                        render={(view, isLoading) => {
                             const current = view.current
                             const form =
                                 p.form === null ? null : (
@@ -125,7 +128,6 @@ export const LeadResponsibilityBase = (props: LeadResponsibilityBaseProps) => {
                                                 message={l.noOwnerTitle}
                                                 description={l.noOwnerHint}
                                                 actionLabel={l.proposeLabel}
-                                                actionVariant="primary"
                                                 isActionPending={p.isPending}
                                                 onAction={on.propose}
                                             />
@@ -140,9 +142,9 @@ export const LeadResponsibilityBase = (props: LeadResponsibilityBaseProps) => {
                                     </>
                                 )
                             }
-                            return renderCurrentStep({ isSkeleton, current, l, form, on })
+                            return renderCurrentStep({ isLoading, current, l, form, on })
                         }}
-                    </SlotView>
+                    />
                 </SurfaceCard>
             </Stack>
         </div>
@@ -153,27 +155,26 @@ export const LeadResponsibilityBase = (props: LeadResponsibilityBaseProps) => {
 interface RenderStepOwnerContext {
     readonly l: ResponsibilityLabels
     readonly current: StepView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 /** Builds the accountableLabel section from the current view. */
-const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => (
-    <SurfaceCard ariaLabel={l.accountableLabel}>
+const renderStepOwner = ({ l, current, isLoading }: RenderStepOwnerContext) => (
+    <Section title={l.accountableLabel} headingLevel={3} isLoading={isLoading}>
         <Cluster gap="section" justify="between">
             <Cluster gap="row" wrap={false}>
                 {current.isAgent ? (
                     <AgentMark
-                        glyph={nivoIconSource(current.agentGlyph, "leading")}
                         label={current.ownerName}
                         seed={current.ownerName}
                         src={current.agentAvatarUrl}
-                        module="chatbot"
+
                         size="md"
                     />
                 ) : (
                     <PersonAvatar name={current.ownerName} size="md" />
                 )}
                 <Stack gap="identity">
-                    <Text weight="semibold" isSkeleton={isSkeleton}>
+                    <Text isStrong isLoading={isLoading}>
                         {current.ownerName}
                     </Text>
                     <Text size="xs" tone="muted">
@@ -183,7 +184,7 @@ const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => 
             </Cluster>
             <DescriptionList
                 layout="stacked"
-                isLoading={isSkeleton}
+                isLoading={isLoading}
                 items={[
                     {
                         id: "due",
@@ -193,7 +194,7 @@ const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => 
                                 <Text tone="muted">{l.noDueLabel}</Text>
                             ) : (
                                 <Cluster gap="inline">
-                                    <Text as="span" weight="semibold">
+                                    <Text as="span" isStrong>
                                         {current.due.date}
                                     </Text>
                                     <Text as="span" size="sm" tone="muted">
@@ -208,52 +209,49 @@ const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => 
                 ]}
             />
         </Cluster>
-    </SurfaceCard>
+    </Section>
 )
 
 /** Inputs needed to build the Body section. */
 interface RenderCurrentStepContext {
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly current: StepView
     readonly l: ResponsibilityLabels
     readonly form: React.JSX.Element | null
     readonly on: LeadResponsibilityBaseProps["on"]
 }
 /** Builds the Body section from the current view. */
-const renderCurrentStep = ({ isSkeleton, current, l, form, on }: RenderCurrentStepContext) => (
+const renderCurrentStep = ({ isLoading, current, l, form, on }: RenderCurrentStepContext) => (
     <Stack gap="region">
         <Cluster gap="row" justify="between">
-            <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+            <Text size="sm" tone="muted" isLoading={isLoading}>
                 {current.title}
             </Text>
             <Badge tone={current.statusTone}>{current.statusLabel}</Badge>
         </Cluster>
-        <Stack gap="identity">
-            <Text size="xs" tone="muted" weight="semibold">
-                {l.nextStepLabel}
-            </Text>
-            <Text size="md" weight="semibold" isSkeleton={isSkeleton}>
+        <Section title={l.nextStepLabel} headingLevel={3} isLoading={isLoading}>
+            <Text size="md" isStrong isLoading={isLoading}>
                 {current.nextAction}
             </Text>
-        </Stack>
-        {renderStepOwner({ l, current, isSkeleton })}
+        </Section>
+        {renderStepOwner({ l, current, isLoading })}
         {form}
-        {isSkeleton || form !== null ? null : (
+        {form !== null ? null : (
             <Cluster gap="row">
                 {current.isDone ? (
-                    <Button intent="neutral" onPress={() => on.open("add")}>
+                    <Button intent="neutral" onPress={() => on.open("add")} isLoading={isLoading}>
                         {l.addLabel}
                     </Button>
                 ) : (
                     <>
-                        <Button intent="neutral" onPress={() => on.open("reassign")}>
+                        <Button intent="neutral" onPress={() => on.open("reassign")} isLoading={isLoading}>
                             {l.reassignLabel}
                         </Button>
-                        <Button intent="neutral" onPress={() => on.open("due")}>
+                        <Button intent="neutral" onPress={() => on.open("due")} isLoading={isLoading}>
                             {l.changeDueLabel}
                         </Button>
                         {current.isAgent ? (
-                            <Button intent="neutral" href={l.askHref}>
+                            <Button intent="neutral" href={l.askHref} isLoading={isLoading}>
                                 {l.askLabel}
                             </Button>
                         ) : null}

@@ -1,5 +1,4 @@
-import { Alert, Button, Divider, Heading, Region, SurfaceCard, TagGroup, Text, Textarea } from "@starci/grammar/common"
-import { ACTIONS_CLASS, FACTS_CLASS, PRESERVE_LINES_CLASS, SECTION_CLASS } from "./classNames"
+import { Alert, Button, Quote, TagGroup, Text, Textarea, Section, Stack, Cluster } from "@starci/grammar/common"
 
 /** What the message section shows, already in the reader language. */
 type AutomationMessageProps = {
@@ -34,14 +33,7 @@ type AutomationMessageProps = {
 
 /** The approved wording: a proposal written from the shop context, editable, always reviewed and saved by the owner, with a live preview. */
 export const AutomationMessage = (props: AutomationMessageProps) => (
-    <Region className={SECTION_CLASS} label={props.sectionLabel}>
-        <Divider semantics="presentation" />
-        <div className={FACTS_CLASS}>
-            <Heading level={3}>{props.title}</Heading>
-            <Text size="sm" tone="muted">
-                {props.help}
-            </Text>
-        </div>
+    <Section title={props.title} description={props.help} headingLevel={3}>
         {props.staleAlert === undefined ? null : (
             <Alert
                 title={props.staleAlert.title}
@@ -65,7 +57,7 @@ export const AutomationMessage = (props: AutomationMessageProps) => (
                 {props.note}
             </Text>
         )}
-        <div className={FACTS_CLASS}>
+        <Stack gap="identity">
             <Text size="xs" tone="muted">
                 {props.variablesTitle}
             </Text>
@@ -74,24 +66,17 @@ export const AutomationMessage = (props: AutomationMessageProps) => (
                 size="sm"
                 items={props.variables.map((variable) => ({ id: variable, label: `{${variable}}` }))}
             />
-        </div>
+        </Stack>
         {renderAutomationMessageActions(props)}
-        <div className={FACTS_CLASS}>
-            <Text size="xs" tone="muted">
-                {props.previewTitle}
-            </Text>
-            <SurfaceCard ariaLabel={props.previewTitle}>
-                <div className={PRESERVE_LINES_CLASS}>
-                    <Text size="sm">{props.previewText}</Text>
-                </div>
-            </SurfaceCard>
+        <Stack gap="identity">
+            <Quote source={props.previewTitle} text={props.previewText} />
             {props.toneNote === undefined ? null : (
                 <Text size="xs" tone="muted">
                     {props.toneNote}
                 </Text>
             )}
-        </div>
-    </Region>
+        </Stack>
+    </Section>
 )
 
 /** Renders the AutomationMessage actions section. */
@@ -111,7 +96,7 @@ const renderAutomationMessageActions = (
         | "composeLabel"
     >,
 ) => (
-    <div className={ACTIONS_CLASS}>
+    <Cluster gap="inline">
         {props.enableLabel === undefined ? null : (
             <Button intent="commit" isPending={props.isBusy} isDisabled={!props.canEnable} onPress={props.onEnable}>
                 {props.enableLabel}
@@ -123,5 +108,5 @@ const renderAutomationMessageActions = (
         <Button intent="neutral" isPending={props.isComposing} isDisabled={props.isBusy} onPress={props.onCompose}>
             {props.composeLabel}
         </Button>
-    </div>
+    </Cluster>
 )

@@ -11,8 +11,12 @@ import type {
     NodeAnswerKey,
 } from "../agent-graphs.contracts"
 import { conditionProblems } from "./condition.policy"
+import { contractProblems } from "./contract-problems.policy"
+import { successorsOf } from "./graph-successors.policy"
 import { amountFactOf, boundaryFindings, intervalOf, numericFactsOf, topOf } from "./interval.policy"
 import type { Interval } from "./interval.policy"
+
+export { successorsOf }
 
 const problem = (
     code: GraphProblem["code"],
@@ -20,12 +24,6 @@ const problem = (
     branchKey: string | null = null,
     detail = "",
 ): GraphProblem => ({ code, nodeKey, branchKey, detail })
-
-/** The keys a node leads to. */
-export const successorsOf = (node: GraphNode): ReadonlyArray<string> => {
-    if (node.decide !== undefined) return node.decide.branches.map((branch) => branch.next)
-    return node.next
-}
 
 const LIST_ANSWERS: ReadonlyArray<NodeAnswerKey> = ["knows", "uses", "reads", "writes", "sources"]
 
@@ -233,4 +231,5 @@ export const graphProblems = (graph: GraphDocument, context: GraphContext): Read
     ...rightsProblems(graph, context),
     ...outsiderProblems(graph, context),
     ...blankProblems(graph),
+    ...(context.hasFrame === undefined ? [] : contractProblems(graph, context.hasFrame)),
 ]

@@ -31,11 +31,12 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
     )
     const { recheck, isRechecking } = useZaloChecks(props.connectionId)
     const { slot } = useZaloPage(props.connectionId)
+    const page = "items" in slot ? slot.items : undefined
     const [isAsking, setIsAsking] = useState(false)
     const [isRailOpen, setRailOpen] = useState(false)
     const refusal = useConnectionRefusal()
     if (isMissing && refusal === undefined) notFound()
-    const banner = head.items?.banner ?? ""
+    const banner = ("items" in head ? head.items : undefined)?.banner ?? ""
     const notices: ReadonlyArray<ZaloPageNotice> = [
         ...(banner === "" ? [] : [{ id: "banner", tone: "negative" as const, title: banner }]),
         ...(notice === "" ? [] : [{ id: "notice", tone: "negative" as const, title: notice }]),
@@ -43,7 +44,7 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
             ? [{ id: "waiting", tone: "informative" as const, title: t("waitingTitle"), description: t("waitingBody") }]
             : []),
     ]
-    const isLive = slot.items !== undefined && slot.items.status !== "disconnected"
+    const isLive = page !== undefined && page.status !== "disconnected"
     return (
         <ZaloConnectionHeadBase
             shape={props.shape}
@@ -55,7 +56,7 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
                 crumbLabel: t("crumbLabel"),
                 crumbs: [
                     { id: "connections", label: t("crumbConnections"), href: CONSOLE_ROUTES.connections },
-                    { id: "zalo", label: head.items?.name ?? t("crumbZalo") },
+                    { id: "zalo", label: ("items" in head ? head.items : undefined)?.name ?? t("crumbZalo") },
                 ],
                 gridLabel: t("title"),
                 mainLabel: t("mainLabel"),

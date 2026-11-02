@@ -84,7 +84,11 @@ describe("PaymentClaimsService", () => {
                 action: "reconcile_payment",
                 dedupeKey: "reconcile_payment:invoice:inv-1",
                 forceAsk: "unclear_outcome",
-                seed: objectLike({ candidates: [objectLike({ id: "inv-1" })] }),
+                seed: objectLike({
+                    candidates: [objectLike({ id: "inv-1" })],
+                    evidence: [{ key: "amount_vnd", value: 500_000, kind: "claimed", via: "chat_text" }],
+                    fields: objectLike({ conversation_id: "c1" }),
+                }),
             }),
         )
     })

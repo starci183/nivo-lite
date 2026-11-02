@@ -1,3 +1,4 @@
+import { TOOL_AUDITS } from "@tests/fixtures/builders/native-tools.builder"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
@@ -201,14 +202,7 @@ describe("AgentToolsService > runTool", () => {
             { workspaceId: ctx.workspaceId, conversationId: ctx.conversationId, agentId: null },
             "hours",
         )
-        expect(events.record).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            kind: "engine.tool.knowledge.search",
-            actor: "NIVO engine",
-            summary: "Knowledge search: hours",
-            leadId: "lead-9",
-            evidence: "job-1",
-        })
+        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.knowledgeSearch())
     })
 
     it("keeps only 100 characters of the query in the evidence summary", async () => {
@@ -216,14 +210,7 @@ describe("AgentToolsService > runTool", () => {
 
         await service.runTool("t", "knowledge.search", { query: "q".repeat(300) })
 
-        expect(events.record).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            kind: "engine.tool.knowledge.search",
-            actor: "NIVO engine",
-            summary: `Knowledge search: ${"q".repeat(100)}`,
-            leadId: "lead-9",
-            evidence: "job-1",
-        })
+        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.boundedQuery())
     })
 })
 
@@ -244,14 +231,7 @@ describe("AgentToolsService > runTool", () => {
             company: null,
             contact: "0900",
         })
-        expect(events.record).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            kind: "engine.tool.lead.create_or_update",
-            actor: "NIVO engine",
-            summary: "Lead handed to Sales through the gate (done)",
-            leadId: "lead-1",
-            evidence: "job-1",
-        })
+        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.leadWrite())
     })
 
     it("refuses a lead without a name before writing anything", async () => {
@@ -278,14 +258,7 @@ describe("AgentToolsService > runTool", () => {
             proposedAnswer: null,
             reason: "unclear_outcome",
         })
-        expect(events.record).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            kind: "engine.tool.approval.request",
-            actor: "NIVO engine",
-            summary: "Approval requested from the owner (waiting_decision)",
-            leadId: "lead-9",
-            evidence: "wi-1",
-        })
+        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.approval())
     })
 })
 
@@ -297,14 +270,7 @@ describe("AgentToolsService > runTool", () => {
 
         expect(result).toEqual({ status: "handed_to_person" })
         expect(handoffs.handoff).toHaveBeenCalledWith(ctx, "angry customer")
-        expect(events.record).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            kind: "engine.tool.handoff.to_person",
-            actor: "NIVO engine",
-            summary: "Conversation handed to a person",
-            leadId: "lead-9",
-            evidence: "angry customer",
-        })
+        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.handoffReason())
     })
 
     it("traces the job when a handoff gives no reason", async () => {
@@ -312,14 +278,7 @@ describe("AgentToolsService > runTool", () => {
 
         await service.runTool("t", "handoff.to_person", {})
 
-        expect(events.record).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            kind: "engine.tool.handoff.to_person",
-            actor: "NIVO engine",
-            summary: "Conversation handed to a person",
-            leadId: "lead-9",
-            evidence: "job-1",
-        })
+        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.handoffJob())
     })
 
     it("leaves the booking tools to their port, which traces itself", async () => {
@@ -364,14 +323,7 @@ describe("AgentToolsService > connector meta-tools and agent hand-off", () => {
             name: "crm.order.place",
             arguments_json: '{"sku":"a"}',
         })
-        expect(events.record).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            kind: "engine.tool.tool.call",
-            actor: "NIVO engine",
-            summary: "Connector tool.call: crm.order.place",
-            leadId: "lead-9",
-            evidence: "job-1",
-        })
+        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.connectorCall())
     })
 
     it("traces the query of a search and the name of a description", async () => {
@@ -401,14 +353,7 @@ describe("AgentToolsService > connector meta-tools and agent hand-off", () => {
 
         expect(result).toEqual({ status: "handed_off", to: "AI Care" })
         expect(agentHandoff.handOff).toHaveBeenCalledWith(ctx, { to: "care", note: "booking confirmed" })
-        expect(events.record).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            kind: "engine.tool.conversation.handOff",
-            actor: "NIVO engine",
-            summary: "Conversation handed to care",
-            leadId: "lead-9",
-            evidence: "booking confirmed",
-        })
+        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.agentHandoff())
     })
 
     it("refuses a hand-off without a target or a note before moving anything", async () => {
@@ -494,5 +439,33 @@ describe("AgentToolsService > the bridge credential", () => {
         })
         expect(bridge.runInternal).toHaveBeenCalledWith(tagTurn, "tool.search", { query: "x" })
         expect(knowledge.search).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentToolsService > memory reads", () => {
+    it("returns standing memory for the admitted conversation and traces that read", async () => {
+        const { service, knowledge, events } = await build()
+        knowledge.memory.mockResolvedValue("Approved delivery days: Sunday")
+
+        await expect(service.runTool("t", "memory.read", {})).resolves.toEqual({
+            memory: "Approved delivery days: Sunday",
+        })
+
+        expect(knowledge.memory).toHaveBeenCalledWith({ workspaceId: "ws-1", conversationId: "conv-1", agentId: null })
+        expect(knowledge.search).not.toHaveBeenCalled()
+        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.conversationMemory())
+    })
+
+    it("reads the same standing memory as the agent of a turn without a conversation", async () => {
+        const { service, knowledge, events, bridge } = await build(claims, tagTurn)
+        knowledge.memory.mockResolvedValue("Approved internal handover")
+
+        await expect(service.runBearerTool("Bearer bridge.body.mac", "memory.read", {})).resolves.toEqual({
+            memory: "Approved internal handover",
+        })
+
+        expect(knowledge.memory).toHaveBeenCalledWith({ workspaceId: "ws-1", conversationId: null, agentId: "agent-1" })
+        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.turnMemory())
+        expect(bridge.runInternal).not.toHaveBeenCalled()
     })
 })

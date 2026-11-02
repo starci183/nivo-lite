@@ -9,8 +9,8 @@ import { queryVideoBrand } from "@/modules/api/graphql/queries/query-video-brand
 export const QUERY_VIDEO_BRAND_SWR_KEY = "QUERY_VIDEO_BRAND_SWR"
 
 /** The video brand of the workspace. */
-export const useQueryVideoBrandSwr = () =>
+export const useQueryVideoBrandSwr = (isActive = true) =>
     useSWR(
-        useWorkspaceParamsKey(QUERY_VIDEO_BRAND_SWR_KEY, [] as const),
+        useWorkspaceParamsKey(QUERY_VIDEO_BRAND_SWR_KEY, isActive ? ([] as const) : null),
         async () => answeredData(await queryVideoBrand(), QUERY_VIDEO_BRAND_SWR_KEY).videoBrand,
     )

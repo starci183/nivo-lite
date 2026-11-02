@@ -1,5 +1,5 @@
 import type { useTranslations, useFormatter } from "next-intl"
-import type { useLoyaltyPromo } from "./useLoyaltyPromo"
+import type { PromoPreview, useLoyaltyPromo } from "./useLoyaltyPromo"
 import type { BadgeTone } from "@starci/grammar/common"
 import { digitsOnly, parseDigits } from "@/hooks/loyalty"
 
@@ -73,35 +73,29 @@ export const reasonKey = (errorCode: string | null | undefined): string => {
 
 /** Resolves count, audience and sample lines for the current segment preview. */
 export const promotionPreviewOf = (
-    preview: ReturnType<typeof useLoyaltyPromo>["preview"],
+    preview: PromoPreview,
     segmentLabel: string,
     t: ReturnType<typeof useTranslations<"loyalty">>,
     format: ReturnType<typeof useFormatter>,
 ): Array<{ readonly id: string; readonly text: string; readonly emphasis: boolean }> => {
     const previewLines: Array<{ readonly id: string; readonly text: string; readonly emphasis: boolean }> = []
-    if (preview.kind === "failed") previewLines.push({ id: "failed", text: t("previewFailed"), emphasis: false })
-    if (preview.kind === "loading") previewLines.push({ id: "loading", text: t("previewLoading"), emphasis: false })
-    if (preview.kind === "ready") {
-        const shown = preview.preview
-        previewLines.push(
-            {
-                id: "count",
-                text: t("previewCount", {
-                    total: format.number(shown.total),
-                    reachable: format.number(shown.reachable),
-                }),
-                emphasis: true,
-            },
-            { id: "who", text: t("previewWho", { who: segmentLabel }), emphasis: false },
-        )
-        if (shown.names.length > 0)
-            previewLines.push({
-                id: "sample",
-                text: t("previewSample", { names: format.list([...shown.names], { type: "unit" }) }),
-                emphasis: false,
-            })
-    }
-
+    previewLines.push(
+        {
+            id: "count",
+            text: t("previewCount", {
+                total: format.number(preview.total),
+                reachable: format.number(preview.reachable),
+            }),
+            emphasis: true,
+        },
+        { id: "who", text: t("previewWho", { who: segmentLabel }), emphasis: false },
+    )
+    if (preview.names.length > 0)
+        previewLines.push({
+            id: "sample",
+            text: t("previewSample", { names: format.list([...preview.names], { type: "unit" }) }),
+            emphasis: false,
+        })
     return previewLines
 }
 

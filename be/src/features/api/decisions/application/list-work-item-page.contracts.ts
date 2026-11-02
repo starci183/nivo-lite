@@ -1,4 +1,5 @@
-import type { WorkItemCursor, WorkStatus } from "@modules/domain/decisions"
+import type { WorkItemCursor } from "@modules/domain/decisions"
+import type { WorkStatus } from "@modules/domain/work-items"
 
 /** What listing work items takes. */
 export interface ListWorkItemPageRequest {

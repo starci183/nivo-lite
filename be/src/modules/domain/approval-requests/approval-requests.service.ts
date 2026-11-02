@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import type {
     ApprovalProgress,
     ApprovalSweep,
@@ -24,8 +25,8 @@ export class ApprovalRequestsService {
     ) {}
 
     /** Opens the request of a chain step and answers who is asked, who was left out and when it runs out. */
-    open(params: OpenApprovalParams): Promise<OpenedApproval> {
-        return this.opening.open(params)
+    open(params: OpenApprovalParams, manager?: EntityManager): Promise<OpenedApproval> {
+        return manager === undefined ? this.opening.open(params) : this.opening.open(params, manager)
     }
 
     /** Takes the verdict of a member on a request, after proving their right again. */

@@ -1,48 +1,46 @@
-import { Input, NumberField, Textarea } from "@starci/grammar/common"
-import type { HiringJobFieldCommands, HiringJobValues, HiringSay } from "@/modules/types"
-import { GRID_CLASS_NAME } from "./classNames"
-
+import { Input, NumberField, Textarea, Grid } from "@starci/grammar/common"
+import type { HiringJobFieldCommands, HiringViews } from "@/modules/types"
 /** The words, values and changes of the requirement fields of a job. */
 interface HiringRequirementFieldsProps extends HiringJobFieldCommands {
-    readonly say: HiringSay
-    readonly values: HiringJobValues
+    readonly copy: HiringViews["workbenchCopy"]
+    readonly values: HiringViews["jobFormValues"]
 }
 
 /** What a job screens candidates on: skills, hours, must-haves, nice-to-haves, years and the experience note. */
 export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => {
-    const { say, values, onText, onNumber } = props
+    const { copy, values, onText, onNumber } = props
     return (
-        <div className={GRID_CLASS_NAME}>
+        <Grid kind="form" columns={2}>
             <Textarea
-                label={say("jobSkills")}
-                description={say("jobSkillsHint")}
+                label={copy.jobSkills}
+                description={copy.jobSkillsHint}
                 rows={3}
                 value={values.skills}
                 onValueChange={(skills) => onText("skills", skills)}
             />
             <Textarea
-                label={say("jobAvailability")}
-                description={say("jobAvailabilityHint")}
+                label={copy.jobAvailability}
+                description={copy.jobAvailabilityHint}
                 rows={3}
                 value={values.availability}
                 onValueChange={(availability) => onText("availability", availability)}
             />
             <Textarea
-                label={say("jobMustHave")}
-                description={say("jobMustHaveHint")}
+                label={copy.jobMustHave}
+                description={copy.jobMustHaveHint}
                 rows={3}
                 value={values.mustHave}
                 onValueChange={(mustHave) => onText("mustHave", mustHave)}
             />
             <Textarea
-                label={say("jobNiceToHave")}
-                description={say("jobNiceToHaveHint")}
+                label={copy.jobNiceToHave}
+                description={copy.jobNiceToHaveHint}
                 rows={3}
                 value={values.niceToHave}
                 onValueChange={(niceToHave) => onText("niceToHave", niceToHave)}
             />
             <NumberField
-                label={say("jobYears")}
+                label={copy.jobYears}
                 minValue={0}
                 maxValue={50}
                 step={1}
@@ -52,10 +50,10 @@ export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => 
             <Input
                 id="job-exp-note"
                 name="experience_note"
-                label={say("jobExperienceNote")}
+                label={copy.jobExperienceNote}
                 value={values.experienceNote}
                 onValueChange={(note) => onText("experienceNote", note)}
             />
-        </div>
+        </Grid>
     )
 }

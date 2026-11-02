@@ -1,8 +1,11 @@
 import type { Type } from "@nestjs/common"
 import type { GraphFactReader } from "./agent-graphs.port"
+import type { GraphWorkDecisions } from "./graph-work-decisions.port"
 
 /** What the action graph needs from the app root: the readers of the facts a decide point reads from real records. */
 export interface AgentGraphsOptions {
+    /** The real work owner that resumes and locks approval decisions; required by the whole capability. */
+    readonly workDecisions?: Type<GraphWorkDecisions>
     /** One reader for each module that declares graph facts; a fact with no reader is never read, so its branch falls to the else. */
     readonly readers?: ReadonlyArray<Type<GraphFactReader>>
     /** Only the data rights of the gateway: the store and the rights, none of the work engine behind the rest of the graph (the MCP endpoint). */

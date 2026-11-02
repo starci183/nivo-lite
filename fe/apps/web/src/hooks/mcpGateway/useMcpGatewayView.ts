@@ -7,7 +7,7 @@ import {
     useQueryMcpToolGrantsSwr,
 } from "@/hooks/swr"
 import { useFormatter, useTranslations } from "next-intl"
-import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
+import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 import { connectorRowsOf } from "./mcpGateway.shared"
 import { argsWordsOf, constraintBadgesOf, modeWordOf, outcomeWordOf, toolNameOf } from "@/modules/mcpGateway"
 import type { McpBadgeView, McpFormatter, McpTone, McpToolRowView, McpTranslator } from "./mcpGateway.shared"
@@ -35,9 +35,6 @@ const OUTCOME_TONE: ReadonlyMap<string, McpTone> = new Map([
 
 /** The plain name a tool id shows on this screen. */
 type ToolNamer = (tool: string) => string
-
-/** The first read error of the three, typed as unknown as SWR types it `any`. */
-const firstError = (...errors: ReadonlyArray<unknown>): unknown => errors.find((error) => error !== undefined)
 
 /** A neutral badge. */
 const plain = (label: string): McpBadgeView => ({ label, tone: "neutral" })
@@ -146,16 +143,11 @@ export const useMcpGatewayView = (enabled: boolean) => {
             },
         ],
     }
-    const reads = {
-        data: connectors.data === undefined || grants.data === undefined || log.data === undefined ? undefined : cards,
-        error: firstError(connectors.error, grants.error, log.error),
-        isLoading: connectors.isLoading || grants.isLoading || log.isLoading,
-    }
     return {
         /** The region is drawn for a manager once the page is ready, and only then is anything read. */
         isShown: enabled,
         label: t("label"),
-        slot: slotOfSwr(reads),
+        slot: slotOfReads([connectors, grants, log, agents], () => cards),
         labels: { ...slotLabelsOf(t("connectorsEmpty")), error: t("failedTitle"), retry: t("retry") },
         forms: forms.view,
         on: forms.on,
@@ -163,6 +155,7 @@ export const useMcpGatewayView = (enabled: boolean) => {
             void connectors.mutate()
             void grants.mutate()
             void log.mutate()
+            void agents.mutate()
         },
     }
 }

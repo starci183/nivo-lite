@@ -1,4 +1,5 @@
 import type { BadgeTone } from "@starci/grammar/common"
+import type { HiringSay } from "@/modules/types"
 import type { HiringWorkbenchData } from "@/hooks/hiringWire"
 
 /** The lanes of the pipeline board: rejected closes it (withdrawn candidates sit outside the board). */
@@ -85,3 +86,15 @@ export const focusedCandidateId = (board: HiringWorkbenchData, focus: string | n
     const interview = board.interviews.find((entry) => entry.id === focus || entry.workItemId === focus)
     return interview?.candidateId ?? null
 }
+
+/** Resolves the shared candidate rejection dialog's exact name and words before the pure halves draw it. */
+export const hiringRejectCopyOf = (say: HiringSay, name: string) => ({
+    title: say("rejectTitle", { name }),
+    closeLabel: say("close"),
+    hint: say("rejectHint"),
+    failed: say("rejectFailed"),
+    reasonLabel: say("rejectReason"),
+    kept: say("rejectKept"),
+    cancelLabel: say("cancel"),
+    confirmLabel: say("rejectConfirm"),
+})

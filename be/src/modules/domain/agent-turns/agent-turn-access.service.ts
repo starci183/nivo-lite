@@ -5,6 +5,7 @@ import type { BridgeTurn, BridgeTurns, OptionalBridgeTurn } from "@modules/domai
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectAgentTurnsOptions } from "./agent-turns.decorators"
+import { pinnedOf } from "./intent-turn.policy"
 import { sameSession, verifyBridgeToken } from "./bridge-credential.policy"
 import type { AgentTurnsOptions } from "./agent-turns.options"
 
@@ -18,6 +19,7 @@ const toBridgeTurn = (turn: AgentRunningTurn): BridgeTurn => ({
     source: turn.source,
     conversationId: turn.context.conversationId ?? null,
     authorUserId: turn.context.authorUserId ?? null,
+    pinnedIntent: pinnedOf(turn.context),
 })
 
 @Injectable()

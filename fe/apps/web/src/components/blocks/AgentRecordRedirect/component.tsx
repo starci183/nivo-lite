@@ -16,9 +16,9 @@ export interface AgentRecordRedirectBaseProps {
 
 /** Draws waiting lines while the instance of an old agent url is found. */
 export const AgentRecordRedirectBase = (props: AgentRecordRedirectBaseProps) => (
-    <Page isSkeleton measure="reading">
+    <Page isLoading measure="reading">
         <SurfaceCard ariaLabel={props.props.label}>
-            <WaitingLines rows={props.props.lines} isSkeleton />
+            <WaitingLines rows={props.props.lines} isLoading />
         </SurfaceCard>
     </Page>
 )

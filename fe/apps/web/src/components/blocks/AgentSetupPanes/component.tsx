@@ -1,16 +1,23 @@
-import { EmptyNotice, Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
+import { AgentGraphBranchesBand } from "@/components/composites/AgentGraphBranchesBand"
+import { AgentGraphDetailDrawer } from "@/components/frames/AgentGraphDetailDrawer"
+import { CONSOLE_ROUTES } from "@/modules/routes"
+import { AgentGraphProblems } from "@/components/branches/AgentGraphProblems"
+import { AgentGraphCanvas } from "@/components/composites/AgentGraphCanvas"
+import { AgentGraphHead } from "@/components/composites/AgentGraphHead"
+import { AgentGraphMode } from "@/components/composites/AgentGraphMode"
+import { AgentGraphInspector } from "@/components/composites/AgentGraphInspector"
+import { AgentGraphTabs } from "@/components/composites/AgentGraphTabs"
+import { SlotView } from "@/components/composites/SlotView"
+import { AgentSetupNotice } from "@/components/frames/AgentSetupNotice"
+import { Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
 import type { PaneGridProps } from "@starci/grammar/common"
 import type { ReactNode, Ref } from "react"
-import { AgentSetupChecklist } from "@/components/composites/AgentSetupChecklist"
-import { SetupDraftCard } from "@/components/composites/SetupDraftCard"
-import { SetupKnowledgeCard } from "@/components/composites/SetupKnowledgeCard"
-import { SetupVersionsCard } from "@/components/composites/SetupVersionsCard"
-import { AgentSetupBand } from "@/components/composites/AgentSetupBand"
+import { AgentSetupBand } from "@/components/frames/AgentSetupBand"
 import { AgentSetupComposer, type AgentSetupComposerContent } from "@/components/composites/AgentSetupComposer"
 import { AgentSetupThread, type AgentSetupThreadContent } from "@/components/composites/AgentSetupThread"
-import { SlotView } from "@/components/composites/SlotView"
 import type {
     AgentGraphAction,
+    AgentSetupCopy,
     AgentGraphPanelView,
     AgentGraphLayoutView,
     AgentGraphPhoneView,
@@ -21,32 +28,8 @@ import type {
     SlotLabels,
 } from "@/modules/types"
 import type { BrandProposalCommands } from "@/components/leaves/BrandProposalView"
-import {
-    BranchesBand,
-    DetailDrawer,
-    GraphCanvasBand,
-    GraphHeadBand,
-    GraphModeBand,
-    InspectorBand,
-    ProblemsBand,
-    TabsBand,
-} from "./graphBands"
 /** What the chat draws once the setup is in: the thread and the composer. */
 export interface AgentSetupChatContent extends AgentSetupThreadContent, AgentSetupComposerContent {}
-/** The words of the panes that do not come from a slot. */
-export interface AgentSetupCopy {
-    readonly paneLabel: string
-    readonly checklistLabel: string
-    readonly feedNote: string
-    readonly chatLabel: string
-    readonly chatTitle: string
-    readonly proposalsLabel: string
-    readonly confirmLabel: string
-    readonly proposalEditLabel: string
-    readonly suggestionsLabel: string
-    /** "NIVO is asking in the chat", under the current gate. */
-    readonly askingLabel: string
-}
 /** The slots, the copy, the notice for anyone who may not set an agent up, and the commands of the setup panes. */
 export interface AgentSetupPanesBaseProps {
     readonly props: {
@@ -104,10 +87,14 @@ interface ViewSource<T> {
     readonly onRetry: () => void
 }
 /** Draws a read through the one recipe of a slot's status. */
-const viewOf = <T,>(labels: SlotLabels, source: ViewSource<T>, render: (data: T, isSkeleton: boolean) => ReactNode) => (
-    <SlotView slot={source.slot} placeholder={source.placeholder} labels={labels} onRetry={source.onRetry}>
-        {render}
-    </SlotView>
+const viewOf = <T,>(labels: SlotLabels, source: ViewSource<T>, render: (data: T, isLoading: boolean) => ReactNode) => (
+    <SlotView
+        slot={source.slot}
+        placeholder={source.placeholder}
+        labels={labels}
+        onRetry={source.onRetry}
+        render={render}
+    />
 )
 /** The checklist read: the gates, the draft, the knowledge and the versions. */
 const sideOf = (base: AgentSetupPanesBaseProps): ViewSource<SetupSideView> => ({
@@ -121,32 +108,17 @@ const chatOf = (base: AgentSetupPanesBaseProps): ViewSource<AgentSetupChatConten
     placeholder: base.props.chatPlaceholder,
     onRetry: base.on.retryChat,
 })
-/** The checklist that must be confirmed before the agent runs, with the run action. */
-const SetupBand = (props: AgentSetupPanesBaseProps) =>
-    viewOf(props.props.slotLabels, sideOf(props), (view, isSkeleton) => (
-        <AgentSetupBand
-            gates={view.gates}
-            checklistLabel={props.props.copy.checklistLabel}
-            feedNote={props.props.copy.feedNote}
-            isSkeleton={isSkeleton}
-        >
-            <AgentSetupChecklist view={view} isSkeleton={isSkeleton} copy={props.props.copy} on={props.on} />
-            <SetupDraftCard {...view.draft} isSkeleton={isSkeleton} />
-            <SetupKnowledgeCard {...view.knowledge} isSkeleton={isSkeleton} />
-            <SetupVersionsCard {...view.versions} isSkeleton={isSkeleton} />
-        </AgentSetupBand>
-    ))
 /** The thread of the private chat with NIVO. */
 const ThreadBand = (props: AgentSetupPanesBaseProps) =>
-    viewOf(props.props.slotLabels, chatOf(props), (content, isSkeleton) => (
-        <AgentSetupThread content={content} isSkeleton={isSkeleton} copy={props.props.copy} on={props.on} />
+    viewOf(props.props.slotLabels, chatOf(props), (content, isLoading) => (
+        <AgentSetupThread content={content} isLoading={isLoading} copy={props.props.copy} on={props.on} />
     ))
 /** The composer of the private chat with NIVO. */
 const ComposerBand = (props: AgentSetupPanesBaseProps) =>
-    viewOf(props.props.slotLabels, chatOf(props), (content, isSkeleton) => (
+    viewOf(props.props.slotLabels, chatOf(props), (content, isLoading) => (
         <AgentSetupComposer
             content={content}
-            isSkeleton={isSkeleton}
+            isLoading={isLoading}
             copy={{
                 suggestionsLabel: props.props.copy.suggestionsLabel,
                 formLabel: props.props.copy.chatTitle,
@@ -154,20 +126,105 @@ const ComposerBand = (props: AgentSetupPanesBaseProps) =>
             on={props.on}
         />
     ))
-/** The notice shown instead of the panes. */
-interface NoticePanesProps {
-    readonly label: string
-    readonly message: string
-}
-const NoticePanes = (props: NoticePanesProps) => (
-    <PaneGrid label={props.label} areas={["notice"]}>
-        <Pane area="notice">
-            <PaneSection align="center">
-                <EmptyNotice message={props.message} />
-            </PaneSection>
-        </Pane>
-    </PaneGrid>
+
+/** Draws a read through the one recipe of a slot's status. */
+const graphViewOf = (
+    props: AgentSetupPanesBaseProps,
+    render: (data: AgentGraphPanelView, isLoading: boolean) => ReactNode,
+) => (
+    <SlotView
+        slot={props.props.graph}
+        placeholder={props.props.graphPlaceholder}
+        labels={props.props.slotLabels}
+        onRetry={props.on.retryGraph}
+        render={render}
+    />
 )
+/** The phone branch lane consumes its read in this Base, then draws ready anatomy. */
+const BranchesBand = (props: AgentSetupPanesBaseProps) =>
+    graphViewOf(props, (view, isLoading) => (
+        <AgentGraphBranchesBand
+            branches={view.branches}
+            adder={view.adder}
+            isLoading={isLoading}
+            onAction={props.on.graph}
+        />
+    ))
+
+/** What is wrong with the draft, in words, with the step to open and the page where a right is given. */
+const ProblemsBand = (props: AgentSetupPanesBaseProps) =>
+    graphViewOf(props, (view) => (
+        <AgentGraphProblems
+            view={view.problems}
+            onOpen={(value) => props.on.graph({ kind: "openNode", value })}
+            onGrants={() => props.on.open(CONSOLE_ROUTES.authority)}
+        />
+    ))
+
+/** The head of the work map. */
+const GraphHeadBand = (props: AgentSetupPanesBaseProps) =>
+    graphViewOf(props, (view, isLoading) => (
+        <AgentGraphHead view={view.head} isLoading={isLoading} onPublish={() => props.on.graph({ kind: "publish" })} />
+    ))
+
+/** The switch beside the map: does the agent work by the map or only record it. */
+const GraphModeBand = (props: AgentSetupPanesBaseProps) =>
+    graphViewOf(props, (view, isLoading) => (
+        <AgentGraphMode
+            view={view.mode}
+            isLoading={isLoading}
+            onMode={(value) => props.on.graph({ kind: "mode", value })}
+        />
+    ))
+
+/** The graph itself. */
+const GraphCanvasBand = (props: AgentSetupPanesBaseProps) =>
+    graphViewOf(props, (view, isLoading) => (
+        <AgentGraphCanvas
+            view={view.canvas}
+            isLoading={isLoading}
+            onSelect={(value) => props.on.graph({ kind: value === "" ? "select" : "openNode", value })}
+        />
+    ))
+
+/** The tab line of the pane beside the graph, or the switch of the phone. */
+const tabsBandOf = (props: AgentSetupPanesBaseProps, isPhone: boolean) =>
+    graphViewOf(props, (view) => (
+        <AgentGraphTabs
+            label={isPhone ? view.phoneLabel : view.tabsLabel}
+            tabs={isPhone ? view.phoneOptions : view.tabs}
+            selected={isPhone ? view.phoneView : view.sideTab}
+            onSelect={(value) => props.on.graph({ kind: isPhone ? "phoneView" : "sideTab", value })}
+        />
+    ))
+
+/** The body of the pane beside the graph for a tab that is not the chat. */
+const inspectorBandOf = (props: AgentSetupPanesBaseProps, sideTab: AgentGraphSideTab) =>
+    graphViewOf(props, (view, isLoading) => (
+        <AgentGraphInspector view={view} sideTab={sideTab} isLoading={isLoading} onAction={props.on.graph} />
+    ))
+
+/** The phone detail consumes its read in this Base, then draws the same ready drawer. */
+const DetailDrawer = (props: AgentSetupPanesBaseProps) =>
+    graphViewOf(props, (view, isLoading) => (
+        <AgentGraphDetailDrawer view={view} isLoading={isLoading} onAction={props.on.graph} />
+    ))
+
+/** The checklist read stays in its connected Base; only ready anatomy is handed down. */
+const SetupBand = (props: AgentSetupPanesBaseProps) =>
+    viewOf(props.props.slotLabels, sideOf(props), (view, isLoading) => (
+        <AgentSetupBand
+            view={view}
+            isLoading={isLoading}
+            copy={props.props.copy}
+            emptyLabel={props.props.slotLabels.empty}
+            onGate={props.on.gate}
+            onStartEdit={props.on.startEdit}
+            onStopEdit={props.on.stopEdit}
+            onEditText={props.on.editText}
+            onOpen={props.on.open}
+        />
+    ))
 
 /**
  * Draws the Setup tab of an agent as one PaneGrid flush under the tab line. On a laptop the work map of the agent (head, what is
@@ -178,7 +235,7 @@ const NoticePanes = (props: NoticePanesProps) => (
  */
 export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
     const { copy, sideTab, threadRef, layout } = props.props
-    if (props.props.forbidden !== "") return <NoticePanes label={copy.paneLabel} message={props.props.forbidden} />
+    if (props.props.forbidden !== "") return <AgentSetupNotice label={copy.paneLabel} message={props.props.forbidden} />
     return (
         <>
             <PaneGrid
@@ -188,9 +245,7 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                 rows={{ base: layout.phoneRows, medium: layout.mediumRows }}
             >
                 <Pane area="phonetabs" surface>
-                    <PaneSection align="center">
-                        <TabsBand {...props} isPhone />
-                    </PaneSection>
+                    <PaneSection align="center">{tabsBandOf(props, true)}</PaneSection>
                 </Pane>
                 <Pane area="branches">
                     <PaneSection scroll={{ label: copy.paneLabel }}>
@@ -209,9 +264,7 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                     </PaneSection>
                 </Pane>
                 <Pane area="tabs" surface>
-                    <PaneSection align="center">
-                        <TabsBand {...props} isPhone={false} />
-                    </PaneSection>
+                    <PaneSection align="center">{tabsBandOf(props, false)}</PaneSection>
                 </Pane>
                 <Pane area="body">
                     {sideTab === "chat" ? (
@@ -223,7 +276,7 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                         </PaneSection>
                     ) : (
                         <PaneSection key="inspector" scroll={{ label: copy.paneLabel }} gap="section">
-                            <InspectorBand {...props} sideTab={sideTab} />
+                            {inspectorBandOf(props, sideTab)}
                         </PaneSection>
                     )}
                 </Pane>

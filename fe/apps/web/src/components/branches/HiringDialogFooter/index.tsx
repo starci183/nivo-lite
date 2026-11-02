@@ -1,10 +1,11 @@
+import type { HiringViews } from "@/modules/types"
+
 import { Button } from "@starci/grammar/common"
-import type { HiringSay } from "@/modules/types"
 
 /** The words and state of the footer of a request dialog. */
 interface HiringDialogFooterProps {
-    readonly say: HiringSay
-    readonly sendKey: string
+    readonly copy: HiringViews["workbenchCopy"]
+    readonly sendLabel: string
     readonly isDone: boolean
     readonly canSend: boolean
     readonly isBusy: boolean
@@ -16,7 +17,7 @@ interface HiringDialogFooterProps {
 export const HiringDialogFooter = (props: HiringDialogFooterProps) => (
     <>
         <Button intent="dismiss" onPress={props.onClose}>
-            {props.say(props.isDone ? "done" : "cancel")}
+            {props.isDone ? props.copy.done : props.copy.cancel}
         </Button>
         {props.isDone ? null : (
             <Button
@@ -25,7 +26,7 @@ export const HiringDialogFooter = (props: HiringDialogFooterProps) => (
                 isDisabled={props.isBusy || !props.canSend}
                 onPress={props.onSend}
             >
-                {props.say(props.sendKey)}
+                {props.sendLabel}
             </Button>
         )}
     </>

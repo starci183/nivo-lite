@@ -60,6 +60,9 @@ const AGENT_LIMIT = 200
 /** The agents newest columns the lists and finders order by: oldest first, the id as tie-break. */
 const OLDEST_FIRST = { createdAt: "ASC", id: "ASC" } as const
 
+/** An agent id: anything else that names an agent is a department (module key). */
+const AGENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
+
 @Injectable()
 /** The agents of a workspace as the Agents pages use them: the instance list, the dashboard regions, and the owner's edits of one agent. */
 export class AgentsService {
@@ -119,6 +122,13 @@ export class AgentsService {
     /** The profile of one agent of the workspace, whatever its status; null when there is none. */
     async profileOf(workspaceId: string, agentId: string): Promise<OptionalAgentProfile> {
         return firstProfileOf(await this.entityManager.findOne(AgentEntity, { where: { id: agentId, workspaceId } }))
+    }
+
+    /** The profile of the agent named by its id or by its department; null when there is none. */
+    profileByReference(workspaceId: string, reference: string): Promise<OptionalAgentProfile> {
+        return AGENT_ID.test(reference)
+            ? this.profileOf(workspaceId, reference)
+            : this.profileOfDepartment(workspaceId, reference)
     }
 
     /** The profile of the active agent that speaks for a department; null when it has none. */

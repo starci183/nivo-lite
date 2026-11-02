@@ -1,21 +1,23 @@
 "use client"
-
-import { useMemo } from "react"
+import { slotOfReads } from "@/hooks/slot"
 import { useQueryVideoBrandSwr, useQueryVideoMediaSwr, useQueryVideoScopeSwr } from "@/hooks/swr"
 import { brandOf, mediaItemOf } from "./video.shared"
-import type { Brand } from "./video.shared"
 
-/** The brand kit of the workspace, its media library, and whether the member may change them. */
-export const useVideoBrandKit = () => {
-    const scope = useQueryVideoScopeSwr()
-    const brandQuery = useQueryVideoBrandSwr()
-    const mediaQuery = useQueryVideoMediaSwr()
-    const brand = useMemo<Brand | null>(() => (brandQuery.data ? brandOf(brandQuery.data) : null), [brandQuery.data])
-    const media = useMemo(() => (mediaQuery.data ?? []).map(mediaItemOf), [mediaQuery.data])
+/** Owns the actual scope/brand/media reads shared by the library and editor; disabled keys stay idle. */
+export const useVideoBrandKit = (isActive = true) => {
+    const scope = useQueryVideoScopeSwr(isActive),
+        brand = useQueryVideoBrandSwr(isActive),
+        media = useQueryVideoMediaSwr(isActive)
+    const reads = [scope, brand, media]
+    const slot = slotOfReads(reads, () => {
+        if (scope.data === undefined || brand.data === undefined || media.data === undefined)
+            throw new Error("A ready brand kit requires all three settled reads")
+        return { brand: brandOf(brand.data), media: media.data.map(mediaItemOf), canEdit: scope.data.canEdit }
+    })
     return {
-        brand,
-        media,
-        canEdit: scope.data?.canEdit ?? false,
-        isReady: scope.data !== undefined && brandQuery.data !== undefined && mediaQuery.data !== undefined,
+        slot,
+        reads,
+        data: "items" in slot ? slot.items : undefined,
+        reload: () => Promise.all([scope.mutate(), brand.mutate(), media.mutate()]),
     }
 }

@@ -24,7 +24,7 @@ export const LeadLoadingPage = async () => {
                     items: [
                         { id: "home", label: t("crumbHome"), href: LEADS_ROUTES.dashboard },
                         { id: "leads", label: t("title"), href: LEADS_ROUTES.leads },
-                        { id: "lead", label: "", isSkeleton: true },
+                        { id: "lead", label: "", isLoading: true },
                     ],
                 },
                 mark: <LeadHeader part="mark" />,

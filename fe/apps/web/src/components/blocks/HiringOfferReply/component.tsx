@@ -1,8 +1,8 @@
-import { Alert, Button, Text } from "@starci/grammar/common"
-import { HiringReplyCard } from "@/components/composites/HiringReplyCard"
+import { Alert, Button, Heading, Text, Stack } from "@starci/grammar/common"
+import { HiringReplyCard } from "@/components/frames/HiringReplyCard"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, HiringSay, SlotLabels } from "@/modules/types"
-import { ANSWERS_CLASS_NAME, PRE_WRAP_CLASS_NAME } from "./classNames"
+import { PRE_WRAP_CLASS_NAME } from "./classNames"
 
 /** The offer shapes: open to an answer, answered either way, or past its date. */
 export const HIRING_OFFER_REPLY_SHAPES = ["open", "accepted", "declined", "expired"] as const
@@ -63,13 +63,13 @@ const OfferAnswer = (props: OfferCardProps) => {
         case "open":
             if (outcome !== null) return <Alert tone={outcome.isOk ? "affirmative" : "negative"} title={outcome.text} />
             return (
-                <div className={ANSWERS_CLASS_NAME}>
+                <Stack gap="inline">
                     <Button
                         intent="commit"
                         width="fill"
                         isDisabled={isBusy}
                         isPending={isBusy}
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isSkeleton}
                         onPress={() => on.answer(true)}
                     >
                         {say("replyAccept")}
@@ -78,12 +78,12 @@ const OfferAnswer = (props: OfferCardProps) => {
                         intent="alternative"
                         width="fill"
                         isDisabled={isBusy}
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isSkeleton}
                         onPress={() => on.answer(false)}
                     >
                         {say("replyDecline")}
                     </Button>
-                </div>
+                </Stack>
             )
     }
 }
@@ -95,17 +95,23 @@ export const HiringOfferReplyBase = (props: HiringOfferReplyBaseProps) => (
         placeholder={LETTER_PLACEHOLDER}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(view, isSkeleton) => (
+        render={(view, isSkeleton) => (
             <HiringReplyCard
                 say={props.props.say}
                 ariaKey="replyOfferTitle"
-                shop={view.shop}
-                heading={view.heading}
-                isSkeleton={isSkeleton}
+                shop={
+                    <Text size="sm" tone="muted" isLoading={isSkeleton}>
+                        {view.shop}
+                    </Text>
+                }
+                heading={
+                    <Heading level={1} isLoading={isSkeleton}>
+                        {view.heading}
+                    </Heading>
+                }
             >
                 <div className={PRE_WRAP_CLASS_NAME}>
-                    <Text size="sm" isSkeleton={isSkeleton}>
+                    <Text size="sm" isLoading={isSkeleton}>
                         {view.letter}
                     </Text>
                 </div>
@@ -117,5 +123,5 @@ export const HiringOfferReplyBase = (props: HiringOfferReplyBaseProps) => (
                 <OfferAnswer {...props} view={view} isSkeleton={isSkeleton} />
             </HiringReplyCard>
         )}
-    </SlotView>
+    />
 )

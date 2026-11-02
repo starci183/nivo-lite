@@ -1,7 +1,6 @@
-import { Button, SurfaceCard } from "@starci/grammar/common"
+import { Button, SurfaceCard, Stack, Grid } from "@starci/grammar/common"
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
 import type { TierTextField, TierValues } from "@/modules/types"
-import { FIELD_PAIR_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What one tier card of the programme settings draws and reports. */
 type LoyaltyTierCardProps = {
@@ -30,8 +29,8 @@ export const LoyaltyTierCard = (props: LoyaltyTierCardProps) => {
     const { tier } = props
     return (
         <SurfaceCard ariaLabel={tier.name || props.nameLabel}>
-            <div className={FORM_CLASS_NAME}>
-                <div className={FIELD_PAIR_CLASS_NAME}>
+            <Stack gap="row">
+                <Grid kind="form" columns={2}>
                     <LoyaltyField
                         id={`lp-tier-name-${tier.uid}`}
                         label={props.nameLabel}
@@ -65,7 +64,7 @@ export const LoyaltyTierCard = (props: LoyaltyTierCardProps) => {
                         isDisabled={props.isDisabled}
                         onChange={(value) => props.onChange(tier.uid, "winback", value)}
                     />
-                </div>
+                </Grid>
                 <LoyaltyField
                     id={`lp-tier-benefit-${tier.uid}`}
                     label={props.benefitLabel}
@@ -86,7 +85,7 @@ export const LoyaltyTierCard = (props: LoyaltyTierCardProps) => {
                         </Button>
                     </div>
                 ) : null}
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 }

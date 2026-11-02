@@ -14,6 +14,28 @@ const build = async (rows: ReadonlyArray<unknown>) => {
 }
 
 describe("DecisionLogReadService", () => {
+    it("reads recorded member ids for the newest decision of the bounded item batch, never its display labels", async () => {
+        const { service, fake } = await build([
+            { workItemId: "item-1", memberId: "member-1" },
+            { workItemId: "legacy", memberId: null },
+        ])
+        await expect(service.decidersOf(["item-1", "legacy"])).resolves.toEqual(
+            new Map([
+                ["item-1", "member-1"],
+                ["legacy", null],
+            ]),
+        )
+        expect(fake?.callsOf("where")).toEqual([["d.workItemId IN (:...itemIds)", { itemIds: ["item-1", "legacy"] }]])
+        expect(fake?.callsOf("distinctOn")).toEqual([[["d.workItemId"]]])
+        expect(fake?.callsOf("limit")).toEqual([[2]])
+    })
+
+    it("reads no decision actors for an empty batch", async () => {
+        const { service, fake } = await build([])
+        await expect(service.decidersOf([])).resolves.toEqual(new Map())
+        expect(fake?.callsOf("where")).toEqual([])
+    })
+
     it("reads the newest lines of the workspace without narrowing when no filter is given", async () => {
         const row = { id: "decision-1" }
         const { service, fake } = await build([row])

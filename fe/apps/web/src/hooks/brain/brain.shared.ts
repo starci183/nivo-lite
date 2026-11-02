@@ -1,17 +1,59 @@
-import type { useTranslations } from "next-intl"
-import { confirmSidesOf, findingActionsOf, isActive } from "@/modules/brain"
+import type { useFormatter, useTranslations } from "next-intl"
+import { confirmSidesOf, findingActionsOf, isActive, DOSSIER_STATUS_TONE, FINDING_FILTERS } from "@/modules/brain"
 import type {
     EvidencePlaceView,
     FindingAction,
     FindingCardActionView,
     FindingView,
     MemberOption,
+    DossierReviewRecord,
+    ReviewedStatus,
+    FindingFilter,
 } from "@/modules/brain"
 import { brainUploadHref } from "@/modules/routes"
 import type { DossierIdentity } from "./useDossierIdentities"
 
 /** The words of the dossier review. */
 export type Translate = ReturnType<typeof useTranslations<"dossierReview">>
+
+/** The names of the three finding lists, in their existing order. */
+export const DOSSIER_FILTER_KEY = { open: "filterOpen", confirmed: "filterConfirmed", closed: "filterClosed" } as const
+/** Why the review's AI pass could not run. */
+export const DOSSIER_AI_NOTICE_KEY = { credits: "aiSkippedCredits", budget: "aiSkippedBudget" } as const
+
+/** Keeps a filter selection within the actual finding lists. */
+export const dossierFilterOf = (value: string, fallback: FindingFilter): FindingFilter =>
+    FINDING_FILTERS.find((one) => one === value) ?? fallback
+
+/** The review's status and the checklist's status when they differ. */
+export const dossierBadgesOf = (
+    t: Translate,
+    brain: ReturnType<typeof useTranslations<"secondBrain">>,
+    standing: ReviewedStatus,
+) => [
+    { id: "status", label: brain(`status_${standing.status}`), tone: DOSSIER_STATUS_TONE[standing.status] },
+    ...(standing.checklist === null
+        ? []
+        : [
+              {
+                  id: "checklist",
+                  label: t("checklistStatus", { status: brain(`status_${standing.checklist}`) }),
+                  tone: "muted" as const,
+              },
+          ]),
+]
+
+/** When the review last looked at the dossier, or that it never did. */
+export const dossierReviewedLineOf = (
+    t: Translate,
+    format: ReturnType<typeof useFormatter>,
+    review: DossierReviewRecord | undefined,
+): string =>
+    review === undefined
+        ? t("neverReviewed")
+        : t("reviewedAt", {
+              time: format.dateTime(new Date(review.reviewedAt), { dateStyle: "medium", timeStyle: "short" }),
+          })
 
 /** Where a quote sits in its document, in words: "Trang 3", "Slide 2" or the name of the sheet. */
 export const placeWordsOf = (t: Translate) => (place: EvidencePlaceView) =>

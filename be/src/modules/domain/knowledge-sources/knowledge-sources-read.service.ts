@@ -8,6 +8,8 @@ import type {
     OriginSource,
     PublicSourceExcerpt,
     PublicSourceText,
+    MaybeSourceDocument,
+    SourceState,
 } from "./knowledge-sources-read.contracts"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 
@@ -127,6 +129,58 @@ export class KnowledgeSourcesReadService {
             sizeBytes: row.sizeBytes,
             updatedAt: row.updatedAt.toISOString(),
         }))
+    }
+
+    /** The title, visibility, status and text hash of these sources of a workspace; an id that is gone is left out. */
+    async statesOf(
+        workspaceId: string,
+        sourceIds: ReadonlyArray<string>,
+        manager: EntityManager = this.entityManager,
+    ): Promise<ReadonlyArray<SourceState>> {
+        if (sourceIds.length === 0) return []
+        const rows = await manager.find(KnowledgeSourceEntity, {
+            select: { id: true, title: true, visibility: true, status: true, contentHash: true },
+            where: { workspaceId, id: In([...sourceIds]) },
+            take: sourceIds.length,
+        })
+        return rows.map((row) => ({
+            id: row.id,
+            title: row.title,
+            visibility: row.visibility,
+            status: row.status,
+            contentHash: row.contentHash,
+        }))
+    }
+
+    /** One document of a workspace with its text and lane; null when the id is not one of the workspace's. */
+    async textOf(workspaceId: string, sourceId: string): Promise<MaybeSourceDocument> {
+        const row = await this.entityManager.findOne(KnowledgeSourceEntity, {
+            select: {
+                id: true,
+                title: true,
+                visibility: true,
+                status: true,
+                contentHash: true,
+                module: true,
+                installationId: true,
+                topic: true,
+                content: true,
+            },
+            where: { workspaceId, id: sourceId },
+        })
+        return row === null
+            ? null
+            : {
+                  id: row.id,
+                  title: row.title,
+                  visibility: row.visibility,
+                  status: row.status,
+                  contentHash: row.contentHash,
+                  module: row.module,
+                  installationId: row.installationId,
+                  topic: row.topic,
+                  content: row.content,
+              }
     }
 
     /** The public, indexed documents of the workspace that every instance of the module may read. */

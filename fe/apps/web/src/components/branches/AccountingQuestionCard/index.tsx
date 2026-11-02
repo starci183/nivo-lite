@@ -1,64 +1,57 @@
 import {
     Alert,
-    Badge,
     Button,
     Cluster,
+    Fieldset,
     Form,
     Input,
     RadioGroup,
+    Section,
     Stack,
-    SurfaceCard,
     Text,
     Textarea,
 } from "@starci/grammar/common"
-import { AccountingMissingFields } from "@/components/leaves/AccountingMissingFields"
+import { DecisionMissingInputs } from "@/components/leaves/DecisionMissingInputs"
 import type { AccountingQuestionCardView } from "@/modules/types"
-/** A proposal's settled display data and bound decision actions; `isSkeleton` draws its leaves as skeleton while it is a placeholder. */
+/** A proposal's settled display data and bound decision actions, with one unresolved drawing flag. */
 interface AccountingQuestionCardProps extends AccountingQuestionCardView {
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
-/** Renders a proposal and the owner's decision without legacy office actions. */
+/** Supplies one proposal row, keeping its form and bound decision commands in the collection's detail. */
 export const AccountingQuestionCard = (props: AccountingQuestionCardProps) => {
     return (
-        <SurfaceCard label={props.props.title}>
-            <Form label={props.props.title} isPending={props.props.isBusy} onSubmit={props.on.approve}>
-                <Stack gap="section">
-                    <Cluster gap="inline">
-                        <Badge tone={props.props.statusTone} isDot isSkeleton={props.isSkeleton}>
-                            {props.props.status}
-                        </Badge>
-                    </Cluster>
-                    {props.props.explanation ? (
-                        <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
-                            {props.props.explanation}
-                        </Text>
-                    ) : null}
-                    {renderAccountingQuestionCardProposal(props)}
-                    {renderAccountingQuestionEditing(props)}
-                    {renderAccountingQuestionDetails(props)}
-                    {props.props.footer ? (
-                        <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
-                            {props.props.footer}
-                        </Text>
-                    ) : null}
-                    {props.props.error ? <Alert tone="negative" title={props.props.error} /> : null}
-                    {props.props.isOpen && !props.props.canAct ? (
-                        <Text size="sm" weight="medium">
-                            {props.props.waitingLabel}
-                        </Text>
-                    ) : null}
-                    {props.props.isOpen && props.props.canAct ? renderAccountingQuestionCardActions(props) : null}
-                    {props.props.leadHref ? (
-                        <div>
-                            <Button intent="neutral" href={props.props.leadHref}>
-                                {props.props.leadLabel}
-                            </Button>
-                        </div>
-                    ) : null}
-                </Stack>
-            </Form>
-        </SurfaceCard>
+        <Form label={props.props.title} isPending={props.props.isBusy} onSubmit={props.on.approve}>
+            <Stack gap="section">
+                {props.props.explanation ? (
+                    <Text size="sm" tone="muted" isLoading={props.isLoading}>
+                        {props.props.explanation}
+                    </Text>
+                ) : null}
+                {renderAccountingQuestionCardProposal(props)}
+                {renderAccountingQuestionEditing(props)}
+                {renderAccountingQuestionDetails(props)}
+                {props.props.footer ? (
+                    <Text size="xs" tone="muted" isLoading={props.isLoading}>
+                        {props.props.footer}
+                    </Text>
+                ) : null}
+                {props.props.error ? <Alert tone="negative" title={props.props.error} /> : null}
+                {props.props.isOpen && !props.props.canAct ? (
+                    <Text size="sm" isStrong>
+                        {props.props.waitingLabel}
+                    </Text>
+                ) : null}
+                {props.props.isOpen && props.props.canAct ? renderAccountingQuestionCardActions(props) : null}
+                {props.props.leadHref ? (
+                    <div>
+                        <Button intent="neutral" href={props.props.leadHref}>
+                            {props.props.leadLabel}
+                        </Button>
+                    </div>
+                ) : null}
+            </Stack>
+        </Form>
     )
 }
 
@@ -66,7 +59,7 @@ export const AccountingQuestionCard = (props: AccountingQuestionCardProps) => {
 const renderAccountingQuestionCardActions = (props: NonNullable<AccountingQuestionCardProps>) => (
     <Cluster gap="inline">
         {!props.props.isFailed ? (
-            <Button intent="commit" type="submit" isPending={props.props.isBusy} isSkeleton={props.isSkeleton}>
+            <Button intent="neutral" type="submit" isPending={props.props.isBusy} isLoading={props.isLoading}>
                 {props.props.approveLabel}
             </Button>
         ) : null}
@@ -77,7 +70,7 @@ const renderAccountingQuestionCardActions = (props: NonNullable<AccountingQuesti
                 type="button"
                 intent="neutral"
                 isDisabled={props.props.isBusy}
-                isSkeleton={props.isSkeleton}
+                isLoading={props.isLoading}
                 onPress={props.on.toggleEdit}
             >
                 {props.props.editLabel}
@@ -85,9 +78,9 @@ const renderAccountingQuestionCardActions = (props: NonNullable<AccountingQuesti
         ) : null}
         <Button
             type="button"
-            intent="alternative"
+            intent="neutral"
             isDisabled={props.props.isBusy}
-            isSkeleton={props.isSkeleton}
+            isLoading={props.isLoading}
             onPress={props.on.reject}
         >
             {props.props.rejectLabel}
@@ -112,14 +105,11 @@ const renderAccountingQuestionCardBasis = (props: Pick<AccountingQuestionCardPro
 
 /** Renders the AccountingQuestionCard proposal section. */
 const renderAccountingQuestionCardProposal = (props: NonNullable<AccountingQuestionCardProps>) => (
-    <div>
-        <Text size="xs" tone="muted" weight="medium" isSkeleton={props.isSkeleton}>
-            {props.props.proposalLabel}
-        </Text>
-        <Text as="p" size="sm" isSkeleton={props.isSkeleton}>
+    <Section title={props.props.proposalLabel} headingLevel={4} isLoading={props.isLoading}>
+        <Text as="p" size="sm" isLoading={props.isLoading}>
             {props.props.summary}
         </Text>
-    </div>
+    </Section>
 )
 
 /** Renders the AccountingQuestionCard amount section. */
@@ -164,13 +154,17 @@ const renderAccountingQuestionEditing = (props: AccountingQuestionCardProps) => 
 const renderAccountingQuestionDetails = (props: AccountingQuestionCardProps) => (
     <>
         {props.props.isOpen && !props.props.isFailed && props.props.fields.length ? (
-            <AccountingMissingFields
-                id={props.props.id}
-                label={props.props.missingLabel}
-                fields={props.props.fields}
-                isBusy={props.props.isBusy}
-                onChange={props.on.changeField}
-            />
+            <Fieldset legend={props.props.missingLabel} isDisabled={props.props.isBusy}>
+                <Stack gap="row">
+                    <DecisionMissingInputs
+                        idPrefix={props.props.id}
+                        fields={props.props.fields}
+                        isRequired
+                        isDisabled={props.props.isBusy}
+                        onField={props.on.changeField}
+                    />
+                </Stack>
+            </Fieldset>
         ) : null}
         {props.props.isOpen && !props.props.isFailed && props.props.reconcileCredit !== null ? (
             <div>

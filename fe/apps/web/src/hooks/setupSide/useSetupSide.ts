@@ -3,13 +3,14 @@
 import type { SetupKnowledgeCounts } from "@/hooks/agentSetup"
 import { LOADING_SESSION, useSetupGates, useSetupKnowledge, useSetupState, useSetupVersions } from "@/hooks/agentSetup"
 import { setupProgressOf } from "@/modules/setup-view"
+import { slotOfReads } from "@/hooks/slot"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { useSetupRequirements } from "@/hooks/setupRequirements"
 import { MODULE_KEYS, isModuleKey } from "@/modules/catalog"
 import { gateEntry, gateHint, gateLabel } from "@/modules/installations"
 import type { ContextVersion, SetupSession } from "@/modules/installations"
 import { KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
-import type { DataSlot, SetupSideKnowledge, SetupSideVersions, SetupSideView } from "@/modules/types"
+import type { SetupSideKnowledge, SetupSideVersions, SetupSideView } from "@/modules/types"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { PLACEHOLDER_GATES, commandsOf, setupRequirementsNoticeOf, versionsViewOf } from "./setupSide.shared"
 
@@ -26,20 +27,21 @@ export const useSetupSide = (module: string, installationId: string) => {
     const format = useFormatter()
     const moduleKey = isModuleKey(module) ? module : MODULE_KEYS[0]
     const catalog = useModuleCatalog()
-    const { slot, reload } = useSetupState(installationId)
+    const state = useSetupState(installationId)
+    const { slot, reload } = state
     const versionsSlot = useSetupVersions(installationId)
     const unmet = useSetupRequirements(moduleKey)
     const knowledgeSlot = useSetupKnowledge(moduleKey, installationId)
-    const counts = knowledgeSlot.items ?? null
-    const isLoading =
-        slot.items === undefined ||
-        catalog.slot.items === undefined ||
-        counts === null ||
-        versionsSlot.isLoading === true
-    const session = slot.items?.session ?? LOADING_SESSION
+    const counts = ("items" in knowledgeSlot ? knowledgeSlot.items : undefined) ?? null
+    const reads = [state.read, catalog.read, knowledgeSlot.read, versionsSlot.read]
+    const isLoading = reads.some((read) => read.data === undefined && read.isLoading)
+    const session = ("items" in slot ? slot.items : undefined)?.session ?? LOADING_SESSION
     const gatesState = useSetupGates(session.id, installationId)
-    const versions = versionsSlot.items?.versions ?? NO_VERSIONS
-    const activeVersionId = versionsSlot.items?.activeVersionId ?? slot.items?.instance.activeVersionId ?? null
+    const versions = ("items" in versionsSlot ? versionsSlot.items : undefined)?.versions ?? NO_VERSIONS
+    const activeVersionId =
+        ("items" in versionsSlot ? versionsSlot.items : undefined)?.activeVersionId ??
+        ("items" in slot ? slot.items : undefined)?.instance.activeVersionId ??
+        null
     const progress = setupProgressOf(
         moduleKey,
         session,
@@ -80,7 +82,7 @@ export const useSetupSide = (module: string, installationId: string) => {
         knowledge: knowledgeOf(t, counts, moduleKey),
         versions: versionsViewOf(versionsOf(t, versions, format, activeVersionId), isLoading),
     }
-    const sideSlot = sideSlotOf(view, [slot, catalog.slot, knowledgeSlot, versionsSlot], isLoading)
+    const sideSlot = slotOfReads(reads, () => view)
     return {
         slot: sideSlot,
         placeholder: view,
@@ -107,17 +109,6 @@ const setupOf = (
     isApplying: gatesState.isApplying,
     apply: gatesState.apply,
 })
-
-/** The side column as one slot: a failed or forbidden read shows as such, any read still in flight as loading, else the view. */
-const sideSlotOf = (
-    view: SetupSideView,
-    reads: ReadonlyArray<DataSlot<unknown>>,
-    isLoading: boolean,
-): DataSlot<SetupSideView> => {
-    if (reads.some((read) => read.isForbidden === true)) return { isForbidden: true }
-    if (reads.some((read) => read.isError === true)) return { isError: true }
-    return isLoading ? { isLoading: true } : { items: view }
-}
 
 /** Resolves the gates labels for the current locale. */
 const gatesLabelsOf = (t: ReturnType<typeof useTranslations<"moduleSetup">>) => ({

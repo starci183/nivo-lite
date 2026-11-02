@@ -125,7 +125,7 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | `READY_OWNER_PASSWORD` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
 | `READY_STAFF_EMAIL` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
 | `READY_STAFF_PASSWORD` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
-| `WORKSPACE_SEED_INPUT` | `test-accounts` | Private ensure input (owner, manager, staff accounts and workspace name) the **seed demo workspace** workflow (`.github/workflows/cli-deploy.yml`) hands to `cli seed-workspace profile` as `WORKSPACE_SEED_INPUT_FILE`. |
+| `WORKSPACE_SEED_INPUT` | `test-accounts` | Private explicit workspace access input. The managed `ensure-workspace` and `verify-workspace` tasks read it as `WORKSPACE_SEED_INPUT_FILE`; the profile workflow uses the same input contract. See the production runbook's "Workspace access" procedure. |
 | `WORKSPACE_PROFILE_INPUT` | `test-accounts` | Private profile input `{"schema":"nivo/workspace-profile-input@1","connectors":{"hakuen":{"url":"https://..."}}}`: the endpoint of each remote MCP connector the profile registers. The same workflow hands it to `cli seed-workspace profile` as `WORKSPACE_PROFILE_INPUT_FILE`; a dry run refuses when a connector endpoint is missing. |
 | `privateKey` | `vps` | The operator SSH key (`starci app stack` reads it from the member `deploy.remote.sealed.sshKey` names). |
 | `knownHosts` | `vps` | The pinned host keys (`starci app stack` reads them from the member `deploy.remote.sealed.knownHosts` names). |

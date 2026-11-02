@@ -1,5 +1,4 @@
-import { Button } from "@starci/grammar/common"
-import { FILTER_ROW_CLASS_NAME } from "./classNames"
+import { FilterButtonGroup } from "@starci/grammar/common"
 
 /** One filter: what it is called and how many items it keeps. */
 export interface FilterButtonView {
@@ -17,22 +16,13 @@ interface FilterButtonsProps {
     readonly onValueChange: (id: string) => void
 }
 
-/**
- * One row of filters, each a small button that is pressed while it is the one on. This is the one place the app draws a filter
- * row of buttons: until the grammar ships a `FilterButtonGroup`, the swap is this file alone.
- */
+/** Adapts the app's filter identities to the grammar's one-row, keyboard-controlled filter group. */
 export const FilterButtons = (props: FilterButtonsProps) => (
-    <div role="group" aria-label={props.label} className={FILTER_ROW_CLASS_NAME}>
-        {props.options.map((option) => (
-            <Button
-                key={option.id}
-                size="sm"
-                intent="neutral"
-                aria-pressed={option.id === props.value}
-                onPress={() => props.onValueChange(option.id)}
-            >
-                {option.label}
-            </Button>
-        ))}
-    </div>
+    <FilterButtonGroup
+        label={props.label}
+        options={props.options.map((option) => ({ value: option.id, label: option.label }))}
+        value={props.value}
+        onValueChange={props.onValueChange}
+        searchLabel={props.label}
+    />
 )

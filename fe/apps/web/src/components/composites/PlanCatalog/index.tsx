@@ -3,21 +3,15 @@ import {
     Badge,
     Button,
     NumberField,
-    SectionHeader,
+    Cluster,
+    EmptyNotice,
+    Section,
+    Stack,
     SegmentedControl,
     Select,
-    SurfaceCard,
     Text,
 } from "@starci/grammar/common"
-import {
-    BADGES_CLASS_NAME,
-    CARD_CLASS_NAME,
-    CATALOG_CLASS_NAME,
-    FACTS_CLASS_NAME,
-    GRID_CLASS_NAME,
-    GROUP_CLASS_NAME,
-    PRICE_CLASS_NAME,
-} from "./classNames"
+import type { ListRowData } from "@starci/grammar/common"
 import type { PlanCardView, PlanGroupView } from "@/modules/types"
 
 interface PlanCatalogProps {
@@ -39,12 +33,11 @@ interface PlanCatalogProps {
     }
 }
 
-/** Draws the plans: the billing cycle toggle, then Individual, Team and Enterprise with their usage tiers, seats and actions. */
+/** Plans are equal comparison rows; the billing-cycle field and every purchase control keep their behavior. */
 export const PlanCatalog = (props: PlanCatalogProps) => {
     const view = props.props
     return (
-        <div className={CATALOG_CLASS_NAME}>
-            <SectionHeader level={2} title={view.title} description={view.text} />
+        <Section title={view.title} description={view.text}>
             {view.notice ? <Alert tone="informative" title={view.notice} /> : null}
             {view.storage ? (
                 <Text size="sm" tone="muted">
@@ -58,95 +51,86 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
                 onValueChange={props.on.setCycle}
             />
             {view.groups.map((group) => (
-                <div key={group.id} className={GROUP_CLASS_NAME}>
-                    <SectionHeader level={3} title={group.title} description={group.text} />
-                    <div className={GRID_CLASS_NAME}>
-                        {group.cards.map((card) => (
-                            <SurfaceCard key={card.id} label={card.name} headingLevel={4} isHighlight={card.isCurrent}>
-                                <div className={CARD_CLASS_NAME}>
-                                    {renderPlanCatalogPrice(card)}
-                                    {card.badges.length > 0 ? (
-                                        <div className={BADGES_CLASS_NAME}>
-                                            {card.badges.map((badge) => (
-                                                <Badge key={badge.label} tone={badge.tone}>
-                                                    {badge.label}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    ) : null}
-                                    {card.tier ? (
-                                        <Select
-                                            label={card.tier.label}
-                                            options={card.tier.options}
-                                            value={card.tier.value}
-                                            onValueChange={(value) => {
-                                                if (value !== null) props.on.setTier(card.id, value)
-                                            }}
-                                        />
-                                    ) : null}
-                                    {card.seats ? (
-                                        <NumberField
-                                            label={card.seats.label}
-                                            value={card.seats.value}
-                                            minValue={1}
-                                            maxValue={card.seats.max}
-                                            step={1}
-                                            onValueChange={props.on.setSeats}
-                                        />
-                                    ) : null}
-                                    <div className={FACTS_CLASS_NAME}>
-                                        {card.facts.map((fact) => (
-                                            <Text key={fact} size="sm">
-                                                {fact}
-                                            </Text>
-                                        ))}
-                                    </div>
-                                    {card.action.kind === "contact"
-                                        ? renderPlanCatalogContactAction(card)
-                                        : renderPlanCatalogCheckoutAction(card, props)}
-                                </div>
-                            </SurfaceCard>
-                        ))}
-                    </div>
-                </div>
+                <Section
+                    key={group.id}
+                    kind="list"
+                    title={group.title}
+                    description={group.text}
+                    headingLevel={3}
+                    items={group.cards.map((card) => planItemOf(card, props))}
+                    empty={<EmptyNotice message={group.title} />}
+                />
             ))}
-        </div>
+        </Section>
     )
 }
 
-/** Renders the PlanCatalog price section. */
-const renderPlanCatalogPrice = (card: Pick<PlanCardView, "isPriceLoading" | "price" | "notes">) => (
-    <div className={PRICE_CLASS_NAME}>
-        <Text size="metric-lead" weight="semibold" isSkeleton={card.isPriceLoading}>
-            {card.price}
-        </Text>
-        {card.notes.map((note) => (
-            <Text key={note} size="sm" tone="muted">
-                {note}
-            </Text>
-        ))}
-    </div>
-)
-
-/** Renders the PlanCatalog contact action section. */
-const renderPlanCatalogContactAction = (card: Pick<PlanCardView, "action">) => (
-    <div>
-        <Button intent="neutral" href={card.action.href} target="_blank" rel="noopener noreferrer">
-            {card.action.label}
-        </Button>
-    </div>
-)
-
-/** Renders the PlanCatalog checkout action section. */
-const renderPlanCatalogCheckoutAction = (card: Pick<PlanCardView, "action" | "id">, props: PlanCatalogProps) => (
-    <div>
-        <Button
-            intent="commit"
-            isPending={card.action.isPending}
-            isDisabled={card.action.isDisabled}
-            onPress={() => props.on.choose(card.id)}
-        >
-            {card.action.label}
-        </Button>
-    </div>
-)
+/** Price, current-plan badges, seats, tier and entitlements stay together under the plan's row. */
+const planItemOf = (card: PlanCardView, props: PlanCatalogProps): ListRowData => ({
+    id: card.id,
+    title: card.name,
+    detail: (
+        <Stack gap="row">
+            <Stack gap="identity">
+                <Text isStrong isLoading={card.isPriceLoading}>
+                    {card.price}
+                </Text>
+                {card.notes.map((note) => (
+                    <Text key={note} size="sm" tone="muted">
+                        {note}
+                    </Text>
+                ))}
+            </Stack>
+            {card.badges.length === 0 ? null : (
+                <Cluster gap="inline">
+                    {card.badges.map((badge) => (
+                        <Badge key={badge.label} tone={badge.tone}>
+                            {badge.label}
+                        </Badge>
+                    ))}
+                </Cluster>
+            )}
+            {card.tier ? (
+                <Select
+                    label={card.tier.label}
+                    options={card.tier.options}
+                    value={card.tier.value}
+                    onValueChange={(value) => {
+                        if (value !== null) props.on.setTier(card.id, value)
+                    }}
+                />
+            ) : null}
+            {card.seats ? (
+                <NumberField
+                    label={card.seats.label}
+                    value={card.seats.value}
+                    minValue={1}
+                    maxValue={card.seats.max}
+                    step={1}
+                    onValueChange={props.on.setSeats}
+                />
+            ) : null}
+            <Stack gap="identity">
+                {card.facts.map((fact) => (
+                    <Text key={fact} size="sm">
+                        {fact}
+                    </Text>
+                ))}
+            </Stack>
+            {card.action.kind === "contact" ? (
+                <Button intent="neutral" href={card.action.href} target="_blank" rel="noopener noreferrer">
+                    {card.action.label}
+                </Button>
+            ) : (
+                <Button
+                    intent="neutral"
+                    isPending={card.action.isPending}
+                    isDisabled={card.action.isDisabled}
+                    onPress={() => props.on.choose(card.id)}
+                >
+                    {card.action.label}
+                </Button>
+            )}
+        </Stack>
+    ),
+})

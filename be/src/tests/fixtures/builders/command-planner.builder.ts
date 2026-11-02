@@ -1,5 +1,7 @@
 import { builder, mock } from "@starci/jest-preset"
-import type { ModuleEntry, SendCommandInput, WorkContext, WorkItem } from "@modules/domain/decisions"
+import type { ModuleCatalogService, SendCommandInput, WorkContext, WorkItem } from "@modules/domain/decisions"
+
+type ModuleEntry = NonNullable<Awaited<ReturnType<ModuleCatalogService["entryOf"]>>>
 
 /** The workspace context shared by command planner scenarios. */
 export const ctx: WorkContext = { workspaceId: "ws-1", actor: "An", locale: "en" }

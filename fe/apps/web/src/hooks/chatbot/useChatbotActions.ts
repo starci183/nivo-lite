@@ -38,7 +38,7 @@ const noticeOf = (t: ChatbotTranslator, kind: "reply" | "answer", declined: bool
 }
 
 /** Queues replies and decisions, then follows durable GraphQL status. Browser-lifetime locks survive workspace and installation changes. */
-export const useChatbotActions = (workspaceId: string, userId: string) => {
+export const useChatbotActions = (workspaceId: string, userId: string, isActive = true) => {
     const t = useTranslations("workbenchChatbot")
     const locale = useLocale()
     const runGraphQL = useGraphQLWithToast()
@@ -65,8 +65,8 @@ export const useChatbotActions = (workspaceId: string, userId: string) => {
     }
 
     const followed = { onSuccess: settle, onError: reportReadError }
-    useQueryChatReplyStatusSwr(workspaceId, job?.kind === "reply" ? job.id : undefined, followed)
-    useQueryChatAnswerStatusSwr(workspaceId, job?.kind === "answer" ? job.id : undefined, followed)
+    useQueryChatReplyStatusSwr(workspaceId, isActive && job?.kind === "reply" ? job.id : undefined, followed)
+    useQueryChatAnswerStatusSwr(workspaceId, isActive && job?.kind === "answer" ? job.id : undefined, followed)
 
     const sendReply = async (conversationId: string, body: string): Promise<boolean> => {
         if (userId === "" || !useChatbotStore.getState().start(identity, "reply")) return false

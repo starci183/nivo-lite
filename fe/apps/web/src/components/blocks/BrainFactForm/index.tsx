@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { SCOPE_KEY, TYPE_KEY, useBrainCommand, useBrainForm, useFactForm } from "@/hooks/brain"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref } from "@/modules/routes"
+import { toast } from "@/modules/toast"
 import type { BrainTab } from "@/modules/routes"
 import { FACT_SUBJECT_TYPES } from "@/modules/types"
 import type { FactScope, FactSubjectType } from "@/modules/types"
@@ -31,6 +32,7 @@ const scopeOf = (value: string, fallback: FactScope): FactScope => SCOPES.find((
 /** The connected fact form: reads what the address asks for, opens and closes through the address and sends the fact to the back end as a mutation. */
 export const BrainFactForm = (props: BrainFactFormProps) => {
     const t = useTranslations("brain")
+    const feedback = useTranslations("toast")
     const router = navigation.useRouter()
     const address = useBrainForm(props)
     const form = useFactForm(address.editing, address.preset, address.formKey)
@@ -38,7 +40,9 @@ export const BrainFactForm = (props: BrainFactFormProps) => {
     const close = () => router.replace(brainTabHref(props.tab))
     const submit = () => {
         if (!form.isComplete) return
-        command.send("fact.save", form.payload(address.preset?.gapId), { onResult: close })
+        command.send("fact.save", form.payload(address.preset?.gapId), { onResult: close }).catch(() => {
+            toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+        })
     }
     const { state } = form
     if (!address.canWrite) return null

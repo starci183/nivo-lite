@@ -1,26 +1,35 @@
-import { VideoStepFooterBase } from "./component"
-
+import { Button, Text, Cluster } from "@starci/grammar/common"
 interface VideoStepFooterProps {
     readonly backLabel: string
     readonly nextLabel: string
-    /** A short note beside the next action, for example the estimated length. */
     readonly note?: string | null
     readonly pending: boolean
     readonly nextDisabled: boolean
+    readonly isLoading?: boolean
     readonly onBack: () => void
     readonly onNext: () => void
 }
-
-/** The footer of a wizard step: back, an optional note and the next action. */
+/** The existing footer anatomy now lives at its actual leaf owner. */
 export const VideoStepFooter = (props: VideoStepFooterProps) => (
-    <VideoStepFooterBase
-        props={{
-            backLabel: props.backLabel,
-            nextLabel: props.nextLabel,
-            note: props.note ?? null,
-            pending: props.pending,
-            nextDisabled: props.nextDisabled,
-        }}
-        on={{ back: props.onBack, next: props.onNext }}
-    />
+    <Cluster gap="inline" justify="between">
+        <Button intent="neutral" isDisabled={props.pending} isLoading={props.isLoading ?? false} onPress={props.onBack}>
+            {props.backLabel}
+        </Button>
+        <Cluster gap="inline">
+            {props.note === null || props.note === undefined ? null : (
+                <Text as="span" size="sm" tone="muted" isLoading={props.isLoading ?? false}>
+                    {props.note}
+                </Text>
+            )}
+            <Button
+                intent="commit"
+                isPending={props.pending}
+                isDisabled={props.nextDisabled}
+                isLoading={props.isLoading ?? false}
+                onPress={props.onNext}
+            >
+                {props.nextLabel}
+            </Button>
+        </Cluster>
+    </Cluster>
 )

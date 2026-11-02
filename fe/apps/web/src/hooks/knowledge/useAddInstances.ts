@@ -27,6 +27,6 @@ export const useAddInstances = (): AddInstances => {
     const { installations } = useModuleInstallations()
     return {
         canWrite: member.canWrite,
-        instances: slot.isLoading === true ? [] : instanceOptions(installations ?? [], moduleNames),
+        instances: "isLoading" in slot ? [] : instanceOptions(installations ?? [], moduleNames),
     }
 }

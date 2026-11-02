@@ -16,6 +16,7 @@ import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions } from "@modules/domain/identity"
 import { LivenessModule } from "@modules/domain/liveness"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
+import { McpCallLogModule } from "@modules/domain/mcp-call-log"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { CUSTOMER_TOOL_ADAPTERS, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
@@ -105,6 +106,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     DataRecordsModule.register({ isGlobal: true }),
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     ...mcpKnowledgeModules(options),
+    McpCallLogModule.register({ isGlobal: true }),
     McpGatewayModule.register({
         isGlobal: true,
         ...options.mcpGateway,

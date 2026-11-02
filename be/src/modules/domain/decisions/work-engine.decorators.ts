@@ -1,3 +1,4 @@
+import { WORK_ITEM_CLOSED } from "@modules/domain/work-items"
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type {
@@ -8,6 +9,7 @@ import type {
     OutboundAccessGate,
     ThreadWorkHistory,
     WorkChainsHistory,
+    WorkItemClosedHook,
     WorkThreadsHistory,
 } from "./work-engine.port"
 
@@ -64,3 +66,7 @@ export const InjectWorkChainsHistory = (): TypedParameterDecorator<WorkChainsHis
 /** Injects the work threads history port. Parameter type: WorkThreadsHistory. */
 export const InjectWorkThreadsHistory = (): TypedParameterDecorator<WorkThreadsHistory> =>
     injector<WorkThreadsHistory>(WORK_THREADS_HISTORY)
+
+/** Injects the closed-item hook. Parameter type: WorkItemClosedHook. */
+export const InjectWorkItemClosed = (): TypedParameterDecorator<WorkItemClosedHook> =>
+    injector<WorkItemClosedHook>(WORK_ITEM_CLOSED)

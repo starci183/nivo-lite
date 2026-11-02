@@ -1,11 +1,12 @@
+import type { ContentViews } from "@/modules/types"
 import { Button, Cluster, Text } from "@starci/grammar/common"
-import type { ContentT } from "@/modules/types"
 
 /** Props of {@link ContentMonthBar}. */
 interface ContentMonthBarProps {
     /** The month title, already formatted. */
     readonly title: string
-    readonly t: ContentT
+    readonly isLoading: boolean
+    readonly copy: ContentViews["workbenchCopy"]
     /** Moves the month by -1 or +1. */
     readonly onShift: (by: number) => void
     /** Goes back to the current month. */
@@ -15,15 +16,17 @@ interface ContentMonthBarProps {
 /** Previous month, the month title, next month and "today". */
 export const ContentMonthBar = (props: ContentMonthBarProps) => (
     <Cluster gap="inline">
-        <Button intent="neutral" size="sm" onPress={() => props.onShift(-1)}>
-            {props.t("prevMonth")}
+        <Button isLoading={props.isLoading} intent="neutral" size="sm" onPress={() => props.onShift(-1)}>
+            {props.copy.prevMonth}
         </Button>
-        <Text weight="semibold">{props.title}</Text>
-        <Button intent="neutral" size="sm" onPress={() => props.onShift(1)}>
-            {props.t("nextMonth")}
+        <Text isLoading={props.isLoading} isStrong>
+            {props.title}
+        </Text>
+        <Button isLoading={props.isLoading} intent="neutral" size="sm" onPress={() => props.onShift(1)}>
+            {props.copy.nextMonth}
         </Button>
-        <Button intent="neutral" size="sm" onPress={props.onToday}>
-            {props.t("today")}
+        <Button isLoading={props.isLoading} intent="neutral" size="sm" onPress={props.onToday}>
+            {props.copy.today}
         </Button>
     </Cluster>
 )

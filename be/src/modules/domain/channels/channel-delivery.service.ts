@@ -1,23 +1,31 @@
 import { Injectable } from "@nestjs/common"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { ConversationTarget } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentMessagesService, DELIVERY_OUTCOME_UNKNOWN } from "@modules/domain/agent-messages"
 import { ConnectionSecretReadsService } from "@modules/domain/connections"
-import { InjectTelegram } from "@modules/integrations/telegram"
+import { InjectTelegram, TelegramError, TelegramErrorCode } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
 import { InjectZalo } from "@modules/integrations/zalo"
 import type { ZaloClient } from "@modules/integrations/zalo"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectChannelSenderRegistry } from "./channels.decorators"
-import type { ChannelSenderRegistry, DeliveryRequest, DeliveryResult, PersonMessage } from "./channels.contracts"
+import type { ChannelSenderRegistry, DeliveryRequest, DeliveryReceipt, PersonMessage } from "./channels.contracts"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { ZaloDeliveryService } from "./zalo-delivery.service"
 
-const DELIVERED: DeliveryResult = { delivered: true, failure: null }
-const NOT_DELIVERED: DeliveryResult = { delivered: false, failure: null }
+const DELIVERED: DeliveryReceipt = { delivered: true, failure: null, outcome: "acknowledged" }
+const NOT_DELIVERED: DeliveryReceipt = { delivered: false, failure: null, outcome: "rejected" }
+const UNKNOWN: DeliveryReceipt = { delivered: false, failure: null, outcome: "ambiguous" }
+
+/** The stored delivery failure keeps an uncertain remote receipt fenced; a definite refusal alone may retry. */
+const deliveryErrorOf = (receipt: DeliveryReceipt): string | undefined => {
+    if (receipt.delivered) return undefined
+    if (receipt.outcome === "ambiguous") return DELIVERY_OUTCOME_UNKNOWN
+    return receipt.failure === null || receipt.failure === "zalo_error" ? "delivery_rejected" : receipt.failure
+}
 
 /** Archived conversations carry `<chat id>:<timestamp>`; the customer's id on the channel is the part before the colon. */
 const customerIdOf = (externalId: string): string => {
@@ -54,11 +62,28 @@ export class ChannelDeliveryService {
     ) {}
 
     /** Sends the reply on the conversation's channel and records the verdict on the stored message. */
-    async deliver(request: DeliveryRequest): Promise<DeliveryResult> {
+    async deliver(request: DeliveryRequest): Promise<DeliveryReceipt> {
         const target = await this.conversations.targetOf(request.conversationId)
         if (target.kind !== "ok") return NOT_DELIVERED
-        const result = await this.send(target.value, request)
-        await this.messages.markDelivery(request.messageId, result.delivered, result.failure ?? undefined)
+        const message = await this.messages.find(request.messageId, request.conversationId)
+        if (message.kind !== "ok") return NOT_DELIVERED
+        if (target.value.channel !== "website") {
+            const claim = await this.messages.claimDelivery(request.messageId, request.conversationId)
+            if (claim === "acknowledged") return DELIVERED
+            if (claim === "ambiguous") return UNKNOWN
+            if (claim === "missing") return NOT_DELIVERED
+        }
+        let result: DeliveryReceipt
+        try {
+            result = await this.send(target.value, { ...request, text: message.value.body })
+        } catch (cause) {
+            if (cause instanceof ChannelsError && cause.code === ChannelsErrorCode.ZaloRefreshBusy) {
+                await this.messages.markDelivery(request.messageId, false, "delivery_rejected")
+                throw cause
+            }
+            result = this.failed(target.value, cause)
+        }
+        await this.messages.markDelivery(request.messageId, result.delivered, deliveryErrorOf(result))
         return result
     }
 
@@ -101,34 +126,37 @@ export class ChannelDeliveryService {
         await this.telegram.sendMessage(token.value, request.recipientId, request.text)
     }
 
-    private async send(target: ConversationTarget, request: DeliveryRequest): Promise<DeliveryResult> {
+    private async send(target: ConversationTarget, request: DeliveryRequest): Promise<DeliveryReceipt> {
         if (target.channel === "website") return DELIVERED
         if (target.channel === "zalo") {
             const userId = target.externalId === null ? null : customerIdOf(target.externalId)
-            return this.zaloDelivery.send(target, userId, request)
+            const result = await this.zaloDelivery.send(target, userId, request)
+            return { ...result, outcome: result.outcome ?? (result.delivered ? "acknowledged" : "ambiguous") }
         }
         const sender = this.senders.get(target.channel)
-        if (sender !== undefined) return { delivered: await sender.send(target, request.text), failure: null }
+        if (sender !== undefined) {
+            const sent = await sender.send(target, request.text)
+            return sent ? DELIVERED : UNKNOWN
+        }
         if (target.channel !== "telegram" || target.externalId === null) return NOT_DELIVERED
         return this.sendTelegram(target, target.externalId, request.text)
     }
 
-    private async sendTelegram(target: ConversationTarget, externalId: string, text: string): Promise<DeliveryResult> {
+    private async sendTelegram(target: ConversationTarget, externalId: string, text: string): Promise<DeliveryReceipt> {
         if (target.connectionId === null) return NOT_DELIVERED
         const token = await this.secrets.botToken(target.workspaceId, target.connectionId)
-        if (token.kind !== "ok")
-            return this.failed(target, new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound }))
+        if (token.kind !== "ok") return NOT_DELIVERED
         return this.telegram.sendMessage(token.value, customerIdOf(externalId), text).then(
             () => DELIVERED,
             (cause: unknown) => this.failed(target, cause),
         )
     }
 
-    private failed(target: ConversationTarget, cause: unknown): DeliveryResult {
+    private failed(target: ConversationTarget, cause: unknown): DeliveryReceipt {
         this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, {
             conversationId: target.id,
             channel: target.channel,
         })
-        return NOT_DELIVERED
+        return cause instanceof TelegramError && cause.code === TelegramErrorCode.Rejected ? NOT_DELIVERED : UNKNOWN
     }
 }

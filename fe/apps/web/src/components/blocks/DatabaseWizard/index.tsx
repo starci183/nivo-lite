@@ -1,8 +1,10 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
 import { useFormatter, useTranslations } from "next-intl"
-import { agentChoicesOf, resumeSlotOfLoading } from "@/hooks/connection-wizard"
-import { useSlotLabels } from "@/hooks/slot"
+import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import {
     DB_ENGINES,
     DB_ENTITIES,
@@ -20,6 +22,8 @@ import type { DatabaseWizardBaseProps } from "./component"
 
 /** What the board hands the database wizard. */
 interface DatabaseWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** Workspace agents (any module): every agent may be given read access to the data. */
     readonly agents: ReadonlyArray<AgentOption>
     /** Continue or edit this existing connection instead of creating a new one. */
@@ -42,7 +46,9 @@ export const DatabaseWizard = (props: DatabaseWizardProps) => {
     return (
         <DatabaseWizardBase
             props={{
-                resume: resumeSlotOfLoading(wizard.isLoading, wizard.loadError),
+                resume: slotOfReads([...props.dependencyReads, ...wizard.reads], () => ({
+                    isResumed: props.resumeId !== undefined,
+                })),
                 slotLabels: { ...slotLabelsOf(""), ...(wizard.loadError === null ? {} : { error: wizard.loadError }) },
                 title: t("title"),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: DB_STEPS.length }),

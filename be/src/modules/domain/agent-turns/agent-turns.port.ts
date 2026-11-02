@@ -1,4 +1,4 @@
-import type { AgentTurnRequest, AgentTurnResult, GraphIntent } from "./agent-turns.contracts"
+import type { AgentTurnRequest, AgentTurnResult, IntentFileBundle, IntentFileRef } from "./agent-turns.contracts"
 
 /** The replaceable seam under the executor: runs one turn on the runtime. */
 export interface AgentTurnRunner {
@@ -8,8 +8,8 @@ export interface AgentTurnRunner {
     run(request: AgentTurnRequest, signal: AbortSignal): Promise<AgentTurnResult>
 }
 
-/** What the action graph lets an agent ask for (owner: the action graph, bound at the app root). */
-export interface AgentGraphBrief {
-    /** The intents the active version of the agent's graph allows; none for an agent with no graph. */
-    intentsOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphIntent>>
+/** What the files of a customer's message or a colleague's tag add to a turn (owner: the chat files, bound at the app root). */
+export interface IntentFiles {
+    /** The read of the files of a message, and the files; nothing when it holds none. */
+    of(ref: IntentFileRef): Promise<IntentFileBundle>
 }

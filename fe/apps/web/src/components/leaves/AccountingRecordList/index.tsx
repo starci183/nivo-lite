@@ -1,6 +1,6 @@
-import { Badge, Cluster, EmptyNotice, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import { Cluster, EmptyNotice, Stack, SurfaceCard, Text, type ListRowData } from "@starci/grammar/common"
 
-/** One status mark on a row. */
+/** One operational status carried by a record. */
 interface AccountingRecordBadge {
     readonly id: string
     readonly label: string
@@ -8,7 +8,7 @@ interface AccountingRecordBadge {
     readonly isDot: boolean
 }
 
-/** One record of a list: who or what, a supporting line, up to two status marks, the amount and a footnote. */
+/** The settled amount, source and status of one accounting record. */
 interface AccountingRecord {
     readonly id: string
     readonly title: string
@@ -18,56 +18,58 @@ interface AccountingRecord {
     readonly footnote: string
 }
 
-/** A titled list of records with its empty state; a row opens its detail when the list is given a way to open it. */
+/** The record rows of a bounded panel, with an optional command opening their details. */
 interface AccountingRecordListProps {
     readonly label: string
     readonly empty: string
     readonly emptyBody: string
     readonly records: ReadonlyArray<AccountingRecord>
     readonly onOpen?: ((id: string) => void) | undefined
-    /** The rows are placeholders: drawn as the ready rows, with skeleton leaves. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
-/** A collection of money records as rows: name, supporting line, status marks, amount and footnote. */
-export const AccountingRecordList = (props: AccountingRecordListProps) => (
-    <SurfaceListCard
-        ariaLabel={props.label}
-        empty={<EmptyNotice message={props.empty} description={props.emptyBody} />}
-    >
-        {props.records.map((record) => (
-            <ListRow
-                key={record.id}
-                title={
-                    props.onOpen === undefined ? (
-                        record.title
-                    ) : (
-                        <TextAction isSkeleton={props.isSkeleton} onPress={() => props.onOpen?.(record.id)}>
-                            {record.title}
-                        </TextAction>
-                    )
-                }
-                isSkeleton={props.isSkeleton}
-                description={record.description}
-                badges={
-                    <>
-                        {record.badges.map((badge) => (
-                            <Badge key={badge.id} tone={badge.tone} isDot={badge.isDot} isSkeleton={props.isSkeleton}>
-                                {badge.label}
-                            </Badge>
-                        ))}
-                    </>
-                }
-            >
+/** Keeps opening a record as a native row command, with its amount and source in the detail. */
+const accountingRecordItemOf = (
+    record: AccountingRecord,
+    isLoading: boolean,
+    onOpen?: (id: string) => void,
+): ListRowData => {
+    const [status, exception, ...facts] = record.badges
+    let badges: ListRowData["badges"]
+    if (status !== undefined) badges = exception === undefined ? [status] : [status, exception]
+    return {
+        id: record.id,
+        title: record.title,
+        description: record.description,
+        ...(badges === undefined ? {} : { badges }),
+        ...(onOpen === undefined ? {} : { action: { label: record.title, press: () => onOpen(record.id) } }),
+        detail: (
+            <Stack gap="inline">
+                {facts.map((fact) => (
+                    <Text key={fact.id} size="xs" tone="muted" isLoading={isLoading}>
+                        {fact.label}
+                    </Text>
+                ))}
                 <Cluster gap="inline" align="baseline" justify="between">
-                    <Text weight="semibold" isSkeleton={props.isSkeleton}>
+                    <Text isStrong isLoading={isLoading}>
                         {record.amount}
                     </Text>
-                    <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
+                    <Text size="xs" tone="muted" isLoading={isLoading}>
                         {record.footnote}
                     </Text>
                 </Cluster>
-            </ListRow>
-        ))}
-    </SurfaceListCard>
+            </Stack>
+        ),
+    }
+}
+
+/** The bounded record collection for callers that have no collection owner of their own. */
+export const AccountingRecordList = (props: AccountingRecordListProps) => (
+    <SurfaceCard
+        kind="list"
+        ariaLabel={props.label}
+        isLoading={props.isLoading === true}
+        empty={<EmptyNotice message={props.empty} description={props.emptyBody} />}
+        items={props.records.map((record) => accountingRecordItemOf(record, props.isLoading, props.onOpen))}
+    />
 )

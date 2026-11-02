@@ -1,13 +1,12 @@
-import { Button, Disclosure, Form, Input, Select, Textarea } from "@starci/grammar/common"
+import { Button, Disclosure, Form, Input, Select, Textarea, Cluster, Stack } from "@starci/grammar/common"
 import {
     KNOWLEDGE_ROWS_PLACEHOLDER,
     KnowledgeRowList,
     KnowledgeRowsSection,
     rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
-import type { KnowledgeListView } from "@/components/composites/KnowledgeRows"
+import type { KnowledgeListView } from "@/modules/types"
 import { SlotView } from "@/components/composites/SlotView"
-import { FORM_CLASS_NAME, MINE_CLASS_NAME } from "./classNames"
 
 /** The words and values of the part that studies corrections and writes a lesson by hand. */
 interface WriteView {
@@ -42,6 +41,7 @@ export interface BrainLessonsBaseProps {
         readonly mine: () => void
         readonly save: () => void
         readonly retry: () => void
+        readonly action: (rowId: string, actionId: string) => void
     }
 }
 
@@ -54,7 +54,7 @@ interface WritePartProps {
 /** Draws the choice of an agent, the button that studies its corrections and the form that writes a lesson by hand. */
 const WritePart = (props: WritePartProps) => (
     <>
-        <div className={MINE_CLASS_NAME}>
+        <Cluster gap="row" align="end">
             <Select
                 label={props.view.agentLabel}
                 name="agent"
@@ -67,43 +67,46 @@ const WritePart = (props: WritePartProps) => (
             <Button intent="neutral" isPending={props.view.isPending} onPress={props.on.mine}>
                 {props.view.mineLabel}
             </Button>
-        </div>
-        <Disclosure title={props.view.addTitle}>
-            <Form label={props.view.addTitle} onSubmit={props.on.save} isPending={props.view.isPending}>
-                <div className={FORM_CLASS_NAME}>
-                    <Input
-                        id="brain-lesson-title"
-                        name="title"
-                        label={props.view.titleLabel}
-                        isRequired
-                        value={props.view.lessonTitle}
-                        isDisabled={props.view.isPending}
-                        onValueChange={props.on.setLessonTitle}
-                    />
-                    <Textarea
-                        id="brain-lesson-body"
-                        name="body"
-                        label={props.view.bodyLabel}
-                        rows={3}
-                        isRequired
-                        value={props.view.lessonBody}
-                        isDisabled={props.view.isPending}
-                        onValueChange={props.on.setLessonBody}
-                    />
-                    <Input
-                        id="brain-lesson-when"
-                        name="appliesWhen"
-                        label={props.view.whenLabel}
-                        value={props.view.lessonWhen}
-                        isDisabled={props.view.isPending}
-                        onValueChange={props.on.setLessonWhen}
-                    />
-                    <Button intent="commit" type="submit" isPending={props.view.isPending}>
-                        {props.view.saveLabel}
-                    </Button>
-                </div>
-            </Form>
-        </Disclosure>
+        </Cluster>
+        <Disclosure
+            title={props.view.addTitle}
+            body={
+                <Form label={props.view.addTitle} onSubmit={props.on.save} isPending={props.view.isPending}>
+                    <Stack gap="section">
+                        <Input
+                            id="brain-lesson-title"
+                            name="title"
+                            label={props.view.titleLabel}
+                            isRequired
+                            value={props.view.lessonTitle}
+                            isDisabled={props.view.isPending}
+                            onValueChange={props.on.setLessonTitle}
+                        />
+                        <Textarea
+                            id="brain-lesson-body"
+                            name="body"
+                            label={props.view.bodyLabel}
+                            rows={3}
+                            isRequired
+                            value={props.view.lessonBody}
+                            isDisabled={props.view.isPending}
+                            onValueChange={props.on.setLessonBody}
+                        />
+                        <Input
+                            id="brain-lesson-when"
+                            name="appliesWhen"
+                            label={props.view.whenLabel}
+                            value={props.view.lessonWhen}
+                            isDisabled={props.view.isPending}
+                            onValueChange={props.on.setLessonWhen}
+                        />
+                        <Button intent="commit" type="submit" isPending={props.view.isPending}>
+                            {props.view.saveLabel}
+                        </Button>
+                    </Stack>
+                </Form>
+            }
+        />
     </>
 )
 
@@ -116,17 +119,22 @@ export const BrainLessonsBase = (props: BrainLessonsBaseProps) => {
             section={list.section}
             isPending={list.isPending}
             before={props.props.write === undefined ? null : <WritePart view={props.props.write} on={props.on} />}
-        >
-            <SlotView
-                slot={list.slot}
-                placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
-                labels={list.slotLabels}
-                onRetry={props.on.retry}
-            >
-                {(rows, isSkeleton) => (
-                    <KnowledgeRowList {...rowListPropsOf(list)} rows={rows} isSkeleton={isSkeleton} />
-                )}
-            </SlotView>
-        </KnowledgeRowsSection>
+            body={
+                <SlotView
+                    slot={list.slot}
+                    placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
+                    labels={list.slotLabels}
+                    onRetry={props.on.retry}
+                    render={(rows, isSkeleton) => (
+                        <KnowledgeRowList
+                            {...rowListPropsOf(list)}
+                            rows={rows}
+                            isLoading={isSkeleton}
+                            onAction={props.on.action}
+                        />
+                    )}
+                />
+            }
+        />
     )
 }

@@ -1,4 +1,4 @@
-import { Stack, Text, TextAction } from "@starci/grammar/common"
+import { Link, Stack, Text } from "@starci/grammar/common"
 
 /** The connections an agent waits for, already in the reader language, and where to connect them. */
 export interface ConnectionNeedsProps {
@@ -17,8 +17,6 @@ export const ConnectionNeeds = (props: ConnectionNeedsProps) =>
                     {line}
                 </Text>
             ))}
-            <TextAction size="xs" href={props.href}>
-                {props.linkLabel}
-            </TextAction>
+            <Link href={props.href}>{props.linkLabel}</Link>
         </Stack>
     )

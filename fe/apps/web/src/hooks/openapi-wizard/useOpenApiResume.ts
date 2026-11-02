@@ -3,9 +3,12 @@
 import { useEffect, useMemo, useRef } from "react"
 import type { useOpenApiAuthForm } from "@/hooks/rhf"
 import { useQueryLoadOpenApiConnectionSwr, useQueryLoadOpenApiSpecSwr } from "@/hooks/swr"
+import type { SlotRead } from "@/hooks/slot"
+import { readError } from "@/hooks/workspaceread"
 import { mergeOpenApiOps, openApiScheduleIdOf, parseOpenApiConfig, parseOpenApiOps } from "./openapi-wizard.shared"
 import type { useOpenApiPicks } from "./useOpenApiPicks"
 import type { useOpenApiSource } from "./useOpenApiSource"
+import type { OpenApiConfigView } from "./openapi-wizard.shared"
 
 /** Reads once: an edited connection must not be overwritten by a revalidation while the owner types. */
 const ONCE = { revalidateOnFocus: false, revalidateIfStale: false } as const
@@ -23,17 +26,26 @@ interface OpenApiResumeInput {
  * Opens a saved connection once: its config seeds the steps, then the fresh operations of its spec link (when it has one) replace the
  * stored ones, keeping the stored operations that are pulled or offered as tools. Answers the load failure, if any.
  */
-export const useOpenApiResume = (input: OpenApiResumeInput): string | null => {
+export const useOpenApiResume = (input: OpenApiResumeInput) => {
     const { authForm, restoreSource, setOps, restorePicks } = input
     const saved = useQueryLoadOpenApiConnectionSwr(input.resumeId, ONCE)
-    const config = useMemo(
-        () => (saved.data === undefined ? null : parseOpenApiConfig(saved.data.config)),
+    const parsed = useMemo(
+        () => (saved.data === undefined ? { config: null, error: undefined } : configOf(saved.data.config)),
         [saved.data],
     )
-    const fresh = useQueryLoadOpenApiSpecSwr(
-        config === null || config.specUrl === "" ? undefined : config.specUrl,
-        ONCE,
-    )
+    const config = parsed.config
+    const specUrl = config === null || config.specUrl === "" ? undefined : config.specUrl
+    const fresh = useQueryLoadOpenApiSpecSwr(specUrl, ONCE)
+    const savedRead = {
+        data: config === null ? undefined : saved.data,
+        isLoading: saved.isLoading,
+        isValidating: saved.isValidating,
+        error: parsed.error ?? readError(saved),
+    }
+    const reads: ReadonlyArray<SlotRead<unknown>> = [
+        ...(input.resumeId === undefined ? [] : [savedRead]),
+        ...(specUrl === undefined ? [] : [fresh]),
+    ]
     const seeded = useRef(false)
     const merged = useRef(false)
 
@@ -63,5 +75,22 @@ export const useOpenApiResume = (input: OpenApiResumeInput): string | null => {
         setOps(mergeOpenApiOps(parseOpenApiOps(fresh.data.ops), config))
     }, [fresh.data, config, setOps])
 
-    return saved.error instanceof Error ? saved.error.message : null
+    const error = reads.find((read) => read.error !== undefined)?.error
+    return {
+        reads,
+        error: error instanceof Error ? error.message : null,
+        retry: () => {
+            if (input.resumeId !== undefined) void saved.mutate()
+            if (specUrl !== undefined) void fresh.mutate()
+        },
+    }
+}
+
+/** Keeps a stored configuration failure in the read that owns it instead of crashing the wizard. */
+const configOf = (raw: unknown): { readonly config: OpenApiConfigView | null; readonly error: unknown } => {
+    try {
+        return { config: parseOpenApiConfig(raw), error: undefined }
+    } catch (error: unknown) {
+        return { config: null, error }
+    }
 }

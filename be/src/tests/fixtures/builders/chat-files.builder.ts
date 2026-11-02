@@ -1,3 +1,34 @@
+import { builder } from "@starci/jest-preset"
+import { chatFilesEntities } from "@modules/domain/chat-files"
+
+const [AttachmentEntity] = chatFilesEntities
+
+/** A stored attachment with stable identity and database timestamps, before its contents have been read. */
+export const chatFileAttachmentOf = builder<InstanceType<typeof AttachmentEntity>>({
+    id: "attachment-1",
+    workspaceId: "ws-1",
+    conversationId: "conv-1",
+    messageId: "m-1",
+    path: "ws-1/chat/conv-1/0f8fad5b-d9cb-469f-a165-70867728950e.png",
+    name: "a.png",
+    contentType: "image/png",
+    sizeBytes: 9,
+    read: null,
+    createdAt: new Date("2026-11-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-11-01T00:00:00.000Z"),
+})
+
+/** Two addressed attachments, allowing a signing response to keep one and omit the missing object. */
+export const chatFileAttachmentRowsOf = () => [
+    chatFileAttachmentOf(),
+    chatFileAttachmentOf({
+        id: "attachment-2",
+        messageId: "m-2",
+        path: "ws-1/chat/conv-1/missing.pdf",
+        name: "missing.pdf",
+    }),
+]
+
 /** The chat files of a thread that holds none. */
 export const NO_CHAT_FILES = {
     viewsOf: () => Promise.resolve([]),

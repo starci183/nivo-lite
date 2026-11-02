@@ -1,11 +1,11 @@
 "use client"
 
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import { useAutomationsBoard, type AutomationsBoardState } from "@/hooks/automations"
+import { useAutomationsBoard } from "@/hooks/automations"
 
-import { loadingSlot, useSlotLabels } from "@/hooks/slot"
+import { useSlotLabels } from "@/hooks/slot"
 import { CONSOLE_ROUTES } from "@/modules/routes"
-import { AutomationsBoardBase, type AutomationsBoardNotice } from "./component"
+import { AutomationsBoardBase } from "./component"
 
 /** What the pages tell the board. */
 interface AutomationsBoardProps {
@@ -14,25 +14,6 @@ interface AutomationsBoardProps {
     readonly moduleKey?: string
     /** The card to open when the board appears; none stays closed. */
     readonly focus?: string
-}
-
-/** Why the board shows a notice instead of the cards, if it does: the member may not manage automations, or the read failed. */
-const noticeOf = (
-    board: AutomationsBoardState,
-    layout: "page" | "module",
-    t: (key: string) => string,
-): AutomationsBoardNotice | undefined => {
-    if (board.isForbidden)
-        return {
-            kind: "forbidden",
-            title: t("forbiddenTitle"),
-            body: t("forbiddenBody"),
-            backLabel: t("forbiddenBack"),
-            backHref: CONSOLE_ROUTES.chat,
-            isPage: layout === "page",
-        }
-    if (board.view === undefined && board.error !== undefined) return { kind: "failed", title: t("loadFailed") }
-    return undefined
 }
 
 /**
@@ -55,17 +36,20 @@ export const AutomationsBoard = (props: AutomationsBoardProps) => {
     return (
         <AutomationsBoardBase
             props={{
-                slot: board.view === undefined ? loadingSlot() : { items: board.view },
+                slot: board.slot,
                 layout: props.layout,
-                notice: noticeOf(board, props.layout, t),
                 labels: {
-                    slot: slotLabels(t("emptyAll")),
+                    slot: { ...slotLabels(t("emptyAll")), forbidden: t("forbiddenTitle"), error: t("loadFailed") },
+                    forbiddenDescription: t("forbiddenBody"),
+                    backLabel: t("forbiddenBack"),
+                    backHref: CONSOLE_ROUTES.chat,
+                    collection: t("title"),
                     loading: t("loading"),
                     status: t("statusOff"),
                     select: t("selectHint"),
                 },
             }}
-            on={board.on}
+            on={{ ...board.on, retry: board.retry }}
         />
     )
 }

@@ -107,6 +107,7 @@ import { paymentOrdersEntities } from "@modules/domain/payment-orders"
 import { platformAdminEntities } from "@modules/domain/platform-admin"
 import { platformAuditEntities } from "@modules/domain/platform-audit"
 import { publicApiEntities } from "@modules/domain/public-api"
+import { publicDocumentsEntities } from "@modules/domain/public-documents"
 import { responsibilitiesEntities } from "@modules/domain/responsibilities"
 import { sepayTransactionsEntities } from "@modules/domain/sepay-transactions"
 import { shiftsEntities } from "@modules/domain/shifts"
@@ -116,6 +117,7 @@ import { telegramInboxEntities } from "@modules/domain/telegram-inbox"
 import { threadMessagesEntities } from "@modules/domain/thread-messages"
 import { threadWorkEntities } from "@modules/domain/thread-work"
 import { agentGraphsEntities } from "@modules/domain/agent-graphs"
+import { agentRunsEntities } from "@modules/domain/agent-runs"
 import { agentWorkEntities } from "@modules/domain/agent-work"
 import { transactionsEntities } from "@modules/domain/transactions"
 import { videoBrandKitsEntities } from "@modules/domain/video-brand-kits"
@@ -251,6 +253,7 @@ export const PRIMARY_ENTITIES = [
     ...platformAdminEntities,
     ...platformAuditEntities,
     ...publicApiEntities,
+    ...publicDocumentsEntities,
     ...responsibilitiesEntities,
     ...sepayTransactionsEntities,
     ...shiftsEntities,
@@ -260,6 +263,7 @@ export const PRIMARY_ENTITIES = [
     ...threadMessagesEntities,
     ...threadWorkEntities,
     ...agentGraphsEntities,
+    ...agentRunsEntities,
     ...agentWorkEntities,
     ...transactionsEntities,
     ...videoBrandKitsEntities,

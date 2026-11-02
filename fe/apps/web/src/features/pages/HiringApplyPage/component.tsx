@@ -1,6 +1,6 @@
 import { Page } from "@starci/grammar/common"
 import { HiringApplyForm } from "@/components/blocks/HiringApplyForm"
-import { HiringPublicShell } from "@/components/composites/HiringPublicShell"
+import { HiringPublicShell } from "@/components/frames/HiringPublicShell"
 
 /** Props for {@link HiringApplyPageBase}. */
 export interface HiringApplyPageBaseProps {

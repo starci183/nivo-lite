@@ -1,56 +1,36 @@
-import { Button, Form, Input, Select, Switch, Textarea } from "@starci/grammar/common"
-import type { RewardFormValues, RewardTextField } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
+import type { LoyaltyViews, LoyaltyActions } from "@/modules/types"
+import { Button, Form, Input, Select, Switch, Textarea, Stack, Grid, Cluster } from "@starci/grammar/common"
 
 /** What the add and edit form of one reward draws and reports. */
-export type LoyaltyRewardFormProps = {
-    readonly heading: string
-    readonly values: RewardFormValues
-    readonly isPending: boolean
-    readonly nameError?: string | undefined
-    readonly costError?: string | undefined
-    readonly kindOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
-    readonly tierOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
-    readonly nameLabel: string
-    readonly kindLabel: string
-    readonly costLabel: string
-    readonly valueLabel: string
-    readonly valueHint: string
-    readonly percentLabel: string
-    readonly stockLabel: string
-    readonly stockHint: string
-    readonly limitLabel: string
-    readonly limitHint: string
-    readonly minTierLabel: string
-    readonly noteLabel: string
-    readonly activeLabel: string
-    readonly saveLabel: string
-    readonly cancelLabel: string
-    readonly noteMax: number
-    readonly onChange: (field: RewardTextField, value: string) => void
-    readonly onActive: (active: boolean) => void
-    readonly onSubmit: () => void
-    readonly onCancel: () => void
+type RewardEditorData = LoyaltyViews["rewardEditor"]
+/** The existing native presentation contract, with pure fields and actions owned separately. */
+interface LoyaltyRewardFormProps extends RewardEditorData {
+    readonly isLoading?: boolean
+    readonly onChange: LoyaltyActions["rewards"]["change"]
+    readonly onActive: LoyaltyActions["rewards"]["setActive"]
+    readonly onSubmit: LoyaltyActions["rewards"]["submit"]
+    readonly onCancel: LoyaltyActions["rewards"]["cancelForm"]
 }
 
 /** The fields of one reward with its save and cancel buttons; the percent field shows for percent rewards only. */
 export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
     <Form label={props.heading} isPending={props.isPending} onSubmit={props.onSubmit}>
-        <div className={FORM_CLASS_NAME}>
+        <Stack gap="row">
             <Input
                 id="reward-name"
                 name="name"
                 label={props.nameLabel}
                 isRequired
-                isError={props.nameError !== undefined}
+                isInvalid={props.nameError !== undefined}
                 errorMessage={props.nameError}
                 value={props.values.name}
                 isDisabled={props.isPending}
+                isLoading={props.isLoading ?? false}
                 onValueChange={(value) => props.onChange("name", value)}
             />
             {renderLoyaltyRewardFormKindFields(props)}
             {renderLoyaltyRewardFormValueFields(props)}
-            <div className={FIELD_PAIR_CLASS_NAME}>
+            <Grid kind="form" columns={2}>
                 <Input
                     id="reward-stock"
                     name="stock"
@@ -58,6 +38,7 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
                     description={props.stockHint}
                     value={props.values.stock}
                     isDisabled={props.isPending}
+                    isLoading={props.isLoading ?? false}
                     onValueChange={(value) => props.onChange("stock", value)}
                 />
                 <Input
@@ -67,14 +48,16 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
                     description={props.limitHint}
                     value={props.values.limit}
                     isDisabled={props.isPending}
+                    isLoading={props.isLoading ?? false}
                     onValueChange={(value) => props.onChange("limit", value)}
                 />
-            </div>
+            </Grid>
             <Select
                 label={props.minTierLabel}
                 options={props.tierOptions}
                 value={props.values.minTier}
                 isDisabled={props.isPending}
+                isLoading={props.isLoading ?? false}
                 onValueChange={(value) => props.onChange("minTier", value ?? "")}
             />
             <Textarea
@@ -83,23 +66,30 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
                 maxLength={props.noteMax}
                 value={props.values.note}
                 isDisabled={props.isPending}
+                isLoading={props.isLoading ?? false}
                 onValueChange={(value) => props.onChange("note", value)}
             />
             <Switch
                 label={props.activeLabel}
                 isSelected={props.values.active}
                 isDisabled={props.isPending}
+                isLoading={props.isLoading ?? false}
                 onSelectedChange={(active) => props.onActive(active)}
             />
-            <div className={ACTIONS_CLASS_NAME}>
-                <Button type="submit" intent="commit" isPending={props.isPending}>
+            <Cluster gap="inline">
+                <Button type="submit" intent="commit" isPending={props.isPending} isLoading={props.isLoading ?? false}>
                     {props.saveLabel}
                 </Button>
-                <Button intent="neutral" isDisabled={props.isPending} onPress={props.onCancel}>
+                <Button
+                    intent="neutral"
+                    isDisabled={props.isPending}
+                    isLoading={props.isLoading ?? false}
+                    onPress={props.onCancel}
+                >
                     {props.cancelLabel}
                 </Button>
-            </div>
-        </div>
+            </Cluster>
+        </Stack>
     </Form>
 )
 
@@ -107,10 +97,10 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
 const renderLoyaltyRewardFormValueFields = (
     props: Pick<
         LoyaltyRewardFormProps,
-        "valueLabel" | "valueHint" | "values" | "isPending" | "onChange" | "percentLabel"
+        "valueLabel" | "valueHint" | "values" | "isPending" | "isLoading" | "onChange" | "percentLabel"
     >,
 ) => (
-    <div className={FIELD_PAIR_CLASS_NAME}>
+    <Grid kind="form" columns={2}>
         <Input
             id="reward-value"
             name="value"
@@ -118,6 +108,7 @@ const renderLoyaltyRewardFormValueFields = (
             description={props.valueHint}
             value={props.values.value}
             isDisabled={props.isPending}
+            isLoading={props.isLoading ?? false}
             onValueChange={(value) => props.onChange("value", value)}
         />
         {props.values.kind === "percent" ? (
@@ -127,25 +118,27 @@ const renderLoyaltyRewardFormValueFields = (
                 label={props.percentLabel}
                 value={props.values.percent}
                 isDisabled={props.isPending}
+                isLoading={props.isLoading ?? false}
                 onValueChange={(value) => props.onChange("percent", value)}
             />
         ) : null}
-    </div>
+    </Grid>
 )
 
 /** Renders the LoyaltyRewardForm kind fields section. */
 const renderLoyaltyRewardFormKindFields = (
     props: Pick<
         LoyaltyRewardFormProps,
-        "kindLabel" | "kindOptions" | "values" | "isPending" | "onChange" | "costLabel" | "costError"
+        "kindLabel" | "kindOptions" | "values" | "isPending" | "isLoading" | "onChange" | "costLabel" | "costError"
     >,
 ) => (
-    <div className={FIELD_PAIR_CLASS_NAME}>
+    <Grid kind="form" columns={2}>
         <Select
             label={props.kindLabel}
             options={props.kindOptions}
             value={props.values.kind}
             isDisabled={props.isPending}
+            isLoading={props.isLoading ?? false}
             onValueChange={(value) => props.onChange("kind", value ?? "")}
         />
         <Input
@@ -153,11 +146,12 @@ const renderLoyaltyRewardFormKindFields = (
             name="cost"
             label={props.costLabel}
             isRequired
-            isError={props.costError !== undefined}
+            isInvalid={props.costError !== undefined}
             errorMessage={props.costError}
             value={props.values.cost}
             isDisabled={props.isPending}
+            isLoading={props.isLoading ?? false}
             onValueChange={(value) => props.onChange("cost", value)}
         />
-    </div>
+    </Grid>
 )

@@ -1,4 +1,4 @@
-import { Image, TextAction } from "@starci/grammar/common"
+import { Link } from "@starci/grammar/common"
 
 /** The words and address of the logo link. */
 interface LandingNavBrandBaseProps {
@@ -15,16 +15,19 @@ const LOGO_HEIGHT = 36
 
 /** The brand slot of the top bar: the logo as a link home. */
 export const LandingNavBrandBase = (props: LandingNavBrandBaseProps) => (
-    <TextAction href={props.props.homeHref} size="control">
-        <Image
-            src={props.props.logoSrc}
-            alt={props.props.homeLabel}
-            width={LOGO_WIDTH}
-            height={LOGO_HEIGHT}
-            aspect="auto"
-            fit="contain"
-            plate="none"
-            loading="eager"
-        />
-    </TextAction>
+    <Link
+        href={props.props.homeHref}
+        label={props.props.homeLabel}
+        media={{
+            src: props.props.logoSrc,
+            alt: props.props.homeLabel,
+            width: LOGO_WIDTH,
+            height: LOGO_HEIGHT,
+            aspect: "auto",
+            fit: "contain",
+            plate: "none",
+            loading: "eager",
+        }}
+        visited="uniform"
+    />
 )

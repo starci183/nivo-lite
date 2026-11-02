@@ -66,7 +66,11 @@ describe("LoyaltyCodeDeliveryService", () => {
             const { service, conversations, messages, channels, logger } = await build()
             conversations.targetOf.mockResolvedValue(ok(targetOf({ channel })))
             messages.storeAgentMessage.mockResolvedValue("message-1")
-            channels.deliver.mockResolvedValue({ delivered, failure: null })
+            channels.deliver.mockResolvedValue({
+                delivered,
+                outcome: delivered ? "acknowledged" : "rejected",
+                failure: null,
+            })
 
             expect(await service.send(PARAMS)).toBe(delivered)
             expect(conversations.targetOf).toHaveBeenCalledWith("conversation-1")

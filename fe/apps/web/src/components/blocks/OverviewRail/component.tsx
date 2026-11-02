@@ -1,7 +1,6 @@
 import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
-import { Badge, Button, EmptyNotice, ListRow, Stack, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
-import { AgentMark } from "@/components/leaves/AgentMark"
-import { TileIcon } from "@/components/composites/TileIcon"
+import { Button, EmptyNotice, Link, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import type { ListRowData } from "@starci/grammar/common"
 import type { ModuleIconName } from "@/modules/types"
 
 /** One agent row. */
@@ -48,72 +47,61 @@ interface OverviewRailBaseProps {
     }
 }
 
+/** One agent row as list data: its mark, its standing and the chat it opens. */
+const agentItemOf = (agent: OverviewRailAgent, chatLabel: string): ListRowData => ({
+    id: agent.id,
+    title: agent.name,
+    leading: {
+        avatar: {
+            name: agent.name,
+            kind: "agent",
+            seed: agent.id,
+            // The mark of an agent without its own picture is the NIVO unicorn, as AgentMark draws it.
+            src: agent.avatarUrl ?? "/images/agents/mascot-avatar.webp",
+        },
+    },
+    badges: [{ label: agent.statusLabel, tone: agent.isActive ? "success" : "neutral", isDot: true }],
+    action: { label: chatLabel, href: agent.chatHref },
+})
+
+/** One recent-activity row as list data: its glyph, who acted and when, and where it leads. */
+const activityItemOf = (item: OverviewRailActivity): ListRowData => ({
+    id: item.id,
+    title: item.actor,
+    leading: { icon: nivoIconSource(item.icon, "leading") },
+    description: item.summary,
+    ...(item.href === null ? {} : { href: item.href }),
+    detail: (
+        <Text size="xs" tone="muted">
+            {item.timeLabel}
+        </Text>
+    ),
+})
+
 /** The rail beside the open work: onboarding progress, the agents and the recent activity. */
-export const OverviewRailBase = (props: OverviewRailBaseProps) => {
-    const activity = props.props.activity.map((item) => ({ item, iconProps: { icon: item.icon } }))
-    return (
-        <Stack gap="region">
-            <SurfaceListCard
-                label={props.props.agentsTitle}
-                isLoading={props.props.isSkeleton}
-                footer={
-                    props.props.buyChatbotLabel === null ? undefined : (
-                        <Button intent="neutral" size="sm" href={props.props.buyChatbotHref}>
-                            {props.props.buyChatbotLabel}
-                        </Button>
-                    )
-                }
-                empty={<EmptyNotice message={props.props.agentsEmpty} description={props.props.agentsEmptyBody} />}
-            >
-                {props.props.agents.map((agent) => (
-                    <ListRow
-                        key={agent.id}
-                        leading={
-                            <AgentMark
-                                glyph={nivoIconSource(agent.glyph, "leading")}
-                                label={agent.name}
-                                seed={agent.id}
-                                src={agent.avatarUrl}
-                                module={agent.module}
-                            />
-                        }
-                        title={agent.name}
-                        badges={
-                            <Badge tone={agent.isActive ? "success" : "neutral"} isDot>
-                                {agent.statusLabel}
-                            </Badge>
-                        }
-                        actions={
-                            <Button intent="neutral" size="sm" href={agent.chatHref}>
-                                {props.props.chatLabel}
-                            </Button>
-                        }
-                    />
-                ))}
-            </SurfaceListCard>
-            <SurfaceListCard
-                label={props.props.activityTitle}
-                isLoading={props.props.isSkeleton}
-                footer={
-                    <TextAction href={props.props.viewAllHref} appearance="section">
-                        {props.props.viewAllLabel}
-                    </TextAction>
-                }
-                empty={<EmptyNotice message={props.props.activityEmpty} description={props.props.activityEmptyBody} />}
-            >
-                {activity.map(({ item, iconProps }) => (
-                    <ListRow
-                        key={item.id}
-                        leading={<TileIcon props={iconProps} />}
-                        title={item.href === null ? item.actor : <TextAction href={item.href}>{item.actor}</TextAction>}
-                        description={item.summary}
-                    >
-                        <Text size="xs" tone="muted">
-                            {item.timeLabel}
-                        </Text>
-                    </ListRow>
-                ))}
-            </SurfaceListCard>
-        </Stack>
-    )
-}
+export const OverviewRailBase = (props: OverviewRailBaseProps) => (
+    <Stack gap="region">
+        <SurfaceCard
+            kind="list"
+            label={props.props.agentsTitle}
+            isLoading={props.props.isSkeleton}
+            footer={
+                props.props.buyChatbotLabel === null ? undefined : (
+                    <Button intent="neutral" size="sm" href={props.props.buyChatbotHref}>
+                        {props.props.buyChatbotLabel}
+                    </Button>
+                )
+            }
+            empty={<EmptyNotice message={props.props.agentsEmpty} description={props.props.agentsEmptyBody} />}
+            items={props.props.agents.map((agent) => agentItemOf(agent, props.props.chatLabel))}
+        />
+        <SurfaceCard
+            kind="list"
+            label={props.props.activityTitle}
+            isLoading={props.props.isSkeleton}
+            footer={<Link href={props.props.viewAllHref}>{props.props.viewAllLabel}</Link>}
+            empty={<EmptyNotice message={props.props.activityEmpty} description={props.props.activityEmptyBody} />}
+            items={props.props.activity.map(activityItemOf)}
+        />
+    </Stack>
+)

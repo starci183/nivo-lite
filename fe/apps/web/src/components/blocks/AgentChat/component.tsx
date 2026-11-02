@@ -17,7 +17,7 @@ import { AgentChatThread, type AgentChatThreadProps } from "@/components/composi
 import { PromoWelcomeBand, type PromoWelcomeBandProps } from "@/components/composites/PromoWelcomeBand"
 
 import { SlotView } from "@/components/composites/SlotView"
-import type { ModuleIconName, DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** Which channel the owner is looking at. */
 export type AgentChatTab = "test" | "customer"
@@ -41,8 +41,6 @@ export interface AgentChatViewProps {
     readonly pageLabel: string
     /** The agent is not in yet: the new-conversation control waits while the frame, labels and composer stay. */
     readonly isStartDisabled: boolean
-    readonly glyph: ModuleIconName
-    readonly module: string
     /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
     readonly avatarUrl: string | null
     /** The id of the agent: the one seed of its mark on every screen. */
@@ -59,15 +57,17 @@ export interface AgentChatViewProps {
     readonly channelTabs: ChannelTabsView | null
     readonly threadSlot: DataSlot<ThreadView>
     readonly threadLabels: SlotLabels
-    readonly thread: Omit<AgentChatThreadProps, "children"> & { readonly label: string }
+    readonly thread: Omit<AgentChatThreadProps, "messages"> & { readonly label: string }
     readonly welcome: Omit<PromoWelcomeBandProps, "onClose"> | null
-    readonly messages: Omit<AgentChatMessagesProps, "glyph" | "module" | "seed" | "isSkeleton">
+    readonly messages: Omit<AgentChatMessagesProps, "glyph" | "module" | "seed" | "isLoading">
     readonly empty: Omit<AgentChatEmptyProps, "glyph" | "module" | "seed" | "onVisitorName" | "onPrompt" | "onStart">
     readonly composer: Omit<AgentChatComposerProps, "onDraft" | "onFile" | "onFileClear" | "onPrompt" | "onSend">
 }
 
 /** What the surface asks of its owner. */
 export interface AgentChatHandlers {
+    readonly retryRail: () => void
+    readonly retryThread: () => void
     readonly toggleTakeover: () => void
     readonly back: () => void
     readonly tab: (tab: AgentChatTab) => void
@@ -97,44 +97,45 @@ const Thread = (props: AgentChatBaseProps) => (
         scrollKey={props.props.thread.scrollKey}
         handoff={props.props.thread.handoff}
         takenOverNotice={props.props.thread.takenOverNotice}
-    >
-        {props.props.welcome === null ? null : (
-            <PromoWelcomeBand {...props.props.welcome} onClose={props.on.closeWelcome} />
-        )}
-        <SlotView slot={props.props.threadSlot} placeholder={SKELETON_THREAD} labels={props.props.threadLabels}>
-            {(view, isSkeleton) =>
-                view.hasSelection ? (
-                    <AgentChatMessages
-                        {...props.props.messages}
-                        glyph={props.props.glyph}
-                        module={props.props.module}
-                        avatarUrl={props.props.avatarUrl}
-                        seed={props.props.seed}
-                        isSkeleton={isSkeleton}
-                    />
-                ) : (
-                    <AgentChatEmpty
-                        {...props.props.empty}
-                        glyph={props.props.glyph}
-                        module={props.props.module}
-                        avatarUrl={props.props.avatarUrl}
-                        seed={props.props.seed}
-                        onVisitorName={props.on.visitorName}
-                        onPrompt={props.on.send}
-                        onStart={props.on.start}
-                    />
-                )
-            }
-        </SlotView>
-    </AgentChatThread>
+        messages={
+            <>
+                {props.props.welcome === null ? null : (
+                    <PromoWelcomeBand {...props.props.welcome} onClose={props.on.closeWelcome} />
+                )}
+                <SlotView
+                    slot={props.props.threadSlot}
+                    placeholder={SKELETON_THREAD}
+                    labels={props.props.threadLabels}
+                    onRetry={props.on.retryThread}
+                    render={(view, isLoading) =>
+                        view.hasSelection ? (
+                            <AgentChatMessages
+                                {...props.props.messages}
+                                avatarUrl={props.props.avatarUrl}
+                                seed={props.props.seed}
+                                isLoading={isLoading}
+                            />
+                        ) : (
+                            <AgentChatEmpty
+                                {...props.props.empty}
+                                avatarUrl={props.props.avatarUrl}
+                                seed={props.props.seed}
+                                onVisitorName={props.on.visitorName}
+                                onPrompt={props.on.send}
+                                onStart={props.on.start}
+                            />
+                        )
+                    }
+                />
+            </>
+        }
+    />
 )
 
 /** The header of the open conversation. */
 const Head = (props: AgentChatBaseProps) => (
     <AgentChatHeader
         {...props.props.header}
-        glyph={props.props.glyph}
-        module={props.props.module}
         avatarUrl={props.props.avatarUrl}
         seed={props.props.seed}
         onBack={props.on.back}
@@ -165,24 +166,27 @@ const ChannelTabs = (props: ChannelTabsProps) => (
 interface RailListProps {
     readonly view: AgentChatViewProps
     readonly onPick: (id: string, kind: AgentChatTab) => void
+    readonly onRetry: () => void
 }
 
 /** The conversations of the rail with the pick that also closes the drawer. */
 const RailList = (props: RailListProps) => (
-    <SlotView slot={props.view.railSlot} placeholder={NO_ROWS} labels={props.view.railLabels}>
-        {(rows, isSkeleton) => (
+    <SlotView
+        slot={props.view.railSlot}
+        placeholder={NO_ROWS}
+        labels={props.view.railLabels}
+        onRetry={props.onRetry}
+        render={(rows, isLoading) => (
             <AgentChatRailList
                 label={props.view.railTitle}
                 rows={rows}
-                glyph={props.view.glyph}
-                module={props.view.module}
                 avatarUrl={props.view.avatarUrl}
                 seed={props.view.seed}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
                 onPick={props.onPick}
             />
         )}
-    </SlotView>
+    />
 )
 
 /**
@@ -223,7 +227,7 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
                         />
                     </PaneSection>
                     <PaneSection scroll={{ label: view.railTitle }}>
-                        <RailList view={view} onPick={onPick} />
+                        <RailList view={view} onPick={onPick} onRetry={props.on.retryRail} />
                     </PaneSection>
                 </Pane>
                 <Pane area="main">

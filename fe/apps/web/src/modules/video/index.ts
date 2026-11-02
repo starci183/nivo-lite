@@ -26,3 +26,6 @@ export type {
     ScriptScene,
     SourceChoice,
 } from "./video.types"
+
+export type { VideoEditorData } from "./workbench-editor"
+export type { VideoWorkbenchCopy } from "./workbench-copy"

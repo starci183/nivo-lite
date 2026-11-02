@@ -8,6 +8,7 @@ import { RunDataSyncQueueModule } from "@features/jobs/run-data-sync"
 import { ExtractKnowledgeFactsQueueModule } from "@features/jobs/extract-knowledge-facts"
 import { ReviewDossiersQueueModule } from "@features/jobs/review-dossiers"
 import { DraftDossierRemedyQueueModule } from "@features/jobs/draft-dossier-remedy"
+import { DraftPublicDocumentQueueModule } from "@features/jobs/draft-public-document"
 import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
 import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
 import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
@@ -45,6 +46,8 @@ import { RunMarketingTickQueueModule } from "@features/jobs/run-marketing-tick"
 import { RunLeadGenQueueModule } from "@features/jobs/run-lead-gen"
 import { SweepRealtimeEventsQueueModule } from "@features/jobs/sweep-realtime-events"
 import { SweepSystemHistoryQueueModule } from "@features/jobs/sweep-system-history"
+import { DeliverGenericWebhookQueueModule } from "@features/jobs/deliver-generic-webhook"
+import { RunAgentStepQueueModule } from "@features/jobs/run-agent-step"
 import { RunAgentTurnQueueModule } from "@features/jobs/run-agent-turn"
 import { FireAgentScheduleQueueModule } from "@features/jobs/fire-agent-schedule"
 import { SweepAgentWorkQueueModule } from "@features/jobs/sweep-agent-work"
@@ -60,6 +63,7 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     ExtractKnowledgeFactsQueueModule.register({}),
     ReviewDossiersQueueModule.register({}),
     DraftDossierRemedyQueueModule.register({}),
+    DraftPublicDocumentQueueModule.register({}),
     RunBrainCommandQueueModule.register({}),
     IndexKnowledgeSourceQueueModule.register({}),
     ReembedKnowledgeQueueModule.register({}),
@@ -97,6 +101,8 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     RunShiftsAlertsQueueModule.register({}),
     RunAccountingMorningQueueModule.register({}),
     RunMarketingTickQueueModule.register({}),
+    RunAgentStepQueueModule.register({}),
+    DeliverGenericWebhookQueueModule.register({}),
     RunAgentTurnQueueModule.register({}),
     FireAgentScheduleQueueModule.register({}),
     SweepAgentWorkQueueModule.register({}),

@@ -1,7 +1,6 @@
-import { Badge, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import { AgentMark } from "@/components/leaves/AgentMark"
+import { EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
+import type { BadgeTone, ListRowData } from "@starci/grammar/common"
+import { AGENT_MARK_MASCOT_SRC } from "@/components/leaves/AgentMark"
 import type { ModuleIconName } from "@/modules/types"
 
 /** One line of a list region. */
@@ -26,15 +25,44 @@ export interface ListRegionProps {
     readonly rows: ReadonlyArray<ListRegionRow>
     /** A line under the list; null for none. */
     readonly footer: string | null
+    /** The settled-empty sentence resolved by the block that owns this read. */
+    readonly empty: string
     /** The region's read is still in flight: the card draws its skeleton rows. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
+}
+
+const listRowOf = (row: ListRegionRow): ListRowData => {
+    const first = row.badges[0]
+    const second = row.badges[1]
+    const badges = listBadgesOf(first, second)
+    return {
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        ...(badges === undefined ? {} : { badges }),
+        ...(row.mark === null
+            ? {}
+            : {
+                  leading: {
+                      avatar: {
+                          name: row.title,
+                          seed: row.id,
+                          kind: "agent",
+                          src: row.mark.avatarUrl ?? AGENT_MARK_MASCOT_SRC,
+                      },
+                  },
+              }),
+    }
 }
 
 /** A card of lines that is read apart from its page; its block draws the read's status through SlotView. */
 export const ListRegion = (props: ListRegionProps) => (
-    <SurfaceListCard
+    <SurfaceCard
+        kind="list"
         label={props.label}
-        isLoading={props.isSkeleton}
+        items={props.rows.map(listRowOf)}
+        empty={<EmptyNotice message={props.empty} />}
+        isLoading={props.isLoading}
         footer={
             props.footer === null ? undefined : (
                 <Text size="sm" tone="muted">
@@ -42,32 +70,15 @@ export const ListRegion = (props: ListRegionProps) => (
                 </Text>
             )
         }
-    >
-        {/* While the read waits the card draws its own skeleton rows: placeholder lines would win over them. */}
-        {props.isSkeleton
-            ? null
-            : props.rows.map((row) => (
-                  <ListRow
-                      key={row.id}
-                      title={row.title}
-                      description={row.description}
-                      leading={
-                          row.mark === null ? undefined : (
-                              <AgentMark
-                                  glyph={nivoIconSource(row.mark.glyph, "leading")}
-                                  module={row.mark.module}
-                                  label={row.title}
-                                  seed={row.id}
-                                  src={row.mark.avatarUrl}
-                              />
-                          )
-                      }
-                      badges={row.badges.map((badge) => (
-                          <Badge key={badge.label} tone={badge.tone}>
-                              {badge.label}
-                          </Badge>
-                      ))}
-                  />
-              ))}
-    </SurfaceListCard>
+    />
 )
+
+/** Native rows carry at most two existing badges. */
+const listBadgesOf = (
+    first: ListRegionRow["badges"][number] | undefined,
+    second: ListRegionRow["badges"][number] | undefined,
+): ListRowData["badges"] => {
+    if (first === undefined) return undefined
+    if (second === undefined) return [first]
+    return [first, second]
+}

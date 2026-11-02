@@ -1,21 +1,8 @@
-import { Badge, Button, DropdownMenu, IconTile, ListRow, Text } from "@starci/grammar/common"
-import type { BadgeTone, DropdownMenuEntry } from "@starci/grammar/common"
-import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
+import { Button, Cluster, DropdownMenu, Stack, Text, type DropdownMenuEntry } from "@starci/grammar/common"
+
+import { nivoIconSource } from "@/components/leaves/Icon"
 import type { ResponsibilityRowView } from "@/modules/types"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
-import { ACTIONS_CLASS, META_CLASS } from "./classNames"
-
-const STATUS_TONES: Record<ResponsibilityRowView["status"], BadgeTone> = {
-    open: "neutral",
-    waiting_approval: "accent",
-    done: "success",
-}
-
-const STATUS_ICONS: Record<ResponsibilityRowView["status"], IconName> = {
-    open: "pending",
-    waiting_approval: "review",
-    done: "complete",
-}
 
 /** The words of one row. */
 export interface ResponsibilityRowLabels {
@@ -41,7 +28,7 @@ type ResponsibilityLineProps = {
     readonly isDrafting: boolean
     readonly isCopied: boolean
     /** The row is drawn from the placeholder while its read is in flight. */
-    readonly isSkeleton?: boolean
+    readonly isLoading?: boolean
     readonly onDraft: (responsibilityId: string) => void
     readonly onCopy: (responsibilityId: string, leadId: string) => void
 }
@@ -87,72 +74,56 @@ const entriesOf = (props: ResponsibilityLineProps): Array<DropdownMenuEntry> => 
     return entries
 }
 
-/** One responsibility as a card row: tile, title with status, customer, owner and due, Open and a real actions menu. */
+/** One responsibility as data for its owner's collection, with pending commands and settled feedback in its detail. */
 export const ResponsibilityLine = (props: ResponsibilityLineProps) => {
     const { row, labels } = props
+
     return (
-        <ListRow
-            isSkeleton={props.isSkeleton ?? false}
-            leading={
-                <IconTile
-                    source={nivoIconSource(STATUS_ICONS[row.status], "leading")}
-                    tone={row.isOverdue ? "warning" : "accent"}
-                    size="md"
+        <Stack gap="inline">
+            <Cluster gap="inline">
+                <Button intent="neutral" href={leadHref(row.leadId)} isLoading={props.isLoading === true}>
+                    {labels.open}
+                </Button>
+                <DropdownMenu
+                    placement="bottom end"
+                    trigger={
+                        <Button
+                            intent="neutral"
+                            size="sm"
+                            isPending={props.isDrafting}
+                            isLoading={props.isLoading === true}
+                        >
+                            {props.isDrafting ? labels.drafting : labels.more}
+                        </Button>
+                    }
+                    entries={entriesOf(props)}
                 />
-            }
-            title={row.title}
-            description={row.customer}
-            badges={
-                <>
-                    <Badge tone={STATUS_TONES[row.status]} isDot>
-                        {row.statusLabel}
-                    </Badge>
-                    {row.status === "waiting_approval" && row.ownerKind === "agent" ? (
-                        <Badge tone="accent">{labels.aiDraft}</Badge>
-                    ) : null}
-                </>
-            }
-            actions={
-                <div className={ACTIONS_CLASS}>
-                    <Button intent="neutral" href={leadHref(row.leadId)}>
-                        {labels.open}
-                    </Button>
-                    <DropdownMenu
-                        placement="bottom end"
-                        trigger={
-                            <Button intent="neutral" size="sm" isPending={props.isDrafting}>
-                                {props.isDrafting ? labels.drafting : labels.more}
-                            </Button>
-                        }
-                        entries={entriesOf(props)}
-                    />
-                </div>
-            }
-        >
-            <div className={META_CLASS}>
-                <Text size="xs" tone="muted">
+            </Cluster>
+            <Cluster gap="inline">
+                <Text size="xs" tone="muted" isLoading={props.isLoading === true}>
                     {`${labels.owner} ${row.ownerName}`}
                 </Text>
                 {row.dueLabel === null ? null : (
                     <Text
                         size="xs"
-                        tone={row.isOverdue ? "accent" : "muted"}
-                        weight={row.isOverdue ? "semibold" : "normal"}
+                        tone={row.isOverdue ? "default" : "muted"}
+                        isStrong={row.isOverdue}
+                        isLoading={props.isLoading === true}
                     >
                         {row.dueLabel}
                     </Text>
                 )}
                 {props.isCopied ? (
-                    <Text size="xs" tone="muted">
+                    <Text size="xs" tone="muted" isLoading={props.isLoading === true}>
                         {labels.linkCopied}
                     </Text>
                 ) : null}
-            </div>
+            </Cluster>
             {row.status === "done" ? null : (
-                <Text size="sm" overflow="clamp-2">
+                <Text size="sm" overflow="clamp-2" isLoading={props.isLoading === true}>
                     {labels.next(row.nextAction)}
                 </Text>
             )}
-        </ListRow>
+        </Stack>
     )
 }

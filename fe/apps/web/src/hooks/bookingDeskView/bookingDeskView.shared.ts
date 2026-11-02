@@ -1,6 +1,9 @@
 import type { BadgeTone } from "@starci/grammar/common"
+
 import type { Dispatch, SetStateAction } from "react"
+
 import type { useTranslations, useFormatter } from "next-intl"
+
 import {
     placementLabelsOf,
     type useBookingRange,
@@ -8,6 +11,7 @@ import {
     type useBookingActions,
     type blankPlacementOf,
 } from "@/hooks/bookingDesk"
+
 import { shiftDate } from "@/modules/i18n"
 
 /** Inputs owned by this display/state mapping. */
@@ -174,9 +178,9 @@ export const buildBookingDeskEvents = (connected: BookingDeskEventsInput, moveAc
         next: () => range.goto(shiftDate(anchor, 7)),
         thisWeek: () => range.goto(board.today),
         pickDate: range.goto,
-        toggleCancelled: setShowCancelled,
+        toggleCancelled: (value: boolean) => setShowCancelled(value),
         dismissNotice: desk.dismiss,
-        open: setOpenId,
+        open: (id: string) => setOpenId(id),
         act,
         confirmCancel: () => {
             if (cancelId === null) return

@@ -1,4 +1,5 @@
-import { Badge, List, ListRow, Switch } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard, Switch } from "@starci/grammar/common"
+import type { ListRowData } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZaloAgentRowView } from "@/modules/types"
 
@@ -23,10 +24,6 @@ export interface ZaloConnectionAgentsBaseProps {
     readonly on: { readonly toggle: (agentId: string, isOn: boolean) => void; readonly retry: () => void }
 }
 
-/** What a non-owner reads in place of the switch: a badge on an agent that works through the connection, nothing on the others. */
-const readOnlyMark = (agent: ZaloAgentRowView, label: string) =>
-    agent.isOn ? <Badge tone="success">{label}</Badge> : undefined
-
 /** Draws the body of the last setup step: every agent that can work through a Zalo OA, with a switch for whether it does. */
 export const ZaloConnectionAgentsBase = (props: ZaloConnectionAgentsBaseProps) => (
     <SlotView
@@ -35,31 +32,32 @@ export const ZaloConnectionAgentsBase = (props: ZaloConnectionAgentsBaseProps) =
         labels={props.props.slotLabels}
         forbidden="notice"
         onRetry={props.on.retry}
-    >
-        {(agents, isSkeleton) => (
-            <List label={props.props.title} aria-busy={isSkeleton}>
-                {agents.map((agent) => (
-                    <ListRow
-                        key={agent.id}
-                        title={agent.name}
-                        isSkeleton={isSkeleton}
-                        actions={
-                            props.props.canToggle ? (
+        render={(agents, isLoading) => (
+            <SurfaceCard
+                kind="list"
+                label={props.props.title}
+                isLoading={isLoading}
+                empty={<EmptyNotice message={props.props.slotLabels.empty} />}
+                items={agents.map((agent): ListRowData => {
+                    const item = { id: agent.id, title: agent.name }
+                    if (props.props.canToggle)
+                        return {
+                            ...item,
+                            detail: (
                                 <Switch
                                     name={`agent-${agent.id}`}
                                     label={`${props.props.switchLabel} ${agent.name}`}
                                     isLabelHidden
                                     isSelected={agent.isOn}
-                                    isSkeleton={isSkeleton}
+                                    isLoading={isLoading}
                                     onSelectedChange={(isOn) => props.on.toggle(agent.id, isOn)}
                                 />
-                            ) : (
-                                readOnlyMark(agent, props.props.onLabel)
-                            )
+                            ),
                         }
-                    />
-                ))}
-            </List>
+                    if (agent.isOn) return { ...item, badges: [{ label: props.props.onLabel, tone: "success" }] }
+                    return item
+                })}
+            />
         )}
-    </SlotView>
+    />
 )

@@ -1,5 +1,4 @@
-import { Button, Text } from "@starci/grammar/common"
-import { NUDGE } from "./classNames"
+import { Button, Text, Cluster } from "@starci/grammar/common"
 
 /** Copy of the wait note. */
 interface PromoLeadWaitBaseProps {
@@ -8,12 +7,14 @@ interface PromoLeadWaitBaseProps {
 
 /** Draws the small note under the lead header: what the lead waited and a quiet link to the Chatbot. */
 export const PromoLeadWaitBase = (props: PromoLeadWaitBaseProps) => (
-    <div className={NUDGE} role="note">
-        <Text size="sm" tone="muted">
-            {props.props.text}
-        </Text>
-        <Button intent="neutral" size="sm" href={props.props.seeHref}>
-            {props.props.seeLabel}
-        </Button>
+    <div role="note">
+        <Cluster gap="row">
+            <Text size="sm" tone="muted">
+                {props.props.text}
+            </Text>
+            <Button intent="neutral" size="sm" href={props.props.seeHref}>
+                {props.props.seeLabel}
+            </Button>
+        </Cluster>
     </div>
 )

@@ -4,7 +4,7 @@ import type { AgentGraphCanvasView } from "@/modules/types"
 /** The graph of the agent: what it draws and what a click on a card does. */
 type AgentGraphCanvasProps = {
     readonly view: AgentGraphCanvasView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly onSelect: (nodeKey: string) => void
 }
 
@@ -24,7 +24,7 @@ export const AgentGraphCanvas = (props: AgentGraphCanvasProps) => (
         height="lg"
         selectedId={props.view.selectedId === "" ? null : props.view.selectedId}
         emptyLabel={props.view.emptyLabel}
-        isLoading={props.isSkeleton}
+        isLoading={props.isLoading}
         onSelect={(id) => props.onSelect(id ?? "")}
     />
 )

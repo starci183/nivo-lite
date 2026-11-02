@@ -1,9 +1,9 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { InjectAgentGraphBrief } from "./agent-turns.decorators"
+import { InjectAgentGraphBrief } from "@modules/domain/agent-graphs"
 import { blockOf, intentLineOf } from "./internal-turn-prompt.policy"
-import type { AgentGraphBrief } from "./agent-turns.port"
+import type { AgentGraphBrief } from "@modules/domain/agent-graphs"
 
 @Injectable()
 /**

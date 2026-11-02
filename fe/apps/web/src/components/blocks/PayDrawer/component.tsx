@@ -1,5 +1,5 @@
-import { Alert, Button, DescriptionList, Drawer, Image, Input, MediaFrame, Text } from "@starci/grammar/common"
-import { PAY_CLASS_NAME, QR_CLASS_NAME, QR_WRAP_CLASS_NAME } from "./classNames"
+import { Alert, Button, DescriptionList, Drawer, Image, Input, MediaFrame, Text, Stack } from "@starci/grammar/common"
+import { QR_CLASS_NAME } from "./classNames"
 
 type TransferDetail = {
     readonly id: string
@@ -82,22 +82,26 @@ type PaymentQrProps = Pick<PayDrawerBaseProps, "props">
 
 const PaymentQr = (props: PaymentQrProps) => {
     return (
-        <div className={QR_WRAP_CLASS_NAME}>
-            <Text size="sm" weight="medium">
+        <Stack gap="row" align="center">
+            <Text size="sm" isStrong>
                 {props.props.scanLabel}
             </Text>
             {props.props.isBankConfigured ? (
                 <div className={QR_CLASS_NAME}>
-                    <MediaFrame aspect="square" fit="contain">
-                        <Image
-                            src={props.props.qrUrl}
-                            alt={props.props.qrAlt}
-                            width={256}
-                            height={256}
-                            aspect="square"
-                            fit="contain"
-                        />
-                    </MediaFrame>
+                    <MediaFrame
+                        aspect="square"
+                        fit="contain"
+                        media={
+                            <Image
+                                src={props.props.qrUrl}
+                                alt={props.props.qrAlt}
+                                width={256}
+                                height={256}
+                                aspect="square"
+                                fit="contain"
+                            />
+                        }
+                    />
                 </div>
             ) : (
                 <Alert tone="cautionary" title={props.props.unconfiguredLabel} />
@@ -107,7 +111,7 @@ const PaymentQr = (props: PaymentQrProps) => {
                     {props.props.countdown}
                 </Text>
             )}
-        </div>
+        </Stack>
     )
 }
 
@@ -120,7 +124,7 @@ const PaymentContent = (props: PayDrawerBaseProps) => {
         content = <Alert tone="affirmative" title={props.props.paidTitle} description={props.props.paidDescription} />
     } else if (props.shape === "expired") {
         content = (
-            <div className={PAY_CLASS_NAME}>
+            <Stack gap="section">
                 {props.props.hasOrder ? (
                     <Alert
                         tone="cautionary"
@@ -136,11 +140,11 @@ const PaymentContent = (props: PayDrawerBaseProps) => {
                         {props.props.regenerateLabel}
                     </Button>
                 </div>
-            </div>
+            </Stack>
         )
     } else {
         content = (
-            <div className={PAY_CLASS_NAME}>
+            <Stack gap="section">
                 <PaymentQr {...props} />
                 <DescriptionList
                     layout="stacked"
@@ -148,11 +152,7 @@ const PaymentContent = (props: PayDrawerBaseProps) => {
                         {
                             id: "credits-pay-amount",
                             term: props.props.amountLabel,
-                            description: (
-                                <Text size="metric-lead" weight="semibold">
-                                    {props.props.amount}
-                                </Text>
-                            ),
+                            description: props.props.amount,
                         },
                     ]}
                 />
@@ -178,7 +178,7 @@ const PaymentContent = (props: PayDrawerBaseProps) => {
                     {props.props.contentWarning}
                 </Text>
                 <Alert tone="pending" title={props.props.waitingLabel} urgency="polite" />
-            </div>
+            </Stack>
         )
     }
 

@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common"
+import { AMOUNT_EVIDENCE, WorkItemsService } from "@modules/domain/work-items"
 import { EvidenceService, WorkEngineService, formatVnd } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { LeadRecordsService } from "@modules/domain/leads"
-import { WorkItemsService } from "@modules/domain/work-items"
 import { claimKeyOf } from "@modules/domain/work-performers"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -65,6 +65,7 @@ export class PaymentClaimsService {
                     channel: claim.channelLabel,
                 }),
                 amount_vnd: invoice.amount_vnd,
+                evidence: [{ key: AMOUNT_EVIDENCE, value: invoice.amount_vnd, kind: "claimed", via: "chat_text" }],
                 outcome: "unclear",
                 candidates: [
                     {

@@ -1,11 +1,5 @@
-import { Badge, Heading, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
-import {
-    CARD_CLASS_NAME,
-    FACTS_CLASS_NAME,
-    HEAD_CLASS_NAME,
-    LIST_BLOCK_CLASS_NAME,
-    PRE_WRAP_CLASS_NAME,
-} from "./classNames"
+import { Badge, Cluster, EmptyNotice, Heading, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { PRE_WRAP_CLASS_NAME } from "./classNames"
 
 /** A public job post, every word already resolved. */
 export interface HiringJobPostProps {
@@ -25,21 +19,21 @@ export const HiringJobPost = (props: HiringJobPostProps) => {
     const { company, title, facts, cardLabel, description, experience, lists } = props.props
     return (
         <>
-            <div className={HEAD_CLASS_NAME}>
+            <Stack gap="identity">
                 <Text size="sm" tone="muted">
                     {company}
                 </Text>
                 <Heading level={1}>{title}</Heading>
-                <div className={FACTS_CLASS_NAME}>
+                <Cluster gap="inline">
                     {facts.map((fact) => (
                         <Badge key={fact} tone="neutral">
                             {fact}
                         </Badge>
                     ))}
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
             <SurfaceCard ariaLabel={cardLabel}>
-                <div className={CARD_CLASS_NAME}>
+                <Stack gap="section">
                     {description === "" ? null : (
                         <div className={PRE_WRAP_CLASS_NAME}>
                             <Text size="sm">{description}</Text>
@@ -48,19 +42,17 @@ export const HiringJobPost = (props: HiringJobPostProps) => {
                     {lists
                         .filter((list) => list.items.length > 0)
                         .map((list) => (
-                            <div key={list.title} className={LIST_BLOCK_CLASS_NAME}>
-                                <Text weight="semibold">{list.title}</Text>
-                                <List label={list.title}>
-                                    {list.items.map((item) => (
-                                        <ListItem key={item}>
-                                            <Text>{item}</Text>
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            </div>
+                            <Section
+                                key={list.title}
+                                kind="list"
+                                title={list.title}
+                                headingLevel={3}
+                                items={list.items.map((item) => ({ id: item, title: item }))}
+                                empty={<EmptyNotice message={list.title} />}
+                            />
                         ))}
                     {experience === null ? null : <Text>{experience}</Text>}
-                </div>
+                </Stack>
             </SurfaceCard>
         </>
     )

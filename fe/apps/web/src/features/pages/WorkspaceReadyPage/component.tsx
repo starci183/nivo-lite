@@ -1,6 +1,6 @@
 import { Mascot, Page } from "@starci/grammar/common"
 import { OnboardingReady } from "@/components/blocks/OnboardingReady"
-import { FirstRunStep } from "@/components/composites/FirstRunStep"
+import { FirstRunStep } from "@/components/frames/FirstRunStep"
 
 /** Copy the /workspaces/new/done page supplies. */
 export interface WorkspaceReadyPageBaseProps {

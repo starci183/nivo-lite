@@ -1,4 +1,5 @@
-"use client"
+import type { InventoryPanelScope } from "./inventory.shared"
+;("use client")
 
 import type { ItemView, RecipeView } from "@/modules/types"
 import { changeAt } from "./inventory.shared"
@@ -35,10 +36,13 @@ const startRecipeState = (recipe: RecipeView | null): RecipeDrawerState => {
 export const useRecipeDrawer = (
     items: ReadonlyArray<ItemView>,
     commands: InventoryCommandSet<"saveRecipe" | "deleteRecipe">,
+    lifetime?: InventoryPanelScope,
 ) => {
+    const { isActive = true, scope = "" } = lifetime ?? {}
+
     const say = useSay()
-    const run = useInventoryRun()
-    const drawer = useDrawer<RecipeDrawerState>()
+    const run = useInventoryRun(isActive, scope)
+    const drawer = useDrawer<RecipeDrawerState>(isActive, scope)
     const { state, change } = drawer
     const unitOf = (id: string): string => items.find((item) => item.id === id)?.unit ?? ""
     return {
@@ -47,12 +51,16 @@ export const useRecipeDrawer = (
             state === null
                 ? null
                 : {
-                      say,
+                      copy: recipeDrawerCopy(say, state.recipe),
                       editing: state.recipe === null ? null : state.recipe.name,
                       name: state.name,
                       aliases: state.aliases,
-                      lines: state.lines.map((line) => ({
+                      lines: state.lines.map((line, index) => ({
                           ...line,
+                          ingredientLabel: say("recipeIngredient", { n: index + 1 }),
+                          quantityLabel: say("recipeQty", {
+                              unit: line.itemId === "" ? "" : ` (${unitOf(line.itemId)})`,
+                          }),
                           unit: line.itemId === "" ? "" : ` (${unitOf(line.itemId)})`,
                       })),
                       items: items
@@ -87,14 +95,37 @@ export const useRecipeDrawer = (
                             aliases: state.aliases,
                             lines: state.lines.map((line) => ({ itemId: line.itemId, qty: line.qty })),
                         }),
-                    drawer.done,
+                    (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
                 )
             },
             remove: () => {
                 const target = state?.recipe ?? null
-                if (target !== null) run.exec(() => commands.deleteRecipe(target.id), drawer.done)
+                if (target !== null)
+                    run.exec(
+                        () => commands.deleteRecipe(target.id),
+                        (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
+                    )
             },
             close: drawer.close,
         },
     }
 }
+
+/** Resolves the exact recipe drawer copy in its domain owner. */
+const recipeDrawerCopy = (say: ReturnType<typeof useSay>, owner: RecipeView | null) =>
+    ({
+        recipeAddTitle: say("recipeAddTitle"),
+        recipeEditTitle: say("recipeEditTitle", { name: owner?.name ?? "" }),
+        recipeDrawerHint: say("recipeDrawerHint"),
+        close: say("close"),
+        recipeName: say("recipeName"),
+        recipeNameHint: say("recipeNameHint"),
+        recipeAliases: say("recipeAliases"),
+        recipeAliasesHint: say("recipeAliasesHint"),
+        recipeIngredients: say("recipeIngredients"),
+        recipeIngredientHint: say("recipeIngredientHint"),
+        recipeRemoveLine: say("recipeRemoveLine"),
+        recipeAddLine: say("recipeAddLine"),
+        save: say("save"),
+        recipeDelete: say("recipeDelete"),
+    }) as const

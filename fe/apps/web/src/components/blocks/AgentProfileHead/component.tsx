@@ -13,6 +13,8 @@ import {
 } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import type { ReactNode } from "react"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { AgentMark } from "@/components/leaves/AgentMark"
 
 /** What the heading shows once the agent arrived, every word resolved. */
@@ -42,7 +44,9 @@ export interface AgentProfileHeadBaseProps {
         /** The heading once the agent arrived, or the placeholder while it has not. */
         readonly head: ProfileHeadView
         /** True while the agent is unresolved: the heading draws its measured placeholders. */
-        readonly isSkeleton: boolean
+        readonly isLoading: boolean
+        readonly read: DataSlot<boolean>
+        readonly labels: SlotLabels
         readonly composer: {
             readonly isOpen: boolean
             readonly label: string
@@ -69,6 +73,7 @@ export interface AgentProfileHeadBaseProps {
         }
     }
     readonly on: {
+        readonly retry: () => void
         readonly toggle: () => void
         readonly change: (text: string) => void
         readonly send: () => void
@@ -164,33 +169,27 @@ const AssignComposer = (props: ComposerProps) => {
 /** Draws the agent profile as one Page: trail, name and role, the identity chips and the "Giao viec" action in its header; the mini composer and the page body inside it. */
 export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
     const view = props.props
-    const { head, isSkeleton } = view
+    const { head, isLoading } = view
     return (
         <Page
             measure="product"
-            isSkeleton={isSkeleton}
+            isLoading={isLoading}
             header={{
                 breadcrumbs: { label: view.crumbLabel, items: head.crumbs },
                 title: head.title,
                 description: head.description,
                 mark: (
-                    <AgentMark
-                        label={head.title}
-                        seed={head.seed}
-                        src={head.picture}
-                        size="lg"
-                        isSkeleton={isSkeleton}
-                    />
+                    <AgentMark label={head.title} seed={head.seed} src={head.picture} size="lg" isLoading={isLoading} />
                 ),
                 status: head.chips.map((chip) => (
-                    <Badge key={chip.id} tone={chip.tone} isSkeleton={isSkeleton}>
+                    <Badge key={chip.id} tone={chip.tone} isLoading={isLoading}>
                         {chip.label}
                     </Badge>
                 )),
                 actions: (
                     <Button
                         intent="alternative"
-                        isSkeleton={isSkeleton}
+                        isLoading={isLoading}
                         isDisabled={!head.canAssign}
                         onPress={props.on.toggle}
                     >
@@ -199,10 +198,18 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                 ),
             }}
         >
-            <Stack gap="region">
-                {view.composer.isOpen ? <AssignComposer {...props} /> : null}
-                {props.shape.body}
-            </Stack>
+            <SlotView
+                slot={view.read}
+                placeholder={false}
+                labels={view.labels}
+                onRetry={props.on.retry}
+                render={() => (
+                    <Stack gap="region">
+                        {view.composer.isOpen ? <AssignComposer {...props} /> : null}
+                        {props.shape.body}
+                    </Stack>
+                )}
+            />
         </Page>
     )
 }

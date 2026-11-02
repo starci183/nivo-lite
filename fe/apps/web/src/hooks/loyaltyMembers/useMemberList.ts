@@ -1,17 +1,37 @@
 "use client"
 
 import type { LoyaltyBoardType } from "@/hooks/swr"
+import type { LoyaltyPanelActivation } from "@/hooks/loyalty"
 import { useMemo, useState } from "react"
+import { useFeatureReset } from "@/hooks/reuseables"
 import { MEMBER_PAGE_SIZE, MEMBER_SORTS, matchesQuery, sortValue } from "./loyaltyMembers.shared"
 import type { MemberSortKey } from "./loyaltyMembers.shared"
 
 /** The member list's search, tier filter, sort and paging, and the member picked for the detail. */
-export const useMemberList = (board: LoyaltyBoardType) => {
-    const [query, setQuery] = useState("")
-    const [tier, setTier] = useState("all")
-    const [sort, setSort] = useState<MemberSortKey>("lastVisit")
-    const [limit, setLimit] = useState(MEMBER_PAGE_SIZE)
-    const [selected, setSelected] = useState<string | null>(null)
+export const useMemberList = (board: LoyaltyBoardType, activation: LoyaltyPanelActivation) => {
+    const [sessionScope, setSessionScope] = useState<string | null>(null)
+    const isCurrent = activation.isActive && activation.isReady && sessionScope === activation.scope
+    const [queryState, setQuery] = useState("")
+    const [tierState, setTier] = useState("all")
+    const [sortState, setSort] = useState<MemberSortKey>("lastVisit")
+    const [limitState, setLimit] = useState(MEMBER_PAGE_SIZE)
+    const [selectedState, setSelected] = useState<string | null>(null)
+    const query = isCurrent ? queryState : ""
+    const tier = isCurrent ? tierState : "all"
+    const sort = isCurrent ? sortState : "lastVisit"
+    const limit = isCurrent ? limitState : MEMBER_PAGE_SIZE
+    const selected = isCurrent ? selectedState : null
+    useFeatureReset({
+        ...activation,
+        onReset: () => {
+            setSessionScope(activation.isActive && activation.isReady ? activation.scope : null)
+            setQuery("")
+            setTier("all")
+            setSort("lastVisit")
+            setLimit(MEMBER_PAGE_SIZE)
+            setSelected(null)
+        },
+    })
     const rows = useMemo(
         () =>
             board.members

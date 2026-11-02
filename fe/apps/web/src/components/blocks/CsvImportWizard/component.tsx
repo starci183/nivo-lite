@@ -1,17 +1,19 @@
-import { Alert, Button, FileDropzone, Input, RadioGroup, Select, Text, Textarea } from "@starci/grammar/common"
-import { CsvImportDocs } from "@/components/composites/CsvImportDocs"
-import { CsvImportGrid } from "@/components/composites/CsvImportGrid"
-import type { CsvImportGridView } from "@/components/composites/CsvImportGrid"
+import { Grid, Alert, Input, RadioGroup, Select, Text } from "@starci/grammar/common"
+
+import { CsvImportDataStep } from "@/components/composites/CsvImportDataStep"
+import type { CsvImportGridView } from "@/components/branches/CsvImportGrid"
 import { CsvImportMap } from "@/components/composites/CsvImportMap"
 import type { CsvImportMapView, CsvMapColumn } from "@/components/composites/CsvImportMap"
 import { CsvImportRun } from "@/components/composites/CsvImportRun"
 import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
+import { WizardFooter, backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
-import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
+import { frameOf, WizardFrame } from "@/components/frames/WizardFrame"
 import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
-import { csvImportWizardClassNames as classNames } from "./classNames"
+
+/** The ready drawing with its canonical first-read loading atom. */
+type CsvImportWizardDrawLoadingProps = CsvImportWizardBaseProps & { readonly isLoading: boolean }
 
 /** One option of a select. */
 interface CsvOption {
@@ -143,9 +145,9 @@ const actionsOf = ({ props, on }: CsvImportWizardBaseProps): ReadonlyArray<Wizar
     return [nextAction(text.done, on.finish, { isPending: props.isPending })]
 }
 
-const SourceStep = ({ props, on }: CsvImportWizardBaseProps) => (
+const SourceStep = ({ props, on, isLoading }: CsvImportWizardDrawLoadingProps) => (
     <>
-        <div className={classNames.fields}>
+        <Grid kind="form" columns={2}>
             <Input
                 id="csv-name"
                 name="name"
@@ -154,6 +156,7 @@ const SourceStep = ({ props, on }: CsvImportWizardBaseProps) => (
                 isDisabled={props.isPending}
                 value={props.form.name}
                 onValueChange={on.name}
+                isLoading={isLoading}
             />
             {props.source === "document" ? null : (
                 <Select
@@ -162,70 +165,22 @@ const SourceStep = ({ props, on }: CsvImportWizardBaseProps) => (
                     value={props.form.entity}
                     options={[...props.entityOptions]}
                     onValueChange={on.entity}
+                    isLoading={isLoading}
                 />
             )}
-        </div>
+        </Grid>
         <RadioGroup
             label={props.text.fieldSource}
             isDisabled={props.isPending}
             value={props.source}
             onValueChange={on.source}
             options={[...props.sourceOptions]}
+            isLoading={isLoading}
         />
     </>
 )
 
-const FileStep = ({ props, on }: CsvImportWizardBaseProps) => (
-    <>
-        <FileDropzone
-            label={props.text.fileLabel}
-            accept=".csv,.tsv,.txt,.xlsx"
-            prompt={props.text.filePrompt}
-            isDisabled={props.isPending}
-            hideFileList
-            onFilesChange={on.file}
-        />
-        {props.fileChosen === null ? null : <Text size="sm">{props.fileChosen}</Text>}
-    </>
-)
-
-const SheetStep = ({ props, on }: CsvImportWizardBaseProps) => (
-    <Input
-        id="csv-link"
-        name="link"
-        label={props.text.linkSheetLabel}
-        description={props.text.linkSheetHint}
-        placeholder={props.text.linkSheetPlaceholder}
-        isDisabled={props.isPending}
-        value={props.link}
-        onValueChange={on.link}
-    />
-)
-
-const ManualStep = ({ props, on }: CsvImportWizardBaseProps) => (
-    <>
-        <Textarea
-            label={props.text.pasteLabel}
-            description={props.text.pasteHint}
-            rows={4}
-            isDisabled={props.isPending}
-            value={props.paste}
-            onValueChange={on.paste}
-        />
-        <div>
-            <Button intent="neutral" isDisabled={props.isPending || !props.paste.trim()} onPress={on.applyPaste}>
-                {props.text.pasteUse}
-            </Button>
-        </div>
-        <CsvImportGrid {...props.grid} isDisabled={props.isPending} on={on} />
-    </>
-)
-
-const DocsStep = ({ props, on }: CsvImportWizardBaseProps) => (
-    <CsvImportDocs link={props.link} isDisabled={props.isPending} text={props.text} onDocs={on.docs} onLink={on.link} />
-)
-
-const ImportStep = ({ props, on }: CsvImportWizardBaseProps) => (
+const ImportStep = ({ props, on, isLoading }: CsvImportWizardDrawLoadingProps) => (
     <CsvImportRun
         intro={props.importIntro}
         schedule={
@@ -236,24 +191,42 @@ const ImportStep = ({ props, on }: CsvImportWizardBaseProps) => (
         isDisabled={props.isPending}
         done={props.done}
         onSchedule={on.schedule}
+        isLoading={isLoading}
     />
 )
 
 /** The data step's body for each source (documents have their own step). */
-const DATA_STEPS = { file: FileStep, sheet: SheetStep, manual: ManualStep, document: DocsStep } as const
 
-const StepBody = (base: CsvImportWizardBaseProps) => {
+const StepBody = (base: CsvImportWizardDrawLoadingProps) => {
     const { props, on } = base
-    if (props.step === "source") return <SourceStep {...base} />
-    if (props.step === "data") {
-        const Data = DATA_STEPS[props.source]
-        return <Data {...base} />
-    }
-    if (props.step === "docs") return <DocsStep {...base} />
+    if (props.step === "source") return <SourceStep {...base} isLoading={base.isLoading} />
+    if (props.step === "data" || props.step === "docs")
+        return (
+            <CsvImportDataStep
+                source={props.step === "docs" ? "document" : props.source}
+                text={props.text}
+                isPending={props.isPending}
+                isLoading={base.isLoading}
+                fileChosen={props.fileChosen}
+                link={props.link}
+                paste={props.paste}
+                grid={props.grid}
+                on={on}
+            />
+        )
     if (props.step === "map")
-        return props.map === null ? null : <CsvImportMap {...props.map} isDisabled={props.isPending} on={on} />
-    if (props.step === "import") return <ImportStep {...base} />
-    return <WizardAgentStep {...props.agentStep} isDisabled={props.isPending} onChange={on.agents} />
+        return props.map === null ? null : (
+            <CsvImportMap {...props.map} isDisabled={props.isPending} on={on} isLoading={base.isLoading} />
+        )
+    if (props.step === "import") return <ImportStep {...base} isLoading={base.isLoading} />
+    return (
+        <WizardAgentStep
+            {...props.agentStep}
+            isDisabled={props.isPending}
+            onChange={on.agents}
+            isLoading={base.isLoading}
+        />
+    )
 }
 
 /** The wizard a new import starts with: the placeholder drawn while a saved one is read. */
@@ -266,18 +239,27 @@ const RESUME_PLACEHOLDER: WizardResume = { isResumed: false }
 export const CsvImportWizardBase = (props: CsvImportWizardBaseProps) => {
     const { props: view, on } = props
     return (
-        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
-            {(_resume, isSkeleton) => (
-                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} actions={actionsOf(props)}>
+        <SlotView
+            slot={view.resume}
+            placeholder={RESUME_PLACEHOLDER}
+            labels={view.slotLabels}
+            onRetry={on.retry}
+            render={(_resume, isLoading) => (
+                <WizardFrame
+                    {...frameOf(view)}
+                    footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
+                >
                     {view.resumeLine === null ? null : (
                         <Text size="sm" tone="muted">
                             {view.resumeLine}
                         </Text>
                     )}
-                    <StepBody {...props} />
-                    {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
+                    <StepBody {...props} isLoading={isLoading} />
+                    {view.note === null ? null : (
+                        <Alert tone={view.note.tone} title={view.note.text} isLoading={isLoading} />
+                    )}
                 </WizardFrame>
             )}
-        </SlotView>
+        />
     )
 }

@@ -74,28 +74,47 @@ export interface EditorSave {
     readonly media: ReadonlyArray<MediaRef>
 }
 
-/** The editor fields a stored post starts with. */
-export const initialForm = (item: ContentItem): EditorForm => ({
-    title: item.title,
-    brief: item.brief,
-    pillarId: item.pillar_id,
-    channels: [...item.channels],
-    date: dateText(item.scheduled_at),
-    time: timeText(item.scheduled_at),
+/** Local form defaults while no actual post is selected; no API entity is invented. */
+const blankEditorForm = (): EditorForm => ({
+    title: "",
+    brief: "",
+    pillarId: null,
+    channels: [],
+    date: "",
+    time: "",
     hint: "",
     proof: {},
-    variants: Object.fromEntries(
-        Object.entries(item.variants).map(([channel, variant]) => [
-            channel,
-            { ...variant, hashtags: [...variant.hashtags] },
-        ]),
-    ),
-    tags: Object.fromEntries(
-        CONTENT_CHANNELS.map((channel) => [channel, (item.variants[channel]?.hashtags ?? []).join(" ")]),
-    ),
-    media: item.media.map((media) => ({ ...media })),
-    links: item.links.map((link) => ({ ...link })),
+    variants: {},
+    tags: Object.fromEntries(CONTENT_CHANNELS.map((channel) => [channel, ""])),
+    media: [],
+    links: [],
 })
+
+/** The editor fields a stored post starts with, or a real blank form before selection. */
+export const initialForm = (item: ContentItem | null): EditorForm =>
+    item === null
+        ? blankEditorForm()
+        : {
+              title: item.title,
+              brief: item.brief,
+              pillarId: item.pillar_id,
+              channels: [...item.channels],
+              date: dateText(item.scheduled_at),
+              time: timeText(item.scheduled_at),
+              hint: "",
+              proof: {},
+              variants: Object.fromEntries(
+                  Object.entries(item.variants).map(([channel, variant]) => [
+                      channel,
+                      { ...variant, hashtags: [...variant.hashtags] },
+                  ]),
+              ),
+              tags: Object.fromEntries(
+                  CONTENT_CHANNELS.map((channel) => [channel, (item.variants[channel]?.hashtags ?? []).join(" ")]),
+              ),
+              media: item.media.map((media) => ({ ...media })),
+              links: item.links.map((link) => ({ ...link })),
+          }
 
 /** The mutation input of a valid form, or nothing when the date or the time cannot be read. */
 export const toEditorSave = (values: EditorForm, withVariants: boolean): EditorSave | undefined => {

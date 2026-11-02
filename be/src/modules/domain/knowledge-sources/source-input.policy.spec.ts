@@ -54,14 +54,18 @@ describe("normalizeSource audience", () => {
         ["missing", undefined],
         ["unknown", "other"],
         ["empty", ""],
-    ])("refuses a source whose audience is %s: the owner chooses, nothing is assumed", async (_name, visibility) => {
-        const subject = await buildSubject()
+        ["internal", "internal"],
+    ])(
+        "adds a source whose audience is %s as internal: there is no picker, the part of the Brain decides",
+        async (_name, visibility) => {
+            const subject = await buildSubject()
 
-        expect(subject.normalizeSource(WS, inputOf({ visibility }))).toMatchObject({
-            kind: "refused",
-            code: KnowledgeSourcesErrorCode.VisibilityRequired,
-        })
-    })
+            expect(subject.normalizeSource(WS, inputOf({ visibility }))).toMatchObject({
+                kind: "ok",
+                value: { visibility: "internal" },
+            })
+        },
+    )
 })
 
 describe("normalizeSource", () => {
@@ -78,7 +82,7 @@ describe("normalizeSource", () => {
                     tags: [" a ", "a", "", "b"],
                     module: "chatbot",
                     installationId: "inst-1",
-                    visibility: "public",
+                    visibility: "internal",
                     origin: "ZIP",
                 }),
             ),
@@ -94,7 +98,7 @@ describe("normalizeSource", () => {
                 tags: ["a", "b"],
                 module: "chatbot",
                 installationId: "inst-1",
-                visibility: "public",
+                visibility: "internal",
                 origin: "ZIP",
             },
         })
@@ -144,6 +148,11 @@ describe("normalizeSource", () => {
 describe("normalizeSource", () => {
     it.each([
         ["an unknown kind", inputOf({ kind: "audio" }), KnowledgeSourcesErrorCode.SourceKindUnknown],
+        [
+            "a public document, which only an approved public document is",
+            inputOf({ visibility: "public" }),
+            KnowledgeSourcesErrorCode.PublicByApproval,
+        ],
         ["a link that is not http", inputOf({ kind: "url", url: "ftp://x" }), KnowledgeSourcesErrorCode.UrlInvalid],
         [
             "a file outside the workspace",
@@ -174,11 +183,8 @@ describe("normalizeUpdate", () => {
         const subject = await buildSubject()
 
         expect(subject.normalizeUpdate({ sourceId: "s" })).toEqual({
-            title: null,
-            topic: null,
-            tags: null,
-            module: null,
-            visibility: null,
+            kind: "ok",
+            value: { title: null, topic: null, tags: null, module: null, visibility: null },
         })
         expect(
             subject.normalizeUpdate({
@@ -187,9 +193,17 @@ describe("normalizeUpdate", () => {
                 topic: " x ",
                 tags: ["a", "a"],
                 module: " m ",
-                visibility: "public",
             }),
-        ).toEqual({ title: "T", topic: "x", tags: ["a"], module: "m", visibility: "public" })
+        ).toEqual({ kind: "ok", value: { title: "T", topic: "x", tags: ["a"], module: "m", visibility: null } })
+    })
+
+    it("refuses to make a document public", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.normalizeUpdate({ sourceId: "s", visibility: "public" })).toMatchObject({
+            kind: "refused",
+            code: KnowledgeSourcesErrorCode.PublicByApproval,
+        })
     })
 
     it("clears a topic and a module with an empty text and names an empty title", async () => {
@@ -198,11 +212,8 @@ describe("normalizeUpdate", () => {
         expect(
             subject.normalizeUpdate({ sourceId: "s", title: " ", topic: "", module: "", visibility: "internal" }),
         ).toEqual({
-            title: "Untitled",
-            topic: "",
-            tags: null,
-            module: "",
-            visibility: "internal",
+            kind: "ok",
+            value: { title: "Untitled", topic: "", tags: null, module: "", visibility: "internal" },
         })
     })
 })
@@ -276,16 +287,16 @@ describe("metaChanges", () => {
         const none = { title: null, topic: null, tags: null, module: null, visibility: null }
 
         expect(subject.metaChanges(none)).toEqual({ updatedAt: anyFunction })
-        expect(subject.metaChanges({ title: "T", topic: "x", tags: ["a"], module: "m", visibility: "public" })).toEqual(
-            {
-                title: "T",
-                topic: "x",
-                tags: ["a"],
-                module: "m",
-                visibility: "public",
-                updatedAt: anyFunction,
-            },
-        )
+        expect(
+            subject.metaChanges({ title: "T", topic: "x", tags: ["a"], module: "m", visibility: "internal" }),
+        ).toEqual({
+            title: "T",
+            topic: "x",
+            tags: ["a"],
+            module: "m",
+            visibility: "internal",
+            updatedAt: anyFunction,
+        })
     })
 
     it("clears a topic and a module that are empty text", async () => {

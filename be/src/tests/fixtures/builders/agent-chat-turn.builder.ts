@@ -1,13 +1,32 @@
+import type {
+    ChatTurnFacts,
+    AgentChatPageData,
+    RequestChatFileUpload,
+    SendAgentChatRequest,
+    TakeOverAgentChatRequest,
+    AgentChatTurnStatusRequest,
+    AgentChatHolder,
+    AgentChatTurnStatus,
+    QueuedAgentChatTurn,
+    StartAgentChatRequest,
+} from "@modules/domain/agent-chat"
+import type { CustomerIntakeService } from "@modules/domain/conversations"
+import type { ChatFilesService } from "@modules/domain/chat-files"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
+import { builder } from "@starci/jest-preset"
 import type { MockOf } from "@starci/jest-preset"
 import type {
     AgentConversationsReadService,
+    AgentConversationsService,
     ChatConversation,
     ConversationTarget,
 } from "@modules/domain/agent-conversations"
-import type { AgentMessageDeliveriesService, AgentThreadMessage } from "@modules/domain/agent-messages"
+import type {
+    AgentMessageDeliveriesService,
+    AgentMessagesService,
+    AgentThreadMessage,
+} from "@modules/domain/agent-messages"
 import type { AgentProfile } from "@modules/domain/agents"
-import type { ChatTurnFacts } from "@modules/domain/agent-chat"
 
 const CHAT_NOW = "2026-10-13T02:00:00.000Z"
 
@@ -19,6 +38,7 @@ export const PROFILE: AgentProfile = {
     instructions: "Be brief",
     knowledge: "Open 9 to 6",
     approval_rule: "owner",
+    module: "chatbot",
 }
 
 export const CONVERSATION: ChatConversation = {
@@ -82,4 +102,156 @@ export const MEMBER_LAN: WorkspaceMember = {
     staffId: null,
     displayName: "Lan",
     status: "active",
+}
+
+interface ChatFileSendOwners {
+    readonly files: MockOf<ChatFilesService>
+    readonly conversations: MockOf<AgentConversationsService>
+    readonly messages: MockOf<AgentMessagesService>
+}
+/** Deterministic page, submission and delivery answers used by the chat service boundary cases. */
+export const CHAT = {
+    page: builder<AgentChatPageData>({
+        id: "a1",
+        module: "chatbot",
+        name: "Nivo",
+        handle: "nivo",
+        role: "receptionist",
+        avatarUrl: null,
+        isActive: true,
+        hasCustomerChannel: true,
+        workspaceId: "w1",
+        showWelcome: true,
+    }),
+    salesPage: builder<Pick<AgentChatPageData, "module" | "avatarUrl" | "hasCustomerChannel" | "showWelcome">>({
+        module: "sales",
+        avatarUrl: null,
+        hasCustomerChannel: false,
+        showWelcome: false,
+    }),
+    longVisitor: builder<StartAgentChatRequest>({
+        workspaceId: "w1",
+        agentId: "a1",
+        kind: "customer",
+        visitorName: ` ${"n".repeat(90)} `,
+    }),
+    customerAccepted: builder<QueuedAgentChatTurn>({
+        id: "m1",
+        conversationId: "c1",
+        status: "queued",
+    }),
+    customerWake: builder<Parameters<CustomerIntakeService["answerChat"]>[0]>({
+        workspaceId: "w1",
+        conversationId: "c1",
+        messageId: "m1",
+        channelEventId: "agentchat:m1",
+        lookupName: false,
+    }),
+    humanAccepted: builder<QueuedAgentChatTurn>({
+        id: "m2",
+        conversationId: "c1",
+        status: "queued",
+    }),
+    releasedHolder: builder<AgentChatHolder>({
+        conversationId: "c1",
+        handledBy: null,
+    }),
+    queuedStatus: builder<AgentChatTurnStatus>({
+        id: "m1",
+        jobId: "job-1",
+        conversationId: "c1",
+        status: "queued",
+        resultMessageId: "r1",
+        errorCode: null,
+    }),
+    runningStatus: builder<Pick<AgentChatTurnStatus, "status" | "errorCode">>({
+        status: "running",
+        errorCode: null,
+    }),
+    succeededStatus: builder<Pick<AgentChatTurnStatus, "status" | "resultMessageId" | "errorCode">>({
+        status: "succeeded",
+        resultMessageId: "r1",
+        errorCode: null,
+    }),
+    failedDelivery: builder<ChatTurnFacts>({
+        ...TURN,
+        channel: "zalo",
+        role: "agent",
+        deliveryStatus: "failed",
+        replyId: null,
+    }),
+    failedDeliveryStatus: builder<AgentChatTurnStatus>({
+        id: "m1",
+        jobId: "job-2",
+        conversationId: "c1",
+        status: "failed",
+        resultMessageId: "m1",
+        errorCode: "CHAT_DELIVERY_FAILED",
+    }),
+    failedQueueStatus: builder<Pick<AgentChatTurnStatus, "status" | "errorCode">>({
+        status: "failed",
+        errorCode: "CHAT_TURN_FAILED",
+    }),
+    fileAccepted: builder<QueuedAgentChatTurn>({
+        id: "m-file",
+        conversationId: "c1",
+        status: "queued",
+    }),
+    fileWake: builder<Parameters<CustomerIntakeService["answerChat"]>[0]>({
+        workspaceId: "w1",
+        conversationId: "c1",
+        messageId: "m-file",
+        channelEventId: "agentchat:m-file",
+        lookupName: false,
+    }),
+    namelessChats: [
+        { kind: "test", visitorName: "Lan" },
+        { kind: "customer", visitorName: null },
+    ] as const,
+    externalDeliveries: [
+        ["failed", "failed", "CHAT_DELIVERY_FAILED"],
+        ["sent", "succeeded", null],
+    ] as const,
+    externalStatus: (
+        status: AgentChatTurnStatus["status"],
+        errorCode: AgentChatTurnStatus["errorCode"],
+    ): AgentChatTurnStatus => ({
+        id: "m1",
+        jobId: "job-1",
+        conversationId: "c1",
+        status,
+        resultMessageId: "r1",
+        errorCode,
+    }),
+    turn: builder<AgentChatTurnStatusRequest>({ workspaceId: "w1", id: "m1" }),
+    send: builder<SendAgentChatRequest>({ workspaceId: "w1", conversationId: "c1", body: "Hello", file: null }),
+    start: builder<StartAgentChatRequest>({ workspaceId: "w1", agentId: "a1", kind: "customer", visitorName: null }),
+    take: builder<TakeOverAgentChatRequest>({ workspaceId: "w1", conversationId: "c1", take: true, line: "" }),
+    memberHolder: builder<AgentChatHolder>({ conversationId: "c1", handledBy: "Lan" }),
+    staffHolder: builder<AgentChatHolder>({ conversationId: "c1", handledBy: "staff" }),
+    uploadRequest: builder<RequestChatFileUpload>({
+        workspaceId: "w1",
+        conversationId: "c1",
+        contentType: "image/png",
+        sizeBytes: 9,
+    }),
+    arrangeFileSend: (
+        { files, conversations, messages }: ChatFileSendOwners,
+        checked: Parameters<ChatFilesService["attach"]>[1],
+    ): void => {
+        files.verify.mockResolvedValue(checked)
+        files.wordsOf.mockReturnValue("sent a file")
+        conversations.lockChat.mockResolvedValue(CONVERSATION)
+        messages.storeCustomer.mockResolvedValue("m-file")
+    },
+    arrangeAttachmentFailure: (
+        { files, conversations, messages }: ChatFileSendOwners,
+        checked: Parameters<ChatFilesService["attach"]>[1],
+        failure: Error,
+    ): void => {
+        files.verify.mockResolvedValue(checked)
+        files.attach.mockRejectedValue(failure)
+        conversations.lockChat.mockResolvedValue(CONVERSATION)
+        messages.storeCustomer.mockResolvedValue("m-file")
+    },
 }

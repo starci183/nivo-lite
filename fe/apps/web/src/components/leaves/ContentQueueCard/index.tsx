@@ -1,8 +1,7 @@
-import { Button, Cluster, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
-import type { ContentT, PostView, QuoteView } from "@/modules/types"
-import { QUOTE_CLASS_NAME } from "./classNames"
+import { Button, Cluster, Quote, Stack, Text } from "@starci/grammar/common"
+import type { PostView, QuoteView, ContentViews } from "@/modules/types"
 
-/** Props of {@link ContentQueueCard}. */
+/** Props of {@link ContentQueueCard}: the body of one waiting post inside its row. */
 interface ContentQueueCardProps {
     /** The post waiting for approval. */
     readonly post: PostView
@@ -17,68 +16,67 @@ interface ContentQueueCardProps {
     readonly busy: "approved" | "rejected" | null
     /** The outcome message of the last decision on this post. */
     readonly note: { readonly tone: "ok" | "error"; readonly text: string } | undefined
-    readonly t: ContentT
+    readonly copy: ContentViews["workbenchCopy"]
     readonly onDecide: (id: string, decision: "approved" | "rejected") => void
     readonly onOpen: (id: string) => void
+    /** The row is a placeholder while the read is in flight: the same tree draws as a skeleton. */
+    readonly isLoading?: boolean
 }
 
-/** One post waiting for the owner: the text of each channel as it will be posted, and open, refuse or approve. */
-export const ContentQueueCard = (props: ContentQueueCardProps) => {
-    const { post, t } = props
-    return (
-        <ListRow
-            title={post.title}
-            description={post.when}
-            actions={
-                <Cluster gap="inline">
-                    <Button intent="neutral" size="sm" onPress={() => props.onOpen(post.id)}>
-                        {t("queueOpen")}
+/** One post waiting for the owner: the text of each channel as it will be posted, as quotes inside the row's detail. */
+export const ContentQueueCard = (props: ContentQueueCardProps) => (
+    <Stack gap="row">
+        {props.quotes.map((quote) => (
+            <Quote key={quote.channel} source={quote.label} text={quote.text} isLoading={props.isLoading ?? false} />
+        ))}
+        <Cluster gap="inline">
+            <Button
+                isLoading={props.isLoading ?? false}
+                intent="neutral"
+                size="sm"
+                onPress={() => props.onOpen(props.post.id)}
+            >
+                {props.copy.queueOpen}
+            </Button>
+            {props.canDecide && props.hasDecision ? (
+                <>
+                    <Button
+                        isLoading={props.isLoading ?? false}
+                        intent="destructive"
+                        step="entry"
+                        size="sm"
+                        isPending={props.isPending && props.busy === "rejected"}
+                        isDisabled={props.isPending}
+                        onPress={() => props.onDecide(props.post.id, "rejected")}
+                    >
+                        {props.copy.reject}
                     </Button>
-                    {props.canDecide && props.hasDecision ? (
-                        <>
-                            <Button
-                                intent="destructive"
-                                step="entry"
-                                size="sm"
-                                isPending={props.isPending && props.busy === "rejected"}
-                                isDisabled={props.isPending}
-                                onPress={() => props.onDecide(post.id, "rejected")}
-                            >
-                                {t("reject")}
-                            </Button>
-                            <Button
-                                intent="alternative"
-                                size="sm"
-                                isPending={props.isPending && props.busy === "approved"}
-                                isDisabled={props.isPending}
-                                onPress={() => props.onDecide(post.id, "approved")}
-                            >
-                                {t("approve")}
-                            </Button>
-                        </>
-                    ) : null}
-                </Cluster>
-            }
-        >
-            {props.quotes.map((quote) => (
-                <SurfaceCard key={quote.channel} label={quote.label} headingLevel={4}>
-                    <div className={QUOTE_CLASS_NAME}>
-                        <Text as="p" size="sm">
-                            {quote.text}
-                        </Text>
-                    </div>
-                </SurfaceCard>
-            ))}
-            {props.hasDecision ? null : (
-                <Text size="sm" tone="muted">
-                    {t("queueNoDecision")}
-                </Text>
-            )}
-            {props.note ? (
-                <Text size="sm" live={props.note.tone === "error" ? "assertive" : "polite"}>
-                    {props.note.text}
-                </Text>
+                    <Button
+                        isLoading={props.isLoading ?? false}
+                        intent="alternative"
+                        size="sm"
+                        isPending={props.isPending && props.busy === "approved"}
+                        isDisabled={props.isPending}
+                        onPress={() => props.onDecide(props.post.id, "approved")}
+                    >
+                        {props.copy.approve}
+                    </Button>
+                </>
             ) : null}
-        </ListRow>
-    )
-}
+        </Cluster>
+        {props.hasDecision ? null : (
+            <Text isLoading={props.isLoading ?? false} size="sm" tone="muted">
+                {props.copy.queueNoDecision}
+            </Text>
+        )}
+        {props.note ? (
+            <Text
+                isLoading={props.isLoading ?? false}
+                size="sm"
+                live={props.note.tone === "error" ? "assertive" : "polite"}
+            >
+                {props.note.text}
+            </Text>
+        ) : null}
+    </Stack>
+)

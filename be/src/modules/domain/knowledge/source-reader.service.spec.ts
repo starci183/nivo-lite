@@ -58,27 +58,47 @@ describe("SourceReaderService", () => {
     })
 })
 
+const registerPlacedFileCases = (file: typeof sourceOf) => {
+    it("reads the object by its file name", async () => {
+        const { reader, sources, documents } = await build()
+        documents.canReadFileName.mockReturnValue(true)
+        sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1, 2]), contentType: "application/pdf" })
+        const parts: ReadonlyArray<PlacedText> = [{ place: { kind: "page", label: "1" }, text: "Menu text" }]
+        documents.readPlacedFile.mockResolvedValue({ text: "Menu text", parts })
+
+        await expect(reader.read(file())).resolves.toEqual({
+            kind: "ok",
+            value: { text: "Menu text", title: null, parts },
+        })
+
+        expect(documents.canReadFileName).toHaveBeenCalledWith("menu.pdf")
+        expect(sources.readUpload).toHaveBeenCalledWith(`${WS}/a/menu.pdf`)
+        expect(documents.readPlacedFile).toHaveBeenCalledWith("menu.pdf", new Uint8Array([1, 2]), "application/pdf")
+    })
+
+    it("keeps plain file text without inventing document places", async () => {
+        const { reader, sources, documents } = await build()
+        documents.canReadFileName.mockReturnValue(true)
+        sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1]), contentType: "text/plain" })
+        documents.readPlacedFile.mockResolvedValue({
+            text: "Menu text",
+            parts: [{ place: null, text: "Menu text" }],
+        })
+
+        await expect(reader.read(file({ storagePath: `${WS}/a/menu.txt` }))).resolves.toEqual({
+            kind: "ok",
+            value: { text: "Menu text", title: null },
+        })
+        expect(documents.readPlacedFile).toHaveBeenCalledWith("menu.txt", new Uint8Array([1]), "text/plain")
+    })
+}
+
 describe("SourceReaderService", () => {
     describe("files", () => {
         const file = (patch: Partial<SourceRecord> = {}) =>
             sourceOf({ kind: "file", storagePath: `${WS}/a/menu.pdf`, content: "", ...patch })
 
-        it("reads the object by its file name", async () => {
-            const { reader, sources, documents } = await build()
-            documents.canReadFileName.mockReturnValue(true)
-            sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1, 2]), contentType: "application/pdf" })
-            const parts: ReadonlyArray<PlacedText> = [{ place: { kind: "page", label: "1" }, text: "Menu text" }]
-            documents.readPlacedFile.mockResolvedValue({ text: "Menu text", parts })
-
-            await expect(reader.read(file())).resolves.toEqual({
-                kind: "ok",
-                value: { text: "Menu text", title: null, parts },
-            })
-
-            expect(documents.canReadFileName).toHaveBeenCalledWith("menu.pdf")
-            expect(sources.readUpload).toHaveBeenCalledWith(`${WS}/a/menu.pdf`)
-            expect(documents.readPlacedFile).toHaveBeenCalledWith("menu.pdf", new Uint8Array([1, 2]), "application/pdf")
-        })
+        registerPlacedFileCases(file)
 
         it("takes the text of a file source that has no object", async () => {
             const { reader, sources } = await build()

@@ -8,14 +8,13 @@ import { useQueryAuthUserSwr } from "@/hooks/auth"
 import {
     mayConnect,
     moneyProviderOf,
-    boardSlotOf,
     useConnectionOverlays,
     useConnectionsData,
     useConnectionsRefresh,
     useConnectionsRole,
     wizardTargetOf,
 } from "@/hooks/connections"
-import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
+import { slotOfReads, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import type { AgentOption, Connection, DataSlot } from "@/modules/types"
 import { ConnectionWizardOverlayBase } from "./component"
 import type { WizardBoard, WizardTargetView } from "./component"
@@ -43,7 +42,8 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
     const params = useSearchParams()
     const overlays = useConnectionOverlays()
     const data = useConnectionsData()
-    const { role } = useConnectionsRole()
+    const access = useConnectionsRole()
+    const { role } = access
     const slotLabelsOf = useSlotLabels()
     // The signed-in person only prefills the SMTP test recipient: the drawer never waits on it.
     const user = slotOfSwr(useQueryAuthUserSwr())
@@ -67,10 +67,12 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
         ),
     }
     const hasOwnRead = props.items === undefined || props.agents === undefined
-    const slot: DataSlot<WizardBoard> = boardSlotOf(
-        { isLoading: hasOwnRead && data.isLoading, isManager: true, isFailed: hasOwnRead && data.failed },
-        board,
-    )
+    const dependencyReads = [access.read, ...(hasOwnRead ? data.reads : [])]
+    const slot: DataSlot<WizardBoard> = slotOfReads(dependencyReads, () => board)
+    const retry = () => {
+        access.retry()
+        if (hasOwnRead) data.retry()
+    }
     const close = (changed: boolean) => {
         overlays.closeWizard()
         if (changed) void refreshConnections()
@@ -80,12 +82,13 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
             props={{
                 title: def === null ? "" : t(providerKey(def.id, "title")),
                 closeLabel: t("close"),
-                ownerEmail: props.ownerEmail ?? user.items?.email ?? "",
+                ownerEmail: props.ownerEmail ?? ("items" in user ? user.items?.email : undefined) ?? "",
                 target,
                 board: slot,
+                dependencyReads,
                 slotLabels: slotLabelsOf(""),
             }}
-            on={{ close, retry: data.retry }}
+            on={{ close, retry }}
         />
     )
 }

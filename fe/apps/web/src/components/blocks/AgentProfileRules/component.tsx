@@ -8,9 +8,17 @@ export type AgentProfileRulesBaseProps = ProfileRegionBaseProps<ListRegionProps[
 
 /** Draws the rules that apply to the agent: read-only, one line each with its mode. */
 export const AgentProfileRulesBase = (props: AgentProfileRulesBaseProps) => (
-    <SlotView {...props.props.read} onRetry={props.on.retry}>
-        {(rows, isSkeleton) => (
-            <ListRegion label={props.props.label} rows={rows} footer={props.props.footer} isSkeleton={isSkeleton} />
+    <SlotView
+        {...props.props.read}
+        onRetry={props.on.retry}
+        render={(rows, isSkeleton) => (
+            <ListRegion
+                label={props.props.label}
+                rows={rows}
+                footer={props.props.footer}
+                empty={props.props.read.labels.empty}
+                isLoading={isSkeleton}
+            />
         )}
-    </SlotView>
+    />
 )

@@ -1,4 +1,4 @@
-import { Page, PrimaryRailLayout, Stack } from "@starci/grammar/common"
+import { Page, Stack, Grid } from "@starci/grammar/common"
 import { OnboardingChecklist } from "@/components/blocks/OnboardingChecklist"
 import { OverviewGovernance } from "@/components/blocks/OverviewGovernance"
 import { OverviewHeader } from "@/components/blocks/OverviewHeader"
@@ -27,7 +27,8 @@ export const OverviewPageBase = (props: OverviewPageBaseProps) => (
             <OverviewStatus />
             <OverviewGovernance />
             <OverviewKpiBand />
-            <PrimaryRailLayout
+            <Grid
+                kind="main-rail"
                 railWidth="standard"
                 align="start"
                 primary={<OverviewOwners />}

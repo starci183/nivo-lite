@@ -6,12 +6,15 @@ import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
+import type { Dispatch, SetStateAction } from "react"
+import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useContentRefresh } from "./useContentRefresh"
 
 /** What one queued content AI job needs from its caller. */
 interface ContentAiJobOptions<TRequest> {
+    readonly isActive?: boolean
+    readonly scope?: string
     readonly queue: (request: TRequest) => Promise<ContentAiRequestedType | undefined>
-    readonly isMutating: boolean
     readonly successMessage: (status: ContentAiStatusType) => string
     readonly onSucceeded?: ((status: ContentAiStatusType) => void) | undefined
 }
@@ -34,19 +37,65 @@ const FAILURE_KEYS: Readonly<Record<string, string>> = {
     CONTENT_AI_FAILED: "err_ai_busy",
 }
 
+interface ContentQueueExecution<TRequest> {
+    readonly options: ContentAiJobOptions<TRequest>
+    readonly input: TRequest
+    readonly capture: () => () => boolean
+    readonly runGraphQL: ReturnType<typeof useGraphQLWithToast>
+    readonly queuedMessage: string
+    readonly workspaceId: string | undefined
+    readonly accept: Dispatch<SetStateAction<ContentAiJobRef | undefined>>
+    readonly pending: Dispatch<SetStateAction<ReadonlyArray<() => boolean>>>
+}
+
+/** Request acceptance retains its standard toast while only its origin owns request pending and the followed job. */
+const requestContentAiJob = async <TRequest>(context: ContentQueueExecution<TRequest>) => {
+    const isCurrent = context.capture()
+    if (!context.options.isActive || !isCurrent()) return undefined
+    context.pending((current) => [...current, isCurrent])
+    try {
+        const accepted = await context.runGraphQL(() => context.options.queue(context.input), {
+            successMessage: context.queuedMessage,
+        })
+        if (accepted !== undefined && isCurrent()) context.accept({ id: accepted.id, workspaceId: context.workspaceId })
+        return accepted
+    } catch (error) {
+        await context.runGraphQL(() => Promise.reject(error), { showSuccessToast: false })
+        return undefined
+    } finally {
+        if (isCurrent()) context.pending((current) => current.filter((operation) => operation !== isCurrent))
+    }
+}
+
 /** Queues one content AI job, follows its status, and reports its terminal outcome once. */
 export const useContentAiJob = <TRequest>(options: ContentAiJobOptions<TRequest>) => {
     const t = useTranslations("content")
     const runGraphQL = useGraphQLWithToast()
     const { refresh } = useContentRefresh()
     const { activeWorkspaceId } = useActiveWorkspace()
+    const isActive = options.isActive ?? true
+    const scope = options.scope ?? JSON.stringify([activeWorkspaceId])
+    const lifetime = useFeatureLifetime(isActive, scope)
     const [job, setJob] = useState<ContentAiJobRef>()
+    const [requests, setRequests] = useState<ReadonlyArray<() => boolean>>([])
     const reported = useRef<string | undefined>(undefined)
-    const jobId = job && job.workspaceId === activeWorkspaceId ? job.id : undefined
-    const { queue, successMessage, onSucceeded } = options
+    useFeatureReset({
+        isActive,
+        isReady: true,
+        scope,
+        onReset: () => {
+            setJob(undefined)
+            setRequests([])
+            reported.current = undefined
+        },
+    })
+    const jobId = isActive && job && job.workspaceId === activeWorkspaceId ? job.id : undefined
+    const { successMessage, onSucceeded } = options
 
     const reportStatus = useCallback(
         async (status: ContentAiStatusType) => {
+            if (!isActive) return
+            const isCurrent = lifetime.capture()
             if (status.status !== "succeeded" && status.status !== "failed") return
             if (reported.current === status.id) return
             reported.current = status.id
@@ -57,32 +106,39 @@ export const useContentAiJob = <TRequest>(options: ContentAiJobOptions<TRequest>
             }
             await runGraphQL(() => Promise.resolve(status), { successMessage: successMessage(status) })
             await runGraphQL(refresh, { showSuccessToast: false })
-            onSucceeded?.(status)
+            if (isCurrent()) onSucceeded?.(status)
         },
-        [onSucceeded, refresh, runGraphQL, successMessage, t],
+        [isActive, lifetime, onSucceeded, refresh, runGraphQL, successMessage, t],
     )
     const reportFailure = useCallback(
         async (error: Error) => {
+            if (!isActive) return
             if (reported.current === jobId) return
             reported.current = jobId
             await runGraphQL(() => Promise.reject(error), { showSuccessToast: false })
         },
-        [jobId, runGraphQL],
+        [isActive, jobId, runGraphQL],
     )
     const { data: status } = useQueryContentAiStatusSwr(jobId, {
-        onSuccess: (answer) => void reportStatus(answer),
-        onError: (error) => void reportFailure(error),
+        onSuccess: reportStatus,
+        onError: reportFailure,
     })
 
     const request = useCallback(
-        async (input: TRequest) => {
-            const accepted = await runGraphQL(() => queue(input), { successMessage: t("aiQueued") })
-            if (accepted !== undefined) setJob({ id: accepted.id, workspaceId: activeWorkspaceId })
-            return accepted
-        },
-        [activeWorkspaceId, queue, runGraphQL, t],
+        (input: TRequest) =>
+            requestContentAiJob({
+                options: { ...options, isActive },
+                input,
+                capture: lifetime.capture,
+                runGraphQL,
+                queuedMessage: t("aiQueued"),
+                workspaceId: activeWorkspaceId,
+                accept: setJob,
+                pending: setRequests,
+            }),
+        [activeWorkspaceId, isActive, lifetime, options, runGraphQL, t],
     )
 
     const isTerminal = status?.status === "succeeded" || status?.status === "failed"
-    return { request, status, isPending: options.isMutating || (jobId !== undefined && !isTerminal) }
+    return { request, status, isPending: requests.length > 0 || (jobId !== undefined && !isTerminal) }
 }

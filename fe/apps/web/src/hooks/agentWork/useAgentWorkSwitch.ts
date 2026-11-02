@@ -32,7 +32,10 @@ export const useAgentWorkSwitch = (installationId: string) => {
         [installationId, runGraphQL, trigger, mutate, t],
     )
     const isOn = data?.state.workEnabled ?? true
-    const lifecycle = installations.items?.find((installation) => installation.id === installationId)?.lifecycle ?? null
+    const lifecycle =
+        ("items" in installations ? installations.items : undefined)?.find(
+            (installation) => installation.id === installationId,
+        )?.lifecycle ?? null
     const isStopped = !isOn && !isSetupPending(lifecycle)
     const statusLabelOf = (): string => {
         if (isStopped) return t("switchStatusOff")

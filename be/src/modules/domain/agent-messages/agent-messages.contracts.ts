@@ -43,6 +43,9 @@ export interface AgentThreadMessage {
 /** The stable message id of an approved work item, or null for a newly generated id. */
 export type ApprovedMessageId = string | null
 
+/** The final reply body already persisted for an item or customer message, or null before one exists. */
+export type StoredReplyBody = string | null
+
 /** The proven workspace account that typed a message, or null for channel and automated messages. */
 export type AuthorUserId = string | null
 
@@ -65,3 +68,6 @@ export interface ConversationDayCount {
     /** How many messages customers wrote. */
     readonly messages: number
 }
+
+/** Whether the stored message grants one outbound attempt, or already holds a delivery fact. */
+export type DeliveryClaim = "send" | "acknowledged" | "ambiguous" | "missing"

@@ -3,6 +3,8 @@ import { Button, FencedCodeBlock } from "@starci/grammar/common"
 
 /** What the copy-ready code block draws. */
 type WizardCodeBlockProps = {
+    readonly isLoading?: boolean
+
     readonly code: string
     readonly label: string
     readonly copyLabel: string
@@ -22,10 +24,16 @@ export const WizardCodeBlock = (props: WizardCodeBlockProps) => {
     }
     return (
         <FencedCodeBlock
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
             code={props.code}
             label={props.label}
             action={
-                <Button intent="neutral" size="sm" onPress={() => void copy()}>
+                <Button
+                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                    intent="neutral"
+                    size="sm"
+                    onPress={() => void copy()}
+                >
                     {copied ? props.copiedLabel : props.copyLabel}
                 </Button>
             }

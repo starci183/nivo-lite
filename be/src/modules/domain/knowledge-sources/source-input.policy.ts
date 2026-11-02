@@ -26,8 +26,8 @@ export interface NormalizedSource {
     readonly module: string | null
     /** The agent instance, or null for every instance. */
     readonly installationId: string | null
-    /** public or internal. */
-    readonly visibility: "public" | "internal"
+    /** Always internal: a document becomes public only as a separate public document an owner approved. */
+    readonly visibility: "internal"
     /** Where it came from. */
     readonly origin: string | null
 }
@@ -42,12 +42,26 @@ export interface NormalizedUpdate {
     readonly tags: ReadonlyArray<string> | null
     /** The new module. */
     readonly module: string | null
-    /** The new visibility. */
+    /** The new visibility. A change a person asks for through the API is never public (see `normalizeUpdate`); a trusted seed may make a document public. */
     readonly visibility: "public" | "internal" | null
 }
 
 /** The database instant of a write, for the `updated_at` column. */
 export const NOW = (): string => "now()"
+
+/** The columns of a source put back on the queue to be read from the start, with the changes that go with it. */
+export const requeued = (
+    changes: QueryDeepPartialEntity<KnowledgeSourceEntity>,
+): QueryDeepPartialEntity<KnowledgeSourceEntity> => ({
+    status: "queued",
+    progress: 0,
+    error: null,
+    stage: null,
+    stageDone: null,
+    stageTotal: null,
+    ...changes,
+    updatedAt: NOW,
+})
 
 /** The columns a change of metadata writes: a null keeps the stored value, an empty topic or module clears it. */
 export const metaChanges = (change: NormalizedUpdate): QueryDeepPartialEntity<KnowledgeSourceEntity> => ({
@@ -90,10 +104,6 @@ const contentOf = (kind: SourceKind, url: string, content: string): string => {
     return kind === "file" ? "" : content
 }
 
-/** The audience the owner chose, or null when none was chosen: there is no default, only the owner decides who may read. */
-const chosenVisibility = (value: string | undefined): "public" | "internal" | null =>
-    value === "public" || value === "internal" ? value : null
-
 /** The title: the one given, else for a link or file the one derived from its address or name. */
 const titleOf = (given: string, kind: SourceKind, url: string, path: string): string => {
     if (given !== "") return given
@@ -133,8 +143,7 @@ const inputRefusal = (workspaceId: string, kind: SourceKind, body: SourceBody): 
 export const normalizeSource = (workspaceId: string, input: AddSourceInput): NormalizedSourceOutcome => {
     const kind = SOURCE_KINDS.find((candidate) => candidate === input.kind)
     if (kind === undefined) return refused(KnowledgeSourcesErrorCode.SourceKindUnknown)
-    const visibility = chosenVisibility(input.visibility)
-    if (visibility === null) return refused(KnowledgeSourcesErrorCode.VisibilityRequired)
+    if (input.visibility === "public") return refused(KnowledgeSourcesErrorCode.PublicByApproval)
     const url = (input.url ?? "").trim()
     const path = (input.storagePath ?? "").trim()
     const content = (input.content ?? "").trim()
@@ -153,19 +162,24 @@ export const normalizeSource = (workspaceId: string, input: AddSourceInput): Nor
         tags: tagsOf(input.tags),
         module: textOrNull(input.module, 40),
         installationId: textOrNull(input.installationId, 40),
-        visibility,
+        visibility: "internal",
         origin: textOrNull(input.origin, 300),
     })
 }
 
-/** Tidies a change of metadata. */
-export const normalizeUpdate = (input: UpdateSourceInput): NormalizedUpdate => ({
-    title: input.title === undefined ? null : input.title.trim().slice(0, 160) || "Untitled",
-    topic: input.topic === undefined ? null : input.topic.trim().slice(0, 80),
-    tags: input.tags === undefined ? null : tagsOf(input.tags),
-    module: input.module === undefined ? null : input.module.trim().slice(0, 40),
-    visibility: chosenVisibility(input.visibility),
-})
+/** Tidies a change of metadata; a change to public is refused, since no internal document is moved to public through the API. */
+export const normalizeUpdate = (input: UpdateSourceInput): Outcome<NormalizedUpdate, KnowledgeSourcesErrorCode> => {
+    if (input.visibility !== undefined && input.visibility !== "internal") {
+        return refused(KnowledgeSourcesErrorCode.PublicByApproval)
+    }
+    return ok({
+        title: input.title === undefined ? null : input.title.trim().slice(0, 160) || "Untitled",
+        topic: input.topic === undefined ? null : input.topic.trim().slice(0, 80),
+        tags: input.tags === undefined ? null : tagsOf(input.tags),
+        module: input.module === undefined ? null : input.module.trim().slice(0, 40),
+        visibility: input.visibility === undefined ? null : "internal",
+    })
+}
 
 /** The new text of a source to read again, checked: present and not too long. */
 export const replacementContent = (content: string | undefined): Outcome<string | null, KnowledgeSourcesErrorCode> => {

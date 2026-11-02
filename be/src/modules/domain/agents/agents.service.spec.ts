@@ -124,6 +124,7 @@ describe("AgentsService", () => {
 
             await expect(service.profileOf("w1", "a1")).resolves.toEqual({
                 id: "a1",
+                module: "chatbot",
                 name: "Bot",
                 handle: "bot",
                 role: "Front desk",
@@ -149,6 +150,7 @@ describe("AgentsService", () => {
 
             await expect(service.profileOfDepartment("w1", "chatbot")).resolves.toEqual({
                 id: "a1",
+                module: "chatbot",
                 name: "Bot",
                 handle: "bot",
                 role: "Front desk",
@@ -160,6 +162,23 @@ describe("AgentsService", () => {
                 where: { workspaceId: "w1", module: "chatbot", status: "active" },
                 order: { createdAt: "ASC", id: "ASC" },
             })
+        })
+
+        it("reads the profile of an agent named by its id, or of the department named by its key", async () => {
+            const em = mockEntityManager({ findOne: [AgentEntity, AGENT] })
+            const { service } = await build(em)
+            const agentId = "0b9f6a3e-1c2d-4e5f-8a7b-9c0d1e2f3a4b"
+
+            await expect(service.profileByReference("w1", agentId)).resolves.toMatchObject({ id: "a1" })
+            await expect(service.profileByReference("w1", "chatbot")).resolves.toMatchObject({ id: "a1" })
+
+            expect(em.findOne.mock.calls.map((call) => call[1])).toEqual([
+                { where: { id: agentId, workspaceId: "w1" } },
+                {
+                    where: { workspaceId: "w1", module: "chatbot", status: "active" },
+                    order: { createdAt: "ASC", id: "ASC" },
+                },
+            ])
         })
 
         it("answers no department profile when it has no active agent", async () => {

@@ -29,7 +29,7 @@ export const useAgentIdentity = (agentId: string) => {
     const setAvatar = useMutateSetAgentAvatarSwr()
     const [draft, setDraft] = useState<string | null>(null)
     const [isNameInvalid, setNameInvalid] = useState(false)
-    const agent = slot.items
+    const agent = "items" in slot ? slot.items : undefined
     const name = draft ?? agent?.name ?? ""
 
     const refresh = useCallback(async () => {

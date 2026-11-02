@@ -1,4 +1,4 @@
-import { Alert, Stack, Text } from "@starci/grammar/common"
+import { Alert, Section, Text } from "@starci/grammar/common"
 
 /** Props for {@link WizardConsentCopy}. */
 type WizardConsentCopyProps = {
@@ -13,13 +13,12 @@ type WizardConsentCopyProps = {
 
 /** The consent step of a wizard that sends the owner to a provider: what NIVO will be allowed, in a few short lines, then the refusal if one came back. */
 export const WizardConsentCopy = (props: WizardConsentCopyProps) => (
-    <Stack gap="row">
-        <Text weight="semibold">{props.title}</Text>
+    <Section title={props.title} headingLevel={4}>
         {props.lines.map((line, index) => (
             <Text key={line} size="sm" {...(index === 0 ? {} : { tone: "muted" as const })}>
                 {line}
             </Text>
         ))}
         {props.refusal === null ? null : <Alert tone="negative" title={`${props.failTitle}. ${props.refusal}`} />}
-    </Stack>
+    </Section>
 )

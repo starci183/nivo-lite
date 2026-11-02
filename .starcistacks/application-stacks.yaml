@@ -29,6 +29,7 @@ ci:
     - {name: SOPS_AGE_KEY, scope: environment, environment: production, purpose: age identity that decrypts the sealed members (the CI transport vps-ci included) in the deploy and database workflows}
   vars:
     - {name: SONAR_HOST_URL, scope: repository, value: https://sonar.starci.org, purpose: public Sonar server of the host}
+    - {name: STARCI_DEPLOY_PAUSED, scope: environment, environment: production, ownerValue: true, purpose: Owner-controlled production automatic-deploy brake}
 # Application image digests are illustrative all-zero placeholders (the canon lite skeleton form <repo>/<app>:<x.y.z>@sha256:0...0),
 # never a completed release: the deploy workflow binds each build's immutable digest per release (release.json).
 components:
@@ -512,6 +513,14 @@ environments:
         version: 1
         recipientPolicy: SOPS/age, key READY_STAFF_PASSWORD of the sealed member test-accounts (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
+      - name: workspace-seed-input
+        member: test-accounts
+        key: WORKSPACE_SEED_INPUT
+        where: secrets/test-accounts
+        runtimeName: nivo-custody-workspace-seed-input-v1
+        version: 1
+        recipientPolicy: SOPS/age, explicit workspace access input of the test-accounts member, sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the operator CLI receives the input through WORKSPACE_SEED_INPUT_FILE, never an argument or a log.
     # Shared VPS ingress and the verbs of the canon (starci app stack ...): the data below is the only app-specific deploy configuration.
     deploy:
       stack: nivo
@@ -549,6 +558,7 @@ environments:
               - {member: google}
               - {member: storage}
               - {member: ai}
+              - {member: test-accounts, keys: [WORKSPACE_SEED_INPUT]}
               - {member: n8n, keys: [N8N_SIGNING_SECRET]}
               - {member: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS, OPENCLAW_TURN_TIMEOUT, OPENCLAW_BRIDGE_SECRET], fill: true}
           # Redis starts with --requirepass from /run/secrets/QUEUE_REDIS_PASSWORD, so a boot without it fails instead of serving an open broker.
@@ -652,6 +662,8 @@ environments:
         # place the files in /media-seed of the api task (the stack does not mount it) before running this task.
         seed-media: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, seed-media, upload, --dir, /media-seed]}
         seed-modules: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, seed-modules, run]}
+        ensure-workspace: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, seed-workspace, ensure]}
+        verify-workspace: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, seed-workspace, verify]}
       backup:
         image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
         keepDays: 14

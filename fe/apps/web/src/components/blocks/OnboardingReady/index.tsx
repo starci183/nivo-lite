@@ -20,7 +20,7 @@ export const OnboardingReady = () => {
                 heading: name === undefined ? t("readyTitle") : t("readyHeading", { name }),
                 description: t("readyText"),
                 enterLabel: t("enterWorkspace"),
-                isSkeleton: status === "loading",
+                isLoading: status === "loading",
             }}
             on={{
                 enter: () => {

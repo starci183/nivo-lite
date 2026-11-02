@@ -1,3 +1,7 @@
+import { WorkDecisionTimeoutService } from "./work-decision-timeout.service"
+import { AgentRunItemVerdictsService } from "./agent-run-item-verdicts.service"
+import { AGENT_RUN_ITEM_VERDICTS } from "@modules/domain/agent-runs"
+import { GraphWorkDecisionService } from "./graph-work-decision.service"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AGENT_DIRECTORY, MessagesModule } from "@modules/domain/messages"
@@ -24,6 +28,7 @@ import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import { WorkItemViewsService } from "./work-item-views.service"
 import { WorkBranchService } from "./work-branch.service"
+import { WorkItemClosedService } from "./work-item-closed.service"
 import { WorkChainService } from "./work-chain.service"
 import { WorkDecisionService } from "./work-decision.service"
 import { WorkDrainService } from "./work-drain.service"
@@ -45,6 +50,16 @@ import { WorkPerformersService } from "./work-performers.service"
 import { WorkRecorderService } from "./work-recorder.service"
 import { DurableWorkService } from "./durable-work.service"
 
+const decisionOwners = (options: typeof OPTIONS_TYPE): Array<DynamicModule> => [
+    AuthorityModule.register({ isGlobal: false }),
+    AuthorityRulesModule.register({ isGlobal: false }),
+    MemberGrantsModule.register({ isGlobal: false }),
+    ExecutionsModule.register({ isGlobal: false }),
+    MessagesModule.register({ isGlobal: false, agentDirectory: options.ports.agentDirectory }),
+    ResponsibilitiesModule.register({ isGlobal: false, agentDirectory: options.ports.agentDirectory }),
+    WorkItemsModule.register({ isGlobal: false, ports: { leads: options.ports.workItemLeads } }),
+]
+
 @Module({})
 /**
  * The policy gate, the command bus, the work engine and the decision log. It composes the authority, authority-rules, messages,
@@ -56,21 +71,14 @@ export class DecisionsModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
-        const owners = [
-            AuthorityModule.register({ isGlobal: false }),
-            AuthorityRulesModule.register({ isGlobal: false }),
-            MemberGrantsModule.register({ isGlobal: false }),
-            ExecutionsModule.register({ isGlobal: false }),
-            MessagesModule.register({ isGlobal: false, agentDirectory: options.ports.agentDirectory }),
-            ResponsibilitiesModule.register({ isGlobal: false, agentDirectory: options.ports.agentDirectory }),
-            WorkItemsModule.register({ isGlobal: false, ports: { leads: options.ports.workItemLeads } }),
-        ]
+        const owners = decisionOwners(options)
         return {
             ...base,
             imports: [...(base.imports ?? []), ...owners, DecisionsQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 { provide: INBOX, useClass: InboxService },
+                { provide: AGENT_RUN_ITEM_VERDICTS, useExisting: AgentRunItemVerdictsService },
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
                 { provide: AGENT_DIRECTORY, useExisting: options.ports.agentDirectory },
                 { provide: INBOUND_EVENT_STATUS, useClass: options.ports.inboundEventStatus },
@@ -88,6 +96,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 CommandPlannerService,
                 DecisionHistoryService,
                 DecisionLogReadService,
+                AgentRunItemVerdictsService,
                 DecisionsService,
                 DecisionsFiguresService,
                 EvidenceService,
@@ -95,8 +104,11 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 ModuleCatalogService,
                 WorkApprovalService,
                 WorkBranchService,
+                WorkItemClosedService,
                 WorkChainService,
                 WorkDecisionService,
+                WorkDecisionTimeoutService,
+                GraphWorkDecisionService,
                 WorkDrainService,
                 WorkItemViewsService,
                 WorkPlacementService,
@@ -106,6 +118,8 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 WorkRecorderService,
             ],
             exports: [
+                AGENT_RUN_ITEM_VERDICTS,
+                GraphWorkDecisionService,
                 ...owners,
                 DecisionsQueueModule,
                 WORK_PERFORMER_REGISTRY,
@@ -114,12 +128,14 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 CommandBusService,
                 DecisionJobsService,
                 DecisionHistoryService,
+                DecisionLogReadService,
                 DecisionsService,
                 DecisionsFiguresService,
                 EvidenceService,
                 DurableWorkService,
                 ModuleCatalogService,
                 WorkDecisionService,
+                WorkDecisionTimeoutService,
                 WorkDrainService,
                 WorkItemViewsService,
                 WorkPlacementService,

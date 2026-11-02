@@ -27,7 +27,7 @@ export const AgentModeCard = (props: AgentModeCardProps) => {
     const { slot, reload } = useAgentInstallation(props.installationId, props.module)
     const [chosen, setChosen] = useState<AgentMode | null>(null)
     const { choose, isSaving } = useChooseOperatingMode(props.installationId)
-    const mode = chosen ?? slot.items?.mode ?? "assist"
+    const mode = chosen ?? ("items" in slot ? slot.items : undefined)?.mode ?? "assist"
     const change = async (value: string) => {
         const next: AgentMode = value === "autopilot" ? "autopilot" : "assist"
         setChosen(next)

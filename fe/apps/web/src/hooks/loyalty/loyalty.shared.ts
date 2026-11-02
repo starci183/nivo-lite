@@ -1,5 +1,30 @@
-import type { LoyaltyBoardType, LoyaltyConfigType, LoyaltyTierType } from "@/hooks/swr"
+import type { LoyaltyBoardType, LoyaltyConfigType, LoyaltyTierType, useQueryLoyaltyBoardSwr } from "@/hooks/swr"
 import type { BadgeTone } from "@starci/grammar/common"
+
+/** The actual Loyalty panels, in the existing strip order. */
+export const LOYALTY_TABS = ["overview", "members", "rewards", "promo", "pending"] as const
+/** One real panel of the Loyalty workbench. */
+export type LoyaltyTab = (typeof LOYALTY_TABS)[number]
+/** Shared read identity with the formerly conditional panel's own activation and local-session scope. */
+export interface LoyaltyPanelActivation {
+    readonly workspaceId: string | undefined
+    readonly isActive: boolean
+    readonly isReady: boolean
+    readonly scope: string
+}
+/** Every cache entry a Loyalty command refreshes belongs to the workspace that initiated it. */
+export const loyaltyReadOf =
+    (workspaceId: string | undefined, names: ReadonlyArray<string>) =>
+    (key: unknown): boolean =>
+        workspaceId !== undefined &&
+        Array.isArray(key) &&
+        key[1] === workspaceId &&
+        typeof key[0] === "string" &&
+        names.includes(key[0])
+/** The shared board read consumed by one actual panel controller. */
+export interface LoyaltyPanelInput extends LoyaltyPanelActivation {
+    readonly read: ReturnType<typeof useQueryLoyaltyBoardSwr>
+}
 
 /** The board shown while the first answer is on its way: no members, rewards or campaigns, read-only. */
 export const EMPTY_LOYALTY_BOARD: LoyaltyBoardType = {

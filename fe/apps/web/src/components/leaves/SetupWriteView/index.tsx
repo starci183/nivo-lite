@@ -104,12 +104,9 @@ export const SetupWriteView = (props: SetupWriteViewProps) => {
         )
     }
     return (
-        <SurfaceCard ariaLabel={proposal.head}>
+        <SurfaceCard label={proposal.head}>
             <Stack gap="inline">
                 <Cluster gap="inline" justify="between">
-                    <Text weight="semibold" size="sm">
-                        {proposal.head}
-                    </Text>
                     {proposal.hasGap ? <Badge tone="warning">{proposal.gapLabel}</Badge> : null}
                 </Cluster>
                 <DescriptionList layout="stacked" items={proposal.items} />

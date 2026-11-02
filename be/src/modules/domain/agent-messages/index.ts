@@ -13,3 +13,5 @@ export { AGENT_MESSAGES_MESSAGES } from "./messages/agent-messages.messages"
 export type { TranscriptLine } from "./agent-messages.contracts"
 export type { AgentThreadMessage } from "./agent-messages.contracts"
 export { agentMessagesEntities } from "./persistence/entities"
+
+export { DELIVERY_OUTCOME_UNKNOWN } from "./agent-messages.policy"

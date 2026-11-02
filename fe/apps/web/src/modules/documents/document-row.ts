@@ -1,26 +1,14 @@
-import type { KnowledgeProgressRowView } from "./live-progress"
-
-/** The retry or other button of a document row, with its word. */
-export interface DocumentRowActionView {
-    readonly id: string
-    readonly label: string
-    readonly onPress: () => void
-}
+import type { KnowledgeRowView, RowActionView } from "@/modules/types"
 
 /** A small label beside a document row. */
-export interface DocumentRowBadgeView {
-    readonly label: string
-    readonly tone: "neutral" | "warning" | "success" | "danger" | "accent"
-}
+export type DocumentRowBadgeView = NonNullable<KnowledgeRowView["badges"]>[number]
 
 /** One document as every list of documents draws it, with every word resolved: where it stands, who may read it, how far a worker got. */
-export interface DocumentRowView {
-    readonly id: string
-    readonly title: string
+export interface DocumentRowView extends KnowledgeRowView {
     /** Muted lines under the title. */
     readonly lines: ReadonlyArray<string>
     readonly badges: ReadonlyArray<DocumentRowBadgeView>
-    readonly actions: ReadonlyArray<DocumentRowActionView>
+    readonly actions: ReadonlyArray<RowActionView>
     /** The live stage with its count and bar while a worker is on the document; undefined otherwise. */
-    readonly progress: KnowledgeProgressRowView | undefined
+    readonly progress: KnowledgeRowView["progress"] | undefined
 }

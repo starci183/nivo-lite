@@ -50,6 +50,9 @@ export interface WorkContext {
     readonly locale: Locale
 }
 
+/** A person's rejection note, or null when none was supplied. */
+export type OptionalRejectionNote = string | null
+
 /** Who decides an item. */
 export interface Decider {
     /** The display name. */

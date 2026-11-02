@@ -1,11 +1,8 @@
 import {
     Alert,
     Button,
-    Cluster,
     EmptyNotice,
-    Heading,
-    List,
-    ListItem,
+    Section,
     Meter,
     Select,
     Stack,
@@ -13,9 +10,10 @@ import {
     Text,
     Textarea,
 } from "@starci/grammar/common"
-import { LeadPanel } from "@/components/composites/LeadPanel"
+import { LeadPanel } from "@/components/frames/LeadPanel"
 import { SlotView } from "@/components/composites/SlotView"
-import { Icon } from "@/components/leaves/Icon"
+import { nivoIconSource } from "@/components/leaves/Icon"
+
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** One recorded piece of evidence, already resolved to text. */
@@ -83,10 +81,8 @@ const PLACEHOLDER: OutcomeView = {
     stage: "",
     wonNote: null,
     recordedTitle: "",
-    recorded: [],
+    recorded: ["a", "b", "c"].map((id) => ({ id, byline: "", text: "" })),
 }
-
-const EVIDENCE_ICON = { name: "blog", usage: "chip" } as const
 
 /** The outcome card: where the journey stands, the form that records a stage change with its evidence and the evidence already kept. */
 export const LeadOutcomeBase = (props: LeadOutcomeBaseProps) => {
@@ -94,17 +90,20 @@ export const LeadOutcomeBase = (props: LeadOutcomeBaseProps) => {
     const { props: p, on } = props
     return (
         <LeadPanel anchor="outcome" label={l.title}>
-            <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
-                {(view, isSkeleton) => (
+            <SlotView
+                slot={p.slot}
+                placeholder={{ ...PLACEHOLDER, recordedTitle: l.evidenceLabel }}
+                labels={l.slot}
+                render={(view, isLoading) => (
                     <Stack gap="region">
-                        <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                        <Text size="sm" tone="muted" isLoading={isLoading}>
                             {view.fact}
                         </Text>
                         <Stepper
                             label={l.stepperLabel}
                             steps={view.steps}
                             currentStepId={view.currentStepId}
-                            isLoading={isSkeleton}
+                            isLoading={isLoading}
                         />
                         <Stack gap="inline">
                             <Meter
@@ -112,16 +111,16 @@ export const LeadOutcomeBase = (props: LeadOutcomeBaseProps) => {
                                 value={view.meterValue}
                                 maxValue={view.meterMax}
                                 valueLabel={view.meterValueLabel}
-                                isSkeleton={isSkeleton}
+                                isLoading={isLoading}
                             />
-                            <Text as="p" size="xs" tone="muted" isSkeleton={isSkeleton}>
+                            <Text as="p" size="xs" tone="muted" isLoading={isLoading}>
                                 {view.evidenceNote}
                             </Text>
                         </Stack>
-                        {renderOutcomeFields({ l, view, on, p, isSkeleton })}
+                        {renderOutcomeFields({ l, view, on, p, isLoading })}
                     </Stack>
                 )}
-            </SlotView>
+            />
         </LeadPanel>
     )
 }
@@ -132,17 +131,17 @@ interface RenderOutcomeFieldsContext {
     readonly view: OutcomeView
     readonly on: LeadOutcomeBaseProps["on"]
     readonly p: LeadOutcomeBaseProps["props"]
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 /** Builds the LeadOutcomeContent section from the current view. */
-const renderOutcomeFields = ({ l, view, on, p, isSkeleton }: RenderOutcomeFieldsContext) => (
+const renderOutcomeFields = ({ l, view, on, p, isLoading }: RenderOutcomeFieldsContext) => (
     <>
         <Stack gap="section">
             <Select
                 label={l.stageLabel}
                 options={l.stageOptions}
                 value={view.stage}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
                 onValueChange={(value) => value && on.stage(value)}
             />
             {view.wonNote === null ? null : (
@@ -155,7 +154,7 @@ const renderOutcomeFields = ({ l, view, on, p, isSkeleton }: RenderOutcomeFields
                 description={l.evidenceHint}
                 rows={4}
                 value={p.evidenceText}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
                 onValueChange={on.evidence}
             />
             {p.error === null ? null : <Alert title={l.failTitle} description={p.error} tone="negative" />}
@@ -163,50 +162,34 @@ const renderOutcomeFields = ({ l, view, on, p, isSkeleton }: RenderOutcomeFields
                 intent="commit"
                 isPending={p.isPending}
                 isDisabled={p.evidenceText.trim().length === 0}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
                 onPress={on.submit}
             >
                 {l.recordLabel}
             </Button>
         </Stack>
-        {isSkeleton ? null : renderRecorded({ l, view })}
+        {renderRecorded({ l, view, isLoading })}
     </>
 )
 
 /** The evidence already kept, or the notice that none is. */
-const renderRecorded = ({ l, view }: Pick<RenderOutcomeFieldsContext, "l" | "view">) => (
-    <>
-        {view.recorded.length === 0 ? (
-            <EmptyNotice message={l.noEvidenceTitle} description={l.noEvidenceHint} />
-        ) : (
-            <Stack gap="inline">
-                <Heading level={3}>{view.recordedTitle}</Heading>
-                <List label={view.recordedTitle}>
-                    {view.recorded.map((item) => (
-                        <ListItem key={item.id}>
-                            <Stack gap="identity">
-                                <Cluster gap="inline">
-                                    <Text
-                                        as="span"
-                                        size="xs"
-                                        tone="muted"
-                                        weight="semibold"
-                                        startContent={<Icon props={EVIDENCE_ICON} />}
-                                    >
-                                        {l.evidenceLabel}
-                                    </Text>
-                                    <Text as="span" size="xs" tone="muted">
-                                        {item.byline}
-                                    </Text>
-                                </Cluster>
-                                <Text as="p" size="sm">
-                                    {item.text}
-                                </Text>
-                            </Stack>
-                        </ListItem>
-                    ))}
-                </List>
-            </Stack>
-        )}
-    </>
+const renderRecorded = ({ l, view, isLoading }: Pick<RenderOutcomeFieldsContext, "l" | "view" | "isLoading">) => (
+    <Section
+        kind="list"
+        title={view.recordedTitle}
+        headingLevel={3}
+        isLoading={isLoading}
+        empty={<EmptyNotice message={l.noEvidenceTitle} description={l.noEvidenceHint} />}
+        items={view.recorded.map((item) => ({
+            id: item.id,
+            title: l.evidenceLabel,
+            description: item.byline,
+            leading: { icon: nivoIconSource("blog", "chip") },
+            detail: (
+                <Text as="p" size="sm" isLoading={isLoading}>
+                    {item.text}
+                </Text>
+            ),
+        }))}
+    />
 )

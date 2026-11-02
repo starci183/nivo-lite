@@ -15,7 +15,7 @@ import {
     visibleGroups,
 } from "@/hooks/authority"
 import { useAuthorityScopeForm } from "@/hooks/rhf"
-import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 import { AuthorityScopeBase } from "./component"
 import type { ScopeGroupView } from "./component"
 import { actionWordOf } from "@/hooks/actionWord"
@@ -25,7 +25,7 @@ export const AuthorityScope = () => {
     const t = useTranslations("authority")
     const g = useTranslations("governance")
     const slotLabels = useSlotLabels()
-    const { slot, reload, rules, isLocked } = useAuthoritySection()
+    const { read, reload, rules, isLocked } = useAuthoritySection()
     const instances = useInstanceNames()
     const { form, stored } = useAuthorityScopeForm(rules)
     const { save, isSaving } = useSaveAuthorityRules()
@@ -33,7 +33,7 @@ export const AuthorityScope = () => {
 
     const groupsOf = (): ReadonlyArray<ScopeGroupView> =>
         visibleGroups(rules).map((group) => {
-            const names = instances[group.department] ?? []
+            const names = ("items" in instances.slot ? instances.slot.items?.[group.department] : undefined) ?? []
             return {
                 department: group.department,
                 title: g(`dept_${group.department}`),
@@ -84,11 +84,19 @@ export const AuthorityScope = () => {
                 },
                 limitLabel: t("limitLabel"),
                 limitHint: t("limitHint"),
-                slot: mapSlot(slot, groupsOf),
+                slot: slotOfReads([read, instances.read], groupsOf),
                 placeholder: groupsOf(),
                 slotLabels: slotLabels(t("loadFailTitle")),
             }}
-            on={{ mode: setMode, limit: setLimit, save: () => void submit(), retry: reload }}
+            on={{
+                mode: setMode,
+                limit: setLimit,
+                save: () => void submit(),
+                retry: () => {
+                    reload()
+                    instances.reload()
+                },
+            }}
         />
     )
 }

@@ -14,7 +14,7 @@ export const LandingFact = (props: LandingFactProps) => (
     <SurfaceCard height="fill">
         <Stack gap="row">
             <IconGlyph name={props.icon} isTile />
-            <Text size="md" weight="semibold">
+            <Text size="md" isStrong>
                 {props.title}
             </Text>
             <Text size="sm" tone="muted">

@@ -22,7 +22,7 @@ export interface LeadHeaderActionsBaseProps {
         readonly labels: HeaderActionLabels
         readonly notice: string | null
         readonly isPending: boolean
-        readonly isSkeleton: boolean
+        readonly isLoading: boolean
     }
     readonly on: {
         readonly draft: (responsibilityId: string) => void
@@ -43,7 +43,7 @@ export const LeadHeaderActionsBase = (props: LeadHeaderActionsBaseProps) => {
                 {p.notice ?? ""}
             </Text>
             {primary.kind === "review" ? (
-                <Button intent="neutral" href="#execution" isSkeleton={p.isSkeleton}>
+                <Button intent="neutral" href="#execution" isLoading={p.isLoading}>
                     {l.reviewLabel}
                 </Button>
             ) : null}
@@ -51,18 +51,18 @@ export const LeadHeaderActionsBase = (props: LeadHeaderActionsBaseProps) => {
                 <Button
                     intent="commit"
                     isPending={p.isPending}
-                    isSkeleton={p.isSkeleton}
+                    isLoading={p.isLoading}
                     onPress={() => on.draft(primary.responsibilityId)}
                 >
                     {l.draftLabel}
                 </Button>
             ) : null}
             {primary.kind === "propose" ? (
-                <Button intent="commit" isPending={p.isPending} isSkeleton={p.isSkeleton} onPress={on.propose}>
+                <Button intent="commit" isPending={p.isPending} isLoading={p.isLoading} onPress={on.propose}>
                     {l.proposeLabel}
                 </Button>
             ) : null}
-            <Button intent="neutral" href={l.officeHref} isSkeleton={p.isSkeleton}>
+            <Button intent="neutral" href={l.officeHref} isLoading={p.isLoading}>
                 {l.officeLabel}
             </Button>
             <DropdownMenu
@@ -77,7 +77,7 @@ export const LeadHeaderActionsBase = (props: LeadHeaderActionsBaseProps) => {
                         intent="neutral"
                         source={nivoIconSource("more", "leading")}
                         label={l.menuMore}
-                        isSkeleton={p.isSkeleton}
+                        isLoading={p.isLoading}
                     />
                 }
             />

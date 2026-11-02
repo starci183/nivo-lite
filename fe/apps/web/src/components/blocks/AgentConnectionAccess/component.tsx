@@ -1,4 +1,4 @@
-import { Alert, Badge, Cluster, Select, Stack, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Alert, Badge, Cluster, Link, Select, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
@@ -47,9 +47,7 @@ export const AgentConnectionAccessBase = (props: AgentConnectionAccessBaseProps)
                 slot={props.props.slot}
                 placeholder={props.props.placeholder}
                 labels={props.props.slotLabels}
-                empty="collapse"
-            >
-                {(rows, isSkeleton) => (
+                render={(rows, isLoading) => (
                     <>
                         {rows.map((row) => (
                             <Cluster key={row.id} gap="row">
@@ -73,19 +71,16 @@ export const AgentConnectionAccessBase = (props: AgentConnectionAccessBaseProps)
                                     }))}
                                     value={row.access}
                                     onValueChange={(level) => props.on.pick(row.id, level)}
-                                    isDisabled={props.props.isDisabled || isSkeleton}
+                                    isDisabled={props.props.isDisabled || isLoading}
                                 />
                             </Cluster>
                         ))}
                     </>
                 )}
-            </SlotView>
-            {props.props.slot.items?.length === 0 ? <Text size="sm">{props.props.slotLabels.empty}</Text> : null}
+            />
             {props.props.notice === "" ? null : <Alert tone="informative" title={props.props.notice} />}
             <Cluster gap="row">
-                <TextAction href={props.props.manageHref} size="sm" appearance="inline">
-                    {props.props.manageLabel}
-                </TextAction>
+                <Link href={props.props.manageHref}>{props.props.manageLabel}</Link>
                 {props.props.canEdit ? null : (
                     <Text size="xs" tone="muted">
                         {props.props.ownerOnlyText}

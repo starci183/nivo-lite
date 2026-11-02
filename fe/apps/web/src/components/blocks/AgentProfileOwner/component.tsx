@@ -32,20 +32,22 @@ export interface AgentProfileOwnerBaseProps {
 /** Draws who answers for the agent, with the fallback and a notice when the owner is gone. */
 export const AgentProfileOwnerBase = (props: AgentProfileOwnerBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotView {...props.props.read} onRetry={props.on.retry}>
-            {(owner, isSkeleton) => (
+        <SlotView
+            {...props.props.read}
+            onRetry={props.on.retry}
+            render={(owner, isSkeleton) => (
                 <Stack gap="section">
                     <Cluster gap="section" wrap={false}>
                         <PersonAvatar name={owner.name} size="lg" />
                         <div className={COPY_CLASS}>
                             <Stack gap="identity">
-                                <Text weight="medium" isSkeleton={isSkeleton}>
+                                <Text isStrong isLoading={isSkeleton}>
                                     {owner.name}
                                 </Text>
-                                <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                                <Text size="sm" tone="muted" isLoading={isSkeleton}>
                                     {owner.roleLabel}
                                 </Text>
-                                <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                                <Text size="sm" tone="muted" isLoading={isSkeleton}>
                                     {owner.note}
                                 </Text>
                             </Stack>
@@ -61,6 +63,6 @@ export const AgentProfileOwnerBase = (props: AgentProfileOwnerBaseProps) => (
                     )}
                 </Stack>
             )}
-        </SlotView>
+        />
     </SurfaceCard>
 )

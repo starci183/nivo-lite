@@ -1,13 +1,15 @@
 "use client"
 
 import { useState } from "react"
+import { useFeatureReset } from "@/hooks/reuseables"
 import { matchesInboxFilter, isInboxFilter } from "@/hooks/chatbot"
 import type { ChatbotOverview } from "@/modules/types"
 import type { InboxFilters } from "./useChatbotInbox"
 
 /** Owns the inbox filter draft and the conversations matching it. */
-export const useChatbotInboxFilters = (overview: ChatbotOverview | undefined) => {
+export const useChatbotInboxFilters = (overview: ChatbotOverview | undefined, isActive: boolean, scope: string) => {
     const [filters, setFilters] = useState<InboxFilters>({ filter: "all", query: "" })
+    useFeatureReset({ isActive, isReady: true, scope, onReset: () => setFilters({ filter: "all", query: "" }) })
     const query = filters.query.trim().toLocaleLowerCase()
     const visible =
         overview?.conversations.filter(

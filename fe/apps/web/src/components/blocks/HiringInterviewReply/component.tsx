@@ -1,9 +1,7 @@
-import { Alert, Button, Text } from "@starci/grammar/common"
-import { HiringReplyCard } from "@/components/composites/HiringReplyCard"
+import { Heading, Alert, Button, Text, Stack } from "@starci/grammar/common"
+import { HiringReplyCard } from "@/components/frames/HiringReplyCard"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, HiringSay, SlotLabels } from "@/modules/types"
-import { SLOTS_CLASS_NAME } from "./classNames"
-
 /** The interview shapes: times proposed to pick from, one confirmed, or the invitation closed. */
 export const HIRING_INTERVIEW_REPLY_SHAPES = ["proposed", "confirmed", "closed"] as const
 /** One drawing per state of the invitation. */
@@ -46,7 +44,7 @@ export interface HiringInterviewReplyBaseProps {
 /** Props of the card once the invitation is known (or its placeholder). */
 interface InviteCardProps extends HiringInterviewReplyBaseProps {
     readonly view: HiringInterviewInviteView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** The times to pick from, and the way to say none fits. */
@@ -55,10 +53,10 @@ const InviteSlots = (props: InviteCardProps) => {
     const { on } = props
     return (
         <>
-            <Text weight="medium" isSkeleton={props.isSkeleton}>
+            <Heading level={3} isLoading={props.isLoading}>
                 {say("replyPick")}
-            </Text>
-            <div className={SLOTS_CLASS_NAME}>
+            </Heading>
+            <Stack gap="inline">
                 {props.view.slots.map((slot) => (
                     <Button
                         key={slot.start}
@@ -66,7 +64,7 @@ const InviteSlots = (props: InviteCardProps) => {
                         width="fill"
                         isDisabled={isBusy}
                         isPending={isBusy}
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isLoading}
                         onPress={() => on.pick(slot.start)}
                     >
                         {slot.label}
@@ -76,12 +74,12 @@ const InviteSlots = (props: InviteCardProps) => {
                     intent="neutral"
                     width="fill"
                     isDisabled={isBusy}
-                    isSkeleton={props.isSkeleton}
+                    isLoading={props.isLoading}
                     onPress={() => on.pick(null)}
                 >
                     {say("replyNoFit")}
                 </Button>
-            </div>
+            </Stack>
         </>
     )
 }
@@ -107,20 +105,26 @@ export const HiringInterviewReplyBase = (props: HiringInterviewReplyBaseProps) =
         placeholder={INVITE_PLACEHOLDER}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(view, isSkeleton) => (
+        render={(view, isLoading) => (
             <HiringReplyCard
                 say={props.props.say}
                 ariaKey="replyInterviewTitle"
-                shop={view.shop}
-                heading={view.heading}
-                isSkeleton={isSkeleton}
+                shop={
+                    <Text size="sm" tone="muted" isLoading={isLoading}>
+                        {view.shop}
+                    </Text>
+                }
+                heading={
+                    <Heading level={1} isLoading={isLoading}>
+                        {view.heading}
+                    </Heading>
+                }
             >
-                <Text tone="muted" isSkeleton={isSkeleton}>
+                <Text tone="muted" isLoading={isLoading}>
                     {view.detail}
                 </Text>
-                <InviteAnswer {...props} view={view} isSkeleton={isSkeleton} />
+                <InviteAnswer {...props} view={view} isLoading={isLoading} />
             </HiringReplyCard>
         )}
-    </SlotView>
+    />
 )

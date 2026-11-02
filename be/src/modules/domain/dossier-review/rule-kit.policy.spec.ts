@@ -311,3 +311,12 @@ describe("rule-kit candidates", () => {
         expect(subject.remedyActionOf(inputsOf(), "upload")).toBe("upload")
     })
 })
+
+describe("rule-kit > an unnumbered dossier", () => {
+    it("labels a stand-in dossier by its name without an invented checklist number", async () => {
+        const subject = await buildSubject()
+        const inputs = inputsOf({ dossier: dossierOf({ ref: "", name: "Unfiled documents" }) })
+
+        expect(subject.dossierLabel(inputs)).toBe("Unfiled documents")
+    })
+})

@@ -1,8 +1,8 @@
 "use client"
 
-import { useMemo } from "react"
 import { useActiveWorkspace } from "@/hooks/workspaces"
-import { slotOfSwr } from "@/hooks/slot"
+import { useGraphQLWithToast } from "@/modules/toast"
+import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryAgentDashboardSwr } from "@/hooks/swr"
 import type { ModuleKey } from "@/modules/catalog"
 import type { DataSlot } from "@/modules/types"
@@ -13,13 +13,21 @@ import type { AgentDashboardView } from "./agentDashboard.shared"
 export const useAgentDashboard = (
     module: ModuleKey,
     installationId: string | null,
-): { readonly slot: DataSlot<AgentDashboardView>; readonly reload: () => void } => {
+    isActive = true,
+): {
+    readonly read: ReturnType<typeof useQueryAgentDashboardSwr>
+    readonly slot: DataSlot<AgentDashboardView>
+    readonly reload: () => void
+} => {
     const { activeWorkspaceId } = useActiveWorkspace()
-    const read = useQueryAgentDashboardSwr(activeWorkspaceId, { module, installationId })
-    const view = useMemo(
-        () => (read.data === undefined ? undefined : toAgentDashboard(read.data, module, installationId)),
-        [read.data, module, installationId],
-    )
-    const reload = () => void read.mutate()
-    return { slot: slotOfSwr({ data: view, error: read.error, isLoading: read.isLoading }), reload }
+    const report = useGraphQLWithToast()
+    const read = useQueryAgentDashboardSwr(isActive ? activeWorkspaceId : undefined, { module, installationId })
+    const reload = () => {
+        read.mutate().catch((error) => report(() => Promise.reject(error), { showSuccessToast: false }))
+    }
+    return {
+        read,
+        slot: mapSlot(slotOfSwr(read), (wire) => toAgentDashboard(wire, module, installationId)),
+        reload,
+    }
 }

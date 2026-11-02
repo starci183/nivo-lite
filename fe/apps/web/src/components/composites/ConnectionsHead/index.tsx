@@ -1,4 +1,4 @@
-import { Button, Skeleton } from "@starci/grammar/common"
+import { Button, Text } from "@starci/grammar/common"
 import type { PageHeaderContent, PageHeaderTabs } from "@starci/grammar/common"
 
 /** The words of the Connections heading, resolved by the page. */
@@ -21,7 +21,11 @@ type ConnectionsHeadContentProps = {
 export const ConnectionsHeadContent = (props: ConnectionsHeadContentProps): PageHeaderContent => ({
     title: props.title,
     description: props.description,
-    meta: props.meta ?? <Skeleton shape="text" />,
+    meta: (
+        <Text size="sm" tone="muted" isLoading={props.meta === undefined}>
+            {props.meta ?? props.description}
+        </Text>
+    ),
     breadcrumbs: {
         label: props.crumbLabel,
         items: [

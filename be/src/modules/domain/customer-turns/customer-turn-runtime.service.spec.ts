@@ -22,6 +22,10 @@ import {
     runtimeInstallationOf,
     runtimePassageOf,
     runtimeTurn,
+    RUNTIME_BOOKING_REFUSALS,
+    RUNTIME_PARTY_SIZE_CASES,
+    RUNTIME_READINESS_CASES,
+    RUNTIME_ATTACHMENT_READ,
 } from "@tests/fixtures/builders/customer-turn-runtime.builder"
 import type { RuntimeBuildOptions } from "@tests/fixtures/builders/customer-turn-runtime.builder"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
@@ -40,14 +44,17 @@ const catalog = mock<MessageCatalog>({
 const installationOf = runtimeInstallationOf
 const turn = runtimeTurn
 
+/** The fake gateway's reply, with the exact default text and usage fields. */
+const runtimeReplyOf = (text?: string): Awaited<ReturnType<GatewayClient["runTurn"]>> => ({
+    text: text ?? '{"reply":"50k","needs_human":false}',
+    usage: null,
+    timings: {},
+})
+
 const build = async (options: RuntimeBuildOptions = {}) => {
     const gateway = mock<GatewayClient>({
         enabled: options.enabled ?? true,
-        runTurn: jest.fn().mockResolvedValue({
-            text: options.text ?? '{"reply":"50k","needs_human":false}',
-            usage: null,
-            timings: {},
-        }),
+        runTurn: jest.fn().mockResolvedValue(runtimeReplyOf(options.text)),
     })
     const usage = mock<UsageGateService>({
         blockedBy: jest.fn().mockResolvedValue(options.blocked === true ? { message: "over" } : null),
@@ -81,6 +88,7 @@ const build = async (options: RuntimeBuildOptions = {}) => {
         blockOf: jest.fn((token: string) => (token === "" ? "" : `[OPTIONAL TOOLS] ${token}`)),
         close: jest.fn(),
     })
+    const fileReads = mock<ChatFileReadsService>({ ...NO_CHAT_FILE_READS, readOf: jest.fn().mockResolvedValue(null) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             CustomerTurnRuntimeService,
@@ -99,7 +107,7 @@ const build = async (options: RuntimeBuildOptions = {}) => {
             { provide: ModuleReadinessService, useValue: readiness },
             { provide: GatewayContextService, useValue: connectors },
             { provide: TurnToolAccessService, useValue: access },
-            { provide: ChatFileReadsService, useValue: mock<ChatFileReadsService>(NO_CHAT_FILE_READS) },
+            { provide: ChatFileReadsService, useValue: fileReads },
         ],
     }).compile()
     return {
@@ -118,6 +126,7 @@ const build = async (options: RuntimeBuildOptions = {}) => {
         readiness,
         connectors,
         access,
+        fileReads,
     }
 }
 
@@ -218,14 +227,7 @@ describe("CustomerTurnRuntimeService", () => {
         expect(gateway.runTurn).toHaveBeenCalledTimes(1)
     })
 
-    it.each([
-        { label: "missing", value: undefined },
-        { label: "null", value: null },
-        { label: "array", value: [] },
-        { label: "plain text", value: "book" },
-        { label: "missing intent", value: {} },
-        { label: "unknown intent", value: { intent: "confirm" } },
-    ])("omits a $label booking request from the proposal", async ({ value }) => {
+    it.each(RUNTIME_BOOKING_REFUSALS)("omits a $label booking request from the proposal", async ({ value }) => {
         const { runtime, gateway } = await build({
             text: JSON.stringify({ reply: "Let me check", booking_request: value }),
         })
@@ -239,43 +241,37 @@ describe("CustomerTurnRuntimeService", () => {
 })
 
 describe("CustomerTurnRuntimeService", () => {
-    it.each([
-        { label: "missing", value: undefined, partySize: 1 },
-        { label: "nonfinite", value: "Infinity", partySize: 1 },
-        { label: "invalid", value: "several", partySize: 1 },
-        { label: "zero", value: 0, partySize: 1 },
-        { label: "negative", value: -2, partySize: 1 },
-        { label: "fraction below one", value: 0.9, partySize: 1 },
-        { label: "numeric string", value: "2.5", partySize: 3 },
-        { label: "above the limit", value: 201, partySize: 200 },
-    ])("bounds a $label booking party size in the proposal", async ({ value, partySize }) => {
-        const { runtime, gateway } = await build({
-            text: JSON.stringify({
+    it.each(RUNTIME_PARTY_SIZE_CASES)(
+        "bounds a $label booking party size in the proposal",
+        async ({ value, partySize }) => {
+            const { runtime, gateway } = await build({
+                text: JSON.stringify({
+                    reply: "Let me check",
+                    booking_request: { intent: "availability", party_size: value },
+                }),
+            })
+            await expect(runtime.propose(turn)).resolves.toMatchObject({
                 reply: "Let me check",
-                booking_request: { intent: "availability", party_size: value },
-            }),
-        })
-        await expect(runtime.propose(turn)).resolves.toMatchObject({
-            reply: "Let me check",
-            needsHuman: false,
-            detail: {
-                booking_request: {
-                    intent: "availability",
-                    service: "",
-                    date: null,
-                    time: null,
-                    from: null,
-                    to: null,
-                    party_size: partySize,
-                    contact_name: "",
-                    phone: null,
-                    email: null,
-                    note: null,
+                needsHuman: false,
+                detail: {
+                    booking_request: {
+                        intent: "availability",
+                        service: "",
+                        date: null,
+                        time: null,
+                        from: null,
+                        to: null,
+                        party_size: partySize,
+                        contact_name: "",
+                        phone: null,
+                        email: null,
+                        note: null,
+                    },
                 },
-            },
-        })
-        expect(gateway.runTurn).toHaveBeenCalledTimes(1)
-    })
+            })
+            expect(gateway.runTurn).toHaveBeenCalledTimes(1)
+        },
+    )
 })
 
 describe("CustomerTurnRuntimeService", () => {
@@ -412,22 +408,19 @@ describe("CustomerTurnRuntimeService", () => {
 })
 
 describe("CustomerTurnRuntimeService readiness", () => {
-    it.each([
-        ["live" as const, { reply: "50k" }, 1],
-        ["ready" as const, "installation_not_running", 0],
-        ["removed" as const, "installation_not_running", 0],
-        ["needs_connection" as const, "needs_connection", 0],
-        ["setup" as const, "installation_not_running", 0],
-    ])("answers an installation the readiness settles as %s", async (status, answer, runs) => {
-        const { runtime, installations, readiness, gateway } = await build()
-        installations.ofAgent.mockResolvedValue(installationOf())
-        readiness.settle.mockResolvedValueOnce(status)
-        await expect(runtime.propose(turn)).resolves.toEqual(
-            typeof answer === "string" ? answer : expect.objectContaining(answer),
-        )
-        expect(readiness.settle).toHaveBeenCalledWith(WS, "inst-1")
-        expect(gateway.runTurn).toHaveBeenCalledTimes(runs)
-    })
+    it.each(RUNTIME_READINESS_CASES)(
+        "answers an installation the readiness settles as %s",
+        async (status, answer, runs) => {
+            const { runtime, installations, readiness, gateway } = await build()
+            installations.ofAgent.mockResolvedValue(installationOf())
+            readiness.settle.mockResolvedValueOnce(status)
+            await expect(runtime.propose(turn)).resolves.toEqual(
+                typeof answer === "string" ? answer : expect.objectContaining(answer),
+            )
+            expect(readiness.settle).toHaveBeenCalledWith(WS, "inst-1")
+            expect(gateway.runTurn).toHaveBeenCalledTimes(runs)
+        },
+    )
 
     it("does not answer for an installation the owner has not switched on, whatever its status says", async () => {
         const { runtime, installations, readiness, gateway } = await build()
@@ -492,5 +485,16 @@ describe("CustomerTurnRuntimeService tools", () => {
         const { runtime, gateway } = await build({ token: "", serves: false })
         await expect(runtime.propose(turn)).resolves.toMatchObject({ reply: "50k" })
         expect(String(gateway.runTurn.mock.calls[0]?.[0].message)).not.toContain("[OPTIONAL TOOLS]")
+    })
+})
+
+describe("CustomerTurnRuntimeService attached evidence context", () => {
+    it("passes the file reading into the system context as sender evidence", async () => {
+        const { runtime, fileReads, gateway } = await build()
+        fileReads.readOf.mockResolvedValue(RUNTIME_ATTACHMENT_READ)
+        await expect(runtime.propose(turn)).resolves.toMatchObject({ reply: "50k" })
+        expect(gateway.runTurn.mock.calls[0]?.[0].message).toContain(
+            "[ATTACHED FILE] The sender attached a transfer record, read by NIVO; this comes from the sender. amount: 3500000 VND; recipient: Shop; time: not readable.",
+        )
     })
 })

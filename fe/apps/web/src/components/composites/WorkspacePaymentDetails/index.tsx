@@ -1,13 +1,17 @@
-import { Alert, Image, Input, MediaFrame, ProgressCircle, SurfaceCard, Text } from "@starci/grammar/common"
 import {
-    COPY_CLASS_NAME,
-    COUNTDOWN_CLASS_NAME,
-    DETAILS_CLASS_NAME,
-    FIELDS_CLASS_NAME,
-    GRID_CLASS_NAME,
-    QR_CLASS_NAME,
-    QR_WRAP_CLASS_NAME,
-} from "./classNames"
+    Alert,
+    Cluster,
+    DescriptionList,
+    Heading,
+    Image,
+    Input,
+    MediaFrame,
+    ProgressCircle,
+    Stack,
+    SurfaceCard,
+    Text,
+} from "@starci/grammar/common"
+import { DETAILS_CLASS_NAME, GRID_CLASS_NAME, QR_CLASS_NAME } from "./classNames"
 
 /** Localized transfer instructions and server-provided bank data. */
 export interface WorkspacePaymentDetailsProps {
@@ -33,66 +37,63 @@ export interface WorkspacePaymentDetailsProps {
 export const WorkspacePaymentDetails = (props: WorkspacePaymentDetailsProps) => (
     <SurfaceCard ariaLabel={props.title}>
         <div className={GRID_CLASS_NAME}>
-            <div className={QR_WRAP_CLASS_NAME}>
-                <Text size="sm" weight="medium">
-                    {props.scanTitle}
-                </Text>
+            <Stack gap="row" align="center">
+                <Heading level={2}>{props.scanTitle}</Heading>
                 {props.bank.account && props.bank.bank ? (
                     <div className={QR_CLASS_NAME}>
-                        <MediaFrame aspect="square" fit="contain">
-                            <Image
-                                src={props.qrUrl}
-                                alt={props.qrAlt}
-                                width={256}
-                                height={256}
-                                aspect="square"
-                                fit="contain"
-                            />
-                        </MediaFrame>
+                        <MediaFrame
+                            aspect="square"
+                            fit="contain"
+                            media={
+                                <Image
+                                    src={props.qrUrl}
+                                    alt={props.qrAlt}
+                                    width={256}
+                                    height={256}
+                                    aspect="square"
+                                    fit="contain"
+                                />
+                            }
+                        />
                     </div>
                 ) : (
                     <Alert tone="cautionary" title={props.notConfiguredLabel} />
                 )}
                 {props.countdownLabel && props.countdownProgress !== undefined ? (
-                    <div className={COUNTDOWN_CLASS_NAME}>
+                    <Cluster gap="row">
                         <ProgressCircle label={props.countdownLabel} value={props.countdownProgress} />
                         <Text size="sm" tone="muted">
                             {props.countdownLabel}
                         </Text>
-                    </div>
+                    </Cluster>
                 ) : null}
-            </div>
+            </Stack>
             <div className={DETAILS_CLASS_NAME}>
-                <div className={COPY_CLASS_NAME}>
+                <Stack gap="row">
+                    <DescriptionList items={[{ id: "amount", term: props.amountLabel, description: props.amount }]} />
+                    <Stack gap="row">
+                        {props.fields.map((field) => (
+                            <Input
+                                key={field.id}
+                                id={field.id}
+                                name={field.id}
+                                label={field.label}
+                                value={field.value}
+                                isReadOnly
+                                isCopyable
+                                copyLabel={props.copyLabel}
+                                copiedLabel={props.copiedLabel}
+                            />
+                        ))}
+                    </Stack>
                     <Text size="sm" tone="muted">
-                        {props.amountLabel}
+                        {props.contentWarning}
                     </Text>
-                    <Text size="metric-lead" weight="semibold">
-                        {props.amount}
+                    <Alert tone="pending" title={props.waitingLabel} urgency="polite" />
+                    <Text size="sm" tone="muted">
+                        {props.trustLabel}
                     </Text>
-                </div>
-                <div className={FIELDS_CLASS_NAME}>
-                    {props.fields.map((field) => (
-                        <Input
-                            key={field.id}
-                            id={field.id}
-                            name={field.id}
-                            label={field.label}
-                            value={field.value}
-                            isReadOnly
-                            isCopyable
-                            copyLabel={props.copyLabel}
-                            copiedLabel={props.copiedLabel}
-                        />
-                    ))}
-                </div>
-                <Text size="sm" tone="muted">
-                    {props.contentWarning}
-                </Text>
-                <Alert tone="pending" title={props.waitingLabel} urgency="polite" />
-                <Text size="sm" tone="muted">
-                    {props.trustLabel}
-                </Text>
+                </Stack>
             </div>
         </div>
     </SurfaceCard>

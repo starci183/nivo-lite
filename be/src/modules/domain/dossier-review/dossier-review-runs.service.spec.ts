@@ -279,3 +279,24 @@ describe("DossierReviewRunsService request", () => {
         await expect(service.request("u1", WS, "d1")).resolves.toMatchObject({ id: "whole", scope: "workspace" })
     })
 })
+
+describe("DossierReviewRunsService > a numbered source without a category", () => {
+    it("keeps an unclaimed category-less scan unfiled rather than assuming the numbered dossier's category", async () => {
+        const { tx, inserts } = freshRun(runOf({ scope: "workspace", dossierId: null }))
+        const { service, sources, inputs, queue, critic } = await build(tx.em)
+        const source = sourceOf({ topic: null })
+        sources.sourceOf.mockResolvedValue(source)
+        inputs.all.mockResolvedValue([dossierOf()])
+        inputs.dossierOf.mockResolvedValue(undefined)
+
+        await service.requestForSource(WS, "s1")
+
+        expect(inputs.dossierOf).toHaveBeenCalledWith(WS, source)
+        expect(sources.fileUnder).not.toHaveBeenCalled()
+        expect(inserts[0]?.callsOf("values")).toEqual([
+            [expect.objectContaining({ scope: "workspace", dossierId: null, trigger: "document", triggerRef: "s1" })],
+        ])
+        expect(queue.enqueueDossierReview).toHaveBeenCalledWith({ runId: FIRST_ID, workspaceId: WS }, expect.anything())
+        expect(critic.enter).toHaveBeenCalledWith(WS, "s1")
+    })
+})

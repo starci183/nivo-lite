@@ -24,8 +24,11 @@ export interface AgentWorkWorkspaceSwitchBaseProps {
 /** Draws the kill switch of the whole workspace on the agents list, with the counts of what waits beside it. */
 export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotView {...props.props.read} forbidden="hide" onRetry={props.on.retry}>
-            {(view, isSkeleton) => (
+        <SlotView
+            {...props.props.read}
+            forbidden="hide"
+            onRetry={props.on.retry}
+            render={(view, isLoading) => (
                 <Stack gap="section">
                     <Cluster gap="row">
                         <Switch
@@ -33,16 +36,16 @@ export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBase
                             label={props.props.switchLabel}
                             isLabelHidden
                             isSelected={view.isOn}
-                            isSkeleton={isSkeleton}
+                            isLoading={isLoading}
                             isDisabled={props.props.isDisabled || !view.canChange}
                             onSelectedChange={props.on.change}
                         />
-                        <Text weight="medium">{props.props.switchLabel}</Text>
+                        <Text isStrong>{props.props.switchLabel}</Text>
                     </Cluster>
-                    <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                    <Text size="sm" tone="muted" isLoading={isLoading}>
                         {props.props.help}
                     </Text>
-                    <Text size="sm" isSkeleton={isSkeleton}>
+                    <Text size="sm" isLoading={isLoading}>
                         {view.countsLabel}
                     </Text>
                     {view.isOn ? null : <Alert title={props.props.offNotice} tone="negative" appearance="soft" />}
@@ -53,6 +56,6 @@ export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBase
                     )}
                 </Stack>
             )}
-        </SlotView>
+        />
     </SurfaceCard>
 )

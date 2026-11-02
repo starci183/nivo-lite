@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useCreditPackPurchase } from "@/hooks/billing"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { BillingCreditPacksBase } from "./component"
 
 interface BillingCreditPacksProps {
@@ -13,7 +14,7 @@ export const BillingCreditPacks = (props: BillingCreditPacksProps) => {
     const t = useTranslations("billing")
     const format = useFormatter()
     const purchase = useCreditPackPurchase(props.workspaceId)
-    if (!purchase.isActive || purchase.packs.length === 0) return null
+    const slotLabels = useSlotLabels()
     const money = (amount: number) =>
         format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
     return (
@@ -23,18 +24,21 @@ export const BillingCreditPacks = (props: BillingCreditPacksProps) => {
                 fact: t("packsFact"),
                 buy: t("packsBuy"),
                 empty: t("packsEmpty"),
-                loading: t("loading"),
                 canBuy: purchase.canBuy,
-                packs: purchase.packs.map((pack) => ({
-                    id: String(pack.creditsPerMonth),
-                    title: t("packsRow", { credits: format.number(pack.creditsPerMonth) }),
-                    description: money(pack.priceVnd),
-                    pending: purchase.isRequesting,
-                    disabled: purchase.isRequesting,
-                    target: { kind: "credit_pack" as const, credits: pack.creditsPerMonth },
-                })),
+                slot: mapSlot(purchase.packs, (packs) =>
+                    packs.map((pack) => ({
+                        id: String(pack.creditsPerMonth),
+                        title: t("packsRow", { credits: format.number(pack.creditsPerMonth) }),
+                        description: money(pack.priceVnd),
+                        pending: purchase.isRequesting,
+                        disabled: purchase.isRequesting,
+                        target: { kind: "credit_pack" as const, credits: pack.creditsPerMonth },
+                    })),
+                ),
+                labels: slotLabels(t("packsEmpty")),
             }}
             on={{
+                retry: purchase.retry,
                 buy: (target) => {
                     if (target.kind === "credit_pack") purchase.buy(target.credits)
                 },

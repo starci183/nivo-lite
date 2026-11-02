@@ -7,6 +7,7 @@ import { agentListHref, instancesOf } from "@/modules/installations"
 import { AGENTS_ROUTE } from "@/modules/routes"
 import type { AgentTab, Installation } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
+import { loadingSlot, mapSlot } from "@/hooks/slot"
 import { typeTargetOf } from "./installations.shared"
 import type { TypeRouteMode } from "./installations.shared"
 import { useInstallations } from "./useInstallations"
@@ -15,6 +16,10 @@ import { useInstallations } from "./useInstallations"
 interface TypeRoute {
     readonly slot: DataSlot<ReadonlyArray<Installation>>
     readonly reload: () => void
+    readonly read: ReturnType<typeof useInstallations>["read"]
+    readonly instances: ReadonlyArray<Installation>
+    /** A resolved redirect holds the same frame loading until the destination opens. */
+    readonly isLeaving: boolean
 }
 
 /**
@@ -24,14 +29,21 @@ interface TypeRoute {
  */
 export const useTypeRoute = (module: ModuleKey, tab: AgentTab, query: string, mode: TypeRouteMode): TypeRoute => {
     const router = navigation.useRouter()
-    const { slot, installations, reload } = useInstallations()
+    const { slot, installations, reload, read } = useInstallations()
     const target = installations === undefined ? null : typeTargetOf(installations, module, tab, query)
     const listed = target ?? (mode === "redirect" ? agentListHref(module) : null)
     const leaveTo = mode === "list" && listed !== AGENTS_ROUTE ? null : listed
     useEffect(() => {
         if (leaveTo !== null) router.replace(leaveTo)
     }, [leaveTo, router])
-    if (leaveTo !== null) return { slot: { isLoading: true }, reload }
-    if (installations === undefined) return { slot, reload }
-    return { slot: { items: instancesOf(installations, module) }, reload }
+    return {
+        slot:
+            leaveTo !== null
+                ? loadingSlot<ReadonlyArray<Installation>>()
+                : mapSlot(slot, (rows) => instancesOf(rows, module)),
+        reload,
+        read,
+        instances: instancesOf(installations ?? [], module),
+        isLeaving: leaveTo !== null,
+    }
 }

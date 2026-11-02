@@ -25,17 +25,18 @@ export const AgentSyncCardBase = (props: AgentSyncCardBaseProps) => (
             <div aria-live="polite">
                 <Cluster gap="row">
                     <Badge isDot tone={props.props.lineTone}>
-                        {props.props.lineCheckedAt === null ? (
-                            props.props.lineText
-                        ) : (
-                            <RelativeTime
-                                dateTime={props.props.lineCheckedAt}
-                                locale={props.props.locale}
-                                template={props.props.lineText}
-                                fallback={props.props.lineText.replace("{time}", "")}
-                            />
-                        )}
+                        {props.props.lineCheckedAt === null
+                            ? props.props.lineText
+                            : props.props.lineText.replace("{time}", "").trim()}
                     </Badge>
+                    {props.props.lineCheckedAt === null ? null : (
+                        <RelativeTime
+                            dateTime={props.props.lineCheckedAt}
+                            locale={props.props.locale}
+                            template="{time}"
+                            fallback=""
+                        />
+                    )}
                     <Button
                         intent="neutral"
                         size="sm"

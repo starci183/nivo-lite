@@ -1,5 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { installationOf } from "@tests/fixtures/builders/setup-chat.builder"
+import {
+    installationOf,
+    setupMessageOf as lineOf,
+    setupSessionOf as sessionOf,
+} from "@tests/fixtures/builders/setup-chat.builder"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentsService } from "@modules/domain/agents"
 import { EventsService } from "@modules/domain/events"
@@ -7,9 +11,7 @@ import { ContextVersionsService } from "@modules/domain/module-context-versions"
 import type { ContextVersionRecord, GateEntry, GateEvidence } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { SetupMessagesService } from "@modules/domain/module-setup-messages"
-import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
-import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 import { InstallationChangesService } from "./installation-changes.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -35,26 +37,6 @@ const CONFIRMED: GateEvidence = Object.fromEntries(
         { status: "confirmed", evidence: `About ${gate.key}` },
     ]),
 )
-
-const sessionOf = builder<SetupSessionRecord>({
-    id: "s-1",
-    workspaceId: "ws-1",
-    installationId: "inst-1",
-    revision: 1,
-    status: "draft",
-    draft: { summary: "A bakery.", facts: [] },
-    gateEvidence: {},
-    createdAt: NOW,
-})
-
-const lineOf = builder<SetupMessageRecord>({
-    id: "m-1",
-    setupSessionId: "s-1",
-    role: "user",
-    author: "Lan",
-    body: "Hello",
-    createdAt: NOW,
-})
 
 const versionOf = builder<ContextVersionRecord>({
     id: "v-1",
@@ -105,6 +87,7 @@ const build = async () => {
         requireWhole: jest.fn().mockResolvedValue(undefined),
         checkPublish: jest.fn().mockResolvedValue(0),
         publish: jest.fn().mockResolvedValue(undefined),
+        proposeContracts: jest.fn().mockResolvedValue(0),
     })
     const readiness = mock<ModuleReadinessService>()
     readiness.settle.mockResolvedValue("ready")
@@ -451,6 +434,7 @@ describe("SetupChatService", () => {
             handle: "books",
             role: "Accounting",
             approval_rule: "",
+            module: "chatbot",
             instructions: "Keep these rules.\n\n### NIVO setup v1\nOld rules\n### end NIVO setup",
             knowledge: "Keep these notes.\n\n### NIVO setup v1\nOld notes\n### end NIVO setup",
         })
@@ -458,6 +442,13 @@ describe("SetupChatService", () => {
         await expect(service.apply("u1", "ws-1", "inst-1", "en")).resolves.toBe(8)
         expect(installations.activateVersion).toHaveBeenCalledWith("ws-1", "inst-1", "v-8", "ready")
         expect(graph.publish).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            principalId: "u1",
+            installationId: "inst-1",
+            version: 8,
+            contextVersionId: "v-8",
+        })
+        expect(graph.proposeContracts).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             principalId: "u1",
             installationId: "inst-1",

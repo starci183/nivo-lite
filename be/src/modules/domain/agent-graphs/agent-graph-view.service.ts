@@ -1,4 +1,6 @@
 import { Injectable } from "@nestjs/common"
+import { InjectInstallations } from "@modules/domain/agents"
+import type { InstallationDirectory } from "@modules/domain/agents"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -10,6 +12,9 @@ import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.er
 import { AgentGraphsService } from "./agent-graphs.service"
 import type { AgentGraphView, GraphDocument, GraphProposalView } from "./agent-graphs.contracts"
 import { graphGapsOf } from "./policies/graph-gaps.policy"
+import { contractWarnings } from "./policies/contract-problems.policy"
+import { unheldRulesOf } from "./policies/unheld-rules.policy"
+import type { UnheldRule } from "./policies/unheld-rules.policy"
 import { graphProblems } from "./policies/graph-problems.policy"
 import { nodeCardOf } from "./policies/node-card.policy"
 
@@ -37,6 +42,7 @@ export class AgentGraphViewService {
         private readonly installations: InstallationRecordsService,
         private readonly members: MemberGrantsService,
         private readonly brain: BrainFactsService,
+        @InjectInstallations() private readonly directory: InstallationDirectory,
     ) {}
 
     /** The view of the graph of an agent for the editor. */
@@ -64,8 +70,12 @@ export class AgentGraphViewService {
             activeVersionId: state.activeVersionId,
             gaps: graphGapsOf(state.draft, context),
             problems: graphProblems(state.draft, context),
+            warnings: contractWarnings(state.draft),
+            unheldRules: await this.unheldRulesOf(state.draft, installation.activeContextVersionId),
             cards: state.draft.nodes.map((node) => nodeCardOf(node, nameOf(node.approver?.group.members[0]), say)),
-            proposals: await Promise.all(proposals.map((proposal) => this.withPassages(workspaceId, state.draft, proposal))),
+            proposals: await Promise.all(
+                proposals.map((proposal) => this.withPassages(workspaceId, state.draft, proposal)),
+            ),
             facts: Object.values(context.facts).map((spec) => ({
                 key: spec.key,
                 label: say(spec.labelKey),
@@ -84,7 +94,17 @@ export class AgentGraphViewService {
     ): Promise<GraphProposalView> {
         const [oldId, newId] = proposal.evidence
         if (proposal.kind !== "conflict" || oldId === undefined || newId === undefined) return proposal
-        const [old, current] = await Promise.all([this.brain.get(workspaceId, oldId), this.brain.get(workspaceId, newId)])
+        const [old, current] = await Promise.all([
+            this.brain.get(workspaceId, oldId),
+            this.brain.get(workspaceId, newId),
+        ])
         return { ...proposal, before: citedPassageOf(graph, oldId) ?? old?.value ?? "", after: current?.value ?? "" }
+    }
+
+    /** What the published setup says as a rule and the graph does not hold. */
+    private async unheldRulesOf(graph: GraphDocument, versionId: string | null): Promise<ReadonlyArray<UnheldRule>> {
+        const version = versionId === null ? null : await this.directory.contextVersionOf(versionId)
+        if (version === null) return []
+        return unheldRulesOf([version.summary, ...version.facts, ...version.gates.map((gate) => gate.evidence)], graph)
     }
 }

@@ -74,8 +74,8 @@ export interface KnowledgeRequestBody {
     readonly topic: string | null
     /** The cleaned tags. */
     readonly tags: ReadonlyArray<string>
-    /** Whether customers may be answered from it. */
-    readonly visibility: "internal" | "public"
+    /** Always internal: customers are answered from a public document an owner approved, never from an API-added source. */
+    readonly visibility: "internal"
     /** The source named in evidence: `api:<key name>`. */
     readonly source: string
 }

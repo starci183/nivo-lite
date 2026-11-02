@@ -1,5 +1,6 @@
 import { useQueryLeadBoardSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
+import { slotOfSwr } from "@/hooks/slot"
 import type { DataSlot, LeadListItem } from "@/modules/types"
 import { leadRecordOf } from "./leads.shared"
 
@@ -12,10 +13,11 @@ export const useLeadBoard = () => {
         owner_name: lead.ownerName ?? null,
         next_action: lead.nextAction ?? null,
     }))
-    const slot: DataSlot<ReadonlyArray<LeadListItem>> = {
+    const slot: DataSlot<ReadonlyArray<LeadListItem>> = slotOfSwr({
+        data: items,
+        error: query.error,
         isLoading: query.isLoading,
-        isError: query.error !== undefined,
-        items,
-    }
+        isValidating: query.isValidating,
+    })
     return { ...query, slot }
 }

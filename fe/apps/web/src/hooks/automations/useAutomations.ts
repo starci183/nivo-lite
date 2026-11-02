@@ -21,10 +21,13 @@ const successTextOf = (patch: AutomationPatch, t: (key: string) => string): stri
 
 /** The board data and the one change at a time the owner makes on a card. */
 interface Automations {
+    readonly reads: {
+        readonly overview: ReturnType<typeof useQueryAutomationsSwr>
+        readonly accounts: ReturnType<typeof useQueryAutomationGoogleAccountsSwr>
+    }
+    readonly retry: () => void
     /** The gallery, the history, the shop, the sample and the accounts; absent while loading. */
     readonly data: AutomationsData | undefined
-    readonly isLoading: boolean
-    readonly error: unknown
     readonly busyKey: string | null
     /** Writes a patch to one pipeline; true when it worked (the outcome is toasted). */
     readonly apply: (key: string, patch: AutomationPatch) => Promise<boolean>
@@ -69,9 +72,12 @@ export const useAutomations = (): Automations => {
             : { ...overview.data, accounts: accounts.data }
 
     return {
+        reads: { overview, accounts },
+        retry: () => {
+            void overview.mutate()
+            void accounts.mutate()
+        },
         data,
-        isLoading: overview.isLoading || accounts.isLoading,
-        error: overview.error ?? accounts.error,
         busyKey,
         apply,
     }

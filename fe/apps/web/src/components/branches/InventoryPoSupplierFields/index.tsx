@@ -1,13 +1,14 @@
+import type { InventoryPoEditorData } from "@/modules/types"
+import { Grid } from "@starci/grammar/common"
 import { InventorySelect } from "@/components/leaves/InventorySelect"
 import { InventoryField } from "@/components/leaves/InventoryField"
-import type { InventorySay } from "@/modules/types"
-import { FORM_GRID_CLASS_NAME } from "./classNames"
+
 type PoLineFormView = Readonly<Record<"id" | "name" | "hint" | "qty" | "cost", string>>
 
 /** The purchase order form, displayed state and bound commands of its drawer. */
 export interface InventoryPoDrawerProps {
     readonly props: {
-        readonly say: InventorySay
+        readonly copy: InventoryPoEditorData["copy"]
         readonly title: string
         readonly description: string
         /** `edit` for a draft, `receive` for an order on its way, `read` for the rest. */
@@ -55,18 +56,19 @@ export interface InventoryPoDrawerProps {
 
 /** The supplier and expected delivery fields of a draft order. */
 interface InventoryPoSupplierFieldsProps {
-    readonly props: Pick<InventoryPoDrawerProps["props"], "say" | "supplierId" | "suppliers" | "expected">
+    readonly props: Pick<InventoryPoDrawerProps["props"], "copy" | "supplierId" | "suppliers" | "expected">
     readonly on: Pick<InventoryPoDrawerProps["on"], "supplier" | "expected">
 }
+
 /** Renders the supplier and delivery date of a draft purchase order. */
 export const InventoryPoSupplierFields = (props: InventoryPoSupplierFieldsProps) => {
     const { props: p, on } = props
-    const say = p.say
+    const copy = p.copy
     return (
-        <div className={FORM_GRID_CLASS_NAME}>
+        <Grid kind="form" columns={2}>
             <InventorySelect
-                label={say("poSupplier")}
-                placeholder={say("poSupplierHint")}
+                label={copy.poSupplier}
+                placeholder={copy.poSupplierHint}
                 value={p.supplierId}
                 options={p.suppliers}
                 onChange={(value) => on.supplier(value)}
@@ -74,11 +76,11 @@ export const InventoryPoSupplierFields = (props: InventoryPoSupplierFieldsProps)
             <InventoryField
                 id="po-expected"
                 name="expected"
-                label={say("poExpected")}
-                hint={say("poExpectedHint")}
+                label={copy.poExpected}
+                hint={copy.poExpectedHint}
                 value={p.expected}
                 onChange={on.expected}
             />
-        </div>
+        </Grid>
     )
 }

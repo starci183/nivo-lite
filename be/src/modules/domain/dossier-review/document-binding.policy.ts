@@ -66,14 +66,17 @@ const beforeMarks = (text: string, marks: ReadonlyArray<string>): string => {
 const bareTitleOf = (title: string): string =>
     beforeMarks(
         foldText(title)
-            .replace(/^d+[a-z]?./u, "")
-            .replace(/.(pdf|docx?|xlsx?|pptx?|csv|txt|md)$/u, ""),
+            .replace(/^\d+[a-z]?\.\s*/u, "")
+            .replace(/\.(pdf|docx?|xlsx?|pptx?|csv|txt|md)$/u, ""),
         [" - nivo", " - so theo doi"],
     ).trim()
 
 const leadingNumberOf = (title: string): string | null => {
-    const found = /^0*(d+).s/u.exec(title.trimStart())
-    return found?.[1] ?? null
+    const found = /^(\d+)\.\s/u.exec(title.trimStart())
+    const digits = found?.[1]
+    if (digits === undefined) return null
+    const reference = digits.replace(/^0+/u, "")
+    return reference === "" ? "0" : reference
 }
 
 const share = (tokens: ReadonlyArray<string>, text: string): number =>

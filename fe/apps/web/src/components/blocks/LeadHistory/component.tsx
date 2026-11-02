@@ -1,4 +1,4 @@
-import { EmptyNotice, Region, SectionHeader, Stack, SurfaceAccordionCard, Text, Timeline } from "@starci/grammar/common"
+import { Stack, SurfaceCard, Text, Timeline, Section, type TimelineItem } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { LeadMark } from "@/components/composites/LeadMark"
 import { HISTORY_ANCHOR_CLASS_NAME } from "./classNames"
@@ -38,82 +38,103 @@ export interface HistoryLabels {
 export interface LeadHistoryBaseProps {
     readonly props: {
         readonly slot: DataSlot<HistoryView>
+        readonly entriesSlot: DataSlot<ReadonlyArray<HistoryEntryView>>
         readonly labels: HistoryLabels
     }
     readonly on: {
+        readonly retry: () => void
         readonly toggle: (entryId: string, isOpen: boolean) => void
     }
 }
 
 const PLACEHOLDER: HistoryView = { meta: "", entries: [] }
 
-/** The append-only audit trail of a lead, oldest first so the latest sits at the bottom; entries with evidence expand to show it. */
+/** One evidence disclosure, kept outside the collection loop so its typed items have one owner. */
+interface EvidenceDisclosureProps {
+    readonly entry: HistoryEntryView
+    readonly label: string
+    readonly onToggle: LeadHistoryBaseProps["on"]["toggle"]
+}
+
+const EvidenceDisclosure = (props: EvidenceDisclosureProps) => (
+    <SurfaceCard
+        kind="accordion"
+        ariaLabel={props.label}
+        items={[
+            {
+                id: props.entry.id,
+                title: props.label,
+                isOpen: props.entry.isOpen,
+                body: (
+                    <Text as="p" size="sm">
+                        {props.entry.evidence}
+                    </Text>
+                ),
+            },
+        ]}
+        onItemOpenChange={props.onToggle}
+    />
+)
+
+/** The existing timeline anatomy for one settled history entry. */
+const historyItemOf = (
+    entry: HistoryEntryView,
+    labels: HistoryLabels,
+    on: LeadHistoryBaseProps["on"],
+): TimelineItem => ({
+    id: entry.id,
+    title: entry.actor,
+    dateTime: entry.dateTime,
+    timeLabel: entry.timeLabel,
+    marker: <LeadMark icon={entry.icon} />,
+    description: (
+        <Stack gap="identity">
+            <Text as="p" size="xs" tone="muted" isStrong>
+                {entry.kindLabel}
+            </Text>
+            <Text as="p" size="sm">
+                {entry.summary}
+            </Text>
+            {entry.evidence ? (
+                <EvidenceDisclosure entry={entry} label={labels.evidenceLabel} onToggle={on.toggle} />
+            ) : null}
+        </Stack>
+    ),
+})
+
+/** The append-only audit trail; each read status remains in the canonical slot recipe. */
 export const LeadHistoryBase = (props: LeadHistoryBaseProps) => {
-    const { props: p, on } = props
-    const l = p.labels
+    const p = props.props,
+        labels = p.labels
     return (
-        <Region id="history" labelledBy="history-title" className={HISTORY_ANCHOR_CLASS_NAME}>
-            <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
-                {(view, isSkeleton) => (
-                    <>
-                        <SectionHeader
-                            id="history-title"
-                            level={2}
-                            title={l.title}
-                            meta={view.meta}
-                            isSkeleton={isSkeleton}
+        <div id="history" className={HISTORY_ANCHOR_CLASS_NAME}>
+            <SlotView
+                slot={p.slot}
+                placeholder={PLACEHOLDER}
+                labels={labels.slot}
+                onRetry={props.on.retry}
+                render={(view, isLoading) => (
+                    <Section title={labels.title} meta={view.meta} isLoading={isLoading}>
+                        <SlotView
+                            slot={p.entriesSlot}
+                            placeholder={[]}
+                            labels={{ ...labels.slot, empty: labels.emptyTitle }}
+                            emptyDescription={labels.emptyHint}
+                            onRetry={props.on.retry}
+                            render={(entries, isLoading) => (
+                                <Timeline
+                                    label={labels.timelineLabel}
+                                    isLoading={isLoading}
+                                    items={entries.map((entry) => historyItemOf(entry, labels, props.on))}
+                                />
+                            )}
                         />
-                        {!isSkeleton && view.entries.length === 0 ? (
-                            <EmptyNotice message={l.emptyTitle} description={l.emptyHint} />
-                        ) : null}
-                        {isSkeleton || view.entries.length > 0 ? (
-                            <Timeline
-                                label={l.timelineLabel}
-                                isLoading={isSkeleton}
-                                loadingRows={3}
-                                items={view.entries.map((entry) => ({
-                                    id: entry.id,
-                                    title: entry.actor,
-                                    dateTime: entry.dateTime,
-                                    timeLabel: entry.timeLabel,
-                                    marker: <LeadMark icon={entry.icon} />,
-                                    description: (
-                                        <Stack gap="identity">
-                                            <Text as="p" size="xs" tone="muted" weight="medium">
-                                                {entry.kindLabel}
-                                            </Text>
-                                            <Text as="p" size="sm">
-                                                {entry.summary}
-                                            </Text>
-                                            {entry.evidence ? (
-                                                <SurfaceAccordionCard
-                                                    isOpen={entry.isOpen}
-                                                    onOpenChange={(isOpen) => on.toggle(entry.id, isOpen)}
-                                                    summaryRender={l.evidenceLabel}
-                                                    bodyRender={entry.evidence}
-                                                    renderSummary={(summary) => (
-                                                        <Text size="sm" weight="medium">
-                                                            {summary}
-                                                        </Text>
-                                                    )}
-                                                    renderBody={(body) => (
-                                                        <Text as="p" size="sm">
-                                                            {body}
-                                                        </Text>
-                                                    )}
-                                                />
-                                            ) : null}
-                                        </Stack>
-                                    ),
-                                }))}
-                            />
-                        ) : null}
                         <Text as="p" size="xs" tone="muted">
-                            {l.auditNote}
+                            {labels.auditNote}
                         </Text>
-                    </>
+                    </Section>
                 )}
-            </SlotView>
-        </Region>
+            />
+        </div>
     )
 }

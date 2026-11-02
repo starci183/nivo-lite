@@ -10,7 +10,7 @@ import { MUSIC_TRACKS, TTS_VOICES, type Brand } from "@/modules/video"
 const VOICE_IDS: ReadonlySet<string> = new Set(TTS_VOICES)
 
 /** Validates the brand kit with localized messages before it is saved. */
-export const useVideoBrandForm = (initial: Brand) => {
+export const useVideoBrandForm = (initial: Brand | null) => {
     const t = useTranslations("video")
     const schema = useMemo(() => {
         const error = t("err_default")
@@ -32,7 +32,14 @@ export const useVideoBrandForm = (initial: Brand) => {
     }, [t])
     return useForm<Brand>({
         resolver: zodResolver(schema),
-        defaultValues: initial,
+        defaultValues: initial ?? {
+            shopName: "",
+            primary: "",
+            secondary: "",
+            logoPath: null,
+            musicTrack: null,
+            voice: "",
+        },
         mode: "onSubmit",
     })
 }

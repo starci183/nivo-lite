@@ -1,13 +1,5 @@
 import type { DropdownMenuEntry, DropdownMenuItem } from "@starci/grammar/common"
-import {
-    AvatarButton,
-    Cluster,
-    DropdownMenu,
-    IconButton,
-    NavigationFeatureNav,
-    Popover,
-    Switch,
-} from "@starci/grammar/common"
+import { AvatarButton, Cluster, DropdownMenu, IconButton, TopBar, Icon, Popover, Switch } from "@starci/grammar/common"
 import type { ConsolePending } from "@/modules/types"
 import { ACCOUNT_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
 import { ConsoleNotificationsPanel } from "../../composites/ConsoleNotificationsPanel"
@@ -136,7 +128,6 @@ const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
                             source={nivoIconSource("locale", "leading")}
                             label={props.languageLabel}
                             intent="dismiss"
-                            size="control"
                             isDisabled={props.isLocalePending}
                         />
                     }
@@ -164,7 +155,6 @@ const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
                     intent="neutral"
                     badge={Math.max(props.pendingCount, 0)}
                     badgeLabel={props.notificationsCopy.title}
-                    size="control"
                 />
             }
         >
@@ -193,14 +183,17 @@ const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
 
 /** Draws the console top bar: the workspace lockup on the left; the search field in the middle (an icon on a phone); language, appearance, bell and account on the right; the compact tab row under it. */
 export const ConsoleHeaderBase = (props: ConsoleHeaderBaseProps) => (
-    <NavigationFeatureNav
+    <TopBar
         position="sticky"
-        identity={<Brand {...props} />}
+        brand={<Brand {...props} />}
         navigation={<ConsoleSearch part="field" {...searchProps(props.props, props.on)} />}
-        navigationLabel={props.props.searchLabel}
-        compactNavigationTrigger={<ConsoleSearch part="icon" {...searchProps(props.props, props.on)} />}
-        compactNavigationTriggerLabel={props.props.searchLabel}
+        menu={{
+            icon: <Icon source={nivoIconSource("search", "leading")} />,
+            openLabel: props.props.searchLabel,
+            closeLabel: props.props.closeLabel,
+            isOpen: props.props.isSearchOpen,
+            onOpenChange: props.on.setSearchOpen,
+        }}
         actions={<Actions {...props} />}
-        actionsLabel={props.props.actionsLabel}
     />
 )

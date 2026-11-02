@@ -5,9 +5,9 @@ import { DatabaseTableMapper } from "@/components/composites/DatabaseTableMapper
 import type { DatabaseTableMapperProps } from "@/components/composites/DatabaseTableMapper"
 import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
+import { WizardFooter, backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
-import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
+import { frameOf, WizardFrame } from "@/components/frames/WizardFrame"
 import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
 
 /** One option of a radio or checkbox list. */
@@ -119,6 +119,7 @@ const actionsOf = (base: DatabaseWizardBaseProps): ReadonlyArray<WizardAction> =
 
 /** What the table step draws and reports. */
 interface DatabaseTablesStepProps {
+    readonly isLoading: boolean
     readonly view: DatabaseTablesView
     readonly isPending: boolean
     readonly on: DatabaseWizardBaseProps["on"]
@@ -129,6 +130,7 @@ const mapperOf = (step: DatabaseTablesStepProps, table: DatabaseMappedView): Dat
     const { view, on } = step
     return {
         props: {
+            isLoading: step.isLoading,
             id: table.id,
             title: table.key,
             entity: table.entity,
@@ -171,6 +173,7 @@ const DatabaseTablesStep = (props: DatabaseTablesStepProps) => (
             options={props.view.options}
             value={[...props.view.picked]}
             onValueChange={props.on.tables}
+            isLoading={props.isLoading}
         />
         {props.view.none === null ? null : (
             <Text size="xs" tone="muted">
@@ -196,12 +199,29 @@ const noteOf = (note: WizardNote | null) => (note === null ? null : <Alert tone=
 export const DatabaseWizardBase = (props: DatabaseWizardBaseProps) => {
     const { props: view, on } = props
     return (
-        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
-            {(_resume, isSkeleton) => (
-                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} actions={actionsOf(props)}>
-                    {view.step === "connect" ? <DatabaseConnectFields {...view.connect} /> : null}
+        <SlotView
+            slot={view.resume}
+            placeholder={RESUME_PLACEHOLDER}
+            labels={view.slotLabels}
+            onRetry={on.retry}
+            render={(_resume, isLoading) => (
+                <WizardFrame
+                    {...frameOf(view)}
+                    footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
+                >
+                    {view.step === "connect" ? (
+                        <DatabaseConnectFields
+                            {...view.connect}
+                            props={{ ...view.connect.props, isLoading: isLoading }}
+                        />
+                    ) : null}
                     {view.step === "tables" && view.tables !== null ? (
-                        <DatabaseTablesStep view={view.tables} isPending={view.isPending} on={on} />
+                        <DatabaseTablesStep
+                            view={view.tables}
+                            isPending={view.isPending}
+                            on={on}
+                            isLoading={isLoading}
+                        />
                     ) : null}
                     {view.step === "schedule" ? (
                         <>
@@ -215,15 +235,21 @@ export const DatabaseWizardBase = (props: DatabaseWizardBaseProps) => {
                                 value={view.schedule.value}
                                 onValueChange={on.schedule}
                                 options={view.schedule.options}
+                                isLoading={isLoading}
                             />
                         </>
                     ) : null}
                     {view.step === "agent" ? (
-                        <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
+                        <WizardAgentStep
+                            {...view.agentStep}
+                            isDisabled={view.isPending}
+                            onChange={on.agents}
+                            isLoading={isLoading}
+                        />
                     ) : null}
                     {noteOf(view.note)}
                 </WizardFrame>
             )}
-        </SlotView>
+        />
     )
 }

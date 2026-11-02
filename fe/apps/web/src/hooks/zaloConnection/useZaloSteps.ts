@@ -23,7 +23,7 @@ export const useZaloSteps = (connectionId: string) => {
     const t = useTranslations("zaloConnection")
     const { slot } = useZaloPage(connectionId)
     const [toggled, setToggled] = useState<Readonly<Partial<Record<ZaloStepId, boolean>>>>({})
-    const page = slot.items
+    const page = "items" in slot ? slot.items : undefined
     const done = zaloStepsDone({
         appId: page?.appId ?? "",
         appSecretMask: page?.appSecretMask ?? null,
@@ -59,7 +59,7 @@ export const useZaloSteps = (connectionId: string) => {
     }))
     return {
         steps,
-        isSkeleton: page === undefined,
+        isLoading: page === undefined,
         toggle: (id: ZaloStepId, isOpen: boolean) => setToggled((current) => ({ ...current, [id]: isOpen })),
     }
 }

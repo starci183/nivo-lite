@@ -1,10 +1,9 @@
-import { Form, Input, SurfaceCard } from "@starci/grammar/common"
+import { Form, Input, SurfaceCard, Stack } from "@starci/grammar/common"
 import { AvatarEditor } from "@/components/composites/AvatarEditor"
 import { FormActions } from "@/components/composites/FormActions"
 import { SlotView } from "@/components/composites/SlotView"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { FORM_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** Copy, values and state the connected profile card supplies. */
 export interface AccountProfileBaseProps {
@@ -47,10 +46,14 @@ export interface AccountProfileBaseProps {
 
 /** Draws the profile card (the picture with its live preview, then the display name) without reading copy or data. */
 export const AccountProfileBase = (props: AccountProfileBaseProps) => (
-    <SlotView slot={props.props.slot} placeholder labels={props.props.labels} onRetry={props.on.retry}>
-        {(_, isSkeleton) => (
-            <SurfaceCard label={props.props.title} headingLevel={2}>
-                <div className={STACK_CLASS_NAME}>
+    <SlotView
+        slot={props.props.slot}
+        placeholder
+        labels={props.props.labels}
+        onRetry={props.on.retry}
+        render={(_, isSkeleton) => (
+            <SurfaceCard label={props.props.title} headingLevel={2} isLoading={isSkeleton}>
+                <Stack gap="region">
                     <AvatarEditor
                         id="account-avatar"
                         preview={
@@ -66,7 +69,7 @@ export const AccountProfileBase = (props: AccountProfileBaseProps) => (
                         onRemove={props.on.remove}
                     />
                     <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
-                        <div className={FORM_CLASS_NAME}>
+                        <Stack gap="section" measure="form">
                             <Input
                                 id="account-name"
                                 name="name"
@@ -74,7 +77,7 @@ export const AccountProfileBase = (props: AccountProfileBaseProps) => (
                                 description={props.props.nameHint}
                                 isRequired
                                 isDisabled={props.props.isPending}
-                                isSkeleton={isSkeleton}
+                                isLoading={isSkeleton}
                                 value={props.props.name}
                                 onValueChange={props.on.setName}
                             />
@@ -84,12 +87,12 @@ export const AccountProfileBase = (props: AccountProfileBaseProps) => (
                                 done={props.props.done}
                                 submitLabel={props.props.saveLabel}
                                 isPending={props.props.isPending}
-                                isSkeleton={isSkeleton}
+                                isLoading={isSkeleton}
                             />
-                        </div>
+                        </Stack>
                     </Form>
-                </div>
+                </Stack>
             </SurfaceCard>
         )}
-    </SlotView>
+    />
 )

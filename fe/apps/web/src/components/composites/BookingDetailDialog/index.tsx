@@ -1,6 +1,13 @@
-import { Badge, Button, DescriptionList, Dialog } from "@starci/grammar/common"
-import type { BadgeTone, DescriptionListItem } from "@starci/grammar/common"
-import { ROW_CLASS, STACK_CLASS } from "./classNames"
+import {
+    Badge,
+    Button,
+    DescriptionList,
+    Dialog,
+    Stack,
+    Cluster,
+    type BadgeTone,
+    type DescriptionListItem,
+} from "@starci/grammar/common"
 
 /** One button of the dialog footer. */
 type ActionView = {
@@ -10,7 +17,7 @@ type ActionView = {
 }
 
 /** What the detail dialog of a booking draws and reports. */
-export type BookingDetailDialogProps = {
+type BookingDetailDialogProps = {
     readonly title: string
     readonly description: string
     readonly closeLabel: string
@@ -91,13 +98,13 @@ export const BookingDetailDialog = (props: BookingDetailDialogProps) => (
             </>
         }
     >
-        <div className={STACK_CLASS}>
-            <div className={ROW_CLASS}>
+        <Stack gap="row">
+            <Cluster gap="inline">
                 <Badge tone={props.statusTone} isDot>
                     {props.statusLabel}
                 </Badge>
-            </div>
+            </Cluster>
             <DescriptionList layout="columns" items={props.items} />
-        </div>
+        </Stack>
     </Dialog>
 )

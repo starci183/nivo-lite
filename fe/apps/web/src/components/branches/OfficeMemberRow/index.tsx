@@ -1,4 +1,4 @@
-import { Badge, Cluster, IconButton, ItemActions, Text, TextAction, Tooltip } from "@starci/grammar/common"
+import { Badge, Cluster, IconButton, Link, Text, Tooltip } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeMemberRowView } from "@/modules/types"
@@ -25,7 +25,7 @@ export const OfficeMemberRow = (props: OfficeMemberRowProps) => (
                     <div className={LINE_CLASS_NAME}>
                         <Cluster gap="inline">
                             <div className={NAME_CLASS_NAME}>
-                                <Text weight="medium" overflow="truncate">
+                                <Text isStrong overflow="truncate">
                                     {props.member.name}
                                 </Text>
                             </div>
@@ -61,38 +61,50 @@ export const OfficeMemberRow = (props: OfficeMemberRowProps) => (
                         </Text>
                     )}
                     {props.member.noteAction === null ? null : (
-                        <TextAction size="xs" href={props.member.noteAction.href}>
-                            {props.member.noteAction.label}
-                        </TextAction>
+                        <Link href={props.member.noteAction.href}>{props.member.noteAction.label}</Link>
                     )}
                 </div>
-                {props.member.mention === null && props.member.chatHref === null ? null : (
-                    <ItemActions>
-                        <Cluster gap="identity" wrap={false}>
-                            {props.member.mention === null ? null : (
-                                <Tooltip content={props.mentionLabel}>
-                                    <IconButton
-                                        intent="neutral"
-                                        source={nivoIconSource("mention", "leading")}
-                                        label={props.mentionLabel}
-                                        onPress={() => props.onMention(props.member.mention ?? "")}
-                                    />
-                                </Tooltip>
-                            )}
-                            {props.member.chatHref === null ? null : (
-                                <Tooltip content={props.chatLabel}>
-                                    <IconButton
-                                        intent="neutral"
-                                        source={nivoIconSource("chat", "leading")}
-                                        label={props.chatLabel}
-                                        href={props.member.chatHref}
-                                    />
-                                </Tooltip>
-                            )}
-                        </Cluster>
-                    </ItemActions>
-                )}
+                <MemberQuickActions {...props} />
             </Cluster>
         </div>
     </Cluster>
+)
+
+type MemberQuickActionsProps = Pick<OfficeMemberRowProps, "member" | "mentionLabel" | "chatLabel" | "onMention">
+/** Mention and direct chat retain their own accessible tooltip targets. */
+const MemberQuickActions = (props: MemberQuickActionsProps) => (
+    <>
+        {props.member.mention === null && props.member.chatHref === null ? null : (
+            <>
+                <Cluster gap="identity" wrap={false}>
+                    {props.member.mention === null ? null : (
+                        <Tooltip
+                            content={props.mentionLabel}
+                            trigger={
+                                <IconButton
+                                    intent="neutral"
+                                    source={nivoIconSource("mention", "leading")}
+                                    label={props.mentionLabel}
+                                    onPress={() => props.onMention(props.member.mention ?? "")}
+                                />
+                            }
+                        />
+                    )}
+                    {props.member.chatHref === null ? null : (
+                        <Tooltip
+                            content={props.chatLabel}
+                            trigger={
+                                <IconButton
+                                    intent="neutral"
+                                    source={nivoIconSource("chat", "leading")}
+                                    label={props.chatLabel}
+                                    href={props.member.chatHref}
+                                />
+                            }
+                        />
+                    )}
+                </Cluster>
+            </>
+        )}
+    </>
 )

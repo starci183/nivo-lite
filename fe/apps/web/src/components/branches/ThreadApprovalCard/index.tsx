@@ -1,13 +1,6 @@
-import { Badge, Button, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, Heading, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { ApprovalCountdown } from "@/components/leaves/ApprovalCountdown"
 import type { ThreadApprovalCardView, ThreadApprovalLabels } from "@/modules/types"
-import {
-    ACTIONS_CLASS_NAME,
-    CARD_CLASS_NAME,
-    FACTS_CLASS_NAME,
-    PEOPLE_CLASS_NAME,
-    PERSON_CLASS_NAME,
-} from "./classNames"
 
 /** What the approval card draws and asks. */
 type ThreadApprovalCardProps = {
@@ -24,7 +17,7 @@ const Decision = (props: ThreadApprovalCardProps) => {
     const { card } = props
     if (!card.isPending) return <Badge tone={card.decidedTone}>{card.decidedLine}</Badge>
     return (
-        <div className={ACTIONS_CLASS_NAME}>
+        <Cluster gap="inline">
             <Button intent="commit" size="sm" isPending={props.isBusy} onPress={() => props.onApprove(card.messageId)}>
                 {props.labels.approve}
             </Button>
@@ -36,7 +29,7 @@ const Decision = (props: ThreadApprovalCardProps) => {
             >
                 {props.labels.reject}
             </Button>
-        </div>
+        </Cluster>
     )
 }
 
@@ -45,35 +38,35 @@ export const ThreadApprovalCard = (props: ThreadApprovalCardProps) => {
     const { card } = props
     return (
         <SurfaceCard label={props.labels.cardLabel} {...(card.isPending ? { state: "pending" as const } : {})}>
-            <div className={CARD_CLASS_NAME}>
-                <Text weight="semibold">{card.title}</Text>
+            <Stack gap="row">
+                <Heading level={4}>{card.title}</Heading>
                 <Text size="sm" tone="muted">
                     {card.ruleLine}
                 </Text>
-                <div className={FACTS_CLASS_NAME}>
+                <Cluster gap="inline" justify="between">
                     <Text size="sm">{card.policyLabel}</Text>
                     <ApprovalCountdown expiry={card.expiry} />
-                </div>
-                <div className={PEOPLE_CLASS_NAME}>
+                </Cluster>
+                <Stack gap="inline">
                     {card.approvers.map((person) => (
-                        <div key={person.id} className={PERSON_CLASS_NAME}>
+                        <Cluster key={person.id} gap="row" justify="between" wrap={false}>
                             <Text size="sm">{`${person.name} · ${person.roleLabel}`}</Text>
                             <Badge tone={person.tone}>{person.statusLabel}</Badge>
-                        </div>
+                        </Cluster>
                     ))}
                     {card.excluded.map((left) => (
                         <Text key={left.id} size="xs" tone="muted">
                             {left.line}
                         </Text>
                     ))}
-                </div>
+                </Stack>
                 <Decision {...props} />
                 {card.fallbackLine === null ? null : (
                     <Text size="xs" tone="muted">
                         {card.fallbackLine}
                     </Text>
                 )}
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 }

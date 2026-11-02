@@ -20,7 +20,7 @@ export const useTelegramNotices = (
     const tc = useTranslations("connections")
     const { slot } = useTelegramPage(connectionId)
     const { data } = useMutateCheckTelegramConnectionSwr(connectionId)
-    const page = slot.items
+    const page = "items" in slot ? slot.items : undefined
     if (page === undefined) return []
     const isLive = page.status !== "disconnected"
     const stored = page.lastError

@@ -1,8 +1,5 @@
 export {
-    ATTENTION_TONES,
     DEAL_STAGES,
-    EVIDENCE_TONES,
-    INVOICE_TONES,
     KNOWN_FIELDS,
     OPEN_LANES,
     OUTCOME_TONES,
@@ -13,7 +10,10 @@ export {
     isStale,
     parseAmount,
     salesTabOf,
-    stageToneOf,
     vietnamDay,
 } from "./sales.shared"
+export { SALES_TABS } from "./sales.shared"
 export { useSalesActions } from "./useSalesActions"
+export { useSalesActivityView } from "./useSalesActivityView"
+export { useSalesAttentionView } from "./useSalesAttentionView"
+export { useSalesHandoffsView } from "./useSalesHandoffsView"

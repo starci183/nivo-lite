@@ -1,4 +1,4 @@
-import { Alert, Button, DescriptionList, Meter, SectionHeader, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, DescriptionList, Meter, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, MarketingReportView, SlotLabels } from "@/modules/types"
 
@@ -30,7 +30,7 @@ export interface MarketingReportBaseProps {
 }
 
 /** The ready (or skeleton) report with the commands of the tab. */
-type ReportProps = MarketingReportBaseProps & { readonly view: MarketingReportView; readonly isSkeleton: boolean }
+type ReportProps = MarketingReportBaseProps & { readonly view: MarketingReportView; readonly isLoading: boolean }
 
 /** The parts of the report a section draws. */
 interface SectionProps {
@@ -43,7 +43,7 @@ const Suggestion = ({ words, view }: SectionProps) =>
     view.suggestion === null ? null : (
         <SurfaceCard label={words.suggestionTitle}>
             <Stack gap="section">
-                <Text weight="semibold">{view.suggestion.title}</Text>
+                <Text isStrong>{view.suggestion.title}</Text>
                 <Text size="sm">{view.suggestion.body}</Text>
                 <Text size="xs" tone="muted">
                     {view.suggestion.sources}
@@ -67,64 +67,75 @@ const TopPosts = ({ words, view }: SectionProps) =>
 
 const Report = (props: ReportProps) => {
     const { words } = props.props
-    const { view, isSkeleton } = props
+    const { view, isLoading } = props
     return (
         <Stack gap="region">
-            <SectionHeader
-                level={2}
+            <Section
+                headingLevel={2}
                 title={words.title}
                 description={view.period === "" ? words.description : `${words.description} · ${view.period}`}
-                isSkeleton={isSkeleton}
+                isLoading={isLoading}
                 action={
                     props.props.canPost ? (
                         <Button
                             intent="commit"
                             isPending={props.props.isPosting}
-                            isDisabled={isSkeleton}
+                            isDisabled={isLoading}
                             onPress={props.on.post}
                         >
                             {words.postLabel}
                         </Button>
                     ) : undefined
                 }
-            />
-            <DescriptionList layout="stat-strip" isDivided isLoading={isSkeleton} items={view.kpis} />
-            <SurfaceCard label={words.chartTitle}>
-                <Stack gap="section">
-                    <Text size="sm" tone="muted">
-                        {words.chartNote}
-                    </Text>
-                    <Stack gap="row">
-                        {view.days.map((day) => (
-                            <Meter
-                                key={day.id}
-                                label={day.label || words.chartTitle}
-                                value={day.total}
-                                maxValue={view.dayMax}
-                                valueLabel={
-                                    day.breakdown === "" ? String(day.total) : `${day.total} · ${day.breakdown}`
-                                }
-                                isSkeleton={isSkeleton}
-                            />
-                        ))}
+            >
+                <SurfaceCard
+                    kind="figures"
+                    ariaLabel={words.title}
+                    isLoading={isLoading}
+                    items={view.kpis.map((item) => ({
+                        id: item.id,
+                        term: item.term,
+                        value: item.description,
+                        meta: item.meta,
+                    }))}
+                />
+                <SurfaceCard label={words.chartTitle}>
+                    <Stack gap="section">
+                        <Text size="sm" tone="muted">
+                            {words.chartNote}
+                        </Text>
+                        <Stack gap="row">
+                            {view.days.map((day) => (
+                                <Meter
+                                    key={day.id}
+                                    label={day.label || words.chartTitle}
+                                    value={day.total}
+                                    maxValue={view.dayMax}
+                                    valueLabel={
+                                        day.breakdown === "" ? String(day.total) : `${day.total} · ${day.breakdown}`
+                                    }
+                                    isLoading={isLoading}
+                                />
+                            ))}
+                        </Stack>
                     </Stack>
-                </Stack>
-            </SurfaceCard>
-            {view.channels.length === 0 ? null : (
-                <SurfaceCard label={words.channelsTitle}>
-                    <DescriptionList layout="columns" isDivided items={view.channels} />
                 </SurfaceCard>
-            )}
-            {view.insight === "" ? null : (
-                <Alert tone="informative" title={words.insightTitle} description={view.insight} />
-            )}
-            <Suggestion words={words} view={view} />
-            <TopPosts words={words} view={view} />
-            {props.props.canPost ? (
-                <Text size="xs" tone="muted">
-                    {words.postHint}
-                </Text>
-            ) : null}
+                {view.channels.length === 0 ? null : (
+                    <SurfaceCard label={words.channelsTitle}>
+                        <DescriptionList layout="columns" isDivided items={view.channels} />
+                    </SurfaceCard>
+                )}
+                {view.insight === "" ? null : (
+                    <Alert tone="informative" title={words.insightTitle} description={view.insight} />
+                )}
+                <Suggestion words={words} view={view} />
+                <TopPosts words={words} view={view} />
+                {props.props.canPost ? (
+                    <Text size="xs" tone="muted">
+                        {words.postHint}
+                    </Text>
+                ) : null}
+            </Section>
         </Stack>
     )
 }
@@ -137,7 +148,6 @@ export const MarketingReportBase = (props: MarketingReportBaseProps) => (
         placeholder={props.props.placeholder}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(view, isSkeleton) => <Report {...props} view={view} isSkeleton={isSkeleton} />}
-    </SlotView>
+        render={(view, isLoading) => <Report {...props} view={view} isLoading={isLoading} />}
+    />
 )

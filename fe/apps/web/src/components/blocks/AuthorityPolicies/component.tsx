@@ -1,6 +1,6 @@
-import { Textarea } from "@starci/grammar/common"
-import { AuthoritySection } from "@/components/composites/AuthoritySection"
-import type { AuthoritySectionView } from "@/components/composites/AuthoritySection"
+import { Button, Textarea } from "@starci/grammar/common"
+import { AuthoritySection } from "@/components/frames/AuthoritySection"
+import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
@@ -33,11 +33,27 @@ export interface AuthorityPoliciesBaseProps {
 export const AuthorityPoliciesBase = (props: AuthorityPoliciesBaseProps) => {
     const view = props.props
     return (
-        <SlotView slot={view.slot} placeholder={false} labels={view.slotLabels} onRetry={props.on.retry}>
-            {(_, isSkeleton) => (
-                <AuthoritySection section={view.section} isSkeleton={isSkeleton} onSave={props.on.save}>
+        <SlotView
+            slot={view.slot}
+            placeholder={false}
+            labels={view.slotLabels}
+            onRetry={props.on.retry}
+            render={(_, isLoading) => (
+                <AuthoritySection
+                    section={view.section}
+                    footer={
+                        <Button
+                            intent="commit"
+                            isPending={view.section.isPending}
+                            isLoading={isLoading}
+                            onPress={props.on.save}
+                        >
+                            {view.section.saveLabel}
+                        </Button>
+                    }
+                >
                     <Textarea
-                        isSkeleton={isSkeleton}
+                        isLoading={isLoading}
                         label={view.policiesLabel}
                         description={view.policiesHint}
                         rows={4}
@@ -45,7 +61,7 @@ export const AuthorityPoliciesBase = (props: AuthorityPoliciesBaseProps) => {
                         onValueChange={props.on.policies}
                     />
                     <Textarea
-                        isSkeleton={isSkeleton}
+                        isLoading={isLoading}
                         label={view.replyStyleLabel}
                         description={view.replyStyleHint}
                         rows={2}
@@ -53,7 +69,7 @@ export const AuthorityPoliciesBase = (props: AuthorityPoliciesBaseProps) => {
                         onValueChange={props.on.replyStyle}
                     />
                     <Textarea
-                        isSkeleton={isSkeleton}
+                        isLoading={isLoading}
                         label={view.brandVoiceLabel}
                         description={view.brandVoiceHint}
                         rows={2}
@@ -62,6 +78,6 @@ export const AuthorityPoliciesBase = (props: AuthorityPoliciesBaseProps) => {
                     />
                 </AuthoritySection>
             )}
-        </SlotView>
+        />
     )
 }

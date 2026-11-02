@@ -30,15 +30,15 @@ the target of the visual pass.
 3. **Confirm the 8 items.** Each gate is missing, proposed (NIVO filled it) or confirmed. The owner confirms a proposal,
    edits it in their own words ("Save and confirm", which confirms) or reopens it (`setSetupGate`). Progress reads
    "N/8 confirmed".
-4. **Publish and run.** One button, "Xuất bản và chạy" (Publish and run), in the head row of the work map. Running is a state of
+4. **Publish and run.** One button, "Publish and run", in the head row of the work map. Running is a state of
    the agent; a version is only history. One press does both halves: with the checklist confirmed and changed it calls
    `applySetup` (the draft becomes the next context version, the installation becomes ready, and the same call publishes the
    draft of the action graph with that context version); with only the map changed it calls `publishAgentGraph` (the draft of
-   the map becomes the next graph version; an owner's edit also turns the map to `enforced`). The head row is one line, "Bản 1 đang
-   chạy · Không có thay đổi mới", with the button at its end and no second run button. The button is off when there is nothing
+   the map becomes the next graph version; an owner's edit also turns the map to `enforced`). The head row is one line, "Version 1 is
+   running · No new changes", with the button at its end and no second run button. The button is off when there is nothing
    new, when the checklist is not confirmed, when the map has gaps or problems, or when the person may not edit; the status
    line beside it says which, in words. The graph sits directly under the head row and the checklist after it. The switch
-   "Để bản đồ quyết định" sits under the graph and says what the agent does before and after it is turned on. Connecting a
+   "Let the map decide" sits under the graph and says what the agent does before and after it is turned on. Connecting a
    channel and the live switch are on Settings (and Connections); the header says "No channel connected" until a channel is bound.
 5. **Switch agent.** Today the rail "Your agents" beside the tab; in the visual pass it moves to a menu in the header
    (the mockup's breadcrumb ▾), and "Add agent" goes back to `/agents`.

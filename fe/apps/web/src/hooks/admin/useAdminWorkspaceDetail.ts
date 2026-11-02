@@ -9,5 +9,11 @@ export const useAdminWorkspaceDetail = (workspaceId: string) => {
     const swrRead = useQueryAdminWorkspaceSwr({ workspaceId })
     const { data, isLoading } = swrRead
     const error = readError(swrRead)
-    return { detail: data, isLoading, failure: adminFailureOf(error), reload: () => void swrRead.mutate() }
+    return {
+        read: swrRead,
+        detail: data,
+        isLoading,
+        failure: adminFailureOf(error),
+        reload: () => void swrRead.mutate(),
+    }
 }

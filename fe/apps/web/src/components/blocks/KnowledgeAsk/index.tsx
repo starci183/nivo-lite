@@ -63,27 +63,32 @@ const identityOf = (t: Translate, agent: AgentLens | undefined, audience: string
               caption: captionOf(t, agent, audience),
           }
 
+/** Props for the connected panel. */
+interface KnowledgeAskProps {
+    /** Every question is asked for this audience, with no choice offered; the public part asks as a customer. */
+    readonly fixedAudience?: "customer"
+}
+
 /** The connected "ask as an agent" panel: asks the back end what an agent would retrieve through its own view, and cites where it read it. */
-export const KnowledgeAsk = () => {
+export const KnowledgeAsk = (props: KnowledgeAskProps) => {
     const t = useTranslations("knowledge")
+    const pub = useTranslations("publicBrain")
     const slotLabels = useSlotLabels()
     const { lenses, slot, reload } = useAgentLenses()
-    const agents = (lenses ?? []).filter((lens) => lens.kind === "agent")
-    const ask = useAskKnowledge(agents)
+    const all = (lenses ?? []).filter((lens) => lens.kind === "agent")
+    const facing = all.filter((lens) => lens.audience === props.fixedAudience)
+    const agents = props.fixedAudience === undefined || facing.length === 0 ? all : facing
+    const ask = useAskKnowledge(agents, props.fixedAudience)
     return (
         <KnowledgeAskBase
             props={{
-                title: t("askTitle"),
-                hint: t("askHint"),
+                title: props.fixedAudience === undefined ? t("askTitle") : pub("tryTitle"),
+                hint: props.fixedAudience === undefined ? t("askHint") : pub("tryHint"),
                 placeholder: t("askPlaceholder"),
                 questionLabel: t("askQuestion"),
                 agentLabel: t("askModule"),
                 selectPlaceholder: t("selectPlaceholder"),
-                agents: mapSlot(slot, (all) =>
-                    all
-                        .filter((lens) => lens.kind === "agent")
-                        .map((lens) => ({ id: lens.id, label: lens.name ?? "" })),
-                ),
+                agents: mapSlot(slot, () => agents.map((lens) => ({ id: lens.id, label: lens.name ?? "" }))),
                 agentsLabels: slotLabels(t("askNoAgents")),
                 audienceLabel: t("askAudience"),
                 audienceOptions: audienceOptionsOf(t),

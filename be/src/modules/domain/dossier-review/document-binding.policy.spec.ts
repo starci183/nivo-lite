@@ -104,3 +104,48 @@ describe("bindingOf", () => {
         ).toBeNull()
     })
 })
+
+describe("bindingOf > checklist and title boundaries", () => {
+    it("binds a zero-padded numeric reference with its category even when the scan has no useful words", async () => {
+        const { bindingOf: bind } = await buildSubject()
+
+        expect(bind({ title: "  005. scan 0192.pdf", topic: "legal files", opening: "" }, [BANK, CHARTER])).toBe(BANK)
+    })
+
+    it("keeps zero as a numeric reference after removing redundant leading zeros", async () => {
+        const { bindingOf: bind } = await buildSubject()
+        const zero = candidateOf({ id: "d0", ref: "0", name: "Archive index" })
+
+        expect(bind({ title: "000. scan", topic: "legal files", opening: "" }, [zero])).toBe(zero)
+    })
+
+    it("matches a listed title after removing a numbered subitem prefix and a real file extension", async () => {
+        const { bindingOf: bind } = await buildSubject()
+        const archive = candidateOf({ id: "d9", ref: "9", name: "Archive index", existing: "Board resolution" })
+
+        expect(bind({ title: "004a. Board resolution.docx", topic: null, opening: "" }, [archive])).toBe(archive)
+    })
+
+    it("does not remove a file type word that is part of the title rather than an extension", async () => {
+        const { bindingOf: bind } = await buildSubject()
+        const archive = candidateOf({ id: "d9", ref: "9", name: "Archive index", existing: "Operating budget" })
+
+        expect(bind({ title: "Operating budget docx", topic: null, opening: "" }, [archive])).toBeNull()
+    })
+
+    it("does not infer a dossier from common words, a year or an empty title", async () => {
+        const { bindingOf: bind } = await buildSubject()
+        const common = candidateOf({ name: "Ho so 2026", ref: "" })
+
+        expect(bind({ title: "2026", topic: null, opening: "" }, [common])).toBeNull()
+        expect(bind({ title: "", topic: null, opening: "" }, [common])).toBeNull()
+    })
+
+    it("keeps large checklist references exact while removing only redundant leading zeros", async () => {
+        const { bindingOf: bind } = await buildSubject()
+        const large = candidateOf({ id: "large", ref: "9007199254740993", name: "Archive index" })
+
+        expect(bind({ title: "0009007199254740993. scan", topic: "legal files", opening: "" }, [large])).toBe(large)
+        expect(bind({ title: "0009007199254740993x. scan", topic: "legal files", opening: "" }, [large])).toBeNull()
+    })
+})

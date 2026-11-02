@@ -236,14 +236,10 @@ describe("public-api policy / leadFacts", () => {
 })
 
 describe("public-api policy / visibilityOf", () => {
-    it("is public only when the caller says public", async () => {
+    it("is always internal, whatever the caller says", async () => {
         const subject = await build()
 
-        const base = { authorization: undefined, title: "t", content: "c" }
-
-        expect(subject.visibilityOf({ ...base, visibility: "public" })).toBe("public")
-        expect(subject.visibilityOf({ ...base, visibility: "secret" })).toBe("internal")
-        expect(subject.visibilityOf(base)).toBe("internal")
+        expect(subject.visibilityOf()).toBe("internal")
     })
 })
 

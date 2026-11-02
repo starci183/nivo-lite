@@ -1,18 +1,4 @@
-import { Fragment } from "react"
-import {
-    Avatar,
-    Badge,
-    Cluster,
-    Divider,
-    Grid,
-    PageContainer,
-    Region,
-    SectionHeader,
-    Stack,
-    SurfaceCard,
-    SurfaceCopyGroup,
-    Text,
-} from "@starci/grammar/common"
+import { Heading, Avatar, Badge, Cluster, DescriptionList, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { ANCHOR } from "./classNames"
 
 /** One principle: a title over its explanation. */
@@ -45,25 +31,22 @@ interface LandingCommitmentBaseProps {
  * NIVO team, never a personal quote or a photo of a person.
  */
 export const LandingCommitmentBase = (props: LandingCommitmentBaseProps) => (
-    <Region id="commitment" label={props.props.regionLabel} className={ANCHOR}>
-        <PageContainer measure="product">
-            <Stack gap="section">
-                <SectionHeader
-                    eyebrow={props.props.eyebrow}
-                    title={props.props.titleLines.map((line, position) => (
-                        <Fragment key={line}>
-                            {position > 0 ? <br /> : null}
-                            {line}
-                        </Fragment>
-                    ))}
-                />
-                <SurfaceCard>
-                    <Stack gap="row">
+    <div id="commitment" className={ANCHOR}>
+        <SurfaceCard
+            kind="bands"
+            label={props.props.titleLines.join(" ")}
+            ariaLabel={props.props.regionLabel}
+            fact={props.props.eyebrow}
+            headingLevel={2}
+            bands={[
+                {
+                    kind: "body",
+                    children: (
                         <Stack gap="row">
-                            <SurfaceCopyGroup>
+                            <Stack gap="inline">
                                 <Text size="xs">{props.props.panelLabel}</Text>
-                                <Text weight="medium">{props.props.panelText}</Text>
-                            </SurfaceCopyGroup>
+                                <Text isStrong>{props.props.panelText}</Text>
+                            </Stack>
                             <Cluster gap="row">
                                 <Avatar
                                     name={props.props.author}
@@ -72,18 +55,20 @@ export const LandingCommitmentBase = (props: LandingCommitmentBaseProps) => (
                                     isDecorative
                                 />
                                 <Stack gap="identity">
-                                    <Text weight="medium">{props.props.author}</Text>
+                                    <Text isStrong>{props.props.author}</Text>
                                     <Text size="sm" tone="muted">
                                         {props.props.authorRole}
                                     </Text>
                                 </Stack>
                             </Cluster>
                         </Stack>
-                        <Divider semantics="presentation" />
+                    ),
+                },
+                {
+                    kind: "body",
+                    children: (
                         <Stack gap="row">
-                            <Text size="md" weight="medium">
-                                {props.props.quote}
-                            </Text>
+                            <Heading level={3}>{props.props.quote}</Heading>
                             <Cluster gap="inline">
                                 <Badge tone="neutral">{props.props.aiChip}</Badge>
                                 <Text size="sm" tone="muted">
@@ -91,20 +76,22 @@ export const LandingCommitmentBase = (props: LandingCommitmentBaseProps) => (
                                 </Text>
                             </Cluster>
                         </Stack>
-                        <Divider semantics="presentation" />
-                        <Grid kind="cards" columns={2}>
-                            {props.props.principles.map((principle) => (
-                                <SurfaceCopyGroup key={principle.id}>
-                                    <Text weight="medium">{principle.title}</Text>
-                                    <Text size="sm" tone="muted">
-                                        {principle.text}
-                                    </Text>
-                                </SurfaceCopyGroup>
-                            ))}
-                        </Grid>
-                    </Stack>
-                </SurfaceCard>
-            </Stack>
-        </PageContainer>
-    </Region>
+                    ),
+                },
+                {
+                    kind: "body",
+                    children: (
+                        <DescriptionList
+                            layout="columns"
+                            items={props.props.principles.map((principle) => ({
+                                id: principle.id,
+                                term: principle.title,
+                                description: principle.text,
+                            }))}
+                        />
+                    ),
+                },
+            ]}
+        />
+    </div>
 )

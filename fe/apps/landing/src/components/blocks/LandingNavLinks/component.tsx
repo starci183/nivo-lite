@@ -1,4 +1,4 @@
-import { NavLandmark, TextAction } from "@starci/grammar/common"
+import { NavLandmark, Link } from "@starci/grammar/common"
 import { NAV_LINKS } from "./classNames"
 
 /** One in-page destination of the bar. */
@@ -21,9 +21,9 @@ export const LandingNavLinksBase = (props: LandingNavLinksBaseProps) => (
     <div className={NAV_LINKS}>
         <NavLandmark label={props.props.navLabel} layout="bar">
             {props.props.links.map((link) => (
-                <TextAction key={link.id} href={link.href} appearance="route" size="control">
+                <Link key={link.id} href={link.href}>
                     {link.label}
-                </TextAction>
+                </Link>
             ))}
         </NavLandmark>
     </div>

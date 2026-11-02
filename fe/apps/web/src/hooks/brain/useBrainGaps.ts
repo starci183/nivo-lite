@@ -1,0 +1,94 @@
+"use client"
+
+import { useFormatter, useTranslations } from "next-intl"
+import { useState } from "react"
+import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
+import { brainTabHref } from "@/modules/routes"
+import type { BrainGap, KnowledgeListView, KnowledgeRowView } from "@/modules/types"
+import { toast } from "@/modules/toast"
+import { useBrainCommand } from "./useBrainCommand"
+import type { useBrainBoard } from "./useBrainBoard"
+
+interface GapOptions {
+    readonly answer?: "fact" | "public"
+    readonly gaps?: readonly BrainGap[]
+}
+
+/** Resolves unanswered questions for the queue or public answers, without sharing either region's display status. */
+export const useBrainGaps = (board: ReturnType<typeof useBrainBoard>, options: GapOptions = {}) => {
+    const t = useTranslations("brain")
+    const pub = useTranslations("publicBrain")
+    const feedback = useTranslations("toast")
+    const format = useFormatter()
+    const labels = useSlotLabels()
+    const command = useBrainCommand()
+    const [pending, setPending] = useState<string | undefined>()
+    const failed = () => {
+        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+    }
+    const rowOf = (gap: BrainGap): KnowledgeRowView => {
+        const when = format.dateTime(new Date(gap.lastSeenAt), { dateStyle: "medium" })
+        return {
+            id: gap.id,
+            title: gap.question,
+            lines: [gap.count > 1 ? t("gapAsked", { n: gap.count, when }) : t("gapAskedOnce", { when })],
+            badges: [
+                { label: gap.module, tone: "neutral" },
+                ...(gap.reopenedCount > 0 ? [{ label: t("gapReopened"), tone: "warning" as const }] : []),
+            ],
+            actions: board.canWrite
+                ? [
+                      {
+                          id: "answer",
+                          label: t("gapAnswer"),
+                          href:
+                              options.answer === "public"
+                                  ? brainTabHref("publicDocs", { compose: "write", title: gap.question })
+                                  : brainTabHref("todo", { answer: gap.id }),
+                      },
+                      {
+                          id: "dismiss",
+                          label: t("gapDismiss"),
+                          intent: "neutral",
+                          isPending: pending === gap.id,
+                          isDisabled: pending !== undefined && pending !== gap.id,
+                          disabledReason: t("actionBusy"),
+                      },
+                  ]
+                : [],
+        }
+    }
+    const dismiss = async (rowId: string, actionId: string) => {
+        if (
+            !board.canWrite ||
+            actionId !== "dismiss" ||
+            pending !== undefined ||
+            !(options.gaps ?? board.gaps).some((gap) => gap.id === rowId)
+        )
+            return
+        setPending(rowId)
+        try {
+            return await command.send("gap.dismiss", { id: rowId }, { done: t("gapDismissed") })
+        } catch {
+            failed()
+            return undefined
+        } finally {
+            setPending(undefined)
+        }
+    }
+    const dispatch = (rowId: string, actionId: string) => {
+        dismiss(rowId, actionId).catch(failed)
+    }
+    const list: KnowledgeListView = {
+        section: { id: "brain-gaps-title", title: t("gapsTitle"), failTitle: t("loadFailed") },
+        label: t("gapsTitle"),
+        ...(options.answer === "public" ? { footer: pub("asksFooter") } : {}),
+        isPending: command.isPending,
+        slot:
+            options.gaps === undefined
+                ? mapSlot(board.slot, (brain) => brain.gaps.map(rowOf))
+                : slotOfSwr({ data: options.gaps.map(rowOf), error: undefined, isLoading: false }),
+        slotLabels: labels(t("gapsEmpty")),
+    }
+    return { list, dispatch, retry: board.reload }
+}

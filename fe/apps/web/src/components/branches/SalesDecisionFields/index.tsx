@@ -1,4 +1,5 @@
 import { Input, Stack, Textarea } from "@starci/grammar/common"
+import { DecisionMissingInputs } from "@/components/leaves/DecisionMissingInputs"
 
 /** One data field NIVO is missing and the person fills in. */
 interface MissingFieldView {
@@ -19,6 +20,7 @@ interface SalesDecisionFieldsProps {
     readonly amountLabel: string
     readonly amountValue: string
     readonly isBusy: boolean
+    readonly isLoading?: boolean
     readonly onField: (name: string, value: string) => void
     readonly onDraft: (value: string) => void
     readonly onAmount: (value: string) => void
@@ -27,23 +29,20 @@ interface SalesDecisionFieldsProps {
 /** The missing fields, the editable draft and the editable amount of one pending decision. */
 export const SalesDecisionFields = (props: SalesDecisionFieldsProps) => (
     <Stack gap="row">
-        {props.missing.map((field) => (
-            <Input
-                key={field.name}
-                id={`${props.anchor}-${field.name}`}
-                name={field.name}
-                label={field.label}
-                value={field.value}
-                isDisabled={props.isBusy}
-                onValueChange={(value) => props.onField(field.name, value)}
-            />
-        ))}
+        <DecisionMissingInputs
+            idPrefix={props.anchor}
+            fields={props.missing}
+            isDisabled={props.isBusy}
+            isLoading={props.isLoading === true}
+            onField={props.onField}
+        />
         {props.showDraftField ? (
             <Textarea
                 label={props.draftLabel}
                 rows={4}
                 value={props.draftValue}
                 isDisabled={props.isBusy}
+                isLoading={props.isLoading === true}
                 onValueChange={props.onDraft}
             />
         ) : null}
@@ -54,6 +53,7 @@ export const SalesDecisionFields = (props: SalesDecisionFieldsProps) => (
                 label={props.amountLabel}
                 value={props.amountValue}
                 isDisabled={props.isBusy}
+                isLoading={props.isLoading === true}
                 onValueChange={props.onAmount}
             />
         ) : null}

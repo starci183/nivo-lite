@@ -1,9 +1,10 @@
-import { Input, Select, Text } from "@starci/grammar/common"
+import { Input, Select, Text, Stack } from "@starci/grammar/common"
 import type { SmtpAccountView, SmtpText } from "@/modules/types"
-import { smtpAccountStepClassNames as classNames } from "./classNames"
 
 /** What the sender step draws and reports. */
 type SmtpAccountStepProps = {
+    readonly isLoading?: boolean
+
     readonly account: SmtpAccountView
     readonly text: SmtpText
     /** The connection is saved: the fields stay as they were and the password is never shown. */
@@ -21,37 +22,29 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
     const locked = props.isLocked || props.isPending
     return (
         <>
-            <div className={classNames.fields}>
-                <Input
-                    id="smtp-from-name"
-                    name="fromName"
+            <Stack gap="section">
+                <SmtpSenderField
+                    props={props}
+                    field="fromName"
                     label={text.fieldFromName}
                     description={text.fieldFromNameHint}
-                    isDisabled={locked}
-                    value={account.values.fromName}
-                    onValueChange={(v) => props.onField("fromName", v)}
                 />
-                <Input
-                    id="smtp-from-email"
-                    name="fromEmail"
+                <SmtpSenderField
+                    props={props}
+                    field="fromEmail"
                     label={text.fieldFromEmail}
                     description={text.fieldFromEmailHint}
-                    isDisabled={locked}
-                    value={account.values.fromEmail}
-                    onValueChange={(v) => props.onField("fromEmail", v)}
                 />
-                <Input
-                    id="smtp-reply-to"
-                    name="replyTo"
+                <SmtpSenderField
+                    props={props}
+                    field="replyTo"
                     label={text.fieldReplyTo}
                     description={text.fieldReplyToHint}
-                    isDisabled={locked}
-                    value={account.values.replyTo}
-                    onValueChange={(v) => props.onField("replyTo", v)}
                 />
                 {account.showHost ? renderSmtpAccountStepServerFields(text, locked, account, props) : null}
                 {account.showUser ? (
                     <Input
+                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                         id="smtp-user"
                         name="user"
                         label={text.fieldUser}
@@ -62,14 +55,14 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                     />
                 ) : null}
                 {account.showPassword ? renderSmtpAccountStepPassword(account, locked, props) : null}
-            </div>
+            </Stack>
             {account.fixedUserNote === null ? null : (
-                <Text size="xs" tone="muted">
+                <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="xs" tone="muted">
                     {account.fixedUserNote}
                 </Text>
             )}
             {account.prefilledNote === null ? null : (
-                <Text size="xs" tone="muted">
+                <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="xs" tone="muted">
                     {account.prefilledNote}
                 </Text>
             )}
@@ -89,6 +82,7 @@ const renderSmtpAccountStepServerFields = (
 ) => (
     <>
         <Input
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
             id="smtp-host"
             name="host"
             label={text.fieldHost}
@@ -97,6 +91,7 @@ const renderSmtpAccountStepServerFields = (
             onValueChange={props.onHost}
         />
         <Input
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
             id="smtp-port"
             name="port"
             label={text.fieldPort}
@@ -105,6 +100,7 @@ const renderSmtpAccountStepServerFields = (
             onValueChange={props.onPort}
         />
         <Select
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
             label={text.fieldSecurity}
             isDisabled={locked}
             value={account.security}
@@ -121,6 +117,7 @@ const renderSmtpAccountStepPassword = (
     props: SmtpAccountStepProps,
 ) => (
     <Input
+        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
         id="smtp-password"
         name="password"
         label={account.passwordLabel}
@@ -131,3 +128,28 @@ const renderSmtpAccountStepPassword = (
         onValueChange={(v) => props.onField("password", v)}
     />
 )
+
+interface SmtpSenderFieldProps {
+    readonly props: SmtpAccountStepProps
+    readonly field: "fromName" | "fromEmail" | "replyTo"
+    readonly label: string
+    readonly description: string
+}
+/** Sender identity fields share the same lock, first-read and addressed edit behavior. */
+const SmtpSenderField = (input: SmtpSenderFieldProps) => {
+    const props = input.props
+    return (
+        <Input
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            id={SMTP_SENDER_IDS[input.field]}
+            name={input.field}
+            label={input.label}
+            description={input.description}
+            isDisabled={props.isLocked || props.isPending}
+            value={props.account.values[input.field]}
+            onValueChange={(value) => props.onField(input.field, value)}
+        />
+    )
+}
+
+const SMTP_SENDER_IDS = { fromName: "smtp-from-name", fromEmail: "smtp-from-email", replyTo: "smtp-reply-to" } as const

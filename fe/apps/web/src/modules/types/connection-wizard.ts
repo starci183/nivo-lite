@@ -284,3 +284,128 @@ export interface MetaCheck {
     readonly verifyTokenSet: boolean
     readonly repaired: boolean
 }
+
+/** Resolved words shared by the bank wizard and its pure environment/account/provider steps. */
+export type MoneyWizardCopy = Readonly<
+    Record<
+        | "back"
+        | "next"
+        | "close"
+        | "done"
+        | "checkLater"
+        | "earlyAccess"
+        | "earlyAccessNote"
+        | "envHint"
+        | "envBadge"
+        | "openProvider"
+        | "fieldName"
+        | "fieldNameHint"
+        | "fieldBank"
+        | "fieldBankPlaceholder"
+        | "fieldAccount"
+        | "fieldHolder"
+        | "createdLocked"
+        | "verifyWaiting"
+        | "verifyError",
+        string
+    >
+>
+
+/** Resolved words shared by personal Telegram consent, scheduling and the owning wizard controls. */
+export type TelegramUserWizardCopy = Readonly<
+    Record<
+        | "close"
+        | "back"
+        | "next"
+        | "done"
+        | "save"
+        | "sendCode"
+        | "confirmCode"
+        | "resend"
+        | "cancelLogin"
+        | "signIn"
+        | "chatsRetry"
+        | "notConfiguredTitle"
+        | "notConfiguredBody"
+        | "nameLabel"
+        | "nameHint"
+        | "consentTitle"
+        | "consent1"
+        | "consent2"
+        | "consent3"
+        | "consentLabel"
+        | "scheduleLabel"
+        | "scheduleManual"
+        | "schedule15"
+        | "schedule60"
+        | "scheduleHint",
+        string
+    >
+>
+
+/** One resolved personal Telegram dialog option. */
+type TelegramUserChatOption = {
+    readonly value: string
+    readonly label: string
+    readonly description: string
+    readonly isDisabled: boolean
+}
+
+/** The settled personal Telegram chat picker data shared across its slot and pure picker. */
+export type TelegramUserChatsView = {
+    readonly options: ReadonlyArray<TelegramUserChatOption>
+    readonly value: ReadonlyArray<string>
+    readonly query: string
+    readonly sinceDays: string
+    readonly text: Readonly<
+        Record<"hint" | "search" | "placeholder" | "count" | "empty" | "label" | "since" | "since7" | "since30", string>
+    >
+}
+
+/** Resolved data shared by the money wizard and its environment step. */
+export interface MoneyEnvironmentView {
+    readonly environments: ReadonlyArray<{
+        readonly value: string
+        readonly label: string
+        readonly description: string
+    }>
+    readonly environment: string
+    readonly showEnvHint: boolean
+    readonly noTestNote: string | null
+}
+
+/** Resolved data shared by the money wizard and its account step. */
+export interface MoneyAccountView {
+    readonly isLocked: boolean
+    readonly needsBank: boolean
+    readonly bankOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
+    readonly form: {
+        readonly name: string
+        readonly bank: string
+        readonly account: string
+        readonly holder: string
+    }
+    readonly accountHint: string | undefined
+}
+
+/** Resolved data shared by the money wizard and its guide step. */
+export interface MoneyGuideView {
+    readonly isTest: boolean
+    readonly providerHref: string | null
+    readonly screens: ReadonlyArray<GuideScreen>
+    readonly copy: CopyLabels
+    readonly keysNote: string | null
+}
+
+/** One field of the personal Telegram sign-in protocol, shared by its input and footer decisions. */
+type TelegramUserLoginField = "phone" | "code" | "password"
+
+/** Resolved personal Telegram login data shared by the input step and its footer. */
+export interface TelegramUserLoginView {
+    readonly stage: TelegramUserLoginField
+    readonly sentLine: string | null
+    readonly values: Readonly<Record<TelegramUserLoginField, string>>
+    readonly text: Readonly<
+        Record<"phone" | "phoneHint" | "code" | "codeHint" | "passwordTitle" | "password" | "passwordHint", string>
+    >
+}

@@ -1,4 +1,4 @@
-import type { ContentChannel, Pillar } from "@/modules/types"
+import type { ContentChannel, Pillar, ContentViews } from "@/modules/types"
 
 export type { ContentChannel, Pillar }
 
@@ -45,14 +45,15 @@ export interface Cadence {
     readonly post_time: string
 }
 
-/** The switchable automations (they run in the back end). */
-export type AutomationKey = "today_reminder" | "offer_draft" | "weekly_summary"
-
 /** Every automation key. */
-export const AUTOMATION_KEYS: ReadonlyArray<AutomationKey> = ["today_reminder", "offer_draft", "weekly_summary"]
+export const AUTOMATION_KEYS: ReadonlyArray<ContentViews["automationKey"]> = [
+    "today_reminder",
+    "offer_draft",
+    "weekly_summary",
+]
 
 /** Which automations are switched on. */
-export type AutomationFlags = Readonly<Record<AutomationKey, boolean>>
+export type AutomationFlags = Readonly<Record<ContentViews["automationKey"], boolean>>
 
 /** Brand voice and automation settings of a workspace. */
 export interface ContentSettings {

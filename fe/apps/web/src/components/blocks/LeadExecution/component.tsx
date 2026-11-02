@@ -1,4 +1,4 @@
-import { Alert, Button, List, ListItem, Region, SectionHeader, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { ApprovalCard } from "@/components/composites/ApprovalCard"
 import type { ApprovalCardLabels, ApprovalCardView } from "@/components/composites/ApprovalCard"
@@ -58,13 +58,16 @@ export const LeadExecutionBase = (props: LeadExecutionBaseProps) => {
     return (
         <div id="execution" className={PANEL_CLASS_NAME}>
             <Stack gap="region">
-                <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
-                    {(view, isSkeleton) => (
+                <SlotView
+                    slot={p.slot}
+                    placeholder={PLACEHOLDER}
+                    labels={l.slot}
+                    render={(view, isSkeleton) => (
                         <>
                             {view.waiting === null ? (
                                 <SurfaceCard label={l.cardLabel} headingLevel={2}>
                                     <Stack gap="row">
-                                        <Text tone="muted" isSkeleton={isSkeleton}>
+                                        <Text tone="muted" isLoading={isSkeleton}>
                                             {view.explanation}
                                         </Text>
                                         {p.error === null ? null : (
@@ -75,7 +78,7 @@ export const LeadExecutionBase = (props: LeadExecutionBaseProps) => {
                                         </Text>
                                         <Button
                                             intent="commit"
-                                            isSkeleton={isSkeleton}
+                                            isLoading={isSkeleton}
                                             isPending={p.isPending}
                                             isDisabled={!view.canDraft}
                                             onPress={on.draft}
@@ -88,27 +91,17 @@ export const LeadExecutionBase = (props: LeadExecutionBaseProps) => {
                                 <ApprovalCard view={view.waiting.view} labels={l.approval} on={on} />
                             )}
                             {view.earlier.length === 0 ? null : (
-                                <Region labelledBy="earlier-approvals-title">
+                                <Section title={l.earlierTitle} meta={l.earlierMeta} id="earlier-approvals-title">
                                     <Stack gap="section">
-                                        <SectionHeader
-                                            id="earlier-approvals-title"
-                                            level={2}
-                                            title={l.earlierTitle}
-                                            meta={l.earlierMeta}
-                                        />
-                                        <List label={l.earlierTitle}>
-                                            {view.earlier.map((item) => (
-                                                <ListItem key={item.id}>
-                                                    <ApprovalCard view={item.view} labels={l.approval} on={on} />
-                                                </ListItem>
-                                            ))}
-                                        </List>
+                                        {view.earlier.map((item) => (
+                                            <ApprovalCard key={item.id} view={item.view} labels={l.approval} on={on} />
+                                        ))}
                                     </Stack>
-                                </Region>
+                                </Section>
                             )}
                         </>
                     )}
-                </SlotView>
+                />
             </Stack>
         </div>
     )

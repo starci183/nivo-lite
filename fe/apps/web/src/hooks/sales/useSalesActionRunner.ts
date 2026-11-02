@@ -1,90 +1,81 @@
 "use client"
 
 import { useRevalidateLeadViews } from "@/hooks/leads"
+import { useFeatureLifetime } from "@/hooks/reuseables"
 import { useQuerySalesActionStatusSwr } from "@/hooks/swr"
 import type { SalesActionType } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 
-/** The queued Sales job being observed, bound to the workspace it was queued in. */
-interface PendingSalesAction {
+/** The actual mounted panel identity, when its controller remains mounted between tabs. */
+export interface SalesActionActivity {
+    readonly isActive: boolean
+    readonly scope: string
+}
+
+/** One command origin; a retired origin cannot hold a fresh editor busy. */
+interface SalesOperation {
+    readonly scope: string
+    readonly isCurrent: () => boolean
+}
+
+/** The server-owned queued action observed by this particular mounted panel. */
+interface PendingSalesAction extends SalesOperation {
     readonly id: string
     readonly workspaceId: string
 }
 
-/** What a write that notifies the accounting side answers: the notification to observe. */
 interface ShipmentAnswer {
     readonly notificationId: string
 }
 
 const isTerminal = (status: string): boolean => status === "succeeded" || status === "failed"
 
-/**
- * Runs one Sales write at a time (a second call while one is in flight or its queued job is still running answers undefined),
- * toasts the outcome, observes the queued job until it is terminal and reads the affected views again.
- */
-export const useSalesActionRunner = () => {
+/** Runs one Sales command, retaining normal feedback and revalidation while fencing local panel ownership. */
+export const useSalesActionRunner = (activity?: SalesActionActivity) => {
     const t = useTranslations("workbenchSales")
     const runGraphQL = useGraphQLWithToast()
     const { activeWorkspaceId } = useActiveWorkspace()
     const revalidate = useRevalidateLeadViews()
-    const [pending, setPending] = useState<PendingSalesAction>()
-    const completedId = useRef<string | undefined>(undefined)
-    const reportedErrorId = useRef<string | undefined>(undefined)
-    const commandLock = useRef(false)
-    const pendingId = pending && pending.workspaceId === activeWorkspaceId ? pending.id : undefined
-
-    const finish = useCallback(
-        (result: SalesActionType) => {
-            if (!pendingId || completedId.current === pendingId || !isTerminal(result.status)) return
-            completedId.current = pendingId
-            if (result.status === "failed")
-                toast.danger(t("salesActionFailed", { code: result.errorCode ?? result.status }))
-            else toast.success(t("salesActionCompleted"))
-            setPending(undefined)
-            void revalidate()
-        },
-        [pendingId, revalidate, t],
-    )
-    const reportError = useCallback(
-        (error: unknown) => {
-            if (!pendingId || reportedErrorId.current === pendingId) return
-            reportedErrorId.current = pendingId
-            toast.danger(error instanceof Error ? error.message : t("loadFailedBody"))
-        },
-        [pendingId, t],
-    )
-    useQuerySalesActionStatusSwr(activeWorkspaceId, pendingId, { onSuccess: finish, onError: reportError })
-
-    const watch = useCallback(
-        (id: string) => {
-            if (!activeWorkspaceId) return
-            completedId.current = undefined
-            setPending({ id, workspaceId: activeWorkspaceId })
-        },
-        [activeWorkspaceId],
-    )
-    const track = useCallback((result: SalesActionType | undefined) => trackSalesAction(t, watch, result), [t, watch])
+    const isActive = activity?.isActive ?? true
+    const isScoped = activity !== undefined
+    const scope = JSON.stringify([activeWorkspaceId, activity?.scope ?? null])
+    const lifetime = useFeatureLifetime(isActive, scope)
+    const observer = useSalesActionObserver(isActive, scope)
+    const lease = useMemo(() => ({ isLocked: false }), [isActive, scope])
+    const [operation, setOperation] = useState<SalesOperation | null>(null)
     const locked = useCallback(
-        async <Result>(action: () => Promise<Result | undefined>) => {
-            if (commandLock.current || pendingId) return undefined
-            commandLock.current = true
+        async <Result>(action: (isCurrent: () => boolean) => Promise<Result | undefined>) => {
+            const pending = { scope, isCurrent: lifetime.capture() }
+            if (!pending.isCurrent() || lease.isLocked || observer.pendingId) return undefined
+            lease.isLocked = true
+            setOperation(pending)
             try {
-                const result = await action()
+                const result = await action(pending.isCurrent)
                 if (result !== undefined) await revalidate()
                 return result
+            } catch (error) {
+                if (!isScoped) throw error
+                return await runGraphQL(() => Promise.reject(error), { showSuccessToast: false })
             } finally {
-                commandLock.current = false
+                lease.isLocked = false
+                setOperation((current) => (current === pending ? null : current))
             }
         },
-        [pendingId, revalidate],
+        [isScoped, lease, lifetime, observer.pendingId, revalidate, runGraphQL, scope],
     )
     const runQueued = useCallback(
         (action: () => Promise<SalesActionType>) =>
-            locked(async () => track(await runGraphQL(action, { showSuccessToast: false }))),
-        [locked, runGraphQL, track],
+            locked(async (isCurrent) =>
+                trackSalesAction(
+                    t,
+                    (id) => observer.watch(id, isCurrent),
+                    await runGraphQL(action, { showSuccessToast: false }),
+                ),
+            ),
+        [locked, observer.watch, runGraphQL, t],
     )
     const runImmediate = useCallback(
         <Result>(action: () => Promise<Result>, successMessage: string) =>
@@ -93,20 +84,73 @@ export const useSalesActionRunner = () => {
     )
     const runShipment = useCallback(
         <Result extends ShipmentAnswer>(action: () => Promise<Result>) =>
-            locked(async () => {
+            locked(async (isCurrent) => {
                 const result = await runGraphQL(action, { successMessage: t("salesActionQueued") })
-                if (result !== undefined) watch(result.notificationId)
+                if (result !== undefined) observer.watch(result.notificationId, isCurrent)
                 return result
             }),
-        [locked, runGraphQL, t, watch],
+        [locked, observer.watch, runGraphQL, t],
     )
-    return { isBusy: Boolean(pendingId), runQueued, runImmediate, runShipment }
+    return {
+        isBusy: Boolean(observer.pendingId),
+        isExecuting: operation?.scope === scope && operation.isCurrent(),
+        runQueued,
+        runImmediate,
+        runShipment,
+    }
 }
 
-/** The runner the Sales action hooks share. */
+/** Polls the real job only while its originating panel is mounted; status remains the server's authority. */
+const useSalesActionObserver = (isActive: boolean, scope: string) => {
+    const t = useTranslations("workbenchSales")
+    const { activeWorkspaceId } = useActiveWorkspace()
+    const revalidate = useRevalidateLeadViews()
+    const [pending, setPending] = useState<PendingSalesAction>()
+    const completed = useRef<PendingSalesAction | undefined>(undefined)
+    const reportedError = useRef<PendingSalesAction | undefined>(undefined)
+    const pendingId =
+        isActive && pending?.scope === scope && pending.workspaceId === activeWorkspaceId && pending.isCurrent()
+            ? pending.id
+            : undefined
+    const finish = useCallback(
+        (result: SalesActionType) => {
+            if (!pendingId || !pending?.isCurrent() || completed.current === pending || !isTerminal(result.status))
+                return
+            completed.current = pending
+            if (result.status === "failed")
+                toast.danger(t("salesActionFailed", { code: result.errorCode ?? result.status }))
+            else toast.success(t("salesActionCompleted"))
+            setPending((current) => (current === pending ? undefined : current))
+            void revalidate()
+        },
+        [pending, pendingId, revalidate, t],
+    )
+    const reportError = useCallback(
+        (error: unknown) => {
+            if (!pendingId || !pending?.isCurrent() || reportedError.current === pending) return
+            reportedError.current = pending
+            toast.danger(error instanceof Error ? error.message : t("loadFailedBody"))
+        },
+        [pending, pendingId, t],
+    )
+    useQuerySalesActionStatusSwr(pendingId ? activeWorkspaceId : undefined, pendingId, {
+        onSuccess: finish,
+        onError: reportError,
+    })
+    const watch = useCallback(
+        (id: string, isCurrent: () => boolean) => {
+            if (!activeWorkspaceId || !isActive || !isCurrent()) return
+            setPending({ id, workspaceId: activeWorkspaceId, scope, isCurrent })
+        },
+        [activeWorkspaceId, isActive, scope],
+    )
+    return { pendingId, watch }
+}
+
+/** The runner the Sales command hooks share. */
 export type SalesActionRunner = ReturnType<typeof useSalesActionRunner>
 
-/** Reports the queued result and starts observing a nonterminal action. */
+/** Reports the normal command result and observes a nonterminal server job only for its original panel. */
 const trackSalesAction = (
     t: ReturnType<typeof useTranslations<"workbenchSales">>,
     watch: (id: string) => void,

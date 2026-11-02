@@ -1,5 +1,6 @@
-import { Heading, Input, NumberField, SurfaceCard } from "@starci/grammar/common"
-import { HONEYPOT_CLASS, STACK_CLASS } from "./classNames"
+import { Stack, Heading, Input, NumberField, SurfaceCard } from "@starci/grammar/common"
+
+import { HONEYPOT_CLASS } from "./classNames"
 
 /** Values collected by the booking contact step. */
 interface PublicBookingContactValues {
@@ -27,7 +28,7 @@ export const PublicBookingContact = (props: PublicBookingContactProps) => {
     const { props: p, on } = props
     return (
         <SurfaceCard ariaLabel={p.labels.step3}>
-            <div className={STACK_CLASS}>
+            <Stack gap="row">
                 <Heading level={2}>{p.labels.step3}</Heading>
                 <Input
                     id="booking-public-name"
@@ -79,7 +80,7 @@ export const PublicBookingContact = (props: PublicBookingContactProps) => {
                         onValueChange={(website) => on.change({ website })}
                     />
                 </div>
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 }

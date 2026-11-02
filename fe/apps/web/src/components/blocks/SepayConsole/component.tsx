@@ -1,5 +1,17 @@
-import { Alert, Badge, Button, Page, Pane, PaneGrid, PaneSection, SectionHeader } from "@starci/grammar/common"
-import type { BadgeTone, PageHeaderContent } from "@starci/grammar/common"
+import {
+    Alert,
+    Badge,
+    Button,
+    Page,
+    Pane,
+    PaneGrid,
+    PaneSection,
+    Section,
+    Text,
+    type BadgeTone,
+    type PageHeaderContent,
+} from "@starci/grammar/common"
+
 import type { ComponentProps, ReactNode } from "react"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { ConnectionRefusedPage } from "@/components/composites/ConnectionRefusedPage"
@@ -82,7 +94,7 @@ type SepayBandProps = Pick<SepayConsoleBaseProps, "props" | "on">
 
 /** The header content of a SePay connection: trail, mark, name, status and environment, and the provider facts. */
 const headerOf = (props: SepayConsoleBaseProps["props"]): PageHeaderContent => {
-    const view = props.slot.items ?? props.placeholder
+    const view = "items" in props.slot ? props.slot.items : props.placeholder
     return {
         title: view.name,
         breadcrumbs: { label: props.crumbLabel, items: [...props.crumbs] },
@@ -99,12 +111,12 @@ const headerOf = (props: SepayConsoleBaseProps["props"]): PageHeaderContent => {
     }
 }
 
-const isFailed = (slot: DataSlot<SepayHeaderView>): boolean => slot.isError === true || slot.isForbidden === true
+const isFailed = (slot: DataSlot<SepayHeaderView>): boolean => "isError" in slot || "isForbidden" in slot
 
 /** The first band of the main pane: the read failed in place, or the last delivery failed; absent when neither. */
 const NoticeBand = (props: SepayBandProps) => {
     const { slot } = props.props
-    const lastError = slot.items?.lastError ?? ""
+    const lastError = "items" in slot ? slot.items.lastError : ""
     if (!isFailed(slot) && lastError === "") return null
     return (
         <PaneSection>
@@ -115,9 +127,8 @@ const NoticeBand = (props: SepayBandProps) => {
                     labels={props.props.labels}
                     forbidden="notice"
                     onRetry={props.on.retry}
-                >
-                    {() => null}
-                </SlotView>
+                    render={() => null}
+                />
             ) : (
                 <Alert tone="negative" title={props.props.errorTitle} description={lastError} />
             )}
@@ -131,16 +142,17 @@ const ReconnectBand = (props: SepayBandProps) => {
     if (reconnect === undefined) return null
     return (
         <PaneSection>
-            <SectionHeader
-                level={2}
+            <Section
+                headingLevel={2}
                 title={reconnect.title}
-                description={reconnect.description}
                 action={
                     <Button intent="alternative" href={reconnect.href}>
                         {reconnect.label}
                     </Button>
                 }
-            />
+            >
+                <Text tone="muted">{reconnect.description}</Text>
+            </Section>
         </PaneSection>
     )
 }
@@ -150,10 +162,9 @@ const DisconnectBand = (props: SepayBandProps) => {
     if (disconnect === undefined) return null
     return (
         <PaneSection>
-            <SectionHeader
-                level={2}
+            <Section
+                headingLevel={2}
                 title={disconnect.title}
-                description={disconnect.description}
                 action={
                     <Button
                         intent="destructive"
@@ -164,7 +175,9 @@ const DisconnectBand = (props: SepayBandProps) => {
                         {disconnect.label}
                     </Button>
                 }
-            />
+            >
+                <Text tone="muted">{disconnect.description}</Text>
+            </Section>
         </PaneSection>
     )
 }
@@ -182,7 +195,7 @@ export const SepayConsoleBase = (props: SepayConsoleBaseProps) => {
             <Page
                 chrome="panes"
                 header={headerOf(props.props)}
-                isSkeleton={props.props.slot.isLoading === true}
+                isLoading={"isLoading" in props.props.slot}
                 measure="product"
             >
                 <PaneGrid

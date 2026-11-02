@@ -50,7 +50,6 @@ export const useMemberDetailLists = (
                 : {}),
         })),
         busyId: actions.busyReward,
-        onRedeem: actions.redeem,
     }
     const ledger = {
         title: t("ledgerTitle"),

@@ -1,4 +1,7 @@
-import { Alert, Input, Select, Text, Textarea } from "@starci/grammar/common"
+import type { DataSlot, SlotLabels, AgentStepView, WizardNote } from "@/modules/types"
+import { SlotView } from "@/components/composites/SlotView"
+import { Stack, Alert, Input, Select, Text, Textarea } from "@starci/grammar/common"
+
 import { OpenApiAuthStep } from "@/components/composites/OpenApiAuthStep"
 import { OpenApiPullsStep } from "@/components/composites/OpenApiPullsStep"
 import { OpenApiTestStep } from "@/components/composites/OpenApiTestStep"
@@ -6,9 +9,10 @@ import { OpenApiToolsStep } from "@/components/composites/OpenApiToolsStep"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { backAction, closeAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
-import { WizardFrame } from "@/components/composites/WizardFrame"
-import type { AgentStepView, WizardNote } from "@/modules/types"
-import { openApiWizardClassNames as classNames } from "./classNames"
+import { WizardFrame } from "@/components/frames/WizardFrame"
+
+/** The ready drawing with its canonical first-read loading atom. */
+type OpenApiWizardDrawLoadingProps = OpenApiWizardBaseProps & { readonly isLoading: boolean }
 
 /** A choice of a select. */
 type Option = { readonly id: string; readonly label: string }
@@ -31,6 +35,8 @@ type ToolOption = { readonly value: string; readonly label: string; readonly des
 /** Copy, state and commands of the OpenAPI wizard. */
 export interface OpenApiWizardBaseProps {
     readonly props: {
+        readonly boot: DataSlot<boolean>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
@@ -59,7 +65,7 @@ export interface OpenApiWizardBaseProps {
             readonly rows: ReadonlyArray<PullRow>
             readonly entityOptions: ReadonlyArray<Option>
             readonly query: string
-            readonly isEmpty: boolean
+            readonly unavailableReason: string | null
             readonly tooMany: string | null
             readonly text: Readonly<Record<"hint" | "search" | "empty" | PullField | "itemsPathHint", string>>
         }
@@ -108,6 +114,7 @@ export interface OpenApiWizardBaseProps {
         >
     }
     readonly on: {
+        readonly retryRead: () => void
         readonly go: (to: number) => void
         readonly close: () => void
         readonly loadSpec: () => void
@@ -165,8 +172,8 @@ const actionsOf = ({ props, on }: OpenApiWizardBaseProps): ReadonlyArray<WizardA
 }
 
 /** Step "source": the connection name, the spec link or the pasted spec. */
-const SourceStep = ({ props, on }: OpenApiWizardBaseProps) => (
-    <div className={classNames.column}>
+const SourceStep = ({ props, on, isLoading }: OpenApiWizardDrawLoadingProps) => (
+    <Stack gap="section">
         <Input
             id="oa-name"
             name="name"
@@ -175,6 +182,7 @@ const SourceStep = ({ props, on }: OpenApiWizardBaseProps) => (
             isDisabled={props.isPending}
             value={props.source.name}
             onValueChange={on.name}
+            isLoading={isLoading}
         />
         <Input
             id="oa-url"
@@ -184,6 +192,7 @@ const SourceStep = ({ props, on }: OpenApiWizardBaseProps) => (
             isDisabled={props.isPending}
             value={props.source.specUrl}
             onValueChange={on.specUrl}
+            isLoading={isLoading}
         />
         <Textarea
             id="oa-text"
@@ -193,13 +202,14 @@ const SourceStep = ({ props, on }: OpenApiWizardBaseProps) => (
             isDisabled={props.isPending}
             value={props.source.specText}
             onValueChange={on.specText}
+            isLoading={isLoading}
         />
-    </div>
+    </Stack>
 )
 
 /** Step "schedule": how often the pulled endpoints are read again. */
-const ScheduleStep = ({ props, on }: OpenApiWizardBaseProps) => (
-    <div className={classNames.column}>
+const ScheduleStep = ({ props, on, isLoading }: OpenApiWizardDrawLoadingProps) => (
+    <Stack gap="section">
         <Text size="sm" tone="muted">
             {props.text.scheduleHint}
         </Text>
@@ -209,12 +219,13 @@ const ScheduleStep = ({ props, on }: OpenApiWizardBaseProps) => (
             options={props.schedule.options}
             value={props.schedule.value}
             onValueChange={on.schedule}
+            isLoading={isLoading}
         />
-    </div>
+    </Stack>
 )
 
 /** Swagger / OpenAPI in the shared wizard frame: spec, auth, pulled operations, agent tools, schedule, test, agents. */
-export const OpenApiWizardBase = (props: OpenApiWizardBaseProps) => {
+const renderOpenApiWizard = (props: OpenApiWizardBaseProps, isLoading: boolean) => {
     const { props: view, on } = props
     return (
         <WizardFrame
@@ -222,15 +233,16 @@ export const OpenApiWizardBase = (props: OpenApiWizardBaseProps) => {
             stepLabel={view.stepLabel}
             steps={view.steps}
             index={view.index}
-            footer={<WizardFooter actions={actionsOf(props)} />}
+            footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
         >
-            {view.step === "source" ? <SourceStep {...props} /> : null}
+            {view.step === "source" ? <SourceStep {...props} isLoading={isLoading} /> : null}
             {view.step === "auth" ? (
                 <OpenApiAuthStep
                     {...view.auth}
                     isDisabled={view.isPending}
                     onField={on.authField}
                     onAuthType={on.authType}
+                    isLoading={isLoading}
                 />
             ) : null}
             {view.step === "pulls" ? (
@@ -240,6 +252,7 @@ export const OpenApiWizardBase = (props: OpenApiWizardBaseProps) => {
                     onQuery={on.pullQuery}
                     onToggle={on.togglePull}
                     onPatch={on.patchPull}
+                    isLoading={isLoading}
                 />
             ) : null}
             {view.step === "tools" ? (
@@ -248,21 +261,39 @@ export const OpenApiWizardBase = (props: OpenApiWizardBaseProps) => {
                     isDisabled={view.isPending}
                     onQuery={on.toolQuery}
                     onChange={on.tools}
+                    isLoading={isLoading}
                 />
             ) : null}
-            {view.step === "schedule" ? <ScheduleStep {...props} /> : null}
+            {view.step === "schedule" ? <ScheduleStep {...props} isLoading={isLoading} /> : null}
             {view.step === "test" ? (
                 <OpenApiTestStep
                     {...view.test}
                     isTesting={view.isTesting}
                     onOperation={on.testOperation}
                     onQuery={on.testQuery}
+                    isLoading={isLoading}
                 />
             ) : null}
             {view.step === "agent" ? (
-                <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
+                <WizardAgentStep
+                    {...view.agentStep}
+                    isDisabled={view.isPending}
+                    onChange={on.agents}
+                    isLoading={isLoading}
+                />
             ) : null}
-            {view.error === null ? null : <Alert tone="negative" title={view.error} />}
+            {view.error === null ? null : <Alert tone="negative" title={view.error} isLoading={isLoading} />}
         </WizardFrame>
     )
 }
+
+/** Draws the selected wizard's existing ready tree from its actual dependency reads. */
+export const OpenApiWizardBase = (props: OpenApiWizardBaseProps) => (
+    <SlotView
+        slot={props.props.boot}
+        placeholder={true}
+        labels={props.props.slotLabels}
+        onRetry={props.on.retryRead}
+        render={(_ready, isLoading) => renderOpenApiWizard(props, isLoading)}
+    />
+)

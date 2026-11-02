@@ -371,55 +371,55 @@ differ ("Checklist: Partial"). `be/src/modules/domain/dossier-review/dossier-sta
 Grammar components only (`@starci/grammar/common`: SurfaceCard, SurfaceListCard, ListRow, Quote, DescriptionList (stat strip),
 Stepper, Badge, Button, EmptyNotice, Drawer, Dialog, Textarea, Select, Alert, DataTable). No new visual primitives.
 
-**Tabs**, in this order: Cần xử lý (with its count), Hồ sơ, Nạp tài liệu, Bản đồ, Sự thật, Bài học, Agent thấy gì. The tab list is
-`BRAIN_TABS` in `fe/apps/web/src/modules/routes/knowledge-routes.ts`. The old Chờ duyệt and Khách hỏi chưa đáp tabs are part of
-Cần xử lý; `?tab=review`, `?tab=gaps` and a bare `?answer=<id>` redirect to `?tab=todo`
-(`legacyBrainHrefOf` in `modules/brain/tabs.ts`). The page opens on Cần xử lý. The header carries the page commands at the end of
-its row: "Thêm tài liệu" (owner and manager; not on Nạp tài liệu) and, on Hồ sơ, "Rà soát lại cả bộ" (disabled with a progress label
+**Tabs**, in this order: To do (with its count), Dossiers, Add sources, Map, Facts, Lessons, What agents see. The ordered
+TypeScript tab declaration and its `BrainTab` type live in `fe/apps/web/src/modules/routes/knowledge-routes.ts`. The former
+Review and Unanswered customer questions tabs belong to To do; `?tab=review`, `?tab=gaps` and a bare `?answer=<id>` redirect to `?tab=todo`
+(`legacyBrainHrefOf` in `fe/apps/web/src/modules/brain/tabs.ts`). The page opens on To do. The header carries the page commands at the end of
+its row: "Add documents" (owner and manager; not on Add sources) and, on Dossiers, "Review all dossiers" (disabled with a progress label
 while a run is queued or running).
 
 **One number.** What needs the owner is the sum of the active findings (`dossierReviewSummary` open + confirmed), the cards of facts
-waiting (`reviewBoardOf`) and the unanswered customer questions (`brain.gaps`): `useBrainTodoCount`. The Cần xử lý tab label and
+waiting (`reviewBoardOf`) and the unanswered customer questions (`brain.gaps`): `useBrainTodoCount`. The To do tab label and
 the Second Brain badge in the rail both read it. No back-end query was added: the queue reuses `dossierFindings`, `brain` and
 `dossierReviewSummary`.
 
-**Cần xử lý** (`BrainTodo` block) is one queue, worst first: the finding cards (the back end orders them by severity), then the
+**To do** (`BrainTodo` block) is one queue, worst first: the finding cards (the back end orders them by severity), then the
 facts waiting for a decision (`BrainReview`), then the customer questions (`BrainGaps`). A filter row sits on top: All, one filter per
 kind of finding that has items, Facts, Customer questions, each with its count. Until the grammar ships `FilterButtonGroup` the row is
 a plain group of `sm` buttons in the leaf `components/leaves/FilterButtons`, the one file to swap; it is never a `TagGroup`.
-The queue loads the findings a page at a time (50); the kind counts are of the findings loaded, and "Xem thêm" reads the rest.
+The queue loads the findings a page at a time (50); the kind counts are of the findings loaded, and "Load more" reads the rest.
 
 **Finding card** (`FindingCards` composite, one `SurfaceCard` per finding): the title as the card heading, then the kind badge,
-the severity badge, "AI" for AI findings, "Cần bổ sung văn bản" when the owner confirmed a finding whose remedy is a document, and the dossier
+the severity badge, "AI" for AI findings, "Document needed" when the owner confirmed a finding whose remedy is a document, and the dossier
 (a link to it); the detail; up to two evidence quotes side by side (`Quote`: the document title as its source, the evidence label as
-its byline); and the actions that answer it (`sm` buttons): one "<document> đúng" per side of a contradiction that is still open,
-Tải giấy tờ / Tải tài liệu khác, NIVO soạn giúp, Giao người làm, Đã xử lý xong and Bỏ qua (a reason is asked). The page of a
+its byline); and the actions that answer it (`sm` buttons): one "<document> is correct" per side of a contradiction that is still open,
+Upload supporting document / Upload another document, Ask NIVO to draft, Assign, Mark resolved and Dismiss (a reason is asked). The page of a
 passage is not stored, so a quote names its document only.
 
 Confirming a value records which document the owner said is right (the note of `confirmDossierFinding`) and moves the finding from open to
-confirmed. It does not close it: a finding with remedy `upload` or `draft` stays in the queue as "cần bổ sung văn bản" until a new document
+confirmed. It does not close it: a finding with remedy `upload` or `draft` stays in the queue as "Document needed" until a new document
 or an approved draft covers it, or the owner marks it done.
 
-**Hồ sơ** carries the only stat strip of the page: dossiers complete (Đủ), partly held, missing, plus drafted and template when there are
+**Dossiers** carries the only stat strip of the page: dossiers complete (Complete), partly held, missing, plus drafted and template when there are
 any, and the questions waiting for the owner. Under it, one `SurfaceListCard` per category (the category is the card's label) of
-`ListRow`s: the name, one note line, the status badge (and the findings count in the tone of the worst), and the next step ("Xem" opens the
-findings of the dossier in a drawer at `?dossier=<id>`, with the draft drawer; "Tải giấy tờ" for a missing one). The note "NIVO rà soát
-lại mỗi khi có tài liệu mới" is the footer of the last card.
+`ListRow`s: the name, one note line, the status badge (and the findings count in the tone of the worst), and the next step ("View" opens the
+findings of the dossier in a drawer at `?dossier=<id>`, with the draft drawer; "Upload supporting document" for a missing one). The note "NIVO reviews
+again whenever a new document arrives" is the footer of the last card.
 
 **Findings drawer** (`DossierFindings` block): header with the dossier, status, last reviewed time and "Review this dossier"; an Alert
 when the last run skipped AI (no credits, daily budget); a SegmentedControl Open / Confirmed / Closed; rows (ListRow) with the severity,
 kind and "AI" badges, the title, the detail, evidence as static rows when expanded, assignee and due date, and the row actions.
 
-**Nạp tài liệu**: one card "Thêm tài liệu" (files and links, a written note or questions, optional topic, tags and agent, the document
-allowance meter). Công khai or Nội bộ is chosen by the owner before "Thêm" works; nothing is selected by default, and NIVO only says
-which it suggests (for an idea it was opened from). Under it "Đang xử lý" lists the documents a worker is on, each with the four stages Đọc,
-Lập chỉ mục, Trích sự thật, Phản biện (`Stepper` dense; the stage comes from the document status, Phản biện lights up once the
+**Add sources**: one card "Add documents" (files and links, a written note or questions, optional topic, tags and agent, the document
+allowance meter). Public or Internal is chosen by the owner before "Add" works; nothing is selected by default, and NIVO only says
+which it suggests (for an idea it was opened from). Under it "Processing" lists the documents a worker is on, each with the four stages Read,
+Index, Extract facts, Critique (`Stepper` dense; the stage comes from the document status, Critique lights up once the
 critic pass reports its own status). When every document of a batch has been read and something waits for the owner, one line says
-"NIVO có n điều cần hỏi bạn" with "Xem ngay" to Cần xử lý. Then "Tài liệu đã nạp" and the ideas for what to add.
+"NIVO has n questions for you" with "View now" to To do. Then "Added documents" and the ideas for what to add.
 
 Lists that are bounded (the dossiers of a category, facts, lessons, documents, waiting facts, questions) are a `SurfaceListCard` of
 `ListRow`s: the label is the card's, outside its shell, the list's command hugs the end of the label row and the note is its footer.
-Agent thấy gì keeps a `DataTable` outside any card.
+What agents see keeps a `DataTable` outside any card.
 
 **Draft drawer** (`DossierRemedyDraft` block, Drawer from the trailing edge): status line; while `generating` a
 progress line (SWR refresh every 4 s, 0 once settled); title field, body Textarea, the placeholders as StaticStateRows,
@@ -786,7 +786,7 @@ D:/.claude/contexts/code/fe/{README,architecture,boundaries,folder,data,form,i18
 D:/.claude/contexts/code/shared/{test,typing,naming,comment}.md, D:/.claude/contexts/ui/{README,composition,presentation}.md and
 D:/.claude/contexts/ui/components/{pane-grid,list-table,dialog-drawer,segmented-control,select,text-field,toast-alert,empty-state,button,chip}.md,
 D:/.claude/contexts/grammars/core.md (or the grammar hfs.json names). Templates:
-fe/apps/web/src/components/blocks/BrainDossiers/, fe/apps/web/src/components/blocks/BrainReview/, fe/apps/web/src/components/blocks/BrainGaps/,
+fe/apps/web/src/components/blocks/BrainDossiers/, fe/apps/web/src/components/blocks/DossierFindings/, fe/apps/web/src/components/blocks/BrainGaps/,
 fe/apps/web/src/components/blocks/KnowledgeAdd/, fe/apps/web/src/features/pages/BrainPage/, fe/apps/web/src/components/blocks/BrainPageFrame/,
 fe/apps/web/src/hooks/brain/, fe/apps/web/src/hooks/swr/api/graphql/, fe/apps/web/src/modules/api/graphql/queries/, fe/apps/web/src/modules/api/graphql/mutations/,
 fe/apps/web/src/modules/brain/, fe/apps/web/src/modules/routes/knowledge-routes.ts, fe/apps/web/src/app/[locale]/(console)/brain/page.tsx,

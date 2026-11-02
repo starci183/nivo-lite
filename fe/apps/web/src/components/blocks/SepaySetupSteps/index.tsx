@@ -26,7 +26,7 @@ export const SepaySetupSteps = (props: SepaySetupStepsProps) => {
     const t = useTranslations("sepayConnection")
     const { slot } = useSepayConnection(props.connectionId)
     const { steps, toggle } = useSepaySteps(props.connectionId)
-    const environment = slot.items?.environment ?? "test"
+    const environment = ("items" in slot ? slot.items : undefined)?.environment ?? "test"
     const titleOf = (id: SepayStepId): string => {
         if (id === "test") return t(environment === "live" ? "checklistTitleLive" : "checklistTitle")
         return t(TITLE_KEYS[id])

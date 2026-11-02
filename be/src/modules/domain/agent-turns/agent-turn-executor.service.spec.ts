@@ -229,3 +229,39 @@ describe("AgentTurnExecutorService > a turn that is blocked", () => {
         expect(runner.run).not.toHaveBeenCalled()
     })
 })
+
+describe("AgentTurnExecutorService > plans carrying a picture", () => {
+    it("preserves the image payload while retaining the wake replay key and metered result", async () => {
+        const { executor, runner, usage } = await build()
+        const attachments = [{ fileName: "receipt.png", mimeType: "image/png", content: "AQID" }]
+        const turn = agentTurnViewOf({ source: "customer" })
+
+        await expect(executor.run(turn, { ...plan, attachments }, signal)).resolves.toEqual({
+            kind: "proposal",
+            proposal: { text: "model words" },
+            usage: { model: "p/m", promptTokens: 12, completionTokens: 5, cost: 0.02, durationMs: 800 },
+        })
+
+        expect(runner.run).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                agentId: "agent-1",
+                module: "accounting",
+                runtimeAgentId: "ws-aaaa1111-accounting",
+                threadKey: "agent:ws-aaaa1111-accounting:work",
+                message: "the words",
+                attachments,
+                runKey: "wake-wake-1:3",
+                timeoutMs: 120_000,
+            },
+            signal,
+        )
+        expect(usage.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "chat_reply",
+            module: "accounting",
+            usage: { prompt_tokens: 12, completion_tokens: 5, cached_tokens: 0, cost: 0.02, model: "p/m" },
+            completionChars: 11,
+        })
+    })
+})

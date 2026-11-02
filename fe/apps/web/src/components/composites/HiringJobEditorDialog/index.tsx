@@ -1,41 +1,19 @@
-import { Alert, Button, CheckboxGroup, Dialog, Heading, Textarea } from "@starci/grammar/common"
+import type { HiringViews, HiringActions } from "@/modules/types"
+
+import { Alert, Button, CheckboxGroup, Dialog, Heading, Textarea, Stack } from "@starci/grammar/common"
 import { HiringJobFields } from "@/components/leaves/HiringJobFields"
-import type { HiringJobFieldsProps } from "@/components/leaves/HiringJobFields"
+
 import { HiringRequirementFields } from "@/components/branches/HiringRequirementFields"
 import { HiringQuestionList } from "@/components/branches/HiringQuestionList"
-import type { FieldOf, HiringJobValues, HiringQuestionValues, HiringSay } from "@/modules/types"
-import { FORM_CLASS_NAME } from "./classNames"
 
 /** The words, values and state of the job editor dialog. */
-export interface HiringJobEditorDialogProps {
-    readonly props: {
-        readonly say: HiringSay
-        readonly isNew: boolean
-        readonly values: HiringJobValues
-        readonly employmentOptions: HiringJobFieldsProps["employmentOptions"]
-        readonly payUnitOptions: HiringJobFieldsProps["employmentOptions"]
-        readonly questionTypeOptions: HiringJobFieldsProps["employmentOptions"]
-        readonly channelOptions: HiringJobFieldsProps["employmentOptions"]
-        readonly canSave: boolean
-        readonly canAddQuestion: boolean
-        readonly isBusy: boolean
-        readonly error: string | null
-    }
-    readonly on: {
-        readonly text: (name: FieldOf<HiringJobValues, string>, value: string) => void
-        readonly number: (name: FieldOf<HiringJobValues, number | null>, value: number | null) => void
-        readonly list: (name: FieldOf<HiringJobValues, Array<string>>, value: Array<string>) => void
-        readonly patchQuestion: (index: number, patch: Partial<HiringQuestionValues>) => void
-        readonly addQuestion: () => void
-        readonly removeQuestion: (index: number) => void
-        readonly save: () => void
-        readonly close: () => void
-    }
+type HiringJobEditorDialogProps = HiringViews["jobEditorFields"] & {
+    readonly on: HiringActions["jobEditorActions"]
 }
 
 /** The dialog that creates or edits one job post: the post itself, what candidates are screened on, and their questions. */
 export const HiringJobEditorDialog = (props: HiringJobEditorDialogProps) => {
-    const { say, values, isBusy, error } = props.props
+    const { copy, values, isBusy, error } = props
     const { on } = props
     return (
         <Dialog
@@ -44,65 +22,80 @@ export const HiringJobEditorDialog = (props: HiringJobEditorDialogProps) => {
                 if (!open) on.close()
             }}
             size="lg"
-            title={say(props.props.isNew ? "jobEditorNew" : "jobEditorEdit")}
-            closeLabel={say("close")}
-            description={say("jobEditorHint")}
-            footer={(close) => renderHiringJobEditorDialogFooter(close, say, isBusy, props.props.canSave, on.save)}
+            title={props.isNew ? copy.jobEditorNew : copy.jobEditorEdit}
+            closeLabel={copy.close}
+            description={copy.jobEditorHint}
+            footer={
+                <HiringEditorFooter
+                    copy={copy}
+                    isBusy={isBusy}
+                    canSave={props.canSave}
+                    onClose={on.close}
+                    onSave={on.save}
+                />
+            }
         >
-            <div className={FORM_CLASS_NAME}>
-                {error === null ? null : <Alert tone="negative" title={say("errorNotSaved")} description={error} />}
+            <Stack gap="row">
+                {error === null ? null : <Alert tone="negative" title={copy.errorNotSaved} description={error} />}
                 <HiringJobFields
-                    say={say}
+                    copy={copy}
                     values={values}
-                    employmentOptions={props.props.employmentOptions}
-                    payUnitOptions={props.props.payUnitOptions}
+                    employmentOptions={props.employmentOptions}
+                    payUnitOptions={props.payUnitOptions}
                     onText={on.text}
                     onNumber={on.number}
                 />
                 <Textarea
-                    label={say("jobDescription")}
+                    label={copy.jobDescription}
                     rows={4}
                     maxLength={6000}
                     value={values.description}
                     onValueChange={(description) => on.text("description", description)}
                 />
-                <Heading level={3}>{say("jobRequirements")}</Heading>
-                <HiringRequirementFields say={say} values={values} onText={on.text} onNumber={on.number} />
+                <Heading level={3}>{copy.jobRequirements}</Heading>
+                <HiringRequirementFields copy={copy} values={values} onText={on.text} onNumber={on.number} />
                 <HiringQuestionList
-                    say={say}
-                    questions={values.questions}
-                    typeOptions={props.props.questionTypeOptions}
-                    canAdd={props.props.canAddQuestion}
+                    copy={copy}
+                    questions={props.questions}
+                    typeOptions={props.questionTypeOptions}
+                    canAdd={props.canAddQuestion}
                     onPatch={on.patchQuestion}
                     onAdd={on.addQuestion}
                     onRemove={on.removeQuestion}
                 />
                 <CheckboxGroup
-                    label={say("jobChannels")}
+                    label={copy.jobChannels}
                     orientation="horizontal"
-                    options={props.props.channelOptions.map((option) => ({ value: option.id, label: option.label }))}
+                    options={props.channelOptions.map((option) => ({ value: option.id, label: option.label }))}
                     value={values.channels}
                     onValueChange={(channels) => on.list("channels", channels)}
                 />
-            </div>
+            </Stack>
         </Dialog>
     )
 }
 
-/** Renders the HiringJobEditorDialog footer section. */
-const renderHiringJobEditorDialogFooter = (
-    close: () => void,
-    say: NonNullable<HiringJobEditorDialogProps["props"]["say"]>,
-    isBusy: NonNullable<HiringJobEditorDialogProps["props"]["isBusy"]>,
-    canSave: boolean,
-    save: () => void,
-) => (
+interface HiringEditorFooterProps {
+    readonly copy: Pick<HiringViews["workbenchCopy"], "cancel" | "jobEditorSave">
+    readonly isBusy: boolean
+    readonly canSave: boolean
+    readonly onClose: () => void
+    readonly onSave: () => void
+}
+
+/** The original dismiss/save decision remains at the dialog footer with controlled close ownership. */
+const HiringEditorFooter = (props: HiringEditorFooterProps) => (
     <>
-        <Button intent="dismiss" onPress={close}>
-            {say("cancel")}
+        <Button intent="dismiss" onPress={props.onClose}>
+            {props.copy.cancel}
         </Button>
-        <Button intent="commit" isPending={isBusy} isDisabled={isBusy || !canSave} onPress={save}>
-            {say("jobEditorSave")}
+        <Button
+            intent="commit"
+            isPending={props.isBusy}
+            isDisabled={props.isBusy || !props.canSave}
+            onPress={props.onSave}
+        >
+            {props.copy.jobEditorSave}
         </Button>
     </>
 )

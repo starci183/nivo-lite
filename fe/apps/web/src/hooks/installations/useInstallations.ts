@@ -11,14 +11,22 @@ import { toInstallations } from "./installations.shared"
 export const useInstallations = (): {
     readonly slot: DataSlot<ReadonlyArray<Installation>>
     readonly installations: ReadonlyArray<Installation> | undefined
+    /** The authoritative read for a frame that joins installation data with another read. */
+    readonly read: ReturnType<typeof useQueryModuleInstallationsSwr>
     readonly reload: () => void
 } => {
     const read = useQueryModuleInstallationsSwr()
     const installations = useMemo(() => (read.data === undefined ? undefined : toInstallations(read.data)), [read.data])
     const reload = () => void read.mutate()
     return {
-        slot: slotOfSwr({ data: installations, error: read.error, isLoading: read.isLoading }),
+        slot: slotOfSwr({
+            data: installations,
+            error: read.error,
+            isLoading: read.isLoading,
+            isValidating: read.isValidating,
+        }),
         installations,
+        read,
         reload,
     }
 }

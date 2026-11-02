@@ -1,12 +1,6 @@
-import { Badge, Button, Quote, SurfaceCard, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, Button, Cluster, EmptyNotice, Quote, Section, Stack, Text, Link } from "@starci/grammar/common"
 import type { FindingCardActionView, FindingCardView } from "@/hooks/brain"
-import {
-    CARDS_CLASS_NAME,
-    CARD_ACTIONS_CLASS_NAME,
-    CARD_BODY_CLASS_NAME,
-    CARD_HEAD_CLASS_NAME,
-    QUOTES_CLASS_NAME,
-} from "./classNames"
+import type { ListRowData } from "@starci/grammar/common"
 
 export type { FindingCardActionView, FindingCardView } from "@/hooks/brain"
 
@@ -15,7 +9,7 @@ interface FindingCardsProps {
     /** Names the list of cards. */
     readonly label: string
     /** The cards are a placeholder: the list draws as inert geometry. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly cards: ReadonlyArray<FindingCardView>
     readonly onAction: (findingId: string, action: FindingCardActionView) => void
 }
@@ -36,7 +30,11 @@ interface CardActionProps {
 /** The action of a card: a destination for the upload, a command for the rest. */
 const CardAction = (props: CardActionProps) =>
     props.action.href === null ? (
-        <Button size="sm" intent={props.action.intent} onPress={() => props.onAction(props.card.id, props.action)}>
+        <Button
+            size="sm"
+            intent={props.action.intent === "commit" ? "neutral" : props.action.intent}
+            onPress={() => props.onAction(props.card.id, props.action)}
+        >
             {props.action.label}
         </Button>
     ) : (
@@ -45,55 +43,58 @@ const CardAction = (props: CardActionProps) =>
         </Button>
     )
 
-/** One finding as a card: what kind it is, the question, the words of the documents that disagree, and what answers it. */
-const FindingCard = (props: FindingCardProps) => (
-    <SurfaceCard label={props.card.title} headingLevel={3}>
-        <div className={CARD_BODY_CLASS_NAME}>
-            <div className={CARD_HEAD_CLASS_NAME}>
-                <Badge tone={props.card.kind.tone}>{props.card.kind.label}</Badge>
-                {props.card.badges.map((badge) => (
-                    <Badge key={badge.id} tone={badge.tone}>
-                        {badge.label}
-                    </Badge>
+/** The rich evidence and commands sit in the row's named detail field, without another surface. */
+const FindingDetail = (props: FindingCardProps) => (
+    <Stack gap="section">
+        <Cluster gap="inline">
+            {props.card.badges.map((badge) => (
+                <Badge key={badge.id} tone={badge.tone}>
+                    {badge.label}
+                </Badge>
+            ))}
+            {props.card.dossier === null ? null : (
+                <Link href={props.card.dossier.href}>{props.card.dossier.label}</Link>
+            )}
+        </Cluster>
+        <Text>{props.card.detail}</Text>
+        {props.card.meta === null ? null : <Text tone="muted">{props.card.meta}</Text>}
+        {props.card.quotes.length === 0 ? null : (
+            <Cluster gap="row" align="start">
+                {props.card.quotes.map((quote) => (
+                    <Quote
+                        key={quote.id}
+                        source={quote.source}
+                        text={quote.text}
+                        {...(quote.byline === undefined ? {} : { byline: quote.byline })}
+                    />
                 ))}
-                {props.card.dossier === null ? null : (
-                    <Text tone="muted">
-                        <TextAction href={props.card.dossier.href}>{props.card.dossier.label}</TextAction>
-                    </Text>
-                )}
-            </div>
-            <Text>{props.card.detail}</Text>
-            {props.card.meta === null ? null : <Text tone="muted">{props.card.meta}</Text>}
-            {props.card.quotes.length === 0 ? null : (
-                <div className={QUOTES_CLASS_NAME}>
-                    {props.card.quotes.map((quote) => (
-                        <Quote
-                            key={quote.id}
-                            source={quote.source}
-                            {...(quote.byline === undefined ? {} : { byline: quote.byline })}
-                        >
-                            {quote.text}
-                        </Quote>
-                    ))}
-                </div>
-            )}
-            {props.card.actions.length === 0 ? null : (
-                <div className={CARD_ACTIONS_CLASS_NAME}>
-                    {props.card.actions.map((action) => (
-                        <CardAction key={action.id} card={props.card} action={action} onAction={props.onAction} />
-                    ))}
-                </div>
-            )}
-        </div>
-    </SurfaceCard>
+            </Cluster>
+        )}
+        {props.card.actions.length === 0 ? null : (
+            <Cluster gap="inline">
+                {props.card.actions.map((action) => (
+                    <CardAction key={action.id} card={props.card} action={action} onAction={props.onAction} />
+                ))}
+            </Cluster>
+        )}
+    </Stack>
 )
 
-/** The findings of the queue, one card each, worst first as they arrive. */
-export const FindingCards = (props: FindingCardsProps) => (
-    <div className={CARDS_CLASS_NAME}>
-        {props.isSkeleton ? <SurfaceListCard ariaLabel={props.label} isLoading /> : null}
-        {props.cards.map((card) => (
-            <FindingCard key={card.id} card={card} onAction={props.onAction} />
-        ))}
-    </div>
-)
+/** Findings remain one queue; the collection draws its loading and ready rows from the same item data. */
+export const FindingCards = (props: FindingCardsProps) => {
+    const items: ListRowData[] = props.cards.map((card) => ({
+        id: card.id,
+        title: card.title,
+        badges: [{ label: card.kind.label, tone: card.kind.tone }],
+        detail: <FindingDetail card={card} onAction={props.onAction} />,
+    }))
+    return (
+        <Section
+            kind="list"
+            title={props.label}
+            isLoading={props.isLoading === true}
+            items={items}
+            empty={<EmptyNotice message={props.label} />}
+        />
+    )
+}

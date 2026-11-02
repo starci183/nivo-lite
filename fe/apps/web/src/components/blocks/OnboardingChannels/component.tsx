@@ -1,6 +1,6 @@
-import { Badge, Button, Cluster, ListRow, SurfaceListCard } from "@starci/grammar/common"
-import { ProviderLogo } from "@/components/branches/ProviderLogo"
-import { FirstRunCard } from "@/components/composites/FirstRunCard"
+import { Button, Cluster, EmptyNotice } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import { FirstRunCard } from "@/components/frames/FirstRunCard"
 
 /** One channel the step offers: its name, what it brings, its mark and whether the workspace already has it. */
 export interface OnboardingChannelView {
@@ -53,27 +53,22 @@ export const OnboardingChannelsBase = (props: OnboardingChannelsBaseProps) => {
                     </Cluster>
                 </>
             }
-        >
-            <SurfaceListCard ariaLabel={view.title}>
-                {view.channels.map((channel) => (
-                    <ListRow
-                        key={channel.id}
-                        title={channel.name}
-                        description={channel.description}
-                        leading={
-                            <ProviderLogo glyph="chat" {...(channel.logo === undefined ? {} : { src: channel.logo })} />
-                        }
-                        badges={channel.isConnected ? <Badge tone="success">{view.connectedLabel}</Badge> : undefined}
-                        actions={
-                            channel.isConnected ? undefined : (
-                                <Button intent="neutral" href={channel.connectHref}>
-                                    {view.connectLabel}
-                                </Button>
-                            )
-                        }
-                    />
-                ))}
-            </SurfaceListCard>
-        </FirstRunCard>
+            collection={{
+                kind: "list",
+                items: view.channels.map((channel) => ({
+                    id: channel.id,
+                    title: channel.name,
+                    description: channel.description,
+                    leading:
+                        channel.logo === undefined
+                            ? { icon: nivoIconSource("chat", "leading") }
+                            : { avatar: { name: channel.name, src: channel.logo, shape: "square" } },
+                    ...(channel.isConnected
+                        ? { badges: [{ label: view.connectedLabel, tone: "success" }] }
+                        : { action: { label: view.connectLabel, intent: "neutral", href: channel.connectHref } }),
+                })),
+                empty: <EmptyNotice message={view.description} />,
+            }}
+        />
     )
 }

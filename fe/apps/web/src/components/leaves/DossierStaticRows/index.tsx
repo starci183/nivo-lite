@@ -1,19 +1,27 @@
-import { StaticStateRow, SurfaceListCard } from "@starci/grammar/common"
+import { EmptyNotice, Section } from "@starci/grammar/common"
 import type { EvidenceItemView } from "@/hooks/brain"
 
 /** What the static list says. */
 interface DossierStaticRowsProps {
     readonly label: string
     readonly items: ReadonlyArray<EvidenceItemView>
+    readonly isLoading?: boolean
 }
 
-/** A list of lines that only inform, in one card: the evidence of a finding, or the places a draft leaves to fill. */
+/** Informative rows share their drawer or finding's existing surface. */
 export const DossierStaticRows = (props: DossierStaticRowsProps) => (
-    <SurfaceListCard ariaLabel={props.label}>
-        {props.items.map((item) => (
-            <StaticStateRow key={item.id} item={item} />
-        ))}
-    </SurfaceListCard>
+    <Section
+        kind="list"
+        title={props.label}
+        headingLevel={4}
+        isLoading={props.isLoading === true}
+        empty={<EmptyNotice message={props.label} />}
+        items={props.items.map((item) => ({
+            id: item.id,
+            title: item.label,
+            ...(item.description === undefined ? {} : { description: item.description }),
+        }))}
+    />
 )
 
 export type { EvidenceItemView } from "@/hooks/brain"

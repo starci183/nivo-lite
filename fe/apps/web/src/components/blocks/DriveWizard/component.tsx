@@ -1,10 +1,12 @@
-import { Alert, Text } from "@starci/grammar/common"
+import type { DataSlot, SlotLabels } from "@/modules/types"
+import { SlotView } from "@/components/composites/SlotView"
+import { Alert, Text, Stack } from "@starci/grammar/common"
 import type { ComponentProps } from "react"
-import { WizardFrame, frameOf } from "@/components/composites/WizardFrame"
+import { WizardFrame, frameOf } from "@/components/frames/WizardFrame"
 import { WizardConsentCopy } from "@/components/composites/WizardConsentCopy"
 import { DriveFileChooser } from "@/components/composites/DriveFileChooser"
 import type { WizardAction } from "@/components/branches/WizardFooter"
-import { driveWizardClassNames as classNames } from "./classNames"
+import { WizardFooter } from "@/components/branches/WizardFooter"
 
 /** The words of the wizard: its three steps' guidance and buttons. */
 type DriveWizardText = Readonly<
@@ -28,6 +30,8 @@ type DriveWizardText = Readonly<
 /** Copy, state and commands of the Google Drive wizard. */
 export interface DriveWizardBaseProps {
     readonly props: {
+        readonly boot: DataSlot<boolean>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
@@ -42,6 +46,7 @@ export interface DriveWizardBaseProps {
         readonly text: DriveWizardText
     }
     readonly on: ComponentProps<typeof DriveFileChooser>["on"] & {
+        readonly retryRead: () => void
         readonly grant: () => void
         readonly close: (changed: boolean) => void
     }
@@ -67,11 +72,11 @@ const actionsOf = (props: DriveWizardBaseProps): ReadonlyArray<WizardAction> => 
 }
 
 /** Draws Google Drive in the shared wizard frame: what NIVO is allowed to read, then choosing documents, then Done. */
-export const DriveWizardBase = (props: DriveWizardBaseProps) => {
+const renderDriveWizard = (props: DriveWizardBaseProps, isLoading: boolean) => {
     const view = props.props
     const text = view.text
     return (
-        <WizardFrame {...frameOf(view)} actions={actionsOf(props)}>
+        <WizardFrame {...frameOf(view)} footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}>
             {view.index === 0 ? (
                 <WizardConsentCopy
                     title={text.allowTitle}
@@ -81,20 +86,31 @@ export const DriveWizardBase = (props: DriveWizardBaseProps) => {
                 />
             ) : null}
             {view.index === 1 ? (
-                <div className={classNames.copy}>
-                    <Alert tone="affirmative" appearance="soft" title={text.connected} />
-                    <DriveFileChooser props={view.chooser} on={props.on} />
-                </div>
+                <Stack gap="row">
+                    <Alert tone="affirmative" appearance="soft" title={text.connected} isLoading={isLoading} />
+                    <DriveFileChooser props={{ ...view.chooser, isLoading: isLoading }} on={props.on} />
+                </Stack>
             ) : null}
             {view.index === 2 ? (
-                <div className={classNames.copy}>
-                    <Alert tone="affirmative" title={text.doneBody} />
+                <Stack gap="row">
+                    <Alert tone="affirmative" title={text.doneBody} isLoading={isLoading} />
                     <Text size="sm" tone="muted">
                         {text.doneHint}
                     </Text>
-                </div>
+                </Stack>
             ) : null}
-            {view.error === null ? null : <Alert tone="negative" title={view.error} />}
+            {view.error === null ? null : <Alert tone="negative" title={view.error} isLoading={isLoading} />}
         </WizardFrame>
     )
 }
+
+/** Draws the selected wizard's existing ready tree from its actual dependency reads. */
+export const DriveWizardBase = (props: DriveWizardBaseProps) => (
+    <SlotView
+        slot={props.props.boot}
+        placeholder={true}
+        labels={props.props.slotLabels}
+        onRetry={props.on.retryRead}
+        render={(_ready, isLoading) => renderDriveWizard(props, isLoading)}
+    />
+)

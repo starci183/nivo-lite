@@ -41,6 +41,7 @@ export const OnboardingHandover = () => {
                         },
                     },
                 ],
+                emptyRules: t("handoverEmpty"),
                 backLabel: t("back"),
                 backHref: APP_ROUTES.workspaceChannels,
                 finishLabel: t("finish"),

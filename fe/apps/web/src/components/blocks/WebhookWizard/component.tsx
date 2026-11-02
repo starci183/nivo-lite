@@ -1,16 +1,21 @@
-import { Alert, CheckboxGroup, Input, LeadingNumber, List, ListItem, Text } from "@starci/grammar/common"
+import type { DataSlot, SlotLabels, CopyLabels } from "@/modules/types"
+import { SlotView } from "@/components/composites/SlotView"
+import { Alert, CheckboxGroup, EmptyNotice, Input, Section, Stack, Text } from "@starci/grammar/common"
 import { ConnectionCopyInput } from "@/components/composites/ConnectionCopyInput"
 import { WizardCodeBlock } from "@/components/composites/WizardCodeBlock"
 import { backAction, closeAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
-import { WizardFrame } from "@/components/composites/WizardFrame"
+import { WizardFrame } from "@/components/frames/WizardFrame"
 import { WizardTestAlert } from "@/components/composites/WizardTestAlert"
-import type { CopyLabels } from "@/modules/types"
-import { webhookWizardClassNames as classNames } from "./classNames"
+
+/** The ready drawing with its canonical first-read loading atom. */
+type WebhookWizardDrawLoadingProps = WebhookWizardBaseProps & { readonly isLoading: boolean }
 
 /** Copy, state and commands of the webhook wizard. */
 export interface WebhookWizardBaseProps {
     readonly props: {
+        readonly boot: DataSlot<boolean>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
@@ -46,6 +51,7 @@ export interface WebhookWizardBaseProps {
                 | "secretOnce"
                 | "n8nTitle"
                 | "n8nNote"
+                | "n8nEmpty"
                 | "codeLabel"
                 | "testIntro"
                 | "testWarn"
@@ -93,13 +99,13 @@ const actionsOf = ({ props, on }: WebhookWizardBaseProps): ReadonlyArray<WizardA
     ]
 }
 
-const addressOf = (props: WebhookWizardBaseProps) => {
+const addressOf = (props: WebhookWizardDrawLoadingProps) => {
     const { props: view, on } = props
     return (
         <>
             {view.step === "address" ? (
                 <>
-                    <div className={classNames.fields}>
+                    <Stack gap="row">
                         <Input
                             id="webhook-name"
                             name="name"
@@ -107,6 +113,7 @@ const addressOf = (props: WebhookWizardBaseProps) => {
                             isDisabled={view.isPending}
                             value={view.form.name}
                             onValueChange={on.name}
+                            isLoading={props.isLoading}
                         />
                         <Input
                             id="webhook-url"
@@ -117,14 +124,16 @@ const addressOf = (props: WebhookWizardBaseProps) => {
                             isDisabled={view.isPending}
                             value={view.form.url}
                             onValueChange={on.url}
+                            isLoading={props.isLoading}
                         />
-                    </div>
+                    </Stack>
                     <CheckboxGroup
                         label={view.text.eventsLabel}
                         isDisabled={view.isPending}
                         options={[...view.eventOptions]}
                         value={[...view.events]}
                         onValueChange={(events) => on.events(events)}
+                        isLoading={props.isLoading}
                     />
                 </>
             ) : null}
@@ -133,7 +142,7 @@ const addressOf = (props: WebhookWizardBaseProps) => {
 }
 
 /** n8n / Make / Zapier webhook in the shared wizard frame: address and events, signing key, a test send, done. */
-export const WebhookWizardBase = (props: WebhookWizardBaseProps) => {
+const renderWebhookWizard = (props: WebhookWizardBaseProps, isLoading: boolean) => {
     const { props: view } = props
     return (
         <WizardFrame
@@ -141,15 +150,15 @@ export const WebhookWizardBase = (props: WebhookWizardBaseProps) => {
             stepLabel={view.stepLabel}
             steps={view.steps}
             index={view.index}
-            footer={<WizardFooter actions={actionsOf(props)} />}
+            footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
         >
-            {addressOf(props)}
+            {addressOf({ ...props, isLoading: isLoading })}
             {view.step === "secret" ? (
                 <>
                     <Text size="sm" tone="muted">
                         {view.text.secretIntro}
                     </Text>
-                    <Alert tone="cautionary" title={view.text.secretOnce} />
+                    <Alert tone="cautionary" title={view.text.secretOnce} isLoading={isLoading} />
                     <ConnectionCopyInput
                         id="webhook-signing-secret"
                         name="signingSecret"
@@ -157,22 +166,26 @@ export const WebhookWizardBase = (props: WebhookWizardBaseProps) => {
                         value={view.signingSecret}
                         isSecret
                         labels={view.copy}
+                        isLoading={isLoading}
                     />
-                    <Text weight="semibold">{view.text.n8nTitle}</Text>
-                    <List as="ol" className={classNames.numbered}>
-                        {view.n8nSteps.map((step, position) => (
-                            <ListItem key={step}>
-                                <Text size="sm" startContent={<LeadingNumber position={position + 1} />}>
-                                    {step}
-                                </Text>
-                            </ListItem>
-                        ))}
-                    </List>
+                    <Section
+                        kind="list"
+                        title={view.text.n8nTitle}
+                        headingLevel={3}
+                        items={view.n8nSteps.map((step, position) => ({
+                            id: String(position + 1),
+                            title: step,
+                            leading: { position: position + 1 },
+                        }))}
+                        empty={<EmptyNotice message={view.text.n8nEmpty} />}
+                        isLoading={isLoading}
+                    />
                     <WizardCodeBlock
                         code={view.snippet}
                         label={view.text.codeLabel}
                         copyLabel={view.copy.copy}
                         copiedLabel={view.copy.copied}
+                        isLoading={isLoading}
                     />
                     <Text size="xs" tone="muted">
                         {view.text.n8nNote}
@@ -189,6 +202,7 @@ export const WebhookWizardBase = (props: WebhookWizardBaseProps) => {
                             isOk={view.test.isOk}
                             title={view.test.title}
                             description={view.test.description}
+                            isLoading={isLoading}
                         />
                     )}
                     {view.test !== null && !view.test.isOk ? (
@@ -203,7 +217,17 @@ export const WebhookWizardBase = (props: WebhookWizardBaseProps) => {
                     {view.text.doneIntro}
                 </Text>
             ) : null}
-            {view.error === null ? null : <Alert tone="negative" title={view.error} />}
+            {view.error === null ? null : <Alert tone="negative" title={view.error} isLoading={isLoading} />}
         </WizardFrame>
     )
 }
+
+/** Draws the selected wizard's existing ready tree from its actual dependency reads. */
+export const WebhookWizardBase = (props: WebhookWizardBaseProps) => (
+    <SlotView
+        slot={props.props.boot}
+        placeholder={true}
+        labels={props.props.slotLabels}
+        render={(_ready, isLoading) => renderWebhookWizard(props, isLoading)}
+    />
+)

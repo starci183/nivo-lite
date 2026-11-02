@@ -1,17 +1,27 @@
 import { createHash } from "node:crypto"
 import { builder } from "@starci/jest-preset"
-import type { CallLogLine } from "@modules/domain/mcp-call-log"
-import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
-import type { McpToolGrantView } from "@modules/domain/mcp-tool-grants"
+import type { FakeClock, MockOf } from "@starci/jest-preset"
+import type { CallLogLine, McpCallLogService } from "@modules/domain/mcp-call-log"
+import type { McpConnectorRow, McpConnectorsService } from "@modules/domain/mcp-connectors"
+import type { McpToolGrantView, McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
+import type { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import type {
     GatewayCaller,
     GatewayJson,
     OptionalDataRights,
     RemoteTarget,
     RoleReadiness,
+    NativeAdapter,
+    DataRightsGate,
+    ToolGraphGate,
+    McpGatewayService,
 } from "@modules/domain/mcp-gateway"
-import type { McpEndpoint } from "@modules/integrations/mcp"
+import type { McpEndpoint, McpRemote } from "@modules/integrations/mcp"
 import { Secret } from "@modules/platform/config"
+import type { Logger } from "@modules/platform/logging"
+import type { QueueTimeout } from "@modules/platform/queue"
+
+type GatewayDependencies = ConstructorParameters<typeof McpGatewayService>
 
 /** The caller of the gateway specs: an agent in a conversation, with no work item. */
 export const GATEWAY_CALLER: GatewayCaller = {
@@ -132,4 +142,48 @@ export interface GatewaySpecSetup {
     readonly grants?: ReadonlyArray<McpToolGrantView>
     readonly rights?: OptionalDataRights
     readonly timeoutMs?: number
+}
+
+/** The scheduler cancellation port observed by the unit spec. */
+export interface GatewayCancellation {
+    /** The scheduler cancellation function observed by the unit spec. */
+    readonly cancel: () => void
+}
+
+/** Actual constructor doubles made by the colocated spec; helpers configure these same references. */
+export interface GatewaySpecDoubles {
+    /** The deterministic gateway clock. */
+    readonly clock: FakeClock
+    /** The captured structured logger. */
+    readonly logger: MockOf<Logger>
+    /** The remote transport. */
+    readonly remote: MockOf<McpRemote>
+    /** The native adapter. */
+    readonly native: MockOf<NativeAdapter>
+    /** The connector deadline scheduler. */
+    readonly timeout: MockOf<QueueTimeout>
+    /** The connector registry. */
+    readonly connectors: MockOf<McpConnectorsService>
+    /** The tool grant reader. */
+    readonly grants: MockOf<McpToolGrantsService>
+    /** The captured call audit. */
+    readonly callLog: MockOf<McpCallLogService>
+    /** The sealed endpoint opener. */
+    readonly credentials: MockOf<GatewayDependencies[8]>
+    /** The claimed call receipt boundary. */
+    readonly receipts: MockOf<GatewayReceiptsService>
+    /** The agent data rights. */
+    readonly dataRights: MockOf<DataRightsGate>
+    /** The agent graph verdict. */
+    readonly graph: MockOf<ToolGraphGate>
+    /** The deadline cancellation callback. */
+    readonly cancel: () => void
+}
+
+/** Configures the same kit doubles the spec provides to its real subject. */
+export const arrangeGatewayDoubles = (setup: GatewaySpecSetup, doubles: GatewaySpecDoubles): void => {
+    doubles.native.invoke.mockResolvedValue({ transactions: [] })
+    doubles.credentials.endpointOf.mockImplementation(openedEndpointOf)
+    doubles.dataRights.rightsOf.mockResolvedValue(setup.rights ?? null)
+    doubles.graph.judge.mockResolvedValue({ kind: "run" })
 }

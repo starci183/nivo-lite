@@ -58,7 +58,7 @@ export const useDriveHead = (enabled = true) => {
         router.replace(CONSOLE_ROUTES.connections)
     }, [settle, forget, t, router])
 
-    const standing = slot.items?.standing
+    const standing = ("items" in slot ? slot.items : undefined)?.standing
     const returned = params.get("drive") === "error" ? tw(driveFailureKeyOf(params.get("reason") ?? "")) : ""
     const notices: ReadonlyArray<ConnectionNotice> = [
         ...(standing === "lost"

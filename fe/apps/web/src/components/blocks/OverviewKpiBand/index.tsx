@@ -8,7 +8,5 @@ export const OverviewKpiBand = () => {
     const band = useOverviewKpis()
     const { failed } = useOverviewData()
     if (band === undefined && failed) return null
-    return (
-        <OverviewKpiBandBase props={{ ...(band ?? OVERVIEW_KPI_BAND_PLACEHOLDER), isSkeleton: band === undefined }} />
-    )
+    return <OverviewKpiBandBase props={{ ...(band ?? OVERVIEW_KPI_BAND_PLACEHOLDER), isLoading: band === undefined }} />
 }

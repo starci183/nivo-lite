@@ -63,6 +63,7 @@ export const useSalesDecisionForm = () => {
     }
     return {
         typed,
+        reset: () => form.reset(EMPTY_TYPED),
         validateDecision,
         validateForm: (item: SalesDecision) =>
             form.trigger([

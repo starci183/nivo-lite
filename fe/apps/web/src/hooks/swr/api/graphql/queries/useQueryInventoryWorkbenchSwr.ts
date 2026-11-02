@@ -8,9 +8,11 @@ import { queryInventoryWorkbench } from "@/modules/api/graphql/queries/query-inv
 export const QUERY_INVENTORY_WORKBENCH_SWR_KEY = "QUERY_INVENTORY_WORKBENCH_SWR"
 
 /** The `inventoryWorkbench` query through SWR. */
-export const useQueryInventoryWorkbenchSwr = () =>
-    useSWR(useWorkspaceKey(QUERY_INVENTORY_WORKBENCH_SWR_KEY, []), async () => {
+export const useQueryInventoryWorkbenchSwr = (isActive = true) => {
+    const key = useWorkspaceKey(QUERY_INVENTORY_WORKBENCH_SWR_KEY, [])
+    return useSWR(isActive ? key : null, async () => {
         const result = await queryInventoryWorkbench()
         if (!result.data) throw new Error("inventoryWorkbench answered no data")
         return result.data.inventoryWorkbench
     })
+}

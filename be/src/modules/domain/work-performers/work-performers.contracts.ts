@@ -33,3 +33,6 @@ export interface CareText {
     /** True when the model wrote it; false when it is the filled template because the model did not answer. */
     readonly drafted: boolean
 }
+
+/** How the owner reaches a customer, or null. */
+export type OptionalContact = string | null

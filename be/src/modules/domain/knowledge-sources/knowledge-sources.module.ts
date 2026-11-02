@@ -15,6 +15,7 @@ import { SourceTwinsService } from "./source-twins.service"
 import { KnowledgeSourcesReadableService } from "./knowledge-sources-readable.service"
 import { KnowledgeSourcesAdminReadService } from "./knowledge-sources-admin-read.service"
 import { KnowledgeSourcesReadService } from "./knowledge-sources-read.service"
+import { PublishedSourcesService } from "./published-sources.service"
 
 @Module({})
 /** The documents of a workspace: their rows, their stages and the jobs that index them. */
@@ -52,6 +53,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 SourceCategoriesService,
                 DossierSourcesService,
                 ApiKnowledgeSourcesService,
+                PublishedSourcesService,
             ],
             exports: [
                 KnowledgeQueueModule,
@@ -67,6 +69,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 SourceCategoriesService,
                 DossierSourcesService,
                 ApiKnowledgeSourcesService,
+                PublishedSourcesService,
             ],
         }
     }

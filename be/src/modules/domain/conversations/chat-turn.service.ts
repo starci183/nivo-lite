@@ -3,6 +3,7 @@ import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelDeliveryService } from "@modules/domain/channels"
+import type { DeliveryOutcome } from "@modules/domain/channels"
 import { ChannelReceiptsService } from "@modules/domain/channel-receipts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { InjectClock } from "@modules/platform/clock"
@@ -124,7 +125,7 @@ export class ChatTurnService {
     async respond(turn: CustomerTurn, proposal: ChatTurnProposal): Promise<void> {
         const outcomes = this.extensions.outcomes()
         const verdict = outcomes === undefined ? this.plainVerdict(proposal) : await outcomes.settle(turn, proposal)
-        if (verdict.send) await this.sendReply(turn, verdict.reply)
+        if (verdict.send && turn.finalOwed !== true) await this.sendReply(turn, verdict.reply)
         await this.writeLines(turn.conversation, verdict.lines)
     }
 
@@ -134,6 +135,18 @@ export class ChatTurnService {
             send: true,
             lines: proposal.needsHuman ? [this.catalog.get("conversations.chatNeedsHuman", {}, LOCALE)] : [],
         }
+    }
+
+    /**
+     * A reply that comes after its turn ended, keyed by what it answers: it passes the outcome handler's gate, the lines go to the
+     * conversation, and the caller delivers it under that key.
+     */
+    async settleLate(turn: CustomerTurn, reply: string, key: string): Promise<TurnVerdict> {
+        const outcomes = this.extensions.outcomes()
+        if (outcomes === undefined) return { reply, send: true, lines: [] }
+        const verdict = await outcomes.settleLate(turn, reply, key)
+        await this.writeLines(turn.conversation, verdict.lines)
+        return verdict
     }
 
     /** The AI could not answer: the question goes to a person, and the customer hears the holding line at most once per hour. */
@@ -153,20 +166,21 @@ export class ChatTurnService {
         ])
     }
 
-    /** Stores the reply to the customer message once and pushes it to the channel unless a previous attempt already did. */
-    private async sendReply(turn: CustomerTurn, text: string): Promise<void> {
+    /** Stores the reply once and reports whether the channel accepted it, including a website's persisted reply. */
+    async sendReply(turn: CustomerTurn, text: string): Promise<DeliveryOutcome> {
         const stored = await this.messages.storeReply(
             turn.conversation.workspaceId,
             turn.conversation.id,
             text,
             turn.messageId,
         )
-        if (!stored.sent)
-            await this.delivery.deliver({
-                conversationId: turn.conversation.id,
-                messageId: stored.id,
-                text: stored.body,
-            })
+        if (stored.sent) return "acknowledged"
+        const result = await this.delivery.deliver({
+            conversationId: turn.conversation.id,
+            messageId: stored.id,
+            text: stored.body,
+        })
+        return result.outcome
     }
 
     /** The owner own words (module settings), else the default holding line. */

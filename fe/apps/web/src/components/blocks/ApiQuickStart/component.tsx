@@ -1,6 +1,4 @@
-import { Button, FencedCodeBlock, Heading, SurfaceCard, Text } from "@starci/grammar/common"
-import { EXAMPLE_CLASS, STACK_CLASS } from "./classNames"
-
+import { Button, FencedCodeBlock, Heading, SurfaceCard, Text, Stack } from "@starci/grammar/common"
 /** One copyable example, already in the reader's words. */
 export interface QuickStartExample {
     readonly id: string
@@ -26,7 +24,7 @@ export interface ApiQuickStartBaseProps {
 }
 
 const example = (item: QuickStartExample, copy: (id: string, code: string) => void) => (
-    <div key={item.id} className={EXAMPLE_CLASS}>
+    <Stack gap="inline" key={item.id}>
         <Heading level={3}>{item.title}</Heading>
         {item.note === undefined ? null : (
             <Text size="sm" tone="muted">
@@ -41,24 +39,24 @@ const example = (item: QuickStartExample, copy: (id: string, code: string) => vo
                 </Button>
             }
         />
-    </div>
+    </Stack>
 )
 
 /** Draws the quick start: base address, auth, limits, then copyable curl and n8n examples. */
 export const ApiQuickStartBase = (props: ApiQuickStartBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <div className={STACK_CLASS}>
+        <Stack gap="section">
             <Text size="sm" tone="muted">
                 {props.props.intro}
             </Text>
             {props.props.examples.map((item) => example(item, props.on.copy))}
-            <div className={EXAMPLE_CLASS}>
+            <Stack gap="inline">
                 <Heading level={3}>{props.props.n8n.title}</Heading>
                 <Text size="sm" tone="muted">
                     {props.props.n8n.steps}
                 </Text>
                 {props.props.n8n.examples.map((item) => example(item, props.on.copy))}
-            </div>
-        </div>
+            </Stack>
+        </Stack>
     </SurfaceCard>
 )

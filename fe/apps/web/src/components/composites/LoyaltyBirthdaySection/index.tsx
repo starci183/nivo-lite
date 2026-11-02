@@ -1,12 +1,10 @@
-import { Select, Switch } from "@starci/grammar/common"
-import { LoyaltySettingsSection } from "@/components/leaves/LoyaltySettingsSection"
+import { Grid, Select, Switch } from "@starci/grammar/common"
+
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
 import type { ProgramTextField } from "@/modules/types"
-import { FIELD_PAIR_CLASS_NAME } from "./classNames"
 
 /** What the birthday section of the programme settings draws and reports. */
 type LoyaltyBirthdaySectionProps = {
-    readonly title: string
     readonly isOn: boolean
     readonly points: string
     readonly rewardKey: string
@@ -24,14 +22,14 @@ type LoyaltyBirthdaySectionProps = {
 
 /** The birthday gift: a switch, the bonus points, the reward and the note of the message; the fields wait for the switch. */
 export const LoyaltyBirthdaySection = (props: LoyaltyBirthdaySectionProps) => (
-    <LoyaltySettingsSection title={props.title}>
+    <>
         <Switch
             label={props.onLabel}
             isSelected={props.isOn}
             isDisabled={props.isDisabled}
             onSelectedChange={props.onToggle}
         />
-        <div className={FIELD_PAIR_CLASS_NAME}>
+        <Grid kind="form" columns={2}>
             <LoyaltyField
                 id="lp-birthday-points"
                 label={props.pointsLabel}
@@ -46,7 +44,7 @@ export const LoyaltyBirthdaySection = (props: LoyaltyBirthdaySectionProps) => (
                 isDisabled={props.isDisabled || !props.isOn}
                 onValueChange={(value) => props.onChange("birthdayReward", value ?? "")}
             />
-        </div>
+        </Grid>
         <LoyaltyField
             id="lp-birthday-note"
             label={props.noteLabel}
@@ -55,5 +53,5 @@ export const LoyaltyBirthdaySection = (props: LoyaltyBirthdaySectionProps) => (
             isDisabled={props.isDisabled || !props.isOn}
             onChange={(value) => props.onChange("birthdayNote", value)}
         />
-    </LoyaltySettingsSection>
+    </>
 )

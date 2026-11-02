@@ -1,12 +1,12 @@
-import { Button, Input, Select, SurfaceCard, Switch } from "@starci/grammar/common"
-import type { HiringQuestionValues, HiringSay } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, FIELDS_CLASS_NAME, GRID_CLASS_NAME } from "./classNames"
+import { Stack, Grid, Cluster, Button, Input, Select, SurfaceCard, Switch } from "@starci/grammar/common"
+
+import type { HiringQuestionValues, HiringViews } from "@/modules/types"
 
 /** One question of the job editor and the way to change or remove it. */
 interface HiringQuestionFieldsProps {
-    readonly say: HiringSay
-    readonly index: number
-    readonly question: HiringQuestionValues
+    readonly copy: HiringViews["workbenchCopy"]
+    readonly numberLabel: string
+    readonly question: HiringViews["questionData"]
     readonly typeOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
     readonly onPatch: (patch: Partial<HiringQuestionValues>) => void
     readonly onRemove: () => void
@@ -14,32 +14,32 @@ interface HiringQuestionFieldsProps {
 
 /** The fields of one question: its text, the kind of answer, the answer worth a point, and whether it is required. */
 export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
-    const { say, index, question, typeOptions, onPatch } = props
+    const { copy, numberLabel, question, typeOptions, onPatch } = props
     const id = question.id
     return (
-        <SurfaceCard ariaLabel={say("qNumber", { n: index + 1 })}>
-            <div className={FIELDS_CLASS_NAME}>
+        <SurfaceCard ariaLabel={numberLabel}>
+            <Stack gap="row">
                 <Input
                     id={`job-q-${id}`}
                     name={`q_${id}`}
-                    label={say("qNumber", { n: index + 1 })}
+                    label={numberLabel}
                     value={question.text}
                     onValueChange={(text) => onPatch({ text })}
                 />
-                <div className={GRID_CLASS_NAME}>
+                <Grid kind="form" columns={2}>
                     <Select
-                        label={say("qType")}
+                        label={copy.qType}
                         options={typeOptions}
                         value={question.type}
                         onValueChange={(type) => onPatch({ type: type ?? "text", expect: "" })}
                     />
                     {question.type === "yesno" ? (
                         <Select
-                            label={say("qExpect")}
+                            label={copy.qExpect}
                             options={[
-                                { id: "", label: say("qExpectNone") },
-                                { id: "yes", label: say("yes") },
-                                { id: "no", label: say("no") },
+                                { id: "", label: copy.qExpectNone },
+                                { id: "yes", label: copy.yes },
+                                { id: "no", label: copy.no },
                             ]}
                             value={question.expect}
                             onValueChange={(expect) => onPatch({ expect: expect ?? "" })}
@@ -49,7 +49,7 @@ export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
                         <Input
                             id={`job-qe-${id}`}
                             name={`qe_${id}`}
-                            label={say("qExpectNumber")}
+                            label={copy.qExpectNumber}
                             value={question.expect}
                             onValueChange={(expect) => onPatch({ expect })}
                         />
@@ -58,32 +58,32 @@ export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
                         <Input
                             id={`job-qc-${id}`}
                             name={`qc_${id}`}
-                            label={say("qChoices")}
+                            label={copy.qChoices}
                             value={question.choices}
                             onValueChange={(choices) => onPatch({ choices })}
                         />
                     ) : null}
-                </div>
+                </Grid>
                 {question.type === "choice" ? (
                     <Input
                         id={`job-qx-${id}`}
                         name={`qx_${id}`}
-                        label={say("qExpectChoices")}
+                        label={copy.qExpectChoices}
                         value={question.expect}
                         onValueChange={(expect) => onPatch({ expect })}
                     />
                 ) : null}
-                <div className={ACTIONS_CLASS_NAME}>
+                <Cluster gap="inline">
                     <Switch
-                        label={say("qRequired")}
+                        label={copy.qRequired}
                         isSelected={question.required}
                         onSelectedChange={(required) => onPatch({ required })}
                     />
                     <Button intent="alternative" onPress={props.onRemove}>
-                        {say("qRemove")}
+                        {copy.qRemove}
                     </Button>
-                </div>
-            </div>
+                </Cluster>
+            </Stack>
         </SurfaceCard>
     )
 }

@@ -8,11 +8,10 @@ import { CommandBusService, EvidenceService, WorkEngineService } from "@modules/
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import { HiringPublicService } from "@modules/domain/hiring"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import type { GraphAnswer } from "@modules/domain/authority-rules"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InvoicesService } from "@modules/domain/invoices"
-import type { InvoiceRow } from "@modules/domain/invoices"
 import { WorkItemsService } from "@modules/domain/work-items"
-import type { ReasonCode } from "@modules/domain/work-items"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -21,14 +20,10 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { handoffTranscriptOf, isRecentlyPaid, latestQuestionOf } from "./customer-turn.policy"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
-import type {
-    CapturedOrder,
-    CustomerChannel,
-    CustomerReply,
-    HumanReason,
-    TurnSettled,
-} from "./customer-turns.contracts"
+import type { CustomerChannel, CustomerReply, TurnSettled } from "./customer-turns.contracts"
 import { isKnownPrice } from "./knowledge-price.policy"
+import { REPLY_ACTION, evidenceOfTurn, replyCheckOf } from "./reply-graph.policy"
+import type { Judged, OpenedReplyItem, ReplyItemSpec, ReplyScope } from "./reply-graph.policy"
 import { findingsOf, humanReasonOf } from "./reply-reading.policy"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
@@ -40,8 +35,6 @@ const LOCALE: Locale = "vi"
 /** The name under which the engine acts in evidence and in conversation hand-offs. */
 const ENGINE_ACTOR = "OpenClaw"
 const SUMMARY_QUESTION_MAX = 160
-/** The action whose rule says whether a reply leaves alone. */
-const REPLY_ACTION = "reply_customer"
 /** How many queued chain steps a turn drains after it: one more when an order queued its invoice. */
 const DRAIN_STEPS = 2
 const DRAIN_STEPS_AFTER_ORDER = 3
@@ -54,42 +47,6 @@ interface AppliedApplication {
     readonly lines: ReadonlyArray<string>
     /** True when the application was stored. */
     readonly changed: boolean
-}
-
-/** A waiting answer to open for a person. */
-interface ReplyItemSpec {
-    /** One item per customer message and purpose. */
-    readonly dedupeKey: string
-    /** What the customer asked. */
-    readonly question: string
-    /** The answer a person may approve, or empty. */
-    readonly draft: string
-    /** Why a person decides. */
-    readonly forceAsk: ReasonCode
-    /** The customer, when known. */
-    readonly leadId: string | null
-}
-
-/** A waiting answer, and whether an earlier delivery of the turn had already opened it. */
-interface OpenedReplyItem {
-    /** The item. */
-    readonly item: WorkItem
-    /** True when it existed before this call. */
-    readonly existed: boolean
-}
-
-/** The reply as the gate will judge it, after the price and payment rules. */
-interface Judged {
-    /** The text that leaves. */
-    readonly reply: string
-    /** True when a person must answer. */
-    readonly needsHuman: boolean
-    /** Why, or null. */
-    readonly reason: HumanReason | null
-    /** The order to record, or null. */
-    readonly order: CapturedOrder | null
-    /** The open invoice the customer says they paid, or null. */
-    readonly claimOpen: InvoiceRow | null
 }
 
 @Injectable()
@@ -131,7 +88,6 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         }
         const judged = await this.judge(turn.conversation, reply)
         const application = await this.applyApplication(turn, reply, judged.reply)
-        const approval = await this.approvalOf(ctx, turn, application.reply)
         const channel = this.channelOf(turn.conversation)
         const handoff = await this.handOff(ctx, turn, reply, application.reply, channel)
         const order = await this.purchases.recordOrder(ctx, turn, {
@@ -143,6 +99,15 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         const claim = await this.purchases.recordClaim(ctx, turn, judged.claimOpen, channel)
         const extra = judged.needsHuman ? { reply: null, lines: [] } : await this.modules.settle(ctx, turn, reply)
         const waiting = judged.needsHuman ? await this.askPerson(ctx, turn, reply, judged, order.leadId) : []
+        const leaving = extra.reply ?? application.reply
+        const approval =
+            turn.finalOwed === true
+                ? []
+                : await this.approvalOf(ctx, turn, leaving, {
+                      key: turn.messageId,
+                      leadId: order.leadId,
+                      evidence: evidenceOfTurn(reply, judged, order.orderAmountVnd ?? null),
+                  })
         await this.gaps.note({
             view: viewOf({
                 workspaceId: ctx.workspaceId,
@@ -173,7 +138,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             judged.needsHuman
         if (changed) this.drainLater(ctx, order.changed ? DRAIN_STEPS_AFTER_ORDER : DRAIN_STEPS)
         return {
-            reply: extra.reply ?? application.reply,
+            reply: leaving,
             send: approval.length === 0,
             lines: [
                 ...approval,
@@ -185,6 +150,16 @@ export class CustomerOutcomesService implements CustomerOutcomes {
                 ...waiting,
             ],
         }
+    }
+
+    /** A reply written after the turn, from what an output really came to: the same gate as any reply, keyed by what it answers. */
+    async settleLate(turn: CustomerTurn, reply: string, key: string): Promise<TurnVerdict> {
+        const lines = await this.approvalOf(this.ctxOf(turn), turn, reply, {
+            key,
+            leadId: turn.conversation.leadId,
+            evidence: [],
+        })
+        return { reply, send: lines.length === 0, lines }
     }
 
     /** The AI could not answer: the question becomes a waiting answer for a person, tagged to a staff member, with the fallback in the evidence. */
@@ -239,7 +214,12 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         }
         const paid = leadId === null ? null : await this.invoices.latestOfLead(conversation.workspaceId, leadId, "paid")
         if (paid !== null && isRecentlyPaid(paid.paid_at, this.clock.now())) {
-            return { ...base, reply: this.text("paymentConfirmedReply", { no: paid.invoice_no }), needsHuman: false }
+            return {
+                ...base,
+                reply: this.text("paymentConfirmedReply", { no: paid.invoice_no }),
+                needsHuman: false,
+                paid,
+            }
         }
         // A payment with no open invoice of ours: a person has to look at it (the reply only says the shop will check).
         return { ...base, needsHuman: true, reason: "unclear_outcome" }
@@ -266,15 +246,23 @@ export class CustomerOutcomesService implements CustomerOutcomes {
     }
 
     /**
-     * The owner's reply rule and the agent's access through the conversation's connection: rule "auto" with access "auto" (or the
-     * website chat) sends; anything else turns the reply into a waiting answer with the draft, which the approved reply_customer sends.
-     * Answers the lines to show; none means the reply leaves now.
+     * The graph of the agent on the text that really leaves, then the owner's reply rule and the agent's access through the conversation's
+     * connection: rule "auto" with access "auto" (or the website chat) sends; anything else turns the reply into a waiting answer with the
+     * draft, which the approved reply_customer sends. A graph that stops it sends nothing and one that names another action runs that
+     * action. Answers the lines to show; none means the reply leaves now.
      */
-    private async approvalOf(ctx: WorkContext, turn: CustomerTurn, reply: string): Promise<ReadonlyArray<string>> {
+    private async approvalOf(
+        ctx: WorkContext,
+        turn: CustomerTurn,
+        reply: string,
+        scope: ReplyScope,
+    ): Promise<ReadonlyArray<string>> {
         const { conversation } = turn
+        const graph = await this.engine.checkGraph(replyCheckOf(turn, reply, scope))
+        if (graph.outcome !== "run") return this.heldByGraph(ctx, turn, reply, scope, graph)
         if (!(await this.needsApproval(conversation))) return []
         const { item, existed } = await this.openReplyItem(ctx, turn, {
-            dedupeKey: `reply_customer:access:${turn.messageId}`,
+            dedupeKey: `reply_customer:access:${scope.key}`,
             question: turn.body,
             draft: reply,
             forceAsk: "over_authority",
@@ -282,6 +270,48 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         })
         if (!existed && item.status === "waiting_decision") await this.escalate(item, conversation, turn.body, reply)
         return [this.text("replyAwaitsApproval", {})]
+    }
+
+    /** The graph did not let the reply leave: a person is asked, or it stops, or another action runs; the lines say which and what could not be read. */
+    private async heldByGraph(
+        ctx: WorkContext,
+        turn: CustomerTurn,
+        reply: string,
+        scope: ReplyScope,
+        graph: GraphAnswer,
+    ): Promise<ReadonlyArray<string>> {
+        const { conversation } = turn
+        const unread = graph.unread.map((fact) => this.catalog.get(`agentGraphs.fact.${fact}`, {}, LOCALE)).join(", ")
+        const note = unread === "" ? [] : [this.text("graphUnread", { facts: unread })]
+        if (graph.outcome === "ask") {
+            const { item, existed } = await this.openReplyItem(ctx, turn, {
+                dedupeKey: `reply_customer:graph:${scope.key}`,
+                question: turn.body,
+                draft: reply,
+                forceAsk: "branch_ask",
+                leadId: scope.leadId,
+                evidence: scope.evidence,
+            })
+            if (!existed && item.status === "waiting_decision")
+                await this.escalate(item, conversation, turn.body, reply)
+            return [this.text("replyAwaitsGraph", {}), ...note]
+        }
+        if (graph.divert !== null) {
+            await this.engine.runDiverted(ctx, graph.divert, {
+                key: scope.key,
+                subjectType: "conversation",
+                subjectId: conversation.id,
+                leadId: scope.leadId,
+                installationId: conversation.installationId,
+                origin: turn.origin ?? null,
+                proposal: {
+                    summary: this.text("replySummary", { question: turn.body.slice(0, SUMMARY_QUESTION_MAX) }),
+                    draft: reply,
+                },
+            })
+            return [this.text("replyDivertedByGraph", {}), ...note]
+        }
+        return [this.text("replyStoppedByGraph", {}), ...note]
     }
 
     /** True when the owner's reply rule asks first, or this agent may not send through the conversation's connection on its own. */
@@ -409,6 +439,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             seed: {
                 summary: this.text("replySummary", { question: spec.question.slice(0, SUMMARY_QUESTION_MAX) }),
                 draft: spec.draft,
+                ...(spec.evidence === undefined ? {} : { evidence: spec.evidence }),
                 fields: { question: spec.question, conversation_id: conversation.id },
             },
         })

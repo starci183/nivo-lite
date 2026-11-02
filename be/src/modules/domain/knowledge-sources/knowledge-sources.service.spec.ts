@@ -1,6 +1,6 @@
-import { row, summary } from "@tests/fixtures/builders/knowledge-sources.builder"
+import * as sourceData from "@tests/fixtures/builders/knowledge-sources.builder"
 import { Test } from "@nestjs/testing"
-import { In } from "typeorm"
+import { In, IsNull, Not } from "typeorm"
 import {
     FakeClock,
     builder,
@@ -28,7 +28,6 @@ import { StoredNote } from "./knowledge-sources.contracts"
 import type { AddSourceInput, ReindexInput, UpdateSourceInput } from "./knowledge-sources.contracts"
 import { KNOWLEDGE_STORAGE } from "./knowledge-sources.decorators"
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
-import { contentHashOf } from "./source-hash.policy"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import { NOW } from "./source-input.policy"
 import { SourcePartsService } from "./source-parts.service"
@@ -39,6 +38,7 @@ const AT = "2026-10-12T10:00:00.000Z"
 const UPLOAD_ID = "00000000-0000-4000-8000-000000000001"
 const codes = KnowledgeSourcesErrorCode
 const job = { sourceId: "s1", workspaceId: WS }
+const { row, summary, sourceWriteRows } = sourceData
 const missing = { code: codes.SourceNotFound }
 const listRowOf = builder<KnowledgeSourceEntity>({ ...row, createdAt: new Date("2026-10-11T10:00:00.000Z") })
 const KEY = { id: "s1", workspaceId: WS }
@@ -50,8 +50,6 @@ const touched = (changes: object) => [{ ...changes, updatedAt: NOW }]
 const updated = (em: MockEntityManager, changes: object) =>
     expect(em.update).toHaveBeenCalledWith(KnowledgeSourceEntity, KEY, ...touched(changes))
 /** A transaction whose insert answers the new source `s1`. */
-const insertedTx = () =>
-    fakeTransaction(mockEntityManager({ insert: [KnowledgeSourceEntity, { identifiers: [{ id: "s1" }] }] }))
 const instance = { id: "i1", workspaceId: WS, moduleKey: "chatbot" }
 const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content: "Open 8-21", visibility: "internal" })
 const build = async (em: MockEntityManager) => {
@@ -87,7 +85,7 @@ const build = async (em: MockEntityManager) => {
 }
 describe("KnowledgeSourcesService addSource", () => {
     it("authorizes the manager and atomically writes the source with its indexing job", async () => {
-        const tx = insertedTx()
+        const tx = fakeTransaction(mockEntityManager(sourceData.sourceInsertRows()))
         const { service, members, queue } = await build(tx.em)
         await expect(service.addSource("u1", WS, inputOf({ tags: ["a"], topic: "Open" }))).resolves.toEqual({
             id: "s1",
@@ -116,7 +114,7 @@ describe("KnowledgeSourcesService addSource", () => {
     })
 
     it("keeps a document for one agent instance and takes the module of its type", async () => {
-        const tx = insertedTx()
+        const tx = fakeTransaction(mockEntityManager(sourceData.sourceInsertRows()))
         const { service, installations } = await build(tx.em)
         installations.find.mockResolvedValue(mock<InstallationRecord>(instance))
         await service.addSource("u1", WS, inputOf({ installationId: "i1", module: "sales" }))
@@ -165,7 +163,7 @@ describe("KnowledgeSourcesService addSource", () => {
 
 describe("KnowledgeSourcesService retrySource", () => {
     it("queues a failed source again with the retry instant", async () => {
-        const tx = fakeTransaction(mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] }))
+        const tx = fakeTransaction(mockEntityManager(sourceWriteRows(1)))
         const { service, queue } = await build(tx.em)
         await expect(service.retrySource("u1", WS, "s1")).resolves.toEqual({ id: "s1" })
         expect(tx.em.update).toHaveBeenCalledWith(
@@ -177,30 +175,33 @@ describe("KnowledgeSourcesService retrySource", () => {
     })
 
     it("leaves a source that is not failed or blocked as it is", async () => {
-        const tx = fakeTransaction(mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 0 }] }))
+        const tx = fakeTransaction(mockEntityManager(sourceWriteRows(0)))
         const { service, queue } = await build(tx.em)
         await expect(service.retrySource("u1", WS, "s1")).resolves.toEqual({ id: "s1" })
         expect(queue.enqueueIndex).not.toHaveBeenCalled()
     })
 
-    it.each<readonly [string, UpdateSourceInput, object]>([
-        [
-            "changes the metadata of the source",
-            { sourceId: "s1", title: "T", tags: ["a"], visibility: "public" },
-            { title: "T", tags: ["a"], visibility: "public" },
-        ],
-        ["keeps the tags when none are given", { sourceId: "s1" }, {}],
-    ])("%s", async (_name, input, changes) => {
-        const em = mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] })
-        const { service, parts } = await build(em)
-        await service.updateSource("u1", WS, input)
-        updated(em, changes)
-        const kept = Object.fromEntries(Object.entries(changes).filter(([key]) => key !== "title"))
-        expect(parts.follow).toHaveBeenCalledWith(WS, "s1", ...touched(kept))
-    })
+    it.each<readonly [string, UpdateSourceInput, object]>(sourceData.SOURCE_METADATA_CASES)(
+        "%s",
+        async (_name, input, changes) => {
+            const em = mockEntityManager(sourceWriteRows(1))
+            const { service, parts } = await build(em)
+            await service.updateSource("u1", WS, input)
+            expect(em.update).toHaveBeenCalledWith(
+                KnowledgeSourceEntity,
+                [
+                    { ...KEY, origin: IsNull() },
+                    { ...KEY, origin: Not("public_document") },
+                ],
+                ...touched(changes),
+            )
+            const kept = Object.fromEntries(Object.entries(changes).filter(([key]) => key !== "title"))
+            expect(parts.follow).toHaveBeenCalledWith(WS, "s1", ...touched(kept))
+        },
+    )
 
     it("refuses an unknown source", async () => {
-        const { service } = await build(mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 0 }] }))
+        const { service } = await build(mockEntityManager(sourceData.sourceUnchangedRows(null)))
         await expect(service.updateSource("u1", WS, { sourceId: "s1" })).rejects.toMatchObject(missing)
     })
 
@@ -255,6 +256,33 @@ describe("KnowledgeSourcesService requestReembed", () => {
     })
 })
 
+describe("KnowledgeSourcesService approved document ownership", () => {
+    it("refuses generic reindex text changes to an approved document source without enqueueing", async () => {
+        const tx = fakeTransaction(
+            mockEntityManager(sourceData.sourceUnchangedRows({ ...row, origin: "public_document" })),
+        )
+        const { service, queue } = await build(tx.em)
+
+        await expect(
+            service.reindexSource("u1", WS, { sourceId: "s1", content: "Unreviewed replacement" }),
+        ).rejects.toMatchObject({ code: codes.PublicByApproval })
+
+        expect(queue.enqueueIndex).not.toHaveBeenCalled()
+        expect(tx.rollbacks).toBe(1)
+    })
+
+    it("refuses generic metadata changes to an approved document source without propagating them", async () => {
+        const em = mockEntityManager(sourceData.sourceUnchangedRows({ ...row, origin: "public_document" }))
+        const { service, parts } = await build(em)
+
+        await expect(
+            service.updateSource("u1", WS, { sourceId: "s1", title: "Unreviewed title" }),
+        ).rejects.toMatchObject({ code: codes.PublicByApproval })
+
+        expect(parts.follow).not.toHaveBeenCalled()
+    })
+})
+
 describe("KnowledgeSourcesService readUpload", () => {
     it("answers the bytes and content type of the object", async () => {
         const { service, storage } = await build(mockEntityManager())
@@ -301,7 +329,7 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
     })
 
     it("stores the text, moves to indexing at the chunk stage, then announces the row", async () => {
-        const em = mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] })
+        const em = mockEntityManager(sourceWriteRows(1))
         const { service, progress } = await build(em)
         await service.startIndexing(WS, "s1", "text", "Title")
         const row = matching({ status: "indexing", contentHash: null, title: "Title", stage: "chunk" })
@@ -318,7 +346,7 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
     })
 
     it("records the stored passages, publishes knowledge_source_indexed and moves on in one transaction, then announces", async () => {
-        const tx = fakeTransaction(mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] }))
+        const tx = fakeTransaction(mockEntityManager(sourceWriteRows(1)))
         const { service, queue, bus, progress } = await build(tx.em)
         await service.finishIndexing(WS, "s1", StoredNote.KeywordOnly, 3)
         updated(tx.em, { error: StoredNote.KeywordOnly, chunkCount: 3, progress: 80 })
@@ -345,50 +373,37 @@ describe("KnowledgeSourcesService the stages a worker ends a source with", () =>
         await run(service)
         expect(progress.write).toHaveBeenCalledWith(WS, "s1", { ...change, stage: null, done: null, total: null })
     }
-    const ready = { status: "ready", progress: 100 }
-    const blocked = { status: "blocked_credits" }
-    const forIndex = StoredNote.NoCreditsForIndex
-    const forFacts = StoredNote.NoCreditsForFacts
-    const note = StoredNote.KeywordOnly
-    const contentHash = contentHashOf("text")
-    it.each<[string, (s: KnowledgeSourcesService) => Promise<void>, object]>([
-        ["fails", (s) => s.fail(WS, "s1", "CODE"), { status: "failed", error: "CODE" }],
-        ["is ready", (s) => s.ready(WS, "s1", null), ready],
-        ["is ready with the note of a failed reading", (s) => s.ready(WS, "s1", note), { ...ready, error: note }],
-        ["settles with the hash of the text", (s) => s.settle(WS, "s1", "text"), { ...ready, contentHash }],
-        ["keeps an unchanged source and its note", (s) => s.keepIndexed(WS, "s1", note), { ...ready, error: note }],
-        [
-            "blocks indexing",
-            (s) => s.blockIndexing(WS, "s1", forIndex, 60),
-            { ...blocked, error: forIndex, chunkCount: 60, progress: 80 },
-        ],
-        ["blocks the facts", (s) => s.blockFacts(WS, "s1", forFacts), { ...blocked, error: forFacts }],
-    ])("%s", (_name, run, change) => ends(run, change))
+    it.each<[string, (s: KnowledgeSourcesService) => Promise<void>, object]>(sourceData.SOURCE_STAGE_CASES)(
+        "%s",
+        (_name, run, change) => ends(run, change),
+    )
 })
 
 describe("KnowledgeSourcesService one job per source", () => {
-    it.each<readonly [string, ReindexInput, object]>([
-        ["replaces its text when new text is given", { sourceId: "s1", content: " new " }, { content: "new" }],
-        ["keeps the text when none is given", { sourceId: "s1" }, {}],
-    ])("queues the source again and %s", async (_name, input, changes) => {
-        const tx = fakeTransaction(mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 1 }] }))
-        const { service, queue } = await build(tx.em)
-        await expect(service.reindexSource("u1", WS, input)).resolves.toEqual({ id: "s1" })
-        expect(tx.em.update).toHaveBeenCalledWith(
-            KnowledgeSourceEntity,
-            { ...KEY, status: In(["pending", "ready", "failed", "blocked_credits"]) },
-            ...touched({ status: "queued", progress: 0, error: null, ...NO_STAGE, ...changes }),
-        )
-        expect(queue.enqueueIndex).toHaveBeenCalledWith(expect.anything(), expect.anything(), Date.parse(AT))
-    })
+    it.each<readonly [string, ReindexInput, object]>(sourceData.SOURCE_REINDEX_CASES)(
+        "queues the source again and %s",
+        async (_name, input, changes) => {
+            const tx = fakeTransaction(mockEntityManager(sourceWriteRows(1)))
+            const { service, queue } = await build(tx.em)
+            await expect(service.reindexSource("u1", WS, input)).resolves.toEqual({ id: "s1" })
+            expect(tx.em.update).toHaveBeenCalledWith(
+                KnowledgeSourceEntity,
+                [
+                    { ...KEY, status: In(["pending", "ready", "failed", "blocked_credits"]), origin: IsNull() },
+                    {
+                        ...KEY,
+                        status: In(["pending", "ready", "failed", "blocked_credits"]),
+                        origin: Not("public_document"),
+                    },
+                ],
+                ...touched({ status: "queued", progress: 0, error: null, ...NO_STAGE, ...changes }),
+            )
+            expect(queue.enqueueIndex).toHaveBeenCalledWith(expect.anything(), expect.anything(), Date.parse(AT))
+        },
+    )
 
     it("refuses an unknown source and an empty text", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                update: [KnowledgeSourceEntity, { affected: 0 }],
-                findOne: [KnowledgeSourceEntity, null],
-            }),
-        )
+        const tx = fakeTransaction(mockEntityManager(sourceData.sourceUnchangedRows(null)))
         const { service } = await build(tx.em)
         await expect(service.reindexSource("u1", WS, { sourceId: "s1" })).rejects.toMatchObject(missing)
         await expect(service.reindexSource("u1", WS, { sourceId: "s1", content: " " })).rejects.toMatchObject({
@@ -397,33 +412,25 @@ describe("KnowledgeSourcesService one job per source", () => {
     })
 
     it("leaves a source a worker is on as it is, so two jobs never embed the same passages", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                update: [KnowledgeSourceEntity, { affected: 0 }],
-                findOne: [KnowledgeSourceEntity, row],
-            }),
-        )
+        const tx = fakeTransaction(mockEntityManager(sourceData.sourceUnchangedRows(row)))
         const { service, queue, progress } = await build(tx.em)
         await expect(service.reindexSource("u1", WS, { sourceId: "s1" })).resolves.toEqual({ id: "s1" })
         expect(queue.enqueueIndex).not.toHaveBeenCalled()
         expect(progress.announce).not.toHaveBeenCalled()
     })
 
-    it.each<readonly [string, typeof row | null, string, boolean]>([
-        ["answers the source an uploaded object already became instead of adding a second one", row, "s1", false],
-        ["adds a new source for an uploaded object that no source holds yet", null, "s2", true],
-    ])("%s", async (_name, found, id, adds) => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                findOne: [KnowledgeSourceEntity, found],
-                insert: [KnowledgeSourceEntity, { identifiers: [{ id }] }],
-            }),
-        )
-        const { service, queue } = await build(tx.em)
-        const input = inputOf({ kind: "file", storagePath: `${WS}/${UPLOAD_ID}/a.pdf`, content: undefined })
-        await expect(service.addSource("u1", WS, input)).resolves.toEqual({ id })
-        expect([tx.em.insert, queue.enqueueIndex].map((spy) => spy.mock.calls.length)).toEqual(adds ? [1, 1] : [0, 0])
-    })
+    it.each<readonly [string, typeof row | null, string, boolean]>(sourceData.SOURCE_ORIGIN_CASES)(
+        "%s",
+        async (_name, found, id, adds) => {
+            const tx = fakeTransaction(mockEntityManager(sourceData.sourceOriginRows(found, id)))
+            const { service, queue } = await build(tx.em)
+            const input = inputOf({ kind: "file", storagePath: `${WS}/${UPLOAD_ID}/a.pdf`, content: undefined })
+            await expect(service.addSource("u1", WS, input)).resolves.toEqual({ id })
+            expect([tx.em.insert, queue.enqueueIndex].map((spy) => spy.mock.calls.length)).toEqual(
+                adds ? [1, 1] : [0, 0],
+            )
+        },
+    )
 })
 
 describe("KnowledgeSourcesService reading", () => {

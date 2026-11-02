@@ -5,6 +5,7 @@ type TelegramLoginField = "phone" | "code" | "password"
 
 /** What the login step of the personal Telegram wizard draws and reports. */
 type TelegramUserLoginProps = {
+    readonly isLoading?: boolean
     readonly stage: TelegramLoginField
     /** Where Telegram sent the code; null before it was sent. */
     readonly sentLine: string | null
@@ -23,6 +24,7 @@ export const TelegramUserLogin = (props: TelegramUserLoginProps) => {
         <Grid kind="form">
             {props.stage === "phone" ? (
                 <Input
+                    isLoading={props.isLoading === true}
                     id="tgu-phone"
                     name="phone"
                     kind="tel"
@@ -36,11 +38,12 @@ export const TelegramUserLogin = (props: TelegramUserLoginProps) => {
             {props.stage === "code" ? (
                 <>
                     {props.sentLine === null ? null : (
-                        <Text size="sm" live="polite">
+                        <Text isLoading={props.isLoading === true} size="sm" live="polite">
                             {props.sentLine}
                         </Text>
                     )}
                     <Input
+                        isLoading={props.isLoading === true}
                         id="tgu-code"
                         name="code"
                         kind="code"
@@ -54,10 +57,11 @@ export const TelegramUserLogin = (props: TelegramUserLoginProps) => {
             ) : null}
             {props.stage === "password" ? (
                 <>
-                    <Text size="sm" weight="semibold">
+                    <Text isLoading={props.isLoading === true} size="sm" isStrong>
                         {text.passwordTitle}
                     </Text>
                     <Input
+                        isLoading={props.isLoading === true}
                         id="tgu-password"
                         name="password"
                         kind="password"

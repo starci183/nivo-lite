@@ -1,8 +1,9 @@
 import type { ReactNode } from "react"
-import { Badge, Button, ChatBubble, Cluster, IconButton, Text, Tooltip } from "@starci/grammar/common"
+import { Badge, Button, Cluster, IconButton, Text, Tooltip, MessageBubble, MessageStatus } from "@starci/grammar/common"
+import type { MessageStatusProps } from "@starci/grammar/common"
 import { ChatMessageFiles } from "@/components/leaves/ChatMessageFiles"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { OfficeBodyPart, OfficeMessageView, OfficeText } from "@/modules/types"
+import type { OfficeBodyPart, OfficeMessageView, OfficeThreadProps } from "@/modules/types"
 import { AVATAR_SLOT_CLASS_NAME, NOTICE_CLASS_NAME } from "./classNames"
 
 /** What one chat line draws. */
@@ -10,9 +11,9 @@ type OfficeMessageRowProps = {
     readonly message: OfficeMessageView
     /** The avatar, drawn once per group by the thread. */
     readonly avatar: ReactNode
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["copy"]["message"]
     /** The status line under this bubble: the view carries one only for my last line, and only while nothing waits to send. */
-    readonly status: ReactNode
+    readonly receipt?: Extract<MessageStatusProps, { readonly kind: "receipt" }>
     /** True while this line's text shows as just copied. */
     readonly isCopied: boolean
     readonly onReply: (handle: string) => void
@@ -39,42 +40,51 @@ const Body = (props: BodyProps) => (
 /** What the hover toolbar of a bubble holds: copy, reply and the lead link. */
 type MessageActionsProps = {
     readonly message: OfficeMessageView
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["copy"]["message"]
     readonly isCopied: boolean
     readonly onCopy: () => void
     readonly onReply: (handle: string) => void
 }
 
 /** The hover toolbar of a bubble: icon actions with tooltips, and the lead link when the message has one. */
-const MessageActions = ({ message, text, isCopied, onCopy, onReply }: MessageActionsProps) => (
+const MessageActions = ({ message, copy, isCopied, onCopy, onReply }: MessageActionsProps) => (
     <>
-        <Tooltip content={isCopied ? text("copied") : text("copyText")}>
-            <IconButton
-                intent="neutral"
-                source={nivoIconSource(isCopied ? "copied" : "copy", "leading")}
-                label={isCopied ? text("copied") : text("copyText")}
-                onPress={onCopy}
-            />
-        </Tooltip>
-        {message.replyHandle === null ? null : (
-            <Tooltip content={text("reply")}>
+        <Tooltip
+            content={isCopied ? copy.copied : copy.copyText}
+            trigger={
                 <IconButton
                     intent="neutral"
-                    source={nivoIconSource("reply", "leading")}
-                    label={text("reply")}
-                    onPress={() => onReply(message.replyHandle ?? "")}
+                    source={nivoIconSource(isCopied ? "copied" : "copy", "leading")}
+                    label={isCopied ? copy.copied : copy.copyText}
+                    onPress={onCopy}
                 />
-            </Tooltip>
+            }
+        />
+        {message.replyHandle === null ? null : (
+            <Tooltip
+                content={copy.reply}
+                trigger={
+                    <IconButton
+                        intent="neutral"
+                        source={nivoIconSource("reply", "leading")}
+                        label={copy.reply}
+                        onPress={() => onReply(message.replyHandle ?? "")}
+                    />
+                }
+            />
         )}
         {message.leadHref === null ? null : (
-            <Tooltip content={message.leadLabel}>
-                <IconButton
-                    intent="neutral"
-                    source={nivoIconSource("openLead", "leading")}
-                    label={message.leadLabel}
-                    href={message.leadHref}
-                />
-            </Tooltip>
+            <Tooltip
+                content={message.leadLabel}
+                trigger={
+                    <IconButton
+                        intent="neutral"
+                        source={nivoIconSource("openLead", "leading")}
+                        label={message.leadLabel}
+                        href={message.leadHref}
+                    />
+                }
+            />
         )}
     </>
 )
@@ -93,7 +103,7 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
                     </Text>
                     {message.workHref === null ? null : (
                         <Button intent="neutral" size="sm" href={message.workHref}>
-                            {props.text("cmdOpenWork")}
+                            {props.copy.cmdOpenWork}
                         </Button>
                     )}
                     {message.leadHref === null ? null : (
@@ -106,41 +116,45 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
         )
     }
 
+    const receipt = props.receipt === undefined ? null : <MessageStatus {...props.receipt} />
     const bubble = (
-        <ChatBubble
+        <MessageBubble
             side={message.side}
             author={message.author ?? undefined}
             avatar={
                 message.side === "outgoing" ? undefined : <div className={AVATAR_SLOT_CLASS_NAME}>{props.avatar}</div>
             }
-            status={message.isAi ? <Badge tone="neutral">{props.text("aiBadge")}</Badge> : undefined}
+            status={message.isAi ? <Badge tone="neutral">{props.copy.aiBadge}</Badge> : undefined}
             footer={
                 message.files.length === 0 ? (
-                    props.status
+                    receipt
                 ) : (
                     <>
                         <ChatMessageFiles files={message.files} />
-                        {props.status}
+                        {receipt}
                     </>
                 )
             }
             actions={
                 <MessageActions
                     message={message}
-                    text={props.text}
+                    copy={props.copy}
                     isCopied={props.isCopied}
                     onCopy={onCopy}
                     onReply={props.onReply}
                 />
             }
-        >
-            <Body parts={message.parts} />
-            {message.showTime ? (
-                <Text as="p" size="xs" tone="muted">
-                    {message.time}
-                </Text>
-            ) : null}
-        </ChatBubble>
+            body={
+                <>
+                    <Body parts={message.parts} />
+                    {message.showTime ? (
+                        <Text as="p" size="xs" tone="muted">
+                            {message.time}
+                        </Text>
+                    ) : null}
+                </>
+            }
+        />
     )
     return bubble
 }

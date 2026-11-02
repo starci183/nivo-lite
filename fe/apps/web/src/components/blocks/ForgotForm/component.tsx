@@ -1,11 +1,9 @@
-import { TextAction } from "@starci/grammar/common"
-import { AuthForm } from "../../composites/AuthForm"
-import { AuthPanel } from "../../composites/AuthPanel"
+import { Link, Stack } from "@starci/grammar/common"
+import { AuthForm } from "@/components/frames/AuthForm"
+import { AuthPanel } from "../../frames/AuthPanel"
 import { CheckEmail } from "../../composites/CheckEmail"
 import type { CheckEmailProps } from "../../composites/CheckEmail"
 import { EmailField } from "../../composites/EmailField"
-import { FORGOT_CENTER_CLASS_NAME } from "./classNames"
-
 /** The two drawn shapes of the forgot-password card: the form, or the message once the request went out. */
 export type ForgotFormShape = "form" | "sent"
 
@@ -52,9 +50,9 @@ export const ForgotFormBase = (props: ForgotFormBaseProps) => {
                 error={view.submitError}
                 submitLabel={view.submitLabel}
                 footer={
-                    <div className={FORGOT_CENTER_CLASS_NAME}>
-                        <TextAction href={view.loginHref}>{view.backLabel}</TextAction>
-                    </div>
+                    <Stack gap="inline" align="center">
+                        <Link href={view.loginHref}>{view.backLabel}</Link>
+                    </Stack>
                 }
             >
                 <EmailField

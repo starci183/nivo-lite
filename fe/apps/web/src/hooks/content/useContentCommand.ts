@@ -1,6 +1,8 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useState } from "react"
 import { errorKey } from "@/modules/content"
 import { useContentRefresh } from "./useContentRefresh"
@@ -34,39 +36,56 @@ export interface ContentCommand {
 }
 
 /** Tracks a content command and revalidates browser data when it completes. */
-export const useContentCommand = (): ContentCommand => {
+export const useContentCommand = (isActive = true, ownerScope?: string): ContentCommand => {
     const t = useTranslations("content")
     const { refresh } = useContentRefresh()
+    const { activeWorkspaceId } = useActiveWorkspace()
+    const scope = ownerScope ?? JSON.stringify([activeWorkspaceId])
+    const lifetime = useFeatureLifetime(isActive, scope)
     const [isPending, setPending] = useState(false)
     const [busy, setBusy] = useState<string | null>(null)
     const [note, setNote] = useState<ContentNote | null>(null)
+    useFeatureReset({
+        isActive,
+        isReady: true,
+        scope,
+        onReset: () => {
+            setPending(false)
+            setBusy(null)
+            setNote(null)
+        },
+    })
     const explain = (reply: ActionReply): string =>
         t("actionFailed", { error: t(errorKey({ kind: reply.kind, code: reply.code ?? "" })) })
-    const run: ContentCommand["run"] = (label, action, onOk) => {
+    const run: ContentCommand["run"] = async (label, action, onOk) => {
+        const isCurrent = lifetime.capture()
+        if (!isActive || !isCurrent()) return
         setBusy(label)
         setPending(true)
         setNote(null)
-        void (async () => {
-            try {
-                const done = await action()
-                if (done.kind === "ok") {
-                    onOk?.(done)
-                    await refresh()
-                } else if (done.kind !== "handled") {
-                    setNote({ tone: "error", text: explain(done) })
-                }
-            } catch {
-                setNote({ tone: "error", text: explain({ kind: "unavailable", code: "transport" }) })
+        try {
+            const done = await action()
+            if (done.kind === "ok") {
+                if (isCurrent()) onOk?.(done)
+                await refresh()
+            } else if (done.kind !== "handled" && isCurrent()) {
+                setNote({ tone: "error", text: explain(done) })
             }
+        } catch {
+            if (isCurrent()) setNote({ tone: "error", text: explain({ kind: "unavailable", code: "transport" }) })
+        }
+        if (isCurrent()) {
             setBusy(null)
             setPending(false)
-        })()
+        }
     }
     return {
         isPending,
         busy,
         note,
-        say: (tone, text) => setNote({ tone, text }),
+        say: (tone, text) => {
+            if (lifetime.capture()()) setNote({ tone, text })
+        },
         dismiss: () => setNote(null),
         run,
     }

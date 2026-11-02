@@ -1,4 +1,4 @@
-import { Alert, EmptyNotice, SurfaceListCard, TextAction } from "@starci/grammar/common"
+import { Alert, EmptyNotice, Section, Link } from "@starci/grammar/common"
 import type { ComponentType, ReactNode } from "react"
 import { SlotView } from "@/components/composites/SlotView"
 import type { AgentOption, Connection, DataSlot, SlotLabels } from "@/modules/types"
@@ -60,7 +60,7 @@ export interface ConnectionsOverviewProps {
         readonly agentNames: ReadonlyArray<string>
         readonly canManage: boolean
     }>
-    readonly renderLibrary: ComponentType<{ readonly items: ReadonlyArray<Connection>; readonly isSkeleton: boolean }>
+    readonly renderLibrary: ComponentType<{ readonly items: ReadonlyArray<Connection>; readonly isLoading: boolean }>
     readonly renderRow: ComponentType<{
         readonly connection: Connection
         readonly agentNames: ReadonlyArray<string>
@@ -77,30 +77,33 @@ interface ConnectionsListsProps {
     readonly words: PageWords
     readonly renderRow: ConnectionsOverviewProps["renderRow"]
     /** The list is drawn as placeholder rows while the workspace reads are on their way. */
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** One joined list of every live connection, sorted by attention, using the row block supplied by the feature host (COLLECTION-1). */
 export const ConnectionsLists = (props: ConnectionsListsProps) => (
-    <SurfaceListCard
-        isLoading={props.isSkeleton}
-        loadingRows={2}
-        label={props.words.inUseTitle}
+    <Section
+        kind="list"
+        isLoading={props.isLoading}
+        title={props.words.inUseTitle}
         headingLevel={2}
-        fact={props.words.inUseOrder}
-    >
-        {props.props.rows.map((row) => (
-            <props.renderRow
-                key={row.connection.id}
-                connection={row.connection}
-                agentNames={row.agentNames}
-                localOnly={props.props.localOnly}
-                ownerEmail={props.props.ownerEmail}
-                agents={props.props.agents}
-                canManage={props.props.canManage}
-            />
-        ))}
-    </SurfaceListCard>
+        meta={props.words.inUseOrder}
+        empty={<EmptyNotice message={props.words.emptyTitle} description={props.words.emptyHint} />}
+        items={props.props.rows.map((row) => ({
+            id: row.connection.id,
+            title: row.connection.name,
+            detail: (
+                <props.renderRow
+                    connection={row.connection}
+                    agentNames={row.agentNames}
+                    localOnly={props.props.localOnly}
+                    ownerEmail={props.props.ownerEmail}
+                    agents={props.props.agents}
+                    canManage={props.props.canManage}
+                />
+            ),
+        }))}
+    />
 )
 
 /** The board drawn while the workspace reads are on their way: the same list with no connection in it yet. */
@@ -120,7 +123,7 @@ export const BOARD_PLACEHOLDER: ConnectionsBoard = {
 /** The overview, the board it draws and whether that board is a placeholder. */
 interface BoardBodyProps extends ConnectionsOverviewProps {
     readonly board: ConnectionsBoard
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
 }
 
 /** The first card of the board that needs the owner, then the lists of the chosen view. */
@@ -137,9 +140,7 @@ export const BoardBody = (props: BoardBodyProps) => {
                 />
             ))}
             {board.canManage ? null : <Alert tone="informative" title={props.props.words.ownerOnly} />}
-            {board.view === "library" ? (
-                <props.renderLibrary items={board.items} isSkeleton={props.isSkeleton} />
-            ) : null}
+            {board.view === "library" ? <props.renderLibrary items={board.items} isLoading={props.isLoading} /> : null}
             {board.view === "connected" && board.liveCount === 0 ? (
                 <EmptyNotice message={props.props.words.emptyTitle} description={props.props.words.emptyHint} />
             ) : null}
@@ -148,7 +149,7 @@ export const BoardBody = (props: BoardBodyProps) => {
                     props={board}
                     words={props.props.words}
                     renderRow={props.renderRow}
-                    isSkeleton={props.isSkeleton}
+                    isLoading={props.isLoading}
                 />
             ) : null}
         </>
@@ -169,19 +170,14 @@ export const ConnectionsBoardRegion = (props: ConnectionsBoardRegionProps) => {
             placeholder={{ ...BOARD_PLACEHOLDER, view: overview.props.placeholderView }}
             labels={overview.props.slotLabels}
             forbidden="notice"
-            forbiddenAction={
-                <TextAction href={overview.props.words.backHref}>{overview.props.words.backLabel}</TextAction>
-            }
+            forbiddenAction={<Link href={overview.props.words.backHref}>{overview.props.words.backLabel}</Link>}
             onRetry={overview.on.retry}
-        >
-            {(board, isSkeleton) => (
+            render={(board, isLoading) => (
                 <>
-                    <BoardBody {...overview} board={board} isSkeleton={isSkeleton} />
-                    <TextAction href={overview.props.words.automationsHref}>
-                        {overview.props.words.automationsLink}
-                    </TextAction>
+                    <BoardBody {...overview} board={board} isLoading={isLoading} />
+                    <Link href={overview.props.words.automationsHref}>{overview.props.words.automationsLink}</Link>
                 </>
             )}
-        </SlotView>
+        />
     )
 }

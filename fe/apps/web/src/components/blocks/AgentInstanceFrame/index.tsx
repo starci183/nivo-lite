@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import {
     useConnectionNeedsCopy,
     useInstanceHeader,
@@ -35,7 +36,7 @@ const PLACEHOLDER: InstanceHeaderView = {
 interface AgentInstanceFrameProps {
     readonly module: ModuleKey
     readonly installationId: string
-    readonly children?: ReactNode
+    readonly children: ReactNode
 }
 
 /** The tabs whose body is panes, attached flush under the tab line; the other tabs are card bodies. */
@@ -47,13 +48,16 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
     const ts = useTranslations("shell")
     const { tabs, selected, hrefOf } = useInstanceTabs(props.module, props.installationId)
     const header = useInstanceHeader(props.module, props.installationId)
+    const labels = useSlotLabels()
+    const resolved = "items" in header.slot ? header.slot.items : undefined
+    const isLoading = "isLoading" in header.slot
     const needs = useConnectionNeedsCopy()
     const rail = useInstanceRail(props.installationId)
     const member = useMember()
     const why = useWorkbenchWhyKey()
     return (
         <AgentInstanceFrameBase
-            shape={{ body: props.children }}
+            children={props.children}
             props={{
                 hasPanes: PANES_TABS.has(selected) || (selected === "workbench" && why.workItemId !== null),
                 ariaLabel: header.name === "" ? header.typeName : header.name,
@@ -61,8 +65,8 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                 crumbs: [
                     { id: "home", label: ts("crumbHome"), href: APP_ROUTES.dashboard },
                     { id: "modules", label: t("catalogTitle"), href: AGENTS_ROUTE },
-                    header.isLoading
-                        ? { id: "agent", label: "", isSkeleton: true }
+                    isLoading
+                        ? { id: "agent", label: "", isLoading: true }
                         : { id: "agent", label: header.name === "" ? header.typeName : header.name },
                 ],
                 tabsLabel: t("tabsLabel"),
@@ -75,7 +79,9 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                 earlyLabel: t("earlyBadge"),
                 chatLabel: t("privateChat"),
                 profileLabel: t("profileShort"),
-                isSkeleton: header.isLoading,
+                isLoading,
+                read: mapSlot(header.slot, () => true),
+                labels: labels(t("catalogTitle")),
                 switcher: {
                     label: t("switchAgent"),
                     currentId: props.installationId,
@@ -89,29 +95,31 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                         href: item.href,
                     })),
                 },
-                view: header.isLoading
-                    ? PLACEHOLDER
-                    : {
-                          name: header.name,
-                          seed: header.seed,
-                          avatarUrl: header.avatarUrl,
-                          isEarly: header.isEarly,
-                          statusLabel: t(`lifecycle_${header.lifecycle}`),
-                          statusTone: header.statusTone,
-                          subtitle: header.subtitle,
-                          needs: {
-                              lines: needs.linesOf(header.connectionNeeds),
-                              linkLabel: needs.linkLabel,
-                              href: needs.href,
+                view:
+                    resolved === undefined
+                        ? { ...PLACEHOLDER, name: header.typeName }
+                        : {
+                              name: resolved.name,
+                              seed: resolved.seed,
+                              avatarUrl: resolved.avatarUrl,
+                              isEarly: resolved.isEarly,
+                              statusLabel: t(`lifecycle_${resolved.lifecycle}`),
+                              statusTone: resolved.statusTone,
+                              subtitle: resolved.subtitle,
+                              needs: {
+                                  lines: needs.linesOf(resolved.connectionNeeds),
+                                  linkLabel: needs.linkLabel,
+                                  href: needs.href,
+                              },
+                              setup:
+                                  isSetupPending(resolved.lifecycle) && selected !== "setup" && tabs.includes("setup")
+                                      ? { label: t(setupLabelKey(resolved.lifecycle)), href: hrefOf("setup") }
+                                      : null,
+                              chatHref: resolved.chatHref,
+                              profileHref: resolved.profileHref,
                           },
-                          setup:
-                              isSetupPending(header.lifecycle) && selected !== "setup" && tabs.includes("setup")
-                                  ? { label: t(setupLabelKey(header.lifecycle)), href: hrefOf("setup") }
-                                  : null,
-                          chatHref: header.chatHref,
-                          profileHref: header.profileHref,
-                      },
             }}
+            on={{ retry: header.retry }}
         />
     )
 }

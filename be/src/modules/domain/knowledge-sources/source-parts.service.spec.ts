@@ -1,7 +1,8 @@
 import { Test } from "@nestjs/testing"
-import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { row } from "@tests/fixtures/builders/knowledge-sources.builder"
+import { IsNull, Not } from "typeorm"
+import { SOURCE_PART_ROWS } from "@tests/fixtures/builders/knowledge-sources.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
@@ -16,7 +17,6 @@ const WS = "11111111-1111-4111-8111-111111111111"
 const LATER_PARTS = { workspaceId: WS, origin: "part:s1" }
 /** What a write of the table answers. */
 const WRITTEN = {}
-const firstOf = builder<KnowledgeSourceEntity>({ ...row, topic: "Legal", tags: ["a"], visibility: "public" })
 
 const build = async (em: MockEntityManager) => {
     const queue = mock<KnowledgeQueue>()
@@ -33,10 +33,27 @@ const build = async (em: MockEntityManager) => {
 }
 
 describe("SourcePartsService splitLong", () => {
+    it("does not enqueue or announce a part whose insert identifier is not a string", async () => {
+        const tx = fakeTransaction(
+            mockEntityManager({
+                findOne: [KnowledgeSourceEntity, SOURCE_PART_ROWS.first],
+                delete: [KnowledgeSourceEntity, {}],
+                insert: [KnowledgeSourceEntity, { identifiers: [{ id: 42 }] }],
+            }),
+        )
+        const { service, queue, progress } = await build(tx.em)
+
+        await expect(service.splitLong(WS, "s1", "Plan", ["two"])).resolves.toBe("Plan (1/2)")
+
+        expect(queue.enqueueIndex).not.toHaveBeenCalled()
+        expect(progress.announce).not.toHaveBeenCalled()
+        expect(tx.commits).toBe(1)
+    })
+
     it("gives each later part a text source with the readers of the first, queues it and answers the first title", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
-                findOne: [KnowledgeSourceEntity, firstOf()],
+                findOne: [KnowledgeSourceEntity, SOURCE_PART_ROWS.first],
                 delete: [KnowledgeSourceEntity, {}],
                 insert: [KnowledgeSourceEntity, { identifiers: [{ id: "p2" }, { id: "p3" }] }],
             }),
@@ -72,7 +89,7 @@ describe("SourcePartsService removeWhole", () => {
     it("deletes the source and the later parts of a long document in one transaction and answers their titles", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
-                find: [KnowledgeSourceEntity, [firstOf({ id: "p2", title: "Plan (2/2)" })]],
+                find: [KnowledgeSourceEntity, [SOURCE_PART_ROWS.later]],
                 delete: [KnowledgeSourceEntity, WRITTEN],
             }),
         )
@@ -84,13 +101,22 @@ describe("SourcePartsService removeWhole", () => {
             parts: [{ id: "p2", title: "Plan (2/2)" }],
         })
 
-        expect(removal?.callsOf("where")).toEqual([[{ id: "s1", workspaceId: WS }]])
+        expect(removal?.callsOf("where")).toEqual([
+            [
+                [
+                    { id: "s1", workspaceId: WS, origin: IsNull() },
+                    { id: "s1", workspaceId: WS, origin: Not("public_document") },
+                ],
+            ],
+        ])
         expect(tx.em.delete).toHaveBeenCalledWith(KnowledgeSourceEntity, LATER_PARTS)
         expect(tx.commits).toBe(1)
     })
 
     it("deletes nothing, parts included, for a source that is gone", async () => {
-        const tx = fakeTransaction(mockEntityManager({ find: [KnowledgeSourceEntity, []] }))
+        const tx = fakeTransaction(
+            mockEntityManager({ find: [KnowledgeSourceEntity, []], findOne: [KnowledgeSourceEntity, null] }),
+        )
         queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
         const { service } = await build(tx.em)
 
@@ -113,5 +139,25 @@ describe("SourcePartsService follow", () => {
         await service.follow(WS, "s1", changes)
 
         expect(em.update).toHaveBeenCalledWith(KnowledgeSourceEntity, LATER_PARTS, changes)
+    })
+})
+
+describe("SourcePartsService published ownership", () => {
+    it("keeps an approved public document source and its parts under the document owner's archive operation", async () => {
+        const tx = fakeTransaction(
+            mockEntityManager({
+                find: [KnowledgeSourceEntity, []],
+                findOne: [KnowledgeSourceEntity, SOURCE_PART_ROWS.approved],
+            }),
+        )
+        queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
+        const { service } = await build(tx.em)
+
+        await expect(service.removeWhole(WS, "s1")).rejects.toMatchObject({
+            code: KnowledgeSourcesErrorCode.PublicByApproval,
+        })
+
+        expect(tx.em.delete).not.toHaveBeenCalled()
+        expect(tx.rollbacks).toBe(1)
     })
 })

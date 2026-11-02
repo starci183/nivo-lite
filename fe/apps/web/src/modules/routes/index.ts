@@ -49,6 +49,8 @@ export {
 } from "./console-routes"
 export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automations-routes"
 export {
+    BRAIN_PARTS,
+    BRAIN_PART_TABS,
     BRAIN_TABS,
     DEFAULT_BRAIN_TAB,
     KNOWLEDGE_ROUTES,
@@ -58,4 +60,4 @@ export {
     brainUploadHref,
     knowledgeSourceHref,
 } from "./knowledge-routes"
-export type { BrainTab } from "./knowledge-routes"
+export type { BrainPart, BrainTab } from "./knowledge-routes"

@@ -5,14 +5,14 @@ import {
     Grid,
     Image,
     MediaFrame,
-    SectionHeader,
     Select,
     Stack,
     Text,
     TextAction,
     Video,
+    Section,
 } from "@starci/grammar/common"
-import type { ContentT, MediaTile } from "@/modules/types"
+import type { MediaTile, ContentViews } from "@/modules/types"
 
 /** Props of {@link ContentEditorMedia}. */
 interface ContentEditorMediaProps {
@@ -25,7 +25,7 @@ interface ContentEditorMediaProps {
     readonly isPending: boolean
     readonly isUploading: boolean
     readonly isLibraryOpen: boolean
-    readonly t: ContentT
+    readonly copy: ContentViews["workbenchCopy"]
     readonly onRemove: (key: string) => void
     readonly onToggleLibrary: () => void
     readonly onAttach: (key: string) => void
@@ -42,11 +42,7 @@ const Thumb = (props: ThumbProps) => {
         return <Image src={props.tile.url} alt={props.tile.name} aspect="landscape" loading="lazy" />
     }
     if (props.tile.url !== null && props.tile.kind === "video") {
-        return (
-            <MediaFrame aspect="landscape">
-                <Video src={props.tile.url} title={props.tile.name} />
-            </MediaFrame>
-        )
+        return <MediaFrame aspect="landscape" media={<Video src={props.tile.url} title={props.tile.name} />} />
     }
     return (
         <Text size="xs" tone="muted">
@@ -57,11 +53,10 @@ const Thumb = (props: ThumbProps) => {
 
 /** The pictures and videos of a post: the attached ones, the library to pick from, an upload and the rendered videos. */
 export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
-    <>
-        <SectionHeader level={3} title={props.t("mediaTitle")} />
+    <Section title={props.copy.mediaTitle} headingLevel={3}>
         {props.media.length === 0 ? (
             <Text size="sm" tone="muted">
-                {props.t("mediaEmpty")}
+                {props.copy.mediaEmpty}
             </Text>
         ) : (
             <Grid kind="cards" columns={3}>
@@ -73,7 +68,7 @@ export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
                         </Text>
                         {tile.isSuggested ? (
                             <Text size="xs" tone="muted">
-                                {props.t("mediaSuggested")}
+                                {props.copy.mediaSuggested}
                             </Text>
                         ) : null}
                         {props.isEditable ? (
@@ -84,7 +79,7 @@ export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
                                 isDisabled={props.isPending}
                                 onPress={() => props.onRemove(tile.key)}
                             >
-                                {props.t("mediaRemove")}
+                                {props.copy.mediaRemove}
                             </Button>
                         ) : null}
                     </Stack>
@@ -94,7 +89,7 @@ export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
         {props.isEditable ? renderContentEditorMediaTools(props) : null}
         {props.isEditable && props.isLibraryOpen && props.library.length === 0 ? (
             <Text size="sm" tone="muted">
-                {props.t("mediaLibraryEmpty")}
+                {props.copy.mediaLibraryEmpty}
             </Text>
         ) : null}
         {props.isEditable && props.isLibraryOpen && props.library.length > 0 ? (
@@ -109,36 +104,36 @@ export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
                 ))}
             </Grid>
         ) : null}
-    </>
+    </Section>
 )
 
 /** Renders the ContentEditorMedia tools section. */
 const renderContentEditorMediaTools = (
     props: Pick<
         ContentEditorMediaProps,
-        "isPending" | "onToggleLibrary" | "t" | "isUploading" | "onUpload" | "videos" | "onAttachVideo"
+        "isPending" | "onToggleLibrary" | "copy" | "isUploading" | "onUpload" | "videos" | "onAttachVideo"
     >,
 ) => (
     <Cluster gap="inline">
         <Button intent="neutral" size="sm" isDisabled={props.isPending} onPress={props.onToggleLibrary}>
-            {props.t("mediaAttachLibrary")}
+            {props.copy.mediaAttachLibrary}
         </Button>
         <FileDropzone
-            label={props.t("mediaUpload")}
+            label={props.copy.mediaUpload}
             isLabelHidden
             accept="image/jpeg,image/png,image/webp,video/mp4"
             hideFileList
             isDisabled={props.isPending}
-            prompt={props.isUploading ? props.t("mediaUploading") : props.t("mediaUpload")}
+            prompt={props.isUploading ? props.copy.mediaUploading : props.copy.mediaUpload}
             onFilesChange={(files) => {
                 if (files[0] !== undefined) props.onUpload(files[0])
             }}
         />
         {props.videos.length > 0 ? (
             <Select
-                label={props.t("mediaVideo")}
+                label={props.copy.mediaVideo}
                 isLabelHidden
-                placeholder={props.t("mediaVideo")}
+                placeholder={props.copy.mediaVideo}
                 options={props.videos}
                 value={null}
                 isDisabled={props.isPending}

@@ -16,14 +16,16 @@ export const todoFiltersOf = (
     findings: ReadonlyArray<FindingView>,
     factCards: number,
     questions: number,
+    proposals: number,
 ): ReadonlyArray<TodoFilterOption> => {
     const kinds = FINDING_KINDS.map((kind): TodoFilterOption => ({
         id: kind,
         count: findings.filter((one) => one.kind === kind).length,
     }))
-    const all: TodoFilterOption = { id: "all", count: findings.length + factCards + questions }
+    const all: TodoFilterOption = { id: "all", count: findings.length + factCards + questions + proposals }
     const facts: ReadonlyArray<TodoFilterOption> = factCards > 0 ? [{ id: "facts", count: factCards }] : []
-    const asks: ReadonlyArray<TodoFilterOption> = questions > 0 ? [{ id: "ask", count: questions }] : []
+    const asks: ReadonlyArray<TodoFilterOption> =
+        questions + proposals > 0 ? [{ id: "ask", count: questions + proposals }] : []
     return [all, ...kinds.filter((one) => one.count > 0), ...facts, ...asks]
 }
 

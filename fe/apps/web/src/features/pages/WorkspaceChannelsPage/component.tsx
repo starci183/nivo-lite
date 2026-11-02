@@ -1,6 +1,6 @@
 import { Mascot, Page } from "@starci/grammar/common"
 import { OnboardingChannels } from "@/components/blocks/OnboardingChannels"
-import { FirstRunStep } from "@/components/composites/FirstRunStep"
+import { FirstRunStep } from "@/components/frames/FirstRunStep"
 import { ConnectionWizardOverlay } from "@/features/overlays/ConnectionWizardOverlay"
 
 /** Copy the /workspaces/new/channels page supplies. */

@@ -23,11 +23,11 @@ export const SwitchStatus = (props: SwitchStatusProps) => (
         <LabelledSwitch
             label={props.label}
             isSelected={props.isSelected}
-            isSkeleton={props.isSkeleton}
+            isLoading={props.isLoading}
             isDisabled={props.isDisabled}
             onChange={props.onChange}
         />
-        <Badge isDot isSkeleton={props.isSkeleton} tone={props.tone}>
+        <Badge isDot isLoading={props.isLoading} tone={props.tone}>
             {props.statusLabel}
         </Badge>
         <Text size="sm" tone="muted">

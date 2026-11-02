@@ -2,7 +2,7 @@
 
 import { decisionsHref } from "@/hooks/decisions"
 import type { ModuleKey } from "@/hooks/installations"
-import { useSlotLabels } from "@/hooks/slot"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import type { DataSlot } from "@/modules/types"
 import { maskPhones } from "@/modules/utils"
@@ -39,11 +39,8 @@ const regionSlotOf = <V>(
     isRegionFailed: (dashboard: AgentDashboardView) => boolean,
     viewOf: (dashboard: AgentDashboardView) => V,
 ): DataSlot<V> => {
-    const dashboard = slot.items
-    if (dashboard === undefined) {
-        return { isLoading: slot.isLoading, isForbidden: slot.isForbidden, isError: slot.isError }
-    }
-    return isRegionFailed(dashboard) ? { isError: true } : { items: viewOf(dashboard) }
+    if (!("items" in slot)) return slot
+    return isRegionFailed(slot.items) ? { isError: true } : mapSlot(slot, viewOf)
 }
 
 /** The knowledge region: the lens of the agent and, when the reader may see it and the module has none of its own, the open gaps. */
@@ -96,7 +93,7 @@ export const useAgentDashboardRegions = (slot: DataSlot<AgentDashboardView>, inp
     const g = useTranslations("governance")
     const slotLabels = useSlotLabels()
     const whenOf = whenOfFormat(useFormatter())
-    const connections = useAgentDashboardConnections(slot.items ?? PENDING_DASHBOARD)
+    const connections = useAgentDashboardConnections("items" in slot ? slot.items : PENDING_DASHBOARD)
     const actionOf = (action: string): string => actionWordOf(g, action)
     const rowOf = (item: DashboardRow) => ({
         id: item.id,

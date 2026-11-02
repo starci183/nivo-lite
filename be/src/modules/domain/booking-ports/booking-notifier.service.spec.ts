@@ -71,7 +71,7 @@ const build = async () => {
     const messages = mock<AgentMessagesService>()
     messages.storeAgentMessage.mockResolvedValue("message-1")
     const channels = mock<ChannelDeliveryService>()
-    channels.deliver.mockResolvedValue({ delivered: true, failure: null })
+    channels.deliver.mockResolvedValue({ delivered: true, outcome: "acknowledged", failure: null })
     const events = mock<EventsService>()
     events.record.mockResolvedValue(undefined)
     const catalog = mock<MessageCatalog>()
@@ -146,7 +146,7 @@ describe("BookingNotifierService", () => {
 describe("BookingNotifierService", () => {
     it("keeps a stored notice when the channel refuses delivery", async () => {
         const { service, messages, channels, events, catalog, mailer } = await build()
-        channels.deliver.mockResolvedValue({ delivered: false, failure: "zalo_window_expired" })
+        channels.deliver.mockResolvedValue({ delivered: false, outcome: "rejected", failure: "zalo_window_expired" })
 
         await expect(service.notify(NOTICE)).resolves.toEqual({ delivered: false, kept: true, via: "telegram" })
 
@@ -346,7 +346,11 @@ describe("BookingNotifierService", () => {
         async ({ delivered, summary }) => {
             const { service, channels, events, logger } = await build()
             const failure = new Error("Evidence unavailable")
-            channels.deliver.mockResolvedValue({ delivered, failure: null })
+            channels.deliver.mockResolvedValue({
+                delivered,
+                outcome: delivered ? "acknowledged" : "rejected",
+                failure: null,
+            })
             events.record.mockRejectedValue(failure)
 
             await expect(service.notify(NOTICE)).resolves.toEqual({ delivered, kept: true, via: "telegram" })

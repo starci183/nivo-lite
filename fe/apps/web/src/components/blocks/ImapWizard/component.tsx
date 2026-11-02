@@ -4,9 +4,21 @@ import { Alert, Button, CheckboxGroup, RadioGroup, Text } from "@starci/grammar/
 import { ImapAccountFields, type ImapAccountFieldsProps } from "@/components/composites/ImapAccountFields"
 
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, closeAction, nextAction, type WizardAction } from "@/components/branches/WizardFooter"
+import {
+    WizardFooter,
+    backAction,
+    closeAction,
+    nextAction,
+    type WizardAction,
+} from "@/components/branches/WizardFooter"
 
-import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
+import { frameOf, WizardFrame } from "@/components/frames/WizardFrame"
+
+/** The ready drawing with its canonical first-read loading atom. */
+type ImapAccountStepLoadingProps = ImapAccountStepProps & { readonly isLoading: boolean }
+
+/** The ready drawing with its canonical first-read loading atom. */
+type ImapWizardDrawLoadingProps = ImapWizardBaseProps & { readonly isLoading: boolean }
 
 /** One option of a radio or checkbox list. */
 interface ImapChoice {
@@ -115,12 +127,12 @@ interface ImapAccountStepProps {
 }
 
 /** The sign-in step: what NIVO reads, the fields, the provider's app-password guide and the test that lists the folders. */
-const ImapAccountStep = (props: ImapAccountStepProps) => (
+const ImapAccountStep = (props: ImapAccountStepLoadingProps) => (
     <>
         <Text size="sm" tone="muted">
             {props.intro}
         </Text>
-        <ImapAccountFields {...props.view.fields} />
+        <ImapAccountFields {...props.view.fields} props={{ ...props.view.fields.props, isLoading: props.isLoading }} />
         {props.view.server === null ? null : (
             <Text size="xs" tone="muted">
                 {props.view.server}
@@ -132,18 +144,23 @@ const ImapAccountStep = (props: ImapAccountStepProps) => (
         <Text size="xs" tone="muted">
             {props.imapOn}
         </Text>
-        {props.view.starttls === null ? null : <Alert tone="cautionary" title={props.view.starttls} />}
+        {props.view.starttls === null ? null : (
+            <Alert tone="cautionary" title={props.view.starttls} isLoading={props.isLoading} />
+        )}
         <div>
             <Button
                 intent="neutral"
                 isPending={props.isPending}
                 isDisabled={!props.view.canTest}
                 onPress={props.onTest}
+                isLoading={props.isLoading}
             >
                 {props.test}
             </Button>
         </div>
-        {props.view.tested === null ? null : <Alert tone="affirmative" title={props.view.tested} />}
+        {props.view.tested === null ? null : (
+            <Alert tone="affirmative" title={props.view.tested} isLoading={props.isLoading} />
+        )}
         {props.view.stale === null ? null : (
             <Text size="xs" tone="muted">
                 {props.view.stale}
@@ -160,9 +177,16 @@ export const ImapWizardBase = (props: ImapWizardBaseProps) => {
     const { props: view, on } = props
     const { text } = view
     return (
-        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
-            {(_resume, isSkeleton) => (
-                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} actions={actionsOf(props)}>
+        <SlotView
+            slot={view.resume}
+            placeholder={RESUME_PLACEHOLDER}
+            labels={view.slotLabels}
+            onRetry={on.retry}
+            render={(_resume, isLoading) => (
+                <WizardFrame
+                    {...frameOf(view)}
+                    footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
+                >
                     {view.step === "account" ? (
                         <ImapAccountStep
                             view={view.account}
@@ -171,9 +195,10 @@ export const ImapWizardBase = (props: ImapWizardBaseProps) => {
                             test={text.test}
                             isPending={view.isPending}
                             onTest={on.test}
+                            isLoading={isLoading}
                         />
                     ) : null}
-                    {view.step === "folders" ? <ImapFoldersStep {...props} /> : null}
+                    {view.step === "folders" ? <ImapFoldersStep {...props} isLoading={isLoading} /> : null}
                     {view.step === "schedule" ? (
                         <>
                             <Text size="sm" tone="muted">
@@ -185,28 +210,34 @@ export const ImapWizardBase = (props: ImapWizardBaseProps) => {
                                 value={view.schedule.value}
                                 onValueChange={on.schedule}
                                 options={view.schedule.options}
+                                isLoading={isLoading}
                             />
                         </>
                     ) : null}
                     {view.step === "agent" ? (
                         <>
-                            <Alert tone="affirmative" title={text.saved} />
-                            <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
+                            <Alert tone="affirmative" title={text.saved} isLoading={isLoading} />
+                            <WizardAgentStep
+                                {...view.agentStep}
+                                isDisabled={view.isPending}
+                                onChange={on.agents}
+                                isLoading={isLoading}
+                            />
                         </>
                     ) : null}
-                    {view.error === null ? null : <Alert tone="negative" title={view.error} />}
+                    {view.error === null ? null : <Alert tone="negative" title={view.error} isLoading={isLoading} />}
                 </WizardFrame>
             )}
-        </SlotView>
+        />
     )
 }
 
 /** Folder selection and the starting point for the first sync. */
-const ImapFoldersStep = ({ props: view, on }: ImapWizardBaseProps) => {
+const ImapFoldersStep = ({ props: view, on, isLoading }: ImapWizardDrawLoadingProps) => {
     const { text } = view
     return (
         <>
-            <Text size="sm" weight="semibold">
+            <Text size="sm" isStrong>
                 {text.foldersTitle}
             </Text>
             <Text size="sm" tone="muted">
@@ -218,13 +249,14 @@ const ImapFoldersStep = ({ props: view, on }: ImapWizardBaseProps) => {
                 options={view.folders.options}
                 value={[...view.folders.value]}
                 onValueChange={on.folders}
+                isLoading={isLoading}
             />
             {view.folders.none === null ? null : (
                 <Text size="xs" tone="muted">
                     {view.folders.none}
                 </Text>
             )}
-            <Text size="sm" weight="semibold">
+            <Text size="sm" isStrong>
                 {text.sinceTitle}
             </Text>
             <Text size="sm" tone="muted">
@@ -236,6 +268,7 @@ const ImapFoldersStep = ({ props: view, on }: ImapWizardBaseProps) => {
                 value={view.folders.since}
                 onValueChange={on.since}
                 options={view.folders.sinceOptions}
+                isLoading={isLoading}
             />
         </>
     )

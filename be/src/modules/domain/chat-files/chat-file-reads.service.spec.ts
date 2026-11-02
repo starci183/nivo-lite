@@ -117,3 +117,26 @@ describe("ChatFileReadsService.attachmentsOf", () => {
         await expect(none.service.attachmentsOf(TURN)).resolves.toEqual([])
     })
 })
+
+describe("ChatFileReadsService usage", () => {
+    it("records missing provider usage values as zero while preserving the read", async () => {
+        const { service, ai, files, usage } = await build(PICTURE)
+        ai.chat.mockResolvedValue({
+            text: "{}",
+            parsed: CLEAR,
+            model: "m",
+            usage: { promptTokens: null, completionTokens: null, totalTokens: null, costUsd: null },
+            retrieved: 0,
+        })
+
+        await expect(service.readOf(TURN)).resolves.toEqual(READ)
+        expect(files.keepRead).toHaveBeenCalledWith("ws-1", "f-1", READ)
+        expect(usage.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "chat_reply",
+            module: "chatbot",
+            usage: { prompt_tokens: 0, completion_tokens: 0, cached_tokens: 0, cost: 0, model: "m" },
+            completionChars: 2,
+        })
+    })
+})

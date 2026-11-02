@@ -8,7 +8,7 @@ export interface OnboardingReadyBaseProps {
         readonly heading: string
         readonly description: string
         readonly enterLabel: string
-        readonly isSkeleton: boolean
+        readonly isLoading: boolean
     }
     readonly on: { readonly enter: () => void }
 }
@@ -18,7 +18,7 @@ export const OnboardingReadyBase = (props: OnboardingReadyBaseProps) => (
     <SurfaceCard ariaLabel={props.props.title} measure="form">
         <div className={CENTERED_CLASS_NAME}>
             <Stack gap="section" align="center">
-                <Heading level={1} isSkeleton={props.props.isSkeleton}>
+                <Heading level={1} isLoading={props.props.isLoading}>
                     {props.props.heading}
                 </Heading>
                 <Text tone="muted">{props.props.description}</Text>

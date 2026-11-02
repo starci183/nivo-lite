@@ -24,7 +24,6 @@ interface LandingNavActionsBaseProps {
 export const LandingNavActionsBase = (props: LandingNavActionsBaseProps) => (
     <>
         <SegmentedControl
-            size="control"
             label={props.props.language.label}
             isLabelHidden
             value={props.props.language.locale}
@@ -37,11 +36,11 @@ export const LandingNavActionsBase = (props: LandingNavActionsBaseProps) => (
             }))}
         />
         <div className={NAV_SIGNIN}>
-            <Button intent="neutral" size="control" href={props.props.accountHref}>
+            <Button intent="neutral" href={props.props.accountHref}>
                 {props.props.accountLabel}
             </Button>
         </div>
-        <Button intent="alternative" size="control" href={props.props.tryHref}>
+        <Button intent="alternative" href={props.props.tryHref}>
             {props.props.tryLabel}
         </Button>
     </>

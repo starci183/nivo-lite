@@ -1,5 +1,5 @@
-import type { BadgeTone, DescriptionListItem } from "@starci/grammar/common"
-import type { BookingView } from "@/modules/types"
+import type { BookingDetailFact, BookingView } from "@/modules/types"
+import type { BadgeTone } from "@starci/grammar/common"
 import { ACTION_KEY, actionsOf, isMovable, isNextAction, MOVE_ACTION, rowIntent } from "@/modules/booking-desk"
 import type { PlacementFields } from "./useBookingPlacement"
 
@@ -65,9 +65,9 @@ export const bookingRowOf = (booking: BookingView, words: DeskWords, withActions
 })
 
 /** The facts of the detail dialog. */
-const detailItems = (booking: BookingView, words: DeskWords): ReadonlyArray<DescriptionListItem> => {
+const detailItems = (booking: BookingView, words: DeskWords): ReadonlyArray<BookingDetailFact> => {
     const none = words.say("none")
-    const rows: ReadonlyArray<DescriptionListItem | null> = [
+    const rows: ReadonlyArray<BookingDetailFact | null> = [
         {
             id: "when",
             term: words.say("detailWhen"),
@@ -97,7 +97,7 @@ const detailItems = (booking: BookingView, words: DeskWords): ReadonlyArray<Desc
             ? null
             : { id: "conflict", term: words.say("detailConflict"), description: booking.conflictNote },
     ]
-    return rows.filter((row): row is DescriptionListItem => row !== null)
+    return rows.filter((row): row is BookingDetailFact => row !== null)
 }
 
 /** The one next step of a booking, when its status has one: the dialog commits to it. */

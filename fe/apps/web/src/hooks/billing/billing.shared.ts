@@ -5,7 +5,7 @@ import type {
     useQueryBillingWorkspaceSwr,
     useQueryPaymentOrdersSwr,
 } from "@/hooks/swr"
-import { mapSlot, slotOfSwr } from "@/hooks/slot"
+import { mapSlot, slotOfReads, slotOfSwr } from "@/hooks/slot"
 import { PRODUCT_TIME_ZONE } from "@/modules/i18n"
 import type { BillingPlanView, BillingRowView, BillingTone, DataSlot } from "@/modules/types"
 
@@ -85,28 +85,24 @@ export const planCardOf = (
 ): DataSlot<BillingPlanView> => {
     const { t, format } = words
     const { plan } = reads
-    const planSlot = refusedOr(
+    const item = reads.workspace.data
+    const view: BillingPlanView | undefined =
+        item === undefined
+            ? undefined
+            : {
+                  planName: plan.data ? (locale === "vi" ? plan.data.nameVi : plan.data.nameEn) : t("noPlan"),
+                  status: words.statusLabels[item.status] ?? t("statusCancelled"),
+                  statusTone: STATUS_TONES[item.status] ?? "neutral",
+                  paidUntil: item.paidUntil
+                      ? format.dateTime(new Date(item.paidUntil), { dateStyle: "long", timeZone: PRODUCT_TIME_ZONE })
+                      : t("notPaid"),
+                  canRenew: Boolean(plan.data && !plan.data.isCustom),
+              }
+    const requiredReads = item?.planCode == null ? [reads.workspace] : [reads.workspace, plan]
+    return refusedOr(
         isRefused,
-        mapSlot(slotOfSwr(reads.workspace), (item): BillingPlanView => {
-            let planName = t("noPlan")
-            if (plan.data) planName = locale === "vi" ? plan.data.nameVi : plan.data.nameEn
-            const status = item.status
-            return {
-                planName,
-                status: words.statusLabels[status] ?? t("statusCancelled"),
-                statusTone: STATUS_TONES[status] ?? "neutral",
-                paidUntil: item.paidUntil
-                    ? format.dateTime(new Date(item.paidUntil), { dateStyle: "long", timeZone: PRODUCT_TIME_ZONE })
-                    : t("notPaid"),
-                canRenew: Boolean(plan.data && !plan.data.isCustom),
-            }
-        }),
+        slotOfReads(requiredReads, () => view),
     )
-    // The plan card also waits on, and fails with, the plan read it words.
-    const planRead = slotOfSwr(plan)
-    return planSlot.items !== undefined && (planRead.isLoading || planRead.isError)
-        ? { isLoading: planRead.isLoading, isError: planRead.isError }
-        : planSlot
 }
 
 /** The payment history rows: amount, when, plan and order code, and the order status. */

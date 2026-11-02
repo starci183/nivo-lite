@@ -3,9 +3,8 @@ import { mock } from "@starci/jest-preset"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { AgentTurnBriefService } from "./agent-turn-brief.service"
-import { AGENT_GRAPH_BRIEF } from "./agent-turns.decorators"
-import type { GraphIntent } from "./agent-turns.contracts"
-import type { AgentGraphBrief } from "./agent-turns.port"
+import { AGENT_GRAPH_BRIEF } from "@modules/domain/agent-graphs"
+import type { AgentGraphBrief, GraphIntent } from "@modules/domain/agent-graphs"
 
 const catalog = mock<MessageCatalog>({ get: (key: string) => `[${key}]` })
 

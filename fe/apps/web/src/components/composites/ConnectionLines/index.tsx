@@ -1,5 +1,4 @@
-import { Badge, Button, List, ListRow } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import { EmptyNotice, Section, type BadgeTone, type ListRowData } from "@starci/grammar/common"
 
 /** One line of a connection list: what it is, the line under it and the verdict badge. */
 interface ConnectionLine {
@@ -27,30 +26,24 @@ type ConnectionLinesProps = {
 
 /** The lines of a connection (checks, events) as a list whose rows carry a verdict badge. */
 export const ConnectionLines = (props: ConnectionLinesProps) => (
-    <List label={props.label} aria-busy={props.isSkeleton}>
-        {props.lines.map((line) => (
-            <ListRow
-                key={line.id}
-                title={line.title}
-                description={line.description}
-                isSkeleton={props.isSkeleton}
-                actions={
-                    line.action === undefined ? undefined : (
-                        <Button intent="neutral" size="sm" onPress={line.action.run}>
-                            {line.action.label}
-                        </Button>
-                    )
-                }
-                badges={
-                    <Badge
-                        tone={line.badge.tone}
-                        isSkeleton={props.isSkeleton}
-                        {...(line.badge.isDot === true ? { isDot: true } : {})}
-                    >
-                        {line.badge.label}
-                    </Badge>
-                }
-            />
-        ))}
-    </List>
+    <Section
+        kind="list"
+        title={props.label}
+        headingLevel={3}
+        isLoading={props.isSkeleton}
+        items={props.lines.map((line): ListRowData => ({
+            id: line.id,
+            title: line.title,
+            description: line.description,
+            badges: [
+                {
+                    label: line.badge.label,
+                    tone: line.badge.tone,
+                    ...(line.badge.isDot === true ? { isDot: true } : {}),
+                },
+            ],
+            ...(line.action === undefined ? {} : { action: { label: line.action.label, press: line.action.run } }),
+        }))}
+        empty={<EmptyNotice message={props.label} />}
+    />
 )

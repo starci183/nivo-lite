@@ -1,14 +1,11 @@
-import { AlertDialog, Badge, Button, Disclosure, Meter, Text } from "@starci/grammar/common"
+import { AlertDialog, Badge, Button, Disclosure, Meter, Text, Cluster } from "@starci/grammar/common"
 import {
     KNOWLEDGE_ROWS_PLACEHOLDER,
     KnowledgeRowList,
     KnowledgeRowsSection,
 } from "@/components/composites/KnowledgeRows"
-import type { KnowledgeRowView, SectionView } from "@/components/composites/KnowledgeRows"
+import type { KnowledgeListView, KnowledgeRowView, DataSlot, SlotLabels } from "@/modules/types"
 import { SlotView } from "@/components/composites/SlotView"
-import type { DataSlot, SlotLabels } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, FACTS_CLASS_NAME } from "./classNames"
-
 /** What the head of the document says: its status, who may read it and what the owner may do. */
 interface HeadView {
     readonly statusLabel: string
@@ -19,7 +16,6 @@ interface HeadView {
     readonly progress?: number | undefined
     readonly canWrite: boolean
     readonly reindexLabel: string
-    readonly visibilityActionLabel: string
     readonly deleteLabel: string
     readonly deleteQuestion: string
     readonly deleteConfirm: string
@@ -33,7 +29,7 @@ interface HeadView {
 
 /** The document as its slot carries it: the heading, the head and the text. */
 export interface SourceDocView {
-    readonly section: SectionView
+    readonly section: KnowledgeListView["section"]
     readonly head: HeadView
 }
 
@@ -46,7 +42,6 @@ const SOURCE_DOC_PLACEHOLDER: SourceDocView = {
         visibilityLabel: "-",
         canWrite: true,
         reindexLabel: "-",
-        visibilityActionLabel: "-",
         deleteLabel: "-",
         deleteQuestion: "-",
         deleteConfirm: "-",
@@ -70,8 +65,7 @@ export interface KnowledgeSourcePanelBaseProps {
     }
     readonly on: {
         readonly reindex: () => void
-        readonly toggleVisibility: () => void
-        readonly remove: () => void
+        readonly remove: () => Promise<void>
         readonly retry: () => void
     }
 }
@@ -79,21 +73,21 @@ export interface KnowledgeSourcePanelBaseProps {
 /** What the head draws and calls. */
 interface HeadProps {
     readonly view: HeadView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly on: KnowledgeSourcePanelBaseProps["on"]
 }
 
 /** The status and facts of the document and what the owner may do to it. */
 const Head = (props: HeadProps) => (
     <>
-        <div className={FACTS_CLASS_NAME}>
-            <Badge tone={props.view.statusTone} isSkeleton={props.isSkeleton}>
+        <Cluster gap="inline">
+            <Badge tone={props.view.statusTone} isLoading={props.isLoading}>
                 {props.view.statusLabel}
             </Badge>
-            <Badge tone="neutral" isSkeleton={props.isSkeleton}>
+            <Badge tone="neutral" isLoading={props.isLoading}>
                 {props.view.visibilityLabel}
             </Badge>
-        </div>
+        </Cluster>
         {props.view.progress === undefined ? null : (
             <Meter label={props.view.statusLabel} value={props.view.progress} isLabelHidden />
         )}
@@ -103,23 +97,15 @@ const Head = (props: HeadProps) => (
             </Text>
         )}
         {props.view.canWrite ? (
-            <div className={ACTIONS_CLASS_NAME}>
+            <Cluster gap="inline">
                 <Button
                     intent="neutral"
-                    isSkeleton={props.isSkeleton}
+                    isLoading={props.isLoading}
                     isPending={props.view.isBusy}
                     isDisabled={props.view.isReindexDisabled}
                     onPress={props.on.reindex}
                 >
                     {props.view.reindexLabel}
-                </Button>
-                <Button
-                    intent="neutral"
-                    isSkeleton={props.isSkeleton}
-                    isPending={props.view.isBusy}
-                    onPress={props.on.toggleVisibility}
-                >
-                    {props.view.visibilityActionLabel}
                 </Button>
                 <AlertDialog
                     title={props.view.deleteQuestion}
@@ -132,14 +118,14 @@ const Head = (props: HeadProps) => (
                         <Button
                             intent="destructive"
                             step="entry"
-                            isSkeleton={props.isSkeleton}
+                            isLoading={props.isLoading}
                             isPending={props.view.isBusy}
                         >
                             {props.view.deleteLabel}
                         </Button>
                     }
                 />
-            </div>
+            </Cluster>
         ) : null}
     </>
 )
@@ -151,35 +137,40 @@ export const KnowledgeSourcePanelBase = (props: KnowledgeSourcePanelBaseProps) =
         placeholder={SOURCE_DOC_PLACEHOLDER}
         labels={props.props.docLabels}
         onRetry={props.on.retry}
-    >
-        {(doc, isSkeleton) => (
+        render={(doc, isLoading) => (
             <KnowledgeRowsSection
                 section={doc.section}
                 isPending={props.props.isPending}
-                isSkeleton={isSkeleton}
-                before={<Head view={doc.head} isSkeleton={isSkeleton} on={props.on} />}
-            >
-                <SlotView
-                    slot={props.props.passages}
-                    placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
-                    labels={props.props.passagesLabels}
-                    onRetry={props.on.retry}
-                >
-                    {(rows, isRowsSkeleton) => (
-                        <KnowledgeRowList
-                            label={props.props.passagesLabel}
-                            rows={rows}
-                            isPending={props.props.isPending}
-                            isSkeleton={isRowsSkeleton}
+                isLoading={isLoading}
+                before={<Head view={doc.head} isLoading={isLoading} on={props.on} />}
+                body={
+                    <>
+                        <SlotView
+                            slot={props.props.passages}
+                            placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
+                            labels={props.props.passagesLabels}
+                            onRetry={props.on.retry}
+                            render={(rows, isRowsSkeleton) => (
+                                <KnowledgeRowList
+                                    label={props.props.passagesLabel}
+                                    emptyTitle={props.props.passagesLabels.empty}
+                                    rows={rows}
+                                    isPending={props.props.isPending}
+                                    isLoading={isRowsSkeleton}
+                                />
+                            )}
                         />
-                    )}
-                </SlotView>
-                <Disclosure title={doc.head.contentTitle}>
-                    <Text size="sm" isSkeleton={isSkeleton}>
-                        {doc.head.content}
-                    </Text>
-                </Disclosure>
-            </KnowledgeRowsSection>
+                        <Disclosure
+                            title={doc.head.contentTitle}
+                            body={
+                                <Text size="sm" isLoading={isLoading}>
+                                    {doc.head.content}
+                                </Text>
+                            }
+                        />
+                    </>
+                }
+            />
         )}
-    </SlotView>
+    />
 )

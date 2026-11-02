@@ -1,19 +1,19 @@
-import { nivoIconSource } from "@/components/leaves/Icon"
 import type { ModuleIconName } from "@/modules/types"
-import { Badge, Button, Divider, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import {
+    Badge,
+    Button,
+    Cluster,
+    Quote,
+    Stack,
+    SurfaceCard,
+    Text,
+    Textarea,
+    type BadgeTone,
+} from "@starci/grammar/common"
+
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { AiMarkChip } from "@/components/leaves/AiMarkChip"
 import { CopyTextButton } from "@/components/branches/CopyTextButton"
-import {
-    APPROVAL_CARD_ACTIONS_CLASS_NAME,
-    APPROVAL_CARD_BAND_CLASS_NAME,
-    APPROVAL_CARD_BAND_DIVIDED_CLASS_NAME,
-    APPROVAL_CARD_COLUMN_CLASS_NAME,
-    APPROVAL_CARD_META_ROW_CLASS_NAME,
-    APPROVAL_CARD_QUOTE_CLASS_NAME,
-    APPROVAL_CARD_STATUS_ROW_CLASS_NAME,
-} from "./classNames"
 
 /** The drafting agent: its mark and its spoken name. */
 interface ApprovalAgentView {
@@ -76,32 +76,36 @@ export const ApprovalCard = (props: ApprovalCardProps) => {
     const isBusy = view.pendingDecision !== null
     const shownText = view.isWaiting && view.isEditing ? view.editText : view.draft
     return (
-        <div className={APPROVAL_CARD_COLUMN_CLASS_NAME}>
-            <SurfaceCard composition="joined" ariaLabel={view.nextAction}>
-                <div className={APPROVAL_CARD_BAND_CLASS_NAME}>
-                    <div className={APPROVAL_CARD_STATUS_ROW_CLASS_NAME}>
-                        {view.agent === null ? null : (
-                            <AgentMark
-                                glyph={nivoIconSource(view.agent.glyph, "leading")}
-                                label={view.agent.name}
-                                seed={view.agent.name}
-                                src={view.agent.avatarUrl}
-                                module="chatbot"
-                                size="sm"
-                            />
-                        )}
-                        <Badge tone={view.status.tone}>{view.status.label}</Badge>
-                        {view.agent === null ? null : <AiMarkChip label={labels.aiChip} />}
-                    </div>
-                    <Text weight="semibold">{view.nextAction}</Text>
-                    <Text size="sm" tone="muted">
-                        {view.willSend}
-                    </Text>
-                </div>
-                <Divider semantics="presentation" />
-                {renderApprovalCardDraft(view, labels, isBusy, on, shownText)}
-            </SurfaceCard>
-        </div>
+        <SurfaceCard
+            kind="bands"
+            ariaLabel={view.nextAction}
+            bands={[
+                {
+                    kind: "body",
+                    children: (
+                        <Stack gap="inline">
+                            <Cluster gap="inline">
+                                {view.agent === null ? null : (
+                                    <AgentMark
+                                        label={view.agent.name}
+                                        seed={view.agent.name}
+                                        src={view.agent.avatarUrl}
+                                        size="sm"
+                                    />
+                                )}
+                                <Badge tone={view.status.tone}>{view.status.label}</Badge>
+                                {view.agent === null ? null : <AiMarkChip label={labels.aiChip} />}
+                            </Cluster>
+                            <Text isStrong>{view.nextAction}</Text>
+                            <Text size="sm" tone="muted">
+                                {view.willSend}
+                            </Text>
+                        </Stack>
+                    ),
+                },
+                { kind: "body", children: renderApprovalCardDraft(view, labels, isBusy, on, shownText) },
+            ]}
+        />
     )
 }
 
@@ -113,7 +117,7 @@ const renderApprovalCardDraft = (
     on: NonNullable<ApprovalCardProps["on"]>,
     shownText: string,
 ) => (
-    <div className={APPROVAL_CARD_BAND_DIVIDED_CLASS_NAME}>
+    <Stack gap="row">
         {view.isWaiting && view.isEditing ? (
             <Textarea
                 label={labels.draft}
@@ -123,30 +127,26 @@ const renderApprovalCardDraft = (
                 onValueChange={on.editChange}
             />
         ) : (
-            <SurfaceCard>
-                <div className={APPROVAL_CARD_QUOTE_CLASS_NAME}>
-                    <Text>{view.draft}</Text>
-                </div>
-            </SurfaceCard>
+            <Quote text={view.draft} />
         )}
-        <div className={APPROVAL_CARD_META_ROW_CLASS_NAME}>
+        <Cluster gap="inline" justify="between">
             <Text size="xs" tone="muted">
                 {view.characters}
             </Text>
             <CopyTextButton text={shownText} copyLabel={labels.copy} copiedLabel={labels.copied} />
-        </div>
+        </Cluster>
         {view.error === null ? null : (
             <Text size="sm" live="assertive">
                 {view.error}
             </Text>
         )}
         {view.isWaiting && !view.canDecide ? (
-            <Text size="sm" weight="medium" live="polite">
+            <Text size="sm" isStrong live="polite">
                 {labels.waitingManager}
             </Text>
         ) : null}
         {view.isWaiting && view.canDecide ? (
-            <div className={APPROVAL_CARD_ACTIONS_CLASS_NAME}>
+            <Cluster gap="row">
                 <Button
                     intent="commit"
                     isPending={view.pendingDecision === "approved"}
@@ -166,14 +166,14 @@ const renderApprovalCardDraft = (
                 >
                     {labels.reject}
                 </Button>
-            </div>
+            </Cluster>
         ) : null}
         {view.isWaiting ? null : (
-            <div className={APPROVAL_CARD_META_ROW_CLASS_NAME}>
+            <Cluster gap="inline" justify="between">
                 <Text size="sm" tone="muted">
                     {view.settledLabel}
                 </Text>
-            </div>
+            </Cluster>
         )}
-    </div>
+    </Stack>
 )

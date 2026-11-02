@@ -1,13 +1,16 @@
 "use client"
 
+import { useFeatureReset } from "@/hooks/reuseables"
+
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { useSWRConfig } from "swr"
 import { QUERY_BOOKING_BOARD_SWR_KEY, useMutateAddBookingSwr, useMutateMoveBookingSwr } from "@/hooks/swr"
 import { matchesSwrKey } from "@/modules/utils"
 import { graphQLErrorCode } from "@/modules/failure"
 import { wallInstant } from "@/modules/i18n"
 import { toast } from "@/modules/toast"
+import { useBookingTransition } from "./useBookingTransition"
 
 /** The fields of the dialog. */
 export interface PlacementFields {
@@ -43,8 +46,44 @@ const REASON_OF_CODE: Readonly<Record<string, string>> = {
     BOOKINGS_PHONE_INVALID: "phone_invalid",
 }
 
+/** The exact add/move payload belongs to the placement command, independently of its UI settlement. */
+interface PlacementWrite {
+    readonly draft: PlacementDraft
+    readonly fields: PlacementFields
+    readonly timezone: string
+    readonly add: ReturnType<typeof useMutateAddBookingSwr>
+    readonly move: ReturnType<typeof useMutateMoveBookingSwr>
+}
+const triggerPlacement = (input: PlacementWrite) => {
+    if (input.draft.kind === "add") {
+        return input.add.trigger({
+            serviceId: input.fields.serviceId,
+            date: input.fields.date,
+            time: input.fields.time,
+            resourceId: input.fields.resourceId === "" ? null : input.fields.resourceId,
+            name: input.fields.name,
+            phone: input.fields.phone === "" ? null : input.fields.phone,
+            party: input.fields.party,
+            note: input.fields.note === "" ? null : input.fields.note,
+            force: input.fields.force,
+        })
+    } else {
+        return input.move.trigger({
+            id: input.draft.id,
+            startAt: new Date(wallInstant(input.fields.date, input.fields.time, input.timezone)).toISOString(),
+            resourceId: input.fields.resourceId,
+            force: input.fields.force,
+        })
+    }
+}
+
 /** The owner's add and move of a booking: one dialog, one set of fields, and the refusal reason kept on screen until the owner changes the plan. A placed booking toasts and revalidates every cached board. */
-export const useBookingPlacement = (timezone: string, onPlaced: (kind: PlacementDraft["kind"]) => void) => {
+export const useBookingPlacement = (
+    timezone: string,
+    onPlaced: (kind: PlacementDraft["kind"]) => void,
+    isActive = true,
+    scope = "",
+) => {
     const t = useTranslations("workbenchBooking")
     const tToast = useTranslations("toast")
     const { mutate } = useSWRConfig()
@@ -53,7 +92,17 @@ export const useBookingPlacement = (timezone: string, onPlaced: (kind: Placement
     const [draft, setDraft] = useState<PlacementDraft | null>(null)
     const [fields, setFields] = useState<PlacementFields | null>(null)
     const [reason, setReason] = useState<string | null>(null)
-    const [isBusy, startTransition] = useTransition()
+    const transition = useBookingTransition(isActive, scope)
+    useFeatureReset({
+        isActive: isActive,
+        isReady: true,
+        scope: scope,
+        onReset: () => {
+            setDraft(null)
+            setFields(null)
+            setReason(null)
+        },
+    })
 
     const close = () => {
         setDraft(null)
@@ -63,40 +112,21 @@ export const useBookingPlacement = (timezone: string, onPlaced: (kind: Placement
 
     const submit = () => {
         if (draft === null || fields === null) return
-        startTransition(async () => {
+        transition.run(async (isCurrent) => {
             try {
-                if (draft.kind === "add") {
-                    await add.trigger({
-                        serviceId: fields.serviceId,
-                        date: fields.date,
-                        time: fields.time,
-                        resourceId: fields.resourceId === "" ? null : fields.resourceId,
-                        name: fields.name,
-                        phone: fields.phone === "" ? null : fields.phone,
-                        party: fields.party,
-                        note: fields.note === "" ? null : fields.note,
-                        force: fields.force,
-                    })
-                } else {
-                    await move.trigger({
-                        id: draft.id,
-                        startAt: new Date(wallInstant(fields.date, fields.time, timezone)).toISOString(),
-                        resourceId: fields.resourceId,
-                        force: fields.force,
-                    })
-                }
+                await triggerPlacement({ draft, fields, timezone, add, move })
             } catch (error) {
                 const code = graphQLErrorCode(error)
-                setReason(code === undefined ? "failed" : (REASON_OF_CODE[code] ?? "failed"))
+                if (isCurrent()) setReason(code === undefined ? "failed" : (REASON_OF_CODE[code] ?? "failed"))
                 return
             }
             toast.success(tToast("successTitle"), {
                 description: t(draft.kind === "add" ? "did_add" : "did_move"),
             })
             const kind = draft.kind
-            close()
-            void mutate(matchesSwrKey(QUERY_BOOKING_BOARD_SWR_KEY))
-            onPlaced(kind)
+            if (isCurrent()) close()
+            mutate(matchesSwrKey(QUERY_BOOKING_BOARD_SWR_KEY))
+            if (isCurrent()) onPlaced(kind)
         })
     }
 
@@ -104,7 +134,7 @@ export const useBookingPlacement = (timezone: string, onPlaced: (kind: Placement
         draft,
         fields,
         reason,
-        isBusy,
+        isBusy: transition.isPending,
         canForce: reason !== null && FORCEABLE.has(reason),
         open: (next: PlacementDraft, start: PlacementFields) => {
             setReason(null)

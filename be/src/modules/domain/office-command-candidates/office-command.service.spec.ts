@@ -13,7 +13,8 @@ import type { OrderNameRef } from "@modules/domain/orders"
 import { CommandBusService, ModuleCatalogService } from "@modules/domain/decisions"
 import { MessagesReadService, OfficeLinesService } from "@modules/domain/messages"
 import type { LineText } from "@modules/domain/messages"
-import type { ModuleCommand, ModuleEntry } from "@modules/domain/decisions"
+import type { ModuleCommand } from "@modules/domain/decisions"
+
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
@@ -29,6 +30,8 @@ import { OfficeCommandCandidatesLogEvent } from "./office-command-candidates.log
 import type { CommandReader } from "./office-command-candidates.port"
 import { OfficeCommandService } from "./office-command.service"
 import { OfficeCommandCandidateEntity } from "./persistence/entities"
+
+type ModuleEntry = NonNullable<Awaited<ReturnType<ModuleCatalogService["entryOf"]>>>
 
 /** What a spec's database holds, in the order the service reaches for it: the query builders it creates, then the finds. */
 interface Plan {

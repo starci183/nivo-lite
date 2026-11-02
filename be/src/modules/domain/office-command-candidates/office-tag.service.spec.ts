@@ -272,3 +272,31 @@ describe("OfficeTagService > rights and switches", () => {
         expect(wakes.wake).not.toHaveBeenCalled()
     })
 })
+
+describe("OfficeTagService > requestFileUpload", () => {
+    it("issues the member an address scoped to this workspace's Office rather than a conversation", async () => {
+        const { service, members, files, chat, wakes } = await build()
+        const facts = { contentType: "image/png", sizeBytes: 9 }
+        const upload = { path: "ws-1/chat/office/a.png", signedUrl: "https://upload.invalid/office" }
+        files.requestUpload.mockResolvedValue(upload)
+
+        await expect(service.requestFileUpload("user-1", "ws-1", facts)).resolves.toEqual(upload)
+
+        expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+        expect(files.requestUpload).toHaveBeenCalledWith({ workspaceId: "ws-1", conversationId: null }, facts)
+        expect(chat.postHuman).not.toHaveBeenCalled()
+        expect(wakes.wake).not.toHaveBeenCalled()
+    })
+
+    it("issues no upload address when the workspace membership check refuses it", async () => {
+        const { service, members, files } = await build()
+        const refusal = new Error("not a member")
+        members.require.mockRejectedValue(refusal)
+
+        await expect(
+            service.requestFileUpload("user-1", "ws-1", { contentType: "image/png", sizeBytes: 9 }),
+        ).rejects.toBe(refusal)
+
+        expect(files.requestUpload).not.toHaveBeenCalled()
+    })
+})

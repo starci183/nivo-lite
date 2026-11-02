@@ -1,20 +1,6 @@
-import {
-    Alert,
-    Badge,
-    Button,
-    DescriptionList,
-    EmptyNotice,
-    Form,
-    Heading,
-    Input,
-    ListRow,
-    SurfaceCard,
-    SurfaceListCard,
-    Text,
-} from "@starci/grammar/common"
+import { Alert, Button, EmptyNotice, Form, Heading, Input, SurfaceCard, Text, Stack } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { CARD_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** The drawn shapes of the public points check, in the order the visitor meets them. */
 export const LOYALTY_CHECK_SHAPES = ["phone", "code", "result"] as const
@@ -100,11 +86,11 @@ const CheckPhone = (props: CheckBodyProps) => {
     const on = props.on
     return (
         <>
-            <Text tone="muted" isSkeleton={props.isSkeleton}>
+            <Text tone="muted" isLoading={props.isSkeleton}>
                 {props.lead}
             </Text>
             <Form label={title} onSubmit={on.sendCode} isPending={isBusy}>
-                <div className={FORM_CLASS_NAME}>
+                <Stack gap="row">
                     <Input
                         id="loyalty-phone"
                         name="phone"
@@ -112,14 +98,14 @@ const CheckPhone = (props: CheckBodyProps) => {
                         placeholder={props.props.phone.placeholder}
                         isRequired
                         isDisabled={isBusy}
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isSkeleton}
                         value={props.props.phone.value}
                         onValueChange={on.setPhone}
                     />
-                    <Button intent="commit" width="fill" type="submit" isPending={isBusy} isSkeleton={props.isSkeleton}>
+                    <Button intent="commit" width="fill" type="submit" isPending={isBusy} isLoading={props.isSkeleton}>
                         {props.props.phone.send}
                     </Button>
-                </div>
+                </Stack>
             </Form>
         </>
     )
@@ -131,13 +117,13 @@ const CheckStep = (props: CheckBodyProps) => {
     if (props.shape === "result") return renderGreeting(props)
     return (
         <SurfaceCard ariaLabel={title}>
-            <div className={CARD_CLASS_NAME}>
-                <Heading level={1} scale="standard" isSkeleton={props.isSkeleton}>
+            <Stack gap="section">
+                <Heading level={1} scale="standard" isLoading={props.isSkeleton}>
                     {title}
                 </Heading>
                 {props.shape === "phone" ? <CheckPhone {...props} /> : renderVerificationCode(props)}
                 {error === undefined ? null : <Alert tone="negative" title={error} />}
-            </div>
+            </Stack>
         </SurfaceCard>
     )
 }
@@ -149,9 +135,10 @@ export const LoyaltyCheckFormBase = (props: LoyaltyCheckFormBaseProps) => (
         placeholder={SHOP_PLACEHOLDER}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(shop, isSkeleton) => <CheckStep {...props} shape={props.shape} lead={shop.lead} isSkeleton={isSkeleton} />}
-    </SlotView>
+        render={(shop, isSkeleton) => (
+            <CheckStep {...props} shape={props.shape} lead={shop.lead} isSkeleton={isSkeleton} />
+        )}
+    />
 )
 
 /** Draws the greeting section of the current view. */
@@ -160,47 +147,41 @@ const renderGreeting = (props: Pick<LoyaltyCheckFormBaseProps, "props" | "on">) 
     const on = props.on
     if (result === undefined) return null
     return (
-        <SurfaceCard ariaLabel={result.greeting}>
-            <div className={CARD_CLASS_NAME}>
-                <Heading level={2} scale="standard">
-                    {result.greeting}
-                </Heading>
-                <DescriptionList
-                    layout="stat-strip"
-                    isDivided
-                    items={[
-                        { id: "tier", term: result.tierLabel, description: result.tierName },
-                        { id: "points", term: result.pointsLabel, description: result.points },
-                    ]}
-                />
-                {result.nextTier === undefined ? null : (
-                    <Text size="sm" tone="muted">
-                        {result.nextTier}
-                    </Text>
-                )}
-                {result.expiring === undefined ? null : <Alert tone="affirmative" title={result.expiring} />}
-                <SurfaceListCard
-                    label={result.rewardsTitle}
-                    headingLevel={3}
-                    empty={<EmptyNotice message={result.noRewards} />}
-                >
-                    {result.rewards.map((reward) => (
-                        <ListRow
-                            key={reward.id}
-                            title={reward.name}
-                            description={reward.detail}
-                            badges={<Badge tone={reward.canRedeem ? "success" : "neutral"}>{reward.badge}</Badge>}
-                        />
-                    ))}
-                </SurfaceListCard>
+        <Stack gap="section">
+            <SurfaceCard
+                kind="figures"
+                label={result.greeting}
+                headingLevel={2}
+                items={[
+                    { id: "tier", term: result.tierLabel, value: result.tierName },
+                    { id: "points", term: result.pointsLabel, value: result.points },
+                ]}
+            />
+            {result.nextTier === undefined ? null : (
                 <Text size="sm" tone="muted">
-                    {result.redeemHint}
+                    {result.nextTier}
                 </Text>
-                <Button intent="neutral" onPress={on.back}>
-                    {props.props.back}
-                </Button>
-            </div>
-        </SurfaceCard>
+            )}
+            {result.expiring === undefined ? null : <Alert tone="affirmative" title={result.expiring} />}
+            <SurfaceCard
+                kind="list"
+                label={result.rewardsTitle}
+                headingLevel={3}
+                empty={<EmptyNotice message={result.noRewards} />}
+                items={result.rewards.map((reward) => ({
+                    id: reward.id,
+                    title: reward.name,
+                    description: reward.detail,
+                    badges: [{ label: reward.badge, tone: reward.canRedeem ? "success" : "neutral" }],
+                }))}
+            />
+            <Text size="sm" tone="muted">
+                {result.redeemHint}
+            </Text>
+            <Button intent="neutral" onPress={on.back}>
+                {props.props.back}
+            </Button>
+        </Stack>
     )
 }
 
@@ -212,7 +193,7 @@ const renderVerificationCode = (props: Pick<LoyaltyCheckFormBaseProps, "props" |
         <>
             <Alert tone="affirmative" title={props.props.code.sentTitle} description={props.props.code.sentBody} />
             <Form label={props.props.code.check} onSubmit={on.check} isPending={isBusy}>
-                <div className={FORM_CLASS_NAME}>
+                <Stack gap="row">
                     <Input
                         id="loyalty-code"
                         name="code"
@@ -226,7 +207,7 @@ const renderVerificationCode = (props: Pick<LoyaltyCheckFormBaseProps, "props" |
                     <Button intent="commit" width="fill" type="submit" isPending={isBusy}>
                         {props.props.code.check}
                     </Button>
-                </div>
+                </Stack>
             </Form>
             <Button intent="neutral" isDisabled={isBusy} onPress={on.sendCode}>
                 {props.props.code.resend}

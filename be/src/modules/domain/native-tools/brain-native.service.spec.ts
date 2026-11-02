@@ -3,6 +3,8 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { BrainFactsReadService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
+import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
+import type { SourceDocument } from "@modules/domain/knowledge-sources"
 import type { Passage } from "@modules/domain/knowledge"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
 import { CLOCK } from "@modules/platform/clock"
@@ -60,6 +62,19 @@ const passage = (changes: Partial<Passage> = {}): Passage => ({
     ...changes,
 })
 
+const document = (changes: Partial<SourceDocument> = {}): SourceDocument => ({
+    id: "d1",
+    title: "Delivery policy",
+    visibility: "internal",
+    status: "ready",
+    contentHash: "h1",
+    module: null,
+    installationId: null,
+    topic: "delivery",
+    content: "Same day delivery. Call 0901234567 when needed.",
+    ...changes,
+})
+
 interface Scope {
     readonly module: string
     readonly installationId: string | null
@@ -74,35 +89,47 @@ const build = async (scope: Scope = { module: "sales", installationId: null }) =
     facts.search.mockResolvedValue([fact()])
     facts.forView.mockResolvedValue([fact()])
     facts.get.mockResolvedValue(fact())
+    views.internalOf.mockImplementation((workspaceId, caller) => {
+        const view = viewOfCall(workspaceId, scope, caller.conversationId)
+        if (caller.conversationId !== null || view.audience === "customer") {
+            return Promise.reject(nativeRefusal("internal_only"))
+        }
+        return Promise.resolve(view)
+    })
     const knowledge = mock<KnowledgeSearchService>()
     knowledge.forAgent.mockResolvedValue([passage()])
+    const documents = mock<KnowledgeSourcesReadService>()
+    documents.textOf.mockResolvedValue(document())
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainNativeService,
             { provide: NativeViewService, useValue: views },
             { provide: BrainFactsReadService, useValue: facts },
             { provide: KnowledgeSearchService, useValue: knowledge },
+            { provide: KnowledgeSourcesReadService, useValue: documents },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
         ],
     }).compile()
-    return { brain: moduleRef.get(BrainNativeService), views, facts, knowledge }
+    return { brain: moduleRef.get(BrainNativeService), views, facts, knowledge, documents }
 }
 
 describe("BrainNativeService manifest", () => {
-    it("declares three read tools that start at auto and run in a customer turn", () => {
+    it("declares four read tools that start at auto; only the document read is closed to a customer turn", () => {
         expect(BRAIN_MANIFEST.key).toBe("brain")
         expect(BRAIN_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.defaultMode])).toEqual([
             ["search", "read", "auto"],
             ["facts.list", "read", "auto"],
             ["facts.get", "read", "auto"],
+            ["documents.read", "read", "auto"],
         ])
-        for (const tool of BRAIN_MANIFEST.tools) expect(tool.internalOnly).toBeUndefined()
+        expect(BRAIN_MANIFEST.tools.map((tool) => tool.internalOnly)).toEqual([undefined, undefined, undefined, true])
         expect(BRAIN_MANIFEST.tools.map((tool) => tool.secretFields)).toEqual([
             ["notice", "query", "subject", "attribute", "value", "content", "title", "topic"],
             ["notice", "subject", "attribute", "value"],
             ["notice", "subject", "attribute", "value", "label"],
+            ["notice", "title", "topic", "text"],
         ])
-        expect(BRAIN_MANIFEST.tools.map((tool) => tool.taints)).toEqual([true, true, true])
+        expect(BRAIN_MANIFEST.tools.map((tool) => tool.taints)).toEqual([true, true, true, true])
     })
 })
 
@@ -121,6 +148,7 @@ describe("BrainNativeService unknown tool and arguments", () => {
         ["search", { query: "" }],
         ["facts.list", { limit: 51 }],
         ["facts.get", { id: "f1" }],
+        ["documents.read", { sourceId: "d1" }],
     ])("refuses invalid arguments for %s before reading anything", async (tool, args) => {
         const { brain, views } = await build()
 
@@ -318,5 +346,65 @@ describe("BrainNativeService facts.get", () => {
         facts.get.mockResolvedValue(fact({ id: ID, scope: "internal" }))
 
         await expect(brain.invoke(WS, "facts.get", { id: ID }, AGENT)).resolves.toMatchObject({ fact: { id: ID } })
+    })
+})
+
+describe("BrainNativeService documents.read", () => {
+    const ARGS = { sourceId: "22222222-2222-4222-8222-222222222222" }
+
+    it("serves an internal, ready document to an internal agent with no conversation, scrubbed, with the hash of its text", async () => {
+        const { brain, documents } = await build()
+
+        await expect(brain.invoke(WS, "documents.read", ARGS, AGENT)).resolves.toEqual({
+            notice: BRAIN_NOTICE,
+            document: {
+                id: "d1",
+                title: "Delivery policy",
+                topic: "delivery",
+                contentHash: "h1",
+                text: "Same day delivery. Call [phone] when needed.",
+                clipped: false,
+            },
+        })
+        expect(documents.textOf).toHaveBeenCalledWith(WS, ARGS.sourceId)
+    })
+
+    it("cuts a long document and says so", async () => {
+        const { brain, documents } = await build()
+        documents.textOf.mockResolvedValue(document({ content: "x".repeat(13_000), topic: null }))
+
+        const answer = await brain.invoke(WS, "documents.read", ARGS, AGENT)
+
+        expect(answer).toMatchObject({ document: { clipped: true, topic: null } })
+        expect(JSON.stringify(answer).length).toBeLessThan(13_000)
+    })
+
+    it("refuses a customer conversation and a customer-facing agent before reading", async () => {
+        const { brain, documents } = await build({ module: "chatbot", installationId: null })
+
+        for (const caller of [{ agentId: "a1", conversationId: "c1" }, AGENT]) {
+            await expect(brain.invoke(WS, "documents.read", ARGS, caller)).rejects.toMatchObject({
+                code: McpGatewayErrorCode.NativeRefused,
+                params: { reason: "internal_only" },
+            })
+        }
+        expect(documents.textOf).not.toHaveBeenCalled()
+    })
+
+    it.each<readonly [string, SourceDocument | null]>([
+        ["a document the workspace does not have", null],
+        ["a public document", document({ visibility: "public" })],
+        ["a document still being read", document({ status: "indexing" })],
+        ["a document with no hash yet", document({ contentHash: null })],
+        ["a document kept for another module", document({ module: "accounting" })],
+        ["a document kept for another instance", document({ installationId: "i9" })],
+    ])("answers not found for %s", async (_name, found) => {
+        const { brain, documents } = await build()
+        documents.textOf.mockResolvedValue(found)
+
+        await expect(brain.invoke(WS, "documents.read", ARGS, AGENT)).rejects.toMatchObject({
+            code: McpGatewayErrorCode.NativeRefused,
+            params: { reason: "not_found" },
+        })
     })
 })

@@ -5,7 +5,7 @@ import {
     KnowledgeRowsSection,
     rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
-import type { KnowledgeListView } from "@/components/composites/KnowledgeRows"
+import type { KnowledgeListView } from "@/modules/types"
 import { SlotView } from "@/components/composites/SlotView"
 
 /** The list the connected the facts in force and the scheduled ones supplies. */
@@ -15,7 +15,11 @@ export interface BrainFactsBaseProps {
         /** Something is due: a scheduled value waits to take over or a value in force has ended. Nothing is drawn for it while undefined. */
         readonly maintain?: { readonly title: string; readonly body: string; readonly actionLabel: string } | undefined
     }
-    readonly on: { readonly retry: () => void; readonly maintain: () => void }
+    readonly on: {
+        readonly retry: () => void
+        readonly maintain: () => void
+        readonly action: (rowId: string, actionId: string) => void
+    }
 }
 
 /** Draws the facts in force and the scheduled ones. */
@@ -37,17 +41,22 @@ export const BrainFactsBase = (props: BrainFactsBaseProps) => {
                     />
                 )
             }
-        >
-            <SlotView
-                slot={list.slot}
-                placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
-                labels={list.slotLabels}
-                onRetry={props.on.retry}
-            >
-                {(rows, isSkeleton) => (
-                    <KnowledgeRowList {...rowListPropsOf(list)} rows={rows} isSkeleton={isSkeleton} />
-                )}
-            </SlotView>
-        </KnowledgeRowsSection>
+            body={
+                <SlotView
+                    slot={list.slot}
+                    placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
+                    labels={list.slotLabels}
+                    onRetry={props.on.retry}
+                    render={(rows, isSkeleton) => (
+                        <KnowledgeRowList
+                            {...rowListPropsOf(list)}
+                            rows={rows}
+                            isLoading={isSkeleton}
+                            onAction={props.on.action}
+                        />
+                    )}
+                />
+            }
+        />
     )
 }

@@ -64,9 +64,42 @@ The key roster with semantics is `.starcistacks/production/runtime/env/KEYS.md`.
 | `postgres` | `db` (`POSTGRES_PASSWORD_FILE`), `nivo-postgres-backup`; api task; operator | `POSTGRES_PASSWORD` (superuser), `APP_BE_DB_PASSWORD` (the `app_be` login role), `PRIMARY_DB_URL` |
 | `vps` | operator verbs | `VPS_HOST`, `VPS_USER`, `privateKey` (operator SSH key), `knownHosts` (pinned host keys), `ciPrivateKey` (the operator copy of the CI deploy key; CI reads the sealed member `vps-ci`); never granted |
 | `web` | web image build | the public build values of the console (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL` and their siblings, never sealed) read by `starci app stack build-args` |
-| `test-accounts` | smoke tests | `READY_OWNER_*`, `READY_STAFF_*`, `DEMO_*` |
+| `test-accounts` | smoke tests and the explicit workspace operator CLI in the api task | `READY_OWNER_*`, `READY_STAFF_*`, `DEMO_*`, `WORKSPACE_SEED_INPUT` |
 
 The non-secret production configuration (`PRIMARY_DB_SCHEMA`, `AUTH_WEB_ORIGIN`, `AUTH_GOOGLE_CALLBACK_URL`, `STORAGE_ENDPOINT`, `STORAGE_PUBLIC_URL`, `STORAGE_BUCKET_PREFIX`, `SITE_URL`, `PUBLIC_SITE_URL`, `PUBLIC_API_URL`, `HTTP_SECURITY_ALLOWED_ORIGINS`, `N8N_WEBHOOK_BASE`) is committed in `.starcistacks/production/infra/swarm/api-public.conf` and merged into the api environment by the render; the names the be reads, with required or optional marked, are in `.starcistacks/production/infra/swarm/api.env.example`. The public web values `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_DEVELOPER_API_URL` are build arguments declared in `environments.production.deploy.images.web.buildArgs`.
+
+## Workspace access
+
+The managed `ensure-workspace` and `verify-workspace` tasks run the existing workspace CLI inside the running `nivo-api`
+task, with its private database access and auth configuration. Their commands are fixed in `deploy.tasks`; they accept
+no account, password, token or command arguments. Nothing runs automatically during deploy.
+
+Prepare one private `starci/app-workspace-input@1` input with `action: ensure`, exactly one workspace selector, and distinct
+`owner`, `manager` and `staff` accounts. A fresh isolated run uses a unique `workspaceName`, new account emails, private
+initial passwords and `bootstrapOwner: true`. Reuse the same input for reconciliation; do not substitute the existing
+READY or demo accounts. The full input contract is owned by
+`be/src/modules/domain/workspace-seed/workspace-seed.policy.ts`.
+
+Seal that generated input through the approved loader, with masked input or private stdin, never as a command argument:
+
+```sh
+starci app secret set --env production test-accounts WORKSPACE_SEED_INPUT
+```
+
+After the normal approved release deploy grants this key, the renderer mounts only that key from `test-accounts` into
+the api task and sets `WORKSPACE_SEED_INPUT_FILE`. The input is optional outside workspace maintenance; if it is absent,
+the workspace CLI refuses the task rather than selecting an account or workspace itself. No READY or demo key is granted.
+
+```sh
+starci app stack task ensure-workspace --env production             # inspect the fixed command; no account write
+starci app stack task ensure-workspace --env production --execute   # create missing accounts/workspace and ensure seats
+starci app stack task verify-workspace --env production --execute   # authenticate and read back the exact seats
+```
+
+`ensure` writes as soon as the task is executed. It preserves existing credentials and seat state, refuses a conflicting
+role, and authenticates the owner. `verify` performs no domain write; password authentication creates and closes its own
+temporary session. Both emit a structured workspace receipt, including the workspace id and session-cleanup result.
+`consumerVerified: false` means that a separate login through the console remains necessary.
 
 ## Releases, health and rollback
 

@@ -86,7 +86,7 @@ export interface SetupSideView {
 
 /** What the gates card draws and does: the checklist, its skeleton, the last gate failure and the commands. */
 export interface SetupGatesCardProps extends Omit<SetupSideGates, "applyTone"> {
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly gateFailureTitle: string
     readonly gateFailure: string
     readonly applyTone: "idle" | "applied" | "refused"
@@ -95,4 +95,20 @@ export interface SetupGatesCardProps extends Omit<SetupSideGates, "applyTone"> {
     readonly onStartEdit: (gateKey: string, evidence: string) => void
     readonly onStopEdit: () => void
     readonly onApply: () => void
+}
+
+/** The words of the panes that do not come from a slot. */
+export interface AgentSetupCopy {
+    readonly paneLabel: string
+    readonly checklistLabel: string
+    readonly feedNote: string
+    readonly chatLabel: string
+    readonly chatTitle: string
+    readonly proposalsLabel: string
+    readonly proposalsEmpty: string
+    readonly confirmLabel: string
+    readonly proposalEditLabel: string
+    readonly suggestionsLabel: string
+    /** "NIVO is asking in the chat", under the current gate. */
+    readonly askingLabel: string
 }

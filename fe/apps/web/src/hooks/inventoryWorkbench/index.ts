@@ -1,2 +1,2 @@
 export { useInventoryWorkbenchData } from "./useInventoryWorkbenchData"
-export { inventoryFigures } from "./inventoryWorkbench.shared"
+export { useInventoryWorkbenchView } from "./useInventoryWorkbenchView"

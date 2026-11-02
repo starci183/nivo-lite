@@ -1,4 +1,5 @@
-"use client"
+import { useActiveWorkspace } from "@/hooks/workspaces"
+;("use client")
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
@@ -15,6 +16,7 @@ interface ShiftsImportInput {
 
 /** The quick import: answers whether the lines were created (a failure was toasted with the back end words). */
 export const useShiftsImportCommand = (): ((input: ShiftsImportInput) => Promise<boolean>) => {
+    const { activeWorkspaceId } = useActiveWorkspace()
     const t = useTranslations("shifts")
     const tToast = useTranslations("toast")
     const run = useGraphQLWithToast()
@@ -26,9 +28,9 @@ export const useShiftsImportCommand = (): ((input: ShiftsImportInput) => Promise
             toast.success(tToast("successTitle"), {
                 description: t("importDone", { p: result.positions, s: result.staff, b: result.blocks }),
             })
-            await refreshShifts()
+            await refreshShifts(activeWorkspaceId)
             return true
         },
-        [run, importing, t, tToast],
+        [run, importing, t, tToast, activeWorkspaceId],
     )
 }

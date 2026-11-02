@@ -27,7 +27,7 @@ export const OnboardingChecklist = () => {
                 progressValue: t("progressValue", { done, total }),
                 toggleLabel: isOpen ? t("hide") : t("show"),
                 doneLabel: t("done"),
-                isSkeleton: read === undefined,
+                isLoading: read === undefined,
             }}
             on={{ toggle: () => setOpen((open) => !open) }}
         />

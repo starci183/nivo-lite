@@ -1,6 +1,5 @@
 "use client"
 
-import type { ReactNode } from "react"
 import { useTranslations } from "next-intl"
 import {
     DOSSIER_STATUS_TONE,
@@ -16,8 +15,7 @@ import {
 import type { CategoryView, DossierReviewRecord, DossierView } from "@/hooks/brain"
 import { useWorkspaceMember } from "@/hooks/knowledge"
 import { loadingSlot, mapSlot, useSlotLabels } from "@/hooks/slot"
-import { navigation } from "@/modules/i18n"
-import { brainDossierHref, brainTabHref, brainUploadHref } from "@/modules/routes"
+import { brainDossierHref, brainUploadHref } from "@/modules/routes"
 import { placeholderDossierCategory } from "@/components/composites/DossierRowsCard"
 import { BrainDossiersBase } from "./component"
 import type { DossierRowView, DossiersContent } from "./component"
@@ -109,16 +107,12 @@ const dossierRowOf = (context: RowContext, category: CategoryView, dossier: Doss
 interface BrainDossiersProps {
     /** The dossier open in the drawer. */
     readonly dossier: string | undefined
-    /** The findings of the open dossier and the drawer of its draft, drawn by the page. */
-    readonly detail: ReactNode
-    readonly draftDrawer: ReactNode
 }
 
 /** The dossiers tab of the Second Brain: the figures of the whole set, then the dossiers of each category. */
 export const BrainDossiers = (props: BrainDossiersProps) => {
     const t = useTranslations("secondBrain")
     const review = useTranslations("dossierReview")
-    const router = navigation.useRouter()
     const member = useWorkspaceMember()
     const slotLabels = useSlotLabels()
     const { categories, slot, reload } = useBrainDossiers()
@@ -146,16 +140,12 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
     ]
     return (
         <BrainDossiersBase
-            shape={{ detail: props.dossier === undefined ? null : props.detail, draftDrawer: props.draftDrawer }}
             props={{
                 figuresLabel: t("figuresLabel"),
                 listFooter: t("dossiersFooter"),
                 emptyCategory: t("dossiersEmptyCategory"),
                 emptyAll: t("dossiersEmpty"),
                 checklistImport: checklist.view,
-                hasDetail: props.dossier !== undefined,
-                detailLabel: review("detailLabel"),
-                detailCloseLabel: review("detailClose"),
                 slot: member.isLoading
                     ? loadingSlot<DossiersContent>()
                     : mapSlot(slot, (rows) => ({
@@ -169,7 +159,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
                 placeholder: PLACEHOLDER,
                 slotLabels: slotLabels(t("dossiersEmpty")),
             }}
-            on={{ retry: reload, ...checklist.on, closeDetail: () => router.replace(brainTabHref("dossiers")) }}
+            on={{ retry: reload, ...checklist.on }}
         />
     )
 }

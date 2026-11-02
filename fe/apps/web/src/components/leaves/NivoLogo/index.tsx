@@ -1,4 +1,5 @@
 import Image from "next/image"
+import { Link } from "@starci/grammar/common"
 import { LOGO } from "./classNames"
 
 /** What the logo draws: "full" is the primary colour lockup, "os" the product lockup, "mark" the O mark. */
@@ -7,6 +8,7 @@ type NivoLogoProps = {
     readonly height?: number | undefined
     /** The spoken name of the logo. */
     readonly label: string
+    readonly href?: string | undefined
 }
 
 /** The approved brand rasters (light surfaces only, never inverted) with their width-to-height ratio. */
@@ -20,6 +22,24 @@ const SOURCES = {
 export const NivoLogo = (props: NivoLogoProps) => {
     const source = SOURCES[props.variant ?? "os"]
     const height = props.height ?? 28
+    if (props.href !== undefined)
+        return (
+            <Link
+                href={props.href}
+                label={props.label}
+                visited="uniform"
+                media={{
+                    src: source.src,
+                    alt: props.label,
+                    width: Math.round(height * source.ratio),
+                    height,
+                    aspect: "auto",
+                    fit: "contain",
+                    plate: "none",
+                    loading: "eager",
+                }}
+            />
+        )
     return (
         <Image
             className={LOGO}

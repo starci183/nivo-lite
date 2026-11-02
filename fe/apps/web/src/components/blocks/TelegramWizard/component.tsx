@@ -1,14 +1,17 @@
+import type { DataSlot, SlotLabels, AgentStepView, CopyLabels, GuideScreen, WizardNote } from "@/modules/types"
+import { SlotView } from "@/components/composites/SlotView"
 import { Alert, Button, Cluster, Grid, Input, Text } from "@starci/grammar/common"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { backAction, nextAction, startActions, WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
-import { WizardFrame } from "@/components/composites/WizardFrame"
+import { WizardFrame } from "@/components/frames/WizardFrame"
 import { WizardGuideView } from "@/components/composites/WizardGuideView"
-import type { AgentStepView, CopyLabels, GuideScreen, WizardNote } from "@/modules/types"
 
 /** Copy, state and commands of the Telegram wizard. */
 export interface TelegramWizardBaseProps {
     readonly props: {
+        readonly boot: DataSlot<boolean>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
@@ -74,7 +77,7 @@ const actionsOf = ({ props, on }: TelegramWizardBaseProps): ReadonlyArray<Wizard
 }
 
 /** Telegram in the shared wizard frame: BotFather steps, paste the token, check (getMe and webhook info), attach to the agents. */
-export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
+const renderTelegramWizard = (props: TelegramWizardBaseProps, isLoading: boolean) => {
     const { props: view, on } = props
     return (
         <WizardFrame
@@ -82,12 +85,18 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
             stepLabel={view.stepLabel}
             steps={view.steps}
             index={view.index}
-            footer={<WizardFooter actions={actionsOf(props)} />}
+            footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
         >
             {view.step === "bot" ? (
                 <>
                     <Cluster gap="inline">
-                        <Button intent="neutral" href={view.providerHref} target="_blank" rel="noreferrer">
+                        <Button
+                            intent="neutral"
+                            href={view.providerHref}
+                            target="_blank"
+                            rel="noreferrer"
+                            isLoading={isLoading}
+                        >
                             {view.text.openProvider}
                         </Button>
                     </Cluster>
@@ -96,6 +105,7 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
                         copy={view.copy}
                         onEdit={() => undefined}
                         onPaste={() => undefined}
+                        isLoading={isLoading}
                     />
                 </>
             ) : null}
@@ -109,6 +119,7 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
                         isDisabled={view.isPending}
                         value={view.form.name}
                         onValueChange={on.name}
+                        isLoading={isLoading}
                     />
                     <Input
                         id="tg-token"
@@ -119,6 +130,7 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
                         isDisabled={view.isPending}
                         value={view.form.token}
                         onValueChange={on.token}
+                        isLoading={isLoading}
                     />
                 </Grid>
             ) : null}
@@ -128,12 +140,27 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
                 </Text>
             ) : null}
             {view.step === "check" && !view.isChecking && view.check !== null ? (
-                <Alert tone={view.check.tone} title={view.check.text} />
+                <Alert tone={view.check.tone} title={view.check.text} isLoading={isLoading} />
             ) : null}
             {view.step === "agent" ? (
-                <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
+                <WizardAgentStep
+                    {...view.agentStep}
+                    isDisabled={view.isPending}
+                    onChange={on.agents}
+                    isLoading={isLoading}
+                />
             ) : null}
-            {view.error === null ? null : <Alert tone="negative" title={view.error} />}
+            {view.error === null ? null : <Alert tone="negative" title={view.error} isLoading={isLoading} />}
         </WizardFrame>
     )
 }
+
+/** Draws the selected wizard's existing ready tree from its actual dependency reads. */
+export const TelegramWizardBase = (props: TelegramWizardBaseProps) => (
+    <SlotView
+        slot={props.props.boot}
+        placeholder={true}
+        labels={props.props.slotLabels}
+        render={(_ready, isLoading) => renderTelegramWizard(props, isLoading)}
+    />
+)

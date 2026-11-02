@@ -29,20 +29,22 @@ export interface AgentModeCardBaseProps {
 
 /** Draws the operating mode card: assist or autopilot, and what each means. */
 export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
-    <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotView {...props.props.read} onRetry={props.on.retry}>
-            {(view, isSkeleton) => (
+    <SlotView
+        {...props.props.read}
+        onRetry={props.on.retry}
+        render={(view, isSkeleton) => (
+            <SurfaceCard label={props.props.title} headingLevel={2} isLoading={isSkeleton}>
                 <Stack gap="section">
                     <SegmentedControl
                         label={props.props.title}
                         isLabelHidden
                         options={props.props.options}
                         value={view.mode}
-                        isSkeleton={isSkeleton}
+                        isLoading={isSkeleton}
                         isDisabled={props.props.isDisabled}
                         onValueChange={props.on.mode}
                     />
-                    <Text size="sm" isSkeleton={isSkeleton}>
+                    <Text size="sm" isLoading={isSkeleton}>
                         {view.help}
                     </Text>
                     <Text size="xs" tone="muted">
@@ -54,7 +56,7 @@ export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
                         </Text>
                     )}
                 </Stack>
-            )}
-        </SlotView>
-    </SurfaceCard>
+            </SurfaceCard>
+        )}
+    />
 )

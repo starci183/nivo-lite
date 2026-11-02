@@ -1,4 +1,4 @@
-import { Page, Skeleton, SurfaceCard } from "@starci/grammar/common"
+import { EmptyNotice, Page, SurfaceCard } from "@starci/grammar/common"
 
 /** The copy of the console loading skeleton. */
 export interface ConsoleLoadingPageBaseProps {
@@ -9,14 +9,18 @@ export interface ConsoleLoadingPageBaseProps {
 export const ConsoleLoadingPageBase = (props: ConsoleLoadingPageBaseProps) => (
     <Page
         measure="product"
-        isSkeleton
+        isLoading
         header={{
             title: props.props.loading,
             breadcrumbs: { label: props.props.crumbLabel, items: [{ id: "home", label: props.props.crumbHome }] },
         }}
     >
-        <SurfaceCard ariaLabel={props.props.loading}>
-            <Skeleton shape="text" lines={4} />
-        </SurfaceCard>
+        <SurfaceCard
+            kind="list"
+            ariaLabel={props.props.loading}
+            isLoading
+            items={[]}
+            empty={<EmptyNotice message={props.props.loading} />}
+        />
     </Page>
 )

@@ -1,6 +1,7 @@
 "use client"
 import { useTranslations } from "next-intl"
 import { useCreditsHistory } from "@/hooks/credits"
+import { loadingSlot } from "@/hooks/slot"
 import { CreditsHistoryBase } from "./component"
 
 /** Connects the independent payment history slot. */
@@ -17,7 +18,7 @@ export const CreditsHistorySkeleton = () => {
             props={{
                 title: t("paymentsTitle"),
                 loading: t("loading"),
-                slot: { isLoading: true, isError: false, items: [] },
+                slot: loadingSlot(),
                 labels: {
                     empty: t("paymentsEmpty"),
                     forbidden: t("errForbidden"),

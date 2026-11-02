@@ -1,43 +1,62 @@
+import {
+    NOW,
+    conversation,
+    arrangeChatTurn,
+    chatTurnExtensionsOf,
+} from "@tests/fixtures/builders/chat-turn-harness.builder"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
-import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelReceiptsService } from "@modules/domain/channel-receipts"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord, InstallationSettings } from "@modules/domain/module-installations"
 import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import type { ChatTurnPayload } from "@modules/queues/chat-turn"
 import { ChatTurnService } from "./chat-turn.service"
 import { CHAT_TURN_EXTENSIONS } from "./conversations.decorators"
+
+import type { ChatTurnPayload } from "@modules/queues/chat-turn"
+
 import type {
     CustomerTurn,
-    ChatTurnExtensions,
     ChatTurnProposal,
     ChatTurnRuntime,
     CustomerOutcomes,
+    ChatTurnExtensions,
 } from "./conversations.contracts"
 
-/** The installation of the conversation agent, carrying the given settings. */
-const installationOf = (settings: InstallationSettings): InstallationRecord => ({
-    id: "inst-1",
-    workspaceId: "ws-1",
-    moduleKey: "chatbot",
-    name: "Chatbot",
-    isMulti: false,
-    agentId: "agent-1",
-    status: "live",
-    operatingMode: "autopilot",
-    liveEnabled: true,
-    activeContextVersionId: null,
-    settings,
-    createdAt: "2026-10-12T10:00:00.000Z",
-})
+const build = async (setup: Parameters<typeof arrangeChatTurn>[1] = {}) => {
+    const installations = mock<InstallationRecordsService>()
+    const conversations = mock<AgentConversationsService>()
+    const messages = mock<AgentMessagesService>()
+    const receipts = mock<ChannelReceiptsService>()
+    const delivery = mock<ChannelDeliveryService>()
+    const logger = mock<Logger>()
+    const catalog = mock<MessageCatalog>({ get: (key) => `<${key}>` })
+    const extensions = chatTurnExtensionsOf()
+    const extensionPort = mock<ChatTurnExtensions>(extensions)
+    const doubles = { installations, conversations, messages, receipts, delivery, logger, catalog, extensions }
+    arrangeChatTurn(doubles, setup)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            ChatTurnService,
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: CHAT_TURN_EXTENSIONS, useValue: extensionPort },
+            { provide: LOGGER, useValue: logger },
+            { provide: AgentConversationsService, useValue: conversations },
+            { provide: AgentMessagesService, useValue: messages },
+            { provide: ChannelReceiptsService, useValue: receipts },
+            { provide: ChannelDeliveryService, useValue: delivery },
+            { provide: InstallationRecordsService, useValue: installations },
+        ],
+    }).compile()
+    return { service: moduleRef.get(ChatTurnService), ...doubles }
+}
 
 const registerRunFromJob = () => {
     describe("runFromJob", () => {
@@ -173,6 +192,10 @@ const registerDeliveryGuards = () => {
         })
     })
 
+    registerReplyGateCases()
+}
+
+const registerReplyGateCases = () => {
     it("names a customer just met and keeps the name on the turn", async () => {
         const { service, conversations, extensions } = await build({ name: "Minh Tran" })
         const propose = jest.fn().mockResolvedValue(proposal())
@@ -224,6 +247,36 @@ const registerDeliveryFailures = () => {
         expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Lead handed to Sales")
     })
 
+    it("sends none of the model's text when the final reply is owed, and still shows the lines", async () => {
+        const { service, messages, delivery, extensions } = await build()
+        const outcomes = mock<CustomerOutcomes>()
+        outcomes.settle.mockResolvedValue({ reply: "Will do", send: true, lines: ["Order recorded"] })
+        extensions.useOutcomes(outcomes)
+        const turn = await service.turnOf(turnPayload)
+        assert(turn !== undefined)
+
+        await service.respond({ ...turn, finalOwed: true }, proposal())
+
+        expect(messages.storeReply).not.toHaveBeenCalled()
+        expect(delivery.deliver).not.toHaveBeenCalled()
+        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Order recorded")
+    })
+
+    it("passes a late reply through the gate, shows its lines and leaves sending to the caller", async () => {
+        const { service, messages, delivery, extensions } = await build()
+        const outcomes = mock<CustomerOutcomes>()
+        outcomes.settleLate.mockResolvedValue({ reply: "Done", send: false, lines: ["Waits for approval"] })
+        extensions.useOutcomes(outcomes)
+        const turn = await service.turnOf(turnPayload)
+        assert(turn !== undefined)
+
+        await expect(service.settleLate(turn, "Done", "w1")).resolves.toMatchObject({ send: false })
+
+        expect(outcomes.settleLate).toHaveBeenCalledWith(turn, "Done", "w1")
+        expect(delivery.deliver).not.toHaveBeenCalled()
+        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Waits for approval")
+    })
+
     it("sends nothing when the outcome handler keeps the reply for approval, and still shows its lines", async () => {
         const { service, messages, delivery, extensions } = await build()
         const outcomes = mock<CustomerOutcomes>()
@@ -238,6 +291,10 @@ const registerDeliveryFailures = () => {
         expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Waits for approval")
     })
 
+    registerDuplicateReplyGuard()
+}
+
+const registerDuplicateReplyGuard = () => {
     it("never sends a reply twice", async () => {
         const { service, delivery, extensions } = await build({ sent: true })
         extensions.useRuntime(runtimeAnswering(proposal()))
@@ -347,126 +404,6 @@ const registerHoldingFailures = () => {
     })
 }
 
-const NOW = Date.parse("2026-10-12T10:00:00.000Z")
-
-const conversation = (patch: Partial<TurnConversation> = {}): TurnConversation => ({
-    id: "conv-1",
-    workspaceId: "ws-1",
-    channel: "telegram",
-    externalId: "555",
-    connectionId: "c-1",
-    leadId: null,
-    handledBy: null,
-    visitorName: "Minh",
-    installationId: null,
-    agent: {
-        id: "agent-1",
-        name: "Chatbot",
-        handle: "chatbot",
-        role: "Customer chat",
-        module: "chatbot",
-        instructions: "Be kind",
-        knowledge: "Tea",
-        approvalRule: "ask",
-        greeting: "Hi",
-    },
-    speaksAs: null,
-    ...patch,
-})
-
-interface Setup {
-    readonly conversation?: TurnConversation | null
-    readonly message?: boolean
-    readonly setting?: InstallationSettings
-    readonly retry?: boolean
-    readonly held?: boolean
-    readonly sent?: boolean
-    readonly name?: string
-}
-
-/** What the spec plugs into a turn, and when. */
-interface Plugged {
-    /** The AI step, once plugged. */
-    runtime?: ChatTurnRuntime
-    /** The outcome handler, once plugged. */
-    outcomes?: CustomerOutcomes
-}
-
-/**
- * The extensions a spec can plug a runtime and an outcome handler into at any point, like the app root does at start.
- */
-const pluggable = () => {
-    const plugged: Plugged = {}
-    return {
-        runtime: () => plugged.runtime,
-        outcomes: () => plugged.outcomes,
-        useRuntime: (runtime: ChatTurnRuntime) => {
-            plugged.runtime = runtime
-        },
-        useOutcomes: (outcomes: CustomerOutcomes) => {
-            plugged.outcomes = outcomes
-        },
-    }
-}
-
-const build = async (setup: Setup = {}) => {
-    const installations = mock<InstallationRecordsService>()
-    installations.ofAgent.mockResolvedValue(setup.setting === undefined ? null : installationOf(setup.setting))
-    const conversations = mock<AgentConversationsService>()
-    conversations.turnOf.mockResolvedValue(
-        setup.conversation === null
-            ? { kind: "refused", code: AgentConversationsErrorCode.NotFound }
-            : { kind: "ok", value: setup.conversation ?? conversation() },
-    )
-    conversations.rename.mockResolvedValue(undefined)
-    const messages = mock<AgentMessagesService>()
-    messages.find.mockResolvedValue(
-        setup.message === false
-            ? { kind: "refused", code: AgentMessagesErrorCode.NotFound }
-            : { kind: "ok", value: { id: "msg-1", role: "user", body: "Price?", deliveryStatus: null } },
-    )
-    messages.transcript.mockResolvedValue([{ role: "user", body: "Price?" }])
-    messages.storeReply.mockImplementation((_ws, _conv, body) =>
-        Promise.resolve({ id: "reply-1", body, sent: setup.sent === true }),
-    )
-    messages.storeLine.mockResolvedValue(undefined)
-    messages.replyExists.mockResolvedValue(setup.retry === true)
-    const receipts = mock<ChannelReceiptsService>()
-    receipts.heldSince.mockResolvedValue(setup.held === true)
-    receipts.rememberHolding.mockResolvedValue(undefined)
-    const delivery = mock<ChannelDeliveryService>()
-    delivery.deliver.mockResolvedValue({ delivered: true, failure: null })
-    delivery.showTyping.mockResolvedValue(undefined)
-    delivery.customerName.mockResolvedValue(setup.name ?? "")
-    const logger = mock<Logger>()
-    const extensions = pluggable()
-    const catalog: MessageCatalog = { get: (key) => `<${key}>` }
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            ChatTurnService,
-            { provide: CLOCK, useValue: new FakeClock(NOW) },
-            { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>(catalog) },
-            { provide: CHAT_TURN_EXTENSIONS, useValue: mock<ChatTurnExtensions>(extensions) },
-            { provide: LOGGER, useValue: logger },
-            { provide: AgentConversationsService, useValue: conversations },
-            { provide: AgentMessagesService, useValue: messages },
-            { provide: ChannelReceiptsService, useValue: receipts },
-            { provide: ChannelDeliveryService, useValue: delivery },
-            { provide: InstallationRecordsService, useValue: installations },
-        ],
-    }).compile()
-    return {
-        service: moduleRef.get(ChatTurnService),
-        installations,
-        conversations,
-        messages,
-        receipts,
-        delivery,
-        logger,
-        extensions,
-    }
-}
-
 const turnPayload: ChatTurnPayload = {
     kind: "turn",
     workspaceId: "ws-1",
@@ -494,4 +431,20 @@ const deliverPayload: ChatTurnPayload = { ...turnPayload, kind: "deliver", messa
 describe("ChatTurnService", () => {
     registerRunFromJob()
     registerRunADeliverJob()
+})
+import assert from "node:assert/strict"
+
+describe("ChatTurnService late reply without extensions", () => {
+    it("returns the unchanged late reply when no outcome handler is registered", async () => {
+        const { service, messages } = await build()
+        const turn = await service.turnOf(turnPayload)
+        assert(turn !== undefined)
+        await expect(service.settleLate(turn, "Finished", "item-1")).resolves.toEqual({
+            reply: "Finished",
+            send: true,
+            lines: [],
+        })
+        expect(messages.storeLine).not.toHaveBeenCalled()
+        expect(messages.storeReply).not.toHaveBeenCalled()
+    })
 })

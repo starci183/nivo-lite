@@ -36,7 +36,7 @@ interface AgentSetupComposerCommands {
 /** Content, copy and commands of the composer. */
 interface AgentSetupComposerProps {
     readonly content: AgentSetupComposerContent
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly copy: AgentSetupComposerCopy
     readonly on: AgentSetupComposerCommands
 }
@@ -51,7 +51,7 @@ export const AgentSetupComposer = (props: AgentSetupComposerProps) => (
                         key={suggestion.id}
                         intent="neutral"
                         size="sm"
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isLoading}
                         onPress={() => props.on.suggest(suggestion.id)}
                     >
                         {suggestion.label}
@@ -78,7 +78,7 @@ export const AgentSetupComposer = (props: AgentSetupComposerProps) => (
                         rows={2}
                         maxLength={4000}
                         value={props.content.text}
-                        isSkeleton={props.isSkeleton}
+                        isLoading={props.isLoading}
                         isDisabled={props.content.isSending}
                         onValueChange={props.on.text}
                         onSubmitShortcut={props.on.send}
@@ -87,7 +87,7 @@ export const AgentSetupComposer = (props: AgentSetupComposerProps) => (
                 <Button
                     intent="commit"
                     isPending={props.content.isSending}
-                    isDisabled={props.isSkeleton || props.content.text.trim().length === 0}
+                    isDisabled={props.isLoading || props.content.text.trim().length === 0}
                     onPress={props.on.send}
                 >
                     {props.content.sendLabel}
@@ -99,7 +99,7 @@ export const AgentSetupComposer = (props: AgentSetupComposerProps) => (
                 label={props.content.attach.label}
                 accept=".pdf,application/pdf"
                 prompt={props.content.attach.prompt}
-                isDisabled={props.isSkeleton || props.content.attach.isReading}
+                isDisabled={props.isLoading || props.content.attach.isReading}
                 hideFileList
                 onFilesChange={props.on.attach}
             />

@@ -1,77 +1,56 @@
-import { Button, EmptyNotice, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Cluster, Code, EmptyNotice, Stack, SurfaceCard, Text, type ListRowData } from "@starci/grammar/common"
 import { AdminBadges } from "@/components/leaves/AdminBadges"
-import type { AdminCardView, AdminRowView } from "@/hooks/admin"
-import { ROW_META_CLASS_NAME } from "./classNames"
+import type { AdminCardView, AdminRowView } from "@/modules/types"
 
-/** What a list card of the console draws. */
-type AdminRowsCardProps = {
-    readonly card: AdminCardView
-    /** Draws the same card as a skeleton while the read is on its way. */
-    readonly isSkeleton?: boolean | undefined
-}
+/** What one bounded console collection draws before and after its first read. */
+type AdminRowsCardProps = { readonly card: AdminCardView; readonly isLoading?: boolean }
 
-/** What one row of the card draws. */
-type RowProps = {
-    readonly row: AdminRowView
-    readonly isSkeleton: boolean
-}
-
-const Row = (props: RowProps) => (
-    <ListRow
-        title={
-            props.row.isMuted ? (
-                <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
-                    {props.row.title}
-                </Text>
-            ) : (
-                props.row.title
-            )
-        }
-        description={props.row.lines.length === 0 ? null : props.row.lines.join(" · ")}
-        badges={<AdminBadges badges={props.row.badges} isSkeleton={props.isSkeleton} />}
-        isSkeleton={props.isSkeleton}
-        actions={
-            props.row.link === undefined && props.row.note === undefined ? null : (
-                <div className={ROW_META_CLASS_NAME}>
-                    {props.row.link === undefined ? null : (
-                        <Button size="sm" intent="neutral" href={props.row.link.href} isSkeleton={props.isSkeleton}>
-                            {props.row.link.label}
-                        </Button>
-                    )}
-                    {props.row.note === undefined ? null : (
-                        <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
-                            {props.row.note}
+/** Preserves the row's note, command and diagnostic text while the collection owns its anatomy. */
+const itemOf = (row: AdminRowView, isLoading: boolean): ListRowData => {
+    const [status, exception, ...facts] = row.badges
+    let badges: ListRowData["badges"]
+    if (status !== undefined) badges = exception === undefined ? [status] : [status, exception]
+    return {
+        id: row.id,
+        title: row.title,
+        ...(row.lines.length === 0 ? {} : { description: row.lines.join(" · ") }),
+        ...(badges === undefined ? {} : { badges }),
+        ...(row.link === undefined ? {} : { action: { label: row.link.label, href: row.link.href } }),
+        detail:
+            facts.length === 0 && row.note === undefined && row.mono === undefined ? undefined : (
+                <Stack gap="inline">
+                    {facts.map((fact) => (
+                        <Text key={fact.id} size="xs" tone="muted" isLoading={isLoading}>
+                            {fact.label}
+                        </Text>
+                    ))}
+                    {row.note === undefined ? null : (
+                        <Text size="xs" tone="muted" isLoading={isLoading}>
+                            {row.note}
                         </Text>
                     )}
-                </div>
-            )
-        }
-    >
-        {props.row.mono === undefined ? null : (
-            <Text size="xs" isSkeleton={props.isSkeleton}>
-                <code>{props.row.mono}</code>
-            </Text>
-        )}
-    </ListRow>
-)
+                    {row.mono === undefined ? null : <Code isLoading={isLoading}>{row.mono}</Code>}
+                </Stack>
+            ),
+    }
+}
 
-/** One list card of the console: its rows, or the empty notice when it has none. */
+/** One list card of the console, with the label, badges and empty state in their native slots. */
 export const AdminRowsCard = (props: AdminRowsCardProps) => (
-    <SurfaceListCard
+    <SurfaceCard
+        kind="list"
         label={props.card.label}
         {...(props.card.ariaLabel === undefined ? {} : { ariaLabel: props.card.ariaLabel })}
         headingLevel={2}
+        isLoading={props.isLoading === true}
         labelEnd={
             props.card.labelBadges.length === 0 ? undefined : (
-                <div className={ROW_META_CLASS_NAME}>
-                    <AdminBadges badges={props.card.labelBadges} isSkeleton={props.isSkeleton === true} />
-                </div>
+                <Cluster gap="inline">
+                    <AdminBadges badges={props.card.labelBadges} isLoading={props.isLoading === true} />
+                </Cluster>
             )
         }
         empty={<EmptyNotice message={props.card.emptyMessage} />}
-    >
-        {props.card.rows.map((row) => (
-            <Row key={row.id} row={row} isSkeleton={props.isSkeleton === true} />
-        ))}
-    </SurfaceListCard>
+        items={props.card.rows.map((row) => itemOf(row, props.isLoading === true))}
+    />
 )

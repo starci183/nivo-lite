@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { ConversationTarget } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ConnectionsService } from "@modules/domain/connections"
-import { InjectZalo, isZaloTokenRejection, zaloFailureOf } from "@modules/integrations/zalo"
+import { InjectZalo, isZaloMessageRefusal, isZaloTokenRejection, zaloFailureOf } from "@modules/integrations/zalo"
 import type { ZaloClient, ZaloFailure } from "@modules/integrations/zalo"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -19,8 +19,8 @@ import { renewalTemplateData, znsRenewalOf } from "./zns-renewal.policy"
 /** Consultation messages are free for 48 hours after the customer's last interaction; later ones are paid or refused by Zalo. */
 export const ZALO_FREE_WINDOW_MS = 48 * 3_600_000
 
-const BY_CONSULTATION: DeliveryResult = { delivered: true, failure: null, via: "consultation" }
-const BY_ZNS: DeliveryResult = { delivered: true, failure: null, via: "zns" }
+const BY_CONSULTATION: DeliveryResult = { delivered: true, failure: null, outcome: "acknowledged", via: "consultation" }
+const BY_ZNS: DeliveryResult = { delivered: true, failure: null, outcome: "acknowledged", via: "zns" }
 
 @Injectable()
 /**
@@ -44,7 +44,7 @@ export class ZaloDeliveryService {
      */
     async send(target: ConversationTarget, userId: string | null, request: DeliveryRequest): Promise<DeliveryResult> {
         const connectionId = target.connectionId
-        if (connectionId === null) return { delivered: false, failure: "zalo_not_connected" }
+        if (connectionId === null) return { delivered: false, failure: "zalo_not_connected", outcome: "rejected" }
         if (userId === null) return this.outsideWindow(target, connectionId, request, "zalo_not_connected")
         if (await this.windowClosed(target.id))
             return this.outsideWindow(target, connectionId, request, "zalo_window_expired")
@@ -55,7 +55,12 @@ export class ZaloDeliveryService {
                 const failure = this.failed(target, cause)
                 return failure === "zalo_window_expired"
                     ? this.outsideWindow(target, connectionId, request, failure)
-                    : { delivered: false, failure }
+                    : {
+                          delivered: false,
+                          failure,
+                          outcome:
+                              cause instanceof ChannelsError || isZaloMessageRefusal(cause) ? "rejected" : "ambiguous",
+                      }
             },
         )
     }
@@ -100,13 +105,13 @@ export class ZaloDeliveryService {
         refusal: ZaloFailure,
     ): Promise<DeliveryResult> {
         const notice = request.notification
-        if (notice === undefined) return { delivered: false, failure: refusal }
+        if (notice === undefined) return { delivered: false, failure: refusal, outcome: "rejected" }
         const settings = await this.znsSettingsOf(target.workspaceId, connectionId)
         const phone = normaliseVnPhone(notice.phone)
         if (settings === null || phone === null) {
             const note = settings === null ? "zns_not_configured" : "zns_no_phone"
             this.logger.warn(ChannelsLogEvent.ZnsFallbackSkipped, { conversationId: target.id, refusal, note })
-            return { delivered: false, failure: refusal, note }
+            return { delivered: false, failure: refusal, note, outcome: "rejected" }
         }
         const message = {
             phone,
@@ -122,7 +127,11 @@ export class ZaloDeliveryService {
                 })
                 return BY_ZNS
             },
-            (cause: unknown): DeliveryResult => ({ delivered: false, failure: this.failed(target, cause) }),
+            (cause: unknown): DeliveryResult => ({
+                delivered: false,
+                failure: this.failed(target, cause),
+                outcome: cause instanceof ChannelsError || isZaloMessageRefusal(cause) ? "rejected" : "ambiguous",
+            }),
         )
     }
 

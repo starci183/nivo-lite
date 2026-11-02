@@ -18,6 +18,7 @@ import {
 import type { Approver, GrantCandidate, GrantDraft, PermissionDraft, Strategy } from "@/modules/permissions"
 import { usePermissionDrawerWords } from "./usePermissionDrawerWords"
 import { useSavePermission } from "./useSavePermission"
+import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 
 /** The drawer while it is open: the rule being changed, what was typed, and the limits typed over the stored ones. */
 interface DrawerState {
@@ -61,6 +62,7 @@ const STRATEGIES: ReadonlyArray<Strategy> = ["auto", "bands", "ask", "never"]
 export const usePermissionDrawer = (options: DrawerOptions) => {
     const t = useTranslations("permissions")
     const words = usePermissionDrawerWords()
+    const slotLabels = useSlotLabels()
     const isOwner = useMember()?.role === "owner"
     const [state, setState] = useState<DrawerState | null>(null)
     const grantsRead = useQueryMemberGrantsSwr(state === null ? null : { action: state.rule.action })
@@ -106,7 +108,13 @@ export const usePermissionDrawer = (options: DrawerOptions) => {
                   roomOptions: options.roomOptions,
                   memberOptions: activeChoices(options.members),
               }
+    const grantsSlot = slotOfReads([grantsRead], () =>
+        candidates().map((one) => ({ ...one, maxLabel: t("grantMax", { name: one.name }) })),
+    )
     return {
+        grantsSlot,
+        grantsLabels: slotLabels(t("loadFailTitle")),
+        retryGrants: () => void grantsRead.mutate(),
         open: (rule: StoredRule) => setState({ rule, draft: draftOf(rule), grantEdits: {} }),
         props,
         on: {

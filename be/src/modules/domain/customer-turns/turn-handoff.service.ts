@@ -3,15 +3,20 @@ import { AgentConversationsService, ConversationHandoverService } from "@modules
 import type { TurnConversation } from "@modules/domain/agent-conversations"
 import type { AgentHandoff, AgentHandoffRequest, JsonResult, ToolContext } from "@modules/domain/agent-tools"
 import { AgentsService } from "@modules/domain/agents"
+import { HANDOVER_ACTION, HANDOVER_TO_FACT } from "@modules/domain/authority-rules"
+import { WorkEngineService } from "@modules/domain/decisions"
+import type { WorkContext } from "@modules/domain/decisions"
 import type { AgentProfile } from "@modules/domain/agents"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { HubNotesService } from "./hub-notes.service"
 import { TurnSourcesService } from "./turn-sources.service"
 
+type DivertSource = Parameters<WorkEngineService["runDiverted"]>[2]
+
 const LOCALE = "vi"
-/** An agent id: anything else the agent names is a department (module key). */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
+/** Who the engine names as the actor of a hand-over a person must approve. */
+const ENGINE_ACTOR = "OpenClaw"
 
 @Injectable()
 /**
@@ -19,7 +24,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
  * says so (for example Sales to Customer care once a booking is confirmed). The move and its ownership record commit together; a
  * conversation a person holds, an unknown agent or the agent itself stays where it is, and an owner's test chat is never moved (a typed
  * `simulation` answer), so a test leaves no ownership record. Both agents' home rooms get the hand-off note, which lists the knowledge
- * the turn read as its sources.
+ * the turn read as its sources. The graph of the agent judges the move first: it can hold it for a person, stop it, or lead elsewhere.
  */
 export class TurnHandoffService implements AgentHandoff {
     constructor(
@@ -29,6 +34,7 @@ export class TurnHandoffService implements AgentHandoff {
         private readonly agents: AgentsService,
         private readonly notes: HubNotesService,
         private readonly sources: TurnSourcesService,
+        private readonly engine: WorkEngineService,
     ) {}
 
     /** Hands the job's conversation to the named agent; the answer says where it went or why it stayed. */
@@ -38,9 +44,11 @@ export class TurnHandoffService implements AgentHandoff {
         const conversation = turn.value
         if (conversation.handledBy !== null) return { status: "held_by_person" }
         if (await this.conversations.isTestChat(conversation.id)) return { status: "simulation" }
-        const target = await this.targetOf(ctx.workspaceId, request.to)
+        const target = await this.agents.profileByReference(ctx.workspaceId, request.to)
         if (target === null) return { status: "no_such_agent" }
         if (target.id === conversation.agent.id) return { status: "already_there" }
+        const held = await this.heldByGraph(ctx, conversation, request, target)
+        if (held !== null) return held
         const moved = await this.handover.handOver({
             workspaceId: conversation.workspaceId,
             conversationId: conversation.id,
@@ -53,8 +61,47 @@ export class TurnHandoffService implements AgentHandoff {
         return { status: "handed_off", to: target.name }
     }
 
-    private targetOf(workspaceId: string, to: string): Promise<AgentProfile | null> {
-        return UUID.test(to) ? this.agents.profileOf(workspaceId, to) : this.agents.profileOfDepartment(workspaceId, to)
+    /** What the graph says about this move, as the answer to the agent; null when it may go ahead. */
+    private async heldByGraph(
+        ctx: ToolContext,
+        conversation: TurnConversation,
+        request: AgentHandoffRequest,
+        target: AgentProfile,
+    ): Promise<JsonResult | null> {
+        const graph = await this.engine.checkGraph({
+            workspaceId: conversation.workspaceId,
+            installationId: conversation.installationId,
+            action: HANDOVER_ACTION,
+            road: "handover",
+            key: `${ctx.jobId}:${conversation.id}:${target.id}`,
+            subjectType: "conversation",
+            subjectId: conversation.id,
+            leadId: conversation.leadId,
+            text: null,
+            evidence: null,
+            attributes: { [HANDOVER_TO_FACT]: target.module },
+            turnId: null,
+            wakeId: null,
+            askOpensWork: true,
+        })
+        if (graph.outcome === "run") return null
+        if (graph.outcome === "stop") return { status: "stopped_by_graph" }
+        const work: WorkContext = { workspaceId: conversation.workspaceId, actor: ENGINE_ACTOR, locale: LOCALE }
+        const source: DivertSource = {
+            key: `${ctx.jobId}:${conversation.id}`,
+            subjectType: "conversation",
+            subjectId: conversation.id,
+            leadId: conversation.leadId,
+            installationId: conversation.installationId,
+            origin: null,
+            proposal: {
+                summary: this.catalog.get("gatewayTurns.handOverSummary", { to: target.name }, LOCALE),
+                fields: { to: target.id, note: request.note },
+            },
+        }
+        const divert = graph.divert ?? { action: HANDOVER_ACTION, handoverTo: target.id, asks: true }
+        const item = await this.engine.runDiverted(work, divert, source)
+        return { status: graph.outcome === "ask" ? "approval_requested" : "diverted_by_graph", work_item_id: item.id }
     }
 
     /** The hand-off note, once in the home room of each of the two agents. */

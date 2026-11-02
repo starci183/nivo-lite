@@ -1,15 +1,17 @@
 "use client"
 
+import { useFeatureReset } from "@/hooks/reuseables"
+import type { HiringOwner } from "@/hooks/hiring"
+
 import { useMemo, useState } from "react"
-import type { DragEvent } from "react"
 import { useHiringRun } from "@/hooks/hiring"
 import type { HiringWorkbenchData } from "@/hooks/hiringWire"
 import { pipelineLanes, withdrawnCount } from "./hiringPipeline.shared"
 import { useHiringMove } from "./useHiringMove"
 
 /** The pipeline board of one job (or all): lanes, the drag in flight, the card asked to be rejected, and the moves. */
-export const useHiringPipeline = (data: HiringWorkbenchData, jobId: string) => {
-    const run = useHiringRun()
+export const useHiringPipeline = (data: HiringWorkbenchData, jobId: string, owner?: HiringOwner) => {
+    const run = useHiringRun(owner)
     const move = useHiringMove()
     const [dragId, setDragId] = useState<string | null>(null)
     const [overStage, setOverStage] = useState<string | null>(null)
@@ -22,8 +24,18 @@ export const useHiringPipeline = (data: HiringWorkbenchData, jobId: string) => {
             setRejectingId(id)
             return
         }
-        void run.exec(() => move(id, stage))
+        run.dispatch(() => move(id, stage))
     }
+    useFeatureReset({
+        isActive: owner?.isActive ?? true,
+        isReady: true,
+        scope: owner?.scope ?? "",
+        onReset: () => {
+            setDragId(null)
+            setOverStage(null)
+            setRejectingId(null)
+        },
+    })
     return {
         lanes,
         withdrawn: withdrawnCount(data.candidates, jobId),
@@ -34,24 +46,17 @@ export const useHiringPipeline = (data: HiringWorkbenchData, jobId: string) => {
         error: run.error,
         clearError: run.clear,
         moveTo,
-        startDrag: (id: string, event: DragEvent) => {
-            event.dataTransfer.setData("text/plain", id)
-            event.dataTransfer.effectAllowed = "move"
-            setDragId(id)
-        },
+        startDrag: (id: string) => setDragId(id),
         endDrag: () => {
             setDragId(null)
             setOverStage(null)
         },
-        overLane: (stage: string, event: DragEvent) => {
-            if (dragId === null) return
-            event.preventDefault()
-            setOverStage(stage)
+        overLane: (stage: string) => {
+            if (dragId !== null) setOverStage(stage)
         },
         leaveLane: (stage: string) => setOverStage((current) => (current === stage ? null : current)),
-        dropOn: (stage: string, event: DragEvent) => {
-            event.preventDefault()
-            const id = event.dataTransfer.getData("text/plain") || dragId
+        dropOn: (stage: string, transferId: string) => {
+            const id = transferId || dragId
             setOverStage(null)
             setDragId(null)
             if (id !== null) moveTo(id, stage)

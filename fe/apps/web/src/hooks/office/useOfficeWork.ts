@@ -15,12 +15,20 @@ const LIVE = { refreshInterval: OFFICE_POLL_MS }
 export const useOfficeWork = () => {
     const open = useQueryWorkItemsSwr({ statuses: [...OPEN_WORK_STATUSES], limit: OPEN_WORK_LIMIT }, LIVE)
     const done = useQueryWorkItemsSwr({ statuses: [...DECIDED_WORK_STATUSES], limit: DECIDED_WORK_LIMIT }, LIVE)
+    const error: unknown = open.error ?? done.error
     return {
+        workReads: [open, done],
+        reloadWork: () => {
+            void open.mutate()
+            void done.mutate()
+        },
         exceptions: (open.data?.items.map(toOfficeWork) ?? [])
             .filter((work) => work.executionId === null)
             .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
         decidedCards: (done.data?.items.map(toOfficeWork) ?? [])
             .filter((work) => work.executionId === null && work.decidedPath === "human")
             .slice(0, DECIDED_CARDS_SHOWN),
+        isLoading: open.isLoading || done.isLoading,
+        error,
     }
 }

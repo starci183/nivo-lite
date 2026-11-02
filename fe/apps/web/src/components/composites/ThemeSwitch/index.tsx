@@ -14,7 +14,6 @@ export const ThemeSwitch = (props: ThemeSwitchProps) => (
     <Switch
         label={props.label}
         isLabelHidden
-        size="control"
         isSelected={props.isDark}
         onSelectedChange={props.onChange}
         thumbIcon={nivoIconSource("light", "leading")}

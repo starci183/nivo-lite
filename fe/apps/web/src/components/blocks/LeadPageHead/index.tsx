@@ -21,21 +21,21 @@ interface LeadPageHeadProps {
         readonly actions: ReactNode
     }
     /** The page body under the head. */
-    readonly children: ReactNode
+    readonly body: ReactNode
 }
 
 /** The connected head of the lead page: the last crumb is the lead's name, a skeleton while the lead loads. */
 export const LeadPageHead = (props: LeadPageHeadProps) => {
     const t = useTranslations("leads")
     const { slot } = useLeadJourney(props.leadId)
-    const name = slot.items?.lead.contact_name ?? ""
+    const name = ("items" in slot ? slot.items : undefined)?.lead.contact_name ?? ""
     const lead: BreadcrumbItem =
-        slot.isLoading === true
-            ? { id: "lead", label: "", isSkeleton: true }
+        "isLoading" in slot
+            ? { id: "lead", label: "", isLoading: true }
             : { id: "lead", label: name === "" ? t("detailEyebrow") : name }
     return (
         <LeadPageHeadBase
-            shape={{ body: props.children, ...props.slots }}
+            shape={{ body: props.body, ...props.slots }}
             props={{ crumbLabel: props.crumbLabel, crumbs: [...props.crumbs, lead] }}
         />
     )

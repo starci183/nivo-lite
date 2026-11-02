@@ -1,2 +1,1 @@
-export { decidedSalesRow, editsOf, pendingSalesRow } from "./salesdecisions.shared"
-export type { SalesDecisionsControllerInput } from "./salesdecisions.shared"
+export { useSalesDecisionsView } from "./useSalesDecisionsView"

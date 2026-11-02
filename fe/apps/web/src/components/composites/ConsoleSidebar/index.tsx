@@ -31,7 +31,7 @@ const toSidebarItem = (item: ConsoleNavItem): SidebarItem => ({
     id: item.id,
     label: item.label,
     source: nivoIconSource(item.icon, "leading"),
-    trailing: item.badge > 0 ? <Badge tone="accent">{item.badge}</Badge> : undefined,
+    trailing: item.badge > 0 ? <Badge tone="accent">{String(item.badge)}</Badge> : undefined,
 })
 
 /** The rail sections in order, empty ones dropped; the daily-work section carries no heading. */

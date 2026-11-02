@@ -1,7 +1,9 @@
 "use client"
 
+import type { SlotRead } from "@/hooks/slot"
+
 import { useTranslations } from "next-intl"
-import { useSlotLabels } from "@/hooks/slot"
+import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import { GUIDES } from "@/hooks/connection-guides"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf, EMPTY_GUIDE_CONTEXT, guideScreensOf, useCopyLabels } from "@/hooks/connection-wizard"
@@ -11,6 +13,8 @@ import { ZaloWizardBase } from "./component"
 
 /** What the board hands the Zalo wizard. */
 interface ZaloWizardProps {
+    /** The actual workspace reads shared with this selected wizard. */
+    readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
     /** Continue this unfinished connection instead of creating a new one. */
     readonly resumeId?: string | undefined
     /** How the Zalo sign-in ended when the browser came back: ok, denied, failed or expired. */
@@ -86,7 +90,9 @@ export const ZaloWizard = (props: ZaloWizardProps) => {
                 ],
                 index: wizard.index,
                 step: wizard.step,
-                resume: wizard.resume,
+                resume: slotOfReads([...props.dependencyReads, ...wizard.reads], () => ({
+                    isResumed: props.resumeId !== undefined,
+                })),
                 slotLabels: slotLabelsOf(""),
                 providerHref: def.dashboard.live ?? "",
                 appScreens: guideScreensOf({ ...base, steps: steps.slice(0, 1), ctx: EMPTY_GUIDE_CONTEXT }, tc, tw),

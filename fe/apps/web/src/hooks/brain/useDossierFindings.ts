@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { slotOfSwr } from "@/hooks/slot"
+import { loadingSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryDossierFindingsSwr, useQueryWorkspaceMembersSwr } from "@/hooks/swr"
 import type { DossierFindingsFilter } from "@/hooks/swr"
 import { useViewerKeyId } from "@/hooks/workspaceKey"
@@ -34,6 +34,8 @@ interface DossierFindings {
     readonly retry: () => void
     /** The active members of the workspace, for the assignee list and the names of assignees. */
     readonly members: ReadonlyArray<MemberOption>
+    /** The assignee choices keep their own first-read and failure state. */
+    readonly memberSlot: DataSlot<ReadonlyArray<MemberOption>>
 }
 
 /**
@@ -64,8 +66,8 @@ export const useDossierFindings = (query: FindingsQuery, isEnabled = true, revis
     )
     const slot =
         filter === null && isEnabled
-            ? { isLoading: true }
-            : slotOfSwr({ data: views, error: read.error, isLoading: read.isLoading })
+            ? loadingSlot<ReadonlyArray<FindingView>>()
+            : slotOfSwr({ data: views, error: read.error, isLoading: read.isLoading, isValidating: read.isValidating })
     return {
         slot,
         hasNextPage: read.hasNextPage,
@@ -74,5 +76,11 @@ export const useDossierFindings = (query: FindingsQuery, isEnabled = true, revis
         loadMore: read.loadMore,
         retry: read.retry,
         members,
+        memberSlot: slotOfSwr({
+            data: people.data === undefined ? undefined : members,
+            error: people.error,
+            isLoading: people.isLoading,
+            isValidating: people.isValidating,
+        }),
     }
 }

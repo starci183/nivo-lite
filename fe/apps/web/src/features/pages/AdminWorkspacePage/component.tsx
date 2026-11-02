@@ -1,11 +1,11 @@
-import { Button, Page } from "@starci/grammar/common"
+import { Stack, Button, Page } from "@starci/grammar/common"
+
 import { AdminSupportActions } from "@/components/blocks/AdminSupportActions"
 import { AdminWorkspaceLists } from "@/components/blocks/AdminWorkspaceLists"
 import { AdminWorkspaceName } from "@/components/blocks/AdminWorkspaceName"
 import { AdminWorkspaceOverview } from "@/components/blocks/AdminWorkspaceOverview"
 import { AdminWorkspaceSummary } from "@/components/blocks/AdminWorkspaceSummary"
 import { ADMIN_ROUTES } from "@/modules/routes"
-import { PAGE_CLASS_NAME } from "./classNames"
 
 /** The workspace the overview page was opened for, and the words around it. */
 export interface AdminWorkspacePageBaseProps {
@@ -31,10 +31,10 @@ export const AdminWorkspacePageBase = (props: AdminWorkspacePageBaseProps) => (
             ),
         }}
     >
-        <div className={PAGE_CLASS_NAME}>
+        <Stack gap="section">
             <AdminWorkspaceOverview workspaceId={props.props.workspaceId} />
             <AdminSupportActions workspaceId={props.props.workspaceId} />
             <AdminWorkspaceLists workspaceId={props.props.workspaceId} />
-        </div>
+        </Stack>
     </Page>
 )

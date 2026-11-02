@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, List, ListRow } from "@starci/grammar/common"
+import { Button, Cluster, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 
 /** One item NIVO filled and the owner did not confirm yet, as the chat proposes it ("Item 4 - ..."). */
 interface SetupProposal {
@@ -11,6 +11,7 @@ interface SetupProposal {
 interface SetupProposalsProps {
     readonly proposals: ReadonlyArray<SetupProposal>
     readonly label: string
+    readonly emptyLabel: string
     readonly confirmLabel: string
     readonly editLabel: string
     readonly onConfirm: (gateKey: string) => void
@@ -19,27 +20,24 @@ interface SetupProposalsProps {
 
 /** The proposals of NIVO under its latest reply: each item with its value, to confirm or to edit in the checklist. */
 export const SetupProposals = (props: SetupProposalsProps) => (
-    <List label={props.label}>
-        {props.proposals.map((proposal) => (
-            <ListRow
-                key={proposal.key}
-                title={proposal.title}
-                description={proposal.evidence}
-                actions={
-                    <ButtonGroup label={proposal.title}>
-                        <Button intent="neutral" size="sm" onPress={() => props.onConfirm(proposal.key)}>
-                            {props.confirmLabel}
-                        </Button>
-                        <Button
-                            intent="neutral"
-                            size="sm"
-                            onPress={() => props.onEdit(proposal.key, proposal.evidence)}
-                        >
-                            {props.editLabel}
-                        </Button>
-                    </ButtonGroup>
-                }
-            />
-        ))}
-    </List>
+    <SurfaceCard
+        kind="list"
+        label={props.label}
+        items={props.proposals.map((proposal) => ({
+            id: proposal.key,
+            title: proposal.title,
+            description: proposal.evidence,
+            detail: (
+                <Cluster gap="inline">
+                    <Button intent="neutral" size="sm" onPress={() => props.onConfirm(proposal.key)}>
+                        {props.confirmLabel}
+                    </Button>
+                    <Button intent="neutral" size="sm" onPress={() => props.onEdit(proposal.key, proposal.evidence)}>
+                        {props.editLabel}
+                    </Button>
+                </Cluster>
+            ),
+        }))}
+        empty={<EmptyNotice message={props.emptyLabel} />}
+    />
 )

@@ -1,3 +1,6 @@
+import { useGraphQLWithToast } from "@/modules/toast"
+import { useFeatureLifetime } from "@/hooks/reuseables"
+import type { HiringOwner } from "@/hooks/hiring"
 import type { UseFormReturn } from "react-hook-form"
 import { useHiringRun } from "@/hooks/hiring"
 import type { JobView } from "@/hooks/hiringWire"
@@ -8,19 +11,33 @@ import type { FieldOf, HiringJobValues, HiringQuestionValues } from "@/modules/t
 const FIELD_OPTIONS = { shouldValidate: true, shouldDirty: true }
 
 /** The job editor: the form values, every change of them, and the save that closes the editor once the back end took the job. */
-export const useHiringJobEditor = (form: UseFormReturn<HiringJobValues>, job: JobView | null, onClose: () => void) => {
-    const run = useHiringRun()
+export const useHiringJobEditor = (
+    form: UseFormReturn<HiringJobValues>,
+    job: JobView | null,
+    onClose: () => void,
+    owner?: HiringOwner,
+) => {
+    const run = useHiringRun(owner)
+    const runGraphQL = useGraphQLWithToast()
+    const lifetime = useFeatureLifetime(owner?.isActive ?? true, owner?.scope ?? "")
     const { trigger } = useMutateSaveHiringJobSwr()
     const values = form.watch()
     const questions = values.questions
-    const submit = form.handleSubmit(async (submitted) => {
-        const saved = await run.exec(() => trigger(toJobInput(submitted, job?.id ?? null)))
-        if (saved !== undefined) onClose()
-    })
+    const submit = (isCurrent: () => boolean) =>
+        form.handleSubmit((submitted) => {
+            if (!isCurrent()) return
+            run.dispatch(
+                () => trigger(toJobInput(submitted, job?.id ?? null)),
+                undefined,
+                () => {
+                    if (isCurrent()) onClose()
+                },
+            )
+        })
     return {
         values,
         isValid: form.formState.isValid,
-        isPending: run.isPending,
+        isPending: run.isPending || form.formState.isSubmitting,
         error: run.error,
         canAddQuestion: questions.length < MAX_QUESTIONS,
         setText: (name: FieldOf<HiringJobValues, string>, value: string) => form.setValue(name, value, FIELD_OPTIONS),
@@ -39,6 +56,10 @@ export const useHiringJobEditor = (form: UseFormReturn<HiringJobValues>, job: Jo
                 "questions",
                 questions.filter((_, at) => at !== index),
             ),
-        save: () => void submit(),
+        save: () => {
+            const isCurrent = lifetime.capture()
+            if (!isCurrent()) return
+            submit(isCurrent)().catch((error) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
+        },
     }
 }

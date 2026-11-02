@@ -1,33 +1,26 @@
 "use client"
-
-import { useMemo } from "react"
-import { useQueryVideoBrandSwr, useQueryVideoProjectsSwr, useQueryVideoScopeSwr } from "@/hooks/swr"
+import { mapSlot, slotOfReads, slotOfSwr } from "@/hooks/slot"
+import { useQueryVideoProjectsSwr } from "@/hooks/swr"
+import { useVideoBrandKit } from "./useVideoBrandKit"
 import { useVideoReferences } from "./useVideoReferences"
-import { brandOf, projectViewOf } from "./video.shared"
-import type { Brand } from "./video.shared"
+import { projectViewOf } from "./video.shared"
 
-/** What the library and the brand kit of the video workbench show, and whether they could be read. */
-export const useVideoLibrary = () => {
-    const scope = useQueryVideoScopeSwr()
-    const projectsQuery = useQueryVideoProjectsSwr()
-    const brandQuery = useQueryVideoBrandSwr()
-    const references = useVideoReferences()
-    const projects = useMemo(() => (projectsQuery.data ?? []).map(projectViewOf), [projectsQuery.data])
-    const brand = useMemo<Brand | null>(() => (brandQuery.data ? brandOf(brandQuery.data) : null), [brandQuery.data])
-    const failed = Boolean(scope.error || projectsQuery.error || brandQuery.error)
-    const isReady = scope.data !== undefined && projectsQuery.data !== undefined && brandQuery.data !== undefined
+/** The normal library joins real kit/projects; its figures keep their own independent failure and retry. */
+export const useVideoLibrary = (isActive = true) => {
+    const kit = useVideoBrandKit(isActive),
+        projects = useQueryVideoProjectsSwr(false, isActive),
+        references = useVideoReferences(isActive, false, true)
+    const slot = slotOfReads([...kit.reads, projects], () => {
+        if (kit.data === undefined || projects.data === undefined)
+            throw new Error("A ready video library requires its actual kit and projects")
+        return { ...kit.data, projects: projects.data.map(projectViewOf) }
+    })
     return {
-        failed,
-        isReady,
-        isLoading: !failed && !(isReady && !references.isLoading),
-        canEdit: scope.data?.canEdit ?? false,
-        projects,
-        brand,
-        media: references.media,
+        slot,
+        data: "items" in slot ? slot.items : undefined,
         figures: references.figures,
-        figuresFailed: failed || references.figuresFailed,
-        reload: () => {
-            void Promise.allSettled([scope.mutate(), projectsQuery.mutate(), brandQuery.mutate()])
-        },
+        figuresSlot: mapSlot(slotOfSwr(references.reads.figures), () => references.figures),
+        retryFigures: () => references.reads.figures.mutate(),
+        reload: () => Promise.all([kit.reload(), projects.mutate()]),
     }
 }

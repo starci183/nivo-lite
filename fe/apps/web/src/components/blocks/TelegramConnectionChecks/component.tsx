@@ -19,7 +19,8 @@ export const TelegramConnectionChecksBase = (props: TelegramConnectionChecksBase
         placeholder={CONNECTION_LINES_PLACEHOLDER}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-    >
-        {(lines, isSkeleton) => <ConnectionLines label={props.props.title} isSkeleton={isSkeleton} lines={lines} />}
-    </SlotView>
+        render={(lines, isSkeleton) => (
+            <ConnectionLines label={props.props.title} isSkeleton={isSkeleton} lines={lines} />
+        )}
+    />
 )

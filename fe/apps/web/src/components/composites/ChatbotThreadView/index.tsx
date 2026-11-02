@@ -1,8 +1,7 @@
+import type { ChatbotThreadViewData } from "@/modules/types"
 import {
     Avatar,
     Badge,
-    ChatBubble,
-    ChatBubbleSkeletons,
     Cluster,
     Divider,
     Heading,
@@ -10,68 +9,23 @@ import {
     PaneSection,
     Stack,
     Text,
+    MessageBubble,
+    MessageStatus,
 } from "@starci/grammar/common"
 import { useEffect, useRef } from "react"
 import type { RefObject } from "react"
 import { ChatbotChips } from "@/components/branches/ChatbotChips"
 import { ChatbotComposer } from "@/components/branches/ChatbotComposer"
 import { ChatMessageFiles } from "@/components/leaves/ChatMessageFiles"
-import type { ChatMessageFile } from "@/components/leaves/ChatMessageFiles"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { HEAD_TEXT_CLASS_NAME, PHONE_ONLY_CLASS_NAME } from "./classNames"
-
-/** One state mark of the conversation. */
-interface ChatbotThreadChip {
-    readonly id: string
-    readonly label: string
-    readonly tone: "warning" | "accent" | "neutral"
-    readonly isDot: boolean
-}
-
-/** One entry of the thread: a day divider, a system line or a message bubble. */
-interface ChatbotThreadItem {
-    readonly id: string
-    readonly kind: "day" | "system" | "bubble"
-    readonly text: string
-    readonly side: "incoming" | "outgoing"
-    readonly author: string
-    readonly meta: string
-    readonly aiMark: string | null
-    readonly avatarName: string | null
-    readonly deliveryText: string | null
-    readonly deliveryTone: "accent" | "muted"
-    readonly files: ReadonlyArray<ChatMessageFile>
-}
-
 /** The open conversation: its words, its entries and the composer. */
-export interface ChatbotThreadViewProps {
-    /** The thread is still being fetched: three skeleton bubbles stand in. */
-    readonly isResolving: boolean
-    readonly hasThread: boolean
-    readonly pickBody: string
-    readonly backLabel: string
-    readonly infoLabel: string
-    readonly isInfoOpen: boolean
-    readonly name: string
-    readonly channel: string
-    readonly chips: ReadonlyArray<ChatbotThreadChip>
-    readonly entries: ReadonlyArray<ChatbotThreadItem>
-    readonly canReply: boolean
-    readonly lockedText: string
-    readonly composerLabel: string
-    readonly composerPlaceholder: string
-    readonly composerHint: string
-    readonly sendLabel: string
-    readonly draft: string
-    readonly notSentTitle: string
-    readonly error: string | null
-    readonly isSending: boolean
+interface ChatbotThreadViewProps extends ChatbotThreadViewData {
     readonly onBack: () => void
     readonly onToggleInfo: () => void
     readonly onDraft: (draft: string) => void
     readonly onSend: () => void
 }
-
 /** The centre pane of the inbox: header, bubbles and the composer (active only while the signed-in member holds the conversation). */
 export const ChatbotThreadView = (props: ChatbotThreadViewProps) => {
     const endRef = useRef<HTMLDivElement | null>(null)
@@ -83,7 +37,7 @@ export const ChatbotThreadView = (props: ChatbotThreadViewProps) => {
         return (
             <PaneSection align="center" grow>
                 {props.isResolving ? (
-                    <ChatBubbleSkeletons count={3} hasAvatar />
+                    <MessageBubble isLoading hasAvatar />
                 ) : (
                     <Text size="sm" tone="muted">
                         {props.pickBody}
@@ -142,7 +96,6 @@ export const ChatbotThreadView = (props: ChatbotThreadViewProps) => {
         </>
     )
 }
-
 /** Renders the ChatbotThreadView entries section. */
 const renderChatbotThreadViewEntries = (
     props: Pick<ChatbotThreadViewProps, "entries">,
@@ -152,7 +105,7 @@ const renderChatbotThreadViewEntries = (
         {props.entries.map((entry) => {
             if (entry.kind !== "bubble") return <Divider key={entry.id} label={entry.text} />
             return (
-                <ChatBubble
+                <MessageBubble
                     key={entry.id}
                     side={entry.side}
                     author={entry.author}
@@ -167,22 +120,18 @@ const renderChatbotThreadViewEntries = (
                         entry.deliveryText === null && entry.files.length === 0 ? undefined : (
                             <>
                                 {entry.files.length === 0 ? null : <ChatMessageFiles files={entry.files} />}
-                                {entry.deliveryText === null ? null : (
-                                    <Text
-                                        size="xs"
-                                        weight="medium"
-                                        tone={entry.deliveryTone === "accent" ? "accent" : "muted"}
-                                        live="polite"
-                                    >
-                                        {entry.deliveryText}
-                                    </Text>
+                                {entry.deliveryText === null || entry.deliveryKind === null ? null : (
+                                    <MessageStatus
+                                        kind="transport"
+                                        state={entry.deliveryKind}
+                                        label={entry.deliveryText}
+                                    />
                                 )}
                             </>
                         )
                     }
-                >
-                    {entry.text}
-                </ChatBubble>
+                    body={entry.text}
+                />
             )
         })}
         <div ref={endRef} />

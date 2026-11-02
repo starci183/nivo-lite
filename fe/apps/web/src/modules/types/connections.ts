@@ -196,7 +196,7 @@ interface ConnectionRailView {
 export interface ConnectionPageHeadView {
     /** The connection's name, status and facts once read; absent while it loads or when it could not be read (a notice then says why). */
     readonly head?: ConnectionHeadView
-    readonly isSkeleton: boolean
+    readonly isLoading: boolean
     readonly icon: "chat" | "apps"
     readonly crumbLabel: string
     readonly crumbs: ReadonlyArray<ConnectionCrumb>
@@ -243,4 +243,51 @@ export interface ConnectionRailLinesView {
     readonly emptyLabel: string
     readonly lines: DataSlot<ReadonlyArray<ConnectionLineView>>
     readonly retry: () => void
+}
+
+/** One category chip: the group and how many connectors it holds. */
+export interface LibraryCategory {
+    readonly id: string
+    readonly label: string
+    readonly count: number
+}
+
+/** The availability chip beside a tile's name: early access or planned. */
+export interface LibraryTag {
+    readonly tone: "accent" | "neutral"
+    readonly label: string
+}
+
+/** What the workspace runs of a connector, at the foot of its tile. */
+export interface LibraryStatus {
+    readonly tone: "success" | "danger" | "muted"
+    readonly label: string
+    readonly isDot: boolean
+}
+
+/** One connector tile, with its words resolved. */
+export interface LibraryCard {
+    readonly id: string
+    readonly name: string
+    readonly blurb: string
+    /** What the connector is for and whom it serves, one line. */
+    readonly audienceLine: string
+    readonly glyph: ConnectorGlyph
+    readonly logo?: string
+    /** The provider id the guide tour points at; absent for a planned connector. */
+    readonly guide?: string
+    readonly tag: LibraryTag | null
+    readonly status: LibraryStatus
+    /** How many connections of it the workspace runs: with some, the tile offers "Add". */
+    readonly connected: number
+    /** One of the connectors the workspace can use today: it stands in the first section. */
+    readonly isCurrent: boolean
+    /** A planned connector: no page, only the "I want it" command. */
+    readonly isSoon: boolean
+    /** The viewer may start a connection of it; otherwise the tile only opens its detail to read. */
+    readonly canConnect: boolean
+    /** The address of the only connection a workspace can have of it (Google Drive), once it has one. */
+    readonly pageHref?: string
+    /** A planned connector: the state of its "I need this" command. */
+    readonly want: { readonly isPending: boolean; readonly isDone: boolean; readonly note?: string }
 }

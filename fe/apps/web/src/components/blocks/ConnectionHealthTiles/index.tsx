@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { useDriveTiles } from "@/hooks/drive"
 import { useSlotLabels } from "@/hooks/slot"
 import { useTelegramTiles } from "@/hooks/telegramConnection"
@@ -11,13 +13,14 @@ type ConnectionHealthTilesProps =
 
 /** The connected health tiles band of a provider page; the hooks of the provider it does not serve read nothing. */
 export const ConnectionHealthTiles = (props: ConnectionHealthTilesProps) => {
+    const t = useTranslations(props.kind === "telegram" ? "telegramConnection" : "driveConnection")
     const slotLabels = useSlotLabels()
     const telegram = useTelegramTiles(props.kind === "telegram" ? props.connectionId : undefined)
     const drive = useDriveTiles(props.kind === "drive")
     const tiles = props.kind === "telegram" ? telegram : drive
     return (
         <ConnectionHealthTilesBase
-            props={{ facts: tiles.facts, slotLabels: slotLabels(tiles.emptyLabel) }}
+            props={{ label: t("mainLabel"), facts: tiles.facts, slotLabels: slotLabels(tiles.emptyLabel) }}
             on={{ retry: tiles.retry }}
         />
     )

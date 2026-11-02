@@ -4,9 +4,9 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useKnowledgeIdeas, useLibraryCommands } from "@/hooks/knowledge"
 import { loadingSlot, useSlotLabels } from "@/hooks/slot"
-import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
+import type { KnowledgeRowView, IdeaDecision } from "@/modules/types"
 import { brainTabHref } from "@/modules/routes"
-import type { IdeaDecision } from "@/modules/types"
+import { toast } from "@/modules/toast"
 import { KnowledgeSuggestionsBase } from "./component"
 
 /** One idea the page worked out for the workspace. */
@@ -30,11 +30,7 @@ const oneLineOf = (hint: string): string => {
 type Translate = ReturnType<typeof useTranslations<"knowledge">>
 
 /** One open idea: its topic and a one-line hint, with add, not-applicable and hide as words. */
-const openRowOf = (
-    t: Translate,
-    commands: ReturnType<typeof useLibraryCommands>,
-    item: SuggestionItem,
-): KnowledgeRowView => ({
+const openRowOf = (t: Translate, item: SuggestionItem): KnowledgeRowView => ({
     id: item.key,
     title: t(`suggest_${item.key}_topic`),
     lines: [oneLineOf(t(`suggest_${item.key}_hint`))],
@@ -49,38 +45,52 @@ const openRowOf = (
             id: "na",
             label: t("suggestNotApplicable"),
             intent: "dismiss",
-            onPress: () => commands.decide(item.key, "not_applicable"),
         },
         {
             id: "hide",
             label: t("suggestDismiss"),
             intent: "dismiss",
-            onPress: () => commands.decide(item.key, "dismissed"),
         },
     ],
 })
 
+/** An idea set aside retains its resolved decision and restore command as atom-only row data. */
+const skippedRowOf = (t: Translate, item: SuggestionItem, pending: string | undefined): KnowledgeRowView => {
+    const decided = item.state === undefined ? undefined : t(item.state === "dismissed" ? "suggestHidden" : "suggestNA")
+    return {
+        id: item.key,
+        title: t(`suggest_${item.key}_topic`),
+        badges: decided === undefined ? [] : [{ label: decided, tone: "neutral" }],
+        actions: [{ id: "restore", label: t("suggestRestore"), isPending: pending === "restore" }],
+    }
+}
+
 /** The connected suggestions: opens the add drawer through the address, sets an idea aside or brings it back. */
 export const KnowledgeSuggestions = () => {
     const t = useTranslations("knowledge")
+    const feedback = useTranslations("toast")
     const commands = useLibraryCommands()
     const ideas = useKnowledgeIdeas()
     const slotLabels = useSlotLabels()
     const [isExpanded, setIsExpanded] = useState(false)
-    const decidedLabelOf = (item: SuggestionItem): string | undefined => {
-        if (item.state === undefined) return undefined
-        return t(item.state === "dismissed" ? "suggestHidden" : "suggestNA")
+    const failed = () => {
+        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
     }
-    const openRow = (item: SuggestionItem): KnowledgeRowView => openRowOf(t, commands, item)
-    const skippedRow = (item: SuggestionItem): KnowledgeRowView => {
-        const decided = decidedLabelOf(item)
+    const openRow = (item: SuggestionItem): KnowledgeRowView => {
+        const row = openRowOf(t, item)
+        const pending = commands.pending[`idea:${item.key}`]
         return {
-            id: item.key,
-            title: t(`suggest_${item.key}_topic`),
-            badges: decided === undefined ? [] : [{ label: decided, tone: "neutral" }],
-            actions: [{ id: "restore", label: t("suggestRestore"), onPress: () => commands.decide(item.key, null) }],
+            ...row,
+            actions: (row.actions ?? []).map((action) => ({
+                ...action,
+                isPending: pending === action.id,
+                isDisabled: pending !== undefined && pending !== action.id,
+                disabledReason: t("actionBusy"),
+            })),
         }
     }
+    const skippedRow = (item: SuggestionItem): KnowledgeRowView =>
+        skippedRowOf(t, item, commands.pending[`idea:${item.key}`])
     if (!ideas.canWrite) return null
     return (
         <KnowledgeSuggestionsBase
@@ -112,11 +122,20 @@ export const KnowledgeSuggestions = () => {
                         ? undefined
                         : {
                               label: t("suggestSkipped"),
+                              emptyTitle: t("suggestAllDone"),
                               rows: ideas.skipped.map(skippedRow),
                               isPending: commands.isPending,
                           },
             }}
-            on={{ toggleMore: () => setIsExpanded((now) => !now) }}
+            on={{
+                toggleMore: () => setIsExpanded((now) => !now),
+                action: (rowId, actionId) => {
+                    if (!ideas.canWrite || ![...ideas.open, ...ideas.skipped].some((item) => item.key === rowId)) return
+                    if (actionId === "na") commands.decide(rowId, "not_applicable").catch(failed)
+                    if (actionId === "hide") commands.decide(rowId, "dismissed").catch(failed)
+                    if (actionId === "restore") commands.decide(rowId, null).catch(failed)
+                },
+            }}
         />
     )
 }

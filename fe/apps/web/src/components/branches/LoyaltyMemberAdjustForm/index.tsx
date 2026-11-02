@@ -1,37 +1,26 @@
-import { Button, Form, Text } from "@starci/grammar/common"
+import type { LoyaltyViews, LoyaltyActions } from "@/modules/types"
+import { Button, Form, Text, Stack } from "@starci/grammar/common"
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
-import { FORM_CLASS_NAME } from "./classNames"
 
 /** What the point adjustment form draws and reports. */
-export interface LoyaltyMemberAdjustFormProps {
-    readonly label: string
-    readonly memberId: string
-    readonly points: string
-    readonly reason: string
-    readonly pointsError?: string
-    readonly pointsLabel: string
-    readonly pointsHint: string
-    readonly pointsPlaceholder: string
-    readonly reasonLabel: string
-    readonly submitLabel: string
-    readonly canSubmit: boolean
-    readonly note?: string
-    readonly isPending: boolean
-    readonly onPoints: (value: string) => void
-    readonly onReason: (value: string) => void
-    readonly onSubmit: () => void
+type MemberAdjustData = LoyaltyViews["memberAdjust"]
+type MemberAdjustOn = LoyaltyActions["memberAdjust"]
+/** The existing native presentation contract, with pure fields and actions owned separately. */
+interface LoyaltyMemberAdjustFormProps extends MemberAdjustData, MemberAdjustOn {
+    readonly isLoading: boolean
 }
 
 /** The point adjustment form: a signed number and a required reason; a line says whether it was recorded or waits. */
 export const LoyaltyMemberAdjustForm = (props: LoyaltyMemberAdjustFormProps) => (
     <Form label={props.label} onSubmit={props.onSubmit} isPending={props.isPending}>
-        <div className={FORM_CLASS_NAME}>
+        <Stack gap="row">
             <LoyaltyField
                 hint={props.pointsHint}
                 placeholder={props.pointsPlaceholder}
                 {...(props.pointsError === undefined ? {} : { error: props.pointsError })}
                 onChange={props.onPoints}
                 isDisabled={props.isPending}
+                isLoading={props.isLoading}
                 isRequired
                 value={props.points}
                 label={props.pointsLabel}
@@ -45,20 +34,27 @@ export const LoyaltyMemberAdjustForm = (props: LoyaltyMemberAdjustFormProps) => 
                 value={props.reason}
                 isRequired
                 isDisabled={props.isPending}
+                isLoading={props.isLoading}
                 onChange={props.onReason}
             />
             <div>
-                <Button type="submit" intent="neutral" isPending={props.isPending} isDisabled={!props.canSubmit}>
+                <Button
+                    type="submit"
+                    intent="neutral"
+                    isPending={props.isPending}
+                    isDisabled={!props.canSubmit}
+                    isLoading={props.isLoading}
+                >
                     {props.submitLabel}
                 </Button>
             </div>
             <div aria-live="polite">
                 {props.note === undefined ? null : (
-                    <Text size="sm" weight="medium">
+                    <Text size="sm" isStrong>
                         {props.note}
                     </Text>
                 )}
             </div>
-        </div>
+        </Stack>
     </Form>
 )

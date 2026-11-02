@@ -1,22 +1,18 @@
-import { Input, RadioGroup, Stack, Text, Textarea } from "@starci/grammar/common"
-import type { OfficeExceptionView, OfficeText } from "@/modules/types"
-
-/** The least written basis before an unclear credit may be marked paid. */
-export const BASIS_MIN_CHARS = 10
+import { Fieldset, Input, RadioGroup, Textarea } from "@starci/grammar/common"
+import type { OfficeExceptionView, OfficeThreadProps } from "@/modules/types"
 
 /** The editable proposal fields and their bound updates. */
 interface OfficeExceptionFieldsProps {
     readonly item: OfficeExceptionView
-    readonly text: OfficeText
+    readonly copy: OfficeThreadProps["props"]["cardCopy"]["exceptionForm"]
+    readonly basisDescription: string | null
     readonly draft: string
     readonly amount: string
     readonly basis: string
     readonly values: Readonly<Record<string, string>>
     readonly candidateId: string | null
-    readonly basisLength: number
     readonly isEditing: boolean
     readonly isLocked: boolean
-    readonly isBasisMissing: boolean
     readonly onDraft: (value: string) => void
     readonly onAmount: (value: string) => void
     readonly onBasis: (value: string) => void
@@ -36,14 +32,11 @@ export const OfficeExceptionFields = (props: OfficeExceptionFieldsProps) => (
 
 /** Renders the missingfields controls. */
 const renderMissingFields = (
-    props: Pick<OfficeExceptionFieldsProps, "text" | "item" | "values" | "isLocked" | "onValues">,
+    props: Pick<OfficeExceptionFieldsProps, "copy" | "item" | "values" | "isLocked" | "onValues">,
 ) => {
-    const { text, item, values, isLocked, onValues: setValues } = props
+    const { copy, item, values, isLocked, onValues: setValues } = props
     return (
-        <Stack gap="row">
-            <Text size="sm" weight="medium">
-                {text("exceptionMissing")}
-            </Text>
+        <Fieldset legend={copy.exceptionMissing}>
             {item.missing.map((field) => (
                 <Input
                     key={field.name}
@@ -55,28 +48,21 @@ const renderMissingFields = (
                     onValueChange={(next) => setValues((current) => ({ ...current, [field.name]: next }))}
                 />
             ))}
-        </Stack>
+        </Fieldset>
     )
 }
 
 /** Renders the basis controls. */
 const renderBasis = (
-    props: Pick<
-        OfficeExceptionFieldsProps,
-        "item" | "text" | "isBasisMissing" | "basisLength" | "basis" | "isLocked" | "onBasis"
-    >,
+    props: Pick<OfficeExceptionFieldsProps, "item" | "copy" | "basisDescription" | "basis" | "isLocked" | "onBasis">,
 ) => {
-    const { item, text, isBasisMissing, basisLength, basis, isLocked, onBasis: setBasis } = props
+    const { item, copy, basis, isLocked, onBasis: setBasis } = props
     return (
         <Textarea
             id={`${item.id}-basis`}
-            label={text("basisLabel")}
-            description={
-                isBasisMissing
-                    ? `${text("basisHint", { n: BASIS_MIN_CHARS })} ${text("basisCount", { n: basisLength, min: BASIS_MIN_CHARS })}`
-                    : text("basisHint", { n: BASIS_MIN_CHARS })
-            }
-            placeholder={text("basisPlaceholder")}
+            label={copy.basisLabel}
+            description={props.basisDescription ?? undefined}
+            placeholder={copy.basisPlaceholder}
             isRequired
             rows={2}
             value={basis}
@@ -88,12 +74,12 @@ const renderBasis = (
 
 /** Renders the candidates controls. */
 const renderCandidates = (
-    props: Pick<OfficeExceptionFieldsProps, "text" | "candidateId" | "isLocked" | "onCandidate" | "item">,
+    props: Pick<OfficeExceptionFieldsProps, "copy" | "candidateId" | "isLocked" | "onCandidate" | "item">,
 ) => {
-    const { text, candidateId, isLocked, onCandidate: setCandidateId, item } = props
+    const { copy, candidateId, isLocked, onCandidate: setCandidateId, item } = props
     return (
         <RadioGroup
-            label={text("exceptionCandidates")}
+            label={copy.exceptionCandidates}
             value={candidateId}
             isDisabled={isLocked}
             onValueChange={setCandidateId}
@@ -110,15 +96,15 @@ const renderCandidates = (
 const renderDraft = (
     props: Pick<
         OfficeExceptionFieldsProps,
-        "item" | "text" | "draft" | "amount" | "isEditing" | "isLocked" | "onDraft" | "onAmount"
+        "item" | "copy" | "draft" | "amount" | "isEditing" | "isLocked" | "onDraft" | "onAmount"
     >,
 ) => {
-    const { item, text, draft, amount, isEditing, isLocked, onDraft: setDraft, onAmount: setAmount } = props
+    const { item, copy, draft, amount, isEditing, isLocked, onDraft: setDraft, onAmount: setAmount } = props
     return (
         <>
             {isEditing && item.draft !== null ? (
                 <Textarea
-                    label={text("exceptionDraft")}
+                    label={copy.exceptionDraft}
                     rows={4}
                     value={draft}
                     isDisabled={isLocked}
@@ -129,7 +115,7 @@ const renderDraft = (
                 <Input
                     id={`${item.id}-amount`}
                     name="amount_vnd"
-                    label={text("exceptionAmount")}
+                    label={copy.exceptionAmount}
                     value={amount}
                     isDisabled={isLocked}
                     onValueChange={setAmount}

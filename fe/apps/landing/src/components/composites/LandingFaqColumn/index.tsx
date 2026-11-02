@@ -1,4 +1,5 @@
-import { Accordion, SurfaceCard, Text } from "@starci/grammar/common"
+import { useState } from "react"
+import { SurfaceCard, Text } from "@starci/grammar/common"
 
 /** One question with its answer. */
 interface LandingFaqEntry {
@@ -18,17 +19,19 @@ interface LandingFaqColumnProps {
  * One column of the FAQ: a top-level card holding the grammar's unframed single-open accordion. The question is the
  * accordion's own trigger copy; no typography or colour class reaches into it.
  */
-export const LandingFaqColumn = (props: LandingFaqColumnProps) => (
-    <SurfaceCard ariaLabel={props.label}>
-        <Accordion
-            label={props.label}
-            headingLevel={3}
-            defaultExpandedIds={props.defaultOpenId === undefined ? [] : [props.defaultOpenId]}
+export const LandingFaqColumn = (props: LandingFaqColumnProps) => {
+    const [openId, setOpenId] = useState(props.defaultOpenId)
+    return (
+        <SurfaceCard
+            kind="accordion"
+            ariaLabel={props.label}
             items={props.entries.map((entry) => ({
                 id: entry.id,
                 title: entry.question,
-                content: <Text size="sm">{entry.answer}</Text>,
+                body: <Text size="sm">{entry.answer}</Text>,
+                isOpen: openId === entry.id,
             }))}
+            onItemOpenChange={(id, isOpen) => setOpenId(isOpen ? id : undefined)}
         />
-    </SurfaceCard>
-)
+    )
+}

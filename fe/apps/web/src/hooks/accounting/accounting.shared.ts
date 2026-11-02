@@ -20,7 +20,7 @@ import {
     type AccountingFormat,
     type AccountingTranslator,
 } from "@/modules/utils"
-import type { DescriptionListStatItem } from "@starci/grammar/common"
+import type { Figure } from "@starci/grammar/common"
 import type { useFormatter, useTranslations } from "next-intl"
 import type { ValuesInput1 } from "./useAccountingQuestions"
 
@@ -29,7 +29,7 @@ export const accountingFiguresOf = (
     data: AccountingWorkbenchData,
     format: AccountingFormat,
     t: AccountingTranslator,
-): ReadonlyArray<DescriptionListStatItem> => {
+): ReadonlyArray<Figure> => {
     const thisMonth = t("periodThisInline")
     const termOf = (term: string, period: string) => t("figureTerm", { term, period })
     const moneyItem = (
@@ -40,7 +40,7 @@ export const accountingFiguresOf = (
     ) => ({
         id,
         term: termOf(term, thisMonth),
-        description: moneyOf(format, measure.vnd),
+        value: moneyOf(format, measure.vnd),
         meta: t(unit, { n: measure.count }),
     })
     const slots = [data.ageing.d0, data.ageing.d30, data.ageing.d60]
@@ -51,14 +51,14 @@ export const accountingFiguresOf = (
             ? {
                   id: "unmatched",
                   term: termOf(t("mUnmatched"), thisMonth),
-                  description: t("notConnected"),
+                  value: t("notConnected"),
                   meta: t("notConnectedHint"),
               }
             : moneyItem("unmatched", t("mUnmatched"), data.periods.this.unmatched, "countPayments"),
         {
             id: "ageing",
             term: termOf(t("mAgeing"), t("periodTodayInline")),
-            description: slots.map((slot) => slot.count).join(" / "),
+            value: slots.map((slot) => slot.count).join(" / "),
             meta: slots.map((slot) => moneyOf(format, slot.vnd)).join(" · "),
         },
     ]
@@ -120,7 +120,9 @@ export const createAccountingQuestionsActions = ({
 }: AccountingQuestionsActionsInput) => {
     const approve = async (id: string) => {
         const item = items.find((candidate) => candidate.id === id)
-        if (!item || !canAct(item) || item.status !== "waiting_decision" || isDeciding || !lock.acquire()) return
+        if (!item || !canAct(item) || item.status !== "waiting_decision" || isDeciding) return
+        const lease = lock.acquire()
+        if (lease === undefined) return
         try {
             if (!(await form.trigger(`items.${id}`))) return
             const input = getValues(`items.${id}`)
@@ -131,23 +133,18 @@ export const createAccountingQuestionsActions = ({
                 basis: item.action === "reconcile_payment" ? input.basis.trim() : undefined,
             })
         } finally {
-            lock.release()
+            lock.release(lease)
         }
     }
     const reject = async (id: string) => {
         const item = items.find((candidate) => candidate.id === id)
-        if (
-            !item ||
-            !canAct(item) ||
-            !["waiting_decision", "failed"].includes(item.status) ||
-            isDeciding ||
-            !lock.acquire()
-        )
-            return
+        if (!item || !canAct(item) || !["waiting_decision", "failed"].includes(item.status) || isDeciding) return
+        const lease = lock.acquire()
+        if (lease === undefined) return
         try {
             await decide({ workItemId: id, decision: "rejected" })
         } finally {
-            lock.release()
+            lock.release(lease)
         }
     }
     const cards = questions.map((question) => {

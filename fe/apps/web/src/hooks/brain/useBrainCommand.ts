@@ -1,8 +1,10 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { mutate } from "@/modules/viewer-cache"
 import { QUERY_BRAIN_SWR_KEY, QUERY_BRAIN_TODO_SWR_KEY } from "@/hooks/swr"
-import { useGraphQLWithToast } from "@/modules/toast"
+import { useWorkspaceKey } from "@/hooks/workspaceKey"
+import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { useBrainFactTriggers } from "./useBrainFactTriggers"
 import type { BrainFactRequests } from "./useBrainFactTriggers"
 import { useBrainLessonTriggers } from "./useBrainLessonTriggers"
@@ -35,31 +37,41 @@ interface BrainCommand {
         kind: Kind,
         request: BrainCommandRequests[Kind],
         options?: SendOptions,
-    ) => void
+    ) => Promise<true | undefined>
 }
 
 /** A card of the Second Brain that asks the back end to do something: a fact decision, a lesson, a dismissed question. */
 export const useBrainCommand = (): BrainCommand => {
     const runGraphQL = useGraphQLWithToast()
+    const feedback = useTranslations("toast")
+    const workspace = useWorkspaceKey(QUERY_BRAIN_SWR_KEY, [])
     const facts = useBrainFactTriggers()
     const lessons = useBrainLessonTriggers()
     const triggers: BrainCommandTriggers = { ...facts.triggers, ...lessons.triggers }
-    const send = <Kind extends BrainCommandKind>(
+    const send = async <Kind extends BrainCommandKind>(
         kind: Kind,
         request: BrainCommandRequests[Kind],
         options?: SendOptions,
     ) => {
-        void (async () => {
+        if (workspace === null) return undefined
+        try {
             const result = await runGraphQL(() => triggers[kind](request), {
                 successMessage: options?.done,
                 showSuccessToast: options?.done !== undefined,
             })
-            if (result === undefined) return
+            if (result === undefined) return undefined
             options?.onResult?.(result)
             await mutate(
-                (key) => Array.isArray(key) && (key[0] === QUERY_BRAIN_SWR_KEY || key[0] === QUERY_BRAIN_TODO_SWR_KEY),
+                (key) =>
+                    Array.isArray(key) &&
+                    key[1] === workspace[1] &&
+                    (key[0] === QUERY_BRAIN_SWR_KEY || key[0] === QUERY_BRAIN_TODO_SWR_KEY),
             )
-        })()
+            return true as const
+        } catch {
+            toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+            return undefined
+        }
     }
     return { isPending: facts.isPending || lessons.isPending, send }
 }

@@ -66,6 +66,10 @@ export const filesOfMessage = (files: ReadonlyArray<ChatFileView>, messageId: st
 
 /** The name to keep for a file: its last path part, without control characters, bounded; the path of the object when none is left. */
 export const chatFileNameOf = (name: string, path: string): string => {
-    const clean = (name.split(/[/\\]/u).pop() ?? "").replace(/\p{Cc}/gu, "").trim()
-    return clean === "" ? (path.split("/").pop() ?? path) : clean.slice(-NAME_MAX)
+    const start = Math.max(name.lastIndexOf("/"), name.lastIndexOf("\\")) + 1
+    const clean = name
+        .slice(start)
+        .replace(/\p{Cc}/gu, "")
+        .trim()
+    return clean === "" ? path.slice(path.lastIndexOf("/") + 1) : clean.slice(-NAME_MAX)
 }

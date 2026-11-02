@@ -5,18 +5,6 @@ import type { useTelegramUserLogin } from "./useTelegramUserLogin"
 import type { useTelegramUserPicks } from "./useTelegramUserPicks"
 import type { TelegramUserStep, TelegramUserField } from "./useTelegramUserWizard"
 
-/** What the wizard knows once the server answered: whether personal Telegram is set up on it. */
-interface TelegramReady {
-    readonly isConfigured: boolean
-}
-
-/** The slot of the wizard's first reads: loading, failed, or ready (set up, or not set up on this server). */
-const bootSlotOf = (status: "loading" | "unconfigured" | "failed" | "ready"): DataSlot<TelegramReady> => {
-    if (status === "loading") return { isLoading: true }
-    if (status === "failed") return { isError: true }
-    return { items: { isConfigured: status === "ready" } }
-}
-
 /** The status of the chat list read. */
 interface ChatsRead {
     readonly loading: boolean
@@ -107,7 +95,6 @@ type TelegramUserWizardViewInput = {
 
 /** Assembles the resolved domain state and commands for its drawing. */
 export const viewOf = ({
-    step,
     boot,
     index,
     login,
@@ -125,7 +112,8 @@ export const viewOf = ({
     setError,
 }: TelegramUserWizardViewInput) => {
     return {
-        boot: bootSlotOf(step.started ? "ready" : boot.status),
+        reads: boot.reads,
+        bootData: boot.bootData,
         bootError: boot.error,
         index,
         login,

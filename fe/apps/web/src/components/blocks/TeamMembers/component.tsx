@@ -1,10 +1,21 @@
-import { AlertDialog, Badge, Button, DataTable, DropdownMenu, Text } from "@starci/grammar/common"
-import type { DataTableColumn } from "@starci/grammar/common"
-import { TeamSection } from "@/components/composites/TeamSection"
+import {
+    AlertDialog,
+    Badge,
+    Button,
+    Cluster,
+    DataTable,
+    DropdownMenu,
+    EmptyNotice,
+    Stack,
+    Text,
+    type DataTableColumn,
+} from "@starci/grammar/common"
+
+import { TeamSection } from "@/components/frames/TeamSection"
 import { SlotView } from "@/components/composites/SlotView"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, MemberRowView, SlotLabels } from "@/modules/types"
-import { IDENTITY_CLASS_NAME, IDENTITY_TEXT_CLASS_NAME, NAME_LINE_CLASS_NAME } from "./classNames"
+import { IDENTITY_CLASS_NAME } from "./classNames"
 
 /** The question asked before a remove or a disable. */
 interface ConfirmView {
@@ -44,29 +55,31 @@ export const TeamMembersBase = (props: TeamMembersBaseProps) => {
         if (columnId === "member") {
             return (
                 <div className={IDENTITY_CLASS_NAME}>
-                    <PersonAvatar name={row.name} size="md" />
-                    <div className={IDENTITY_TEXT_CLASS_NAME}>
-                        <div className={NAME_LINE_CLASS_NAME}>
-                            <Text weight="semibold" overflow="truncate">
-                                {row.name}
+                    <Cluster gap="row">
+                        <PersonAvatar name={row.name} size="md" />
+                        <Stack gap="identity">
+                            <Cluster gap="inline">
+                                <Text isStrong overflow="truncate">
+                                    {row.name}
+                                </Text>
+                                {row.isYou ? <Badge tone="neutral">{props.props.youLabel}</Badge> : null}
+                            </Cluster>
+                            <Text size="sm" tone="muted" overflow="truncate">
+                                {row.email}
                             </Text>
-                            {row.isYou ? <Badge tone="neutral">{props.props.youLabel}</Badge> : null}
-                        </div>
-                        <Text size="sm" tone="muted" overflow="truncate">
-                            {row.email}
-                        </Text>
-                        {row.staffNote === undefined ? null : (
-                            <Text size="xs" tone="muted" overflow="truncate">
-                                {row.staffNote}
-                            </Text>
-                        )}
-                    </div>
+                            {row.staffNote === undefined ? null : (
+                                <Text size="xs" tone="muted" overflow="truncate">
+                                    {row.staffNote}
+                                </Text>
+                            )}
+                        </Stack>
+                    </Cluster>
                 </div>
             )
         }
         if (columnId === "role") {
             return (
-                <Text size="sm" weight="medium">
+                <Text size="sm" isStrong>
                     {row.roleLabel}
                 </Text>
             )
@@ -102,18 +115,17 @@ const renderMembersSection = ({ props, renderCell }: RenderMembersSectionInput) 
             placeholder={props.props.placeholder}
             labels={props.props.slotLabels}
             onRetry={props.on.retry}
-        >
-            {(rows, isSkeleton) => (
+            render={(rows, isSkeleton) => (
                 <DataTable
                     label={props.props.title}
                     columns={props.props.columns}
                     rows={rows}
                     renderCell={renderCell}
                     isLoading={isSkeleton}
-                    emptyContent={null}
+                    emptyContent={<EmptyNotice message={props.props.title} />}
                 />
             )}
-        </SlotView>
+        />
         <AlertDialog
             isOpen={props.props.confirm !== undefined}
             onOpenChange={(open) => {

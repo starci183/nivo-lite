@@ -1,5 +1,4 @@
-import { Disclosure, Input, Select } from "@starci/grammar/common"
-import { PANEL_CLASS_NAME } from "./classNames"
+import { Stack, Disclosure, Input, Select } from "@starci/grammar/common"
 
 /** One choice of a select or a radio group. */
 export interface ChoiceView {
@@ -27,34 +26,37 @@ type AddOptionsPanelProps = {
 
 /** The options that apply to the whole batch: topic, tags and the agent that uses it. */
 export const AddOptionsPanel = (props: AddOptionsPanelProps) => (
-    <Disclosure title={props.title}>
-        <div className={PANEL_CLASS_NAME}>
-            <Input
-                id="knowledge-add-topic"
-                name="topic"
-                label={props.topicLabel}
-                description={props.topicHint}
-                value={props.topic}
-                isDisabled={props.isBusy}
-                onValueChange={props.onTopic}
-            />
-            <Input
-                id="knowledge-add-tags"
-                name="tags"
-                label={props.tagsLabel}
-                description={props.tagsHint}
-                value={props.tags}
-                isDisabled={props.isBusy}
-                onValueChange={props.onTags}
-            />
-            <Select
-                label={props.moduleLabel}
-                name="module"
-                options={props.moduleOptions}
-                value={props.module}
-                isDisabled={props.isBusy}
-                onValueChange={props.onModule}
-            />
-        </div>
-    </Disclosure>
+    <Disclosure
+        title={props.title}
+        body={
+            <Stack gap="section">
+                <Input
+                    id="knowledge-add-topic"
+                    name="topic"
+                    label={props.topicLabel}
+                    description={props.topicHint}
+                    value={props.topic}
+                    isDisabled={props.isBusy}
+                    onValueChange={props.onTopic}
+                />
+                <Input
+                    id="knowledge-add-tags"
+                    name="tags"
+                    label={props.tagsLabel}
+                    description={props.tagsHint}
+                    value={props.tags}
+                    isDisabled={props.isBusy}
+                    onValueChange={props.onTags}
+                />
+                <Select
+                    label={props.moduleLabel}
+                    name="module"
+                    options={props.moduleOptions}
+                    value={props.module}
+                    isDisabled={props.isBusy}
+                    onValueChange={props.onModule}
+                />
+            </Stack>
+        }
+    />
 )

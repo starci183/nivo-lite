@@ -31,8 +31,8 @@ export const useZnsRenewal = (connectionId: string) => {
         invoiceNumber: page.znsRenewal?.params.invoiceNumber ?? "",
     }))
     const form: ZnsRenewalForm = useMemo(
-        () => ({ ...(stored.items ?? EMPTY_ZNS_FORM), ...draft }),
-        [stored.items, draft],
+        () => ({ ...("items" in stored ? stored.items : EMPTY_ZNS_FORM), ...draft }),
+        [stored, draft],
     )
 
     const save = useCallback(async (): Promise<void> => {

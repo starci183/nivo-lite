@@ -1,5 +1,6 @@
 import { CreditsCatalogue } from "@/components/composites/CreditsCatalogue"
-import type { PayTarget } from "@/modules/types"
+import { SlotView } from "@/components/composites/SlotView"
+import type { CreditsOverviewView, DataSlot, PayTarget, SlotLabels } from "@/modules/types"
 
 /** Settled copy and rows of the "Buy more credits" section. */
 export interface BillingCreditPacksBaseProps {
@@ -8,26 +9,34 @@ export interface BillingCreditPacksBaseProps {
         readonly fact: string
         readonly buy: string
         readonly empty: string
-        readonly loading: string
         readonly canBuy: boolean
-        readonly packs: React.ComponentProps<typeof CreditsCatalogue>["props"]["packs"]
+        readonly slot: DataSlot<CreditsOverviewView["packs"]>
+        readonly labels: SlotLabels
     }
-    readonly on: { readonly buy: (target: PayTarget) => void }
+    readonly on: { readonly buy: (target: PayTarget) => void; readonly retry: () => void }
 }
 
 /** Draws the add-on credit packs of the current plan. */
 export const BillingCreditPacksBase = (props: BillingCreditPacksBaseProps) => (
-    <CreditsCatalogue
-        props={{
-            packs: props.props.packs,
-            canBuy: props.props.canBuy,
-            label: props.props.title,
-            fact: props.props.fact,
-            buy: props.props.buy,
-            empty: props.props.empty,
-            loading: props.props.loading,
-            isSkeleton: false,
-        }}
-        on={{ buy: props.on.buy }}
+    <SlotView
+        slot={props.props.slot}
+        placeholder={[]}
+        labels={props.props.labels}
+        empty="collapse"
+        onRetry={props.on.retry}
+        render={(packs, isLoading) => (
+            <CreditsCatalogue
+                props={{
+                    packs,
+                    canBuy: props.props.canBuy,
+                    label: props.props.title,
+                    fact: props.props.fact,
+                    buy: props.props.buy,
+                    empty: props.props.empty,
+                    isLoading,
+                }}
+                on={{ buy: props.on.buy }}
+            />
+        )}
     />
 )

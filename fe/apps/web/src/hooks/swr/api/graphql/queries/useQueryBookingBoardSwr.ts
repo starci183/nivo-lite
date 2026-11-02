@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
@@ -10,14 +11,28 @@ import type { QueryBookingBoardRequest } from "@/modules/api/graphql/queries/typ
 /** The SWR key of the `bookingBoard` query. */
 export const QUERY_BOOKING_BOARD_SWR_KEY = "QUERY_BOOKING_BOARD_SWR"
 
-/** The booking workbench board of one range of dates (an empty request answers the current week of the workspace timezone). */
-export const useQueryBookingBoardSwr = (request?: QueryBookingBoardRequest | null, config?: SWRConfiguration) =>
-    useSWR(
-        useWorkspaceParamsKey(QUERY_BOOKING_BOARD_SWR_KEY, [request ?? null]),
+/** Reads one booking range, retaining earlier ranges only inside the same resolved workspace; inactive scopes pause. */
+export const useQueryBookingBoardSwr = (
+    request?: QueryBookingBoardRequest | null,
+    config?: SWRConfiguration,
+    isActive = true,
+) => {
+    const key = useWorkspaceParamsKey(QUERY_BOOKING_BOARD_SWR_KEY, isActive ? [request ?? null] : null)
+    const workspaceId = key?.[1]
+    const [resolvedWorkspaceId, setResolvedWorkspaceId] = useState(workspaceId)
+    const read = useSWR(
+        key,
         async (key: WorkspaceReadKey<QueryBookingBoardRequest | null>) => {
             const result = await queryBookingBoard({ request: key[2] ?? {} })
             if (!result.data) throw new Error("bookingBoard answered no data")
             return result.data.bookingBoard
         },
-        config,
+        { ...config, keepPreviousData: config?.keepPreviousData === true && workspaceId === resolvedWorkspaceId },
     )
+    useEffect(() => {
+        if (workspaceId !== undefined && read.data !== undefined && !read.isLoading) {
+            setResolvedWorkspaceId(workspaceId)
+        }
+    }, [workspaceId, read.data, read.isLoading])
+    return read
+}
