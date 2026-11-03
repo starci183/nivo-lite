@@ -12,6 +12,7 @@ import type {
 } from "@nivo/agent-sdk/template"
 import type {
     CreatorLedgerView,
+    FirstPartySyncReport,
     LikenessGrantRequest,
     LikenessGrantView,
     ListingCard,
@@ -20,6 +21,7 @@ import type {
 import type { PayableOrder } from "@modules/domain/billing"
 import { isRecord } from "@modules/platform/primitives"
 import type { CreatorLedgerType } from "./dto/creator-ledger.type"
+import type { FirstPartySyncReportType } from "./dto/first-party-sync-report.type"
 import type { InstalledTemplateType } from "./dto/installed-template.type"
 import type { LikenessGrantType } from "./dto/likeness-grant.type"
 import type { ListingCardType } from "./dto/listing-card.type"
@@ -235,4 +237,12 @@ export const toCreatorLedgerType = (ledger: CreatorLedgerView): CreatorLedgerTyp
 export const toLikenessGrantType = (grant: LikenessGrantView): LikenessGrantType => ({
     ...grant,
     allowedUses: [...grant.allowedUses],
+})
+
+/** Maps the report of a sync of the first-party templates to its GraphQL type. */
+export const toFirstPartySyncReportType = (report: FirstPartySyncReport): FirstPartySyncReportType => ({
+    packaged: [...report.packaged],
+    unchanged: [...report.unchanged],
+    refused: [...report.refused],
+    adopted: report.adopted,
 })

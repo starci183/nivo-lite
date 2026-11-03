@@ -1,6 +1,8 @@
 export { TEMPLATE_MARKETPLACE_ERROR_KINDS } from "./errors/template-marketplace.error"
 export { TEMPLATE_MARKETPLACE_MESSAGES } from "./messages/template-marketplace.messages"
 export { CreatorLedgerService } from "./creator-ledger.service"
+export { FirstPartyTemplatesService } from "./first-party-templates.service"
+export type { FirstPartySyncReport, ForkRequest } from "./first-party-templates.service"
 export { TemplateLikenessService } from "./template-likeness.service"
 export type { LikenessGrantRequest } from "./template-likeness.service"
 export { TemplateListingsService } from "./template-listings.service"

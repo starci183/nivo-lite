@@ -16,10 +16,14 @@ import { AcceptTemplateUpdateHandler } from "./application/accept-template-updat
 import { MyCreatorLedgerHandler } from "./application/my-creator-ledger.handler"
 import { RecordTemplateLikenessHandler } from "./application/record-template-likeness.handler"
 import { VerifyTemplateLikenessHandler } from "./application/verify-template-likeness.handler"
+import { ForkFirstPartyTemplateHandler } from "./application/fork-first-party-template.handler"
+import { SyncFirstPartyTemplatesHandler } from "./application/sync-first-party-templates.handler"
 import { ConfigurableModuleClass } from "./template-marketplace.module-definition"
 
 @Module({
     providers: [
+        SyncFirstPartyTemplatesHandler,
+        ForkFirstPartyTemplateHandler,
         PreviewAgentTemplateHandler,
         PackageAgentTemplateHandler,
         MyAgentTemplatesHandler,

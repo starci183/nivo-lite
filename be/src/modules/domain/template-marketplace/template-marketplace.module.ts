@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { PAID_ORDER_FULFILMENT } from "@modules/domain/sepay-transactions"
 import { CreatorLedgerService } from "./creator-ledger.service"
+import { FirstPartyTemplatesService } from "./first-party-templates.service"
 import { TemplateLikenessService } from "./template-likeness.service"
 import { TemplateListingsService } from "./template-listings.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./template-marketplace.module-definition"
@@ -20,6 +21,7 @@ export class TemplateMarketplaceModule extends ConfigurableModuleClass {
         const base = super.register(options)
         const services = [
             CreatorLedgerService,
+            FirstPartyTemplatesService,
             TemplateLikenessService,
             TemplateListingsService,
             TemplatePaymentsService,

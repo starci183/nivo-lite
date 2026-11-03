@@ -257,6 +257,28 @@ describe("AgentTemplatesService.packageVersion", () => {
         expect(foreign.versions.save).not.toHaveBeenCalled()
     })
 
+    it("allows a graph whose branches come from a first-party package, so a derivative of a built-in can be packaged and listed", async () => {
+        const base = leakyGraph()
+        const graph = {
+            ...base,
+            nodes: base.nodes.map((node) =>
+                node.key === "decide"
+                    ? { ...node, sources: [{ kind: "template" as const, key: "nivo-accounting", version: 1 }] }
+                    : node,
+            ),
+        }
+        const derived = await build({ graph })
+        derived.versions.templateOf.mockImplementation((key: string) =>
+            Promise.resolve(
+                key === "nivo-accounting"
+                    ? Object.assign(new AgentTemplateEntity(), { creatorAccountId: "nivo", firstParty: true })
+                    : null,
+            ),
+        )
+
+        await expect(derived.service.packageVersion(CREATOR.accountId, REQUEST)).resolves.toBeDefined()
+    })
+
     it("allows a graph whose template branches are of a template of the same account, or of the template itself", async () => {
         const base = leakyGraph()
         const graph = {
