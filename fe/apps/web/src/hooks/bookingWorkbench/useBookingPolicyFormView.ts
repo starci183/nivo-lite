@@ -26,12 +26,47 @@ type Numbers = Readonly<Record<(typeof RULES)[number][0], number>>
 /** What the owner has typed so far; a field not touched keeps showing the saved value. */
 type Edits = Partial<Numbers & { address: string; autoConfirm: boolean; handoffOrder: boolean }>
 
+/** The view `useBookingPolicyFormView` returns. */
+export interface BookingPolicyFormView {
+    readonly props: {
+        readonly title: string
+        readonly hint: string
+        readonly rules: {
+            id:
+                | "cancelWindowHours"
+                | "depositPct"
+                | "lateCancelFeePct"
+                | "maxAdvanceDays"
+                | "minLeadMin"
+                | "noShowFeeVnd"
+                | "slotStepMin"
+            label: string
+            value: number
+        }[]
+        readonly addressLabel: string
+        readonly address: string
+        readonly autoConfirmLabel: string
+        readonly autoConfirm: boolean
+        readonly handoffLabel: string
+        readonly handoff: boolean
+        readonly saveLabel: string
+        readonly isPending: boolean
+    }
+    readonly on: {
+        readonly changeRule: (id: string, value: number) => void
+        readonly changeAddress: (value: string) => void
+        readonly toggleAutoConfirm: (value: boolean) => void
+        readonly toggleHandoff: (value: boolean) => void
+        readonly save: () => void
+    }
+}
+
 /** The connected policy form: saves the cancellation, deposit and slot rules of the workspace. */
 export const useBookingPolicyFormView = (
     isActive: boolean,
     scope: string,
     boardRead: ReturnType<typeof useBookingBoard>,
-) => {
+): BookingPolicyFormView => {
     const { board } = boardRead
     const t = useTranslations("workbenchBooking")
     const commands = useBookingSettingsCommands()

@@ -13,11 +13,17 @@ interface AssignTaskDraft {
     readonly leadId: string
 }
 
+/** The view `useAssignAgentWork` returns. */
+export interface AssignAgentWorkView {
+    send: (text: string, task: AssignTaskDraft | null) => Promise<boolean>
+    isSending: boolean
+}
+
 /**
  * Hands an agent work. The server decides who may and records the request in a work thread; with a task the agent starts on it
  * there. A refusal was already toasted with the server message. Answers whether it worked.
  */
-export const useAssignAgentWork = (agentId: string) => {
+export const useAssignAgentWork = (agentId: string): AssignAgentWorkView => {
     const t = useTranslations("agentProfile")
     const runGraphQL = useGraphQLWithToast()
     const assign = useMutateAssignAgentWorkSwr()

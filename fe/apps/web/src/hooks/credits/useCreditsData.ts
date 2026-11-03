@@ -20,8 +20,15 @@ import { readError } from "@/hooks/workspaceread"
 
 const LAST_DAYS = 6
 
+/** The view `useCreditsData` returns. */
+export interface CreditsDataView {
+    data: CreditsData | null
+    error: unknown
+    refresh: () => Promise<void>
+}
+
 /** Connects the credits overview to the catalogue and selected workspace. */
-export const useCreditsData = (contactHref: string) => {
+export const useCreditsData = (contactHref: string): CreditsDataView => {
     const { activeWorkspaceId: workspaceId } = useRequireActiveWorkspace()
     const router = navigation.useRouter()
     const now = new Date()

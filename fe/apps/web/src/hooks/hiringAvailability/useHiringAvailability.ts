@@ -10,12 +10,25 @@ import type { HiringMemberView } from "@/hooks/hiringWire"
 import { useMutateSaveHiringAvailabilitySwr } from "@/hooks/swr"
 import { WEEKDAYS, memberTexts, parseWindows } from "./hiringAvailability.shared"
 
+/** The view `useHiringAvailability` returns. */
+export interface HiringAvailabilityView {
+    who: string
+    texts: Record<number, string>
+    invalid: number[]
+    isPending: boolean
+    error: string | null
+    notice: string | null
+    pick: (userId: string) => void
+    setText: (weekday: number, text: string) => void
+    save: () => void
+}
+
 /** The availability form: the member being edited, the text of each weekday, the weekdays that are not time ranges, and the save. */
 export const useHiringAvailability = (
     members: ReadonlyArray<HiringMemberView>,
     meUserId: string,
     owner?: HiringOwner,
-) => {
+): HiringAvailabilityView => {
     const t = useTranslations("hiring")
     const run = useHiringRun(owner)
     const { trigger } = useMutateSaveHiringAvailabilitySwr()

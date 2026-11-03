@@ -1,5 +1,5 @@
 "use client"
-import type { ContentViews, ContentActions } from "@/modules/types"
+import type { ContentViews, ContentActions, ContentPlanFields, ContentPlanActions } from "@/modules/types"
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
@@ -10,8 +10,14 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import { contentDialogOf, type ContentViewInput } from "./contentWorkbench.shared"
 
 const MONTHS_OFFERED = 4
+/** The view `useContentPlanActionView` returns. */
+export interface ContentPlanActionView {
+    props: ContentPlanFields | undefined
+    on: ContentPlanActions
+}
+
 /** Owns the actual ContentPlanAction data derivations and conditional controller lifetime. */
-export const useContentPlanActionView = (input: ContentViewInput) => {
+export const useContentPlanActionView = (input: ContentViewInput): ContentPlanActionView => {
     const data = input.data
     const t = useTranslations("content")
     const runGraphQL = useGraphQLWithToast()

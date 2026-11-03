@@ -2,12 +2,22 @@
 
 import { useMemo } from "react"
 import { useQueryContentConfigurationSwr, useQueryContentMediaSwr, useQueryContentWorkbenchSwr } from "@/hooks/swr"
-import { contentWorkbenchView } from "@/modules/content"
+import { contentWorkbenchView, type ContentWorkbenchData } from "@/modules/content"
 import { slotOfReads } from "@/hooks/slot"
 import { readError } from "@/hooks/workspaceread"
+import type { DataSlot } from "@/modules/types"
+
+/** The view `useContentWorkbench` returns. */
+export interface ContentWorkbenchViewShape {
+    data: ContentWorkbenchData | undefined
+    slot: DataSlot<ContentWorkbenchData>
+    error: unknown
+    isLoading: boolean
+    reload: () => void
+}
 
 /** Loads the content workbench in the browser, including the media needed by the editor. */
-export const useContentWorkbench = (isActive = true) => {
+export const useContentWorkbench = (isActive = true): ContentWorkbenchViewShape => {
     const workbench = useQueryContentWorkbenchSwr(isActive)
     const configuration = useQueryContentConfigurationSwr(isActive)
     const request = useMemo(() => {

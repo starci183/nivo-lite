@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import { useLeadBoard } from "@/hooks/leads"
 import { fromField } from "@/modules/authority"
 import type { AppliedRuleView } from "./agentProfile.shared"
@@ -17,12 +17,34 @@ interface Choice {
     readonly label: string
 }
 
+/** The view `useAssignComposer` returns. */
+export interface AssignComposerView {
+    isOpen: boolean
+    text: string
+    action: string
+    amount: number
+    amountVnd: number
+    leadId: string
+    hasTask: boolean
+    actions: readonly Choice[]
+    customers: readonly Choice[]
+    canSend: boolean
+    isSending: boolean
+    toggle: () => void
+    setText: Dispatch<SetStateAction<string>>
+    setAction: (value: string | null) => void
+    setAmount: Dispatch<SetStateAction<number>>
+    setAmountVnd: Dispatch<SetStateAction<number>>
+    setLeadId: (value: string | null) => void
+    submit: () => undefined
+}
+
 /**
  * The mini composer that hands an agent work: the request in the member's words and, when the member names it, the work the agent
  * starts on in the thread (one of the actions its rules cover, the amount in the rule's unit, the deal value and the customer).
  * Work needs a customer; a plain request does not.
  */
-export const useAssignComposer = (agentId: string, rules: ReadonlyArray<AppliedRuleView>) => {
+export const useAssignComposer = (agentId: string, rules: ReadonlyArray<AppliedRuleView>): AssignComposerView => {
     const t = useTranslations("agentProfile")
     const g = useTranslations("governance")
     const { send, isSending } = useAssignAgentWork(agentId)

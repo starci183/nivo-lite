@@ -1,5 +1,5 @@
 "use client"
-import type { ContentViews, ContentActions } from "@/modules/types"
+import type { ContentViews, ContentActions, ContentListFields, ContentListActions } from "@/modules/types"
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
@@ -7,8 +7,14 @@ import { CONTENT_STATUSES, postView, useContentFocus } from "@/hooks/content"
 import { useFeatureReset } from "@/hooks/reuseables"
 import type { ContentViewInput } from "./contentWorkbench.shared"
 
+/** The view `useContentListPanelView` returns. */
+export interface ContentListPanelView {
+    props: ContentListFields | undefined
+    on: ContentListActions
+}
+
 /** Owns the actual ContentListPanel data derivations and conditional controller lifetime. */
-export const useContentListPanelView = (input: ContentViewInput) => {
+export const useContentListPanelView = (input: ContentViewInput): ContentListPanelView => {
     const data = input.data
     const t = useTranslations("content")
     const focus = useContentFocus()

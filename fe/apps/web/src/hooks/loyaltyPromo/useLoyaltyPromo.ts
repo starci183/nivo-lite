@@ -1,7 +1,7 @@
 import { useLoyaltyCommand, loyaltyReadOf, type LoyaltyPanelActivation } from "@/hooks/loyalty"
 import { mutate } from "@/modules/viewer-cache"
 
-import { useLoyaltyCampaignForm } from "@/hooks/rhf"
+import { useLoyaltyCampaignForm, type LoyaltyCampaignValues } from "@/hooks/rhf"
 import {
     QUERY_LOYALTY_BOARD_SWR_KEY,
     useMutateDraftLoyaltyCampaignSwr,
@@ -25,6 +25,8 @@ import {
 } from "./loyaltyPromo.shared"
 import { useSegmentLabel } from "./useSegmentLabel"
 import { useFeatureReset } from "@/hooks/reuseables"
+import type { UseFormReturn } from "react-hook-form"
+import type { SWRResponse } from "swr"
 
 /** How many members a segment reaches, and a few of them. */
 export interface PromoPreview {
@@ -40,8 +42,87 @@ interface PolledStatus {
 
 const LIMITS = { nameMax: CAMPAIGN_NAME_MAX, briefMax: CAMPAIGN_BRIEF_MAX }
 
+/** The view `useLoyaltyPromo` returns. */
+export interface LoyaltyPromoViewShape {
+    setTiers: (value: ReadonlyArray<string>) => void
+    setInactive: (value: string) => void
+    setSpend: (value: string) => void
+    setBirthday: (value: boolean) => void
+    setName: (value: string) => void
+    setBrief: (value: string) => void
+    form: UseFormReturn<LoyaltyCampaignValues>
+    segmentLabel: string
+    previewRead: SWRResponse<
+        {
+            reachable: number
+            total: number
+            sample: Array<{
+                id: string
+                name: string
+                tierKey: string | null
+            }>
+        },
+        Error
+    >
+    campaignRead: SWRResponse<
+        {
+            createdAt: string
+            createdBy: string
+            draft: string
+            draftMs: number | null
+            errorCode: string | null
+            failed: number
+            finishedAt: string | null
+            id: string
+            messageDraft: string
+            name: string
+            queued: number
+            recipients: number
+            sent: number
+            skipped: number
+            status: string
+            workItemId: string | null
+            segment: {
+                birthdayThisMonth: boolean
+                inactiveDays: number
+                minSpendVnd: number
+                tiers: Array<string>
+            }
+        },
+        Error
+    >
+    hasCampaign: boolean
+    created: {
+        createdAt: string
+        createdBy: string
+        draft: string
+        draftMs: number | null
+        errorCode: string | null
+        failed: number
+        finishedAt: string | null
+        id: string
+        messageDraft: string
+        name: string
+        queued: number
+        recipients: number
+        sent: number
+        skipped: number
+        status: string
+        workItemId: string | null
+        segment: {
+            birthdayThisMonth: boolean
+            inactiveDays: number
+            minSpendVnd: number
+            tiers: Array<string>
+        }
+    } | null
+    isWriting: boolean
+    isBusy: boolean
+    submit: (e?: React.BaseSyntheticEvent) => Promise<void>
+}
+
 /** The promotion builder: the form, the debounced live count of the segment, and the slow message draft that is polled until it leaves `waiting`. */
-export const useLoyaltyPromo = (board: LoyaltyBoardType, activation: LoyaltyPanelActivation) => {
+export const useLoyaltyPromo = (board: LoyaltyBoardType, activation: LoyaltyPanelActivation): LoyaltyPromoViewShape => {
     const t = useTranslations("loyalty")
     const [sessionScope, setSessionScope] = useState<string | null>(null)
     const isSessionReady = activation.isActive && activation.isReady && sessionScope === activation.scope
@@ -121,8 +202,18 @@ export const useLoyaltyPromo = (board: LoyaltyBoardType, activation: LoyaltyPane
     }
 }
 
+/** What `campaignFieldsOf` returns. */
+export interface CampaignFieldsOfResult {
+    setTiers: (value: ReadonlyArray<string>) => void
+    setInactive: (value: string) => void
+    setSpend: (value: string) => void
+    setBirthday: (value: boolean) => void
+    setName: (value: string) => void
+    setBrief: (value: string) => void
+}
+
 /** Normalizes only the promotion fields; submission and its remote settlement remain with the command owner. */
-const campaignFieldsOf = (form: ReturnType<typeof useLoyaltyCampaignForm>) => ({
+const campaignFieldsOf = (form: ReturnType<typeof useLoyaltyCampaignForm>): CampaignFieldsOfResult => ({
     setTiers: (value: ReadonlyArray<string>) => form.setValue("tiers", [...value]),
     setInactive: (value: string) => form.setValue("inactive", inactiveText(value)),
     setSpend: (value: string) => form.setValue("spend", spendText(value)),

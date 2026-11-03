@@ -34,12 +34,61 @@ const startItemState = (item: ItemView | null): ItemDrawerState => ({
     },
 })
 
+/** The view `useItemDrawer` returns. */
+export interface ItemDrawerView {
+    open: (target: ItemView | null) => void
+    props: {
+        copy: {
+            itemEditTitle: string
+            close: string
+            save: string
+            itemAddTitle: string
+            itemDrawerHint: string
+            itemName: string
+            itemSku: string
+            itemSkuHint: string
+            itemUnit: string
+            itemUnitHint: string
+            itemUnits: string
+            itemUnitsHint: string
+            itemCategory: string
+            itemSupplier: string
+            itemSupplierNone: string
+            itemCost: string
+            itemSell: string
+            itemReorderPoint: string
+            itemReorderPointHint: string
+            itemReorderQty: string
+            itemAliases: string
+            itemAliasesHint: string
+            itemOpening: string
+            itemStop: string
+            itemResume: string
+        }
+        editing: string | null
+        active: boolean | null
+        values: ItemFormValues
+        suppliers: {
+            id: string
+            label: string
+        }[]
+        isPending: boolean
+        error: string | null
+    } | null
+    on: {
+        field: (name: ItemFormField, value: string) => void
+        save: () => void
+        toggleActive: () => void
+        close: () => void
+    }
+}
+
 /** Opens, fills and saves the item form; `props` is null while the drawer is closed. */
 export const useItemDrawer = (
     suppliers: ReadonlyArray<SupplierView>,
     commands: InventoryCommandSet<"saveItem" | "setItemActive">,
     lifetime?: InventoryPanelScope,
-) => {
+): ItemDrawerView => {
     const { isActive = true, scope = "" } = lifetime ?? {}
 
     const say = useSay()

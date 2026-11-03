@@ -1,13 +1,32 @@
 "use client"
 
-import type { CreditsHistoryRow } from "@/modules/types"
+import type { CreditsHistoryRow, DataSlot } from "@/modules/types"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useRequireActiveWorkspace } from "@/hooks/workspaces"
 import { useQueryBillingPlansSwr, useQueryPaymentOrdersSwr } from "@/hooks/swr"
 import { slotOfReads } from "@/hooks/slot"
 
+/** The view `useCreditsHistory` returns. */
+export interface CreditsHistoryView {
+    props: {
+        title: string
+        loading: string
+        rows: readonly CreditsHistoryRow[]
+        slot: DataSlot<readonly CreditsHistoryRow[]>
+        labels: {
+            empty: string
+            forbidden: string
+            error: string
+            retry: string
+        }
+    }
+    on: {
+        retry: () => void
+    }
+}
+
 /** Resolves the payment-history slot independently from the credits balance. */
-export const useCreditsHistory = () => {
+export const useCreditsHistory = (): CreditsHistoryView => {
     const { activeWorkspaceId } = useRequireActiveWorkspace()
     const payments = useQueryPaymentOrdersSwr(activeWorkspaceId)
     const plans = useQueryBillingPlansSwr()

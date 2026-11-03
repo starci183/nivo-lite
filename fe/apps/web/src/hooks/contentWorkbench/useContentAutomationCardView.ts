@@ -5,7 +5,7 @@ import { useContentAutomationForm } from "@/hooks/rhf"
 import { defaultSettings } from "@/modules/content"
 import { useMemo } from "react"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import type { ContentNoteView, ContentViews } from "@/modules/types"
+import type { ContentNoteView, ContentViews, ContentWorkbenchCopy, AutomationKey } from "@/modules/types"
 import type { ContentViewInput } from "./contentWorkbench.shared"
 
 const COPY: ReadonlyArray<{
@@ -18,8 +18,30 @@ const COPY: ReadonlyArray<{
     { key: "weekly_summary", title: "autoSummary", body: "autoSummaryBody" },
 ]
 
+/** The view `useContentAutomationCardView` returns. */
+export interface ContentAutomationCardView {
+    props:
+        | {
+              copy: ContentWorkbenchCopy
+              rows: {
+                  key: AutomationKey
+                  title: string
+                  body: string
+                  on: boolean
+              }[]
+              canManage: boolean
+              isPending: boolean
+              note: null
+          }
+        | undefined
+    on: {
+        toggle: (keyInput: string, value: boolean) => Promise<void> | undefined
+        dismissNote: () => void
+    }
+}
+
 /** Owns optimistic automation edits; stale completions cannot revert a replacement settings form. */
-export const useContentAutomationCardView = (input: ContentViewInput) => {
+export const useContentAutomationCardView = (input: ContentViewInput): ContentAutomationCardView => {
     const t = useTranslations("content")
     const defaults = useMemo(() => defaultSettings(input.workspaceId ?? ""), [input.workspaceId])
     const form = useContentAutomationForm(input.data?.settings ?? defaults)

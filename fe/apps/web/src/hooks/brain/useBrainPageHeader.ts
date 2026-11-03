@@ -8,12 +8,22 @@ import { useBrain } from "./useBrain"
 import { useBrainTodoCount } from "./useBrainTodoCount"
 import { useBrainPageActions } from "./useBrainPageActions"
 
+/** The view `useBrainPageHeader` returns. */
+export interface BrainPageHeaderViewShape {
+    props: BrainPageHeaderView
+    on: {
+        selectTab: (id: string) => void
+        reviewAll: () => void
+        setPart: (id: string) => void
+    }
+}
+
 /**
  * The Second Brain's page header with the tabs of the part that is open: the selected tab lives in the address. The queue of what needs doing carries
  * its count once there is something in it (a count of zero is no label); it is the number the rail shows too. The customer questions
  * nobody answered carry theirs on the public part.
  */
-export const useBrainPageHeader = (selected: BrainTab, heading: BrainPageHeading) => {
+export const useBrainPageHeader = (selected: BrainTab, heading: BrainPageHeading): BrainPageHeaderViewShape => {
     const t = useTranslations("secondBrain")
     const router = navigation.useRouter()
     const todo = useBrainTodoCount()

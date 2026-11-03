@@ -6,6 +6,8 @@ import type { PipelineLane } from "@/hooks/hiringPipeline"
 import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import type { CandidateView } from "@/hooks/hiringWire"
 import type { HiringViewInput } from "./hiringWorkbench.shared"
+import type { BadgeTone } from "@starci/grammar/common"
+import type { Dispatch, SetStateAction } from "react"
 
 /** The resolved heading and cards in one stage. */
 const laneOf = (
@@ -51,8 +53,90 @@ const candidateCardOf = (candidate: CandidateView, context: PipelineCardContext)
         })),
     }
 }
+/** The view `useHiringPipelineView` returns. */
+export interface HiringPipelineViewShape {
+    props: {
+        copy: {
+            title: string
+            jobLabel: string
+            moveFailed: string
+            dismissLabel: string
+            emptyTitle: string
+            emptyBody: string
+            boardLabel: string
+            laneEmpty: string
+            openLabel: string
+            moveToLabel: string
+            movePlaceholder: string
+        }
+        jobId: string
+        jobOptions: {
+            id: string
+            label: string
+        }[]
+        lanes: {
+            stage: string
+            label: string
+            count: string
+            cards: {
+                id: string
+                name: string
+                scoreLabel: string
+                scoreTone: BadgeTone
+                meta: string
+                suggestion: string | null
+                moveOptions: {
+                    id: string
+                    label: string
+                }[]
+            }[]
+        }[]
+        hasNoCandidates: boolean
+        withdrawnNote: string | null
+        dragId: string | null
+        overStage: string | null
+        isBusy: boolean
+        error: string | null
+        isRejectOpen: boolean
+        reject: {
+            copy: {
+                title: string
+                closeLabel: string
+                hint: string
+                failed: string
+                reasonLabel: string
+                kept: string
+                cancelLabel: string
+                confirmLabel: string
+            }
+            reason: string
+            canConfirm: boolean
+            isBusy: boolean
+            error: string | null
+        }
+    }
+    on: {
+        board: {
+            job: (id: string) => void
+            open: (candidateId: string) => void
+            move: (id: string, stage: string) => void
+            dragStart: (id: string) => void
+            dragEnd: () => void
+            dragOver: (stage: string) => void
+            dragLeave: (stage: string) => void
+            drop: (stage: string, transferId: string) => void
+            clearError: () => void
+        }
+        reject: {
+            reason: Dispatch<SetStateAction<string>>
+            confirm: () => void
+            close: () => void
+        }
+    }
+}
+
 /** Owns HiringPipeline's resolved data, commands and actual panel activation. */
-export const useHiringPipelineView = (input: HiringViewInput) => {
+export const useHiringPipelineView = (input: HiringViewInput): HiringPipelineViewShape => {
     const owner = { isActive: input.isActive && input.isReady, scope: input.scope }
 
     const t = useTranslations("hiring")

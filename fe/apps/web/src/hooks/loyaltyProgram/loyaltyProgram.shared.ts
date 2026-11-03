@@ -9,7 +9,7 @@ export const MAX_CATEGORIES = 12
 export const MAX_TIERS = 8
 
 /** A clock time as hh:mm. */
-export const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
+export const HHMM: RegExp = /^([01]\d|2[0-3]):[0-5]\d$/
 
 /** What the form shows before the programme is loaded. */
 export const BLANK_PROGRAM: ProgramValues = {
@@ -88,8 +88,51 @@ export const programValuesOf = (name: string, enabled: boolean, config: LoyaltyC
     batch: String(config.promo.batch),
 })
 
+/** What `programInputOf` returns. */
+export interface ProgramInputOfResult {
+    name: string
+    enabled: boolean
+    config: {
+        earn: {
+            perThousandVnd: number
+            perVisit: number
+            minOrderVnd: number
+            trigger: string
+            categories: {
+                match: string
+                perThousandVnd: number
+                label: string
+            }[]
+        }
+        tiers: {
+            key: string
+            name: string
+            minSpendVnd: number
+            multiplier: number
+            winbackDays: number
+            benefit: string
+        }[]
+        expiry: {
+            months: number
+            warnDays: number
+        }
+        birthday: {
+            enabled: boolean
+            points: number
+            rewardKey: string
+            note: string
+        }
+        promo: {
+            maxPerMonth: number
+            hourFrom: string
+            hourTo: string
+            batch: number
+        }
+    }
+}
+
 /** The `saveLoyaltyProgram` input for the form values: the first tier always starts at 0 and empty category rules are dropped. */
-export const programInputOf = (values: ProgramValues) => ({
+export const programInputOf = (values: ProgramValues): ProgramInputOfResult => ({
     name: values.name.trim(),
     enabled: values.enabled,
     config: {

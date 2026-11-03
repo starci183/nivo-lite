@@ -10,11 +10,14 @@ import {
     useHiringJobEditor,
     useHiringJobs,
 } from "@/hooks/hiringJobs"
-import type { HiringWorkbenchData, JobView } from "@/hooks/hiringWire"
+import type { HiringWorkbenchData, JobView, AdView } from "@/hooks/hiringWire"
 import { useHiringJobForm } from "@/hooks/rhf"
 import type { HiringViewInput } from "./hiringWorkbench.shared"
 
 import { useFeatureReset } from "@/hooks/reuseables"
+import type { HiringWorkbenchCopy, HiringJobValues, HiringQuestionValues, FieldOf } from "@/modules/types"
+import type { BadgeTone } from "@starci/grammar/common"
+import type { Dispatch, SetStateAction } from "react"
 
 /** The candidates of each job: all of them, the fresh ones and the hired ones. */
 const countsOf = (data: HiringWorkbenchData, jobId: string) => {
@@ -62,8 +65,104 @@ const rowOf = (job: JobView, context: JobRowContext) => {
         })),
     }
 }
+/** The view `useHiringJobsView` returns. */
+export interface HiringJobsViewShape {
+    props: {
+        copy: HiringWorkbenchCopy
+        fact: string
+        rows: {
+            id: string
+            title: string
+            statusLabel: string
+            statusTone: BadgeTone
+            facts: string
+            counts: string
+            publicUrl: string | null
+            copyLabel: string | null
+            transitions: {
+                to: string
+                label: string
+                isPrimary: boolean
+            }[]
+        }[]
+        isBusy: boolean
+        error: string | null
+        isEditorOpen: boolean
+        editor: {
+            copy: HiringWorkbenchCopy
+            isNew: boolean
+            values: HiringJobValues
+            questions: {
+                question: HiringQuestionValues
+                numberLabel: string
+            }[]
+            employmentOptions: {
+                id: string
+                label: string
+            }[]
+            payUnitOptions: {
+                id: string
+                label: string
+            }[]
+            questionTypeOptions: {
+                id: string
+                label: string
+            }[]
+            channelOptions: {
+                id: string
+                label: string
+            }[]
+            canSave: boolean
+            canAddQuestion: boolean
+            isBusy: boolean
+            error: string | null
+        }
+        isAdOpen: boolean
+        ad: {
+            copy: HiringWorkbenchCopy
+            title: string
+            ads: AdView | null
+            meta: string | null
+            publicUrl: string | null
+            publicLinkLabel: string | null
+            kindLabels: {
+                facebook: string
+                zalo: string
+                topcv: string
+            }
+            copiedId: string | null
+            isBusy: boolean
+            error: string | null
+        }
+    }
+    on: {
+        list: {
+            create: () => void
+            edit: (id: string) => void
+            openAd: Dispatch<SetStateAction<string | null>>
+            copy: (id: string) => void
+            transition: (id: string, to: string) => void
+        }
+        editor: {
+            text: (name: FieldOf<HiringJobValues, string>, value: string) => void
+            number: (name: FieldOf<HiringJobValues, number | null>, value: number | null) => void
+            list: (name: FieldOf<HiringJobValues, Array<string>>, value: Array<string>) => void
+            patchQuestion: (index: number, patch: Partial<HiringQuestionValues>) => void
+            addQuestion: () => void
+            removeQuestion: (index: number) => void
+            save: () => void
+            close: () => void
+        }
+        ad: {
+            generate: () => void
+            copy: (id: string, text: string) => void
+            close: () => void
+        }
+    }
+}
+
 /** Owns HiringJobs's resolved data, commands and actual panel activation. */
-export const useHiringJobsView = (input: HiringViewInput) => {
+export const useHiringJobsView = (input: HiringViewInput): HiringJobsViewShape => {
     const owner = { isActive: input.isActive && input.isReady, scope: input.scope }
 
     const t = useTranslations("hiring")

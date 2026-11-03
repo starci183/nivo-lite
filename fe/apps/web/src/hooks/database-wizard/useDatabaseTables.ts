@@ -1,7 +1,7 @@
 "use client"
 
 import { useReducer } from "react"
-import type { DbPreviewRows, DbTableInfo, DbTableMapping, DbTarget } from "@/modules/types"
+import type { DbPreviewRows, DbTableInfo, DbTableMapping, DbTarget, DbEntity } from "@/modules/types"
 import {
     DB_MAX_COLUMNS,
     DB_NO_COLUMN,
@@ -44,8 +44,48 @@ const without = <T>(record: Readonly<Record<string, T>>, key: string): Readonly<
 
 const apply = (state: DatabasePreviewState, patch: PreviewPatch): DatabasePreviewState => patch(state)
 
+/** The view `useDatabaseTables` returns. */
+export interface DatabaseTablesViewShape {
+    mapped: {
+        key: string
+        id: string
+        table: string
+        entity: DbEntity
+        idColumn: string | null
+        titleColumn: string
+        updatedColumn: string
+        columns: readonly string[]
+        names: readonly {
+            readonly id: string
+            readonly label: string
+        }[]
+        isOverCap: boolean
+        isPreviewing: boolean
+        error: string | null
+        lines:
+            | readonly {
+                  readonly id: string
+                  readonly text: string
+              }[]
+            | null
+    }[]
+    toggle: (keys: ReadonlyArray<string>) => void
+    setEntity: (key: string, value: string | null) => void
+    setIdColumn: (key: string, value: string | null) => void
+    setOptionalColumn: (key: string, column: DbOptionalColumn, value: string | null) => void
+    setColumns: (key: string, value: ReadonlyArray<string>) => void
+    preview: (key: string) => void
+}
+
 /** The table step: tick tables, map each one, and load a 5-row preview per table (each loads and fails on its own). */
-export const useDatabaseTables = ({ commands, connectionId, target, tables, picked, update }: DatabaseTablesInput) => {
+export const useDatabaseTables = ({
+    commands,
+    connectionId,
+    target,
+    tables,
+    picked,
+    update,
+}: DatabaseTablesInput): DatabaseTablesViewShape => {
     const [previews, dispatch] = useReducer(apply, EMPTY)
     const change = (key: string, patch: Partial<DbTableMapping>) =>
         update((list) => list.map((m) => (dbTableKey(m) === key ? { ...m, ...patch } : m)))

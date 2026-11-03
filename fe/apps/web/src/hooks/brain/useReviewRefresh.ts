@@ -30,7 +30,11 @@ const isReadOf = (names: ReadonlyArray<string>) => (key: unknown) =>
  * the summary and the draft, with the extra reads the write changes (an approval adds a document). Answers undefined when the
  * write failed.
  */
-export const useReviewRefresh = () => {
+export const useReviewRefresh = (): (<Answer>(
+    action: () => Promise<Answer>,
+    done: string,
+    reads?: ReadonlyArray<string>,
+) => Promise<(Awaited<Answer> & ({} | null)) | undefined>) => {
     const runGraphQL = useGraphQLWithToast()
     const { cache, mutate } = useSWRConfig()
     return useCallback(

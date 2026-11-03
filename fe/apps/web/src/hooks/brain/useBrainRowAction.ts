@@ -13,8 +13,14 @@ interface BrainRowActionInput {
     readonly send: (rowId: string) => Promise<unknown>
 }
 
+/** The view `useBrainRowAction` returns. */
+export interface BrainRowActionView {
+    pending: string | undefined
+    dispatch: (rowId: string, actionId: string) => void
+}
+
 /** Runs the one action of a list of rows, one row at a time: the row it is running on, and the handler of the row's action. */
-export const useBrainRowAction = (input: BrainRowActionInput) => {
+export const useBrainRowAction = (input: BrainRowActionInput): BrainRowActionView => {
     const failed = useFailureToast()
     const [pending, setPending] = useState<string | undefined>()
     const run = async (rowId: string, actionId: string) => {

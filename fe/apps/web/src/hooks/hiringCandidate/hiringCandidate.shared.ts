@@ -2,6 +2,7 @@ import type { useTranslations } from "next-intl"
 import { OPEN_OFFER_STATUSES, reasonTone, scoreTone, type useHiringFormat } from "@/hooks/hiring"
 import type { CandidateView, CandidateDetailView, JobView, HiringMemberView } from "@/hooks/hiringWire"
 import type { useHiringCandidate } from "./useHiringCandidate"
+import type { BadgeTone } from "@starci/grammar/common"
 
 /** How an interview is held. */
 export const INTERVIEW_MODES: ReadonlyArray<string> = ["in_person", "online"]
@@ -47,13 +48,46 @@ export const offerDefaults = (job: JobView | undefined, pay: string): OfferValue
 /** Whether the CV can be previewed in the page: a PDF or an image. */
 export const isPreviewable = (mime: string): boolean => mime === "application/pdf" || mime.startsWith("image/")
 
+/** What `candidateDetailsOf` returns. */
+export interface CandidateDetailsOfResult {
+    score: {
+        value: string
+        label: string
+        tone: BadgeTone
+        summary: string | null
+        reasons: {
+            id: string
+            criterion: string
+            note: string
+            statusLabel: string
+            tone: BadgeTone
+        }[]
+    } | null
+    answers: {
+        id: string
+        title: string
+        text: string
+    }[]
+    interviews: {
+        id: string
+        title: string
+        text: string
+    }[]
+    offers: {
+        id: string
+        title: string
+        text: string
+        canCancel: boolean
+    }[]
+}
+
 /** The screening, CV and activity already resolved for the candidate. */
 export const candidateDetailsOf = (
     candidate: CandidateView,
     view: ReturnType<typeof useHiringCandidate>,
     format: ReturnType<typeof useHiringFormat>,
     t: ReturnType<typeof useTranslations<"hiring">>,
-) => {
+): CandidateDetailsOfResult => {
     return {
         score:
             candidate.score === null
@@ -96,12 +130,22 @@ export const candidateDetailsOf = (
     }
 }
 
+/** What `candidateCvOf` returns. */
+export interface CandidateCvOfResult {
+    hasCv: boolean
+    openLabel: string
+    url: string
+    isPdf: boolean
+    canPreview: boolean
+    isPreviewing: boolean
+}
+
 /** Resolves signed CV facts only from an actual detail answer; availability is never a loading-status shape. */
 export const candidateCvOf = (
     detail: CandidateDetailView,
     isPreviewing: boolean,
     t: ReturnType<typeof useTranslations<"hiring">>,
-) => {
+): CandidateCvOfResult => {
     const cv = detail.cv
     return {
         hasCv: cv !== null,
@@ -114,7 +158,14 @@ export const candidateCvOf = (
 }
 
 /** Resolves each actual timeline event's existing summary, actor and local time. */
-export const candidateHistoryOf = (detail: CandidateDetailView, format: ReturnType<typeof useHiringFormat>) =>
+export const candidateHistoryOf = (
+    detail: CandidateDetailView,
+    format: ReturnType<typeof useHiringFormat>,
+): {
+    id: string
+    title: string
+    text: string
+}[] =>
     detail.events.map((event) => ({
         id: event.id,
         title: event.summary,

@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react"
 import { automationStatusOf, startsAutomationConnection } from "@/modules/automations"
 import type { AutomationStatus } from "@/modules/automations"
 import type { AutomationCardView } from "@/modules/types"
 import type { AutomationPatch } from "./automations.shared"
-import { useAutomationDetail } from "./useAutomationDetail"
+import { useAutomationDetail, type AutomationDetailState } from "./useAutomationDetail"
 
 interface AutomationSelectionInput {
     readonly focus: string | null
@@ -15,8 +15,22 @@ interface AutomationSelectionInput {
     readonly connect: (card: AutomationCardView, status: AutomationStatus) => Promise<void>
 }
 
+/** The view `useAutomationSelection` returns. */
+export interface AutomationSelectionView {
+    selected: string | null
+    awaiting: string | null
+    current: AutomationCardView | null
+    detail: AutomationDetailState
+    select: (key: string) => void
+    toggle: (key: string, next: boolean) => void
+    saveBody: () => Promise<boolean>
+    enable: () => Promise<void>
+    saveSettings: () => Promise<void>
+    setSelected: Dispatch<SetStateAction<string | null>>
+}
+
 /** Owns selection and editing of the open automation while the board owns its data and navigation. */
-export const useAutomationSelection = (input: AutomationSelectionInput) => {
+export const useAutomationSelection = (input: AutomationSelectionInput): AutomationSelectionView => {
     const { cards, visible, change, connect } = input
     const [selected, setSelected] = useState<string | null>(input.focus)
     const [awaiting, setAwaiting] = useState<string | null>(null)

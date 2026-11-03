@@ -3,7 +3,14 @@
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
 import { useBrandKitForm } from "@/hooks/rhf"
-import { brandCardOf, kitOfText, kitTextOf, type BrandCardSay, type BrandKitText } from "@/modules/content"
+import {
+    brandCardOf,
+    kitOfText,
+    kitTextOf,
+    type BrandCardSay,
+    type BrandKitText,
+    type BrandProposalCardView,
+} from "@/modules/content"
 import { useSetupBrandKit } from "./useSetupBrandKit"
 
 const EMPTY_TEXT: BrandKitText = { brandName: "", colors: "", fonts: "", tone: "", address: "", imagery: "", avoid: "" }
@@ -40,6 +47,25 @@ const useBrandCardSay = (): BrandCardSay => {
     )
 }
 
+/** The view `useSetupBrandCards` returns. */
+export interface SetupBrandCardsView {
+    content: {
+        attachLabel: string
+        attachPrompt: string
+        isReading: boolean
+        readingLabel: string
+        cards: BrandProposalCardView[]
+    } | null
+    scrollKey: string
+    on: {
+        attach: (files: ReadonlyArray<File>) => undefined
+        brandField: (name: keyof BrandKitText, value: string) => void
+        brandConfirm: (id: string) => void
+        brandToggleEdit: (id: string) => void
+        brandReject: (id: string) => undefined
+    }
+}
+
 /** The brand guideline part of the setup chat (the AI Marketing agent only): the PDF dropzone, the brand proposal cards with
  * their one open edit, and the commands that confirm (edited or not) or reject a proposal. Null content for other agents. */
 export const useSetupBrandCards = (
@@ -47,7 +73,7 @@ export const useSetupBrandCards = (
     setupSessionId: string,
     isEnabled: boolean,
     onRead: () => void,
-) => {
+): SetupBrandCardsView => {
     const t = useTranslations("marketing")
     const say = useBrandCardSay()
     const brand = useSetupBrandKit({ installationId, setupSessionId, isEnabled, onRead })

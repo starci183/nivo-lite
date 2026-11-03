@@ -6,13 +6,23 @@ import { useMutatePostMarketingWeeklyReportSwr, useQueryMarketingWeeklyReportSwr
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { MARKETING_REPORT_PLACEHOLDER, marketingReportView, type MarketingReportSay } from "@/modules/content"
 import { useGraphQLWithToast } from "@/modules/toast"
+import type { MarketingReportView, DataSlot } from "@/modules/types"
 
 const ZONE = "Asia/Ho_Chi_Minh"
 
 const dayOf = (iso: string) => new Date(`${iso}T00:00:00+07:00`)
 
+/** The view `useMarketingReport` returns. */
+export interface MarketingReportViewShape {
+    placeholder: MarketingReportView
+    slot: DataSlot<MarketingReportView>
+    reload: () => undefined
+    isPosting: boolean
+    send: () => Promise<void>
+}
+
 /** The weekly marketing report of the Performance tab, and the command that posts it into the Marketing room of the Hub. */
-export const useMarketingReport = () => {
+export const useMarketingReport = (): MarketingReportViewShape => {
     const t = useTranslations("marketing")
     const format = useFormatter()
     const runGraphQL = useGraphQLWithToast()

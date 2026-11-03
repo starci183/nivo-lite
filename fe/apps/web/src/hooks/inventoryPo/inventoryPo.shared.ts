@@ -57,11 +57,23 @@ export const startPoState = (po: PoView): PoDrawerState => ({
 })
 
 /** The typed lines with one field of one line replaced. */
-export const withLine = (lines: ReadonlyArray<TypedLine>, index: number, field: "qty" | "cost", value: string) =>
-    lines.map((line, at) => (at === index ? { ...line, [field]: value } : line))
+export const withLine = (
+    lines: ReadonlyArray<TypedLine>,
+    index: number,
+    field: "qty" | "cost",
+    value: string,
+): TypedLine[] => lines.map((line, at) => (at === index ? { ...line, [field]: value } : line))
+
+/** What `poFacts` returns. */
+export interface PoFactsResult {
+    editable: boolean
+    receiving: boolean
+    waiting: boolean
+    mode: PoMode
+}
 
 /** The facts of an order the drawer branches on. */
-export const poFacts = (po: PoView) => {
+export const poFacts = (po: PoView): PoFactsResult => {
     const editable = po.status === "draft"
     const receiving = po.status === "sent" || po.status === "partially_received"
     const lateMode: PoMode = receiving ? "receive" : "read"
@@ -69,8 +81,20 @@ export const poFacts = (po: PoView) => {
     return { editable, receiving, waiting: po.status === "waiting_approval", mode }
 }
 
+/** What `draftInputOf` returns. */
+export interface DraftInputOfResult {
+    poId: string
+    supplierId: string
+    expectedAt: string
+    lines: {
+        lineId: string
+        qty: string
+        unitCost: string
+    }[]
+}
+
 /** The request that saves the draft: supplier, date and the typed lines. */
-export const draftInputOf = (open: PoDrawerState) => ({
+export const draftInputOf = (open: PoDrawerState): DraftInputOfResult => ({
     poId: open.po.id,
     supplierId: open.supplierId,
     expectedAt: open.expected,
@@ -81,8 +105,20 @@ export const draftInputOf = (open: PoDrawerState) => ({
     })),
 })
 
+/** What `receiveInputOf` returns. */
+export interface ReceiveInputOfResult {
+    poId: string
+    invoiceNo: string
+    note: string
+    lines: {
+        lineId: string
+        qty: string
+        unitCost: string
+    }[]
+}
+
 /** The request that records the delivery: the typed received lines. */
-export const receiveInputOf = (open: PoDrawerState) => ({
+export const receiveInputOf = (open: PoDrawerState): ReceiveInputOfResult => ({
     poId: open.po.id,
     invoiceNo: open.invoiceNo,
     note: "",
@@ -95,8 +131,76 @@ export const receiveInputOf = (open: PoDrawerState) => ({
 
 const channelKey = (channel: SupplierChannel | null): string => `channel_${channel ?? "email"}`
 
+/** What `poDrawerProps` returns. */
+export interface PoDrawerPropsResult {
+    copy: {
+        readonly approveAndSend: string
+        readonly close: string
+        readonly poCancel: string
+        readonly poCopied: string
+        readonly poCopy: string
+        readonly poExpected: string
+        readonly poExpectedHint: string
+        readonly poInvoice: string
+        readonly poInvoiceHint: string
+        readonly poItems: string
+        readonly poMessageDrafted: string
+        readonly poMessageHint: string
+        readonly poQty: string
+        readonly poReceive: string
+        readonly poReceiveCost: string
+        readonly poReceiveHint: string
+        readonly poReceiveQty: string
+        readonly poRemind: string
+        readonly poSaveDraft: string
+        readonly poSendForApproval: string
+        readonly poSentEmail: string
+        readonly poSupplier: string
+        readonly poSupplierHint: string
+        readonly poUnitCost: string
+        readonly reject: string
+    }
+    title: string
+    description: string
+    mode: PoMode
+    summary: string
+    supplierId: string
+    suppliers: {
+        id: string
+        label: string
+    }[]
+    expected: string
+    lines: {
+        id: string
+        name: string
+        hint: string
+        qty: string
+        cost: string
+    }[]
+    readLines: {
+        id: string
+        text: string
+    }[]
+    total: string
+    invoiceNo: string
+    messageTitle: string
+    message: string
+    messageEditable: boolean
+    sendNote: string | null
+    sentByEmail: boolean
+    canEdit: boolean
+    canApprove: boolean
+    canReceive: boolean
+    canCopy: boolean
+    canCancel: boolean
+    copied: boolean
+    isPending: boolean
+    error: string | null
+    notice: string | null
+}
+
 /** The props of the order drawer for the open order. */
-export const poDrawerProps = (open: PoDrawerState, context: PoDrawerContext) => {
+export const poDrawerProps = (open: PoDrawerState, context: PoDrawerContext): PoDrawerPropsResult => {
     const { say, format } = context
     const { po } = open
     const facts = poFacts(po)

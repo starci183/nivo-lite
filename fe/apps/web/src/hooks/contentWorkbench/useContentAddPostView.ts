@@ -1,5 +1,5 @@
 "use client"
-import type { ContentViews, ContentActions } from "@/modules/types"
+import type { ContentViews, ContentActions, ContentAddPostFields, ContentAddPostActions } from "@/modules/types"
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
@@ -17,8 +17,14 @@ import { useFeatureReset } from "@/hooks/reuseables"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { contentDialogOf, type ContentViewInput } from "./contentWorkbench.shared"
 
+/** The view `useContentAddPostView` returns. */
+export interface ContentAddPostView {
+    props: ContentAddPostFields | undefined
+    on: ContentAddPostActions
+}
+
 /** Owns the actual ContentAddPost data derivations and conditional controller lifetime. */
-export const useContentAddPostView = (input: ContentViewInput) => {
+export const useContentAddPostView = (input: ContentViewInput): ContentAddPostView => {
     const data = input.data
     const pillars = data?.pillars.filter((pillar) => pillar.active) ?? []
     const t = useTranslations("content")

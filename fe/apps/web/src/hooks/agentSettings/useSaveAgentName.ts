@@ -6,11 +6,17 @@ import { useMutateRenameInstallationAgentSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useRefreshInstallation } from "./useRefreshInstallation"
 
+/** The view `useSaveAgentName` returns. */
+export interface SaveAgentNameView {
+    save: (name: string) => Promise<boolean>
+    isSaving: boolean
+}
+
 /**
  * Saves the display name of an agent. An agent has one name for every type, instance or not: the one the header, Office, the chat and
  * the OpenClaw copy show. Answers whether it worked; a failure was already toasted with the server message.
  */
-export const useSaveAgentName = (installationId: string) => {
+export const useSaveAgentName = (installationId: string): SaveAgentNameView => {
     const t = useTranslations("modulesCore")
     const runGraphQL = useGraphQLWithToast()
     const renameAgent = useMutateRenameInstallationAgentSwr()

@@ -28,7 +28,7 @@ const LEAD_VIEW_KEYS: ReadonlySet<string> = new Set([
 ])
 
 /** Reads again every lead-derived view of the active workspace (board, journey, flow, workbenches, dashboards) after a write. */
-export const useRevalidateLeadViews = () => {
+export const useRevalidateLeadViews = (): (() => Promise<unknown[]>) => {
     const { mutate } = useSWRConfig()
     const { activeWorkspaceId } = useActiveWorkspace()
     return useCallback(() => {

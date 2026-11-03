@@ -8,8 +8,14 @@ import { AGENTS_ROUTE } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useRefreshInstallation } from "./useRefreshInstallation"
 
+/** The view `useRemoveAgent` returns. */
+export interface RemoveAgentView {
+    remove: () => Promise<void>
+    isRemoving: boolean
+}
+
 /** Removes an agent for good: it stops at once, its history stays. On success the person goes back to the agents with a toast; a failure was already toasted. */
-export const useRemoveAgent = (installationId: string) => {
+export const useRemoveAgent = (installationId: string): RemoveAgentView => {
     const t = useTranslations("modulesCore")
     const router = navigation.useRouter()
     const runGraphQL = useGraphQLWithToast()

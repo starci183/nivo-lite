@@ -7,7 +7,7 @@ import type { Settled } from "@/hooks/connection-wizard"
 import { useMutateWantConnectorSwr } from "@/hooks/swr"
 
 /** Says the workspace wants a planned connector ("I want it", owner or manager); recorded once per workspace. */
-export const useWantConnector = () => {
+export const useWantConnector = (): ((connectorId: string) => Promise<Settled<true>>) => {
     const t = useTranslations("connections")
     const settle = useSettledGraphQL()
     const { trigger } = useMutateWantConnectorSwr()

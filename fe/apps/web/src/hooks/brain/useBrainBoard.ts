@@ -6,7 +6,7 @@ import { useBrain } from "./useBrain"
 import type { BrainView } from "./useBrain"
 
 /** What a list of the Second Brain draws: its rows, whether the member may write, and whether it is still loading. */
-interface BrainBoard {
+export interface BrainBoard {
     readonly facts: ReadonlyArray<BrainFact>
     readonly lessons: ReadonlyArray<BrainLesson>
     readonly gaps: ReadonlyArray<BrainGap>

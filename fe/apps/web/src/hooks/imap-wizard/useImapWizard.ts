@@ -3,10 +3,11 @@
 import { useImapWizardActions } from "./useImapWizardActions"
 import { accountOf, requestOf, stateOf, IMAP_STEPS, type ImapPresetId } from "./imap-wizard.shared"
 import { useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
-import { useImapAccountForm } from "@/hooks/rhf"
+import { useImapAccountForm, type ImapAccountValues } from "@/hooks/rhf"
 import { useEffect, useReducer, useRef } from "react"
 import { useImapCommands } from "./useImapCommands"
 import { useImapMailbox } from "./useImapMailbox"
+import type { SlotRead } from "@/modules/types"
 
 /** What the mailbox wizard needs from its drawer. */
 interface ImapWizardInput {
@@ -32,12 +33,46 @@ export interface ImapWizardState {
 
 const merge = (state: ImapWizardState, patch: Partial<ImapWizardState>): ImapWizardState => ({ ...state, ...patch })
 
+/** The view `useImapWizard` returns. */
+export interface ImapWizardView {
+    reads: readonly SlotRead<unknown>[]
+    loading: boolean
+    loadError: string | null
+    step: "account" | "agent" | "schedule" | "folders"
+    index: number
+    savedId: string | null
+    preset: ImapPresetId
+    folderList: readonly string[]
+    folders: readonly string[]
+    sinceDays: number
+    every: number | null
+    agentIds: readonly string[]
+    error: string | null
+    values: ImapAccountValues
+    isPending: boolean
+    isTested: boolean
+    wasTested: boolean
+    ready: boolean
+    go: (to: number) => void
+    setField: (key: "name" | "email" | "user" | "password" | "host" | "port") => (value: string) => void
+    pickPreset: (id: string) => void
+    pickSecurity: (value: string) => void
+    setFolders: (folders: ReadonlyArray<string>) => void
+    setSinceDays: (sinceDays: number) => void
+    setEvery: (every: number | null) => void
+    setAgentIds: (agentIds: ReadonlyArray<string>) => void
+    check: () => void
+    save: () => void
+    finish: () => void
+    reload: () => undefined
+}
+
 /**
  * The mailbox wizard's state machine: 1 sign-in with a test that lists the folders, 2 folders and how far back the first sync reads,
  * 3 how often to sync (the mailbox is saved here), 4 attach agents. When resuming, the saved mailbox is read first (`loading`, or
  * `loadError` when it could not be) and seeds the steps once. The password goes to the back end once and is never read back.
  */
-export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput) => {
+export const useImapWizard = ({ resumeId, onClose }: ImapWizardInput): ImapWizardView => {
     const commands = useImapCommands()
     const setConnectionAgents = useSetConnectionAgents()
     const { start: startSync } = useSyncNow()

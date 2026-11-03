@@ -4,6 +4,7 @@ import { useFormatter, useTranslations } from "next-intl"
 import type { useQueryLoyaltyMemberSwr } from "@/hooks/swr"
 import { blockMessageKey, isLedgerKind, ledgerTone } from "./loyaltyMembers.shared"
 import type { useMemberActions } from "./useMemberActions"
+import type { BadgeTone } from "@starci/grammar/common"
 
 /** The member detail as the back end answers it. */
 type MemberDetail = NonNullable<ReturnType<typeof useQueryLoyaltyMemberSwr>["data"]>
@@ -11,11 +12,43 @@ type MemberDetail = NonNullable<ReturnType<typeof useQueryLoyaltyMemberSwr>["dat
 /** One reward option as the back end answers it. */
 type RewardOption = MemberDetail["rewards"][number]
 
+/** The view `useMemberDetailLists` returns. */
+export interface MemberDetailListsView {
+    rewards: {
+        title: string
+        emptyText: string
+        redeemLabel: string
+        rows: {
+            note?: string
+            blocked?: string
+            id: string
+            name: string
+            cost: string
+        }[]
+        busyId: string | null
+    }
+    ledger: {
+        title: string
+        emptyText: string
+        rows: {
+            evidence?: string
+            ref?: string
+            dateTime: string
+            timeLabel: string
+            amount?: string
+            id: string
+            kind: string
+            tone: BadgeTone
+            points: string
+        }[]
+    }
+}
+
 /** The redeemable rewards and the points history of one member, ready for the composites that draw them. */
 export const useMemberDetailLists = (
     detail: MemberDetail | undefined,
     actions: ReturnType<typeof useMemberActions>,
-) => {
+): MemberDetailListsView => {
     const t = useTranslations("loyalty")
     const format = useFormatter()
     const money = (value: number) =>

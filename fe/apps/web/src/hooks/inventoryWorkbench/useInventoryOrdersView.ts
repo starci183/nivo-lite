@@ -13,11 +13,161 @@ import {
     useNewPoDrawer,
 } from "@/hooks/inventory"
 import { usePoDrawer } from "@/hooks/inventoryPo"
-import type { PoView } from "@/modules/types"
+import type { PoView, PoStatus } from "@/modules/types"
 import { useInventoryOrderCommands } from "@/hooks/inventoryCommands"
 
+/** The view `useInventoryOrdersView` returns. */
+export interface InventoryOrdersView {
+    readonly props: {
+        readonly createLabel: string | null
+        readonly openCount: string
+        readonly boardLabel: string
+        readonly emptyTitle: string
+        readonly emptyBody: string
+        readonly openLabel: string
+        readonly hasOrders: boolean
+        readonly lanes: {
+            status: PoStatus
+            label: string
+            count: string
+            cards: {
+                id: string
+                poNo: string
+                statusLabel: string
+                statusTone: "success" | "neutral" | "warning" | "accent"
+                supplier: string
+                facts: string
+                copyNote: string | null
+            }[]
+        }[]
+        readonly poDrawer: {
+            copy: {
+                readonly approveAndSend: string
+                readonly close: string
+                readonly poCancel: string
+                readonly poCopied: string
+                readonly poCopy: string
+                readonly poExpected: string
+                readonly poExpectedHint: string
+                readonly poInvoice: string
+                readonly poInvoiceHint: string
+                readonly poItems: string
+                readonly poMessageDrafted: string
+                readonly poMessageHint: string
+                readonly poQty: string
+                readonly poReceive: string
+                readonly poReceiveCost: string
+                readonly poReceiveHint: string
+                readonly poReceiveQty: string
+                readonly poRemind: string
+                readonly poSaveDraft: string
+                readonly poSendForApproval: string
+                readonly poSentEmail: string
+                readonly poSupplier: string
+                readonly poSupplierHint: string
+                readonly poUnitCost: string
+                readonly reject: string
+            }
+            title: string
+            description: string
+            mode: "read" | "edit" | "receive"
+            summary: string
+            supplierId: string
+            suppliers: {
+                id: string
+                label: string
+            }[]
+            expected: string
+            lines: {
+                id: string
+                name: string
+                hint: string
+                qty: string
+                cost: string
+            }[]
+            readLines: {
+                id: string
+                text: string
+            }[]
+            total: string
+            invoiceNo: string
+            messageTitle: string
+            message: string
+            messageEditable: boolean
+            sendNote: string | null
+            sentByEmail: boolean
+            canEdit: boolean
+            canApprove: boolean
+            canReceive: boolean
+            canCopy: boolean
+            canCancel: boolean
+            copied: boolean
+            isPending: boolean
+            error: string | null
+            notice: string | null
+        } | null
+        readonly newPoDrawer: {
+            copy: {
+                readonly newPoTitle: string
+                readonly newPoHint: string
+                readonly close: string
+                readonly poSupplier: string
+                readonly poSupplierHint: string
+                readonly newPoItemHint: string
+                readonly poQty: string
+                readonly poUnitCost: string
+                readonly newPoAddLine: string
+                readonly newPoCreate: string
+            }
+            supplierId: string
+            suppliers: {
+                id: string
+                label: string
+            }[]
+            items: {
+                id: string
+                label: string
+            }[]
+            lines: {
+                itemLabel: string
+                key: string
+                itemId: string
+                qty: string
+                cost: string
+            }[]
+            isPending: boolean
+            error: string | null
+        } | null
+    }
+    readonly on: {
+        readonly onCreate: () => void
+        readonly onOpen: (id: string) => void
+        readonly onPoSupplier: (supplierId: string) => void
+        readonly onPoExpected: (expected: string) => void
+        readonly onPoLine: (index: number, field: "qty" | "cost", value: string) => void
+        readonly onPoInvoice: (invoiceNo: string) => void
+        readonly onPoMessage: (message: string) => void
+        readonly onPoSaveDraft: () => void
+        readonly onPoSendForApproval: () => void
+        readonly onPoApprove: () => void
+        readonly onPoReject: () => void
+        readonly onPoReceive: () => void
+        readonly onPoRemind: () => void
+        readonly onPoCopy: () => void
+        readonly onPoCancel: () => void
+        readonly onPoClose: () => void
+        readonly onNewSupplier: (supplierId: string) => void
+        readonly onNewPick: (index: number, itemId: string) => void
+        readonly onNewQty: (index: number, qty: string) => void
+        readonly onNewCost: (index: number, cost: string) => void
+        readonly onNewAddLine: () => void
+        readonly onNewCreate: () => void
+        readonly onNewClose: () => void
+    }
+}
+
 /** The orders tab: the drawers live in their hooks, the drawing in the pure half. */
-export const useInventoryOrdersView = (input: InventoryPanelInput) => {
+export const useInventoryOrdersView = (input: InventoryPanelInput): InventoryOrdersView => {
     const board = input.board
     const lifetime = { isActive: input.isActive, scope: input.scope }
     const t = useTranslations("workbenchInventory")

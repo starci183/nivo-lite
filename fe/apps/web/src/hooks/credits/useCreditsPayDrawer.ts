@@ -5,10 +5,27 @@ import { useTranslations } from "next-intl"
 import { mutate } from "@/modules/viewer-cache"
 import { useQueryPaymentOrderSwr } from "@/hooks/swr"
 import { useCreditsCheckoutStore } from "@/hooks/zustand/creditsCheckout"
-import type { PayOrder } from "@/modules/types"
+import type { PayOrder, PayTarget } from "@/modules/types"
+
+/** The view `useCreditsPayDrawer` returns. */
+export interface CreditsPayDrawerView {
+    target: PayTarget | null
+    order: PayOrder | null
+    workspaceId: string
+    bank: {
+        account: string
+        bank: string
+        holder: string
+    }
+    isRegenerating: boolean
+    regenerateError: string | null
+    onRegenerate: () => void
+    onPaid: () => void
+    onClose: () => void
+}
 
 /** Resolves the drawer slot from the chosen purchase and backend payment instructions. */
-export const useCreditsPayDrawer = () => {
+export const useCreditsPayDrawer = (): CreditsPayDrawerView => {
     const t = useTranslations("credits")
     const { target, workspaceId, orderId, isRequesting, error, close, requestHandler } = useCreditsCheckoutStore()
     const payment = useQueryPaymentOrderSwr(workspaceId, orderId)

@@ -80,6 +80,67 @@ interface AgentChatViewInput {
     readonly opened: ReturnType<typeof useAgentChatNavigation>["opened"]
 }
 
+/** What `viewOf` returns. */
+export interface ViewOfResult {
+    agent:
+        | {
+              id: string
+              module: string
+              name: string
+              handle: string
+              role: string
+              avatarUrl: string | null
+              isActive: boolean
+              hasCustomerChannel: boolean
+              workspaceId: string
+              showWelcome: boolean
+          }
+        | undefined
+    pageError: string | null
+    tab: ChatTab
+    rows: {
+        id: string
+        kind: ChatTab
+        title: string
+        description: string
+        isSelected: boolean
+    }[]
+    thread: {
+        id: string
+        role: "user" | "system" | "agent"
+        body: string
+        timeLabel: string
+        files: {
+            id: string
+            name: string
+            contentType: string
+            url: string
+        }[]
+    }[]
+    draft: string
+    visitorName: string
+    error: string | null
+    isLoadingList: boolean
+    isLoadingThread: boolean
+    isSending: boolean
+    isAwaitingReply: boolean
+    isStarting: boolean
+    isTakingOver: boolean
+    isTakenOver: boolean
+    hasSelection: boolean
+    leadId: string | null
+    setDraft: (body: string) => void
+    setVisitorName: (visitorName: string) => void
+    start: () => Promise<void>
+    send: (prompt?: string) => Promise<void>
+    file: File | null
+    chooseFile: (chosen: File) => void
+    clearFile: () => void
+    toggleTakeover: () => Promise<void>
+    changeTab: (next: ChatTab) => void
+    select: (conversationId: string, kind: ChatTab) => void
+}
+
 /** Assembles the resolved domain state and commands for its drawing. */
 export const viewOf = ({
     loaded,
@@ -96,7 +157,7 @@ export const viewOf = ({
     selectedConversation,
     changeTab,
     opened,
-}: AgentChatViewInput) => {
+}: AgentChatViewInput): ViewOfResult => {
     return {
         agent: loaded,
         pageError: page.error instanceof Error ? page.error.message : null,

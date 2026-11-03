@@ -24,7 +24,7 @@ const blankPair = (): FaqEntry => ({ id: nextId(), q: "", a: "" })
 const freshDraft = (): Draft => ({ title: "", content: "", pairs: [blankPair()], tried: false })
 
 /** What the note draft gives the drawer. */
-interface NoteDraft extends Draft {
+export interface NoteDraft extends Draft {
     readonly setTitle: (value: string) => void
     readonly setContent: (value: string) => void
     readonly setPair: (id: string, field: "q" | "a", value: string) => void

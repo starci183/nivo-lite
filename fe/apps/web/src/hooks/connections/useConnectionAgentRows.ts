@@ -21,11 +21,23 @@ interface ConnectionPageRead {
     readonly reload: () => void
 }
 
+/** The view `useConnectionAgentRows` returns. */
+export interface ConnectionAgentRowsView {
+    slot: DataSlot<readonly ConnectionAgentRowView[]>
+    toggle: (agentId: string, isOn: boolean) => Promise<void>
+    reload: () => void
+    isOwner: boolean
+}
+
 /**
  * The agents that can work through a connection of a provider (a grant of that pair has a purpose), each marked when it does, and the
  * toggle that saves the set; only the owner may toggle, since the back end refuses everyone else.
  */
-export const useConnectionAgentRows = (connectionId: string, provider: Provider, page: ConnectionPageRead) => {
+export const useConnectionAgentRows = (
+    connectionId: string,
+    provider: Provider,
+    page: ConnectionPageRead,
+): ConnectionAgentRowsView => {
     const agentIds = page.read.data?.agentIds
     const { reload } = page
     const agentsRead = useQueryConnectionAgentsSwr()

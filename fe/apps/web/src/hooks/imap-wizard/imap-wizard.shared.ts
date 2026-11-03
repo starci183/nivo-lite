@@ -83,7 +83,13 @@ export interface ImapMailbox {
 }
 
 /** The `connectorImap` key of each provider's app-password guide. */
-export const IMAP_GUIDE_KEY = {
+export const IMAP_GUIDE_KEY: {
+    readonly gmail: "guideGmail"
+    readonly outlook: "guideOutlook"
+    readonly zoho: "guideZoho"
+    readonly yahoo: "guideYahoo"
+    readonly other: "guideOther"
+} = {
     gmail: "guideGmail",
     outlook: "guideOutlook",
     zoho: "guideZoho",
@@ -92,7 +98,13 @@ export const IMAP_GUIDE_KEY = {
 } as const satisfies Record<ImapPresetId, string>
 
 /** The `connectorImap` key of each provider's name. */
-export const IMAP_PRESET_KEY = {
+export const IMAP_PRESET_KEY: {
+    readonly gmail: "presetGmail"
+    readonly outlook: "presetOutlook"
+    readonly zoho: "presetZoho"
+    readonly yahoo: "presetYahoo"
+    readonly other: "presetOther"
+} = {
     gmail: "presetGmail",
     outlook: "presetOutlook",
     zoho: "presetZoho",
@@ -101,10 +113,11 @@ export const IMAP_PRESET_KEY = {
 } as const satisfies Record<ImapPresetId, string>
 
 /** The `connectorImap` key of each first-sync period. */
-export const IMAP_SINCE_KEY = { 7: "since7", 30: "since30", 90: "since90" } as const satisfies Record<
-    (typeof IMAP_SINCE_DAYS)[number],
-    string
->
+export const IMAP_SINCE_KEY: {
+    readonly 7: "since7"
+    readonly 30: "since30"
+    readonly 90: "since90"
+} = { 7: "since7", 30: "since30", 90: "since90" } as const satisfies Record<(typeof IMAP_SINCE_DAYS)[number], string>
 
 /** Restores a saved connection or prepares the initial wizard state. */
 export const stateOf = (mailbox: ImapMailbox | undefined): ImapWizardState => ({
@@ -135,7 +148,20 @@ export const accountOf = (mailbox: ImapMailbox | undefined): ImapAccountValues |
           }
 
 /** Builds the mailbox request from its current account and resumed credentials. */
-export const requestOf = (state: ImapWizardState, values: ImapAccountValues, user: string) => {
+export const requestOf = (
+    state: ImapWizardState,
+    values: ImapAccountValues,
+    user: string,
+): (() => {
+    name: string
+    email: string
+    host: string
+    port: number
+    security: "tls" | "starttls"
+    user: string
+    password: string
+    connectionId?: string
+}) => {
     return () => ({
         ...(state.savedId === null ? {} : { connectionId: state.savedId }),
         name: values.name.trim(),

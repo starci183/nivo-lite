@@ -6,7 +6,7 @@ import type { Settled } from "@/hooks/connection-wizard"
 import { useMutateAuthorizeGoogleSwr } from "@/hooks/swr"
 
 /** Starts the Google consent for the workspace: answers the address the browser is sent to (the back end signs the state). */
-export const useAuthorizeGoogle = () => {
+export const useAuthorizeGoogle = (): ((returnTo: string) => Promise<Settled<string>>) => {
     const settle = useSettledGraphQL()
     const { trigger } = useMutateAuthorizeGoogleSwr()
     return useCallback(

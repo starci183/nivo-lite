@@ -6,11 +6,29 @@ import { useMutateCreateApiKeySwr, useMutateRevokeApiKeySwr, useQueryApiKeysSwr 
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 
+/** The view `useApiKeys` returns. */
+export interface ApiKeysView {
+    items: {
+        id: string
+        name: string
+        prefix: string
+        createdAt: string
+        lastUsedAt: string | null
+        revokedAt: string | null
+    }[]
+    isLoading: boolean
+    loadFailed: boolean
+    create: (name: string) => Promise<string | undefined>
+    isCreating: boolean
+    revoke: (keyId: string) => Promise<boolean>
+    isRevoking: boolean
+}
+
 /**
  * The API keys of the active workspace with their two writes. Each write toasts its outcome (a failure shows the server-localized
  * message) and refreshes the list on success. `create` answers the secret once, or `undefined` when it failed.
  */
-export const useApiKeys = () => {
+export const useApiKeys = (): ApiKeysView => {
     const t = useTranslations("developers")
     const runGraphQL = useGraphQLWithToast()
     const { activeWorkspaceId } = useActiveWorkspace()

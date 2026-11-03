@@ -5,12 +5,35 @@ import type { HiringOwner } from "@/hooks/hiring"
 
 import { useMemo, useState } from "react"
 import { useHiringRun } from "@/hooks/hiring"
-import type { HiringWorkbenchData } from "@/hooks/hiringWire"
-import { pipelineLanes, withdrawnCount } from "./hiringPipeline.shared"
+import type { HiringWorkbenchData, CandidateView } from "@/hooks/hiringWire"
+import { pipelineLanes, withdrawnCount, type PipelineLane } from "./hiringPipeline.shared"
 import { useHiringMove } from "./useHiringMove"
 
+/** The view `useHiringPipeline` returns. */
+export interface HiringPipelineView {
+    lanes: PipelineLane[]
+    withdrawn: number
+    dragId: string | null
+    overStage: string | null
+    rejecting: CandidateView | null
+    isPending: boolean
+    error: string | null
+    clearError: () => void
+    moveTo: (id: string, stage: string) => void
+    startDrag: (id: string) => void
+    endDrag: () => void
+    overLane: (stage: string) => void
+    leaveLane: (stage: string) => void
+    dropOn: (stage: string, transferId: string) => void
+    closeReject: () => void
+}
+
 /** The pipeline board of one job (or all): lanes, the drag in flight, the card asked to be rejected, and the moves. */
-export const useHiringPipeline = (data: HiringWorkbenchData, jobId: string, owner?: HiringOwner) => {
+export const useHiringPipeline = (
+    data: HiringWorkbenchData,
+    jobId: string,
+    owner?: HiringOwner,
+): HiringPipelineView => {
     const run = useHiringRun(owner)
     const move = useHiringMove()
     const [dragId, setDragId] = useState<string | null>(null)

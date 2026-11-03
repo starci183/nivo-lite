@@ -13,8 +13,15 @@ interface GapOptions {
     readonly gaps?: readonly BrainGap[]
 }
 
+/** The view `useBrainGaps` returns. */
+export interface BrainGapsView {
+    list: KnowledgeListView
+    dispatch: (rowId: string, actionId: string) => void
+    retry: () => void
+}
+
 /** Resolves unanswered questions for the queue or public answers, without sharing either region's display status. */
-export const useBrainGaps = (board: ReturnType<typeof useBrainBoard>, options: GapOptions = {}) => {
+export const useBrainGaps = (board: ReturnType<typeof useBrainBoard>, options: GapOptions = {}): BrainGapsView => {
     const t = useTranslations("brain")
     const pub = useTranslations("publicBrain")
     const format = useFormatter()

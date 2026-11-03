@@ -87,8 +87,20 @@ export const focusedCandidateId = (board: HiringWorkbenchData, focus: string | n
     return interview?.candidateId ?? null
 }
 
+/** What `hiringRejectCopyOf` returns. */
+export interface HiringRejectCopyOfResult {
+    title: string
+    closeLabel: string
+    hint: string
+    failed: string
+    reasonLabel: string
+    kept: string
+    cancelLabel: string
+    confirmLabel: string
+}
+
 /** Resolves the shared candidate rejection dialog's exact name and words before the pure halves draw it. */
-export const hiringRejectCopyOf = (say: HiringSay, name: string) => ({
+export const hiringRejectCopyOf = (say: HiringSay, name: string): HiringRejectCopyOfResult => ({
     title: say("rejectTitle", { name }),
     closeLabel: say("close"),
     hint: say("rejectHint"),

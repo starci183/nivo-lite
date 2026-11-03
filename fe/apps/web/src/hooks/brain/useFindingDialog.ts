@@ -37,7 +37,7 @@ const TEXT_FIELDS = {
 type Commands = DossierReviewCommands
 
 /** What the dialog of a finding gives its pane. */
-interface FindingDialog {
+export interface FindingDialog {
     /** What the open dialog says; null while none is open. */
     readonly view: FindingDialogView | null
     readonly open: (kind: DialogKind, finding: FindingView) => void

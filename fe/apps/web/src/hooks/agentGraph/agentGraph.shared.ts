@@ -62,7 +62,21 @@ export interface AgentGraphSetup extends AgentGraphSetupState {
 }
 
 /** The run a work item left on the graph: its decision, version, outcome and the steps of its trace; null while none is read. */
-export const agentGraphRunOf = (data: ReturnType<typeof useQueryAgentGraphRunSwr>["data"]) =>
+export const agentGraphRunOf = (
+    data: ReturnType<typeof useQueryAgentGraphRunSwr>["data"],
+): {
+    id: string
+    version: number
+    outcome: string
+    closedAs: string | null
+    steps: readonly {
+        key: string
+        title: string
+        kind: "trigger" | "output" | "condition" | "execute"
+        step: string
+        branchKey: string | null
+    }[]
+} | null =>
     data === undefined
         ? null
         : {

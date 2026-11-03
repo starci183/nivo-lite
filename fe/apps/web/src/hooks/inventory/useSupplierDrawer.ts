@@ -34,8 +34,47 @@ const startSupplierState = (supplier: SupplierView | null): SupplierDrawerState 
     },
 })
 
+/** The view `useSupplierDrawer` returns. */
+export interface SupplierDrawerView {
+    open: (target: SupplierView | null) => void
+    props: {
+        copy: {
+            supplierEditTitle: string
+            close: string
+            save: string
+            supplierAddTitle: string
+            supplierDrawerHint: string
+            supplierName: string
+            supplierContact: string
+            supplierChannel: string
+            supplierEmail: string
+            supplierPhone: string
+            supplierZalo: string
+            supplierLead: string
+            supplierTerms: string
+            supplierNote: string
+        }
+        editing: string | null
+        values: SupplierFormValues
+        channels: {
+            value: string
+            label: string
+        }[]
+        isPending: boolean
+        error: string | null
+    } | null
+    on: {
+        field: (name: SupplierFormField, value: string) => void
+        save: () => void
+        close: () => void
+    }
+}
+
 /** Opens, fills and saves the supplier form; `props` is null while the drawer is closed. */
-export const useSupplierDrawer = (commands: InventoryCommandSet<"saveSupplier">, lifetime?: InventoryPanelScope) => {
+export const useSupplierDrawer = (
+    commands: InventoryCommandSet<"saveSupplier">,
+    lifetime?: InventoryPanelScope,
+): SupplierDrawerView => {
     const { isActive = true, scope = "" } = lifetime ?? {}
 
     const t = useTranslations("workbenchInventory")

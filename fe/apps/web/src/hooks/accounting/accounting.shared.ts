@@ -100,6 +100,17 @@ interface AccountingQuestionsActionsInput {
     readonly setValue: ReturnType<typeof useAccountingQuestionsForm>["setValue"]
 }
 
+/** What `createAccountingQuestionsActions` returns. */
+export interface CreateAccountingQuestionsActionsResult {
+    cards: {
+        group: AccountingQuestionGroup
+        data: AccountingQuestionCardData
+    }[]
+    approve: (id: string) => Promise<void>
+    reject: (id: string) => Promise<void>
+    change: (id: string, name: Exclude<keyof AccountingQuestionValues, "fields">, value: string) => void
+}
+
 /** Builds validated accounting decisions, question cards and edit handlers. */
 export const createAccountingQuestionsActions = ({
     items,
@@ -117,7 +128,7 @@ export const createAccountingQuestionsActions = ({
     format,
     editing,
     setValue,
-}: AccountingQuestionsActionsInput) => {
+}: AccountingQuestionsActionsInput): CreateAccountingQuestionsActionsResult => {
     const approve = async (id: string) => {
         const item = items.find((candidate) => candidate.id === id)
         if (!item || !canAct(item) || item.status !== "waiting_decision" || isDeciding) return

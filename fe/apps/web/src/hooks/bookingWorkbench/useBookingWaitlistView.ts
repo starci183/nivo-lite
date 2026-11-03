@@ -7,12 +7,31 @@ import { useFormatter, useTranslations } from "next-intl"
 
 import { useBookingSettingsCommands } from "@/hooks/bookingSetup"
 
+/** The view `useBookingWaitlistView` returns. */
+export interface BookingWaitlistView {
+    readonly props: {
+        readonly label: string
+        readonly emptyTitle: string
+        readonly emptyBody: string
+        readonly removeLabel: string
+        readonly rows: {
+            id: string
+            title: string
+            detail: string
+        }[]
+        readonly isPending: boolean
+    }
+    readonly on: {
+        readonly remove: (id: string) => void
+    }
+}
+
 /** The connected waiting list: customers who wait for a free time, removable one by one. */
 export const useBookingWaitlistView = (
     isActive: boolean,
     scope: string,
     boardRead: ReturnType<typeof useBookingBoard>,
-) => {
+): BookingWaitlistView => {
     const { board } = boardRead
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()

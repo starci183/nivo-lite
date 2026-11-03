@@ -16,9 +16,57 @@ import type {
 } from "@/hooks/swr"
 import { documentCommandOf } from "./brain.shared"
 import { usePublicDocRunner } from "./usePublicDocRunner"
+import type { PublicDocument } from "@/modules/brain"
+
+/** The view `usePublicDocCommands` returns. */
+export interface PublicDocCommandsView {
+    isPending: boolean
+    /** NIVO drafts from internal documents; the row appears at once, being drafted. */
+    draft: (
+        request: {
+            instructions?: string | null | undefined
+        } & {
+            sourceIds: (string | number)[]
+            title: string
+        },
+        done?: string,
+    ) => Promise<PublicDocument | undefined>
+    /** The owner writes the document by hand. */
+    write: (
+        request: {} & {
+            body: string
+            title: string
+        },
+        done?: string,
+    ) => Promise<PublicDocument | undefined>
+    /** NIVO drafts again from the same internal documents. */
+    redraft: (request: string, done?: string) => Promise<PublicDocument | undefined>
+    /** Changes the title or the text. */
+    update: (
+        request: {
+            body?: string | null | undefined
+            title?: string | null | undefined
+        } & {
+            id: string | number
+        },
+        done?: string,
+    ) => Promise<PublicDocument | undefined>
+    /** The owner approves: the document is published to customers. */
+    approve: (
+        request: {
+            reviewedChanges?: boolean | null | undefined
+        } & {
+            expectedDraftRevision: number
+            id: string | number
+        },
+        done?: string,
+    ) => Promise<PublicDocument | undefined>
+    /** Takes the document away from customers. */
+    archive: (id: string, done?: string) => Promise<boolean | undefined>
+}
 
 /** The commands on the documents written for customers; each failure is toasted by the back end's words, and the lists they change are read again. */
-export const usePublicDocCommands = () => {
+export const usePublicDocCommands = (): PublicDocCommandsView => {
     const { isPending, run } = usePublicDocRunner()
     const drafting = useMutateDraftPublicDocumentSwr()
     const writing = useMutateWritePublicDocumentSwr()

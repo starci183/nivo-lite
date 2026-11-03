@@ -10,13 +10,29 @@ import type { FieldOf, HiringJobValues, HiringQuestionValues } from "@/modules/t
 
 const FIELD_OPTIONS = { shouldValidate: true, shouldDirty: true }
 
+/** The view `useHiringJobEditor` returns. */
+export interface HiringJobEditorView {
+    values: HiringJobValues
+    isValid: boolean
+    isPending: boolean
+    error: string | null
+    canAddQuestion: boolean
+    setText: (name: FieldOf<HiringJobValues, string>, value: string) => void
+    setNumber: (name: FieldOf<HiringJobValues, number | null>, value: number | null) => void
+    setList: (name: FieldOf<HiringJobValues, Array<string>>, value: Array<string>) => void
+    patchQuestion: (index: number, patch: Partial<HiringQuestionValues>) => void
+    addQuestion: () => void
+    removeQuestion: (index: number) => void
+    save: () => void
+}
+
 /** The job editor: the form values, every change of them, and the save that closes the editor once the back end took the job. */
 export const useHiringJobEditor = (
     form: UseFormReturn<HiringJobValues>,
     job: JobView | null,
     onClose: () => void,
     owner?: HiringOwner,
-) => {
+): HiringJobEditorView => {
     const run = useHiringRun(owner)
     const runGraphQL = useGraphQLWithToast()
     const lifetime = useFeatureLifetime(owner?.isActive ?? true, owner?.scope ?? "")

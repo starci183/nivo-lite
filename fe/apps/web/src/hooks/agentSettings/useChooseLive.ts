@@ -6,8 +6,14 @@ import { useMutateSetModuleLiveSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useRefreshInstallation } from "./useRefreshInstallation"
 
+/** The view `useChooseLive` returns. */
+export interface ChooseLiveView {
+    choose: (live: boolean) => Promise<boolean>
+    isSaving: boolean
+}
+
 /** Switches an agent live or paused. Answers whether it worked; a failure was already toasted. */
-export const useChooseLive = (installationId: string) => {
+export const useChooseLive = (installationId: string): ChooseLiveView => {
     const t = useTranslations("modulesCore")
     const runGraphQL = useGraphQLWithToast()
     const { trigger, isMutating } = useMutateSetModuleLiveSwr()

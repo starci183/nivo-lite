@@ -9,8 +9,15 @@ import type { ReplyOutcome } from "./useHiringInterviewReply"
 
 const ANSWERED_OUTCOMES: ReadonlySet<string> = new Set(["accepted", "declined", "already_accepted", "already_declined"])
 
+/** The view `useHiringOfferReply` returns. */
+export interface HiringOfferReplyView {
+    outcome: ReplyOutcome | null
+    isPending: boolean
+    answer: (accept: boolean) => undefined
+}
+
 /** The candidate's answer to a job offer: accept it or decline it. */
-export const useHiringOfferReply = (token: string) => {
+export const useHiringOfferReply = (token: string): HiringOfferReplyView => {
     const t = useTranslations("hiring")
     const runGraphQL = useGraphQLWithToast()
     const { trigger } = useMutateRespondHiringOfferSwr()

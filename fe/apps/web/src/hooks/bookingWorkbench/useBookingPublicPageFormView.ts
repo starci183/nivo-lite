@@ -16,12 +16,41 @@ interface Edits {
     readonly note?: string
 }
 
+/** The view `useBookingPublicPageFormView` returns. */
+export interface BookingPublicPageFormView {
+    readonly props: {
+        readonly saveLabel: string
+        readonly isPending: boolean
+        readonly link?: {
+            label: string
+            href: string
+            hint: string
+        }
+        readonly title: string
+        readonly hint: string
+        readonly enabledLabel: string
+        readonly enabled: boolean
+        readonly slugLabel: string
+        readonly slug: string
+        readonly slugPlaceholder: string
+        readonly noteLabel: string
+        readonly note: string
+        readonly notePlaceholder: string
+    }
+    readonly on: {
+        readonly toggleEnabled: (value: boolean) => void
+        readonly changeSlug: (value: string) => void
+        readonly changeNote: (value: string) => void
+        readonly save: () => void
+    }
+}
+
 /** The connected public page form: the switch, the address and the note of the booking page of the shop. */
 export const useBookingPublicPageFormView = (
     isActive: boolean,
     scope: string,
     boardRead: ReturnType<typeof useBookingBoard>,
-) => {
+): BookingPublicPageFormView => {
     const t = useTranslations("workbenchBooking")
     const commands = useBookingSettingsCommands()
     const { board } = boardRead

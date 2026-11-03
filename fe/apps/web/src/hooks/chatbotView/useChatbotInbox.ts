@@ -5,11 +5,12 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import type { ChatbotTextFormOptions } from "@/hooks/rhf"
 import { useChatbotInboxView } from "./useChatbotInboxView"
 import { useChatbotInboxScope } from "./useChatbotInboxScope"
-import { useChatbotActions, useChatbotThread } from "@/hooks/chatbot"
+import { useChatbotActions, useChatbotThread, type ChatbotChipView } from "@/hooks/chatbot"
 import type { InboxFilter } from "@/hooks/chatbot"
 import { navigation } from "@/modules/i18n"
-import type { ChatbotConversation, ChatbotOverview, ChatbotThread } from "@/modules/types"
+import type { ChatbotConversation, ChatbotOverview, ChatbotThread, LeadStageId } from "@/modules/types"
 import { useTranslations } from "next-intl"
+import type { ChatbotThreadEntry } from "@/hooks/chatbotThread"
 
 /** Who looks at the inbox, and which conversation the route asks for. */
 export interface ChatbotInboxInput {
@@ -32,12 +33,139 @@ export interface InboxFilters {
     readonly query: string
 }
 
+/** The view `useChatbotInbox` returns. */
+export interface ChatbotInboxView {
+    props: {
+        title: string
+        actionFailedTitle: string
+        actionError: string | null
+        pane: "thread" | "list"
+        hasSelection: boolean
+        pickTitle: string
+        pickBody: string
+        list: {
+            title: string
+            searchLabel: string
+            searchPlaceholder: string
+            clearLabel: string
+            listLabel: string
+            query: string
+            filters: {
+                value: InboxFilter
+                label: string
+            }[]
+            selectedFilter: InboxFilter
+            items: {
+                id: string
+                name: string
+                preview: string
+                time: string
+                channel: string
+                chips: readonly ChatbotChipView[]
+            }[]
+            hasConversations: boolean
+            emptyListTitle: string
+            emptyListBody: string
+            emptyFilter: string
+            selectedId: string | null
+        }
+        thread: {
+            isResolving: boolean
+            hasThread: boolean
+            pickBody: string
+            backLabel: string
+            infoLabel: string
+            isInfoOpen: boolean
+            name: string
+            channel: string
+            chips: readonly ChatbotChipView[]
+            entries: readonly ChatbotThreadEntry[]
+            canReply: boolean
+            lockedText: string
+            composerLabel: string
+            composerPlaceholder: string
+            composerHint: string
+            sendLabel: string
+            draft: string
+            notSentTitle: string
+            error: string | null
+            isSending: boolean
+        }
+        sideLabel: string
+        closeSideLabel: string
+        isInfoOpen: boolean
+        side: {
+            title: string
+            closeLabel: string
+            hasThread: boolean
+            customerName: string
+            channelLine: string
+            escalation: {
+                title: string
+                askedLabel: string
+                question: string
+                assigned: string | null
+                draftLabel: string
+                draftHint: string
+                draft: string
+                sendLabel: string
+                declineLabel: string
+                isAnswering: boolean
+                noticeTone: "negative" | null
+                noticeTitle: string
+                noticeText: string | null
+            } | null
+            stage: {
+                title: string
+                label: string
+                steps: readonly {
+                    readonly id: LeadStageId
+                    readonly label: string
+                }[]
+                currentId: LeadStageId
+            } | null
+            handling: {
+                title: string
+                text: string
+                buttonLabel: string
+                hint: string | null
+                isBusy: boolean
+            }
+            leadTitle: string
+            leadNone: string
+            lead: {
+                name: string
+                facts: readonly {
+                    readonly id: string
+                    readonly term: string
+                    readonly description: string
+                }[]
+                openLabel: string
+                openHref: string
+            } | null
+        }
+    }
+    on: {
+        query: (value: string) => void
+        filter: (value: string) => void
+        select: (id: string) => void
+        back: () => void
+        toggleInfo: () => void
+        draft: (text: string) => void
+        send: () => void
+        toggleHandling: () => void
+        escalationDraft: (text: string) => void
+        sendAnswer: () => void
+        declineAnswer: () => void
+    }
+}
+
 /** The words, rows and actions of the inbox: validated drafts, queued replies, the open thread. Drafts stay tied to their conversation or escalation. */
 export const useChatbotInbox = (
     input: ChatbotInboxInput,
     isActive = true,
-    scope = JSON.stringify([input.overview?.workspaceId, input.userId]),
-) => {
+    scope: string = JSON.stringify([input.overview?.workspaceId, input.userId]),
+): ChatbotInboxView => {
     const runGraphQL = useGraphQLWithToast()
     const { overview, userName, userId } = input
     const t = useTranslations("workbenchChatbot")

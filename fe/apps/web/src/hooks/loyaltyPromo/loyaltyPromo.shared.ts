@@ -105,7 +105,17 @@ export const promotionResultOf = (
     isWriting: boolean,
     t: ReturnType<typeof useTranslations<"loyalty">>,
     format: ReturnType<typeof useFormatter>,
-) => {
+): {
+    result:
+        | {
+              readonly title: string
+              readonly recipients: string
+              readonly time: string
+              readonly draft: string
+          }
+        | undefined
+    failure: string | undefined
+} => {
     let result:
         | { readonly title: string; readonly recipients: string; readonly time: string; readonly draft: string }
         | undefined

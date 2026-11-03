@@ -10,7 +10,7 @@ import {
     useQueryChatAnswerStatusSwr,
     useQueryChatReplyStatusSwr,
 } from "@/hooks/swr"
-import { CHATBOT_IDLE, useChatbotStore } from "@/hooks/zustand/chatbot"
+import { CHATBOT_IDLE, useChatbotStore, type ChatbotFeedback, type ChatbotAction } from "@/hooks/zustand/chatbot"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useLocale, useTranslations } from "next-intl"
 import { useCallback } from "react"
@@ -37,8 +37,17 @@ const noticeOf = (t: ChatbotTranslator, kind: "reply" | "answer", declined: bool
     return t(declined ? "answerDeclined" : "answerSent")
 }
 
+/** The view `useChatbotActions` returns. */
+export interface ChatbotActionsView {
+    sendReply: (conversationId: string, body: string) => Promise<boolean>
+    sendAnswer: (conversationId: string, workItemId: string, text: string | null) => Promise<void>
+    toggleHandling: (conversationId: string, takeOver: boolean) => Promise<void>
+    feedback: ChatbotFeedback | null
+    busy: ChatbotAction | null
+}
+
 /** Queues replies and decisions, then follows durable GraphQL status. Browser-lifetime locks survive workspace and installation changes. */
-export const useChatbotActions = (workspaceId: string, userId: string, isActive = true) => {
+export const useChatbotActions = (workspaceId: string, userId: string, isActive = true): ChatbotActionsView => {
     const t = useTranslations("workbenchChatbot")
     const locale = useLocale()
     const runGraphQL = useGraphQLWithToast()

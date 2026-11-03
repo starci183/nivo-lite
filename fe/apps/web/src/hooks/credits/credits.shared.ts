@@ -7,7 +7,7 @@ import type {
     CreditTopupLotType,
 } from "@/hooks/swr"
 import { dayjs } from "@/modules/dayjs"
-import type { CreditsOverviewView, CreditsData, PlanView } from "@/modules/types"
+import type { CreditsOverviewView, CreditsData, PlanView, PayTarget } from "@/modules/types"
 import { forecastRunout } from "@/modules/utils"
 import type { useTranslations } from "next-intl"
 
@@ -162,8 +162,33 @@ const upgradeSummaryOf = ({
     }
 }
 
+/** What `creditsSummaryOf` returns. */
+export interface CreditsSummaryOfResult {
+    topupText: string
+    forecast: string
+    carried: string
+    upgrade: {
+        readonly name: string
+        readonly line: string
+        readonly price: string
+        readonly action: string
+        readonly pending: boolean
+        readonly disabled: boolean
+        readonly target: PayTarget
+    } | null
+    contact: {
+        readonly name: string
+        readonly text: string
+        readonly action: string
+        readonly href: string
+    } | null
+    badge: string
+    badgeTone: "danger" | "warning"
+    figure: string
+}
+
 /** Resolves balance, exhaustion, expiry and upgrade summaries for the current account. */
-export const creditsSummaryOf = (input: CreditsSummaryInput) => {
+export const creditsSummaryOf = (input: CreditsSummaryInput): CreditsSummaryOfResult => {
     const { data, t, credit, day, name } = input
     const loading = t("loading")
     let topupText = loading

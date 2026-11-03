@@ -4,13 +4,29 @@ import type { AccountingWorkbenchData } from "@/modules/types"
 import { useFormatter, useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref } from "@/modules/routes"
-import { accountingUpcomingRowsOf } from "@/hooks/accountingUpcoming"
+import { accountingUpcomingRowsOf, type AccountingUpcomingRow } from "@/hooks/accountingUpcoming"
+
+/** The view `useAccountingUpcoming` returns. */
+export interface AccountingUpcomingView {
+    props: {
+        title: string
+        rows: readonly AccountingUpcomingRow[]
+        isUnknown: boolean
+        emptyMessage: string
+        emptyBody: string
+        openBrainLabel: string
+        note: string | null
+    }
+    on: {
+        openBrain: () => void
+    }
+}
 
 /**
  * The Upcoming list of the Overview tab: the tax deadlines of the Brain tax profile and the open supplier invoices, soonest first.
  * With no tax profile the list is unknown, so it says what it needs; with no invoice connector it lists tax only and says so.
  */
-export const useAccountingUpcoming = (data: AccountingWorkbenchData) => {
+export const useAccountingUpcoming = (data: AccountingWorkbenchData): AccountingUpcomingView => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const router = navigation.useRouter()

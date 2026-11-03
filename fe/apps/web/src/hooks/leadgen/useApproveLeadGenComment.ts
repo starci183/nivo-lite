@@ -25,8 +25,17 @@ interface ApprovalProgress {
     readonly status: string
 }
 
+/** The view `useApproveLeadGenComment` returns. */
+export interface ApproveLeadGenCommentView {
+    approve: (request: MutateApproveLeadGenCommentRequest) => Promise<boolean>
+    busyId: string | null
+    isApproving: boolean
+    statusReadError: string | null
+    retryStatus: () => void
+}
+
 /** Approves a public reply, follows its job, and refreshes the affected workspace views. */
-export const useApproveLeadGenComment = (isActive = true) => {
+export const useApproveLeadGenComment = (isActive = true): ApproveLeadGenCommentView => {
     const t = useTranslations("workbenchLeadGen")
     const runGraphQL = useGraphQLWithToast()
     const { activeWorkspaceId } = useActiveWorkspace()

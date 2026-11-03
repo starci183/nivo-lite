@@ -9,8 +9,14 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import { programInputOf } from "./loyaltyProgram.shared"
 import type { ProgramValues } from "@/modules/types"
 
+/** The view `useLoyaltyProgramSave` returns. */
+export interface LoyaltyProgramSaveView {
+    isPending: boolean
+    save: (values: ProgramValues) => void
+}
+
 /** Saves the whole programme; the answer becomes a toast and the programme and the board are read again. */
-export const useLoyaltyProgramSave = () => {
+export const useLoyaltyProgramSave = (): LoyaltyProgramSaveView => {
     const t = useTranslations("loyalty")
     const withToast = useGraphQLWithToast()
     const { mutate } = useSWRConfig()

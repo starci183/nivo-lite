@@ -14,6 +14,7 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import type { AgentChatAgent, ChatTab } from "./useAgentChat"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The selected thread and the way an opened thread becomes selected. */
 export interface AgentChatActionTarget {
@@ -32,8 +33,29 @@ export interface PendingTurn {
     readonly delivery: boolean
 }
 
+/** The view `useAgentChatActions` returns. */
+export interface AgentChatActionsView {
+    message: UseFormReturn<{
+        body: string
+    }>
+    visitor: UseFormReturn<{
+        visitorName: string
+    }>
+    start: () => Promise<void>
+    send: (prompt?: string) => Promise<void>
+    toggleTakeover: () => Promise<void>
+    file: File | null
+    chooseFile: (chosen: File) => void
+    clearFile: () => void
+    isSending: boolean
+    isAwaitingReply: boolean
+    isStarting: boolean
+    isTakingOver: boolean
+    error: string | null
+}
+
 /** Validated chat writes, mutation feedback and the authoritative queued-turn lifecycle. */
-export const useAgentChatActions = (target: AgentChatActionTarget) => {
+export const useAgentChatActions = (target: AgentChatActionTarget): AgentChatActionsView => {
     const t = useTranslations("agentChat")
     const system = useTranslations("system")
     const runGraphQL = useGraphQLWithToast()

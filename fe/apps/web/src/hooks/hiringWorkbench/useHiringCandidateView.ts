@@ -1,15 +1,206 @@
 "use client"
 import { useTranslations } from "next-intl"
 import { focusedCandidateId, stageTone, useHiringFormat } from "@/hooks/hiring"
-import { candidateDetailsOf, candidateCvOf, candidateHistoryOf, useHiringCandidate } from "@/hooks/hiringCandidate"
+import {
+    candidateDetailsOf,
+    candidateCvOf,
+    candidateHistoryOf,
+    useHiringCandidate,
+    type InterviewValues,
+    type OfferValues,
+} from "@/hooks/hiringCandidate"
 import { NO_CANDIDATE } from "@/hooks/hiringMap"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import type { HiringViewInput } from "./hiringWorkbench.shared"
 import { useHiringCandidateDialogsView } from "./useHiringCandidateDialogsView"
+import type { BadgeTone } from "@starci/grammar/common"
+import type {
+    HiringWorkbenchCopy,
+    HiringCandidateDialog,
+    HiringRequestOutcome,
+    DataSlot,
+    SlotLabels,
+    FieldOf,
+} from "@/modules/types"
+import type { Dispatch, SetStateAction } from "react"
+
+/** The view `useHiringCandidateView` returns. */
+export interface HiringCandidateViewShape {
+    props: {
+        frame: {
+            notes: string
+            canSaveNotes: boolean
+            retention: string
+            isBusy: boolean
+            error: string | null
+            notice: string | null
+            isDeleteOpen: boolean
+            deleteTitle: string
+            score: {
+                value: string
+                label: string
+                tone: BadgeTone
+                summary: string | null
+                reasons: {
+                    id: string
+                    criterion: string
+                    note: string
+                    statusLabel: string
+                    tone: BadgeTone
+                }[]
+            } | null
+            answers: {
+                id: string
+                title: string
+                text: string
+            }[]
+            interviews: {
+                id: string
+                title: string
+                text: string
+            }[]
+            offers: {
+                id: string
+                title: string
+                text: string
+                canCancel: boolean
+            }[]
+            copy: HiringWorkbenchCopy
+            isOpen: boolean
+            name: string
+            subtitle: string
+            stageLabel: string
+            stageTone: BadgeTone
+            contacts: string[]
+            canSchedule: boolean
+            canOffer: boolean
+            canShortlist: boolean
+            canReject: boolean
+        }
+        dialog: HiringCandidateDialog | null
+        dialogs: {
+            interview: {
+                copy: HiringWorkbenchCopy
+                title: string
+                members: {
+                    id: string
+                    label: string
+                }[]
+                modes: {
+                    id: string
+                    label: string
+                }[]
+                values: InterviewValues
+                outcome: HiringRequestOutcome | null
+                canSend: boolean
+                isBusy: boolean
+                error: string | null
+            }
+            offer: {
+                copy: HiringWorkbenchCopy
+                title: string
+                values: OfferValues
+                outcome: HiringRequestOutcome | null
+                canSend: boolean
+                isBusy: boolean
+                error: string | null
+            }
+            reject: {
+                copy: {
+                    title: string
+                    closeLabel: string
+                    hint: string
+                    failed: string
+                    reasonLabel: string
+                    kept: string
+                    cancelLabel: string
+                    confirmLabel: string
+                }
+                reason: string
+                canConfirm: boolean
+                isBusy: boolean
+                error: string | null
+            }
+        }
+        cv: {
+            slot: DataSlot<{
+                hasCv: boolean
+                openLabel: string
+                url: string
+                isPdf: boolean
+                canPreview: boolean
+                isPreviewing: boolean
+            }>
+            labels: SlotLabels
+        }
+        hasNoCv: boolean
+        history: {
+            slot: DataSlot<
+                {
+                    id: string
+                    title: string
+                    text: string
+                }[]
+            >
+            labels: SlotLabels
+        }
+    }
+    on: {
+        frame: {
+            openDialog: Dispatch<SetStateAction<HiringCandidateDialog | null>>
+            shortlist: () => void
+            rescreen: () => void
+            notes: (text: string) => void
+            saveNotes: () => void
+            cancelOffer: (id: string) => void
+            remove: () => Promise<void>
+            clear: () => void
+            close: () => void
+            closeDialog: () => void
+        }
+        dialogs: {
+            close: () => void
+            interview: {
+                text: (name: FieldOf<InterviewValues, string>, value: string) => void
+                number: (name: FieldOf<InterviewValues, number>, value: number) => void
+                send: () => void
+                close: () => void
+            }
+            offer: {
+                text: (name: FieldOf<OfferValues, string>, value: string) => void
+                send: () => void
+                close: () => void
+            }
+            reject: {
+                reason: Dispatch<SetStateAction<string>>
+                confirm: () => void
+                close: () => void
+            }
+        }
+        toggleCv: () => void
+        retryDetail: () => Promise<
+            | {
+                  cv: {
+                      mime: string
+                      name: string
+                      url: string
+                  } | null
+                  events: Array<{
+                      actor: string
+                      createdAt: string
+                      id: string
+                      kind: string
+                      summary: string
+                  }>
+              }
+            | undefined
+        >
+    }
+}
 
 /** One selected candidate owns its detail read and dialogs while the original overview is mounted. */
-export const useHiringCandidateView = (input: HiringViewInput) => {
+export const useHiringCandidateView = (input: HiringViewInput): HiringCandidateViewShape => {
     const data = input.board
     const { openId, close } = useHiringBenchStore()
     const wanted = openId === undefined ? focusedCandidateId(data, input.focus) : openId

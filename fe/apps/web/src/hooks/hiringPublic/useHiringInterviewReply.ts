@@ -15,8 +15,15 @@ export interface ReplyOutcome {
 
 const PICKED_OUTCOMES: ReadonlySet<string> = new Set(["confirmed", "already_confirmed", "none_fit"])
 
+/** The view `useHiringInterviewReply` returns. */
+export interface HiringInterviewReplyView {
+    outcome: ReplyOutcome | null
+    isPending: boolean
+    pick: (start: string | null) => undefined
+}
+
 /** The candidate's answer to an interview invitation: pick a time, or say none fits. */
-export const useHiringInterviewReply = (token: string) => {
+export const useHiringInterviewReply = (token: string): HiringInterviewReplyView => {
     const t = useTranslations("hiring")
     const format = useHiringFormat()
     const runGraphQL = useGraphQLWithToast()

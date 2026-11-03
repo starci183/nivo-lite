@@ -8,18 +8,39 @@ import {
     useQueryPaymentOrdersSwr,
     useQueryBillingReviewTransactionsSwr,
 } from "@/hooks/swr"
-import { useUsageCard } from "@/hooks/usageCard"
+import { useUsageCard, type UsageCardView } from "@/hooks/usageCard"
 import { navigation } from "@/modules/i18n"
 import { workspaceRenewalPaymentPath } from "@/modules/routes"
 import { billingWordsOf, ordersSlotOf, planCardOf, reviewSlotOf } from "./billing.shared"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
+import type { DataSlot, BillingPlanView, BillingRowView } from "@/modules/types"
+
+/** The view `useBillingOverview` returns. */
+export interface BillingOverviewView {
+    isRenewing: boolean
+    usage: UsageCardView
+    plan: DataSlot<BillingPlanView>
+    orders: DataSlot<readonly BillingRowView[]>
+    review: DataSlot<readonly BillingRowView[]>
+    on: {
+        renew: () => void
+        retryPlan: () => void
+        retryOrders: () => void
+        retryReview: () => void
+        retryUsage: () => void
+        openCredits: () => void
+        formatUsageDay: (value: unknown) => string
+        formatUsageCredits: (value: unknown) => string
+        minimumUsageBarSize: (value: number | null | undefined) => number
+    }
+}
 
 /**
  * Reads the billing of one workspace for its owner or manager and words it for the overview: the plan card, the payment
  * history, the transfers held for review and the usage card, with renew (which opens the renewal payment once its order
  * exists) and the retries. A viewer without the role reads every region as forbidden.
  */
-export const useBillingOverview = (workspaceId: string) => {
+export const useBillingOverview = (workspaceId: string): BillingOverviewView => {
     const t = useTranslations("billing")
     const format = useFormatter()
     const locale = useLocale()

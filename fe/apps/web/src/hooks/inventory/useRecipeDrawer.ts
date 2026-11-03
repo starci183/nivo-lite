@@ -33,12 +33,63 @@ const startRecipeState = (recipe: RecipeView | null): RecipeDrawerState => {
     return { recipe, name: recipe?.name ?? "", aliases: recipe?.aliases.join(", ") ?? "", lines, serial: lines.length }
 }
 
+/** The view `useRecipeDrawer` returns. */
+export interface RecipeDrawerView {
+    open: (target: RecipeView | null) => void
+    props: {
+        copy: {
+            recipeEditTitle: string
+            close: string
+            save: string
+            recipeAddTitle: string
+            recipeDrawerHint: string
+            recipeName: string
+            recipeNameHint: string
+            recipeAliases: string
+            recipeAliasesHint: string
+            recipeIngredients: string
+            recipeIngredientHint: string
+            recipeRemoveLine: string
+            recipeAddLine: string
+            recipeDelete: string
+        }
+        editing: string | null
+        name: string
+        aliases: string
+        lines: {
+            ingredientLabel: string
+            quantityLabel: string
+            unit: string
+            key: string
+            itemId: string
+            qty: string
+        }[]
+        items: {
+            id: string
+            label: string
+        }[]
+        isPending: boolean
+        error: string | null
+    } | null
+    on: {
+        name: (name: string) => void
+        aliases: (aliases: string) => void
+        item: (index: number, itemId: string) => void
+        qty: (index: number, qty: string) => void
+        removeLine: (index: number) => void
+        addLine: () => void
+        save: () => void
+        remove: () => void
+        close: () => void
+    }
+}
+
 /** Opens, fills and saves the recipe form; `props` is null while the drawer is closed. */
 export const useRecipeDrawer = (
     items: ReadonlyArray<ItemView>,
     commands: InventoryCommandSet<"saveRecipe" | "deleteRecipe">,
     lifetime?: InventoryPanelScope,
-) => {
+): RecipeDrawerView => {
     const { isActive = true, scope = "" } = lifetime ?? {}
 
     const say = useSay()

@@ -14,6 +14,9 @@ import {
     useInventoryRun,
     useItemDrawer,
     type StockFilter,
+    type ItemFormValues,
+    type AdjustMode,
+    type ItemFormField,
 } from "@/hooks/inventory"
 import { useFeatureReset } from "@/hooks/reuseables"
 import type { InventoryPanelInput } from "./inventoryWorkbench.shared"
@@ -55,8 +58,149 @@ interface BuildStockCommandsContext {
 
 const filterOf = (value: string): StockFilter => STOCK_FILTERS.find((filter) => filter === value) ?? "all"
 
+/** The view `useInventoryStockView` returns. */
+export interface InventoryStockView {
+    readonly props: {
+        readonly searchLabel: string
+        readonly searchPlaceholder: string
+        readonly clearLabel: string
+        readonly addLabel: string | null
+        readonly draftLabel: string | null
+        readonly filterLabel: string
+        readonly filters: {
+            value: StockFilter
+            label: string
+        }[]
+        readonly listLabel: string
+        readonly emptyTitle: string
+        readonly emptyBody: string
+        readonly adjustLabel: string
+        readonly editLabel: string | null
+        readonly toggleInactiveLabel: string | null
+        readonly query: string
+        readonly filter: StockFilter
+        readonly rows: {
+            id: string
+            name: string
+            statusLabel: string
+            statusTone: "success" | "neutral" | "danger" | "warning"
+            onOrderLabel: string | null
+            detail: string
+            total: string
+            stepLabel: string
+            lessLabel: string
+            moreLabel: string
+        }[]
+        readonly isPending: boolean
+        readonly error: string | null
+        readonly notice: string | null
+        readonly itemDrawer: {
+            copy: {
+                itemEditTitle: string
+                close: string
+                save: string
+                itemAddTitle: string
+                itemDrawerHint: string
+                itemName: string
+                itemSku: string
+                itemSkuHint: string
+                itemUnit: string
+                itemUnitHint: string
+                itemUnits: string
+                itemUnitsHint: string
+                itemCategory: string
+                itemSupplier: string
+                itemSupplierNone: string
+                itemCost: string
+                itemSell: string
+                itemReorderPoint: string
+                itemReorderPointHint: string
+                itemReorderQty: string
+                itemAliases: string
+                itemAliasesHint: string
+                itemOpening: string
+                itemStop: string
+                itemResume: string
+            }
+            editing: string | null
+            active: boolean | null
+            values: ItemFormValues
+            suppliers: {
+                id: string
+                label: string
+            }[]
+            isPending: boolean
+            error: string | null
+        } | null
+        readonly adjustDrawer: {
+            copy: {
+                readonly adjustTitle: string
+                readonly close: string
+                readonly adjustMode: string
+                readonly adjustFrom: string
+                readonly adjustAt: string
+                readonly adjustTo: string
+                readonly adjustToHint: string
+                readonly adjustNote: string
+                readonly adjustReason: string
+                readonly adjustReasonHint: string
+                readonly valueLabel: string
+            }
+            itemName: string
+            unit: string
+            summary: string
+            modes: {
+                value: string
+                label: string
+            }[]
+            mode: AdjustMode
+            isMove: boolean
+            showPlaces: boolean
+            places: {
+                id: string
+                label: string
+            }[]
+            targets: {
+                id: string
+                label: string
+            }[]
+            from: string
+            to: string
+            value: string
+            reason: string
+            preview: string | null
+            submitLabel: string
+            canSubmit: boolean
+            isPending: boolean
+            error: string | null
+            notice: string | null
+        } | null
+    }
+    readonly on: {
+        readonly onQuery: (value: string) => void
+        readonly onFilter: (value: string) => void
+        readonly onAdd: () => void
+        readonly onDraft: () => void
+        readonly onQuick: (id: string, sign: 1 | -1) => void
+        readonly onAdjust: (id: string) => void
+        readonly onEdit: (id: string) => void
+        readonly onToggleInactive: () => void
+        readonly onItemField: (name: ItemFormField, value: string) => void
+        readonly onItemSave: () => void
+        readonly onItemToggle: () => void
+        readonly onItemClose: () => void
+        readonly onAdjustMode: (next: string) => void
+        readonly onAdjustFrom: (from: string) => void
+        readonly onAdjustTo: (to: string) => void
+        readonly onAdjustValue: (value: string) => void
+        readonly onAdjustReason: (reason: string) => void
+        readonly onAdjustSubmit: () => void
+        readonly onAdjustClose: () => void
+    }
+}
+
 /** The stock tab: search and filter live here, the drawers in their hooks, the drawing in the pure half. */
-export const useInventoryStockView = (input: InventoryPanelInput) => {
+export const useInventoryStockView = (input: InventoryPanelInput): InventoryStockView => {
     const board = input.board
     const lifetime = { isActive: input.isActive, scope: input.scope }
     const t = useTranslations("workbenchInventory")

@@ -4,7 +4,7 @@ import { useMemo } from "react"
 import { useQueryBrainSwr } from "@/hooks/swr"
 import { slotOfSwr } from "@/hooks/slot"
 import { toBrainExtraction, toBrainFact, toBrainGap, toBrainLens, toBrainLesson } from "@/modules/brain"
-import type { BrainExtraction, BrainFact, BrainGap, BrainLens, BrainLesson } from "@/modules/types"
+import type { BrainExtraction, BrainFact, BrainGap, BrainLens, BrainLesson, DataSlot } from "@/modules/types"
 import { readError } from "@/hooks/workspaceread"
 
 /** The shared Second Brain of the active workspace, in the shape the blocks know. */
@@ -17,8 +17,17 @@ export interface BrainView {
     readonly gapsOpen: number
 }
 
+/** The view `useBrain` returns. */
+export interface BrainViewShape {
+    brain: BrainView | undefined
+    error: unknown
+    isLoading: boolean
+    slot: DataSlot<BrainView>
+    reload: () => undefined
+}
+
 /** The `brain` query mapped to the domain shape; polls while a document reading is still on. */
-export const useBrain = () => {
+export const useBrain = (): BrainViewShape => {
     const swrRead = useQueryBrainSwr()
     const { data, isLoading } = swrRead
     const error = readError(swrRead)

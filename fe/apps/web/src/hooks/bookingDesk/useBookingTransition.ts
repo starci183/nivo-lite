@@ -9,11 +9,17 @@ interface BookingOperation {
     readonly isCurrent: () => boolean
 }
 
+/** The view `useBookingTransition` returns. */
+export interface BookingTransitionView {
+    isPending: boolean
+    run: (job: (isCurrent: () => boolean) => Promise<void>) => void
+}
+
 /**
  * Runs booking work with React's transition priority while tracking busy state per active lifetime. An older command
  * settling can remove only itself; it cannot keep a newly reopened editor busy or clear that editor's current work.
  */
-export const useBookingTransition = (isActive: boolean, scope: string) => {
+export const useBookingTransition = (isActive: boolean, scope: string): BookingTransitionView => {
     const lifetime = useFeatureLifetime(isActive, scope)
     const [, startTransition] = useTransition()
     const [operations, setOperations] = useState<ReadonlyArray<BookingOperation>>([])

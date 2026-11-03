@@ -7,8 +7,14 @@ import { QUERY_MY_ACCOUNT_SWR_KEY, useMutateLogoutOtherSessionsSwr } from "@/hoo
 import { toast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 
+/** The view `useSignOutOthers` returns. */
+export interface SignOutOthersView {
+    run: () => Promise<boolean>
+    isPending: boolean
+}
+
 /** Signs the account out of every other device (`logoutOtherSessions`) and toasts the outcome. The device list is revalidated on success. */
-export const useSignOutOthers = () => {
+export const useSignOutOthers = (): SignOutOthersView => {
     const t = useTranslations("account")
     const tToast = useTranslations("toast")
     const { trigger, isMutating } = useMutateLogoutOtherSessionsSwr()

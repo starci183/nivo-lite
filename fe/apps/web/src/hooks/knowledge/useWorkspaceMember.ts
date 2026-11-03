@@ -6,7 +6,7 @@ import { readError } from "@/hooks/workspaceread"
 const roleOf = (value: string): ConsoleWorkspace["role"] => (value === "owner" || value === "manager" ? value : "staff")
 
 /** What the membership of the active workspace gives a block. */
-interface WorkspaceMember {
+export interface WorkspaceMember {
     /** The workspace the person works in; undefined until the store restores it and `myWorkspaces` answers. */
     readonly workspaceId: string | undefined
     readonly workspaceName: string

@@ -12,10 +12,11 @@ import {
     type ChatbotFormat,
     type ChatbotTranslator,
     type InboxFilter,
+    type ChatbotChipView,
 } from "@/hooks/chatbot"
-import { threadEntriesOf } from "@/hooks/chatbotThread"
+import { threadEntriesOf, type ChatbotThreadEntry } from "@/hooks/chatbotThread"
 import { leadHref } from "@/modules/routes"
-import type { ChatbotConversation, ChatbotOverview, ChatbotThread } from "@/modules/types"
+import type { ChatbotConversation, ChatbotOverview, ChatbotThread, LeadStageId } from "@/modules/types"
 
 /** The existing unread inbox overview keeps its real words and draws no conversation rows. */
 export const CHATBOT_EMPTY_OVERVIEW: ChatbotOverview = {
@@ -42,8 +43,36 @@ const previewOf = (t: ChatbotTranslator, item: ChatbotConversation): string => {
     return item.lastRole === "agent" ? `${t("youPrefix")}: ${item.lastText}` : item.lastText
 }
 
+/** What `listViewOf` returns. */
+export interface ListViewOfResult {
+    title: string
+    searchLabel: string
+    searchPlaceholder: string
+    clearLabel: string
+    listLabel: string
+    query: string
+    filters: {
+        value: InboxFilter
+        label: string
+    }[]
+    selectedFilter: InboxFilter
+    items: {
+        id: string
+        name: string
+        preview: string
+        time: string
+        channel: string
+        chips: readonly ChatbotChipView[]
+    }[]
+    hasConversations: boolean
+    emptyListTitle: string
+    emptyListBody: string
+    emptyFilter: string
+    selectedId: string | null
+}
+
 /** The words and rows of the conversation list. */
-export const listViewOf = (t: ChatbotTranslator, format: ChatbotFormat, input: ListViewInput) => ({
+export const listViewOf = (t: ChatbotTranslator, format: ChatbotFormat, input: ListViewInput): ListViewOfResult => ({
     title: t("title"),
     searchLabel: t("searchLabel"),
     searchPlaceholder: t("searchPlaceholder"),
@@ -80,8 +109,36 @@ export interface ThreadViewInput {
     readonly isSending: boolean
 }
 
+/** What `threadViewOf` returns. */
+export interface ThreadViewOfResult {
+    isResolving: boolean
+    hasThread: boolean
+    pickBody: string
+    backLabel: string
+    infoLabel: string
+    isInfoOpen: boolean
+    name: string
+    channel: string
+    chips: readonly ChatbotChipView[]
+    entries: readonly ChatbotThreadEntry[]
+    canReply: boolean
+    lockedText: string
+    composerLabel: string
+    composerPlaceholder: string
+    composerHint: string
+    sendLabel: string
+    draft: string
+    notSentTitle: string
+    error: string | null
+    isSending: boolean
+}
+
 /** The words and entries of the open thread and its composer. */
-export const threadViewOf = (t: ChatbotTranslator, format: ChatbotFormat, input: ThreadViewInput) => {
+export const threadViewOf = (
+    t: ChatbotTranslator,
+    format: ChatbotFormat,
+    input: ThreadViewInput,
+): ThreadViewOfResult => {
     const conversation = input.thread?.conversation ?? null
     const handledBy = conversation?.handledBy ?? null
     return {
@@ -118,8 +175,60 @@ export interface SideViewInput {
     readonly busy: "reply" | "answer" | "handling" | null
 }
 
+/** What `sideViewOf` returns. */
+export interface SideViewOfResult {
+    title: string
+    closeLabel: string
+    hasThread: boolean
+    customerName: string
+    channelLine: string
+    escalation: {
+        title: string
+        askedLabel: string
+        question: string
+        assigned: string | null
+        draftLabel: string
+        draftHint: string
+        draft: string
+        sendLabel: string
+        declineLabel: string
+        isAnswering: boolean
+        noticeTone: "negative" | null
+        noticeTitle: string
+        noticeText: string | null
+    } | null
+    stage: {
+        title: string
+        label: string
+        steps: readonly {
+            readonly id: LeadStageId
+            readonly label: string
+        }[]
+        currentId: LeadStageId
+    } | null
+    handling: {
+        title: string
+        text: string
+        buttonLabel: string
+        hint: string | null
+        isBusy: boolean
+    }
+    leadTitle: string
+    leadNone: string
+    lead: {
+        name: string
+        facts: readonly {
+            readonly id: string
+            readonly term: string
+            readonly description: string
+        }[]
+        openLabel: string
+        openHref: string
+    } | null
+}
+
 /** The words and parts of the customer pane. */
-export const sideViewOf = (t: ChatbotTranslator, input: SideViewInput) => {
+export const sideViewOf = (t: ChatbotTranslator, input: SideViewInput): SideViewOfResult => {
     const conversation = input.thread?.conversation ?? null
     const escalation = input.thread?.escalation ?? null
     const lead = input.thread?.lead ?? null

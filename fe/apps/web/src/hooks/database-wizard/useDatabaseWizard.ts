@@ -3,8 +3,8 @@
 import { useDatabaseWizardActions } from "./useDatabaseWizardActions"
 import { databaseTargetOf, stateOf, DB_SCHEDULES, DB_STEPS } from "./database-wizard.shared"
 import { useSetConnectionAgents } from "@/hooks/connections"
-import { useDatabaseTargetForm } from "@/hooks/rhf"
-import type { DbTableInfo, DbTableMapping } from "@/modules/types"
+import { useDatabaseTargetForm, type DatabaseTargetValues } from "@/hooks/rhf"
+import type { DbTableInfo, DbTableMapping, SlotRead, DbEntity } from "@/modules/types"
 import { DB_DEFAULT_PORT } from "@/modules/utils"
 import { useEffect, useReducer, useRef } from "react"
 import { useDatabaseCommands } from "./useDatabaseCommands"
@@ -42,12 +42,74 @@ const merge = (state: DatabaseWizardState, patch: DatabasePatch): DatabaseWizard
     ...(typeof patch === "function" ? patch(state) : patch),
 })
 
+/** The view `useDatabaseWizard` returns. */
+export interface DatabaseWizardView {
+    reads: readonly SlotRead<unknown>[]
+    isLoading: boolean
+    loadError: string | null
+    step: "agent" | "schedule" | "tables" | "connect"
+    index: number
+    values: DatabaseTargetValues
+    passwordSaved: boolean
+    tables: readonly DbTableInfo[] | null
+    picked: readonly DbTableMapping[]
+    everyMinutes: number | null
+    agentIds: readonly string[]
+    error: string | null
+    found: number | null
+    isPending: boolean
+    canTest: boolean
+    tablesReady: boolean
+    mapped: {
+        key: string
+        id: string
+        table: string
+        entity: DbEntity
+        idColumn: string | null
+        titleColumn: string
+        updatedColumn: string
+        columns: readonly string[]
+        names: readonly {
+            readonly id: string
+            readonly label: string
+        }[]
+        isOverCap: boolean
+        isPreviewing: boolean
+        error: string | null
+        lines:
+            | readonly {
+                  readonly id: string
+                  readonly text: string
+              }[]
+            | null
+    }[]
+    on: {
+        go: (to: number) => void
+        test: () => void
+        save: () => void
+        finish: () => void
+        retry: () => void
+        toggle: (keys: ReadonlyArray<string>) => void
+        setEntity: (key: string, value: string | null) => void
+        setIdColumn: (key: string, value: string | null) => void
+        setOptionalColumn: (key: string, column: "titleColumn" | "updatedColumn", value: string | null) => void
+        setColumns: (key: string, value: ReadonlyArray<string>) => void
+        preview: (key: string) => void
+        setField: (field: "name" | "database" | "user" | "password" | "host" | "port") => (value: string) => void
+        setEngine: (value: string | null) => void
+        setSsl: (on: boolean) => void
+        close: () => void
+        setSchedule: (key: string) => void
+        setAgentIds: (agentIds: ReadonlyArray<string>) => void
+    }
+}
+
 /**
  * The database wizard's state machine: 1 connect and list the tables, 2 map the tables, 3 schedule (the connection is saved here),
  * 4 attach agents. When resuming, the saved connection is read first (`isLoading`) and seeds the steps once. The password lives in
  * the form only until it is saved; when editing it is never sent back.
  */
-export const useDatabaseWizard = (input: DatabaseWizardInput) => {
+export const useDatabaseWizard = (input: DatabaseWizardInput): DatabaseWizardView => {
     const setConnectionAgents = useSetConnectionAgents()
     const commands = useDatabaseCommands()
     const { saved, isLoading, error: loadError, reload, reads } = useDatabaseSaved(input.resumeId)

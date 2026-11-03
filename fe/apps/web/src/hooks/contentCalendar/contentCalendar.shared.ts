@@ -1,6 +1,6 @@
 import type { useTranslations } from "next-intl"
 import { daysInMonth, isoWeekdayOf, pad2, postView, vietnamClock, vnDateKey } from "@/hooks/content"
-import type { ContentWorkbenchData } from "@/modules/content"
+import type { ContentWorkbenchData, ContentItem } from "@/modules/content"
 import type { PostView } from "@/modules/types"
 
 const inMonth = (iso: string | null, y: number, m: number): boolean => {
@@ -11,13 +11,34 @@ const inMonth = (iso: string | null, y: number, m: number): boolean => {
 
 const WEEK = 7
 
+/** What `calendarMonthView` returns. */
+export interface CalendarMonthViewResult {
+    monthItems: ContentItem[]
+    pillarNames: {
+        [k: string]: string
+    }
+    byDay: Map<string, PostView[]>
+    cells: (
+        | {
+              key: string
+              day: number
+              dateKey: string
+          }
+        | {
+              key: string
+              day: null
+              dateKey: string
+          }
+    )[]
+}
+
 /** Groups a month's scheduled posts and constructs its complete week cells. */
 export const calendarMonthView = (
     data: ContentWorkbenchData,
     t: ReturnType<typeof useTranslations<"content">>,
     y: number,
     m: number,
-) => {
+): CalendarMonthViewResult => {
     const monthItems = data.items
         .filter((i) => inMonth(i.scheduled_at, y, m))
         .sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? ""))

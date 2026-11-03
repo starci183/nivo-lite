@@ -12,8 +12,20 @@ import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "@/modules/viewer-cache"
 
+/** The view `useDecideAccountingQuestion` returns. */
+export interface DecideAccountingQuestionView {
+    decide: (request: MutateDecideWorkItemRequest) => Promise<
+        | {
+              id: string
+              status: string
+          }
+        | undefined
+    >
+    isDeciding: boolean
+}
+
 /** Decides an accounting question and reloads the workbench after the backend resumes it. */
-export const useDecideAccountingQuestion = () => {
+export const useDecideAccountingQuestion = (): DecideAccountingQuestionView => {
     const t = useTranslations("workbenchAccounting")
     const runGraphQL = useGraphQLWithToast()
     const { activeWorkspaceId } = useActiveWorkspace()

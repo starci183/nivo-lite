@@ -6,8 +6,16 @@ import { useMutateCloseAgentTaskSwr, useMutateSaveAgentGoalSwr } from "@/hooks/s
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { AgentWorkGoalView } from "@/modules/types"
 
+/** The view `useAgentWorkItems` returns. */
+export interface AgentWorkItemsView {
+    addGoal: (title: string) => Promise<boolean>
+    closeGoal: (goal: AgentWorkGoalView) => Promise<boolean>
+    closeTask: (taskId: string) => Promise<boolean>
+    isSaving: boolean
+}
+
 /** The goal and task commands of the Work tab. Each answers whether it worked; a failure was already toasted. */
-export const useAgentWorkItems = (installationId: string, refresh: () => Promise<unknown>) => {
+export const useAgentWorkItems = (installationId: string, refresh: () => Promise<unknown>): AgentWorkItemsView => {
     const t = useTranslations("agentWork")
     const runGraphQL = useGraphQLWithToast()
     const saveGoal = useMutateSaveAgentGoalSwr()

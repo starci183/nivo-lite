@@ -1,10 +1,17 @@
-import type { SlotRead } from "@/modules/types"
+import type { SlotRead, DataSlot } from "@/modules/types"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryModuleInstallationsSwr } from "@/hooks/swr"
 import { displayNameOf } from "@/modules/installations"
 
+/** The view `useInstanceNames` returns. */
+export interface InstanceNamesView {
+    read: SlotRead<Record<string, string[]> | undefined>
+    slot: DataSlot<Record<string, string[]> | undefined>
+    reload: () => undefined
+}
+
 /** Instance names preserve the installation read's loading, failure and settled empty states. */
-export const useInstanceNames = () => {
+export const useInstanceNames = (): InstanceNamesView => {
     const read = useQueryModuleInstallationsSwr()
     const names: Record<string, Array<string>> | undefined = read.data === undefined ? undefined : {}
     if (names !== undefined && read.data !== undefined) {

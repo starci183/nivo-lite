@@ -1,10 +1,11 @@
-import type { ContentNoteView, ContentViews } from "@/modules/types"
+import type { ContentNoteView, ContentViews, PostView } from "@/modules/types"
 import type { ContentWorkbenchData } from "@/modules/content"
 import { parseDate } from "@internationalized/date"
 import type { useFormatter, useTranslations } from "next-intl"
 import { calendarMonthView } from "@/hooks/contentCalendar"
 import { postView, vietnamClock, vnDateKey } from "@/hooks/content"
 import { PRODUCT_TIME_ZONE } from "@/modules/i18n"
+import type { BadgeTone } from "@starci/grammar/common"
 
 /** Current content data and the actual conditional lifetime of one module surface. */
 export interface ContentViewInput {
@@ -33,10 +34,21 @@ const contentSettingsError = (
     errors: { readonly message?: string; readonly root?: { readonly message?: string } } | undefined,
     rowMessage: string | undefined,
     invalidLabel: string,
-) => errors?.message ?? errors?.root?.message ?? rowMessage ?? (errors ? invalidLabel : undefined)
+): string | undefined => errors?.message ?? errors?.root?.message ?? rowMessage ?? (errors ? invalidLabel : undefined)
+
+/** What `contentDialogOf` returns. */
+export interface ContentDialogOfResult {
+    open: () => void
+    close: () => void
+    openChange: (open: boolean) => void
+}
 
 /** The commands that open and close a dialog of the workbench: it opens only on an active, ready surface and does not close while pending. */
-export const contentDialogOf = (input: ContentViewInput, setOpen: (isOpen: boolean) => void, isPending: boolean) => ({
+export const contentDialogOf = (
+    input: ContentViewInput,
+    setOpen: (isOpen: boolean) => void,
+    isPending: boolean,
+): ContentDialogOfResult => ({
     open: () => {
         if (input.isActive && input.isReady) setOpen(true)
     },
@@ -57,7 +69,12 @@ export const contentSettingsNoteOf = (
 }
 
 /** The lifetime the commands of a settings card follow: only while its surface is active and ready. */
-export const contentSettingsLifetimeOf = (input: ContentViewInput) => ({
+export const contentSettingsLifetimeOf = (
+    input: ContentViewInput,
+): {
+    isActive: boolean
+    scope: string
+} => ({
     isActive: input.isActive && input.isReady,
     scope: input.scope,
 })
@@ -104,10 +121,13 @@ export const freshContentCalendar = (
 export const sameContentCalendarOwner = (
     current: ContentCalendarState,
     input: Pick<ContentViewInput, "scope" | "isActive" | "isReady">,
-) => current.scope === input.scope && current.isActive === input.isActive && current.isReady === input.isReady
+): boolean => current.scope === input.scope && current.isActive === input.isActive && current.isReady === input.isReady
 
 /** Captured events can affect only the exact active, ready activation that produced them. */
-export const currentContentCalendarEpoch = (current: ContentCalendarReceipt, expected: ContentCalendarReceipt) =>
+export const currentContentCalendarEpoch = (
+    current: ContentCalendarReceipt,
+    expected: ContentCalendarReceipt,
+): boolean =>
     current.scope === expected.scope &&
     current.epoch === expected.epoch &&
     current.isActive === expected.isActive &&
@@ -126,8 +146,59 @@ interface ContentCalendarFieldsInput {
     expandedKey: string | null
 }
 
+/** What `contentCalendarFields` returns. */
+export interface ContentCalendarFieldsResult {
+    cells: (
+        | {
+              label: string
+              posts: {
+                  pickLabel: string
+                  id: string
+                  title: string
+                  time: string
+                  when: string
+                  brief: string | null
+                  statusLabel: string
+                  tone: BadgeTone
+                  isSkipped: boolean
+                  canMove: boolean
+                  channels: ReadonlyArray<string>
+                  pillar: string | null
+              }[]
+              moreLabel: string | null
+              key: string
+              day: number
+              dateKey: string
+          }
+        | {
+              label: string
+              posts: {
+                  pickLabel: string
+                  id: string
+                  title: string
+                  time: string
+                  when: string
+                  brief: string | null
+                  statusLabel: string
+                  tone: BadgeTone
+                  isSkipped: boolean
+                  canMove: boolean
+                  channels: ReadonlyArray<string>
+                  pillar: string | null
+              }[]
+              moreLabel: string | null
+              key: string
+              day: null
+              dateKey: string
+          }
+    )[]
+    monthItems: PostView[]
+    unscheduled: PostView[]
+    hasSetup: boolean
+}
+
 /** Resolve the month cells and post labels from the current read and selection. */
-export const contentCalendarFields = (input: ContentCalendarFieldsInput) => {
+export const contentCalendarFields = (input: ContentCalendarFieldsInput): ContentCalendarFieldsResult => {
     const { data, t, format, ym, now, expandedKey } = input
     const { monthItems, pillarNames, byDay, cells } = calendarMonthView(data, t, ym.y, ym.m)
     const resolvedCells = cells.map((cell) => {

@@ -3,8 +3,13 @@
 import { useCallback } from "react"
 import { useSWRConfig } from "swr"
 
+/** The view `useContentRefresh` returns. */
+export interface ContentRefreshView {
+    refresh: () => Promise<void>
+}
+
 /** Revalidates content and dashboard caches after a successful change. */
-export const useContentRefresh = () => {
+export const useContentRefresh = (): ContentRefreshView => {
     const { mutate } = useSWRConfig()
     const refresh = useCallback(async () => {
         await mutate((key) => {

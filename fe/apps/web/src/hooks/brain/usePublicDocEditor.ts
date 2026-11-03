@@ -10,6 +10,8 @@ import { navigation } from "@/modules/i18n"
 import { brainTabHref } from "@/modules/routes"
 import { usePublicDocCommands } from "./usePublicDocCommands"
 import { usePublicDocuments } from "./usePublicDocuments"
+import type { DataSlot } from "@/modules/types"
+import type { PublicDocument } from "@/modules/brain"
 
 /** Tracks the initiating decision while disabling competing decisions until it settles. */
 const usePendingDecision = () => {
@@ -25,8 +27,27 @@ const usePendingDecision = () => {
     return { pendingAction, run }
 }
 
+/** The view `usePublicDocEditor` returns. */
+export interface PublicDocEditorView {
+    canWrite: boolean
+    slot: DataSlot<PublicDocument[]>
+    reload: () => undefined
+    doc: PublicDocument | undefined
+    isPending: boolean
+    pendingAction: "save" | "approve" | "redraft" | undefined
+    title: string
+    body: string
+    error: string | undefined
+    close: () => void
+    save: (e?: React.BaseSyntheticEvent) => Promise<void>
+    approve: (e?: React.BaseSyntheticEvent) => Promise<void>
+    redraft: () => Promise<PublicDocument | undefined>
+    setTitle: (value: string) => void
+    setBody: (value: string) => void
+}
+
 /** Keeps approval bound to the exact displayed or saved text and its server-issued revision. */
-export const usePublicDocEditor = (docId: string | undefined) => {
+export const usePublicDocEditor = (docId: string | undefined): PublicDocEditorView => {
     const t = useTranslations("publicBrain")
     const router = navigation.useRouter()
     const member = useWorkspaceMember()

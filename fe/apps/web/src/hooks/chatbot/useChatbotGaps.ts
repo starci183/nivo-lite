@@ -15,14 +15,26 @@ import {
 import { maskPhones } from "@/modules/utils"
 import { brainTabHref } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"
+import type { DataSlot } from "@/modules/types"
+
+/** The view `useChatbotGaps` returns. */
+export interface ChatbotGapsViewShape {
+    slot: DataSlot<ChatbotGapRow[]>
+    title: string
+    description: string
+    emptyTitle: string
+    isPending: boolean
+    dismiss: (id: string) => Promise<void>
+    reload: () => void
+}
 
 /** Reads the open gaps of a manager and dismisses a gap through its GraphQL mutation. Without a manager the card is `null`. */
 export const useChatbotGaps = (
     workspaceId: string | undefined,
     isManager: boolean,
     isActive = true,
-    scope = workspaceId ?? "",
-) => {
+    scope: string = workspaceId ?? "",
+): ChatbotGapsViewShape => {
     const t = useTranslations("brain")
     const format = useFormatter()
     const runGraphQL = useGraphQLWithToast()

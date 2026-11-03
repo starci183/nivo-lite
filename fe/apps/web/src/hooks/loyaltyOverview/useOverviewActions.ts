@@ -12,8 +12,18 @@ const noSubscription = () => unsubscribe
 const browserOrigin = () => window.location.origin
 const serverOrigin = () => ""
 
+/** The view `useOverviewActions` returns. */
+export interface OverviewActionsView {
+    isPending: boolean
+    copied: boolean
+    syncNote: string | null
+    url: string
+    markCopied: () => void
+    sync: () => void
+}
+
 /** The overview's actions: sync customers into members, and the public check link with its copied flag. */
-export const useOverviewActions = (slug: string, activation: LoyaltyPanelActivation) => {
+export const useOverviewActions = (slug: string, activation: LoyaltyPanelActivation): OverviewActionsView => {
     const { isActive } = activation
     const t = useTranslations("loyalty")
     const command = useLoyaltyCommand(activation)

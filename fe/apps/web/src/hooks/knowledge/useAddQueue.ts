@@ -23,7 +23,7 @@ interface ZipSkip {
 }
 
 /** What the queue gives the drawer. */
-interface AddQueue {
+export interface AddQueue {
     readonly items: ReadonlyArray<QueueItem>
     readonly isReading: boolean
     readonly zipTruncated: boolean

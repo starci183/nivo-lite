@@ -4,13 +4,27 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useQueryBrainDossiersSwr, useQueryKnowledgeCategoriesSwr, useQueryKnowledgeUsageSwr } from "@/hooks/swr"
 import { slotOfSwr } from "@/hooks/slot"
-import { categoriesOf, folderKeyOf } from "@/modules/brain"
+import { categoriesOf, folderKeyOf, type CategoryView } from "@/modules/brain"
+import type { DataSlot } from "@/modules/types"
+
+/** The view `useBrainDossiers` returns. */
+export interface BrainDossiersView {
+    categories: readonly CategoryView[] | undefined
+    slot: DataSlot<readonly CategoryView[]>
+    reload: () => void
+    usage:
+        | {
+              limitBytes: number
+              usedBytes: number
+          }
+        | undefined
+}
 
 /**
  * The categories of the documents of the active workspace with the dossiers filed under each, and how much of the raw document
  * allowance is used. The categories come from the grouped back end read, so the totals never depend on how many documents the page loads.
  */
-export const useBrainDossiers = () => {
+export const useBrainDossiers = (): BrainDossiersView => {
     const t = useTranslations("secondBrain")
     const categoriesRead = useQueryKnowledgeCategoriesSwr()
     const dossiersRead = useQueryBrainDossiersSwr()

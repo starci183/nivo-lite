@@ -14,7 +14,10 @@ export type AgentWish = string | { readonly agentId: string; readonly access: Ac
 const wishOf = (wish: AgentWish) => (typeof wish === "string" ? { agentId: wish } : wish)
 
 /** Makes exactly these agents the ones that work through a connection (the last step of every wizard) and toasts the outcome. */
-export const useSetConnectionAgents = () => {
+export const useSetConnectionAgents = (): ((
+    connectionId: string,
+    wanted: ReadonlyArray<AgentWish>,
+) => Promise<Settled<true>>) => {
     const t = useTranslations("connections")
     const settle = useSettledGraphQL()
     const refresh = useConnectionsRefresh()

@@ -4,11 +4,46 @@ import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { slotOfReads } from "@/hooks/slot"
 import { pickCopy } from "@/modules/catalog"
-import { installationPersonName, agentHref, agentLifecycleOf, agentLifecycleTone } from "@/modules/installations"
+import {
+    installationPersonName,
+    agentHref,
+    agentLifecycleOf,
+    agentLifecycleTone,
+    type AgentLifecycle,
+} from "@/modules/installations"
 import { useInstallations } from "./useInstallations"
+import type { DataSlot } from "@/modules/types"
+
+/** The view `useInstanceRail` returns. */
+export interface InstanceRailView {
+    items: {
+        id: string
+        href: string
+        name: string
+        seed: string
+        avatarUrl: string | null
+        roleName: string
+        isCurrent: boolean
+        lifecycle: AgentLifecycle
+        statusTone: "success" | "neutral" | "warning" | "accent"
+    }[]
+    slot: DataSlot<
+        {
+            id: string
+            href: string
+            name: string
+            seed: string
+            avatarUrl: string | null
+            roleName: string
+            isCurrent: boolean
+            lifecycle: AgentLifecycle
+            statusTone: "success" | "neutral" | "warning" | "accent"
+        }[]
+    >
+}
 
 /** The installed agents (one row per instance, as people of the team) for the switcher of the agent frame; no rows until they are known. */
-export const useInstanceRail = (installationId: string) => {
+export const useInstanceRail = (installationId: string): InstanceRailView => {
     const locale = useLocale() === "en" ? "en" : "vi"
     const installed = useInstallations()
     const catalog = useModuleCatalog()

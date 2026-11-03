@@ -4,12 +4,13 @@ import { decisionsHref } from "@/hooks/decisions"
 import type { ModuleKey } from "@/hooks/installations"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { KNOWLEDGE_ROUTES } from "@/modules/routes"
-import type { DataSlot } from "@/modules/types"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { maskPhones } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
 import { PENDING_DASHBOARD, type AgentDashboardView, type DashboardRow } from "./agentDashboard.shared"
 import { useAgentDashboardConnections } from "./useAgentDashboardConnections"
 import { actionWordOf } from "@/hooks/actionWord"
+import type { BadgeTone } from "@starci/grammar/common"
 
 /** What the regions need from the frame: the module, and whether the module brings its own gaps card. */
 interface RegionsInput {
@@ -87,8 +88,159 @@ const knowledgeOf = (
     }
 }
 
+/** The view `useAgentDashboardRegions` returns. */
+export interface AgentDashboardRegionsView {
+    waiting: {
+        label: string
+        slot: DataSlot<{
+            count: string | null
+            rows: {
+                id: string
+                title: string
+                description: string
+                href: string
+            }[]
+            openLabel: string
+            more: string | null
+            emptyMessage: string
+            emptyDescription: string
+        }>
+        placeholder: {
+            count: string
+            rows: {
+                id: string
+                title: string
+                description: string
+                href: string
+            }[]
+            openLabel: string
+            more: string | null
+            emptyMessage: string
+            emptyDescription: string
+        }
+        labels: SlotLabels
+    }
+    done: {
+        label: string
+        slot: DataSlot<{
+            count: string
+            logLabel: string
+            logHref: string
+            rows: {
+                id: string
+                title: string
+                description: string
+                href: string
+            }[]
+            emptyMessage: string
+            emptyDescription: string
+        }>
+        placeholder: {
+            rows: {
+                id: string
+                title: string
+                description: string
+                href: string
+            }[]
+            count: string
+            logLabel: string
+            logHref: string
+            emptyMessage: string
+            emptyDescription: string
+        }
+        labels: SlotLabels
+    }
+    connections: {
+        label: string
+        slot: DataSlot<{
+            manageLabel: string
+            manageHref: "/connections"
+            rows: {
+                id: string
+                name: string
+                description: string
+                statusLabel: string
+                statusTone: BadgeTone
+                accessLabel: string
+            }[]
+            emptyMessage: string
+            emptyDescription: string
+        }>
+        placeholder: {
+            rows: {
+                name: string
+                statusLabel: string
+                statusTone: "neutral"
+                accessLabel: string
+                id: string
+                title: string
+                description: string
+                href: string
+            }[]
+            manageLabel: string
+            manageHref: "/connections"
+            emptyMessage: string
+            emptyDescription: string
+        }
+        labels: SlotLabels
+    }
+    knowledge: {
+        label: string
+        slot: DataSlot<{
+            openLabel: string
+            openHref: string
+            footer: string
+            publicTitle: string
+            publicDescription: string
+            internalTitle: string
+            internalDescription: string
+            gaps: {
+                label: string
+                count: string | null
+                openLabel: string
+                openHref: string
+                rows: {
+                    id: string
+                    title: string
+                    description: string
+                    asked: string
+                }[]
+                emptyMessage: string
+                emptyDescription: string
+            } | null
+        }>
+        placeholder: {
+            openLabel: string
+            openHref: string
+            footer: string
+            publicTitle: string
+            publicDescription: string
+            internalTitle: string
+            internalDescription: string
+            gaps: {
+                label: string
+                count: string | null
+                openLabel: string
+                openHref: string
+                rows: {
+                    id: string
+                    title: string
+                    description: string
+                    asked: string
+                }[]
+                emptyMessage: string
+                emptyDescription: string
+            } | null
+        }
+        labels: SlotLabels
+    }
+}
+
 /** The four common regions of an agent workbench (waiting, done, connections, knowledge): each one a slot, its same-shape placeholder and the words of its status. */
-export const useAgentDashboardRegions = (slot: DataSlot<AgentDashboardView>, input: RegionsInput) => {
+export const useAgentDashboardRegions = (
+    slot: DataSlot<AgentDashboardView>,
+    input: RegionsInput,
+): AgentDashboardRegionsView => {
     const t = useTranslations("agentDashboard")
     const g = useTranslations("governance")
     const slotLabels = useSlotLabels()

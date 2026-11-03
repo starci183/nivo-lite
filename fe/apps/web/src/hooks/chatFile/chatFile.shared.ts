@@ -5,7 +5,7 @@ const CHAT_FILE_MAX_BYTES = 10 * 1024 * 1024
 const CHAT_FILE_TYPES: ReadonlyArray<string> = ["image/jpeg", "image/png", "image/webp", "application/pdf"]
 
 /** The list the file picker offers. */
-export const CHAT_FILE_ACCEPT = CHAT_FILE_TYPES.join(",")
+export const CHAT_FILE_ACCEPT: string = CHAT_FILE_TYPES.join(",")
 
 /** What is wrong with a chosen file: the words of the refusal are the caller's. */
 export type ChatFileProblem = "fileTooLarge" | "fileTypeRefused"

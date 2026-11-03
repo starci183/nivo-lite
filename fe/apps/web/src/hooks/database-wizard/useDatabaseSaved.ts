@@ -7,8 +7,17 @@ import type { DbSavedConnection } from "@/modules/types"
 import { dbSavedOf } from "./database-wizard.shared"
 import { readError } from "@/hooks/workspaceread"
 
+/** The view `useDatabaseSaved` returns. */
+export interface DatabaseSavedView {
+    reads: readonly SlotRead<unknown>[]
+    saved: DbSavedConnection | null
+    isLoading: boolean
+    error: string | undefined
+    reload: () => undefined
+}
+
 /** A saved database connection reopened for editing: `saved` once loaded, `error` with the back end message when it failed; `isLoading` while it is on its way; `reload` reads it again. */
-export const useDatabaseSaved = (connectionId: string | undefined) => {
+export const useDatabaseSaved = (connectionId: string | undefined): DatabaseSavedView => {
     const swrRead = useQueryLoadDatabaseConnectionSwr(connectionId, {
         revalidateOnFocus: false,
         shouldRetryOnError: false,

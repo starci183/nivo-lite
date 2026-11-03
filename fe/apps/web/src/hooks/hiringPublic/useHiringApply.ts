@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import type { UseFormReturn } from "react-hook-form"
 import { useMutateApplyToHiringJobSwr, useMutateCreateHiringCvUploadSwr, usePutPresignedSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
@@ -28,12 +28,28 @@ interface ApplyDone {
     readonly cvSkipped: boolean
 }
 
+/** The view `useHiringApply` returns. */
+export interface HiringApplyView {
+    values: ApplyValues
+    cvError: string | undefined
+    done: ApplyDone | null
+    isFailed: boolean
+    isPending: boolean
+    canSubmit: boolean
+    setText: (name: FieldOf<ApplyValues, string>, value: string) => void
+    setFlag: (name: FieldOf<ApplyValues, boolean>, value: boolean) => void
+    setList: (name: FieldOf<ApplyValues, Array<string>>, value: Array<string>) => void
+    setAnswer: (id: string, answer: string) => void
+    setCv: Dispatch<SetStateAction<File | null>>
+    submit: () => undefined
+}
+
 /** The apply form of a public job: the values, the CV, the checks, and the send (CV upload first, then the application). */
 export const useHiringApply = (
     form: UseFormReturn<ApplyValues>,
     read: PublicJobView | undefined,
     target: ApplyTarget,
-) => {
+): HiringApplyView => {
     const t = useTranslations("hiring")
     const job = read ?? NO_PUBLIC_JOB
     const runGraphQL = useGraphQLWithToast()

@@ -6,8 +6,15 @@ import { useMutateSaveHoldingMessageSwr, useMutateSaveReplyTimeoutSwr } from "@/
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useRefreshInstallation } from "./useRefreshInstallation"
 
+/** The view `useSaveReply` returns. */
+export interface SaveReplyView {
+    timeout: (value: number) => Promise<boolean>
+    holding: (value: string) => Promise<boolean>
+    isSaving: boolean
+}
+
 /** Saves the two reply settings of a chatbot, each on its own: how long a customer waits, and the holding message. */
-export const useSaveReply = (installationId: string) => {
+export const useSaveReply = (installationId: string): SaveReplyView => {
     const t = useTranslations("modulesCore")
     const runGraphQL = useGraphQLWithToast()
     const saveTimeout = useMutateSaveReplyTimeoutSwr()

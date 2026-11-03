@@ -6,13 +6,44 @@ import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { loadingSlot, slotOfReads } from "@/hooks/slot"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
-import { agentHref, agentLifecycleOf, agentLifecycleTone, nextInstanceName } from "@/modules/installations"
+import {
+    agentHref,
+    agentLifecycleOf,
+    agentLifecycleTone,
+    nextInstanceName,
+    type Installation,
+    type AgentLifecycle,
+    type InstallationConnectionNeed,
+} from "@/modules/installations"
 import { useInstanceChannels } from "./useInstanceChannels"
 import { useTypeRoute } from "./useTypeRoute"
 import type { TypeRouteMode } from "./installations.shared"
+import type { DataSlot } from "@/modules/types"
+
+/** The view `useInstanceList` returns. */
+export interface InstanceListView {
+    slot: DataSlot<readonly Installation[]>
+    typeName: string
+    typeShort: string
+    typeDescription: string
+    isCopyReady: boolean
+    isMulti: boolean
+    names: string[]
+    defaultName: string
+    rows: {
+        id: string
+        name: string
+        channels: readonly string[]
+        activeVersion: number | null
+        lifecycle: AgentLifecycle
+        statusTone: "success" | "neutral" | "warning" | "accent"
+        connectionNeeds: readonly InstallationConnectionNeed[]
+        openHref: string
+    }[]
+}
 
 /** The instances of one agent type for the list screen, with the names of the type in the reader language. */
-export const useInstanceList = (module: ModuleKey, query: string, mode: TypeRouteMode) => {
+export const useInstanceList = (module: ModuleKey, query: string, mode: TypeRouteMode): InstanceListView => {
     const locale = useLocale() === "en" ? "en" : "vi"
     const route = useTypeRoute(module, "setup", query, mode)
     const channelsOf = useInstanceChannels()

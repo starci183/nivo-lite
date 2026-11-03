@@ -16,11 +16,24 @@ interface ApprovalTarget {
     readonly draft: string
 }
 
+/** The view `useApprovalDecision` returns. */
+export interface ApprovalDecisionView {
+    canDecide: boolean
+    isEditing: boolean
+    editText: string
+    pendingDecision: ApprovalDecision | null
+    error: string | null
+    isMutating: boolean
+    toggleEdit: () => void
+    edit: (value: string) => void
+    decide: (decision: ApprovalDecision) => void
+}
+
 /**
  * The approval controls of the draft waiting for a person: editing the text, queuing the approval or rejection and the state of the
  * persisted job (the Sales runner polls it). `target` is `null` while no draft waits.
  */
-export const useApprovalDecision = (target: ApprovalTarget | null) => {
+export const useApprovalDecision = (target: ApprovalTarget | null): ApprovalDecisionView => {
     const member = useMember()
     const t = useTranslations("approval")
     const actions = useSalesActions()

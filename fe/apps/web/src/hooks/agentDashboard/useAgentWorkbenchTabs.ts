@@ -16,7 +16,12 @@ const selectedTabOf = <T extends string>(ids: readonly [T, ...T[]], value: strin
     ids.find((id) => id === value) ?? ids[0]
 
 /** Owns local selection and soft URL replacement without dropping any other query parameter. */
-export const useAgentWorkbenchTabs = <T extends string>(input: AgentWorkbenchTabsInput<T>) => {
+export const useAgentWorkbenchTabs = <T extends string>(
+    input: AgentWorkbenchTabsInput<T>,
+): {
+    selected: T
+    select: (id: string) => void
+} => {
     const isActive = input.isActive ?? true
     const [selected, setSelected] = useState<T>(() => selectedTabOf(input.ids, input.initialTab))
     const [route, setRoute] = useState({ tab: input.initialTab, isActive, scope: input.scope })

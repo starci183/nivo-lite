@@ -9,8 +9,17 @@ interface PanelOperation {
     readonly isCurrent: () => boolean
 }
 
+/** The view `useLoyaltyCommand` returns. */
+export interface LoyaltyCommandView {
+    isPending: boolean
+    run: <T>(action: (isCurrent: () => boolean) => Promise<T>) => Promise<T | undefined>
+    dispatch: (action: (isCurrent: () => boolean) => Promise<void>) => void
+    /** Local completion ownership; resource authorization stays with the existing back end. */
+    isCurrent: () => boolean
+}
+
 /** Owns one panel session's initiating pending state, while domain effects keep their original remote/cache owners. */
-export const useLoyaltyCommand = (activation: LoyaltyPanelActivation) => {
+export const useLoyaltyCommand = (activation: LoyaltyPanelActivation): LoyaltyCommandView => {
     const feedback = useTranslations("toast")
     const lifetime = useFeatureLifetime(activation.isActive && activation.isReady, activation.scope)
     const running = useRef<PanelOperation | null>(null)

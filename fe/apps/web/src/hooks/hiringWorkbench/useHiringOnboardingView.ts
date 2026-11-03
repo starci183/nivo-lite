@@ -9,8 +9,40 @@ type ResolvedActions = {
     readonly clearError: () => void
 }
 
+/** The view `useHiringOnboardingView` returns. */
+export interface HiringOnboardingViewShape {
+    props: {
+        copy: {
+            title: string
+            emptyTitle: string
+            emptyBody: string
+            errorTitle: string
+            dismissLabel: string
+            hasStaffLabel: string
+            createStaffLabel: string
+            progressLabel: string
+        }
+        people: {
+            id: string
+            name: string
+            job: string
+            contact: string
+            hasStaff: boolean
+            done: number
+            steps: {
+                id: string
+                title: string
+                isDone: boolean
+            }[]
+        }[]
+        isBusy: boolean
+        error: string | null
+    }
+    on: ResolvedActions
+}
+
 /** Owns HiringOnboarding's resolved data, commands and actual panel activation. */
-export const useHiringOnboardingView = (input: HiringViewInput) => {
+export const useHiringOnboardingView = (input: HiringViewInput): HiringOnboardingViewShape => {
     const owner = { isActive: input.isActive && input.isReady, scope: input.scope }
 
     const say = useHiringSay()

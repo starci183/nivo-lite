@@ -4,10 +4,25 @@ import { useTranslations } from "next-intl"
 import { useCallback, useMemo, useState } from "react"
 import { useMutateRequestAgentSyncSwr, useQueryAgentSyncStatusSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { SYNC_POLL_BUSY_MS, SYNC_POLL_IDLE_MS, UNKNOWN_SYNC, toAgentSync } from "./agentSettings.shared"
+import {
+    SYNC_POLL_BUSY_MS,
+    SYNC_POLL_IDLE_MS,
+    UNKNOWN_SYNC,
+    toAgentSync,
+    type AgentSyncView,
+} from "./agentSettings.shared"
+
+/** The view `useAgentSync` returns. */
+export interface AgentSyncViewShape {
+    status: AgentSyncView
+    checkedAgoSeconds: number | null
+    isKnown: boolean
+    resync: () => Promise<void>
+    isQueuing: boolean
+}
 
 /** Follows the OpenClaw copy of an agent: fast while a sync runs, slow otherwise; `resync` queues a sync now. */
-export const useAgentSync = (installationId: string) => {
+export const useAgentSync = (installationId: string): AgentSyncViewShape => {
     const t = useTranslations("modulesCore")
     const runGraphQL = useGraphQLWithToast()
     const [answeredAt, setAnsweredAt] = useState<number | null>(null)

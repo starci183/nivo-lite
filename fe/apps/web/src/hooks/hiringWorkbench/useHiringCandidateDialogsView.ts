@@ -1,5 +1,5 @@
 "use client"
-import type { HiringViews } from "@/modules/types"
+import type { HiringViews, HiringWorkbenchCopy, HiringRequestOutcome, FieldOf } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import { hiringRejectCopyOf, useHiringFormat, useHiringSay, type HiringOwner } from "@/hooks/hiring"
 
@@ -9,11 +9,14 @@ import {
     offerDefaults,
     useHiringInterviewRequest,
     useHiringOfferRequest,
+    type InterviewValues,
+    type OfferValues,
 } from "@/hooks/hiringCandidate"
 import { useHiringReject } from "@/hooks/hiringPipeline"
 import type { CandidateView, HiringWorkbenchData } from "@/hooks/hiringWire"
 import { useHiringInterviewForm, useHiringOfferForm } from "@/hooks/rhf"
 import { useFeatureReset } from "@/hooks/reuseables"
+import type { Dispatch, SetStateAction } from "react"
 
 interface CandidateDialogsInput {
     readonly candidate: CandidateView
@@ -68,8 +71,75 @@ const requestProps = (context: RequestProjection) => {
     }
 }
 
+/** The view `useHiringCandidateDialogsView` returns. */
+export interface HiringCandidateDialogsView {
+    props: {
+        interview: {
+            copy: HiringWorkbenchCopy
+            title: string
+            members: {
+                id: string
+                label: string
+            }[]
+            modes: {
+                id: string
+                label: string
+            }[]
+            values: InterviewValues
+            outcome: HiringRequestOutcome | null
+            canSend: boolean
+            isBusy: boolean
+            error: string | null
+        }
+        offer: {
+            copy: HiringWorkbenchCopy
+            title: string
+            values: OfferValues
+            outcome: HiringRequestOutcome | null
+            canSend: boolean
+            isBusy: boolean
+            error: string | null
+        }
+        reject: {
+            copy: {
+                title: string
+                closeLabel: string
+                hint: string
+                failed: string
+                reasonLabel: string
+                kept: string
+                cancelLabel: string
+                confirmLabel: string
+            }
+            reason: string
+            canConfirm: boolean
+            isBusy: boolean
+            error: string | null
+        }
+    }
+    on: {
+        close: () => void
+        interview: {
+            text: (name: FieldOf<InterviewValues, string>, value: string) => void
+            number: (name: FieldOf<InterviewValues, number>, value: number) => void
+            send: () => void
+            close: () => void
+        }
+        offer: {
+            text: (name: FieldOf<OfferValues, string>, value: string) => void
+            send: () => void
+            close: () => void
+        }
+        reject: {
+            reason: Dispatch<SetStateAction<string>>
+            confirm: () => void
+            close: () => void
+        }
+    }
+}
+
 /** Owns the three candidate-dialog forms and their original shared close/reset boundary. */
-export const useHiringCandidateDialogsView = (input: CandidateDialogsInput) => {
+export const useHiringCandidateDialogsView = (input: CandidateDialogsInput): HiringCandidateDialogsView => {
     const t = useTranslations("hiring")
     const say = useHiringSay()
     const format = useHiringFormat()

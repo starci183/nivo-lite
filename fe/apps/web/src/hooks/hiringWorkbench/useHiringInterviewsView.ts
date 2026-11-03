@@ -5,6 +5,7 @@ import { useHiringInterviews } from "@/hooks/hiringInterviews"
 import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import type { InterviewView } from "@/hooks/hiringWire"
 import type { HiringViewInput } from "./hiringWorkbench.shared"
+import type { HiringWorkbenchCopy } from "@/modules/types"
 
 type ResolvedActions = {
     readonly previousWeek: () => void
@@ -16,8 +17,44 @@ type ResolvedActions = {
     readonly clearError: () => void
 }
 
+/** The view `useHiringInterviewsView` returns. */
+export interface HiringInterviewsViewShape {
+    props: {
+        copy: HiringWorkbenchCopy
+        weekLabel: string
+        isThisWeek: boolean
+        days: {
+            key: string
+            label: string
+            isToday: boolean
+            items: {
+                id: string
+                candidateId: string
+                title: string
+                meta: string
+                isConfirmed: boolean
+            }[]
+        }[]
+        invitations: {
+            title: string
+            badge: string
+            meta: string
+            proposed: string
+            note: string | null
+            copyLabel: string
+            id: string
+            candidateId: string
+            isConfirmed: boolean
+        }[]
+        invitationsFact: string
+        isBusy: boolean
+        error: string | null
+    }
+    on: ResolvedActions
+}
+
 /** Owns HiringInterviews's resolved data, commands and actual panel activation. */
-export const useHiringInterviewsView = (input: HiringViewInput) => {
+export const useHiringInterviewsView = (input: HiringViewInput): HiringInterviewsViewShape => {
     const owner = { isActive: input.isActive && input.isReady, scope: input.scope }
 
     const t = useTranslations("hiring")

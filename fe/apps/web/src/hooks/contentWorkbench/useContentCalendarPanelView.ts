@@ -10,6 +10,7 @@ import {
     vietnamClock,
     vnDateKey,
     useContentItemActions,
+    type ContentNote,
 } from "@/hooks/content"
 import {
     contentCalendarFields,
@@ -18,6 +19,8 @@ import {
     currentContentCalendarEpoch,
 } from "./contentWorkbench.shared"
 import type { ContentViewInput, ContentCalendarState, ContentCalendarReceipt } from "./contentWorkbench.shared"
+import type { ContentWorkbenchCopy, PostView } from "@/modules/types"
+import type { BadgeTone } from "@starci/grammar/common"
 
 interface CalendarActionsInput {
     readonly calendar: ContentCalendarState
@@ -88,8 +91,95 @@ const useCommittedCalendar = (calendar: ContentCalendarState): (() => boolean) =
     }
 }
 
+/** The view `useContentCalendarPanelView` returns. */
+export interface ContentCalendarPanelView {
+    loading: {
+        weekdays: string[]
+        y: number
+        m: number
+        title: string
+        todayKey: string
+    }
+    props:
+        | {
+              copy: ContentWorkbenchCopy
+              weekdays: string[]
+              y: number
+              m: number
+              title: string
+              cells: (
+                  | {
+                        label: string
+                        posts: {
+                            pickLabel: string
+                            id: string
+                            title: string
+                            time: string
+                            when: string
+                            brief: string | null
+                            statusLabel: string
+                            tone: BadgeTone
+                            isSkipped: boolean
+                            canMove: boolean
+                            channels: ReadonlyArray<string>
+                            pillar: string | null
+                        }[]
+                        moreLabel: string | null
+                        key: string
+                        day: number
+                        dateKey: string
+                    }
+                  | {
+                        label: string
+                        posts: {
+                            pickLabel: string
+                            id: string
+                            title: string
+                            time: string
+                            when: string
+                            brief: string | null
+                            statusLabel: string
+                            tone: BadgeTone
+                            isSkipped: boolean
+                            canMove: boolean
+                            channels: ReadonlyArray<string>
+                            pillar: string | null
+                        }[]
+                        moreLabel: string | null
+                        key: string
+                        day: null
+                        dateKey: string
+                    }
+              )[]
+              monthItems: PostView[]
+              isMonthEmpty: boolean
+              unscheduled: PostView[]
+              todayKey: string
+              pickedId: string | null
+              overKey: string | null
+              expandedKey: string | null
+              canManage: boolean
+              isEmptySetup: boolean
+              note: ContentNote | null
+          }
+        | undefined
+    on: {
+        shift: (by: number) => void
+        today: () => void
+        open: (id: string) => void
+        dragStart: (id: string) => void
+        pick: (id: string) => void
+        dragEnd: () => void
+        dragOver: (key: string) => void
+        dragLeave: (key: string) => void
+        drop: (day: number) => void
+        expand: (key: string) => void
+        dismissNote: () => void
+    }
+}
+
 /** Projects the incoming owner immediately; only this immutable bundle owns calendar UI state. */
-export const useContentCalendarPanelView = (input: ContentViewInput) => {
+export const useContentCalendarPanelView = (input: ContentViewInput): ContentCalendarPanelView => {
     const { data } = input
     const t = useTranslations("content")
     const format = useFormatter()

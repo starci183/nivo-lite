@@ -18,8 +18,64 @@ interface StepInput {
     readonly dueAt: string | null
 }
 
+/** The view `useLeadCommands` returns. */
+export interface LeadCommandsView {
+    isMutating: boolean
+    recordOutcome: (
+        leadId: string,
+        stage: LeadStageId,
+        evidence: string,
+    ) => Promise<
+        | {
+              channel: string
+              company: string
+              contactName: string
+              handedToAccounting: boolean
+              leadId: string
+              need: string
+              stage: string
+          }
+        | undefined
+    >
+    addResponsibility: (
+        leadId: string,
+        title: string,
+        input: StepInput,
+    ) => Promise<
+        | {
+              dueAt: string | null
+              id: string
+              leadId: string
+              nextAction: string
+              ownerAgentId: string | null
+              ownerKind: string
+              ownerName: string
+              status: string
+              title: string
+          }
+        | undefined
+    >
+    assignResponsibility: (
+        responsibilityId: string,
+        input: StepInput,
+    ) => Promise<
+        | {
+              dueAt: string | null
+              id: string
+              leadId: string
+              nextAction: string
+              ownerAgentId: string | null
+              ownerKind: string
+              ownerName: string
+              status: string
+              title: string
+          }
+        | undefined
+    >
+}
+
 /** Lead mutations toast their result and refresh affected views. */
-export const useLeadCommands = () => {
+export const useLeadCommands = (): LeadCommandsView => {
     const t = useTranslations("lead")
     const withToast = useGraphQLWithToast()
     const outcome = useMutateRecordOutcomeSwr()

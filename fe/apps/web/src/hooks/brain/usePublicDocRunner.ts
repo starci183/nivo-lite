@@ -23,8 +23,14 @@ const CHANGED_KEYS: ReadonlySet<string> = new Set([
 /** Returns the actual saved snapshot; approval must never substitute a later polled revision. */
 export type Run = <Result>(action: () => Promise<Result>, done: string | undefined) => Promise<Result | undefined>
 
+/** The view `usePublicDocRunner` returns. */
+export interface PublicDocRunnerView {
+    isPending: boolean
+    run: Run
+}
+
 /** The runner every command of the public documents goes through, and whether one is running. */
-export const usePublicDocRunner = () => {
+export const usePublicDocRunner = (): PublicDocRunnerView => {
     const runGraphQL = useGraphQLWithToast()
     const feedback = useTranslations("toast")
     const workspaceKey = useWorkspaceKey(QUERY_PUBLIC_DOCUMENTS_SWR_KEY, [])

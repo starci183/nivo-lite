@@ -68,7 +68,43 @@ const requestContentAiJob = async <TRequest>(context: ContentQueueExecution<TReq
 }
 
 /** Queues one content AI job, follows its status, and reports its terminal outcome once. */
-export const useContentAiJob = <TRequest>(options: ContentAiJobOptions<TRequest>) => {
+export const useContentAiJob = <TRequest>(
+    options: ContentAiJobOptions<TRequest>,
+): {
+    request: (input: TRequest) => Promise<
+        | {
+              id: string
+              itemId: string | null
+              status: string
+          }
+        | undefined
+    >
+    status:
+        | {
+              id: string
+              status: string
+              progress: number
+              itemId: string | null
+              planId: string | null
+              resultId: string | null
+              ideas: number | null
+              seconds: number | null
+              skippedPast: number | null
+              errorCode: string | null
+              warnings: Array<{
+                  channel: string
+                  warning: {
+                      kind: string
+                      phrase: string | null
+                      figure: string | null
+                      length: number | null
+                      max: number | null
+                  }
+              }>
+          }
+        | undefined
+    isPending: boolean
+} => {
     const t = useTranslations("content")
     const runGraphQL = useGraphQLWithToast()
     const { refresh } = useContentRefresh()

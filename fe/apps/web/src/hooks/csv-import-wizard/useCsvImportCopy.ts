@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { CSV_SOURCES, SCHEDULES, TABLE_ENTITIES } from "./csv-import-wizard.shared"
+import { CSV_SOURCES, SCHEDULES, TABLE_ENTITIES, type CsvSource } from "./csv-import-wizard.shared"
 
 /** The catalog keys of each source (title, body). */
 const SOURCE_KEYS = {
@@ -28,8 +28,79 @@ const scheduleKeyOf = (minutes: number | null) => {
     return "scheduleManual"
 }
 
+/** The view `useCsvImportCopy` returns. */
+export interface CsvImportCopyView {
+    steps: {
+        source: string
+        data: string
+        docs: string
+        map: string
+        import: string
+        agent: string
+    }
+    entities: {
+        id: "other" | "transaction" | "customer" | "order" | "product"
+        label: string
+    }[]
+    sources: {
+        value: CsvSource
+        label: string
+        description: string
+    }[]
+    schedules: {
+        id: string
+        label: string
+    }[]
+    kinds: {
+        phone: string
+        email: string
+        number: string
+        date: string
+    }
+    text: {
+        back: string
+        next: string
+        close: string
+        done: string
+        fieldName: string
+        fieldNameHint: string
+        fieldEntity: string
+        fieldSource: string
+        fileLabel: string
+        filePrompt: string
+        linkSheetLabel: string
+        linkSheetHint: string
+        linkSheetPlaceholder: string
+        pasteLabel: string
+        pasteHint: string
+        pasteUse: string
+        docsLabel: string
+        docsPrompt: string
+        docsNote: string
+        docsOr: string
+        linkDocLabel: string
+        linkDocHint: string
+        linkDocPlaceholder: string
+        importScheduleLabel: string
+        gridTitle: string
+        gridAddRow: string
+        gridAddColumn: string
+        gridRemove: string
+        gridTooBig: string
+        sheetLabel: string
+        mapId: string
+        mapTitle: string
+        mapDate: string
+        mapIdHint: string
+        previewLabel: string
+        previewEmpty: string
+    }
+    /** The plural label of a kind of rows, as the import intro names it. */
+    entityLabel: (entity: keyof typeof ENTITY_KEYS) => string
+}
+
 /** The fixed copy of the import wizard (`connectorCsv`): step names, choices and every plain label. */
-export const useCsvImportCopy = () => {
+export const useCsvImportCopy = (): CsvImportCopyView => {
     const t = useTranslations("connectorCsv")
     return {
         steps: {

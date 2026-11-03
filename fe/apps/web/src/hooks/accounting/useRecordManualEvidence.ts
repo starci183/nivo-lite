@@ -12,8 +12,19 @@ import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "@/modules/viewer-cache"
 
+/** The view `useRecordManualEvidence` returns. */
+export interface RecordManualEvidenceView {
+    record: (request: MutateRecordManualEvidenceRequest) => Promise<
+        | {
+              duplicate: boolean
+          }
+        | undefined
+    >
+    isRecording: boolean
+}
+
 /** Records a manual credit, reports duplicates and revalidates the accounting figures. */
-export const useRecordManualEvidence = () => {
+export const useRecordManualEvidence = (): RecordManualEvidenceView => {
     const t = useTranslations("workbenchAccounting")
     const runGraphQL = useGraphQLWithToast()
     const { activeWorkspaceId } = useActiveWorkspace()

@@ -12,11 +12,56 @@ const WAITING_ROWS = 3
 /** The shortest written basis a confirmed unclear payment needs. */
 const BASIS_MIN_CHARS = 10
 
+/** The view `useAccountingWaiting` returns. */
+export interface AccountingWaitingView {
+    props: {
+        title: string
+        count: string | null
+        rows: {
+            id: string
+            title: string
+            summary: string
+            reason: string
+            status: string
+            tone: "success" | "danger" | "warning"
+            amount: string | null
+            canAct: boolean
+            isOpen: boolean
+            isBusy: boolean
+            isApproveDisabled: boolean
+            basis: {
+                value: string
+                label: string
+                hint: string
+            } | null
+            approveLabel: string
+            rejectLabel: string
+            waitingLabel: string
+            error: string | null
+        }[]
+        more: string | null
+        moreLabel: string
+        moreHref: string
+        moreMenuLabel: string
+        emptyMessage: string
+        emptyBody: string
+    }
+    on: {
+        approve: (id: string) => void
+        reject: (id: string) => void
+        changeBasis: (id: string, value: string) => void
+    }
+}
+
 /**
  * The "waiting for you" card of the Accounting workbench: the oldest waiting questions, each decided in place. Approve stays off
  * until the basis a question asks for is written; a member who may not decide sees the proposal and who is waited for, no buttons.
  */
-export const useAccountingWaiting = (data: AccountingWorkbenchData, isActive: boolean, scope: string) => {
+export const useAccountingWaiting = (
+    data: AccountingWorkbenchData,
+    isActive: boolean,
+    scope: string,
+): AccountingWaitingView => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const oldest = useMemo(

@@ -6,7 +6,7 @@ import type { useBookingTransition } from "@/hooks/bookingDesk"
 
 import type { useBookingBoard } from "@/hooks/bookingBoard"
 
-import type { BookingHoursView, ResourceFields } from "@/modules/types"
+import type { BookingHoursView, ResourceFields, BookingResourceView } from "@/modules/types"
 
 import type { useBookingResourceCommands } from "./useBookingResourceCommands"
 
@@ -73,7 +73,23 @@ interface ServiceFormDraft<Fields> {
 export const bookingServiceFormOf = <Fields extends { readonly name: string }>(
     draft: ServiceFormDraft<Fields>,
     t: ReturnType<typeof useTranslations<"workbenchBooking">>,
-) => ({
+): {
+    heading: string
+    fields: Fields
+    nameLabel: string
+    durationLabel: string
+    bufferLabel: string
+    priceLabel: string
+    pricePlaceholder: string
+    kindLabel: string
+    kindPlaceholder: string
+    followupLabel: string
+    followupPlaceholder: string
+    descriptionLabel: string
+    activeLabel: string
+    saveLabel: string
+    cancelLabel: string
+} => ({
     heading: draft.id === null ? t("serviceAdd") : draft.fields.name,
     fields: draft.fields,
     nameLabel: t("serviceName"),
@@ -101,7 +117,7 @@ export type SetupPersist = <T>(action: () => Promise<T>) => Promise<T | undefine
 
 /** Turns a mutation into a setup command that runs through the setup save. */
 export const setupCommandOf =
-    (persist: SetupPersist) =>
+    (persist: SetupPersist): (<A, R>(mutation: SetupMutation<A, R>) => (arg: A) => Promise<R | undefined>) =>
     <A, R>(mutation: SetupMutation<A, R>) =>
     (arg: A) =>
         persist(() => mutation.trigger(arg))
@@ -135,8 +151,28 @@ export interface ResourceContext {
     readonly setRemoveId: Dispatch<SetStateAction<string | null>>
 }
 
+/** What `buildBookingResourcesState` returns. */
+export interface BuildBookingResourcesStateResult {
+    weekdayName: (day: number) => string
+    removing: BookingResourceView | undefined
+    save: () => void
+    saveHours: () => void
+    board: ReturnType<typeof useBookingBoard>["board"]
+    removeId: string | null
+    format: ReturnType<typeof useFormatter>
+    draft: ResourceDraft | null
+    startTransition: ReturnType<typeof useBookingTransition>["run"]
+    commands: ReturnType<typeof useBookingResourceCommands>
+    setDraft: Dispatch<SetStateAction<ResourceDraft | null>>
+    setNotice: Dispatch<SetStateAction<ResourceNotice | null>>
+    t: ReturnType<typeof useTranslations<"workbenchBooking">>
+    isPending: boolean
+    notice: ResourceNotice | null
+    setRemoveId: Dispatch<SetStateAction<string | null>>
+}
+
 /** Composes resource form callbacks from the connected inputs. */
-export const buildBookingResourcesState = (context: ResourceContext) => {
+export const buildBookingResourcesState = (context: ResourceContext): BuildBookingResourcesStateResult => {
     const { board, removeId, format, draft, startTransition, commands, setDraft, setNotice, t } = context
     const removing = board.resources.find((resource) => resource.id === removeId)
     const weekdayName = (day: number) =>

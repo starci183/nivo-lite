@@ -3,7 +3,7 @@
 import { CONSOLE_ROUTES, agentSetupHref, leadFlowHref } from "@/modules/routes"
 import { useTranslations } from "next-intl"
 import { CHAT_FILE_ACCEPT } from "@/hooks/chatFile"
-import type { useAgentChat } from "./useAgentChat"
+import type { useAgentChat, ChatTab } from "./useAgentChat"
 
 /** The prompts offered to the owner of a chat with a customer channel, and to one without. */
 const CUSTOMER_PROMPTS = ["customerPrompt1", "customerPrompt2", "customerPrompt3"] as const
@@ -17,8 +17,118 @@ const NEXT_STEPS = [
 /** The chat as the hook resolved it. */
 type AgentChatState = ReturnType<typeof useAgentChat>
 
+/** The view `useAgentChatCopy` returns. */
+export interface AgentChatCopyView {
+    crumbLabel: string
+    crumbs: (
+        | {
+              id: string
+              label: string
+              href: string
+              isLoading?: never
+          }
+        | {
+              id: string
+              label: string
+              isLoading: true
+              href?: never
+          }
+        | {
+              id: string
+              label: string
+              href?: never
+              isLoading?: never
+          }
+    )[]
+    header: {
+        backLabel: string
+        name: string
+        subtitle: string
+        isLoading: boolean
+        badge: string | null
+        takeover: {
+            label: string
+            isPending: boolean
+        } | null
+        openLeadLabel: string | null
+        setup: {
+            label: string
+            href: string
+        } | null
+    }
+    channelTabs: {
+        label: string
+        selectedKey: ChatTab
+        items: {
+            id: string
+            label: string
+        }[]
+    } | null
+    thread: {
+        label: string
+        scrollKey: string
+        handoff: {
+            label: string
+            href: string
+        } | null
+        takenOverNotice: string | null
+    }
+    messages: {
+        messages: {
+            id: string
+            role: "user" | "system" | "agent"
+            body: string
+            timeLabel: string
+            files: {
+                id: string
+                name: string
+                contentType: string
+                url: string
+            }[]
+        }[]
+        userAuthor: string
+        agentName: string
+        typing: string | null
+    }
+    empty: {
+        agentName: string
+        greeting: string
+        help: string
+        isCustomer: boolean
+        visitorLabel: string
+        visitorName: string
+        prompts: string[]
+        arePromptsDisabled: boolean
+        startLabel: string
+        isStarting: boolean
+        steps: string[]
+    }
+    composer: {
+        formLabel: string
+        messageLabel: string
+        placeholder: string
+        sendLabel: string
+        draft: string
+        isSending: boolean
+        isLoading: boolean
+        canSend: boolean
+        file: {
+            label: string
+            removeLabel: string
+            accept: string
+            name: string | null
+            isHidden: boolean
+        }
+        error: {
+            title: string
+            text: string
+        } | null
+        prompts: string[]
+    }
+}
+
 /** Every word of the agent chat, resolved for the reader, grouped by the part of the surface that draws it. */
-export const useAgentChatCopy = (chat: AgentChatState) => {
+export const useAgentChatCopy = (chat: AgentChatState): AgentChatCopyView => {
     const t = useTranslations("agentChat")
     const modules = useTranslations("modulesCore")
     const shell = useTranslations("shell")

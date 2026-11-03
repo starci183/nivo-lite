@@ -20,8 +20,30 @@ const failureKey = (code: string | null | undefined): "errForbidden" | "errCusto
     return "paymentFailed"
 }
 
+/** The view `useRequestPaymentOrder` returns. */
+export interface RequestPaymentOrderView {
+    request: (input: MutateRequestPaymentOrderRequest) => Promise<
+        | {
+              id: string
+              status: string
+          }
+        | undefined
+    >
+    isRequesting: boolean
+    status:
+        | {
+              id: string
+              status: string
+              resultId: string | null
+              errorCode: string | null
+          }
+        | undefined
+    orderId: string | undefined
+    error: unknown
+}
+
 /** Enqueues a payment order, polls creation, and toasts each outcome once. */
-export const useRequestPaymentOrder = (workspaceId: string | undefined) => {
+export const useRequestPaymentOrder = (workspaceId: string | undefined): RequestPaymentOrderView => {
     const t = useTranslations("billing")
     const runGraphQL = useGraphQLWithToast()
     const [pendingRequest, setPendingRequest] = useState<{

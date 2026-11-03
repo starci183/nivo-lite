@@ -28,7 +28,13 @@ export const STAGE_TONES: Readonly<Record<LeadStageId, BadgeTone>> = {
 }
 
 /** The catalog key of the label of each stage in the leads namespace. */
-export const STAGE_KEYS = {
+export const STAGE_KEYS: {
+    readonly new: "stageNew"
+    readonly qualified: "stageQualified"
+    readonly proposal: "stageProposal"
+    readonly won: "stageWon"
+    readonly lost: "stageLost"
+} = {
     new: "stageNew",
     qualified: "stageQualified",
     proposal: "stageProposal",
@@ -44,7 +50,11 @@ export const STATUS_TONES: Readonly<Record<StepStatus, BadgeTone>> = {
 }
 
 /** The catalog key of the label of each step status. */
-export const STATUS_KEYS = {
+export const STATUS_KEYS: {
+    readonly open: "statusOpen"
+    readonly waiting_approval: "statusWaiting"
+    readonly done: "statusDone"
+} = {
     open: "statusOpen",
     waiting_approval: "statusWaiting",
     done: "statusDone",

@@ -48,7 +48,10 @@ const executeContentSave = async <TArgs extends unknown[], TResult>(input: Conte
 export const useContentSave = <TArgs extends unknown[], TResult>(
     trigger: (...args: TArgs) => Promise<TResult>,
     owner?: ContentSaveOwner,
-) => {
+): {
+    exec: (args: TArgs, onResult?: (result: TResult | undefined) => void) => Promise<TResult | undefined>
+    isPending: boolean
+} => {
     const t = useTranslations("content"),
         runGraphQL = useGraphQLWithToast()
     const { refresh } = useContentRefresh()

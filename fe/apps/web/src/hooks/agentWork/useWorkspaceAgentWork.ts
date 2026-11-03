@@ -6,11 +6,19 @@ import { useMember } from "@/hooks/member"
 import { slotOfSwr } from "@/hooks/slot"
 import { useMutateSetWorkspaceAgentWorkSwr, useQueryWorkspaceAgentWorkSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import type { WorkspaceAgentWorkView } from "@/modules/types"
+import type { WorkspaceAgentWorkView, DataSlot } from "@/modules/types"
 import { WORK_POLL_IDLE_MS } from "@/modules/agentWork"
 
+/** The view `useWorkspaceAgentWork` returns. */
+export interface WorkspaceAgentWorkViewShape {
+    slot: DataSlot<WorkspaceAgentWorkView>
+    change: (enabled: boolean) => Promise<boolean>
+    isChanging: boolean
+    reload: () => undefined
+}
+
 /** The kill switch of the whole workspace with its counts: read by every member, set by the owner only. */
-export const useWorkspaceAgentWork = () => {
+export const useWorkspaceAgentWork = (): WorkspaceAgentWorkViewShape => {
     const t = useTranslations("agentWork")
     const member = useMember()
     const runGraphQL = useGraphQLWithToast()

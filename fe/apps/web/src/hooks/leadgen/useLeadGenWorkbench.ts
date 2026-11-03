@@ -4,9 +4,24 @@ import { useTranslations } from "next-intl"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryLeadGenWorkbenchSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
+import type { LeadGenWorkbenchData, DataSlot } from "@/modules/types"
+
+/** The view `useLeadGenWorkbench` returns. */
+export interface LeadGenWorkbenchView {
+    data: LeadGenWorkbenchData | undefined
+    /** The read as a slot: items once read, loading while in flight, error when it failed. */
+    slot: DataSlot<LeadGenWorkbenchData>
+    /** The words of a panel that could not be read; null while the read stands. */
+    failure: {
+        title: string
+        description: string
+        retryLabel: string
+    } | null
+    retry: () => void
+}
 
 /** The prospects, sources, comments and Sales handoffs of one Lead Gen instance, read once through the shared SWR cache. */
-export const useLeadGenWorkbench = (installationId: string | null) => {
+export const useLeadGenWorkbench = (installationId: string | null): LeadGenWorkbenchView => {
     const t = useTranslations("workbenchLeadGen")
     const { activeWorkspaceId } = useActiveWorkspace()
     const query = useQueryLeadGenWorkbenchSwr(activeWorkspaceId, installationId)

@@ -9,8 +9,55 @@ import { MOVE_KINDS, MOVE_TONES, includesText, useInventoryFormat } from "@/hook
 
 const ALL = "all"
 
+/** The view `useInventoryHistoryView` returns. */
+export interface InventoryHistoryView {
+    readonly props: {
+        readonly searchLabel: string
+        readonly searchPlaceholder: string
+        readonly clearLabel: string
+        readonly kindLabel: string
+        readonly kinds: readonly [
+            {
+                readonly value: "all"
+                readonly label: string
+            },
+            {
+                readonly value: "in"
+                readonly label: string
+            },
+            {
+                readonly value: "out"
+                readonly label: string
+            },
+            {
+                readonly value: "adjust"
+                readonly label: string
+            },
+        ]
+        readonly listLabel: string
+        readonly emptyTitle: string
+        readonly emptyBody: string
+        readonly query: string
+        readonly kind: string
+        readonly rows: {
+            id: string
+            kindLabel: string
+            kindTone: "success" | "neutral" | "warning" | "accent"
+            itemName: string
+            quantity: string
+            detail: string
+            evidence: string | null
+            stamp: string
+        }[]
+    }
+    readonly on: {
+        readonly onQuery: (value: string) => void
+        readonly onKind: (value: string) => void
+    }
+}
+
 /** The history tab: the search text and the movement kind live here, the drawing in the pure half. */
-export const useInventoryHistoryView = (input: InventoryPanelInput) => {
+export const useInventoryHistoryView = (input: InventoryPanelInput): InventoryHistoryView => {
     const board = input.board
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()

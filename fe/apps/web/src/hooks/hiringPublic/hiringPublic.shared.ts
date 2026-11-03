@@ -10,7 +10,7 @@ import type {
 import type { ApplyValues, PublicQuestionView } from "@/modules/types"
 
 /** The largest CV the apply form takes, in bytes. */
-export const CV_MAX_BYTES = 5 * 1024 * 1024
+export const CV_MAX_BYTES: number = 5 * 1024 * 1024
 
 /** The file types the CV field takes. */
 export const CV_ACCEPT = ".pdf,.doc,.docx,.jpg,.jpeg,.png"
@@ -161,5 +161,10 @@ export const availabilityOf = (values: ApplyValues, job: PublicJobView): string 
     job.requirements.availability.length > 0 ? values.availability.join(", ") : values.availabilityText
 
 /** The answers sent, one per question of the job. */
-export const answerGroups = (values: ApplyValues, job: PublicJobView) =>
-    job.questions.map((question) => ({ questionId: question.id, answer: values.answers[question.id] ?? "" }))
+export const answerGroups = (
+    values: ApplyValues,
+    job: PublicJobView,
+): {
+    questionId: string
+    answer: string
+}[] => job.questions.map((question) => ({ questionId: question.id, answer: values.answers[question.id] ?? "" }))

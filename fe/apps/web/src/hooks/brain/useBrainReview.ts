@@ -10,8 +10,15 @@ import type { KnowledgeListView } from "@/modules/types"
 import { useBrainCommand } from "./useBrainCommand"
 import type { useBrainBoard } from "./useBrainBoard"
 
+/** The view `useBrainReview` returns. */
+export interface BrainReviewView {
+    list: KnowledgeListView
+    dispatch: (rowId: string, actionId: string, partId?: string) => void
+    retry: () => void
+}
+
 /** Owns fact review decisions and the independently retryable facts region of the queue. */
-export const useBrainReview = (board: ReturnType<typeof useBrainBoard>) => {
+export const useBrainReview = (board: ReturnType<typeof useBrainBoard>): BrainReviewView => {
     const t = useTranslations("brain")
     const feedback = useTranslations("toast")
     const command = useBrainCommand()

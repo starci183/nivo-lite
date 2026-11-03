@@ -166,7 +166,7 @@ export const stockToggleLabel = (
     t: ReturnType<typeof useTranslations<"workbenchInventory">>,
     isAvailable: boolean,
     showInactive: boolean,
-) => {
+): string | null => {
     if (!isAvailable) return null
     return t(showInactive ? "stockShowActive" : "stockShowInactive")
 }
@@ -176,8 +176,23 @@ interface AdjustmentCopyFacts {
     readonly item: { readonly name: string; readonly unit: string }
 }
 
+/** What `adjustmentCopyOf` returns. */
+export interface AdjustmentCopyOfResult {
+    readonly adjustTitle: string
+    readonly close: string
+    readonly adjustMode: string
+    readonly adjustFrom: string
+    readonly adjustAt: string
+    readonly adjustTo: string
+    readonly adjustToHint: string
+    readonly adjustNote: string
+    readonly adjustReason: string
+    readonly adjustReasonHint: string
+    readonly valueLabel: string
+}
+
 /** Resolves the exact adjust drawer copy in its domain owner. */
-export const adjustmentCopyOf = (say: InventorySay, owner: AdjustmentCopyFacts) =>
+export const adjustmentCopyOf = (say: InventorySay, owner: AdjustmentCopyFacts): AdjustmentCopyOfResult =>
     ({
         adjustTitle: say("adjustTitle", { name: owner.item.name }),
         close: say("close"),

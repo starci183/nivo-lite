@@ -8,13 +8,24 @@ import type { AgentWorkPreset, AgentWorkTriggerView } from "@/modules/types"
 import { DEFAULT_TIME_ZONE, presetNeedsTime } from "@/modules/agentWork"
 
 /** A new clock trigger as the form holds it. */
-interface NewClockTrigger {
+export interface NewClockTrigger {
     readonly preset: AgentWorkPreset
     readonly atTime: string
 }
 
+/** The view `useAgentWorkTriggers` returns. */
+export interface AgentWorkTriggersView {
+    addClock: (clock: NewClockTrigger) => Promise<boolean>
+    switchTrigger: (trigger: AgentWorkTriggerView, enabled: boolean) => Promise<boolean>
+    removeClock: (triggerId: string) => Promise<boolean>
+    isSaving: boolean
+}
+
 /** The trigger commands of the Work tab. Each answers whether it worked; a failure was already toasted. */
-export const useAgentWorkTriggers = (installationId: string, refresh: () => Promise<unknown>) => {
+export const useAgentWorkTriggers = (
+    installationId: string,
+    refresh: () => Promise<unknown>,
+): AgentWorkTriggersView => {
     const t = useTranslations("agentWork")
     const runGraphQL = useGraphQLWithToast()
     const saveTrigger = useMutateSaveAgentTriggerSwr()

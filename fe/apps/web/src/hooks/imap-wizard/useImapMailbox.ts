@@ -6,8 +6,17 @@ import type { SlotRead } from "@/hooks/slot"
 import { securityOf } from "./imap-wizard.shared"
 import type { ImapMailbox } from "./imap-wizard.shared"
 
+/** The view `useImapMailbox` returns. */
+export interface ImapMailboxView {
+    reads: readonly SlotRead<unknown>[]
+    loading: boolean
+    view: ImapMailbox | undefined
+    error: string | null
+    reload: () => undefined
+}
+
 /** The saved mailbox a wizard resumes: `loading` while it is read, `view` once it is, `error` with the back end message. */
-export const useImapMailbox = (resumeId: string | undefined) => {
+export const useImapMailbox = (resumeId: string | undefined): ImapMailboxView => {
     const saved = useQueryLoadImapConnectionSwr(resumeId)
     const data = saved.data
     const view = useMemo<ImapMailbox | undefined>(

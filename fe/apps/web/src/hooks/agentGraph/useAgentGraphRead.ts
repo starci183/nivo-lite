@@ -26,12 +26,20 @@ export interface AgentGraphRead {
     readonly data: AgentGraphData
 }
 
+/** The view `useAgentGraphRead` returns. */
+export interface AgentGraphReadView {
+    slot: DataSlot<AgentGraphData>
+    runId: string
+    read: AgentGraphRead | undefined
+    reload: () => void
+}
+
 /**
  * Reads the action graph of an instance through the W6 contract (`agentGraph`, `agentGraphVersions`) and the people an approver can
  * be (`approverDirectory`). The JSON texts of the graph are parsed once, with their schemas, in `parseAgentGraphWire`; what the
  * panes draw is made from that and the directory. `changes` is how many branches were saved to the draft on this screen.
  */
-export const useAgentGraphRead = (installationId: string, changes: number) => {
+export const useAgentGraphRead = (installationId: string, changes: number): AgentGraphReadView => {
     const t = useTranslations("agentGraph")
     const format = useFormatter()
     const locale = useLocale()

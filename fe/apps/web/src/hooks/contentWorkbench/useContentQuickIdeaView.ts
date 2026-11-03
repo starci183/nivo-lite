@@ -1,5 +1,5 @@
 "use client"
-import type { ContentViews, ContentActions } from "@/modules/types"
+import type { ContentViews, ContentActions, ContentQuickIdeaFields, ContentQuickIdeaActions } from "@/modules/types"
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
@@ -15,8 +15,14 @@ import { useFeatureReset } from "@/hooks/reuseables"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { contentDialogOf, type ContentViewInput } from "./contentWorkbench.shared"
 
+/** The view `useContentQuickIdeaView` returns. */
+export interface ContentQuickIdeaView {
+    props: ContentQuickIdeaFields | undefined
+    on: ContentQuickIdeaActions
+}
+
 /** Owns the actual ContentQuickIdea data derivations and conditional controller lifetime. */
-export const useContentQuickIdeaView = (input: ContentViewInput) => {
+export const useContentQuickIdeaView = (input: ContentViewInput): ContentQuickIdeaView => {
     const data = input.data
     const defaultChannels =
         data?.cadence.filter((entry) => entry.posts_per_week > 0).map((entry) => entry.channel) ?? []

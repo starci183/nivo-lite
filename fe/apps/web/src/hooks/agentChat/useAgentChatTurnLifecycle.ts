@@ -9,7 +9,7 @@ import {
 import { toast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useRef, type Dispatch, type SetStateAction } from "react"
-import { useSWRConfig } from "swr"
+import { useSWRConfig, type SWRResponse } from "swr"
 import type { AgentChatActionTarget, PendingTurn } from "./useAgentChatActions"
 
 /** The active thread and the state a terminal turn settles. */
@@ -24,13 +24,29 @@ interface AgentChatTurnLifecycleInput {
 const failureKeyOf = (turn: AgentChatTurnStatusType) =>
     turn.errorCode === "CHAT_DELIVERY_FAILED" ? "deliveryFailed" : "turnFailed"
 
+/** The view `useAgentChatTurnLifecycle` returns. */
+export interface AgentChatTurnLifecycleView {
+    status: SWRResponse<
+        {
+            id: string
+            jobId: string
+            conversationId: string
+            status: string
+            resultMessageId: string | null
+            errorCode: string | null
+        },
+        Error
+    >
+    refresh: (conversationId: string) => Promise<void>
+}
+
 /** Polls the active queued turn and settles its feedback and cache refresh once. */
 export const useAgentChatTurnLifecycle = ({
     target,
     pending,
     setPendingTurn,
     setTurnError,
-}: AgentChatTurnLifecycleInput) => {
+}: AgentChatTurnLifecycleInput): AgentChatTurnLifecycleView => {
     const t = useTranslations("agentChat")
     const { mutate } = useSWRConfig()
     const settledTurn = useRef<string | undefined>(undefined)

@@ -3,12 +3,64 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { driveFileNoteOf, isReadableDriveFile } from "./drive.shared"
 import { useDriveChoose } from "./useDriveChoose"
+import type { Dispatch, SetStateAction } from "react"
+
+/** The view `useDriveChooserView` returns. */
+export interface DriveChooserView {
+    added: number
+    props: {
+        listing?: {
+            add: {
+                label: string
+                isPending: boolean
+                isDisabled: boolean
+            }
+            empty?: {
+                message: string
+                description: string
+            }
+            title: string
+            count: string
+            filesLabel: string
+            files: {
+                value: string
+                label: string
+                description: string
+                isDisabled: boolean
+            }[]
+            selected: readonly string[]
+            notices: {
+                id: string
+                tone: "cautionary"
+                title: string
+            }[]
+        }
+        error: string
+        added: string
+        pickLabel?: string
+        link: {
+            label: string
+            placeholder: string
+            description: string
+            value: string
+            readLabel: string
+            isReading: boolean
+        }
+    }
+    on: {
+        changeLink: Dispatch<SetStateAction<string>>
+        read: () => undefined
+        pick: () => undefined
+        select: Dispatch<SetStateAction<readonly string[]>>
+        add: () => undefined
+    }
+}
 
 /**
  * The choose step of Google Drive in the words of the reader, for the page and the hub wizard alike: what the composite draws, and the
  * commands behind it. A file NIVO cannot read stays in the list, unticked, with the reason under its name.
  */
-export const useDriveChooserView = () => {
+export const useDriveChooserView = (): DriveChooserView => {
     const t = useTranslations("driveConnection")
     const format = useFormatter()
     const choose = useDriveChoose(t("pickFailed"))

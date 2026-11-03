@@ -7,9 +7,33 @@ import { mapSlot } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref } from "@/modules/routes"
 import { usePublicDocCommands } from "./usePublicDocCommands"
+import type { DataSlot } from "@/modules/types"
+
+/** The view `usePublicDraftController` returns. */
+export interface PublicDraftControllerView {
+    canWrite: boolean
+    isPending: boolean
+    sources: DataSlot<
+        {
+            id: string
+            label: string
+        }[]
+    >
+    reload: () => undefined
+    maxSources: 5
+    title: string
+    selected: string[]
+    instructions: string
+    error: string | undefined
+    close: () => void
+    submit: (e?: React.BaseSyntheticEvent) => Promise<void>
+    setTitle: (value: string) => void
+    setSelected: (ids: readonly string[]) => void
+    setInstructions: (value: string) => void
+}
 
 /** Owns source selection and validation; a failed source read stays retryable instead of becoming an empty list. */
-export const usePublicDraftController = () => {
+export const usePublicDraftController = (): PublicDraftControllerView => {
     const t = useTranslations("publicBrain")
     const router = navigation.useRouter()
     const member = useWorkspaceMember()

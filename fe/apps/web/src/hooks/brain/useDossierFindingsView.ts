@@ -10,6 +10,9 @@ import {
     queryOfDossier,
     reviewedStatusOf,
     selectionOf,
+    type FindingDialogView,
+    type FindingRowView,
+    type FindingDialogValues,
 } from "@/modules/brain"
 import type { CategoryView, FindingAction, FindingFilter, FindingView } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
@@ -30,6 +33,7 @@ import { useDossierReviewSummary } from "./useDossierReviewSummary"
 import { useFindingDialog } from "./useFindingDialog"
 import { useFindingRows } from "./useFindingRows"
 import type { UploadTarget } from "./useFindingRows"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** A direct dossier pane, or a map node whose dossier must be proven by the actual map read. */
 type FindingsSelection =
@@ -112,8 +116,60 @@ const dossierIdOf = (
     return selected.kind === "dossier" ? selected.dossier.id : undefined
 }
 
+/** The view `useDossierFindingsView` returns. */
+export interface DossierFindingsView {
+    props: {
+        isVisible: boolean
+        frame: {
+            title: string
+            badges: (
+                | {
+                      id: string
+                      label: string
+                      tone: "success" | "neutral" | "danger" | "warning" | "accent"
+                  }
+                | {
+                      id: string
+                      label: string
+                      tone: "muted"
+                  }
+            )[]
+            reviewedLine: string
+            isRunning: boolean
+            runningLabel: string
+            reviewLabel: string | null
+            isReviewPending: boolean
+            aiNotice: string | null
+            hasNextPage: boolean
+            isLoadingMore: boolean
+            loadMoreLabel: string
+            pageFailure: string | null
+            retryLabel: string
+            dialog: FindingDialogView | null
+        }
+        filterLabel: string
+        filters: {
+            value: "open" | "confirmed" | "closed"
+            label: string
+        }[]
+        filter: "open" | "confirmed" | "closed"
+        listLabel: string
+        slot: DataSlot<FindingRowView[]>
+        slotLabels: SlotLabels
+    }
+    on: {
+        setFilter: (value: string) => void
+        review: () => void
+        action: (id: string, action: FindingAction) => void
+        loadMore: () => void
+        retry: () => void
+        submitDialog: (values: Parameters<(values: FindingDialogValues) => Promise<void>>[0]) => void
+        closeDialog: () => void
+    }
+}
+
 /** Owns the findings read, its filter/dialog session and commands; an unselected map node reads no findings. */
-export const useDossierFindingsView = (input: FindingsSelection) => {
+export const useDossierFindingsView = (input: FindingsSelection): DossierFindingsView => {
     const t = useTranslations("dossierReview")
     const brain = useTranslations("secondBrain")
     const feedback = useTranslations("toast")

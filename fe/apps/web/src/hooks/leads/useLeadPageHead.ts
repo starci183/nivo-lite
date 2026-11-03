@@ -1,6 +1,6 @@
 "use client"
 
-import type { BreadcrumbItem } from "@starci/grammar/common"
+import type { BreadcrumbItem, BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { mapSlot } from "@/hooks/slot"
@@ -10,8 +10,61 @@ import { STAGE_KEYS, STAGE_TONES, primaryActionOf } from "./leads.shared"
 import { useLeadActions } from "./useLeadActions"
 import { useLeadJourney } from "./useLeadJourney"
 
+/** The view `useLeadPageHead` returns. */
+export interface LeadPageHeadView {
+    crumb: BreadcrumbItem
+    head: {
+        view:
+            | {
+                  name: string
+                  meta: string
+                  stageLabel: string
+                  stageTone: BadgeTone
+              }
+            | undefined
+        isSkeleton: boolean
+        fallbackTitle: string
+    }
+    actions: {
+        primary:
+            | {
+                  readonly kind: "draft"
+                  readonly responsibilityId: string
+              }
+            | {
+                  readonly kind: "review"
+              }
+            | {
+                  readonly kind: "propose"
+              }
+            | {
+                  readonly kind: "none"
+              }
+        notice: string | null
+        isPending: boolean
+        isLoading: boolean
+        labels: {
+            reviewLabel: string
+            draftLabel: string
+            proposeLabel: string
+            officeLabel: string
+            officeHref: "/chat"
+            menuMore: string
+            menuRefresh: string
+            menuOutcome: string
+            menuCopy: string
+        }
+    }
+    on: {
+        draft: (responsibilityId: string) => void
+        propose: () => void
+        refresh: () => void
+        copy: () => undefined
+    }
+}
+
 /** Reads the lead of the page once and resolves the head of the lead page: the trail's last crumb, the heading words and the action bar. */
-export const useLeadPageHead = (leadId: string | undefined) => {
+export const useLeadPageHead = (leadId: string | undefined): LeadPageHeadView => {
     const t = useTranslations("leads")
     const format = useFormatter()
     const query = useLeadJourney(leadId)

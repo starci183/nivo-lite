@@ -5,8 +5,32 @@ import type { CreditsData, CreditsOverviewView, PlanView } from "@/modules/types
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { creditsSummaryOf } from "./credits.shared"
 
+/** The view `useCreditsView` returns. */
+export interface CreditsView {
+    view: CreditsOverviewView
+    labels: {
+        plansHref: string
+        loading: string
+        emptyPacks: string
+        upgrade: string
+        plans: string
+        plansLabel: string
+        buy: string
+        plansCta: string
+        balance: string
+        topups: string
+        topupFact: string
+    }
+    slotLabels: {
+        empty: string
+        error: string
+        forbidden: string
+        retry: string
+    }
+}
+
 /** Resolves every locale-sensitive label before the pure credits drawing. */
-export const useCreditsView = (data: CreditsData | null, busy: string | null) => {
+export const useCreditsView = (data: CreditsData | null, busy: string | null): CreditsView => {
     const t = useTranslations("credits")
     const locale = useLocale()
     const formatter = useFormatter()

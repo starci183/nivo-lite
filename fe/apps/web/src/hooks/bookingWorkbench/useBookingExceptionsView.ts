@@ -55,12 +55,45 @@ const exceptionProps = (input: ExceptionViewInput) => {
     }
 }
 
+/** The view `useBookingExceptionsView` returns. */
+export interface BookingExceptionsView {
+    readonly props: {
+        title: string
+        hint: string
+        rows: {
+            id: string
+            title: string
+            detail: string
+        }[]
+        removeLabel: string
+        fields: ExceptionFields
+        appliesLabel: string
+        applies: {
+            id: string
+            label: string
+        }[]
+        dateLabel: string
+        noteLabel: string
+        notePlaceholder: string
+        closedLabel: string
+        startLabel: string
+        endLabel: string
+        addLabel: string
+        isPending: boolean
+    }
+    readonly on: {
+        readonly change: (patch: Partial<ExceptionFields>) => void
+        readonly add: () => void
+        readonly remove: (id: string) => void
+    }
+}
+
 /** The connected days-off list: add a closing or special hours and remove the ones that no longer apply. */
 export const useBookingExceptionsView = (
     isActive: boolean,
     scope: string,
     boardRead: ReturnType<typeof useBookingBoard>,
-) => {
+): BookingExceptionsView => {
     const { board, isLoaded } = boardRead
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()

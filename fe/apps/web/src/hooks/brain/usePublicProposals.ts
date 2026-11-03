@@ -10,8 +10,16 @@ import { useBrainRowAction } from "./useBrainRowAction"
 import { usePublicDocCommands } from "./usePublicDocCommands"
 import { usePublicDocuments } from "./usePublicDocuments"
 
+/** The view `usePublicProposals` returns. */
+export interface PublicProposalsView {
+    list: KnowledgeListView
+    dispatch: (rowId: string, actionId: string) => void
+    retry: () => undefined
+    count: number
+}
+
 /** Owns proposed public answers, retaining their own read status and requiring full revision-bound review before approval. */
-export const usePublicProposals = () => {
+export const usePublicProposals = (): PublicProposalsView => {
     const t = useTranslations("publicBrain")
     const read = usePublicDocuments()
     const command = usePublicDocCommands()

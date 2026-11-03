@@ -7,8 +7,14 @@ import type { OperatingMode } from "@/modules/installations"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useRefreshInstallation } from "./useRefreshInstallation"
 
+/** The view `useChooseOperatingMode` returns. */
+export interface ChooseOperatingModeView {
+    choose: (mode: OperatingMode) => Promise<boolean>
+    isSaving: boolean
+}
+
 /** Chooses how an agent runs (assist or autopilot). Answers whether it worked; a failure was already toasted. */
-export const useChooseOperatingMode = (installationId: string) => {
+export const useChooseOperatingMode = (installationId: string): ChooseOperatingModeView => {
     const t = useTranslations("modulesCore")
     const runGraphQL = useGraphQLWithToast()
     const { trigger, isMutating } = useMutateSetOperatingModeSwr()

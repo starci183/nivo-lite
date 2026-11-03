@@ -60,6 +60,14 @@ interface CsvImportActionsInput {
     readonly commands: CsvImportCommands
 }
 
+/** What `createCsvImportWizardActions` returns. */
+export interface CreateCsvImportWizardActionsResult {
+    fail: (text: string) => void
+    sourceArg: (sheet?: string) => CsvSourceArg | null
+    go: (to: number) => void
+    read: (sheet?: string) => Promise<void>
+}
+
 const createCsvImportWizardActions = ({
     patch,
     entity,
@@ -71,7 +79,7 @@ const createCsvImportWizardActions = ({
     gridState,
     setPending,
     commands,
-}: CsvImportActionsInput) => {
+}: CsvImportActionsInput): CreateCsvImportWizardActionsResult => {
     const fail = (text: string) => patch({ note: { tone: "negative", text } })
     const go = (to: number) => patch({ note: null, index: to })
     const missing = (key: "needFile" | "tooBig" | "needLink" | "needSheetEmpty") => {
@@ -110,7 +118,7 @@ const createCsvImportRunner =
         importNow: ReturnType<typeof importNowOf>,
         fail: (message: string) => void,
         patch: (next: Partial<CsvImportFields>) => void,
-    ) =>
+    ): (() => Promise<void>) =>
     async () => {
         setPending(true)
         const answer = await importNow()
@@ -137,6 +145,15 @@ interface CsvImportWorkflowInput {
     readonly agentIds: ReadonlyArray<string>
 }
 
+/** The view `useCsvImportWorkflow` returns. */
+export interface CsvImportWorkflowView {
+    go: (to: number) => void
+    read: (sheet?: string) => Promise<void>
+    runImport: () => Promise<void>
+    finish: () => Promise<void>
+    isPending: boolean
+}
+
 /** Owns preview/import progress and completion of the selected CSV or document source. */
 export const useCsvImportWorkflow = ({
     patch,
@@ -153,7 +170,7 @@ export const useCsvImportWorkflow = ({
     input,
     setAgentsOf,
     agentIds,
-}: CsvImportWorkflowInput) => {
+}: CsvImportWorkflowInput): CsvImportWorkflowView => {
     const [isPending, setPending] = useState(false)
     const { fail, sourceArg, go, read } = createCsvImportWizardActions({
         patch,

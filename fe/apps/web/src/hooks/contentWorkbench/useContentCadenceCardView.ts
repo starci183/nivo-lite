@@ -2,14 +2,48 @@
 import { useTranslations } from "next-intl"
 import type { Cadence } from "@/modules/content"
 import { useContentCadenceForm } from "@/hooks/rhf"
-import type { ContentChannel, ContentViews } from "@/modules/types"
+import type { ContentChannel, ContentViews, ContentWorkbenchCopy, ContentNoteView } from "@/modules/types"
 import { canManageContentSettings, contentSettingsNoteOf, type ContentViewInput } from "./contentWorkbench.shared"
 import { useContentCadenceCommands } from "./useContentCadenceCommands"
 
 const EMPTY_CADENCE: ReadonlyArray<Cadence> = []
 
+/** The view `useContentCadenceCardView` returns. */
+export interface ContentCadenceCardView {
+    props:
+        | {
+              copy: ContentWorkbenchCopy
+              rows: {
+                  channel: "zalo" | "facebook" | "instagram" | "tiktok"
+                  label: string
+                  on: boolean
+                  perWeek: number
+                  days: number[]
+                  time: string
+              }[]
+              dayNames: string[]
+              canManage: boolean
+              isPending: boolean
+              note: ContentNoteView | null
+          }
+        | undefined
+    on: {
+        change: (channel: ContentChannel, patch: Partial<ContentViews["cadenceRow"]>) => void
+        preset: () =>
+            | Promise<
+                  | {
+                        count: number
+                    }
+                  | undefined
+              >
+            | undefined
+        save: () => Promise<void> | undefined
+        dismissNote: () => void
+    }
+}
+
 /** Owns the active settings rhythm form and its two independent mutation lifetimes. */
-export const useContentCadenceCardView = (input: ContentViewInput) => {
+export const useContentCadenceCardView = (input: ContentViewInput): ContentCadenceCardView => {
     const form = useContentCadenceForm(input.data?.cadence ?? EMPTY_CADENCE)
     const { save, presets } = useContentCadenceCommands(input, form)
     const rows = form.watch("rows")

@@ -7,9 +7,25 @@ import { toast } from "@/modules/toast"
 import { navigation } from "@/modules/i18n"
 import { workspaceRenewalPaymentPath } from "@/modules/routes"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
+import type { DataSlot } from "@/modules/types"
+
+/** The view `useCreditPackPurchase` returns. */
+export interface CreditPackPurchaseView {
+    packs: DataSlot<
+        {
+            creditsPerMonth: number
+            priceVnd: number
+            perSeat: boolean
+        }[]
+    >
+    canBuy: boolean
+    isRequesting: boolean
+    retry: () => void
+    buy: (credits: number) => void
+}
 
 /** The add-on credit packs of the plan a workspace is on, and the purchase that opens the payment screen. */
-export const useCreditPackPurchase = (workspaceId: string) => {
+export const useCreditPackPurchase = (workspaceId: string): CreditPackPurchaseView => {
     const router = navigation.useRouter()
     const workspace = useQueryBillingWorkspaceSwr(workspaceId)
     const plan = useQueryBillingPlanSwr(workspace.data?.planCode ?? undefined)

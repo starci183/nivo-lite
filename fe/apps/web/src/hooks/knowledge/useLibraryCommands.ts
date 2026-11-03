@@ -42,8 +42,46 @@ const suggestionActionOf = (state: IdeaDecision | null) => {
 const retryingSourcesOf = (pending: Readonly<Record<string, string>>): ReadonlySet<string> =>
     new Set(Object.keys(pending).filter((key) => !key.startsWith("idea:")))
 
+/** The view `useLibraryCommands` returns. */
+export interface LibraryCommandsView {
+    pending: Readonly<Record<string, string>>
+    retrying: ReadonlySet<string>
+    isPending: boolean
+    retry: (sourceId: string) => Promise<
+        | {
+              id: string
+          }
+        | undefined
+    >
+    reread: (sourceId: string) => Promise<
+        | {
+              id: string
+          }
+        | undefined
+    >
+    applyFacts: (sourceId: string) => Promise<
+        | {
+              applied: number
+              batchId: string
+              skipped: number
+          }
+        | undefined
+    >
+    undoFacts: (
+        batchId: string,
+        sourceId: string,
+    ) => Promise<
+        | {
+              kept: number
+              restored: number
+          }
+        | undefined
+    >
+    decide: (key: string, state: IdeaDecision | null) => Promise<boolean | undefined>
+}
+
 /** Each caller awaits its actual command and revalidation, and row data receives only the initiating action's identity. */
-export const useLibraryCommands = () => {
+export const useLibraryCommands = (): LibraryCommandsView => {
     const workspace = useWorkspaceKey(QUERY_KNOWLEDGE_SOURCES_SWR_KEY, [])
     const runGraphQL = useGraphQLWithToast()
     const retrySource = useMutateRetryKnowledgeSourceSwr()
