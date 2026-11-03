@@ -4,8 +4,9 @@ export type OrderStatus = "pending" | "paid" | "expired" | "cancelled"
 /**
  * Plan: first payment or renewal. Upgrade: a higher plan for the prorated difference. Topup: a legacy pack of extra credits.
  * Credit pack: an add-on pack of the plan, added to the allowance of the month it is bought in.
+ * Agent template: a paid listing of the marketplace, whose license and creator ledger entries the back end writes when it is paid.
  */
-export type OrderKind = "plan" | "upgrade" | "topup" | "credit_pack"
+export type OrderKind = "plan" | "upgrade" | "topup" | "credit_pack" | "agent_template"
 
 /** An order, or null when none matches. */
 export type OrderLookup = PaymentOrder | null

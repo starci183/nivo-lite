@@ -243,5 +243,33 @@ describe("PaymentOrdersService", () => {
             expect(hit.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", kind: "upgrade" })
             await expect(orders.findOpenUpgrade(query)).resolves.toBeNull()
         })
+
+        it("finds the pending order of a paid listing for the listing and amount, or none", async () => {
+            const em = mockEntityManager()
+            const hit = fakeQueryBuilder({ getOne: ROW })
+            answerQueryBuilders(em, hit, fakeQueryBuilder({ getOne: null }))
+            const orders = await build(em)
+
+            await expect(orders.findOpenAgentTemplate(query)).resolves.toMatchObject({ id: "order-1" })
+            expect(hit.argsOf("andWhere")[1]).toEqual([
+                "o.detail ->> 'listingId' = :target",
+                { target: "credits_1000" },
+            ])
+            expect(hit.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", kind: "agent_template" })
+            await expect(orders.findOpenAgentTemplate(query)).resolves.toBeNull()
+        })
+    })
+
+    describe("findByCode", () => {
+        it("reads an order by its code in capitals, in the given transaction when there is one, and answers none for an unknown code", async () => {
+            const em = mockEntityManager({ findOne: [PaymentOrderEntity, ROW] })
+            const tx = mockEntityManager({ findOne: [PaymentOrderEntity, null] })
+            const orders = await build(em)
+
+            await expect(orders.findByCode("nivo8f3k2")).resolves.toMatchObject({ id: "order-1" })
+            expect(em.findOne).toHaveBeenCalledWith(PaymentOrderEntity, { where: { orderCode: "NIVO8F3K2" } })
+            await expect(orders.findByCode("zzz", tx)).resolves.toBeNull()
+            expect(tx.findOne).toHaveBeenCalledWith(PaymentOrderEntity, { where: { orderCode: "ZZZ" } })
+        })
     })
 })
