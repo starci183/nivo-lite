@@ -40,6 +40,7 @@ import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { ZaloInboxModule, ZaloInboxPageReadService } from "@modules/domain/zalo-inbox"
 import { ZaloWizardDraftsModule } from "@modules/domain/zalo-wizard-drafts"
 import { MAIL_ERROR_KINDS, MAIL_MESSAGES, MailModule } from "@modules/integrations/mail"
+import { SEPAY_ERROR_KINDS, SEPAY_MESSAGES, SepayModule } from "@modules/integrations/sepay"
 import { TELEGRAM_ERROR_KINDS, TELEGRAM_MESSAGES, TelegramModule } from "@modules/integrations/telegram"
 import { ZALO_ERROR_KINDS, ZALO_MESSAGES, ZaloModule } from "@modules/integrations/zalo"
 import type { ApiOptions } from "../api.options"
@@ -48,6 +49,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** The messaging area of the API, in registration order. */
 export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     TelegramModule.register({ isGlobal: true, ...options.telegram }),
+    SepayModule.register({ isGlobal: true, ...options.sepay }),
     ZaloModule.register({ isGlobal: true, ...options.zalo }),
     MailModule.register({ isGlobal: true, ...options.mail }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
@@ -88,6 +90,7 @@ export const messagingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     CONVERSATIONS_ERROR_KINDS,
     MAIL_ERROR_KINDS,
     TELEGRAM_ERROR_KINDS,
+    SEPAY_ERROR_KINDS,
     ZALO_ERROR_KINDS,
     CHAT_MARKERS_ERROR_KINDS,
     MCP_GATEWAY_ERROR_KINDS,
@@ -105,6 +108,7 @@ export const messagingMessages: ReadonlyArray<MessageBundle> = [
     CUSTOMER_TURNS_MESSAGES,
     MAIL_MESSAGES,
     TELEGRAM_MESSAGES,
+    SEPAY_MESSAGES,
     ZALO_MESSAGES,
     CHAT_MARKERS_MESSAGES,
     MCP_GATEWAY_MESSAGES,

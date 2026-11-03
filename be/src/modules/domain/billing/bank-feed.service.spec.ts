@@ -495,3 +495,32 @@ describe("BankFeedService debits", () => {
         expect(tx.em.query).toHaveBeenCalledWith(MARK_CONNECTION_FED, expect.anything())
     })
 })
+describe("BankFeedService polled credits", () => {
+    const polled = { amount: 5000, content: "BUI NGUYEN DINH", eventId: "sepay:95958515", fallbackBankName: "MBBank" }
+    it("claims a polled transaction under the webhook key, tagged as a poll, and queues it once", async () => {
+        const { feed, feedInbox, write } = await build()
+        await expect(feed.acceptPolledCredit("conn-1", "sepay-feed", "conn-1:sepay:95958515", polled)).resolves.toBe(
+            true,
+        )
+        const manager = feedInbox.claim.mock.calls[0]?.[0]
+        expect(feedInbox.claim).toHaveBeenCalledWith(manager, "sepay-feed", "conn-1:sepay:95958515", {
+            connection: "conn-1",
+            credits: [polled],
+            source: "poll",
+        })
+        expect(write).toHaveBeenCalledWith(
+            manager,
+            BANK_FEED_DELIVERY_QUEUE,
+            { provider: "sepay-feed", deliveryId: "conn-1:sepay:95958515" },
+            { dedupeKey: "bank-feed-delivery:sepay-feed:conn-1:sepay:95958515" },
+        )
+    })
+    it("records nothing when the webhook already delivered the transaction", async () => {
+        const { feed, feedInbox, outbox } = await build()
+        feedInbox.claim.mockResolvedValue(false)
+        await expect(feed.acceptPolledCredit("conn-1", "sepay-feed", "conn-1:sepay:95958515", polled)).resolves.toBe(
+            false,
+        )
+        expect(outbox.jobs).toEqual([])
+    })
+})

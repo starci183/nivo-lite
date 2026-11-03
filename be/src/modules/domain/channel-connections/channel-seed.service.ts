@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { randomSecret, safeEqual } from "@modules/domain/connection-secrets"
+import { ConnectionApiTokenService, randomSecret, safeEqual } from "@modules/domain/connection-secrets"
 import { ConnectionsService, sha256 } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import type {
@@ -60,7 +60,10 @@ const outcomeOf = (
  * given. Nothing here reaches a provider: the owner checks each connection in the console.
  */
 export class ChannelSeedService {
-    constructor(private readonly connections: ConnectionsService) {}
+    constructor(
+        private readonly connections: ConnectionsService,
+        private readonly apiTokens: ConnectionApiTokenService,
+    ) {}
 
     /** Ensures the four connections of the workspace of `actor`; answers what each ended as, never a value. */
     async ensure(actor: ConnectionActor, seed: ChannelSeed): Promise<ReadonlyArray<SeededConnection>> {
@@ -142,6 +145,8 @@ export class ChannelSeedService {
         } else {
             await this.keepSepay(actor, found, key, facts)
         }
+        const apiToken = filled(seed.apiToken)
+        if (apiToken !== undefined) await this.apiTokens.write(seed.id, apiToken)
         return outcomeOf("sepay", seed.id, found, key !== undefined)
     }
 

@@ -13,6 +13,7 @@ import { parseLoyaltyOtpsConfig } from "@modules/domain/loyalty-otps"
 import { parseDataSourcesConfig } from "@modules/integrations/data-sources"
 import { parseTelegramUserConfig } from "@modules/integrations/telegram-user"
 import { parseMailConfig } from "@modules/integrations/mail"
+import { parseSepayConfig } from "@modules/integrations/sepay"
 import { parseTelegramConfig } from "@modules/integrations/telegram"
 import { parseZaloConfig } from "@modules/integrations/zalo"
 import { parseZaloInboxConfig } from "@modules/domain/zalo-inbox"
@@ -79,6 +80,8 @@ export interface ApiOptions {
     readonly channels: ReturnType<typeof parseChannelsConfig>
     /** The Telegram Bot API host. */
     readonly telegram: ReturnType<typeof parseTelegramConfig>
+    /** The SePay user API host. */
+    readonly sepay: ReturnType<typeof parseSepayConfig>
     /** The Zalo OAuth and Open API hosts. */
     readonly zalo: ReturnType<typeof parseZaloConfig>
     /** The reply window, the stale age and the backfill window of the Zalo inbox reconcile job. */
@@ -146,6 +149,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     loyaltyOtps: parseLoyaltyOtpsConfig(env),
     channels: parseChannelsConfig(env),
     telegram: parseTelegramConfig(env),
+    sepay: parseSepayConfig(env),
     zalo: parseZaloConfig(env),
     zaloInbox: parseZaloInboxConfig(env),
     mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),

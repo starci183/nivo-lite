@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connection-secrets.module-definition"
+import { ConnectionApiTokenService } from "./connection-api-token.service"
 import { ConnectionSecretsService } from "./connection-secrets.service"
 
 @Module({})
@@ -11,8 +12,8 @@ export class ConnectionSecretsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ConnectionSecretsService],
-            exports: [ConnectionSecretsService],
+            providers: [...(base.providers ?? []), ConnectionSecretsService, ConnectionApiTokenService],
+            exports: [ConnectionSecretsService, ConnectionApiTokenService],
         }
     }
 }

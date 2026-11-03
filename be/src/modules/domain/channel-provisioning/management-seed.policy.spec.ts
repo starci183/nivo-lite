@@ -6,6 +6,7 @@ const refused = (field: string) =>
     new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
 
 const SEPAY_KEY = ["nivo", "ab12".repeat(16)].join("_")
+const SEPAY_API_TOKEN = ["api", "token", "1"].join("-")
 const SEALED = {
     WORKSPACE_OWNER_EMAIL: "Owner@Nivo.test",
     WORKSPACE_SMTP_HOST: "smtp.nivo.test",
@@ -21,6 +22,7 @@ const SEALED = {
     WORKSPACE_SEPAY_BANK_CODE: "VCB",
     WORKSPACE_SEPAY_ACCOUNT_HOLDER: "NIVO",
     WORKSPACE_SEPAY_API_KEY: SEPAY_KEY,
+    WORKSPACE_SEPAY_API_TOKEN: SEPAY_API_TOKEN,
     WORKSPACE_PAYOS_CLIENT_ID: "client",
     WORKSPACE_PAYOS_API_KEY: "payos-key-1",
     WORKSPACE_PAYOS_CHECKSUM_KEY: "checksum-1",
@@ -62,6 +64,7 @@ describe("readManagementSeed > a production document", () => {
                 accountNumber: "0123456789",
                 holder: "NIVO",
                 apiKey: SEPAY_KEY,
+                apiToken: SEPAY_API_TOKEN,
             },
             payos: {
                 id: MANAGEMENT_CONNECTION_IDS.payos,
@@ -91,12 +94,14 @@ describe("readManagementSeed > a production document", () => {
                     "WORKSPACE_SMTP_PASSWORD",
                     "WORKSPACE_SMTP_FROM",
                     "WORKSPACE_SEPAY_API_KEY",
+                    "WORKSPACE_SEPAY_API_TOKEN",
                 ),
             ),
         )
 
         expect(seed.smtp).toBeUndefined()
         expect(seed.channels.sepay.apiKey).toBeUndefined()
+        expect(seed.channels.sepay.apiToken).toBeUndefined()
     })
 
     it.each([

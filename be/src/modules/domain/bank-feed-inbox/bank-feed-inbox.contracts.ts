@@ -21,6 +21,8 @@ export interface FeedReceiptPayload {
     readonly connection: string
     /** The normalized credits of the delivery. */
     readonly credits: ReadonlyArray<IncomingCredit>
+    /** `poll` when a reconcile run read the transaction back from the provider because its webhook never delivered it; absent for a webhook delivery. */
+    readonly source?: "poll"
 }
 
 /** A pending receipt held by the caller's transaction lock. */

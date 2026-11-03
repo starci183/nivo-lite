@@ -14,6 +14,7 @@ const EXPECTED = [
     ["agent-work-sweep", "agent_turn", "agent-turn.sweep", {}, 1],
     ["agents-sync-all", "agents", "agents.sync", {}, 5],
     ["automation-tick", "automation", "automation.tick", {}, 1],
+    ["bank-feed-reconcile-tick", "bank-feed-poll", "reconcile-bank-feed", {}, 5],
     ["connection-health-tick", "connection_health", "connection_health", { silentAfterHours: 72 }, 15],
     ["content-tick", "content_tick", "content_tick", {}, 15],
     ["data-sync-tick", "data_sync", "data_sync", { tick: true }, 1],

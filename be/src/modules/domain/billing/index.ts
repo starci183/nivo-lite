@@ -1,4 +1,5 @@
 export { BankFeedDeliveryService } from "./bank-feed-delivery.service"
+export { BankFeedPollService } from "./bank-feed-poll.service"
 export { BankFeedService } from "./bank-feed.service"
 export { parseBillingConfig } from "./billing.config"
 export { BILLING_ERROR_KINDS, BillingError, BillingErrorCode } from "./errors/billing.error"
