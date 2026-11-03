@@ -8,8 +8,38 @@ const inFilter = (row: OfficeConversationRowView, filter: Filter): boolean => {
     if (filter === "customers") return row.kind === "customer"
     return row.unread > 0
 }
+type UseOfficeConversationViewResult = {
+    view: {
+        list: {
+            conversations: OfficeConversationRowView[]
+            selectedRoom: string
+            pendingCount: number
+        }
+        query: string
+        filter: Filter
+        filters: {
+            id: string
+            label: string
+        }[]
+        copy: {
+            searchLabel: string
+            searchPlaceholder: string
+            clearSearch: string
+            filterLabel: string
+            listLabel: string
+            empty: string
+        }
+    }
+    query: (value: string) => void
+    filter: (value: string) => void
+}
+
 /** Owns search and filtering while the conversation list is mounted, including the query-dependent empty text. */
-export const useOfficeConversationView = (list: OfficeListView, text: OfficeText, mounted: boolean) => {
+export const useOfficeConversationView = (
+    list: OfficeListView,
+    text: OfficeText,
+    mounted: boolean,
+): UseOfficeConversationViewResult => {
     const [state, setState] = useState<{ mounted: boolean; query: string; filter: Filter }>({
         mounted,
         query: "",
@@ -44,8 +74,8 @@ export const useOfficeConversationView = (list: OfficeListView, text: OfficeText
                 empty: q !== "" ? text("noMatches", { q }) : text(filter === "unread" ? "emptyUnread" : "emptyList"),
             },
         },
-        query: (value: string) => setState((current) => ({ ...current, query: value })),
-        filter: (value: string) => {
+        query: (value: string): void => setState((current) => ({ ...current, query: value })),
+        filter: (value: string): void => {
             if (value === "all" || value === "groups" || value === "customers" || value === "unread")
                 setState((current) => ({ ...current, filter: value }))
         },

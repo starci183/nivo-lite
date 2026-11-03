@@ -8,12 +8,13 @@ import { z } from "zod"
 import { JOB_TITLE_MIN, jobDefaults } from "@/hooks/hiringJobs"
 import type { HiringJobValues } from "@/modules/types"
 import type { JobView } from "@/hooks/hiringWire"
+import type { UseFormReturn } from "react-hook-form"
 
 /**
  * The job editor form: a zod schema whose message comes from the `hiring` catalog, validated as the owner types. The values follow
  * the job being edited (null: a new one), so the one mounted form serves every job the editor opens for.
  */
-export const useHiringJobForm = (job: JobView | null) => {
+export const useHiringJobForm = (job: JobView | null): UseFormReturn<HiringJobValues> => {
     const t = useTranslations("hiring")
     const defaults = useMemo(
         () => jobDefaults(job, [t("starterQuestionExperience"), t("starterQuestionStart")]),

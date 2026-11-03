@@ -24,8 +24,32 @@ interface Busy {
 }
 const FIELD_NAMES: ReadonlySet<string> = new Set(KNOWN_FIELDS)
 
+type UseSalesAttentionViewResult = {
+    props: {
+        label: string
+        emptyTitle: string
+        emptyBody: string
+        rows: readonly AttentionItemView[]
+        answerLabel: string
+        decideLabel: string
+        retryLabel: string
+        stopLabel: string
+        followUpLabel: string
+        replyLabel: string
+        isBusy: boolean
+    }
+    on: {
+        retry: (key: string, workItemId: string) => void
+        stop: (key: string, workItemId: string) => void
+    }
+}
+
 /** Owns the former Attention mount's retry/stop state and resolves its existing row facts. */
-export const useSalesAttentionView = (data: SalesWorkbenchData | null, isActive: boolean, scope: string) => {
+export const useSalesAttentionView = (
+    data: SalesWorkbenchData | null,
+    isActive: boolean,
+    scope: string,
+): UseSalesAttentionViewResult => {
     const t = useTranslations("workbenchSales")
     const g = useTranslations("governance")
     const actions = useSalesActions({ isActive, scope })
@@ -71,12 +95,12 @@ export const useSalesAttentionView = (data: SalesWorkbenchData | null, isActive:
             isBusy: actions.isMutating,
         },
         on: {
-            retry: (key: string, workItemId: string) => {
+            retry: (key: string, workItemId: string): void => {
                 run("retry", key, workItemId).catch((error: unknown) =>
                     runGraphQL(() => Promise.reject(error), { showSuccessToast: false }),
                 )
             },
-            stop: (key: string, workItemId: string) => {
+            stop: (key: string, workItemId: string): void => {
                 run("stop", key, workItemId).catch((error: unknown) =>
                     runGraphQL(() => Promise.reject(error), { showSuccessToast: false }),
                 )

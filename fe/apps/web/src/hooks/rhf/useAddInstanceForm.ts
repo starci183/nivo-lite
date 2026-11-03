@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { cleanInstanceName, instanceNameKey } from "@/modules/installations"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the add instance form. */
 export interface AddInstanceValues {
@@ -13,7 +14,10 @@ export interface AddInstanceValues {
 }
 
 /** The add instance form: the name is 1-80 characters and not used by another instance of the type (the server checks again). */
-export const useAddInstanceForm = (defaultName: string, taken: ReadonlyArray<string>) => {
+export const useAddInstanceForm = (
+    defaultName: string,
+    taken: ReadonlyArray<string>,
+): UseFormReturn<AddInstanceValues> => {
     const t = useTranslations("modulesCore")
     const schema = useMemo(
         () =>

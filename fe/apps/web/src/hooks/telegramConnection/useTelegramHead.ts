@@ -13,8 +13,18 @@ import { useTelegramPage } from "./useTelegramPage"
 
 const CHIP_KEYS = { ok: "chipOk", check: "chipCheck", off: "chipOff" } as const
 
+type UseTelegramHeadResult = {
+    head: DataSlot<ConnectionHeadView>
+    notice: string
+    disconnect: () => Promise<void>
+    isDisconnecting: boolean
+    isMissing: boolean
+    isOwner: boolean
+    isLive: boolean
+}
+
 /** The header of the page of a Telegram bot connection, its status kind, and its one owner command: disconnect. */
-export const useTelegramHead = (connectionId: string | undefined) => {
+export const useTelegramHead = (connectionId: string | undefined): UseTelegramHeadResult => {
     const t = useTranslations("telegramConnection")
     const settle = useSettledGraphQL()
     const router = navigation.useRouter()

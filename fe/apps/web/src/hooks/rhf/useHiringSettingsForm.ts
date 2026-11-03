@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { RETENTION_MAX_DAYS, RETENTION_MIN_DAYS } from "@/hooks/hiringSettings"
 import type { SettingsValues } from "@/hooks/hiringSettings"
+import type { UseFormReturn } from "react-hook-form"
 
 const schema = z.object({
     publicSlug: z.string(),
@@ -17,5 +18,5 @@ const schema = z.object({
 })
 
 /** The settings form: the public link name, how long closed files are kept, the consent text, the tone and the three switches. */
-export const useHiringSettingsForm = (defaults: SettingsValues) =>
+export const useHiringSettingsForm = (defaults: SettingsValues): UseFormReturn<SettingsValues> =>
     useForm<SettingsValues>({ resolver: zodResolver(schema), defaultValues: defaults, mode: "onChange" })

@@ -14,11 +14,16 @@ export interface SepayStepState {
     readonly isOpen: boolean
 }
 
+type UseSepayStepsResult = {
+    steps: readonly SepayStepState[]
+    toggle: (id: SepayStepId, isOpen: boolean) => void
+}
+
 /**
  * The five setup steps of a SePay connection in back end order (environment, bank account, the webhook on SePay, the test, the agent
  * and matching): each says whether it is done, the first step not done opens on its own, and the reader opens or closes any step.
  */
-export const useSepaySteps = (connectionId: string) => {
+export const useSepaySteps = (connectionId: string): UseSepayStepsResult => {
     const t = useTranslations("sepayConnection")
     const { slot } = useSepayConnection(connectionId)
     const [toggled, setToggled] = useState<Readonly<Partial<Record<SepayStepId, boolean>>>>({})
@@ -52,6 +57,6 @@ export const useSepaySteps = (connectionId: string) => {
               }))
     return {
         steps,
-        toggle: (id: SepayStepId, isOpen: boolean) => setToggled((current) => ({ ...current, [id]: isOpen })),
+        toggle: (id: SepayStepId, isOpen: boolean): void => setToggled((current) => ({ ...current, [id]: isOpen })),
     }
 }

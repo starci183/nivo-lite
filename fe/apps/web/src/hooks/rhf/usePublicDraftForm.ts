@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { INPUT_BOUNDS, inputBoundsIssues } from "@/modules/api"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The internal sources and instructions used to ask for a public draft. */
 interface PublicDraftValues {
@@ -14,8 +15,13 @@ interface PublicDraftValues {
     instructions: string
 }
 
+type UsePublicDraftFormResult = {
+    form: UseFormReturn<PublicDraftValues>
+    maxSources: 5
+}
+
 /** Validates required fields and the backend's collection and text bounds. */
-export const usePublicDraftForm = () => {
+export const usePublicDraftForm = (): UsePublicDraftFormResult => {
     const t = useTranslations("publicBrain")
     const bounds = INPUT_BOUNDS.DraftPublicDocumentInput
     const schema = useMemo(

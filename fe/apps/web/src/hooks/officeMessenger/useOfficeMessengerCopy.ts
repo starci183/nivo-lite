@@ -53,8 +53,71 @@ const chromeOf = (text: OfficeText) => ({
     },
 })
 
+type UseOfficeMessengerCopyResult = {
+    chrome: {
+        headerCopy: {
+            back: string
+            tasksTitle: string
+            mutedChat: string
+            tasksBack: string
+            unmuteChat: string
+            muteChat: string
+            infoClose: string
+            infoOpen: string
+        }
+        infoCopy: {
+            pendingTitle: string
+            pendingNone: string
+            pendingJump: string
+            exceptionsTitle: string
+            exceptionsNone: string
+            exceptionJump: string
+            tasksTitle: string
+            tasksOpen: string
+            membersTitle: string
+            youTag: string
+            mention: string
+            chat11: string
+            addAgent: string
+            cardsTitle: string
+            channelsTitle: string
+            pinsTitle: string
+        }
+        labels: {
+            messenger: string
+            list: string
+            info: string
+            infoOpen: string
+            infoClose: string
+            tasks: string
+            conversation: string
+            nivoCore: string
+            aiBadge: string
+        }
+    }
+    composer: {
+        prompts: string[]
+        copy: {
+            quickLabel: string
+            removeFile: string
+            attachFile: string
+            mentionButton: string
+            composerLabel: string
+            composerPlaceholder: string
+            mentionLabel: string
+            send: string
+            composerHint: string
+        }
+        file: {
+            name: string | null
+            problem: string | null
+            accept: string
+        }
+    }
+}
+
 /** Resolves the messenger chrome and composer labels in the active Office locale. */
-export const useOfficeMessengerCopy = (input: MessengerCopyInput) => {
+export const useOfficeMessengerCopy = (input: MessengerCopyInput): UseOfficeMessengerCopyResult => {
     const { t } = useOfficeWords()
     return {
         chrome: chromeOf(t),

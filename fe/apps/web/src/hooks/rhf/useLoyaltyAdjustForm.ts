@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { LOYALTY_ADJUST_REASON_MAX, parseSigned } from "@/hooks/loyalty"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the point adjustment form; the points are typed as a signed number. */
 export interface LoyaltyAdjustValues {
@@ -14,7 +15,7 @@ export interface LoyaltyAdjustValues {
 }
 
 /** The point adjustment form: a signed whole number other than zero and a required reason, with messages from the `loyalty` catalog. */
-export const useLoyaltyAdjustForm = () => {
+export const useLoyaltyAdjustForm = (): UseFormReturn<LoyaltyAdjustValues> => {
     const t = useTranslations("loyalty")
     const schema = useMemo(
         () =>

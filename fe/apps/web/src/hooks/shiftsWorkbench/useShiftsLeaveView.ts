@@ -1,6 +1,6 @@
 import { useFeatureReset } from "@/hooks/reuseables"
 import { useShiftsOperation } from "./useShiftsOperation"
-import type { ShiftsPersonalViews, ShiftsPersonalActions } from "@/modules/types"
+import type { ShiftsPersonalViews, ShiftsPersonalActions, ShiftsSetupViews } from "@/modules/types"
 import type { ShiftsPanelInput } from "./shiftsWorkbench.shared"
 type FullView = { readonly props: ShiftsPersonalViews["leaveData"]; readonly on: ShiftsPersonalActions["leave"] }
 
@@ -20,8 +20,23 @@ const DATE_CHOICES = 90
 const LIST_LIMIT = 6
 const NO_OPTIONS: ReadonlyArray<{ readonly id: string; readonly label: string }> = []
 
+type UseShiftsLeaveViewResult =
+    | {
+          copy: Omit<ShiftsSetupViews["availability"], "rows" | "fields">
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<ShiftsSetupViews["availability"], "rows" | "fields">
+          data: Pick<ShiftsSetupViews["availability"], "rows" | "fields">
+          on: {
+              readonly field: (id: string, value: string) => void
+              readonly submit: () => void
+          }
+      }
+
 /** Ask for leave: the day range and the reason, and my latest requests with their state. */
-export const useShiftsLeaveView = (input: ShiftsPanelInput) => {
+export const useShiftsLeaveView = (input: ShiftsPanelInput): UseShiftsLeaveViewResult => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
     const commands = useShiftsMineCommands()

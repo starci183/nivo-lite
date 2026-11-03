@@ -50,8 +50,16 @@ export const salesFiguresOf = (metrics: SalesMetrics, words: SalesWords): Readon
         },
     ]
 }
+type SalesFiguresPlaceholderOfResult = {
+    id: string
+    term: string
+    value: string
+}[]
+
 /** The existing four Sales figure placeholders, with the same localized terms and empty values. */
-export const salesFiguresPlaceholderOf = (t: ReturnType<typeof useTranslations<"workbenchSales">>) => [
+export const salesFiguresPlaceholderOf = (
+    t: ReturnType<typeof useTranslations<"workbenchSales">>,
+): SalesFiguresPlaceholderOfResult => [
     { id: "open", term: t("metricOpen"), value: "" },
     { id: "proposal", term: t("metricProposal"), value: "" },
     { id: "won", term: t("metricWon"), value: "" },

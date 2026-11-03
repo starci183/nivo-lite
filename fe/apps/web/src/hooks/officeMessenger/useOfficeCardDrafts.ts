@@ -6,8 +6,15 @@ import type { OfficeCardDraft } from "@/modules/types"
 
 const COPIED_MS = 1500
 
+type UseOfficeCardDraftsResult = {
+    drafts: Readonly<Record<string, OfficeCardDraft>>
+    copiedKey: string | null
+    editCard: (key: string, patch: Partial<OfficeCardDraft>) => void
+    copy: (key: string, text: string) => void
+}
+
 /** The product state of the thread cards: what the owner edits on each card, and the line whose text was just copied. */
-export const useOfficeCardDrafts = () => {
+export const useOfficeCardDrafts = (): UseOfficeCardDraftsResult => {
     const [drafts, setDrafts] = useState<Readonly<Record<string, OfficeCardDraft>>>({})
     const [copiedKey, setCopiedKey] = useState<string | null>(null)
 
@@ -17,11 +24,11 @@ export const useOfficeCardDrafts = () => {
         return () => window.clearTimeout(timer)
     }, [copiedKey])
 
-    const editCard = useCallback((key: string, patch: Partial<OfficeCardDraft>) => {
+    const editCard = useCallback((key: string, patch: Partial<OfficeCardDraft>): void => {
         setDrafts((current) => ({ ...current, [key]: { ...(current[key] ?? EMPTY_OFFICE_CARD_DRAFT), ...patch } }))
     }, [])
 
-    const copy = useCallback((key: string, text: string) => {
+    const copy = useCallback((key: string, text: string): void => {
         void navigator.clipboard
             .writeText(text)
             .then(() => setCopiedKey(key))

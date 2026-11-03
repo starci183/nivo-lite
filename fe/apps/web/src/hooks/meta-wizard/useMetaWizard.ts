@@ -5,11 +5,20 @@ import { allAgentIds, resumeNoteOf, resumeSlotOf, useAdoptOnce } from "@/hooks/c
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
 import { useQueryMetaConnectionSwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
-import type { AgentOption, MetaCheck, MetaWizardConnection, WizardNote } from "@/modules/types"
+import type {
+    AgentOption,
+    FirstEvent,
+    DataSlot,
+    MetaCheck,
+    MetaWizardConnection,
+    WizardNote,
+    WizardResume,
+} from "@/modules/types"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { META_STEPS, metaFailureOf, metaStartStepOf } from "./meta-wizard.shared"
 import { useMetaCommands, type MetaCommands } from "./useMetaCommands"
+import type { SetStateAction, Dispatch } from "react"
 
 /** What the Meta wizard needs from its drawer. */
 interface MetaWizardInput {
@@ -22,11 +31,38 @@ interface MetaWizardInput {
     readonly onClose: (changed: boolean) => void
 }
 
+type UseMetaWizardResult = {
+    reads: readonly SlotRead<unknown>[]
+    index: number
+    step: "connect" | "pick" | "agent" | "test"
+    conn: MetaWizardConnection | null
+    pageId: string
+    agentIds: readonly string[]
+    check: MetaCheck | null
+    note: WizardNote | null
+    isPending: boolean
+    isChecking: boolean
+    resume: DataSlot<WizardResume>
+    firstEvent: FirstEvent | null
+    on: {
+        retry: () => void
+        go: (to: number) => void
+        login: () => void
+        choose: () => void
+        saveAgents: () => void
+        runCheck: (repair: boolean) => void
+        close: () => void
+        done: () => void
+        page: Dispatch<SetStateAction<string>>
+        agents: Dispatch<SetStateAction<readonly string[]>>
+    }
+}
+
 /**
  * The Meta wizard's state machine: log in with Facebook (the browser leaves for Meta and comes back here), pick the Page (its Instagram
  * account comes with it), attach the agents, then check what Meta really has and wait for the first message or comment.
  */
-export const useMetaWizard = (input: MetaWizardInput) => {
+export const useMetaWizard = (input: MetaWizardInput): UseMetaWizardResult => {
     const tm = useTranslations("metaWizard")
     const commands = useMetaCommands()
     const setAgentsOf = useSetConnectionAgents()
@@ -86,7 +122,7 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         resume: resumeSlotOf(input.resumeId, resume),
         firstEvent,
         on: {
-            retry: () => {
+            retry: (): void => {
                 void resume.mutate()
             },
             go,
@@ -94,8 +130,8 @@ export const useMetaWizard = (input: MetaWizardInput) => {
             choose,
             saveAgents,
             runCheck,
-            close: () => input.onClose(conn !== null),
-            done: () => input.onClose(true),
+            close: (): void => input.onClose(conn !== null),
+            done: (): void => input.onClose(true),
             page: setPageId,
             agents: setAgentIds,
         },
@@ -131,13 +167,13 @@ const createMetaWizardActions = ({
     setAgentsOf,
     agentIds,
 }: MetaWizardActionsInput) => {
-    const go = (to: number) => {
+    const go = (to: number): void => {
         setNote(null)
         setIndex(to)
     }
     const fail = (message: string) => setNote({ tone: "negative", text: message })
 
-    const runCheck = (repair: boolean) => {
+    const runCheck = (repair: boolean): void => {
         if (conn === null) return
         startChecking(async () => {
             const answer = await commands.check(conn.id, repair)
@@ -146,14 +182,14 @@ const createMetaWizardActions = ({
         })
     }
 
-    const login = () =>
+    const login = (): void =>
         startTransition(async () => {
             setNote(null)
             const answer = await commands.authorize(conn === null ? undefined : conn.id)
             if (answer.kind !== "ok") return fail(answer.message)
             window.location.assign(answer.value)
         })
-    const choose = () => {
+    const choose = (): void => {
         if (conn === null || pageId === "") return setNote({ tone: "negative", text: tm("pickPick") })
         startTransition(async () => {
             const answer = await commands.choosePage(conn.id, pageId)
@@ -162,7 +198,7 @@ const createMetaWizardActions = ({
             go(2)
         })
     }
-    const saveAgents = () => {
+    const saveAgents = (): void => {
         if (conn === null) return go(3)
         startTransition(async () => {
             const answer = await setAgentsOf(conn.id, agentIds)

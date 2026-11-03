@@ -1,6 +1,6 @@
 import type { useShiftsOperation } from "./useShiftsOperation"
 import { useShiftsAvailabilityDraft } from "./useShiftsAvailabilityDraft"
-import type { ShiftsPersonalViews, ShiftsPersonalActions } from "@/modules/types"
+import type { ShiftsPersonalViews, ShiftsPersonalActions, ShiftsSetupViews } from "@/modules/types"
 import type { ShiftsPanelInput } from "./shiftsWorkbench.shared"
 type FullView = {
     readonly props: ShiftsPersonalViews["myAvailabilityData"]
@@ -86,8 +86,24 @@ const buildMyAvailabilityReady = (context: AvailabilityReadyInput): FullView => 
     return view
 }
 
+type UseShiftsMyAvailabilityViewResult =
+    | {
+          copy: Omit<ShiftsSetupViews["availability"], "fields" | "rows">
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<ShiftsSetupViews["availability"], "fields" | "rows">
+          data: Pick<ShiftsSetupViews["availability"], "fields" | "rows">
+          on: {
+              readonly field: (id: string, value: string) => void
+              readonly available: (value: boolean) => void
+              readonly submit: () => void
+          }
+      }
+
 /** When I can work: tell the shop the days or hours I cannot, and see what was approved. */
-export const useShiftsMyAvailabilityView = (input: ShiftsPanelInput) => {
+export const useShiftsMyAvailabilityView = (input: ShiftsPanelInput): UseShiftsMyAvailabilityViewResult => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
     const mine = input.mine.data

@@ -1,7 +1,7 @@
 "use client"
 
 import type { VideoEditorActions } from "@/modules/types"
-type VideoGoalFormActions = VideoEditorActions["goal"]
+export type VideoGoalFormActions = VideoEditorActions["goal"]
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useVideoActions } from "@/hooks/video"
@@ -22,6 +22,7 @@ import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { videoOwnerOf } from "./videoWorkbench.shared"
 import type { VideoViewInput } from "./videoWorkbench.shared"
+import type { Goal } from "@/modules/video"
 interface GoalProjection {
     readonly input: VideoViewInput
     readonly t: ReturnType<typeof useTranslations<"video">>
@@ -61,8 +62,43 @@ const goalFieldsOf = (context: GoalProjection) => {
         read: input.editor === null ? null : { disabled: !input.editor?.canEdit || initial.locked },
     }
 }
+type UseVideoGoalStepViewResult = {
+    on: VideoGoalFormActions
+    ui: {
+        heading: string
+        goals: {
+            value: Goal
+            label: string
+            description: string
+        }[]
+        goal: string
+        aspectLabel: string
+        aspects: {
+            value: "9:16" | "1:1" | "16:9"
+            label: string
+        }[]
+        aspect: string
+        durationLabel: string
+        durations: {
+            value: string
+            label: string
+        }[]
+        seconds: string
+        titleLabel: string
+        titleHint: string
+        title: string
+        nextLabel: string
+        pending: boolean
+        error: string | null
+        dismissLabel: string
+    }
+    read: {
+        disabled: boolean
+    } | null
+}
+
 /** Actual goal/create form of the selected editor lifetime. */
-export const useVideoGoalStepView = (input: VideoViewInput) => {
+export const useVideoGoalStepView = (input: VideoViewInput): UseVideoGoalStepViewResult => {
     const t = useTranslations("video"),
         owner = videoOwnerOf(input, "goal"),
         lifetime = useFeatureLifetime(owner.isActive, owner.scope),

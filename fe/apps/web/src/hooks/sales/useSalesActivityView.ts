@@ -5,8 +5,18 @@ import { actionWordOf } from "@/hooks/actionWord"
 import type { ActivityItemView, SalesWorkbenchData } from "@/modules/types"
 import { EVIDENCE_TONES } from "./sales.shared"
 
+type UseSalesActivityViewResult = {
+    label: string
+    intro: string
+    emptyTitle: string
+    emptyBody: string
+    rows: readonly ActivityItemView[]
+    evidenceTitle: string
+    byPolicy: string
+}
+
 /** Resolves the same routine-work rows from the workbench read owned by Sales. */
-export const useSalesActivityView = (data: SalesWorkbenchData | null) => {
+export const useSalesActivityView = (data: SalesWorkbenchData | null): UseSalesActivityViewResult => {
     const t = useTranslations("workbenchSales")
     const g = useTranslations("governance")
     const format = useFormatter()

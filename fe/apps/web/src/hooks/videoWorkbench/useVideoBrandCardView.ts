@@ -2,7 +2,7 @@
 
 import type { VideoLibraryActions, VideoLibraryViews } from "@/modules/types"
 type VideoBrandSettingsFields = VideoLibraryViews["brand"]
-type VideoBrandSettingsActions = VideoLibraryActions["brand"]
+export type VideoBrandSettingsActions = VideoLibraryActions["brand"]
 import type { Brand, MediaItem } from "@/modules/video"
 import { useState } from "react"
 import { useTranslations } from "next-intl"
@@ -80,8 +80,50 @@ const brandFieldsOf = (context: BrandProjection) => {
         read: kit === null ? null : { logoUrl: logo?.url ?? null, canEdit: kit.canEdit },
     }
 }
+type UseVideoBrandCardViewResult = {
+    on: VideoBrandSettingsActions
+    ui: {
+        title: string
+        hint: string
+        shopNameLabel: string
+        shopName: string
+        primaryLabel: string
+        primary: string
+        secondaryLabel: string
+        secondary: string
+        colorHint: string
+        logoLabel: string
+        logoNone: string
+        logoUpload: string
+        logoRemove: string
+        hasLogo: boolean
+        musicLabel: string
+        music: string
+        musics: {
+            id: string
+            label: string
+        }[]
+        voiceLabel: string
+        voice: string
+        voices: {
+            id: "vi-VN-HoaiMyNeural" | "vi-VN-NamMinhNeural"
+            label: string
+        }[]
+        saveLabel: string
+        pending: boolean
+        message: {
+            readonly tone: "affirmative" | "negative"
+            readonly text: string
+        } | null
+    }
+    read: {
+        logoUrl: string | null
+        canEdit: boolean
+    } | null
+}
+
 /** The same brand form participates in either the inputs step or its normal brand tab. */
-export const useVideoBrandCardView = (input: VideoViewInput) => {
+export const useVideoBrandCardView = (input: VideoViewInput): UseVideoBrandCardViewResult => {
     const t = useTranslations("video"),
         owner = videoOwnerOf(input, "brand"),
         lifetime = useFeatureLifetime(owner.isActive, owner.scope),

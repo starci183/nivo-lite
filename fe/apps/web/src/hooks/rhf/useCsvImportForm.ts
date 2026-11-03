@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The shortest name an import may have. */
 const CSV_NAME_MIN = 2
@@ -17,7 +18,7 @@ export interface CsvImportValues {
 }
 
 /** The import setup form: a zod schema whose message comes from the `connectorCsv` catalog. */
-export const useCsvImportForm = (initial?: Partial<CsvImportValues>) => {
+export const useCsvImportForm = (initial?: Partial<CsvImportValues>): UseFormReturn<CsvImportValues> => {
     const t = useTranslations("connectorCsv")
     const schema = useMemo(
         () =>

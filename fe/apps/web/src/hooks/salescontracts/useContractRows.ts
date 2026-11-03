@@ -6,7 +6,7 @@ import type { SalesContract } from "@/modules/types"
 import { CONTRACT_TONES, contractDaysLeft, isoDayText } from "./salescontracts.shared"
 
 /** A contract row with every word resolved. */
-interface ContractRow {
+export interface ContractRow {
     readonly id: string
     readonly title: string
     readonly description: string

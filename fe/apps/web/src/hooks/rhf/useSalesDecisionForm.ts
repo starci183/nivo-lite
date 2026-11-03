@@ -9,8 +9,20 @@ import { digitsToNumber, EMPTY_TYPED, fieldKey } from "@/modules/utils"
 
 import type { SalesDecision, TypedDecisionValues } from "@/modules/types"
 
+type UseSalesDecisionFormResult = {
+    typed: TypedDecisionValues
+    reset: () => void
+    validateDecision: (item: SalesDecision) => string | undefined
+    validateForm: (item: SalesDecision) => Promise<boolean>
+    field: (id: string, name: string, value: string) => void
+    draft: (id: string, value: string) => void
+    amount: (id: string, value: string) => void
+    toggleEdit: (id: string) => void
+    finish: (id: string) => void
+}
+
 /** The typed edits of Sales cards, validated before an approval is queued. */
-export const useSalesDecisionForm = () => {
+export const useSalesDecisionForm = (): UseSalesDecisionFormResult => {
     const t = useTranslations("workbenchSales")
     const schema = useMemo(
         () =>
@@ -62,17 +74,17 @@ export const useSalesDecisionForm = () => {
     }
     return {
         typed,
-        reset: () => form.reset(EMPTY_TYPED),
+        reset: (): void => form.reset(EMPTY_TYPED),
         validateDecision,
-        validateForm: (item: SalesDecision) =>
+        validateForm: (item: SalesDecision): Promise<boolean> =>
             form.trigger([
                 `drafts.${item.id}`,
                 ...item.missing.map((name) => `values.${fieldKey(item.id, name)}` as const),
             ]),
-        field: (id: string, name: string, value: string) => form.setValue(`values.${fieldKey(id, name)}`, value),
-        draft: (id: string, value: string) => form.setValue(`drafts.${id}`, value),
-        amount: (id: string, value: string) => form.setValue(`amounts.${id}`, value),
-        toggleEdit: (id: string) => form.setValue(`editing.${id}`, !typed.editing[id]),
-        finish: (id: string) => form.setValue(`editing.${id}`, false),
+        field: (id: string, name: string, value: string): void => form.setValue(`values.${fieldKey(id, name)}`, value),
+        draft: (id: string, value: string): void => form.setValue(`drafts.${id}`, value),
+        amount: (id: string, value: string): void => form.setValue(`amounts.${id}`, value),
+        toggleEdit: (id: string): void => form.setValue(`editing.${id}`, !typed.editing[id]),
+        finish: (id: string): void => form.setValue(`editing.${id}`, false),
     }
 }

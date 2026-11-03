@@ -18,6 +18,10 @@ import { useOpenApiPicks } from "./useOpenApiPicks"
 import { useOpenApiResume } from "./useOpenApiResume"
 import { useOpenApiSource } from "./useOpenApiSource"
 import { useOpenApiTest } from "./useOpenApiTest"
+import type { OpenApiPullField, OpenApiPullDef, OpenApiOp } from "./openapi-wizard.shared"
+import type { SetStateAction, Dispatch } from "react"
+import type { OpenApiSourceRestore } from "./useOpenApiSource"
+import type { OpenApiPicksRestore } from "./useOpenApiPicks"
 
 /** What the OpenAPI wizard needs from its drawer. */
 interface OpenApiWizardInput {
@@ -27,8 +31,223 @@ interface OpenApiWizardInput {
     readonly onClose: (changed: boolean) => void
 }
 
+type UseOpenApiWizardResult = {
+    reads: readonly SlotRead<unknown>[]
+    retryReads: () => void
+    index: number
+    steps: readonly OpenApiStep[]
+    step: OpenApiStep
+    editing: boolean
+    error: string | null
+    isPending: boolean
+    auth: {
+        values: OpenApiAuthValues
+        errors: {
+            baseUrl: string | undefined
+            authName: string | undefined
+        }
+        hasSecret: boolean
+        ready: boolean
+    }
+    source: {
+        name: string
+        specUrl: string
+        specText: string
+        ops: readonly {
+            id: string
+            method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+            path: string
+            summary: string
+            params: {
+                name: string
+                in: "header" | "query" | "path"
+                required: boolean
+            }[]
+            hasBody: boolean
+            suggest?:
+                | {
+                      itemsPath: string
+                      idField: string
+                      titleField: string
+                  }
+                | undefined
+        }[]
+        hasSecret: boolean
+        ready: boolean
+        unchanged: boolean
+        setName: Dispatch<SetStateAction<string>>
+        setSpecUrl: Dispatch<SetStateAction<string>>
+        setSpecText: Dispatch<SetStateAction<string>>
+        setOps: Dispatch<
+            SetStateAction<
+                readonly {
+                    id: string
+                    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+                    path: string
+                    summary: string
+                    params: {
+                        name: string
+                        in: "header" | "query" | "path"
+                        required: boolean
+                    }[]
+                    hasBody: boolean
+                    suggest?:
+                        | {
+                              itemsPath: string
+                              idField: string
+                              titleField: string
+                          }
+                        | undefined
+                }[]
+            >
+        >
+        restore: (saved: OpenApiSourceRestore) => void
+        loaded: (next: ReadonlyArray<OpenApiOp>) => void
+    }
+    picks: {
+        pulls: readonly {
+            opId: string
+            entity: "customer" | "order" | "product" | "transaction" | "other"
+            itemsPath: string
+            idField: string
+            titleField: string
+            fixedQuery: string
+        }[]
+        tools: readonly string[]
+        schedule: string
+        pullQuery: string
+        toolQuery: string
+        gets: {
+            id: string
+            method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+            path: string
+            summary: string
+            params: {
+                name: string
+                in: "header" | "query" | "path"
+                required: boolean
+            }[]
+            hasBody: boolean
+            suggest?:
+                | {
+                      itemsPath: string
+                      idField: string
+                      titleField: string
+                  }
+                | undefined
+        }[]
+        noGets: boolean
+        tooMany: boolean
+        visibleTools: {
+            id: string
+            method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+            path: string
+            summary: string
+            params: {
+                name: string
+                in: "header" | "query" | "path"
+                required: boolean
+            }[]
+            hasBody: boolean
+            suggest?:
+                | {
+                      itemsPath: string
+                      idField: string
+                      titleField: string
+                  }
+                | undefined
+        }[]
+        toolValue: string[]
+        onPull: (op: OpenApiOp, pull: OpenApiPullDef | null) => void
+        togglePull: (opId: string, on: boolean) => void
+        patchPull: (opId: string, field: OpenApiPullField, value: string | null) => void
+        keepOnly: (ids: ReadonlySet<string>) => void
+        restore: (saved: OpenApiPicksRestore) => void
+        setSchedule: (id: string | null) => void
+        setPullQuery: Dispatch<SetStateAction<string>>
+        setToolQuery: Dispatch<SetStateAction<string>>
+        pickTools: (ids: ReadonlyArray<string>) => void
+    }
+    test: {
+        testable: {
+            id: string
+            method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+            path: string
+            summary: string
+            params: {
+                name: string
+                in: "path" | "query" | "header"
+                required: boolean
+            }[]
+            hasBody: boolean
+            suggest?:
+                | {
+                      itemsPath: string
+                      idField: string
+                      titleField: string
+                  }
+                | undefined
+        }[]
+        activeTestId: string | null
+        testOp: {
+            id: string
+            method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+            path: string
+            summary: string
+            params: {
+                name: string
+                in: "path" | "query" | "header"
+                required: boolean
+            }[]
+            hasBody: boolean
+            suggest?:
+                | {
+                      itemsPath: string
+                      idField: string
+                      titleField: string
+                  }
+                | undefined
+        } | null
+        testPull:
+            | {
+                  opId: string
+                  entity: "customer" | "order" | "product" | "transaction" | "other"
+                  itemsPath: string
+                  idField: string
+                  titleField: string
+                  fixedQuery: string
+              }
+            | undefined
+        testQuery: string
+        testing: boolean
+        result: {
+            status: number
+            itemCount: number
+            itemsPath: string
+            idField: string
+            titleField: string
+            sampleKeys: Array<string>
+            error: string | null
+        } | null
+        setTestQuery: Dispatch<SetStateAction<string>>
+        pickOp: (id: string | null) => void
+        runTest: () => undefined
+    }
+    agentIds: readonly string[]
+    on: {
+        go: (to: number) => void
+        loadSpec: () => void
+        save: () => void
+        finish: () => void
+        setAgentIds: Dispatch<SetStateAction<readonly string[]>>
+        close: () => void
+        authField: (field: OpenApiAuthField, value: string) => void
+        authType: (value: string | null) => void
+    }
+}
+
 /** The state machine of the OpenAPI wizard: spec, auth, pulled endpoints, agent tools, schedule, test, agents. */
-export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
+export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput): UseOpenApiWizardResult => {
     const commands = useOpenApiCommands()
     const authForm = useOpenApiAuthForm()
     const editing = Boolean(resumeId)

@@ -18,11 +18,17 @@ const verdictOf = (label: string, tone: "success" | "danger" | "warning"): Verdi
     badge: { label, tone, isDot: true },
 })
 
+type UseTelegramChecksResult = {
+    lines: DataSlot<readonly ConnectionLineView[]>
+    recheck: () => Promise<void>
+    isRechecking: boolean
+}
+
 /**
  * The check list (token, webhook, last error) and the check run again. The page alone says whether the bot works; Telegram's own word
  * on the webhook (and how many messages it holds back) comes from a check, which the owner or manager runs and the page keeps.
  */
-export const useTelegramChecks = (connectionId: string | undefined) => {
+export const useTelegramChecks = (connectionId: string | undefined): UseTelegramChecksResult => {
     const t = useTranslations("telegramConnection")
     const tc = useTranslations("connections")
     const settle = useSettledGraphQL()

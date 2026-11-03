@@ -27,7 +27,7 @@ export const WORK_PRESETS: ReadonlyArray<AgentWorkPreset> = ["every_15m", "hourl
 export const presetNeedsTime = (preset: AgentWorkPreset): boolean => preset === "daily_at" || preset === "weekdays_at"
 
 /** A time of day as the back end reads it: HH:MM. */
-export const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/
+export const TIME_OF_DAY: RegExp = /^([01]\d|2[0-3]):[0-5]\d$/
 
 /** The state of an agent as the back end sends it. */
 export interface StateWire {

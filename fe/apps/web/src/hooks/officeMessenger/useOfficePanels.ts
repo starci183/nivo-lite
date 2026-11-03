@@ -25,6 +25,8 @@ import type {
     OfficeWords,
 } from "@/modules/office"
 
+import type { OfficeListView, OfficeInfoView, OfficeTaskView, OfficeMentionView } from "@/modules/types"
+
 /** The room on screen and the Hub around it. */
 export interface PanelRoom {
     /** The room shown; null is the Office room. */
@@ -38,6 +40,13 @@ export interface PanelRoom {
     readonly unread: OfficeConversationUnread
 }
 
+type UseOfficePanelsResult = {
+    list: OfficeListView
+    info: OfficeInfoView
+    tasks: readonly OfficeTaskView[]
+    mentions: readonly OfficeMentionView[]
+}
+
 /** The side columns and the composer's mention list, with their words; `board` is already scoped to the room. */
 export const useOfficePanels = (
     messages: ReadonlyArray<OfficeMessage>,
@@ -45,7 +54,7 @@ export const useOfficePanels = (
     words: OfficeWords,
     waitingCount: number,
     room: PanelRoom,
-) => {
+): UseOfficePanelsResult => {
     const me = useMember()
     const { current, key, rooms, channels, agents, unread } = room
     return useMemo(() => {

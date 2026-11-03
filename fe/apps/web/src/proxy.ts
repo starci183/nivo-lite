@@ -109,7 +109,11 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
     return response
 }
 
+type ConfigShape = {
+    matcher: string[]
+}
+
 /** Routes that pass through the proxy: everything except static assets. */
-export const config = {
+export const config: ConfigShape = {
     matcher: ["/((?!_next/static|_next/image|favicon.ico|.*[.](?:svg|png|jpg|jpeg|webp)$).*)"],
 }

@@ -8,8 +8,86 @@ import { useShiftsWeekModel } from "@/hooks/shiftsCoverage"
 
 const NO_MOVES: Readonly<Record<string, string | null>> = {}
 
+type UseShiftsWeekStatsViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly captions: ReadonlyArray<{
+                      readonly id: string
+                      readonly term: string
+                      readonly meta: string
+                  }>
+                  readonly ariaLabel: string
+                  readonly stats: ReadonlyArray<ShiftsWeekViews["weekStatsWeekStatView"]>
+                  readonly explainTitle: string
+                  readonly explainNone: string
+                  readonly lines: ReadonlyArray<{
+                      readonly id: string
+                      readonly text: string
+                  }>
+                  readonly source: {
+                      readonly label: string
+                      readonly isOpenClaw: boolean
+                  } | null
+                  readonly hasExplanation: boolean
+              },
+              "ariaLabel" | "stats" | "lines" | "source" | "hasExplanation"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly captions: ReadonlyArray<{
+                      readonly id: string
+                      readonly term: string
+                      readonly meta: string
+                  }>
+                  readonly ariaLabel: string
+                  readonly stats: ReadonlyArray<ShiftsWeekViews["weekStatsWeekStatView"]>
+                  readonly explainTitle: string
+                  readonly explainNone: string
+                  readonly lines: ReadonlyArray<{
+                      readonly id: string
+                      readonly text: string
+                  }>
+                  readonly source: {
+                      readonly label: string
+                      readonly isOpenClaw: boolean
+                  } | null
+                  readonly hasExplanation: boolean
+              },
+              "ariaLabel" | "stats" | "lines" | "source" | "hasExplanation"
+          >
+          data: Pick<
+              {
+                  readonly captions: ReadonlyArray<{
+                      readonly id: string
+                      readonly term: string
+                      readonly meta: string
+                  }>
+                  readonly ariaLabel: string
+                  readonly stats: ReadonlyArray<ShiftsWeekViews["weekStatsWeekStatView"]>
+                  readonly explainTitle: string
+                  readonly explainNone: string
+                  readonly lines: ReadonlyArray<{
+                      readonly id: string
+                      readonly text: string
+                  }>
+                  readonly source: {
+                      readonly label: string
+                      readonly isOpenClaw: boolean
+                  } | null
+                  readonly hasExplanation: boolean
+              },
+              "ariaLabel" | "stats" | "lines" | "source" | "hasExplanation"
+          >
+          on: Record<string, never>
+      }
+
 /** The figures of the week (wages, assigned shifts, short blocks, rule breaks) and the explanation of the schedule. */
-export const useShiftsWeekStatsView = (input: ShiftsPanelInput) => {
+export const useShiftsWeekStatsView = (input: ShiftsPanelInput): UseShiftsWeekStatsViewResult => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
     const bench = input.bench.data

@@ -11,4 +11,7 @@ const catalogueOf = (loaded: unknown): Record<string, unknown> => {
 }
 
 /** Loads the landing's own catalogue of the requested locale; the i18n package resolves the locale and the time zone. */
-export default createRequestConfig("landing", async (locale) => catalogueOf(await import(`./messages/${locale}.json`)))
+const requestConfig: ReturnType<typeof createRequestConfig> = createRequestConfig("landing", async (locale) =>
+    catalogueOf(await import(`./messages/${locale}.json`)),
+)
+export default requestConfig

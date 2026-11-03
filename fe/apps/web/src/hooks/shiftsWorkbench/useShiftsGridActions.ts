@@ -4,9 +4,10 @@ import { useFeatureReset } from "@/hooks/reuseables"
 import { useShiftsWeekCommands } from "@/hooks/shiftsCommands"
 import { useShiftsWeekModel } from "@/hooks/shiftsCoverage"
 import { isoWeekDates } from "@/hooks/shiftsTime"
-import type { ShiftsShiftView, ShiftsWeekViews } from "@/modules/types"
+import type { ShiftsShiftView, ShiftsWeekView, ShiftsStaffView, ShiftsWeekViews } from "@/modules/types"
 import { useShiftsOperation } from "./useShiftsOperation"
 import type { ShiftsPanelInput } from "./shiftsWorkbench.shared"
+import type { SetStateAction, Dispatch } from "react"
 type GridChipView = ShiftsWeekViews["gridGridChipView"]
 type GridCellView = ShiftsWeekViews["gridGridCellView"]
 const OPEN_ROW = "open"
@@ -68,8 +69,33 @@ const createGridCells = (context: GridCellsInput) => {
     return { ...context, weekView, editable, dates, live, people, chipOf, cellOf }
 }
 
+type UseShiftsGridActionsResult = {
+    cells:
+        | {
+              weekView: ShiftsWeekView
+              editable: boolean
+              dates: string[]
+              live: ShiftsShiftView[]
+              people: ShiftsStaffView[]
+              chipOf: (shift: ShiftsShiftView) => GridChipView
+              cellOf: (staffId: string | null, date: string) => GridCellView
+              t: ReturnType<typeof useTranslations<"shifts">>
+              bench: NonNullable<ShiftsPanelInput["bench"]["data"]>
+              picked: string | null
+              over: string | null
+              model: NonNullable<ReturnType<typeof useShiftsWeekModel>>
+          }
+        | undefined
+    picked: string | null
+    setPicked: Dispatch<SetStateAction<string | null>>
+    setOver: Dispatch<SetStateAction<string | null>>
+    dayIndex: number
+    setDayIndex: Dispatch<SetStateAction<number>>
+    move: (shiftId: string, staffId: string | null) => void
+}
+
 /** Owns the live rule preview and optimistic drag/tap edits for the actually mounted week panel. */
-export const useShiftsGridActions = (input: ShiftsPanelInput) => {
+export const useShiftsGridActions = (input: ShiftsPanelInput): UseShiftsGridActionsResult => {
     const t = useTranslations("shifts"),
         week = useShiftsWeekCommands(),
         operation = useShiftsOperation(input)
@@ -90,7 +116,7 @@ export const useShiftsGridActions = (input: ShiftsPanelInput) => {
     })
     const bench = input.bench.data,
         model = useShiftsWeekModel(bench, moves)
-    const move = (shiftId: string, staffId: string | null) => {
+    const move = (shiftId: string, staffId: string | null): void => {
         const current = model?.shifts.find((shift) => shift.id === shiftId && shift.status !== "cancelled")
         const isCurrent = operation.capture()
         if (!isCurrent()) return

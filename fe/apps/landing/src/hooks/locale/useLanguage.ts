@@ -2,8 +2,20 @@ import { useLocale, useTranslations } from "next-intl"
 import { useTransition } from "react"
 import { LOCALE_COOKIE, appLocaleOf, navigation } from "@/modules/i18n"
 
+type UseLanguageResult = {
+    label: string
+    locale: string
+    isPending: boolean
+    choose: (next: string) => void
+    options: {
+        value: string
+        label: string
+        name: string
+    }[]
+}
+
 /** The reader's language as the landing offers it: the words of the switch, the current language and the command that changes it. */
-export const useLanguage = () => {
+export const useLanguage = (): UseLanguageResult => {
     const t = useTranslations("shell")
     const locale = useLocale()
     const router = navigation.useRouter()

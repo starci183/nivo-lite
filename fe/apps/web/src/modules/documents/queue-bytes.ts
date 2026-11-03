@@ -32,8 +32,20 @@ export const bytesDetailOf = (say: BytesSay, formatter: BytesFormatter, item: Qu
     return say(item.status === "failed" ? "uploadStoppedAt" : "uploadBytes", { sent, size: all, percent })
 }
 
+type BatchBytesOfResult =
+    | {
+          label: string
+          value: number
+          valueText: string
+      }
+    | undefined
+
 /** The bytes of the whole batch while it travels, or undefined when no file is on its way. */
-export const batchBytesOf = (say: BytesSay, formatter: BytesFormatter, items: ReadonlyArray<QueueItem>) => {
+export const batchBytesOf = (
+    say: BytesSay,
+    formatter: BytesFormatter,
+    items: ReadonlyArray<QueueItem>,
+): BatchBytesOfResult => {
     const files = items.filter((item) => item.file !== undefined && (item.size ?? 0) > 0)
     if (!files.some((item) => item.status === "uploading")) return undefined
     const total = files.reduce((sum, item) => sum + (item.size ?? 0), 0)

@@ -17,7 +17,7 @@ interface VideoJobCallbacks<T> {
     readonly onSuccess: (answer: T) => void
     readonly onError: (failure: Error) => void
 }
-interface VideoJobRead<T> extends SlotRead<T> {
+export interface VideoJobRead<T> extends SlotRead<T> {
     readonly mutate: () => Promise<unknown>
 }
 interface VideoJobOptions<T extends VideoJobStatusView> {
@@ -31,8 +31,22 @@ interface VideoJobOptions<T extends VideoJobStatusView> {
     readonly owner?: VideoOwner
 }
 
+type UseVideoJobResult<T extends VideoJobStatusView> = {
+    request: (projectId: string) => Promise<
+        | {
+              readonly id: string
+          }
+        | undefined
+    >
+    status: T | undefined
+    error: unknown
+    read: VideoJobRead<T>
+    isStatusEnabled: boolean
+    isPending: boolean
+}
+
 /** Queues a real durable job while only its active originating surface follows status and owns local pending. */
-export const useVideoJob = <T extends VideoJobStatusView>(options: VideoJobOptions<T>) => {
+export const useVideoJob = <T extends VideoJobStatusView>(options: VideoJobOptions<T>): UseVideoJobResult<T> => {
     const t = useTranslations("video")
     const report = useGraphQLWithToast()
     const { activeWorkspaceId } = useActiveWorkspace()
@@ -60,7 +74,14 @@ export const useVideoJob = <T extends VideoJobStatusView>(options: VideoJobOptio
             )
         },
     })
-    const request = (projectId: string) => {
+    const request = (
+        projectId: string,
+    ): Promise<
+        | {
+              readonly id: string
+          }
+        | undefined
+    > => {
         const isCurrent = lifetime.capture()
         if (!isCurrent()) return Promise.resolve(undefined)
         return complete(

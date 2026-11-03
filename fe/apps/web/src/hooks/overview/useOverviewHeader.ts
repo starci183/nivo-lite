@@ -8,8 +8,20 @@ import { CONSOLE_ROUTES } from "@/modules/routes"
 import { firstNameOf, greetingOf } from "./overview.shared"
 import { useOverviewData } from "./useOverviewData"
 
+type UseOverviewHeaderResult =
+    | {
+          title: string
+          description: string
+          openOfficeLabel: string
+          openOfficeHref: "/chat"
+          newLeadLabel: string
+          newLeadHref: "/leads?new=1"
+          newLeadIsPrimary: boolean
+      }
+    | undefined
+
 /** The heading of the overview and its two actions; undefined until the dashboard is read. */
-export const useOverviewHeader = () => {
+export const useOverviewHeader = (): UseOverviewHeaderResult => {
     const t = useTranslations("overview")
     const format = useFormatter()
     const { dashboard, displayName } = useOverviewData()

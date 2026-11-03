@@ -19,8 +19,53 @@ const TONES: Readonly<Record<ShiftsCoverageCell["status"], CoverageTone>> = {
     ok: "affirmative",
 }
 
+type UseShiftsCoverageViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly dayLabels: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly title: string
+                  readonly hint: string
+                  readonly days: ReadonlyArray<ShiftsWeekViews["coverageCoverageDayView"]>
+              },
+              "days"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly dayLabels: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly title: string
+                  readonly hint: string
+                  readonly days: ReadonlyArray<ShiftsWeekViews["coverageCoverageDayView"]>
+              },
+              "days"
+          >
+          data: Pick<
+              {
+                  readonly dayLabels: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly title: string
+                  readonly hint: string
+                  readonly days: ReadonlyArray<ShiftsWeekViews["coverageCoverageDayView"]>
+              },
+              "days"
+          >
+          on: Record<string, never>
+      }
+
 /** People on duty against the minimum of every coverage block, day by day. */
-export const useShiftsCoverageView = (input: ShiftsPanelInput) => {
+export const useShiftsCoverageView = (input: ShiftsPanelInput): UseShiftsCoverageViewResult => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
     const bench = input.bench.data

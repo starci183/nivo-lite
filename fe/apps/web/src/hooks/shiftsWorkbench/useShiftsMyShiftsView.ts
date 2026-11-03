@@ -12,8 +12,101 @@ import { useShiftsMineCommands } from "@/hooks/shiftsCommands"
 
 const NO_SWAP: SwapForm = { shiftId: null, toStaffId: "", reason: "" }
 
+type UseShiftsMyShiftsViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly notice: {
+                      readonly title: string
+                      readonly body: string
+                  } | null
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyTitle: string
+                  readonly emptyBody: string
+                  readonly checkInLabel: string
+                  readonly checkedInLabel: string
+                  readonly askSwapLabel: string
+                  readonly swapWithLabel: string
+                  readonly pickPersonLabel: string
+                  readonly reasonLabel: string
+                  readonly sendLabel: string
+                  readonly shifts: ReadonlyArray<ShiftsPersonalViews["myShiftsMyShiftView"]>
+                  readonly swap: ShiftsPersonalViews["myShiftsSwapForm"]
+                  readonly swapOptions: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+              },
+              "shifts" | "notice" | "swapOptions"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly notice: {
+                      readonly title: string
+                      readonly body: string
+                  } | null
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyTitle: string
+                  readonly emptyBody: string
+                  readonly checkInLabel: string
+                  readonly checkedInLabel: string
+                  readonly askSwapLabel: string
+                  readonly swapWithLabel: string
+                  readonly pickPersonLabel: string
+                  readonly reasonLabel: string
+                  readonly sendLabel: string
+                  readonly shifts: ReadonlyArray<ShiftsPersonalViews["myShiftsMyShiftView"]>
+                  readonly swap: ShiftsPersonalViews["myShiftsSwapForm"]
+                  readonly swapOptions: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+              },
+              "shifts" | "notice" | "swapOptions"
+          >
+          data: Pick<
+              {
+                  readonly notice: {
+                      readonly title: string
+                      readonly body: string
+                  } | null
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyTitle: string
+                  readonly emptyBody: string
+                  readonly checkInLabel: string
+                  readonly checkedInLabel: string
+                  readonly askSwapLabel: string
+                  readonly swapWithLabel: string
+                  readonly pickPersonLabel: string
+                  readonly reasonLabel: string
+                  readonly sendLabel: string
+                  readonly shifts: ReadonlyArray<ShiftsPersonalViews["myShiftsMyShiftView"]>
+                  readonly swap: ShiftsPersonalViews["myShiftsSwapForm"]
+                  readonly swapOptions: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+              },
+              "shifts" | "notice" | "swapOptions"
+          >
+          on: {
+              readonly checkIn: (id: string) => void
+              readonly toggleSwap: (id: string) => void
+              readonly target: (id: string) => void
+              readonly reason: (text: string) => void
+              readonly send: (id: string) => void
+          }
+      }
+
 /** My upcoming shifts: check in on the day, and ask a colleague to swap one. */
-export const useShiftsMyShiftsView = (input: ShiftsPanelInput) => {
+export const useShiftsMyShiftsView = (input: ShiftsPanelInput): UseShiftsMyShiftsViewResult => {
     const t = useTranslations("shifts")
     const mine = input.mine.data
     const bench = input.bench.data

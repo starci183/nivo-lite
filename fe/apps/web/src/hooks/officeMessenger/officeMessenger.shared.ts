@@ -2,11 +2,12 @@ import { slotOfReads } from "@/hooks/slot"
 import type { useOfficeBoard, useOfficeRooms, useOfficeThread } from "@/hooks/office"
 import type { navigation } from "@/modules/i18n"
 import { agentChatHref, leadHref } from "@/modules/routes"
-import type { OfficeText, OfficeThreadProps } from "@/modules/types"
+import type { OfficeListView, DataSlot, OfficeText, OfficeThreadProps } from "@/modules/types"
 import { BASIS_MIN_CHARS, EMPTY_OFFICE_CARD_DRAFT, cardCopyOf, threadCopyOf } from "@/modules/office"
 import type { useOfficeCardDrafts } from "./useOfficeCardDrafts"
 import type { useOfficeMessenger } from "./useOfficeMessenger"
 import type { useOfficePanels } from "./useOfficePanels"
+import type { OfficeMessage } from "@/modules/office"
 
 /** What the thread draws once its messages are in. */
 export type OfficeThreadBody = Omit<OfficeThreadProps["props"], "isLoading">
@@ -93,7 +94,7 @@ export const officeMessengerCommands = (
         id: string,
         decision: "approved" | "rejected",
         edited: string | null,
-    ) => {
+    ): void => {
         if (kind === "execution") void office.decisions.decideApproval(id, decision, edited)
         else
             void office.decisions.decideWork(id, {
@@ -105,7 +106,7 @@ export const officeMessengerCommands = (
                 basis: null,
             })
     },
-    openDirect: (kind: "agent" | "lead", id: string) => {
+    openDirect: (kind: "agent" | "lead", id: string): void => {
         void office.markConversationRead(kind, id)
         router.push(kind === "agent" ? agentChatHref(id) : leadHref(id))
     },
@@ -118,8 +119,18 @@ type OfficeReadOwners = {
     readonly list: ReturnType<typeof useOfficePanels>["list"]
 }
 
+type OfficeReadSlotsResult = {
+    slot: DataSlot<readonly OfficeMessage[]>
+    listSlot: DataSlot<OfficeListView>
+    threadSlot: DataSlot<boolean>
+    composerSlot: DataSlot<boolean>
+    retryList: () => void
+    retryThread: () => void
+    retryComposer: () => void
+}
+
 /** Folds the reads each Office region depends on and retries the same owners. */
-export const officeReadSlots = ({ board, hub, thread, list }: OfficeReadOwners) => ({
+export const officeReadSlots = ({ board, hub, thread, list }: OfficeReadOwners): OfficeReadSlotsResult => ({
     slot: thread.slot,
     listSlot: slotOfReads(
         [...hub.listReads, ...board.teamReads, ...board.approvalReads, ...board.workReads],
@@ -130,17 +141,17 @@ export const officeReadSlots = ({ board, hub, thread, list }: OfficeReadOwners) 
         () => true,
     ),
     composerSlot: slotOfReads([...board.composerReads, hub.roomRead], () => true),
-    retryList: () => {
+    retryList: (): void => {
         board.reload()
         hub.reload()
     },
-    retryThread: () => {
+    retryThread: (): void => {
         board.reload()
         hub.refreshRooms()
         hub.reloadMarkers()
         thread.reload()
     },
-    retryComposer: () => {
+    retryComposer: (): void => {
         board.reloadTeam()
         hub.refreshRooms()
     },

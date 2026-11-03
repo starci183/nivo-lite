@@ -36,11 +36,20 @@ export const workbenchRowDataOf = (row: WorkbenchRowView): WorkbenchRowData => (
     waitingFor: row.waitingFor,
 })
 
+type WorkbenchWaitingDataOfResult = {
+    slot: DataSlot<WorkbenchRowData[]>
+    on: {
+        command: (rowId: string, commandId: string) => void
+    }
+}
+
 /** Separates a live owner's waiting read from its atomic row/command-id dispatcher. */
-export const workbenchWaitingDataOf = (slot: DataSlot<ReadonlyArray<WorkbenchRowView>>) => ({
+export const workbenchWaitingDataOf = (
+    slot: DataSlot<ReadonlyArray<WorkbenchRowView>>,
+): WorkbenchWaitingDataOfResult => ({
     slot: mapSlot(slot, (rows) => rows.map(workbenchRowDataOf)),
     on: {
-        command: (rowId: string, commandId: string) => {
+        command: (rowId: string, commandId: string): void => {
             const row = "items" in slot ? slot.items.find((item) => item.id === rowId) : undefined
             if (row === undefined) return
             if (row.primary?.id === commandId) {

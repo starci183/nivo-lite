@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server"
 import { readLegalSections, type LegalDocKey } from "@/hooks/legal"
 import { LegalPageBase } from "./component"
 
+import type { ReactElement } from "react"
+
 /** Which document the route serves. */
 interface LegalPageProps {
     readonly doc: LegalDocKey
@@ -16,7 +18,7 @@ export const legalMetadata = async (doc: LegalDocKey): Promise<Metadata> => {
 }
 
 /** The public legal document with its wording resolved on the server. */
-export const LegalPage = async (props: LegalPageProps) => {
+export const LegalPage = async (props: LegalPageProps): Promise<ReactElement> => {
     const t = await getTranslations("legal")
     return (
         <LegalPageBase

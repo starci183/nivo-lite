@@ -13,11 +13,23 @@ import { chipToneOf, zaloStatusKindOf } from "./zaloConnection.shared"
 import { useConnectionsRole } from "@/hooks/connections"
 import { useZaloPage } from "./useZaloPage"
 import type { ZaloPageData } from "./useZaloPage"
+import type { ZaloStatusKind } from "./zaloConnection.shared"
 
 const CHIP_KEYS = { ok: "chipOk", waiting: "chipWaiting", check: "chipCheck" } as const
 
+type UseZaloHeadResult = {
+    head: DataSlot<ZaloHeadView>
+    notice: string
+    reconnect: () => Promise<void>
+    disconnect: () => Promise<void>
+    isDisconnecting: boolean
+    isMissing: boolean
+    isOwner: boolean
+    statusKind: ZaloStatusKind | null
+}
+
 /** The header of the page of a Zalo OA connection, its status kind, and its two commands: reconnect through the existing authorization, and disconnect. */
-export const useZaloHead = (connectionId: string) => {
+export const useZaloHead = (connectionId: string): UseZaloHeadResult => {
     const t = useTranslations("zaloConnection")
     const format = useFormatter()
     const router = navigation.useRouter()

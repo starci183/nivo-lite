@@ -3,8 +3,16 @@ import { useTranslations } from "next-intl"
 import { useFeatureLifetime } from "@/hooks/reuseables"
 import { toast } from "@/modules/toast"
 import type { ShiftsPanelInput } from "./shiftsWorkbench.shared"
+type UseShiftsOperationResult = {
+    run: <T>(tag: string, action: () => Promise<T>) => Promise<T | undefined>
+    observe: (action: Promise<unknown>) => void
+    capture: () => () => boolean
+    isPending: (tag: string) => boolean
+    tag: string | null
+}
+
 /** An initiating card owns pending through remote feedback and cache settlement. */
-export const useShiftsOperation = (input: ShiftsPanelInput) => {
+export const useShiftsOperation = (input: ShiftsPanelInput): UseShiftsOperationResult => {
     const lifetime = useFeatureLifetime(input.isActive, input.scope)
     const feedback = useTranslations("toast")
     const running = useRef(new Map<string, { readonly identity: typeof lifetime.identity; readonly token: symbol }>())
@@ -35,7 +43,8 @@ export const useShiftsOperation = (input: ShiftsPanelInput) => {
         run,
         observe,
         capture: lifetime.capture,
-        isPending: (tag: string) => pending.some((item) => item.identity === lifetime.identity && item.tag === tag),
+        isPending: (tag: string): boolean =>
+            pending.some((item) => item.identity === lifetime.identity && item.tag === tag),
         tag: pending.find((item) => item.identity === lifetime.identity)?.tag ?? null,
     }
 }

@@ -2,6 +2,8 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { CONSOLE_PAGES, appHref } from "@/modules/routes"
 import { LandingConnectBase } from "./component"
 
+import type { ReactElement } from "react"
+
 /** The channels listed: catalog keys and whether the channel works today. */
 const CHANNELS = [
     { id: "website", name: "chWebsite", text: "chWebsiteText", isLive: true },
@@ -11,7 +13,7 @@ const CHANNELS = [
 ] as const
 
 /** The landing connect section with its copy resolved on the server. */
-export const LandingConnect = async () => {
+export const LandingConnect = async (): Promise<ReactElement> => {
     const t = await getTranslations("landing")
 
     const locale = await getLocale()

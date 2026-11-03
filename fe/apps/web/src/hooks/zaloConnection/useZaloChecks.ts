@@ -11,8 +11,14 @@ import type { ZaloPageData } from "./useZaloPage"
 
 type CheckRow = ZaloPageData["checks"][number]
 
+type UseZaloChecksResult = {
+    lines: DataSlot<readonly ZaloCheckLineView[]>
+    recheck: () => Promise<void>
+    isRechecking: boolean
+}
+
 /** The check list: the four parts of the connection with a verdict and a detail line, and the check run again. */
-export const useZaloChecks = (connectionId: string) => {
+export const useZaloChecks = (connectionId: string): UseZaloChecksResult => {
     const t = useTranslations("zaloConnection")
     const format = useFormatter()
     const settle = useSettledGraphQL()

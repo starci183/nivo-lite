@@ -1,7 +1,11 @@
 import type { ModuleDef } from "./catalog.types"
 
+type LeadGenGatesShape = {
+    key: string
+}[]
+
 /** The setup gates of the lead generation module. */
-export const LEAD_GEN_GATES = [
+export const LEAD_GEN_GATES: LeadGenGatesShape = [
     {
         key: "icp_area",
     },

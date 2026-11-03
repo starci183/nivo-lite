@@ -1,6 +1,7 @@
 "use client"
 
 import { create } from "zustand"
+import type { UseBoundStore, StoreApi } from "zustand"
 
 /** Feature-local state shared by the Hiring tabs: the job the candidates tab filters on and the candidate whose drawer is open. */
 interface HiringBenchState {
@@ -13,7 +14,7 @@ interface HiringBenchState {
 }
 
 /** The store of the Hiring tabs' shared selection. */
-export const useHiringBenchStore = create<HiringBenchState>((set) => ({
+export const useHiringBenchStore: UseBoundStore<StoreApi<HiringBenchState>> = create<HiringBenchState>((set) => ({
     jobId: "all",
     openId: undefined,
     setJobId: (id) => set({ jobId: id }),

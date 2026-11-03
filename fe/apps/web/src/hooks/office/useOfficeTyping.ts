@@ -15,11 +15,17 @@ interface LastSent {
     readonly at: number
 }
 
+type UseOfficeTypingResult = {
+    names: string[]
+    byRoom: ReadonlyMap<string, readonly TypingSignal[]>
+    onDraft: (draft: string) => void
+}
+
 /**
  * Who else is typing in one Hub room (null = the Office room), over the back end typing event stream, and the
  * command that tells the others this person types. A signal lapses at its own deadline even when the stop never arrives.
  */
-export const useOfficeTyping = (room: string | null) => {
+export const useOfficeTyping = (room: string | null): UseOfficeTypingResult => {
     const me = useMember()
     const { trigger } = useMutateSetChatTypingSwr()
     const [signals, setSignals] = useState<ReadonlyArray<TypingSignal>>([])
@@ -49,7 +55,7 @@ export const useOfficeTyping = (room: string | null) => {
 
     /** Called with the draft on every change: refreshes the signal while there is text and stops it when the draft is empty. */
     const onDraft = useCallback(
-        (draft: string) => {
+        (draft: string): void => {
             const now = Date.now()
             const previous = lastSent.current
             const isTyping = draft.trim() !== ""

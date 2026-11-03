@@ -12,6 +12,9 @@ import { usePermissionDrawerWords } from "./usePermissionDrawerWords"
 import { useSavePermission } from "./useSavePermission"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 
+import type { ApproverRole, ApprovalPolicy, RuleUnit } from "@/modules/authority"
+import type { DataSlot, SlotLabels } from "@/modules/types"
+
 /** The drawer while it is open: the rule being changed, what was typed, and the limits typed over the stored ones. */
 interface DrawerState {
     readonly rule: StoredRule
@@ -45,11 +48,122 @@ const stateOf = (draft: PermissionDraft, who: Viewer) => ({
     isPending: who.isSaving,
 })
 
+type UsePermissionDrawerResult = {
+    grantsSlot: DataSlot<
+        {
+            maxLabel: string
+            name: string
+            memberId: string
+            enabled: boolean
+            max: number
+        }[]
+    >
+    grantsLabels: SlotLabels
+    retryGrants: () => undefined
+    open: (rule: StoredRule) => void
+    props: {
+        grants: {
+            maxLabel: string
+            name: string
+            memberId: string
+            enabled: boolean
+            max: number
+        }[]
+        agentOptions: readonly {
+            readonly id: string
+            readonly label: string
+        }[]
+        roomOptions: readonly {
+            readonly id: string
+            readonly label: string
+        }[]
+        memberOptions: {
+            id: string
+            label: string
+        }[]
+        draft: PermissionDraft
+        canGrant: boolean
+        canSave: boolean
+        isBandsInvalid: boolean
+        isPending: boolean
+        title: string
+        copy: {
+            drawerDesc: string
+            close: string
+            agentsLabel: string
+            agentsHint: string
+            strategyLabel: string
+            unitLabel: string
+            autoMaxLabel: string
+            askMaxLabel: string
+            sliderLabel: string
+            bandsInvalid: string
+            groupLabel: string
+            rolesLabel: string
+            roomsLabel: string
+            roomsNone: string
+            membersLabel: string
+            membersHint: string
+            policyLabel: string
+            timeoutLabel: string
+            timeoutNote: string
+            grantsLabel: string
+            grantsNote: string
+            ownerAlways: string
+            save: string
+            cancel: string
+        }
+        legend: {
+            auto: string
+            ask: string
+            never: string
+        }
+        sliderMax: number
+        strategyOptions: {
+            id: string
+            label: string
+        }[]
+        roleOptions: {
+            id: ApproverRole
+            label: string
+        }[]
+        policyOptions: {
+            id: ApprovalPolicy
+            label: string
+        }[]
+        unitOptions: {
+            id: RuleUnit
+            label: string
+        }[]
+        timeoutOptions: {
+            id: string
+            label: string
+        }[]
+    } | null
+    on: {
+        save: () => Promise<void>
+        close: () => void
+        agents: (ids: ReadonlyArray<string>) => void
+        strategy: (value: string) => void
+        unit: (value: string | null) => void
+        autoMax: (value: number) => void
+        askMax: (value: number) => void
+        slider: (values: ReadonlyArray<number>) => void
+        roles: (ids: ReadonlyArray<string>) => void
+        rooms: (ids: ReadonlyArray<string>) => void
+        members: (ids: ReadonlyArray<string>) => void
+        policy: (value: string) => void
+        timeout: (value: string | null) => void
+        grantEnabled: (memberId: string, enabled: boolean) => void
+        grantMax: (memberId: string, max: number) => void
+    }
+}
+
 /**
  * Opens, fills and saves the rule drawer of the Quyen page. `props` is null while the drawer is closed. Only the owner may hand
  * out approval limits (the server refuses a manager), so a manager sees them without being able to change them.
  */
-export const usePermissionDrawer = (options: DrawerOptions) => {
+export const usePermissionDrawer = (options: DrawerOptions): UsePermissionDrawerResult => {
     const t = useTranslations("permissions")
     const words = usePermissionDrawerWords()
     const slotLabels = useSlotLabels()
@@ -76,7 +190,7 @@ export const usePermissionDrawer = (options: DrawerOptions) => {
             return { ...current, grantEdits: { ...current.grantEdits, [memberId]: grant } }
         })
 
-    const saveRule = async () => {
+    const saveRule = async (): Promise<void> => {
         if (state === null) return
         const limits =
             isOwner && grantsRead.data !== undefined
@@ -104,13 +218,13 @@ export const usePermissionDrawer = (options: DrawerOptions) => {
     return {
         grantsSlot,
         grantsLabels: slotLabels(t("loadFailTitle")),
-        retryGrants: () => void grantsRead.mutate(),
-        open: (rule: StoredRule) => setState({ rule, draft: draftOf(rule), grantEdits: {} }),
+        retryGrants: (): undefined => void grantsRead.mutate(),
+        open: (rule: StoredRule): void => setState({ rule, draft: draftOf(rule), grantEdits: {} }),
         props,
         on: {
             ...permissionEditsOf({ change, editGrant, members: state?.draft.members ?? [] }),
             save: saveRule,
-            close: () => setState(null),
+            close: (): void => setState(null),
         },
     }
 }

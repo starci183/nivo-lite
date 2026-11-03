@@ -67,17 +67,34 @@ interface PolledStatus {
 }
 
 /** Polls a queued job only until its authoritative terminal state. */
-const terminalInterval = (intervalMs: number) => (progress: PolledStatus | undefined) =>
-    progress?.status === "succeeded" || progress?.status === "failed" ? 0 : intervalMs
+const terminalInterval =
+    (intervalMs: number) =>
+    (progress: PolledStatus | undefined): number =>
+        progress?.status === "succeeded" || progress?.status === "failed" ? 0 : intervalMs
+
+type TerminalJobOptionsResult<Callbacks extends object> = {
+    refreshInterval: (progress: PolledStatus | undefined) => number
+} & Callbacks
 
 /** The shared job cadence, followed by the caller's callbacks/options. */
-export const terminalJobOptions = <Callbacks extends object>(callbacks: Callbacks, intervalMs = 2000) => ({
+export const terminalJobOptions = <Callbacks extends object>(
+    callbacks: Callbacks,
+    intervalMs = 2000,
+): TerminalJobOptionsResult<Callbacks> => ({
     refreshInterval: terminalInterval(intervalMs),
     ...callbacks,
 })
 
+type TerminalStatusOptionsResult<Callbacks extends object> = Callbacks & {
+    refreshInterval: (progress: PolledStatus | undefined) => number
+    revalidateOnFocus: boolean
+}
+
 /** Status polling keeps caller callbacks and disables focus refresh. */
-export const terminalStatusOptions = <Callbacks extends object>(intervalMs: number, callbacks: Callbacks) => ({
+export const terminalStatusOptions = <Callbacks extends object>(
+    intervalMs: number,
+    callbacks: Callbacks,
+): TerminalStatusOptionsResult<Callbacks> => ({
     ...callbacks,
     refreshInterval: terminalInterval(intervalMs),
     revalidateOnFocus: false,

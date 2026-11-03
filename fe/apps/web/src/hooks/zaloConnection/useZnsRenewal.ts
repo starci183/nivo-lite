@@ -10,8 +10,19 @@ import type { DataSlot, ZnsRenewalForm } from "@/modules/types"
 import { useZaloPage } from "./useZaloPage"
 import { EMPTY_ZNS_FORM } from "./zaloConnection.shared"
 
+type UseZnsRenewalResult = {
+    slot: DataSlot<ZnsRenewalForm>
+    form: ZnsRenewalForm
+    change: (patch: Partial<ZnsRenewalForm>) => void
+    save: () => Promise<void>
+    isSaving: boolean
+    canEdit: boolean
+    note: string
+    reload: () => undefined
+}
+
 /** The ZNS renewal template of the connection: what is stored, what the owner has typed over it, and the save. */
-export const useZnsRenewal = (connectionId: string) => {
+export const useZnsRenewal = (connectionId: string): UseZnsRenewalResult => {
     const t = useTranslations("zaloConnection")
     const settle = useSettledGraphQL()
     const labelOf = useZaloFailureLabel()
@@ -46,11 +57,11 @@ export const useZnsRenewal = (connectionId: string) => {
     return {
         slot: stored,
         form,
-        change: (patch: Partial<ZnsRenewalForm>) => setDraft((current) => ({ ...current, ...patch })),
+        change: (patch: Partial<ZnsRenewalForm>): void => setDraft((current) => ({ ...current, ...patch })),
         save,
         isSaving: isMutating,
         canEdit: role === "owner",
         note,
-        reload: () => void mutate(),
+        reload: (): undefined => void mutate(),
     }
 }

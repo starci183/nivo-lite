@@ -9,11 +9,16 @@ import { TELEGRAM_EVENTS_POLL_MS } from "./telegramConnection.shared"
 /** The badge tone of each outcome the back end names; anything else did not get through. */
 const OUTCOME_TONES: Readonly<Record<string, ConnectionTone>> = { received: "neutral", sent: "success" }
 
+type UseTelegramEventsResult = {
+    lines: DataSlot<readonly ConnectionLineView[]>
+    reload: () => undefined
+}
+
 /**
  * The live panel: customer messages and the agent's replies, newest first, asked again every few seconds. A line carries who and when,
  * never what was written: the back end sends no message text.
  */
-export const useTelegramEvents = (connectionId: string | undefined) => {
+export const useTelegramEvents = (connectionId: string | undefined): UseTelegramEventsResult => {
     const t = useTranslations("telegramConnection")
     const format = useFormatter()
     const read = useQueryTelegramConnectionEventsSwr(connectionId, { refreshInterval: TELEGRAM_EVENTS_POLL_MS })
@@ -38,5 +43,5 @@ export const useTelegramEvents = (connectionId: string | undefined) => {
             }
         }),
     )
-    return { lines, reload: () => void read.mutate() }
+    return { lines, reload: (): undefined => void read.mutate() }
 }

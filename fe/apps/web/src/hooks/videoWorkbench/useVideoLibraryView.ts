@@ -75,8 +75,61 @@ const libraryFieldsOf = (context: LibraryProjection) => {
         },
     }
 }
+type UseVideoLibraryViewResult =
+    | {
+          on: VideoLibraryListActions
+          ui: {
+              title: string
+              emptyTitle: string
+              emptyBody: string
+              newLabel: string
+              openLabel: string
+              menuLabel: string
+              duplicateLabel: string
+              archiveLabel: string
+              error: string | null
+              dismissLabel: string
+              busy: boolean
+          }
+          read: null
+      }
+    | {
+          on: VideoLibraryListActions
+          ui: {
+              title: string
+              emptyTitle: string
+              emptyBody: string
+              newLabel: string
+              openLabel: string
+              menuLabel: string
+              duplicateLabel: string
+              archiveLabel: string
+              error: string | null
+              dismissLabel: string
+              busy: boolean
+          }
+          read: {
+              meta: string
+              entries: {
+                  id: string
+                  title: string
+                  posterUrl: string | null
+                  noPoster: string
+                  statusLabel: string
+                  statusTone: BadgeTone
+                  goalLabel: string
+                  aspectLabel: "9:16" | "1:1" | "16:9"
+                  facts: string
+                  href: string
+                  archiveDisabled: boolean
+              }[]
+              canEdit: boolean
+              isViewOnly: boolean
+          }
+      }
+
 /** Duplicate/archive retain their real original command and current-origin local outcome. */
-export const useVideoLibraryView = (input: VideoViewInput) => {
+export const useVideoLibraryView = (input: VideoViewInput): UseVideoLibraryViewResult => {
     const t = useTranslations("video"),
         common = useTranslations("common"),
         owner = videoOwnerOf(input, "library"),

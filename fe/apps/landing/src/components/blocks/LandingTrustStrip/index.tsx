@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server"
 import type { IconGlyphName } from "@/components/leaves/Icon"
 import { LandingTrustStripBase } from "./component"
 
+import type { ReactElement } from "react"
+
 /** The situations the product watches: catalog key and the glyph that names each. */
 const CHIPS: ReadonlyArray<{ readonly id: string; readonly icon: IconGlyphName }> = [
     { id: "chip1", icon: "account" },
@@ -16,7 +18,7 @@ const CHIPS: ReadonlyArray<{ readonly id: string; readonly icon: IconGlyphName }
 ]
 
 /** The landing trust strip with its copy resolved on the server. */
-export const LandingTrustStrip = async () => {
+export const LandingTrustStrip = async (): Promise<ReactElement> => {
     const t = await getTranslations("landing")
     return (
         <LandingTrustStripBase

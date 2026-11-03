@@ -9,8 +9,14 @@ const required = (name: string, value: string | undefined): string => {
 export const developerApiUrl = (): string =>
     required("NEXT_PUBLIC_DEVELOPER_API_URL", process.env.NEXT_PUBLIC_DEVELOPER_API_URL)
 
+type SessionCookieOptionsShape = {
+    readonly httpOnly: false
+    readonly secure: boolean
+    readonly sameSite: "lax"
+}
+
 /** Security attributes applied to the cookies the web app itself writes (the locale cookie). The session cookie belongs to the back end. */
-export const sessionCookieOptions = {
+export const sessionCookieOptions: SessionCookieOptionsShape = {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

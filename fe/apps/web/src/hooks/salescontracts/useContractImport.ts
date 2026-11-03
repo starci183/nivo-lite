@@ -31,8 +31,26 @@ const sourceInputOf = async (state: ImportState) => {
     return { text: state.paste }
 }
 
+type UseContractImportResult = {
+    open: () => void
+    close: () => void
+    source: (value: string) => void
+    file: (files: ReadonlyArray<File>) => void
+    paste: (value: string) => void
+    sheet: (value: string | null) => void
+    preview: () => void
+    column: (field: string, column: string | null) => void
+    runImport: () => void
+    state: ImportState
+    isPreviewing: boolean
+    isImporting: boolean
+}
+
 /** Owns the bulk import input and the real server preview/import commands for its original panel lifetime. */
-export const useContractImport = (onDone: (message: string) => void, activity?: ImportActivity) => {
+export const useContractImport = (
+    onDone: (message: string) => void,
+    activity?: ImportActivity,
+): UseContractImportResult => {
     const t = useTranslations("workbenchSales")
     const settle = useSettledGraphQL()
     const runGraphQL = useGraphQLWithToast()
@@ -128,7 +146,7 @@ const importCommandsOf = (input: ImportCommandsInput) => {
             .catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
             .finally(() => input.setPreviewOperation((current) => (current === pending ? null : current)))
     }
-    const runImport = () => {
+    const runImport = (): void => {
         const pending = { scope, isCurrent: capture() }
         if (!pending.isCurrent() || state.mapping === null) return
         input.setImportOperation(pending)
@@ -166,20 +184,20 @@ const importActionsOf = (
     setState: Dispatch<SetStateAction<ImportState>>,
     commands: ReturnType<typeof importCommandsOf>,
 ) => ({
-    open: () => setState({ ...CLOSED_CONTRACT_IMPORT, isOpen: true }),
-    close: () => setState(CLOSED_CONTRACT_IMPORT),
-    source: (value: string) =>
+    open: (): void => setState({ ...CLOSED_CONTRACT_IMPORT, isOpen: true }),
+    close: (): void => setState(CLOSED_CONTRACT_IMPORT),
+    source: (value: string): void =>
         setState({ ...state, source: value === "paste" ? "paste" : "file", preview: null, mapping: null, error: null }),
-    file: (files: ReadonlyArray<File>) => {
+    file: (files: ReadonlyArray<File>): void => {
         const [file] = files
         if (file !== undefined) commands.runPreview({ ...state, file, sheet: null, preview: null }, null)
     },
-    paste: (value: string) => setState({ ...state, paste: value }),
-    sheet: (value: string | null) => {
+    paste: (value: string): void => setState({ ...state, paste: value }),
+    sheet: (value: string | null): void => {
         if (value !== null && state.file !== null) commands.runPreview({ ...state, sheet: value }, null)
     },
-    preview: () => commands.runPreview({ ...state, preview: null }, null),
-    column: (field: string, column: string | null) => {
+    preview: (): void => commands.runPreview({ ...state, preview: null }, null),
+    column: (field: string, column: string | null): void => {
         if (state.mapping === null) return
         const known: ContractImportField =
             CONTRACT_IMPORT_FIELDS.find((candidate) => candidate === field) ?? "customerName"

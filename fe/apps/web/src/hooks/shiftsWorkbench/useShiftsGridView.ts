@@ -77,8 +77,107 @@ const createGridProps = (context: ReturnType<typeof createGridRows>): FullView =
     }
 }
 
+type UseShiftsGridViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly dayLabels: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyDay: string
+                  readonly assignLabel: string
+                  readonly onLeaveLabel: string
+                  readonly openId: string
+                  readonly editable: boolean
+                  readonly dates: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly rows: ReadonlyArray<ShiftsWeekViews["gridGridRowView"]>
+                  readonly selectedDay: string
+                  readonly dayShifts: ReadonlyArray<ShiftsWeekViews["gridGridDayShiftView"]>
+                  readonly assignOptions: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+              },
+              "hint" | "editable" | "dates" | "rows" | "selectedDay" | "dayShifts" | "assignOptions"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly dayLabels: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyDay: string
+                  readonly assignLabel: string
+                  readonly onLeaveLabel: string
+                  readonly openId: string
+                  readonly editable: boolean
+                  readonly dates: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly rows: ReadonlyArray<ShiftsWeekViews["gridGridRowView"]>
+                  readonly selectedDay: string
+                  readonly dayShifts: ReadonlyArray<ShiftsWeekViews["gridGridDayShiftView"]>
+                  readonly assignOptions: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+              },
+              "hint" | "editable" | "dates" | "rows" | "selectedDay" | "dayShifts" | "assignOptions"
+          >
+          data: Pick<
+              {
+                  readonly dayLabels: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyDay: string
+                  readonly assignLabel: string
+                  readonly onLeaveLabel: string
+                  readonly openId: string
+                  readonly editable: boolean
+                  readonly dates: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly rows: ReadonlyArray<ShiftsWeekViews["gridGridRowView"]>
+                  readonly selectedDay: string
+                  readonly dayShifts: ReadonlyArray<ShiftsWeekViews["gridGridDayShiftView"]>
+                  readonly assignOptions: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+              },
+              "hint" | "editable" | "dates" | "rows" | "selectedDay" | "dayShifts" | "assignOptions"
+          >
+          on: {
+              readonly pick: (shiftId: string) => void
+              readonly dragStart: (shiftId: string) => void
+              readonly dragEnd: () => void
+              readonly hover: (cellId: string | null) => void
+              readonly drop: (shiftId: string, rowId: string) => void
+              readonly place: (rowId: string) => void
+              readonly day: (date: string) => void
+              readonly assign: (shiftId: string, rowId: string) => void
+          }
+      }
+
 /** Resolves the existing desktop grid and phone day list from the week controller. */
-export const useShiftsGridView = (input: ShiftsPanelInput) => {
+export const useShiftsGridView = (input: ShiftsPanelInput): UseShiftsGridViewResult => {
     const t = useTranslations("shifts"),
         format = useShiftsFormat(),
         actions = useShiftsGridActions(input)

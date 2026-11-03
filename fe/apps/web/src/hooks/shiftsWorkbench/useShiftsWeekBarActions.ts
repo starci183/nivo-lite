@@ -3,8 +3,16 @@ import { useFeatureReset } from "@/hooks/reuseables"
 import { useShiftsRequestCommands, useShiftsWeekCommands } from "@/hooks/shiftsCommands"
 import { useShiftsOperation } from "./useShiftsOperation"
 import type { ShiftsPanelInput } from "./shiftsWorkbench.shared"
+type UseShiftsWeekBarActionsResult = {
+    busy: "explain" | "propose" | "publish" | "decide" | null
+    propose: () => void
+    publish: () => void
+    approve: () => void
+    decline: () => void
+}
+
 /** Owns one bar's propose/explain/publish decision settlement without resetting the chosen Monday. */
-export const useShiftsWeekBarActions = (input: ShiftsPanelInput) => {
+export const useShiftsWeekBarActions = (input: ShiftsPanelInput): UseShiftsWeekBarActionsResult => {
     const week = useShiftsWeekCommands(),
         requests = useShiftsRequestCommands()
     const operation = useShiftsOperation(input)
@@ -15,7 +23,7 @@ export const useShiftsWeekBarActions = (input: ShiftsPanelInput) => {
         scope: input.scope,
         onReset: () => setExplaining(false),
     })
-    const propose = () => {
+    const propose = (): void => {
         const bench = input.bench.data
         if (bench === undefined) return
         const isCurrent = operation.capture()
@@ -29,7 +37,7 @@ export const useShiftsWeekBarActions = (input: ShiftsPanelInput) => {
             }),
         )
     }
-    const publish = () => {
+    const publish = (): void => {
         const schedule = input.bench.data?.week.current
         if (schedule !== null && schedule !== undefined)
             operation.observe(operation.run("publish", () => week.publish(schedule.id)))
@@ -45,5 +53,11 @@ export const useShiftsWeekBarActions = (input: ShiftsPanelInput) => {
         if (operation.tag === "decide") return "decide" as const
         return null
     }
-    return { busy: busy(), propose, publish, approve: () => decide("approved"), decline: () => decide("rejected") }
+    return {
+        busy: busy(),
+        propose,
+        publish,
+        approve: (): void => decide("approved"),
+        decline: (): void => decide("rejected"),
+    }
 }

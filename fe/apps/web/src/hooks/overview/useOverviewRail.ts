@@ -8,11 +8,38 @@ import { isModuleKey } from "@/modules/catalog"
 import { agentLifecycleOf } from "@/modules/installations"
 import { useOverviewData } from "./useOverviewData"
 
+import type { AgentLifecycle } from "@/modules/installations"
+import type { ActivityModel } from "../overviewRows/overviewRows.shared"
+
+type UseOverviewRailResult =
+    | {
+          agents: {
+              id: string
+              module:
+                  | "chatbot"
+                  | "lead_gen"
+                  | "sales"
+                  | "accounting"
+                  | "shifts"
+                  | "booking"
+                  | "inventory"
+                  | "loyalty"
+                  | "video"
+                  | "content"
+                  | "hiring"
+              handle: string
+              name: string
+              lifecycle: AgentLifecycle
+          }[]
+          activity: ActivityModel[]
+      }
+    | undefined
+
 /**
  * The agents and the recent activity of the rail; undefined until the dashboard is read. Each agent stands in the one state the back end
  * names for its installation (the lifecycle), never in the status of the agent row.
  */
-export const useOverviewRail = () => {
+export const useOverviewRail = (): UseOverviewRailResult => {
     const t = useTranslations("responsibilities")
     const g = useTranslations("governance")
     const { dashboard } = useOverviewData()

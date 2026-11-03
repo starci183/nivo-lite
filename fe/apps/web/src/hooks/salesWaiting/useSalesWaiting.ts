@@ -6,12 +6,22 @@ import { mapSlot } from "@/hooks/slot"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { agentHref } from "@/modules/installations"
-import type { SalesDecision } from "@/modules/types"
+import type { DataSlot, SalesDecision, WorkbenchRowView } from "@/modules/types"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { SALES_WAITING_SHOWN, salesWaitingRowOf } from "./salesWaiting.shared"
 
+type UseSalesWaitingResult = {
+    slot: DataSlot<WorkbenchRowView[]>
+    count: string | null
+    more: {
+        label: string
+        href: string
+    } | null
+    reload: () => void
+}
+
 /** The pending decisions of the Sales desk, each decided in place: the oldest three, then a link to the Decisions tab. */
-export const useSalesWaiting = (isActive = true, scope?: string) => {
+export const useSalesWaiting = (isActive = true, scope?: string): UseSalesWaitingResult => {
     const t = useTranslations("workbenchSales")
     const format = useFormatter()
     const router = navigation.useRouter()

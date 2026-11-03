@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the name and consent step. */
 export interface TelegramConsentValues {
@@ -42,8 +43,15 @@ const isPhone = (raw: string): boolean => {
     return phone.startsWith("0") || (phone.startsWith("84") && phone.length >= 11 && phone.length <= 12)
 }
 
+type UseTelegramUserFormResult = {
+    consent: UseFormReturn<TelegramConsentValues>
+    phone: UseFormReturn<TelegramPhoneValues>
+    code: UseFormReturn<TelegramCodeValues>
+    password: UseFormReturn<TelegramPasswordValues>
+}
+
 /** The four small forms of the personal Telegram wizard, each with its zod schema and catalog messages. */
-export const useTelegramUserForm = (start: TelegramConsentStart) => {
+export const useTelegramUserForm = (start: TelegramConsentStart): UseTelegramUserFormResult => {
     const t = useTranslations("connectorTelegramUser")
     const schemas = useMemo(
         () => ({

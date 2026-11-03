@@ -24,8 +24,17 @@ interface VideoJobReportOptions {
     readonly failureFallback: string
 }
 
+type UseVideoJobReportResult = {
+    reportStatus: (status: VideoJobStatus) => Promise<void>
+    reportError: (error: Error, jobId: string | undefined) => Promise<void>
+}
+
 /** Reports the outcome of a queued video job once: a toast for success or failure, then the video data is read again. */
-export const useVideoJobReport = ({ doneStates, successKey, failureFallback }: VideoJobReportOptions) => {
+export const useVideoJobReport = ({
+    doneStates,
+    successKey,
+    failureFallback,
+}: VideoJobReportOptions): UseVideoJobReportResult => {
     const t = useTranslations("video")
     const failure = useVideoFailure()
     const runGraphQL = useGraphQLWithToast()
@@ -34,7 +43,7 @@ export const useVideoJobReport = ({ doneStates, successKey, failureFallback }: V
     const reported = useRef<string | undefined>(undefined)
     const reportedError = useRef<string | undefined>(undefined)
     const reportStatus = useCallback(
-        async (status: VideoJobStatus) => {
+        async (status: VideoJobStatus): Promise<void> => {
             const identity = `${activeWorkspaceId}:${status.id}`
             if (!doneStates.includes(status.status) || reported.current === identity) return
             reported.current = identity
@@ -50,7 +59,7 @@ export const useVideoJobReport = ({ doneStates, successKey, failureFallback }: V
         [activeWorkspaceId, doneStates, failure, failureFallback, refresh, runGraphQL, successKey, t],
     )
     const reportError = useCallback(
-        async (error: Error, jobId: string | undefined) => {
+        async (error: Error, jobId: string | undefined): Promise<void> => {
             if (jobId === undefined) return
             const identity = `${activeWorkspaceId}:${jobId}:${error.message}`
             if (reportedError.current === identity) return

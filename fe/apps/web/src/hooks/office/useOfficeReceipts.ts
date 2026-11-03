@@ -11,11 +11,19 @@ interface ReceiptMemory {
     read: string | null
 }
 
+type UseOfficeReceiptsResult = {
+    onFetched: (lastMessageId: string | null) => void
+}
+
 /**
  * Acknowledges fetched lines independently of visibility. A read additionally requires the thread on screen in the visible,
  * focused document. Focus and frame changes can mark an already fetched line read without waiting for another read.
  */
-export const useOfficeReceipts = (room: string | null, isThreadVisible: boolean, onRead: () => void) => {
+export const useOfficeReceipts = (
+    room: string | null,
+    isThreadVisible: boolean,
+    onRead: () => void,
+): UseOfficeReceiptsResult => {
     const { trigger: deliver } = useMutateMarkChatDeliveredSwr()
     const { trigger: read } = useMutateMarkChatReadSwr()
     const memory = useRef<ReceiptMemory>({ fetched: null, delivered: null, read: null })
@@ -52,7 +60,7 @@ export const useOfficeReceipts = (room: string | null, isThreadVisible: boolean,
     }, [room, isThreadVisible, deliver, read, onRead])
 
     const onFetched = useCallback(
-        (lastMessageId: string | null) => {
+        (lastMessageId: string | null): void => {
             memory.current.fetched = lastMessageId === null ? null : { room, id: lastMessageId }
             acknowledge()
         },

@@ -10,8 +10,64 @@ import { useTranslations } from "next-intl"
 import { useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsMineCommands } from "@/hooks/shiftsCommands"
 
+type UseShiftsOpenShiftsViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyLabel: string
+                  readonly claimLabel: string
+                  readonly shifts: ReadonlyArray<{
+                      readonly id: string
+                      readonly title: string
+                      readonly notes: ReadonlyArray<string>
+                      readonly isBusy: boolean
+                  }>
+              },
+              "shifts"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyLabel: string
+                  readonly claimLabel: string
+                  readonly shifts: ReadonlyArray<{
+                      readonly id: string
+                      readonly title: string
+                      readonly notes: ReadonlyArray<string>
+                      readonly isBusy: boolean
+                  }>
+              },
+              "shifts"
+          >
+          data: Pick<
+              {
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyLabel: string
+                  readonly claimLabel: string
+                  readonly shifts: ReadonlyArray<{
+                      readonly id: string
+                      readonly title: string
+                      readonly notes: ReadonlyArray<string>
+                      readonly isBusy: boolean
+                  }>
+              },
+              "shifts"
+          >
+          on: {
+              readonly claim: (id: string) => void
+          }
+      }
+
 /** The open shifts nobody has yet, each with a button to ask for it. */
-export const useShiftsOpenShiftsView = (input: ShiftsPanelInput) => {
+export const useShiftsOpenShiftsView = (input: ShiftsPanelInput): UseShiftsOpenShiftsViewResult => {
     const t = useTranslations("shifts")
     const mine = input.mine.data
     const bench = input.bench.data

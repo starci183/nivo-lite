@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { INPUT_BOUNDS, inputBoundsIssues } from "@/modules/api"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The separate document written for customers. */
 interface PublicWriteValues {
@@ -14,7 +15,7 @@ interface PublicWriteValues {
 }
 
 /** Requires a title and body and reads all size limits from the emitted write contract. */
-export const usePublicWriteForm = (title: string) => {
+export const usePublicWriteForm = (title: string): UseFormReturn<PublicWriteValues> => {
     const t = useTranslations("publicBrain")
     const schema = useMemo(
         () =>

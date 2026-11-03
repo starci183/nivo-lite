@@ -1,7 +1,7 @@
 "use client"
 
 import type { VideoEditorActions } from "@/modules/types"
-type VideoScriptFormActions = VideoEditorActions["script"]
+export type VideoScriptFormActions = VideoEditorActions["script"]
 import { useEffect, useState } from "react"
 import { useTranslations, useFormatter } from "next-intl"
 import { useVideoActions, useVideoScript, useVideoFailure } from "@/hooks/video"
@@ -13,6 +13,7 @@ import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { videoOwnerOf, videoScriptFieldsOf, swapped } from "./videoWorkbench.shared"
 import type { VideoViewInput } from "./videoWorkbench.shared"
+import type { VideoJobRead } from "@/hooks/video/useVideoJob"
 const sceneChangesOf = (form: ReturnType<typeof useVideoScriptForm>, scenes: ReadonlyArray<ScriptScene>) => {
     const change = (next: ReadonlyArray<ScriptScene>) => {
         form.setValue(
@@ -26,8 +27,69 @@ const sceneChangesOf = (form: ReturnType<typeof useVideoScriptForm>, scenes: Rea
 
     return { change, edit }
 }
+type UseVideoScriptStepViewResult = {
+    on: VideoScriptFormActions
+    statusRead: VideoJobRead<{
+        errorCode: string | null
+        id: string
+        progress: number
+        projectId: string
+        resultId: string | null
+        status: string
+    }>
+    isStatusEnabled: boolean
+    isRequestPending: boolean
+    ui: {
+        heading: string
+        writingLabel: string
+        emptyLabel: string
+        hasScenes: boolean
+        writeLabel: string
+        rewriteWarn: string | null
+        scenes: {
+            id: string
+            title: string
+            roleLabel: string
+            roleTone: "success" | "accent" | "neutral"
+            caption: string
+            voiceover: string
+            visualHint: string | null
+            media: string
+            canMoveUp: boolean
+            canMoveDown: boolean
+            canRemove: boolean
+        }[]
+        captionLabel: string
+        voiceLabel: string
+        mediaLabel: string
+        moveUpLabel: string
+        moveDownLabel: string
+        removeLabel: string
+        addLabel: string
+        canAdd: boolean
+        backLabel: string
+        nextLabel: string
+        estimateLabel: string | null
+        saving: boolean
+        canContinue: boolean
+        dismissLabel: string
+        error: string | null
+    }
+    read: {
+        tookLabel: string | undefined
+        mediaOptions: {
+            id: string
+            label: string
+        }[]
+        canEdit: boolean
+        isScripting: boolean
+        jobState: string | null
+        projectFailure: string | null
+    } | null
+}
+
 /** Real script editing and durable job request retain their selected-project lifetime. */
-export const useVideoScriptStepView = (input: VideoViewInput) => {
+export const useVideoScriptStepView = (input: VideoViewInput): UseVideoScriptStepViewResult => {
     const t = useTranslations("video"),
         format = useFormatter(),
         failure = useVideoFailure(),

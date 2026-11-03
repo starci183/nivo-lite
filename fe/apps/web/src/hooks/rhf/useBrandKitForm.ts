@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { isColorList, isLineList, type BrandKitText } from "@/modules/content"
+import type { UseFormReturn } from "react-hook-form"
 
 type MarketingT = ReturnType<typeof useTranslations<"marketing">>
 
@@ -21,7 +22,7 @@ const brandKitSchema = (t: MarketingT) =>
     })
 
 /** Validates the owner's edit of a brand proposal (one item per line for the lists) before it is confirmed. */
-export const useBrandKitForm = (initial: BrandKitText) => {
+export const useBrandKitForm = (initial: BrandKitText): UseFormReturn<BrandKitText> => {
     const t = useTranslations("marketing")
     const schema = useMemo(() => brandKitSchema(t), [t])
     return useForm<BrandKitText>({ resolver: zodResolver(schema), defaultValues: initial, mode: "onSubmit" })

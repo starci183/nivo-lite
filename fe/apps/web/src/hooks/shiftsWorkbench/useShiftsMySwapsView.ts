@@ -13,8 +13,56 @@ import { requestStatusOf } from "@/hooks/shifts"
 
 const LIST_LIMIT = 8
 
+type UseShiftsMySwapsViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly title: string
+                  readonly emptyLabel: string
+                  readonly rows: ReadonlyArray<{
+                      readonly id: string
+                      readonly text: string
+                      readonly tone: "success" | "neutral" | "warning"
+                      readonly badge: string
+                  }>
+              },
+              "rows"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly title: string
+                  readonly emptyLabel: string
+                  readonly rows: ReadonlyArray<{
+                      readonly id: string
+                      readonly text: string
+                      readonly tone: "success" | "neutral" | "warning"
+                      readonly badge: string
+                  }>
+              },
+              "rows"
+          >
+          data: Pick<
+              {
+                  readonly title: string
+                  readonly emptyLabel: string
+                  readonly rows: ReadonlyArray<{
+                      readonly id: string
+                      readonly text: string
+                      readonly tone: "success" | "neutral" | "warning"
+                      readonly badge: string
+                  }>
+              },
+              "rows"
+          >
+          on: Record<string, never>
+      }
+
 /** My swap and open-shift requests with their state. */
-export const useShiftsMySwapsView = (input: ShiftsPanelInput) => {
+export const useShiftsMySwapsView = (input: ShiftsPanelInput): UseShiftsMySwapsViewResult => {
     const t = useTranslations("shifts")
     const mine = input.mine.data
     const copy: ShiftsPersonalViews["mySwapsCopy"] = { title: t("mySwaps"), emptyLabel: t("mySwapsEmpty") }

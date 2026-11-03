@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the mailbox account form; the port travels as typed text. */
 export interface ImapAccountValues {
@@ -34,7 +35,10 @@ const EMPTY_ACCOUNT: ImapAccountValues = {
  * The mailbox account form: connection name, address, server, port, security, login and password. A blank password is accepted
  * only when the mailbox is already saved (the saved one is kept). Messages come from the `connectorImap` catalog.
  */
-export const useImapAccountForm = (hasSavedPassword: boolean, initial: ImapAccountValues = EMPTY_ACCOUNT) => {
+export const useImapAccountForm = (
+    hasSavedPassword: boolean,
+    initial: ImapAccountValues = EMPTY_ACCOUNT,
+): UseFormReturn<ImapAccountValues> => {
     const t = useTranslations("connectorImap")
     const schema = useMemo(
         () =>

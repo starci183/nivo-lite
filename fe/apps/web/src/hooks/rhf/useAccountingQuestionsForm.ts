@@ -8,6 +8,7 @@ import { z } from "zod"
 import type { FlowWorkItemView, AccountingQuestionValues } from "@/modules/types"
 
 import { digitsToNumber, type AccountingTranslator } from "@/modules/utils"
+import type { UseFormReturn } from "react-hook-form"
 
 interface AccountingQuestionsValues {
     items: Record<string, AccountingQuestionValues>
@@ -55,7 +56,9 @@ const schemaOf = (item: FlowWorkItemView, t: AccountingTranslator, accounting: A
         })
 
 /** Holds every question's independent inputs in one form; callers validate only the addressed item path. */
-export const useAccountingQuestionsForm = (items: ReadonlyArray<FlowWorkItemView>) => {
+export const useAccountingQuestionsForm = (
+    items: ReadonlyArray<FlowWorkItemView>,
+): UseFormReturn<AccountingQuestionsValues> => {
     const t = useTranslations("office")
     const accounting = useTranslations("workbenchAccounting")
     const schema = useMemo(() => {

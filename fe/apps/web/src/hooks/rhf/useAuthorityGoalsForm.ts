@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import type { AuthorityProfile } from "@/modules/authority"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the goals form: the three targets (empty when none) and the note. */
 export interface AuthorityGoalsValues {
@@ -16,7 +17,7 @@ export interface AuthorityGoalsValues {
 }
 
 /** The goals form over the stored profile: whole numbers only, the note trimmed; the stored values refill it when they change. */
-export const useAuthorityGoalsForm = (profile: AuthorityProfile) => {
+export const useAuthorityGoalsForm = (profile: AuthorityProfile): UseFormReturn<AuthorityGoalsValues> => {
     const t = useTranslations("authority")
     const schema = useMemo(
         () =>

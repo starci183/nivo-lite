@@ -5,8 +5,41 @@ import { useQueryVideoFiguresSwr, useQueryVideoSourcesSwr } from "@/hooks/swr"
 import type { SourceChoice } from "@/modules/video"
 import type { WorkbenchFigureData } from "@/modules/types"
 
+import type { SWRResponse } from "swr"
+
+type UseVideoReferencesResult = {
+    sources: readonly SourceChoice[]
+    figures: readonly WorkbenchFigureData[]
+    reads: {
+        sources: SWRResponse<
+            {
+                excerpt: string
+                id: string
+                title: string
+                topic: string | null
+            }[],
+            unknown
+        >
+        figures: SWRResponse<
+            {
+                approved: number
+                credits30: number
+                published30: number
+                readyToPublish: number
+                rendering: number
+                scripting: number
+            },
+            unknown
+        >
+    }
+}
+
 /** Sources belong to the editor; figures belong to the normal ribbon, each retaining its authoritative read. */
-export const useVideoReferences = (isActive = true, withSources = true, withFigures = true) => {
+export const useVideoReferences = (
+    isActive = true,
+    withSources = true,
+    withFigures = true,
+): UseVideoReferencesResult => {
     const t = useTranslations("video"),
         format = useFormatter()
     const sourcesQuery = useQueryVideoSourcesSwr(isActive && withSources),

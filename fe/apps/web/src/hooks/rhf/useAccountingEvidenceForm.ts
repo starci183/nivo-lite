@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { digitsToNumber, vietnamToday } from "@/modules/utils"
 import { dayjs } from "@/modules/dayjs"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The owner's typed manual credit fields. */
 export interface AccountingEvidenceValues {
@@ -18,7 +19,7 @@ export interface AccountingEvidenceValues {
 }
 
 /** Validates the same amount, date and text bounds as the backend before recording evidence. */
-export const useAccountingEvidenceForm = () => {
+export const useAccountingEvidenceForm = (): UseFormReturn<AccountingEvidenceValues> => {
     const t = useTranslations("workbenchAccounting")
     const today = vietnamToday()
     const schema = useMemo(

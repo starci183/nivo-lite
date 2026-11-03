@@ -33,8 +33,24 @@ interface ShipmentAnswer {
 
 const isTerminal = (status: string): boolean => status === "succeeded" || status === "failed"
 
+type UseSalesActionRunnerResult = {
+    isBusy: boolean
+    isExecuting: boolean
+    runQueued: (action: () => Promise<SalesActionType>) => Promise<
+        | {
+              errorCode: string | null
+              id: string
+              status: string
+              workItemId: string | null
+          }
+        | undefined
+    >
+    runImmediate: <Result>(action: () => Promise<Result>, successMessage: string) => Promise<Result | undefined>
+    runShipment: <Result extends ShipmentAnswer>(action: () => Promise<Result>) => Promise<Result | undefined>
+}
+
 /** Runs one Sales command, retaining normal feedback and revalidation while fencing local panel ownership. */
-export const useSalesActionRunner = (activity?: SalesActionActivity) => {
+export const useSalesActionRunner = (activity?: SalesActionActivity): UseSalesActionRunnerResult => {
     const t = useTranslations("workbenchSales")
     const runGraphQL = useGraphQLWithToast()
     const { activeWorkspaceId } = useActiveWorkspace()
@@ -68,7 +84,17 @@ export const useSalesActionRunner = (activity?: SalesActionActivity) => {
         [isScoped, lease, lifetime, pendingId, revalidate, runGraphQL, scope],
     )
     const runQueued = useCallback(
-        (action: () => Promise<SalesActionType>) =>
+        (
+            action: () => Promise<SalesActionType>,
+        ): Promise<
+            | {
+                  errorCode: string | null
+                  id: string
+                  status: string
+                  workItemId: string | null
+              }
+            | undefined
+        > =>
             locked(async (isCurrent) =>
                 trackSalesAction(
                     t,
@@ -79,12 +105,12 @@ export const useSalesActionRunner = (activity?: SalesActionActivity) => {
         [locked, watch, runGraphQL, t],
     )
     const runImmediate = useCallback(
-        <Result>(action: () => Promise<Result>, successMessage: string) =>
+        <Result>(action: () => Promise<Result>, successMessage: string): Promise<Result | undefined> =>
             locked(() => runGraphQL(action, { successMessage })),
         [locked, runGraphQL],
     )
     const runShipment = useCallback(
-        <Result extends ShipmentAnswer>(action: () => Promise<Result>) =>
+        <Result extends ShipmentAnswer>(action: () => Promise<Result>): Promise<Result | undefined> =>
             locked(async (isCurrent) => {
                 const result = await runGraphQL(action, { successMessage: t("salesActionQueued") })
                 if (result !== undefined) watch(result.notificationId, isCurrent)

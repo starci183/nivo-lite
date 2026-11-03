@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit"
-import type { PayloadAction } from "@reduxjs/toolkit"
+import type { ActionCreatorWithPayload, PayloadAction, Reducer } from "@reduxjs/toolkit"
 
 /** The app-wide viewer identity. */
 export interface ViewerSliceState {
@@ -20,6 +20,7 @@ const viewerSlice = createSlice({
 })
 
 /** Records the person the session now belongs to (or `null` on sign-out). */
-export const { setViewerId } = viewerSlice.actions
+const dest = viewerSlice.actions
+export const setViewerId: ActionCreatorWithPayload<string | null, "viewer/setViewerId"> = dest.setViewerId
 /** The reducer of the viewer identity. */
-export const viewerReducer = viewerSlice.reducer
+export const viewerReducer: Reducer<ViewerSliceState> = viewerSlice.reducer

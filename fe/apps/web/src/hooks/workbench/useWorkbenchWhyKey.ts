@@ -5,11 +5,16 @@ import { useSearchParams } from "next/navigation"
 /** The query key that opens the why pane on a work item. `?focus=` already means a conversation or a decision, so it cannot carry a third meaning. */
 const WHY_QUERY_KEY = "why"
 
+type UseWorkbenchWhyKeyResult = {
+    workItemId: string | null
+    close: () => void
+}
+
 /** The work item whose why pane is open (`?why=`), null when none, and the command that closes it by removing the key from the query. */
-export const useWorkbenchWhyKey = () => {
+export const useWorkbenchWhyKey = (): UseWorkbenchWhyKeyResult => {
     const params = useSearchParams()
     const value = params.get(WHY_QUERY_KEY)
-    const close = () => {
+    const close = (): void => {
         const query = new URLSearchParams(window.location.search)
         query.delete(WHY_QUERY_KEY)
         const rest = query.toString()

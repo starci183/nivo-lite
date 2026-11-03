@@ -1,5 +1,5 @@
 import type { VideoProductionViews } from "@/modules/types"
-type VideoResultBadge = VideoProductionViews["resultBadge"]
+export type VideoResultBadge = VideoProductionViews["resultBadge"]
 
 import type { VideoEditorData, Brand, MediaItem, ProjectView, VideoWorkbenchCopy, ScriptScene } from "@/modules/video"
 import type { useTranslations, useFormatter } from "next-intl"
@@ -24,8 +24,13 @@ export const shapeOf = (aspect: string): "portrait" | "square" | "landscape" => 
     if (aspect === "9:16") return "portrait"
     return aspect === "1:1" ? "square" : "landscape"
 }
+type VideoOwnerOfResult = {
+    isActive: boolean
+    scope: string
+}
+
 /** Commands and reads share the actual tenant/instance scope plus their existing region identity. */
-export const videoOwnerOf = (input: VideoViewInput, region: string) => ({
+export const videoOwnerOf = (input: VideoViewInput, region: string): VideoOwnerOfResult => ({
     isActive: input.isActive,
     scope: JSON.stringify([input.scope, region]),
 })
@@ -60,8 +65,58 @@ const estimateStateOf = (sceneCount: number, total: number): "none" | "long" | "
     if (sceneCount === 0) return "none"
     return total > VIDEO_MAX_SECONDS ? "long" : "ok"
 }
+type VideoScriptFieldsOfResult = {
+    ui: {
+        heading: string
+        writingLabel: string
+        emptyLabel: string
+        hasScenes: boolean
+        writeLabel: string
+        rewriteWarn: string | null
+        scenes: {
+            id: string
+            title: string
+            roleLabel: string
+            roleTone: "success" | "accent" | "neutral"
+            caption: string
+            voiceover: string
+            visualHint: string | null
+            media: string
+            canMoveUp: boolean
+            canMoveDown: boolean
+            canRemove: boolean
+        }[]
+        captionLabel: string
+        voiceLabel: string
+        mediaLabel: string
+        moveUpLabel: string
+        moveDownLabel: string
+        removeLabel: string
+        addLabel: string
+        canAdd: boolean
+        backLabel: string
+        nextLabel: string
+        estimateLabel: string | null
+        saving: boolean
+        canContinue: boolean
+        dismissLabel: string
+        error: string | null
+    }
+    read: {
+        tookLabel: string | undefined
+        mediaOptions: {
+            id: string
+            label: string
+        }[]
+        canEdit: boolean
+        isScripting: boolean
+        jobState: string | null
+        projectFailure: string | null
+    } | null
+}
+
 /** The script form's exact labels, estimate and command failures. */
-export const videoScriptFieldsOf = (context: ScriptProjection) => {
+export const videoScriptFieldsOf = (context: ScriptProjection): VideoScriptFieldsOfResult => {
     const { input, form, job, error, pending, t, format, failure } = context,
         project = input.editor?.project ?? null,
         copy = input.copy,

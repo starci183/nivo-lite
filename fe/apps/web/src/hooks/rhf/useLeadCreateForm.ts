@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
 
 /** Validated values of a manually captured lead. */
 export interface LeadCreateValues {
@@ -15,7 +16,7 @@ export interface LeadCreateValues {
 }
 
 /** The lead capture schema uses the catalog's field-level validation messages. */
-export const useLeadCreateForm = () => {
+export const useLeadCreateForm = (): UseFormReturn<LeadCreateValues> => {
     const t = useTranslations("leads")
     const schema = useMemo(
         () =>

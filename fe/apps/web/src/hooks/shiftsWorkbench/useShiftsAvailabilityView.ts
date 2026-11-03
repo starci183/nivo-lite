@@ -96,8 +96,25 @@ const buildAvailabilityReady = (context: AvailabilityReadyInput): FullView => {
     return view
 }
 
+type UseShiftsAvailabilityViewResult =
+    | {
+          copy: Omit<ShiftsSetupViews["availability"], "fields" | "rows" | "canSubmit">
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<ShiftsSetupViews["availability"], "fields" | "rows" | "canSubmit">
+          data: Pick<ShiftsSetupViews["availability"], "fields" | "rows" | "canSubmit">
+          on: {
+              readonly field: (id: string, value: string) => void
+              readonly available: (value: boolean) => void
+              readonly submit: () => void
+              readonly remove: (id: string) => void
+          }
+      }
+
 /** The availability of each person, entered by the manager: the form and the approved rows with remove. */
-export const useShiftsAvailabilityView = (input: ShiftsPanelInput) => {
+export const useShiftsAvailabilityView = (input: ShiftsPanelInput): UseShiftsAvailabilityViewResult => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
     const commands = useShiftsRuleCommands()

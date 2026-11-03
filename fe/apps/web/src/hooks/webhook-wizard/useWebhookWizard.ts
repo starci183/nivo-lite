@@ -5,6 +5,7 @@ import { SECRET_STEP, WEBHOOK_EVENTS, WEBHOOK_STEPS } from "./webhook-wizard.sha
 import type { WebhookTestVerdict, WebhookView } from "@/modules/types"
 
 import { useWebhookCommands } from "./useWebhookCommands"
+import type { SetStateAction, Dispatch } from "react"
 
 /** What the webhook wizard needs from its drawer. */
 interface WebhookWizardInput {
@@ -14,8 +15,32 @@ interface WebhookWizardInput {
     readonly onClose: (changed: boolean) => void
 }
 
+type UseWebhookWizardResult = {
+    index: number
+    step: "address" | "secret" | "test" | "done"
+    form: {
+        name: string
+        url: string
+    }
+    events: readonly string[]
+    signingSecret: string
+    test: WebhookTestVerdict | null
+    error: string | null
+    isPending: boolean
+    on: {
+        go: (to: number) => void
+        save: () => void
+        sendTest: () => void
+        finish: () => void
+        close: () => void
+        name: (name: string) => void
+        url: (url: string) => void
+        events: Dispatch<SetStateAction<readonly string[]>>
+    }
+}
+
 /** The webhook wizard's state machine: address and events, the signing key, a test send, done. */
-export const useWebhookWizard = (input: WebhookWizardInput) => {
+export const useWebhookWizard = (input: WebhookWizardInput): UseWebhookWizardResult => {
     const commands = useWebhookCommands()
     const [index, setIndex] = useState(0)
     const [form, setForm] = useState({ name: input.defaultName, url: "" })
@@ -25,7 +50,7 @@ export const useWebhookWizard = (input: WebhookWizardInput) => {
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
 
-    const save = () =>
+    const save = (): void =>
         startTransition(async () => {
             setError(null)
             const answer = await commands.start(form, events)
@@ -34,7 +59,7 @@ export const useWebhookWizard = (input: WebhookWizardInput) => {
             setIndex(1)
         })
 
-    const sendTest = () =>
+    const sendTest = (): void =>
         startTransition(async () => {
             if (created === null) return
             setError(null)
@@ -43,7 +68,7 @@ export const useWebhookWizard = (input: WebhookWizardInput) => {
             setTest(answer.value)
         })
 
-    const finish = () =>
+    const finish = (): void =>
         startTransition(async () => {
             if (created === null) return
             setError(null)
@@ -62,7 +87,7 @@ export const useWebhookWizard = (input: WebhookWizardInput) => {
         error,
         isPending,
         on: {
-            go: (to: number) => {
+            go: (to: number): void => {
                 setError(null)
                 // The signing secret is shown once: leaving its step drops it from memory.
                 if (index === SECRET_STEP && to !== SECRET_STEP)
@@ -72,9 +97,9 @@ export const useWebhookWizard = (input: WebhookWizardInput) => {
             save,
             sendTest,
             finish,
-            close: () => input.onClose(created !== null),
-            name: (name: string) => setForm((current) => ({ ...current, name })),
-            url: (url: string) => setForm((current) => ({ ...current, url })),
+            close: (): void => input.onClose(created !== null),
+            name: (name: string): void => setForm((current) => ({ ...current, name })),
+            url: (url: string): void => setForm((current) => ({ ...current, url })),
             events: setEvents,
         },
     }

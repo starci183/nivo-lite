@@ -5,7 +5,7 @@ import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useQuerySalesOrdersSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { leadPath } from "@/modules/routes"
-import type { SalesOrderRowView } from "@/modules/types"
+import type { DataSlot, SalesOrderRowView, SlotLabels } from "@/modules/types"
 
 const STATUS_KEYS = {
     draft: "order_draft",
@@ -24,8 +24,26 @@ const ORDER_PLACEHOLDER: ReadonlyArray<SalesOrderRowView> = [
     { id: "loading", number: "", items: "", leadHref: null, status: "", amount: "", createdAt: "" },
 ]
 
+type UseSalesOrdersViewResult = {
+    props: {
+        title: string
+        placeholder: readonly SalesOrderRowView[]
+        slot: DataSlot<SalesOrderRowView[]>
+        labels: SlotLabels
+        hasNextPage: boolean
+        isLoadingMore: boolean
+        paginationFailure: string | null
+        loadMoreLabel: string
+        retryLabel: string
+    }
+    on: {
+        loadMore: () => void
+        retry: () => undefined
+    }
+}
+
 /** Owns the original independently paged order read only while its hand-off panel is mounted. */
-export const useSalesOrdersView = (isActive: boolean) => {
+export const useSalesOrdersView = (isActive: boolean): UseSalesOrdersViewResult => {
     const t = useTranslations("workbenchSales")
     const format = useFormatter()
     const labels = useSlotLabels()

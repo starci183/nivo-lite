@@ -6,11 +6,12 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { MUSIC_TRACKS, TTS_VOICES, type Brand } from "@/modules/video"
+import type { UseFormReturn } from "react-hook-form"
 
 const VOICE_IDS: ReadonlySet<string> = new Set(TTS_VOICES)
 
 /** Validates the brand kit with localized messages before it is saved. */
-export const useVideoBrandForm = (initial: Brand | null) => {
+export const useVideoBrandForm = (initial: Brand | null): UseFormReturn<Brand> => {
     const t = useTranslations("video")
     const schema = useMemo(() => {
         const error = t("err_default")

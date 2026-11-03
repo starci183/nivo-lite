@@ -56,7 +56,7 @@ const createOpenApiWizardActions = ({
     agentIds,
     refresh,
 }: OpenApiWizardActionsInput) => {
-    const loadSpec = () =>
+    const loadSpec = (): void =>
         startTransition(async () => {
             setError(null)
             const answer = await commands.loadSpec(source.specUrl, source.specText)
@@ -74,7 +74,7 @@ const createOpenApiWizardActions = ({
             go(1)
         })
 
-    const save = () =>
+    const save = (): void =>
         startTransition(async () => {
             setError(null)
             const keep = new Set([...picks.pulls.map((pull) => pull.opId), ...picks.tools])
@@ -101,11 +101,11 @@ const createOpenApiWizardActions = ({
             if (editing) return onClose(true)
             go(index + 1)
         })
-    const go = (to: number) => {
+    const go = (to: number): void => {
         setError(null)
         setIndex(to)
     }
-    const finish = () =>
+    const finish = (): void =>
         startTransition(async () => {
             if (!connId) return onClose(false)
             const answer = await setConnectionAgents(connId, agentIds)
@@ -116,8 +116,16 @@ const createOpenApiWizardActions = ({
     return { loadSpec, save, go, finish }
 }
 
+type UseOpenApiWizardCommandsResult = {
+    isPending: boolean
+    loadSpec: () => void
+    save: () => void
+    go: (to: number) => void
+    finish: () => void
+}
+
 /** Owns the OpenAPI command transition and its actions. */
-export const useOpenApiWizardCommands = (input: OpenApiWizardCommandsInput) => {
+export const useOpenApiWizardCommands = (input: OpenApiWizardCommandsInput): UseOpenApiWizardCommandsResult => {
     const [isPending, startTransition] = useTransition()
     const { start: startSync } = useSyncNow()
     const setConnectionAgents = useSetConnectionAgents()

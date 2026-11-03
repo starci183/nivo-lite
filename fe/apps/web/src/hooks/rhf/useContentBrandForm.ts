@@ -6,9 +6,20 @@ import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import type { ContentSettings } from "@/modules/content"
+import type { UseFormReturn } from "react-hook-form"
 
 type ContentBrandT = ReturnType<typeof useTranslations<"content">>
-const brandSchema = (t: ContentBrandT) =>
+type BrandSchemaResult = z.ZodObject<
+    {
+        brandVoice: z.ZodString
+        avoid: z.ZodString
+        cta: z.ZodString
+        hashtags: z.ZodString
+    },
+    z.core.$strip
+>
+
+const brandSchema = (t: ContentBrandT): BrandSchemaResult =>
     z.object({
         brandVoice: z.string().trim().max(1500, t("err_input")),
         avoid: z.string().trim().max(1500, t("err_input")),
@@ -19,8 +30,15 @@ const brandSchema = (t: ContentBrandT) =>
 /** Local editable brand fields, validated before saving. */
 export type ContentBrandValues = z.infer<ReturnType<typeof brandSchema>>
 
+type UseContentBrandFormResult = UseFormReturn<{
+    brandVoice: string
+    avoid: string
+    cta: string
+    hashtags: string
+}>
+
 /** Validates the brand voice and resets it when fresh saved settings arrive. */
-export const useContentBrandForm = (initial: ContentSettings) => {
+export const useContentBrandForm = (initial: ContentSettings): UseContentBrandFormResult => {
     const t = useTranslations("content")
     const schema = useMemo(() => brandSchema(t), [t])
     const values = useMemo(

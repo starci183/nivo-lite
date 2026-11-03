@@ -10,8 +10,16 @@ import { useTranslations } from "next-intl"
 import { type MoneyCommands } from "./useMoneyCommands"
 import type { MoneyWizardInput } from "./useMoneyWizard"
 
+type UseMoneyWizardActionsResult = {
+    go: (to: number) => void
+    create: () => void
+    followDone: () => void
+    finish: () => void
+    isPending: boolean
+}
+
 /** Owns the pending transition and the commands that move the payment setup forward. */
-export const useMoneyWizardActions = (input: MoneyWizardActionsInput) => {
+export const useMoneyWizardActions = (input: MoneyWizardActionsInput): UseMoneyWizardActionsResult => {
     const [isPending, startTransition] = useTransition()
     const { save, go, fail } = createMoneyWizardActions({ ...input, startTransition })
     const { create, followDone, finish } = createMoneyWizardActions2({ ...input, save, go, fail, startTransition })
@@ -50,7 +58,7 @@ const createMoneyWizardActions = ({
     tw,
     def,
 }: MoneyWizardSaveInput) => {
-    const go = (to: number) => {
+    const go = (to: number): void => {
         setNote(null)
         setNav((current) => ({ ...current, index: to }))
     }
@@ -113,7 +121,7 @@ const createMoneyWizardActions2 = ({
     setAgentsOf,
     agentIds,
 }: MoneyWizardFinishInput) => {
-    const create = () => {
+    const create = (): void => {
         if (conn !== null) return flags.accountDirty ? save(form.name, 2) : go(2)
         startTransition(async () => {
             const answer = await commands.start(input.provider, form)
@@ -123,7 +131,7 @@ const createMoneyWizardActions2 = ({
         })
     }
 
-    const followDone = () => {
+    const followDone = (): void => {
         if (conn === null) return
         if (flags.followDirty) return save(connectionNameOf(follow.webhookName), flags.needsKeys ? 2 : 3)
         if (flags.keysDone) return go(3)
@@ -137,7 +145,7 @@ const createMoneyWizardActions2 = ({
         })
     }
 
-    const finish = () => {
+    const finish = (): void => {
         if (conn === null) return input.onClose(false)
         startTransition(async () => {
             const answer = await setAgentsOf(conn.id, agentIds)

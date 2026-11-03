@@ -8,8 +8,26 @@ import {
     updatePassword,
 } from "@/modules/auth"
 
+import type { GraphQLResponse } from "../types"
+import type { SignInResult, SignUpResult, PasswordReset } from "../auth/actions"
+import type { SignInInput } from "@/modules/auth/actions"
+
+type AuthActionsOfResult = {
+    endSession: () => Promise<GraphQLResponse<true>>
+    requestPasswordReset: (input: unknown) => Promise<GraphQLResponse<true>>
+    resendConfirmation: (input: unknown) => Promise<GraphQLResponse<true>>
+    signInWithPassword: (input: SignInInput) => Promise<GraphQLResponse<SignInResult>>
+    signUp: (input: unknown) => Promise<GraphQLResponse<SignUpResult>>
+    startOAuth: (next: string | undefined) => Promise<
+        GraphQLResponse<{
+            readonly url: string
+        }>
+    >
+    updatePassword: (input: PasswordReset) => Promise<GraphQLResponse<true>>
+}
+
 /** The browser Auth actions (back end auth doors only: sign-in, sign-up, password, sign-out), for the auth forms and the account menus. */
-export const authActionsOf = () => ({
+export const authActionsOf = (): AuthActionsOfResult => ({
     endSession,
     requestPasswordReset,
     resendConfirmation,

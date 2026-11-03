@@ -33,8 +33,20 @@ interface BookingSession {
     readonly token: string
 }
 
+type UsePublicBookingResult = {
+    change: (patch: Partial<PublicBookingFields>) => void
+    again: () => void
+    pick: (start: string, date: string) => void
+    today: string
+    fields: PublicBookingFields
+    times: string[] | null
+    result: PublicBookingResult | null
+    isBusy: boolean
+    submit: () => void
+}
+
 /** The visitor's booking state starts when shop data arrives and resets with the mounted shop. */
-export const usePublicBooking = (page: PublicBookingPageData | null | undefined) => {
+export const usePublicBooking = (page: PublicBookingPageData | null | undefined): UsePublicBookingResult => {
     const [session, setSession] = useState(() => sessionOf(page, 0))
     const { fields, today, result, isBusy } = session
     if (session.slug !== (page?.slug ?? null)) {
@@ -48,7 +60,7 @@ export const usePublicBooking = (page: PublicBookingPageData | null | undefined)
     )
     const update = (change: (current: BookingSession) => BookingSession) =>
         setSession((current) => (current.generation === session.generation ? change(current) : current))
-    const submit = () => {
+    const submit = (): void => {
         if (page == null) return
         update((current) => ({ ...current, result: null, isBusy: true }))
         void request.trigger(requestInputOf(page.slug, session)).then(
@@ -160,7 +172,7 @@ const sessionOf = (page: PublicBookingPageData | null | undefined, generation: n
 
 /** Editing commands preserve the request token until the visitor starts a new attempt. */
 const bookingEditsOf = (setSession: Dispatch<SetStateAction<BookingSession>>) => ({
-    change: (patch: Partial<PublicBookingFields>) =>
+    change: (patch: Partial<PublicBookingFields>): void =>
         setSession((current) => ({
             ...current,
             fields: {
@@ -169,14 +181,14 @@ const bookingEditsOf = (setSession: Dispatch<SetStateAction<BookingSession>>) =>
                 ...("serviceId" in patch || "date" in patch || "party" in patch ? { start: "" } : {}),
             },
         })),
-    again: () =>
+    again: (): void =>
         setSession((current) => ({
             ...current,
             result: null,
             fields: { ...current.fields, start: "" },
             token: newIdempotencyToken(),
         })),
-    pick: (start: string, date: string) =>
+    pick: (start: string, date: string): void =>
         setSession((current) => ({
             ...current,
             result: null,

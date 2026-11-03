@@ -2,7 +2,7 @@
 
 import type { VideoProductionActions, VideoProductionViews } from "@/modules/types"
 type VideoResultViewFields = VideoProductionViews["result"]
-type VideoResultViewActions = VideoProductionActions["result"]
+export type VideoResultViewActions = VideoProductionActions["result"]
 import { useState } from "react"
 import { useTranslations, useFormatter } from "next-intl"
 import { useVideoRelease, useVideoFailure } from "@/hooks/video"
@@ -12,7 +12,7 @@ import { editorHref } from "@/modules/video"
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { shapeOf, videoOwnerOf, videoResultBadgesOf } from "./videoWorkbench.shared"
-import type { VideoViewInput } from "./videoWorkbench.shared"
+import type { VideoViewInput, VideoResultBadge } from "./videoWorkbench.shared"
 type ResultBusy = "approve" | "share" | "posted"
 const copyOf = (t: ReturnType<typeof useTranslations<"video">>) => ({
     heading: t("resultHeading"),
@@ -81,8 +81,89 @@ const resultFieldsOf = (context: ResultProjection) => {
         },
     }
 }
+type UseVideoResultStepViewResult =
+    | {
+          on: VideoResultViewActions
+          ui: {
+              failedTitle: string
+              approveHeading: string
+              approveHelp: string
+              approving: boolean
+              sharing: boolean
+              posting: boolean
+              lockedNote: string
+              message: {
+                  readonly tone: "negative" | "informative"
+                  readonly text: string
+              } | null
+              heading: string
+              waitingLabel: string
+              captionsLabel: string
+              approveLabel: string
+              downloadLabel: string
+              shareLabel: string
+              postedLabel: string
+              soonLabel: string
+              tikTokLabel: string
+              facebookLabel: string
+              postNote: string
+              editLabel: string
+              rerenderLabel: string
+          }
+          read: null
+      }
+    | {
+          on: VideoResultViewActions
+          ui: {
+              failedTitle: string
+              approveHeading: string
+              approveHelp: string
+              approving: boolean
+              sharing: boolean
+              posting: boolean
+              lockedNote: string
+              message: {
+                  readonly tone: "negative" | "informative"
+                  readonly text: string
+              } | null
+              heading: string
+              waitingLabel: string
+              captionsLabel: string
+              approveLabel: string
+              downloadLabel: string
+              shareLabel: string
+              postedLabel: string
+              soonLabel: string
+              tikTokLabel: string
+              facebookLabel: string
+              postNote: string
+              editLabel: string
+              rerenderLabel: string
+          }
+          read: {
+              fact: string
+              title: string
+              shape: "portrait" | "square" | "landscape"
+              videoUrl: string | null
+              posterUrl: string | null
+              captionsUrl: string | null
+              captionsLang: string | null
+              failedDetail: string | null
+              badges: readonly VideoResultBadge[]
+              showApprove: boolean
+              approveDisabled: boolean
+              downloadUrl: string | null
+              showShare: boolean
+              showPosted: boolean
+              canEdit: boolean
+              rerenderDisabled: boolean
+              isApproved: boolean
+              hasFailedRender: boolean
+          }
+      }
+
 /** Existing release actions retain their same result predicates and standard feedback owner. */
-export const useVideoResultStepView = (input: VideoViewInput) => {
+export const useVideoResultStepView = (input: VideoViewInput): UseVideoResultStepViewResult => {
     const t = useTranslations("video"),
         format = useFormatter(),
         failure = useVideoFailure(),

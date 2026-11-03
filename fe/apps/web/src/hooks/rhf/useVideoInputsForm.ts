@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import type { ProjectInputs } from "@/modules/video"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The editable sources, notes and media used by the script writer. */
 export interface VideoInputsValues {
@@ -20,7 +21,7 @@ export interface VideoInputsValues {
 }
 
 /** Validates the material step with localized messages before it is saved. */
-export const useVideoInputsForm = (initial: ProjectInputs | null) => {
+export const useVideoInputsForm = (initial: ProjectInputs | null): UseFormReturn<VideoInputsValues> => {
     const t = useTranslations("video")
     const schema = useMemo(() => {
         const error = t("err_default")

@@ -1,7 +1,7 @@
 "use client"
 
 import type { VideoProductionActions } from "@/modules/types"
-type VideoPreviewCardActions = VideoProductionActions["preview"]
+export type VideoPreviewCardActions = VideoProductionActions["preview"]
 import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { useVideoRender, useVideoFailure } from "@/hooks/video"
@@ -13,6 +13,7 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import { shapeOf, videoOwnerOf } from "./videoWorkbench.shared"
 
 import type { VideoViewInput } from "./videoWorkbench.shared"
+import type { VideoJobRead } from "@/hooks/video/useVideoJob"
 
 const STAGES: ReadonlySet<string> = new Set(["tts", "scenes", "mix", "encode", "upload"])
 interface PreviewProjection {
@@ -68,8 +69,82 @@ const videoPreviewFieldsOf = (context: PreviewProjection) => {
         },
     }
 }
+type UseVideoPreviewStepViewResult =
+    | {
+          on: VideoPreviewCardActions
+          statusRead: VideoJobRead<{
+              durationMs: number | null
+              errorCode: string | null
+              id: string
+              outputPath: string | null
+              posterPath: string | null
+              progress: number
+              sizeBytes: number | null
+              stage: string | null
+              status: string
+          }>
+          isStatusEnabled: boolean
+          ui: {
+              heading: string
+              hint: string
+              progressTitle: string
+              progressLabel: string
+              note: string
+              backLabel: string
+              renderLabel: string
+              pending: boolean
+              error: string | null
+              dismissLabel: string
+          }
+          read: null
+      }
+    | {
+          on: VideoPreviewCardActions
+          statusRead: VideoJobRead<{
+              durationMs: number | null
+              errorCode: string | null
+              id: string
+              outputPath: string | null
+              posterPath: string | null
+              progress: number
+              sizeBytes: number | null
+              stage: string | null
+              status: string
+          }>
+          isStatusEnabled: boolean
+          ui: {
+              heading: string
+              hint: string
+              progressTitle: string
+              progressLabel: string
+              note: string
+              backLabel: string
+              renderLabel: string
+              pending: boolean
+              error: string | null
+              dismissLabel: string
+          }
+          read: {
+              estimateLabel: string
+              shape: "portrait" | "square" | "landscape"
+              frames: {
+                  label: string
+                  caption: string
+                  mediaName: string | null
+                  mediaUrl: string | null
+                  mediaKind: "video" | "image" | null
+              }[]
+              live: boolean
+              stageLabel: string
+              progress: number
+              canRender: boolean
+              hasRender: boolean
+              statusFailure: string | null
+          }
+      }
+
 /** Follows the actual selected render; leaving this step pauses its status read. */
-export const useVideoPreviewStepView = (input: VideoViewInput) => {
+export const useVideoPreviewStepView = (input: VideoViewInput): UseVideoPreviewStepViewResult => {
     const t = useTranslations("video"),
         failure = useVideoFailure(),
         owner = videoOwnerOf(input, "preview"),

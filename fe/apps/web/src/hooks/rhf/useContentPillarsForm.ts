@@ -6,9 +6,29 @@ import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import type { Pillar } from "@/modules/content"
+import type { UseFormReturn } from "react-hook-form"
 
 type ContentPillarsT = ReturnType<typeof useTranslations<"content">>
-const pillarsSchema = (t: ContentPillarsT) =>
+type PillarsSchemaResult = z.ZodObject<
+    {
+        rows: z.ZodArray<
+            z.ZodObject<
+                {
+                    key: z.ZodString
+                    id: z.ZodOptional<z.ZodUUID>
+                    name: z.ZodString
+                    description: z.ZodString
+                    weight: z.ZodNumber
+                    active: z.ZodBoolean
+                },
+                z.core.$strip
+            >
+        >
+    },
+    z.core.$strip
+>
+
+const pillarsSchema = (t: ContentPillarsT): PillarsSchemaResult =>
     z.object({
         rows: z
             .array(
@@ -31,8 +51,19 @@ const pillarsSchema = (t: ContentPillarsT) =>
 /** Local editable theme rows, including a stable key for unsaved themes. */
 export type ContentPillarsValues = z.infer<ReturnType<typeof pillarsSchema>>
 
+type UseContentPillarsFormResult = UseFormReturn<{
+    rows: {
+        key: string
+        name: string
+        description: string
+        weight: number
+        active: boolean
+        id?: string | undefined
+    }[]
+}>
+
 /** Checks theme fields and duplicate names before saving. */
-export const useContentPillarsForm = (initial: ReadonlyArray<Pillar>) => {
+export const useContentPillarsForm = (initial: ReadonlyArray<Pillar>): UseContentPillarsFormResult => {
     const t = useTranslations("content")
     const schema = useMemo(() => pillarsSchema(t), [t])
     const values = useMemo(

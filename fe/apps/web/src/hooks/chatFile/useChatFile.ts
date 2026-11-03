@@ -7,13 +7,13 @@ import { chatFileProblemOf } from "./chatFile.shared"
 import type { ChatFileProblem } from "./chatFile.shared"
 
 /** Where the back end says a file goes. */
-interface ChatFileAddress {
+export interface ChatFileAddress {
     readonly path: string
     readonly signedUrl: string
 }
 
 /** A file that landed in the store: what a message names. */
-interface UploadedChatFile {
+export interface UploadedChatFile {
     readonly path: string
     readonly name: string
 }

@@ -1,4 +1,4 @@
-import type { ShiftsWorkbenchOn } from "@/modules/types"
+import type { ShiftsWorkbenchData, ShiftsWorkbenchOn } from "@/modules/types"
 import { toast } from "@/modules/toast"
 import {
     projectShiftsWorkbench,
@@ -33,8 +33,14 @@ interface ShiftsWorkbenchInput {
     readonly initialTab: string | null
     readonly tabs: Readonly<Record<(typeof SHIFTS_TABS)[number], string>>
 }
+type UseShiftsWorkbenchViewResult = {
+    shape: "week" | "requests" | "setup" | "quick" | "mine" | "explanation"
+    props: ShiftsWorkbenchData
+    on: ShiftsWorkbenchOn
+}
+
 /** Owns the actual dashboard and three independent transport scopes, without replacing the persistent week selection. */
-export const useShiftsWorkbenchView = (input: ShiftsWorkbenchInput) => {
+export const useShiftsWorkbenchView = (input: ShiftsWorkbenchInput): UseShiftsWorkbenchViewResult => {
     const { activeWorkspaceId } = useActiveWorkspace(),
         labels = useSlotLabels()
     const scope = JSON.stringify([activeWorkspaceId, input.installationId])

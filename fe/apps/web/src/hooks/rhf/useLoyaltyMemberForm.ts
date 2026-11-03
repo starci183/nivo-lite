@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { LOYALTY_MEMBER_NAME_MAX, LOYALTY_MEMBER_NOTE_MAX, inputToIso } from "@/hooks/loyalty"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the loyalty member details form; the birthday is typed as day/month/year. */
 export interface LoyaltyMemberValues {
@@ -15,7 +16,7 @@ export interface LoyaltyMemberValues {
 }
 
 /** The member details form: a zod schema whose messages come from the `loyalty` catalog; `initial` is the saved member it starts from. */
-export const useLoyaltyMemberForm = (initial: LoyaltyMemberValues) => {
+export const useLoyaltyMemberForm = (initial: LoyaltyMemberValues): UseFormReturn<LoyaltyMemberValues> => {
     const t = useTranslations("loyalty")
     const schema = useMemo(
         () =>

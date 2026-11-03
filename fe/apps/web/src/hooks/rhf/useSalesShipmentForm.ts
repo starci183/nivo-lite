@@ -5,9 +5,15 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
+
+type UseSalesShipmentFormResult = UseFormReturn<{
+    carrier: string
+    tracking: string
+}>
 
 /** Validates the carrier and tracking code before the GraphQL shipment mutation. */
-export const useSalesShipmentForm = () => {
+export const useSalesShipmentForm = (): UseSalesShipmentFormResult => {
     const t = useTranslations("workbenchSales")
     const schema = useMemo(
         () =>

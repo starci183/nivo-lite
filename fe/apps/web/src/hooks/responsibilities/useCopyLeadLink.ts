@@ -6,8 +6,13 @@ import { useGraphQLWithToast } from "@/modules/toast"
 
 const COPIED_MS = 2000
 
+type UseCopyLeadLinkResult = {
+    copiedId: string | null
+    copy: (responsibilityId: string, leadId: string) => Promise<void>
+}
+
 /** Copies the address of a lead to the clipboard, toasts a failure and remembers which responsibility was copied for a moment. */
-export const useCopyLeadLink = () => {
+export const useCopyLeadLink = (): UseCopyLeadLinkResult => {
     const run = useGraphQLWithToast()
     const [copiedId, setCopiedId] = useState<string | null>(null)
     useEffect(() => {

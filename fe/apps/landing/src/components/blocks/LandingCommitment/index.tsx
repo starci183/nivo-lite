@@ -1,11 +1,13 @@
 import { getTranslations } from "next-intl/server"
 import { LandingCommitmentBase } from "./component"
 
+import type { ReactElement } from "react"
+
 /** The approved NIVO mark raster used as the author's decorative avatar. */
 const AUTHOR_MARK_SRC = "/brand/nivo-mark.png"
 
 /** The landing commitment section with its copy resolved on the server. */
-export const LandingCommitment = async () => {
+export const LandingCommitment = async (): Promise<ReactElement> => {
     const t = await getTranslations("landingBottom")
     return (
         <LandingCommitmentBase

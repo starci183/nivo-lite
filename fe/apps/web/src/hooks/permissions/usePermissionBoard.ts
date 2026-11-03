@@ -33,11 +33,27 @@ const TONES: Readonly<Record<ModeKind, ModeTone>> = {
     never: "danger",
 }
 
+type UsePermissionBoardResult = {
+    slot: DataSlot<readonly PermissionBoardRow[]>
+    placeholder: readonly PermissionBoardRow[]
+    reload: () => void
+    isLocked: boolean
+    agentOptions: {
+        id: string
+        label: string
+    }[]
+    roomOptions: {
+        id: string
+        label: string
+    }[]
+    members: readonly Approver[]
+}
+
 /**
  * What the Quyen page needs: the rule of every action the modules can be granted (the stored one, or "ask first" before anybody
  * saved one), worded for the table, and the agents, people and rooms the drawer picks from.
  */
-export const usePermissionBoard = () => {
+export const usePermissionBoard = (): UsePermissionBoardResult => {
     const g = useTranslations("governance")
     const format = useFormatter()
     const authority = useAuthoritySection()
@@ -84,7 +100,7 @@ export const usePermissionBoard = () => {
     const rowsSlot: DataSlot<ReadonlyArray<PermissionBoardRow>> = slotOfReads([read, agents, directory, rooms], () =>
         rowsOf(),
     )
-    const reload = () => {
+    const reload = (): void => {
         authority.reload()
         void agents.mutate()
         void directory.mutate()

@@ -115,8 +115,154 @@ const WEEK = [0, 1, 2, 3, 4, 5, 6] as const
 const DEFAULT_OPEN = "07:00"
 const DEFAULT_CLOSE = "22:00"
 
+type UseShiftsRulesViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly fieldStructure: ReadonlyArray<{
+                      readonly id: "leave" | "swap" | "remind" | "noshow" | "overtime"
+                      readonly label: string
+                      readonly min: number
+                      readonly max: number
+                  }>
+                  readonly dayStructure: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly openingLabel: string
+                  readonly closingLabel: string
+                  readonly title: string
+                  readonly hint: string
+                  readonly hoursTitle: string
+                  readonly closedLabel: string
+                  readonly saveLabel: string
+                  readonly reminderLabel: string
+                  readonly reminderHint: string
+                  readonly reminderOn: boolean
+                  readonly fields: ReadonlyArray<{
+                      readonly id: "leave" | "swap" | "remind" | "noshow" | "overtime"
+                      readonly label: string
+                      readonly value: number
+                      readonly min: number
+                      readonly max: number
+                  }>
+                  readonly days: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                      readonly isOpen: boolean
+                      readonly ends: ReadonlyArray<{
+                          readonly id: string
+                          readonly label: string
+                          readonly value: string
+                      }>
+                  }>
+                  readonly timeOptions: ReadonlyArray<ShiftsSetupViews["rulesOptionView"]>
+                  readonly isBusy: boolean
+              },
+              "reminderLabel" | "reminderHint" | "reminderOn" | "fields" | "days"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly fieldStructure: ReadonlyArray<{
+                      readonly id: "leave" | "swap" | "remind" | "noshow" | "overtime"
+                      readonly label: string
+                      readonly min: number
+                      readonly max: number
+                  }>
+                  readonly dayStructure: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly openingLabel: string
+                  readonly closingLabel: string
+                  readonly title: string
+                  readonly hint: string
+                  readonly hoursTitle: string
+                  readonly closedLabel: string
+                  readonly saveLabel: string
+                  readonly reminderLabel: string
+                  readonly reminderHint: string
+                  readonly reminderOn: boolean
+                  readonly fields: ReadonlyArray<{
+                      readonly id: "leave" | "swap" | "remind" | "noshow" | "overtime"
+                      readonly label: string
+                      readonly value: number
+                      readonly min: number
+                      readonly max: number
+                  }>
+                  readonly days: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                      readonly isOpen: boolean
+                      readonly ends: ReadonlyArray<{
+                          readonly id: string
+                          readonly label: string
+                          readonly value: string
+                      }>
+                  }>
+                  readonly timeOptions: ReadonlyArray<ShiftsSetupViews["rulesOptionView"]>
+                  readonly isBusy: boolean
+              },
+              "reminderLabel" | "reminderHint" | "reminderOn" | "fields" | "days"
+          >
+          data: Pick<
+              {
+                  readonly fieldStructure: ReadonlyArray<{
+                      readonly id: "leave" | "swap" | "remind" | "noshow" | "overtime"
+                      readonly label: string
+                      readonly min: number
+                      readonly max: number
+                  }>
+                  readonly dayStructure: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                  }>
+                  readonly openingLabel: string
+                  readonly closingLabel: string
+                  readonly title: string
+                  readonly hint: string
+                  readonly hoursTitle: string
+                  readonly closedLabel: string
+                  readonly saveLabel: string
+                  readonly reminderLabel: string
+                  readonly reminderHint: string
+                  readonly reminderOn: boolean
+                  readonly fields: ReadonlyArray<{
+                      readonly id: "leave" | "swap" | "remind" | "noshow" | "overtime"
+                      readonly label: string
+                      readonly value: number
+                      readonly min: number
+                      readonly max: number
+                  }>
+                  readonly days: ReadonlyArray<{
+                      readonly id: string
+                      readonly label: string
+                      readonly isOpen: boolean
+                      readonly ends: ReadonlyArray<{
+                          readonly id: string
+                          readonly label: string
+                          readonly value: string
+                      }>
+                  }>
+                  readonly timeOptions: ReadonlyArray<ShiftsSetupViews["rulesOptionView"]>
+                  readonly isBusy: boolean
+              },
+              "reminderLabel" | "reminderHint" | "reminderOn" | "fields" | "days"
+          >
+          on: {
+              readonly rule: (field: "leave" | "swap" | "remind" | "noshow" | "overtime", value: number) => void
+              readonly toggle: (day: string, isOpen: boolean) => void
+              readonly end: (day: string, end: string, value: string) => void
+              readonly save: () => void
+          }
+      }
+
 /** The rules of the shop (notice periods, reminders, overtime) and its opening hours by weekday. */
-export const useShiftsRulesView = (input: ShiftsPanelInput) => {
+export const useShiftsRulesView = (input: ShiftsPanelInput): UseShiftsRulesViewResult => {
     const t = useTranslations("shifts")
     const format = useShiftsFormat()
     const commands = useShiftsRuleCommands()

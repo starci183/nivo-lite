@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { PASSWORD_MIN_LENGTH } from "@/hooks/auth"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the reset-password form. */
 export interface ResetValues {
@@ -14,7 +15,7 @@ export interface ResetValues {
 }
 
 /** The reset-password form: long enough and confirmed; messages come from the `auth` catalog. */
-export const useResetForm = () => {
+export const useResetForm = (): UseFormReturn<ResetValues> => {
     const t = useTranslations("auth")
     const schema = useMemo(
         () =>

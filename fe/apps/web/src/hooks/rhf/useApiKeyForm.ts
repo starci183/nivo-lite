@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The shortest name a new API key may have. */
 const API_KEY_NAME_MIN = 2
@@ -15,7 +16,7 @@ export interface ApiKeyValues {
 }
 
 /** The create API key form: a zod schema whose message comes from the `developers` catalog, validated before the mutation runs. */
-export const useApiKeyForm = () => {
+export const useApiKeyForm = (): UseFormReturn<ApiKeyValues> => {
     const t = useTranslations("developers")
     const schema = useMemo(() => z.object({ name: z.string().trim().min(API_KEY_NAME_MIN, t("keyNameHint")) }), [t])
     return useForm<ApiKeyValues>({

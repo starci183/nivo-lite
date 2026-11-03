@@ -7,8 +7,48 @@ type FullView = {
 
 import { useFormatter, useTranslations } from "next-intl"
 
+type UseShiftsFiguresViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly captions: ReadonlyArray<{
+                      readonly id: string
+                      readonly term: string
+                      readonly unit: string
+                  }>
+                  readonly ariaLabel: string
+                  readonly staffNotice: string | null
+                  readonly stats: ReadonlyArray<ShiftsWeekViews["figuresFigureView"]>
+              },
+              "staffNotice" | "stats"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly captions: ReadonlyArray<{
+                      readonly id: string
+                      readonly term: string
+                      readonly unit: string
+                  }>
+                  readonly ariaLabel: string
+                  readonly staffNotice: string | null
+                  readonly stats: ReadonlyArray<ShiftsWeekViews["figuresFigureView"]>
+              },
+              "staffNotice" | "stats"
+          >
+          data: {
+              isVisible: boolean
+              staffNotice: string | null
+              stats: ReadonlyArray<ShiftsWeekViews["figuresFigureView"]>
+          }
+          on: Record<string, never>
+      }
+
 /** The four figures of the Shifts workbench (this week, open gaps, leave waiting, hours of the month), or the pointer to "My schedule" for staff. */
-export const useShiftsFiguresView = (input: ShiftsPanelInput) => {
+export const useShiftsFiguresView = (input: ShiftsPanelInput): UseShiftsFiguresViewResult => {
     const t = useTranslations("workbenchFigures")
     const ts = useTranslations("shifts")
     const format = useFormatter()

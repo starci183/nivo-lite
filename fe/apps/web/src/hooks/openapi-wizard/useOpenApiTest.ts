@@ -5,6 +5,7 @@ import { useMemo, useState } from "react"
 import { isOpenApiPullable } from "./openapi-wizard.shared"
 import type { OpenApiOp, OpenApiPullDef } from "./openapi-wizard.shared"
 import type { OpenApiCommands } from "./useOpenApiCommands"
+import type { SetStateAction, Dispatch } from "react"
 
 /** What the test step reads of the wizard around it. */
 interface OpenApiTestInput {
@@ -20,8 +21,74 @@ interface OpenApiTestInput {
     readonly fail: (message: string | null) => void
 }
 
+type UseOpenApiTestResult = {
+    testable: {
+        id: string
+        method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+        path: string
+        summary: string
+        params: {
+            name: string
+            in: "path" | "query" | "header"
+            required: boolean
+        }[]
+        hasBody: boolean
+        suggest?:
+            | {
+                  itemsPath: string
+                  idField: string
+                  titleField: string
+              }
+            | undefined
+    }[]
+    activeTestId: string | null
+    testOp: {
+        id: string
+        method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+        path: string
+        summary: string
+        params: {
+            name: string
+            in: "path" | "query" | "header"
+            required: boolean
+        }[]
+        hasBody: boolean
+        suggest?:
+            | {
+                  itemsPath: string
+                  idField: string
+                  titleField: string
+              }
+            | undefined
+    } | null
+    testPull:
+        | {
+              opId: string
+              entity: "customer" | "order" | "product" | "transaction" | "other"
+              itemsPath: string
+              idField: string
+              titleField: string
+              fixedQuery: string
+          }
+        | undefined
+    testQuery: string
+    testing: boolean
+    result: {
+        status: number
+        itemCount: number
+        itemsPath: string
+        idField: string
+        titleField: string
+        sampleKeys: Array<string>
+        error: string | null
+    } | null
+    setTestQuery: Dispatch<SetStateAction<string>>
+    pickOp: (id: string | null) => void
+    runTest: () => undefined
+}
+
 /** The test step of the OpenAPI wizard: one GET called with the typed settings; a found list fills the empty mapping fields. */
-export const useOpenApiTest = (input: OpenApiTestInput) => {
+export const useOpenApiTest = (input: OpenApiTestInput): UseOpenApiTestResult => {
     const { ops, pulls, commands, onPull, fail } = input
     const [testOpId, setTestOpId] = useState<string | null>(null)
     const [testQuery, setTestQuery] = useState("")
@@ -66,10 +133,10 @@ export const useOpenApiTest = (input: OpenApiTestInput) => {
         testing,
         result,
         setTestQuery,
-        pickOp: (id: string | null) => {
+        pickOp: (id: string | null): void => {
             setTestOpId(id)
             setResult(null)
         },
-        runTest: () => void runTest(),
+        runTest: (): undefined => void runTest(),
     }
 }

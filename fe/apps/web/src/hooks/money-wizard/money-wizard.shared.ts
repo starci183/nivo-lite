@@ -5,8 +5,18 @@ import { resumeNoteOf, resumeSlotOf } from "@/hooks/connection-wizard"
 import type { useFirstEvent } from "@/hooks/connections"
 import type { useQueryMoneyConnectionSwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
-import type { Environment, MoneyProvider, WizardConnection, WizardNote } from "@/modules/types"
+import type {
+    DataSlot,
+    Environment,
+    FirstEvent,
+    MoneyProvider,
+    WizardConnection,
+    WizardNote,
+    WizardResume,
+} from "@/modules/types"
 import type { MoneyWizardInput, NavInput1 } from "./useMoneyWizard"
+
+import type { Dispatch, SetStateAction } from "react"
 
 /** The steps of the bank and payment wizard, in order. */
 export const MONEY_STEPS = ["env", "account", "follow", "verify", "agent"] as const
@@ -125,6 +135,42 @@ interface MoneyWizardViewInput {
     readonly setAgentIds: import("react").Dispatch<import("react").SetStateAction<ReadonlyArray<string>>>
 }
 
+type ViewOfResult = {
+    reads: readonly SlotRead<unknown>[]
+    index: number
+    step: "env" | "account" | "follow" | "verify" | "agent"
+    resume: DataSlot<WizardResume>
+    form: AccountForm
+    conn: WizardConnection | null
+    follow: FollowDraft
+    note: WizardNote | null
+    agentIds: readonly string[]
+    isPending: boolean
+    received: boolean
+    firstEvent: FirstEvent | null
+    hasCheckFailed: boolean
+    hasSkipped: boolean
+    flags: MoneyFlags
+    context: GuideContext
+    on: {
+        retry: () => void
+        go: (to: number) => void
+        create: () => void
+        followDone: () => void
+        finish: () => void
+        checkLater: () => void
+        close: () => void
+        environment: (environment: Environment) => void
+        name: (name: string) => void
+        bank: (bank: string) => void
+        account: (account: string) => void
+        holder: (holder: string) => void
+        edit: (token: string, value: string) => void
+        paste: (field: string, value: string) => void
+        agents: Dispatch<SetStateAction<readonly string[]>>
+    }
+}
+
 /** Assembles the resolved domain state and commands for its drawing. */
 export const viewOf = ({
     nav,
@@ -149,7 +195,7 @@ export const viewOf = ({
     setForm,
     setFollow,
     setAgentIds,
-}: MoneyWizardViewInput) => {
+}: MoneyWizardViewInput): ViewOfResult => {
     const reads: ReadonlyArray<SlotRead<unknown>> = input.resumeId === undefined ? [] : [resume]
     return {
         reads,
@@ -169,28 +215,28 @@ export const viewOf = ({
         flags,
         context: moneyContextOf(form, conn),
         on: {
-            retry: () => {
+            retry: (): void => {
                 void resume.mutate()
             },
             go,
             create,
             followDone,
             finish,
-            checkLater: () => {
+            checkLater: (): void => {
                 setNote(null)
                 setNav((current) => ({ ...current, index: 4, skipped: true }))
             },
-            close: () => input.onClose(conn !== null),
-            environment: (environment: Environment) => setForm((current) => ({ ...current, environment })),
-            name: (name: string) => setForm((current) => ({ ...current, name })),
-            bank: (bank: string) => setForm((current) => ({ ...current, bank })),
-            account: (account: string) => setForm((current) => ({ ...current, account })),
-            holder: (holder: string) => setForm((current) => ({ ...current, holder })),
-            edit: (token: string, value: string) =>
+            close: (): void => input.onClose(conn !== null),
+            environment: (environment: Environment): void => setForm((current) => ({ ...current, environment })),
+            name: (name: string): void => setForm((current) => ({ ...current, name })),
+            bank: (bank: string): void => setForm((current) => ({ ...current, bank })),
+            account: (account: string): void => setForm((current) => ({ ...current, account })),
+            holder: (holder: string): void => setForm((current) => ({ ...current, holder })),
+            edit: (token: string, value: string): void =>
                 setFollow((current) =>
                     token === "webhookName" ? { ...current, webhookName: value } : { ...current, apiKey: value },
                 ),
-            paste: (field: string, value: string) =>
+            paste: (field: string, value: string): void =>
                 setFollow((current) => ({ ...current, values: { ...current.values, [field]: value } })),
             agents: setAgentIds,
         },

@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { EMAIL_PATTERN } from "@/hooks/auth"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the sign-in form. */
 export interface LoginValues {
@@ -14,7 +15,7 @@ export interface LoginValues {
 }
 
 /** The sign-in form: a zod schema whose messages come from the `auth` catalog, validated before the sign-in runs. */
-export const useLoginForm = () => {
+export const useLoginForm = (): UseFormReturn<LoginValues> => {
     const t = useTranslations("auth")
     const schema = useMemo(
         () =>

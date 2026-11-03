@@ -33,8 +33,24 @@ const QUEUE_STATUS_KEYS: Readonly<Record<QueueItem["status"], string>> = {
 const statusLabelOf = (say: RowSay, item: QueueItem): string =>
     item.status === "uploading" && item.uploaded === 1 ? say("itemEnqueuing") : say(QUEUE_STATUS_KEYS[item.status])
 
+type QueueRowOfResult = {
+    id: string
+    name: string
+    detail: string
+    statusLabel: string
+    statusTone: QueueStatusTone
+    error: string | undefined
+    canRemove: boolean
+    retryLabel: string | undefined
+}
+
 /** The row of the queue for one file or link, already worded; `isBusy` is true while the queue is being sent. */
-export const queueRowOf = (say: RowSay, formatter: RowFormatter, isBusy: boolean, item: QueueItem) => ({
+export const queueRowOf = (
+    say: RowSay,
+    formatter: RowFormatter,
+    isBusy: boolean,
+    item: QueueItem,
+): QueueRowOfResult => ({
     id: item.id,
     name: item.name,
     detail: [

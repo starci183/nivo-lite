@@ -29,7 +29,7 @@ export interface McpToolRowView {
 }
 
 /** One connector row: its state, its pinned tools and, for a remote connector, its credential, Test, Approve and Check. */
-interface McpConnectorRowView {
+export interface McpConnectorRowView {
     readonly id: string
     readonly title: string
     readonly description: string

@@ -24,7 +24,10 @@ const useToastMessages = (): ToastMessages => {
 }
 
 /** A localized `runGraphQLWithToast`: use it for every GraphQL mutation. Answers the data, or `undefined` on failure. */
-export const useGraphQLWithToast = () => {
+export const useGraphQLWithToast = (): (<T>(
+    action: () => Promise<T>,
+    options?: Omit<RunGraphQLWithToastOptions, "messages">,
+) => Promise<T | undefined>) => {
     const messages = useToastMessages()
     return useCallback(
         <T>(action: () => Promise<T>, options?: Omit<RunGraphQLWithToastOptions, "messages">) =>
@@ -34,7 +37,10 @@ export const useGraphQLWithToast = () => {
 }
 
 /** A localized `runRestWithToast`: use it for every REST write (axios, presigned uploads). Answers the payload, or `null` on failure. */
-export const useRestWithToast = () => {
+export const useRestWithToast = (): (<T>(
+    action: () => Promise<T>,
+    options?: Omit<RunRestWithToastOptions, "messages">,
+) => Promise<T | null>) => {
     const messages = useToastMessages()
     return useCallback(
         <T>(action: () => Promise<T>, options?: Omit<RunRestWithToastOptions, "messages">) =>

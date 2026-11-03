@@ -10,12 +10,18 @@ import { useTelegramChecks } from "./useTelegramChecks"
 import { useTelegramHead } from "./useTelegramHead"
 import { useTelegramNotices } from "./useTelegramNotices"
 
+type UseTelegramPageHeadResult = {
+    view: ConnectionPageHeadView
+    on: ConnectionPageHeadCommands
+    isMissing: boolean
+}
+
 /**
  * The frame of a Telegram bot connection page: the header with "Check again" (owner and manager), the notices (why the bot cannot work,
  * a refused command, a local site, no agent yet), the live rail's drawer and the owner's disconnect, which asks first. Nothing is read
  * while `connectionId` is undefined (the frame is serving another provider).
  */
-export const useTelegramPageHead = (connectionId: string | undefined) => {
+export const useTelegramPageHead = (connectionId: string | undefined): UseTelegramPageHeadResult => {
     const t = useTranslations("telegramConnection")
     const slotLabels = useSlotLabels()
     const router = navigation.useRouter()

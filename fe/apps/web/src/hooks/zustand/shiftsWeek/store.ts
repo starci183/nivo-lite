@@ -1,6 +1,7 @@
 "use client"
 
 import { create } from "zustand"
+import type { UseBoundStore, StoreApi } from "zustand"
 
 interface ShiftsWeekStore {
     /** Any date inside the week on screen; `null` = the week of today. */
@@ -9,7 +10,7 @@ interface ShiftsWeekStore {
 }
 
 /** The week the Shifts week blocks share: the bar moves it, the stats, coverage and grid follow it. */
-export const useShiftsWeekStore = create<ShiftsWeekStore>((set) => ({
+export const useShiftsWeekStore: UseBoundStore<StoreApi<ShiftsWeekStore>> = create<ShiftsWeekStore>((set) => ({
     monday: null,
     setMonday: (monday) => set({ monday }),
 }))

@@ -19,8 +19,15 @@ interface Names {
     readonly agents: ReadonlyArray<Choice>
 }
 
+type UsePermissionWordsResult = {
+    modeWords: (rule: StoredRule) => string
+    groupWords: (rule: StoredRule) => ReadonlyArray<string>
+    agentWords: (rule: StoredRule) => string
+    policyWords: (rule: StoredRule) => string
+}
+
 /** How the table words a rule: its mode, the people it asks, the agents it covers and the way they decide. */
-export const usePermissionWords = (names: Names) => {
+export const usePermissionWords = (names: Names): UsePermissionWordsResult => {
     const t = useTranslations("permissions")
     const g = useTranslations("governance")
     const bound = useBoundFormatter()

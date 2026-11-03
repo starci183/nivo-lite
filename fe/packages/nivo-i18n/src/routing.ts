@@ -10,8 +10,18 @@ export const LOCALE_COOKIE = "NIVO_LOCALE"
 /** The fixed product time zone used by the server and the hydrated client. */
 export const PRODUCT_TIME_ZONE = "Asia/Ho_Chi_Minh"
 
+/** The shape of the locale-routing table next-intl reads. */
+interface Routing {
+    locales: typeof LOCALES
+    defaultLocale: typeof DEFAULT_LOCALE
+    localePrefix: "never"
+    localeDetection: boolean
+    alternateLinks: boolean
+    localeCookie: { name: string; maxAge: number; sameSite: "lax"; path: string }
+}
+
 /** The one locale-routing table of the web app: no prefix in the URL, the cookie decides. */
-export const routing = {
+export const routing: Routing = {
     locales: LOCALES,
     defaultLocale: DEFAULT_LOCALE,
     localePrefix: "never" as const,

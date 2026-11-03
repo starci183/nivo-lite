@@ -55,7 +55,7 @@ export interface SignInResult {
 }
 
 /** What a password sign-in takes. */
-interface SignInInput {
+export interface SignInInput {
     readonly email: string
     readonly password: string
     readonly next?: string | undefined

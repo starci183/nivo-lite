@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { applyDefaults } from "@/hooks/hiringPublic"
 import type { ApplyValues } from "@/modules/types"
+import type { UseFormReturn } from "react-hook-form"
 
 const schema = z.object({
     name: z.string().trim().min(1),
@@ -18,5 +19,5 @@ const schema = z.object({
 })
 
 /** The public apply form: name, contact, availability, the job's own answers, the consent and the honeypot. */
-export const useHiringApplyForm = () =>
+export const useHiringApplyForm = (): UseFormReturn<ApplyValues> =>
     useForm<ApplyValues>({ resolver: zodResolver(schema), defaultValues: applyDefaults(), mode: "onChange" })

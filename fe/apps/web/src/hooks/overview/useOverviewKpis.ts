@@ -7,8 +7,22 @@ import { leadsThisWeek } from "./overview.shared"
 import { useOverviewData } from "./useOverviewData"
 import { useOverviewRows } from "./useOverviewRows"
 
+type UseOverviewKpisResult =
+    | {
+          title: string
+          label: string
+          kpis: {
+              id: string
+              label: string
+              value: number
+              href: string
+              isAlert: boolean
+          }[]
+      }
+    | undefined
+
 /** The KPI band: the five counts, each linking to its filtered list; undefined until the dashboard is read. */
-export const useOverviewKpis = () => {
+export const useOverviewKpis = (): UseOverviewKpisResult => {
     const t = useTranslations("overview")
     const { dashboard } = useOverviewData()
     const data = useOverviewRows()
