@@ -142,6 +142,16 @@ describe("add", () => {
         })
     })
 
+    it("asks the broker to wait the delay of the row, and adds a row with none at once", async () => {
+        const { client, adds } = await build()
+
+        await client.add("knowledge", "knowledge.index", "row-1", {}, 3000)
+        await client.add("knowledge", "knowledge.index", "row-2", {}, 0)
+
+        expect(adds[0]?.options).toMatchObject({ jobId: "row-1", delay: 3000 })
+        expect(adds[1]?.options).not.toHaveProperty("delay")
+    })
+
     it("opens the queue on the Redis of the options, with the prefix and no per-request retries", async () => {
         const { client, factory } = await build()
 

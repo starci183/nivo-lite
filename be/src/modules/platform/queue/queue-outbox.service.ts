@@ -24,12 +24,7 @@ export class QueueOutboxService implements QueueOutbox {
     async write(tx: EntityManager, queue: string, payload: object, options: QueueWriteOptions = {}): Promise<void> {
         const job = jobOf(queue, payload, options)
         const dedupeKey = job.dedupeKey ?? (await freshDedupeKey(tx, job.job))
-        await callDbFunction(tx, "public.job_enqueue", [
-            job.workspaceId,
-            job.queue,
-            job.job,
-            JSON.stringify(job.payload),
-            dedupeKey,
-        ])
+        const row = [job.workspaceId, job.queue, job.job, JSON.stringify(job.payload), dedupeKey]
+        await callDbFunction(tx, "public.job_enqueue", job.delayMs > 0 ? [...row, job.delayMs] : row)
     }
 }

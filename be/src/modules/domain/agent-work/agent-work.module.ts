@@ -16,6 +16,7 @@ import { AgentWorkDoorsService } from "./agent-work-doors.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkReadService } from "./agent-work-read.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
+import { AGENT_WORK_OPTIONS } from "./agent-work.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-work.module-definition"
 
 @Module({})
@@ -33,6 +34,7 @@ export class AgentWorkModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), AgentTurnQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
+                { provide: AGENT_WORK_OPTIONS, useValue: { debounceMs: options.debounceMs } },
                 AgentWorkAccessService,
                 AgentTurnsService,
                 AgentWorkHandlersService,
