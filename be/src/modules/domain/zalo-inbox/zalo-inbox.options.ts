@@ -4,6 +4,4 @@ export interface ZaloInboxOptions {
     readonly replyWindowMs?: number
     /** A polled message older than this is kept for the owner instead of being answered by an agent, in milliseconds. */
     readonly staleAfterMs?: number
-    /** How far back the first run of a connection reads, in milliseconds. */
-    readonly backfillMs?: number
 }

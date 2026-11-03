@@ -127,6 +127,36 @@ describe("InboundEventsService recordBankPayment", () => {
         })
     })
 })
+describe("InboundEventsService keepForOwner", () => {
+    it("keeps a message that came too late for an agent as an event the owner decides on", async () => {
+        const { events, tx } = await build()
+        const [insert] = queueQueryBuilders(tx.em, [IGNORED])
+
+        await events.keepForOwner(tx.em, {
+            workspaceId: "ws-1",
+            channel: "zalo",
+            sender: "Dinh",
+            body: "Tôi cần tư vấn",
+            eventId: "zalo:c-1:m-1",
+        })
+
+        expect(insert?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    channel: "zalo",
+                    kind: "message",
+                    senderName: "Dinh",
+                    body: "Tôi cần tư vấn",
+                    eventId: "zalo:c-1:m-1",
+                    dedupeKey: "zalo:message:zalo:c-1:m-1",
+                    status: "needs_decision",
+                },
+            ],
+        ])
+    })
+})
+
 describe("InboundEventsService keepUnrouted", () => {
     it("keeps an unrouted message in the inbox under a dedupe key made of its channel and event id", async () => {
         const { events, tx } = await build()

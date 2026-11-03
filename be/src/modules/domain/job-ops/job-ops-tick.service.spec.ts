@@ -29,6 +29,7 @@ const EXPECTED = [
         { doneDays: 1, failedDays: 7, batch: 5000 },
         1440,
     ],
+    ["zalo-inbox-reconcile-tick", "zalo-inbox-poll", "reconcile-zalo-inbox", {}, 5],
     ["zalo-refresh-tick", "zalo_refresh", "zalo_refresh", { withinMs: 25_200_000 }, 360],
 ] as const
 

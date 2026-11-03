@@ -5,6 +5,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./zalo-inbox.module-definition"
 import { ZaloInboxPageReadService } from "./zalo-inbox-page-read.service"
 import { ZaloInboxService } from "./zalo-inbox.service"
+import { ZaloInboxPoller } from "./zalo-inbox-poller.service"
 import { ZaloInboxPollService } from "./zalo-poll.service"
 import { ZaloInboxPollQueue } from "@modules/queues/zalo-inbox-poll"
 
@@ -21,6 +22,7 @@ export class ZaloInboxModule extends ConfigurableModuleClass {
                 { provide: INBOX, useClass: InboxService },
                 ZaloInboxService,
                 ZaloInboxPollQueue,
+                ZaloInboxPoller,
                 ZaloInboxPollService,
                 ZaloInboxPageReadService,
                 ZaloDeliveryPolicy,

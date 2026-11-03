@@ -128,7 +128,7 @@ const registerZaloRouting = () => {
             },
         })
 
-        await expect(service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), manager)).resolves.toBeUndefined()
+        await expect(service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), manager)).resolves.toBe(true)
         expect(connections.markReceived).toHaveBeenCalledWith(
             CONNECTION,
             { amount: 0, content: "<conversations.zaloGuest>", at: new Date(NOW).toISOString(), text: "Hello" },
@@ -154,7 +154,7 @@ const registerZaloRouting = () => {
 
         await expect(
             service.acceptZalo(CONNECTION, zaloMessage({ text: "x".repeat(300) }), manager),
-        ).resolves.toBeUndefined()
+        ).resolves.toBe(true)
         expect(connections.markReceived).toHaveBeenCalledWith(
             CONNECTION,
             expect.objectContaining({ content: "Minh", text: "x".repeat(160) }),
@@ -167,7 +167,7 @@ const registerZaloRouting = () => {
         const manager = mockEntityManager()
         const { service, connections } = await build({ existing: known({ visitorName: null }) }, [FRONT_AGENT])
 
-        await expect(service.acceptZalo(CONNECTION, zaloMessage(), manager)).resolves.toBeUndefined()
+        await expect(service.acceptZalo(CONNECTION, zaloMessage(), manager)).resolves.toBe(true)
         expect(connections.markReceived).toHaveBeenCalledWith(
             CONNECTION,
             expect.objectContaining({ content: "<conversations.zaloGuest>" }),
@@ -182,7 +182,7 @@ const registerZaloInbox = () => {
         const manager = mockEntityManager()
         const { service, intake, inboundEvents } = await build({}, [])
 
-        await expect(service.acceptZalo(CONNECTION, zaloMessage(), manager)).resolves.toBeUndefined()
+        await expect(service.acceptZalo(CONNECTION, zaloMessage(), manager)).resolves.toBe(false)
         expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
             workspaceId: "ws-1",
             channel: "zalo",
@@ -209,8 +209,8 @@ const registerZaloInbox = () => {
 
         await expect(
             other.service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), otherManager),
-        ).resolves.toBeUndefined()
-        await expect(gone.service.acceptZalo(CONNECTION, zaloMessage(), goneManager)).resolves.toBeUndefined()
+        ).resolves.toBe(false)
+        await expect(gone.service.acceptZalo(CONNECTION, zaloMessage(), goneManager)).resolves.toBe(false)
         expect(other.connections.markReceived).not.toHaveBeenCalled()
         expect(gone.connections.markReceived).not.toHaveBeenCalled()
     })
@@ -220,7 +220,7 @@ const registerZaloInbox = () => {
         const { service, connections, zalo } = await build({}, [FRONT_AGENT])
         zalo.load.mockResolvedValue({ kind: "refused", code: ChannelsErrorCode.SecretUnreadable })
 
-        await expect(service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), manager)).resolves.toBeUndefined()
+        await expect(service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), manager)).resolves.toBe(true)
         expect(connections.markReceived).toHaveBeenCalledTimes(1)
     })
 }

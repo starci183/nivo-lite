@@ -71,22 +71,3 @@ export interface ZaloInboxFactsRow {
     /** A follow event arrived. */
     readonly has_follow: boolean
 }
-
-/** What one reconcile run did. */
-export interface ZaloPollSummary {
-    /** Connections the run read. */
-    connections: number
-    /** Customer text messages read back inside the window. */
-    fetched: number
-    /** Messages stored that the webhook had not delivered. */
-    recorded: number
-    /** Of those, the stale ones kept for the owner instead of an agent. */
-    expired: number
-    /** Connections left out (no token, no usable credential). */
-    skipped: number
-    /** Connections whose read failed. */
-    failed: number
-}
-
-/** Why a connection was left out of a run. */
-export type ZaloPollSkipReason = "no_credential" | "no_token"
